@@ -44,14 +44,13 @@ import type {
 	// TODO: re-enable when workflow bindings return.
 	// WorkflowBinding,
 } from "./bindings";
-import type { DurableObjectExport, WorkflowExport } from "./exports";
+import type { DurableObjectExport } from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
 	FetchTrigger,
 	QueueConsumerTrigger,
 	ScheduledTrigger,
 } from "./triggers";
-import type { Json } from "./utils";
 
 /**
  * Union of all binding definitions accepted in `env`.
@@ -70,7 +69,7 @@ type Binding =
 	| FlagshipBinding
 	| HyperdriveBinding
 	| ImagesBinding
-	| JsonBinding<Json>
+	| JsonBinding
 	| KvBinding
 	| LogfwdrBinding
 	| MediaBinding
@@ -83,7 +82,7 @@ type Binding =
 	| SecretsStoreSecretBinding
 	| SendEmailBinding
 	| StreamBinding
-	| TextBinding<string>
+	| TextBinding
 	| UnsafeBinding
 	| VectorizeBinding
 	| VersionMetadataBinding
@@ -102,7 +101,9 @@ type Trigger = FetchTrigger | QueueConsumerTrigger | ScheduledTrigger;
 /**
  * Union of all export definitions accepted in `exports`.
  */
-type Export = DurableObjectExport | WorkflowExport;
+type Export = DurableObjectExport;
+// TODO: support Workflows
+// type Export = DurableObjectExport | WorkflowExport;
 
 /**
  * Worker configuration. This is the input shape passed to

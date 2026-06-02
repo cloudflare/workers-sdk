@@ -524,14 +524,11 @@ function convertBindingsAndAssets(
 				workerLoaders.push({ binding: name });
 				break;
 			}
-			// TODO: re-enable when workflow bindings return. Workflows are
-			// currently produced only by the top-level `exports` field, which
-			// emits a same-Worker `workflows` entry (no `script_name`).
+			// TODO: re-enable when workflow bindings return.
 			// case "workflow": {
 			// 	workflows.push(
 			// 		omitUndefined({
 			// 			binding: name,
-			// 			name: <user-facing name from referenced config>,
 			// 			class_name: binding.exportName,
 			// 			script_name: binding.workerName,
 			// 			remote: binding.remote,
@@ -660,9 +657,6 @@ function convertExports(
 
 	const newSqliteClasses: string[] = [];
 	const newClasses: string[] = [];
-	const workflows: NonNullable<RawConfig["workflows"]> = result.workflows
-		? [...result.workflows]
-		: [];
 
 	let hasDurableObjectExports = false;
 
@@ -674,25 +668,14 @@ function convertExports(
 			} else {
 				newClasses.push(exportName);
 			}
-		} else if (value.type === "workflow") {
-			workflows.push(
-				omitUndefined({
-					binding: exportName,
-					name: value.name,
-					class_name: exportName,
-				})
-			);
 		}
+		// TODO: support Workflows
 	}
 
 	if (hasDurableObjectExports && !options.includeMigrations) {
 		throw new Error(
 			"Durable Object exports are not currently supported for build/deploy."
 		);
-	}
-
-	if (workflows.length) {
-		result.workflows = workflows;
 	}
 
 	if (hasDurableObjectExports && options.includeMigrations) {

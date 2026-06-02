@@ -6,7 +6,7 @@ import type {
 import type {
 	InferWorkerName,
 	InferExportsByType,
-	InferEntrypointExports,
+	InferWorkerEntrypointExports,
 } from "./inference";
 import type { UserConfig } from "./types";
 
@@ -21,7 +21,7 @@ export interface ConfigContext {
 
 // We currently use Symbol.for rather than Symbol so that the symbol matches if duplicated across bundles
 // This wouldn't be necessary if @cloudflare/config was published and included as a dependency
-const CONFIG = Symbol.for("@cloudflare/config:worker-definition");
+const CONFIG = Symbol.for("@cloudflare/config:worker-config");
 
 /**
  * Base shape of a Worker definition. Carries the resolved config and the
@@ -63,7 +63,8 @@ export interface TypedWorkerDefinition<
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
 	 */
 	worker<
-		TExportName extends InferEntrypointExports<TConfig> | undefined = undefined,
+		TExportName extends InferWorkerEntrypointExports<TConfig> | undefined =
+			undefined,
 	>(options: {
 		workerName: TWorkerName;
 		exportName?: TExportName;

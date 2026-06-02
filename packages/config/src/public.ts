@@ -70,4 +70,4 @@ export type {
 	TypedWorkerDefinition,
 	UserConfigExport,
 } from "./worker-definition";
-export { defineWorker, resolveWorkerDefinition } from "./worker-definition";
+export { defineWorker } from "./worker-definition";

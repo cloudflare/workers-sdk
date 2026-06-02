@@ -17,6 +17,15 @@ interface FetchTriggerOptions {
 	zone?: string;
 }
 
+/**
+ * Fetch trigger — a route that your Worker should be published to.
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
+ */
+export interface FetchTrigger extends FetchTriggerOptions {
+	type: "fetch";
+}
+
 interface QueueConsumerTriggerOptions {
 	/** The name of the queue from which this consumer should consume. */
 	name: string;
@@ -40,6 +49,16 @@ interface QueueConsumerTriggerOptions {
 	visibilityTimeoutMs?: number;
 }
 
+/**
+ * Queue consumer trigger — invokes this Worker when messages arrive on the
+ * named queue.
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
+ */
+export interface QueueConsumerTrigger extends QueueConsumerTriggerOptions {
+	type: "queue";
+}
+
 interface ScheduledTriggerOptions {
 	/**
 	 * "Cron" definitions to trigger a Worker's "scheduled" function.
@@ -49,25 +68,6 @@ interface ScheduledTriggerOptions {
 	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
 	 */
 	schedules: string[];
-}
-
-/**
- * Fetch trigger — a route that your Worker should be published to.
- *
- * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
- */
-export interface FetchTrigger extends FetchTriggerOptions {
-	type: "fetch";
-}
-
-/**
- * Queue consumer trigger — invokes this Worker when messages arrive on the
- * named queue.
- *
- * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
- */
-export interface QueueConsumerTrigger extends QueueConsumerTriggerOptions {
-	type: "queue";
 }
 
 /**

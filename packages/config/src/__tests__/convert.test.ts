@@ -598,17 +598,6 @@ describe("convertToWranglerConfig", () => {
 				},
 			]);
 		});
-
-		it("emits workflow exports as workflows bindings", ({ expect }) => {
-			const result = convertToWranglerConfig({
-				exports: {
-					MyWF: { type: "workflow", name: "my-workflow" },
-				},
-			});
-			expect(result.workflows).toEqual([
-				{ binding: "MyWF", name: "my-workflow", class_name: "MyWF" },
-			]);
-		});
 	});
 
 	describe("triggers", () => {

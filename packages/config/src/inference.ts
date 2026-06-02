@@ -228,7 +228,7 @@ export type InferExportsByType<
  * Returns named module exports that are not declared as type `"durable-object"` or `"workflow"` in `exports`.
  * Excludes `"default"` since `exportName` should only be provided for named exports.
  */
-export type InferEntrypointExports<TUnwrappedConfig> = Exclude<
+export type InferWorkerEntrypointExports<TUnwrappedConfig> = Exclude<
 	keyof InferMainModule<TUnwrappedConfig> & string,
 	| "default"
 	| InferExportsByType<TUnwrappedConfig, "durable-object" | "workflow">

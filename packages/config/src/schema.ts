@@ -177,9 +177,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({ type: z.literal("worker-loader") }),
-	// TODO: workflow bindings are temporarily disabled. Workflows are defined
-	// via the top-level `exports` field, which produces a same-Worker
-	// `workflows` entry in the Wrangler config.
+	// TODO: support Workflows
 	// z.strictObject({
 	// 	type: z.literal("workflow"),
 	// 	workerName: z.string(),
@@ -300,11 +298,12 @@ const ExportSchema = z.discriminatedUnion("type", [
 		type: z.literal("durable-object"),
 		storage: z.enum(["sqlite", "legacy-kv"]),
 	}),
-	z.strictObject({
-		type: z.literal("workflow"),
-		name: z.string(),
-		limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	}),
+	// TODO: support Workflows
+	// z.strictObject({
+	// 	type: z.literal("workflow"),
+	// 	name: z.string(),
+	// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
+	// }),
 ]);
 
 const LimitsSchema = z.strictObject({
@@ -424,7 +423,7 @@ export const ConfigSchema = z.strictObject({
 	complianceRegion: z.enum(["public", "fedramp-high"]).optional(),
 	firstPartyWorker: z.boolean().optional(),
 	unsafe: UnsafeSchema.optional(),
-	// previews: TODO
+	// TODO: support previews
 	env: EnvSchema,
 	exports: z.record(z.string(), ExportSchema).optional(),
 });

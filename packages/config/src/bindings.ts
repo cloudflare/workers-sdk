@@ -1,8 +1,7 @@
 import type { Json } from "./utils";
 import type { PipelineRecord } from "cloudflare:pipelines";
 
-// JSDoc on `*BindingOptions` interfaces is derived from
-// `packages/workers-utils/src/config/environment.ts` — keep both in sync.
+// JSDoc is derived from `packages/workers-utils/src/config/environment.ts` — keep both in sync.
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BINDING TYPES
@@ -236,7 +235,7 @@ export interface ImagesBinding extends ImagesBindingOptions {
  * Inline JSON value made available to the Worker on `env` under the
  * binding name.
  */
-export interface JsonBinding<T extends Json> {
+export interface JsonBinding<T extends Json = Json> {
 	type: "json";
 	/** The JSON value made available to the Worker. */
 	value: T;
@@ -453,7 +452,7 @@ export interface StreamBinding extends StreamBindingOptions {
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
  */
-export interface TextBinding<T extends string> {
+export interface TextBinding<T extends string = string> {
 	type: "text";
 	/** The string value made available to the Worker. */
 	value: T;
