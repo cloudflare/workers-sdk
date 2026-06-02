@@ -158,7 +158,7 @@ export async function getMigrationsPath({
 }: {
 	projectPath: string;
 	migrationsDir: string;
-	migrationsDirRaw?: string;
+	migrationsDirRaw: string | undefined;
 	createIfMissing: boolean;
 	configPath: string | undefined;
 }): Promise<string> {
