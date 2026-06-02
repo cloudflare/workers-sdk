@@ -797,8 +797,10 @@ function InstanceDetailView() {
 						<div className="px-6 py-5">
 							<p className="text-sm text-kumo-subtle">
 								This will rerun the instance from{" "}
-								<span className="font-medium text-kumo-default">
-									{restartFromStepTarget?.name ?? ""}
+							This will rerun the instance from{" "}
+							<span className="font-medium text-kumo-default">
+								{getStepDisplayName(restartFromStepTarget?.name)}
+							</span>
 								</span>
 								. Saved state for this step and later steps will be cleared,
 								while earlier completed steps are kept.
