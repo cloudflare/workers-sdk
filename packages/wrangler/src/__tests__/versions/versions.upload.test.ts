@@ -1146,6 +1146,20 @@ describe("versions upload", () => {
 			).rejects.toThrow(/Workers Sites does not support uploading versions/);
 		});
 
+		test("should error when --script points to a directory", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("assets", { recursive: true });
+			fs.writeFileSync("assets/index.html", "<h1>Hello</h1>");
+
+			await expect(runWrangler("versions upload --script ./assets")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+				  wrangler versions upload ./assets
+				  wrangler versions upload --assets ./assets]
+			`);
+		});
+
 		test("should error when no name is provided", async ({ expect }) => {
 			writeWorkerSource();
 			await expect(
@@ -1752,6 +1766,45 @@ describe("versions upload", () => {
 			fs.writeFileSync("public/index.html", "<h1>Hello</h1>");
 
 			await runWrangler("versions upload --assets public");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.assets).toBeDefined();
+			expect(metadata.assets?.jwt).toEqual("test-assets-jwt");
+		});
+
+		test("should upload assets when directory is passed as positional path", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Mock asset upload session
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/assets-upload-session`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "test-assets-jwt", buckets: [[]] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+			fs.mkdirSync("public", { recursive: true });
+			fs.writeFileSync("public/index.html", "<h1>Hello</h1>");
+
+			await runWrangler("versions upload public");
 
 			const metadata = await getMetadata(requests[requests.length - 1]);
 			expect(metadata.assets).toBeDefined();

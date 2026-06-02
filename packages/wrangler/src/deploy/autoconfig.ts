@@ -234,7 +234,8 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 				`\nSimply run ${chalk.bold("`wrangler deploy`")} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
 			);
 		} else {
-			const pathPart = (args.path ?? args.script) ? `${args.path ?? args.script} ` : "";
+			const pathPart =
+				(args.path ?? args.script) ? `${args.path ?? args.script} ` : "";
 			const flagParts = [
 				args.name ? `--name ${args.name}` : "",
 				effectiveCompatDate

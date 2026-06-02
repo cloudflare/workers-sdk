@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { statSync } from "node:fs";
 import path from "node:path";
 import {
 	getTodaysCompatDate,
@@ -37,21 +36,6 @@ export const deployCommand = createCommand({
 	positionalArgs: ["path"],
 	args: {
 		...sharedDeployVersionsArgs,
-		path: {
-			describe:
-				"The path to an entry point for your Worker or a directory of static assets",
-			type: "string",
-		},
-		// Override the shared `script` definition to hide it for `wrangler deploy` —
-		// the `path` positional replaces it. `--script` still works as a named option
-		// for backwards compatibility but only accepts file paths (not directories).
-		script: {
-			describe: "The path to an entry point for your Worker",
-			type: "string",
-			requiresArg: true,
-			hidden: true,
-			deprecated: true,
-		},
 		triggers: {
 			describe: "cron schedules to attach",
 			alias: ["schedule", "schedules"],
@@ -129,46 +113,7 @@ export const deployCommand = createCommand({
 		printMetricsBanner: true,
 	},
 	validateArgs(args) {
-		validateDeployVersionsArgs(args);
-
-		// Resolve the `path` positional into `script` (file) or `assets` (directory).
-		// This must happen before config is read because config resolution uses
-		// `args.script` to locate the wrangler config file relative to the entry point.
-		if (args.path) {
-			try {
-				const stats = statSync(args.path);
-				if (stats.isDirectory()) {
-					if (!args.assets) {
-						args.assets = args.path;
-					}
-				} else {
-					args.script = args.path;
-				}
-			} catch {
-				// If stat fails, assume it's a script path and let downstream handle the error
-				args.script = args.path;
-			}
-		}
-
-		// Validate that --script points to a file, not a directory
-		if (args.script && !args.path) {
-			try {
-				const stats = statSync(args.script);
-				if (stats.isDirectory()) {
-					throw new UserError(
-						`The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:\n  wrangler deploy ${args.script}\n  wrangler deploy --assets ${args.script}`,
-						{
-							telemetryMessage: "deploy script option pointed to directory",
-						}
-					);
-				}
-			} catch (e) {
-				if (e instanceof UserError) {
-					throw e;
-				}
-				// stat failure is fine, downstream will handle missing files
-			}
-		}
+		validateDeployVersionsArgs(args, "deploy");
 	},
 	async handler(args, { config }) {
 		// --- Step 0. Auto-config --- //
