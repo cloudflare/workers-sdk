@@ -143,6 +143,37 @@ describe("migrate", () => {
 
 			expect(fs.existsSync("./migrations")).toBe(false);
 		});
+
+		it('`create` succeeds with `migrations_dir: "."` (project root as the migrations dir)', async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{
+							binding: "DATABASE",
+							database_name: "db",
+							database_id: "xxxx",
+							migrations_dir: ".",
+						},
+					],
+				},
+				"./wrangler.jsonc"
+			);
+
+			// `list`/`apply` discover top-level `.sql` files when migrations_dir
+			// is ".", so `create` must be able to write one. The default pattern
+			// normalizes to "*.sql"; the new file "0001_test.sql" at the project
+			// root matches it, so create should succeed (not reject as "does not
+			// match the configured migrations_pattern").
+			await runWrangler("d1 migrations create db test");
+
+			expect(fs.existsSync("0001_test.sql")).toBe(true);
+			expect(fs.readFileSync("0001_test.sql", "utf8")).toContain(
+				"Migration number: 0001"
+			);
+		});
 	});
 
 	describe("apply", () => {

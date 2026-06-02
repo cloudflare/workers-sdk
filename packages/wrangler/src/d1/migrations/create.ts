@@ -8,6 +8,7 @@ import { getDatabaseInfoFromConfig } from "../utils";
 import {
 	getMigrationsPath,
 	getNextMigrationNumber,
+	normalizeRelativePath,
 	resolveMigrationsConfig,
 } from "./helpers";
 
@@ -86,7 +87,15 @@ export const d1MigrationsCreateCommand = createCommand({
 		const matcher = new Minimatch(migrationsConfig.migrationsPattern, {
 			dot: false,
 		});
-		const proposedPath = `${migrationsConfig.migrationsDir}/${newMigrationName}`;
+		// Normalize so the path is shaped like the entries
+		// `getMigrationNames` matches against `migrationsPattern` — both
+		// `migrationsDir` and `migrationsPattern` are normalized, so the
+		// proposed path must be too. In particular, for `migrations_dir: "."`
+		// this strips the leading `./` (which would otherwise split into a
+		// separate segment and never match the normalized pattern).
+		const proposedPath = normalizeRelativePath(
+			`${migrationsConfig.migrationsDir}/${newMigrationName}`
+		);
 		if (!matcher.match(proposedPath)) {
 			throw new UserError(
 				dedent`
