@@ -271,6 +271,8 @@ export const versionsUploadCommand = createCommand({
 	},
 });
 
+export type VersionsUploadArgs = (typeof versionsUploadCommand)["args"];
+
 export default async function versionsUpload(props: Props): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
