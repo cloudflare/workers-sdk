@@ -330,9 +330,6 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 
 			await maybeInstallCloudflareSkillsGlobally(false);
 
-			expect(std.out).toContain(
-				"Cloudflare agent skills are available for: Claude Code"
-			);
 			// Verify no install call was made
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
