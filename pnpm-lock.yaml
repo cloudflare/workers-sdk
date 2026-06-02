@@ -3895,9 +3895,6 @@ importers:
       '@vitest/ui':
         specifier: catalog:default
         version: 4.1.0(vitest@4.1.0)
-      ci-info:
-        specifier: catalog:default
-        version: 4.4.0
       cloudflare:
         specifier: ^5.2.0
         version: 5.2.0(encoding@0.1.13)
