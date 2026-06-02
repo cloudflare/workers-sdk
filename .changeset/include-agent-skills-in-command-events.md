@@ -2,7 +2,8 @@
 "wrangler": patch
 ---
 
-Include `currentAgentSkillsInstalled` in command telemetry events
+Include agent skill installation status in all telemetry events
 
 
-The `currentAgentSkillsInstalled` property was only included in adhoc telemetry events (e.g. `autoconfig_process_started`) but was missing from command events (`wrangler command started`, `wrangler command completed`, `wrangler command errored`). It is now included in all telemetry events.
+The agent skill installation status is now consistently included in all telemetry events, not just a subset of them.
+
