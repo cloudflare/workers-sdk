@@ -217,7 +217,12 @@ describe("migrate", () => {
 			);
 
 			await expect(
-				runWrangler("d1 migrations create db foo\\\\bar")
+				runWrangler(
+					// windows shells need less escaping of backslashes than unix ones?
+					process.platform === "win32"
+						? "d1 migrations create db foo\\bar"
+						: "d1 migrations create db foo\\\\bar"
+				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				// snapshot process seems to replace \ with / for consistency across platforms
 				`[Error: The migration name "foo//bar" contains a path separator ("/" or "/"). Please remove this and try again.]`
