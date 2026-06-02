@@ -1,10 +1,10 @@
+import { triggersDeploy } from "@cloudflare/deploy-helpers";
 import { createCommand, createNamespace } from "../core/create-command";
 import { resolveTriggersInput } from "../deployment-bundle/resolve-config-args";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { requireAuth } from "../user";
-import triggersDeploy from "./deploy";
 
 export const triggersNamespace = createNamespace({
 	metadata: {
@@ -61,7 +61,7 @@ export const triggersDeployCommand = createCommand({
 	behaviour: {
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
-	async handler(args, { config }) {
+	async handler(args, { config, ...ctx }) {
 		metrics.sendMetricsEvent("deploy worker triggers", {
 			sendMetrics: config.send_metrics,
 		});
@@ -72,15 +72,19 @@ export const triggersDeployCommand = createCommand({
 			return;
 		}
 
+		// Any validation that requires auth goes below
 		const accountId = await requireAuth(config);
 		await ensureQueuesExistByConfig(config);
 
-		await triggersDeploy({
-			config,
-			accountId,
-			env: args.env,
-			firstDeploy: false,
-			...props,
-		});
+		await triggersDeploy(
+			{
+				config,
+				accountId,
+				env: args.env,
+				firstDeploy: false,
+				...props,
+			},
+			ctx
+		);
 	},
 });

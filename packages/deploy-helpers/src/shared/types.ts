@@ -132,3 +132,19 @@ export type VersionsUploadProps = SharedDeployVersionsProps & {
 	/** CLI-only (--preview-alias), or auto-generated from CI branch name. */
 	previewAlias: string | undefined;
 };
+
+export interface TriggerDeployment {
+	targets: string[];
+	error?: Error;
+}
+
+export type TriggerProps = {
+	config: Config;
+	accountId: string;
+	scriptName: string;
+	env: string | undefined;
+	crons: string[] | undefined;
+	routes: Route[];
+	useServiceEnvironments: boolean;
+	firstDeploy: boolean;
+};

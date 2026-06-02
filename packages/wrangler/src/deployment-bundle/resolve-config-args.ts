@@ -54,7 +54,7 @@ function resolveCronTriggers(args: { triggers?: string[] }, config: Config) {
 	return args.triggers ?? config.triggers?.crons;
 }
 
-const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
+export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 	const invalidRoutes: Record<string, string[]> = {};
 	const mountedAssetRoutes: string[] = [];
 

@@ -1788,6 +1788,10 @@ importers:
         version: 17.7.2
 
   packages/deploy-helpers:
+    dependencies:
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
     devDependencies:
       '@cloudflare/containers-shared':
         specifier: workspace:*
@@ -1795,9 +1799,6 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
-      '@cloudflare/workers-utils':
-        specifier: workspace:*
-        version: link:../workers-utils
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17

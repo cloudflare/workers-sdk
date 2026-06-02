@@ -120,3 +120,8 @@ export type { Logger } from "./logger";
 
 export { retryOnAPIFailure } from "./retry";
 export { formatTime } from "./format-time";
+export {
+	getHostFromRoute,
+	getHostFromUrl,
+	getZoneFromRoute,
+} from "./route-utils";

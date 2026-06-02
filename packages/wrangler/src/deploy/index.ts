@@ -115,7 +115,7 @@ export const deployCommand = createCommand({
 	validateArgs(args) {
 		validateDeployVersionsArgs(args);
 	},
-	async handler(args, { config }) {
+	async handler(args, { config, ...ctx }) {
 		// --- Step 0. Auto-config --- //
 		const autoConfigResult = await maybeRunAutoConfig(args, config);
 		if (autoConfigResult.aborted) {
@@ -194,49 +194,52 @@ export const deployCommand = createCommand({
 		const projectRoot =
 			config.userConfigPath && path.dirname(config.userConfigPath);
 
-		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
-			config,
-			accountId,
-			name,
-			rules: getRules(config),
-			entry,
-			env: args.env,
-			compatibilityDate: args.latest
-				? getTodaysCompatDate()
-				: args.compatibilityDate,
-			compatibilityFlags: args.compatibilityFlags,
-			vars: cliVars,
-			defines: cliDefines,
-			alias: cliAlias,
-			triggers: args.triggers,
-			jsxFactory: args.jsxFactory,
-			jsxFragment: args.jsxFragment,
-			tsconfig: args.tsconfig,
-			routes: args.routes,
-			domains: args.domains,
-			assetsOptions,
-			legacyAssetPaths: siteAssetPaths,
-			useServiceEnvironments: useServiceEnvironments(config),
-			minify: args.minify,
-			isWorkersSite: Boolean(args.site || config.site),
-			outDir: args.outdir,
-			outFile: args.outfile,
-			dryRun: args.dryRun,
-			metafile: args.metafile,
-			noBundle: !(args.bundle ?? !config.no_bundle),
-			keepVars: args.keepVars,
-			logpush: args.logpush,
-			uploadSourceMaps: args.uploadSourceMaps,
-			oldAssetTtl: args.oldAssetTtl,
-			projectRoot,
-			dispatchNamespace: args.dispatchNamespace,
-			experimentalAutoCreate: args.experimentalAutoCreate,
-			containersRollout: args.containersRollout,
-			strict: args.strict,
-			tag: args.tag,
-			message: args.message,
-			secretsFile: args.secretsFile,
-		});
+		const { sourceMapSize, versionId, workerTag, targets } = await deploy(
+			{
+				config,
+				accountId,
+				name,
+				rules: getRules(config),
+				entry,
+				env: args.env,
+				compatibilityDate: args.latest
+					? getTodaysCompatDate()
+					: args.compatibilityDate,
+				compatibilityFlags: args.compatibilityFlags,
+				vars: cliVars,
+				defines: cliDefines,
+				alias: cliAlias,
+				triggers: args.triggers,
+				jsxFactory: args.jsxFactory,
+				jsxFragment: args.jsxFragment,
+				tsconfig: args.tsconfig,
+				routes: args.routes,
+				domains: args.domains,
+				assetsOptions,
+				legacyAssetPaths: siteAssetPaths,
+				useServiceEnvironments: useServiceEnvironments(config),
+				minify: args.minify,
+				isWorkersSite: Boolean(args.site || config.site),
+				outDir: args.outdir,
+				outFile: args.outfile,
+				dryRun: args.dryRun,
+				metafile: args.metafile,
+				noBundle: !(args.bundle ?? !config.no_bundle),
+				keepVars: args.keepVars,
+				logpush: args.logpush,
+				uploadSourceMaps: args.uploadSourceMaps,
+				oldAssetTtl: args.oldAssetTtl,
+				projectRoot,
+				dispatchNamespace: args.dispatchNamespace,
+				experimentalAutoCreate: args.experimentalAutoCreate,
+				containersRollout: args.containersRollout,
+				strict: args.strict,
+				tag: args.tag,
+				message: args.message,
+				secretsFile: args.secretsFile,
+			},
+			ctx
+		);
 
 		writeOutput({
 			type: "deploy",

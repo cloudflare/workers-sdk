@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
+import { getWorkersDevSubdomain } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	getTodaysCompatDate,
@@ -24,6 +25,7 @@ import {
 } from "../assets";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
+import { createDeployHelpersContext } from "../core/deploy-helpers-context";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -60,7 +62,6 @@ import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { writeOutput } from "../output";
 import { ensureQueuesExistByConfig } from "../queues/client";
-import { getWorkersDevSubdomain } from "../routes";
 import { parseBulkInputToObject } from "../secret";
 import {
 	getSourceMappedString,
@@ -821,9 +822,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}>(config, `${workerUrl}/subdomain`);
 
 		if (previews_available_on_subdomain) {
-			const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-				configPath: config.configPath,
-			});
+			const userSubdomain = await getWorkersDevSubdomain(
+				config,
+				accountId,
+				createDeployHelpersContext(),
+				{
+					configPath: config.configPath,
+				}
+			);
 			const shortVersion = versionId.slice(0, 8);
 			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
