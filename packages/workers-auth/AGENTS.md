@@ -32,7 +32,7 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `generateAuthUrl?` / `generateRandomState?` — test overrides for deterministic
   snapshot tests (defaults pull from `./generate-auth-url` / `./generate-random-state`)
 
-Wrangler wires this once in `packages/wrangler/src/user/oauth.ts`.
+Wrangler wires this once in `packages/wrangler/src/user/user.ts`.
 
 ## CONVENTIONS
 
