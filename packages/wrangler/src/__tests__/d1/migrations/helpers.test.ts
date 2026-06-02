@@ -281,81 +281,46 @@ describe("getMigrationNames", () => {
 		expect(result).toEqual(["very/deeply/nested/0001_init.sql"]);
 	});
 
-	it("works when migrations_dir and migrations_pattern are absolute paths", ({
+	it("works end-to-end when migrations_dir / migrations_pattern are absolute Windows-style backslash paths", ({
 		expect,
 	}) => {
-		// `runInTempDir()` makes cwd = a fresh temp dir; we can use that as
-		// the absolute path. This is what would happen if a user wrote
-		// `migrations_dir: "/abs/path/to/migrations"` (or, on Windows,
-		// `"C:\\path\\to\\migrations"`) in their config. `path.resolve`
-		// produces the native form for the current OS.
-		const absMigrationsDir = path.resolve("migrations");
-		// On Windows the user might write backslashes in their config. Pass
-		// it through to make sure backslashes don't break anything. On
-		// POSIX, the backslash-flip in normalizeRelativePath is a no-op.
-		const absMigrationsDirAsConfigValue = absMigrationsDir;
+		// `runInTempDir()` makes cwd a fresh temp dir; `path.resolve` gives its
+		// absolute path. We convert the separators to backslashes to mirror a
+		// user who wrote a Windows-style absolute path
+		// (`C:\Users\…\migrations`) in their config.
+		// On Mac/Linux it's \Users\…\migrations and on Windows it's C:\…\migrations.
+		// This happens not to break anything on mac.
+		const absMigrationsDir = path.resolve("migrations").replace(/\//g, "\\");
 		seedProjectFiles([
 			"migrations/0001_init/migration.sql",
 			"migrations/0002_users/migration.sql",
 		]);
 
-		const result = getMigrationNames(
-			migrationsConfig({
-				// projectPath is ignored because both dir and pattern are
-				// absolute — pass something irrelevant to prove it.
-				projectPath: "/some/other/place",
-				migrationsDir: absMigrationsDirAsConfigValue,
-				// Build the pattern with forward slashes regardless of OS so
-				// minimatch can parse it (minimatch globs always use `/`).
-				migrationsPattern: `${absMigrationsDir.replace(/\\/g, "/")}/*/migration.sql`,
-			})
-		);
+		// Build the config the way production does — through
+		// resolveMigrationsConfig — so the backslashes are normalized before
+		// getMigrationNames walks the tree.
+		const config = resolveMigrationsConfig({
+			databaseInfo: {
+				uuid: "x",
+				binding: "DB",
+				migrationsTableName: "d1_migrations",
+				migrationsDirRaw: absMigrationsDir,
+				migrationsPattern: `${absMigrationsDir}\\*\\migration.sql`,
+			},
+			// An unrelated project dir: because migrations_dir is absolute, it
+			// is ignored when resolving the walk root.
+			configPath: path.join("some", "other", "place", "wrangler.jsonc"),
+		});
 
-		// Returned names are still relative to migrations_dir — so the
-		// d1_migrations table records the same name regardless of whether
-		// the user wrote an absolute or relative path in their config.
+		const result = getMigrationNames(config);
+
+		// Names are recorded relative to migrations_dir, so the d1_migrations
+		// table records the same name regardless of how the user wrote the path.
 		expect(result).toEqual([
 			"0001_init/migration.sql",
 			"0002_users/migration.sql",
 		]);
 	});
-
-	// Windows-only: prove that a config value with literal backslashes
-	// (`C:\Users\Dave\proj\migrations`) works end-to-end. This only runs
-	// under Windows CI because `path.resolve` on POSIX would treat such a
-	// string as a relative path and produce nonsense — and a user on POSIX
-	// would never write a Windows path in their config anyway.
-	it.skipIf(process.platform !== "win32")(
-		"works on Windows when migrations_dir / migrations_pattern use backslashes",
-		({ expect }) => {
-			// e.g. C:\Users\runner\AppData\Local\Temp\wrangler-tests…\migrations
-			const absMigrationsDir = path.resolve("migrations");
-			// Sanity: this branch only matters when path.resolve returned a
-			// backslash-bearing path.
-			expect(absMigrationsDir).toMatch(/\\/);
-
-			seedProjectFiles([
-				"migrations/0001_init/migration.sql",
-				"migrations/0002_users/migration.sql",
-			]);
-
-			const result = getMigrationNames(
-				migrationsConfig({
-					projectPath: "C:\\some\\other\\place",
-					migrationsDir: absMigrationsDir,
-					// Patterns are still globs (always forward-slash for minimatch),
-					// so we flip the dir's backslashes here. The normalizer in
-					// helpers.ts does the same conversion when comparing the two.
-					migrationsPattern: `${absMigrationsDir.replace(/\\/g, "/")}/*/migration.sql`,
-				})
-			);
-
-			expect(result).toEqual([
-				"0001_init/migration.sql",
-				"0002_users/migration.sql",
-			]);
-		}
-	);
 });
 
 describe("maybeLogHint", () => {
@@ -785,6 +750,35 @@ describe("resolveMigrationsConfig", () => {
 				configPath: "wrangler.jsonc",
 			})
 		).not.toThrow();
+	});
+
+	it("normalises a Windows drive-letter path with backslashes", ({
+		expect,
+	}) => {
+		// A user on Windows may write an absolute, backslashed path in their
+		// config. `normalizeRelativePath` flips the backslashes to forward
+		// slashes (on every platform, so this test isn't Windows-gated) and
+		// the drive letter survives, so the dir and pattern line up and the
+		// resolved config carries forward-slash paths. This is the layer where
+		// backslashes are handled — `getMigrationNames` only ever sees the
+		// normalized result. (The end-to-end Windows walk is covered by the
+		// Windows-only test in the `getMigrationNames` block.)
+		const result = resolveMigrationsConfig({
+			databaseInfo: databaseInfo({
+				migrationsDirRaw: "C:\\some\\windows\\path",
+				migrationsPattern: "C:\\some\\windows\\path\\*\\migration.sql",
+			}),
+			configPath: "wrangler.jsonc",
+		});
+		expect(result.migrationsDir).toBe("C:/some/windows/path");
+		expect(result.migrationsPattern).toBe(
+			"C:/some/windows/path/*/migration.sql"
+		);
+		// The pattern stays under the dir, so getMigrationNames can strip the
+		// prefix to walk relative to it.
+		expect(
+			result.migrationsPattern.startsWith(`${result.migrationsDir}/`)
+		).toBe(true);
 	});
 
 	it('accepts `migrations_dir: "."` with a pattern rooted at the project root', ({
