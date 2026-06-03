@@ -258,23 +258,7 @@ const SINGLETON_BINDING_TYPES = new Set([
 	"web-search",
 ]);
 
-/**
- * Formats a list of items as natural language.
- * - 1 item: "ai"
- * - 2 items: "ai and assets"
- * - 3+ items: "ai, assets, and browser"
- */
-function formatList(items: string[]): string {
-	if (items.length === 1) {
-		return `${items[0]}`;
-	}
-
-	if (items.length === 2) {
-		return `${items[0]} and ${items[1]}`;
-	}
-
-	return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
-}
+const listFormatter = new Intl.ListFormat("en-US");
 
 const EnvSchema = z
 	.record(z.string(), BindingSchema)
@@ -297,7 +281,7 @@ const EnvSchema = z
 		if (duplicates.size > 0) {
 			ctx.addIssue({
 				code: "custom",
-				message: `${formatList([...duplicates].sort())} bindings can only be defined once`,
+				message: `${listFormatter.format([...duplicates].sort())} bindings can only be defined once`,
 			});
 		}
 	})
