@@ -22,7 +22,7 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import { maybeRunAutoConfig, promptForMissingConfig } from "./autoconfig";
+import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import deploy from "./deploy";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 
@@ -33,7 +33,7 @@ export const deployCommand = createCommand({
 		status: "stable",
 		category: "Compute & AI",
 	},
-	positionalArgs: ["script"],
+	positionalArgs: ["path"],
 	args: {
 		...sharedDeployVersionsArgs,
 		triggers: {
@@ -113,7 +113,7 @@ export const deployCommand = createCommand({
 		printMetricsBanner: true,
 	},
 	validateArgs(args) {
-		validateDeployVersionsArgs(args);
+		validateDeployVersionsArgs(args, "deploy");
 	},
 	async handler(args, { config, ...ctx }) {
 		// --- Step 0. Auto-config --- //
@@ -124,7 +124,7 @@ export const deployCommand = createCommand({
 		config = autoConfigResult.config;
 
 		// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
-		args = await promptForMissingConfig(args, config);
+		args = await promptForMissingDeployConfig(args, config);
 
 		// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
 		// As a precaution we're gating the feature under the autoconfig flag for the time being.

@@ -19,7 +19,7 @@ describe("versions --help", () => {
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
 			  wrangler versions list                      List the 10 most recent Versions of your Worker
-			  wrangler versions upload [script]           Uploads your Worker code and config as a new Version
+			  wrangler versions upload [path]             Uploads your Worker code and config as a new Version
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
@@ -52,7 +52,7 @@ describe("versions subhelp", () => {
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
 			  wrangler versions list                      List the 10 most recent Versions of your Worker
-			  wrangler versions upload [script]           Uploads your Worker code and config as a new Version
+			  wrangler versions upload [path]             Uploads your Worker code and config as a new Version
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 

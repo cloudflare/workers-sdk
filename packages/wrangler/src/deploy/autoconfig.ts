@@ -1,4 +1,4 @@
-import { statSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
@@ -23,6 +23,7 @@ import type { ReadConfigCommandArgs } from "../config";
 type AutoConfigArgs = ReadConfigCommandArgs & {
 	experimentalAutoconfig: boolean | undefined;
 	assets: string | undefined;
+	path: string | undefined;
 	dryRun: boolean | undefined;
 	latest: boolean | undefined;
 	compatibilityDate: string | undefined;
@@ -44,6 +45,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		// If there is a positional parameter, an assets directory specified via --assets, or an
 		// explicit --config path then we don't want to run autoconfig since we assume that the
 		// user knows what they are doing and that they are specifying what needs to be deployed
+		!args.path &&
 		!args.script &&
 		!args.assets &&
 		!args.config;
@@ -125,81 +127,6 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	}
 
 	return { config, aborted: false };
-}
-
-/**
- * Interactively prompts for missing deploy configuration. Handles two phases:
- *
- * 1. If the positional `script` arg is a directory and no config file exists,
- *    asks whether the user intends to deploy static assets.
- * 2. Prompts for missing name and compatibility date, and optionally writes a
- *    new wrangler.jsonc config file.
- *
- * No-op in non-interactive / CI environments.
- */
-export async function promptForMissingConfig<Args extends AutoConfigArgs>(
-	args: Args,
-	config: { configPath?: string; compatibility_date?: string; name?: string }
-): Promise<Args> {
-	// Phase 1: detect `wrangler deploy <directory>` and offer to treat it as assets
-	let scriptIsDirectory = false;
-	if (!config.configPath && args.script) {
-		try {
-			const stats = statSync(args.script);
-			if (stats.isDirectory()) {
-				scriptIsDirectory = true;
-				args = await promptForMissingAssetFlag(args.script, args);
-			}
-		} catch (error) {
-			// If this is our UserError, re-throw it
-			if (error instanceof UserError) {
-				throw error;
-			}
-			// If stat fails, let the original flow handle the error
-		}
-	}
-
-	// Phase 2: prompt for name / compat-date / config file.
-	// Skip when the user was offered an assets deployment and declined (script is still a directory) —
-	// getEntry will produce the appropriate error about the directory entry point.
-	if (scriptIsDirectory && !args.assets) {
-		return args;
-	}
-
-	return promptForMissingDeployConfig(args, config);
-}
-
-/**
- * Handles the case where a user provides a directory as a positional argument,
- * probably intending to deploy static assets. e.g. `wrangler deploy ./public`.
- * If the user confirms, sets `args.assets` and clears `args.script`.
- */
-export async function promptForMissingAssetFlag<Args extends AutoConfigArgs>(
-	assetDirectory: string,
-	args: Args
-): Promise<Args> {
-	if (isNonInteractiveOrCI()) {
-		return args;
-	}
-
-	// Ask if user intended to deploy assets only
-	logger.log("");
-	if (!args.assets) {
-		const deployAssets = await confirm(
-			"It looks like you are trying to deploy a directory of static assets only. Is this correct?",
-			{ defaultValue: true }
-		);
-		logger.log("");
-		if (deployAssets) {
-			args.assets = assetDirectory;
-			args.script = undefined;
-		} else {
-			// let the usual error handling path kick in
-			return args;
-		}
-	}
-
-	return args;
 }
 
 /**
@@ -293,13 +220,17 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 				`\nSimply run ${chalk.bold("`wrangler deploy`")} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
 			);
 		} else {
-			const scriptPart = args.script ? `${args.script} ` : "";
+			const pathPart =
+				(args.path ?? args.script) ? `${args.path ?? args.script} ` : "";
 			const flagParts = [
 				args.name ? `--name ${args.name}` : "",
 				effectiveCompatDate
 					? `--compatibility-date ${effectiveCompatDate}`
 					: "",
-				args.assets ? `--assets ${args.assets}` : "",
+				// Only omit --assets when the positional path already covers the assets directory
+				args.assets && args.assets !== args.path
+					? `--assets ${args.assets}`
+					: "",
 				...(args.compatibilityFlags?.length
 					? [`--compatibility-flags ${args.compatibilityFlags.join(" ")}`]
 					: []),
@@ -308,7 +239,7 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 				.join(" ");
 			logger.log(
 				`\nYou should run ${chalk.bold(
-					`wrangler deploy ${scriptPart}${flagParts}`
+					`wrangler deploy ${pathPart}${flagParts}`
 				)} next time to deploy this Worker without going through this flow again.`
 			);
 		}

@@ -56,7 +56,7 @@ describe("wrangler", () => {
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
 				  wrangler containers             📦 Manage Containers
 				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
@@ -137,7 +137,7 @@ describe("wrangler", () => {
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
 				  wrangler containers             📦 Manage Containers
 				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
