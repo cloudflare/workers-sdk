@@ -322,7 +322,7 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			});
 		});
 
-		test("logs info and sends skills_install_skipped when TTY is false", async ({
+		test("sends skills_install_skipped without logging anything in the terminal when TTY is false", async ({
 			expect,
 		}) => {
 			setIsTTY(false);
@@ -330,9 +330,9 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 
 			await maybeInstallCloudflareSkillsGlobally(false);
 
-			expect(std.out).toContain(
-				"Cloudflare agent skills are available for: Claude Code"
-			);
+			// Nothing has been logged
+			expect(std.out).toEqual("");
+
 			// Verify no install call was made
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
