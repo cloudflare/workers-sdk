@@ -98,7 +98,7 @@ interface BindingTypeMap<TBinding> {
 	"analytics-engine-dataset": AnalyticsEngineDataset;
 	artifacts: Artifacts;
 	assets: Fetcher;
-	browser: Fetcher;
+	browser: BrowserRun;
 	d1: D1Database;
 	"dispatch-namespace": DispatchNamespace;
 	"durable-object": DurableObjectNamespace;
