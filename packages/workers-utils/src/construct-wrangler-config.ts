@@ -1,5 +1,4 @@
 import { getTodaysCompatDate } from "./compatibility-date";
-import { ENVIRONMENT_TAG_PREFIX, SERVICE_TAG_PREFIX } from "./constants";
 import { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 import type { RawConfig } from "./config";
 import type {
@@ -48,7 +47,14 @@ interface APIWorkerConfig {
 	};
 }
 
-function convertWorkerToWranglerConfig(config: APIWorkerConfig): RawConfig {
+/**
+ * Given information about a Worker,
+ * construct a Wrangler config file for the application.
+ *
+ * @param config - The Worker configuration sourced from the Cloudflare API
+ * @returns A Wrangler-compatible raw config object
+ */
+export function constructWranglerConfig(config: APIWorkerConfig): RawConfig {
 	const mappedBindings = mapWorkerMetadataBindings(config.bindings);
 
 	const durableObjectClassNames = config.bindings
@@ -108,52 +114,4 @@ function convertWorkerToWranglerConfig(config: APIWorkerConfig): RawConfig {
 		observability: config.observability,
 		...mappedBindings,
 	};
-}
-
-/**
- * Given the information of multiple Workers (representing different environments),
- * construct a Wrangler config file for the application.
- */
-export function constructWranglerConfig(
-	workerOrWorkers: APIWorkerConfig | APIWorkerConfig[]
-): RawConfig {
-	let workers: APIWorkerConfig[];
-	if (Array.isArray(workerOrWorkers)) {
-		workers = workerOrWorkers;
-	} else {
-		workers = [workerOrWorkers];
-	}
-
-	const topLevelEnv = workers.find(
-		(w) => !w.tags?.some((t) => t.startsWith(ENVIRONMENT_TAG_PREFIX))
-	);
-	const workerName = topLevelEnv?.name ?? workers[0].name;
-	const entrypoint = topLevelEnv?.entrypoint ?? workers[0].entrypoint;
-	let combinedConfig: RawConfig;
-	if (topLevelEnv) {
-		combinedConfig = convertWorkerToWranglerConfig(topLevelEnv);
-	} else {
-		// Make a synthetic top level environment
-		combinedConfig = {
-			name: workerName,
-			main: entrypoint,
-		};
-	}
-
-	for (const env of workers) {
-		const serviceTag = env.tags?.find(
-			(t) => t === `${SERVICE_TAG_PREFIX}${workerName}`
-		);
-		const envTag = env.tags?.find((t) => t.startsWith(ENVIRONMENT_TAG_PREFIX));
-		if (
-			serviceTag !== `${SERVICE_TAG_PREFIX}${workerName}` ||
-			envTag === undefined
-		) {
-			continue;
-		}
-		const [_, envName] = envTag.split("=");
-		combinedConfig.env ??= {};
-		combinedConfig.env[envName] = convertWorkerToWranglerConfig(env);
-	}
-	return combinedConfig;
 }
