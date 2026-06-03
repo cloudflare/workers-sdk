@@ -1156,7 +1156,7 @@ function validateRoutes(
 		if (customDomainRoutes && customDomainRoutes.length > 0) {
 			const customDomains = customDomainRoutes.map((r) => r.pattern).join(", ");
 			diagnostics.warnings.push(
-				`The "env.${envName}" environment inherits the top-level \`routes\` configuration, which includes the custom domain(s): ${customDomains}. Deploying this environment will reassign these custom domains away from the top-level Worker. Add \`"routes": []\` to "env.${envName}" to prevent inheritance.`
+				`The "env.${envName}" environment inherits the top-level \`routes\` configuration, which includes the custom domain(s): ${customDomains}. Deploying this environment will reassign these custom domains away from the top-level Worker. Add \`"routes": []\` to "env.${envName}" to prevent inheritance, or copy the route configuration from the top level to hide this warning.`
 			);
 		}
 	}

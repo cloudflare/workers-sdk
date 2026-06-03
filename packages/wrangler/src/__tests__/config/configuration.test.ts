@@ -274,6 +274,7 @@ describe("readConfig() custom_domain inheritance warning", () => {
 		expect(std.warn).toContain(`api.example.com`);
 		expect(std.warn).toContain(`Add \`"routes": []\``);
 		expect(std.warn).toContain(`prevent`);
+		expect(std.warn).toContain(`copy the route configuration from the top level`);
 	});
 
 	it("should not warn when the env explicitly overrides routes", async ({
