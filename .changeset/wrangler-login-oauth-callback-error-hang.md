@@ -1,5 +1,6 @@
 ---
 "wrangler": patch
+"@cloudflare/workers-auth": patch
 ---
 
 Show the actual OAuth error instead of hanging when `wrangler login` is rejected by the OAuth provider (for example with `invalid_scope`).
