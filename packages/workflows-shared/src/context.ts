@@ -106,7 +106,7 @@ function normalizeForStorage(
 	// Typed-array views (TypedArray + DataView): copy bytes into a tight
 	// backing buffer, preserving the original view constructor.
 	if (ArrayBuffer.isView(value)) {
-		return compactView(value);
+		return buildCompactView(value);
 	}
 
 	if (Array.isArray(value)) {
@@ -154,55 +154,13 @@ function normalizeForStorage(
 	return value;
 }
 
-function compactView(view: ArrayBufferView): ArrayBufferView {
-	const tightBuffer = new Uint8Array(
-		view.buffer,
+type ViewCtor = new (buffer: ArrayBufferLike) => ArrayBufferView;
+function buildCompactView(view: ArrayBufferView): ArrayBufferView {
+	const tightBuffer = view.buffer.slice(
 		view.byteOffset,
-		view.byteLength
-	).slice().buffer;
-
-	// Preserve the view type so the persisted shape matches the live shape.
-	// Subclasses we don't recognise (Node `Buffer`, custom user types) fall
-	// through to `Uint8Array` — bytes are intact but the precise constructor
-	// is downgraded. Acceptable trade-off; the bug being fixed is buffer
-	// bloat, not type fidelity for exotic subclasses.
-	if (view instanceof Uint8Array) {
-		return new Uint8Array(tightBuffer);
-	}
-	if (view instanceof Uint8ClampedArray) {
-		return new Uint8ClampedArray(tightBuffer);
-	}
-	if (view instanceof Int8Array) {
-		return new Int8Array(tightBuffer);
-	}
-	if (view instanceof Uint16Array) {
-		return new Uint16Array(tightBuffer);
-	}
-	if (view instanceof Int16Array) {
-		return new Int16Array(tightBuffer);
-	}
-	if (view instanceof Uint32Array) {
-		return new Uint32Array(tightBuffer);
-	}
-	if (view instanceof Int32Array) {
-		return new Int32Array(tightBuffer);
-	}
-	if (view instanceof Float32Array) {
-		return new Float32Array(tightBuffer);
-	}
-	if (view instanceof Float64Array) {
-		return new Float64Array(tightBuffer);
-	}
-	if (view instanceof BigUint64Array) {
-		return new BigUint64Array(tightBuffer);
-	}
-	if (view instanceof BigInt64Array) {
-		return new BigInt64Array(tightBuffer);
-	}
-	if (view instanceof DataView) {
-		return new DataView(tightBuffer);
-	}
-	return new Uint8Array(tightBuffer);
+		view.byteOffset + view.byteLength
+	);
+	return new (view.constructor as ViewCtor)(tightBuffer);
 }
 
 export interface UserErrorField {
