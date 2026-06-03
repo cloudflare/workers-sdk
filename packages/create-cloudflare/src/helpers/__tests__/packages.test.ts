@@ -1,7 +1,6 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { writePnpmWorkspaceYaml } from "helpers/packages";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import whichPMRuns from "which-pm-runs";
+import { beforeEach, describe, test, vi } from "vitest";
 import { mockPackageManager } from "./mocks";
 
 vi.mock("node:fs");
@@ -14,26 +13,26 @@ describe("writePnpmWorkspaceYaml", () => {
 		vi.mocked(writeFileSync).mockImplementation(() => undefined);
 	});
 
-	test("does nothing for non-pnpm package managers", () => {
+	test("does nothing for non-pnpm package managers", ({ expect }) => {
 		mockPackageManager("npm");
 		writePnpmWorkspaceYaml("/some/project");
 		expect(writeFileSync).not.toHaveBeenCalled();
 	});
 
-	test("does nothing for pnpm < 9", () => {
+	test("does nothing for pnpm < 9", ({ expect }) => {
 		mockPackageManager("pnpm", "8.15.0");
 		writePnpmWorkspaceYaml("/some/project");
 		expect(writeFileSync).not.toHaveBeenCalled();
 	});
 
-	test("does nothing if pnpm-workspace.yaml already exists", () => {
+	test("does nothing if pnpm-workspace.yaml already exists", ({ expect }) => {
 		mockPackageManager("pnpm", "10.0.0");
 		vi.mocked(existsSync).mockReturnValue(true);
 		writePnpmWorkspaceYaml("/some/project");
 		expect(writeFileSync).not.toHaveBeenCalled();
 	});
 
-	test("writes onlyBuiltDependencies list for pnpm 9.x", () => {
+	test("writes onlyBuiltDependencies list for pnpm 9.x", ({ expect }) => {
 		mockPackageManager("pnpm", "9.5.0");
 		writePnpmWorkspaceYaml("/some/project");
 		expect(writeFileSync).toHaveBeenCalledOnce();
@@ -46,7 +45,7 @@ describe("writePnpmWorkspaceYaml", () => {
 		expect(written).not.toContain("allowBuilds:");
 	});
 
-	test("writes allowBuilds map with boolean values for pnpm 10+", () => {
+	test("writes allowBuilds map with boolean values for pnpm 10+", ({ expect }) => {
 		mockPackageManager("pnpm", "10.0.0");
 		writePnpmWorkspaceYaml("/some/project");
 		expect(writeFileSync).toHaveBeenCalledOnce();
@@ -61,7 +60,7 @@ describe("writePnpmWorkspaceYaml", () => {
 		expect(written).not.toContain("onlyBuiltDependencies:");
 	});
 
-	test("writes to the correct path", () => {
+	test("writes to the correct path", ({ expect }) => {
 		mockPackageManager("pnpm", "10.1.0");
 		writePnpmWorkspaceYaml("/my/project");
 		expect(writeFileSync).toHaveBeenCalledWith(
