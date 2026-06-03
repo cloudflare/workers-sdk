@@ -52,9 +52,12 @@ export type Event = {
 	type: string;
 };
 
-export type ResolvedStepConfig = Required<WorkflowStepConfig>;
+export type ResolvedStepConfig = Required<
+	Pick<WorkflowStepConfig, "retries" | "timeout">
+> &
+	Pick<WorkflowStepConfig, "sensitive">;
 
-const defaultConfig: Required<WorkflowStepConfig> = {
+const defaultConfig: ResolvedStepConfig = {
 	retries: {
 		limit: 5,
 		delay: 1000,

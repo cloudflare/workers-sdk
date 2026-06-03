@@ -315,14 +315,38 @@ export class BundlerController extends Controller {
 		});
 
 		if (config.assets?.directory) {
-			this.#assetsWatcher = watch(config.assets.directory, {
+			const assetsDir = config.assets.directory;
+			const watcher = watch(assetsDir, {
 				persistent: true,
 				ignoreInitial: true,
-			}).on("all", async (eventName, filePath) => {
-				const message = getAssetChangeMessage(eventName, filePath);
-				logger.debug(`🌀 ${message}...`);
-				debouncedRefreshBundle();
-			});
+			})
+				.on("all", async (eventName, filePath) => {
+					const message = getAssetChangeMessage(eventName, filePath);
+					logger.debug(`🌀 ${message}...`);
+					debouncedRefreshBundle();
+				})
+				.on("error", (err) => {
+					const errnoError = err as NodeJS.ErrnoException;
+					if (errnoError.code === "EMFILE") {
+						logger.warn(
+							`Assets directory watcher hit a platform limit and has been disabled.\n` +
+								`Hot-reloading will not reflect changes to files in ${assetsDir}.\n` +
+								`This can occur when watching very large assets directory trees.\n` +
+								`To work around this, reduce the number of subdirectories under ${assetsDir} by flattening or restructuring the assets directory.`
+						);
+					} else {
+						logger.warn(
+							`Assets directory watcher encountered an error and has been disabled.\n` +
+								`Hot-reloading will not reflect changes to files in ${assetsDir}.\n` +
+								`Watcher error: ${err.message}`
+						);
+					}
+					void watcher.close();
+					if (this.#assetsWatcher === watcher) {
+						this.#assetsWatcher = undefined;
+					}
+				});
+			this.#assetsWatcher = watcher;
 		}
 	}
 

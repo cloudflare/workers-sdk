@@ -24,8 +24,12 @@ vi.unmock("../agents-skills-install");
 vi.mock("am-i-vibing");
 
 // Mock rosie-skills to avoid real network/WASM calls.
-const mockRosieInstall = vi.fn();
-const mockRosieAgents = vi.fn();
+// vi.hoisted() is required because vi.mock() factories are hoisted above normal
+// variable declarations, so plain `const` variables would still be in the TDZ.
+const { mockRosieInstall, mockRosieAgents } = vi.hoisted(() => ({
+	mockRosieInstall: vi.fn(),
+	mockRosieAgents: vi.fn(),
+}));
 vi.mock("rosie-skills", () => ({
 	install: mockRosieInstall,
 	agents: mockRosieAgents,
@@ -318,7 +322,7 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			});
 		});
 
-		test("logs info and sends skills_install_skipped when TTY is false", async ({
+		test("sends skills_install_skipped without logging anything in the terminal when TTY is false", async ({
 			expect,
 		}) => {
 			setIsTTY(false);
@@ -326,9 +330,9 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 
 			await maybeInstallCloudflareSkillsGlobally(false);
 
-			expect(std.out).toContain(
-				"Cloudflare agent skills are available for: Claude Code"
-			);
+			// Nothing has been logged
+			expect(std.out).toEqual("");
+
 			// Verify no install call was made
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(

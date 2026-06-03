@@ -1,5 +1,43 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.16.12
+
+### Patch Changes
+
+- [#14152](https://github.com/cloudflare/workers-sdk/pull/14152) [`3d7992e`](https://github.com/cloudflare/workers-sdk/commit/3d7992e6ac69c6572449b1c1f74354cfdeeaa1ad) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix module resolution failing when project path contains spaces
+
+  When a project lived under a directory with spaces (e.g. `/Users/me/Documents/Master CMS/project`), the vitest pool would fail with `No such module "threads.js"` before any test executed. The module fallback service now uses the `rawSpecifier` from workerd's fallback request to correctly decode `file://` URLs, avoiding the double-encoding of spaces (`%20` → `%2520`) that occurred when workerd resolved these URLs as relative paths.
+
+- [#14105](https://github.com/cloudflare/workers-sdk/pull/14105) [`337e912`](https://github.com/cloudflare/workers-sdk/commit/337e9124cfa461a99ce7ffb800dcc341f7b2f026) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove trailing periods from URLs in terminal output
+
+  URLs printed to the terminal with a sentence-ending period (e.g. `https://example.com/path.`) would include the period when clicked in some terminal emulators, causing 404 errors. This removes trailing periods from all URLs displayed in CLI output across wrangler, miniflare, vitest-pool-workers, and workers-utils.
+
+- [#14112](https://github.com/cloudflare/workers-sdk/pull/14112) [`3a746ac`](https://github.com/cloudflare/workers-sdk/commit/3a746ac56a40b805e38f26ef5328e44917b543e6) Thanks [@penalosa](https://github.com/penalosa)! - Pin non-bundled runtime dependencies to exact versions
+
+  Dependencies that are not bundled into a package's published output are installed directly into consumers' dependency trees, so they are now pinned to exact versions instead of semver ranges. This closes a supply-chain gap where an unpinned external dependency could resolve to a compromised upstream release on a fresh install. A new `pnpm check:pinned-deps` lint enforces this for all published packages (and for the shared pnpm catalog) going forward.
+
+- [#14061](https://github.com/cloudflare/workers-sdk/pull/14061) [`da8e306`](https://github.com/cloudflare/workers-sdk/commit/da8e306153843c6f42508bf7fe7737e91ac67241) Thanks [@Vardiak](https://github.com/Vardiak)! - Preserve Durable Object WebSocket handler invocation order
+
+  Durable Object WebSocket events could begin executing out of order in the Workers Vitest integration when several events arrived while the test wrapper was resolving user code.
+
+  Handler invocation now preserves arrival order while still allowing asynchronous handler completion to run concurrently.
+
+- Updated dependencies [[`b210c5e`](https://github.com/cloudflare/workers-sdk/commit/b210c5eefdb22d83f937728527bc0091f9308070), [`aec1bb8`](https://github.com/cloudflare/workers-sdk/commit/aec1bb826aaba963bfc1ee96ba7359e284162bfa), [`e06cbb7`](https://github.com/cloudflare/workers-sdk/commit/e06cbb722b3552b622e48c53d4f7d910162ce943), [`9a26191`](https://github.com/cloudflare/workers-sdk/commit/9a26191e1a8c4246f7999bdb3637a176b9166207), [`5565823`](https://github.com/cloudflare/workers-sdk/commit/5565823854b60937fcad7162425fcd9fad64558a), [`4ef790b`](https://github.com/cloudflare/workers-sdk/commit/4ef790b3ee22389db29c64f49564aac28022e40e), [`890fca7`](https://github.com/cloudflare/workers-sdk/commit/890fca7d63a6efab5a58e4829cf02bf731eab197), [`6fc9777`](https://github.com/cloudflare/workers-sdk/commit/6fc97775d688ab6b65c40cad1c403bb04346d77e), [`337e912`](https://github.com/cloudflare/workers-sdk/commit/337e9124cfa461a99ce7ffb800dcc341f7b2f026), [`8e7b74f`](https://github.com/cloudflare/workers-sdk/commit/8e7b74fa837dc7b67c4affab1d4b28876ce4d3f2), [`e86489a`](https://github.com/cloudflare/workers-sdk/commit/e86489a5743ff9bad7bcb5b444ad3d952d5b0164), [`42288d4`](https://github.com/cloudflare/workers-sdk/commit/42288d4886b7b7a516f5bcca6924a706201aa1e8), [`65b5f9e`](https://github.com/cloudflare/workers-sdk/commit/65b5f9e1855651c2df2c1bdfc8930141e36413d5), [`3a746ac`](https://github.com/cloudflare/workers-sdk/commit/3a746ac56a40b805e38f26ef5328e44917b543e6), [`64ef9fd`](https://github.com/cloudflare/workers-sdk/commit/64ef9fd46eeb590813bb8cbc61b58c407452362e), [`94b29f7`](https://github.com/cloudflare/workers-sdk/commit/94b29f76c6c6543c2504fb9d1967f15a3bad530d)]:
+  - wrangler@4.97.0
+  - miniflare@4.20260601.0
+
+## 0.16.11
+
+### Patch Changes
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix Durable Object RPC dispatch for constructors that return proxies
+
+  Durable Object RPC methods mediated by a returned `Proxy` are now resolved through that proxy after validating prototype exposure. This allows wrappers that bind methods to the underlying instance to use private fields and methods in Vitest, while matching workerd's rejection of constructor-assigned RPC overrides.
+
+- Updated dependencies [[`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`cbb39bd`](https://github.com/cloudflare/workers-sdk/commit/cbb39bdc90d4b93f9a9b4355124570d838eb1a2d), [`cbb39bd`](https://github.com/cloudflare/workers-sdk/commit/cbb39bdc90d4b93f9a9b4355124570d838eb1a2d), [`408432a`](https://github.com/cloudflare/workers-sdk/commit/408432aed493563cb13b9a9c241806112ea606bc), [`1103c07`](https://github.com/cloudflare/workers-sdk/commit/1103c07646569208c4b0a623d123395643e022d5), [`7bb5c7a`](https://github.com/cloudflare/workers-sdk/commit/7bb5c7a78a22320283549a86a29a76146f7252a4), [`5b5cbd3`](https://github.com/cloudflare/workers-sdk/commit/5b5cbd3e98e5713ecf5ee0afa975a1f2ee38b2cc), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`97d7d81`](https://github.com/cloudflare/workers-sdk/commit/97d7d81e0a757e30e7700b183133249e2136a280), [`c647ccc`](https://github.com/cloudflare/workers-sdk/commit/c647ccc7873c2cada60ba5f4ce7c8dfeb4801acc), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`b64b7e4`](https://github.com/cloudflare/workers-sdk/commit/b64b7e4499b940efd74cdc09215620ee0b34a290), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e4c8fd9`](https://github.com/cloudflare/workers-sdk/commit/e4c8fd97a63230fccffe3d2c62185f5350fc5351), [`2dffeeb`](https://github.com/cloudflare/workers-sdk/commit/2dffeeb92d4f0b8a4c2c91f9cca7959d1970638a), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`4c0da7b`](https://github.com/cloudflare/workers-sdk/commit/4c0da7be0d47e6127066dc6edd8a59e536e7c24c), [`972d13d`](https://github.com/cloudflare/workers-sdk/commit/972d13d7054586bb9e3c11e888179d3df7753338), [`13cbadb`](https://github.com/cloudflare/workers-sdk/commit/13cbadbd7ecdd2b7c56b850df1209960a71f7d54), [`59e43e4`](https://github.com/cloudflare/workers-sdk/commit/59e43e4e066f9d201fc6c1e3b31cb232853e83d7)]:
+  - miniflare@4.20260529.0
+  - wrangler@4.96.0
+
 ## 0.16.10
 
 ### Patch Changes

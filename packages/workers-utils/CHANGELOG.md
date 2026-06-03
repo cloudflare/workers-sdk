@@ -1,5 +1,95 @@
 # @cloudflare/workers-utils
 
+## 0.22.1
+
+### Patch Changes
+
+- [#14084](https://github.com/cloudflare/workers-sdk/pull/14084) [`e86489a`](https://github.com/cloudflare/workers-sdk/commit/e86489a5743ff9bad7bcb5b444ad3d952d5b0164) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Correctly map JSON bindings in `mapWorkerMetadataBindings`
+
+  The `json` binding case used literal keys `name` and `json` instead of a computed property key `[binding.name]: binding.json`. This caused JSON bindings to always produce `{ name: "<binding_name>", json: <value> }` instead of `{ <binding_name>: <value> }`, clobbering any existing vars with those keys. This is now consistent with how `plain_text` bindings are mapped.
+
+- [#14105](https://github.com/cloudflare/workers-sdk/pull/14105) [`337e912`](https://github.com/cloudflare/workers-sdk/commit/337e9124cfa461a99ce7ffb800dcc341f7b2f026) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove trailing periods from URLs in terminal output
+
+  URLs printed to the terminal with a sentence-ending period (e.g. `https://example.com/path.`) would include the period when clicked in some terminal emulators, causing 404 errors. This removes trailing periods from all URLs displayed in CLI output across wrangler, miniflare, vitest-pool-workers, and workers-utils.
+
+- [#14063](https://github.com/cloudflare/workers-sdk/pull/14063) [`65b5f9e`](https://github.com/cloudflare/workers-sdk/commit/65b5f9e1855651c2df2c1bdfc8930141e36413d5) Thanks [@emily-shen](https://github.com/emily-shen)! - Move fetch helpers into `@cloudflare/workers-utils`
+
+  Shared Cloudflare API fetch helper types and plumbing now live in `@cloudflare/workers-utils` so Wrangler and other clients can use the same implementation.
+
+## 0.22.0
+
+### Minor Changes
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Add support for the new `web_search` binding kind.
+
+  Cloudflare Web Search is a managed, zero-setup web discovery primitive for agents and Workers. Declare the binding as a single object in `wrangler.jsonc`:
+
+  ```jsonc
+  {
+    "web_search": { "binding": "WEBSEARCH" }
+  }
+  ```
+
+  There is exactly one shared web corpus, so there is no namespace, instance, or other field to specify -- only the variable name. The binding exposes a single `search()` method that returns URLs and catalog metadata for a query. Web Search is discovery-only -- to read a result's content the caller invokes the global `fetch()` API against the result's `url`.
+
+  The binding is **always remote** in local development: Miniflare proxies to the production Web Search service via the remote-bindings transport. Adds the `websearch.run` OAuth scope to `wrangler login`.
+
+  Also adds a `wrangler websearch search` command for running ad-hoc queries from the CLI:
+
+  ```sh
+  npx wrangler websearch search "cloudflare workers"
+  npx wrangler websearch search "cloudflare workers" --limit 5
+  npx wrangler websearch search "cloudflare workers" --json
+  ```
+
+  `--limit` is optional (defaults to 10, capped at 20). `--json` prints the raw response; without it the results render as a pretty table.
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Rename `pipeline` field to `stream` in pipeline bindings configuration
+
+  The `pipeline` field inside `pipelines` bindings has been renamed to `stream` to align with the updated API wire format. The old `pipeline` field is still accepted but deprecated and will emit a warning.
+
+  Before:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "pipeline": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+  After:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "stream": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- [#14111](https://github.com/cloudflare/workers-sdk/pull/14111) [`599b27a`](https://github.com/cloudflare/workers-sdk/commit/599b27aafb9bc432524a35eb4e5a414de21bef41) Thanks [@nikitacano](https://github.com/nikitacano)! - Fix cloudflared SHA256 checksum mismatch on macOS
+
+  The update service (`update.argotunnel.com`) returns a checksum for the extracted binary, not the `.tgz` tarball. We were computing the SHA256 of the tarball itself, which always mismatched on macOS where cloudflared is distributed as a compressed archive.
+
+  This aligns with cloudflared's own auto-updater (`cmd/cloudflared/updater/workers_update.go`), which decompresses the tarball first, then checksums the resulting binary. We now do the same: extract, then verify.
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Filter compatibility date fallback warning when no update is available
+
+  The compatibility date warning from workerd (e.g., "The latest compatibility date supported by the installed Cloudflare Workers Runtime is...") is now only shown when a newer version of `@cloudflare/vite-plugin` is available. This matches the behavior in Wrangler and reduces noise when the user is already on the latest version.
+
+  The update-check logic has been extracted to `@cloudflare/workers-utils` so it can be shared across packages.
+
 ## 0.21.1
 
 ### Patch Changes

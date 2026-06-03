@@ -32,7 +32,10 @@
 		"prefer-const": "error",
 		"prefer-rest-params": "error",
 		"prefer-spread": "error",
-		"@typescript-eslint/consistent-type-imports": ["error"],
+		"@typescript-eslint/consistent-type-imports": [
+			"error",
+			{ "disallowTypeAnnotations": false },
+		],
 		"no-var": "error",
 		"no-regex-spaces": "error",
 		"@typescript-eslint/no-empty-object-type": "error",

@@ -41,7 +41,7 @@ export async function isEmailReplyable(
 		if ((email.references.match(/@/g)?.length ?? 0) >= 100) {
 			await log(
 				red(
-					'The incoming email\'s "References" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/.'
+					'The incoming email\'s "References" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/'
 				)
 			);
 			return false;

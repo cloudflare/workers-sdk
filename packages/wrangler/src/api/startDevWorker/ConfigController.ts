@@ -409,7 +409,7 @@ async function resolveConfig(
 		logger.once.warn(
 			"Setting upstream-protocol to http is not currently supported for remote mode.\n" +
 				"If this is required in your project, please add your use case to the following issue:\n" +
-				"https://github.com/cloudflare/workers-sdk/issues/583."
+				"https://github.com/cloudflare/workers-sdk/issues/583"
 		);
 	}
 

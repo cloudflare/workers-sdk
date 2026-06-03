@@ -8,8 +8,7 @@ import {
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
-import type { StartDevWorkerInput } from "../../src/api";
-import type { StartRemoteProxySessionOptions } from "../../src/cli";
+import type { RemoteProxySession, StartDevWorkerInput } from "../../src/api";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type {
 	Awaitable,
@@ -62,11 +61,11 @@ interface TestCase {
  */
 interface TestConfig {
 	/**
-	 * These bindings and options objects will be merged with all the other test cases to create a single remote proxy session for all tests.
+	 * The bindings to install on the shared remote proxy session via
+	 * `updateBindings` when this test case runs.
 	 */
 	remoteProxySessionConfig: {
 		bindings: StartDevWorkerInput["bindings"];
-		options?: StartRemoteProxySessionOptions;
 	};
 	/**
 	 * The Miniflare config (mostly bindings) for this test case. This will be merged with all other test cases to create a single Miniflare instance for all tests.
@@ -483,6 +482,34 @@ const testCases: TestCase[] = [
 		getExpectFetchToMatch: (expect) => [expect.stringContaining(`"id"`)],
 	},
 	{
+		name: "Agent Memory",
+		scriptPath: "agent-memory.js",
+		setup: async (helper) => {
+			const namespace = generateResourceName("agent-memory", 8);
+			await helper.run(`wrangler agent-memory namespace create ${namespace}`);
+
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						MEMORY: {
+							type: "agent_memory",
+							namespace,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					agentMemory: {
+						MEMORY: {
+							namespace,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
+		},
+		getExpectFetchToMatch: (expect) => [expect.stringContaining("profile")],
+	},
+	{
 		name: "Pipelines",
 		scriptPath: "pipelines.js",
 		setup: () => ({
@@ -642,29 +669,25 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 	describe("Remote bindings (remote proxy session enabled)", () => {
 		let helper: WranglerE2ETestHelper;
 		let mf: MiniflareType;
+		let remoteProxySession: RemoteProxySession;
+		const testConfigByTestCase = new Map<TestCase, TestConfig>();
 		const onTeardown = useTeardown({ timeout: testCases.length * 15_000 });
 		const activeTestCases = testCases.filter((testCase) => !testCase.skip);
 
 		beforeAll(async () => {
 			helper = new WranglerE2ETestHelper(onTeardown);
 			await helper.seed(path.resolve(__dirname, "./workers"));
-			const testConfigs: TestConfig[] = [];
 			for (const testCase of activeTestCases) {
-				testConfigs.push(await testCase.setup(helper));
+				testConfigByTestCase.set(testCase, await testCase.setup(helper));
 			}
-			const remoteProxySession = await startRemoteProxySession(
-				Object.assign(
-					{},
-					...testConfigs.map(
-						(config) => config.remoteProxySessionConfig.bindings
-					)
-				),
-				Object.assign(
-					{},
-					...testConfigs.map(
-						(config) => config.remoteProxySessionConfig.options
-					)
-				)
+			const testConfigs = [...testConfigByTestCase.values()];
+
+			// Boot the proxy session with only the first test case's bindings.
+			// Each `it` will then call `updateBindings` to swap in its own bindings.
+			// This makes the boot smaller (and faster) and pinpoints any per-binding
+			// issue to the test that owns that binding rather than the beforeAll hook.
+			remoteProxySession = await startRemoteProxySession(
+				testConfigs[0].remoteProxySessionConfig.bindings
 			);
 
 			const testCaseModules = activeTestCases.map((testCase) => ({
@@ -672,6 +695,10 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				path: path.resolve(helper.tmpPath, testCase.scriptPath),
 			}));
 
+			// The proxy connection string is stable across `updateBindings` calls,
+			// so we can build the Miniflare instance once with all bindings merged.
+			// Each test script only touches its own binding (selected via the
+			// `x-test-module` header), so unused entries are dormant.
 			const miniflareConfig: MiniflareOptions = Object.assign(
 				{
 					compatibilityDate: "2025-09-06",
@@ -692,114 +719,101 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 		}, activeTestCases.length * 15_000);
 
 		for (const testCase of activeTestCases) {
-			it("should work for " + testCase.name, async ({ expect }) => {
-				const resp = await mf.dispatchFetch("http://example.com/", {
-					headers: { "x-test-module": testCase.scriptPath },
-				});
-				const respText = await resp.text();
-				testCase.getExpectFetchToMatch(expect).forEach((match) => {
-					expect(respText).toEqual(match);
-				});
-			});
+			it(
+				"should work for " + testCase.name,
+				async ({ expect }) => {
+					const testConfig = testConfigByTestCase.get(testCase);
+					assert(testConfig, `Missing test config for ${testCase.name}`);
+					await remoteProxySession.updateBindings(
+						testConfig.remoteProxySessionConfig.bindings
+					);
+					const resp = await mf.dispatchFetch("http://example.com/", {
+						headers: { "x-test-module": testCase.scriptPath },
+					});
+					const respText = await resp.text();
+					testCase.getExpectFetchToMatch(expect).forEach((match) => {
+						expect(respText).toEqual(match);
+					});
+				},
+				45_000
+			);
 		}
 	});
 
-	// Separate describe block for mTLS since it needs a custom remote-binding proxy worker deployment
+	// Separate describe block for mTLS because it needs a custom remote-binding
+	// proxy worker pre-deployed with `mtls_certificates` configured. That can't
+	// be done via runtime `bindings:` alone, so it can't share the standard
+	// proxy worker the other test cases use.
 	describe("Remote bindings (mtls)", () => {
-		const mtlsTestCase: TestCase = {
-			name: "mTLS",
-			scriptPath: "mtls.js",
-			setup: async (helper) => {
-				const certificateId = await helper.cert();
-				// We need to override the standard Wrangler remote proxy worker with one that has the mTLS configured.
-				const workerName = generateResourceName();
-				const wranglerConfig: RawConfig = {
-					name: workerName,
-					main: "worker.js",
-					mtls_certificates: [
-						{
-							certificate_id: certificateId,
-							binding: "MTLS",
-						},
-					],
-				};
-				await helper.seed({
-					"worker.js": dedent /* javascript */ `
-						export default {
-							fetch(request) { return new Response("Hello"); }
-						}
-					`,
-					"pre-deployment-wrangler.json": JSON.stringify(
-						wranglerConfig,
-						null,
-						2
-					),
-				});
-				// Deploy the custom remote proxy worker for this tests
-				await helper.worker({
-					workerName,
-					configPath: "pre-deployment-wrangler.json",
-				});
-				return {
-					remoteProxySessionConfig: {
-						bindings: {
-							MTLS: {
-								type: "mtls_certificate",
-								certificate_id: certificateId,
-							},
-						},
-						// This is the big difference that means we cannot use the standard remote proxy worker
-						// This worker needs to have mTLS certificates configured.
-						options: {
-							workerName,
-						},
-					},
-					miniflareConfig: (connection) => ({
-						mtlsCertificates: {
-							MTLS: {
-								certificate_id: certificateId,
-								remoteProxyConnectionString: connection,
-							},
-						},
-					}),
-				};
-			},
-			getExpectFetchToMatch: (expect) => [
-				// Note: in this test we are making sure that TLS negotiation does work by checking that we get an SSL certificate error
-				expect.stringMatching(/The SSL certificate error/),
-				expect.not.stringMatching(/No required SSL certificate was sent/),
-			],
-		};
-
 		it("should work for mTLS bindings", async ({ expect }) => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed(path.resolve(__dirname, "./workers"));
-			const testConfig = await mtlsTestCase.setup(helper);
+
+			const certificateId = await helper.cert();
+			// Override the standard Wrangler remote proxy worker with one that has
+			// the mTLS certificate configured at the wrangler-config level.
+			const workerName = generateResourceName();
+			const wranglerConfig: RawConfig = {
+				name: workerName,
+				main: "worker.js",
+				mtls_certificates: [
+					{
+						certificate_id: certificateId,
+						binding: "MTLS",
+					},
+				],
+			};
+			await helper.seed({
+				"worker.js": dedent /* javascript */ `
+					export default {
+						fetch(request) { return new Response("Hello"); }
+					}
+				`,
+				"pre-deployment-wrangler.json": JSON.stringify(wranglerConfig, null, 2),
+			});
+			// Deploy the custom remote proxy worker for this test
+			await helper.worker({
+				workerName,
+				configPath: "pre-deployment-wrangler.json",
+			});
+
 			const remoteProxySession = await startRemoteProxySession(
-				testConfig.remoteProxySessionConfig.bindings,
-				testConfig.remoteProxySessionConfig.options
-			);
-			const miniflareConfig: MiniflareOptions = Object.assign(
 				{
-					compatibilityDate: "2025-09-06",
-					modules: [
-						{
-							type: "ESModule",
-							path: path.resolve(helper.tmpPath, mtlsTestCase.scriptPath),
-						},
-					],
-					modulesRoot: helper.tmpPath,
-				} satisfies MiniflareOptions,
-				testConfig.miniflareConfig(
-					remoteProxySession.remoteProxyConnectionString
-				)
+					MTLS: {
+						type: "mtls_certificate",
+						certificate_id: certificateId,
+					},
+				},
+				{ workerName }
 			);
-			const mf = new Miniflare(miniflareConfig);
+
+			const mf = new Miniflare({
+				compatibilityDate: "2025-09-06",
+				modules: [
+					{
+						type: "ESModule",
+						path: path.resolve(helper.tmpPath, "mtls.js"),
+					},
+				],
+				modulesRoot: helper.tmpPath,
+				mtlsCertificates: {
+					MTLS: {
+						certificate_id: certificateId,
+						remoteProxyConnectionString:
+							remoteProxySession.remoteProxyConnectionString,
+					},
+				},
+			});
 			const resp = await mf.dispatchFetch("http://example.com/");
 			const respText = await resp.text();
-			mtlsTestCase.getExpectFetchToMatch(expect).forEach((match) => {
-				expect(respText).toEqual(match);
-			});
+			// Check that TLS negotiation does work by checking that we get an SSL
+			// certificate error rather than a "no certificate sent" error.
+			expect(respText).toEqual(
+				expect.stringMatching(/The SSL certificate error/)
+			);
+			expect(respText).toEqual(
+				expect.not.stringMatching(/No required SSL certificate was sent/)
+			);
 		});
 	});
 }

@@ -22,7 +22,7 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import { maybeRunAutoConfig, promptForMissingConfig } from "./autoconfig";
+import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import deploy from "./deploy";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 
@@ -33,7 +33,7 @@ export const deployCommand = createCommand({
 		status: "stable",
 		category: "Compute & AI",
 	},
-	positionalArgs: ["script"],
+	positionalArgs: ["path"],
 	args: {
 		...sharedDeployVersionsArgs,
 		triggers: {
@@ -113,9 +113,9 @@ export const deployCommand = createCommand({
 		printMetricsBanner: true,
 	},
 	validateArgs(args) {
-		validateDeployVersionsArgs(args);
+		validateDeployVersionsArgs(args, "deploy");
 	},
-	async handler(args, { config }) {
+	async handler(args, { config, ...ctx }) {
 		// --- Step 0. Auto-config --- //
 		const autoConfigResult = await maybeRunAutoConfig(args, config);
 		if (autoConfigResult.aborted) {
@@ -124,7 +124,7 @@ export const deployCommand = createCommand({
 		config = autoConfigResult.config;
 
 		// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
-		args = await promptForMissingConfig(args, config);
+		args = await promptForMissingDeployConfig(args, config);
 
 		// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
 		// As a precaution we're gating the feature under the autoconfig flag for the time being.
@@ -194,49 +194,52 @@ export const deployCommand = createCommand({
 		const projectRoot =
 			config.userConfigPath && path.dirname(config.userConfigPath);
 
-		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
-			config,
-			accountId,
-			name,
-			rules: getRules(config),
-			entry,
-			env: args.env,
-			compatibilityDate: args.latest
-				? getTodaysCompatDate()
-				: args.compatibilityDate,
-			compatibilityFlags: args.compatibilityFlags,
-			vars: cliVars,
-			defines: cliDefines,
-			alias: cliAlias,
-			triggers: args.triggers,
-			jsxFactory: args.jsxFactory,
-			jsxFragment: args.jsxFragment,
-			tsconfig: args.tsconfig,
-			routes: args.routes,
-			domains: args.domains,
-			assetsOptions,
-			legacyAssetPaths: siteAssetPaths,
-			useServiceEnvironments: useServiceEnvironments(config),
-			minify: args.minify,
-			isWorkersSite: Boolean(args.site || config.site),
-			outDir: args.outdir,
-			outFile: args.outfile,
-			dryRun: args.dryRun,
-			metafile: args.metafile,
-			noBundle: !(args.bundle ?? !config.no_bundle),
-			keepVars: args.keepVars,
-			logpush: args.logpush,
-			uploadSourceMaps: args.uploadSourceMaps,
-			oldAssetTtl: args.oldAssetTtl,
-			projectRoot,
-			dispatchNamespace: args.dispatchNamespace,
-			experimentalAutoCreate: args.experimentalAutoCreate,
-			containersRollout: args.containersRollout,
-			strict: args.strict,
-			tag: args.tag,
-			message: args.message,
-			secretsFile: args.secretsFile,
-		});
+		const { sourceMapSize, versionId, workerTag, targets } = await deploy(
+			{
+				config,
+				accountId,
+				name,
+				rules: getRules(config),
+				entry,
+				env: args.env,
+				compatibilityDate: args.latest
+					? getTodaysCompatDate()
+					: args.compatibilityDate,
+				compatibilityFlags: args.compatibilityFlags,
+				vars: cliVars,
+				defines: cliDefines,
+				alias: cliAlias,
+				triggers: args.triggers,
+				jsxFactory: args.jsxFactory,
+				jsxFragment: args.jsxFragment,
+				tsconfig: args.tsconfig,
+				routes: args.routes,
+				domains: args.domains,
+				assetsOptions,
+				legacyAssetPaths: siteAssetPaths,
+				useServiceEnvironments: useServiceEnvironments(config),
+				minify: args.minify,
+				isWorkersSite: Boolean(args.site || config.site),
+				outDir: args.outdir,
+				outFile: args.outfile,
+				dryRun: args.dryRun,
+				metafile: args.metafile,
+				noBundle: !(args.bundle ?? !config.no_bundle),
+				keepVars: args.keepVars,
+				logpush: args.logpush,
+				uploadSourceMaps: args.uploadSourceMaps,
+				oldAssetTtl: args.oldAssetTtl,
+				projectRoot,
+				dispatchNamespace: args.dispatchNamespace,
+				experimentalAutoCreate: args.experimentalAutoCreate,
+				containersRollout: args.containersRollout,
+				strict: args.strict,
+				tag: args.tag,
+				message: args.message,
+				secretsFile: args.secretsFile,
+			},
+			ctx
+		);
 
 		writeOutput({
 			type: "deploy",
