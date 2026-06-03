@@ -207,6 +207,10 @@ export function validateDeployVersionsArgs(
 	},
 	commandName: "deploy" | "versions upload"
 ): void {
+	// Capture the original --script value before resolving the positional path,
+	// so we can validate it independently even after args.script is overwritten.
+	const originalScript = args.script;
+
 	// Resolve the `path` positional into `script` (file) or `assets` (directory).
 	// This must happen before config is read because config resolution uses
 	// `args.script` to locate the wrangler config file relative to the entry point.
@@ -227,14 +231,14 @@ export function validateDeployVersionsArgs(
 	}
 
 	// Validate that --script points to a file, not a directory.
-	// Skip when args.script was set from the positional path (they'll be equal)
-	// since the path block above already handled directory detection.
-	if (args.script && args.script !== args.path) {
+	// Use the original --script value (before the positional path may have
+	// overwritten it) so directory validation is never silently bypassed.
+	if (originalScript) {
 		try {
-			const stats = statSync(args.script);
+			const stats = statSync(originalScript);
 			if (stats.isDirectory()) {
 				throw new UserError(
-					`The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:\n  wrangler ${commandName} ${args.script}\n  wrangler ${commandName} --assets ${args.script}`,
+					`The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:\n  wrangler ${commandName} ${originalScript}\n  wrangler ${commandName} --assets ${originalScript}`,
 					{
 						telemetryMessage: `${commandName} script option pointed to directory`,
 					}

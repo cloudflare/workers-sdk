@@ -1340,6 +1340,19 @@ addEventListener('fetch', event => {});`
 				`);
 			});
 
+			it("should error when --script points to a directory even when positional path is a file", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("index.js", "export default {}");
+
+				await expect(runWrangler("deploy ./index.js --script ./assets")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+					  wrangler deploy ./assets
+					  wrangler deploy --assets ./assets]
+				`);
+			});
+
 			it("does not write out a wrangler config file if the user says no", async ({
 				expect,
 			}) => {
