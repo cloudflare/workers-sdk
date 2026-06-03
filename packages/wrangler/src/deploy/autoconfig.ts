@@ -130,20 +130,6 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 }
 
 /**
- * Interactively prompts for missing deploy configuration:
- * prompts for missing name and compatibility date, and optionally writes a
- * new wrangler.jsonc config file.
- *
- * No-op in non-interactive / CI environments.
- */
-export async function promptForMissingConfig<Args extends AutoConfigArgs>(
-	args: Args,
-	config: { configPath?: string; compatibility_date?: string; name?: string }
-): Promise<Args> {
-	return promptForMissingDeployConfig(args, config);
-}
-
-/**
  * Interactively prompts for missing deployment configuration (name, compatibility date,
  * and optionally config file writing when no config file exists).
  * No-op in non-interactive/CI environments or when all required config is already present.
