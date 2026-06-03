@@ -679,7 +679,7 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				triggers: [{ type: "fetch", pattern: "*/api/*" }],
 			});
-			expect(result.routes).toEqual([{ pattern: "*/api/*" }]);
+			expect(result.routes).toEqual(["*/api/*"]);
 		});
 
 		it("maps queue trigger to queues.consumers with snake_case fields", ({

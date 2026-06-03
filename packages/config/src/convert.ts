@@ -739,7 +739,7 @@ function convertTriggers(config: ParsedConfig, result: RawConfig): void {
 			}
 			case "fetch": {
 				if (trigger.zone === undefined) {
-					routes.push({ pattern: trigger.pattern } as (typeof routes)[number]);
+					routes.push(trigger.pattern);
 				} else if (trigger.zone.includes(".")) {
 					routes.push({ pattern: trigger.pattern, zone_name: trigger.zone });
 				} else {
