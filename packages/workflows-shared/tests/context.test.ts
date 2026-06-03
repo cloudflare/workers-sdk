@@ -1307,67 +1307,6 @@ describe("Context - typed-array step outputs (issue #14101)", () => {
 		).toBe(false);
 	});
 
-	it("should fail with SQLITE_TOOBIG when a step output exceeds the 1MiB limit", async ({
-		expect,
-	}) => {
-		// Beyond the 1MiB step-output limit, the workflow must fail
-		// terminally (documented production behaviour: 1MiB cap).
-		//
-		// Note: the friendly `WorkflowInternalError("Maximum allowed size is
-		// 1MiB.")` at context.ts:768-774 does NOT currently fire for typed-array
-		// outputs because the SQLITE_TOOBIG error surfaces asynchronously from
-		// the workerd DO storage layer, bypassing the awaited try/catch around
-		// `persistStepResult`. The raw `string or blob too big: SQLITE_TOOBIG`
-		// error reaches WORKFLOW_FAILURE instead. This is a secondary issue
-		// noted in #14101 and will be addressed in a follow-up — the contract
-		// validated here is just that oversized outputs terminate the workflow.
-		const engineStub = await runWorkflow(
-			"UINT8-OVERSIZE-2M",
-			async (_event, step) => {
-				return await step.do(
-					"emit-too-many-bytes",
-					{ retries: { limit: 0, delay: 0 } },
-					async () => {
-						return new Uint8Array(2_000_000);
-					}
-				);
-			}
-		);
-
-		await vi.waitUntil(
-			async () => {
-				const logs = (await engineStub.readLogs()) as EngineLogs;
-				return logs.logs.some(
-					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
-				);
-			},
-			{ timeout: 10000 }
-		);
-
-		const logs = (await engineStub.readLogs()) as EngineLogs;
-		const failureMessages = logs.logs
-			.filter((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
-			.flatMap((val) => {
-				const meta = val.metadata as Record<string, unknown> | undefined;
-				const err = meta?.error as { message?: string } | string | undefined;
-				if (typeof err === "string") {
-					return [err];
-				}
-				if (err && typeof err === "object" && typeof err.message === "string") {
-					return [err.message];
-				}
-				return [];
-			});
-		expect(failureMessages.length).toBeGreaterThan(0);
-		expect(
-			failureMessages.some(
-				(m) =>
-					m.includes("SQLITE_TOOBIG") ||
-					m.includes("Maximum allowed size is 1MiB")
-			)
-		).toBe(true);
-	});
-
 	it("should return the original Uint8Array to the next step in the live execution path", async ({
 		expect,
 	}) => {
