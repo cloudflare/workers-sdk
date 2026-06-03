@@ -269,12 +269,12 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps pipeline.name to pipeline", ({ expect }) => {
+		it("maps pipeline.name to stream", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				env: { MY_PIPE: { type: "pipeline", name: "pipe-1" } },
 			});
 			expect(result.pipelines).toEqual([
-				{ binding: "MY_PIPE", pipeline: "pipe-1" },
+				{ binding: "MY_PIPE", stream: "pipe-1" },
 			]);
 		});
 

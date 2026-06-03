@@ -401,7 +401,7 @@ function convertBindingsAndAssets(
 				pipelines.push(
 					omitUndefined({
 						binding: name,
-						pipeline: binding.name,
+						stream: binding.name,
 						remote: binding.remote,
 					})
 				);
