@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-fix: show a clear error when deploying a service-worker format Worker with Durable Object migrations instead of an opaque API error
+Show a clear error when deploying a service-worker format Worker with Durable Object migrations or bindings instead of an opaque API error
