@@ -1788,6 +1788,10 @@ importers:
         version: 17.7.2
 
   packages/deploy-helpers:
+    dependencies:
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
     devDependencies:
       '@cloudflare/containers-shared':
         specifier: workspace:*
@@ -1795,18 +1799,21 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
-      '@cloudflare/workers-utils':
-        specifier: workspace:*
-        version: link:../workers-utils
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      chalk:
+        specifier: ^5.2.0
+        version: 5.3.0
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
+      p-queue:
+        specifier: ^9.0.0
+        version: 9.0.0
       tsup:
         specifier: 8.3.0
         version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.14)(supports-color@9.2.2)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.1)
@@ -3668,6 +3675,46 @@ importers:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
+  packages/workers-auth:
+    dependencies:
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
+      undici:
+        specifier: catalog:default
+        version: 7.24.8
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@types/node':
+        specifier: 22.15.17
+        version: 22.15.17
+      '@vitest/ui':
+        specifier: catalog:default
+        version: 4.1.0(vitest@4.1.0)
+      concurrently:
+        specifier: ^8.2.2
+        version: 8.2.2
+      msw:
+        specifier: catalog:default
+        version: 2.12.4(@types/node@22.15.17)(typescript@5.8.3)
+      smol-toml:
+        specifier: catalog:default
+        version: 1.5.2
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
+      tsup:
+        specifier: 8.3.0
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.14)(supports-color@9.2.2)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.1)
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+
   packages/workers-editor-shared:
     dependencies:
       react-split-pane:
@@ -4019,6 +4066,9 @@ importers:
       '@cloudflare/types':
         specifier: 6.18.4
         version: 6.18.4(react@19.2.4)
+      '@cloudflare/workers-auth':
+        specifier: workspace:*
+        version: link:../workers-auth
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared

@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.96.0",
+	"version": "4.97.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -83,6 +83,7 @@
 		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
+		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",

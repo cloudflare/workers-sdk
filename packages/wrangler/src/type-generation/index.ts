@@ -2338,17 +2338,17 @@ function collectCoreBindings(
 			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
 		}
 
-		if (env.web_search) {
-			if (!env.web_search.binding) {
+		if (env.websearch) {
+			if (!env.websearch.binding) {
 				throwMissingBindingError({
-					binding: env.web_search,
-					bindingType: "web_search",
+					binding: env.websearch,
+					bindingType: "websearch",
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
 				});
 			} else {
-				addBinding(env.web_search.binding, "WebSearch", "web_search", envName);
+				addBinding(env.websearch.binding, "WebSearch", "websearch", envName);
 			}
 		}
 
@@ -3516,19 +3516,19 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
-		if (env.web_search) {
-			if (!env.web_search.binding) {
+		if (env.websearch) {
+			if (!env.websearch.binding) {
 				throwMissingBindingError({
-					binding: env.web_search,
-					bindingType: "web_search",
+					binding: env.websearch,
+					bindingType: "websearch",
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
 				});
 			} else {
 				bindings.push({
-					bindingCategory: "web_search",
-					name: env.web_search.binding,
+					bindingCategory: "websearch",
+					name: env.websearch.binding,
 					type: "WebSearch",
 				});
 			}

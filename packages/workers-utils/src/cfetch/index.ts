@@ -37,6 +37,13 @@ export type FetchResultFetcher = <ResponseType>(
 	abortSignal?: AbortSignal
 ) => Promise<ResponseType>;
 
+export type FetchListResultFetcher = <ResponseType>(
+	complianceConfig: ComplianceConfig,
+	resource: string,
+	init?: RequestInit,
+	queryParams?: URLSearchParams
+) => Promise<ResponseType[]>;
+
 function logHeaders(headers: Headers, logger: Logger): void {
 	const clone = cloneHeaders(headers);
 	clone.delete("Authorization");

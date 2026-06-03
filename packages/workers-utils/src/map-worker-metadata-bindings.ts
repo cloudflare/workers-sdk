@@ -298,9 +298,9 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
-					case "web_search":
+					case "websearch":
 						{
-							configObj.web_search = {
+							configObj.websearch = {
 								binding: binding.name,
 							};
 						}

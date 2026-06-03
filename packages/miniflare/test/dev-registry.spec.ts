@@ -845,6 +845,72 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
+	test("workflow with cross-worker scriptName", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+
+			workflows: {
+				MY_WORKFLOW: {
+					name: "MY_WORKFLOW",
+					className: "MyWorkflow",
+					scriptName: "remote-worker",
+				},
+			},
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: `
+				export default {
+					async fetch(request, env, ctx) {
+						const instance = await env.MY_WORKFLOW.create({ id: "cross-worker-instance" });
+						return Response.json({ id: instance.id });
+					}
+				}
+			`,
+		});
+		useDispose(local);
+
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+
+			workflows: {
+				MY_WORKFLOW: {
+					name: "MY_WORKFLOW",
+					className: "MyWorkflow",
+				},
+			},
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: `
+				import { WorkflowEntrypoint } from "cloudflare:workers";
+				export class MyWorkflow extends WorkflowEntrypoint {
+					async run(event, step) {
+						return await step.do("hello", async () => "from remote workflow");
+					}
+				}
+				export default {
+					async fetch() { return new Response("ok"); }
+				}
+			`,
+		});
+		useDispose(remote);
+
+		await remote.ready;
+		// Workflow `create()` is queued asynchronously by the engine; routing
+		// goes engine (local) → ExternalServiceProxy → dev registry → remote
+		// MyWorkflow.run. Verify the instance is created with the expected id.
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(res.status).toBe(200);
+				expect(await res.json()).toEqual({ id: "cross-worker-instance" });
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
 	test("DO RPC survives remote worker restart", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 

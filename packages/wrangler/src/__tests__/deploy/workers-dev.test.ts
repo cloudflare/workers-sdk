@@ -1,3 +1,4 @@
+import { getSubdomainValues } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -10,7 +11,6 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
-import { getSubdomainValues } from "../../triggers/deploy";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";

@@ -1,11 +1,12 @@
 import crypto from "node:crypto";
 import { URL } from "node:url";
+import { getWorkersDevSubdomain } from "@cloudflare/deploy-helpers";
 import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
+import { createDeployHelpersContext } from "../core/deploy-helpers-context";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logger } from "../logger";
-import { getWorkersDevSubdomain } from "../routes";
 import { getAccessHeaders } from "../user/access";
 import type { CfWorkerInitWithName } from "./remote";
 import type {
@@ -218,8 +219,8 @@ export async function createPreviewSession(
 			const subdomain = await getWorkersDevSubdomain(
 				complianceConfig,
 				account.accountId,
+				createDeployHelpersContext({ apiToken }),
 				{
-					apiToken,
 					abortSignal: withTimeout(abortSignal),
 				}
 			);

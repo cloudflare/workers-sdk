@@ -1083,7 +1083,7 @@ export interface EnvironmentNonInheritable {
 	 * @default {}
 	 * @nonInheritable
 	 */
-	web_search:
+	websearch:
 		| {
 				/** The binding name used to refer to Web Search in the Worker. */
 				binding: string;
