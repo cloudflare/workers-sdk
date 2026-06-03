@@ -6,8 +6,11 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
+import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
+import { getMetricsUsageHeaders } from "../metrics";
 import { getSiteAssetPaths } from "../sites";
+import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironmentApi } from "../utils/useServiceEnvironments";
@@ -56,6 +59,12 @@ async function mergeSharedConfigArgs(
 
 	const noBundle = !(args.bundle ?? !config.no_bundle);
 
+	const dryRun = args.dryRun ?? false;
+	const accountId = dryRun ? undefined : await requireAuth(config);
+
+	const metricsHeaders = await getMetricsUsageHeaders(config.send_metrics);
+	const sendMetrics = metricsHeaders !== undefined;
+
 	return {
 		entry,
 		name,
@@ -74,7 +83,7 @@ async function mergeSharedConfigArgs(
 		alias: { ...config.alias, ...collectKeyValues(args.alias) },
 		useServiceEnvApiPath: useServiceEnvironmentApi(args, config),
 		destination: args.outdir ?? getWranglerTmpDir(entry.projectRoot, "deploy"),
-		dryRun: args.dryRun ?? false,
+		dryRun,
 		env: args.env,
 		outdir: args.outdir,
 		outfile: args.outfile,
@@ -83,6 +92,9 @@ async function mergeSharedConfigArgs(
 		secretsFile: args.secretsFile,
 		cliVars: collectKeyValues(args.var),
 		experimentalAutoCreate: args.experimentalAutoCreate,
+		accountId,
+		sendMetrics,
+		resourcesProvision: getFlag("RESOURCES_PROVISION") ?? false,
 	};
 }
 

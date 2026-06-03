@@ -39,11 +39,9 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
-import { getFlag } from "../experimental-flags";
-import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
-import { getMetricsUsageHeaders } from "../metrics";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
@@ -51,7 +49,6 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
-import { requireAuth } from "../user";
 import { downloadWorkerConfig } from "../utils/download-worker-config";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { parseConfigPlacement } from "../utils/placement";
@@ -139,9 +136,8 @@ export default async function deploy(
 		minify,
 		noBundle,
 		uploadSourceMaps,
+		accountId,
 	} = props;
-
-	const accountId = props.dryRun ? undefined : await requireAuth(config);
 
 	if (!props.dryRun) {
 		assert(accountId, "Missing account ID");
@@ -246,7 +242,7 @@ export default async function deploy(
 		}
 	}
 
-	if (accountId && (isInteractive() || props.strict)) {
+	if (accountId) {
 		const remoteSecretsCheck = await checkRemoteSecretsOverride(
 			config,
 			props.env
@@ -260,11 +256,7 @@ export default async function deploy(
 		}
 	}
 
-	if (
-		accountId &&
-		config.workflows?.length &&
-		(isInteractive() || props.strict)
-	) {
+	if (accountId && config.workflows?.length) {
 		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
 
 		if (workflowCheck.hasConflicts) {
@@ -615,7 +607,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		} else {
 			assert(accountId, "Missing accountId");
 
-			if (getFlag("RESOURCES_PROVISION")) {
+			if (props.resourcesProvision) {
 				await provisionBindings(
 					bindings ?? {},
 					accountId,
@@ -662,7 +654,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							{
 								method: "POST",
 								body: workerBundle,
-								headers: await getMetricsUsageHeaders(config.send_metrics),
+								headers: props.sendMetrics
+									? { metricsEnabled: "true" }
+									: undefined,
 							},
 							new URLSearchParams({ bindings_inherit: "strict" })
 						)
@@ -725,7 +719,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							{
 								method: "PUT",
 								body: workerBundle,
-								headers: await getMetricsUsageHeaders(config.send_metrics),
+								headers: props.sendMetrics
+									? { metricsEnabled: "true" }
+									: undefined,
 							},
 							new URLSearchParams({
 								// pass excludeScript so the whole body of the

@@ -96,6 +96,12 @@ export type SharedDeployVersionsProps = {
 	cliVars: Record<string, string>;
 	/** From --experimental-auto-create arg. */
 	experimentalAutoCreate: boolean;
+	/** Resolved from requireAuth() before calling deploy-helpers. undefined only in dry-run. */
+	accountId: string | undefined;
+	/** Resolved from getMetricsUsageHeaders() / config.send_metrics. Controls whether usage metrics headers are sent with upload requests. */
+	sendMetrics: boolean;
+	/** Resolved from getFlag("RESOURCES_PROVISION"). Controls whether bindings are auto-provisioned before upload. */
+	resourcesProvision: boolean;
 };
 
 export type DeployProps = SharedDeployVersionsProps & {
