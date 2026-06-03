@@ -1529,6 +1529,13 @@ export async function requireAuth(
 			});
 		}
 	}
+
+	if (allowTemporary) {
+		logger.warn(
+			"You're already authenticated, so `--temporary` was ignored; using your existing Cloudflare account."
+		);
+	}
+
 	const accountId = await getOrSelectAccountId(config);
 	if (!accountId) {
 		throw new UserError("No account id found, quitting...", {

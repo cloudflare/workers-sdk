@@ -952,6 +952,7 @@ describe("deploy", () => {
 
 			expect(previewAccountRequests).toBe(0);
 			expect(std.out).not.toContain("Temporary account ready:");
+			expect(std.warn).toContain("already authenticated");
 		});
 
 		describe("with temporary preview accounts", () => {

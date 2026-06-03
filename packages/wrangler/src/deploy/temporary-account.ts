@@ -121,7 +121,13 @@ function cacheTemporaryPreviewAccount(
 	);
 }
 
-/** Returns whether a cached account existed before removal. */
+/**
+ * Returns whether a cached account existed before removal.
+ *
+ * Only clears the cache for the current `WRANGLER_API_ENVIRONMENT`; a cache
+ * minted under a different environment is left untouched (low impact given the
+ * short TTLs).
+ */
 export function clearCachedTemporaryPreviewAccount(): boolean {
 	const configPath = getTemporaryPreviewAccountConfigPath();
 	const existed = existsSync(configPath);
