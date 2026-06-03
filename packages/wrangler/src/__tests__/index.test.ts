@@ -267,7 +267,7 @@ describe("wrangler", () => {
 				  wrangler secret put <key>     Create or update a secret for a Worker
 				  wrangler secret delete <key>  Delete a secret from a Worker
 				  wrangler secret list          List all secrets for a Worker
-				  wrangler secret bulk [file]   Upload multiple secrets for a Worker at once
+				  wrangler secret bulk [file]   Create, update, or delete multiple secrets for a Worker in a single request, with up to 100 secrets per command.
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]
