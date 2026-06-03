@@ -8,6 +8,7 @@ import {
 	testPackageManager,
 	testPackageManagerVersion,
 } from "../../e2e/helpers/constants";
+import { writePnpmWorkspaceYaml } from "./packages";
 import type { C3Context } from "types";
 
 /**
@@ -125,6 +126,10 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 	const lockfilePath = nodePath.join(ctx.project.path, "package-lock.json");
 	if (existsSync(lockfilePath)) {
 		rmSync(lockfilePath);
+	}
+
+	if (npm === "pnpm") {
+		writePnpmWorkspaceYaml(ctx.project.path);
 	}
 
 	await runCommand([npm, "install"], {
