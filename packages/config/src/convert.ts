@@ -520,7 +520,7 @@ function convertBindingsAndAssets(
 				break;
 			}
 			case "web-search": {
-				result.web_search = omitUndefined({
+				result.websearch = omitUndefined({
 					binding: name,
 					remote: binding.remote,
 				});

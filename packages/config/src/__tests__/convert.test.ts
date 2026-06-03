@@ -162,7 +162,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.media).toEqual({ binding: "MY_MEDIA" });
 			expect(result.stream).toEqual({ binding: "MY_STREAM" });
 			expect(result.version_metadata).toEqual({ binding: "MY_VM" });
-			expect(result.web_search).toEqual({ binding: "MY_WEB_SEARCH" });
+			expect(result.websearch).toEqual({ binding: "MY_WEB_SEARCH" });
 		});
 
 		it("includes the remote flag on singletons that support it", ({
@@ -178,7 +178,7 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				env: { MY_WS: { type: "web-search", remote: true } },
 			});
-			expect(result.web_search).toEqual({
+			expect(result.websearch).toEqual({
 				binding: "MY_WS",
 				remote: true,
 			});
