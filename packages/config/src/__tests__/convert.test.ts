@@ -640,7 +640,8 @@ describe("convertToWranglerConfig", () => {
 		it("maps scheduled triggers to triggers.crons", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				triggers: [
-					{ type: "scheduled", schedules: ["0 * * * *", "*/5 * * * *"] },
+					{ type: "scheduled", schedule: "0 * * * *" },
+					{ type: "scheduled", schedule: "*/5 * * * *" },
 				],
 			});
 			expect(result.triggers).toEqual({

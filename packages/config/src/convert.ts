@@ -734,7 +734,7 @@ function convertTriggers(config: ParsedConfig, result: RawConfig): void {
 	for (const trigger of triggers) {
 		switch (trigger.type) {
 			case "scheduled": {
-				crons.push(...trigger.schedules);
+				crons.push(trigger.schedule);
 				break;
 			}
 			case "fetch": {

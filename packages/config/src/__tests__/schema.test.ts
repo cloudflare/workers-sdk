@@ -313,7 +313,7 @@ describe("unknown property rejection", () => {
 			triggers: [
 				{
 					type: "scheduled",
-					schedules: ["0 0 * * *"],
+					schedule: "0 0 * * *",
 					// Typo: not a real field
 					cronz: "0 0 * * *",
 				},

@@ -61,13 +61,13 @@ export interface QueueConsumerTrigger extends QueueConsumerTriggerOptions {
 
 interface ScheduledTriggerOptions {
 	/**
-	 * "Cron" definitions to trigger a Worker's "scheduled" function.
+	 * A "cron" definition to trigger a Worker's "scheduled" function.
 	 *
 	 * Lets you call Workers periodically, much like a cron job.
 	 *
 	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
 	 */
-	schedules: string[];
+	schedule: string;
 }
 
 /**
@@ -119,7 +119,8 @@ export interface Triggers {
  *   triggers: [
  *     triggers.fetch({ pattern: "example.com/*", zone: "example.com" }),
  *     triggers.queue({ name: "my-queue" }),
- *     triggers.scheduled({ schedules: ["0 * * * *"] }),
+ *     triggers.scheduled({ schedule: "0 * * * *" }),
+ *     triggers.scheduled({ schedule: "30 0 * * *" }),
  *   ],
  * });
  * ```

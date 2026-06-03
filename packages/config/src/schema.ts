@@ -388,7 +388,7 @@ const TriggerSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("scheduled"),
-		schedules: z.array(z.string()),
+		schedule: z.string(),
 	}),
 ]);
 
