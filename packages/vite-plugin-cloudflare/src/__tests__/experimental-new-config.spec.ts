@@ -9,7 +9,7 @@ const viteEnv = { mode: "development", command: "serve" as const };
 
 // Create the temp directory inside the package so Node can resolve the
 // workspace-linked `@cloudflare/config` import from the generated
-// `worker.config.ts` (Node walks up the directory tree looking for
+// `cloudflare.config.ts` (Node walks up the directory tree looking for
 // `node_modules`).
 const FIXTURES_ROOT = path.resolve(
 	__dirname,
@@ -40,17 +40,17 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 	}
 
 	function writeWorkerConfig(body: string) {
-		fs.writeFileSync(path.join(tempDir, "worker.config.ts"), body);
+		fs.writeFileSync(path.join(tempDir, "cloudflare.config.ts"), body);
 	}
 
-	test("throws when worker.config.ts is missing", async ({ expect }) => {
+	test("throws when cloudflare.config.ts is missing", async ({ expect }) => {
 		const pluginConfig: PluginConfig = {
 			experimental: { newConfig: true },
 		};
 
 		await expect(
 			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
-		).rejects.toThrow(/no `worker\.config\.ts` was found/);
+		).rejects.toThrow(/no `cloudflare\.config\.ts` was found/);
 	});
 
 	test("throws when configPath is combined with experimental.newConfig", async ({
@@ -103,7 +103,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		).rejects.toThrow(/auxiliaryWorkers/);
 	});
 
-	test("loads a worker.config.ts and produces a worker resolved config", async ({
+	test("loads a cloudflare.config.ts and produces a worker resolved config", async ({
 		expect,
 	}) => {
 		seedWorkerSource();
@@ -172,7 +172,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(worker?.config.name).toBe("worker-development");
 	});
 
-	test("adds worker.config.ts to configPaths for watching", async ({
+	test("adds cloudflare.config.ts to configPaths for watching", async ({
 		expect,
 	}) => {
 		seedWorkerSource();
@@ -198,7 +198,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		)) as WorkersResolvedConfig;
 
 		const configPaths = Array.from(result.configPaths);
-		expect(configPaths).toContain(path.join(tempDir, "worker.config.ts"));
+		expect(configPaths).toContain(path.join(tempDir, "cloudflare.config.ts"));
 		// Transitive `dependencies` from @cloudflare/config's loadConfig
 		// (covered by its own unit tests) are also merged into configPaths.
 	});
@@ -230,7 +230,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(content).toContain(
 			`from "@cloudflare/vite-plugin/experimental-config"`
 		);
-		expect(content).toContain(`import type Config from "./worker.config"`);
+		expect(content).toContain(`import type Config from "./cloudflare.config"`);
 		expect(content).not.toContain(`} from "@cloudflare/config"`);
 	});
 

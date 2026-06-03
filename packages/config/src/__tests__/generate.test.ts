@@ -3,14 +3,14 @@ import { generateTypes } from "../generate";
 
 describe("generateTypes", () => {
 	it("defaults the package import to @cloudflare/config", ({ expect }) => {
-		const out = generateTypes({ configPath: "./worker.config.ts" });
+		const out = generateTypes({ configPath: "./cloudflare.config.ts" });
 		expect(out).toContain(`from "@cloudflare/config"`);
-		expect(out).toContain(`import type Config from "./worker.config"`);
+		expect(out).toContain(`import type Config from "./cloudflare.config"`);
 	});
 
 	it("accepts a custom packageName", ({ expect }) => {
 		const out = generateTypes({
-			configPath: "./worker.config.ts",
+			configPath: "./cloudflare.config.ts",
 			packageName: "@cloudflare/vite-plugin/experimental-config",
 		});
 		expect(out).toContain(`from "@cloudflare/vite-plugin/experimental-config"`);
@@ -21,8 +21,8 @@ describe("generateTypes", () => {
 		expect,
 	}) => {
 		for (const ext of ["ts", "js", "mts", "mjs"]) {
-			const out = generateTypes({ configPath: `./worker.config.${ext}` });
-			expect(out).toContain(`import type Config from "./worker.config"`);
+			const out = generateTypes({ configPath: `./cloudflare.config.${ext}` });
+			expect(out).toContain(`import type Config from "./cloudflare.config"`);
 		}
 	});
 });

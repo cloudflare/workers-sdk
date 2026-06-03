@@ -108,7 +108,7 @@ interface Experimental {
 	prerenderWorker?: PrerenderWorkerConfig;
 	/**
 	 * Experimental support for loading the entry Worker's configuration from
-	 * `worker.config.ts` instead of `wrangler.json` /
+	 * `cloudflare.config.ts` instead of `wrangler.json` /
 	 * `wrangler.jsonc` / `wrangler.toml`.
 	 *
 	 * Pass `true` for defaults, or an object to customize behaviour.
@@ -416,7 +416,7 @@ export async function resolvePluginConfig(
 	if (resolvedNewConfig) {
 		if (pluginConfig.configPath) {
 			throw new Error(
-				"`configPath` cannot be used together with `experimental.newConfig`. Configure the entry Worker via `worker.config.ts` instead."
+				"`configPath` cannot be used together with `experimental.newConfig`. Configure the entry Worker via `cloudflare.config.ts` instead."
 			);
 		}
 		if (pluginConfig.auxiliaryWorkers?.length) {
@@ -681,12 +681,12 @@ function resolveWorker(
 	};
 }
 
-const NEW_CONFIG_FILENAME = "worker.config.ts";
+const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
 const TYPES_OUTPUT_FILENAME = "worker-configuration.d.ts";
 const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
 
 /**
- * Load and convert a `worker.config.ts` file via `@cloudflare/config`. Returns
+ * Load and convert a `cloudflare.config.ts` file via `@cloudflare/config`. Returns
  * the resulting Wrangler `RawConfig`, the absolute path of the loaded file,
  * and the set of files imported while resolving the config (for watch-mode).
  *
@@ -744,7 +744,7 @@ async function loadNewConfig(options: {
 
 	if (options.includeMigrations && hasDurableObjectExports) {
 		console.info(
-			"worker.config.ts - Durable Object exports are currently supported in dev but not build/deploy"
+			"cloudflare.config.ts - Durable Object exports are currently supported in dev but not build/deploy"
 		);
 	}
 

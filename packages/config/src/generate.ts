@@ -22,7 +22,7 @@ interface GenerateTypesOptions {
  * import { writeFileSync } from "node:fs";
  *
  * const content = generateTypes({
- *   configPath: "./worker.config.ts",
+ *   configPath: "./cloudflare.config.ts",
  * });
  *
  * writeFileSync("worker-configuration.d.ts", content);

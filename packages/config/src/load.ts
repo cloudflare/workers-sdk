@@ -82,13 +82,13 @@ export function registerConfigHooks(): () => void {
 	}
 	if (typeof process !== "undefined" && process.versions.bun) {
 		throw new Error(
-			"worker.config.ts loading is not supported on Bun. " +
+			"cloudflare.config.ts loading is not supported on Bun. " +
 				"Please use Node.js v22.18.0 or higher."
 		);
 	}
 	if (typeof registerHooks !== "function") {
 		throw new Error(
-			"worker.config.ts loading requires Node.js v22.18.0 or higher."
+			"cloudflare.config.ts loading requires Node.js v22.18.0 or higher."
 		);
 	}
 

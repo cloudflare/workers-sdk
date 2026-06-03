@@ -3,5 +3,5 @@
 	"compilerOptions": {
 		"allowImportingTsExtensions": true
 	},
-	"include": ["src", "worker.config.ts", "worker-configuration.d.ts"]
+	"include": ["src", "cloudflare.config.ts", "worker-configuration.d.ts"]
 }

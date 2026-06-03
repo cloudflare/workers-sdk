@@ -1,6 +1,6 @@
 /**
  * Curated public surface of `@cloudflare/config` — the types and values that a
- * user authoring a `worker.config.ts` should have access to.
+ * user authoring a `cloudflare.config.ts` should have access to.
  */
 
 export type {
