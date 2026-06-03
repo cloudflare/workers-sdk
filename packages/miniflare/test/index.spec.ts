@@ -2752,6 +2752,32 @@ unixSerialTest(
 	}
 );
 
+// When workerd exits before sending all listen events on FD3, Miniflare should
+// detect this and throw ERR_RUNTIME_FAILURE instead of hanging indefinitely.
+// See https://github.com/cloudflare/workers-sdk/issues/14077
+unixSerialTest(
+	"Miniflare: throws ERR_RUNTIME_FAILURE when workerd exits before all sockets are ready",
+	async ({ expect, onTestFinished }) => {
+		const workerdPath = path.join(FIXTURES_PATH, "crashing-workerd.mjs");
+
+		const original = process.env.MINIFLARE_WORKERD_PATH;
+		process.env.MINIFLARE_WORKERD_PATH = workerdPath;
+		onTestFinished(() => {
+			if (original === undefined) {
+				delete process.env.MINIFLARE_WORKERD_PATH;
+			} else {
+				process.env.MINIFLARE_WORKERD_PATH = original;
+			}
+		});
+
+		const mf = new Miniflare({ script: "" });
+		onTestFinished(() => mf.dispose().catch(() => {}));
+
+		await expect(mf.ready).rejects.toThrow(MiniflareCoreError);
+		await expect(mf.ready).rejects.toThrow(/Workers runtime failed to start/);
+	}
+);
+
 const TIMEZONE_WORKER = `
 	export default {
 		fetch() {
