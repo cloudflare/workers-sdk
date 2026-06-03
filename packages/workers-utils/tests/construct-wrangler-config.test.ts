@@ -1,9 +1,7 @@
 import { describe, it } from "vitest";
-import { ENVIRONMENT_TAG_PREFIX, SERVICE_TAG_PREFIX } from "../src/constants";
 import { constructWranglerConfig } from "../src/construct-wrangler-config";
 
-type APIWorkerConfigOrArray = Parameters<typeof constructWranglerConfig>[0];
-type APIWorkerConfig = Exclude<APIWorkerConfigOrArray, unknown[]>;
+type APIWorkerConfig = Parameters<typeof constructWranglerConfig>[0];
 
 /**
  * Factory for a minimal valid APIWorkerConfig.
@@ -36,22 +34,6 @@ function makeWorkerConfig(
 }
 
 describe("constructWranglerConfig", () => {
-	describe("input normalization", () => {
-		it("accepts a single worker (non-array)", ({ expect }) => {
-			const config = makeWorkerConfig();
-			const result = constructWranglerConfig(config);
-			expect(result.name).toBe("my-worker");
-			expect(result.main).toBe("index.js");
-		});
-
-		it("accepts an array with one worker", ({ expect }) => {
-			const config = makeWorkerConfig();
-			const result = constructWranglerConfig([config]);
-			expect(result.name).toBe("my-worker");
-			expect(result.main).toBe("index.js");
-		});
-	});
-
 	describe("basic field mapping", () => {
 		it("maps core fields correctly", ({ expect }) => {
 			const config = makeWorkerConfig({
@@ -389,129 +371,6 @@ describe("constructWranglerConfig", () => {
 			expect(result.vars).toEqual({ MY_VAR: "hello" });
 			// secret_text should not appear anywhere in the output
 			expect(JSON.stringify(result)).not.toContain("s3cret");
-		});
-	});
-
-	describe("multi-environment support", () => {
-		it("uses top-level worker as base config and tagged workers as environments", ({
-			expect,
-		}) => {
-			const topLevel = makeWorkerConfig({
-				name: "my-worker",
-				entrypoint: "index.js",
-				tags: [],
-				compatibility_date: "2025-01-01",
-			});
-			const staging = makeWorkerConfig({
-				name: "my-worker-staging",
-				entrypoint: "index.js",
-				tags: [
-					`${SERVICE_TAG_PREFIX}my-worker`,
-					`${ENVIRONMENT_TAG_PREFIX}staging`,
-				],
-				compatibility_date: "2025-02-01",
-			});
-			const production = makeWorkerConfig({
-				name: "my-worker-production",
-				entrypoint: "index.js",
-				tags: [
-					`${SERVICE_TAG_PREFIX}my-worker`,
-					`${ENVIRONMENT_TAG_PREFIX}production`,
-				],
-				compatibility_date: "2025-03-01",
-			});
-
-			const result = constructWranglerConfig([topLevel, staging, production]);
-
-			expect(result.name).toBe("my-worker");
-			expect(result.compatibility_date).toBe("2025-01-01");
-			expect(result.env).toBeDefined();
-			expect(result.env?.staging).toBeDefined();
-			expect(result.env?.staging?.compatibility_date).toBe("2025-02-01");
-			expect(result.env?.production).toBeDefined();
-			expect(result.env?.production?.compatibility_date).toBe("2025-03-01");
-		});
-
-		it("creates synthetic top-level when no untagged worker exists", ({
-			expect,
-		}) => {
-			const staging = makeWorkerConfig({
-				name: "my-worker-staging",
-				entrypoint: "src/index.ts",
-				tags: [
-					`${ENVIRONMENT_TAG_PREFIX}staging`,
-					`${SERVICE_TAG_PREFIX}my-worker-staging`,
-				],
-			});
-			const production = makeWorkerConfig({
-				name: "my-worker-prod",
-				entrypoint: "src/index.ts",
-				tags: [
-					`${ENVIRONMENT_TAG_PREFIX}production`,
-					`${SERVICE_TAG_PREFIX}my-worker-staging`,
-				],
-			});
-
-			const result = constructWranglerConfig([staging, production]);
-
-			// Synthetic top-level should use workers[0] for name and entrypoint
-			expect(result.name).toBe("my-worker-staging");
-			expect(result.main).toBe("src/index.ts");
-			// Should not have compatibility_date etc. since it's synthetic
-			expect(result.compatibility_date).toBeUndefined();
-		});
-
-		it("skips workers with mismatched service tags", ({ expect }) => {
-			const topLevel = makeWorkerConfig({
-				name: "my-worker",
-				tags: [],
-			});
-			const matchingEnv = makeWorkerConfig({
-				name: "my-worker-staging",
-				tags: [
-					`${SERVICE_TAG_PREFIX}my-worker`,
-					`${ENVIRONMENT_TAG_PREFIX}staging`,
-				],
-			});
-			const mismatchedEnv = makeWorkerConfig({
-				name: "other-worker-prod",
-				tags: [
-					`${SERVICE_TAG_PREFIX}other-worker`,
-					`${ENVIRONMENT_TAG_PREFIX}production`,
-				],
-			});
-
-			const result = constructWranglerConfig([
-				topLevel,
-				matchingEnv,
-				mismatchedEnv,
-			]);
-
-			expect(result.env?.staging).toBeDefined();
-			expect(result.env?.production).toBeUndefined();
-		});
-
-		it("skips workers without an environment tag", ({ expect }) => {
-			const topLevel = makeWorkerConfig({
-				name: "my-worker",
-				tags: [],
-			});
-			const noEnvTag = makeWorkerConfig({
-				name: "my-worker-noenv",
-				tags: [`${SERVICE_TAG_PREFIX}my-worker`],
-			});
-
-			const result = constructWranglerConfig([topLevel, noEnvTag]);
-			expect(result.env).toBeUndefined();
-		});
-
-		it("handles null tags by treating worker as top-level", ({ expect }) => {
-			const config = makeWorkerConfig({ tags: null });
-			const result = constructWranglerConfig(config);
-			// Worker with null tags is treated as having no tags,
-			// so it becomes the top-level environment
-			expect(result.name).toBe("my-worker");
-			expect(result.main).toBe("index.js");
 		});
 	});
 });

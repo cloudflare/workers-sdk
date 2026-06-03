@@ -990,6 +990,21 @@ export interface EnvironmentNonInheritable {
 		migrations_table?: string;
 		/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */
 		migrations_dir?: string;
+		/**
+		 * A glob pattern (relative to the Wrangler config file) used to discover
+		 * migration files for this D1 database. Defaults to `${migrations_dir}/*.sql`
+		 * if not specified.
+		 *
+		 * Use this to opt in to nested layouts such as `migrations/*\/migration.sql`
+		 * (as produced by some ORMs).
+		 *
+		 * When `migrations_pattern` is set, `migrations_dir` must also be set, and
+		 * `migrations_pattern` must start with `${migrations_dir}/`. This keeps the
+		 * relationship between the two settings explicit and lets Wrangler record
+		 * each migration's name in the migrations table as a path relative to
+		 * `migrations_dir`.
+		 */
+		migrations_pattern?: string;
 		/** Internal use only. */
 		database_internal_env?: string;
 		/** Whether the D1 database should be remote or not in local development */
