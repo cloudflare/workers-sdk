@@ -34,6 +34,8 @@ interface WorkflowExportOptions {
 		/** Maximum number of steps a Workflow instance can execute. */
 		steps?: number;
 	};
+	/** Optional cron schedules for automatically triggering workflow instances. */
+	schedules?: string[];
 }
 
 /** Declares a Workflow defined by this Worker. */
