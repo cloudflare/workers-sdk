@@ -1160,6 +1160,22 @@ describe("versions upload", () => {
 			`);
 		});
 
+		test("should error when --script points to a directory even when positional path is also provided", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("assets", { recursive: true });
+			fs.writeFileSync("assets/index.html", "<h1>Hello</h1>");
+			fs.mkdirSync("other-dir", { recursive: true });
+			fs.writeFileSync("other-dir/page.html", "<h1>Other</h1>");
+
+			await expect(runWrangler("versions upload ./assets --script ./other-dir"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+				  wrangler versions upload ./other-dir
+				  wrangler versions upload --assets ./other-dir]
+			`);
+		});
+
 		test("should error when no name is provided", async ({ expect }) => {
 			writeWorkerSource();
 			await expect(

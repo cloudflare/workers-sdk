@@ -226,8 +226,10 @@ export function validateDeployVersionsArgs(
 		}
 	}
 
-	// Validate that --script points to a file, not a directory
-	if (args.script && !args.path) {
+	// Validate that --script points to a file, not a directory.
+	// Skip when args.script was set from the positional path (they'll be equal)
+	// since the path block above already handled directory detection.
+	if (args.script && args.script !== args.path) {
 		try {
 			const stats = statSync(args.script);
 			if (stats.isDirectory()) {
