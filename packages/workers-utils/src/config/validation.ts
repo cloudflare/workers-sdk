@@ -4117,12 +4117,22 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isOptionalProperty(value, "migrations_pattern", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "migrations_pattern" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"database_id",
 		"database_internal_env",
 		"database_name",
 		"migrations_dir",
+		"migrations_pattern",
 		"migrations_table",
 		"preview_database_id",
 		"remote",
