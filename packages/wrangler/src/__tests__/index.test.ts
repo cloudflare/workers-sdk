@@ -50,12 +50,13 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
+				  wrangler agent-memory           🧠 Manage Agent Memory namespaces [private beta]
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler ai-search              🔍 Manage AI Search instances [open beta]
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
 				  wrangler containers             📦 Manage Containers
 				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
@@ -71,6 +72,7 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
@@ -129,12 +131,13 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
+				  wrangler agent-memory           🧠 Manage Agent Memory namespaces [private beta]
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler ai-search              🔍 Manage AI Search instances [open beta]
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
 				  wrangler containers             📦 Manage Containers
 				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
@@ -150,6 +153,7 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
@@ -263,7 +267,7 @@ describe("wrangler", () => {
 				  wrangler secret put <key>     Create or update a secret for a Worker
 				  wrangler secret delete <key>  Delete a secret from a Worker
 				  wrangler secret list          List all secrets for a Worker
-				  wrangler secret bulk [file]   Upload multiple secrets for a Worker at once
+				  wrangler secret bulk [file]   Create, update, or delete multiple secrets for a Worker in a single request, with up to 100 secrets per command.
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]
@@ -411,7 +415,10 @@ describe("wrangler", () => {
 		it("should display a 'try updating' message if there is one available", async ({
 			expect,
 		}) => {
-			(updateCheck as Mock).mockImplementation(async () => "123.123.123");
+			(updateCheck as Mock).mockImplementation(async () => ({
+				status: "update-available",
+				latest: "123.123.123",
+			}));
 			await logPossibleBugMessage();
 			expect(std.out).toMatchInlineSnapshot(`
 			"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m

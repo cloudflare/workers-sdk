@@ -34,8 +34,7 @@ export function mapWorkerMetadataBindings(
 						{
 							configObj.vars = {
 								...(configObj.vars ?? {}),
-								name: binding.name,
-								json: binding.json,
+								[binding.name]: binding.json,
 							};
 						}
 						break;
@@ -299,6 +298,23 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
+					case "websearch":
+						{
+							configObj.websearch = {
+								binding: binding.name,
+							};
+						}
+						break;
+					case "agent_memory": {
+						configObj.agent_memory = [
+							...(configObj.agent_memory ?? []),
+							{
+								binding: binding.name,
+								namespace: binding.namespace,
+							},
+						];
+						break;
+					}
 					case "hyperdrive":
 						configObj.hyperdrive = [
 							...(configObj.hyperdrive ?? []),

@@ -379,18 +379,6 @@ describe("isBareSpecifier()", () => {
 		expect(isBareSpecifier("__BUILD_CONFIG")).toBe(false);
 	});
 
-	it("should reject template-literal expressions in specifiers", ({
-		expect,
-	}) => {
-		expect(isBareSpecifier("${moduleName}")).toBe(false);
-		expect(isBareSpecifier("foo/${bar}")).toBe(false);
-	});
-
-	it("should reject specifiers with wildcards", ({ expect }) => {
-		expect(isBareSpecifier("*")).toBe(false);
-		expect(isBareSpecifier("foo/*")).toBe(false);
-	});
-
 	it("should reject specifiers that are not package-name shaped", ({
 		expect,
 	}) => {
@@ -401,105 +389,146 @@ describe("isBareSpecifier()", () => {
 });
 
 describe("extractBareImports()", () => {
-	it("should extract named imports", ({ expect }) => {
-		const imports = extractBareImports(`import { x } from "lodash";`);
+	it("should extract named imports", async ({ expect }) => {
+		const imports = await extractBareImports(`import { x } from "lodash";`);
 		expect([...imports]).toEqual(["lodash"]);
 	});
 
-	it("should extract default imports", ({ expect }) => {
-		const imports = extractBareImports(`import x from "lodash";`);
+	it("should extract default imports", async ({ expect }) => {
+		const imports = await extractBareImports(`import x from "lodash";`);
 		expect([...imports]).toEqual(["lodash"]);
 	});
 
-	it("should extract namespace imports", ({ expect }) => {
-		const imports = extractBareImports(`import * as x from "lodash";`);
+	it("should extract namespace imports", async ({ expect }) => {
+		const imports = await extractBareImports(`import * as x from "lodash";`);
 		expect([...imports]).toEqual(["lodash"]);
 	});
 
-	it("should extract side-effect imports", ({ expect }) => {
-		const imports = extractBareImports(`import "lodash";`);
+	it("should extract side-effect imports", async ({ expect }) => {
+		const imports = await extractBareImports(`import "lodash";`);
 		expect([...imports]).toEqual(["lodash"]);
 	});
 
-	it("should extract re-exports", ({ expect }) => {
-		const imports = extractBareImports(`export { x } from "lodash";`);
+	it("should extract re-exports", async ({ expect }) => {
+		const imports = await extractBareImports(`export { x } from "lodash";`);
 		expect([...imports]).toEqual(["lodash"]);
 	});
 
-	it("should extract require() calls", ({ expect }) => {
-		const imports = extractBareImports(
+	it("should extract require() calls", async ({ expect }) => {
+		const imports = await extractBareImports(
 			`const x = require("lodash"); require("foo");`
 		);
 		expect([...imports].sort()).toEqual(["foo", "lodash"]);
 	});
 
-	it("should extract dynamic import() calls with string literals", ({
+	it("should extract dynamic import() calls with string literals", async ({
 		expect,
 	}) => {
-		const imports = extractBareImports(`const x = await import("lodash");`);
+		const imports = await extractBareImports(
+			`const x = await import("lodash");`
+		);
 		expect([...imports]).toEqual(["lodash"]);
 	});
 
-	it("should strip subpath imports down to package name", ({ expect }) => {
-		const imports = extractBareImports(
+	it("should strip subpath imports down to package name", async ({
+		expect,
+	}) => {
+		const imports = await extractBareImports(
 			`import x from "semver/functions/satisfies.js";`
 		);
 		expect([...imports]).toEqual(["semver"]);
 	});
 
-	it("should skip relative imports", ({ expect }) => {
-		const imports = extractBareImports(
+	it("should skip relative imports", async ({ expect }) => {
+		const imports = await extractBareImports(
 			`import x from "./foo"; import y from "../bar";`
 		);
 		expect([...imports]).toEqual([]);
 	});
 
-	it("should skip Node built-in imports", ({ expect }) => {
-		const imports = extractBareImports(
+	it("should skip Node built-in imports", async ({ expect }) => {
+		const imports = await extractBareImports(
 			`import fs from "node:fs"; const path = require("node:path");`
 		);
 		expect([...imports]).toEqual([]);
 	});
 
-	it("should skip Cloudflare/workerd built-in imports", ({ expect }) => {
-		const imports = extractBareImports(
+	it("should skip Cloudflare/workerd built-in imports", async ({ expect }) => {
+		const imports = await extractBareImports(
 			`import { env } from "cloudflare:workers"; import x from "workerd:unsafe";`
 		);
 		expect([...imports]).toEqual([]);
 	});
 
-	it("should skip imports inside line comments", ({ expect }) => {
-		const imports = extractBareImports(
+	it("should skip imports inside line comments", async ({ expect }) => {
+		const imports = await extractBareImports(
 			`// import x from "lodash";\nimport y from "react";`
 		);
 		expect([...imports]).toEqual(["react"]);
 	});
 
-	it("should skip imports inside block comments", ({ expect }) => {
-		const imports = extractBareImports(
+	it("should skip imports inside block comments", async ({ expect }) => {
+		const imports = await extractBareImports(
 			`/* import x from "lodash"; */\nimport y from "react";`
 		);
 		expect([...imports]).toEqual(["react"]);
 	});
 
-	it("should not match `from` keywords that aren't part of import/export", ({
+	it("should skip imports inside template literals (regression: createViteConfig)", async ({
 		expect,
 	}) => {
-		const imports = extractBareImports(
+		// Regression test: wrangler's createViteConfig bundles the literal text
+		// of a vite.config.ts into a template literal. The regex-based scanner
+		// used to match `import { defineConfig } from "vite"` as a real import.
+		const imports = await extractBareImports(
+			[
+				"function createViteConfig() {",
+				'  const content = `import { cloudflare } from "@cloudflare/vite-plugin";',
+				'import { defineConfig } from "vite";',
+				"",
+				"export default defineConfig({",
+				"\tplugins: [cloudflare()],",
+				"});",
+				"`;",
+				"  return content;",
+				"}",
+				'import real from "react";',
+			].join("\n")
+		);
+		expect([...imports]).toEqual(["react"]);
+	});
+
+	it("should skip imports inside single- and double-quoted strings", async ({
+		expect,
+	}) => {
+		const imports = await extractBareImports(
+			[
+				'const a = "import { x } from \\"lodash\\";";',
+				"const b = 'import { y } from \"react\";';",
+				'import real from "commander";',
+			].join("\n")
+		);
+		expect([...imports]).toEqual(["commander"]);
+	});
+
+	it("should not match `from` keywords that aren't part of import/export", async ({
+		expect,
+	}) => {
+		const imports = await extractBareImports(
 			`function foo() { return "hello"; } const z = "from";`
 		);
 		expect([...imports]).toEqual([]);
 	});
 
-	it("should deduplicate imports", ({ expect }) => {
-		const imports = extractBareImports(
+	it("should deduplicate imports", async ({ expect }) => {
+		const imports = await extractBareImports(
 			`import { x } from "lodash";\nimport { y } from "lodash";`
 		);
 		expect([...imports]).toEqual(["lodash"]);
 	});
 
-	it("should handle multiple imports in one file", ({ expect }) => {
-		const imports = extractBareImports(`
+	it("should handle multiple imports in one file", async ({ expect }) => {
+		const imports = await extractBareImports(`
 			import { x } from "lodash";
 			import y from "react";
 			import "polyfill";

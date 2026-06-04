@@ -5,10 +5,32 @@ import type {
 	CfPlacement,
 	Config,
 	EphemeralDirectory,
+	FetchResultFetcher,
+	FetchListResultFetcher,
+	Logger,
 	Route,
 	Entry,
 } from "@cloudflare/workers-utils";
 import type { NodeJSCompatMode } from "miniflare";
+
+/**
+ * client needs to handle logger and fetch/auth implementation
+ * these are passed into this package to handle any API requests/logs
+ */
+export type DeployHelpersContext = {
+	fetchResult: FetchResultFetcher;
+	fetchListResult: FetchListResultFetcher;
+	logger: Logger;
+	confirm: (
+		text: string,
+		options?: { defaultValue?: boolean; fallbackValue?: boolean }
+	) => Promise<boolean>;
+	prompt: (
+		text: string,
+		options?: { defaultValue?: string }
+	) => Promise<string>;
+	isNonInteractiveOrCI: () => boolean;
+};
 
 /**
  * Shared fields produced by merging CLI args with wrangler config.
@@ -110,4 +132,20 @@ export type VersionsUploadProps = SharedDeployVersionsProps & {
 	command: "versions upload";
 	/** CLI-only (--preview-alias), or auto-generated from CI branch name. */
 	previewAlias: string | undefined;
+};
+
+export interface TriggerDeployment {
+	targets: string[];
+	error?: Error;
+}
+
+export type TriggerProps = {
+	config: Config;
+	accountId: string;
+	scriptName: string;
+	env: string | undefined;
+	crons: string[] | undefined;
+	routes: Route[];
+	useServiceEnvironments: boolean;
+	firstDeploy: boolean;
 };

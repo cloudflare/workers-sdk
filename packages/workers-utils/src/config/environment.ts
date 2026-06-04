@@ -1,3 +1,11 @@
+/**
+ * Wrangler configuration types. The JSDoc on these fields is also the source
+ * of truth for the equivalent fields in `@cloudflare/config`
+ * (`packages/config/src/types.ts` — `UserConfig` — and the binding option
+ * interfaces in `packages/config/src/config.ts`). When editing prose here,
+ * mirror the changes there.
+ */
+
 import type { Json } from "../types";
 
 /**
@@ -990,6 +998,21 @@ export interface EnvironmentNonInheritable {
 		migrations_table?: string;
 		/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */
 		migrations_dir?: string;
+		/**
+		 * A glob pattern (relative to the Wrangler config file) used to discover
+		 * migration files for this D1 database. Defaults to `${migrations_dir}/*.sql`
+		 * if not specified.
+		 *
+		 * Use this to opt in to nested layouts such as `migrations/*\/migration.sql`
+		 * (as produced by some ORMs).
+		 *
+		 * When `migrations_pattern` is set, `migrations_dir` must also be set, and
+		 * `migrations_pattern` must start with `${migrations_dir}/`. This keeps the
+		 * relationship between the two settings explicit and lets Wrangler record
+		 * each migration's name in the migrations table as a path relative to
+		 * `migrations_dir`.
+		 */
+		migrations_pattern?: string;
 		/** Internal use only. */
 		database_internal_env?: string;
 		/** Whether the D1 database should be remote or not in local development */
@@ -1053,6 +1076,44 @@ export interface EnvironmentNonInheritable {
 		/** Whether the AI Search instance binding should be remote in local development */
 		remote?: boolean;
 	}[];
+
+	/**
+	 * Specifies Agent Memory namespace bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	agent_memory: {
+		/** The binding name used to refer to the Agent Memory namespace in the Worker. */
+		binding: string;
+		/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
+		namespace: string;
+		/** Whether the Agent Memory binding should be remote in local development */
+		remote?: boolean;
+	}[];
+
+	/**
+	 * Cloudflare Web Search binding. There is exactly one shared web corpus, so the
+	 * binding is zero-config -- only the variable name is required, declared as a
+	 * single object (not an array).
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	websearch:
+		| {
+				/** The binding name used to refer to Web Search in the Worker. */
+				binding: string;
+				/** Whether the Web Search binding should be remote or not in local development */
+				remote?: boolean;
+		  }
+		| undefined;
 
 	/**
 	 * Specifies Hyperdrive configs that are bound to this Worker environment.

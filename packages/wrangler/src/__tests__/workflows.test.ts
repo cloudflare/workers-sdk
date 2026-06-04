@@ -695,6 +695,70 @@ describe("wrangler workflows", () => {
 				`"🥷 The instance "bar" from some-workflow was restarted successfully"`
 			);
 		});
+
+		it("should restart an instance from a specific step", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+
+			msw.use(
+				http.patch(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId/status`,
+					async ({ params, request }) => {
+						expect(params.instanceId).toEqual("bar");
+						const body = (await request.json()) as Record<string, unknown>;
+						expect(body).toEqual({
+							status: "restart",
+							from: {
+								name: "process",
+								count: 2,
+								type: "do",
+							},
+						});
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {},
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(
+				`workflows instances restart some-workflow bar --from-step-name process --from-step-count 2 --from-step-type do`
+			);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 The instance "bar" from some-workflow was restarted successfully"`
+			);
+		});
+
+		it("should require a step name when restart step options are provided", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+
+			await expect(
+				runWrangler(
+					`workflows instances restart some-workflow bar --from-step-type do`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --from-step-name is required when using --from-step-count or --from-step-type]`
+			);
+		});
+
+		it("should reject invalid restart step counts", async ({ expect }) => {
+			writeWranglerConfig();
+
+			await expect(
+				runWrangler(
+					`workflows instances restart some-workflow bar --from-step-name process --from-step-count 0`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --from-step-count must be a positive integer]`
+			);
+		});
 	});
 
 	describe("instances terminate-all", () => {
@@ -1714,6 +1778,43 @@ describe("wrangler workflows", () => {
 
 				await runWrangler(
 					"workflows instances restart my-workflow instance-123 --local"
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"🥷 The instance "instance-123" from my-workflow was restarted successfully"`
+				);
+			});
+
+			it("should restart an instance from a specific step in local dev session", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.patch(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/status`,
+						async ({ params, request }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							const body = (await request.json()) as Record<string, unknown>;
+							expect(body).toEqual({
+								action: "restart",
+								from: {
+									name: "checkpoint",
+									type: "waitForEvent",
+								},
+							});
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances restart my-workflow instance-123 --local --from-step-name checkpoint --from-step-type waitForEvent"
 				);
 				expect(std.info).toMatchInlineSnapshot(
 					`"🥷 The instance "instance-123" from my-workflow was restarted successfully"`

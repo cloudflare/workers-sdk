@@ -1,0 +1,47 @@
+{
+	"name": "@cloudflare/config",
+	"version": "0.0.0",
+	"private": true,
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/config#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/config"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		},
+		"./public": {
+			"types": "./dist/public.d.mts",
+			"import": "./dist/public.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check:type": "tsc",
+		"dev": "tsdown --watch",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
+		"ts-dedent": "^2.2.0",
+		"tsdown": "0.16.3",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default",
+		"zod": "^4.4.3"
+	}
+}

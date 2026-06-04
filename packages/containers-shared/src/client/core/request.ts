@@ -22,6 +22,10 @@ type FetchResult<ResponseType = unknown> = {
 	result_info?: ResultInfo;
 };
 
+type ErrorResponse = {
+	error: string;
+};
+
 const isDefined = <T>(
 	value: T | null | undefined
 ): value is Exclude<T, null | undefined> => {
@@ -49,11 +53,19 @@ const isBlob = (value: any): value is Blob => {
 	);
 };
 
+const isErrorResponse = (value: unknown): value is ErrorResponse => {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"error" in value &&
+		typeof value.error === "string"
+	);
+};
+
 const base64 = (str: string): string => {
 	try {
 		return btoa(str);
 	} catch (err) {
-		// @ts-ignore
 		return Buffer.from(str).toString("base64");
 	}
 };
@@ -234,6 +246,8 @@ const parseResponseSchemaV4 = <T>(
 		} else {
 			result = {};
 		}
+	} else if (isErrorResponse(fetchResult)) {
+		result = fetchResult;
 	} else {
 		result = { error: fetchResult.errors?.[0]?.message };
 	}
@@ -268,7 +282,7 @@ export const sendRequest = async (
 		// :(
 		// The vite-plugin is attempting to typecheck everything with worker types, which does not support request.credentials
 		// Also note this is always set to "omit".
-		// @ts-ignore
+		// @ts-ignore -- request.credentials not in Workers types
 		request.credentials = config.CREDENTIALS;
 	}
 

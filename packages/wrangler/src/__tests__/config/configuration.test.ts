@@ -16,7 +16,7 @@ describe("readConfig() upgrade hint", () => {
 	it("should not show an upgrade hint when unexpected fields are found but no update is available", async ({
 		expect,
 	}) => {
-		vi.mocked(updateCheck).mockResolvedValue(undefined);
+		vi.mocked(updateCheck).mockResolvedValue({ status: "up-to-date" });
 		writeWranglerConfig({
 			// @ts-expect-error intentional unknown field for test
 			unknown_field: "some_value",
@@ -30,7 +30,10 @@ describe("readConfig() upgrade hint", () => {
 	it("should show an upgrade hint when unexpected fields are found and an update is available", async ({
 		expect,
 	}) => {
-		vi.mocked(updateCheck).mockResolvedValue("9.9.9");
+		vi.mocked(updateCheck).mockResolvedValue({
+			status: "update-available",
+			latest: "9.9.9",
+		});
 		writeWranglerConfig({
 			// @ts-expect-error intentional unknown field for test
 			unknown_field: "some_value",
@@ -48,7 +51,10 @@ describe("readConfig() upgrade hint", () => {
 	it("should not show an upgrade hint when warnings are unrelated to unexpected fields", async ({
 		expect,
 	}) => {
-		vi.mocked(updateCheck).mockResolvedValue("9.9.9");
+		vi.mocked(updateCheck).mockResolvedValue({
+			status: "update-available",
+			latest: "9.9.9",
+		});
 		// legacy_env: false produces a "Service environments are deprecated" warning
 		// but does NOT trigger validateAdditionalProperties, so no upgrade hint
 		writeWranglerConfig({ legacy_env: false });
@@ -240,5 +246,62 @@ compatibility_date = "2022-01-12"`;
 
 		const config = readConfig({ config: "wrangler.toml" });
 		expect(config.name).toBe("no-bom-test");
+	});
+});
+
+describe("readConfig() custom_domain inheritance warning", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+
+	it("should warn when a named env inherits custom_domain routes from the top-level config", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			routes: [{ pattern: "api.example.com", custom_domain: true }],
+			env: {
+				staging: {
+					name: "my-worker-staging",
+					workers_dev: true,
+					// no `routes` override — will inherit top-level custom domain
+				},
+			},
+		});
+		readConfig({ config: "wrangler.toml", env: "staging" });
+		await endEventLoop();
+		expect(std.warn).toContain(
+			`"env.staging" environment inherits the top-level`
+		);
+		expect(std.warn).toContain(`api.example.com`);
+		expect(std.warn).toContain(`Add \`"routes": []\``);
+		expect(std.warn).toContain(`prevent`);
+		expect(std.warn).toContain(
+			`copy the route configuration from the top level`
+		);
+	});
+
+	it("should not warn when the env explicitly overrides routes", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			routes: [{ pattern: "api.example.com", custom_domain: true }],
+			env: {
+				staging: {
+					name: "my-worker-staging",
+					routes: [],
+				},
+			},
+		});
+		readConfig({ config: "wrangler.toml", env: "staging" });
+		await endEventLoop();
+		expect(std.warn).not.toContain("inherits the top-level `routes`");
+	});
+
+	it("should not warn for the top-level env itself", async ({ expect }) => {
+		writeWranglerConfig({
+			routes: [{ pattern: "api.example.com", custom_domain: true }],
+		});
+		readConfig({ config: "wrangler.toml" });
+		await endEventLoop();
+		expect(std.warn).not.toContain("inherits the top-level `routes`");
 	});
 });

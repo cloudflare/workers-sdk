@@ -5,15 +5,15 @@ import {
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { getHostFromRoute } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
 import { convertConfigToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
-import { validateRoutes } from "./deploy/deploy";
+import { validateRoutes } from "./deployment-bundle/resolve-config-args";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { logger } from "./logger";
-import { getHostFromRoute } from "./zones";
 import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {

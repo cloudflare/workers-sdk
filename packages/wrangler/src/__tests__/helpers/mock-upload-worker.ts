@@ -1,3 +1,7 @@
+import {
+	getSubdomainValues,
+	getSubdomainValuesAPIMock,
+} from "@cloudflare/deploy-helpers";
 import { ParseError } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 /* eslint-disable-next-line no-restricted-imports --
@@ -5,10 +9,6 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { expect } from "vitest";
-import {
-	getSubdomainValues,
-	getSubdomainValuesAPIMock,
-} from "../../triggers/deploy";
 import {
 	mockGetWorkerSubdomain,
 	mockUpdateWorkerSubdomain,

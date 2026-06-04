@@ -79,6 +79,12 @@ function mockNoWorkerFound({ isBulk = false } = {}) {
 	}
 }
 
+function mockReadlineInput(input: string) {
+	vi.spyOn(readline, "createInterface").mockImplementation(
+		() => input.split(/\r?\n/) as unknown as Interface
+	);
+}
+
 describe("wrangler secret", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -431,7 +437,8 @@ describe("wrangler secret", () => {
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
-						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your Wrangler configuration file.]
+						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your Wrangler configuration file.
+						Alternatively, try running \`wrangler login\` to re-authenticate.]
 					`);
 				});
 
@@ -1136,13 +1143,11 @@ describe("wrangler secret", () => {
 		});
 
 		it("should use secret bulk w/ pipe input", async ({ expect }) => {
-			vi.spyOn(readline, "createInterface").mockImplementation(
-				() =>
-					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
-					JSON.stringify({
-						secret1: "secret-value",
-						password: "hunter2",
-					}) as unknown as Interface
+			mockReadlineInput(
+				JSON.stringify({
+					secret1: "secret-value",
+					password: "hunter2",
+				})
 			);
 			mockBulkRequest(expect);
 
@@ -1154,6 +1159,27 @@ describe("wrangler secret", () => {
 				🌀 Processing the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret1
 				✨ Successfully created secret for key: password
+
+				Finished processing secrets file:
+				✨ 2 secrets successfully created"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create secrets from env stdin", async ({ expect }) => {
+			mockReadlineInput("SECRET_NAME_1=secret_text\nSECRET_NAME_2=secret_text");
+			mockBulkRequest(expect);
+
+			await runWrangler("secret bulk --name script-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Processing the secrets for the Worker "script-name"
+				✨ Successfully created secret for key: SECRET_NAME_1
+				✨ Successfully created secret for key: SECRET_NAME_2
 
 				Finished processing secrets file:
 				✨ 2 secrets successfully created"

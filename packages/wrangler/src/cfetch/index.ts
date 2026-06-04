@@ -1,22 +1,22 @@
 import { URLSearchParams } from "node:url";
-import { APIError } from "@cloudflare/workers-utils";
-import { maybeThrowFriendlyError } from "./errors";
-import { fetchInternal } from "./internal";
-import type { ApiCredentials } from "../user";
-import type { FetchError } from "./errors";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
-import type { ErrorData } from "cloudflare/resources/shared";
+import {
+	throwFetchError,
+	hasCursor,
+	hasMorePages,
+	fetchResultBase,
+	fetchListResultBase,
+} from "@cloudflare/workers-utils";
+import { version as wranglerVersion } from "../../package.json";
+import { logger } from "../logger";
+import { fetchInternal, resolveCredentials } from "./internal";
+import type {
+	ComplianceConfig,
+	FetchResult,
+	ApiCredentials,
+} from "@cloudflare/workers-utils";
 import type { RequestInit } from "undici";
 
 // Check out https://api.cloudflare.com/ for API docs.
-
-export interface FetchResult<ResponseType = unknown> {
-	success: boolean;
-	result: ResponseType;
-	errors: FetchError[];
-	messages?: (string | { code?: number; message: string })[];
-	result_info?: unknown;
-}
 
 export { fetchKVGetValue, performApiFetch } from "./internal";
 
@@ -31,14 +31,17 @@ export async function fetchResult<ResponseType>(
 	abortSignal?: AbortSignal,
 	apiToken?: ApiCredentials
 ): Promise<ResponseType> {
-	const { response: json, status } = await fetchInternal<
-		FetchResult<ResponseType>
-	>(complianceConfig, resource, init, queryParams, abortSignal, apiToken);
-	if (json.success) {
-		return json.result;
-	} else {
-		throwFetchError(resource, json, status);
-	}
+	apiToken = await resolveCredentials(complianceConfig, apiToken);
+	return fetchResultBase(
+		complianceConfig,
+		resource,
+		init,
+		`wrangler/${wranglerVersion}`,
+		logger,
+		queryParams,
+		abortSignal,
+		apiToken
+	);
 }
 
 /**
@@ -74,29 +77,16 @@ export async function fetchListResult<ResponseType>(
 	init: RequestInit = {},
 	queryParams?: URLSearchParams
 ): Promise<ResponseType[]> {
-	const results: ResponseType[] = [];
-	let getMoreResults = true;
-	let cursor: string | undefined;
-	while (getMoreResults) {
-		if (cursor) {
-			queryParams = new URLSearchParams(queryParams);
-			queryParams.set("cursor", cursor);
-		}
-		const { response: json, status } = await fetchInternal<
-			FetchResult<ResponseType[]>
-		>(complianceConfig, resource, init, queryParams);
-		if (json.success) {
-			results.push(...json.result);
-			if (hasCursor(json.result_info)) {
-				cursor = json.result_info?.cursor;
-			} else {
-				getMoreResults = false;
-			}
-		} else {
-			throwFetchError(resource, json, status);
-		}
-	}
-	return results;
+	const credentials = await resolveCredentials(complianceConfig);
+	return fetchListResultBase(
+		complianceConfig,
+		resource,
+		init,
+		`wrangler/${wranglerVersion}`,
+		logger,
+		queryParams,
+		credentials
+	);
 }
 
 /**
@@ -183,107 +173,4 @@ export async function fetchCursorPage<ResponseType>(
 	}
 
 	return results;
-}
-
-interface PageResultInfo {
-	page: number;
-	per_page: number;
-	count: number;
-	total_count: number;
-}
-
-export function hasMorePages(
-	result_info: unknown
-): result_info is PageResultInfo {
-	const page = (result_info as PageResultInfo | undefined)?.page;
-	const per_page = (result_info as PageResultInfo | undefined)?.per_page;
-	const total = (result_info as PageResultInfo | undefined)?.total_count;
-
-	return (
-		page !== undefined &&
-		per_page !== undefined &&
-		total !== undefined &&
-		page * per_page < total
-	);
-}
-
-function throwFetchError(
-	resource: string,
-	response: FetchResult<unknown>,
-	status: number
-): never {
-	// This is an error from within an MSW handler
-	if (typeof vitest !== "undefined" && !("errors" in response)) {
-		throw response;
-	}
-	const errors = response.errors ?? [];
-	for (const error of errors) {
-		maybeThrowFriendlyError(error);
-	}
-
-	// Some API endpoints return non-standard error envelopes (e.g. {code, error}
-	// instead of {errors: [...]}). Surface those as notes when errors is empty.
-	const notes = [
-		...errors.map((err) => ({ text: renderError(err) })),
-		...(response.messages?.map((msg) => ({
-			text: typeof msg === "string" ? msg : (msg.message ?? String(msg)),
-		})) ?? []),
-	];
-	if (notes.length === 0) {
-		const raw = response as unknown as Record<string, unknown>;
-		const fallbackMessage =
-			typeof raw.error === "string"
-				? `${raw.error}${raw.code ? ` [code: ${raw.code}]` : ""}`
-				: undefined;
-		if (fallbackMessage) {
-			notes.push({ text: fallbackMessage });
-		}
-	}
-
-	const error = new APIError({
-		text: `A request to the Cloudflare API (${resource}) failed.`,
-		notes,
-		status,
-		telemetryMessage: false,
-	});
-	// add the first error code directly to this error
-	// so consumers can use it for specific behaviour
-	const code = errors[0]?.code;
-	if (code) {
-		error.code = code;
-	}
-	// extract the account tag from the resource (if any)
-	error.accountTag = extractAccountTag(resource);
-	throw error;
-}
-
-export function extractAccountTag(resource: string) {
-	const re = new RegExp("/accounts/([a-zA-Z0-9]+)/?");
-	const matches = re.exec(resource);
-	return matches?.[1];
-}
-
-function hasCursor(result_info: unknown): result_info is { cursor: string } {
-	const cursor = (result_info as { cursor: string } | undefined)?.cursor;
-	return cursor !== undefined && cursor !== null && cursor !== "";
-}
-
-export function renderError(err: FetchError | ErrorData, level = 0): string {
-	const indent = "  ".repeat(level);
-	const chainedMessages =
-		"error_chain" in err
-			? (err.error_chain
-					?.map(
-						(chainedError) =>
-							`\n\n${indent}- ${renderError(chainedError, level + 1)}`
-					)
-					.join("\n") ?? "")
-			: "";
-	return (
-		(err.code ? `${err.message} [code: ${err.code}]` : err.message) +
-		(err.documentation_url
-			? `\n${indent}To learn more about this error, visit: ${err.documentation_url}`
-			: "") +
-		chainedMessages
-	);
 }

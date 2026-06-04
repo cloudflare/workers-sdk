@@ -587,6 +587,31 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 			}
 		}
 
+		// Cross-worker workflow bindings: when `scriptName` refers to a worker
+		// outside this Miniflare instance (registered in the dev registry), mark
+		// the workflow `external` so the workflows plugin reroutes the engine's
+		// USER_WORKFLOW binding through the dev-registry-proxy. Mirrors the DO
+		// block above. Without this, the engine binds to a non-existent local
+		// service `core:user:<scriptName>` and workerd refuses to start.
+		if (workerOpts.workflows.workflows) {
+			for (const [bindingName, workflow] of Object.entries(
+				workerOpts.workflows.workflows
+			)) {
+				const { scriptName, className, remoteProxyConnectionString } = workflow;
+				if (
+					remoteProxyConnectionString === undefined &&
+					scriptName &&
+					!allWorkerNames.includes(scriptName)
+				) {
+					workerOpts.workflows.workflows[bindingName] = {
+						...workflow,
+						external: true,
+					};
+					getEntrypoints(scriptName).entrypoints.add(className);
+				}
+			}
+		}
+
 		if (workerOpts.core.tails) {
 			for (let i = 0; i < workerOpts.core.tails.length; i++) {
 				const {
@@ -2429,7 +2454,13 @@ export class Miniflare {
 			runtimeInspectorAddress = this.#getSocketAddress(
 				kInspectorSocket,
 				this.#previousRuntimeInspectorPort,
-				"localhost",
+				// Use "127.0.0.1" explicitly instead of "localhost" to avoid
+				// DNS resolution issues. On systems where getaddrinfo("localhost")
+				// returns ::1 but IPv6 is disabled, workerd fails to bind the
+				// inspector socket and silently continues without emitting the
+				// listen-inspector event, causing waitForPorts() to hang.
+				// See https://github.com/cloudflare/workers-sdk/issues/14077
+				"127.0.0.1",
 				runtimeInspectorPort
 			);
 			this.#previousRuntimeInspectorPort = runtimeInspectorPort;

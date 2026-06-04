@@ -2338,6 +2338,40 @@ function collectCoreBindings(
 			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
 		}
 
+		if (env.websearch) {
+			if (!env.websearch.binding) {
+				throwMissingBindingError({
+					binding: env.websearch,
+					bindingType: "websearch",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				addBinding(env.websearch.binding, "WebSearch", "websearch", envName);
+			}
+		}
+
+		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
+			if (!agentMemory.binding) {
+				throwMissingBindingError({
+					binding: agentMemory,
+					bindingType: "agent_memory",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(
+				agentMemory.binding,
+				"AgentMemoryNamespace",
+				"agent_memory",
+				envName
+			);
+		}
+
 		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
@@ -2354,7 +2388,7 @@ function collectCoreBindings(
 					fieldName: "binding",
 				});
 			} else {
-				addBinding(env.browser.binding, "Fetcher", "browser", envName);
+				addBinding(env.browser.binding, "BrowserRun", "browser", envName);
 			}
 		}
 
@@ -3339,7 +3373,7 @@ function collectCoreBindingsPerEnvironment(
 				bindings.push({
 					bindingCategory: "browser",
 					name: env.browser.binding,
-					type: "Fetcher",
+					type: "BrowserRun",
 				});
 			}
 		}
@@ -3479,6 +3513,43 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "ai_search",
 				name: aiSearch.binding,
 				type: "AiSearchInstance",
+			});
+		}
+
+		if (env.websearch) {
+			if (!env.websearch.binding) {
+				throwMissingBindingError({
+					binding: env.websearch,
+					bindingType: "websearch",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				bindings.push({
+					bindingCategory: "websearch",
+					name: env.websearch.binding,
+					type: "WebSearch",
+				});
+			}
+		}
+
+		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
+			if (!agentMemory.binding) {
+				throwMissingBindingError({
+					binding: agentMemory,
+					bindingType: "agent_memory",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "agent_memory",
+				name: agentMemory.binding,
+				type: "AgentMemoryNamespace",
 			});
 		}
 

@@ -17,6 +17,7 @@ import {
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zWorkflowsChangeInstanceStatusData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
 import openApiSpec from "./openapi.local.json";
@@ -317,12 +318,16 @@ app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 	)
 );
 
-app.patch("/api/workflows/:workflow_name/instances/:instance_id/status", (c) =>
-	changeWorkflowInstanceStatus(
-		c,
-		c.req.param("workflow_name"),
-		c.req.param("instance_id")
-	)
+app.patch(
+	"/api/workflows/:workflow_name/instances/:instance_id/status",
+	validateRequestBody(zWorkflowsChangeInstanceStatusData.shape.body),
+	(c) =>
+		changeWorkflowInstanceStatus(
+			c,
+			c.req.param("workflow_name"),
+			c.req.param("instance_id"),
+			c.req.valid("json")
+		)
 );
 
 app.post(

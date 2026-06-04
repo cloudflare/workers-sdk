@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports -- Setup file uses dynamic imports where typeof requires value imports */
 import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
@@ -124,7 +123,13 @@ vi.mock("../package-manager", async (importOriginal) => {
 	return mocked;
 });
 
-vi.mock("../update-check");
+vi.mock("../update-check", async (importOriginal) => {
+	const mod = await importOriginal<typeof import("../update-check")>();
+	return {
+		...mod,
+		updateCheck: vi.fn().mockResolvedValue({ status: "up-to-date" }),
+	};
+});
 
 beforeAll(() => {
 	msw.listen({

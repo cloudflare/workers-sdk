@@ -18,7 +18,6 @@ namespace Cloudflare {
 		__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;
 	}
 	interface GlobalProps {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof import() in ambient declarations requires inline import
 		mainModule: typeof import("./index");
 		durableNamespaces: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__";
 	}

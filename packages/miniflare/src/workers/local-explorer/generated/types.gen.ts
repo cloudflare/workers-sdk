@@ -1730,6 +1730,23 @@ export type WorkflowsChangeInstanceStatusData = {
 		 * The action to perform on the workflow instance.
 		 */
 		action: "pause" | "resume" | "restart" | "terminate";
+		/**
+		 * The step to restart the instance from. Only valid when action is restart.
+		 */
+		from?: {
+			/**
+			 * The name of the step.
+			 */
+			name: string;
+			/**
+			 * The 1-based index of the step when multiple steps share the same name and type. Defaults to 1.
+			 */
+			count?: number;
+			/**
+			 * The step type. Defaults to do.
+			 */
+			type?: "do" | "sleep" | "waitForEvent";
+		};
 	};
 	path: {
 		workflow_name: WorkflowsWorkflowName;
