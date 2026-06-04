@@ -61,9 +61,7 @@ export abstract class RuntimeController extends Controller {
 	// *********************
 	//   Runtime Accessors
 	// *********************
-	get mf(): Miniflare | undefined {
-		return undefined;
-	}
+	abstract get mf(): Miniflare | undefined;
 
 	// *********************
 	//   Event Dispatchers
