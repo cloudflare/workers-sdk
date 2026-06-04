@@ -4,6 +4,7 @@ import {
 } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
@@ -14,6 +15,7 @@ import {
 	fetchAllAccounts,
 	getAccountFromCache,
 	getActiveAccountId,
+	getAPIToken,
 	getAuthConfigFilePath,
 	getOAuthTokenFromLocalState,
 	getOrSelectAccountId,
@@ -36,7 +38,6 @@ import {
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
 import { getMswSuccessMembershipHandlers } from "./helpers/msw/handlers/user";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { UserAuthConfig } from "../user";
 import type { Config } from "@cloudflare/workers-utils";
@@ -84,7 +85,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -130,7 +131,7 @@ describe("User", () => {
 				Temporary login server listening on 0.0.0.0:8976
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -176,7 +177,7 @@ describe("User", () => {
 				Temporary login server listening on mylocalhost.local:8976
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -222,7 +223,7 @@ describe("User", () => {
 				Temporary login server listening on localhost:8787
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -264,7 +265,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 
@@ -289,6 +290,99 @@ describe("User", () => {
 			[Error: OAuth login is not supported in the \`fedramp_high\` compliance region.
 			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the \`CLOUDFLARE_API_ENVIRONMENT\` environment variable.]
 		`);
+		});
+
+		// Regression coverage for the OAuth callback hang. When the OAuth
+		// provider redirected to `/oauth/callback?error=...` with any error
+		// other than `access_denied`, Wrangler used to never write a response,
+		// causing `server.close()` to wait forever for the connection to drain
+		// and the login command to hang until the 120s OAuth timeout. The
+		// tightened `mock-http-server.ts` faithfully reproduces those
+		// production semantics, so a regression would cause these tests to
+		// fail at the vitest test timeout rather than passing by accident.
+		describe("OAuth callback error handling", () => {
+			it("rejects with the bare OAuth error code when no description is provided", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback({ error: "invalid_scope" });
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_scope]`
+				);
+			});
+
+			it("rejects with both the OAuth error code and error_description", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback({
+					error: "invalid_scope",
+					error_description:
+						"The OAuth 2.0 Client is not allowed to request scope 'browser:write'.",
+				});
+
+				await expect(runWrangler("login")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: OAuth error: invalid_scope
+					  The OAuth 2.0 Client is not allowed to request scope 'browser:write'.]
+				`);
+			});
+
+			it("rejects with the existing consent-denied message for access_denied", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback({ error: "access_denied" });
+
+				await expect(runWrangler("login")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Error: Consent denied. You must grant consent to Wrangler in order to login.
+					If you don't want to do this consider passing an API token via the \`CLOUDFLARE_API_TOKEN\` environment variable]
+				`);
+			});
+
+			it("rejects with the provider error when /oauth2/token fails after a valid auth code", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						() =>
+							HttpResponse.json({ error: "invalid_grant" }, { status: 400 }),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_grant]`
+				);
+			});
+
+			it("rejects with the provider error when /oauth2/token returns 2xx with an error body", async ({
+				expect,
+			}) => {
+				// Defensive handling of the (non-standard) case where the token
+				// endpoint returns a success status but the body still carries an
+				// OAuth `error` field. The error should still be surfaced via
+				// `toErrorClass` rather than as a plain `Error`.
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						() => HttpResponse.json({ error: "invalid_token" }),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_token]`
+				);
+			});
 		});
 	});
 
@@ -345,6 +439,95 @@ describe("User", () => {
 		).resolves.toEqual(false);
 	});
 
+	describe("CLOUDFLARE_API_TOKEN priority over stored OAuth state", () => {
+		// Regression coverage for https://github.com/cloudflare/workers-sdk/issues/13744
+		//
+		// A user may legitimately have both:
+		//   - A `CLOUDFLARE_API_TOKEN` set in the environment (typically via `.env`)
+		//   - A stale OAuth token left over from a previous `wrangler login`
+		//
+		// The env-based API token should win unconditionally — the stored OAuth
+		// state should not even be consulted, let alone refreshed.
+
+		it("getAPIToken returns the env token even when a stored OAuth token also exists", ({
+			expect,
+		}) => {
+			writeAuthConfigFile({
+				oauth_token: "stale-oauth",
+				refresh_token: "stale-refresh",
+				expiration_time: new Date(Date.now() + 100_000 * 1000).toISOString(),
+				scopes: ["account:read"],
+			});
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-token");
+
+			expect(getAPIToken()).toEqual({ apiToken: "env-token" });
+		});
+
+		it("loginOrRefreshIfRequired does not attempt to refresh an expired OAuth token when env auth is set", async ({
+			expect,
+		}) => {
+			// Stored OAuth token is expired. Without the fix, wrangler would try to
+			// refresh it (and fail), aborting the command even though env auth is
+			// valid and available.
+			const pastDate = new Date(Date.now() - 100_000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-oauth",
+				refresh_token: "stale-refresh",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-token");
+
+			let oauthRefreshCalled = false;
+			msw.use(
+				http.post("*/oauth2/token", () => {
+					oauthRefreshCalled = true;
+					return new HttpResponse(null, { status: 400 });
+				})
+			);
+
+			await expect(
+				loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
+			).resolves.toEqual(true);
+			expect(oauthRefreshCalled).toBe(false);
+		});
+
+		it("wrangler whoami succeeds via env token when a stale OAuth token also exists on disk", async ({
+			expect,
+		}) => {
+			// End-to-end reproduction of issue #13744. With the bug, this command
+			// would fail with "Failed to fetch auth token: 400 Bad Request" /
+			// "Not logged in." Now it should succeed using the env token.
+			const pastDate = new Date(Date.now() - 100_000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-oauth",
+				refresh_token: "stale-refresh",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-token");
+
+			let oauthRefreshCalled = false;
+			msw.use(
+				http.post("*/oauth2/token", () => {
+					oauthRefreshCalled = true;
+					return new HttpResponse(null, { status: 400 });
+				}),
+				http.get("*/user/tokens/verify", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+
+			await runWrangler("whoami");
+
+			expect(std.err).toBe("");
+			expect(std.out).toContain(
+				"The API Token is read from the CLOUDFLARE_API_TOKEN environment variable."
+			);
+			expect(oauthRefreshCalled).toBe(false);
+		});
+	});
+
 	it("should have auth per environment", async ({ expect }) => {
 		setIsTTY(false);
 		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
@@ -393,7 +576,7 @@ describe("User", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 			Successfully logged in."
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -443,6 +626,99 @@ describe("User", () => {
 
 			// The token should have been refreshed (mock returns "access_token_success_mock")
 			expect(std.out).toContain("access_token_success_mock");
+		});
+
+		it("should re-read refresh_token from disk before refreshing in case a sibling process rotated it", async ({
+			expect,
+		}) => {
+			// Bug repro: when a long-lived wrangler process (e.g. `wrangler dev`) holds a
+			// refresh_token from a snapshot of disk, and a sibling wrangler invocation
+			// rotates the token on disk, the long-lived process's next refresh must
+			// pick up the rotated token rather than send the stale RT and get a 401.
+			// See real-world logs: same RT sent by two processes 60min apart, second 401'd.
+			setIsTTY(false);
+
+			// Sibling process has already rotated RT_A → RT_B on disk, but the access
+			// token written alongside is also expired (so a refresh is still needed).
+			// This simulates: our process started up with RT_A, time passes, the
+			// sibling rotates, then our process tries to refresh.
+			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-access",
+				refresh_token: "RT_B",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			// CF token endpoint: stale RT_A returns 401, current RT_B succeeds.
+			// Matches the exact failure mode observed in production logs.
+			msw.use(
+				http.post("*/oauth2/token", async ({ request }) => {
+					const body = new URLSearchParams(await request.text());
+					const rt = body.get("refresh_token");
+					if (rt === "RT_A") {
+						return new HttpResponse(null, {
+							status: 401,
+							statusText: "Unauthorized",
+						});
+					}
+					return HttpResponse.json({
+						access_token: "fresh-access-token",
+						expires_in: 3600,
+						refresh_token: "RT_B_NEXT",
+						scope: "account:read",
+						token_type: "bearer",
+					});
+				})
+			);
+
+			// readStoredAuthState() reads the auth config file on every call, so
+			// exchangeRefreshTokenForAccessToken picks up RT_B written by the
+			// "sibling" process and the command prints the fresh access token.
+			await runWrangler("auth token");
+			expect(std.out).toContain("fresh-access-token");
+		});
+
+		it("should preserve the stored refresh_token when the OAuth server omits one on refresh", async ({
+			expect,
+		}) => {
+			// RFC 6749 §6 allows the authorization server to return a successful
+			// refresh response without a new refresh_token; the previously issued
+			// refresh token then remains valid. Wrangler must keep that stored
+			// refresh token on disk rather than wiping it — otherwise the next
+			// refresh attempt fails with "No refresh token is present" and the
+			// user is effectively logged out.
+			setIsTTY(false);
+			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-access",
+				refresh_token: "RT_A",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			msw.use(
+				http.post("*/oauth2/token", () =>
+					HttpResponse.json({
+						access_token: "fresh-access-token",
+						expires_in: 3600,
+						// no refresh_token in the response
+						scope: "account:read",
+						token_type: "bearer",
+					})
+				)
+			);
+
+			await runWrangler("auth token");
+
+			expect(std.out).toContain("fresh-access-token");
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				api_token: undefined,
+				oauth_token: "fresh-access-token",
+				refresh_token: "RT_A",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
 		});
 
 		it("should error when not logged in", async ({ expect }) => {
@@ -1011,6 +1287,36 @@ describe("User", () => {
 
 			await expect(fetchAllAccounts({})).rejects.toThrowError(
 				/incorrect permissions on your API token/
+			);
+		});
+
+		it("should include env-var hint when /memberships returns 9106 and /accounts is empty", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("*/accounts", () => HttpResponse.json(createFetchResult([])), {
+					once: true,
+				}),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed",
+								},
+							],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/CLOUDFLARE_API_TOKEN/
 			);
 		});
 

@@ -1,4 +1,5 @@
-import type { fetchResult } from "../cfetch";
+import type { fetchResult, fetchListResult } from "../cfetch";
+import type { confirm, prompt } from "../dialogs";
 import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
 import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
@@ -38,9 +39,9 @@ type CamelCaseKey<K extends PropertyKey> = K extends string
 type Alias<O extends Options | PositionalOptions> = O extends { alias: infer T }
 	? T extends Exclude<string, T>
 		? { [key in T]: InferredOptionType<O> }
-		: // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+		: // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Vendored yargs type requires empty object fallback
 			{}
-	: // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+	: // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Vendored yargs type requires empty object fallback
 		{};
 
 type StringKeyOf<T> = Extract<keyof T, string>;
@@ -109,6 +110,19 @@ export type HandlerContext = {
 	 * Use fetchResult to make *auth'd* requests to the Cloudflare API.
 	 */
 	fetchResult: typeof fetchResult;
+	fetchListResult: typeof fetchListResult;
+
+	/**
+	 * Interactive prompts
+	 */
+	confirm: typeof confirm;
+	prompt: typeof prompt;
+
+	/**
+	 * Whether the process is non-interactive or running in CI.
+	 */
+	isNonInteractiveOrCI: () => boolean;
+
 	/**
 	 * Error classes provided to the command implementor as a convenience
 	 * to aid discoverability and to encourage their usage.
@@ -202,6 +216,14 @@ export type CommandDefinition<
 		 * @default true
 		 */
 		sendMetrics?: boolean;
+
+		/**
+		 * Skip the AI coding agent skills installation prompt for this command.
+		 * Set to `true` for commands whose stdout is captured by the shell (e.g. `complete`),
+		 * where interactive prompts would corrupt the output.
+		 * @default false
+		 */
+		skipSkillsPrompt?: boolean;
 	};
 
 	/**

@@ -1,5 +1,8 @@
 import { setTimeout } from "node:timers/promises";
-import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	runInTempDir,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { afterEach, describe, it, vi } from "vitest";
@@ -9,7 +12,6 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { MockWebSocket } from "../helpers/mock-web-socket";
 import { msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type {
 	AlarmEvent,
@@ -24,7 +26,6 @@ import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
 vi.mock("ws", async (importOriginal) => {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	const realModule = await importOriginal<typeof import("ws")>();
 	const module = {
 		__esModule: true,
@@ -77,7 +78,7 @@ describe("pages deployment tail", () => {
 			await expect(
 				runWrangler("pages deployment tail")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Must specify a deployment in non-interactive mode.]`
+				`[Error: Missing deployment. In non-interactive mode, provide the deployment ID or URL as a positional argument.]`
 			);
 			expect(api.requests.deployments.count).toStrictEqual(0);
 			await api.closeHelper();
@@ -144,7 +145,7 @@ describe("pages deployment tail", () => {
 			await expect(
 				runWrangler("pages deployment tail foo")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Must specify a project name in non-interactive mode.]`
+				`[Error: Missing Pages project name. In non-interactive mode, use --project-name <name> to specify which project to tail.]`
 			);
 		});
 
@@ -1122,7 +1123,7 @@ function mockTailAPIs(
 			creation: [],
 			deployments: { count: 0, queryParams: [] },
 		},
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Initialized in beforeEach()
 		ws: null!, // will be set in the `beforeEach()`.
 
 		/**

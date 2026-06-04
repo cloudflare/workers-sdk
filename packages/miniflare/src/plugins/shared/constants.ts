@@ -113,6 +113,10 @@ export function remoteProxyClientWorker(
 						},
 					]
 				: []),
+			// Loopback binding so the proxy client can report diagnostics
+			// (e.g. a Cloudflare Access block on the remote proxy server)
+			// back to the Miniflare host for a single, actionable warning.
+			WORKER_BINDING_SERVICE_LOOPBACK,
 		],
 	};
 }

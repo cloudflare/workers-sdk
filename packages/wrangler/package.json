@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.90.1",
+	"version": "4.98.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -72,7 +72,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260511.1"
+		"workerd": "1.20260603.1"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -80,8 +80,10 @@
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/codemod": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
+		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
@@ -110,7 +112,7 @@
 		"@types/yargs": "^17.0.22",
 		"@vitest/ui": "catalog:default",
 		"@webcontainer/env": "^1.1.0",
-		"am-i-vibing": "^0.1.1",
+		"am-i-vibing": "^0.4.0",
 		"capnweb": "catalog:default",
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",
@@ -145,22 +147,23 @@
 		"patch-console": "^1.0.0",
 		"pretty-bytes": "^6.0.0",
 		"prompts": "^2.4.2",
+		"qr": "^0.6.0",
 		"recast": "0.23.11",
 		"resolve": "^1.22.8",
+		"rosie-skills": "^0.8.1",
 		"semiver": "^1.1.0",
 		"shell-quote": "^1.8.1",
-		"signal-exit": "^3.0.7",
+		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
 		"source-map": "^0.6.1",
 		"supports-color": "^9.2.2",
-		"timeago.js": "^4.0.2",
+		"timeago.js": "4.0.2",
 		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"ts-json-schema-generator": "^1.5.0",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
-		"update-check": "^1.5.4",
 		"vitest": "catalog:default",
 		"vitest-websocket-mock": "^0.4.0",
 		"ws": "catalog:default",
@@ -177,7 +180,7 @@
 		}
 	},
 	"optionalDependencies": {
-		"fsevents": "~2.3.2"
+		"fsevents": "2.3.3"
 	},
 	"engines": {
 		"node": ">=22.0.0"

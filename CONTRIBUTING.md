@@ -24,6 +24,14 @@ We really appreciate your interest in making a contribution, and we want to make
 
 Thanks so much for helping us improve the [workers-sdk](https://github.com/cloudflare/workers-sdk), and we look forward to your contribution!
 
+## Naming experimental and unstable flags
+
+When adding Wrangler flags for behavior that is not yet stable, prefer an `experimental-` prefix for the long CLI flag name, such as `--experimental-autoconfig` or `--experimental-provision`. If the flag also needs a short opt-in alias, use the existing `x-` form, such as `--x-autoconfig` or `--x-provision`.
+
+Keep CLI flag names in kebab-case. Reserve `unstable_` and `experimental_` prefixes for exported JavaScript APIs rather than CLI flags, matching exports such as `unstable_dev` and `experimental_generateTypes`.
+
+If an experimental flag graduates or is no longer needed, keep the old flag hidden and deprecated while pointing users to the stable replacement, as with `--experimental-local` and `--experimental-include-runtime`.
+
 ## Getting started
 
 ### Set up your environment
@@ -448,6 +456,17 @@ export const EXTERNAL_DEPENDENCIES = [
 - **WASM modules**: Some WASM packages don't bundle correctly
 - **Runtime resolution**: Packages like `esbuild` or `unenv` that need to be resolved when bundling user code
 - **Peer dependencies**: Packages the user is expected to provide (e.g., `react`, `vite`)
+
+### Pinning External Dependencies
+
+Because external dependencies are installed into downstream users' dependency trees rather than bundled, their versions must be **pinned to an exact version** (e.g. `1.2.3`, not `^1.2.3`). This closes the supply-chain hole above: an unpinned external dependency could resolve to a compromised upstream release without us vetting it.
+
+This is enforced by `pnpm check:pinned-deps`, which requires:
+
+- Every `dependencies` and `optionalDependencies` entry of a published package to be an exact version, or a `workspace:`/`catalog:` reference.
+- Every entry in the pnpm `catalog:` (in `pnpm-workspace.yaml`) to be an exact version, so that any `catalog:default` reference is also pinned. Deliberate exceptions live in `CATALOG_PIN_EXCEPTIONS` in `tools/deployments/validate-pinned-dependencies.ts` (currently only `@cloudflare/workers-types`, which is consumed as a peer dependency).
+
+`peerDependencies` are exempt — ranges there are intentional, since they describe the set of consumer-provided versions a package is compatible with.
 
 ## Changesets
 

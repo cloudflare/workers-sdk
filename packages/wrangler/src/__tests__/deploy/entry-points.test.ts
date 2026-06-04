@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { findWranglerConfig } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import * as esbuild from "esbuild";
@@ -25,7 +26,6 @@ import { mockGetSettings } from "../helpers/mock-worker-settings";
 import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -887,10 +887,6 @@ addEventListener('fetch', event => {});`
 
 			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
 			it("should handle `wrangler deploy <directory>`", async ({ expect }) => {
-				mockConfirm({
-					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
-					result: true,
-				});
 				mockPrompt({
 					text: "What do you want to name your project?",
 					options: { defaultValue: "my-site" },
@@ -934,8 +930,6 @@ addEventListener('fetch', event => {});`
 					──────────────────
 
 
-
-
 					Wrote
 					{
 					  "name": "test-name",
@@ -945,6 +939,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -971,10 +966,6 @@ addEventListener('fetch', event => {});`
 				const runAutoConfigSpy = (await import("../../autoconfig/run"))
 					.runAutoConfig;
 
-				mockConfirm({
-					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
-					result: true,
-				});
 				mockPrompt({
 					text: "What do you want to name your project?",
 					options: { defaultValue: "my-site" },
@@ -1018,8 +1009,6 @@ addEventListener('fetch', event => {});`
 					──────────────────
 
 
-
-
 					Wrote
 					{
 					  "name": "test-name",
@@ -1029,6 +1018,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -1101,6 +1091,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -1180,6 +1171,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -1195,7 +1187,7 @@ addEventListener('fetch', event => {});`
 				expect(runAutoConfigSpy).not.toHaveBeenCalled();
 			});
 
-			it("should not trigger autoconfig on `wrangler deploy <script>` when called with `--x-autoconfig`", async ({
+			it("should not trigger autoconfig on `wrangler deploy <directory>` when called with `--x-autoconfig`", async ({
 				expect,
 			}) => {
 				vi.mock(import("../../autoconfig/details"), { spy: true });
@@ -1208,10 +1200,6 @@ addEventListener('fetch', event => {});`
 				const runAutoConfigSpy = (await import("../../autoconfig/run"))
 					.runAutoConfig;
 
-				mockConfirm({
-					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
-					result: true,
-				});
 				mockPrompt({
 					text: "What do you want to name your project?",
 					options: { defaultValue: "my-site" },
@@ -1255,8 +1243,6 @@ addEventListener('fetch', event => {});`
 					──────────────────
 
 
-
-
 					Wrote
 					{
 					  "name": "test-name",
@@ -1266,6 +1252,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -1328,22 +1315,41 @@ addEventListener('fetch', event => {});`
 					`);
 			});
 
-			it("should bail if the user denies that they are trying to deploy a directory", async ({
+			it("should error when --script points to a directory", async ({
 				expect,
 			}) => {
-				mockConfirm({
-					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
-					result: false,
-				});
-
-				await expect(runWrangler("deploy ./assets")).rejects
+				await expect(runWrangler("deploy --script ./assets")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-					[Error: The provided entry-point path, "assets", points to a directory, rather than a file.
+					[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+					  wrangler deploy ./assets
+					  wrangler deploy --assets ./assets]
+				`);
+			});
 
-					 If you want to deploy a directory of static assets, you can do so by using the \`--assets\` flag. For example:
+			it("should error when --script points to a directory even when positional path is also provided", async ({
+				expect,
+			}) => {
+				fs.mkdirSync("other-dir", { recursive: true });
+				fs.writeFileSync("other-dir/page.html", "<h1>Other</h1>");
 
-					wrangler deploy --assets=./assets
-					]
+				await expect(runWrangler("deploy ./assets --script ./other-dir"))
+					.rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+					  wrangler deploy ./other-dir
+					  wrangler deploy --assets ./other-dir]
+				`);
+			});
+
+			it("should error when --script points to a directory even when positional path is a file", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("index.js", "export default {}");
+
+				await expect(runWrangler("deploy ./index.js --script ./assets")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+					  wrangler deploy ./assets
+					  wrangler deploy --assets ./assets]
 				`);
 			});
 
@@ -1384,7 +1390,114 @@ addEventListener('fetch', event => {});`
 					──────────────────
 
 
+
 					You should run wrangler deploy --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
+
+					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
+			it("includes script path in suggestion when deprecated --script option is used", async ({
+				expect,
+			}) => {
+				writeWorkerSource();
+				mockUploadWorkerRequest({
+					expectedAssets: {
+						jwt: "<<aus-completion-token>>",
+						config: {},
+					},
+					expectedMainModule: "index.js",
+					expectedType: "esm",
+				});
+
+				mockPrompt({
+					text: "What do you want to name your project?",
+					options: { defaultValue: "my-site" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: false,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy --script ./index.js --assets ./assets");
+				expect(bodies.length).toBe(1);
+				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
+
+
+					You should run wrangler deploy ./index.js --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
+
+					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
+			it("includes --assets in suggestion when positional path is a file and --assets is separate", async ({
+				expect,
+			}) => {
+				writeWorkerSource();
+				mockUploadWorkerRequest({
+					expectedAssets: {
+						jwt: "<<aus-completion-token>>",
+						config: {},
+					},
+					expectedMainModule: "index.js",
+					expectedType: "esm",
+				});
+
+				mockPrompt({
+					text: "What do you want to name your project?",
+					options: { defaultValue: "my-site" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: false,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy ./index.js --assets ./assets");
+				expect(bodies.length).toBe(1);
+				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
+
+
+					You should run wrangler deploy ./index.js --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
 
 					Proceeding with deployment...
 

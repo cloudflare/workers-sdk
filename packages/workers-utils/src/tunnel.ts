@@ -31,6 +31,7 @@ export type TunnelResult = QuickTunnelResult | NamedTunnelResult;
 
 export interface Tunnel {
 	ready: () => Promise<TunnelResult>;
+	isOpen: () => boolean;
 	dispose: () => void;
 	extendExpiry: (ms?: number) => void;
 }
@@ -146,9 +147,9 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 				logger?.log(
 					`${
 						publicURL
-							? `The tunnel is still open at ${publicURL}.`
-							: "The tunnel is still open."
-					} It expires in ${formatTunnelDuration(remainingMs)}. ${options.extendHint ?? ""}`
+							? `Tunnel still open, expires in ${formatTunnelDuration(remainingMs)}: ${publicURL}`
+							: `The tunnel is still open. It expires in ${formatTunnelDuration(remainingMs)}.`
+					}${options.extendHint ? ` ${options.extendHint}` : ""}`
 				);
 			}, reminderIntervalMs);
 			reminderInterval.unref?.();
@@ -207,6 +208,7 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 
 	return {
 		ready: () => readyPromise,
+		isOpen: () => !disposed,
 		dispose: disposeTunnel,
 		extendExpiry,
 	};
@@ -324,7 +326,7 @@ function createTunnelStartupError(
 	const errorMessage =
 		`${message}\n` +
 		`cloudflared output:\n${stderrOutput || "(no output)"}\n\n` +
-		`The local dev server started at ${origin.href}.\n` +
+		`The local dev server started at ${origin.href}\n` +
 		(isQuickTunnelRateLimited
 			? "Cloudflare Quick Tunnel creation was rate limited. Try again in a few minutes, or use a named tunnel if you need more reliable access."
 			: `Check the cloudflared output above for more details, and verify that ${origin.href} is reachable from this machine if this keeps happening.`);

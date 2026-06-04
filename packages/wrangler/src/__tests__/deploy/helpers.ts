@@ -1,9 +1,11 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Buffer } from "node:buffer";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Helper used outside test callbacks, needs module-level expect
+ * TODO: remove this `expect` import
+ */
 import { expect } from "vitest";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import {
@@ -13,8 +15,11 @@ import {
 	mswSuccessDeploymentScriptMetadata,
 } from "../helpers/msw";
 import type { AssetManifest } from "../../assets";
-import type { CustomDomain, CustomDomainChangeset } from "../../deploy/deploy";
 import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
+import type {
+	CustomDomain,
+	CustomDomainChangeset,
+} from "@cloudflare/deploy-helpers";
 import type {
 	Config,
 	ServiceMetadataRes,
@@ -947,6 +952,8 @@ interface CustomMatchers {
 }
 
 declare module "vitest" {
+	/* eslint-disable @typescript-eslint/no-empty-object-type -- Type augmentation interfaces intentionally left empty */
 	interface Assertion extends CustomMatchers {}
 	interface AsymmetricMatchersContaining extends CustomMatchers {}
+	/* eslint-enable @typescript-eslint/no-empty-object-type */
 }

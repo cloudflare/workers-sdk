@@ -129,7 +129,6 @@ export class ProxyWorker implements DurableObject {
 				proxyData.userWorkerInnerUrlOverrides ?? {},
 				request.url
 			);
-			headers.set("MF-Original-URL", innerUrl.href);
 
 			// Preserve client `Accept-Encoding`, rather than using Worker's default
 			// of `Accept-Encoding: br, gzip`
@@ -137,6 +136,11 @@ export class ProxyWorker implements DurableObject {
 			if (encoding !== undefined) headers.set("Accept-Encoding", encoding);
 
 			rewriteUrlRelatedHeaders(headers, outerUrl, innerUrl);
+
+			// Set after `rewriteUrlRelatedHeaders` so that any occurrences of the
+			// outer host inside the URL's query string (e.g. `?redirect_uri=`)
+			// are preserved in `request.url` inside the user worker.
+			headers.set("MF-Original-URL", innerUrl.href);
 
 			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {

@@ -1,6 +1,8 @@
 import { stripVTControlCharacters } from "node:util";
 import { brandColor, dim, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
+	assertNever,
+	getBindingLocalSupport,
 	getBindingTypeFriendlyName,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -88,6 +90,8 @@ export function printBindings(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
+	const websearch = extractBindingsOfType("websearch", bindings);
+	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
@@ -348,6 +352,28 @@ export function printBindings(
 				name: binding,
 				type: getBindingTypeFriendlyName("ai_search"),
 				value: instance_name ? String(instance_name) : undefined,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
+		);
+	}
+
+	if (websearch.length > 0) {
+		output.push(
+			...websearch.map(({ binding }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("websearch"),
+				value: undefined,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
+		);
+	}
+
+	if (agent_memory.length > 0) {
+		output.push(
+			...agent_memory.map(({ binding, namespace }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("agent_memory"),
+				value: namespace ?? undefined,
 				mode: getMode({ isSimulatedLocally: false }),
 			}))
 		);
@@ -637,14 +663,16 @@ export function printBindings(
 
 	if (pipelines.length > 0) {
 		output.push(
-			...pipelines.map(({ binding, pipeline, remote }) => ({
-				name: binding,
-				type: getBindingTypeFriendlyName("pipeline"),
-				value: pipeline,
-				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
-				}),
-			}))
+			...pipelines.map(
+				({ binding, stream: pipelineStream, pipeline, remote }) => ({
+					name: binding,
+					type: getBindingTypeFriendlyName("pipeline"),
+					value: pipelineStream || pipeline,
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
+				})
+			)
 		);
 	}
 
@@ -986,35 +1014,62 @@ function createGetMode({
 	};
 }
 
+/**
+ * Validates the user's `remote` setting for a given binding against the
+ * binding type's local-development capabilities (sourced from
+ * {@link getBindingLocalSupport}). Throws `UserError` for invalid combinations
+ * and emits warnings for valid-but-noteworthy ones.
+ */
 export function warnOrError(
 	type: Binding["type"],
-	remote: boolean | undefined,
-	supports: "remote-and-local" | "local" | "remote" | "always-remote"
+	remote: boolean | undefined
 ) {
-	if (remote === true && supports === "local") {
-		throw new UserError(
-			`${getBindingTypeFriendlyName(type)} bindings do not support accessing remote resources.`,
-			{
-				telemetryMessage: "utils bindings unsupported remote resources",
+	const support = getBindingLocalSupport(type);
+	switch (support) {
+		case "local-and-remote":
+			return;
+		case "local-only":
+			if (remote === true) {
+				throw new UserError(
+					`${getBindingTypeFriendlyName(type)} bindings do not support accessing remote resources.`,
+					{
+						telemetryMessage: "utils bindings unsupported remote resources",
+					}
+				);
 			}
-		);
-	}
-	if (remote === false && supports === "remote") {
-		throw new UserError(
-			`${getBindingTypeFriendlyName(type)} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
-			{
-				telemetryMessage: "utils bindings unsupported local development",
+			return;
+		case "remote":
+			if (remote === false) {
+				throw new UserError(
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
+					{
+						telemetryMessage: "utils bindings unsupported local development",
+					}
+				);
 			}
-		);
-	}
-	if (remote === undefined && supports === "remote") {
-		logger.warn(
-			`${getBindingTypeFriendlyName(type)} bindings do not support local development, and so parts of your Worker may not work correctly. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
-		);
-	}
-	if (remote === undefined && supports === "always-remote") {
-		logger.warn(
-			`${getBindingTypeFriendlyName(type)} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
-		);
+			if (remote === undefined) {
+				logger.warn(
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development, and so parts of your Worker may not work correctly. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+				);
+			}
+			return;
+		case "DO-NOT-USE-this-resource-will-never-have-a-local-simulator":
+			if (remote === false) {
+				throw new UserError(
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
+					{
+						telemetryMessage:
+							"utils bindings unsupported local development always remote",
+					}
+				);
+			}
+			if (remote === undefined) {
+				logger.warn(
+					`${getBindingTypeFriendlyName(type)} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
+				);
+			}
+			return;
+		default:
+			assertNever(support);
 	}
 }

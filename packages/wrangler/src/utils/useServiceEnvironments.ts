@@ -21,3 +21,13 @@ export function useServiceEnvironments(
 		? !config.legacy_env
 		: Boolean(config.legacy.useServiceEnvironments);
 }
+
+/**
+ * even though service environments might be enabled, we might not need to use the service environments api
+ */
+export function useServiceEnvironmentApi(
+	args: { env: string | undefined },
+	config: Config
+) {
+	return Boolean(useServiceEnvironments(config) && args.env);
+}

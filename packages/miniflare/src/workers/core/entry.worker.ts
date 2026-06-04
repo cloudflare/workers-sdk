@@ -176,22 +176,30 @@ function validateCdnCgiRequest(
 		return;
 	}
 
-	// Build allowed hostnames set from localhost + user configured routes
-	const allowedHostnames = new Set<string>();
+	// Subdomain matching should only apply to wildcard routes (e.g.
+	// "*.example.com/*"). Exact routes and the configured upstream hostname
+	// must match the request hostname exactly.
+	const exactHostnames = new Set<string>();
+	const wildcardHostnames = new Set<string>();
 	for (const route of routes) {
 		// route.hostname has already had the leading "*" stripped by parseRoutes,
-		// but may have a leading "." for wildcard routes (e.g., "*.example.com" -> ".example.com")
+		// but wildcard routes still carry a leading "." (e.g., "*.example.com" -> ".example.com")
 		const hostname = route.hostname.replace(/^\./, "");
-		if (hostname) {
-			allowedHostnames.add(hostname);
+		if (!hostname) {
+			continue;
+		}
+		if (route.allowHostnamePrefix) {
+			wildcardHostnames.add(hostname);
+		} else {
+			exactHostnames.add(hostname);
 		}
 	}
-	// Add upstream hostname if configured (e.g., from --host or --local-upstream)
+	// Upstream is a single configured host, not a wildcard.
 	if (upstreamUrl) {
 		try {
 			const upstreamHostname = new URL(upstreamUrl).hostname;
 			if (upstreamHostname) {
-				allowedHostnames.add(upstreamHostname);
+				exactHostnames.add(upstreamHostname);
 			}
 		} catch {
 			// Ignore invalid upstream URL
@@ -206,7 +214,7 @@ function validateCdnCgiRequest(
 		} catch {
 			throw new HttpError(403, "Invalid Host header");
 		}
-		if (!isHostnameAllowed(hostHostname, allowedHostnames)) {
+		if (!isHostnameAllowed(hostHostname, exactHostnames, wildcardHostnames)) {
 			throw new HttpError(403, "Invalid Host header");
 		}
 	}
@@ -219,34 +227,36 @@ function validateCdnCgiRequest(
 		} catch {
 			throw new HttpError(403, "Invalid Origin header");
 		}
-		if (!isHostnameAllowed(originHostname, allowedHostnames)) {
+		if (!isHostnameAllowed(originHostname, exactHostnames, wildcardHostnames)) {
 			throw new HttpError(403, "Invalid Origin header");
 		}
 	}
 }
 
 /**
- * Check if a hostname is allowed.
- * - exactHostnames: must match exactly (localhost, upstream, non-wildcard routes)
- * - wildcardHostnames: allow subdomain matching (for wildcard routes like *.example.com)
+ * Checks whether a hostname is allowed.
+ * - exactHostnames: must match exactly (configured non-wildcard routes, upstream)
+ * - wildcardHostnames: also match any subdomain (for wildcard routes like *.example.com)
+ *
+ * Localhost hostnames are always allowed.
  */
 function isHostnameAllowed(
 	hostname: string,
-	allowedHostnames: Set<string>
+	exactHostnames: Set<string>,
+	wildcardHostnames: Set<string>
 ): boolean {
-	// Direct match against exact hostnames
 	if (LOCALHOST_HOSTNAMES.includes(hostname)) {
 		return true;
 	}
-
-	// Check for subdomain matches only against wildcard hostnames
-	for (const allowed of allowedHostnames) {
+	if (exactHostnames.has(hostname)) {
+		return true;
+	}
+	for (const allowed of wildcardHostnames) {
 		// Match the base domain or any subdomain
 		if (hostname === allowed || hostname.endsWith(`.${allowed}`)) {
 			return true;
 		}
 	}
-
 	return false;
 }
 

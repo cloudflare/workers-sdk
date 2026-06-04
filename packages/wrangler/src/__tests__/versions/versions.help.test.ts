@@ -19,17 +19,18 @@ describe("versions --help", () => {
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
 			  wrangler versions list                      List the 10 most recent Versions of your Worker
-			  wrangler versions upload [script]           Uploads your Worker code and config as a new Version
+			  wrangler versions upload [path]             Uploads your Worker code and config as a new Version
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]"
 		`);
 	});
 });
@@ -51,17 +52,18 @@ describe("versions subhelp", () => {
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
 			  wrangler versions list                      List the 10 most recent Versions of your Worker
-			  wrangler versions upload [script]           Uploads your Worker code and config as a new Version
+			  wrangler versions upload [path]             Uploads your Worker code and config as a new Version
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]"
 		`);
 	});
 });

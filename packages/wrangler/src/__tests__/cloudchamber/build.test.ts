@@ -8,10 +8,10 @@ import {
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccountV4 as mockAccount } from "./utils";
 

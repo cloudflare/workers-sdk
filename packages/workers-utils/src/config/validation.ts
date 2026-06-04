@@ -42,6 +42,7 @@ import type {
 	Assets,
 	CacheOptions,
 	ContainerApp,
+	CustomDomainRoute,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -82,6 +83,8 @@ export type ConfigBindingFieldName =
 	| "vectorize"
 	| "ai_search_namespaces"
 	| "ai_search"
+	| "websearch"
+	| "agent_memory"
 	| "hyperdrive"
 	| "r2_buckets"
 	| "logfwdr"
@@ -124,6 +127,8 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespaces: "AI Search Namespace",
 	ai_search: "AI Search Instance",
+	websearch: "Web Search",
+	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
 	logfwdr: "logfwdr",
@@ -181,6 +186,8 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespace: "AI Search Namespace",
 	ai_search: "AI Search Instance",
+	websearch: "Web Search",
+	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
 	fetcher: "Service Binding",
@@ -1128,9 +1135,10 @@ function normalizeAndValidateRoute(
 function validateRoutes(
 	diagnostics: Diagnostics,
 	topLevelEnv: Environment | undefined,
-	rawEnv: RawEnvironment
+	rawEnv: RawEnvironment,
+	envName?: string
 ): Config["routes"] {
-	return inheritable(
+	const result = inheritable(
 		diagnostics,
 		topLevelEnv,
 		rawEnv,
@@ -1138,6 +1146,25 @@ function validateRoutes(
 		all(isRouteArray, isMutuallyExclusiveWith(rawEnv, "route")),
 		undefined
 	);
+
+	if (
+		topLevelEnv !== undefined &&
+		envName !== undefined &&
+		rawEnv.routes === undefined
+	) {
+		const customDomainRoutes = topLevelEnv.routes?.filter(
+			(r): r is CustomDomainRoute =>
+				typeof r === "object" && r !== null && r.custom_domain === true
+		);
+		if (customDomainRoutes && customDomainRoutes.length > 0) {
+			const customDomains = customDomainRoutes.map((r) => r.pattern).join(", ");
+			diagnostics.warnings.push(
+				`The "env.${envName}" environment inherits the top-level \`routes\` configuration, which includes the custom domain(s): ${customDomains}. Deploying this environment will reassign these custom domains away from the top-level Worker. Add \`"routes": []\` to "env.${envName}" to prevent inheritance, or copy the route configuration from the top level to hide this warning.`
+			);
+		}
+	}
+
+	return result;
 }
 
 function normalizeAndValidatePlacement(
@@ -1433,7 +1460,9 @@ function normalizeAndValidateEnvironment(
 		"error"
 	);
 
-	experimental(diagnostics, rawEnv, "unsafe");
+	if (topLevelEnv === undefined || rawConfig?.unsafe === undefined) {
+		experimental(diagnostics, rawEnv, "unsafe");
+	}
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -1448,7 +1477,12 @@ function normalizeAndValidateEnvironment(
 		undefined
 	);
 
-	const routes = validateRoutes(diagnostics, topLevelEnv, rawEnv);
+	const routes = validateRoutes(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		topLevelEnv === undefined ? undefined : envName
+	);
 
 	const workers_dev = inheritable(
 		diagnostics,
@@ -1752,6 +1786,26 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"ai_search",
 			validateBindingArray(envName, validateAISearchBinding),
+			[]
+		),
+		websearch: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"websearch",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
+		agent_memory: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"agent_memory",
+			validateBindingArray(envName, validateAgentMemoryBinding),
 			[]
 		),
 		hyperdrive: notInheritable(
@@ -2283,15 +2337,17 @@ const validateDefines =
 		if (configDefines.length > 0) {
 			if (typeof value === "object" && value !== null) {
 				const configEnvDefines = config === undefined ? [] : Object.keys(value);
+				const missingDefines = configDefines.filter(
+					(varName) => !(varName in value)
+				);
 
-				for (const varName of configDefines) {
-					if (!(varName in value)) {
-						diagnostics.warnings.push(
-							`"define.${varName}" exists at the top level, but not on "${fieldPath}".\n` +
-								`This is not what you probably want, since "define" configuration is not inherited by environments.\n` +
-								`Please add "define.${varName}" to "env.${envName}".`
-						);
-					}
+				if (missingDefines.length > 0) {
+					diagnostics.warnings.push(
+						`The following define entries exist at the top level, but not on "${fieldPath}".\n` +
+							`This is probably not what you want, since "define" configuration is not inherited by environments.\n` +
+							`Please add these entries to "env.${envName}.define":\n` +
+							missingDefines.map((varName) => `- ${varName}`).join("\n")
+					);
 				}
 				for (const varName of configEnvDefines) {
 					if (!configDefines.includes(varName)) {
@@ -2342,14 +2398,15 @@ const validateVars =
 		const configVars = Object.keys(config?.vars ?? {});
 		if (configVars.length > 0) {
 			if (typeof value === "object" && value !== null) {
-				for (const varName of configVars) {
-					if (!(varName in value)) {
-						diagnostics.warnings.push(
-							`"vars.${varName}" exists at the top level, but not on "${fieldPath}".\n` +
-								`This is not what you probably want, since "vars" configuration is not inherited by environments.\n` +
-								`Please add "vars.${varName}" to "env.${envName}".`
-						);
-					}
+				const missingVars = configVars.filter((varName) => !(varName in value));
+
+				if (missingVars.length > 0) {
+					diagnostics.warnings.push(
+						`The following vars exist at the top level, but not on "${fieldPath}".\n` +
+							`This is probably not what you want, since "vars" configuration is not inherited by environments.\n` +
+							`Please add these vars to "env.${envName}.vars":\n` +
+							missingVars.map((varName) => `- ${varName}`).join("\n")
+					);
 				}
 			}
 		}
@@ -2694,6 +2751,45 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "schedules") && value.schedules !== undefined) {
+		if (typeof value.schedules === "string") {
+			if (value.schedules.length === 0) {
+				diagnostics.errors.push(
+					`"${field}" bindings "schedules" field must not be an empty string.`
+				);
+				isValid = false;
+			}
+		} else if (Array.isArray(value.schedules)) {
+			if (value.schedules.length === 0) {
+				diagnostics.errors.push(
+					`"${field}" bindings "schedules" field must not be an empty array.`
+				);
+				isValid = false;
+			} else if (
+				!value.schedules.every((s: unknown) => typeof s === "string")
+			) {
+				diagnostics.errors.push(
+					`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
+						value
+					)}.`
+				);
+				isValid = false;
+			} else if (value.schedules.some((s: unknown) => s === "")) {
+				diagnostics.errors.push(
+					`"${field}" bindings "schedules" field must not contain empty strings.`
+				);
+				isValid = false;
+			}
+		} else {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		}
+	}
+
 	if (hasProperty(value, "limits") && value.limits !== undefined) {
 		if (
 			typeof value.limits !== "object" ||
@@ -2742,6 +2838,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"script_name",
 		"remote",
 		"limits",
+		"schedules",
 	]);
 
 	return isValid;
@@ -3019,6 +3116,8 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
+			"websearch",
+			"agent_memory",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
@@ -4044,12 +4143,22 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isOptionalProperty(value, "migrations_pattern", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "migrations_pattern" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"database_id",
 		"database_internal_env",
 		"database_name",
 		"migrations_dir",
+		"migrations_pattern",
 		"migrations_table",
 		"preview_database_id",
 		"remote",
@@ -4162,6 +4271,40 @@ const validateAISearchBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"instance_name",
+		"remote",
+	]);
+
+	return isValid;
+};
+
+const validateAgentMemoryBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"agent_memory" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
 		"remote",
 	]);
 
@@ -4796,7 +4939,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
-	// Pipeline bindings must have a binding and a pipeline.
+	// Pipeline bindings must have a binding and a stream (or deprecated pipeline).
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
@@ -4805,9 +4948,21 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "pipeline", "string")) {
+
+	const hasStream = isOptionalProperty(value, "stream", "string");
+	const hasPipeline = isOptionalProperty(value, "pipeline", "string");
+	const v = value as Record<string, unknown>;
+
+	if (hasStream && v.stream) {
+		// "stream" is the primary field — use it as-is
+	} else if (hasPipeline && v.pipeline) {
+		// Deprecated "pipeline" field — normalize to "stream"
+		diagnostics.warnings.push(
+			`The "pipeline" field in "${field}" bindings is deprecated. Use "stream" instead.`
+		);
+	} else {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a string "pipeline" field but got ${JSON.stringify(
+			`"${field}" bindings must have a string "stream" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4820,6 +4975,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
+		"stream",
 		"pipeline",
 		"remote",
 	]);

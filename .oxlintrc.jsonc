@@ -32,7 +32,10 @@
 		"prefer-const": "error",
 		"prefer-rest-params": "error",
 		"prefer-spread": "error",
-		"@typescript-eslint/consistent-type-imports": ["error"],
+		"@typescript-eslint/consistent-type-imports": [
+			"error",
+			{ "disallowTypeAnnotations": false },
+		],
 		"no-var": "error",
 		"no-regex-spaces": "error",
 		"@typescript-eslint/no-empty-object-type": "error",
@@ -196,13 +199,6 @@
 			"files": ["packages/vite-plugin-cloudflare/**"],
 			"rules": {
 				"workers-sdk/no-wrangler-named-imports": "error",
-			},
-		},
-		// TODO: Remove the following wrangler override.
-		{
-			"files": ["packages/wrangler/**"],
-			"rules": {
-				"workers-sdk/require-description-when-disabling": "off",
 			},
 		},
 	],

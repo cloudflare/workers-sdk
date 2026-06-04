@@ -1,6 +1,7 @@
 import {
 	mockCreateDate,
 	mockModifiedDate,
+	runInTempDir,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -10,7 +11,6 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
 	CreateSecret,
@@ -37,12 +37,13 @@ describe("secrets-store help", () => {
 			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open beta]
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]"
 		`);
 	});
 
@@ -67,12 +68,13 @@ describe("secrets-store help", () => {
 			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open beta]
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]"
 		`);
 	});
 });
@@ -322,6 +324,29 @@ describe("secrets-store secret commands", () => {
 			expect(err?.message).toMatchInlineSnapshot(`
 				"Missing required argument: scopes"
 			`);
+		});
+
+		it("errors in creating a secret when value is larger than 64 KiB", async ({
+			expect,
+		}) => {
+			const longValue = "a".repeat(65537);
+			let err: undefined | Error;
+			try {
+				await runWrangler(
+					"secrets-store secret create " +
+						"850e0805c1084551bb46d150b5dfe414 " +
+						"--name TEST_SECRET " +
+						`--value '${longValue}' ` +
+						"--scopes 'workers' " +
+						"--comment 'wrangler secret' " +
+						"--remote"
+				);
+			} catch (e) {
+				err = e as Error;
+			}
+			expect(err?.message).toMatchInlineSnapshot(
+				`"Secret value cannot exceed 65536 bytes (got 65537). The Cloudflare API rejects longer values, and a binding to such a secret will fail at deploy time."`
+			);
 		});
 	});
 

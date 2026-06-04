@@ -11,7 +11,10 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { clearOutputFilePath } from "../../output";
@@ -31,8 +34,7 @@ import {
 import { mockGetZoneWorkerRoutes } from "../helpers/mock-zone-routes";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
-import { runWrangler } from "../helpers/run-wrangler";
+import { runWrangler as runWranglerBase } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -154,12 +156,16 @@ async function getMetadata(request: Request): Promise<WorkerMetadata> {
 
 // ─── Test suites ─────────────────────────────────────────────────────
 
-describe("config/args merging", () => {
+describe.each([
+	{ mode: "default", flag: "" },
+	{ mode: "deploy helpers", flag: " --experimental-deploy-helpers" },
+])("config/args merging ($mode)", ({ flag }) => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
+	const runWrangler = (command: string) => runWranglerBase(`${command}${flag}`);
 
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {
@@ -1187,7 +1193,38 @@ describe("config/args merging", () => {
 		});
 
 		describe("versions upload", () => {
-			// versions upload has no --keep-vars CLI flag; only config.keep_vars applies
+			it("without --keep-vars, keepVars is not set", async ({ expect }) => {
+				writeWranglerConfig({ main: "./index.js" });
+				writeWorkerSource();
+				mockGetScript();
+				const requests = mockUploadVersion();
+				await runWrangler("versions upload");
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.keep_bindings).toEqual(
+					expect.arrayContaining(["secret_text", "secret_key"])
+				);
+				expect(metadata.keep_bindings).not.toEqual(
+					expect.arrayContaining(["plain_text"])
+				);
+			});
+
+			it("--keep-vars alone enables keep_bindings", async ({ expect }) => {
+				writeWranglerConfig({ main: "./index.js", keep_vars: false });
+				writeWorkerSource();
+				mockGetScript();
+				const requests = mockUploadVersion();
+				await runWrangler("versions upload --keep-vars");
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.keep_bindings).toEqual(
+					expect.arrayContaining([
+						"plain_text",
+						"json",
+						"secret_text",
+						"secret_key",
+					])
+				);
+			});
+
 			it("config.keep_vars=true adds plain_text and json to keep_bindings", async ({
 				expect,
 			}) => {

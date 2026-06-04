@@ -5,6 +5,7 @@ import {
 	mockModifiedDate,
 	mockQueuedDate,
 	mockStartDate,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
@@ -14,10 +15,10 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";
 import { msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { Instance, Workflow } from "../workflows/types";
+import type { RawConfig } from "@cloudflare/workers-utils";
 import type { ExpectStatic } from "vitest";
 
 describe("wrangler workflows", () => {
@@ -159,12 +160,13 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances                Manage Workflow instances
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]"
 			`
 			);
 		});
@@ -194,12 +196,13 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances resume <name> <id>      Resume a workflow instance
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]"
 			`);
 		});
 	});
@@ -692,6 +695,70 @@ describe("wrangler workflows", () => {
 				`"🥷 The instance "bar" from some-workflow was restarted successfully"`
 			);
 		});
+
+		it("should restart an instance from a specific step", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+
+			msw.use(
+				http.patch(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId/status`,
+					async ({ params, request }) => {
+						expect(params.instanceId).toEqual("bar");
+						const body = (await request.json()) as Record<string, unknown>;
+						expect(body).toEqual({
+							status: "restart",
+							from: {
+								name: "process",
+								count: 2,
+								type: "do",
+							},
+						});
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {},
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(
+				`workflows instances restart some-workflow bar --from-step-name process --from-step-count 2 --from-step-type do`
+			);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 The instance "bar" from some-workflow was restarted successfully"`
+			);
+		});
+
+		it("should require a step name when restart step options are provided", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+
+			await expect(
+				runWrangler(
+					`workflows instances restart some-workflow bar --from-step-type do`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --from-step-name is required when using --from-step-count or --from-step-type]`
+			);
+		});
+
+		it("should reject invalid restart step counts", async ({ expect }) => {
+			writeWranglerConfig();
+
+			await expect(
+				runWrangler(
+					`workflows instances restart some-workflow bar --from-step-name process --from-step-count 0`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --from-step-count must be a positive integer]`
+			);
+		});
 	});
 
 	describe("instances terminate-all", () => {
@@ -914,9 +981,9 @@ describe("wrangler workflows", () => {
 				workflows: [
 					{
 						binding: "MY_WORKFLOW",
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('should have a string "name" field');
@@ -953,9 +1020,9 @@ describe("wrangler workflows", () => {
 						binding: 123, // should be string
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as unknown as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('should have a string "binding" field');
@@ -965,8 +1032,8 @@ describe("wrangler workflows", () => {
 			expect,
 		}) => {
 			writeWranglerConfig({
-				workflows: ["invalid-workflow-config"] as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-			});
+				workflows: ["invalid-workflow-config"],
+			} as unknown as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('"workflows" bindings should be objects');
@@ -1051,9 +1118,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: 0 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1071,9 +1138,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: 1.5 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as unknown as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1091,7 +1158,7 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: -1 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
 			});
 
@@ -1111,9 +1178,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: "invalid",
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1131,9 +1198,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: [1, 2, 3],
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1711,6 +1778,43 @@ describe("wrangler workflows", () => {
 
 				await runWrangler(
 					"workflows instances restart my-workflow instance-123 --local"
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"🥷 The instance "instance-123" from my-workflow was restarted successfully"`
+				);
+			});
+
+			it("should restart an instance from a specific step in local dev session", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.patch(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/status`,
+						async ({ params, request }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							const body = (await request.json()) as Record<string, unknown>;
+							expect(body).toEqual({
+								action: "restart",
+								from: {
+									name: "checkpoint",
+									type: "waitForEvent",
+								},
+							});
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances restart my-workflow instance-123 --local --from-step-name checkpoint --from-step-type waitForEvent"
 				);
 				expect(std.info).toMatchInlineSnapshot(
 					`"🥷 The instance "instance-123" from my-workflow was restarted successfully"`

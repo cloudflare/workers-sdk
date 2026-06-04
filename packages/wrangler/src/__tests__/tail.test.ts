@@ -1,6 +1,7 @@
 import { setTimeout } from "node:timers/promises";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
@@ -13,7 +14,6 @@ import { clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { createFetchResult, msw, mswSucessScriptHandlers } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
 	AlarmEvent,
@@ -32,7 +32,6 @@ import type { ExpectStatic } from "vitest";
 import type WebSocket from "ws";
 
 vi.mock("ws", async (importOriginal) => {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	const realModule = await importOriginal<typeof import("ws")>();
 	const module = {
 		__esModule: true,
@@ -1211,7 +1210,7 @@ function mockWebsocketAPIs(
 			deletion: { count: 0 },
 			creation: [],
 		},
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Initialized in beforeEach()
 		ws: null!, // will be set in the `beforeEach()` below.
 
 		/**

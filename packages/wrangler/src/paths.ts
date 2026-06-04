@@ -1,8 +1,5 @@
 import { assert } from "node:console";
-import fs from "node:fs";
 import path from "node:path";
-import { removeDirSync } from "@cloudflare/workers-utils";
-import onExit from "signal-exit";
 
 type DiscriminatedPath<Discriminator extends string> = string & {
 	_discriminator: Discriminator;
@@ -69,63 +66,6 @@ declare const __RELATIVE_PACKAGE_PATH__: string;
  * no matter whether the code has been bundled or not.
  */
 export function getBasePath(): string {
-	// eslint-disable-next-line no-restricted-globals
+	// eslint-disable-next-line no-restricted-globals -- __dirname is the correct baseline for resolving the package root at runtime
 	return path.resolve(__dirname, __RELATIVE_PACKAGE_PATH__);
-}
-
-/**
- * A short-lived directory. Automatically removed when the process exits, but
- * can be removed earlier by calling `remove()`.
- */
-export interface EphemeralDirectory {
-	path: string;
-	remove(): void;
-}
-
-/**
- * Gets the path to the project's `.wrangler` folder.
- */
-export function getWranglerHiddenDirPath(
-	projectRoot: string | undefined
-): string {
-	projectRoot ??= process.cwd();
-	return path.join(projectRoot, ".wrangler");
-}
-
-/**
- * Gets a temporary directory in the project's `.wrangler` folder with the
- * specified prefix. We create temporary directories in `.wrangler` as opposed
- * to the OS's temporary directory to avoid issues with different drive letters
- * on Windows. For example, when `esbuild` outputs a file to a different drive
- * than the input sources, the generated source maps are incorrect.
- */
-export function getWranglerTmpDir(
-	projectRoot: string | undefined,
-	prefix: string,
-	cleanup = true
-): EphemeralDirectory {
-	const tmpRoot = path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
-	fs.mkdirSync(tmpRoot, { recursive: true });
-
-	const tmpPrefix = path.join(tmpRoot, `${prefix}-`);
-	const tmpDir = fs.realpathSync(fs.mkdtempSync(tmpPrefix));
-
-	const cleanupDir = () => {
-		if (cleanup) {
-			try {
-				removeDirSync(tmpDir);
-			} catch {
-				/* best effort */
-			}
-		}
-	};
-	const removeExitListener = onExit(cleanupDir);
-
-	return {
-		path: tmpDir,
-		remove() {
-			removeExitListener();
-			cleanupDir();
-		},
-	};
 }

@@ -365,6 +365,11 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
+		// A newer bundle has already been queued — skip this stale one.
+		if (id !== this.#currentBundleId) {
+			return;
+		}
+
 		logger.log(chalk.dim("⎔ Starting remote preview..."));
 
 		try {

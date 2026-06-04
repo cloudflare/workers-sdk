@@ -97,31 +97,37 @@ function getSourceMappingUrl(module: CfModule): string | undefined {
 			? module.content
 			: new TextDecoder().decode(module.content);
 
-	const trimmed = content.trimEnd();
-	const lines = trimmed.split("\n");
-
-	// Some build steps generate empty last lines after the sourceMappingURL, so we'll need to
-	// trim so we can check for the sourcemap url.
-	while (lines.at(-1)?.trim().length === 0) {
-		lines.pop();
-	}
-
 	const commentPrefix = "//# sourceMappingURL=";
-	const lastLine = lines.pop();
-	if (lastLine === undefined || !lastLine.startsWith(commentPrefix)) {
-		return undefined;
+
+	// Scan trailing lines from the bottom up so that the `//# sourceMappingURL=`
+	// comment is still detected when other magic comments (e.g.
+	// `//# debugId=` injected by `sentry-cli sourcemaps inject`) follow it.
+	const lines = content.split("\n");
+	for (let i = lines.length - 1; i >= 0; i--) {
+		const line = lines[i].trim();
+		if (line.length === 0) {
+			continue;
+		}
+		if (line.startsWith(commentPrefix)) {
+			// Assume the source map path in the comment is relative to the
+			// generated file it appears in.
+			const commentPath = stripPrefix(commentPrefix, line).trim();
+			if (commentPath.startsWith("data:")) {
+				throw new Error(
+					`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
+				);
+			}
+			return commentPath;
+		}
+		// Skip past other trailing magic comments (`//# debugId=`, `//# sourceURL=`,
+		// etc.) and keep looking for the sourceMappingURL above them. Stop as
+		// soon as we hit any non-magic-comment content.
+		if (!line.startsWith("//#") && !line.startsWith("//@")) {
+			return undefined;
+		}
 	}
 
-	// Assume the source map path in the comment is relative to the
-	// generated file it appears in.
-	const commentPath = stripPrefix(commentPrefix, lastLine).trim();
-	if (commentPath.startsWith("data:")) {
-		throw new Error(
-			`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
-		);
-	}
-
-	return commentPath;
+	return undefined;
 }
 
 function sourceMapForModule(module: CfModule): CfWorkerSourceMap | undefined {

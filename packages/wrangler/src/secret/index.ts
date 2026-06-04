@@ -9,7 +9,6 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { parse as dotenvParse } from "dotenv";
-import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -22,7 +21,7 @@ import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
-import type { Config, WorkerMetadataBinding } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
 
@@ -31,13 +30,6 @@ type SecretBindingUpload = {
 	name: string;
 	text: string;
 };
-
-type InheritBindingUpload = {
-	type: (WorkerMetadataBinding | SecretBindingRedacted)["type"];
-	name: string;
-};
-
-type SecretBindingRedacted = Omit<SecretBindingUpload, "text">;
 
 async function createDraftWorker({
 	config,
@@ -392,9 +384,49 @@ export const secretListCommand = createCommand({
 	},
 });
 
+async function putBulkSecrets(
+	config: Config,
+	accountId: string,
+	scriptName: string,
+	environment: string | undefined,
+	content: Record<string, string | null>,
+	options: {
+		isServiceEnv?: boolean;
+	} = {}
+): Promise<[unknown, Array<string>, Array<string>]> {
+	const isServiceEnv = options?.isServiceEnv;
+	const url = isServiceEnv
+		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${environment}/secrets-bulk`
+		: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets-bulk`;
+	// Build the merge-patch body using JSON Merge Patch (RFC 7396) semantics:
+	// - Included secrets are created or updated
+	// - Omitted secrets are left unchanged
+	// - Secrets set to null are deleted
+	const secretEntries = Object.entries(content);
+	const secrets: Record<string, SecretBindingUpload | null> = {};
+	const toCreate: Array<string> = [];
+	const toDelete: Array<string> = [];
+	for (const [key, value] of secretEntries) {
+		if (value != null) {
+			toCreate.push(key);
+			secrets[key] = { name: key, text: value, type: "secret_text" };
+		} else {
+			toDelete.push(key);
+			secrets[key] = null;
+		}
+	}
+	const resp = await fetchResult(config, url, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/merge-patch+json" },
+		body: JSON.stringify({ secrets }),
+	});
+	return [resp, toCreate, toDelete];
+}
+
 export const secretBulkCommand = createCommand({
 	metadata: {
-		description: "Upload multiple secrets for a Worker at once",
+		description:
+			"Create, update, or delete multiple secrets for a Worker in a single request, with up to 100 secrets per command.",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
@@ -404,7 +436,7 @@ export const secretBulkCommand = createCommand({
 	},
 	args: {
 		file: {
-			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .env file in the form KEY=VALUE. If omitted, Wrangler expects to receive input from stdin rather than a file.`,
+			describe: `The file of key-value pairs to create, update, or delete, as JSON in form {"key": "value", ...} or .env file in the form KEY=VALUE. Set a key to null in the JSON file to delete it. Deletion is not supported with .env files. If omitted, Wrangler expects to receive input from stdin rather than a file.`,
 			type: "string",
 		},
 		name: {
@@ -429,7 +461,7 @@ export const secretBulkCommand = createCommand({
 			);
 		}
 
-		const isServiceEnv = useServiceEnvironments(config) && args.env;
+		const isServiceEnv = useServiceEnvironments(config) && !!args.env;
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			const error = new UserError(
@@ -443,122 +475,106 @@ export const secretBulkCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		logger.log(
-			`🌀 Creating the secrets for the Worker "${scriptName}" ${
+			`🌀 Processing the secrets for the Worker "${scriptName}" ${
 				isServiceEnv ? `(${args.env})` : ""
 			}`
 		);
 
-		const result = await parseBulkInputToObject(args.file);
+		const result = await parseBulkInputToObject(args.file, true);
 
 		if (!result) {
 			return logger.error(`🚨 No content found in file, or piped input.`);
 		}
 
 		const { content, secretSource, secretFormat } = result;
+		const hasSecretsToCreate = Object.values(content).some(
+			(value) => value != null
+		);
 
-		function getSettings() {
-			const url = isServiceEnv
-				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`
-				: `/accounts/${accountId}/workers/scripts/${scriptName}/settings`;
-
-			return fetchResult<{
-				bindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
-			}>(config, url);
-		}
-
-		function putBindingsSettings(
-			bindings: Array<SecretBindingUpload | InheritBindingUpload>
-		) {
-			const url = isServiceEnv
-				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`
-				: `/accounts/${accountId}/workers/scripts/${scriptName}/settings`;
-
-			const data = new FormData();
-			data.set("settings", JSON.stringify({ bindings }));
-			return fetchResult(config, url, {
-				method: "PATCH",
-				body: data,
-			});
-		}
-
-		let existingBindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
+		let created: Array<string> = [];
+		let deleted: Array<string> = [];
 		try {
-			const settings = await getSettings();
-			existingBindings = settings.bindings;
-		} catch (e) {
-			if (isWorkerNotFoundError(e)) {
-				// create a draft worker before patching
+			try {
+				[, created, deleted] = await putBulkSecrets(
+					config,
+					accountId,
+					scriptName,
+					args.env,
+					content,
+					{ isServiceEnv }
+				);
+			} catch (e) {
+				if (!isWorkerNotFoundError(e)) {
+					throw e;
+				}
+				if (!hasSecretsToCreate) {
+					throw e;
+				}
+				// Worker doesn't exist yet — create a draft worker, then retry
 				const draftWorkerResult = await createDraftWorker({
 					config,
-					args: args,
+					args,
 					accountId,
 					scriptName,
 				});
 				if (draftWorkerResult === null) {
 					return;
 				}
-				existingBindings = [];
-			} else {
-				throw e;
-			}
-		}
-		// any existing bindings can be "inherited" from the previous deploy via the PATCH settings api
-		// by just providing the "name" and "type" fields for the binding.
-		// so after fetching the bindings in the script settings, we can map over and just pick out those fields
-		const inheritBindings = existingBindings
-			.filter((binding) => {
-				// secrets that currently exist for the worker but are not provided for bulk update
-				// are inherited over with other binding types
-				return (
-					binding.type !== "secret_text" || content[binding.name] === undefined
-				);
-			})
-			.map((binding) => ({ type: binding.type, name: binding.name }));
-		// secrets to upload are provided as bindings in their full form
-		// so when we PATCH, we patch in [...current bindings, ...updated / new secrets]
-		const upsertBindings: Array<SecretBindingUpload> = Object.entries(
-			content
-		).map(([key, value]) => {
-			return {
-				type: "secret_text",
-				name: key,
-				text: value,
-			};
-		});
-		try {
-			await putBindingsSettings(inheritBindings.concat(upsertBindings));
-			for (const upsertedBinding of upsertBindings) {
-				logger.log(
-					`✨ Successfully created secret for key: ${upsertedBinding.name}`
+				[, created, deleted] = await putBulkSecrets(
+					config,
+					accountId,
+					scriptName,
+					args.env,
+					content,
+					{ isServiceEnv }
 				);
 			}
-			logger.log("");
-			logger.log("Finished processing secrets file:");
-			logger.log(`✨ ${upsertBindings.length} secrets successfully uploaded`);
-			metrics.sendMetricsEvent(
-				"create encrypted variable",
-				{
-					secretOperation: "bulk",
-					secretSource,
-					secretFormat,
-					hasEnvironment: Boolean(args.env),
-				},
-				{
-					sendMetrics: config.send_metrics,
-				}
-			);
-		} catch (err) {
+		} catch (e) {
 			logger.log("");
 			logger.log(`🚨 Secrets failed to upload`);
-			throw err;
+			throw e;
 		}
+
+		for (const key of deleted) {
+			logger.log(`💥 Successfully deleted secret for key: ${key}`);
+		}
+		for (const key of created) {
+			logger.log(`✨ Successfully created secret for key: ${key}`);
+		}
+
+		logger.log("");
+		logger.log("Finished processing secrets file:");
+		const hasChanges = deleted.length + created.length > 0;
+		if (hasChanges) {
+			if (deleted.length > 0) {
+				logger.log(`💥 ${deleted.length} secrets successfully deleted`);
+			}
+			if (created.length > 0) {
+				logger.log(`✨ ${created.length} secrets successfully created`);
+			}
+		} else {
+			logger.log(`No secrets were created or deleted`);
+		}
+
+		metrics.sendMetricsEvent(
+			"create encrypted variable",
+			{
+				secretOperation: "bulk",
+				secretSource,
+				secretFormat,
+				hasEnvironment: Boolean(args.env),
+			},
+			{
+				sendMetrics: config.send_metrics,
+			}
+		);
 	},
 });
 
 export function validateFileSecrets(
 	content: unknown,
 	jsonFilePath: string
-): asserts content is Record<string, string> {
+): content is Record<string, string | null> {
 	if (content === null || typeof content !== "object") {
 		throw new FatalError(
 			`The contents of "${jsonFilePath}" is not valid. It should be a JSON object of string values.`,
@@ -567,13 +583,14 @@ export function validateFileSecrets(
 	}
 	const entries = Object.entries(content);
 	for (const [key, value] of entries) {
-		if (typeof value !== "string") {
+		if (value != null && typeof value !== "string") {
 			throw new FatalError(
-				`The value for "${key}" in "${jsonFilePath}" is not a "string" instead it is of type "${typeof value}"`,
+				`The value for "${key}" in "${jsonFilePath}" is not null or a "string" instead it is of type "${typeof value}"`,
 				{ telemetryMessage: "secret bulk file invalid value type" }
 			);
 		}
 	}
+	return true;
 }
 
 /** Error thrown when no input is provided to parseBulkInputToObject */
@@ -584,17 +601,37 @@ export class NoInputError extends Error {
 	}
 }
 
-/** Result from parsing bulk secret input, including metadata for analytics */
+/** Result from parsing bulk secret input without nullable values, including metadata for analytics */
 export type BulkInputResult = {
 	content: Record<string, string>;
 	secretSource: "file" | "stdin";
 	secretFormat: "json" | "dotenv";
 };
 
+/** Result from parsing bulk secret input with nullable values, including metadata for analytics */
+export type BulkInputNullableResult = {
+	content: Record<string, string | null>;
+	secretSource: "file" | "stdin";
+	secretFormat: "json" | "dotenv";
+};
+
+/** Override for callers that need non-nullable */
 export async function parseBulkInputToObject(
-	input?: string
-): Promise<BulkInputResult | undefined> {
-	let content: Record<string, string>;
+	input?: string,
+	includeNull?: false
+): Promise<BulkInputResult | undefined>;
+
+/** Override for callers that need nullable */
+export async function parseBulkInputToObject(
+	input?: string,
+	includeNull?: true
+): Promise<BulkInputNullableResult | undefined>;
+
+export async function parseBulkInputToObject(
+	input?: string,
+	includeNull: boolean = false
+): Promise<BulkInputResult | BulkInputNullableResult | undefined> {
+	let content: Record<string, string | null>;
 	let secretSource: "file" | "stdin";
 	let secretFormat: "json" | "dotenv";
 
@@ -603,7 +640,7 @@ export async function parseBulkInputToObject(
 		const jsonFilePath = path.resolve(input);
 		const fileContent = readFileSync(jsonFilePath);
 		try {
-			content = parseJSON(fileContent) as Record<string, string>;
+			content = parseJSON(fileContent) as Record<string, string | null>;
 			secretFormat = "json";
 		} catch {
 			content = dotenvParse(fileContent);
@@ -616,16 +653,24 @@ export async function parseBulkInputToObject(
 			}
 		}
 		validateFileSecrets(content, input);
+		if (!includeNull) {
+			content = Object.fromEntries(
+				Object.entries(content).filter(
+					(entry): entry is [string, string] => entry[1] != null
+				)
+			);
+		}
 	} else {
 		secretSource = "stdin";
 		try {
 			const rl = readline.createInterface({ input: process.stdin });
-			let pipedInput = "";
+			const pipedInputLines: string[] = [];
 			for await (const line of rl) {
-				pipedInput += line;
+				pipedInputLines.push(line);
 			}
+			const pipedInput = pipedInputLines.join("\n");
 			try {
-				content = parseJSON(pipedInput) as Record<string, string>;
+				content = parseJSON(pipedInput) as Record<string, string | null>;
 				secretFormat = "json";
 			} catch (e) {
 				content = dotenvParse(pipedInput);

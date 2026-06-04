@@ -1,15 +1,16 @@
 import crypto from "node:crypto";
 import { URL } from "node:url";
+import { getWorkersDevSubdomain } from "@cloudflare/deploy-helpers";
 import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
+import { createDeployHelpersContext } from "../core/deploy-helpers-context";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logger } from "../logger";
-import { getWorkersDevSubdomain } from "../routes";
 import { getAccessHeaders } from "../user/access";
-import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
 import type {
+	ApiCredentials,
 	CfWorkerContext,
 	ComplianceConfig,
 } from "@cloudflare/workers-utils";
@@ -218,9 +219,10 @@ export async function createPreviewSession(
 			const subdomain = await getWorkersDevSubdomain(
 				complianceConfig,
 				account.accountId,
-				undefined,
-				apiToken,
-				withTimeout(abortSignal)
+				createDeployHelpersContext({ apiToken }),
+				{
+					abortSignal: withTimeout(abortSignal),
+				}
 			);
 			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
 		}

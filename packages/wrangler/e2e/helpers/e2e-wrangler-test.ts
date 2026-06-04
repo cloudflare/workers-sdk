@@ -22,12 +22,10 @@ import {
 import type { WranglerCommandOptions } from "./wrangler";
 import type { Awaitable } from "miniflare";
 
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 export function importWrangler(): Promise<typeof import("../../src/cli")> {
 	return import(WRANGLER_IMPORT.href);
 }
 
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 export function importMiniflare(): Promise<typeof import("miniflare")> {
 	return import(MINIFLARE_IMPORT.href);
 }

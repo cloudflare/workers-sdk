@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -9,7 +12,6 @@ import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { getMswSuccessMembershipHandlers } from "../helpers/msw";
 import { msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("export", () => {
@@ -71,14 +73,14 @@ describe("export", () => {
 		const create_foo = "CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);";
 		const create_bar = "CREATE TABLE bar(id INTEGER PRIMARY KEY, value TEXT);";
 		const insert_foo = [
-			`INSERT INTO "foo" VALUES(1,'xxx');`,
-			`INSERT INTO "foo" VALUES(2,'yyy');`,
-			`INSERT INTO "foo" VALUES(3,'zzz');`,
+			`INSERT INTO "foo" ("id","value") VALUES(1,'xxx');`,
+			`INSERT INTO "foo" ("id","value") VALUES(2,'yyy');`,
+			`INSERT INTO "foo" ("id","value") VALUES(3,'zzz');`,
 		];
 		const insert_bar = [
-			`INSERT INTO "bar" VALUES(1,'aaa');`,
-			`INSERT INTO "bar" VALUES(2,'bbb');`,
-			`INSERT INTO "bar" VALUES(3,'ccc');`,
+			`INSERT INTO "bar" ("id","value") VALUES(1,'aaa');`,
+			`INSERT INTO "bar" ("id","value") VALUES(2,'bbb');`,
+			`INSERT INTO "bar" ("id","value") VALUES(3,'ccc');`,
 		];
 
 		// Full export
@@ -309,13 +311,13 @@ describe("export", () => {
 			[
 				"PRAGMA defer_foreign_keys=TRUE;",
 				"CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);",
-				"INSERT INTO \"foo\" VALUES(1,'xxx');",
-				"INSERT INTO \"foo\" VALUES(2,'yyy');",
-				"INSERT INTO \"foo\" VALUES(3,'zzz');",
+				'INSERT INTO "foo" ("id","value") VALUES(1,\'xxx\');',
+				'INSERT INTO "foo" ("id","value") VALUES(2,\'yyy\');',
+				'INSERT INTO "foo" ("id","value") VALUES(3,\'zzz\');',
 				"CREATE TABLE baz(id INTEGER PRIMARY KEY, value TEXT);",
-				"INSERT INTO \"baz\" VALUES(1,'111');",
-				"INSERT INTO \"baz\" VALUES(2,'222');",
-				"INSERT INTO \"baz\" VALUES(3,'333');",
+				'INSERT INTO "baz" ("id","value") VALUES(1,\'111\');',
+				'INSERT INTO "baz" ("id","value") VALUES(2,\'222\');',
+				'INSERT INTO "baz" ("id","value") VALUES(3,\'333\');',
 			].join("\n")
 		);
 	});

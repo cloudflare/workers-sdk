@@ -31,7 +31,7 @@ name: "Rerun Code Owners (Privileged)"
 # From the check run's details_url we extract the Actions job ID, then
 # re-run that specific job.
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] privileged companion reruns a fixed default-branch workflow using GitHub-provided workflow_run metadata only
     workflows: ["Rerun Code Owners"]
     types: [completed]
 

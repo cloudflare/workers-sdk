@@ -88,6 +88,7 @@ const ignoreMessages = [
 	"disconnected: operation canceled",
 	"disconnected: worker_do_not_log; Request failed due to internal error",
 	"disconnected: WebSocket was aborted",
+	"disconnected: WebSocket peer disconnected",
 	"CODE_MOVED for unknown code block",
 	"broken.outputGateBroken; jsg.Error: Instance dispose",
 ];

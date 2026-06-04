@@ -131,6 +131,8 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
+	const websearch = extractBindingsOfType("websearch", bindings)[0];
+	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
 		"secrets_store_secret",
@@ -367,6 +369,37 @@ export function createWorkerUploadForm(
 		});
 	});
 
+	if (websearch !== undefined) {
+		metadataBindings.push({
+			name: websearch.binding,
+			type: "websearch",
+		});
+	}
+
+	agent_memory.forEach(({ binding, namespace }) => {
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`, {
+				telemetryMessage: false,
+			});
+		}
+
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "agent_memory",
+				namespace,
+			});
+		}
+	});
+
 	hyperdrive.forEach(({ binding, id }) => {
 		metadataBindings.push({
 			name: binding,
@@ -487,12 +520,22 @@ export function createWorkerUploadForm(
 		});
 	});
 
-	pipelines.forEach(({ binding, pipeline }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "pipelines",
-			pipeline: pipeline,
-		});
+	pipelines.forEach(({ binding, stream: pipelineStream, pipeline }) => {
+		if (pipelineStream) {
+			metadataBindings.push({
+				name: binding,
+				type: "pipelines",
+				stream: pipelineStream,
+			});
+		} else if (pipeline) {
+			metadataBindings.push({
+				name: binding,
+				type: "pipelines",
+				pipeline,
+			});
+		} else {
+			throw new Error("Pipeline binding must specify a stream or pipeline");
+		}
 	});
 
 	worker_loaders.forEach(({ binding }) => {

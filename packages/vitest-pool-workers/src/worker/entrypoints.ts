@@ -80,17 +80,17 @@ function createProxyPrototypeClass<
 
 /**
  * Only properties and methods declared on the prototype can be accessed over
- * RPC. This function gets a property from the prototype if it's defined, and
- * throws a helpful error message if not. Note we need to distinguish between a
- * property that returns `undefined` and something not being defined at all.
+ * RPC. This function throws a helpful error message if a property isn't
+ * defined. Note we need to distinguish between a property that returns
+ * `undefined` and something not being defined at all.
  */
-function getRPCProperty(
+function assertRPCPropertyAccessible(
 	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
 	instance:
 		| WorkerEntrypoint<Record<string, unknown> | Cloudflare.Env>
 		| DurableObjectClass<Record<string, unknown> | Cloudflare.Env>,
 	key: string
-): unknown {
+): void {
 	const prototypeHasKey = Reflect.has(ctor.prototype, key);
 	if (!prototypeHasKey) {
 		const quotedKey = JSON.stringify(key);
@@ -108,10 +108,24 @@ function getRPCProperty(
 		}
 		throw new TypeError(message);
 	}
+}
 
+function getRPCProperty(
+	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
+	instance:
+		| WorkerEntrypoint<Record<string, unknown> | Cloudflare.Env>
+		| DurableObjectClass<Record<string, unknown> | Cloudflare.Env>,
+	key: string
+): unknown {
+	assertRPCPropertyAccessible(ctor, instance, key);
 	// `receiver` is the value of `this` provided if a getter is encountered
 	return Reflect.get(/* target */ ctor.prototype, key, /* receiver */ instance);
 }
+
+type InvocationQueueOwner =
+	| WorkerEntrypoint<Cloudflare.Env>
+	| DurableObjectClass<Cloudflare.Env>
+	| WorkflowEntrypoint<Cloudflare.Env>;
 
 /**
  * When calling RPC methods dynamically, we don't know whether the `property`
@@ -131,20 +145,59 @@ function getRPCProperty(
  */
 function getRPCPropertyCallableThenable(
 	key: string,
-	property: Promise<unknown>
+	property: Promise<unknown>,
+	queueOwner: InvocationQueueOwner
 ) {
 	const fn = async function (...args: unknown[]) {
-		const maybeFn = await property;
-		if (typeof maybeFn === "function") {
-			return maybeFn(...args);
-		} else {
-			throw new TypeError(`${JSON.stringify(key)} is not a function.`);
-		}
+		return enqueueInvocation(queueOwner, async (release) => {
+			try {
+				const maybeFn = await property;
+				if (typeof maybeFn === "function") {
+					return maybeFn(...args);
+				} else {
+					throw new TypeError(`${JSON.stringify(key)} is not a function.`);
+				}
+			} finally {
+				release();
+			}
+		});
 	} as Promise<unknown> & ((...args: unknown[]) => Promise<unknown>);
 	fn.then = (onFulfilled, onRejected) => property.then(onFulfilled, onRejected);
 	fn.catch = (onRejected) => property.catch(onRejected);
 	fn.finally = (onFinally) => property.finally(onFinally);
 	return fn;
+}
+
+const invocationQueues = new WeakMap<InvocationQueueOwner, Promise<void>>();
+
+/**
+ * Preserve the order in which async wrapper invocations begin executing.
+ *
+ * Resolving a property like `stub.method`, or ensuring a Durable Object handler
+ * instance, may need to import user modules or instantiate wrapper objects. If
+ * several calls are fired synchronously, those async steps can otherwise
+ * complete out of order before the actual user code is invoked. The queue is
+ * released as soon as invocation starts, so async completions can still run
+ * concurrently.
+ */
+async function enqueueInvocation<T>(
+	owner: InvocationQueueOwner,
+	callback: (release: () => void) => Promise<T>
+): Promise<T> {
+	const previous = invocationQueues.get(owner) ?? Promise.resolve();
+	let releaseStarted: (() => void) | undefined;
+	const started = new Promise<void>((resolve) => {
+		releaseStarted = resolve;
+	});
+	const release = () => {
+		const releaseStartedFn = releaseStarted;
+		if (releaseStartedFn !== undefined) {
+			releaseStartedFn();
+		}
+	};
+	const result = previous.catch(() => {}).then(() => callback(release));
+	invocationQueues.set(owner, started);
+	return result;
 }
 
 /**
@@ -236,7 +289,7 @@ async function getWorkerEntrypointExport(
 	if (!entrypointValue) {
 		const message =
 			`${mainPath} does not export a ${entrypoint} entrypoint. \`@cloudflare/vitest-pool-workers\` does not support service workers or named entrypoints for \`SELF\`.\n` +
-			"If you're using service workers, please migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers.";
+			"If you're using service workers, please migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/";
 		throw new TypeError(message);
 	}
 	return { mainPath, entrypointValue };
@@ -297,7 +350,7 @@ export function createWorkerEntrypointWrapper(
 			}
 
 			const property = getWorkerEntrypointRPCProperty(this, entrypoint, key);
-			return getRPCPropertyCallableThenable(key, property);
+			return getRPCPropertyCallableThenable(key, property, this);
 		}
 	);
 
@@ -388,7 +441,15 @@ async function getDurableObjectRPCProperty(
 		const message = `Expected ${className} exported by ${mainPath} be a subclass of \`DurableObject\` for RPC`;
 		throw new TypeError(message);
 	}
-	const value = getRPCProperty(instanceCtor, instance, key);
+	assertRPCPropertyAccessible(instanceCtor, instance, key);
+	// `workerd` rejects constructor-assigned overrides of RPC methods, but a
+	// constructor may return a Proxy that wraps a method from its prototype.
+	if (Object.hasOwn(instance, key)) {
+		throw new TypeError(
+			`The RPC receiver does not implement the method ${JSON.stringify(key)}.`
+		);
+	}
+	const value = Reflect.get(instance, key, instance);
 	if (typeof value === "function") {
 		// If this is a function, ensure correctly bound `this`
 		return value.bind(instance);
@@ -410,7 +471,7 @@ export function createDurableObjectWrapper(
 		}
 
 		const property = getDurableObjectRPCProperty(this, className, key);
-		return getRPCPropertyCallableThenable(key, property);
+		return getRPCPropertyCallableThenable(key, property, this);
 	});
 
 	Wrapper.prototype[kEnsureInstance] = async function (
@@ -488,14 +549,20 @@ export function createDurableObjectWrapper(
 			this: DurableObjectWrapper,
 			...args: unknown[]
 		) {
-			const { mainPath, instance } = await this[kEnsureInstance]();
-			const maybeFn = instance[key];
-			if (typeof maybeFn === "function") {
-				return (maybeFn as (...a: unknown[]) => void).apply(instance, args);
-			} else {
-				const message = `${className} exported by ${mainPath} does not define a \`${key}()\` method`;
-				throw new TypeError(message);
-			}
+			return enqueueInvocation(this, async (release) => {
+				try {
+					const { mainPath, instance } = await this[kEnsureInstance]();
+					const maybeFn = instance[key];
+					if (typeof maybeFn === "function") {
+						return (maybeFn as (...a: unknown[]) => void).apply(instance, args);
+					} else {
+						const message = `${className} exported by ${mainPath} does not define a \`${key}()\` method`;
+						throw new TypeError(message);
+					}
+				} finally {
+					release();
+				}
+			});
 		};
 	}
 
@@ -526,7 +593,7 @@ export function createWorkflowEntrypointWrapper(entrypoint: string) {
 				entrypoint,
 				key
 			);
-			return getRPCPropertyCallableThenable(key, property);
+			return getRPCPropertyCallableThenable(key, property, this);
 		}
 	);
 

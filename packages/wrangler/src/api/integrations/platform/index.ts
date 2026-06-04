@@ -19,6 +19,7 @@ import {
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
+import { getZoneFromRoute } from "../../../zones";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { extractBindingsOfType } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
@@ -26,11 +27,11 @@ import { ExecutionContext } from "./executionContext";
 // TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
 // This is a temporary fix to ensure that the types are included in the build output
 import type {
+	AssetsOptions,
 	Config,
 	RawConfig,
 	RawEnvironment,
 } from "../../../../../workers-utils/src";
-import type { AssetsOptions } from "../../../assets";
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
@@ -49,6 +50,31 @@ export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectCla
  */
 export function unstable_getDevCompatibilityDate() {
 	return getTodaysCompatDate();
+}
+
+/**
+ * Derive the zone value used for the outbound `CF-Worker` header from a
+ * normalized Wrangler config, for callers outside of `wrangler dev`
+ * (`getPlatformProxy`, `unstable_getMiniflareWorkerOptions`).
+ *
+ * Falls back to the zone of the first configured route (via
+ * {@link getZoneFromRoute}, which prefers the route's `zone_name` field
+ * when present and otherwise falls back to the pattern's hostname), or
+ * `undefined` if no routes are set — in which case Miniflare keeps its
+ * default of `${workerName}.example.com`.
+ *
+ * `dev.host` is intentionally NOT consulted here: the `dev` config block is
+ * specific to `wrangler dev` and should not influence behaviour under
+ * `@cloudflare/vite-plugin`, `@cloudflare/vitest-pool-workers`, or
+ * `getPlatformProxy`. Users who need a custom `CF-Worker` host in those
+ * environments should configure a `route` instead.
+ */
+function getZoneFromConfig(config: Config): string | undefined {
+	const firstRoute = config.route ?? config.routes?.[0];
+	if (firstRoute) {
+		return getZoneFromRoute(firstRoute);
+	}
+	return undefined;
 }
 
 export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
@@ -231,16 +257,28 @@ async function getMiniflareOptionsFromConfig(args: {
 	}
 
 	if (config.workflows?.length > 0) {
-		logger.warn(dedent`
-				You have defined bindings to the following Workflows:
-				${config.workflows.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
+		// Workflow bindings without a `script_name` aren't routable in
+		// `getPlatformProxy()` — the engine inside this Miniflare instance has
+		// nowhere to dispatch USER_WORKFLOW. Strip those (and warn).
+		// Cross-worker workflows (with `script_name` referring to another worker
+		// registered in the dev registry) are passed through; Miniflare's
+		// workflows plugin reroutes them via the dev-registry-proxy.
+		const localWorkflows = config.workflows.filter((w) => !w.script_name);
+		if (localWorkflows.length > 0) {
+			logger.warn(dedent`
+				You have defined bindings to the following Workflows without a script_name:
+				${localWorkflows.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
 				These are not available in local development, so you will not be able to bind to them when testing locally, but they should work in production.
 				`);
 
-		// Remove workflows from bindings to prevent Miniflare from complaining
-		const workflowBindings = extractBindingsOfType("workflow", bindings);
-		for (const workflow of workflowBindings) {
-			delete bindings?.[workflow.binding];
+			// Remove only the local workflows from bindings.
+			const allWorkflowBindings = extractBindingsOfType("workflow", bindings);
+			const localBindingNames = new Set(localWorkflows.map((w) => w.binding));
+			for (const wf of allWorkflowBindings) {
+				if (localBindingNames.has(wf.binding)) {
+					delete bindings?.[wf.binding];
+				}
+			}
 		}
 	}
 
@@ -289,6 +327,7 @@ async function getMiniflareOptionsFromConfig(args: {
 				script: "",
 				modules: true,
 				name: config.name,
+				zone: getZoneFromConfig(config),
 				...bindingOptions,
 				...assetOptions,
 			},
@@ -464,6 +503,7 @@ export function unstable_getMiniflareWorkerOptions(
 		containerEngine: useContainers
 			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
 			: undefined,
+		zone: getZoneFromConfig(config),
 
 		...bindingOptions,
 		...sitesOptions,

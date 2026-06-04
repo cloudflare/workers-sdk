@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import * as esbuild from "esbuild";
@@ -20,7 +21,6 @@ import { mockGetSettings } from "../helpers/mock-worker-settings";
 import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -484,7 +484,7 @@ describe("deploy", () => {
 				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
 				Did you mean to create a ES Module format Worker?
 				If so, try adding \`export default { ... }\` in your entry-point.
-				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/. [plugin cloudflare-internal-imports]"
+				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/ [plugin cloudflare-internal-imports]"
 			`);
 		});
 
@@ -517,7 +517,7 @@ describe("deploy", () => {
 				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
 				Did you mean to create a ES Module format Worker?
 				If so, try adding \`export default { ... }\` in your entry-point.
-				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/. [plugin nodejs_compat-imports]"
+				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/ [plugin nodejs_compat-imports]"
 			`);
 		});
 
@@ -551,7 +551,7 @@ describe("deploy", () => {
 				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
 				Did you mean to create a ES Module format Worker?
 				If so, try adding \`export default { ... }\` in your entry-point.
-				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/. [plugin hybrid-nodejs_compat]"
+				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/ [plugin hybrid-nodejs_compat]"
 			`);
 		});
 	});

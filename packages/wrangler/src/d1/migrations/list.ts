@@ -1,15 +1,14 @@
-import path from "node:path";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { isLocal } from "../../utils/is-local";
-import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
 	getMigrationsPath,
 	getUnappliedMigrations,
 	initMigrationsTable,
+	resolveMigrationsConfig,
 } from "./helpers";
 
 export const d1MigrationsListCommand = createCommand({
@@ -74,19 +73,24 @@ export const d1MigrationsListCommand = createCommand({
 			);
 		}
 
-		const migrationsPath = await getMigrationsPath({
-			projectPath: path.dirname(config.configPath),
-			migrationsFolderPath:
-				databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
+		const migrationsConfig = resolveMigrationsConfig({
+			databaseInfo: databaseInfo ?? null,
+			configPath: config.configPath,
+		});
+		// Side-effect only: confirm the migrations dir exists (or surface an
+		// actionable error). The returned absolute path is not used in `list`
+		// because `getUnappliedMigrations` resolves files itself from
+		// `projectPath` + `migrationsPattern`.
+		await getMigrationsPath({
+			projectPath: migrationsConfig.projectPath,
+			migrationsDir: migrationsConfig.migrationsDir,
+			migrationsDirRaw: migrationsConfig.migrationsDirRaw,
 			createIfMissing: false,
 			configPath: config.configPath,
 		});
 
-		const migrationsTableName =
-			databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
-
 		await initMigrationsTable({
-			migrationsTableName,
+			migrationsTableName: migrationsConfig.migrationsTableName,
 			local,
 			remote,
 			config,
@@ -97,8 +101,7 @@ export const d1MigrationsListCommand = createCommand({
 
 		const unappliedMigrations = (
 			await getUnappliedMigrations({
-				migrationsTableName,
-				migrationsPath,
+				migrationsConfig,
 				local,
 				remote,
 				config,

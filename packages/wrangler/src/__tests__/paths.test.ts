@@ -1,11 +1,6 @@
 import * as path from "node:path";
 import { describe, it } from "vitest";
-import {
-	getBasePath,
-	getWranglerHiddenDirPath,
-	readableRelative,
-} from "../paths";
-
+import { getBasePath, readableRelative } from "../paths";
 describe("paths", () => {
 	describe("getBasePath()", () => {
 		it("should return the path to the wrangler package", ({ expect }) => {
@@ -19,22 +14,6 @@ describe("paths", () => {
 				global as unknown as { __RELATIVE_PACKAGE_PATH__: string }
 			).__RELATIVE_PACKAGE_PATH__ = "/foo/bar";
 			expect(getBasePath()).toEqual(path.resolve("/foo/bar"));
-		});
-	});
-
-	describe("getWranglerHiddenDirPath()", () => {
-		it("should return .wrangler path in project root", ({ expect }) => {
-			expect(getWranglerHiddenDirPath("/project")).toBe(
-				path.join("/project", ".wrangler")
-			);
-		});
-
-		it("should use current working directory when projectRoot is undefined", ({
-			expect,
-		}) => {
-			expect(getWranglerHiddenDirPath(undefined)).toBe(
-				path.join(process.cwd(), ".wrangler")
-			);
 		});
 	});
 });

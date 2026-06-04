@@ -6,7 +6,10 @@ import {
 import { errorResponse, wrapResponse } from "../common";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
-import type { WorkflowsWorkflow } from "../generated";
+import type {
+	WorkflowsChangeInstanceStatusData,
+	WorkflowsWorkflow,
+} from "../generated";
 import type { zWorkflowsListInstancesData } from "../generated/zod.gen";
 import type { RestartFromStep } from "@cloudflare/workflows-shared/src/binding";
 import type { z } from "zod";
@@ -843,7 +846,8 @@ export async function createWorkflowInstance(
 export async function changeWorkflowInstanceStatus(
 	c: AppContext,
 	workflowName: string,
-	instanceId: string
+	instanceId: string,
+	body: WorkflowsChangeInstanceStatusData["body"]
 ): Promise<Response> {
 	const workflow = getWorkflowBinding(c.env, workflowName);
 
@@ -856,7 +860,7 @@ export async function changeWorkflowInstanceStatus(
 				{
 					method: "PATCH",
 					headers: { "Content-Type": "application/json" },
-					body: await c.req.text(),
+					body: JSON.stringify(body),
 				}
 			);
 			if (response) {
@@ -872,10 +876,6 @@ export async function changeWorkflowInstanceStatus(
 	}
 
 	try {
-		const body = (await c.req.json()) as {
-			action: string;
-			from?: RestartFromStep;
-		};
 		const { action } = body;
 
 		if (!["pause", "resume", "restart", "terminate"].includes(action)) {

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
 import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
@@ -10,7 +9,7 @@ chalk.level = 0;
 
 // In general we don't want the ConfigController to watch the config files
 // as this tends to make the tests flaky.
-// eslint-disable-next-line turbo/no-undeclared-env-vars
+// eslint-disable-next-line turbo/no-undeclared-env-vars -- Test-only env var to prevent flaky config file watching
 process.env.WRANGLER_CI_DISABLE_CONFIG_WATCHING = "true";
 
 /**
@@ -124,7 +123,13 @@ vi.mock("../package-manager", async (importOriginal) => {
 	return mocked;
 });
 
-vi.mock("../update-check");
+vi.mock("../update-check", async (importOriginal) => {
+	const mod = await importOriginal<typeof import("../update-check")>();
+	return {
+		...mod,
+		updateCheck: vi.fn().mockResolvedValue({ status: "up-to-date" }),
+	};
+});
 
 beforeAll(() => {
 	msw.listen({
@@ -218,6 +223,19 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 			userId: undefined,
 		};
 	});
+	return realModule;
+});
+
+vi.mock("../agents-skills-install", async (importOriginal) => {
+	const realModule =
+		await importOriginal<typeof import("../agents-skills-install")>();
+	vi.spyOn(
+		realModule,
+		"maybeInstallCloudflareSkillsGlobally"
+	).mockResolvedValue(undefined);
+	vi.spyOn(realModule, "telemetryCurrentAgentSkillsInstalled").mockReturnValue(
+		Promise.resolve(null)
+	);
 	return realModule;
 });
 

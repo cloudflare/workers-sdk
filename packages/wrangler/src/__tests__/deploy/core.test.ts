@@ -1,7 +1,10 @@
 import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
@@ -39,7 +42,6 @@ import {
 	mswSuccessUserHandlers,
 } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -527,7 +529,7 @@ describe("deploy", () => {
 			├─┼─┤
 			│ Account Three │ account-3 │
 			└─┴─┘
-			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.",
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens",
 			  "warn": "",
 			}
 		`);
@@ -759,7 +761,7 @@ describe("deploy", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -805,7 +807,7 @@ describe("deploy", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -1031,6 +1033,7 @@ describe("deploy", () => {
 
 					  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning
 					  its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your Wrangler configuration file.
+					  Alternatively, try running \`wrangler login\` to re-authenticate.
 
 					"
 				`);
@@ -1729,6 +1732,110 @@ describe("deploy", () => {
 			expect(std.out).toContain("--dry-run: exiting now.");
 			// Should NOT have been asked for a name
 			expect(std.out).not.toContain("What do you want to name your project?");
+		});
+
+		it("should include compatibility_flags in generated wrangler.jsonc when --compatibility-flags is passed", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: true,
+			});
+
+			await runWrangler(
+				"deploy ./index.js --compatibility-flags=nodejs_compat --dry-run"
+			);
+			expect(std.out).toContain("--dry-run: exiting now.");
+			const writtenConfig = JSON.parse(
+				fs.readFileSync("wrangler.jsonc", "utf-8")
+			);
+			expect(writtenConfig).toEqual({
+				name: "test-worker",
+				compatibility_date: "2024-06-15",
+				main: "./index.js",
+				compatibility_flags: ["nodejs_compat"],
+			});
+			expect(std.out).toContain("Proceeding with deployment...");
+		});
+
+		it("should include --compatibility-flags in suggested CLI command when user declines config file write", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: false,
+			});
+
+			await runWrangler(
+				"deploy ./index.js --compatibility-flags=nodejs_compat --compatibility-flags=disable_navigator_language --dry-run"
+			);
+			expect(std.out).toContain("--dry-run: exiting now.");
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+			// Suggested command should include the compat flags
+			expect(std.out).toContain(
+				"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15 --compatibility-flags nodejs_compat disable_navigator_language"
+			);
+			expect(std.out).toContain("Proceeding with deployment...");
+		});
+
+		it("should include multiple --compatibility-flags in suggested CLI command and config file", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: true,
+			});
+
+			await runWrangler(
+				"deploy ./index.js --compatibility-flags=nodejs_compat --compatibility-flags=url_standard --dry-run"
+			);
+			expect(std.out).toContain("--dry-run: exiting now.");
+			const writtenConfig = JSON.parse(
+				fs.readFileSync("wrangler.jsonc", "utf-8")
+			);
+			expect(writtenConfig).toEqual({
+				name: "test-worker",
+				compatibility_date: "2024-06-15",
+				main: "./index.js",
+				compatibility_flags: ["nodejs_compat", "url_standard"],
+			});
+			expect(std.out).toContain("Proceeding with deployment...");
 		});
 	});
 });

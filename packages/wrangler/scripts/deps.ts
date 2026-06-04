@@ -37,6 +37,31 @@ export const EXTERNAL_DEPENDENCIES = [
 	"workerd",
 ];
 
+/**
+ * Bare-specifier imports that legitimately appear in wrangler's bundled
+ * output but should NOT be treated as missing runtime dependencies.
+ *
+ * Each entry must be justified — typically the import is guarded
+ * (try/catch, optional require) inside a bundled-in third-party library that
+ * probes for the consumer's environment.
+ */
+export const IGNORED_DIST_IMPORTS = [
+	// @netlify/build-info (bundled devDependency) tries to require these
+	// framework packages to detect what the user has installed. Each call
+	// is guarded by try/catch and used only for framework detection.
+	"@angular/ssr",
+	"@cloudflare/vite-plugin",
+	"isbot",
+	"react-dom",
+	"react-router",
+	"waku",
+
+	// @aws-sdk/client-s3 (bundled devDependency) optionally uses this native
+	// crypto implementation if installed; falls back to a JS implementation
+	// when missing.
+	"@aws-sdk/signature-v4-crt",
+];
+
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
 const packageJson = fs.readFileSync(pathToPackageJson, { encoding: "utf-8" });
 const { dependencies, devDependencies } = JSON.parse(packageJson);

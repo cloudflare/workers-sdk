@@ -1,19 +1,16 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
 import assert from "node:assert";
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
-/* eslint-disable no-restricted-imports */
 import {
 	afterEach,
 	beforeEach,
 	describe,
+	// eslint-disable-next-line no-restricted-imports -- TODO: remove this `expect` import
 	expect,
 	it,
 	onTestFailed,
 	vi,
 } from "vitest";
-/* eslint-enable no-restricted-imports */
-import { Binding, StartRemoteProxySessionOptions } from "../../api";
 import { unwrapHook } from "../../api/startDevWorker/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -23,8 +20,8 @@ import {
 	mswSuccessUserHandlers,
 	mswZoneHandlers,
 } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { Binding, StartRemoteProxySessionOptions } from "../../api";
 import type { StartDevOptions } from "../../dev";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";

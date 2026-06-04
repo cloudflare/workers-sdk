@@ -1,11 +1,13 @@
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager } from "../package-manager";
 import { updateCheck } from "../update-check";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { PackageManager } from "../package-manager";
@@ -48,12 +50,13 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
+				  wrangler agent-memory           🧠 Manage Agent Memory namespaces [private beta]
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler ai-search              🔍 Manage AI Search instances [open beta]
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
 				  wrangler containers             📦 Manage Containers
 				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
@@ -69,9 +72,11 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
+				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
@@ -86,12 +91,13 @@ describe("wrangler", () => {
 				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			`);
@@ -125,12 +131,13 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
+				  wrangler agent-memory           🧠 Manage Agent Memory namespaces [private beta]
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler ai-search              🔍 Manage AI Search instances [open beta]
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
 				  wrangler containers             📦 Manage Containers
 				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
@@ -146,9 +153,11 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
+				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
@@ -163,12 +172,13 @@ describe("wrangler", () => {
 				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			`);
@@ -257,15 +267,16 @@ describe("wrangler", () => {
 				  wrangler secret put <key>     Create or update a secret for a Worker
 				  wrangler secret delete <key>  Delete a secret from a Worker
 				  wrangler secret list          List all secrets for a Worker
-				  wrangler secret bulk [file]   Upload multiple secrets for a Worker at once
+				  wrangler secret bulk [file]   Create, update, or delete multiple secrets for a Worker in a single request, with up to 100 secrets per command.
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]"
 			`);
 		});
 
@@ -286,12 +297,13 @@ describe("wrangler", () => {
 				  wrangler kv namespace rename [old-name]   Rename a KV namespace
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]"
 			`);
 		});
 
@@ -312,12 +324,13 @@ describe("wrangler", () => {
 				  wrangler kv key delete <key>       Remove a single key value pair from the given namespace
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]"
 			`);
 		});
 
@@ -337,12 +350,13 @@ describe("wrangler", () => {
 				  wrangler kv bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]"
 			`);
 		});
 
@@ -362,12 +376,13 @@ describe("wrangler", () => {
 				  wrangler r2 sql     Send queries and manage R2 SQL [open beta]
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]"
 			`);
 		});
 	});
@@ -400,7 +415,10 @@ describe("wrangler", () => {
 		it("should display a 'try updating' message if there is one available", async ({
 			expect,
 		}) => {
-			(updateCheck as Mock).mockImplementation(async () => "123.123.123");
+			(updateCheck as Mock).mockImplementation(async () => ({
+				status: "update-available",
+				latest: "123.123.123",
+			}));
 			await logPossibleBugMessage();
 			expect(std.out).toMatchInlineSnapshot(`
 			"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m

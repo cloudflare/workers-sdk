@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { APIError } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
@@ -22,7 +23,6 @@ import {
 	mswSuccessDeploymentScriptAPI,
 } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -381,8 +381,6 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				? Would you like to continue?
-				🤖 Using fallback value in non-interactive context: yes
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:

@@ -20,6 +20,7 @@ type ValidKeys = Exclude<
 	ConfigBindingFieldName,
 	| "ai"
 	| "browser"
+	| "websearch"
 	| "vars"
 	| "wasm_modules"
 	| "text_blobs"

@@ -1,10 +1,14 @@
 import * as fs from "node:fs";
 import {
+	runInTempDir,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses assert/expect in MSW handlers and top-level mock setup
+ * TODO: remove this `expect` import
+ */
 import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
@@ -19,7 +23,6 @@ import {
 	mockSubDomainRequest,
 } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
@@ -779,7 +782,7 @@ describe("versions upload", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions upload command.[0m
 
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-				  the target environment using the \`-e|--env\` flag.
+				  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
 				  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -830,6 +833,64 @@ describe("versions upload", () => {
 			setIsTTY(false);
 
 			const result = runWrangler("versions upload");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async () => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			mockGetScript();
+			mockUploadVersion(true);
+			mockPatchScriptSettings();
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				useServiceEnvironments: false,
+				env: "test",
+			});
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler("versions upload");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async () => {
+			mockGetScript();
+			mockUploadVersion(true);
+			mockPatchScriptSettings();
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				useServiceEnvironments: false,
+			});
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler('versions upload --env=""');
 
 			await expect(result).resolves.toBeUndefined();
 
@@ -1083,6 +1144,51 @@ describe("versions upload", () => {
 			await expect(
 				runWrangler("versions upload --site ./public")
 			).rejects.toThrow(/Workers Sites does not support uploading versions/);
+		});
+
+		test("should error when --script points to a directory", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("assets", { recursive: true });
+			fs.writeFileSync("assets/index.html", "<h1>Hello</h1>");
+
+			await expect(runWrangler("versions upload --script ./assets")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+				  wrangler versions upload ./assets
+				  wrangler versions upload --assets ./assets]
+			`);
+		});
+
+		test("should error when --script points to a directory even when positional path is also provided", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("assets", { recursive: true });
+			fs.writeFileSync("assets/index.html", "<h1>Hello</h1>");
+			fs.mkdirSync("other-dir", { recursive: true });
+			fs.writeFileSync("other-dir/page.html", "<h1>Other</h1>");
+
+			await expect(runWrangler("versions upload ./assets --script ./other-dir"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+				  wrangler versions upload ./other-dir
+				  wrangler versions upload --assets ./other-dir]
+			`);
+		});
+
+		test("should error when --script points to a directory even when positional path is a file", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("assets", { recursive: true });
+			fs.writeFileSync("assets/index.html", "<h1>Hello</h1>");
+			fs.writeFileSync("index.js", "export default {}");
+
+			await expect(runWrangler("versions upload ./index.js --script ./assets"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+				  wrangler versions upload ./assets
+				  wrangler versions upload --assets ./assets]
+			`);
 		});
 
 		test("should error when no name is provided", async ({ expect }) => {
@@ -1697,6 +1803,45 @@ describe("versions upload", () => {
 			expect(metadata.assets?.jwt).toEqual("test-assets-jwt");
 		});
 
+		test("should upload assets when directory is passed as positional path", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Mock asset upload session
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/assets-upload-session`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "test-assets-jwt", buckets: [[]] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+			fs.mkdirSync("public", { recursive: true });
+			fs.writeFileSync("public/index.html", "<h1>Hello</h1>");
+
+			await runWrangler("versions upload public");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.assets).toBeDefined();
+			expect(metadata.assets?.jwt).toEqual("test-assets-jwt");
+		});
+
 		test("should not upload assets in dry-run", async ({ expect }) => {
 			writeWranglerConfig({
 				name: "test-name",
@@ -1872,7 +2017,7 @@ const mockExecSync = vi.fn();
 describe("generatePreviewAlias", () => {
 	mockConsoleMethods();
 	vi.mock("child_process", () => ({
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- vi.mock callback needs untyped rest args to forward to mock
 		execSync: (...args: any[]) => mockExecSync(...args),
 	}));
 

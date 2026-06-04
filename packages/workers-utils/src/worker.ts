@@ -192,6 +192,7 @@ export interface CfWorkflow {
 	limits?: {
 		steps?: number;
 	};
+	schedules?: string | string[];
 }
 
 export interface CfQueue {
@@ -219,6 +220,7 @@ export interface CfD1Database {
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;
+	migrations_pattern?: string;
 	remote?: boolean;
 	raw?: boolean;
 }
@@ -239,6 +241,17 @@ export interface CfAISearchNamespace {
 export interface CfAISearch {
 	binding: string;
 	instance_name: string;
+	remote?: boolean;
+}
+
+export interface CfWebSearch {
+	binding: string;
+	remote?: boolean;
+}
+
+export interface CfAgentMemory {
+	binding: string;
+	namespace: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 
@@ -344,7 +357,8 @@ export interface CfAssetsBinding {
 
 export interface CfPipeline {
 	binding: string;
-	pipeline: string;
+	stream?: string;
+	pipeline?: string;
 	remote?: boolean;
 }
 

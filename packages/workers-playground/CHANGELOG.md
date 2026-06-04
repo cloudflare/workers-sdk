@@ -1,5 +1,12 @@
 # workers-playground
 
+## 0.4.4
+
+### Patch Changes
+
+- Updated dependencies [[`3a746ac`](https://github.com/cloudflare/workers-sdk/commit/3a746ac56a40b805e38f26ef5328e44917b543e6)]:
+  - @cloudflare/workers-editor-shared@0.1.2
+
 ## 0.4.3
 
 ### Patch Changes

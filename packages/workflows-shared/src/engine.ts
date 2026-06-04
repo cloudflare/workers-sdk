@@ -29,6 +29,7 @@ import {
 	storeRestartFromStep,
 	wipeRestartState,
 } from "./lib/restart";
+import { clearRollbackRegistry, executeRollbacks } from "./lib/rollback";
 import {
 	createReplayReadableStream,
 	getInvalidStoredStreamOutputError,
@@ -40,6 +41,7 @@ import { MODIFIER_KEYS, WorkflowInstanceModifier } from "./modifier";
 import type { RestartFromStep } from "./binding";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
+import type { RollbackRegistryEntry } from "./lib/rollback";
 import type { StreamOutputMeta } from "./lib/streams";
 import type {
 	WorkflowEntrypoint,
@@ -106,6 +108,31 @@ export const DEFAULT_STEP_LIMIT = 10_000;
 
 const PAUSE_DATETIME = "PAUSE_DATETIME";
 
+/**
+ * JSON.stringify replacer that converts TypedArrays and ArrayBuffers to a
+ * human-readable description. Without this, JSON.stringify(Uint8Array) encodes
+ * each byte as a numeric key ({"0":1,"1":2,...}), producing a string ~10x larger
+ * than byteLength and causing SQLITE_TOOBIG for outputs above ~170 KB.
+ * The replacer is called recursively by JSON.stringify, so nested binary values
+ * inside objects or arrays are also handled.
+ */
+function binaryReplacer(_key: string, value: unknown): unknown {
+	if (value instanceof ArrayBuffer) {
+		return `[ArrayBuffer(${value.byteLength} bytes)]`;
+	}
+	if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+		return `[${value.constructor.name}(${(value as ArrayBufferView).byteLength} bytes)]`;
+	}
+	return value;
+}
+
+function isStepSuccessEvent(event: InstanceEvent): boolean {
+	return (
+		event === InstanceEvent.STEP_SUCCESS ||
+		event === InstanceEvent.ROLLBACK_STEP_SUCCESS
+	);
+}
+
 export class Engine extends DurableObject<Env> {
 	logs: Array<unknown> = [];
 
@@ -126,6 +153,9 @@ export class Engine extends DurableObject<Env> {
 		>
 	> = new Map();
 	eventMap: Map<string, Array<Event>> = new Map();
+
+	// Not persisted: rollback fns are RPC stubs, dead across DO restarts.
+	rollbackRegistry: Map<string, RollbackRegistryEntry> = new Map();
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
@@ -188,13 +218,28 @@ export class Engine extends DurableObject<Env> {
 			event,
 			group,
 			target,
-			JSON.stringify(metadata)
+			JSON.stringify(metadata, binaryReplacer)
 		);
 
 		// Wake any waiters if this is a terminal step event
 		if (group) {
 			this.handleStepResultWaiter(group, event, metadata);
 		}
+	}
+
+	readStepStartGroupKeysDesc(): string[] {
+		const rows = [
+			...this.ctx.storage.sql.exec<{ groupKey: string }>(
+				"SELECT groupKey FROM states WHERE event = ? AND groupKey IS NOT NULL ORDER BY id DESC",
+				InstanceEvent.STEP_START
+			),
+		];
+		return rows.map(({ groupKey }) => groupKey);
+	}
+
+	// Lives here for access to the protected DurableObject `ctx`.
+	createRollbackContext(rollbackStep?: { cacheKey: string }): Context {
+		return new Context(this, this.ctx, rollbackStep);
 	}
 
 	readLogsFromStep(_cacheKey: string): RawInstanceLog[] {
@@ -215,10 +260,7 @@ export class Engine extends DurableObject<Env> {
 			logs: logs.map((log) => {
 				const metadata = JSON.parse(log.metadata);
 
-				if (
-					log.event !== InstanceEvent.STEP_SUCCESS ||
-					!metadata.streamOutput
-				) {
+				if (!isStepSuccessEvent(log.event) || !metadata.streamOutput) {
 					return { ...log, metadata, group: log.groupKey };
 				}
 
@@ -275,7 +317,7 @@ export class Engine extends DurableObject<Env> {
 		return rows.map((row) => {
 			const metadata = JSON.parse(row.metadata) as Record<string, unknown>;
 
-			if (row.event !== InstanceEvent.STEP_SUCCESS || !metadata.streamOutput) {
+			if (!isStepSuccessEvent(row.event) || !metadata.streamOutput) {
 				return {
 					id: row.id,
 					timestamp: String(row.timestamp).replace(" ", "T") + "Z",
@@ -992,6 +1034,7 @@ export class Engine extends DurableObject<Env> {
 		this.pauseController = new AbortController();
 		this.waiters = new Map();
 		this.eventMap = new Map();
+		clearRollbackRegistry(this.rollbackRegistry);
 
 		void this.init(accountId, workflow, version, instance, event);
 	}
@@ -1099,11 +1142,23 @@ export class Engine extends DurableObject<Env> {
 			await this.ctx.storage.transaction(async () => {
 				await this.setStatus(accountId, instance.id, InstanceStatus.Complete);
 			});
+			// Dispose dup'd stubs; otherwise they leak across DO lifetimes.
+			clearRollbackRegistry(this.rollbackRegistry);
 			this.isRunning = false;
 		} catch (err) {
 			if (isAbortError(err)) {
 				this.isRunning = false;
 				return;
+			}
+
+			// Run before the terminal status so events land before WORKFLOW_FAILURE.
+			try {
+				await executeRollbacks(
+					this,
+					err instanceof Error ? err : new Error(String(err))
+				);
+			} catch (rollbackErr) {
+				console.error("Rollback execution failed:", rollbackErr);
 			}
 
 			let error;

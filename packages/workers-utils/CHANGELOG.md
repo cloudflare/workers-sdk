@@ -1,5 +1,152 @@
 # @cloudflare/workers-utils
 
+## 0.23.0
+
+### Minor Changes
+
+- [#14089](https://github.com/cloudflare/workers-sdk/pull/14089) [`c6c61b5`](https://github.com/cloudflare/workers-sdk/commit/c6c61b59431443b2bcda25f3af7624dd2ce19b9b) Thanks [@alsuren](https://github.com/alsuren)! - Add `migrations_pattern` to D1 database bindings
+
+  The D1 binding now accepts an optional `migrations_pattern` field, allowing you to point `wrangler d1 migrations apply` and `wrangler d1 migrations list` at migration files in nested layouts (e.g. ORM-generated folders like `migrations/0000_init/migration.sql`).
+
+  `migrations_pattern` is a glob (relative to the wrangler config file) and defaults to `${migrations_dir}/*.sql`, which preserves today's behaviour. Files that do not match the pattern are not executed.
+
+  ```jsonc
+  {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "my-db",
+        "database_id": "...",
+        "migrations_dir": "migrations",
+        "migrations_pattern": "migrations/*/migration.sql"
+      }
+    ]
+  }
+  ```
+
+  When no migrations match the configured pattern but files matching the common `migrations/*/migration.sql` (drizzle-style) layout do exist, Wrangler logs a hint suggesting `migrations_pattern` as an opt-in.
+
+  `wrangler d1 migrations create` now returns an actionable error if the generated migration filename would not match the configured pattern.
+
+- [#14164](https://github.com/cloudflare/workers-sdk/pull/14164) [`b502d54`](https://github.com/cloudflare/workers-sdk/commit/b502d5445b9e9e030020a3d65c0334507393aa64) Thanks [@G4brym](https://github.com/G4brym)! - Rename the `web_search` binding kind to `websearch`
+
+  Pre-launch rename of the public binding type from `web_search` to `websearch` so the on-the-wire shape matches the product name (Web Search). The wrangler config key, the binding-type string sent to the Cloudflare API, and the miniflare option key all move from `web_search` / `webSearch` to `websearch`.
+
+  Update your wrangler config:
+
+  ```diff
+  - "web_search": { "binding": "WEBSEARCH" }
+  + "websearch": { "binding": "WEBSEARCH" }
+  ```
+
+  The runtime `WebSearch` type exposed on `env.WEBSEARCH` is unchanged.
+
+- [#14146](https://github.com/cloudflare/workers-sdk/pull/14146) [`c4f45e8`](https://github.com/cloudflare/workers-sdk/commit/c4f45e8b8694c60fb1808f7fbb130e4b4893d20c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Simplify `constructWranglerConfig` to accept a single worker instead of an array
+
+  The `constructWranglerConfig` function now accepts a single `APIWorkerConfig` object instead of `APIWorkerConfig | APIWorkerConfig[]`. The multi-environment array support has been removed since the array use-case was removed and now the only call site already passes a single worker object. This is a breaking change to the function's public signature.
+
+## 0.22.1
+
+### Patch Changes
+
+- [#14084](https://github.com/cloudflare/workers-sdk/pull/14084) [`e86489a`](https://github.com/cloudflare/workers-sdk/commit/e86489a5743ff9bad7bcb5b444ad3d952d5b0164) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Correctly map JSON bindings in `mapWorkerMetadataBindings`
+
+  The `json` binding case used literal keys `name` and `json` instead of a computed property key `[binding.name]: binding.json`. This caused JSON bindings to always produce `{ name: "<binding_name>", json: <value> }` instead of `{ <binding_name>: <value> }`, clobbering any existing vars with those keys. This is now consistent with how `plain_text` bindings are mapped.
+
+- [#14105](https://github.com/cloudflare/workers-sdk/pull/14105) [`337e912`](https://github.com/cloudflare/workers-sdk/commit/337e9124cfa461a99ce7ffb800dcc341f7b2f026) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove trailing periods from URLs in terminal output
+
+  URLs printed to the terminal with a sentence-ending period (e.g. `https://example.com/path.`) would include the period when clicked in some terminal emulators, causing 404 errors. This removes trailing periods from all URLs displayed in CLI output across wrangler, miniflare, vitest-pool-workers, and workers-utils.
+
+- [#14063](https://github.com/cloudflare/workers-sdk/pull/14063) [`65b5f9e`](https://github.com/cloudflare/workers-sdk/commit/65b5f9e1855651c2df2c1bdfc8930141e36413d5) Thanks [@emily-shen](https://github.com/emily-shen)! - Move fetch helpers into `@cloudflare/workers-utils`
+
+  Shared Cloudflare API fetch helper types and plumbing now live in `@cloudflare/workers-utils` so Wrangler and other clients can use the same implementation.
+
+## 0.22.0
+
+### Minor Changes
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Add support for the new `web_search` binding kind.
+
+  Cloudflare Web Search is a managed, zero-setup web discovery primitive for agents and Workers. Declare the binding as a single object in `wrangler.jsonc`:
+
+  ```jsonc
+  {
+    "web_search": { "binding": "WEBSEARCH" }
+  }
+  ```
+
+  There is exactly one shared web corpus, so there is no namespace, instance, or other field to specify -- only the variable name. The binding exposes a single `search()` method that returns URLs and catalog metadata for a query. Web Search is discovery-only -- to read a result's content the caller invokes the global `fetch()` API against the result's `url`.
+
+  The binding is **always remote** in local development: Miniflare proxies to the production Web Search service via the remote-bindings transport. Adds the `websearch.run` OAuth scope to `wrangler login`.
+
+  Also adds a `wrangler websearch search` command for running ad-hoc queries from the CLI:
+
+  ```sh
+  npx wrangler websearch search "cloudflare workers"
+  npx wrangler websearch search "cloudflare workers" --limit 5
+  npx wrangler websearch search "cloudflare workers" --json
+  ```
+
+  `--limit` is optional (defaults to 10, capped at 20). `--json` prints the raw response; without it the results render as a pretty table.
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Rename `pipeline` field to `stream` in pipeline bindings configuration
+
+  The `pipeline` field inside `pipelines` bindings has been renamed to `stream` to align with the updated API wire format. The old `pipeline` field is still accepted but deprecated and will emit a warning.
+
+  Before:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "pipeline": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+  After:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "stream": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- [#14111](https://github.com/cloudflare/workers-sdk/pull/14111) [`599b27a`](https://github.com/cloudflare/workers-sdk/commit/599b27aafb9bc432524a35eb4e5a414de21bef41) Thanks [@nikitacano](https://github.com/nikitacano)! - Fix cloudflared SHA256 checksum mismatch on macOS
+
+  The update service (`update.argotunnel.com`) returns a checksum for the extracted binary, not the `.tgz` tarball. We were computing the SHA256 of the tarball itself, which always mismatched on macOS where cloudflared is distributed as a compressed archive.
+
+  This aligns with cloudflared's own auto-updater (`cmd/cloudflared/updater/workers_update.go`), which decompresses the tarball first, then checksums the resulting binary. We now do the same: extract, then verify.
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Filter compatibility date fallback warning when no update is available
+
+  The compatibility date warning from workerd (e.g., "The latest compatibility date supported by the installed Cloudflare Workers Runtime is...") is now only shown when a newer version of `@cloudflare/vite-plugin` is available. This matches the behavior in Wrangler and reduces noise when the user is already on the latest version.
+
+  The update-check logic has been extracted to `@cloudflare/workers-utils` so it can be shared across packages.
+
+## 0.21.1
+
+### Patch Changes
+
+- [#13933](https://github.com/cloudflare/workers-sdk/pull/13933) [`90092c0`](https://github.com/cloudflare/workers-sdk/commit/90092c0bca526e2e08a25fe7969534426eb6fd9f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Mark `@cloudflare/workers-utils` as side-effect-free and properly declare `undici` as a runtime dependency
+
+  The package now declares `"sideEffects": false` in its `package.json` so that downstream bundlers can tree-shake unused exports. In particular, consumers that only use a subset of the package (for example, `getTodaysCompatDate` from the main entry) will no longer carry the `cloudflared` / `tunnel` exports — or their transitive dependencies — in their final bundle.
+
+  `undici` has been moved from `devDependencies` to `dependencies`. Previously it was incorrectly listed as a devDependency while the bundler config marked it as external, leaving the published `dist/index.mjs` with an unresolved `import { fetch } from "undici"` for anyone installing the package directly. `undici` is deliberately kept external (rather than bundled) so that downstream consumers don't end up with two copies of `undici` in their bundle — which would break `instanceof Request`/`Response`/`Headers` checks across the boundary and prevent `setGlobalDispatcher` / proxy configuration from applying to the bundled copy.
+
+  `vitest` has been added as an optional `peerDependency` because the `./test-helpers` sub-export uses `vitest`'s `vi`, `beforeEach`, and `afterEach` APIs at runtime; consumers that import from `./test-helpers` must have `vitest` installed themselves.
+
 ## 0.21.0
 
 ### Minor Changes
