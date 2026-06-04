@@ -929,7 +929,9 @@ function getDeployConfirmFunction(
 			process.exitCode = 1;
 			return false;
 		};
+	} else if (nonInteractive) {
+		// if its not in strict mode, continue without asking
+		return async () => true;
 	}
-
 	return confirm;
 }
