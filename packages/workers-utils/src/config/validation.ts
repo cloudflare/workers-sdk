@@ -4358,7 +4358,7 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
-	// VPC service bindings must have a binding and a service_id.
+	// VPC service bindings must have a binding and either a service_id or a service name.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
@@ -4367,9 +4367,35 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "service_id", "string")) {
+	const hasServiceId = hasProperty(value, "service_id");
+	const hasServiceName = hasProperty(value, "service_name");
+	if (!hasServiceId && !hasServiceName) {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a "service_id" field but got ${JSON.stringify(
+			`"${field}" bindings must have either a "service_id" or "service_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (hasServiceId && hasServiceName) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either "service_id" or "service_name", but not both. Got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (hasServiceId && !isOptionalProperty(value, "service_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "service_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (hasServiceName && !isOptionalProperty(value, "service_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "service_name" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4379,6 +4405,7 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"service_id",
+		"service_name",
 		"remote",
 	]);
 

@@ -77,6 +77,7 @@ import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
+import { resolveVpcServiceBindings } from "../vpc/client";
 import { patchNonVersionedScriptSettings } from "./api";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type {
@@ -669,6 +670,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
+
+			// Resolve VPC service name bindings to service_id
+			await resolveVpcServiceBindings(config, bindings);
+
 			workerBundle = createWorkerUploadForm(worker, bindings, {
 				unsafe: config.unsafe,
 			});
