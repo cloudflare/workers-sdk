@@ -344,6 +344,7 @@ export default async function deploy(
 				: undefined,
 		observability: config.observability,
 		cache: config.cache,
+		package_dependencies: props.packageDependencies,
 	};
 
 	const sourceMapSize = worker.sourceMaps?.reduce(
