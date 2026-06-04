@@ -98,7 +98,7 @@ export const pipelinesListCommand = createCommand({
 		);
 		if (failedPipelines.length > 0) {
 			logger.log(
-				`\n${failedPipelines.length} pipeline(s) are in a failed state. Run 'wrangler pipelines get <pipeline>' for details:`
+				`\n${failedPipelines.length} pipeline${failedPipelines.length === 1 ? " is" : "s are"} in a failed state. Run 'wrangler pipelines get <pipeline>' for details:`
 			);
 			for (const pipeline of failedPipelines) {
 				logger.log(
