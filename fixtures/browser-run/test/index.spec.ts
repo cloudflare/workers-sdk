@@ -1,7 +1,7 @@
 // test/index.spec.ts
 import { rm } from "node:fs/promises";
 import { resolve } from "path";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, it, TestOptions } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 const BROWSER_RENDERING_RETRY = {
@@ -10,7 +10,7 @@ const BROWSER_RENDERING_RETRY = {
 		count: 3,
 		delay: 1_000,
 	},
-};
+} satisfies TestOptions;
 
 describe.sequential("Local Browser", () => {
 	let ip: string,
