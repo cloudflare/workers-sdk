@@ -1,6 +1,6 @@
 import {
-	getAuthConfigFilePath,
-	readAuthConfigFile,
+	type AuthConfigStorage,
+	defaultAuthConfigStorage,
 	type UserAuthConfig,
 } from "./auth-config-file";
 import type { OAuthFlowLogger } from "./context";
@@ -68,16 +68,20 @@ export function _resetDeprecatedV1ApiTokenWarningLatch(): void {
  * @param options.warningLogger if provided, a one-time warning is emitted when a
  * deprecated v1 `api_token` is found on disk. Pass the consumer's logger (e.g.
  * wrangler's logger singleton) to surface this to the user.
+ * @param options.storage the persistence backend to read from. Defaults to the
+ * TOML-file-on-disk storage under the global Wrangler config directory.
  */
 export function readStoredAuthState(options?: {
 	configOverride?: UserAuthConfig;
 	warningLogger?: Pick<OAuthFlowLogger, "warn">;
+	storage?: AuthConfigStorage;
 }): StoredAuthState {
 	const { configOverride, warningLogger } = options ?? {};
+	const storage = options?.storage ?? defaultAuthConfigStorage();
 
 	let parsed: UserAuthConfig;
 	try {
-		parsed = configOverride ?? readAuthConfigFile();
+		parsed = configOverride ?? storage.read();
 	} catch {
 		return {};
 	}
@@ -102,7 +106,9 @@ export function readStoredAuthState(options?: {
 			hasWarnedAboutDeprecatedV1ApiToken = true;
 			warningLogger.warn(
 				"It looks like you have used Wrangler v1's `config` command to login with an API token\n" +
-					`from ${configOverride === undefined ? getAuthConfigFilePath() : "in-memory config"}.\n` +
+					`from ${
+						configOverride === undefined ? storage.path() : "in-memory config"
+					}.\n` +
 					"This is no longer supported in the current version of Wrangler.\n" +
 					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
 			);

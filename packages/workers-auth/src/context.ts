@@ -1,8 +1,38 @@
+import type { AuthConfigStorage } from "./auth-config-file";
 import type {
 	generateAuthUrl as defaultGenerateAuthUrl,
 	OAUTH_CALLBACK_URL,
 } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
+
+/**
+ * The branded OAuth consent pages the provider redirects the browser to after
+ * the user grants or denies consent.
+ */
+export interface OAuthConsentPages {
+	/** Redirect target shown after the user grants consent. */
+	granted: { url: string };
+	/** Redirect target shown after the user denies consent, plus the error
+	 * surfaced to the terminal. */
+	denied: { url: string; error: string };
+}
+
+/**
+ * Where the local OAuth callback server listens and which `redirect_uri` is
+ * registered on the OAuth app.
+ */
+export interface OAuthCallbackConfig {
+	/** Host the local callback server listens on. Defaults to `localhost`. */
+	host?: string;
+	/** Port the local callback server listens on. Defaults to `8976`. */
+	port?: number;
+	/**
+	 * The `redirect_uri` registered on the OAuth app. Defaults to
+	 * `http://localhost:8976/oauth/callback`. Must match a redirect URI the
+	 * `clientId`'s OAuth app is registered for.
+	 */
+	redirectUri?: string;
+}
 
 /**
  * Subset of the wrangler `logger` singleton used by the OAuth flow.
@@ -55,6 +85,35 @@ export interface OAuthFlowContext {
 	 * cache).
 	 */
 	purgeOnLoginOrLogout?: () => void;
+
+	/**
+	 * The OAuth client ID identifying the consuming CLI to the Cloudflare OAuth
+	 * server. Defaults to the value resolved from the environment
+	 * (`WRANGLER_CLIENT_ID`, falling back to Wrangler's well-known client ID).
+	 * Provide this to authenticate as a different OAuth app.
+	 */
+	clientId?: string;
+
+	/**
+	 * The branded consent pages the provider redirects to after the user grants
+	 * or denies consent. Defaults to Wrangler's consent pages.
+	 */
+	consent?: OAuthConsentPages;
+
+	/**
+	 * Local callback server host/port and the registered `redirect_uri`.
+	 * Defaults to `localhost:8976` and `http://localhost:8976/oauth/callback`.
+	 * `LoginProps.callbackHost`/`callbackPort` override the host/port per call.
+	 */
+	callback?: OAuthCallbackConfig;
+
+	/**
+	 * Persistence backend for the stored auth config. Defaults to a TOML file
+	 * under the global Wrangler config directory. Provide this to store tokens
+	 * elsewhere or in a different format (e.g. JSONC under another CLI's config
+	 * directory).
+	 */
+	storage?: AuthConfigStorage;
 
 	/**
 	 * Override the OAuth authorize URL generator. Used by tests to produce a

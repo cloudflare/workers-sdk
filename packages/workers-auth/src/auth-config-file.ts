@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	getCloudflareApiEnvironmentFromEnv,
@@ -21,6 +21,43 @@ export interface UserAuthConfig {
 }
 
 /**
+ * Pluggable persistence for the user auth config.
+ *
+ * The default implementation ({@link defaultAuthConfigStorage}) reads/writes a
+ * TOML file under the global Wrangler config directory. Consumers can inject
+ * their own implementation via {@link OAuthFlowContext.storage} to use a
+ * different location and/or serialization format (e.g. a JSONC file under a
+ * different CLI's XDG config directory).
+ */
+export interface AuthConfigStorage {
+	/**
+	 * Read and parse the stored auth config.
+	 * @throws if the backing store is missing or cannot be parsed. Callers treat
+	 * a throw as "not logged in via local OAuth".
+	 */
+	read(): UserAuthConfig;
+	/** Serialize and persist the auth config. */
+	write(config: UserAuthConfig): void;
+	/** Remove the backing store (used on logout). */
+	clear(): void;
+	/** Human-readable location of the backing store, for display and warnings. */
+	path(): string;
+}
+
+/**
+ * The default TOML-file-on-disk storage, located under the global Wrangler
+ * config directory.
+ */
+export function defaultAuthConfigStorage(): AuthConfigStorage {
+	return {
+		read: readAuthConfigFile,
+		write: writeAuthConfigFile,
+		clear: () => rmSync(getAuthConfigFilePath()),
+		path: getAuthConfigFilePath,
+	};
+}
+
+/**
  * The path to the config file that holds user authentication data,
  * relative to the user's home directory.
  */
@@ -35,7 +72,9 @@ const USER_AUTH_CONFIG_PATH = "config";
  */
 export function getAuthConfigFilePath(): string {
 	const environment = getCloudflareApiEnvironmentFromEnv();
-	const filePath = `${USER_AUTH_CONFIG_PATH}/${environment === "production" ? "default.toml" : `${environment}.toml`}`;
+	const filePath = `${USER_AUTH_CONFIG_PATH}/${
+		environment === "production" ? "default.toml" : `${environment}.toml`
+	}`;
 	return path.join(getGlobalWranglerConfigPath(), filePath);
 }
 

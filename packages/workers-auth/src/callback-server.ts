@@ -32,6 +32,13 @@ export interface GetOauthTokenOptions {
 	browser: boolean;
 	scopes: string[];
 	clientId: string;
+	/**
+	 * The `redirect_uri` registered on the OAuth app. The provider redirects
+	 * here after consent; it must match a redirect URI configured for the
+	 * `clientId`. The local callback server (see `callbackHost`/`callbackPort`)
+	 * should normally listen on the same host/port this URL points at.
+	 */
+	redirectUri: string;
 	denied: {
 		url: string;
 		error: string;
@@ -61,6 +68,7 @@ export async function getOauthToken(
 	const urlToOpen = await getAuthURL(
 		options.scopes,
 		options.clientId,
+		options.redirectUri,
 		state,
 		generators
 	);
@@ -207,7 +215,9 @@ export async function getOauthToken(
 						const exchange = await exchangeAuthCodeForAccessToken(
 							state,
 							ctx.logger,
-							ctx.isNonInteractiveOrCI
+							ctx.isNonInteractiveOrCI,
+							options.clientId,
+							options.redirectUri
 						);
 						res.writeHead(307, {
 							Location: options.granted.url,
@@ -237,12 +247,23 @@ export async function getOauthToken(
 			}
 		});
 
-		if (options.callbackHost !== "localhost" || options.callbackPort !== 8976) {
+		// Warn only when the local server listens somewhere other than where the
+		// OAuth provider will redirect to (the registered `redirectUri`) — e.g.
+		// a container forwarding a different host/port. When they match (the
+		// common case), there is nothing to forward and no warning is needed.
+		const redirect = new URL(options.redirectUri);
+		const redirectPort = Number(
+			redirect.port || (redirect.protocol === "https:" ? 443 : 80)
+		);
+		if (
+			redirect.hostname !== options.callbackHost ||
+			redirectPort !== options.callbackPort
+		) {
 			ctx.logger.log(
 				`Temporary login server listening on ${options.callbackHost}:${options.callbackPort}`
 			);
 			ctx.logger.log(
-				"Note that the OAuth login page will always redirect to `localhost:8976`.\n" +
+				`Note that the OAuth login page will always redirect to \`${options.redirectUri}\`.\n` +
 					"If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly."
 			);
 		}

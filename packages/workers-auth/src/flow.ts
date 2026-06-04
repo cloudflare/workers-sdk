@@ -12,14 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { rmSync } from "node:fs";
 import {
 	getCloudflareComplianceRegion,
 	UserError,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { getAuthConfigFilePath, writeAuthConfigFile } from "./auth-config-file";
+import { defaultAuthConfigStorage } from "./auth-config-file";
 import { getOauthToken } from "./callback-server";
 import { getClientIdFromEnv, getRevokeUrlFromEnv } from "./env-vars";
 import {
@@ -29,8 +28,24 @@ import {
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
-import type { OAuthFlowContext } from "./context";
+import type { OAuthConsentPages, OAuthFlowContext } from "./context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
+
+/**
+ * Wrangler's default OAuth consent pages, used when the consumer does not
+ * supply its own via `ctx.consent`.
+ */
+const WRANGLER_CONSENT_PAGES: OAuthConsentPages = {
+	granted: {
+		url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
+	},
+	denied: {
+		url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
+		error:
+			"Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
+			"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable",
+	},
+};
 
 /**
  * Options for an interactive OAuth login.
@@ -131,6 +146,13 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,
 	};
 
+	// Resolve the consumer's OAuth identity once, defaulting to Wrangler's so
+	// existing callers that pass none of these fields are unaffected.
+	const storage = ctx.storage ?? defaultAuthConfigStorage();
+	const clientId = ctx.clientId ?? getClientIdFromEnv();
+	const consent = ctx.consent ?? WRANGLER_CONSENT_PAGES;
+	const redirectUri = ctx.callback?.redirectUri ?? OAUTH_CALLBACK_URL;
+
 	async function login(props: LoginProps): Promise<boolean> {
 		if (ctx.hasEnvCredentials()) {
 			// Env credentials override any login details, so no point in allowing
@@ -166,25 +188,19 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			{
 				browser: props.browser ?? true,
 				scopes: props.scopes,
-				clientId: getClientIdFromEnv(),
-				denied: {
-					url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
-					error:
-						"Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
-						"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable",
-				},
-				granted: {
-					url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
-				},
-				callbackHost: props.callbackHost ?? "localhost",
-				callbackPort: props.callbackPort ?? 8976,
+				clientId,
+				redirectUri,
+				denied: consent.denied,
+				granted: consent.granted,
+				callbackHost: props.callbackHost ?? ctx.callback?.host ?? "localhost",
+				callbackPort: props.callbackPort ?? ctx.callback?.port ?? 8976,
 			},
 			oauthFlowState,
 			ctx,
 			generators
 		);
 
-		writeAuthConfigFile({
+		storage.write({
 			oauth_token: oauth.token?.value ?? "",
 			expiration_time: oauth.token?.expiry,
 			refresh_token: oauth.refreshToken?.value,
@@ -202,7 +218,10 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		if (ctx.hasEnvCredentials()) {
 			return false;
 		}
-		const { accessToken } = readStoredAuthState({ warningLogger: ctx.logger });
+		const { accessToken } = readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage,
+		});
 		return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 	}
 
@@ -223,9 +242,11 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				scopes,
 			} = await exchangeRefreshTokenForAccessToken(
 				ctx.logger,
-				ctx.isNonInteractiveOrCI
+				ctx.isNonInteractiveOrCI,
+				clientId,
+				storage
 			);
-			writeAuthConfigFile({
+			storage.write({
 				oauth_token,
 				expiration_time,
 				refresh_token,
@@ -248,7 +269,10 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			return true;
 		}
 		// TODO: ask permission before opening browser
-		const stored = readStoredAuthState({ warningLogger: ctx.logger });
+		const stored = readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage,
+		});
 		if (!stored.accessToken && !stored.deprecatedApiToken) {
 			// Not logged in.
 			// If we are not interactive, we cannot ask the user to login
@@ -281,6 +305,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 		const storedRefreshToken = readStoredAuthState({
 			warningLogger: ctx.logger,
+			storage,
 		}).refreshToken;
 		if (!storedRefreshToken) {
 			ctx.logger.log("Not logged in, exiting...");
@@ -288,7 +313,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 
 		const body =
-			`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
+			`client_id=${encodeURIComponent(clientId)}&` +
 			`token_type_hint=refresh_token&` +
 			`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
 
@@ -300,14 +325,14 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			},
 		});
 		await response.text(); // blank text? would be nice if it was something meaningful
-		rmSync(getAuthConfigFilePath());
+		storage.clear();
 		ctx.logger.log(`Successfully logged out.`);
 		ctx.purgeOnLoginOrLogout?.();
 	}
 
 	async function getOAuthTokenFromLocalState(): Promise<string | undefined> {
 		// Check if we have an OAuth token
-		let stored = readStoredAuthState({ warningLogger: ctx.logger });
+		let stored = readStoredAuthState({ warningLogger: ctx.logger, storage });
 		if (!stored.accessToken) {
 			return undefined;
 		}
@@ -325,7 +350,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				return undefined;
 			}
 			// Re-read after the refresh has persisted the new token to disk.
-			stored = readStoredAuthState({ warningLogger: ctx.logger });
+			stored = readStoredAuthState({ warningLogger: ctx.logger, storage });
 		}
 
 		return stored.accessToken?.value;

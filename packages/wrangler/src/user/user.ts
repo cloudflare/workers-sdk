@@ -11,7 +11,12 @@
 //     wrangler's commands
 
 import assert from "node:assert";
-import { readStoredAuthState } from "@cloudflare/workers-auth";
+import {
+	getAPIToken as getAPITokenShared,
+	getAuthFromEnv as getAuthFromEnvShared,
+	readStoredAuthState,
+	requireApiToken as requireApiTokenShared,
+} from "@cloudflare/workers-auth";
 import { createOAuthFlow } from "@cloudflare/workers-auth";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import ci from "ci-info";
@@ -21,12 +26,7 @@ import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import {
-	getCloudflareAccountIdFromEnv,
-	getCloudflareAPITokenFromEnv,
-	getCloudflareGlobalAuthEmailFromEnv,
-	getCloudflareGlobalAuthKeyFromEnv,
-} from "./auth-variables";
+import { getCloudflareAccountIdFromEnv } from "./auth-variables";
 import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
@@ -62,24 +62,17 @@ const oauthFlow = createOAuthFlow({
 /**
  * Try to read API credentials from environment variables.
  *
+ * Delegates to the shared resolver in `@cloudflare/workers-auth`. Wrangler
+ * supports the global API key + email pair in addition to API tokens, so the
+ * default (`allowGlobalAuthKey: true`) is used.
+ *
  * Authentication priority (highest to lowest):
  * 1. Global API Key + Email (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL)
  * 2. API Token (CLOUDFLARE_API_TOKEN)
  * 3. OAuth token from local state (via `wrangler login`) - not handled here
- *
- * Note: Global API Key + Email requires two headers (X-Auth-Key + X-Auth-Email),
- * while API Token and OAuth token are both used as Bearer tokens.
  */
 export function getAuthFromEnv(): ApiCredentials | undefined {
-	const globalApiKey = getCloudflareGlobalAuthKeyFromEnv();
-	const globalApiEmail = getCloudflareGlobalAuthEmailFromEnv();
-	const apiToken = getCloudflareAPITokenFromEnv();
-
-	if (globalApiKey && globalApiEmail) {
-		return { authKey: globalApiKey, authEmail: globalApiEmail };
-	} else if (apiToken) {
-		return { apiToken };
-	}
+	return getAuthFromEnvShared();
 }
 
 // ---------------------------------------------------------------------------
@@ -178,33 +171,14 @@ export function printScopes(scopes: Scope[]) {
 // ---------------------------------------------------------------------------
 
 export function getAPIToken(): ApiCredentials | undefined {
-	const envAuth = getAuthFromEnv();
-	if (envAuth) {
-		return envAuth;
-	}
-
-	const stored = readStoredAuthState({ warningLogger: logger });
-	if (stored.deprecatedApiToken) {
-		return { apiToken: stored.deprecatedApiToken };
-	}
-	if (stored.accessToken?.value) {
-		return { apiToken: stored.accessToken.value };
-	}
-
-	return undefined;
+	return getAPITokenShared({ warningLogger: logger });
 }
 
 /**
  * Throw an error if there is no API token available.
  */
 export function requireApiToken(): ApiCredentials {
-	const credentials = getAPIToken();
-	if (!credentials) {
-		throw new UserError("No API token found.", {
-			telemetryMessage: "user auth missing api token",
-		});
-	}
-	return credentials;
+	return requireApiTokenShared({ warningLogger: logger });
 }
 
 // ---------------------------------------------------------------------------
@@ -353,12 +327,16 @@ export async function getOrSelectAccountId(
 			const redactAccountName = ci.isCI;
 			throw new UserError(
 				`More than one account available but unable to select one in non-interactive mode.
-Please set the appropriate \`account_id\` in your ${configFileName(undefined)} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
+Please set the appropriate \`account_id\` in your ${configFileName(
+					undefined
+				)} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map(
 		(account: Account) =>
-			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
+			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${
+				account.id
+			}\``
 	)
 	.join("\n")}`,
 				{ telemetryMessage: "user account selection unavailable" }

@@ -7,11 +7,22 @@
 // tests.
 
 export {
+	defaultAuthConfigStorage,
 	getAuthConfigFilePath,
 	readAuthConfigFile,
 	writeAuthConfigFile,
 } from "./auth-config-file";
-export type { UserAuthConfig } from "./auth-config-file";
+export type { AuthConfigStorage, UserAuthConfig } from "./auth-config-file";
+
+export {
+	getAPIToken,
+	getAuthFromEnv,
+	getCloudflareAPITokenFromEnv,
+	getCloudflareGlobalAuthEmailFromEnv,
+	getCloudflareGlobalAuthKeyFromEnv,
+	requireApiToken,
+} from "./credentials";
+export type { GetAPITokenOptions, GetAuthFromEnvOptions } from "./credentials";
 
 export {
 	clearAccessCaches,
@@ -20,7 +31,12 @@ export {
 	getCloudflareAccessHeaders,
 } from "./access";
 
-export type { OAuthFlowContext, OAuthFlowLogger } from "./context";
+export type {
+	OAuthCallbackConfig,
+	OAuthConsentPages,
+	OAuthFlowContext,
+	OAuthFlowLogger,
+} from "./context";
 
 export {
 	getAccessClientIdFromEnv,
