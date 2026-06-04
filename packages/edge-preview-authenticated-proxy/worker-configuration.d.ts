@@ -2,9 +2,7 @@
 interface Env {
 	SENTRY_DSN: "https://1ff9df95733c4e7d9c31dc13ab05d44a@sentry10.cfdata.org/891";
 	PREVIEW: "preview.cloudflarepreviews.com";
-	PREVIEW_LEGACY: "preview.devprod.cloudflare.dev";
 	RAW_HTTP: "rawhttp.cloudflarepreviews.com";
-	RAW_HTTP_LEGACY: "rawhttp.devprod.cloudflare.dev";
 	// Secrets
 	PROMETHEUS_TOKEN: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;

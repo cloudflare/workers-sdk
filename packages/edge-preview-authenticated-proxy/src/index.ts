@@ -104,7 +104,7 @@ function switchRemote(url: URL, remote: string) {
 function isTokenExchangeRequest(request: Request, url: URL, env: Env) {
 	return (
 		request.method === "POST" &&
-		(url.hostname === env.PREVIEW || url.hostname === env.PREVIEW_LEGACY) &&
+		url.hostname === env.PREVIEW &&
 		url.pathname === "/exchange"
 	);
 }
@@ -112,17 +112,13 @@ function isTokenExchangeRequest(request: Request, url: URL, env: Env) {
 function isPreviewUpdateRequest(request: Request, url: URL, env: Env) {
 	return (
 		request.method === "GET" &&
-		(url.hostname.endsWith(env.PREVIEW) ||
-			url.hostname.endsWith(env.PREVIEW_LEGACY)) &&
+		url.hostname.endsWith(env.PREVIEW) &&
 		url.pathname === "/.update-preview-token"
 	);
 }
 
 function isRawHttpRequest(url: URL, env: Env) {
-	return (
-		url.hostname.endsWith(env.RAW_HTTP) ||
-		url.hostname.endsWith(env.RAW_HTTP_LEGACY)
-	);
+	return url.hostname.endsWith(env.RAW_HTTP);
 }
 
 async function handleRequest(request: Request, env: Env) {
