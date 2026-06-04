@@ -2345,6 +2345,7 @@ export class Miniflare {
 				)
 					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
+			rawFallbackWorkerName: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			tmpPath: this.#tmpPath,
 			log: this.#log,

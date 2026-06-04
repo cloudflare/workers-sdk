@@ -12,6 +12,7 @@ import type { Colorize } from "kleur/colors";
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
+	[CoreBindings.SERVICE_RAW_USER_FALLBACK]: Fetcher;
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
@@ -575,7 +576,8 @@ export default <ExportedHandler<Env>>{
 							)
 						);
 					}
-					return await handleScheduled(url.searchParams, service);
+					const scheduledService = env[CoreBindings.SERVICE_RAW_USER_FALLBACK];
+					return await handleScheduled(url.searchParams, scheduledService);
 				}
 
 				if (url.pathname === CorePaths.EMAIL) {
