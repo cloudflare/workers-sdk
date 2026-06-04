@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli-shared-helpers";
@@ -13,7 +13,6 @@ import {
 	formatConfigSnippet,
 	getDockerPath,
 	parseNonHyphenedUuid,
-	getWranglerTmpDir,
 	UserError,
 	formatTime,
 } from "@cloudflare/workers-utils";
@@ -24,15 +23,8 @@ import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { deployContainers } from "../containers/deploy";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
-import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
-import {
-	createModuleCollector,
-	getWrangler1xLegacyModuleReferences,
-} from "../deployment-bundle/module-collection";
-import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { validateRoutes } from "../deployment-bundle/resolve-config-args";
 import {
@@ -47,11 +39,9 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
-import { getFlag } from "../experimental-flags";
-import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { getMetricsUsageHeaders } from "../metrics";
-import { isNavigatorDefined } from "../navigator-user-agent";
+import { verifyWorkerMatchesCITag } from "../match-tag";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
@@ -64,6 +54,7 @@ import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-er
 import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
+import { useServiceEnvironments as useServiceEnvironmentsConfig } from "../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
@@ -77,60 +68,15 @@ import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type { HandlerContext } from "../core/types";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
+import type { DeployProps, HandleBuild } from "@cloudflare/deploy-helpers";
 import type {
-	AssetsOptions,
 	CfModule,
 	CfScriptFormat,
 	CfWorkerInit,
 	Config,
-	Entry,
-	LegacyAssetPaths,
 	RawConfig,
 } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
-
-type Props = {
-	config: Config;
-	accountId: string | undefined;
-	entry: Entry;
-	rules: Config["rules"];
-	name: string;
-	env: string | undefined;
-	compatibilityDate: string | undefined;
-	compatibilityFlags: string[] | undefined;
-	legacyAssetPaths: LegacyAssetPaths | undefined;
-	assetsOptions: AssetsOptions | undefined;
-	vars: Record<string, string> | undefined;
-	defines: Record<string, string> | undefined;
-	alias: Record<string, string> | undefined;
-	triggers: string[] | undefined;
-	routes: string[] | undefined;
-	domains: string[] | undefined;
-	/** Deprecated service environments.*/
-	useServiceEnvironments: boolean | undefined;
-	jsxFactory: string | undefined;
-	jsxFragment: string | undefined;
-	tsconfig: string | undefined;
-	isWorkersSite: boolean;
-	minify: boolean | undefined;
-	outDir: string | undefined;
-	outFile: string | undefined;
-	dryRun: boolean | undefined;
-	noBundle: boolean | undefined;
-	keepVars: boolean | undefined;
-	logpush: boolean | undefined;
-	uploadSourceMaps: boolean | undefined;
-	oldAssetTtl: number | undefined;
-	projectRoot: string | undefined;
-	dispatchNamespace: string | undefined;
-	experimentalAutoCreate: boolean;
-	metafile: string | boolean | undefined;
-	containersRollout: "immediate" | "gradual" | "none" | undefined;
-	strict: boolean | undefined;
-	tag: string | undefined;
-	message: string | undefined;
-	secretsFile: string | undefined;
-};
 
 /**
  * Inject bindings into the Worker to support Workers Sites. These are injected at the last minute so that
@@ -164,7 +110,9 @@ function addWorkersSitesBindings(
 }
 
 export default async function deploy(
-	props: Props,
+	props: DeployProps,
+	config: Config,
+	buildWorker: HandleBuild,
 	ctx: Omit<HandlerContext, "config">
 ): Promise<{
 	sourceMapSize?: number;
@@ -172,23 +120,40 @@ export default async function deploy(
 	workerTag: string | null;
 	targets?: string[];
 }> {
+	if (!props.name) {
+		throw new UserError(
+			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+			{ telemetryMessage: "deploy command missing worker name" }
+		);
+	}
+
+	const {
+		entry,
+		name,
+		compatibilityDate,
+		compatibilityFlags,
+		keepVars,
+		minify,
+		noBundle,
+		uploadSourceMaps,
+		accountId,
+	} = props;
+
+	if (!props.dryRun) {
+		assert(accountId, "Missing account ID");
+		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
+	}
+
 	const deployConfirm = getDeployConfirmFunction(props.strict);
 
 	// TODO: warn if git/hg has uncommitted changes
-	const { config, accountId, name, entry } = props;
 	let workerTag: string | null = null;
 	let versionId: string | null = null;
 	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 
 	let workerExists: boolean = true;
 
-	const domainRoutes = (props.domains || []).map((domain) => ({
-		pattern: domain,
-		custom_domain: true,
-	}));
-	const routes =
-		props.routes ?? config.routes ?? (config.route ? [config.route] : []);
-	const allDeploymentRoutes = [...routes, ...domainRoutes];
+	const allDeploymentRoutes = props.routes;
 
 	if (!props.dispatchNamespace && accountId) {
 		try {
@@ -277,7 +242,7 @@ export default async function deploy(
 		}
 	}
 
-	if (accountId && (isInteractive() || props.strict)) {
+	if (accountId) {
 		const remoteSecretsCheck = await checkRemoteSecretsOverride(
 			config,
 			props.env
@@ -291,11 +256,7 @@ export default async function deploy(
 		}
 	}
 
-	if (
-		accountId &&
-		config.workflows?.length &&
-		(isInteractive() || props.strict)
-	) {
+	if (accountId && config.workflows?.length) {
 		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
 
 		if (workflowCheck.hasConflicts) {
@@ -305,11 +266,6 @@ export default async function deploy(
 			}
 		}
 	}
-
-	const compatibilityDate =
-		props.compatibilityDate ?? config.compatibility_date;
-	const compatibilityFlags =
-		props.compatibilityFlags ?? config.compatibility_flags;
 
 	if (!compatibilityDate) {
 		const compatibilityDateStr = getTodaysCompatDate();
@@ -327,55 +283,30 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	validateRoutes(allDeploymentRoutes, props.assetsOptions);
 
-	const jsxFactory = props.jsxFactory || config.jsx_factory;
-	const jsxFragment = props.jsxFragment || config.jsx_fragment;
-	const keepVars = props.keepVars || config.keep_vars;
-
-	const minify = props.minify ?? config.minify;
-
 	const nodejsCompatMode = validateNodeCompatMode(
 		compatibilityDate,
 		compatibilityFlags,
-		{
-			noBundle: props.noBundle ?? config.no_bundle,
-		}
+		{ noBundle }
 	);
 
 	// Warn if user tries minify with no-bundle
-	if (props.noBundle && minify) {
+	if (noBundle && minify) {
 		logger.warn(
 			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
 		);
 	}
 
-	const scriptName = props.name;
+	const scriptName = name;
 
 	assert(
 		!config.site || config.site.bucket,
 		"A [site] definition requires a `bucket` field with a path to the site's assets directory."
 	);
 
-	if (props.outDir) {
-		// we're using a custom output directory,
-		// so let's first ensure it exists
-		mkdirSync(props.outDir, { recursive: true });
-		// add a README
-		const readmePath = path.join(props.outDir, "README.md");
-		writeFileSync(
-			readmePath,
-			`This folder contains the built output assets for the worker "${scriptName}" generated at ${new Date().toISOString()}.`
-		);
-	}
-
-	const destination =
-		props.outDir ?? getWranglerTmpDir(props.projectRoot, "deploy");
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
-	/** Whether to use the deprecated service environments path */
-	const useServiceEnvironments = Boolean(
-		props.useServiceEnvironments && props.env
-	);
+	const useServiceEnvironments = props.useServiceEnvApiPath;
 	const workerName = useServiceEnvironments
 		? `${scriptName} (${envName})`
 		: scriptName;
@@ -385,7 +316,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	const { format } = props.entry;
+	const { format } = entry;
+	const { projectRoot } = entry;
 
 	if (
 		!props.dispatchNamespace &&
@@ -438,478 +370,413 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const isDryRun = props.dryRun;
 
-	let sourceMapSize;
 	const normalisedContainerConfig = await getNormalizedContainerOptions(
 		config,
 		props
 	);
-	try {
-		if (props.noBundle) {
-			// if we're not building, let's just copy the entry to the destination directory
-			const destinationDir =
-				typeof destination === "string" ? destination : destination.path;
-			mkdirSync(destinationDir, { recursive: true });
-			writeFileSync(
-				path.join(destinationDir, path.basename(props.entry.file)),
-				readFileSync(props.entry.file, "utf-8")
-			);
-		}
+	const {
+		modules,
+		dependencies,
+		resolvedEntryPointPath,
+		bundleType,
+		content,
+		bundle,
+	} = await buildWorker.build(props, config, {
+		nodejsCompatMode,
+		metafile: props.metafile,
+	});
+	// durable object migrations
+	const migrations = !isDryRun
+		? await getMigrationsToUpload(scriptName, {
+				accountId,
+				config,
+				useServiceEnvironments: useServiceEnvironmentsConfig(config),
+				env: props.env,
+				dispatchNamespace: props.dispatchNamespace,
+			})
+		: undefined;
 
-		const entryDirectory = path.dirname(props.entry.file);
-		const moduleCollector = createModuleCollector({
-			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
-				entryDirectory,
-				props.entry.file
-			),
-			entry: props.entry,
-			// `moduleCollector` doesn't get used when `props.noBundle` is set, so
-			// `findAdditionalModules` always defaults to `false`
-			findAdditionalModules: config.find_additional_modules ?? false,
-			rules: props.rules,
-			preserveFileNames: config.preserve_file_names ?? false,
-		});
-		const uploadSourceMaps =
-			props.uploadSourceMaps ?? config.upload_source_maps;
-
-		const {
-			modules,
-			dependencies,
-			resolvedEntryPointPath,
-			bundleType,
-			...bundle
-		} = props.noBundle
-			? await noBundleWorker(
-					props.entry,
-					props.rules,
-					props.outDir,
-					config.python_modules.exclude
-				)
-			: await bundleWorker(
-					props.entry,
-					typeof destination === "string" ? destination : destination.path,
-					{
-						metafile: props.metafile,
-						bundle: true,
-						additionalModules: [],
-						moduleCollector,
-						doBindings: config.durable_objects.bindings,
-						workflowBindings: config.workflows ?? [],
-						jsxFactory,
-						jsxFragment,
-						tsconfig: props.tsconfig ?? config.tsconfig,
-						minify,
-						keepNames: config.keep_names ?? true,
-						sourcemap: uploadSourceMaps,
-						nodejsCompatMode,
-						compatibilityDate,
-						compatibilityFlags,
-						define: { ...config.define, ...props.defines },
-						checkFetch: false,
-						alias: { ...config.alias, ...props.alias },
-						// We want to know if the build is for development or publishing
-						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-						targetConsumer: "deploy",
-						local: false,
-						projectRoot: props.projectRoot,
-						defineNavigatorUserAgent: isNavigatorDefined(
-							compatibilityDate,
-							compatibilityFlags
-						),
-						plugins: [logBuildOutput(nodejsCompatMode)],
-
-						// Pages specific options used by wrangler pages commands
-						entryName: undefined,
-						inject: undefined,
-						isOutfile: undefined,
-						external: undefined,
-
-						// These options are dev-only
-						testScheduled: undefined,
-						watch: undefined,
-					}
-				);
-
-		// Add modules to dependencies for size warning
-		for (const module of modules) {
-			const modulePath =
-				module.filePath === undefined
-					? module.name
-					: path.relative("", module.filePath);
-			const bytesInOutput =
-				typeof module.content === "string"
-					? Buffer.byteLength(module.content)
-					: module.content.byteLength;
-			dependencies[modulePath] = { bytesInOutput };
-		}
-
-		const content = readFileSync(resolvedEntryPointPath, {
-			encoding: "utf-8",
-		});
-
-		// durable object migrations
-		const migrations = !isDryRun
-			? await getMigrationsToUpload(scriptName, {
-					accountId,
+	// Upload assets if assets is being used
+	const assetsJwt =
+		props.assetsOptions && !isDryRun
+			? await syncAssets(
 					config,
-					useServiceEnvironments: props.useServiceEnvironments,
-					env: props.env,
-					dispatchNamespace: props.dispatchNamespace,
-				})
+					accountId,
+					props.assetsOptions.directory,
+					scriptName,
+					props.dispatchNamespace
+				)
 			: undefined;
 
-		// Upload assets if assets is being used
-		const assetsJwt =
-			props.assetsOptions && !isDryRun
-				? await syncAssets(
-						config,
-						accountId,
-						props.assetsOptions.directory,
-						scriptName,
-						props.dispatchNamespace
-					)
-				: undefined;
+	// validate asset directory
+	if (props.assetsOptions && isDryRun) {
+		await buildAssetManifest(props.assetsOptions.directory);
+	}
 
-		// validate asset directory
-		if (props.assetsOptions && isDryRun) {
-			await buildAssetManifest(props.assetsOptions.directory);
-		}
+	const workersSitesAssets = await syncWorkersSite(
+		config,
+		accountId,
+		// When we're using the newer service environments, we wouldn't
+		// have added the env name on to the script name. However, we must
+		// include it in the kv namespace name regardless (since there's no
+		// concept of service environments for kv namespaces yet).
+		scriptName + (useServiceEnvironments ? `-${props.env}` : ""),
+		props.legacyAssetPaths,
+		false,
+		isDryRun,
+		props.oldAssetTtl
+	);
 
-		const workersSitesAssets = await syncWorkersSite(
-			config,
-			accountId,
-			// When we're using the newer service environments, we wouldn't
-			// have added the env name on to the script name. However, we must
-			// include it in the kv namespace name regardless (since there's no
-			// concept of service environments for kv namespaces yet).
-			scriptName + (useServiceEnvironments ? `-${props.env}` : ""),
-			props.legacyAssetPaths,
-			false,
-			isDryRun,
-			props.oldAssetTtl
-		);
+	const bindings = getBindings(config);
 
-		const bindings = getBindings(config);
+	// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
+	for (const [bindingName, value] of Object.entries(props.cliVars)) {
+		bindings[bindingName] = {
+			type: "plain_text",
+			value,
+			hidden: true,
+		};
+	}
 
-		// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
-		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {
-			bindings[bindingName] = {
-				type: "plain_text",
-				value,
-				hidden: true,
-			};
-		}
-
-		if (props.secretsFile) {
-			const secretsResult = await parseBulkInputToObject(props.secretsFile);
-			if (secretsResult) {
-				for (const [secretName, secretValue] of Object.entries(
-					secretsResult.content
-				)) {
-					bindings[secretName] = {
-						type: "secret_text",
-						value: secretValue,
-					};
-				}
+	if (props.secretsFile) {
+		const secretsResult = await parseBulkInputToObject(props.secretsFile);
+		if (secretsResult) {
+			for (const [secretName, secretValue] of Object.entries(
+				secretsResult.content
+			)) {
+				bindings[secretName] = {
+					type: "secret_text",
+					value: secretValue,
+				};
 			}
 		}
+	}
 
-		addRequiredSecretsInheritBindings(config, bindings, {
-			type: "deploy",
-			workerExists,
+	addRequiredSecretsInheritBindings(config, bindings, {
+		type: "deploy",
+		workerExists,
+	});
+
+	if (workersSitesAssets.manifest) {
+		modules.push({
+			name: "__STATIC_CONTENT_MANIFEST",
+			filePath: undefined,
+			content: JSON.stringify(workersSitesAssets.manifest),
+			type: "text",
 		});
+	}
 
-		if (workersSitesAssets.manifest) {
-			modules.push({
-				name: "__STATIC_CONTENT_MANIFEST",
-				filePath: undefined,
-				content: JSON.stringify(workersSitesAssets.manifest),
-				type: "text",
+	const placement = parseConfigPlacement(config);
+
+	const entryPointName = path.basename(resolvedEntryPointPath);
+	const main: CfModule = {
+		name: entryPointName,
+		filePath: resolvedEntryPointPath,
+		content: content,
+		type: bundleType,
+	};
+	const worker: CfWorkerInit = {
+		name: scriptName,
+		main,
+		migrations,
+		modules,
+		containers: config.containers,
+		sourceMaps: uploadSourceMaps
+			? loadSourceMaps(main, modules, bundle)
+			: undefined,
+		compatibility_date: compatibilityDate,
+		compatibility_flags: compatibilityFlags,
+		keepVars,
+		keepSecrets: keepVars || !!props.secretsFile,
+		logpush: props.logpush,
+		placement,
+		tail_consumers: config.tail_consumers,
+		streaming_tail_consumers: config.streaming_tail_consumers,
+		limits: config.limits,
+		annotations:
+			props.tag || props.message
+				? {
+						"workers/message": props.message,
+						"workers/tag": props.tag,
+					}
+				: undefined,
+		assets:
+			props.assetsOptions && assetsJwt
+				? {
+						jwt: assetsJwt,
+						routerConfig: props.assetsOptions.routerConfig,
+						assetConfig: props.assetsOptions.assetConfig,
+						_redirects: props.assetsOptions._redirects,
+						_headers: props.assetsOptions._headers,
+						run_worker_first: props.assetsOptions.run_worker_first,
+					}
+				: undefined,
+		observability: config.observability,
+		cache: config.cache,
+	};
+
+	const sourceMapSize = worker.sourceMaps?.reduce(
+		(acc, m) => acc + m.content.length,
+		0
+	);
+
+	await printBundleSize(
+		{ name: path.basename(resolvedEntryPointPath), content: content },
+		modules
+	);
+
+	// We can use the new versions/deployments APIs if we:
+	// * are uploading a worker that already exists
+	// * aren't a dispatch namespace deploy
+	// * aren't a service env deploy
+	// * aren't a service Worker
+	// * we don't have DO migrations
+	// * we aren't an fpw
+	// * not a container worker
+	const canUseNewVersionsDeploymentsApi =
+		workerExists &&
+		props.dispatchNamespace === undefined &&
+		!useServiceEnvironments &&
+		format === "modules" &&
+		migrations === undefined &&
+		!config.first_party_worker &&
+		config.containers === undefined;
+
+	let workerBundle: FormData;
+	const dockerPath = getDockerPath();
+
+	// lets fail earlier in the case where docker isn't installed
+	// and we have containers so that we don't get into a
+	// disjointed state where the worker updates but the container
+	// fails.
+	if (normalisedContainerConfig.length && props.containersRollout !== "none") {
+		// if you have a registry url specified, you don't need docker
+		const containersWithDockerfile = normalisedContainerConfig.filter(
+			(container) => "dockerfile" in container
+		);
+		if (containersWithDockerfile.length > 0) {
+			await verifyDockerInstalled({
+				dockerPath,
+				isDev: false,
+				isDryRun,
+				numberOfContainers: containersWithDockerfile.length,
 			});
 		}
+	}
 
-		const placement = parseConfigPlacement(config);
-
-		const entryPointName = path.basename(resolvedEntryPointPath);
-		const main: CfModule = {
-			name: entryPointName,
-			filePath: resolvedEntryPointPath,
-			content: content,
-			type: bundleType,
-		};
-		const worker: CfWorkerInit = {
-			name: scriptName,
-			main,
-			migrations,
-			modules,
-			containers: config.containers,
-			sourceMaps: uploadSourceMaps
-				? loadSourceMaps(main, modules, bundle)
-				: undefined,
-			compatibility_date: compatibilityDate,
-			compatibility_flags: compatibilityFlags,
-			keepVars,
-			keepSecrets: keepVars || !!props.secretsFile,
-			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
-			placement,
-			tail_consumers: config.tail_consumers,
-			streaming_tail_consumers: config.streaming_tail_consumers,
-			limits: config.limits,
-			annotations:
-				props.tag || props.message
-					? {
-							"workers/message": props.message,
-							"workers/tag": props.tag,
-						}
-					: undefined,
-			assets:
-				props.assetsOptions && assetsJwt
-					? {
-							jwt: assetsJwt,
-							routerConfig: props.assetsOptions.routerConfig,
-							assetConfig: props.assetsOptions.assetConfig,
-							_redirects: props.assetsOptions._redirects,
-							_headers: props.assetsOptions._headers,
-							run_worker_first: props.assetsOptions.run_worker_first,
-						}
-					: undefined,
-			observability: config.observability,
-			cache: config.cache,
-		};
-
-		sourceMapSize = worker.sourceMaps?.reduce(
-			(acc, m) => acc + m.content.length,
-			0
-		);
-
-		await printBundleSize(
-			{ name: path.basename(resolvedEntryPointPath), content: content },
-			modules
-		);
-
-		// We can use the new versions/deployments APIs if we:
-		// * are uploading a worker that already exists
-		// * aren't a dispatch namespace deploy
-		// * aren't a service env deploy
-		// * aren't a service Worker
-		// * we don't have DO migrations
-		// * we aren't an fpw
-		// * not a container worker
-		const canUseNewVersionsDeploymentsApi =
-			workerExists &&
-			props.dispatchNamespace === undefined &&
-			!useServiceEnvironments &&
-			format === "modules" &&
-			migrations === undefined &&
-			!config.first_party_worker &&
-			config.containers === undefined;
-
-		let workerBundle: FormData;
-		const dockerPath = getDockerPath();
-
-		// lets fail earlier in the case where docker isn't installed
-		// and we have containers so that we don't get into a
-		// disjointed state where the worker updates but the container
-		// fails.
-		if (
-			normalisedContainerConfig.length &&
-			props.containersRollout !== "none"
-		) {
-			// if you have a registry url specified, you don't need docker
-			const containersWithDockerfile = normalisedContainerConfig.filter(
-				(container) => "dockerfile" in container
-			);
-			if (containersWithDockerfile.length > 0) {
-				await verifyDockerInstalled({
-					dockerPath,
-					isDev: false,
-					isDryRun,
-					numberOfContainers: containersWithDockerfile.length,
-				});
+	if (isDryRun) {
+		if (normalisedContainerConfig.length) {
+			for (const container of normalisedContainerConfig) {
+				if ("dockerfile" in container && props.containersRollout !== "none") {
+					await buildContainer(
+						container,
+						workerTag ?? "worker-tag",
+						isDryRun,
+						dockerPath
+					);
+				}
 			}
 		}
 
-		if (isDryRun) {
-			if (normalisedContainerConfig.length) {
-				for (const container of normalisedContainerConfig) {
-					if ("dockerfile" in container && props.containersRollout !== "none") {
-						await buildContainer(
-							container,
-							workerTag ?? "worker-tag",
-							isDryRun,
-							dockerPath
-						);
-					}
-				}
+		workerBundle = createWorkerUploadForm(
+			worker,
+			addWorkersSitesBindings(
+				bindings ?? {},
+				workersSitesAssets.namespace,
+				workersSitesAssets.manifest,
+				format
+			),
+			{
+				dryRun: true,
+				unsafe: config.unsafe,
 			}
+		);
 
-			workerBundle = createWorkerUploadForm(
-				worker,
-				addWorkersSitesBindings(
-					bindings ?? {},
-					workersSitesAssets.namespace,
-					workersSitesAssets.manifest,
-					format
-				),
-				{
-					dryRun: true,
-					unsafe: config.unsafe,
-				}
+		printBindings(
+			bindings,
+			config.tail_consumers,
+			config.streaming_tail_consumers,
+			config.containers,
+			{ warnIfNoBindings: true, unsafeMetadata: config.unsafe?.metadata }
+		);
+	} else {
+		assert(accountId, "Missing accountId");
+
+		if (props.resourcesProvision) {
+			await provisionBindings(
+				bindings ?? {},
+				accountId,
+				scriptName,
+				props.experimentalAutoCreate,
+				config
 			);
+		}
 
-			printBindings(
-				bindings,
-				config.tail_consumers,
-				config.streaming_tail_consumers,
-				config.containers,
-				{ warnIfNoBindings: true, unsafeMetadata: config.unsafe?.metadata }
-			);
-		} else {
-			assert(accountId, "Missing accountId");
+		workerBundle = createWorkerUploadForm(
+			worker,
+			addWorkersSitesBindings(
+				bindings ?? {},
+				workersSitesAssets.namespace,
+				workersSitesAssets.manifest,
+				format
+			),
+			{
+				unsafe: config.unsafe,
+			}
+		);
 
-			if (getFlag("RESOURCES_PROVISION")) {
-				await provisionBindings(
-					bindings ?? {},
+		await ensureQueuesExistByConfig(config);
+		let bindingsPrinted = false;
+
+		// Upload the script so it has time to propagate.
+		try {
+			let result: {
+				id: string | null;
+				etag: string | null;
+				pipeline_hash: string | null;
+				mutable_pipeline_id: string | null;
+				deployment_id: string | null;
+				startup_time_ms?: number;
+			};
+
+			// If we're using the new APIs, first upload the version
+			if (canUseNewVersionsDeploymentsApi) {
+				// Upload new version
+				const versionResult = await retryOnAPIFailure(async () =>
+					fetchResult<ApiVersion>(
+						config,
+						`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
+						{
+							method: "POST",
+							body: workerBundle,
+							headers: props.sendMetrics
+								? { metricsEnabled: "true" }
+								: undefined,
+						},
+						new URLSearchParams({ bindings_inherit: "strict" })
+					)
+				);
+
+				// Deploy new version to 100%
+				const versionMap = new Map<VersionId, Percentage>();
+				versionMap.set(versionResult.id, 100);
+				await createDeployment(
+					config,
 					accountId,
 					scriptName,
-					props.experimentalAutoCreate,
-					props.config
+					versionMap,
+					props.message
 				);
-			}
 
-			workerBundle = createWorkerUploadForm(
-				worker,
-				addWorkersSitesBindings(
-					bindings ?? {},
-					workersSitesAssets.namespace,
-					workersSitesAssets.manifest,
-					format
-				),
-				{
-					unsafe: config.unsafe,
+				// Update service and environment tags when using environments
+				const nextTags = applyServiceAndEnvironmentTags(config, tags);
+
+				try {
+					// Update tail consumers, logpush, and observability settings
+					await patchNonVersionedScriptSettings(config, accountId, scriptName, {
+						tail_consumers: worker.tail_consumers,
+						logpush: worker.logpush,
+						// If the user hasn't specified observability assume that they want it disabled if they have it on.
+						// This is a no-op in the event that they don't have observability enabled, but will remove observability
+						// if it has been removed from their Wrangler configuration file
+						observability: worker.observability ?? { enabled: false },
+						tags: nextTags,
+					});
+				} catch {
+					warnOnErrorUpdatingServiceAndEnvironmentTags();
 				}
-			);
 
-			await ensureQueuesExistByConfig(config);
-			let bindingsPrinted = false;
-
-			// Upload the script so it has time to propagate.
-			try {
-				let result: {
-					id: string | null;
-					etag: string | null;
-					pipeline_hash: string | null;
-					mutable_pipeline_id: string | null;
-					deployment_id: string | null;
-					startup_time_ms?: number;
+				result = {
+					id: null, // fpw - ignore
+					etag: versionResult.resources.script.etag,
+					pipeline_hash: null, // fpw - ignore
+					mutable_pipeline_id: null, // fpw - ignore
+					deployment_id: versionResult.id, // version id not deployment id but easier to adapt here
+					startup_time_ms: versionResult.startup_time_ms,
 				};
+			} else {
+				result = await retryOnAPIFailure(async () =>
+					fetchResult<{
+						id: string | null;
+						etag: string | null;
+						pipeline_hash: string | null;
+						mutable_pipeline_id: string | null;
+						deployment_id: string | null;
+						startup_time_ms: number;
+					}>(
+						config,
+						workerUrl,
+						{
+							method: "PUT",
+							body: workerBundle,
+							headers: props.sendMetrics
+								? { metricsEnabled: "true" }
+								: undefined,
+						},
+						new URLSearchParams({
+							// pass excludeScript so the whole body of the
+							// script doesn't get included in the response
+							excludeScript: "true",
+							bindings_inherit: "strict",
+						})
+					)
+				);
 
-				// If we're using the new APIs, first upload the version
-				if (canUseNewVersionsDeploymentsApi) {
-					// Upload new version
-					const versionResult = await retryOnAPIFailure(async () =>
-						fetchResult<ApiVersion>(
-							config,
-							`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
-							{
-								method: "POST",
-								body: workerBundle,
-								headers: await getMetricsUsageHeaders(config.send_metrics),
-							},
-							new URLSearchParams({ bindings_inherit: "strict" })
-						)
-					);
-
-					// Deploy new version to 100%
-					const versionMap = new Map<VersionId, Percentage>();
-					versionMap.set(versionResult.id, 100);
-					await createDeployment(
-						props.config,
-						accountId,
-						scriptName,
-						versionMap,
-						props.message
-					);
-
-					// Update service and environment tags when using environments
-					const nextTags = applyServiceAndEnvironmentTags(config, tags);
-
+				// Update service and environment tags when using environments
+				const nextTags = applyServiceAndEnvironmentTags(config, tags);
+				if (!tagsAreEqual(tags, nextTags)) {
 					try {
-						// Update tail consumers, logpush, and observability settings
 						await patchNonVersionedScriptSettings(
-							props.config,
+							config,
 							accountId,
 							scriptName,
 							{
-								tail_consumers: worker.tail_consumers,
-								logpush: worker.logpush,
-								// If the user hasn't specified observability assume that they want it disabled if they have it on.
-								// This is a no-op in the event that they don't have observability enabled, but will remove observability
-								// if it has been removed from their Wrangler configuration file
-								observability: worker.observability ?? { enabled: false },
 								tags: nextTags,
 							}
 						);
 					} catch {
 						warnOnErrorUpdatingServiceAndEnvironmentTags();
 					}
+				}
+			}
 
-					result = {
-						id: null, // fpw - ignore
-						etag: versionResult.resources.script.etag,
-						pipeline_hash: null, // fpw - ignore
-						mutable_pipeline_id: null, // fpw - ignore
-						deployment_id: versionResult.id, // version id not deployment id but easier to adapt here
-						startup_time_ms: versionResult.startup_time_ms,
-					};
-				} else {
-					result = await retryOnAPIFailure(async () =>
-						fetchResult<{
-							id: string | null;
-							etag: string | null;
-							pipeline_hash: string | null;
-							mutable_pipeline_id: string | null;
-							deployment_id: string | null;
-							startup_time_ms: number;
-						}>(
-							config,
-							workerUrl,
-							{
-								method: "PUT",
-								body: workerBundle,
-								headers: await getMetricsUsageHeaders(config.send_metrics),
-							},
-							new URLSearchParams({
-								// pass excludeScript so the whole body of the
-								// script doesn't get included in the response
-								excludeScript: "true",
-								bindings_inherit: "strict",
-							})
-						)
+			if (result.startup_time_ms) {
+				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
+			}
+			bindingsPrinted = true;
+
+			printBindings(
+				bindings,
+				config.tail_consumers,
+				config.streaming_tail_consumers,
+				config.containers,
+				{ unsafeMetadata: config.unsafe?.metadata }
+			);
+
+			versionId = parseNonHyphenedUuid(result.deployment_id);
+
+			if (config.first_party_worker) {
+				// Print some useful information returned after publishing
+				// Not all fields will be populated for every worker
+				// These fields are likely to be scraped by tools, so do not rename
+				if (result.id) {
+					logger.log("Worker ID: ", result.id);
+				}
+				if (result.etag) {
+					logger.log("Worker ETag: ", result.etag);
+				}
+				if (result.pipeline_hash) {
+					logger.log("Worker PipelineHash: ", result.pipeline_hash);
+				}
+				if (result.mutable_pipeline_id) {
+					logger.log(
+						"Worker Mutable PipelineID (Development ONLY!):",
+						result.mutable_pipeline_id
 					);
-
-					// Update service and environment tags when using environments
-					const nextTags = applyServiceAndEnvironmentTags(config, tags);
-					if (!tagsAreEqual(tags, nextTags)) {
-						try {
-							await patchNonVersionedScriptSettings(
-								props.config,
-								accountId,
-								scriptName,
-								{
-									tags: nextTags,
-								}
-							);
-						} catch {
-							warnOnErrorUpdatingServiceAndEnvironmentTags();
-						}
-					}
 				}
-
-				if (result.startup_time_ms) {
-					logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
-				}
-				bindingsPrinted = true;
-
+			}
+		} catch (err) {
+			if (!bindingsPrinted) {
 				printBindings(
 					bindings,
 					config.tail_consumers,
@@ -917,117 +784,78 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config.containers,
 					{ unsafeMetadata: config.unsafe?.metadata }
 				);
-
-				versionId = parseNonHyphenedUuid(result.deployment_id);
-
-				if (config.first_party_worker) {
-					// Print some useful information returned after publishing
-					// Not all fields will be populated for every worker
-					// These fields are likely to be scraped by tools, so do not rename
-					if (result.id) {
-						logger.log("Worker ID: ", result.id);
-					}
-					if (result.etag) {
-						logger.log("Worker ETag: ", result.etag);
-					}
-					if (result.pipeline_hash) {
-						logger.log("Worker PipelineHash: ", result.pipeline_hash);
-					}
-					if (result.mutable_pipeline_id) {
-						logger.log(
-							"Worker Mutable PipelineID (Development ONLY!):",
-							result.mutable_pipeline_id
-						);
-					}
-				}
-			} catch (err) {
-				if (!bindingsPrinted) {
-					printBindings(
-						bindings,
-						config.tail_consumers,
-						config.streaming_tail_consumers,
-						config.containers,
-						{ unsafeMetadata: config.unsafe?.metadata }
-					);
-				}
-				const message = await helpIfErrorIsSizeOrScriptStartup(
-					err,
-					dependencies,
-					workerBundle,
-					props.projectRoot
-				);
-				if (message !== null) {
-					logger.error(message);
-				}
-
-				handleMissingSecretsError(err, config, {
-					type: "deploy",
-					workerExists,
-				});
-
-				// Apply source mapping to validation startup errors if possible
-				if (
-					err instanceof APIError &&
-					"code" in err &&
-					err.code === 10021 /* validation error */ &&
-					err.notes.length > 0
-				) {
-					err.preventReport();
-
-					if (
-						err.notes[0].text ===
-						"binding DB of type d1 must have a valid `id` specified [code: 10021]"
-					) {
-						throw new UserError(
-							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
-							{ telemetryMessage: "deploy d1 database binding invalid id" }
-						);
-					}
-
-					const maybeNameToFilePath = (moduleName: string) => {
-						// If this is a service worker, always return the entrypoint path.
-						// Service workers can't have additional JavaScript modules.
-						if (bundleType === "commonjs") {
-							return resolvedEntryPointPath;
-						}
-						// Similarly, if the name matches the entrypoint, return its path
-						if (moduleName === entryPointName) {
-							return resolvedEntryPointPath;
-						}
-						// Otherwise, return the file path of the matching module (if any)
-						for (const module of modules) {
-							if (moduleName === module.name) {
-								return module.filePath;
-							}
-						}
-					};
-					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
-						maybeRetrieveFileSourceMap(maybeNameToFilePath(moduleName));
-
-					err.notes[0].text = getSourceMappedString(
-						err.notes[0].text,
-						retrieveSourceMap
-					);
-				}
-
-				throw err;
 			}
-		}
-		if (props.outFile) {
-			// we're using a custom output file,
-			// so let's first ensure it's parent directory exists
-			mkdirSync(path.dirname(props.outFile), { recursive: true });
+			const message = await helpIfErrorIsSizeOrScriptStartup(
+				err,
+				dependencies,
+				workerBundle,
+				projectRoot
+			);
+			if (message !== null) {
+				logger.error(message);
+			}
 
-			const serializedFormData = await new Response(workerBundle).arrayBuffer();
+			handleMissingSecretsError(err, config, {
+				type: "deploy",
+				workerExists,
+			});
 
-			writeFileSync(props.outFile, Buffer.from(serializedFormData));
+			// Apply source mapping to validation startup errors if possible
+			if (
+				err instanceof APIError &&
+				"code" in err &&
+				err.code === 10021 /* validation error */ &&
+				err.notes.length > 0
+			) {
+				err.preventReport();
+
+				if (
+					err.notes[0].text ===
+					"binding DB of type d1 must have a valid `id` specified [code: 10021]"
+				) {
+					throw new UserError(
+						"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
+						{ telemetryMessage: "deploy d1 database binding invalid id" }
+					);
+				}
+
+				const maybeNameToFilePath = (moduleName: string) => {
+					// If this is a service worker, always return the entrypoint path.
+					// Service workers can't have additional JavaScript modules.
+					if (bundleType === "commonjs") {
+						return resolvedEntryPointPath;
+					}
+					// Similarly, if the name matches the entrypoint, return its path
+					if (moduleName === entryPointName) {
+						return resolvedEntryPointPath;
+					}
+					// Otherwise, return the file path of the matching module (if any)
+					for (const module of modules) {
+						if (moduleName === module.name) {
+							return module.filePath;
+						}
+					}
+				};
+				const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
+					maybeRetrieveFileSourceMap(maybeNameToFilePath(moduleName));
+
+				err.notes[0].text = getSourceMappedString(
+					err.notes[0].text,
+					retrieveSourceMap
+				);
+			}
+
+			throw err;
 		}
-	} finally {
-		if (typeof destination !== "string") {
-			// this means we're using a temp dir,
-			// so let's clean up before we proceed
-			destination.remove();
-		}
+	}
+	if (props.outfile) {
+		// we're using a custom output file,
+		// so let's first ensure it's parent directory exists
+		mkdirSync(path.dirname(props.outfile), { recursive: true });
+
+		const serializedFormData = await new Response(workerBundle).arrayBuffer();
+
+		writeFileSync(props.outfile, Buffer.from(serializedFormData));
 	}
 
 	if (isDryRun) {
@@ -1061,7 +889,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			accountId,
 			scriptName,
 			env: props.env,
-			crons: props.triggers || config.triggers?.crons,
+			crons: props.triggers,
 			useServiceEnvironments,
 			firstDeploy: !workerExists,
 			routes: allDeploymentRoutes,
@@ -1101,7 +929,9 @@ function getDeployConfirmFunction(
 			process.exitCode = 1;
 			return false;
 		};
+	} else if (nonInteractive) {
+		// if its not in strict mode, continue without asking
+		return async () => true;
 	}
-
 	return confirm;
 }

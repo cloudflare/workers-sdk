@@ -1,27 +1,16 @@
-import assert from "node:assert";
-import path from "node:path";
-import {
-	getTodaysCompatDate,
-	getCIOverrideName,
-	UserError,
-} from "@cloudflare/workers-utils";
-import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { createCommand } from "../core/create-command";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
 } from "../deployment-bundle/deploy-args";
-import { getEntry } from "../deployment-bundle/entry";
-import { logger } from "../logger";
-import { verifyWorkerMatchesCITag } from "../match-tag";
+import { handleBuild } from "../deployment-bundle/maybe-build-worker";
+import {
+	cleanupDestination,
+	mergeDeployConfigArgs,
+} from "../deployment-bundle/merge-config-args";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
-import { getSiteAssetPaths } from "../sites";
-import { requireAuth } from "../user";
-import { collectKeyValues } from "../utils/collectKeyValues";
-import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
-import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import deploy from "./deploy";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
@@ -138,131 +127,49 @@ export const deployCommand = createCommand({
 			return;
 		}
 
-		const entry = await getEntry(args, config, "deploy");
-		validateAssetsArgsAndConfig(args, config);
+		// Merge CLI args with config into a single props object
+		const mergedProps = await mergeDeployConfigArgs(args, config);
 
-		const assetsOptions = getAssetsOptions({
-			args,
-			config,
-		});
+		try {
+			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
+			const preMergeName = getScriptName(args, config);
+			const workerNameOverridden =
+				mergedProps.name !== undefined && mergedProps.name !== preMergeName;
 
-		const cliVars = collectKeyValues(args.var);
-		const cliDefines = collectKeyValues(args.define);
-		const cliAlias = collectKeyValues(args.alias);
+			const beforeUpload = Date.now();
 
-		const accountId = args.dryRun ? undefined : await requireAuth(config);
-
-		const siteAssetPaths = getSiteAssetPaths(
-			config,
-			args.site,
-			args.siteInclude,
-			args.siteExclude
-		);
-
-		const beforeUpload = Date.now();
-		let name = getScriptName(args, config);
-
-		const ciOverrideName = getCIOverrideName();
-		let workerNameOverridden = false;
-		if (ciOverrideName !== undefined && ciOverrideName !== name) {
-			logger.warn(
-				`Failed to match Worker name. Your config file is using the Worker name "${name}", but the CI system expected "${ciOverrideName}". Overriding using the CI provided Worker name. Workers Builds connected builds will attempt to open a pull request to resolve this config name mismatch.`
-			);
-			name = ciOverrideName;
-			workerNameOverridden = true;
-		}
-
-		if (!name) {
-			throw new UserError(
-				'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: "deploy command missing worker name" }
-			);
-		}
-
-		if (!args.dryRun) {
-			assert(accountId, "Missing account ID");
-			await verifyWorkerMatchesCITag(
+			const { sourceMapSize, versionId, workerTag, targets } = await deploy(
+				mergedProps,
 				config,
-				accountId,
-				name,
-				config.configPath
+				handleBuild,
+				ctx
 			);
+
+			writeOutput({
+				type: "deploy",
+				version: 1,
+				worker_name: mergedProps.name ?? null,
+				worker_tag: workerTag,
+				version_id: versionId,
+				targets,
+				wrangler_environment: args.env,
+				worker_name_overridden: workerNameOverridden,
+			});
+
+			metrics.sendMetricsEvent(
+				"deploy worker script",
+				{
+					usesTypeScript: /\.tsx?$/.test(mergedProps.entry.file),
+					durationMs: Date.now() - beforeUpload,
+					sourceMapSize,
+				},
+				{
+					sendMetrics: config.send_metrics,
+				}
+			);
+		} finally {
+			cleanupDestination(mergedProps.destination);
 		}
-
-		// We use the `userConfigPath` to compute the root of a project,
-		// rather than a redirected (potentially generated) `configPath`.
-		const projectRoot =
-			config.userConfigPath && path.dirname(config.userConfigPath);
-
-		const { sourceMapSize, versionId, workerTag, targets } = await deploy(
-			{
-				config,
-				accountId,
-				name,
-				rules: getRules(config),
-				entry,
-				env: args.env,
-				compatibilityDate: args.latest
-					? getTodaysCompatDate()
-					: args.compatibilityDate,
-				compatibilityFlags: args.compatibilityFlags,
-				vars: cliVars,
-				defines: cliDefines,
-				alias: cliAlias,
-				triggers: args.triggers,
-				jsxFactory: args.jsxFactory,
-				jsxFragment: args.jsxFragment,
-				tsconfig: args.tsconfig,
-				routes: args.routes,
-				domains: args.domains,
-				assetsOptions,
-				legacyAssetPaths: siteAssetPaths,
-				useServiceEnvironments: useServiceEnvironments(config),
-				minify: args.minify,
-				isWorkersSite: Boolean(args.site || config.site),
-				outDir: args.outdir,
-				outFile: args.outfile,
-				dryRun: args.dryRun,
-				metafile: args.metafile,
-				noBundle: !(args.bundle ?? !config.no_bundle),
-				keepVars: args.keepVars,
-				logpush: args.logpush,
-				uploadSourceMaps: args.uploadSourceMaps,
-				oldAssetTtl: args.oldAssetTtl,
-				projectRoot,
-				dispatchNamespace: args.dispatchNamespace,
-				experimentalAutoCreate: args.experimentalAutoCreate,
-				containersRollout: args.containersRollout,
-				strict: args.strict,
-				tag: args.tag,
-				message: args.message,
-				secretsFile: args.secretsFile,
-			},
-			ctx
-		);
-
-		writeOutput({
-			type: "deploy",
-			version: 1,
-			worker_name: name ?? null,
-			worker_tag: workerTag,
-			version_id: versionId,
-			targets,
-			wrangler_environment: args.env,
-			worker_name_overridden: workerNameOverridden,
-		});
-
-		metrics.sendMetricsEvent(
-			"deploy worker script",
-			{
-				usesTypeScript: /\.tsx?$/.test(entry.file),
-				durationMs: Date.now() - beforeUpload,
-				sourceMapSize,
-			},
-			{
-				sendMetrics: config.send_metrics,
-			}
-		);
 	},
 });
 

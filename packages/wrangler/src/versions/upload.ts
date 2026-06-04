@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import { getWorkersDevSubdomain } from "@cloudflare/deploy-helpers";
@@ -9,38 +9,28 @@ import {
 	configFileName,
 	getTodaysCompatDate,
 	formatConfigSnippet,
-	getCIGeneratePreviewAlias,
-	getCIOverrideName,
 	getWorkersCIBranchName,
-	getWranglerTmpDir,
 	ParseError,
 	UserError,
 	formatTime,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import {
-	getAssetsOptions,
-	syncAssets,
-	validateAssetsArgsAndConfig,
-} from "../assets";
+import { syncAssets } from "../assets";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { createDeployHelpersContext } from "../core/deploy-helpers-context";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
-import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
 } from "../deployment-bundle/deploy-args";
-import { getEntry } from "../deployment-bundle/entry";
-import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
+import { handleBuild } from "../deployment-bundle/maybe-build-worker";
 import {
-	createModuleCollector,
-	getWrangler1xLegacyModuleReferences,
-} from "../deployment-bundle/module-collection";
-import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
+	cleanupDestination,
+	mergeVersionsUploadConfigArgs,
+} from "../deployment-bundle/merge-config-args";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import {
 	addRequiredSecretsInheritBindings,
@@ -54,12 +44,9 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
-import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
-import { getMetricsUsageHeaders } from "../metrics";
 import * as metrics from "../metrics";
-import { isNavigatorDefined } from "../navigator-user-agent";
 import { writeOutput } from "../output";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { parseBulkInputToObject } from "../secret";
@@ -67,59 +54,21 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
-import { requireAuth } from "../user";
-import { collectKeyValues } from "../utils/collectKeyValues";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
-import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
-import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import { useServiceEnvironments as useServiceEnvironmentsConfig } from "../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import { patchNonVersionedScriptSettings } from "./api";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type {
-	AssetsOptions,
-	CfWorkerInit,
-	Config,
-	Entry,
-} from "@cloudflare/workers-utils";
+	HandleBuild,
+	VersionsUploadProps,
+} from "@cloudflare/deploy-helpers";
+import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
-
-type Props = {
-	config: Config;
-	accountId: string | undefined;
-	entry: Entry;
-	rules: Config["rules"];
-	name: string;
-	useServiceEnvironments: boolean | undefined;
-	env: string | undefined;
-	compatibilityDate: string | undefined;
-	compatibilityFlags: string[] | undefined;
-	assetsOptions: AssetsOptions | undefined;
-	vars: Record<string, string> | undefined;
-	defines: Record<string, string> | undefined;
-	alias: Record<string, string> | undefined;
-	jsxFactory: string | undefined;
-	jsxFragment: string | undefined;
-	tsconfig: string | undefined;
-	isWorkersSite: boolean;
-	minify: boolean | undefined;
-	uploadSourceMaps: boolean | undefined;
-	outDir: string | undefined;
-	outFile: string | undefined;
-	dryRun: boolean | undefined;
-	noBundle: boolean | undefined;
-	keepVars: boolean | undefined;
-	projectRoot: string | undefined;
-	experimentalAutoCreate: boolean;
-
-	tag: string | undefined;
-	message: string | undefined;
-	previewAlias: string | undefined;
-	secretsFile: string | undefined;
-};
 
 export const versionsUploadCommand = createCommand({
 	metadata: {
@@ -149,136 +98,83 @@ export const versionsUploadCommand = createCommand({
 		validateDeployVersionsArgs(args, "versions upload");
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
-		const entry = await getEntry(args, config, "versions upload");
-		metrics.sendMetricsEvent(
-			"upload worker version",
-			{
-				usesTypeScript: /\.tsx?$/.test(entry.file),
-			},
-			{
-				sendMetrics: config.send_metrics,
-			}
-		);
+		// Merge CLI args with config (includes Sites validation and assets validation)
+		const mergedProps = await mergeVersionsUploadConfigArgs(args, config);
 
-		if (args.site || config.site) {
-			throw new UserError(
-				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
-				{ telemetryMessage: "versions upload sites unsupported" }
+		try {
+			metrics.sendMetricsEvent(
+				"upload worker version",
+				{
+					usesTypeScript: /\.tsx?$/.test(mergedProps.entry.file),
+				},
+				{
+					sendMetrics: config.send_metrics,
+				}
 			);
-		}
 
-		validateAssetsArgsAndConfig(
-			{
-				site: undefined,
-				assets: args.assets,
-				script: args.script,
-			},
-			config
-		);
+			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
+			const preMergeName = getScriptName(args, config);
+			const workerNameOverridden =
+				mergedProps.name !== undefined && mergedProps.name !== preMergeName;
 
-		const assetsOptions = getAssetsOptions({
-			args,
-			config,
-		});
+			const {
+				versionId,
+				workerTag,
+				versionPreviewUrl,
+				versionPreviewAliasUrl,
+			} = await versionsUpload(mergedProps, config, handleBuild);
 
-		const cliVars = collectKeyValues(args.var);
-		const cliDefines = collectKeyValues(args.define);
-		const cliAlias = collectKeyValues(args.alias);
-
-		const accountId = args.dryRun ? undefined : await requireAuth(config);
-		let name = getScriptName(args, config);
-
-		const ciOverrideName = getCIOverrideName();
-		let workerNameOverridden = false;
-		if (ciOverrideName !== undefined && ciOverrideName !== name) {
-			logger.warn(
-				`Failed to match Worker name. Your config file is using the Worker name "${name}", but the CI system expected "${ciOverrideName}". Overriding using the CI provided Worker name. Workers Builds connected builds will attempt to open a pull request to resolve this config name mismatch.`
-			);
-			name = ciOverrideName;
-			workerNameOverridden = true;
-		}
-
-		if (!name) {
-			throw new UserError(
-				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: "versions upload missing worker name" }
-			);
-		}
-
-		const previewAlias =
-			args.previewAlias ??
-			(getCIGeneratePreviewAlias() === "true"
-				? generatePreviewAlias(name)
-				: undefined);
-
-		if (!args.dryRun) {
-			assert(accountId, "Missing account ID");
-			await verifyWorkerMatchesCITag(
-				config,
-				accountId,
-				name,
-				config.configPath
-			);
-		}
-
-		const { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl } =
-			await versionsUpload({
-				config,
-				accountId,
-				name,
-				rules: getRules(config),
-				entry,
-				useServiceEnvironments: useServiceEnvironments(config),
-				env: args.env,
-				compatibilityDate: args.latest
-					? getTodaysCompatDate()
-					: args.compatibilityDate,
-				compatibilityFlags: args.compatibilityFlags,
-				vars: cliVars,
-				defines: cliDefines,
-				alias: cliAlias,
-				jsxFactory: args.jsxFactory,
-				jsxFragment: args.jsxFragment,
-				tsconfig: args.tsconfig,
-				assetsOptions,
-				minify: args.minify,
-				uploadSourceMaps: args.uploadSourceMaps,
-				isWorkersSite: Boolean(args.site || config.site),
-				outDir: args.outdir,
-				dryRun: args.dryRun,
-				noBundle: !(args.bundle ?? !config.no_bundle),
-				keepVars: args.keepVars || config.keep_vars,
-				projectRoot: entry.projectRoot,
-				tag: args.tag,
-				message: args.message,
-				previewAlias: previewAlias,
-				experimentalAutoCreate: args.experimentalAutoCreate,
-				outFile: args.outfile,
-				secretsFile: args.secretsFile,
+			writeOutput({
+				type: "version-upload",
+				version: 1,
+				worker_name: mergedProps.name ?? null,
+				worker_tag: workerTag,
+				version_id: versionId,
+				preview_url: versionPreviewUrl,
+				preview_alias_url: versionPreviewAliasUrl,
+				wrangler_environment: args.env,
+				worker_name_overridden: workerNameOverridden,
 			});
-
-		writeOutput({
-			type: "version-upload",
-			version: 1,
-			worker_name: name ?? null,
-			worker_tag: workerTag,
-			version_id: versionId,
-			preview_url: versionPreviewUrl,
-			preview_alias_url: versionPreviewAliasUrl,
-			wrangler_environment: args.env,
-			worker_name_overridden: workerNameOverridden,
-		});
+		} finally {
+			cleanupDestination(mergedProps.destination);
+		}
 	},
 });
 
-export default async function versionsUpload(props: Props): Promise<{
+export type VersionsUploadArgs = (typeof versionsUploadCommand)["args"];
+
+export default async function versionsUpload(
+	props: VersionsUploadProps,
+	config: Config,
+	buildWorker: HandleBuild
+): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
 }> {
-	// TODO: warn if git/hg has uncommitted changes
-	const { config, accountId, name } = props;
+	if (!props.name) {
+		throw new UserError(
+			'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+			{ telemetryMessage: "versions upload missing worker name" }
+		);
+	}
+	const {
+		entry,
+		name,
+		compatibilityDate,
+		compatibilityFlags,
+		keepVars,
+		minify,
+		noBundle,
+		uploadSourceMaps,
+		accountId,
+	} = props;
+
+	if (!props.dryRun) {
+		assert(accountId, "Missing account ID");
+		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
+	}
 	let versionId: string | null = null;
 	let workerTag: string | null = null;
 	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
@@ -331,18 +227,13 @@ export default async function versionsUpload(props: Props): Promise<{
 		}
 	}
 
-	const compatibilityDate =
-		props.compatibilityDate || config.compatibility_date;
-	const compatibilityFlags =
-		props.compatibilityFlags ?? config.compatibility_flags;
-
 	if (!compatibilityDate) {
 		const compatibilityDateStr = getTodaysCompatDate();
 
 		throw new UserError(
 			`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
-	${(formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath), false)}
+	${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
@@ -352,27 +243,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	const jsxFactory = props.jsxFactory || config.jsx_factory;
-	const jsxFragment = props.jsxFragment || config.jsx_fragment;
-
-	const minify = props.minify ?? config.minify;
-
 	const nodejsCompatMode = validateNodeCompatMode(
 		compatibilityDate,
 		compatibilityFlags,
-		{
-			noBundle: props.noBundle ?? config.no_bundle,
-		}
+		{ noBundle }
 	);
 
 	// Warn if user tries minify or node-compat with no-bundle
-	if (props.noBundle && minify) {
+	if (noBundle && minify) {
 		logger.warn(
 			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
 		);
 	}
 
-	const scriptName = props.name;
+	const scriptName = name;
 
 	if (config.site && !config.site.bucket) {
 		throw new UserError(
@@ -381,26 +265,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	if (props.outDir) {
-		// we're using a custom output directory,
-		// so let's first ensure it exists
-		mkdirSync(props.outDir, { recursive: true });
-		// add a README
-		const readmePath = path.join(props.outDir, "README.md");
-		writeFileSync(
-			readmePath,
-			`This folder contains the built output assets for the worker "${scriptName}" generated at ${new Date().toISOString()}.`
-		);
-	}
-
-	const destination =
-		props.outDir ?? getWranglerTmpDir(props.projectRoot, "deploy");
-
 	const start = Date.now();
 	const workerName = scriptName;
 	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	const { format } = props.entry;
+	const { format } = entry;
+	const projectRoot = entry.projectRoot;
 
 	if (config.wasm_modules && format === "modules") {
 		throw new UserError(
@@ -434,223 +304,179 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	let hasPreview = false;
 
-	try {
-		if (props.noBundle) {
-			// if we're not building, let's just copy the entry to the destination directory
-			const destinationDir =
-				typeof destination === "string" ? destination : destination.path;
-			mkdirSync(destinationDir, { recursive: true });
-			writeFileSync(
-				path.join(destinationDir, path.basename(props.entry.file)),
-				readFileSync(props.entry.file, "utf-8")
-			);
-		}
+	const {
+		modules,
+		dependencies,
+		resolvedEntryPointPath,
+		bundleType,
+		content,
+		bundle,
+	} = await buildWorker.build(props, config, {
+		nodejsCompatMode,
+	});
+	const bindings = getBindings(config);
 
-		const entryDirectory = path.dirname(props.entry.file);
-		const moduleCollector = createModuleCollector({
-			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
-				entryDirectory,
-				props.entry.file
-			),
-			entry: props.entry,
-			// `moduleCollector` doesn't get used when `props.noBundle` is set, so
-			// `findAdditionalModules` always defaults to `false`
-			findAdditionalModules: config.find_additional_modules ?? false,
-			rules: props.rules,
-		});
-		const uploadSourceMaps =
-			props.uploadSourceMaps ?? config.upload_source_maps;
+	// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
+	for (const [bindingName, value] of Object.entries(props.cliVars)) {
+		bindings[bindingName] = {
+			type: "plain_text",
+			value,
+			hidden: true,
+		};
+	}
 
-		const bindings = getBindings(config);
+	// durable object migrations
+	const migrations = !props.dryRun
+		? await getMigrationsToUpload(scriptName, {
+				accountId,
+				config,
+				useServiceEnvironments: useServiceEnvironmentsConfig(config),
+				env: props.env,
+				dispatchNamespace: undefined,
+			})
+		: undefined;
 
-		// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
-		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {
-			bindings[bindingName] = {
-				type: "plain_text",
-				value,
-				hidden: true,
-			};
-		}
-
-		const {
-			modules,
-			dependencies,
-			resolvedEntryPointPath,
-			bundleType,
-			...bundle
-		} = props.noBundle
-			? await noBundleWorker(
-					props.entry,
-					props.rules,
-					props.outDir,
-					config.python_modules.exclude
-				)
-			: await bundleWorker(
-					props.entry,
-					typeof destination === "string" ? destination : destination.path,
-					{
-						bundle: true,
-						additionalModules: [],
-						moduleCollector,
-						doBindings: config.durable_objects.bindings,
-						workflowBindings: config.workflows,
-						jsxFactory,
-						jsxFragment,
-						tsconfig: props.tsconfig ?? config.tsconfig,
-						minify,
-						keepNames: config.keep_names ?? true,
-						sourcemap: uploadSourceMaps,
-						nodejsCompatMode,
-						compatibilityDate,
-						compatibilityFlags,
-						define: { ...config.define, ...props.defines },
-						alias: { ...config.alias, ...props.alias },
-						checkFetch: false,
-						// We want to know if the build is for development or publishing
-						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-						targetConsumer: "deploy",
-						local: false,
-						projectRoot: props.projectRoot,
-						defineNavigatorUserAgent: isNavigatorDefined(
-							compatibilityDate,
-							compatibilityFlags
-						),
-						plugins: [logBuildOutput(nodejsCompatMode)],
-
-						// Pages specific options used by wrangler pages commands
-						entryName: undefined,
-						inject: undefined,
-						isOutfile: undefined,
-						external: undefined,
-
-						// These options are dev-only
-						testScheduled: undefined,
-						watch: undefined,
-						metafile: undefined,
-					}
-				);
-
-		// Add modules to dependencies for size warning
-		for (const module of modules) {
-			const modulePath =
-				module.filePath === undefined
-					? module.name
-					: path.relative("", module.filePath);
-			const bytesInOutput =
-				typeof module.content === "string"
-					? Buffer.byteLength(module.content)
-					: module.content.byteLength;
-			dependencies[modulePath] = { bytesInOutput };
-		}
-
-		const content = readFileSync(resolvedEntryPointPath, {
-			encoding: "utf-8",
-		});
-
-		// durable object migrations
-		const migrations = !props.dryRun
-			? await getMigrationsToUpload(scriptName, {
-					accountId,
+	// Upload assets if assets is being used
+	const assetsJwt =
+		props.assetsOptions && !props.dryRun
+			? await syncAssets(
 					config,
-					useServiceEnvironments: props.useServiceEnvironments,
-					env: props.env,
-					dispatchNamespace: undefined,
-				})
+					accountId,
+					props.assetsOptions.directory,
+					scriptName
+				)
 			: undefined;
 
-		// Upload assets if assets is being used
-		const assetsJwt =
-			props.assetsOptions && !props.dryRun
-				? await syncAssets(
-						config,
-						accountId,
-						props.assetsOptions.directory,
-						scriptName
-					)
-				: undefined;
-
-		if (props.secretsFile) {
-			const secretsResult = await parseBulkInputToObject(props.secretsFile);
-			if (secretsResult) {
-				for (const [secretName, secretValue] of Object.entries(
-					secretsResult.content
-				)) {
-					bindings[secretName] = {
-						type: "secret_text",
-						value: secretValue,
-					};
-				}
+	if (props.secretsFile) {
+		const secretsResult = await parseBulkInputToObject(props.secretsFile);
+		if (secretsResult) {
+			for (const [secretName, secretValue] of Object.entries(
+				secretsResult.content
+			)) {
+				bindings[secretName] = {
+					type: "secret_text",
+					value: secretValue,
+				};
 			}
 		}
+	}
 
-		addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
+	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
 
-		const placement = parseConfigPlacement(config);
+	const placement = parseConfigPlacement(config);
 
-		const entryPointName = path.basename(resolvedEntryPointPath);
-		const main = {
-			name: entryPointName,
-			filePath: resolvedEntryPointPath,
-			content: content,
-			type: bundleType,
-		};
-		const worker: CfWorkerInit = {
-			name: scriptName,
-			main,
-			migrations,
-			modules,
-			containers: config.containers,
-			sourceMaps: uploadSourceMaps
-				? loadSourceMaps(main, modules, bundle)
+	const entryPointName = path.basename(resolvedEntryPointPath);
+	const main = {
+		name: entryPointName,
+		filePath: resolvedEntryPointPath,
+		content: content,
+		type: bundleType,
+	};
+	const worker: CfWorkerInit = {
+		name: scriptName,
+		main,
+		migrations,
+		modules,
+		containers: config.containers,
+		sourceMaps: uploadSourceMaps
+			? loadSourceMaps(main, modules, bundle)
+			: undefined,
+		compatibility_date: compatibilityDate,
+		compatibility_flags: compatibilityFlags,
+		keepVars,
+		// we never delete secret bindings when uploading, even if we are setting secrets from a file
+		// so inherit all unchanged secrets from the previous Worker Version
+		keepSecrets: true,
+		placement,
+		tail_consumers: config.tail_consumers,
+		limits: config.limits,
+		annotations: {
+			"workers/message": props.message,
+			"workers/tag": props.tag,
+			"workers/alias": props.previewAlias,
+		},
+		assets:
+			props.assetsOptions && assetsJwt
+				? {
+						jwt: assetsJwt,
+						routerConfig: props.assetsOptions.routerConfig,
+						assetConfig: props.assetsOptions.assetConfig,
+						_redirects: props.assetsOptions._redirects,
+						_headers: props.assetsOptions._headers,
+						run_worker_first: props.assetsOptions.run_worker_first,
+					}
 				: undefined,
-			compatibility_date: compatibilityDate,
-			compatibility_flags: compatibilityFlags,
-			keepVars: props.keepVars ?? false,
-			// we never delete secret bindings when uploading, even if we are setting secrets from a file
-			// so inherit all unchanged secrets from the previous Worker Version
-			keepSecrets: true,
-			placement,
-			tail_consumers: config.tail_consumers,
-			limits: config.limits,
-			annotations: {
-				"workers/message": props.message,
-				"workers/tag": props.tag,
-				"workers/alias": props.previewAlias,
-			},
-			assets:
-				props.assetsOptions && assetsJwt
-					? {
-							jwt: assetsJwt,
-							routerConfig: props.assetsOptions.routerConfig,
-							assetConfig: props.assetsOptions.assetConfig,
-							_redirects: props.assetsOptions._redirects,
-							_headers: props.assetsOptions._headers,
-							run_worker_first: props.assetsOptions.run_worker_first,
-						}
-					: undefined,
-			logpush: undefined, // logpush and observability are non-versioned settings
-			observability: undefined,
-			cache: config.cache, // cache is a versioned setting
-		};
+		logpush: undefined, // logpush and observability are non-versioned settings
+		observability: undefined,
+		cache: config.cache, // cache is a versioned setting
+	};
 
-		if (config.containers && config.containers.length > 0) {
-			logger.warn(
-				`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`wrangler deploy\`.`
+	if (config.containers && config.containers.length > 0) {
+		logger.warn(
+			`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`wrangler deploy\`.`
+		);
+	}
+
+	await printBundleSize(
+		{ name: path.basename(resolvedEntryPointPath), content: content },
+		modules
+	);
+
+	let workerBundle: FormData;
+
+	if (props.dryRun) {
+		workerBundle = createWorkerUploadForm(worker, bindings, {
+			dryRun: true,
+			unsafe: config.unsafe,
+		});
+		printBindings(
+			bindings,
+			config.tail_consumers,
+			config.streaming_tail_consumers,
+			undefined,
+			{ unsafeMetadata: config.unsafe?.metadata }
+		);
+	} else {
+		assert(accountId, "Missing accountId");
+		if (props.resourcesProvision) {
+			await provisionBindings(
+				bindings,
+				accountId,
+				scriptName,
+				props.experimentalAutoCreate,
+				config
 			);
 		}
+		workerBundle = createWorkerUploadForm(worker, bindings, {
+			unsafe: config.unsafe,
+		});
 
-		await printBundleSize(
-			{ name: path.basename(resolvedEntryPointPath), content: content },
-			modules
-		);
+		await ensureQueuesExistByConfig(config);
+		let bindingsPrinted = false;
 
-		let workerBundle: FormData;
+		// Upload the version.
+		try {
+			const result = await retryOnAPIFailure(async () =>
+				fetchResult<{
+					id: string;
+					startup_time_ms: number;
+					metadata: {
+						has_preview: boolean;
+					};
+				}>(
+					config,
+					`${workerUrl}/versions`,
+					{
+						method: "POST",
+						body: workerBundle,
+						headers: props.sendMetrics ? { metricsEnabled: "true" } : undefined,
+					},
+					new URLSearchParams({ bindings_inherit: "strict" })
+				)
+			);
 
-		if (props.dryRun) {
-			workerBundle = createWorkerUploadForm(worker, bindings, {
-				dryRun: true,
-				unsafe: config.unsafe,
-			});
+			logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
+			bindingsPrinted = true;
 			printBindings(
 				bindings,
 				config.tail_consumers,
@@ -658,47 +484,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				undefined,
 				{ unsafeMetadata: config.unsafe?.metadata }
 			);
-		} else {
-			assert(accountId, "Missing accountId");
-			if (getFlag("RESOURCES_PROVISION")) {
-				await provisionBindings(
-					bindings,
-					accountId,
-					scriptName,
-					props.experimentalAutoCreate,
-					props.config
-				);
-			}
-			workerBundle = createWorkerUploadForm(worker, bindings, {
-				unsafe: config.unsafe,
-			});
-
-			await ensureQueuesExistByConfig(config);
-			let bindingsPrinted = false;
-
-			// Upload the version.
-			try {
-				const result = await retryOnAPIFailure(async () =>
-					fetchResult<{
-						id: string;
-						startup_time_ms: number;
-						metadata: {
-							has_preview: boolean;
-						};
-					}>(
-						config,
-						`${workerUrl}/versions`,
-						{
-							method: "POST",
-							body: workerBundle,
-							headers: await getMetricsUsageHeaders(config.send_metrics),
-						},
-						new URLSearchParams({ bindings_inherit: "strict" })
-					)
-				);
-
-				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
-				bindingsPrinted = true;
+			versionId = result.id;
+			hasPreview = result.metadata.has_preview;
+		} catch (err) {
+			if (!bindingsPrinted) {
 				printBindings(
 					bindings,
 					config.tail_consumers,
@@ -706,95 +495,77 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					undefined,
 					{ unsafeMetadata: config.unsafe?.metadata }
 				);
-				versionId = result.id;
-				hasPreview = result.metadata.has_preview;
-			} catch (err) {
-				if (!bindingsPrinted) {
-					printBindings(
-						bindings,
-						config.tail_consumers,
-						config.streaming_tail_consumers,
-						undefined,
-						{ unsafeMetadata: config.unsafe?.metadata }
-					);
-				}
+			}
 
-				const message = await helpIfErrorIsSizeOrScriptStartup(
-					err,
-					dependencies,
-					workerBundle,
-					props.projectRoot
+			const message = await helpIfErrorIsSizeOrScriptStartup(
+				err,
+				dependencies,
+				workerBundle,
+				projectRoot
+			);
+			if (message) {
+				logger.error(message);
+			}
+
+			handleMissingSecretsError(err, config, { type: "upload" });
+
+			// Apply source mapping to validation startup errors if possible
+			if (
+				err instanceof ParseError &&
+				"code" in err &&
+				err.code === 10021 /* validation error */ &&
+				err.notes.length > 0
+			) {
+				const maybeNameToFilePath = (moduleName: string) => {
+					// If this is a service worker, always return the entrypoint path.
+					// Service workers can't have additional JavaScript modules.
+					if (bundleType === "commonjs") {
+						return resolvedEntryPointPath;
+					}
+					// Similarly, if the name matches the entrypoint, return its path
+					if (moduleName === entryPointName) {
+						return resolvedEntryPointPath;
+					}
+					// Otherwise, return the file path of the matching module (if any)
+					for (const module of modules) {
+						if (moduleName === module.name) {
+							return module.filePath;
+						}
+					}
+				};
+				const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
+					maybeRetrieveFileSourceMap(maybeNameToFilePath(moduleName));
+
+				err.notes[0].text = getSourceMappedString(
+					err.notes[0].text,
+					retrieveSourceMap
 				);
-				if (message) {
-					logger.error(message);
-				}
-
-				handleMissingSecretsError(err, config, { type: "upload" });
-
-				// Apply source mapping to validation startup errors if possible
-				if (
-					err instanceof ParseError &&
-					"code" in err &&
-					err.code === 10021 /* validation error */ &&
-					err.notes.length > 0
-				) {
-					const maybeNameToFilePath = (moduleName: string) => {
-						// If this is a service worker, always return the entrypoint path.
-						// Service workers can't have additional JavaScript modules.
-						if (bundleType === "commonjs") {
-							return resolvedEntryPointPath;
-						}
-						// Similarly, if the name matches the entrypoint, return its path
-						if (moduleName === entryPointName) {
-							return resolvedEntryPointPath;
-						}
-						// Otherwise, return the file path of the matching module (if any)
-						for (const module of modules) {
-							if (moduleName === module.name) {
-								return module.filePath;
-							}
-						}
-					};
-					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
-						maybeRetrieveFileSourceMap(maybeNameToFilePath(moduleName));
-
-					err.notes[0].text = getSourceMappedString(
-						err.notes[0].text,
-						retrieveSourceMap
-					);
-				}
-
-				throw err;
 			}
 
-			// Update service and environment tags when using environments
+			throw err;
+		}
 
-			const nextTags = applyServiceAndEnvironmentTags(config, tags);
-			if (!tagsAreEqual(tags, nextTags)) {
-				try {
-					await patchNonVersionedScriptSettings(config, accountId, scriptName, {
-						tags: nextTags,
-					});
-				} catch {
-					warnOnErrorUpdatingServiceAndEnvironmentTags();
-				}
+		// Update service and environment tags when using environments
+
+		const nextTags = applyServiceAndEnvironmentTags(config, tags);
+		if (!tagsAreEqual(tags, nextTags)) {
+			try {
+				await patchNonVersionedScriptSettings(config, accountId, scriptName, {
+					tags: nextTags,
+				});
+			} catch {
+				warnOnErrorUpdatingServiceAndEnvironmentTags();
 			}
 		}
-		if (props.outFile) {
-			// we're using a custom output file,
-			// so let's first ensure it's parent directory exists
-			mkdirSync(path.dirname(props.outFile), { recursive: true });
+	}
+	if (props.outfile) {
+		// we're using a custom output file,
+		// so let's first ensure it's parent directory exists
+		mkdirSync(path.dirname(props.outfile), { recursive: true });
 
-			const serializedFormData = await new Response(workerBundle).arrayBuffer();
+		const serializedFormData = await new Response(workerBundle).arrayBuffer();
 
-			writeFileSync(props.outFile, Buffer.from(serializedFormData));
-		}
-	} finally {
-		if (typeof destination !== "string") {
-			// this means we're using a temp dir,
-			// so let's clean up before we proceed
-			destination.remove();
-		}
+		writeFileSync(props.outfile, Buffer.from(serializedFormData));
 	}
 
 	if (props.dryRun) {
