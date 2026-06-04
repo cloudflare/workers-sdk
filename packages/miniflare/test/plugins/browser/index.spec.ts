@@ -1,5 +1,12 @@
 import { Miniflare } from "miniflare";
-import { afterEach, beforeEach, describe, test, TestOptions, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	test,
+	type TestOptions,
+	vi,
+} from "vitest";
 import { useDispose } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
