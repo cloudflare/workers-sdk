@@ -4,35 +4,20 @@ import type { Json } from "./utils";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 /**
- * Options for `convertToWranglerConfig`.
- */
-export interface ConvertOptions {
-	/**
-	 * If true, generates v1 migrations for Durable Object exports.
-	 * If false (default), throws an error if Durable Object exports are present.
-	 */
-	includeMigrations?: boolean;
-}
-
-/**
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
  *
  * The caller is responsible for unwrapping any function/promise wrapper around
  * the config and validating it against `ConfigSchema` before passing it in.
  *
  * @param config The parsed (post-validation) config.
- * @param options Conversion options.
  * @returns The corresponding Wrangler `RawConfig`.
  */
-export function convertToWranglerConfig(
-	config: ParsedConfig,
-	options: ConvertOptions = {}
-): RawConfig {
+export function convertToWranglerConfig(config: ParsedConfig): RawConfig {
 	const result: RawConfig = {};
 
 	convertTopLevel(config, result);
 	convertBindingsAndAssets(config, result);
-	convertExports(config, result, options);
+	convertExports(config, result);
 	convertDomains(config, result);
 	convertTriggers(config, result);
 	convertTailConsumers(config, result);
@@ -663,53 +648,20 @@ function convertBindingsAndAssets(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EXPORTS (Durable Objects + Workflows + Migrations)
+// EXPORTS (Durable Objects + Workflows)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertExports(
-	config: ParsedConfig,
-	result: RawConfig,
-	options: ConvertOptions
-): void {
+function convertExports(config: ParsedConfig, _result: RawConfig): void {
 	const exports = config.exports;
 	if (!exports) {
 		return;
 	}
 
-	const newSqliteClasses: string[] = [];
-	const newClasses: string[] = [];
-
-	let hasDurableObjectExports = false;
-
-	for (const [exportName, value] of Object.entries(exports)) {
+	for (const value of Object.values(exports)) {
 		if (value.type === "durable-object") {
-			hasDurableObjectExports = true;
-			if (value.storage === "sqlite") {
-				newSqliteClasses.push(exportName);
-			} else {
-				newClasses.push(exportName);
-			}
+			throw new Error("Durable Object exports are not currently supported.");
 		}
 		// TODO: support Workflows
-	}
-
-	if (hasDurableObjectExports && !options.includeMigrations) {
-		throw new Error(
-			"Durable Object exports are not currently supported for build/deploy."
-		);
-	}
-
-	if (hasDurableObjectExports && options.includeMigrations) {
-		const migration: NonNullable<RawConfig["migrations"]>[number] = {
-			tag: "v1",
-		};
-		if (newSqliteClasses.length) {
-			migration.new_sqlite_classes = newSqliteClasses;
-		}
-		if (newClasses.length) {
-			migration.new_classes = newClasses;
-		}
-		result.migrations = [migration];
 	}
 }
 

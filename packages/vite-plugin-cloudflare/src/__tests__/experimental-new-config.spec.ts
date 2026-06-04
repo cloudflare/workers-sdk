@@ -259,45 +259,10 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(fs.existsSync(dtsPath)).toBe(false);
 	});
 
-	test("emits v1 migrations when running in dev (serve)", async ({
-		expect,
-	}) => {
-		seedWorkerSource();
-		writeWorkerConfig(
-			[
-				"import { defineWorker } from '@cloudflare/config';",
-				"export default defineWorker({",
-				"  name: 'experimental-config-worker',",
-				"  entrypoint: './src/index.ts',",
-				"  compatibilityDate: '2024-12-30',",
-				"  exports: {",
-				"    Counter: { type: 'durable-object', storage: 'sqlite' },",
-				"  },",
-				"});",
-			].join("\n")
-		);
-
-		const pluginConfig: PluginConfig = {
-			experimental: { newConfig: true },
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-
-		const worker = result.environmentNameToWorkerMap.get(
-			"experimental_config_worker"
-		);
-		expect(worker?.config.migrations).toEqual([
-			{ tag: "v1", new_sqlite_classes: ["Counter"] },
-		]);
-	});
-
-	test("throws on durable-object exports when running in build", async ({
-		expect,
-	}) => {
+	test.for([
+		{ mode: "development", command: "serve" as const },
+		{ mode: "production", command: "build" as const },
+	])("throws on durable-object exports ($command)", async (env, { expect }) => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
@@ -318,11 +283,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		};
 
 		await expect(
-			resolvePluginConfig(
-				pluginConfig,
-				{ root: tempDir },
-				{ mode: "production", command: "build" }
-			)
+			resolvePluginConfig(pluginConfig, { root: tempDir }, env)
 		).rejects.toThrow(/Durable Object exports/);
 	});
 

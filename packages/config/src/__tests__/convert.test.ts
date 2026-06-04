@@ -569,8 +569,8 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 
-	describe("exports + migrations", () => {
-		it("throws when durable-object exports are present and includeMigrations is false (default)", ({
+	describe("exports", () => {
+		it("throws when sqlite durable-object exports are present", ({
 			expect,
 		}) => {
 			expect(() =>
@@ -582,57 +582,16 @@ describe("convertToWranglerConfig", () => {
 			).toThrow(/Durable Object exports/);
 		});
 
-		it("emits sqlite migration (no binding) when includeMigrations is true", ({
+		it("throws when legacy-kv durable-object exports are present", ({
 			expect,
 		}) => {
-			const result = convertToWranglerConfig(
-				{
-					exports: {
-						MyDO: { type: "durable-object", storage: "sqlite" },
-					},
-				},
-				{ includeMigrations: true }
-			);
-			expect(result.migrations).toEqual([
-				{ tag: "v1", new_sqlite_classes: ["MyDO"] },
-			]);
-		});
-
-		it("emits legacy-kv migrations when storage is 'legacy-kv'", ({
-			expect,
-		}) => {
-			const result = convertToWranglerConfig(
-				{
+			expect(() =>
+				convertToWranglerConfig({
 					exports: {
 						LegacyDO: { type: "durable-object", storage: "legacy-kv" },
 					},
-				},
-				{ includeMigrations: true }
-			);
-			expect(result.migrations).toEqual([
-				{ tag: "v1", new_classes: ["LegacyDO"] },
-			]);
-		});
-
-		it("combines sqlite and legacy-kv DO exports into a single v1 migration", ({
-			expect,
-		}) => {
-			const result = convertToWranglerConfig(
-				{
-					exports: {
-						A: { type: "durable-object", storage: "sqlite" },
-						B: { type: "durable-object", storage: "legacy-kv" },
-					},
-				},
-				{ includeMigrations: true }
-			);
-			expect(result.migrations).toEqual([
-				{
-					tag: "v1",
-					new_sqlite_classes: ["A"],
-					new_classes: ["B"],
-				},
-			]);
+				})
+			).toThrow(/Durable Object exports/);
 		});
 	});
 
