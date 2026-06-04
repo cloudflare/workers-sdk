@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
 import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
 import {
@@ -2346,6 +2347,92 @@ describe("versions upload", () => {
 			await runWrangler("versions upload");
 
 			expect(std.out).toContain("Uploaded test-name");
+		});
+	});
+
+	describe("package_dependencies", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("should include package_dependencies in upload metadata", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Create a resolvable public package in node_modules
+			const pkgPath = path.join(process.cwd(), "node_modules", "test-dep");
+			fs.mkdirSync(pkgPath, { recursive: true });
+			fs.writeFileSync(path.join(pkgPath, "index.js"), "module.exports = {}");
+			fs.writeFileSync(
+				path.join(pkgPath, "package.json"),
+				JSON.stringify({ name: "test-dep", version: "1.2.3" })
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			// Write package.json with the dependency
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						"test-dep": "^1.0.0",
+					},
+				})
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[0]);
+			expect(metadata.package_dependencies).toEqual([
+				{
+					name: "test-dep",
+					packageJsonVersion: "^1.0.0",
+					installedVersion: "1.2.3",
+				},
+			]);
+		});
+
+		test("should omit package_dependencies when dependencies_instrumentation is false", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Create a resolvable public package in node_modules
+			const pkgPath = path.join(process.cwd(), "node_modules", "test-dep");
+			fs.mkdirSync(pkgPath, { recursive: true });
+			fs.writeFileSync(path.join(pkgPath, "index.js"), "module.exports = {}");
+			fs.writeFileSync(
+				path.join(pkgPath, "package.json"),
+				JSON.stringify({ name: "test-dep", version: "1.2.3" })
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				dependencies_instrumentation: false,
+			});
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						"test-dep": "^1.0.0",
+					},
+				})
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[0]);
+			expect(metadata.package_dependencies).toBeUndefined();
 		});
 	});
 });

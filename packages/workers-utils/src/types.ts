@@ -290,6 +290,11 @@ type WorkerMetadataPut = {
 	};
 	observability?: Observability | undefined;
 	containers?: { class_name: string }[];
+	package_dependencies?: Array<{
+		name: string;
+		packageJsonVersion: string;
+		installedVersion: string;
+	}>;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 };

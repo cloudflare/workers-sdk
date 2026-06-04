@@ -488,6 +488,17 @@ export interface CfWorkerInit {
 		| undefined;
 	observability: Observability | undefined;
 	cache: CacheOptions | undefined;
+	/**
+	 * The list of npm package dependencies collected from the project's package.json.
+	 * Sent to the API for instrumentation and analytics purposes.
+	 */
+	package_dependencies?:
+		| Array<{
+				name: string;
+				packageJsonVersion: string;
+				installedVersion: string;
+		  }>
+		| undefined;
 }
 
 export interface CfWorkerContext {

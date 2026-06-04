@@ -66,6 +66,7 @@ describe("normalizeAndValidateConfig()", () => {
 				bindings: [],
 			},
 			send_metrics: undefined,
+			dependencies_instrumentation: undefined,
 			main: undefined,
 			migrations: [],
 			name: undefined,
@@ -174,6 +175,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const expectedConfig = {
 				legacy_env: "FOO",
 				send_metrics: "BAD",
+				dependencies_instrumentation: "NOPE",
 				keep_vars: "NEVER",
 				dev: {
 					ip: 222,
@@ -205,6 +207,7 @@ describe("normalizeAndValidateConfig()", () => {
 				"Processing wrangler configuration:
 				  - Expected "legacy_env" to be of type boolean but got "FOO".
 				  - Expected "send_metrics" to be of type boolean but got "BAD".
+				  - Expected "dependencies_instrumentation" to be of type boolean but got "NOPE".
 				  - Expected "keep_vars" to be of type boolean but got "NEVER".
 				  - Expected "dev.ip" to be of type string but got 222.
 				  - Expected "dev.port" to be of type number but got "FOO".

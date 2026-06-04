@@ -125,6 +125,7 @@ export function parseTOML(tomlContent: string, filePath?: string): unknown {
 export type PackageJSON = {
 	name?: string;
 	version?: string;
+	private?: boolean;
 	devDependencies?: Record<string, unknown>;
 	dependencies?: Record<string, unknown>;
 	scripts?: Record<string, unknown>;
