@@ -46,13 +46,19 @@ describe("cloudflare", () => {
 			"export"
 		);
 		expect(existsSync(join(workerOutDir, "wrangler.json"))).toBe(true);
-		expect(
-			JSON.parse(readFileSync(join(workerOutDir, "wrangler.json"), "utf8"))
-		).toMatchObject({
+		const outputConfig = JSON.parse(
+			readFileSync(join(workerOutDir, "wrangler.json"), "utf8")
+		) as Record<string, unknown>;
+		expect(outputConfig).toMatchObject({
 			name: "test-worker",
 			main: "index.js",
 			no_bundle: true,
 		});
+		expect(outputConfig).not.toHaveProperty("configPath");
+		expect(outputConfig).not.toHaveProperty("userConfigPath");
+		expect(outputConfig).not.toHaveProperty("topLevelName");
+		expect(outputConfig).not.toHaveProperty("definedEnvironments");
+		expect(outputConfig).not.toHaveProperty("targetEnvironment");
 		expect(existsSync(join(root, ".wrangler/deploy/config.json"))).toBe(true);
 	});
 });

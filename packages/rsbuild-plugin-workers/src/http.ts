@@ -1,7 +1,9 @@
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { Request as MiniflareRequest } from "miniflare";
 import type { RequestInit, Response as MiniflareResponse } from "miniflare";
 import type * as http from "node:http";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 
 export function toRequest(req: http.IncomingMessage): MiniflareRequest {
 	const host = req.headers.host ?? "localhost";
@@ -62,6 +64,10 @@ export async function writeResponse(
 		return;
 	}
 
-	const body = Buffer.from(await response.arrayBuffer());
-	res.end(body);
+	await pipeline(
+		Readable.fromWeb(
+			response.body as unknown as NodeReadableStream<Uint8Array>
+		),
+		res
+	);
 }

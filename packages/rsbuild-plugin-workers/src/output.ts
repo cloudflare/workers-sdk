@@ -10,8 +10,16 @@ export function createOutputConfig(
 	resolvedConfig: ResolvedPluginConfig,
 	main: string
 ): Unstable_RawConfig {
+	const {
+		configPath: _configPath,
+		userConfigPath: _userConfigPath,
+		topLevelName: _topLevelName,
+		definedEnvironments: _definedEnvironments,
+		targetEnvironment: _targetEnvironment,
+		...workerConfig
+	} = resolvedConfig.workerConfig;
 	const outputConfig: Unstable_RawConfig = {
-		...resolvedConfig.workerConfig,
+		...workerConfig,
 		main,
 		no_bundle: true,
 		rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
