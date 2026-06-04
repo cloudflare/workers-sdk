@@ -127,7 +127,7 @@ export const versionsUploadCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
-	positionalArgs: ["script"],
+	positionalArgs: ["path"],
 	args: {
 		...sharedDeployVersionsArgs,
 		"preview-alias": {
@@ -146,7 +146,7 @@ export const versionsUploadCommand = createCommand({
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	validateArgs(args) {
-		validateDeployVersionsArgs(args);
+		validateDeployVersionsArgs(args, "versions upload");
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");

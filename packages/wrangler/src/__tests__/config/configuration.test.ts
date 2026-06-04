@@ -248,3 +248,60 @@ compatibility_date = "2022-01-12"`;
 		expect(config.name).toBe("no-bom-test");
 	});
 });
+
+describe("readConfig() custom_domain inheritance warning", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+
+	it("should warn when a named env inherits custom_domain routes from the top-level config", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			routes: [{ pattern: "api.example.com", custom_domain: true }],
+			env: {
+				staging: {
+					name: "my-worker-staging",
+					workers_dev: true,
+					// no `routes` override — will inherit top-level custom domain
+				},
+			},
+		});
+		readConfig({ config: "wrangler.toml", env: "staging" });
+		await endEventLoop();
+		expect(std.warn).toContain(
+			`"env.staging" environment inherits the top-level`
+		);
+		expect(std.warn).toContain(`api.example.com`);
+		expect(std.warn).toContain(`Add \`"routes": []\``);
+		expect(std.warn).toContain(`prevent`);
+		expect(std.warn).toContain(
+			`copy the route configuration from the top level`
+		);
+	});
+
+	it("should not warn when the env explicitly overrides routes", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			routes: [{ pattern: "api.example.com", custom_domain: true }],
+			env: {
+				staging: {
+					name: "my-worker-staging",
+					routes: [],
+				},
+			},
+		});
+		readConfig({ config: "wrangler.toml", env: "staging" });
+		await endEventLoop();
+		expect(std.warn).not.toContain("inherits the top-level `routes`");
+	});
+
+	it("should not warn for the top-level env itself", async ({ expect }) => {
+		writeWranglerConfig({
+			routes: [{ pattern: "api.example.com", custom_domain: true }],
+		});
+		readConfig({ config: "wrangler.toml" });
+		await endEventLoop();
+		expect(std.warn).not.toContain("inherits the top-level `routes`");
+	});
+});

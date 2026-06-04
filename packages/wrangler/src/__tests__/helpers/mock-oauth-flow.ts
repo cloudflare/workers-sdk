@@ -191,10 +191,12 @@ export function mockExchangeRefreshTokenForAccessToken({
 type GrantResponseOptions = {
 	code?: string;
 	error?: ErrorType | ErrorType[];
+	error_description?: string;
+	error_uri?: string;
 };
 
 const toQueryParams = (
-	{ code, error }: GrantResponseOptions,
+	{ code, error, error_description, error_uri }: GrantResponseOptions,
 	wranglerRequestParams: URLSearchParams
 ): string => {
 	const queryParams = [];
@@ -204,6 +206,14 @@ const toQueryParams = (
 	if (error) {
 		const stringifiedErr = Array.isArray(error) ? error.join(",") : error;
 		queryParams.push(`error=${stringifiedErr}`);
+	}
+	if (error_description) {
+		queryParams.push(
+			`error_description=${encodeURIComponent(error_description)}`
+		);
+	}
+	if (error_uri) {
+		queryParams.push(`error_uri=${encodeURIComponent(error_uri)}`);
 	}
 
 	queryParams.push(`state=${wranglerRequestParams.get("state")}`);

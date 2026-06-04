@@ -268,6 +268,12 @@ export class LocalRuntimeController extends RuntimeController {
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
+			// A newer bundle has already been queued — skip this stale one
+			// before doing any expensive work.
+			if (id !== this.#currentBundleId) {
+				return;
+			}
+
 			const configBundle = await convertToConfigBundle(data);
 
 			if (data.config.dev?.remote !== false) {
@@ -291,6 +297,12 @@ export class LocalRuntimeController extends RuntimeController {
 								undefined
 							: data.config.dev.auth
 					);
+			}
+
+			// Bail out if a newer bundle arrived while we were setting up
+			// the remote proxy session.
+			if (id !== this.#currentBundleId) {
+				return;
 			}
 
 			// Assemble container options and build if necessary
@@ -348,6 +360,12 @@ export class LocalRuntimeController extends RuntimeController {
 				logger.log(chalk.dim("⎔ Container image(s) ready"));
 			}
 
+			// Bail out if a newer bundle arrived while we were building
+			// container images.
+			if (id !== this.#currentBundleId) {
+				return;
+			}
+
 			const options = await MF.buildMiniflareOptions(
 				this.#log,
 				configBundle,
@@ -362,6 +380,13 @@ export class LocalRuntimeController extends RuntimeController {
 				}
 			);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
+
+			// Bail out if a newer bundle arrived while we were building
+			// miniflare options — avoid a redundant local server reload.
+			if (id !== this.#currentBundleId) {
+				return;
+			}
+
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
 				this.#mf = new Miniflare(options);

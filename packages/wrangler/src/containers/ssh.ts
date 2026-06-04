@@ -3,7 +3,6 @@ import { createServer } from "node:net";
 import { showCursor } from "@cloudflare/cli-shared-helpers";
 import { bold } from "@cloudflare/cli-shared-helpers/colors";
 import { ApiError, DeploymentsService } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
 import { WebSocket } from "ws";
 import {
 	fillOpenAPIConfiguration,
@@ -101,12 +100,6 @@ const sshArgDefs = {
 type SshArgs = HandlerArgs<typeof sshArgDefs>;
 
 async function sshCommand(sshArgs: SshArgs, _config: Config) {
-	if (sshArgs.ID.length !== 64) {
-		throw new UserError(`Expected an instance ID but got ${sshArgs.ID}`, {
-			telemetryMessage: "containers ssh invalid instance id",
-		});
-	}
-
 	// Get arguments passed to the SSH command itself. yargs includes
 	// "containers" and "ssh" as the first two elements of the array, which
 	// we don't want, so we don't include those.

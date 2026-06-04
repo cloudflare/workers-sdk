@@ -425,7 +425,8 @@ async function putBulkSecrets(
 
 export const secretBulkCommand = createCommand({
 	metadata: {
-		description: "Upload multiple secrets for a Worker at once",
+		description:
+			"Create, update, or delete multiple secrets for a Worker in a single request, with up to 100 secrets per command.",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
@@ -435,7 +436,7 @@ export const secretBulkCommand = createCommand({
 	},
 	args: {
 		file: {
-			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .env file in the form KEY=VALUE. If omitted, Wrangler expects to receive input from stdin rather than a file.`,
+			describe: `The file of key-value pairs to create, update, or delete, as JSON in form {"key": "value", ...} or .env file in the form KEY=VALUE. Set a key to null in the JSON file to delete it. Deletion is not supported with .env files. If omitted, Wrangler expects to receive input from stdin rather than a file.`,
 			type: "string",
 		},
 		name: {

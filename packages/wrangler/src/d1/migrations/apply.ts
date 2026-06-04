@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { createCommand } from "../../core/create-command";
@@ -7,13 +6,13 @@ import { confirm } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { isLocal } from "../../utils/is-local";
-import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
 	getMigrationsPath,
 	getUnappliedMigrations,
 	initMigrationsTable,
+	resolveMigrationsConfig,
 } from "./helpers";
 import type { ParseError } from "@cloudflare/workers-utils";
 
@@ -89,18 +88,20 @@ export const d1MigrationsApplyCommand = createCommand({
 			);
 		}
 
+		const migrationsConfig = resolveMigrationsConfig({
+			databaseInfo: databaseInfo ?? null,
+			configPath: config.configPath,
+		});
 		const migrationsPath = await getMigrationsPath({
-			projectPath: path.dirname(config.configPath),
-			migrationsFolderPath:
-				databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
+			projectPath: migrationsConfig.projectPath,
+			migrationsDir: migrationsConfig.migrationsDir,
+			migrationsDirRaw: migrationsConfig.migrationsDirRaw,
 			createIfMissing: false,
 			configPath: config.configPath,
 		});
 
-		const migrationsTableName =
-			databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
 		await initMigrationsTable({
-			migrationsTableName,
+			migrationsTableName: migrationsConfig.migrationsTableName,
 			local,
 			remote,
 			config,
@@ -109,10 +110,14 @@ export const d1MigrationsApplyCommand = createCommand({
 			preview,
 		});
 
+		// `getUnappliedMigrations` returns paths already sorted by
+		// `compareMigrationPaths` in helpers.ts: numeric order on the first
+		// path segment's leading integer (matching the comparator this code
+		// used to do inline), with a lex tiebreaker for files that share a
+		// numeric prefix or have none.
 		const unappliedMigrations = (
 			await getUnappliedMigrations({
-				migrationsTableName,
-				migrationsPath,
+				migrationsConfig,
 				local,
 				remote,
 				config,
@@ -120,26 +125,12 @@ export const d1MigrationsApplyCommand = createCommand({
 				persistTo,
 				preview,
 			})
-		)
-			.map((migration) => {
-				return {
-					name: migration,
-					status: "🕒️",
-				};
-			})
-			.sort((a, b) => {
-				const migrationNumberA = parseInt(a.name.split("_")[0]);
-				const migrationNumberB = parseInt(b.name.split("_")[0]);
-				if (migrationNumberA < migrationNumberB) {
-					return -1;
-				}
-				if (migrationNumberA > migrationNumberB) {
-					return 1;
-				}
-
-				// numbers must be equal
-				return 0;
-			});
+		).map((migration) => {
+			return {
+				name: migration,
+				status: "🕒️",
+			};
+		});
 
 		if (unappliedMigrations.length === 0) {
 			logger.log("✅ No migrations to apply!");
@@ -162,7 +153,7 @@ Your database may not be available to serve requests during the migration, conti
 				"utf8"
 			);
 			query += `
-								INSERT INTO ${migrationsTableName} (name)
+								INSERT INTO ${migrationsConfig.migrationsTableName} (name)
 								values ('${migration.name}');
 						`;
 
