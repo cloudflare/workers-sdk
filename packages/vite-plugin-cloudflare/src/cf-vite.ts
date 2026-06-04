@@ -10,10 +10,11 @@
  *
  * Spawn contract for `dev`: parent uses `stdio: "inherit"` and forwards
  * SIGINT/SIGTERM. Accepted flags mirror the sibling `cf-wrangler`
- * delegate (`--config`, `--mode`, `--port`, `--host`, `--local`) so the
- * parent can drive either impl interchangeably; everything else lives in
- * the user's `vite.config.ts` / `wrangler.jsonc`. `cf-vite` boots Vite
- * via `createServer()` against the user's own config (expected to
+ * delegate (`--mode`, `--port`, `--host`, `--local`) so the parent can
+ * drive either impl interchangeably; everything else lives in the user's
+ * `vite.config.ts` / `wrangler.jsonc` (including the wrangler config
+ * file, which is discovered by `cloudflare()` itself). `cf-vite` boots
+ * Vite via `createServer()` against the user's own config (expected to
  * include `cloudflare()`); flags are bridged to it as documented inline.
  *
  * Exit codes: 0 graceful, 2 unknown verb / parse error, 130 SIGINT,
@@ -25,7 +26,6 @@ import { createServer } from "vite";
 import type { InlineConfig, ServerOptions } from "vite";
 
 interface DevArgs {
-	config?: string;
 	mode?: string;
 	port?: number;
 	host?: string;
@@ -46,7 +46,6 @@ function parseArgs(argv: string[]): DevArgs {
 		parsed = nodeParseArgs({
 			args: argv,
 			options: {
-				config: { type: "string" },
 				mode: { type: "string" },
 				host: { type: "string" },
 				// `node:util.parseArgs` has no `number` type; coerce below.
@@ -61,9 +60,6 @@ function parseArgs(argv: string[]): DevArgs {
 	}
 
 	const out: DevArgs = {};
-	if (parsed.values.config !== undefined) {
-		out.config = parsed.values.config;
-	}
 	if (parsed.values.mode !== undefined) {
 		out.mode = parsed.values.mode;
 	}
@@ -114,18 +110,13 @@ async function main(): Promise<number> {
 	}
 
 	// Bridge plugin-owned flags via env vars the plugin reads during config
-	// resolution — must be set before `createServer()`. Precedence vs the
-	// user's `cloudflare()` options differs per flag, by design:
-	//   - `--config`: an explicit `cloudflare({ configPath })` wins, since
-	//     this maps to the existing `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH`
-	//     discovery fallback (`configPath ?? env`). A pinned configPath is
-	//     a deliberate user choice, so it stays authoritative.
+	// resolution — must be set before `createServer()`.
 	//   - `--local`: overrides `remoteBindings` outright, mirroring
 	//     `wrangler dev --local` (force local even if config opts into
 	//     remote).
-	if (args.config !== undefined) {
-		process.env.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH = args.config;
-	}
+	// The wrangler config file is not passed here — `cloudflare()`
+	// discovers it (or honours an explicit `configPath`), matching how
+	// `cf-wrangler` relies on wrangler's own config discovery.
 	if (args.local) {
 		process.env.CLOUDFLARE_VITE_FORCE_LOCAL = "true";
 	}
