@@ -2,7 +2,7 @@
 "@cloudflare/vitest-pool-workers": patch
 ---
 
-fix: support `require("./x.wasm?module")` in CommonJS dependencies
+Support `require("./x.wasm?module")` in CommonJS dependencies
 
 Previously, only literal `await import("./x.wasm?module")` specifiers were rewritten through the static analysis path added in #11094. CommonJS dependencies that use `require("./x.wasm?module")` reach the module-fallback service at runtime, where the `?module` suffix went unhandled. The fallback either failed with `No such module "<abs>/x.wasm?module"` or, when a `CompiledWasm` rule was configured, attempted to evaluate the WebAssembly bytes as JavaScript.
 
