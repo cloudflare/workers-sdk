@@ -1,5 +1,48 @@
 # miniflare
 
+## 4.20260603.0
+
+### Minor Changes
+
+- [#14164](https://github.com/cloudflare/workers-sdk/pull/14164) [`b502d54`](https://github.com/cloudflare/workers-sdk/commit/b502d5445b9e9e030020a3d65c0334507393aa64) Thanks [@G4brym](https://github.com/G4brym)! - Rename the `web_search` binding kind to `websearch`
+
+  Pre-launch rename of the public binding type from `web_search` to `websearch` so the on-the-wire shape matches the product name (Web Search). The wrangler config key, the binding-type string sent to the Cloudflare API, and the miniflare option key all move from `web_search` / `webSearch` to `websearch`.
+
+  Update your wrangler config:
+
+  ```diff
+  - "web_search": { "binding": "WEBSEARCH" }
+  + "websearch": { "binding": "WEBSEARCH" }
+  ```
+
+  The runtime `WebSearch` type exposed on `env.WEBSEARCH` is unchanged.
+
+- [#13863](https://github.com/cloudflare/workers-sdk/pull/13863) [`3b8b80a`](https://github.com/cloudflare/workers-sdk/commit/3b8b80ab32e3ac33b5df9f6944dca9cdf72c5495) Thanks [@aslakhellesoy](https://github.com/aslakhellesoy)! - Support cross-worker workflow bindings via the dev registry
+
+  When a workflow binding has a `scriptName` that refers to a worker registered in another Miniflare instance (via `unsafeDevRegistryPath`), miniflare now reroutes the engine's `USER_WORKFLOW` binding through the dev-registry-proxy worker — the same mechanism Durable Objects already use for cross-worker `scriptName` bindings.
+
+  Previously the workflow engine was bound directly to a local service `core:user:<scriptName>`, so workerd refused to start when that script lived in a different process.
+
+  This unblocks `getPlatformProxy()` (and any other split-Miniflare setup) for users whose workflow class is defined in a separate worker — for example SvelteKit/Remix on Cloudflare, where `adapter-cloudflare`'s dev integration runs the user's worker in a sidecar.
+
+  See [#7459](https://github.com/cloudflare/workers-sdk/issues/7459).
+
+### Patch Changes
+
+- [#14175](https://github.com/cloudflare/workers-sdk/pull/14175) [`a3eea27`](https://github.com/cloudflare/workers-sdk/commit/a3eea277aae46450aec1f0c811e3fe256022c46e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260601.1 | 1.20260603.1 |
+
+- [#14081](https://github.com/cloudflare/workers-sdk/pull/14081) [`1fdd8de`](https://github.com/cloudflare/workers-sdk/commit/1fdd8def456011c29c5879fe49be6fa90ad9858d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Detect early workerd exit instead of hanging indefinitely
+
+  When `workerd` exits during startup before writing all expected listen events to the control file descriptor (e.g. due to an IPv6 bind failure, permission error, or missing library), Miniflare's `waitForPorts()` would block forever. This caused `wrangler dev` to stall at "Starting local server..." with no error and no timeout.
+
+  The fix races `waitForPorts()` against the child process exit event so that any unexpected `workerd` termination is detected immediately. When `workerd` exits early, Miniflare now throws `ERR_RUNTIME_FAILURE` with the runtime's stderr output included in the error message, making the root cause diagnosable without external tools.
+
 ## 4.20260601.0
 
 ### Patch Changes

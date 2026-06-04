@@ -1,5 +1,50 @@
 # @cloudflare/workers-utils
 
+## 0.23.0
+
+### Minor Changes
+
+- [#14089](https://github.com/cloudflare/workers-sdk/pull/14089) [`c6c61b5`](https://github.com/cloudflare/workers-sdk/commit/c6c61b59431443b2bcda25f3af7624dd2ce19b9b) Thanks [@alsuren](https://github.com/alsuren)! - Add `migrations_pattern` to D1 database bindings
+
+  The D1 binding now accepts an optional `migrations_pattern` field, allowing you to point `wrangler d1 migrations apply` and `wrangler d1 migrations list` at migration files in nested layouts (e.g. ORM-generated folders like `migrations/0000_init/migration.sql`).
+
+  `migrations_pattern` is a glob (relative to the wrangler config file) and defaults to `${migrations_dir}/*.sql`, which preserves today's behaviour. Files that do not match the pattern are not executed.
+
+  ```jsonc
+  {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "my-db",
+        "database_id": "...",
+        "migrations_dir": "migrations",
+        "migrations_pattern": "migrations/*/migration.sql"
+      }
+    ]
+  }
+  ```
+
+  When no migrations match the configured pattern but files matching the common `migrations/*/migration.sql` (drizzle-style) layout do exist, Wrangler logs a hint suggesting `migrations_pattern` as an opt-in.
+
+  `wrangler d1 migrations create` now returns an actionable error if the generated migration filename would not match the configured pattern.
+
+- [#14164](https://github.com/cloudflare/workers-sdk/pull/14164) [`b502d54`](https://github.com/cloudflare/workers-sdk/commit/b502d5445b9e9e030020a3d65c0334507393aa64) Thanks [@G4brym](https://github.com/G4brym)! - Rename the `web_search` binding kind to `websearch`
+
+  Pre-launch rename of the public binding type from `web_search` to `websearch` so the on-the-wire shape matches the product name (Web Search). The wrangler config key, the binding-type string sent to the Cloudflare API, and the miniflare option key all move from `web_search` / `webSearch` to `websearch`.
+
+  Update your wrangler config:
+
+  ```diff
+  - "web_search": { "binding": "WEBSEARCH" }
+  + "websearch": { "binding": "WEBSEARCH" }
+  ```
+
+  The runtime `WebSearch` type exposed on `env.WEBSEARCH` is unchanged.
+
+- [#14146](https://github.com/cloudflare/workers-sdk/pull/14146) [`c4f45e8`](https://github.com/cloudflare/workers-sdk/commit/c4f45e8b8694c60fb1808f7fbb130e4b4893d20c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Simplify `constructWranglerConfig` to accept a single worker instead of an array
+
+  The `constructWranglerConfig` function now accepts a single `APIWorkerConfig` object instead of `APIWorkerConfig | APIWorkerConfig[]`. The multi-environment array support has been removed since the array use-case was removed and now the only call site already passes a single worker object. This is a breaking change to the function's public signature.
+
 ## 0.22.1
 
 ### Patch Changes
