@@ -209,6 +209,7 @@ export interface CfR2Bucket {
 	jurisdiction?: string;
 	remote?: boolean;
 	raw?: boolean;
+	experimental_local_public?: boolean;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
