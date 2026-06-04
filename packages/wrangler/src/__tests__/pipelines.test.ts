@@ -629,7 +629,7 @@ describe("wrangler pipelines", () => {
 				│ broken_pipeline │ pipeline_2 │ 1/2/2024 │ 1/2/2024 │ failed │
 				└─┴─┴─┴─┴─┘
 
-				1 pipeline(s) are in a failed state. Run 'wrangler pipelines get <pipeline>' for details:
+				1 pipeline is in a failed state. Run 'wrangler pipelines get <pipeline>' for details:
 				  X broken_pipeline: Sink bucket 'my-bucket' does not exist
 				"
 			`);
