@@ -479,15 +479,21 @@ export function createServer(options: ServerOptions): WorkerServer {
 			const cleanup = () => {
 				for (const devEnv of session.devEnvs) {
 					devEnv.off("error", onError);
+					devEnv.off("buildFailed", onBuildFailed);
 				}
 			};
 			const onError = (error: unknown) => {
 				cleanup();
 				reject(resolveErrorCause(error));
 			};
+			const onBuildFailed = (error: ErrorEvent) => {
+				cleanup();
+				reject(resolveErrorCause(error));
+			};
 
 			for (const devEnv of session.devEnvs) {
 				devEnv.once("error", onError);
+				devEnv.once("buildFailed", onBuildFailed);
 			}
 
 			void session.primaryDevEnv.proxy.ready.promise.then(
@@ -508,11 +514,16 @@ export function createServer(options: ServerOptions): WorkerServer {
 			const cleanup = () => {
 				for (const devEnv of session.devEnvs) {
 					devEnv.off("error", onError);
+					devEnv.off("buildFailed", onBuildFailed);
 				}
 
 				session.primaryDevEnv.off("reloadComplete", onReloadComplete);
 			};
 			const onError = (error: unknown) => {
+				cleanup();
+				reject(resolveErrorCause(error));
+			};
+			const onBuildFailed = (error: ErrorEvent) => {
 				cleanup();
 				reject(resolveErrorCause(error));
 			};
@@ -523,6 +534,7 @@ export function createServer(options: ServerOptions): WorkerServer {
 
 			for (const devEnv of session.devEnvs) {
 				devEnv.once("error", onError);
+				devEnv.once("buildFailed", onBuildFailed);
 			}
 
 			session.primaryDevEnv.once("reloadComplete", onReloadComplete);

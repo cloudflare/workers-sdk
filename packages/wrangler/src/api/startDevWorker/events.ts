@@ -26,7 +26,6 @@ type BaseErrorEvent<Source = string, Data = undefined> = {
 	cause: Error | SerializedError;
 	source: Source;
 	data: Data;
-	recoverable?: boolean;
 };
 
 export function castErrorCause(cause: unknown) {

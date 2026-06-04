@@ -68,11 +68,6 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 		this.proxy = proxyFactory(this);
 
 		this.on("error", (event: ErrorEvent) => {
-			if (event.recoverable) {
-				// Recoverable errors are already logged in handleErrorEvent
-				return;
-			}
-
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			logger.debug("=> Error contextual data:", event.data);
 		});
@@ -174,7 +169,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			event.cause instanceof ParseError
 		) {
 			logger.error(event.cause);
-			this.emit("error", { ...event, recoverable: true });
+			this.emit("buildFailed", event);
 		}
 		// Build errors are recoverable by fixing the code and saving
 		else if (event.source === "BundlerController") {
@@ -185,7 +180,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			} else {
 				logger.error(event.cause.message);
 			}
-			this.emit("error", { ...event, recoverable: true });
+			this.emit("buildFailed", event);
 		}
 		// if other knowable + recoverable errors occur, handle them here
 		else {
