@@ -53,8 +53,8 @@ describe("createServer", { sequential: true }, () => {
 		expect(Number(url.port)).toBeGreaterThan(0);
 		expect(inspectorUrl).toBeUndefined();
 
-		const response1 = await fetch(url);
-		await expect(response1.text()).resolves.toBe("Hello World");
+		const response = await fetch(url);
+		await expect(response.text()).resolves.toBe("Hello World");
 
 		const relativeServerResponse = await server.fetch("/url");
 		await expect(relativeServerResponse.text()).resolves.toBe(
@@ -132,6 +132,80 @@ describe("createServer", { sequential: true }, () => {
 			.fetch("/");
 		await expect(auxiliaryResponse.text()).resolves.toBe(
 			"Hello from Auxiliary Worker"
+		);
+	});
+
+	it("supports service bindings between workers", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.primary.jsonc": dedent`
+				{
+					"name": "primary-worker",
+					"main": "src/primary.ts",
+					"compatibility_date": "2026-05-20",
+					"services": [
+						{ "binding": "AUXILIARY", "service": "auxiliary-worker" }
+					]
+				}
+			`,
+			"wrangler.auxiliary.jsonc": dedent`
+				{
+					"name": "auxiliary-worker",
+					"main": "src/auxiliary.ts",
+					"compatibility_date": "2026-05-20",
+					"services": [
+						{ "binding": "PRIMARY", "service": "primary-worker" }
+					]
+				}
+			`,
+			"src/primary.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						if (url.pathname === "/call-auxiliary") {
+							return env.AUXILIARY.fetch("http://auxiliary.example.com/from-primary");
+						}
+
+						return new Response("primary:" + url.pathname);
+					}
+				};
+			`,
+			"src/auxiliary.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						if (url.pathname === "/call-primary") {
+							return env.PRIMARY.fetch("http://primary.example.com/from-auxiliary");
+						}
+
+						return new Response("auxiliary:" + url.pathname);
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [
+				{ configPath: "./wrangler.primary.jsonc" },
+				{ configPath: "./wrangler.auxiliary.jsonc" },
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const auxiliaryResponse = await server
+			.getWorker("primary-worker")
+			.fetch("/call-auxiliary");
+		await expect(auxiliaryResponse.text()).resolves.toBe(
+			"auxiliary:/from-primary"
+		);
+
+		const primaryResponse = await server
+			.getWorker("auxiliary-worker")
+			.fetch("/call-primary");
+		await expect(primaryResponse.text()).resolves.toBe(
+			"primary:/from-auxiliary"
 		);
 	});
 

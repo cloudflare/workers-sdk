@@ -69,6 +69,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 
 		this.on("error", (event: ErrorEvent) => {
 			if (event.recoverable) {
+				// Recoverable errors are already logged in handleErrorEvent
 				return;
 			}
 
