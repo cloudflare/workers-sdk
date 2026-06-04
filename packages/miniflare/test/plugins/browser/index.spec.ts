@@ -1,5 +1,5 @@
 import { Miniflare } from "miniflare";
-import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, TestOptions, vi } from "vitest";
 import { useDispose } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
@@ -61,7 +61,7 @@ const BROWSER_RENDERING_RETRY = {
 		count: 3,
 		delay: 1_000,
 	},
-};
+} satisfies TestOptions;
 
 const BROWSER_WORKER_SCRIPT = () => `
 export default {
