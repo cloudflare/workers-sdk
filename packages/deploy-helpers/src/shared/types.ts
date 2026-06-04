@@ -157,7 +157,6 @@ export type HandleBuild = {
 			metafile?: string | boolean;
 		}
 	) => Promise<HandleBuildResult>;
-	cleanup: (props: SharedDeployVersionsProps) => void;
 };
 
 export interface TriggerDeployment {

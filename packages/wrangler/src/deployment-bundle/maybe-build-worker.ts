@@ -146,13 +146,4 @@ export const handleBuild: HandleBuild = {
 			bundle,
 		};
 	},
-
-	cleanup(props) {
-		const { destination } = props;
-		if (typeof destination !== "string") {
-			// this means we're using a temp dir,
-			// so let's clean up before we proceed
-			destination.remove();
-		}
-	},
 };

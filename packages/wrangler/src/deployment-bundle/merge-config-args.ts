@@ -25,6 +25,7 @@ import type {
 	SharedDeployVersionsProps,
 	VersionsUploadProps,
 } from "@cloudflare/deploy-helpers";
+import type { EphemeralDirectory } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils";
 
 type SharedArgs = HandlerArgs<typeof sharedDeployVersionsArgs>;
@@ -155,4 +156,12 @@ export async function mergeVersionsUploadConfigArgs(
 		command: "versions upload",
 		previewAlias,
 	};
+}
+
+export function cleanupDestination(
+	destination: string | EphemeralDirectory
+): void {
+	if (typeof destination !== "string") {
+		destination.remove();
+	}
 }

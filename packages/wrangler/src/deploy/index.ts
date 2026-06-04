@@ -4,7 +4,10 @@ import {
 	validateDeployVersionsArgs,
 } from "../deployment-bundle/deploy-args";
 import { handleBuild } from "../deployment-bundle/maybe-build-worker";
-import { mergeDeployConfigArgs } from "../deployment-bundle/merge-config-args";
+import {
+	cleanupDestination,
+	mergeDeployConfigArgs,
+} from "../deployment-bundle/merge-config-args";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { getScriptName } from "../utils/getScriptName";
@@ -127,42 +130,46 @@ export const deployCommand = createCommand({
 		// Merge CLI args with config into a single props object
 		const mergedProps = await mergeDeployConfigArgs(args, config);
 
-		// Derive workerNameOverridden by comparing pre-merge name with post-merge name
-		const preMergeName = getScriptName(args, config);
-		const workerNameOverridden =
-			mergedProps.name !== undefined && mergedProps.name !== preMergeName;
+		try {
+			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
+			const preMergeName = getScriptName(args, config);
+			const workerNameOverridden =
+				mergedProps.name !== undefined && mergedProps.name !== preMergeName;
 
-		const beforeUpload = Date.now();
+			const beforeUpload = Date.now();
 
-		const { sourceMapSize, versionId, workerTag, targets } = await deploy(
-			mergedProps,
-			config,
-			handleBuild,
-			ctx
-		);
+			const { sourceMapSize, versionId, workerTag, targets } = await deploy(
+				mergedProps,
+				config,
+				handleBuild,
+				ctx
+			);
 
-		writeOutput({
-			type: "deploy",
-			version: 1,
-			worker_name: mergedProps.name ?? null,
-			worker_tag: workerTag,
-			version_id: versionId,
-			targets,
-			wrangler_environment: args.env,
-			worker_name_overridden: workerNameOverridden,
-		});
+			writeOutput({
+				type: "deploy",
+				version: 1,
+				worker_name: mergedProps.name ?? null,
+				worker_tag: workerTag,
+				version_id: versionId,
+				targets,
+				wrangler_environment: args.env,
+				worker_name_overridden: workerNameOverridden,
+			});
 
-		metrics.sendMetricsEvent(
-			"deploy worker script",
-			{
-				usesTypeScript: /\.tsx?$/.test(mergedProps.entry.file),
-				durationMs: Date.now() - beforeUpload,
-				sourceMapSize,
-			},
-			{
-				sendMetrics: config.send_metrics,
-			}
-		);
+			metrics.sendMetricsEvent(
+				"deploy worker script",
+				{
+					usesTypeScript: /\.tsx?$/.test(mergedProps.entry.file),
+					durationMs: Date.now() - beforeUpload,
+					sourceMapSize,
+				},
+				{
+					sendMetrics: config.send_metrics,
+				}
+			);
+		} finally {
+			cleanupDestination(mergedProps.destination);
+		}
 	},
 });
 
