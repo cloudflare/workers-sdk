@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/wrangler-bundler",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "esbuild-based dev server for Cloudflare Workers, extracted from `wrangler dev`",
 	"license": "MIT OR Apache-2.0",
 	"repository": {
