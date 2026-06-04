@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import SCRIPT_R2_BUCKET_OBJECT from "worker:r2/bucket";
+import SCRIPT_R2_LOCAL from "worker:r2/local";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
@@ -32,6 +33,7 @@ export const R2OptionsSchema = z.object({
 						remoteProxyConnectionString: z
 							.custom<RemoteProxyConnectionString>()
 							.optional(),
+						experimentalLocalPublic: z.boolean().optional(),
 					}),
 				])
 			),
@@ -46,6 +48,7 @@ export const R2SharedOptionsSchema = z.object({
 export const R2_PLUGIN_NAME = "r2";
 const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
 const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
+export const R2_PUBLIC_SERVICE_NAME = `${R2_PLUGIN_NAME}:public`;
 const R2_BUCKET_OBJECT_CLASS_NAME = "R2BucketObject";
 const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: R2_BUCKET_SERVICE_PREFIX,
@@ -55,11 +58,11 @@ const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 interface R2BucketEntry {
 	id: string;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
+	experimentalLocalPublic?: boolean;
 }
 
-// Like the shared `namespaceEntries`, but typed against the R2 bucket schema
-// so future R2-specific fields can be threaded through without expanding the
-// shared helper.
+// Like the shared `namespaceEntries`, except that it matches the
+// R2 bucket schema to extract `experimentalLocalPublic`.
 function r2BucketEntries(
 	buckets: z.infer<typeof R2OptionsSchema>["r2Buckets"]
 ): [bindingName: string, entry: R2BucketEntry][] {
@@ -72,6 +75,42 @@ function r2BucketEntries(
 	} else {
 		return [];
 	}
+}
+
+export function getR2PublicService(
+	allWorkerOpts: { r2?: z.infer<typeof R2OptionsSchema> }[]
+): Service | undefined {
+	const publicBucketsById = new Map<string, R2BucketEntry>();
+	for (const worker of allWorkerOpts) {
+		for (const [, bucket] of r2BucketEntries(worker.r2?.r2Buckets)) {
+			if (
+				bucket.experimentalLocalPublic !== true ||
+				bucket.remoteProxyConnectionString !== undefined
+			) {
+				continue;
+			}
+			publicBucketsById.set(bucket.id, bucket);
+		}
+	}
+	if (publicBucketsById.size === 0) {
+		return undefined;
+	}
+	const bindings = Array.from(publicBucketsById.values()).map<Worker_Binding>(
+		({ id }) => ({
+			name: id,
+			r2Bucket: {
+				name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
+			},
+		})
+	);
+	return {
+		name: R2_PUBLIC_SERVICE_NAME,
+		worker: {
+			compatibilityDate: "2023-07-24",
+			modules: [{ name: "local.worker.js", esModule: SCRIPT_R2_LOCAL() }],
+			bindings,
+		},
+	};
 }
 
 export const R2_PLUGIN: Plugin<
