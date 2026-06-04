@@ -521,10 +521,8 @@ export function getBindings(
 		usePreviewIds: true,
 	});
 
-	// Override vars with .dev.vars (dev-specific)
-	// getVarsForDev returns typed bindings: config vars are plain_text/json,
-	// while .dev.vars/.env vars are secret_text.
-	// When secrets is defined, only declared secret keys are loaded from files.
+	// createServer() can overrides secret through inputBindings.
+	// This filters out those required secrets so the logic doesn't consider them missing
 	const secrets = configParam.secrets
 		? {
 				...configParam.secrets,
@@ -533,6 +531,10 @@ export function getBindings(
 				),
 			}
 		: undefined;
+	// Override vars with .dev.vars (dev-specific)
+	// getVarsForDev returns typed bindings: config vars are plain_text/json,
+	// while .dev.vars/.env vars are secret_text.
+	// When secrets is defined, only declared secret keys are loaded from files.
 	const vars = getVarsForDev(
 		configParam.userConfigPath,
 		envFiles,
