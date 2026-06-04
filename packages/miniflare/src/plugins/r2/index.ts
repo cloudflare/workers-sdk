@@ -7,7 +7,6 @@ import {
 	getPersistPath,
 	getUserBindingServiceName,
 	migrateDatabase,
-	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
@@ -53,6 +52,28 @@ const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	className: R2_BUCKET_OBJECT_CLASS_NAME,
 };
 
+interface R2BucketEntry {
+	id: string;
+	remoteProxyConnectionString?: RemoteProxyConnectionString;
+}
+
+// Like the shared `namespaceEntries`, but typed against the R2 bucket schema
+// so future R2-specific fields can be threaded through without expanding the
+// shared helper.
+function r2BucketEntries(
+	buckets: z.infer<typeof R2OptionsSchema>["r2Buckets"]
+): [bindingName: string, entry: R2BucketEntry][] {
+	if (Array.isArray(buckets)) {
+		return buckets.map((bindingName) => [bindingName, { id: bindingName }]);
+	} else if (buckets !== undefined) {
+		return Object.entries(buckets).map(([name, value]) =>
+			typeof value === "string" ? [name, { id: value }] : [name, value]
+		);
+	} else {
+		return [];
+	}
+}
+
 export const R2_PLUGIN: Plugin<
 	typeof R2OptionsSchema,
 	typeof R2SharedOptionsSchema
@@ -60,7 +81,7 @@ export const R2_PLUGIN: Plugin<
 	options: R2OptionsSchema,
 	sharedOptions: R2SharedOptionsSchema,
 	getBindings(options) {
-		const buckets = namespaceEntries(options.r2Buckets);
+		const buckets = r2BucketEntries(options.r2Buckets);
 		return buckets.map<Worker_Binding>(([name, bucket]) => ({
 			name,
 			r2Bucket: {
@@ -87,7 +108,7 @@ export const R2_PLUGIN: Plugin<
 		unsafeStickyBlobs,
 	}) {
 		const persist = sharedOptions.r2Persist;
-		const buckets = namespaceEntries(options.r2Buckets);
+		const buckets = r2BucketEntries(options.r2Buckets);
 		const services = buckets.map<Service>(
 			([name, { id, remoteProxyConnectionString }]) => ({
 				name: getUserBindingServiceName(
