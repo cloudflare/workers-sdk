@@ -2,9 +2,9 @@
 "wrangler": minor
 ---
 
-Add `createServer()` for running Workers programmatically
+Add `createServer()` for Worker integration tests
 
-Wrangler now includes `createServer()` for use as a local dev server or integration test harness. It starts Workers locally from Wrangler config files, and also works with Workers built by the Cloudflare Vite plugin.
+Wrangler now includes `createServer()` for running Worker integration tests. It starts Workers locally from Wrangler config files, and also works with Workers built by the Cloudflare Vite plugin.
 
 You can use it from any Node.js test runner to send requests to individual Workers, trigger scheduled events, reset the server between tests, and mock outbound requests with libraries that intercept `globalThis.fetch()`, such as MSW:
 

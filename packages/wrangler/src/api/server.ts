@@ -16,11 +16,7 @@ import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
 import { convertConfigToBindings } from "./startDevWorker/utils";
 import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
-import type {
-	LogLevel,
-	ServiceFetch,
-	StartDevWorkerInput,
-} from "./startDevWorker/types";
+import type { StartDevWorkerInput } from "./startDevWorker/types";
 import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
@@ -30,7 +26,7 @@ import type { DispatchFetch, Json, Miniflare, RequestInfo } from "miniflare";
 
 export type ServerOptions = {
 	/**
-	 * Base directory used to resolve relative worker config paths and persist paths.
+	 * Base directory used to resolve relative worker config paths.
 	 * Defaults to `process.cwd()`.
 	 */
 	root?: string | undefined;
@@ -38,41 +34,6 @@ export type ServerOptions = {
 	 * Workers to run in this server. The first worker is the primary worker.
 	 */
 	workers: WorkerInput[];
-	/**
-	 * Host, port, and protocol options for the public server.
-	 * Defaults to `{ hostname: "127.0.0.1", port: 0 }`.
-	 */
-	server?: DevServerOptions | undefined;
-	/**
-	 * Inspector options for debugging Workers. Set to `false` to disable.
-	 * Defaults to `false`.
-	 */
-	inspector?: InspectorOptions | undefined;
-	/**
-	 * Controls local storage persistence.
-	 * Defaults to `false` for ephemeral storage. Set to a path to persist storage there.
-	 */
-	persist?: boolean | string | undefined;
-	/**
-	 * Whether to watch worker source/config files and reload on changes.
-	 * Defaults to `false`.
-	 */
-	watch?: boolean | undefined;
-	/**
-	 * Minimum Wrangler log level emitted while running the server.
-	 * Defaults to `"error"`.
-	 */
-	logLevel?: LogLevel | undefined;
-	/**
-	 * Cloudflare account ID used when an operation requires account context.
-	 * Defaults to the account selected by Wrangler auth when needed.
-	 */
-	accountId?: string | undefined;
-	/**
-	 * Handles outbound `fetch()` calls from Workers.
-	 * Defaults to the current process `fetch`.
-	 */
-	outboundService?: ServiceFetch | undefined;
 };
 
 export type WorkerHandle = {
@@ -111,7 +72,6 @@ export type WorkerServer = {
 	 */
 	listen(): Promise<{
 		url: URL;
-		inspectorUrl: URL | undefined;
 	}>;
 	/**
 	 * Dispatches a fetch request through the server.
@@ -151,31 +111,14 @@ export type WorkerServer = {
 	getWorker(name?: string): WorkerHandle;
 	/**
 	 * Updates the server configuration and reloads the running Workers.
-	 *
-	 * @example
-	 * ```ts
-	 * await server.update((options) => ({
-	 *   ...options,
-	 *   outboundService(request) {
-	 *     if (request.url === "http://example.com/api/data") {
-	 *       return Response.json([
-	 *         { id: 1, name: "Alice" },
-	 *         { id: 2, name: "Bob" }
-	 *       ]);
-	 *     }
-	 *
-	 *     throw new Error(`Unexpected request to ${request.url}`);
-	 *   },
-	 * }));
-	 * ```
 	 */
 	update(
 		options: ServerOptions | ((currentOptions: ServerOptions) => ServerOptions)
 	): Promise<void>;
 	/**
 	 * Restores the server to its initial `createServer()` options and restarts the
-	 * active server session. Ephemeral storage is recreated, but persisted storage
-	 * is left on disk. The server URL may change after reset.
+	 * active server session. Storage is recreated, and the server URL may change
+	 * after reset.
 	 */
 	reset(): Promise<void>;
 	/**
@@ -203,16 +146,6 @@ type WorkerInput =
 			config: InlineConfig;
 	  };
 
-type DevServerOptions = Exclude<
-	NonNullable<StartDevWorkerInput["dev"]>["server"],
-	undefined
->;
-
-type InspectorOptions = Exclude<
-	NonNullable<StartDevWorkerInput["dev"]>["inspector"],
-	undefined
->;
-
 type ServerSession = {
 	primaryDevEnv: DevEnv;
 	devEnvs: DevEnv[];
@@ -237,7 +170,6 @@ type ServerSession = {
 export function createServer(options: ServerOptions): WorkerServer {
 	const initialOptions = options;
 	let currentOptions = options;
-	let resolvedAccountId: string | undefined;
 	let serverSession: ServerSession | undefined;
 	let startPromise: Promise<ServerSession> | undefined;
 
@@ -272,19 +204,6 @@ export function createServer(options: ServerOptions): WorkerServer {
 		return normalizedConfig;
 	}
 
-	function resolvePersistOption(
-		root: string,
-		persist: ServerOptions["persist"]
-	): string | false | undefined {
-		if (persist === true) {
-			return undefined;
-		}
-		if (typeof persist === "string") {
-			return resolvePath(root, persist);
-		}
-		return persist ?? false;
-	}
-
 	function resolveWorkerInputs(
 		serverOptions: ServerOptions
 	): StartDevWorkerInput[] {
@@ -292,16 +211,15 @@ export function createServer(options: ServerOptions): WorkerServer {
 			throw new Error("Worker server requires at least one worker.");
 		}
 
-		const cwd = process.cwd();
-		const serverRoot = serverOptions.root ?? cwd;
+		const root = serverOptions.root ?? process.cwd();
 
 		return serverOptions.workers.map((input, index, list) => {
 			const isPrimaryWorker = index === 0;
 			const isMultiworker = list.length > 1;
-			const root = input.root ?? serverOptions.root ?? cwd;
+			const projectRoot = input.root ?? root;
 			const inlineConfig =
 				"config" in input
-					? normalizeInlineWorkerConfig(input.config, root)
+					? normalizeInlineWorkerConfig(input.config, projectRoot)
 					: undefined;
 			const overrides = "configPath" in input ? input.overrides : undefined;
 			const bindings = convertConfigToBindings(
@@ -315,28 +233,21 @@ export function createServer(options: ServerOptions): WorkerServer {
 			return {
 				config:
 					"configPath" in input
-						? resolvePath(root, input.configPath)
+						? resolvePath(projectRoot, input.configPath)
 						: inlineConfig,
 				env: "configPath" in input ? input.env : undefined,
 				bindings,
 				dev: {
 					auth: serverAuthHook,
-					server: serverOptions.server ?? { hostname: "127.0.0.1", port: 0 },
-					logLevel: serverOptions.logLevel ?? "error",
-					watch: serverOptions.watch ?? false,
-					persist: resolvePersistOption(serverRoot, serverOptions.persist),
-					inspector: serverOptions.inspector ?? false,
+					server: { hostname: "127.0.0.1", port: 0 },
+					logLevel: "error",
+					watch: false,
+					persist: false,
+					inspector: false,
 					registry: undefined,
-					outboundService:
-						serverOptions.outboundService ??
-						((request) => {
-							/**
-							 * Miniflare passes its own undici-based Request here. Pass the URL as
-							 * RequestInfo and the request as RequestInit so method, headers, body,
-							 * and duplex are preserved by global fetch.
-							 */
-							return globalThis.fetch(request.url, request);
-						}),
+					outboundService: (request) => {
+						return globalThis.fetch(request.url, request);
+					},
 					multiworkerPrimary: isMultiworker ? isPrimaryWorker : undefined,
 					inferOriginFromRoutes: false,
 				},
@@ -432,17 +343,8 @@ export function createServer(options: ServerOptions): WorkerServer {
 	async function serverAuthHook(
 		config: Pick<Config, "account_id">
 	): Promise<CfAccount> {
-		const accountId =
-			currentOptions.accountId ??
-			resolvedAccountId ??
-			(await requireAuth(config));
-
-		if (currentOptions.accountId === undefined) {
-			resolvedAccountId = accountId;
-		}
-
 		return {
-			accountId,
+			accountId: await requireAuth(config),
 			apiToken: requireApiToken(),
 		};
 	}
@@ -608,7 +510,6 @@ export function createServer(options: ServerOptions): WorkerServer {
 
 			return {
 				url: ready.url,
-				inspectorUrl: ready.inspectorUrl,
 			};
 		},
 		async fetch(input, init) {

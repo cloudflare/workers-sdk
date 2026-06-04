@@ -3,7 +3,7 @@ import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import dedent from "ts-dedent";
-import { beforeEach, describe, it, onTestFinished, vi } from "vitest";
+import { beforeEach, describe, it, onTestFinished } from "vitest";
 import {
 	importWrangler,
 	WranglerE2ETestHelper,
@@ -46,12 +46,11 @@ describe("createServer", { sequential: true }, () => {
 		});
 		onTestFinished(server.close);
 
-		const { url, inspectorUrl } = await server.listen();
+		const { url } = await server.listen();
 
 		expect(url.protocol).toBe("http:");
 		expect(url.hostname).toBe("127.0.0.1");
 		expect(Number(url.port)).toBeGreaterThan(0);
-		expect(inspectorUrl).toBeUndefined();
 
 		const response = await fetch(url);
 		await expect(response.text()).resolves.toBe("Hello World");
@@ -429,7 +428,7 @@ describe("createServer", { sequential: true }, () => {
 
 		await expect(
 			Promise.race([
-				server.update((options) => ({ ...options, watch: true })),
+				server.update((options) => options),
 				setTimeout(5_000).then(() => {
 					throw new Error("server.update() timed out");
 				}),
@@ -466,45 +465,6 @@ describe("createServer", { sequential: true }, () => {
 		const response = await server.getWorker("missing-worker").fetch("/");
 		expect(response.status).toBe(404);
 		await expect(response.text()).resolves.toBe("No entrypoint worker found");
-	});
-
-	it("supports overriding fetch for outbound requests", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "hello-example",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return fetch("http://example.com");
-					}
-				};
-			`,
-		});
-
-		const server = createServer({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-			outboundService(request) {
-				if (request.url === "http://example.com/") {
-					return new Response("Mocked response from example.com");
-				}
-
-				throw new Error(`Unexpected outbound request to ${request.url}`);
-			},
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.text()).resolves.toBe(
-			"Mocked response from example.com"
-		);
 	});
 
 	it("uses the current Node process fetch for outbound requests by default", async ({
@@ -921,78 +881,11 @@ describe("createServer", { sequential: true }, () => {
 		await expect(setResponse.text()).resolves.toBe("stored");
 		const storedResponse = await server.fetch("/");
 		await expect(storedResponse.text()).resolves.toBe("value");
-		await server.close();
 
-		const persistentServer = createServer({
-			root: helper.tmpPath,
-			persist: "state",
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(persistentServer.close);
+		await server.reset();
 
-		await persistentServer.listen();
-		const persistentSetResponse = await persistentServer.fetch("/set");
-		await expect(persistentSetResponse.text()).resolves.toBe("stored");
-		await persistentServer.close();
-
-		const nextPersistentServer = createServer({
-			root: helper.tmpPath,
-			persist: "state",
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(nextPersistentServer.close);
-
-		await nextPersistentServer.listen();
-		const persistentStoredResponse = await nextPersistentServer.fetch("/");
-		await expect(persistentStoredResponse.text()).resolves.toBe("value");
-
-		await nextPersistentServer.reset();
-
-		const persistentResetResponse = await nextPersistentServer.fetch("/");
-		await expect(persistentResetResponse.text()).resolves.toBe("value");
-		await nextPersistentServer.close();
-
-		const defaultPersistentServer = createServer({
-			root: helper.tmpPath,
-			persist: true,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(defaultPersistentServer.close);
-		await defaultPersistentServer.listen();
-
-		await defaultPersistentServer.reset();
-	});
-
-	it("exposes the inspector URL when enabled", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "inspector-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("Hello World");
-					}
-				};
-			`,
-		});
-
-		const server = createServer({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-			inspector: { port: 0 },
-		});
-		onTestFinished(server.close);
-
-		const { inspectorUrl } = await server.listen();
-
-		expect(inspectorUrl).toBeDefined();
-		const inspectorResponse = await fetch(`http://${inspectorUrl?.host}/json`);
-		expect(inspectorResponse.ok).toBe(true);
+		const resetResponse = await server.fetch("/");
+		await expect(resetResponse.text()).resolves.toBe("missing");
 	});
 
 	it("triggers scheduled handlers", async ({ expect }) => {
@@ -1085,11 +978,6 @@ describe("createServer", { sequential: true }, () => {
 		const response2 = await server.fetch("/");
 		await expect(response2.text()).resolves.toBe("Hello World");
 
-		await server.update((options) => ({ ...options, watch: true }));
-
-		const response3 = await server.fetch("/");
-		await expect(response3.text()).resolves.toBe("Greeting");
-
 		await helper.seed({
 			"src/index.ts": dedent`
 				export default {
@@ -1100,9 +988,9 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		await vi.waitFor(async () => {
-			const response4 = await server.fetch("/");
-			expect(await response4.text()).toBe("Bonjour");
-		});
+		await setTimeout(1000);
+
+		const response3 = await server.fetch("/");
+		await expect(response3.text()).resolves.toBe("Hello World");
 	});
 });
