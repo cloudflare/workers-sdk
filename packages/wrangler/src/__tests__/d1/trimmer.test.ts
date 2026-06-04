@@ -27,6 +27,39 @@ describe("mayContainTransaction()", () => {
 			)
 		).toBe(true);
 	});
+
+	it("should return false when the phrase only appears inside a string literal", ({
+		expect,
+	}) => {
+		expect(
+			mayContainTransaction(
+				`UPDATE Nodes SET text = 'remember to remove BEGIN TRANSACTION and COMMIT' WHERE id = 537;`
+			)
+		).toBe(false);
+		expect(
+			mayContainTransaction(
+				`UPDATE Nodes SET text = 'remove BEGIN TRANSACTION; and COMMIT;' WHERE id = 537;`
+			)
+		).toBe(false);
+		expect(
+			mayContainTransaction(
+				`INSERT INTO Nodes (text) VALUES ("a BEGIN TRANSACTION mention");`
+			)
+		).toBe(false);
+	});
+
+	it("should return false when the phrase only appears inside a comment", ({
+		expect,
+	}) => {
+		expect(
+			mayContainTransaction(
+				`-- BEGIN TRANSACTION is handled by D1\nSELECT * FROM my_table;`
+			)
+		).toBe(false);
+		expect(
+			mayContainTransaction(`/* BEGIN TRANSACTION; */ SELECT * FROM my_table;`)
+		).toBe(false);
+	});
 });
 
 describe("trimSqlQuery()", () => {
@@ -89,6 +122,18 @@ describe("trimSqlQuery()", () => {
 			D1 runs your SQL in a transaction for you.
 			Please export an SQL file from your SQLite database and try again.]
 		`);
+	});
+
+	it("should not throw when a string literal contains the words BEGIN TRANSACTION", ({
+		expect,
+	}) => {
+		expect(
+			trimSqlQuery(
+				`UPDATE Nodes SET text = 'remove BEGIN TRANSACTION; and COMMIT;' WHERE id = 537;`
+			)
+		).toMatchInlineSnapshot(
+			`"UPDATE Nodes SET text = 'remove BEGIN TRANSACTION; and COMMIT;' WHERE id = 537;"`
+		);
 	});
 
 	it("should handle strings", ({ expect }) => {
