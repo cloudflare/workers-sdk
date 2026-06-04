@@ -131,7 +131,7 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
-	const web_search = extractBindingsOfType("web_search", bindings)[0];
+	const websearch = extractBindingsOfType("websearch", bindings)[0];
 	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
@@ -369,10 +369,10 @@ export function createWorkerUploadForm(
 		});
 	});
 
-	if (web_search !== undefined) {
+	if (websearch !== undefined) {
 		metadataBindings.push({
-			name: web_search.binding,
-			type: "web_search",
+			name: websearch.binding,
+			type: "websearch",
 		});
 	}
 

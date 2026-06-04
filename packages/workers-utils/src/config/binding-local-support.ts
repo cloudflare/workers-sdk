@@ -69,7 +69,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	flagship: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_service: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_network: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
-	web_search: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
+	websearch: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	agent_memory: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 };
 

@@ -1,4 +1,5 @@
-import type { fetchResult } from "../cfetch";
+import type { fetchResult, fetchListResult } from "../cfetch";
+import type { confirm, prompt } from "../dialogs";
 import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
 import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
@@ -109,6 +110,19 @@ export type HandlerContext = {
 	 * Use fetchResult to make *auth'd* requests to the Cloudflare API.
 	 */
 	fetchResult: typeof fetchResult;
+	fetchListResult: typeof fetchListResult;
+
+	/**
+	 * Interactive prompts
+	 */
+	confirm: typeof confirm;
+	prompt: typeof prompt;
+
+	/**
+	 * Whether the process is non-interactive or running in CI.
+	 */
+	isNonInteractiveOrCI: () => boolean;
+
 	/**
 	 * Error classes provided to the command implementor as a convenience
 	 * to aid discoverability and to encourage their usage.

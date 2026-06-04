@@ -154,6 +154,50 @@ describe("RemoteRuntimeController", () => {
 		vi.mocked(getAccessHeaders).mockResolvedValue({});
 	});
 
+	describe("stale bundle bail-out", () => {
+		it("should skip stale bundles and only reload once for rapid updates", async ({
+			expect,
+		}) => {
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			// Initial bundle
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// Record events before rapid updates
+			const eventsBefore = bus.events.length;
+			vi.mocked(createWorkerPreview).mockClear();
+
+			// Fire many rapid updates
+			for (let i = 0; i < 5; i++) {
+				controller.onBundleStart({ type: "bundleStart", config });
+				controller.onBundleComplete({
+					type: "bundleComplete",
+					config,
+					bundle,
+				});
+			}
+
+			// Wait for the final reloadComplete
+			await bus.waitFor("reloadComplete");
+
+			// Give stale bundles time to flush through the mutex
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			// Stale bundles should bail out early — only one reloadComplete
+			const reloadCompleteEvents = bus.events
+				.slice(eventsBefore)
+				.filter((e) => e.type === "reloadComplete");
+			expect(reloadCompleteEvents).toHaveLength(1);
+
+			// The API should only be called once (for the winning bundle)
+			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+		});
+	});
+
 	describe("proactive token refresh", () => {
 		afterEach(() => vi.useRealTimers());
 

@@ -125,7 +125,7 @@ function extractBindingNames(config: Config): string[] {
 			}
 			case "browser":
 			case "ai":
-			case "web_search": {
+			case "websearch": {
 				const value: Config[typeof key] = untypedValue;
 				return value ? [value.binding] : [];
 			}

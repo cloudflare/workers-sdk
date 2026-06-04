@@ -1,10 +1,10 @@
-import { getAssetsOptions } from "../assets";
+import { triggersDeploy } from "@cloudflare/deploy-helpers";
 import { createCommand, createNamespace } from "../core/create-command";
+import { resolveTriggersInput } from "../deployment-bundle/resolve-config-args";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { ensureQueuesExistByConfig } from "../queues/client";
 import { requireAuth } from "../user";
-import { getScriptName } from "../utils/getScriptName";
-import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import triggersDeploy from "./deploy";
 
 export const triggersNamespace = createNamespace({
 	metadata: {
@@ -61,28 +61,30 @@ export const triggersDeployCommand = createCommand({
 	behaviour: {
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
-	async handler(args, { config }) {
-		const assetsOptions = getAssetsOptions({
-			args: { assets: undefined },
-			config,
-		});
+	async handler(args, { config, ...ctx }) {
 		metrics.sendMetricsEvent("deploy worker triggers", {
 			sendMetrics: config.send_metrics,
 		});
+		const props = resolveTriggersInput(args, config);
 
-		const accountId = args.dryRun ? undefined : await requireAuth(config);
+		if (args.dryRun) {
+			logger.log(`--dry-run: exiting now.`);
+			return;
+		}
 
-		await triggersDeploy({
-			config,
-			accountId,
-			name: getScriptName(args, config),
-			env: args.env,
-			triggers: args.triggers,
-			routes: args.routes,
-			useServiceEnvironments: useServiceEnvironments(config),
-			dryRun: args.dryRun,
-			assetsOptions,
-			firstDeploy: false, // at this point the Worker should already exist.
-		});
+		// Any validation that requires auth goes below
+		const accountId = await requireAuth(config);
+		await ensureQueuesExistByConfig(config);
+
+		await triggersDeploy(
+			{
+				config,
+				accountId,
+				env: args.env,
+				firstDeploy: false,
+				...props,
+			},
+			ctx
+		);
 	},
 });

@@ -22,6 +22,10 @@ type FetchResult<ResponseType = unknown> = {
 	result_info?: ResultInfo;
 };
 
+type ErrorResponse = {
+	error: string;
+};
+
 const isDefined = <T>(
 	value: T | null | undefined
 ): value is Exclude<T, null | undefined> => {
@@ -46,6 +50,15 @@ const isBlob = (value: any): value is Blob => {
 		typeof value.constructor.name === "string" &&
 		/^(Blob|File)$/.test(value.constructor.name) &&
 		/^(Blob|File)$/.test(value[Symbol.toStringTag])
+	);
+};
+
+const isErrorResponse = (value: unknown): value is ErrorResponse => {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"error" in value &&
+		typeof value.error === "string"
 	);
 };
 
@@ -233,6 +246,8 @@ const parseResponseSchemaV4 = <T>(
 		} else {
 			result = {};
 		}
+	} else if (isErrorResponse(fetchResult)) {
+		result = fetchResult;
 	} else {
 		result = { error: fetchResult.errors?.[0]?.message };
 	}

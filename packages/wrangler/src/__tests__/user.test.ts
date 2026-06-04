@@ -291,6 +291,99 @@ describe("User", () => {
 			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the \`CLOUDFLARE_API_ENVIRONMENT\` environment variable.]
 		`);
 		});
+
+		// Regression coverage for the OAuth callback hang. When the OAuth
+		// provider redirected to `/oauth/callback?error=...` with any error
+		// other than `access_denied`, Wrangler used to never write a response,
+		// causing `server.close()` to wait forever for the connection to drain
+		// and the login command to hang until the 120s OAuth timeout. The
+		// tightened `mock-http-server.ts` faithfully reproduces those
+		// production semantics, so a regression would cause these tests to
+		// fail at the vitest test timeout rather than passing by accident.
+		describe("OAuth callback error handling", () => {
+			it("rejects with the bare OAuth error code when no description is provided", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback({ error: "invalid_scope" });
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_scope]`
+				);
+			});
+
+			it("rejects with both the OAuth error code and error_description", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback({
+					error: "invalid_scope",
+					error_description:
+						"The OAuth 2.0 Client is not allowed to request scope 'browser:write'.",
+				});
+
+				await expect(runWrangler("login")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: OAuth error: invalid_scope
+					  The OAuth 2.0 Client is not allowed to request scope 'browser:write'.]
+				`);
+			});
+
+			it("rejects with the existing consent-denied message for access_denied", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback({ error: "access_denied" });
+
+				await expect(runWrangler("login")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Error: Consent denied. You must grant consent to Wrangler in order to login.
+					If you don't want to do this consider passing an API token via the \`CLOUDFLARE_API_TOKEN\` environment variable]
+				`);
+			});
+
+			it("rejects with the provider error when /oauth2/token fails after a valid auth code", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						() =>
+							HttpResponse.json({ error: "invalid_grant" }, { status: 400 }),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_grant]`
+				);
+			});
+
+			it("rejects with the provider error when /oauth2/token returns 2xx with an error body", async ({
+				expect,
+			}) => {
+				// Defensive handling of the (non-standard) case where the token
+				// endpoint returns a success status but the body still carries an
+				// OAuth `error` field. The error should still be surfaced via
+				// `toErrorClass` rather than as a plain `Error`.
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						() => HttpResponse.json({ error: "invalid_token" }),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_token]`
+				);
+			});
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async ({

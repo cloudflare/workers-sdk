@@ -1146,6 +1146,51 @@ describe("versions upload", () => {
 			).rejects.toThrow(/Workers Sites does not support uploading versions/);
 		});
 
+		test("should error when --script points to a directory", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("assets", { recursive: true });
+			fs.writeFileSync("assets/index.html", "<h1>Hello</h1>");
+
+			await expect(runWrangler("versions upload --script ./assets")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+				  wrangler versions upload ./assets
+				  wrangler versions upload --assets ./assets]
+			`);
+		});
+
+		test("should error when --script points to a directory even when positional path is also provided", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("assets", { recursive: true });
+			fs.writeFileSync("assets/index.html", "<h1>Hello</h1>");
+			fs.mkdirSync("other-dir", { recursive: true });
+			fs.writeFileSync("other-dir/page.html", "<h1>Other</h1>");
+
+			await expect(runWrangler("versions upload ./assets --script ./other-dir"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+				  wrangler versions upload ./other-dir
+				  wrangler versions upload --assets ./other-dir]
+			`);
+		});
+
+		test("should error when --script points to a directory even when positional path is a file", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("assets", { recursive: true });
+			fs.writeFileSync("assets/index.html", "<h1>Hello</h1>");
+			fs.writeFileSync("index.js", "export default {}");
+
+			await expect(runWrangler("versions upload ./index.js --script ./assets"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The --script option must point to a Worker entry-point file, not a directory. To deploy a directory of static assets, use the positional path argument or the --assets flag instead:
+				  wrangler versions upload ./assets
+				  wrangler versions upload --assets ./assets]
+			`);
+		});
+
 		test("should error when no name is provided", async ({ expect }) => {
 			writeWorkerSource();
 			await expect(
@@ -1752,6 +1797,45 @@ describe("versions upload", () => {
 			fs.writeFileSync("public/index.html", "<h1>Hello</h1>");
 
 			await runWrangler("versions upload --assets public");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.assets).toBeDefined();
+			expect(metadata.assets?.jwt).toEqual("test-assets-jwt");
+		});
+
+		test("should upload assets when directory is passed as positional path", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Mock asset upload session
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/assets-upload-session`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "test-assets-jwt", buckets: [[]] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+			fs.mkdirSync("public", { recursive: true });
+			fs.writeFileSync("public/index.html", "<h1>Hello</h1>");
+
+			await runWrangler("versions upload public");
 
 			const metadata = await getMetadata(requests[requests.length - 1]);
 			expect(metadata.assets).toBeDefined();

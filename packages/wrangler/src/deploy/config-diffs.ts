@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { getSubdomainValuesAPIMock } from "../triggers/deploy";
+import { getSubdomainValuesAPIMock } from "@cloudflare/deploy-helpers";
 import {
 	diffJsonObjects,
 	isModifiedDiffValue,
@@ -55,7 +55,7 @@ const reorderableBindings = {
 	images: false,
 	stream: false,
 	media: false,
-	web_search: false,
+	websearch: false,
 	version_metadata: false,
 	unsafe: false,
 	assets: false,
@@ -263,7 +263,7 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		"images",
 		"stream",
 		"media",
-		"web_search",
+		"websearch",
 	] as const;
 	for (const singleBindingField of singleBindingFields) {
 		if (
