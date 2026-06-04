@@ -40,7 +40,7 @@ catalogs:
       specifier: 3.2.0
       version: 3.2.0
     msw:
-      specifier: ^2.14.6
+      specifier: 2.14.6
       version: 2.14.6
     open:
       specifier: 11.0.0
@@ -6584,10 +6584,10 @@ packages:
     engines: {node: '>=16'}
 
   '@msw/cloudflare@https://pkg.pr.new/mswjs/cloudflare/@msw/cloudflare@beta':
-    resolution: {tarball: https://pkg.pr.new/mswjs/cloudflare/@msw/cloudflare@beta}
+    resolution: {integrity: sha512-Hfwuzuk30cOnVO9XEyxf9Ju5HqzkcJTugYwi75rMFhRMFfbF0b38LYmBYUIxHZq1BpfkXseGCn+mVgebNBFLfQ==, tarball: https://pkg.pr.new/mswjs/cloudflare/@msw/cloudflare@beta}
     version: 0.0.1
     peerDependencies:
-      msw: '>=2.14.1'
+      msw: '>=2.14.6'
 
   '@mswjs/interceptors@0.41.9':
     resolution: {integrity: sha512-VVPPgHyQ6ShqnrmDWuxjmUIsO9gWyOZFmuOfLd9LfBGQJwZfy0gvv9pbHSJuoFNIYC7ZDX9aoFwowjcdSC4E8w==}
