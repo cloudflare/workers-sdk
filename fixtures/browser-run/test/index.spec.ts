@@ -4,6 +4,14 @@ import { resolve } from "path";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
+const BROWSER_RENDERING_RETRY = {
+	retry: {
+		condition: /Chrome readiness probe .* timed out|Test timed out/i,
+		count: 3,
+		delay: 1_000,
+	},
+};
+
 describe.sequential("Local Browser", () => {
 	let ip: string,
 		port: number,
@@ -47,33 +55,43 @@ describe.sequential("Local Browser", () => {
 				).resolves.toEqual("Please add an ?url=https://example.com/ parameter");
 			});
 
-			it("Run a browser, and check h1 text content", async ({ expect }) => {
-				await expect(
-					fetchText(
-						`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=select`
-					)
-				).resolves.toEqual("Example Domain");
-			});
+			it(
+				"Run a browser, and check h1 text content",
+				BROWSER_RENDERING_RETRY,
+				async ({ expect }) => {
+					await expect(
+						fetchText(
+							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=select`
+						)
+					).resolves.toEqual("Example Domain");
+				}
+			);
 
-			it("Run a browser, and check p text content", async ({ expect }) => {
-				await expect(
-					fetchText(
-						`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=alter`
-					)
-				).resolves.toEqual(
-					`New paragraph text set by ${lib === "playwright" ? "Playwright" : "Puppeteer"}!`
-				);
-			});
+			it(
+				"Run a browser, and check p text content",
+				BROWSER_RENDERING_RETRY,
+				async ({ expect }) => {
+					await expect(
+						fetchText(
+							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=alter`
+						)
+					).resolves.toEqual(
+						`New paragraph text set by ${lib === "playwright" ? "Playwright" : "Puppeteer"}!`
+					);
+				}
+			);
 
-			it("Disconnect a browser, and check its session connection status", async ({
-				expect,
-			}) => {
-				await expect(
-					fetchText(
-						`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=disconnect`
-					)
-				).resolves.toEqual(`Browser disconnected`);
-			});
+			it(
+				"Disconnect a browser, and check its session connection status",
+				BROWSER_RENDERING_RETRY,
+				async ({ expect }) => {
+					await expect(
+						fetchText(
+							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=disconnect`
+						)
+					).resolves.toEqual(`Browser disconnected`);
+				}
+			);
 		});
 	}
 });
