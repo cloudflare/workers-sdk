@@ -659,15 +659,13 @@ describe("createServer", { sequential: true }, () => {
 			workers: [
 				{
 					configPath: "./wrangler.jsonc",
-					overrides: {
-						vars: {
-							CONFIG_VAR: "from-override",
-							ADDED_VAR: "from-override",
-							NULL_VAR: null,
-						},
-						secrets: {
-							API_TOKEN: "from-override",
-						},
+					vars: {
+						CONFIG_VAR: "from-override",
+						ADDED_VAR: "from-override",
+						NULL_VAR: null,
+					},
+					secrets: {
+						API_TOKEN: "from-override",
 					},
 				},
 			],
@@ -690,15 +688,13 @@ describe("createServer", { sequential: true }, () => {
 			workers: [
 				{
 					configPath: "./wrangler.jsonc",
-					overrides: {
-						vars: {
-							CONFIG_VAR: "from-updated-override",
-							ADDED_VAR: "from-updated-override",
-							NULL_VAR: null,
-						},
-						secrets: {
-							API_TOKEN: "from-updated-override",
-						},
+					vars: {
+						CONFIG_VAR: "from-updated-override",
+						ADDED_VAR: "from-updated-override",
+						NULL_VAR: null,
+					},
+					secrets: {
+						API_TOKEN: "from-updated-override",
 					},
 				},
 			],

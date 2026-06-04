@@ -129,20 +129,40 @@ export type WorkerServer = {
 
 type InlineConfig = Omit<RawConfig, "env">;
 
-type ConfigOverrides = {
-	vars?: Record<string, Json>;
-	secrets?: Record<string, string>;
-};
-
 type WorkerInput =
 	| {
+			/**
+			 * Base directory for resolving this Worker's relative config path.
+			 * Defaults to `ServerOptions.root`.
+			 */
 			root?: string;
+			/**
+			 * Path to a Wrangler config file for this Worker.
+			 * Relative paths resolve from `root`.
+			 */
 			configPath: string | URL;
+			/**
+			 * Wrangler environment to load from the config file.
+			 */
 			env?: string;
-			overrides?: ConfigOverrides;
+			/**
+			 * Test-only vars that override vars from the Wrangler config.
+			 */
+			vars?: Record<string, Json>;
+			/**
+			 * Test-only secrets that override values loaded from `.dev.vars` and `.env` files.
+			 */
+			secrets?: Record<string, string>;
 	  }
 	| {
+			/**
+			 * Base directory for resolving paths in the inline config.
+			 * Defaults to `ServerOptions.root`.
+			 */
 			root?: string;
+			/**
+			 * Inline Wrangler config for this Worker.
+			 */
 			config: InlineConfig;
 	  };
 
@@ -211,31 +231,27 @@ export function createServer(options: ServerOptions): WorkerServer {
 			throw new Error("Worker server requires at least one worker.");
 		}
 
-		const root = serverOptions.root ?? process.cwd();
+		const serverRoot = serverOptions.root ?? process.cwd();
 
 		return serverOptions.workers.map((input, index, list) => {
 			const isPrimaryWorker = index === 0;
 			const isMultiworker = list.length > 1;
-			const projectRoot = input.root ?? root;
-			const inlineConfig =
-				"config" in input
-					? normalizeInlineWorkerConfig(input.config, projectRoot)
-					: undefined;
-			const overrides = "configPath" in input ? input.overrides : undefined;
+			const root = input.root ?? serverRoot;
 			const bindings = convertConfigToBindings(
-				{ vars: overrides?.vars },
+				{ vars: "vars" in input ? input.vars : undefined },
 				{ usePreviewIds: true }
 			);
-			for (const [key, value] of Object.entries(overrides?.secrets ?? {})) {
+			const secrets = "secrets" in input ? input.secrets : undefined;
+			for (const [key, value] of Object.entries(secrets ?? {})) {
 				bindings[key] = { type: "secret_text", value };
 			}
 
 			return {
 				config:
-					"configPath" in input
-						? resolvePath(projectRoot, input.configPath)
-						: inlineConfig,
-				env: "configPath" in input ? input.env : undefined,
+					"config" in input
+						? normalizeInlineWorkerConfig(input.config, root)
+						: resolvePath(root, input.configPath),
+				env: "env" in input ? input.env : undefined,
 				bindings,
 				dev: {
 					auth: serverAuthHook,
