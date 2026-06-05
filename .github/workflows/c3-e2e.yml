@@ -7,9 +7,25 @@ permissions:
   contents: read
   pull-requests: read
 
+# pnpm 11-specific settings, applied at workflow level so every step
+# (including the matrix-version verify) bypasses two pnpm 11 defaults that
+# would otherwise block the e2e flow. Both are recognised by pnpm 11+ and
+# silently ignored by pnpm 10.
+#
+# - pmOnFail=ignore: pnpm 11's default `download` would silently re-exec as
+#   the monorepo's pinned pnpm 10.33.0, defeating the matrix override.
+# - verifyDepsBeforeRun=false: pnpm 11's default `install` would re-run
+#   `pnpm install` at the monorepo root before invoking the script, which
+#   then trips on engines.pnpm.
+env:
+  pnpm_config_pm_on_fail: ignore
+  pnpm_config_verify_deps_before_run: "false"
+
 jobs:
   e2e:
-    # Runs the non-frameworks C3 E2E tests on all supported operating systems and package managers.
+    # Runs the non-frameworks C3 E2E tests on all supported operating systems
+    # and package managers. The pnpm jobs deliberately run pnpm 11.5.1 so the
+    # e2e suite actually exercises pnpm 11's stricter build-script policy.
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}-${{ matrix.filter }}
@@ -22,23 +38,23 @@ jobs:
         filter: ["cli", "workers"]
         os: [{ name: ubuntu-latest, description: Linux }]
         pm:
-          - { name: pnpm, version: "10.33.0" }
+          - { name: pnpm, version: "11.5.1" }
           - { name: npm, version: "0.0.0" }
           # The yarn tests keep failing on Linux with out of space errors, with no clear reason why. Disabling for now.
           # - { name: yarn, version: "1.0.0" }
         include:
           - os: { name: windows-latest, description: Windows }
-            pm: { name: pnpm, version: "10.33.0" }
+            pm: { name: pnpm, version: "11.5.1" }
             filter: "cli"
           - os: { name: windows-latest, description: Windows }
-            pm: { name: pnpm, version: "10.33.0" }
+            pm: { name: pnpm, version: "11.5.1" }
             filter: "workers"
           - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "10.33.0" }
+            pm: { name: pnpm, version: "11.5.1" }
             experimental: true
             filter: "cli"
           - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "10.33.0" }
+            pm: { name: pnpm, version: "11.5.1" }
             experimental: true
             filter: "workers"
     runs-on: ${{ matrix.os.name }}
@@ -82,6 +98,50 @@ jobs:
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler Tester'
 
+      # The `Install Dependencies` step above installs the monorepo's pinned
+      # pnpm 10.33.0 (read from the root `packageManager` field). For the pnpm
+      # matrix entry below we need the scaffolded-project installs that C3
+      # spawns to actually run the matrix version on PATH, so the e2e suite
+      # exercises pnpm 11's behaviour. Without this, `E2E_TEST_PM_VERSION`
+      # only relabels C3's `npm_config_user_agent` and the underlying pnpm
+      # stays at 10.33.0 (so pnpm 11 regressions go undetected).
+      #
+      # `pnpm/action-setup` refuses to install when both `version` input and
+      # the root `package.json#packageManager` are set, so we point it at a
+      # stub `package.json` via `package_json_file`. We also loosen
+      # `engines.pnpm` because pnpm 11 otherwise bails with
+      # ERR_PNPM_UNSUPPORTED_ENGINE on every command at the monorepo root.
+      - name: Prepare workspace for matrix pnpm install
+        if: matrix.pm.name == 'pnpm' && steps.changes.outputs.everything_but_markdown == 'true'
+        shell: bash
+        run: |
+          mkdir -p .ci-pnpm-setup-stub
+          printf '{"name":"ci-stub","private":true}\n' > .ci-pnpm-setup-stub/package.json
+          node -e "
+            const fs = require('node:fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
+            if (pkg.engines && pkg.engines.pnpm) pkg.engines.pnpm = '*';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, '\t') + '\n');
+          "
+      - name: Install matrix pnpm version for scaffolded installs
+        if: matrix.pm.name == 'pnpm' && steps.changes.outputs.everything_but_markdown == 'true'
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+        with:
+          version: ${{ matrix.pm.version }}
+          package_json_file: .ci-pnpm-setup-stub/package.json
+          # Install to a distinct directory so the action's `addPath` prepends
+          # this entry ahead of the earlier `~/setup-pnpm` (which holds the
+          # monorepo's pinned pnpm 10.x).
+          dest: ~/matrix-pnpm
+      - name: Verify pnpm on PATH matches matrix version
+        if: matrix.pm.name == 'pnpm' && steps.changes.outputs.everything_but_markdown == 'true'
+        shell: bash
+        run: |
+          got="$(pnpm --version)"
+          want="${{ matrix.pm.version }}"
+          echo "pnpm on PATH: $got (expected $want)"
+          [ "$got" = "$want" ] || { echo "ERROR: PATH pnpm is $got, not $want — scaffolded installs would silently run the wrong version."; exit 1; }
+
       - id: run-e2e
         if: steps.changes.outputs.everything_but_markdown == 'true'
         shell: bash
@@ -113,6 +173,16 @@ jobs:
 
   frameworks-e2e:
     # Runs the C3 frameworks E2E tests only in the merge queue, on the release branch, if create-cloudflare has changed, or when explicitly requested via label.
+    #
+    # The pnpm job here intentionally stays on pnpm 10.33.0 (monorepo's
+    # pinned version). Several framework generators (Next.js, Nuxt, Analog,
+    # Qwik, Hono) pull in additional build-script dependencies
+    # (`@parcel/watcher`, `unrs-resolver`, `lmdb`, ...) that are outside C3's
+    # pre-approval scope — those approvals are the framework generator's or
+    # the user's responsibility, not C3's. Until upstream generators approve
+    # their own builds, pnpm 11 in CI would fail those frameworks
+    # non-interactively. pnpm 10 only warns, so the scaffold exercise stays
+    # meaningful.
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-frameworks${{ matrix.experimental && '-experimental' || '' }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
