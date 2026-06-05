@@ -1,6 +1,17 @@
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+	closeSync,
+	constants,
+	mkdirSync,
+	openSync,
+	readFileSync,
+	readdirSync,
+	statSync,
+	unlinkSync,
+	writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import {
 	getGlobalWranglerConfigPath,
 	parseJSONC,
@@ -94,6 +105,30 @@ export async function maybeInstallCloudflareSkillsGlobally(
 			skippedBecause: "Non-interactive terminal",
 		});
 		return;
+	}
+
+	// When not forced, check for concurrent wrangler instances. If multiple
+	// instances are starting at the same time, all of them skip the prompt to
+	// avoid TTY contention (the second process's output would overwrite the
+	// first's interactive prompt, making it invisible to the user).
+	// When force=true the user explicitly requested installation via
+	// --install-skills, and confirm() is bypassed, so no TTY contention.
+	if (!force) {
+		const safeToPrompt = await waitForConcurrentInstances();
+		if (!safeToPrompt) {
+			sendResultMetricsEvent({
+				skippedBecause: "Concurrent wrangler instances detected",
+			});
+			return;
+		}
+
+		// Another single-instance wrangler run may have completed the prompt
+		// during the grace period. Re-check the metadata file so we don't
+		// prompt a second time.
+		const freshConfig = readSkillsInstallMetadataFile();
+		if (freshConfig !== undefined) {
+			return;
+		}
 	}
 
 	let accepted: boolean;
@@ -263,6 +298,22 @@ interface SkillsInstallMetadata {
 /** Jsonc metadata file created when Cloudflare agent skills are installed */
 const SKILLS_INSTALL_METADATA_FILENAME = "agents-skills-install.jsonc";
 
+/**
+ * Maximum age (in milliseconds) of a pending metadata file before it is
+ * considered stale and eligible for removal. A process that crashed after
+ * writing the pending marker but before completing the prompt leaves a stale
+ * file; 60 seconds is well above the expected prompt+install duration.
+ */
+const SKILLS_INSTALL_PENDING_STALE_MS = 60_000;
+
+/**
+ * Grace period (in milliseconds) the first process waits after writing the
+ * pending metadata file before checking whether a concurrent instance
+ * overwrote it. This gives a second wrangler process time to start up and
+ * signal its presence by writing its own PID into the file.
+ */
+const SKILLS_INSTALL_GRACE_MS = 500;
+
 /** GitHub Contents API URL for listing skill directories in the cloudflare/skills repo. */
 const SKILLS_REPO_CONTENTS_URL =
 	"https://api.github.com/repos/cloudflare/skills/contents/skills";
@@ -281,6 +332,156 @@ function getSkillsInstallMetadataFilePath(): string {
 		getGlobalWranglerConfigPath(),
 		SKILLS_INSTALL_METADATA_FILENAME
 	);
+}
+
+/**
+ * Shape of the temporary "pending" marker written to the metadata file during
+ * concurrent-instance collision detection. Distinguished from real metadata
+ * by the presence of the `pending` field.
+ */
+interface PendingSkillsInstallMarker {
+	/** Always `true` — signals this is a pending marker, not real metadata. */
+	pending: true;
+	/** PID of the wrangler process that wrote this marker. */
+	pid: number;
+}
+
+/**
+ * Detects whether multiple wrangler processes are starting concurrently by
+ * using the metadata JSONC file itself as both the lock and the contention
+ * signal. No separate lockfile or marker file is needed.
+ *
+ * **How it works:**
+ *
+ * 1. The first process atomically creates the metadata JSONC file
+ *    (`O_CREAT | O_EXCL`) and writes `{"pending": true, "pid": <PID>}`.
+ * 2. Any subsequent process that finds the file already exists reads it.
+ *    If it contains a `pending` marker (not real metadata), the second process
+ *    overwrites the file with its own PID (signalling contention) and returns
+ *    `false`.
+ * 3. The first process waits a {@link SKILLS_INSTALL_GRACE_MS | grace period}
+ *    (500 ms), then re-reads the file and checks whether the PID still matches.
+ *    - Same PID → no contention, return `true` (safe to prompt).
+ *    - Different PID → contention detected, delete the file, return `false`.
+ * 4. On contention the file is deleted so the next single-instance run can
+ *    prompt. On success the file is left in place and later overwritten with
+ *    real metadata by {@link writeSkillsInstallMetadataFile}.
+ *
+ * Stale pending files (older than {@link SKILLS_INSTALL_PENDING_STALE_MS})
+ * from crashed processes are detected and cleaned up automatically.
+ *
+ * @returns `true` if no concurrent instance was detected (safe to prompt),
+ *   `false` if contention was detected (skip the prompt).
+ */
+async function waitForConcurrentInstances(): Promise<boolean> {
+	const metadataPath = getSkillsInstallMetadataFilePath();
+	const myPid = process.pid;
+	mkdirSync(path.dirname(metadataPath), { recursive: true });
+
+	const myMarker: PendingSkillsInstallMarker = { pending: true, pid: myPid };
+
+	try {
+		// Atomically create the file — fails with EEXIST if another process
+		// (or a previous completed run) already created it.
+		const fd = openSync(
+			metadataPath,
+			// eslint-disable-next-line no-bitwise -- atomic create-or-fail
+			constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY
+		);
+		writeFileSync(fd, JSON.stringify(myMarker));
+		closeSync(fd);
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
+			// Unexpected filesystem error — fail open so the prompt still
+			// appears rather than being silently suppressed forever.
+			return true;
+		}
+
+		// The file already exists. Read it to determine what's inside.
+		let existingContent: Record<string, unknown>;
+		try {
+			existingContent = JSON.parse(readFileSync(metadataPath, "utf8"));
+		} catch {
+			// File is corrupt or unreadable — delete and fail open.
+			try {
+				unlinkSync(metadataPath);
+			} catch {
+				// Best-effort cleanup.
+			}
+			return true;
+		}
+
+		// If the file contains real metadata (not a pending marker), another
+		// run already completed. The caller's initial metadata check should
+		// have caught this, but handle it defensively.
+		if (!existingContent.pending) {
+			return true;
+		}
+
+		// The file is a pending marker from another process. Check if it's stale.
+		try {
+			const fileStat = statSync(metadataPath);
+			if (Date.now() - fileStat.mtimeMs >= SKILLS_INSTALL_PENDING_STALE_MS) {
+				// Stale pending marker — the creating process likely crashed.
+				// Delete and treat as a fresh single instance.
+				unlinkSync(metadataPath);
+				return true;
+			}
+		} catch {
+			// Cannot stat — fail open.
+			return true;
+		}
+
+		// Fresh pending marker from another process — overwrite with our PID
+		// to signal contention, then bail.
+		try {
+			writeFileSync(metadataPath, JSON.stringify(myMarker));
+		} catch {
+			// Best-effort — if the overwrite fails, the first process will
+			// see its own PID and proceed with the prompt (acceptable).
+		}
+		return false;
+	}
+
+	// We created the file. Wait the grace period for a second instance to
+	// overwrite it with a different PID.
+	await setTimeout(SKILLS_INSTALL_GRACE_MS);
+
+	// Re-read the file and check whether our PID is still there.
+	try {
+		const content = JSON.parse(readFileSync(metadataPath, "utf8")) as {
+			pending?: boolean;
+			pid?: number;
+		};
+
+		if (!content.pending) {
+			// The file no longer contains a pending marker — another process
+			// completed the prompt and wrote real metadata during the grace
+			// period. Return true (safe to proceed); the caller will re-read
+			// the metadata file and see the completed state.
+			return true;
+		}
+
+		if (content.pid === myPid) {
+			// No contention — our PID is still there. Leave the file in place;
+			// it will be overwritten with real metadata after the prompt.
+			return true;
+		}
+
+		// A different process overwrote our pending marker with its own PID —
+		// contention detected. Delete the file so the next single-instance
+		// run can prompt.
+		try {
+			unlinkSync(metadataPath);
+		} catch {
+			// Best-effort cleanup.
+		}
+		return false;
+	} catch {
+		// File was deleted or is unreadable — another process cleaned up.
+		// Fail open so the prompt still appears.
+		return true;
+	}
 }
 
 /**
@@ -349,12 +550,21 @@ function migrateMetadataToV1(
  * If the file uses the legacy schema (no `version` field), it is automatically
  * migrated to the current version-1 format and overwritten on disk.
  *
- * @returns The parsed metadata file, or `undefined` if the file doesn't exist or can't be parsed.
+ * Temporary "pending" markers written by the concurrent-instance detection
+ * logic (identified by a `pending` field) are treated as non-existent.
+ *
+ * @returns The parsed metadata file, or `undefined` if the file doesn't exist,
+ *   can't be parsed, or contains a pending collision-detection marker.
  */
 function readSkillsInstallMetadataFile(): SkillsInstallMetadata | undefined {
 	try {
 		const content = readFileSync(getSkillsInstallMetadataFilePath(), "utf8");
 		const parsed = parseJSONC(content) as Record<string, unknown>;
+
+		// Ignore temporary pending markers written by waitForConcurrentInstances().
+		if ((parsed as { pending?: unknown }).pending) {
+			return undefined;
+		}
 
 		// TODO(dario): Remove this migration branch after 2026-06-05 — by then
 		// most active users' metadata files will have been converted to version 1.

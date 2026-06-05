@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
@@ -94,6 +94,28 @@ function readMetadataFile(): Record<string, unknown> {
 		"agents-skills-install.jsonc"
 	);
 	return JSON.parse(readFileSync(filePath, "utf8"));
+}
+
+/** Returns the absolute path to the metadata/pending marker file. */
+function getMetadataFilePath(): string {
+	return path.join(
+		getGlobalWranglerConfigPath(),
+		"agents-skills-install.jsonc"
+	);
+}
+
+/**
+ * Writes a pending collision-detection marker to the metadata file,
+ * simulating another wrangler instance that has already started the
+ * concurrent-instance detection flow.
+ *
+ * @param pid - The PID to write into the marker. Defaults to a fake PID
+ *   that won't match the current process.
+ */
+function writePendingMarker(pid = 999999): void {
+	const filePath = getMetadataFilePath();
+	mkdirSync(path.dirname(filePath), { recursive: true });
+	writeFileSync(filePath, JSON.stringify({ pending: true, pid }));
 }
 
 /**
@@ -715,6 +737,159 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			const metadata = readMetadataFile();
 			expect(metadata.accepted).toBe(true);
 			expect(metadata.installFailed).toBe(false);
+		});
+	});
+
+	describe("concurrent instance detection", () => {
+		test("skips when another instance has a pending marker in the metadata file", async ({
+			expect,
+		}) => {
+			// Simulate another wrangler instance that already wrote a pending
+			// marker. Our process will find EEXIST, overwrite with its own PID
+			// to signal contention, and bail.
+			writePendingMarker();
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			// Neither prompt nor install should have been attempted.
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+			expect(sendMetricsEvent).toHaveBeenCalledWith(
+				"skills_install_skipped",
+				{ reason: "Concurrent wrangler instances detected" },
+				{}
+			);
+
+			// The metadata file should now contain the current process's PID
+			// (overwritten to signal contention to the first process).
+			const marker = readMetadataFile();
+			expect(marker.pending).toBe(true);
+			expect(marker.pid).toBe(process.pid);
+		});
+
+		test("prompts normally when no concurrent instance appears during grace period", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: expect.stringContaining("Claude Code") as unknown as string,
+				result: true,
+			});
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			// The prompt should have fired and install should have succeeded.
+			expect(mockRosieInstall).toHaveBeenCalled();
+			expect(std.out).toContain(
+				"Successfully installed Cloudflare skills for: Claude Code."
+			);
+
+			// The metadata file should now contain real metadata (the pending
+			// marker was overwritten by writeSkillsInstallMetadataFile).
+			const metadata = readMetadataFile();
+			expect(metadata.pending).toBeUndefined();
+			expect(metadata.accepted).toBe(true);
+		});
+
+		test("removes stale pending marker and proceeds with prompt", async ({
+			expect,
+		}) => {
+			// Create a pending marker and backdate it to simulate a crashed process.
+			writePendingMarker();
+			const staleTime = Date.now() - 120_000; // 2 minutes ago
+			const staleDate = new Date(staleTime);
+			utimesSync(getMetadataFilePath(), staleDate, staleDate);
+
+			mockConfirm({
+				text: expect.stringContaining("Claude Code") as unknown as string,
+				result: true,
+			});
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			// The stale marker should have been removed and the prompt shown.
+			expect(mockRosieInstall).toHaveBeenCalled();
+			expect(std.out).toContain(
+				"Successfully installed Cloudflare skills for: Claude Code."
+			);
+		});
+
+		test("force=true skips contention detection entirely", async ({
+			expect,
+		}) => {
+			// Pending marker from "another process"
+			writePendingMarker();
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(true);
+
+			// force=true should bypass contention detection and install anyway.
+			expect(mockRosieInstall).toHaveBeenCalled();
+			expect(std.out).toContain(
+				"Successfully installed Cloudflare skills for: Claude Code."
+			);
+		});
+
+		test("skips prompt when real metadata appears during grace period", async ({
+			expect,
+		}) => {
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			// Schedule overwriting the pending marker with real metadata
+			// 200ms into the 500ms grace period, simulating another
+			// (non-concurrent) wrangler instance that completed the prompt.
+			setTimeout(() => {
+				writeMetadataFile({
+					version: 1,
+					accepted: true,
+					date: new Date().toISOString(),
+					detectedAgents: [
+						{
+							name: "Claude Code",
+							rosie: {
+								id: "claude",
+								globalPath: "/fake/.claude/skills",
+							},
+						},
+					],
+					installFailed: false,
+				});
+			}, 200);
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			// The metadata re-check after the grace period should have caught
+			// the newly-written real metadata and returned without prompting.
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+			// No metrics event is sent in this case (same as the initial
+			// metadata-exists check at the top of the function).
+			expect(sendMetricsEvent).not.toHaveBeenCalled();
+		});
+
+		test("ignores pending marker when reading metadata file at startup", async ({
+			expect,
+		}) => {
+			// A stale pending marker from a crashed process should not prevent
+			// the skills install prompt from appearing. The readSkillsInstallMetadataFile
+			// function should treat pending markers as non-existent.
+			writePendingMarker();
+			// Backdate so the stale detection in waitForConcurrentInstances
+			// cleans it up and lets the prompt proceed.
+			const staleDate = new Date(Date.now() - 120_000);
+			utimesSync(getMetadataFilePath(), staleDate, staleDate);
+
+			mockConfirm({
+				text: expect.stringContaining("Claude Code") as unknown as string,
+				result: true,
+			});
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			// The prompt should have appeared — the pending marker was not
+			// treated as existing metadata.
+			expect(mockRosieInstall).toHaveBeenCalled();
 		});
 	});
 });
