@@ -21,7 +21,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 
 		beforeEach(async () => {
 			consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {
-				// suppress error output during tests - we are going to check for specific error messages in the tests themselves
+				// suppress error output during tests
 			});
 
 			helper = new WranglerE2ETestHelper();
@@ -65,6 +65,8 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				};
 			});
 
+			let emittedErrors: unknown[] = [];
+
 			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
 				bindings: {
@@ -82,11 +84,13 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				},
 			});
 
-			await assertValidWorkerAiResponse(expect);
+			worker.raw.on("error", (e: unknown) => emittedErrors.push(e));
+
+			await assertValidWorkerAiResponse(expect, emittedErrors);
 
 			expect(validAuth).toHaveBeenCalled();
 
-			consoleErrorMock.mockReset();
+			emittedErrors = [];
 
 			const incorrectAuth = vi.fn(() => {
 				return {
@@ -103,7 +107,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				},
 			});
 
-			await assertInvalidWorkerAiResponse(expect);
+			await assertAuthErrorForWorkerAiResponse(expect, emittedErrors);
 
 			expect(incorrectAuth).toHaveBeenCalled();
 		});
@@ -119,6 +123,8 @@ describe("startWorker - auth options", { sequential: true }, () => {
 					},
 				};
 			});
+
+			let emittedErrors: unknown[] = [];
 
 			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
@@ -137,11 +143,14 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				},
 			});
 
-			await assertInvalidWorkerAiResponse(expect);
+			worker.raw.on("error", (e: unknown) => emittedErrors.push(e));
+
+			await assertAuthErrorForWorkerAiResponse(expect, emittedErrors);
 
 			expect(incorrectAuth).toHaveBeenCalled();
 
 			consoleErrorMock.mockReset();
+			emittedErrors = [];
 
 			const validAuth = vi.fn(() => {
 				assert(process.env.CLOUDFLARE_API_TOKEN);
@@ -160,12 +169,15 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				},
 			});
 
-			await assertValidWorkerAiResponse(expect);
+			await assertValidWorkerAiResponse(expect, emittedErrors);
 
 			expect(validAuth).toHaveBeenCalled();
 		});
 
-		async function assertValidWorkerAiResponse(expect: ExpectStatic) {
+		async function assertValidWorkerAiResponse(
+			expect: ExpectStatic,
+			emittedErrors: unknown[]
+		) {
 			assert(worker, "Worker is not defined");
 			const responseText = await fetchTimedTextFromWorker(worker);
 
@@ -174,15 +186,20 @@ describe("startWorker - auth options", { sequential: true }, () => {
 			expect(responseText).toBeTruthy();
 			expect(responseText).toContain("This is a response from Workers AI.");
 
-			// And there should be no error regarding the Cloudflare API in the console
-			expect(consoleErrorMock).not.toHaveBeenCalledWith(
-				expect.stringMatching(
-					/A request to the Cloudflare API \([^)]*\) failed\./
+			// And there should be no authentication error emitted
+			const authErrors = emittedErrors.filter((e) =>
+				hasMatchingCauseMessage(
+					e,
+					/Failed to establish remote session due to an authentication issue/
 				)
 			);
+			expect(authErrors).toHaveLength(0);
 		}
 
-		async function assertInvalidWorkerAiResponse(expect: ExpectStatic) {
+		async function assertAuthErrorForWorkerAiResponse(
+			expect: ExpectStatic,
+			emittedErrors: unknown[]
+		) {
 			assert(worker, "Worker is not defined");
 			const responseText = await fetchTimedTextFromWorker(worker);
 
@@ -190,12 +207,37 @@ describe("startWorker - auth options", { sequential: true }, () => {
 			// get a response from the worker
 			expect(responseText).toBe(null);
 
-			// And in the console an appropriate error was logged
-			expect(consoleErrorMock).toHaveBeenCalledWith(
-				expect.stringMatching(
-					/A request to the Cloudflare API \([^)]*\) failed\./
+			// And an authentication error was emitted
+			const authErrors = emittedErrors.filter((e) =>
+				hasMatchingCauseMessage(
+					e,
+					/Failed to establish remote session due to an authentication issue/
 				)
 			);
+			expect(authErrors.length).toBeGreaterThan(0);
+		}
+
+		/**
+		 * Checks whether an emitted error event (or its cause chain) contains
+		 * a message matching the given pattern.
+		 *
+		 * @param event - the error event to inspect
+		 * @param pattern - the regex pattern to match against error messages
+		 * @returns whether any error in the cause chain matches the pattern
+		 */
+		function hasMatchingCauseMessage(event: unknown, pattern: RegExp): boolean {
+			if (event == null || typeof event !== "object") {
+				return false;
+			}
+			const cause = (event as { cause?: unknown }).cause;
+			if (cause instanceof Error && pattern.test(cause.message)) {
+				return true;
+			}
+			// Recurse into nested cause
+			if (cause instanceof Error && cause.cause) {
+				return hasMatchingCauseMessage({ cause: cause.cause }, pattern);
+			}
+			return false;
 		}
 	});
 
