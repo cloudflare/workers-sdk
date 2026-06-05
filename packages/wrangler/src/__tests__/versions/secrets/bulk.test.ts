@@ -251,6 +251,22 @@ describe("versions secret bulk", () => {
 		`);
 	});
 
+	test("should error on json stdin with non-string values", async ({
+		expect,
+	}) => {
+		mockReadlineInput(
+			JSON.stringify({
+				SECRET_1: 1,
+			})
+		);
+
+		await expect(
+			runWrangler(`versions secret bulk --name script-name`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The value for "SECRET_1" in "piped input" is not null or a "string" instead it is of type "number"]`
+		);
+	});
+
 	test("unsafe metadata is provided", async ({ expect }) => {
 		writeWranglerConfig({
 			name: "script-name",

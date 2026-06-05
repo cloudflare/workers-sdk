@@ -652,14 +652,6 @@ export async function parseBulkInputToObject(
 				});
 			}
 		}
-		validateFileSecrets(content, input);
-		if (!includeNull) {
-			content = Object.fromEntries(
-				Object.entries(content).filter(
-					(entry): entry is [string, string] => entry[1] != null
-				)
-			);
-		}
 	} else {
 		secretSource = "stdin";
 		try {
@@ -683,6 +675,14 @@ export async function parseBulkInputToObject(
 		} catch {
 			return;
 		}
+	}
+	validateFileSecrets(content, input ?? "piped input");
+	if (!includeNull) {
+		content = Object.fromEntries(
+			Object.entries(content).filter(
+				(entry): entry is [string, string] => entry[1] != null
+			)
+		);
 	}
 	return { content, secretSource, secretFormat };
 }

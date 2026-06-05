@@ -1268,6 +1268,22 @@ describe("wrangler secret", () => {
 			);
 		});
 
+		it("should fail if JSON stdin contains a record with non-string values", async ({
+			expect,
+		}) => {
+			mockReadlineInput(
+				JSON.stringify({
+					"invalid-secret": 999,
+				})
+			);
+
+			await expect(
+				runWrangler("secret bulk --name script-name")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The value for "invalid-secret" in "piped input" is not null or a "string" instead it is of type "number"]`
+			);
+		});
+
 		it("should count success and network failure on secret bulk", async ({
 			expect,
 		}) => {
