@@ -24,7 +24,7 @@ import type {
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type { DispatchFetch, Json, Miniflare, RequestInfo } from "miniflare";
 
-export type PreviewServerOptions = {
+export type TestHarnessOptions = {
 	/**
 	 * Base directory used to resolve relative worker config paths.
 	 * Defaults to `process.cwd()`.
@@ -39,7 +39,7 @@ export type PreviewServerOptions = {
 export type WorkerHandle = {
 	/**
 	 * Dispatches a fetch event directly to this worker.
-	 * Relative URL inputs are resolved against the current server URL.
+	 * Relative URL inputs are resolved against the URL returned by `listen()`.
 	 *
 	 * @example
 	 * ```ts
@@ -64,7 +64,7 @@ export type WorkerHandle = {
 	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
 };
 
-export type PreviewServer = {
+export type TestHarness = {
 	/**
 	 * Starts the server and returns its current URL.
 	 * Calling this more than once returns the same running server session until
@@ -84,7 +84,7 @@ export type PreviewServer = {
 	 *
 	 * @example
 	 * ```ts
-	 * const server = createPreviewServer({
+	 * const server = createTestHarness({
 	 *   workers: [
 	 *     { configPath: "./wrangler.dashboard.jsonc" }, // No route pattern
 	 *     { configPath: "./wrangler.api.jsonc" }, // Route pattern: "example.com/api/*"
@@ -114,11 +114,11 @@ export type PreviewServer = {
 	 */
 	update(
 		options:
-			| PreviewServerOptions
-			| ((currentOptions: PreviewServerOptions) => PreviewServerOptions)
+			| TestHarnessOptions
+			| ((currentOptions: TestHarnessOptions) => TestHarnessOptions)
 	): Promise<void>;
 	/**
-	 * Restores the server to its initial `createPreviewServer()` options and restarts the
+	 * Restores the server to its initial `createTestHarness()` options and restarts the
 	 * active server session. Storage is recreated, and the server URL may change
 	 * after reset.
 	 */
@@ -135,7 +135,7 @@ type WorkerInput =
 	| {
 			/**
 			 * Base directory for resolving this Worker's relative config path.
-			 * Defaults to `PreviewServerOptions.root`.
+			 * Defaults to `TestHarnessOptions.root`.
 			 */
 			root?: string;
 			/**
@@ -159,7 +159,7 @@ type WorkerInput =
 	| {
 			/**
 			 * Base directory for resolving paths in the inline config.
-			 * Defaults to `PreviewServerOptions.root`.
+			 * Defaults to `TestHarnessOptions.root`.
 			 */
 			root?: string;
 			/**
@@ -174,14 +174,14 @@ type ServerSession = {
 };
 
 /**
- * Creates a server that runs Workers locally.
+ * Creates a local test server for running Workers.
  *
  * The server can run one or more Workers from Wrangler config files, including
  * generated configs from Vite, or from inline configuration objects.
  *
  * @example
  * ```ts
- * const server = createPreviewServer({
+ * const server = createTestHarness({
  *   workers: [{ configPath: "./wrangler.jsonc" }],
  * });
  * await server.listen();
@@ -189,9 +189,7 @@ type ServerSession = {
  * await server.close();
  * ```
  */
-export function createPreviewServer(
-	options: PreviewServerOptions
-): PreviewServer {
+export function createTestHarness(options: TestHarnessOptions): TestHarness {
 	const initialOptions = options;
 	let currentOptions = options;
 	let serverSession: ServerSession | undefined;
@@ -229,10 +227,10 @@ export function createPreviewServer(
 	}
 
 	function resolveWorkerInputs(
-		serverOptions: PreviewServerOptions
+		serverOptions: TestHarnessOptions
 	): StartDevWorkerInput[] {
 		if (serverOptions.workers.length === 0) {
-			throw new Error("Worker server requires at least one worker.");
+			throw new Error("Test harness requires at least one worker.");
 		}
 
 		const serverRoot = serverOptions.root ?? process.cwd();
@@ -303,7 +301,7 @@ export function createPreviewServer(
 	}
 
 	async function createSession(
-		serverOptions: PreviewServerOptions
+		serverOptions: TestHarnessOptions
 	): Promise<ServerSession> {
 		const inputs = resolveWorkerInputs(serverOptions);
 		const [, ...auxiliaryWorkers] = inputs;
@@ -356,7 +354,7 @@ export function createPreviewServer(
 
 		assert(
 			serverSession,
-			"Worker server has not been started. Start it with server.listen() before calling this method."
+			"Server has not been started. Start it with server.listen() before calling this method."
 		);
 
 		assertWorkerExists(serverSession, workerName);

@@ -9,9 +9,9 @@ import {
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
 
-const { createPreviewServer } = await importWrangler();
+const { createTestHarness } = await importWrangler();
 
-describe("createPreviewServer", { sequential: true }, () => {
+describe("createTestHarness", { sequential: true }, () => {
 	let helper: WranglerE2ETestHelper;
 
 	beforeEach(() => {
@@ -39,7 +39,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			workers: [
 				{ configPath: path.resolve(helper.tmpPath, "./wrangler.jsonc") },
 			],
@@ -100,7 +100,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [
 				{ configPath: "./wrangler.primary.jsonc" },
@@ -182,7 +182,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [
 				{ configPath: "./wrangler.primary.jsonc" },
@@ -234,7 +234,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [
 				{ configPath: "./wrangler.primary.jsonc" },
@@ -322,7 +322,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [
 				{
@@ -397,7 +397,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [
 				{ configPath: "./wrangler.primary.jsonc" },
@@ -454,7 +454,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -505,7 +505,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -528,7 +528,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			workers: [
 				{
 					root: helper.tmpPath,
@@ -572,7 +572,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -617,7 +617,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -664,7 +664,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [
 				{
@@ -741,7 +741,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -771,7 +771,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [
 				{
@@ -817,7 +817,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const firstServer = createPreviewServer({
+		const firstServer = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -833,7 +833,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 
 		await firstServer.close();
 
-		const secondServer = createPreviewServer({
+		const secondServer = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -871,14 +871,14 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
 		onTestFinished(server.close);
 
 		await expect(server.reset()).rejects.toThrow(
-			"Worker server has not been started. Start it with server.listen() before calling this method."
+			"Server has not been started. Start it with server.listen() before calling this method."
 		);
 
 		await server.listen();
@@ -917,7 +917,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -957,7 +957,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createPreviewServer({
+		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});

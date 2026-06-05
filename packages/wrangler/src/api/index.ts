@@ -59,12 +59,12 @@ export type {
 export type { DevToolsEvent } from "./startDevWorker/devtools";
 
 // Exports from ./server
-export { createPreviewServer } from "./server";
+export { createTestHarness } from "./test-harness";
 export type {
-	PreviewServerOptions,
+	TestHarnessOptions,
 	WorkerHandle,
-	PreviewServer,
-} from "./server";
+	TestHarness,
+} from "./test-harness";
 
 // Exports from ./integrations
 export {

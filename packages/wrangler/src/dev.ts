@@ -521,7 +521,7 @@ export function getBindings(
 		usePreviewIds: true,
 	});
 
-	// createPreviewServer() can override secrets through inputBindings.
+	// createTestHarness() can override secrets through inputBindings.
 	// This filters out those required secrets so the logic doesn't consider them missing
 	const secrets = configParam.secrets
 		? {

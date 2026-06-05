@@ -2,16 +2,16 @@
 "wrangler": minor
 ---
 
-Introduce `createPreviewServer()` as a Worker integration test harness
+Introduce `createTestHarness()` for integration testing Workers
 
-It runs Workers from production build output in a local preview environment, and works with both Wrangler projects and Workers built by the Cloudflare Vite plugin.
+It runs Workers in a local preview environment using production build output and works with both Wrangler projects and Workers built by the Cloudflare Vite plugin.
 
 Use it from any Node.js test runner to send requests to individual Workers, trigger scheduled events, reset the server between tests, and mock outbound requests with libraries that intercept `globalThis.fetch()`, such as MSW:
 
 ```ts
-import { createPreviewServer } from "wrangler";
+import { createTestHarness } from "wrangler";
 
-const server = createPreviewServer({
+const server = createTestHarness({
 	workers: [
 		{ configPath: "./dist/web_worker/wrangler.json" },
 		{ configPath: "./dist/api_worker/wrangler.json" },
