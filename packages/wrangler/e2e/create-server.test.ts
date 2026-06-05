@@ -436,7 +436,7 @@ describe("createPreviewServer", { sequential: true }, () => {
 		).rejects.toThrow("Build failed");
 	});
 
-	it("returns a 404 response for missing workers", async ({ expect }) => {
+	it("rejects calls on unknown worker handles", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`
 				{
@@ -462,9 +462,19 @@ describe("createPreviewServer", { sequential: true }, () => {
 
 		await server.listen();
 
-		const response = await server.getWorker("missing-worker").fetch("/");
-		expect(response.status).toBe(404);
-		await expect(response.text()).resolves.toBe("No entrypoint worker found");
+		await expect(
+			server.getWorker("unknown-worker").fetch("/")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[TypeError: Worker "unknown-worker" does not exist in this server.]`
+		);
+
+		await expect(
+			server.getWorker("unknown-worker").scheduled({
+				cron: "0 0 * * *",
+			})
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[TypeError: Worker "unknown-worker" does not exist in this server.]`
+		);
 	});
 
 	it("uses the current Node process fetch for outbound requests by default", async ({

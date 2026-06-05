@@ -347,9 +347,11 @@ export function createPreviewServer(
 		}
 	}
 
-	async function resolveSession() {
+	async function resolveSession(workerName?: string) {
 		if (startPromise) {
-			return await startPromise;
+			const session = await startPromise;
+			assertWorkerExists(session, workerName);
+			return session;
 		}
 
 		assert(
@@ -357,7 +359,28 @@ export function createPreviewServer(
 			"Worker server has not been started. Start it with server.listen() before calling this method."
 		);
 
+		assertWorkerExists(serverSession, workerName);
+
 		return serverSession;
+	}
+
+	function assertWorkerExists(
+		session: ServerSession,
+		workerName: string | undefined
+	) {
+		if (workerName === undefined) {
+			return;
+		}
+
+		const workerExists = session.devEnvs.some((devEnv) => {
+			return devEnv.config.latestConfig?.name === workerName;
+		});
+
+		if (!workerExists) {
+			throw new TypeError(
+				`Worker ${JSON.stringify(workerName)} does not exist in this server.`
+			);
+		}
 	}
 
 	async function serverAuthHook(
@@ -545,13 +568,13 @@ export function createPreviewServer(
 		getWorker(name?: string) {
 			return {
 				async fetch(input, init) {
-					const session = await resolveSession();
+					const session = await resolveSession(name);
 					const miniflare = await getRuntimeMiniflare(session);
 
 					return dispatchFetch(miniflare, input, init, name);
 				},
 				async scheduled(scheduledOptions) {
-					const session = await resolveSession();
+					const session = await resolveSession(name);
 					const miniflare = await getRuntimeMiniflare(session);
 					const url = new URL(
 						"http://localhost/cdn-cgi/handler/scheduled?format=json"
