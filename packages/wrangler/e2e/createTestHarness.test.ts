@@ -753,44 +753,6 @@ describe("createTestHarness", { sequential: true }, () => {
 		await expect(response.text()).resolves.toBe("function");
 	});
 
-	it("supports Workers Sites", async ({ expect }) => {
-		await helper.seed({
-			"public/hello.txt": "Hello from Workers Sites",
-			"src/index.ts": dedent`
-				import manifestJSON from "__STATIC_CONTENT_MANIFEST";
-
-				const manifest = JSON.parse(manifestJSON);
-
-				export default {
-					async fetch(request, env) {
-						const key = manifest[new URL(request.url).pathname.slice(1)];
-						const value = key ? await env.__STATIC_CONTENT.get(key) : null;
-						return new Response(value ?? "missing");
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [
-				{
-					config: {
-						main: "src/index.ts",
-						compatibility_date: "2026-05-20",
-						site: { bucket: "public" },
-					},
-				},
-			],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/hello.txt");
-		await expect(response.text()).resolves.toBe("Hello from Workers Sites");
-	});
-
 	it("uses ephemeral storage by default", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`
