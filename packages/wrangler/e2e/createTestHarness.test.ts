@@ -529,9 +529,9 @@ describe("createTestHarness", { sequential: true }, () => {
 		});
 
 		const server = createTestHarness({
+			root: helper.tmpPath,
 			workers: [
 				{
-					root: helper.tmpPath,
 					config: {
 						main: "src/index.ts",
 						compatibility_date: "2026-05-20",

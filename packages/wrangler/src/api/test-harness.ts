@@ -133,13 +133,8 @@ type InlineConfig = Omit<RawConfig, "env">;
 type WorkerInput =
 	| {
 			/**
-			 * Base directory for resolving this Worker's relative config path.
-			 * Defaults to `TestHarnessOptions.root`.
-			 */
-			root?: string;
-			/**
 			 * Path to a Wrangler config file for this Worker.
-			 * Relative paths resolve from `root`.
+			 * Relative paths resolve from server `root`.
 			 */
 			configPath: string | URL;
 			/**
@@ -156,11 +151,6 @@ type WorkerInput =
 			secrets?: Record<string, string>;
 	  }
 	| {
-			/**
-			 * Base directory for resolving paths in the inline config.
-			 * Defaults to `TestHarnessOptions.root`.
-			 */
-			root?: string;
 			/**
 			 * Inline Wrangler config for this Worker.
 			 */
@@ -232,12 +222,11 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 			throw new Error("Test harness requires at least one worker.");
 		}
 
-		const serverRoot = serverOptions.root ?? process.cwd();
+		const root = serverOptions.root ?? process.cwd();
 
 		return serverOptions.workers.map((input, index, list) => {
 			const isPrimaryWorker = index === 0;
 			const isMultiworker = list.length > 1;
-			const root = input.root ?? serverRoot;
 			const bindings = convertConfigToBindings(
 				{ vars: "vars" in input ? input.vars : undefined },
 				{ usePreviewIds: true }
@@ -263,6 +252,11 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 					inspector: false,
 					registry: undefined,
 					outboundService: (request) => {
+						/**
+						 * Miniflare passes its own undici-based Request here. Pass the URL as
+						 * RequestInfo and the request as RequestInit so method, headers, body,
+						 * and duplex are preserved by global fetch.
+						 */
 						return globalThis.fetch(request.url, request);
 					},
 					multiworkerPrimary: isMultiworker ? isPrimaryWorker : undefined,
