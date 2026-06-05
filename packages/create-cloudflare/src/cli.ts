@@ -22,6 +22,11 @@ import {
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
+import {
+	getPnpmIgnoredBuildsGuidance,
+	isPnpmIgnoredBuildsError,
+	writePnpmBuildApprovals,
+} from "helpers/pnpmBuildApprovals";
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
@@ -151,6 +156,13 @@ const create = async (ctx: C3Context) => {
 	}
 	updatePackageName(ctx);
 
+	// Pre-approve the build scripts C3 itself depends on (`workerd`, `esbuild`,
+	// `sharp` — via wrangler/miniflare). Required before any `pnpm install` on
+	// pnpm 11+, where unapproved build scripts are a fatal
+	// `ERR_PNPM_IGNORED_BUILDS`. Framework-introduced build approvals are not
+	// our concern and are left to the framework generator or the user.
+	writePnpmBuildApprovals(ctx.project.path);
+
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
 	await rectifyPmMismatch(ctx);
@@ -247,6 +259,12 @@ main(process.argv)
 	.catch((e) => {
 		if (e instanceof CancelError) {
 			cancel(e.message);
+		} else if (isPnpmIgnoredBuildsError(e)) {
+			// A framework-introduced build script was not approved.
+			// `writePnpmBuildApprovals` only covers C3's own dependencies; the
+			// framework generator (or the user) is responsible for the rest.
+			// Surface the pnpm output alongside actionable guidance.
+			error(`${e.message}\n\n${getPnpmIgnoredBuildsGuidance()}`);
 		} else {
 			error(e);
 		}
