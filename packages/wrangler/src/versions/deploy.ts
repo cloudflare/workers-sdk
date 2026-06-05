@@ -659,8 +659,6 @@ async function maybePatchSettings(
 // ***********
 //    UNITS
 // ***********
-type Tag = string;
-
 /**
  * Parses an optional `@<percentage>` suffix from a shorthand spec (e.g.
  * `<version-id>@<percentage>` or `<tag>@<percentage>`), validating that the
@@ -758,9 +756,10 @@ export function parseVersionSpecs(
 	return optionalVersionTraffic;
 }
 
-export type ParseTagSpecsArgs = {
+type ParseTagSpecsArgs = {
 	tag?: string[];
 };
+
 /**
  * Parses the `--tag` args into a map of tag to optional percentage, supporting
  * the `<tag>@<percentage>` shorthand. Tags are resolved to Version IDs later by
@@ -768,13 +767,13 @@ export type ParseTagSpecsArgs = {
  */
 export function parseTagSpecs(
 	args: ParseTagSpecsArgs
-): Map<Tag, OptionalPercentage> {
-	const tagTraffic = new Map<Tag, OptionalPercentage>();
+): Map<string, OptionalPercentage> {
+	const tagTraffic = new Map<string, OptionalPercentage>();
 
 	for (const spec of args.tag ?? []) {
 		const [tag, percentageString] = spec.split("@");
 
-		if (tag === "") {
+		if (!tag) {
 			throw new UserError(`Could not parse a tag from --tag arg "${spec}".`, {
 				telemetryMessage: "versions deploy tag parse failed",
 			});
@@ -809,7 +808,7 @@ async function resolveTagsToVersions(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
-	tagTraffic: Map<Tag, OptionalPercentage>,
+	tagTraffic: Map<string, OptionalPercentage>,
 	versionCache: VersionCache
 ): Promise<Map<VersionId, OptionalPercentage>> {
 	const versions = await spinnerWhile({
@@ -826,7 +825,7 @@ async function resolveTagsToVersions(
 
 	// A tag may be present on more than one version (e.g. a re-deploy of the same
 	// commit, or a secret change inheriting the tag), so collect all matches.
-	const versionsByTag = new Map<Tag, ApiVersion[]>();
+	const versionsByTag = new Map<string, ApiVersion[]>();
 	for (const version of versions) {
 		const tag = version.annotations?.["workers/tag"];
 		if (tag === undefined) {
