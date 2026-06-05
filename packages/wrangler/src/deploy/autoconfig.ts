@@ -318,14 +318,14 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 					: []),
 				...(args.routes?.length ? [`--routes ${args.routes.join(" ")}`] : []),
 				...(args.domains?.length
-					? args.domains.map((d) => `--domains ${d}`)
+					? [`--domains ${args.domains.join(" ")}`]
 					: []),
 				...(args.triggers?.length
 					? [`--triggers ${args.triggers.map((t) => `'${t}'`).join(" ")}`]
 					: []),
-				...(args.var?.length ? args.var.map((v) => `--var ${v}`) : []),
-				...(args.define?.length ? args.define.map((d) => `--define ${d}`) : []),
-				...(args.alias?.length ? args.alias.map((a) => `--alias ${a}`) : []),
+				...(args.var?.length ? [`--var ${args.var.join(" ")}`] : []),
+				...(args.define?.length ? [`--define ${args.define.join(" ")}`] : []),
+				...(args.alias?.length ? [`--alias ${args.alias.join(" ")}`] : []),
 				...(args.jsxFactory ? [`--jsx-factory ${args.jsxFactory}`] : []),
 				...(args.jsxFragment ? [`--jsx-fragment ${args.jsxFragment}`] : []),
 				...(args.tsconfig ? [`--tsconfig ${args.tsconfig}`] : []),

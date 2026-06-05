@@ -576,8 +576,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(std.out).toContain("--dry-run: exiting now.");
 		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-		expect(std.out).toContain("--domains api.example.com");
-		expect(std.out).toContain("--domains app.example.com");
+		expect(std.out).toContain("--domains api.example.com app.example.com");
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
 
@@ -737,8 +736,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(std.out).toContain("--dry-run: exiting now.");
 		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-		expect(std.out).toContain("--var MY_VAR:my-value");
-		expect(std.out).toContain("--var OTHER:thing");
+		expect(std.out).toContain("--var MY_VAR:my-value OTHER:thing");
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
 
