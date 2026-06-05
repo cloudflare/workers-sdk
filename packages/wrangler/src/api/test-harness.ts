@@ -8,7 +8,6 @@ import {
 import { Headers, Request } from "miniflare";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { logger } from "../logger";
-import { getSiteAssetPaths } from "../sites";
 import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
@@ -276,24 +275,6 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 							config.compatibility_flags ?? [],
 							{ noBundle: config.no_bundle }
 						);
-					},
-				},
-				legacy: {
-					site: (config) => {
-						const legacyAssetPaths = getSiteAssetPaths(config);
-
-						if (!legacyAssetPaths) {
-							return undefined;
-						}
-
-						return {
-							bucket: path.join(
-								legacyAssetPaths.baseDirectory,
-								legacyAssetPaths.assetDirectory
-							),
-							include: legacyAssetPaths.includePatterns,
-							exclude: legacyAssetPaths.excludePatterns,
-						};
 					},
 				},
 			};
