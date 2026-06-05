@@ -6,6 +6,7 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
+import prompts from "prompts";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { sendMetricsEvent } from "../metrics/send-event";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -17,6 +18,7 @@ import type {
 	telemetryCurrentAgentSkillsInstalled as TelemetryFnType,
 } from "../agents-skills-install";
 import type * as SendEventModule from "../metrics/send-event";
+import type { Mock } from "vitest";
 
 // Undo the global no-op mock from vitest.setup.ts so we test the real implementation
 vi.unmock("../agents-skills-install");
@@ -191,6 +193,23 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 					rosie: { id: "claude", globalPath: "/fake/.claude/skills" },
 				},
 			]);
+		});
+
+		test("skips silently when metadata file has accepted: 'SIGINT' (Ctrl+C dismissal)", async ({
+			expect,
+		}) => {
+			writeMetadataFile({
+				version: 1,
+				accepted: "SIGINT",
+				date: "2025-01-01T00:00:00Z",
+			});
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			expect(mockRosieAgents).not.toHaveBeenCalled();
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+			expect(sendMetricsEvent).not.toHaveBeenCalled();
 		});
 
 		test("force=true ignores existing metadata file", async ({ expect }) => {
@@ -410,6 +429,62 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 				},
 				{}
 			);
+		});
+
+		test("writes SIGINT metadata when user presses Ctrl+C during the prompt", async ({
+			expect,
+		}) => {
+			// Stub process.exit so the abort flow doesn't terminate the test runner.
+			const exitSpy = vi
+				.spyOn(process, "exit")
+				.mockImplementation((() => {}) as never);
+
+			// Simulate Ctrl+C: invoke the onState callback with
+			// { aborted: true }, then resolve with { value: undefined }
+			// just as the real prompts library does on abort.
+			(prompts as unknown as Mock).mockImplementationOnce(
+				({ type, name, message, onState }) => {
+					expect({ type, name }).toStrictEqual({
+						type: "confirm",
+						name: "value",
+					});
+					expect(message).toContain("Claude Code");
+
+					// Trigger the abort handler (simulates Ctrl+C)
+					onState({ aborted: true });
+
+					return Promise.resolve({ value: undefined });
+				}
+			);
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			// Should have warned the user that Ctrl+C was treated as a decline
+			expect(std.warn).toContain(
+				"Ctrl+C received — skipping Cloudflare skills installation. This prompt will not be shown again."
+			);
+
+			// The onState abort handler should have written metadata
+			// with accepted: "SIGINT"
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe("SIGINT");
+			expect(metadata.version).toBe(1);
+
+			// Should not have attempted installation
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+
+			// Should have sent a skipped metrics event
+			expect(sendMetricsEvent).toHaveBeenCalledWith(
+				"skills_install_skipped",
+				{ reason: "User dismissed (SIGINT)" },
+				{}
+			);
+
+			// Should have called process.exit(1) after flushing metrics
+			expect(exitSpy).toHaveBeenCalledWith(1);
+
+			exitSpy.mockRestore();
 		});
 
 		test("force=true installs skills without prompting", async ({ expect }) => {
@@ -913,6 +988,69 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 			date: new Date().toISOString(),
 			detectedAgents: [],
 			installFailed: false,
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe("manual");
+	});
+
+	test("resolves to 'manual' when metadata has accepted: 'SIGINT' at primary path", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "claude-code",
+			name: "Claude Code",
+			type: "agent",
+		});
+		createAgentDir(".claude");
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		const claudeGlobalSkillsPath = path.join(os.homedir(), ".claude", "skills");
+		writeMetadataFile({
+			version: 1,
+			accepted: "SIGINT",
+			date: new Date().toISOString(),
+			detectedAgents: [
+				{
+					name: "Claude Code",
+					rosie: { id: "claude", globalPath: claudeGlobalSkillsPath },
+				},
+			],
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe("manual");
+	});
+
+	test("resolves to 'manual' when metadata has accepted: 'SIGINT' at alternativeGlobalPath", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "opencode",
+			name: "OpenCode",
+			type: "agent",
+		});
+		createAgentDir(".config/opencode");
+		const agentsSkills = path.join(os.homedir(), ".agents", "skills");
+		mkdirSync(path.join(agentsSkills, "cloudflare"), { recursive: true });
+		writeMetadataFile({
+			version: 1,
+			accepted: "SIGINT",
+			date: new Date().toISOString(),
+			detectedAgents: [
+				{
+					name: "Cline, Dexto, Warp",
+					rosie: { id: "warp", globalPath: agentsSkills },
+				},
+			],
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"]);
 		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();

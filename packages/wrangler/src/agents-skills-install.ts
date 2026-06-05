@@ -7,12 +7,13 @@ import {
 } from "@cloudflare/workers-utils";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
+import prompts from "prompts";
 import { install as rosieInstall, agents as rosieAgents } from "rosie-skills";
 import { fetch } from "undici";
-import { confirm } from "./dialogs";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { sendMetricsEvent } from "./metrics";
+import { allMetricsDispatchesCompleted } from "./metrics/metrics-dispatcher";
 
 /**
  * Detects AI coding agents installed on the user's machine and, if
@@ -95,12 +96,48 @@ export async function maybeInstallCloudflareSkillsGlobally(
 		return;
 	}
 
-	const accepted =
-		force ||
-		(await confirm(
-			`Wrangler detected the following AI coding agents: ${detectedAgents.map(({ name }) => name).join(", ")}. Would you like to install Cloudflare skills for them?`,
-			{ defaultValue: true, fallbackValue: false }
-		));
+	let accepted: boolean;
+	let sigintReceived = false;
+	if (force) {
+		accepted = true;
+	} else {
+		// Use prompts directly (instead of the shared `confirm()` helper) so
+		// we can intercept the abort (Ctrl+C) and write SIGINT metadata
+		// before the process exits.  The prompts library's readline interface
+		// swallows SIGINT — it never reaches `process.on("SIGINT")` — so this
+		// `onState` callback is the only reliable place to handle it.
+		const { value } = await prompts({
+			type: "confirm",
+			name: "value",
+			message: `Wrangler detected the following AI coding agents: ${detectedAgents.map(({ name }) => name).join(", ")}. Would you like to install Cloudflare skills for them?`,
+			initial: true,
+			onState: (state) => {
+				if (state.aborted) {
+					sigintReceived = true;
+					logger.warn(
+						"Ctrl+C received — skipping Cloudflare skills installation. This prompt will not be shown again."
+					);
+					// Write metadata synchronously so it survives the exit.
+					writeSkillsInstallMetadataFile({
+						version: 1,
+						accepted: "SIGINT",
+						date: new Date().toISOString(),
+						detectedAgents,
+					});
+				}
+			},
+		});
+		accepted = value;
+	}
+
+	if (sigintReceived) {
+		// Metadata was already written in the onState callback.
+		// Send metrics and wait for the dispatch to complete before exiting.
+		sendResultMetricsEvent({ skippedBecause: "User dismissed (SIGINT)" });
+		await allMetricsDispatchesCompleted();
+		// Note: the return is unnecessary but it guards against tests that stub process.exit
+		return process.exit(1);
+	}
 
 	if (!accepted) {
 		writeSkillsInstallMetadataFile({
@@ -200,8 +237,16 @@ type AgentInfo = {
 interface SkillsInstallMetadata {
 	/** Schema version for forward-compatibility. Currently always `1`. */
 	version: 1;
-	/** Whether the user accepted the prompt to install skills. */
-	accepted: boolean;
+	/**
+	 * Whether the user accepted the prompt to install skills.
+	 *
+	 * - `true` — the user explicitly accepted.
+	 * - `false` — the user explicitly declined.
+	 * - `"SIGINT"` — the user dismissed the prompt via Ctrl+C / SIGINT before
+	 *   answering. Treated as a decline but stored separately so we can
+	 *   distinguish these users in telemetry.
+	 */
+	accepted: boolean | "SIGINT";
 	/** ISO date string of when the user was prompted. */
 	date: string;
 	/** All agents detected on the user's machine. */
@@ -653,7 +698,7 @@ async function computeTelemetryCurrentAgentSkillsInstalled(): Promise<AgentSkill
 		// happens to match this alternative path (e.g. OpenCode reads
 		// ~/.agents/skills, which is Warp's rosie install target).
 		const metadata = readSkillsInstallMetadataFile();
-		if (metadata?.accepted) {
+		if (metadata?.accepted === true) {
 			const altAbsPath = path.resolve(matchedAlternativePath);
 			const wasInstalledForAnotherAgent = metadata.detectedAgents?.some(
 				(agent) => {
@@ -700,7 +745,7 @@ async function computeTelemetryCurrentAgentSkillsInstalled(): Promise<AgentSkill
 			));
 
 	if (
-		metadata.accepted &&
+		metadata.accepted === true &&
 		isInDetectedAgents === true &&
 		!installFailedForAgent
 	) {
