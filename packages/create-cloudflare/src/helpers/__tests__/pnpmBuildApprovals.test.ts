@@ -2,7 +2,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readFile, writeFile } from "helpers/files";
 import {
+	extractIgnoredBuildPackages,
 	getPnpmIgnoredBuildsGuidance,
+	IgnoredBuildsError,
+	isIgnoredBuildsError,
 	isPnpmIgnoredBuildsError,
 	mergeAllowBuilds,
 	writePnpmBuildApprovals,
@@ -267,5 +270,106 @@ describe("getPnpmIgnoredBuildsGuidance", () => {
 		expect(guidance).toContain("pnpm approve-builds");
 		// Mentions that C3 deliberately doesn't approve framework builds.
 		expect(guidance).toMatch(/framework|own/i);
+	});
+
+	test("inlines the package list when one is known", ({ expect }) => {
+		const guidance = getPnpmIgnoredBuildsGuidance(["@parcel/watcher", "lmdb"]);
+		// The exact remediation command is surfaced verbatim so the user can
+		// copy-paste it into the generated project.
+		expect(guidance).toContain("pnpm approve-builds @parcel/watcher lmdb");
+	});
+
+	test("falls back to the bare command when no packages are known", ({
+		expect,
+	}) => {
+		const guidance = getPnpmIgnoredBuildsGuidance([]);
+		expect(guidance).toMatch(/^ {2}pnpm approve-builds$/m);
+	});
+});
+
+describe("extractIgnoredBuildPackages", () => {
+	test("parses a single flagged package with version suffix", ({ expect }) => {
+		const err = new Error(
+			[
+				"Packages: +442",
+				"Progress: resolved 527, reused 205, downloaded 239, added 442, done",
+				"",
+				"[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: @parcel/watcher@2.5.6",
+				"",
+				'Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.',
+			].join("\n")
+		);
+		expect(extractIgnoredBuildPackages(err)).toEqual(["@parcel/watcher"]);
+	});
+
+	test("parses multiple comma-separated packages and dedupes", ({ expect }) => {
+		const err = new Error(
+			"[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: @parcel/watcher@2.5.6, lmdb@2.8.1, esbuild@0.27.7, lmdb@2.8.1"
+		);
+		expect(extractIgnoredBuildPackages(err)).toEqual([
+			"@parcel/watcher",
+			"lmdb",
+			"esbuild",
+		]);
+	});
+
+	test("handles unscoped and scoped packages without version suffixes", ({
+		expect,
+	}) => {
+		const err = new Error(
+			"[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: esbuild, @swc/core"
+		);
+		expect(extractIgnoredBuildPackages(err)).toEqual(["esbuild", "@swc/core"]);
+	});
+
+	test("accepts a raw string in addition to an Error", ({ expect }) => {
+		expect(
+			extractIgnoredBuildPackages(
+				"[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: sharp@0.34.5"
+			)
+		).toEqual(["sharp"]);
+	});
+
+	test("returns an empty array when no list can be parsed", ({ expect }) => {
+		expect(extractIgnoredBuildPackages(new Error("network timeout"))).toEqual(
+			[]
+		);
+		expect(extractIgnoredBuildPackages(undefined)).toEqual([]);
+		expect(extractIgnoredBuildPackages(null)).toEqual([]);
+		expect(extractIgnoredBuildPackages({ message: "anything" })).toEqual([]);
+	});
+});
+
+describe("IgnoredBuildsError", () => {
+	test("renders the parsed package list in the message", ({ expect }) => {
+		const err = new IgnoredBuildsError(["@parcel/watcher", "lmdb"]);
+		expect(err.message).toContain("@parcel/watcher");
+		expect(err.message).toContain("lmdb");
+		expect(err.packages).toEqual(["@parcel/watcher", "lmdb"]);
+	});
+
+	test("falls back to a placeholder when no packages are known", ({
+		expect,
+	}) => {
+		const err = new IgnoredBuildsError([]);
+		expect(err.message).toMatch(/unknown/);
+	});
+
+	test("`isIgnoredBuildsError` discriminates on instance, not message text", ({
+		expect,
+	}) => {
+		expect(isIgnoredBuildsError(new IgnoredBuildsError(["x"]))).toBe(true);
+		// The raw runCommand error still trips `isPnpmIgnoredBuildsError`, but
+		// must NOT trip `isIgnoredBuildsError` (or the top-level handler would
+		// dump the raw transcript again).
+		const raw = new Error("[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: x");
+		expect(isIgnoredBuildsError(raw)).toBe(false);
+		expect(isPnpmIgnoredBuildsError(raw)).toBe(true);
+	});
+
+	test("preserves the underlying pnpm error as `cause`", ({ expect }) => {
+		const original = new Error("raw pnpm output");
+		const wrapped = new IgnoredBuildsError(["sharp"], original);
+		expect(wrapped.cause).toBe(original);
 	});
 });

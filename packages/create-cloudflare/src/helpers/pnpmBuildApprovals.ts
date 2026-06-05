@@ -170,24 +170,114 @@ export const isPnpmIgnoredBuildsError = (error: unknown): error is Error => {
 	return error.message.includes("ERR_PNPM_IGNORED_BUILDS");
 };
 
+// Captures the comma-separated list pnpm emits after `Ignored build scripts:`.
+// pnpm appends `@version` to each package; we strip that below.
+const IGNORED_BUILDS_LINE = /Ignored build scripts:\s*([^\n\r]+)/;
+
+/**
+ * Extract the list of packages pnpm refused to run build scripts for, parsed
+ * out of the raw pnpm error output captured by `runCommand`.
+ *
+ * pnpm prints a single line of the form:
+ *
+ *     [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: @parcel/watcher@2.5.6, lmdb@2.8.1
+ *
+ * We return the package names without their `@version` suffix so we can pass
+ * them to `pnpm approve-builds <pkg>...`. Returns an empty array when the
+ * input doesn't contain a recognisable list.
+ */
+export const extractIgnoredBuildPackages = (error: unknown): string[] => {
+	const text =
+		error instanceof Error
+			? error.message
+			: typeof error === "string"
+				? error
+				: "";
+	const match = text.match(IGNORED_BUILDS_LINE);
+	if (!match) {
+		return [];
+	}
+
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const raw of match[1].split(",")) {
+		const trimmed = raw.trim();
+		if (!trimmed) {
+			continue;
+		}
+		const name = stripPackageVersion(trimmed);
+		if (name && !seen.has(name)) {
+			seen.add(name);
+			result.push(name);
+		}
+	}
+	return result;
+};
+
+// Strip a `@version` suffix from a package spec, preserving the leading `@`
+// on scoped names. `@scope/name@1.2.3` → `@scope/name`; `name@1.2.3` → `name`.
+const stripPackageVersion = (spec: string): string => {
+	if (spec.startsWith("@")) {
+		const slashIdx = spec.indexOf("/");
+		if (slashIdx === -1) {
+			return spec;
+		}
+		const versionAt = spec.indexOf("@", slashIdx);
+		return versionAt === -1 ? spec : spec.slice(0, versionAt);
+	}
+	const atIdx = spec.indexOf("@");
+	return atIdx === -1 ? spec : spec.slice(0, atIdx);
+};
+
+/**
+ * Thrown when the install fails because pnpm refused to run dependency build
+ * scripts and we either couldn't recover automatically or the user declined
+ * to approve them. Carries the parsed package list so callers (notably the
+ * top-level error handler in `cli.ts`) can produce a concise message instead
+ * of dumping the full pnpm transcript.
+ */
+export class IgnoredBuildsError extends Error {
+	readonly packages: readonly string[];
+
+	constructor(packages: readonly string[], cause?: unknown) {
+		const list = packages.length > 0 ? packages.join(", ") : "(unknown)";
+		super(`pnpm blocked unapproved dependency build scripts: ${list}`);
+		this.name = "IgnoredBuildsError";
+		this.packages = packages;
+		if (cause !== undefined) {
+			this.cause = cause;
+		}
+	}
+}
+
+export const isIgnoredBuildsError = (
+	error: unknown
+): error is IgnoredBuildsError => error instanceof IgnoredBuildsError;
+
 /**
  * Actionable guidance to append when an install fails with
  * `ERR_PNPM_IGNORED_BUILDS`. C3 only pre-approves the build scripts it owns
  * (`esbuild`, `workerd`, `sharp`); when a framework generator pulls in
  * additional native build-script dependencies, that's outside our scope —
- * we point the user at the standard pnpm approval flow.
+ * we point the user at the standard pnpm approval flow. When we know which
+ * packages pnpm flagged, we surface the exact command to run.
  */
-export const getPnpmIgnoredBuildsGuidance = () =>
-	[
-		"pnpm refused to run dependency build scripts (ERR_PNPM_IGNORED_BUILDS).",
-		"",
+export const getPnpmIgnoredBuildsGuidance = (
+	packages: readonly string[] = []
+) => {
+	const approveCommand =
+		packages.length > 0
+			? `  pnpm approve-builds ${packages.join(" ")}`
+			: "  pnpm approve-builds";
+	return [
 		"create-cloudflare only pre-approves build scripts for the packages it",
-		"installs itself. The packages listed in the pnpm output above were",
-		"introduced by a framework generator and need to be approved separately.",
+		"installs itself. The packages flagged above were introduced by the",
+		"framework generator and need to be approved separately.",
 		"",
 		"Inside the generated project, run:",
 		"",
-		"  pnpm approve-builds",
+		approveCommand,
 		"",
-		"to review and approve them interactively, then re-run the install.",
+		"then re-run the install.",
 	].join("\n");
+};

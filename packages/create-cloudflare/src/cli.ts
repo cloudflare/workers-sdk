@@ -24,7 +24,7 @@ import {
 import { installWrangler, npmInstall } from "helpers/packages";
 import {
 	getPnpmIgnoredBuildsGuidance,
-	isPnpmIgnoredBuildsError,
+	isIgnoredBuildsError,
 	writePnpmBuildApprovals,
 } from "helpers/pnpmBuildApprovals";
 import { version } from "../package.json";
@@ -157,10 +157,11 @@ const create = async (ctx: C3Context) => {
 	updatePackageName(ctx);
 
 	// Pre-approve the build scripts C3 itself depends on (`workerd`, `esbuild`,
-	// `sharp` — via wrangler/miniflare). Required before any `pnpm install` on
-	// pnpm 11+, where unapproved build scripts are a fatal
-	// `ERR_PNPM_IGNORED_BUILDS`. Framework-introduced build approvals are not
-	// our concern and are left to the framework generator or the user.
+	// `sharp` — via wrangler/miniflare). Required before any `pnpm install`
+	// on pnpm 11+, where unapproved build scripts are a fatal
+	// `ERR_PNPM_IGNORED_BUILDS`. Framework-introduced build scripts (e.g.
+	// `@parcel/watcher`, `lmdb`) are intentionally _not_ pre-approved here —
+	// `npmInstall` handles those interactively via `pnpm approve-builds`.
 	writePnpmBuildApprovals(ctx.project.path);
 
 	chdir(ctx.project.path);
@@ -259,12 +260,15 @@ main(process.argv)
 	.catch((e) => {
 		if (e instanceof CancelError) {
 			cancel(e.message);
-		} else if (isPnpmIgnoredBuildsError(e)) {
-			// A framework-introduced build script was not approved.
-			// `writePnpmBuildApprovals` only covers C3's own dependencies; the
-			// framework generator (or the user) is responsible for the rest.
-			// Surface the pnpm output alongside actionable guidance.
-			error(`${e.message}\n\n${getPnpmIgnoredBuildsGuidance()}`);
+		} else if (isIgnoredBuildsError(e)) {
+			// pnpm refused to run dependency build scripts for packages C3
+			// does not pre-approve (e.g. framework-introduced native deps).
+			// `npmInstall` already attempted the interactive recovery path
+			// (`pnpm approve-builds <pkg>` + retry); reaching here means we
+			// either couldn't recover or the user declined. Print a concise
+			// summary with the parsed package list — not the full pnpm
+			// transcript — alongside actionable guidance.
+			error(`${e.message}\n\n${getPnpmIgnoredBuildsGuidance(e.packages)}`);
 		} else {
 			error(e);
 		}
