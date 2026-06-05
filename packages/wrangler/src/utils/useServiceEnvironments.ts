@@ -1,4 +1,4 @@
-import type { StartDevWorkerOptions } from "../api";
+import type { StartDevWorkerOptions } from "../api/startDevWorker/types";
 import type { Config } from "@cloudflare/workers-utils";
 
 /**

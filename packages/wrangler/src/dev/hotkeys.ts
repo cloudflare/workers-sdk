@@ -6,7 +6,7 @@ import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { debounce } from "../utils/debounce";
 import { openInspector } from "./inspect";
-import type { DevEnv } from "../api";
+import type { DevEnv } from "../api/startDevWorker/DevEnv";
 import type { TunnelManager } from "../tunnel/dev";
 
 export default function registerDevHotKeys(

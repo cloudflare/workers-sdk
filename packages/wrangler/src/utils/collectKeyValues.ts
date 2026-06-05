@@ -1,4 +1,4 @@
-import type { Binding } from "../api";
+import type { Binding } from "../api/startDevWorker/types";
 
 /**
  * a function that takes an array of strings in `key:value` format

@@ -5,7 +5,7 @@ import encodeQR from "qr";
 import { formatHostname } from "../dev/start-dev";
 import { logger } from "../logger";
 import { resolveNamedTunnel } from "./client";
-import type { DevEnv } from "../api";
+import type { DevEnv } from "../api/startDevWorker/DevEnv";
 import type { StartDevOptions } from "../dev";
 import type { Tunnel } from "@cloudflare/workers-utils";
 
