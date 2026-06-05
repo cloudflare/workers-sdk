@@ -31,6 +31,7 @@ type DeployConfigFlags = {
 	compatibilityFlags: string[] | undefined;
 	// Routing & scheduling
 	routes: string[] | undefined;
+	domains: string[] | undefined;
 	triggers: string[] | undefined;
 	// Variables & build-time substitutions
 	var: string[] | undefined;
@@ -239,8 +240,12 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 		if (args.compatibilityFlags?.length) {
 			configContent.compatibility_flags = args.compatibilityFlags;
 		}
-		if (args.routes?.length) {
-			configContent.routes = args.routes;
+		if (args.routes?.length || args.domains?.length) {
+			const routeEntries: unknown[] = [...(args.routes ?? [])];
+			for (const domain of args.domains ?? []) {
+				routeEntries.push({ pattern: domain, custom_domain: true });
+			}
+			configContent.routes = routeEntries;
 		}
 		if (args.triggers?.length) {
 			configContent.triggers = { crons: args.triggers };
@@ -312,6 +317,9 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 					? [`--compatibility-flags ${args.compatibilityFlags.join(" ")}`]
 					: []),
 				...(args.routes?.length ? [`--routes ${args.routes.join(" ")}`] : []),
+				...(args.domains?.length
+					? args.domains.map((d) => `--domains ${d}`)
+					: []),
 				...(args.triggers?.length
 					? [`--triggers ${args.triggers.join(" ")}`]
 					: []),

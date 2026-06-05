@@ -514,6 +514,111 @@ describe("deploy: interactive deploy config prompts", () => {
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
 
+	it("should include domains as custom_domain routes in generated wrangler.jsonc when --domains is passed", async ({
+		expect,
+	}) => {
+		vi.setSystemTime(new Date(2024, 5, 15));
+		setIsTTY(true);
+		writeWorkerSource();
+		mockPrompt({
+			text: "What do you want to name your project?",
+			result: "test-worker",
+		});
+		mockConfirm({
+			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			result: true,
+		});
+		mockConfirm({
+			text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+			result: true,
+		});
+
+		await runWrangler(
+			"deploy ./index.js --domains api.example.com --domains app.example.com --dry-run"
+		);
+		expect(std.out).toContain("--dry-run: exiting now.");
+		const writtenConfig = JSON.parse(
+			fs.readFileSync("wrangler.jsonc", "utf-8")
+		);
+		expect(writtenConfig).toEqual({
+			name: "test-worker",
+			compatibility_date: "2024-06-15",
+			main: "./index.js",
+			routes: [
+				{ pattern: "api.example.com", custom_domain: true },
+				{ pattern: "app.example.com", custom_domain: true },
+			],
+		});
+		expect(std.out).toContain("Proceeding with deployment...");
+	});
+
+	it("should include --domains in suggested CLI command when user declines config file write", async ({
+		expect,
+	}) => {
+		vi.setSystemTime(new Date(2024, 5, 15));
+		setIsTTY(true);
+		writeWorkerSource();
+		mockPrompt({
+			text: "What do you want to name your project?",
+			result: "test-worker",
+		});
+		mockConfirm({
+			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			result: true,
+		});
+		mockConfirm({
+			text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+			result: false,
+		});
+
+		await runWrangler(
+			"deploy ./index.js --domains api.example.com --domains app.example.com --dry-run"
+		);
+		expect(std.out).toContain("--dry-run: exiting now.");
+		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+		expect(std.out).toContain("--domains api.example.com");
+		expect(std.out).toContain("--domains app.example.com");
+		expect(std.out).toContain("Proceeding with deployment...");
+	});
+
+	it("should merge --routes and --domains into routes array in generated wrangler.jsonc", async ({
+		expect,
+	}) => {
+		vi.setSystemTime(new Date(2024, 5, 15));
+		setIsTTY(true);
+		writeWorkerSource();
+		mockPrompt({
+			text: "What do you want to name your project?",
+			result: "test-worker",
+		});
+		mockConfirm({
+			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			result: true,
+		});
+		mockConfirm({
+			text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+			result: true,
+		});
+
+		await runWrangler(
+			"deploy ./index.js --routes example.com/* --domains api.example.com --dry-run"
+		);
+		expect(std.out).toContain("--dry-run: exiting now.");
+		const writtenConfig = JSON.parse(
+			fs.readFileSync("wrangler.jsonc", "utf-8")
+		);
+		expect(writtenConfig).toEqual({
+			name: "test-worker",
+			compatibility_date: "2024-06-15",
+			main: "./index.js",
+			routes: [
+				"example.com/*",
+				{ pattern: "api.example.com", custom_domain: true },
+			],
+		});
+		expect(std.out).toContain("Proceeding with deployment...");
+	});
+
 	it("should include triggers in generated wrangler.jsonc when --triggers is passed", async ({
 		expect,
 	}) => {
