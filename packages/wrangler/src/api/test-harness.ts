@@ -583,6 +583,11 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 					? updateInput(currentOptions)
 					: updateInput;
 
+			// If listen() is still starting, wait until serverSession is available so the update is applied to the running Workers.
+			if (startPromise) {
+				await startPromise;
+			}
+
 			if (serverSession) {
 				const nextInputs = resolveWorkerInputs(nextOptions);
 
