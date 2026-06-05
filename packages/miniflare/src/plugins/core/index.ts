@@ -1005,7 +1005,6 @@ export interface GlobalServicesOptions {
 	sharedOptions: z.infer<typeof CoreSharedOptionsSchema>;
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
-	rawFallbackWorkerName: string | undefined;
 	loopbackPort: number;
 	tmpPath: string;
 	log: Log;
@@ -1022,7 +1021,6 @@ export function getGlobalServices({
 	sharedOptions,
 	allWorkerRoutes,
 	fallbackWorkerName,
-	rawFallbackWorkerName,
 	loopbackPort,
 	tmpPath,
 	log,
@@ -1052,10 +1050,6 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.SERVICE_USER_FALLBACK,
 			service: { name: fallbackWorkerName },
-		},
-		{
-			name: CoreBindings.SERVICE_RAW_USER_FALLBACK,
-			service: { name: rawFallbackWorkerName },
 		},
 		...workerNames.map((name) => ({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,

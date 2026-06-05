@@ -26,6 +26,28 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 		return this.env.ROUTER_WORKER.fetch(request);
 	}
 
+	// Forward scheduled events to the User Worker. The proxy itself doesn't run
+	// any scheduled logic; it just dispatches a real scheduled event to the user
+	// worker via the Fetcher built-in, then propagates the user worker's noRetry
+	// decision back onto this controller so the outcome surfaces correctly to
+	// the caller (e.g. the entry worker's `/cdn-cgi/handler/scheduled` handler).
+	async scheduled(controller: ScheduledController) {
+		const result = await this.env.USER_WORKER.scheduled?.({
+			cron: controller.cron,
+			scheduledTime: new Date(controller.scheduledTime),
+		});
+		if (result?.noRetry) {
+			controller.noRetry();
+		}
+		if (result?.outcome !== "ok") {
+			// Re-throw so workerd surfaces `outcome: "exception"` to the caller
+			// rather than swallowing the user worker's failure.
+			throw new Error(
+				`User Worker scheduled handler failed with outcome: ${result?.outcome}`
+			);
+		}
+	}
+
 	tail(events: TraceItem[]) {
 		// Temporary workaround: the tail events is not serializable over capnproto yet
 		// But they are effectively JSON, so we are serializing them to JSON and parsing it back to make it transferable.
