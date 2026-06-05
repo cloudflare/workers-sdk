@@ -115,8 +115,8 @@ catalog:
   "ws": "8.20.1"
   esbuild: "0.27.3"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^4.20260603.1"
-  workerd: "1.20260603.1"
+  "@cloudflare/workers-types": "^4.20260605.1"
+  workerd: "1.20260605.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
   msw: 2.12.4
