@@ -141,14 +141,34 @@ export async function maybeInstallCloudflareSkillsGlobally(
 		// before the process exits.  The prompts library's readline interface
 		// swallows SIGINT — it never reaches `process.on("SIGINT")` — so this
 		// `onState` callback is the only reliable place to handle it.
+		//
+		// We pass a thin stdout proxy so we can mute the prompts library's
+		// abort rendering (the "✖ … yes" line it writes after onState
+		// returns).  Using a proxy keeps process.stdout untouched.
+		let muted = false;
+		const stdoutProxy = new Proxy(process.stdout, {
+			get(target, prop, receiver) {
+				if (prop === "write") {
+					return (...args: Parameters<typeof target.write>) =>
+						muted ? true : target.write(...args);
+				}
+				return Reflect.get(target, prop, receiver);
+			},
+		});
 		const { value } = await prompts({
 			type: "confirm",
 			name: "value",
 			message: `Wrangler detected the following AI coding agents: ${detectedAgents.map(({ name }) => name).join(", ")}. Would you like to install Cloudflare skills for them?`,
 			initial: true,
+			stdout: stdoutProxy,
 			onState: (state) => {
 				if (state.aborted) {
 					sigintReceived = true;
+					// Mute the stdout proxy so the prompts library's abort()
+					// → render() cycle doesn't print a duplicate "✖" line
+					// after the warning.  render() runs synchronously right
+					// after this callback returns.
+					muted = true;
 					logger.warn(
 						"Ctrl+C received — skipping Cloudflare skills installation. This prompt will not be shown again."
 					);
