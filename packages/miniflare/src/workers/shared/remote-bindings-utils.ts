@@ -271,6 +271,11 @@ export function makeRemoteProxyStub(
 			resolvedStub = newWebSocketRpcSession(ws) as unknown as ProxiedService;
 			return resolvedStub;
 		});
+		// If the caller only ever uses the `.fetch()` (HTTP) path, `stubPromise`
+		// is never awaited — swallow the rejection here to avoid an orphaned
+		// unhandled rejection. The error still surfaces when an RPC property is
+		// accessed, because the async wrapper below awaits `stubPromise` directly.
+		stubPromise.catch(() => {});
 	} else {
 		resolvedStub = newWebSocketRpcSession(
 			wsUrl.href
@@ -302,6 +307,14 @@ export function makeRemoteProxyStub(
 				return Reflect.get(resolvedStub, p);
 			}
 			if (stubPromise) {
+				// While the WebSocket is still connecting, this branch handles
+				// every property access. Return `undefined` for `then` so the
+				// proxy is not mistaken for a thenable — otherwise `await`-ing
+				// the stub (or any implicit thenable check) would invoke the
+				// wrapper for `then` and dispatch a bogus remote `then` RPC.
+				if (p === "then") {
+					return undefined;
+				}
 				// The capnweb stub is itself a Proxy whose properties are RPC
 				// methods — they must be invoked as `stub[p](...args)` (calling
 				// `.apply()`/`.call()` would be interpreted as a remote method
