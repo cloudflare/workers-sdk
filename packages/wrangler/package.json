@@ -50,6 +50,17 @@
 	],
 	"main": "wrangler-dist/cli.js",
 	"types": "wrangler-dist/cli.d.ts",
+	"exports": {
+		".": {
+			"types": "./wrangler-dist/cli.d.ts",
+			"default": "./wrangler-dist/cli.js"
+		},
+		"./experimental-config": {
+			"types": "./wrangler-dist/experimental-config.d.mts",
+			"import": "./wrangler-dist/experimental-config.mjs"
+		},
+		"./package.json": "./package.json"
+	},
 	"scripts": {
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",
 		"build": "pnpm run clean && pnpm tsup && pnpm run generate-json-schema",
@@ -80,6 +91,7 @@
 		"@bomb.sh/tab": "^0.0.12",
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/codemod": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
@@ -167,7 +179,8 @@
 		"ws": "catalog:default",
 		"xxhash-wasm": "^1.0.1",
 		"yaml": "^2.8.1",
-		"yargs": "^17.7.2"
+		"yargs": "^17.7.2",
+		"zod": "^4.4.3"
 	},
 	"peerDependencies": {
 		"@cloudflare/workers-types": "catalog:default"

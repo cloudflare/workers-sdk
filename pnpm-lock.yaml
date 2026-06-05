@@ -376,6 +376,30 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/experimental-new-config:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20260610.1
+      '@fixture/shared':
+        specifier: workspace:*
+        version: link:../shared
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      undici:
+        specifier: catalog:default
+        version: 7.24.8
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/get-platform-proxy:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -4156,6 +4180,9 @@ importers:
       '@cloudflare/codemod':
         specifier: workspace:*
         version: link:../codemod
+      '@cloudflare/config':
+        specifier: workspace:*
+        version: link:../config
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
@@ -4420,6 +4447,9 @@ importers:
       yargs:
         specifier: ^17.7.2
         version: 17.7.2
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     optionalDependencies:
       fsevents:
         specifier: 2.3.3

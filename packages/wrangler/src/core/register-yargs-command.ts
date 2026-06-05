@@ -16,7 +16,7 @@ import {
 	fetchPagedListResult,
 } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
-import { readConfig } from "../config";
+import { readConfig, readNewConfig } from "../config";
 import { confirm, prompt } from "../dialogs";
 import { run } from "../experimental-flags";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -135,6 +135,24 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		// Sentry breadcrumbs expect the `wrangler` prefix.
 		addBreadcrumb(def.command);
 
+		// Enforce the experimental `--x-new-config` scope. Only commands that
+		// explicitly declare `supportsNewConfig: true` (deploy, versions upload,
+		// versions deploy) and the two `provideConfig: false` commands that
+		// handle the flag themselves (dev, build) accept it. All others reject.
+		const newConfigEnabled = args.xNewConfig === true;
+		if (newConfigEnabled) {
+			const supportsNewConfig =
+				def.behaviour?.supportsNewConfig === true ||
+				def.command === "wrangler dev" ||
+				def.command === "wrangler build";
+			if (!supportsNewConfig) {
+				throw new UserError(
+					`--x-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy. The ${sanitizedCommand} command does not support --x-new-config.`,
+					{ telemetryMessage: "new-config command not supported" }
+				);
+			}
+		}
+
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
 			const bannerEnabled =
@@ -206,11 +224,17 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 			await run(experimentalFlags, async () => {
 				const config =
 					(def.behaviour?.provideConfig ?? true)
-						? readConfig(args, {
-								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
-								useRedirectIfAvailable:
-									def.behaviour?.useConfigRedirectIfAvailable,
-							})
+						? newConfigEnabled
+							? (
+									await readNewConfig(args, {
+										hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+									})
+								).config
+							: readConfig(args, {
+									hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+									useRedirectIfAvailable:
+										def.behaviour?.useConfigRedirectIfAvailable,
+								})
 						: defaultWranglerConfig;
 
 				const dispatcher = getMetricsDispatcher({
@@ -220,7 +244,13 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					argv,
 				});
 
-				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
+				// Skip the multi-envs warning under `--x-new-config`: it re-reads
+				// `wrangler.json[c]` to enumerate envs, which is not applicable
+				// when the flag is on
+				if (
+					def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified &&
+					!newConfigEnabled
+				) {
 					if (
 						!("env" in args) &&
 						getCloudflareEnv() === undefined &&

@@ -56,6 +56,12 @@ describe("experimental_getWranglerCommands", () => {
 			    "describe": "Show version number",
 			    "type": "boolean",
 			  },
+			  "x-new-config": {
+			    "default": false,
+			    "describe": "[experimental] Use cloudflare.config.ts and wrangler.config.ts (only supported on dev, build, deploy, versions upload, versions deploy)",
+			    "hidden": true,
+			    "type": "boolean",
+			  },
 			}
 		`);
 	});

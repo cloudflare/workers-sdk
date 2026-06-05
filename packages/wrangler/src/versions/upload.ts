@@ -38,6 +38,7 @@ export const versionsUploadCommand = createCommand({
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		supportsNewConfig: true,
 	},
 	validateArgs(args) {
 		validateDeployVersionsArgs(args, "versions upload");

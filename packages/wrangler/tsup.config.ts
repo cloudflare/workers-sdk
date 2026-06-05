@@ -111,4 +111,24 @@ export default defineConfig((options) => [
 		},
 		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
 	},
+	// Separate ESM entry for the experimental `wrangler/experimental-config`
+	// subpath. Re-exports `@cloudflare/config/public` plus the new
+	// `defineWranglerConfig` helper. See `src/experimental-config.ts` for a
+	// known limitation of the generated `.d.mts` (types reference
+	// `@cloudflare/config/public` rather than being inlined).
+	{
+		treeshake: true,
+		keepNames: true,
+		entry: ["src/experimental-config.ts"],
+		platform: "node",
+		format: "esm",
+		dts: {
+			resolve: ["@cloudflare/config"],
+		},
+		outDir: "wrangler-dist",
+		tsconfig: "tsconfig.json",
+		external: EXTERNAL_DEPENDENCIES,
+		sourcemap: process.env.SOURCEMAPS !== "false",
+		outExtension: () => ({ js: ".mjs" }),
+	},
 ]);

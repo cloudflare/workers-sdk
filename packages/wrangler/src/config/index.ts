@@ -11,9 +11,14 @@ import {
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { version as wranglerVersion } from "../../package.json";
+import {
+	hasRedirectedConfig,
+	loadNewConfig,
+} from "../experimental-config/load";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { updateCheck } from "../update-check";
+import type { NormalizedTypes } from "../experimental-config/load";
 import type {
 	Config,
 	ConfigBindingOptions,
@@ -60,6 +65,81 @@ async function logWarningsWithUpgradeHint(
 			);
 		}
 	}
+}
+
+/**
+ * Carries the validated `Config` alongside the
+ * watcher dependency set and the normalised type-generation settings.
+ */
+export interface NewConfig {
+	config: Config;
+	dependencies: Set<string>;
+	types: NormalizedTypes;
+}
+
+/**
+ * Load the experimental TypeScript-based configuration (`cloudflare.config.ts`
+ * + optional `wrangler.config.ts`) used by `--x-new-config`.
+ *
+ * Steps:
+ * 1. Hard error if `args.config` is set (no `--config` override under
+ *    `--x-new-config`).
+ * 2. Hard error if a `.wrangler/deploy/config.json` redirect exists (the
+ *    redirect takes priority — users must pick one).
+ * 3. Call `loadNewConfig(...)` to load + merge both files.
+ * 4. Pass the merged `RawConfig` through the existing
+ *    `normalizeAndValidateConfig` pipeline with `env` explicitly cleared
+ * 5. Return the validated `Config` plus `dependencies` and `types`.
+ */
+export async function readNewConfig(
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Promise<NewConfig> {
+	if (args.config !== undefined) {
+		throw new UserError(
+			`--config is not supported with --x-new-config. cloudflare.config.ts and wrangler.config.ts are loaded from the project root.`,
+			{ telemetryMessage: "new-config config flag not supported" }
+		);
+	}
+
+	const cwd = process.cwd();
+	if (hasRedirectedConfig(cwd)) {
+		throw new UserError(
+			`--x-new-config cannot be used when a redirected config exists at .wrangler/deploy/config.json. Remove the redirect or omit --x-new-config.`,
+			{ telemetryMessage: "new-config redirect conflict" }
+		);
+	}
+
+	const loaded = await loadNewConfig({ cwd, args });
+
+	// Construct a fresh `NormalizeAndValidateConfigArgs` with `env: undefined`.
+	// `args.env` is consumed only by `loadNewConfig` (to compute `ctx.mode`);
+	// it is not forwarded to the validator.
+	const validationArgs: NormalizeAndValidateConfigArgs = {
+		...args,
+		env: undefined,
+	};
+
+	const { config, diagnostics } = normalizeAndValidateConfig(
+		loaded.rawConfig,
+		loaded.cloudflareConfigPath,
+		loaded.cloudflareConfigPath,
+		validationArgs,
+		options.preserveOriginalMain
+	);
+
+	void logWarningsWithUpgradeHint(diagnostics, options.hideWarnings);
+	if (diagnostics.hasErrors()) {
+		throw new UserError(diagnostics.renderErrors(), {
+			telemetryMessage: "new-config worker validation failed",
+		});
+	}
+
+	return {
+		config,
+		dependencies: loaded.dependencies,
+		types: loaded.types,
+	};
 }
 
 /**

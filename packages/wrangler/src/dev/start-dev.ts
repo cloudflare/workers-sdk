@@ -270,6 +270,7 @@ async function setupDevEnv(
 				// initialise with a random id
 				containerBuildId: generateContainerBuildId(),
 				generateTypes: args.types,
+				experimentalNewConfig: args.xNewConfig,
 				tunnel: {
 					enabled: args.tunnel ?? false,
 					name: args.tunnelName,
