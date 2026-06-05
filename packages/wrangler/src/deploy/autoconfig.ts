@@ -321,7 +321,7 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 					? args.domains.map((d) => `--domains ${d}`)
 					: []),
 				...(args.triggers?.length
-					? [`--triggers ${args.triggers.join(" ")}`]
+					? [`--triggers ${args.triggers.map((t) => `'${t}'`).join(" ")}`]
 					: []),
 				...(args.var?.length ? args.var.map((v) => `--var ${v}`) : []),
 				...(args.define?.length ? args.define.map((d) => `--define ${d}`) : []),

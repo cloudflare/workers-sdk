@@ -674,7 +674,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		await runWrangler("deploy ./index.js --triggers '*/5 * * * *' --dry-run");
 		expect(std.out).toContain("--dry-run: exiting now.");
 		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-		expect(std.out).toContain("--triggers */5 * * * *");
+		expect(std.out).toContain("--triggers '*/5 * * * *'");
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
 
