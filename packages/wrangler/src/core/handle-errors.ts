@@ -259,10 +259,26 @@ function isContainersAuthenticationError(e: unknown): e is UserError {
 }
 
 /**
- * @returns whether `e` is a standard Cloudflare API authentication error
+ * Cloudflare API error codes that indicate an authentication problem.
+ *
+ * - 9106: "Authentication failed" — token not recognized (invalid or malformed).
+ * - 10000: "Authentication error" — token is structurally valid but rejected
+ *          (expired, revoked server-side, or wrong scope).
+ */
+const AUTHENTICATION_ERROR_CODES = [9106, 10000];
+
+/**
+ * Checks whether `e` is a standard Cloudflare API authentication error.
+ *
+ * @param e - the error to inspect
+ * @returns whether the error is an APIError with an auth error code
  */
 export function isAuthenticationError(e: unknown): e is ParseError {
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
+	if (!(e instanceof ParseError)) {
+		return false;
+	}
+	const code = (e as { code?: number }).code;
+	return code !== undefined && AUTHENTICATION_ERROR_CODES.includes(code);
 }
 
 /**

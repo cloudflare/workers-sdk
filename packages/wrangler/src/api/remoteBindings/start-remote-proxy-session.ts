@@ -3,6 +3,7 @@ import path from "node:path";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
+import { RemoteSessionAuthenticationError } from "../../dev/remote";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
@@ -45,6 +46,28 @@ function getErrorMessage(error: unknown): string | undefined {
 			const maybeCause = (error as { cause?: unknown }).cause;
 			return getErrorMessage(maybeCause) ?? maybeMessage;
 		}
+	}
+
+	return undefined;
+}
+
+/**
+ * Walks the cause chain of an error (including {@link ErrorEvent} wrappers)
+ * looking for a {@link RemoteSessionAuthenticationError}.
+ *
+ * @param error - the error or ErrorEvent to inspect
+ * @returns the first {@link RemoteSessionAuthenticationError} found, or
+ *   `undefined` if none exists in the chain
+ */
+function findRemoteSessionAuthError(
+	error: unknown
+): RemoteSessionAuthenticationError | undefined {
+	if (error instanceof RemoteSessionAuthenticationError) {
+		return error;
+	}
+
+	if (isErrorEvent(error) || (error instanceof Error && error.cause)) {
+		return findRemoteSessionAuthError(error.cause);
 	}
 
 	return undefined;
@@ -118,6 +141,11 @@ export async function startRemoteProxySession(
 	]);
 
 	if (maybeError && maybeError.error) {
+		const authError = findRemoteSessionAuthError(maybeError.error);
+		if (authError) {
+			throw authError;
+		}
+
 		const details = formatRemoteProxySessionError(maybeError.error);
 		throw new Error(
 			details
