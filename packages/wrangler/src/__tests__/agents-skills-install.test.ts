@@ -815,6 +815,30 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			);
 		});
 
+		test("keeps old pending marker when owning process is still alive", async ({
+			expect,
+		}) => {
+			// Write a pending marker with the current process's own PID (which is
+			// guaranteed to be alive) and backdate it past the stale threshold.
+			// The liveness check should prevent the marker from being treated as
+			// stale, causing the second instance to skip the prompt.
+			writePendingMarker(process.pid);
+			const staleDate = new Date(Date.now() - 120_000);
+			utimesSync(getMetadataFilePath(), staleDate, staleDate);
+
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			// The prompt should NOT have appeared — the owning process is alive.
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+			expect(sendMetricsEvent).toHaveBeenCalledWith(
+				"skills_install_skipped",
+				{ reason: "Concurrent wrangler instances detected" },
+				{}
+			);
+		});
+
 		test("force=true skips contention detection entirely", async ({
 			expect,
 		}) => {

@@ -367,6 +367,33 @@ interface PendingSkillsInstallMarker {
 }
 
 /**
+ * Checks whether a process with the given PID is still running.
+ *
+ * Uses `process.kill(pid, 0)` which sends signal 0 (no actual signal) to
+ * probe for existence. Returns `false` if the PID is not a valid number or
+ * the process has exited.
+ *
+ * Note: PID reuse across separate OS process lifetimes can cause a false
+ * positive (reporting alive when the original process is gone and a new
+ * unrelated process reused the PID). This is an acceptable edge case given
+ * the short window involved.
+ *
+ * @param pid - The process ID to check.
+ * @returns `true` if the process is alive, `false` otherwise.
+ */
+function isProcessAlive(pid: number | undefined): boolean {
+	if (typeof pid !== "number") {
+		return false;
+	}
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
  * Detects whether multiple wrangler processes are starting concurrently by
  * using the metadata JSONC file itself as both the lock and the contention
  * signal. No separate lockfile or marker file is needed.
@@ -388,7 +415,11 @@ interface PendingSkillsInstallMarker {
  *    real metadata by {@link writeSkillsInstallMetadataFile}.
  *
  * Stale pending files (older than {@link SKILLS_INSTALL_PENDING_STALE_MS})
- * from crashed processes are detected and cleaned up automatically.
+ * from crashed processes are detected and cleaned up automatically, but only
+ * when the owning PID is no longer alive (checked via {@link isProcessAlive}).
+ * This prevents a second instance from stealing the prompt while the first
+ * instance's user is still answering it (even if they take longer than the
+ * stale threshold).
  *
  * @returns `true` if no concurrent instance was detected (safe to prompt),
  *   `false` if contention was detected (skip the prompt).
@@ -408,8 +439,11 @@ async function waitForConcurrentInstances(): Promise<boolean> {
 			// eslint-disable-next-line no-bitwise -- atomic create-or-fail
 			constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY
 		);
-		writeFileSync(fd, JSON.stringify(myMarker));
-		closeSync(fd);
+		try {
+			writeFileSync(fd, JSON.stringify(myMarker));
+		} finally {
+			closeSync(fd);
+		}
 	} catch (err) {
 		if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
 			// Unexpected filesystem error — fail open so the prompt still
@@ -438,11 +472,23 @@ async function waitForConcurrentInstances(): Promise<boolean> {
 			return true;
 		}
 
-		// The file is a pending marker from another process. Check if it's stale.
+		// The file is a pending marker from another process. Check whether the
+		// owning process is still alive and whether the marker is stale.
+		// Note: a process killed via SIGKILL during the prompt leaves a
+		// non-stale marker that suppresses the next prompt for up to
+		// SKILLS_INSTALL_PENDING_STALE_MS. This is acceptable because
+		// isProcessAlive() will detect the dead process and the age check
+		// provides a secondary safeguard for PID-reuse edge cases.
 		try {
 			const fileStat = statSync(metadataPath);
-			if (Date.now() - fileStat.mtimeMs >= SKILLS_INSTALL_PENDING_STALE_MS) {
-				// Stale pending marker — the creating process likely crashed.
+			const owningPid = (existingContent as { pid?: number }).pid;
+			const ownerAlive = isProcessAlive(owningPid);
+
+			if (
+				!ownerAlive &&
+				Date.now() - fileStat.mtimeMs >= SKILLS_INSTALL_PENDING_STALE_MS
+			) {
+				// Stale pending marker — the creating process is gone.
 				// Delete and treat as a fresh single instance.
 				unlinkSync(metadataPath);
 				return true;
