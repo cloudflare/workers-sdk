@@ -59,8 +59,12 @@ export type {
 export type { DevToolsEvent } from "./startDevWorker/devtools";
 
 // Exports from ./server
-export { createServer } from "./server";
-export type { ServerOptions, WorkerHandle, WorkerServer } from "./server";
+export { createPreviewServer } from "./server";
+export type {
+	PreviewServerOptions,
+	WorkerHandle,
+	PreviewServer,
+} from "./server";
 
 // Exports from ./integrations
 export {

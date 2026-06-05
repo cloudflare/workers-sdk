@@ -9,9 +9,9 @@ import {
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
 
-const { createServer } = await importWrangler();
+const { createPreviewServer } = await importWrangler();
 
-describe("createServer", { sequential: true }, () => {
+describe("createPreviewServer", { sequential: true }, () => {
 	let helper: WranglerE2ETestHelper;
 
 	beforeEach(() => {
@@ -39,7 +39,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			workers: [
 				{ configPath: path.resolve(helper.tmpPath, "./wrangler.jsonc") },
 			],
@@ -100,7 +100,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [
 				{ configPath: "./wrangler.primary.jsonc" },
@@ -182,7 +182,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [
 				{ configPath: "./wrangler.primary.jsonc" },
@@ -234,7 +234,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [
 				{ configPath: "./wrangler.primary.jsonc" },
@@ -322,7 +322,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [
 				{
@@ -397,7 +397,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [
 				{ configPath: "./wrangler.primary.jsonc" },
@@ -454,7 +454,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -495,7 +495,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -518,7 +518,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			workers: [
 				{
 					root: helper.tmpPath,
@@ -562,7 +562,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -607,7 +607,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -654,7 +654,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [
 				{
@@ -731,7 +731,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -761,7 +761,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [
 				{
@@ -807,7 +807,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const firstServer = createServer({
+		const firstServer = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -823,7 +823,7 @@ describe("createServer", { sequential: true }, () => {
 
 		await firstServer.close();
 
-		const secondServer = createServer({
+		const secondServer = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -861,7 +861,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -907,7 +907,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});
@@ -947,7 +947,7 @@ describe("createServer", { sequential: true }, () => {
 			`,
 		});
 
-		const server = createServer({
+		const server = createPreviewServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "./wrangler.jsonc" }],
 		});

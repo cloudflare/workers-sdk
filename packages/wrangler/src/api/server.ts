@@ -24,7 +24,7 @@ import type {
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type { DispatchFetch, Json, Miniflare, RequestInfo } from "miniflare";
 
-export type ServerOptions = {
+export type PreviewServerOptions = {
 	/**
 	 * Base directory used to resolve relative worker config paths.
 	 * Defaults to `process.cwd()`.
@@ -64,7 +64,7 @@ export type WorkerHandle = {
 	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
 };
 
-export type WorkerServer = {
+export type PreviewServer = {
 	/**
 	 * Starts the server and returns its current URL.
 	 * Calling this more than once returns the same running server session until
@@ -84,7 +84,7 @@ export type WorkerServer = {
 	 *
 	 * @example
 	 * ```ts
-	 * const server = createServer({
+	 * const server = createPreviewServer({
 	 *   workers: [
 	 *     { configPath: "./wrangler.dashboard.jsonc" }, // No route pattern
 	 *     { configPath: "./wrangler.api.jsonc" }, // Route pattern: "example.com/api/*"
@@ -113,10 +113,12 @@ export type WorkerServer = {
 	 * Updates the server configuration and reloads the running Workers.
 	 */
 	update(
-		options: ServerOptions | ((currentOptions: ServerOptions) => ServerOptions)
+		options:
+			| PreviewServerOptions
+			| ((currentOptions: PreviewServerOptions) => PreviewServerOptions)
 	): Promise<void>;
 	/**
-	 * Restores the server to its initial `createServer()` options and restarts the
+	 * Restores the server to its initial `createPreviewServer()` options and restarts the
 	 * active server session. Storage is recreated, and the server URL may change
 	 * after reset.
 	 */
@@ -133,7 +135,7 @@ type WorkerInput =
 	| {
 			/**
 			 * Base directory for resolving this Worker's relative config path.
-			 * Defaults to `ServerOptions.root`.
+			 * Defaults to `PreviewServerOptions.root`.
 			 */
 			root?: string;
 			/**
@@ -157,7 +159,7 @@ type WorkerInput =
 	| {
 			/**
 			 * Base directory for resolving paths in the inline config.
-			 * Defaults to `ServerOptions.root`.
+			 * Defaults to `PreviewServerOptions.root`.
 			 */
 			root?: string;
 			/**
@@ -179,7 +181,7 @@ type ServerSession = {
  *
  * @example
  * ```ts
- * const server = createServer({
+ * const server = createPreviewServer({
  *   workers: [{ configPath: "./wrangler.jsonc" }],
  * });
  * await server.listen();
@@ -187,7 +189,9 @@ type ServerSession = {
  * await server.close();
  * ```
  */
-export function createServer(options: ServerOptions): WorkerServer {
+export function createPreviewServer(
+	options: PreviewServerOptions
+): PreviewServer {
 	const initialOptions = options;
 	let currentOptions = options;
 	let serverSession: ServerSession | undefined;
@@ -225,7 +229,7 @@ export function createServer(options: ServerOptions): WorkerServer {
 	}
 
 	function resolveWorkerInputs(
-		serverOptions: ServerOptions
+		serverOptions: PreviewServerOptions
 	): StartDevWorkerInput[] {
 		if (serverOptions.workers.length === 0) {
 			throw new Error("Worker server requires at least one worker.");
@@ -299,7 +303,7 @@ export function createServer(options: ServerOptions): WorkerServer {
 	}
 
 	async function createSession(
-		serverOptions: ServerOptions
+		serverOptions: PreviewServerOptions
 	): Promise<ServerSession> {
 		const inputs = resolveWorkerInputs(serverOptions);
 		const [, ...auxiliaryWorkers] = inputs;
