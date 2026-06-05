@@ -2,11 +2,11 @@ import { describe, it } from "vitest";
 import { validateDescription } from "../validate-pr-description";
 
 describe("validateDescription()", () => {
-	it("should skip validation with the `skip-pr-description-validation` label", ({
+	it("should skip validation with the `ci:skip-pr-description-validation` label", ({
 		expect,
 	}) => {
 		expect(
-			validateDescription("", "", '["skip-pr-description-validation"]', "[]")
+			validateDescription("", "", '["ci:skip-pr-description-validation"]', "[]")
 		).toHaveLength(0);
 	});
 
@@ -79,7 +79,7 @@ The following selections do not need to be completed if this PR only contains ch
 Have you read our [Contributing guide](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md)?
 In particular, for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.
 -->`,
-				'["no-changeset-required"]',
+				'["ci:no-changeset-required"]',
 				"[]"
 			)
 		).toMatchInlineSnapshot(`[]`);
