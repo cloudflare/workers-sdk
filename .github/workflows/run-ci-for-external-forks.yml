@@ -71,16 +71,16 @@ jobs:
 
           if [ -n "$existing_pr" ]; then
             gh pr edit "$existing_pr" \
-              --add-label "e2e" \
-              --add-label "run-remote-tests" \
+              --add-label "ci:e2e" \
+              --add-label "ci:run-remote-tests" \
               --title "$TITLE" \
               --body "$BODY"
           else
             gh pr create \
               --head "run-ci-on-behalf-of-$PR_NUM" \
               --draft \
-              --label "e2e" \
-              --label "run-remote-tests" \
+              --label "ci:e2e" \
+              --label "ci:run-remote-tests" \
               --title "$TITLE" \
               --body "$BODY"
           fi
