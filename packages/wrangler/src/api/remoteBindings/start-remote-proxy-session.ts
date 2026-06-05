@@ -67,7 +67,7 @@ function findRemoteSessionAuthError(
 	}
 
 	if (isErrorEvent(error) || (error instanceof Error && error.cause)) {
-		return findRemoteSessionAuthError((error as { cause?: unknown }).cause);
+		return findRemoteSessionAuthError(error.cause);
 	}
 
 	return undefined;
