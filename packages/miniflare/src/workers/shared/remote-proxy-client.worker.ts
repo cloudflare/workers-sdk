@@ -15,7 +15,9 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 			this.env.binding,
 			undefined,
 			this.env.cfTraceId,
-			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
+			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK],
+			this.env.accessClientId,
+			this.env.accessClientSecret
 		)(request);
 	}
 
@@ -28,7 +30,9 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 					env.binding,
 					undefined,
 					env.cfTraceId,
-					env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
+					env[SharedBindings.MAYBE_SERVICE_LOOPBACK],
+					env.accessClientId,
+					env.accessClientSecret
 				)
 			: undefined;
 

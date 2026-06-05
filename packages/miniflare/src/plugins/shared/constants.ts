@@ -84,6 +84,16 @@ export function remoteProxyClientWorker(
 	script?: () => string
 ) {
 	const cfTraceId = process.env.CF_TRACE_ID;
+	// Forward Cloudflare Access Service Token credentials to the proxy client
+	// worker so both the HTTP (`makeFetch`) and WebSocket/capnweb
+	// (`makeRemoteProxyStub`) paths can attach CF-Access-Client-Id /
+	// CF-Access-Client-Secret headers. Read from the environment (consistent
+	// with `getAccessHeaders()` used for the realish-preview HTTP path) rather
+	// than worker vars, since these are tooling credentials, not worker runtime
+	// configuration. Without them, remote bindings fail with a 401/403 when the
+	// workers.dev domain is protected by Access.
+	const accessClientId = process.env.CLOUDFLARE_ACCESS_CLIENT_ID;
+	const accessClientSecret = process.env.CLOUDFLARE_ACCESS_CLIENT_SECRET;
 	return {
 		compatibilityDate: "2025-01-01",
 		modules: [
@@ -110,6 +120,22 @@ export function remoteProxyClientWorker(
 						{
 							name: "cfTraceId",
 							text: cfTraceId,
+						},
+					]
+				: []),
+			...(accessClientId
+				? [
+						{
+							name: "accessClientId",
+							text: accessClientId,
+						},
+					]
+				: []),
+			...(accessClientSecret
+				? [
+						{
+							name: "accessClientSecret",
+							text: accessClientSecret,
 						},
 					]
 				: []),

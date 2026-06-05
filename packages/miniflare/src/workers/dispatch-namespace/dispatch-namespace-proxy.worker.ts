@@ -27,7 +27,9 @@ export default class DispatchNamespaceProxy extends WorkerEntrypoint<RemoteBindi
 				}),
 			},
 			this.env.cfTraceId,
-			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
+			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK],
+			this.env.accessClientId,
+			this.env.accessClientSecret
 		);
 	}
 }

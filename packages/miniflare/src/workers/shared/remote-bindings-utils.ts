@@ -8,6 +8,13 @@ export type RemoteBindingEnv = {
 	remoteProxyConnectionString?: string;
 	binding: string;
 	cfTraceId?: string;
+	// Cloudflare Access Service Token credentials. When set, these are attached
+	// as CF-Access-Client-Id / CF-Access-Client-Secret headers to requests to
+	// the remote-bindings proxy server so that both HTTP (`makeFetch`) and
+	// WebSocket/capnweb (`makeRemoteProxyStub`) remote bindings pass through
+	// Access policies protecting the workers.dev domain.
+	accessClientId?: string;
+	accessClientSecret?: string;
 	// Optional loopback service used to surface diagnostics back to the
 	// Miniflare host (e.g. a Cloudflare Access block detected on the response
 	// from the remote-bindings proxy server).
@@ -118,7 +125,9 @@ export function makeFetch(
 	bindingName: string,
 	extraHeaders?: Headers,
 	cfTraceId?: string,
-	loopback?: Fetcher
+	loopback?: Fetcher,
+	accessClientId?: string,
+	accessClientSecret?: string
 ) {
 	return async (
 		input: RequestInfo | URL,
@@ -147,6 +156,16 @@ export function makeFetch(
 			// Also forward through to the binding call via the MF-Header proxy mechanism
 			proxiedHeaders.set("MF-Header-cf-trace-id", cfTraceId);
 		}
+		// Attach Cloudflare Access Service Token credentials so the request to
+		// the remote-bindings proxy server (hosted on the workers.dev domain)
+		// passes through any Access policy protecting it. Wrapped-fetcher
+		// bindings such as AI, Vectorize, and Images route their
+		// `fetcher.fetch()` calls through here, so without these headers they
+		// fail with a 403/401 when the workers.dev domain is behind Access.
+		if (accessClientId && accessClientSecret) {
+			proxiedHeaders.set("CF-Access-Client-Id", accessClientId);
+			proxiedHeaders.set("CF-Access-Client-Secret", accessClientSecret);
+		}
 		const req = new Request(request, {
 			headers: proxiedHeaders,
 		});
@@ -166,24 +185,63 @@ export function makeFetch(
 }
 
 /**
+ * Open a WebSocket to the remote-bindings proxy server via `fetch()` with an
+ * `Upgrade: websocket` header so that custom headers (e.g. Cloudflare Access
+ * service token credentials) are included in the handshake.
+ *
+ * In the Workers runtime, `new WebSocket(url)` (which capnweb uses when given a
+ * URL string) cannot set request headers, so when the proxy server is behind
+ * Cloudflare Access the upgrade is rejected with a 401. Using `fetch()` against
+ * the http(s) URL lets us attach the Access headers; the returned
+ * `response.webSocket` is then handed to capnweb.
+ */
+async function connectWebSocketWithHeaders(
+	httpUrl: string,
+	headers: Record<string, string>
+): Promise<WebSocket> {
+	const resp = await fetch(httpUrl, {
+		headers: { Upgrade: "websocket", ...headers },
+	});
+	const ws = resp.webSocket;
+	if (!ws) {
+		throw new Error(
+			`Remote bindings WebSocket upgrade failed (HTTP ${resp.status}). ` +
+				`If your workers.dev domain is protected by Cloudflare Access, ensure ` +
+				`CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET are set ` +
+				`to valid Service Token credentials.`
+		);
+	}
+	ws.accept();
+	return ws;
+}
+
+/**
  * Create a remote proxy stub that proxies to a remote binding via capnweb.
  *
  * Intercepts `.fetch()` to use plain HTTP; forwards other accesses to capnweb.
+ *
+ * When Access service token credentials are provided, the capnweb WebSocket is
+ * established via `fetch()` with the CF-Access-Client-Id / CF-Access-Client-Secret
+ * headers so RPC-based bindings (e.g. Artifacts) pass through Access policies
+ * protecting the workers.dev domain. The `.fetch()` path threads the same
+ * credentials through to `makeFetch`.
  */
 export function makeRemoteProxyStub(
 	remoteProxyConnectionString: string,
 	bindingName: string,
 	metadata?: ProxyMetadata,
 	cfTraceId?: string,
-	loopback?: Fetcher
+	loopback?: Fetcher,
+	accessClientId?: string,
+	accessClientSecret?: string
 ): Fetcher {
-	const url = new URL(remoteProxyConnectionString);
-	url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-	url.searchParams.set("MF-Binding", bindingName);
+	const wsUrl = new URL(remoteProxyConnectionString);
+	wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+	wsUrl.searchParams.set("MF-Binding", bindingName);
 	if (metadata) {
 		for (const [key, value] of Object.entries(metadata)) {
 			if (value !== undefined) {
-				url.searchParams.set(key, value);
+				wsUrl.searchParams.set(key, value);
 			}
 		}
 	}
@@ -192,7 +250,32 @@ export function makeRemoteProxyStub(
 		fetch: typeof fetch;
 		connect: never;
 	};
-	const stub = newWebSocketRpcSession(url.href) as unknown as ProxiedService;
+
+	// Without Access credentials, hand capnweb the ws(s):// URL directly — it
+	// upgrades via `new WebSocket(url)` (no header support needed). With Access
+	// credentials, establish the WebSocket ourselves via a fetch() upgrade
+	// against the http(s):// URL so the Access headers ride along, then hand the
+	// connected socket to capnweb. RPC methods are async, so awaiting the
+	// connected socket is transparent to callers (e.g. `await env.X.method()`).
+	let resolvedStub: ProxiedService | undefined;
+	let stubPromise: Promise<ProxiedService> | undefined;
+
+	if (accessClientId && accessClientSecret) {
+		// fetch() needs the http(s):// scheme; reuse the same query params.
+		const httpUrl = new URL(wsUrl.href);
+		httpUrl.protocol = httpUrl.protocol === "wss:" ? "https:" : "http:";
+		stubPromise = connectWebSocketWithHeaders(httpUrl.href, {
+			"CF-Access-Client-Id": accessClientId,
+			"CF-Access-Client-Secret": accessClientSecret,
+		}).then((ws) => {
+			resolvedStub = newWebSocketRpcSession(ws) as unknown as ProxiedService;
+			return resolvedStub;
+		});
+	} else {
+		resolvedStub = newWebSocketRpcSession(
+			wsUrl.href
+		) as unknown as ProxiedService;
+	}
 
 	const headers = metadata
 		? new Headers(
@@ -202,7 +285,7 @@ export function makeRemoteProxyStub(
 			)
 		: undefined;
 
-	return new Proxy<ProxiedService>(stub, {
+	return new Proxy<ProxiedService>({} as ProxiedService, {
 		get(_, p) {
 			if (p === "fetch") {
 				return makeFetch(
@@ -210,10 +293,29 @@ export function makeRemoteProxyStub(
 					bindingName,
 					headers,
 					cfTraceId,
-					loopback
+					loopback,
+					accessClientId,
+					accessClientSecret
 				);
 			}
-			return Reflect.get(stub, p);
+			if (resolvedStub) {
+				return Reflect.get(resolvedStub, p);
+			}
+			if (stubPromise) {
+				// The capnweb stub is itself a Proxy whose properties are RPC
+				// methods — they must be invoked as `stub[p](...args)` (calling
+				// `.apply()`/`.call()` would be interpreted as a remote method
+				// named "apply"/"call"). Return an async wrapper that awaits the
+				// authenticated WebSocket upgrade, then dispatches the RPC call.
+				return async (...args: unknown[]) => {
+					const stub = (await stubPromise) as Record<
+						string | symbol,
+						(...a: unknown[]) => unknown
+					>;
+					return stub[p](...args);
+				};
+			}
+			throwRemoteRequired(bindingName);
 		},
 	});
 }
