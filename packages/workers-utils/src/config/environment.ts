@@ -1,3 +1,11 @@
+/**
+ * Wrangler configuration types. The JSDoc on these fields is also the source
+ * of truth for the equivalent fields in `@cloudflare/config`
+ * (`packages/config/src/types.ts` — `UserConfig` — and the binding option
+ * interfaces in `packages/config/src/config.ts`). When editing prose here,
+ * mirror the changes there.
+ */
+
 import type { Json } from "../types";
 
 /**

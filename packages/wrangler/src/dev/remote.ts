@@ -2,13 +2,14 @@ import assert from "node:assert";
 import path from "node:path";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { syncAssets } from "../assets";
+import { isAuthenticationError } from "../core/handle-errors";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
 import { logger } from "../logger";
 import { syncWorkersSite } from "../sites";
-import { requireApiToken } from "../user";
+import { getAuthFromEnv, requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import type { StartDevWorkerInput } from "../api";
@@ -25,6 +26,54 @@ import type {
 	LegacyAssetPaths,
 	Route,
 } from "@cloudflare/workers-utils";
+
+/**
+ * Error thrown when a remote dev session fails due to an authentication
+ * problem.  The error message is a user-friendly description with actionable
+ * guidance, tailored to the caller's authentication method (environment
+ * variable token vs. OAuth).  The original API error is preserved as the
+ * error's {@link Error.cause | cause}.
+ *
+ * Consumers that catch this error can display {@link Error.message | message}
+ * directly — no additional logging helper is needed.
+ */
+export class RemoteSessionAuthenticationError extends UserError {
+	/**
+	 * @param cause - The original error that triggered the authentication
+	 *   failure (e.g. an {@link APIError} with code 9106 or 10000).
+	 */
+	constructor(cause: unknown) {
+		const envAuth = getAuthFromEnv();
+
+		let errorMessage =
+			"Failed to establish remote session due to an authentication issue.\n";
+		if (envAuth !== undefined) {
+			// The user is authenticating via an environment variable
+			const method =
+				"apiToken" in envAuth
+					? "a custom API token (`CLOUDFLARE_API_TOKEN`)"
+					: "a Global API Key (`CLOUDFLARE_API_KEY`)";
+
+			errorMessage +=
+				`It looks like you are authenticating via ${method} set in an environment variable.\n` +
+				"The token may be invalid or lack the required permissions for this operation.\n\n" +
+				"To fix this, verify that your token is valid and has the correct permissions.\n" +
+				"You can also run `wrangler whoami` to check your current authentication status.";
+		} else {
+			// The user is authenticating via OAuth (wrangler login)
+			errorMessage +=
+				"Your credentials may have expired or been revoked.\n\n" +
+				"To fix this, try to:\n" +
+				"  - Run `wrangler whoami` to check your current authentication status.\n" +
+				"  - Run `wrangler logout` and then `wrangler login` to re-authenticate.";
+		}
+
+		super(errorMessage, {
+			cause,
+			telemetryMessage: "remote dev authentication error",
+		});
+	}
+}
 
 export function handlePreviewSessionUploadError(
 	err: unknown,
@@ -58,8 +107,11 @@ export function handlePreviewSessionCreationError(
 	assert(err && typeof err === "object");
 	// instead of logging the raw API error to the user,
 	// give them friendly instructions
+	if (isAuthenticationError(err)) {
+		throw new RemoteSessionAuthenticationError(err);
+	}
 	// for error 10063 (workers.dev subdomain required)
-	if ("code" in err && err.code === 10063) {
+	else if ("code" in err && err.code === 10063) {
 		logger.error(
 			`You need to register a workers.dev subdomain before running the dev command in remote mode. You can either enable local mode by pressing l, or register a workers.dev subdomain here: https://dash.cloudflare.com/${accountId}/workers/onboarding`
 		);
@@ -253,6 +305,12 @@ export async function getWorkerAccountAndContext(props: {
 function handleUserFriendlyError(error: unknown, accountId?: string) {
 	if (error instanceof APIError) {
 		switch (error.code) {
+			// code 9106 and 10000 are authentication errors
+			case 9106:
+			case 10000: {
+				throw new RemoteSessionAuthenticationError(error);
+			}
+
 			// code 10021 is a validation error
 			case 10021: {
 				// if it is the following message, give a more user friendly

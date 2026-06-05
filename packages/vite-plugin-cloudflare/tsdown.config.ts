@@ -5,7 +5,9 @@ const ignoreWatch = ["dist", "playground", "e2e"];
 
 export default defineConfig([
 	{
-		entry: "src/index.ts",
+		entry: {
+			index: "src/index.ts",
+		},
 		platform: "node",
 		outDir: "dist",
 		tsconfig: "tsconfig.plugin.json",
@@ -38,6 +40,19 @@ export default defineConfig([
 		outDir: "dist",
 		tsconfig: "tsconfig.plugin.json",
 		dts: false,
+		ignoreWatch,
+	},
+	// TODO: move into main build as an additional entry once tsdown has been upgraded
+	{
+		entry: {
+			"experimental-config": "src/experimental-config.ts",
+		},
+		platform: "node",
+		outDir: "dist",
+		tsconfig: "tsconfig.plugin.json",
+		dts: {
+			resolve: ["@cloudflare/config"],
+		},
 		ignoreWatch,
 	},
 	worker("asset-worker"),

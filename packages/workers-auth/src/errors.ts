@@ -16,16 +16,26 @@ import { UserError } from "@cloudflare/workers-utils";
 
 /**
  * A list of OAuth2AuthCodePKCE errors.
+ *
+ * Instances may carry the structured details from the OAuth provider's
+ * `error`, `error_description` and `error_uri` query parameters (RFC 6749
+ * §4.1.2.1) so callers can render them — see {@link toErrorClass}.
  */
 // To "namespace" all errors.
 export class ErrorOAuth2 extends UserError {
+	/** The OAuth `error` code returned by the provider (e.g. `invalid_scope`). */
+	code?: string;
+	/** The OAuth `error_description` returned by the provider, if any. */
+	description?: string;
+	/** The OAuth `error_uri` returned by the provider, if any. */
+	uri?: string;
 	toString(): string {
 		return "ErrorOAuth2";
 	}
 }
 
 // Unclassified Oauth errors
-export class ErrorUnknown extends UserError {
+export class ErrorUnknown extends ErrorOAuth2 {
 	toString(): string {
 		return "ErrorUnknown";
 	}
@@ -125,61 +135,108 @@ export class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
 }
 
 /**
- * Translate the raw error strings returned from the server into error classes.
+ * Format the parts of an OAuth provider error response into a single,
+ * user-facing message.
  */
-export function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
+function formatOAuthErrorMessage(
+	code: string,
+	description: string | undefined,
+	uri: string | undefined
+): string {
+	let message = `OAuth error: ${code}`;
+	if (description) {
+		message += `\n  ${description}`;
+	}
+	if (uri) {
+		message += `\n  See: ${uri}`;
+	}
+	return message;
+}
+
+/**
+ * Translate an OAuth error response from the provider into one of our error
+ * classes. The `error_description` and `error_uri` parameters (RFC 6749
+ * §4.1.2.1) are included in the message when present so the user sees the
+ * specific reason for the failure rather than just the bare error code, and
+ * are also attached as structured fields so the HTTP callback handler can
+ * render them on the browser-facing error page.
+ */
+export function toErrorClass(
+	rawError: string,
+	description?: string,
+	uri?: string
+): ErrorOAuth2 | ErrorUnknown {
+	const message = formatOAuthErrorMessage(rawError, description, uri);
+	let error: ErrorOAuth2 | ErrorUnknown;
 	switch (rawError) {
 		case "invalid_request":
-			return new ErrorInvalidRequest(rawError, {
+			error = new ErrorInvalidRequest(message, {
 				telemetryMessage: "user oauth invalid request",
 			});
+			break;
 		case "invalid_grant":
-			return new ErrorInvalidGrant(rawError, {
+			error = new ErrorInvalidGrant(message, {
 				telemetryMessage: "user oauth invalid grant",
 			});
+			break;
 		case "unauthorized_client":
-			return new ErrorUnauthorizedClient(rawError, {
+			error = new ErrorUnauthorizedClient(message, {
 				telemetryMessage: "user oauth unauthorized client",
 			});
+			break;
 		case "access_denied":
-			return new ErrorAccessDenied(rawError, {
+			error = new ErrorAccessDenied(message, {
 				telemetryMessage: "user oauth access denied",
 			});
+			break;
 		case "unsupported_response_type":
-			return new ErrorUnsupportedResponseType(rawError, {
+			error = new ErrorUnsupportedResponseType(message, {
 				telemetryMessage: "user oauth unsupported response type",
 			});
+			break;
 		case "invalid_scope":
-			return new ErrorInvalidScope(rawError, {
+			error = new ErrorInvalidScope(message, {
 				telemetryMessage: "user oauth invalid scope",
 			});
+			break;
 		case "server_error":
-			return new ErrorServerError(rawError, {
+			error = new ErrorServerError(message, {
 				telemetryMessage: "user oauth server error",
 			});
+			break;
 		case "temporarily_unavailable":
-			return new ErrorTemporarilyUnavailable(rawError, {
+			error = new ErrorTemporarilyUnavailable(message, {
 				telemetryMessage: "user oauth temporarily unavailable",
 			});
+			break;
 		case "invalid_client":
-			return new ErrorInvalidClient(rawError, {
+			error = new ErrorInvalidClient(message, {
 				telemetryMessage: "user oauth invalid client",
 			});
+			break;
 		case "unsupported_grant_type":
-			return new ErrorUnsupportedGrantType(rawError, {
+			error = new ErrorUnsupportedGrantType(message, {
 				telemetryMessage: "user oauth unsupported grant type",
 			});
+			break;
 		case "invalid_json":
-			return new ErrorInvalidJson(rawError, {
+			error = new ErrorInvalidJson(message, {
 				telemetryMessage: "user oauth invalid json",
 			});
+			break;
 		case "invalid_token":
-			return new ErrorInvalidToken(rawError, {
+			error = new ErrorInvalidToken(message, {
 				telemetryMessage: "user oauth invalid token",
 			});
+			break;
 		default:
-			return new ErrorUnknown(rawError, {
+			error = new ErrorUnknown(message, {
 				telemetryMessage: "user oauth unknown error",
 			});
+			break;
 	}
+	error.code = rawError;
+	error.description = description;
+	error.uri = uri;
+	return error;
 }

@@ -1,3 +1,4 @@
+import { red } from "@cloudflare/cli-shared-helpers/colors";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
@@ -68,6 +69,7 @@ export const pipelinesListCommand = createCommand({
 					ID: pipeline.id,
 					Created: new Date(pipeline.created_at).toLocaleDateString(),
 					Modified: new Date(pipeline.modified_at).toLocaleDateString(),
+					Status: pipeline.status,
 					Type: "",
 				})),
 				...legacyPipelines.map((pipeline) => ({
@@ -75,6 +77,7 @@ export const pipelinesListCommand = createCommand({
 					ID: pipeline.id,
 					Created: "N/A",
 					Modified: "N/A",
+					Status: "N/A",
 					Type: "Legacy",
 				})),
 			];
@@ -85,8 +88,25 @@ export const pipelinesListCommand = createCommand({
 				ID: pipeline.id,
 				Created: new Date(pipeline.created_at).toLocaleDateString(),
 				Modified: new Date(pipeline.modified_at).toLocaleDateString(),
+				Status: pipeline.status,
 			}));
 			logger.table(tableData);
+		}
+
+		const failedPipelines = (newPipelines || []).filter(
+			(pipeline) => pipeline.status === "failed"
+		);
+		if (failedPipelines.length > 0) {
+			logger.log(
+				`\n${failedPipelines.length} pipeline${failedPipelines.length === 1 ? " is" : "s are"} in a failed state. Run 'wrangler pipelines get <pipeline>' for details:`
+			);
+			for (const pipeline of failedPipelines) {
+				logger.log(
+					red(
+						`  ✘ ${pipeline.name}: ${pipeline.failure_reason ?? "Unknown failure"}\n`
+					)
+				);
+			}
 		}
 
 		if (hasLegacyPipelines) {

@@ -1268,6 +1268,22 @@ describe("wrangler secret", () => {
 			);
 		});
 
+		it("should fail if JSON stdin contains a record with non-string values", async ({
+			expect,
+		}) => {
+			mockReadlineInput(
+				JSON.stringify({
+					"invalid-secret": 999,
+				})
+			);
+
+			await expect(
+				runWrangler("secret bulk --name script-name")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The value for "invalid-secret" in "piped input" is not null or a "string" instead it is of type "number"]`
+			);
+		});
+
 		it("should count success and network failure on secret bulk", async ({
 			expect,
 		}) => {
@@ -1617,6 +1633,54 @@ describe("wrangler secret", () => {
 
 				Finished processing secrets file:
 				✨ 2 secrets successfully created"
+			`);
+		});
+
+		it("should not create a new worker for delete-only bulk input when the worker is not found", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-to-delete": null,
+				})
+			);
+
+			mockNoWorkerFound({ isBulk: true });
+			const createDraftWorkerRequests = { count: 0 };
+			msw.use(
+				http.put("*/accounts/:accountId/workers/scripts/:name", async () => {
+					createDraftWorkerRequests.count++;
+					return HttpResponse.json(createFetchResult(null));
+				})
+			);
+
+			await expect(
+				runWrangler("secret bulk ./secret.json --name non-existent-worker")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/non-existent-worker/secrets-bulk) failed.]`
+			);
+
+			expect(createDraftWorkerRequests.count).toBe(0);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Processing the secrets for the Worker "non-existent-worker"
+
+				🚨 Secrets failed to upload
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/non-existent-worker/secrets-bulk) failed.[0m
+
+				  This Worker does not exist on your account. [code: 10007]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				"
 			`);
 		});
 

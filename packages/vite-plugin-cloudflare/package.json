@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.39.2",
+	"version": "1.40.0",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -34,6 +34,10 @@
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
+		},
+		"./experimental-config": {
+			"types": "./dist/experimental-config.d.mts",
+			"import": "./dist/experimental-config.mjs"
 		}
 	},
 	"publishConfig": {
@@ -56,6 +60,7 @@
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",

@@ -16,7 +16,7 @@ import assert from "node:assert";
 import http from "node:http";
 import url from "node:url";
 import { UserError } from "@cloudflare/workers-utils";
-import { ErrorAccessDenied, ErrorNoAuthCode } from "./errors";
+import { ErrorAccessDenied, ErrorNoAuthCode, ErrorOAuth2 } from "./errors";
 import {
 	exchangeAuthCodeForAccessToken,
 	getAuthURL,
@@ -85,6 +85,15 @@ export async function getOauthToken(
 			function finish(token: AccessContext): void;
 			function finish(token: AccessContext | null, error?: Error) {
 				clearTimeout(loginTimeoutHandle);
+				// Defensive: every code path that calls `finish()` should already
+				// have written a response, but if not, end the connection so that
+				// `server.close()` can complete (its callback only fires once all
+				// open connections have ended). Without this, a future code path
+				// that forgets to send a response could cause `wrangler login` to
+				// hang until the OAuth timeout.
+				if (!res.writableEnded) {
+					res.end();
+				}
 				server.close((closeErr?: Error) => {
 					if (error || closeErr) {
 						reject(error || closeErr);
@@ -93,6 +102,52 @@ export async function getOauthToken(
 						resolve(token);
 					}
 				});
+			}
+
+			function renderErrorPage(detail: {
+				code?: string;
+				description?: string;
+			}): void {
+				const escape = (s: string) =>
+					s.replace(
+						/[&<>"']/g,
+						(c) =>
+							({
+								"&": "&amp;",
+								"<": "&lt;",
+								">": "&gt;",
+								'"': "&quot;",
+								"'": "&#39;",
+							})[c] as string
+					);
+				const codeRow = detail.code
+					? `<p>Code: <code>${escape(detail.code)}</code></p>`
+					: "";
+				const descriptionRow = detail.description
+					? `<p class="detail">${escape(detail.description)}</p>`
+					: "";
+				const body = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Wrangler login failed</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 720px; margin: 4rem auto; padding: 0 1rem; color: #1f2933; line-height: 1.5; }
+    h1 { color: #c12d3f; }
+    code { background: #f5f7fa; padding: 0.15em 0.3em; border-radius: 3px; }
+    p.detail { background: #f5f7fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Wrangler login failed</h1>
+  <p>The Cloudflare OAuth provider returned an error.</p>
+  ${codeRow}
+  ${descriptionRow}
+  <p>You can close this tab and return to your terminal for more details.</p>
+</body>
+</html>`;
+				res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+				res.end(body);
 			}
 
 			assert(req.url, "This request doesn't have a URL"); // This should never happen
@@ -120,45 +175,64 @@ export async function getOauthToken(
 							});
 
 							return;
-						} else {
-							finish(null, err as Error);
-							return;
 						}
+						const oauthErr = err as ErrorOAuth2;
+						renderErrorPage({
+							code: oauthErr.code,
+							description: oauthErr.description ?? oauthErr.message,
+						});
+						finish(null, oauthErr);
+						return;
 					}
 					if (!hasAuthCode) {
-						// render an error page here
+						const noCodeMessage =
+							"The Cloudflare OAuth provider did not return an authorisation code.";
+						renderErrorPage({ description: noCodeMessage });
 						finish(
 							null,
-							new ErrorNoAuthCode("", {
+							new ErrorNoAuthCode(noCodeMessage, {
 								telemetryMessage: "user oauth missing auth code",
 							})
 						);
 						return;
-					} else {
-						// `exchangeAuthCodeForAccessToken` can reject (network error,
-						// invalid JSON, OAuth error response, etc.). Without this
-						// `try/catch` the rejection would become an unhandled promise
-						// rejection inside an `http.createServer` callback, which is
-						// not promise-aware — Node.js >= 15 terminates the process on
-						// unhandled rejection by default. Route the error through
-						// `finish` so the caller's promise rejects cleanly.
-						try {
-							const exchange = await exchangeAuthCodeForAccessToken(
-								state,
-								ctx.logger,
-								ctx.isNonInteractiveOrCI
-							);
-							res.writeHead(307, {
-								Location: options.granted.url,
-							});
-							res.end(() => {
-								finish(exchange);
-							});
-						} catch (err) {
-							finish(null, err as Error);
-						}
-						return;
 					}
+					// `exchangeAuthCodeForAccessToken` can reject (network error,
+					// invalid JSON, OAuth error response, etc.). Without this
+					// `try/catch` the rejection would become an unhandled promise
+					// rejection inside an `http.createServer` callback, which is
+					// not promise-aware — Node.js >= 15 terminates the process on
+					// unhandled rejection by default. Route the error through
+					// `finish` so the caller's promise rejects cleanly.
+					try {
+						const exchange = await exchangeAuthCodeForAccessToken(
+							state,
+							ctx.logger,
+							ctx.isNonInteractiveOrCI
+						);
+						res.writeHead(307, {
+							Location: options.granted.url,
+						});
+						res.end(() => {
+							finish(exchange);
+						});
+					} catch (err: unknown) {
+						// `exchangeAuthCodeForAccessToken` can throw an `ErrorOAuth2`
+						// (for provider-side errors), or a plain `Error` (for JSON
+						// parse failures in `getJSONFromResponse`, network errors
+						// from `fetchAuthToken`, etc.). Only read the structured
+						// OAuth fields when we know we have them.
+						const exchangeErr = err as Error;
+						const isOAuthError = exchangeErr instanceof ErrorOAuth2;
+						renderErrorPage({
+							code: isOAuthError ? exchangeErr.code : undefined,
+							description:
+								(isOAuthError ? exchangeErr.description : undefined) ??
+								exchangeErr.message ??
+								"Failed to exchange the authorisation code for an access token.",
+						});
+						finish(null, exchangeErr);
+					}
+					return;
 				}
 			}
 		});

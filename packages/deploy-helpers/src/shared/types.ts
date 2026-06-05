@@ -1,8 +1,8 @@
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	AssetsOptions,
 	LegacyAssetPaths,
-	CfPlacement,
+	CfModule,
+	CfModuleType,
 	Config,
 	EphemeralDirectory,
 	FetchResultFetcher,
@@ -41,20 +41,14 @@ export type DeployHelpersContext = {
  * config.unsafe, config.tail_consumers).
  */
 export type SharedDeployVersionsProps = {
-	config: Config;
 	/** Merged from args.script/config.main/config.site.entry-point/config.assets. */
 	entry: Entry;
-	/** From config.rules. */
-	rules: Config["rules"];
-	/** Merged: --name arg ?? config.name, with CI override applied. */
-	name: string;
-	workerNameOverridden: boolean;
-	/** Merged: --compatibility-date arg ?? config.compatibility_date. Still optional — validated as required in stage 4. */
+	/** Merged: --name arg ?? config.name, with CI override applied. Validated as required separately. */
+	name: string | undefined;
+	/** Merged: --compatibility-date arg ?? config.compatibility_date. Still optional — validated as required later. */
 	compatibilityDate: string | undefined;
 	/** Merged: --compatibility-flags arg ?? config.compatibility_flags. */
 	compatibilityFlags: string[];
-	/** computed based on compat date and args */
-	nodejsCompatMode: NodeJSCompatMode;
 	/** Merged from --assets arg and config.assets. */
 	assetsOptions: AssetsOptions | undefined;
 	/** Merged: --jsx-factory arg || config.jsx_factory. */
@@ -82,7 +76,6 @@ export type SharedDeployVersionsProps = {
 	 * True only when config opts in (legacy_env: false) AND --env is specified.
 	 */
 	useServiceEnvApiPath: boolean;
-	placement: CfPlacement | undefined;
 	/** Output directory for the bundled Worker. From --outdir arg or a temp directory. */
 	destination: string | EphemeralDirectory;
 	/** From --dry-run arg. */
@@ -99,10 +92,16 @@ export type SharedDeployVersionsProps = {
 	message: string | undefined;
 	/** From --secrets-file arg. */
 	secretsFile: string | undefined;
-	/** From collectKeyValues(--var arg). Pre-resolved key-value pairs. */
-	var: Record<string, string>;
+	/** From collectKeyValues(--var arg). CLI-only vars; config vars flow separately via getBindings(config). */
+	cliVars: Record<string, string>;
 	/** From --experimental-auto-create arg. */
 	experimentalAutoCreate: boolean;
+	/** Resolved from requireAuth() before calling deploy-helpers. undefined only in dry-run. */
+	accountId: string | undefined;
+	/** Resolved from getMetricsUsageHeaders() / config.send_metrics. Controls whether usage metrics headers are sent with upload requests. */
+	sendMetrics: boolean;
+	/** Resolved from getFlag("RESOURCES_PROVISION"). Controls whether bindings are auto-provisioned before upload. */
+	resourcesProvision: boolean;
 };
 
 export type DeployProps = SharedDeployVersionsProps & {
@@ -116,7 +115,6 @@ export type DeployProps = SharedDeployVersionsProps & {
 	routes: Route[];
 	/** Merged: --logpush arg ?? config.logpush. */
 	logpush: boolean | undefined;
-	containers: ContainerNormalizedConfig[];
 	/** From --dispatch-namespace arg. Deploy-only (Workers for Platforms). */
 	dispatchNamespace: string | undefined;
 	/** From --strict arg. Deploy-only. */
@@ -125,6 +123,8 @@ export type DeployProps = SharedDeployVersionsProps & {
 	metafile: string | boolean | undefined;
 	/** From --old-asset-ttl arg. Deploy-only. */
 	oldAssetTtl: number | undefined;
+	/** From --containers-rollout arg. Deploy-only. */
+	containersRollout: "immediate" | "gradual" | "none" | undefined;
 };
 
 export type VersionsUploadProps = SharedDeployVersionsProps & {
@@ -132,6 +132,31 @@ export type VersionsUploadProps = SharedDeployVersionsProps & {
 	command: "versions upload";
 	/** CLI-only (--preview-alias), or auto-generated from CI branch name. */
 	previewAlias: string | undefined;
+};
+
+export type BuildBundleInfo = {
+	sourceMapPath?: string | undefined;
+	sourceMapMetadata?: { tmpDir: string; entryDirectory: string } | undefined;
+};
+
+export type HandleBuildResult = {
+	modules: CfModule[];
+	dependencies: Record<string, { bytesInOutput: number }>;
+	resolvedEntryPointPath: string;
+	bundleType: CfModuleType;
+	content: string;
+	bundle: BuildBundleInfo;
+};
+
+export type HandleBuild = {
+	build: (
+		props: SharedDeployVersionsProps,
+		config: Config,
+		options: {
+			nodejsCompatMode: NodeJSCompatMode;
+			metafile?: string | boolean;
+		}
+	) => Promise<HandleBuildResult>;
 };
 
 export interface TriggerDeployment {
