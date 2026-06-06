@@ -46,6 +46,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
+import type { LoginOrRefreshFailureReason } from "@cloudflare/workers-auth";
 import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
 
@@ -77,12 +78,15 @@ async function resolveDevConfig(
 ): Promise<StartDevWorkerOptions["dev"]> {
 	const auth = async () => {
 		if (input.dev?.remote) {
-			const isLoggedIn = await loginOrRefreshIfRequired(config);
-			if (!isLoggedIn) {
-				throw new UserError(
-					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local.",
-					{ telemetryMessage: "api dev remote login required" }
+			const result = await loginOrRefreshIfRequired(config);
+			if (!result.loggedIn) {
+				const errorMessage = getLoginOrRefreshFailureErrorMessage(
+					input.dev.remote,
+					result.reason
 				);
+				throw new UserError(errorMessage, {
+					telemetryMessage: "api dev remote login required",
+				});
 			}
 		}
 
@@ -169,6 +173,55 @@ async function resolveDevConfig(
 		generateTypes: input.dev?.generateTypes ?? config.dev.generate_types,
 		tunnel: input.dev?.tunnel,
 	} satisfies StartDevWorkerOptions["dev"];
+}
+
+/**
+ * Maps a {@link LoginOrRefreshFailureReason} to a user-facing error message
+ * with actionable remediation steps (e.g. re-running `wrangler login`,
+ * setting `CLOUDFLARE_API_TOKEN`, or falling back to local dev).
+ *
+ * @param remoteMode - The remote dev mode that was requested. When
+ *   `"minimal"` (remote-bindings mode), the suggestion to fall back to
+ *   `--local` dev is omitted because local dev is not a useful alternative.
+ * @param failureReason - The specific {@link LoginOrRefreshFailureReason}
+ *   that describes why login or token refresh could not succeed.
+ * @returns A formatted error message string prefixed with a generic failure
+ *   summary, followed by reason-specific guidance and a `wrangler whoami` tip.
+ */
+function getLoginOrRefreshFailureErrorMessage(
+	remoteMode: boolean | "minimal",
+	failureReason: LoginOrRefreshFailureReason
+) {
+	const errorMessagePrefix = "Could not start remote dev session.";
+	const localFallback =
+		remoteMode === "minimal"
+			? "" // Remote bindings mode — local dev is not a useful fallback
+			: "\n - Or use `wrangler dev --local` to develop locally (remote resources like KV, D1, etc. will use local simulators instead).";
+	const whoamiTip =
+		"\n\nYou can run `wrangler whoami` to check your current authentication status.";
+	const errorMessageBodies = {
+		"no-credentials-non-interactive":
+			" No credentials found, and the environment is non-interactive so browser login cannot be started.\n" +
+			"Either:\n" +
+			" - Set a CLOUDFLARE_API_TOKEN environment variable\n" +
+			` - Run \`wrangler login\` in an interactive terminal first${localFallback}${whoamiTip}`,
+		"no-credentials-login-failed":
+			" No credentials found and the login attempt was unsuccessful.\n" +
+			"Either:\n" +
+			` - Run \`wrangler login\` to try again${localFallback}${whoamiTip}`,
+		"token-expired-non-interactive":
+			" Your auth token has expired and could not be refreshed, and the environment is non-interactive so browser login cannot be started.\n" +
+			"Either:\n" +
+			" - Run `wrangler login` in an interactive terminal\n" +
+			` - Set a CLOUDFLARE_API_TOKEN environment variable${localFallback}${whoamiTip}`,
+		"token-expired-login-failed":
+			" Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful.\n" +
+			"Either:\n" +
+			` - Run \`wrangler login\` to try again${localFallback}${whoamiTip}`,
+	};
+	const errorMessageBody = errorMessageBodies[failureReason];
+	const errorMessage = errorMessagePrefix + errorMessageBody;
+	return errorMessage;
 }
 
 async function resolveBindings(

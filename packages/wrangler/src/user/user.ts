@@ -31,7 +31,10 @@ import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { Account } from "./shared";
-import type { LoginProps } from "@cloudflare/workers-auth";
+import type {
+	LoginOrRefreshResult,
+	LoginProps,
+} from "@cloudflare/workers-auth";
 import type {
 	ApiCredentials,
 	ComplianceConfig,
@@ -243,10 +246,19 @@ export async function logout(): Promise<void> {
 	return oauthFlow.logout();
 }
 
+/**
+ * Attempt to ensure the user is authenticated, refreshing or prompting for
+ * login as needed.
+ *
+ * @param complianceConfig - Compliance region configuration
+ * @param props - Optional overrides for scopes, browser behaviour, etc.
+ * @returns A {@link LoginOrRefreshResult} indicating success or the specific
+ *   reason authentication could not be established.
+ */
 export async function loginOrRefreshIfRequired(
 	complianceConfig: ComplianceConfig,
 	props?: WranglerLoginProps
-): Promise<boolean> {
+): Promise<LoginOrRefreshResult> {
 	return oauthFlow.loginOrRefreshIfRequired(
 		withDefaultScopes(complianceConfig, props)
 	);
@@ -384,9 +396,12 @@ export async function requireAuth(
 		account_id?: string;
 	}
 ): Promise<string> {
-	const loggedIn = await loginOrRefreshIfRequired(config);
-	if (!loggedIn) {
-		if (isNonInteractiveOrCI()) {
+	const result = await loginOrRefreshIfRequired(config);
+	if (!result.loggedIn) {
+		if (
+			result.reason === "no-credentials-non-interactive" ||
+			result.reason === "token-expired-non-interactive"
+		) {
 			throw new UserError(
 				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.",
 				{ telemetryMessage: "user auth missing api token non interactive" }

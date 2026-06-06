@@ -325,7 +325,10 @@ export async function fetchAuthToken(
 			headers,
 		});
 		if (!response.ok) {
-			logger.error(
+			// Log at debug level — callers handle non-OK responses and surface
+			// structured errors, so an error-level log here would be redundant
+			// noise that confuses users with multiple error messages.
+			logger.debug(
 				"Failed to fetch auth token:",
 				response.status,
 				response.statusText
@@ -333,7 +336,8 @@ export async function fetchAuthToken(
 		}
 		return response;
 	} catch (e) {
-		logger.error("Failed to fetch auth token:", e);
+		// Log at debug level — the error is re-thrown for the caller to handle.
+		logger.debug("Failed to fetch auth token:", e);
 		throw e;
 	}
 }
