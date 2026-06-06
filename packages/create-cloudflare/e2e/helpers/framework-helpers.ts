@@ -14,6 +14,7 @@ import {
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import * as jsonc from "jsonc-parser";
+import semver from "semver";
 import { fetch } from "undici";
 import { version } from "../../package.json";
 import { getFrameworkMap } from "../../src/templates";
@@ -23,6 +24,7 @@ import {
 	isExperimental,
 	runDeployTests,
 	testPackageManager,
+	testPackageManagerVersion,
 } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging } from "./spawn";
@@ -36,6 +38,16 @@ export type FrameworkTestConfig = RunnerConfig & {
 	nodeCompat: boolean;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
+	/**
+	 * Per–package-manager semver ranges that should be skipped. Use this when a
+	 * framework template fails on a specific package-manager version (e.g.
+	 * Hono's `create-hono --install` step pulls in unapproved build scripts and
+	 * fails on pnpm >=11, which enforces `ERR_PNPM_IGNORED_BUILDS`).
+	 *
+	 * Keys are package-manager names ("pnpm", "npm", "yarn", "bun") and values
+	 * are semver ranges understood by `semver.satisfies`.
+	 */
+	unsupportedPmRanges?: Partial<Record<string, string>>;
 	flags?: string[];
 	extraEnv?: Record<string, string | undefined>;
 };
@@ -417,8 +429,25 @@ export function shouldRunTest(testConfig: FrameworkTestConfig) {
 		// Skip if the package manager is unsupported
 		!testConfig.unsupportedPms?.includes(testPackageManager) &&
 		// Skip if the OS is unsupported
-		!testConfig.unsupportedOSs?.includes(process.platform)
+		!testConfig.unsupportedOSs?.includes(process.platform) &&
+		// Skip if the package-manager version falls inside an unsupported range
+		!isUnsupportedPmVersion(testConfig)
 	);
+}
+
+function isUnsupportedPmVersion(testConfig: FrameworkTestConfig): boolean {
+	const range = testConfig.unsupportedPmRanges?.[testPackageManager];
+	if (!range || !testPackageManagerVersion) {
+		return false;
+	}
+	// Coerce to a clean semver in case the env value carries extra suffixes
+	// (e.g. "11.5.1-canary"). `semver.coerce` returns null for unparseable
+	// inputs — in that case we fall back to running the test.
+	const coerced = semver.coerce(testPackageManagerVersion);
+	if (!coerced) {
+		return false;
+	}
+	return semver.satisfies(coerced, range);
 }
 
 /**

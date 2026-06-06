@@ -246,6 +246,17 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
+			// `create-hono` is invoked with `--install`
+			// (`templates/hono/pages/c3.ts`), so the dependency install runs
+			// inside the framework generator, *before* C3 reaches its own
+			// `npmInstall`. On pnpm >=11 the default `strictDepBuilds=true`
+			// turns unapproved postinstall scripts (workerd, esbuild, sharp via
+			// wrangler) into a fatal `ERR_PNPM_IGNORED_BUILDS`. C3's
+			// approve-builds recovery path can't engage that early, so the
+			// generator fails before we ever return. Until `create-hono`
+			// supports `--no-install` (or approves its own build scripts), we
+			// skip this test on pnpm 11+.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Hello!",
@@ -268,6 +279,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
+			// See note on hono:pages above.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/message",
 				expectedText: "Hello Hono!",
