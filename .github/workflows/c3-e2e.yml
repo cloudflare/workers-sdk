@@ -175,14 +175,21 @@ jobs:
     # Runs the C3 frameworks E2E tests only in the merge queue, on the release branch, if create-cloudflare has changed, or when explicitly requested via label.
     #
     # The pnpm job here intentionally stays on pnpm 10.33.0 (monorepo's
-    # pinned version). Several framework generators (Next.js, Nuxt, Analog,
-    # Qwik, Hono) pull in additional build-script dependencies
-    # (`@parcel/watcher`, `unrs-resolver`, `lmdb`, ...) that are outside C3's
-    # pre-approval scope — those approvals are the framework generator's or
-    # the user's responsibility, not C3's. Until upstream generators approve
-    # their own builds, pnpm 11 in CI would fail those frameworks
-    # non-interactively. pnpm 10 only warns, so the scaffold exercise stays
-    # meaningful.
+    # pinned version).
+    #
+    # C3 has a recovery path for `ERR_PNPM_IGNORED_BUILDS` when *C3 itself*
+    # runs `pnpm install` — the e2e harness's background responder accepts
+    # the `pnpm approve-builds <pkgs>` prompt non-interactively (see
+    # `e2e/helpers/run-c3.ts`). That covers framework templates that pass
+    # `--no-install` to their generator (e.g. `react-router`, `nuxt`,
+    # `astro`, plus `svelte` and `next` via flags / template download).
+    #
+    # But several frameworks delegate install to their own generator
+    # (e.g. `hono` passes `--install` to `create-hono`, and many generators
+    # default to installing). Those internal installs aren't routed through
+    # C3, so on pnpm 11 they would fail with `ERR_PNPM_IGNORED_BUILDS`
+    # before the recovery path can engage. Until those generators approve
+    # their own build scripts upstream, frameworks-e2e stays on pnpm 10.
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-frameworks${{ matrix.experimental && '-experimental' || '' }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}

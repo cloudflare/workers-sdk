@@ -22,6 +22,17 @@ export type PromptHandler = {
 		  };
 };
 
+/**
+ * A `BackgroundResponder` fires whenever its matcher appears in C3's stdout,
+ * regardless of ordering in `promptHandlers`. It is meant for "opportunistic"
+ * prompts that only show up under specific conditions (e.g. the pnpm 11
+ * approve-builds confirmation). Each responder fires at most once per run.
+ */
+type BackgroundResponder = {
+	matcher: RegExp;
+	keys: string[];
+};
+
 export type RunnerConfig = {
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
@@ -86,8 +97,39 @@ export const runC3 = async (
 		logStream
 	);
 
+	// Background responders fire independently of `promptHandlers` and don't
+	// participate in the ordered queue. They handle recovery-style prompts
+	// that may or may not appear, depending on the framework's dependency
+	// graph (e.g. pnpm 11's `pnpm approve-builds` confirmation, which only
+	// shows up when a framework pulls in unapproved build scripts).
+	const backgroundResponders: BackgroundResponder[] = [
+		{
+			matcher: /Run `pnpm approve-builds [^`]+` and retry the install\?/,
+			// Accept the default ("yes") to run approve-builds + retry.
+			keys: [keys.enter],
+		},
+	];
+	const handledBackground = new WeakSet<BackgroundResponder>();
+
 	const onData = (data: string) => {
+		handleBackgroundPrompts(data);
 		handlePrompt(data);
+	};
+
+	const handleBackgroundPrompts = (data: string) => {
+		const text = stripAnsi(data.toString());
+		for (const responder of backgroundResponders) {
+			if (handledBackground.has(responder)) {
+				continue;
+			}
+			if (!responder.matcher.test(text)) {
+				continue;
+			}
+			handledBackground.add(responder);
+			for (const keystroke of responder.keys) {
+				proc.stdin.write(keystroke);
+			}
+		}
 	};
 
 	// Clone the prompt handlers so we can consume them destructively

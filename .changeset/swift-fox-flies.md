@@ -11,5 +11,5 @@ The scaffold step now writes (or minimally merges into) a `pnpm-workspace.yaml` 
 When pnpm still aborts the install with `ERR_PNPM_IGNORED_BUILDS` (because a framework generator pulled in unapproved build scripts), C3 now:
 
 - parses the flagged package list out of the pnpm output instead of dumping the entire transcript,
-- in an interactive shell, asks before running `pnpm approve-builds <pkg>…` and retrying the install once, and
-- in a non-interactive shell (or after a declined prompt or unsuccessful retry), prints a concise summary with the exact `pnpm approve-builds` command to run in the generated project.
+- prompts to run `pnpm approve-builds <pkg>…` and retry the install once (default: yes),
+- after a declined prompt, an unsuccessful retry, or a closed stdin (e.g. `pnpm create cloudflare < /dev/null`), prints a concise summary with the exact `pnpm approve-builds` command to run in the generated project.

@@ -3,9 +3,9 @@ import nodePath from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim, red } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import {
 	inputPrompt,
-	isInteractive,
 	spinner,
 } from "@cloudflare/cli-shared-helpers/interactive";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
@@ -107,10 +107,14 @@ const runPnpmInstallQuiet = async (
  *      scripts, rethrow.
  *   3. If pnpm refused to run dependency build scripts, parse the flagged
  *      package list.
- *      - If we couldn't parse the list, or we're not running interactively
- *        (CI), throw an `IgnoredBuildsError` carrying whatever we did parse;
- *        the top-level handler renders a concise message + guidance.
+ *      - If we couldn't parse the list, throw an `IgnoredBuildsError` with
+ *        an empty list; the top-level handler renders a concise message +
+ *        guidance.
  *      - Otherwise, prompt the user to approve those packages and retry.
+ *      - If the prompt is cancelled (no TTY / closed stdin / Ctrl-C) or the
+ *        user declines, throw an `IgnoredBuildsError` carrying the parsed
+ *        list. The top-level handler renders concise guidance instead of
+ *        the raw pnpm transcript.
  *   4. If they confirm, run `pnpm approve-builds <pkgs>` (deterministic and
  *      non-interactive when packages are passed explicitly) and re-run the
  *      install once. A second failure becomes an `IgnoredBuildsError`.
@@ -126,6 +130,57 @@ const pnpmInstallWithBuildApprovalRetry = async (
 			throw err;
 		}
 		await recoverFromIgnoredBuilds(npm, err);
+	}
+};
+
+/**
+ * Sentinel error used to distinguish "stdin closed before the prompt was
+ * answered" from a normal `CancelError` (which clack throws when the user
+ * cancels an interactive prompt). Both map to `IgnoredBuildsError` for the
+ * user, but keeping the sentinel internal keeps the intent clear.
+ */
+const STDIN_EOF_MARKER = "__c3_stdin_eof__";
+const isStdinEOFError = (err: unknown): boolean =>
+	err instanceof Error && err.message === STDIN_EOF_MARKER;
+
+/**
+ * Race the approve-builds confirm prompt against stdin's `end` event. In a
+ * TTY the event never fires. In the e2e harness, the harness writes to stdin
+ * before EOF and the prompt resolves first. In a fully non-interactive
+ * shell (e.g. `pnpm create cloudflare < /dev/null`) stdin EOFs immediately,
+ * the event loop would otherwise drain and the process would silently exit
+ * with code 0; here we reject with a sentinel that the caller converts to
+ * `IgnoredBuildsError`.
+ */
+const promptOrEOF = async (packages: string[]): Promise<boolean> => {
+	const prompt = inputPrompt<boolean>({
+		type: "confirm",
+		question: `Run \`pnpm approve-builds ${packages.join(" ")}\` and retry the install?`,
+		label: "approve-builds",
+		defaultValue: true,
+		throwOnError: true,
+	});
+
+	if (process.stdin.isTTY) {
+		// A real terminal won't EOF on its own; no need for the race.
+		return prompt;
+	}
+
+	let onEnd: (() => void) | undefined;
+	const eof = new Promise<boolean>((_, reject) => {
+		onEnd = () => reject(new Error(STDIN_EOF_MARKER));
+		process.stdin.once("end", onEnd);
+		// `resume()` keeps the event loop alive long enough for the `end`
+		// event to fire even when nothing else is reading stdin.
+		process.stdin.resume();
+	});
+
+	try {
+		return await Promise.race([prompt, eof]);
+	} finally {
+		if (onEnd) {
+			process.stdin.removeListener("end", onEnd);
+		}
 	}
 };
 
@@ -145,18 +200,25 @@ const recoverFromIgnoredBuilds = async (
 		`${red("pnpm refused to run build scripts for:")} ${packages.join(", ")}`
 	);
 
-	if (!isInteractive()) {
-		// CI / non-TTY: don't auto-approve framework-introduced build scripts.
-		throw new IgnoredBuildsError(packages, originalErr);
+	// Drive recovery through the same prompt the e2e harness already knows how
+	// to answer. In a real interactive shell the user types y/n. In the e2e
+	// harness, a background responder writes Enter when it sees this question
+	// (see `runC3` in e2e/helpers/run-c3.ts).
+	//
+	// In a fully non-interactive shell (no TTY, stdin already at EOF) clack
+	// has no input to read; without intervention the event loop drains and
+	// the process exits silently with code 0. To turn that into a clean,
+	// actionable error we race the prompt against stdin's `end` event and
+	// convert the EOF to an `IgnoredBuildsError` carrying the parsed list.
+	let approve: boolean;
+	try {
+		approve = await promptOrEOF(packages);
+	} catch (promptErr) {
+		if (promptErr instanceof CancelError || isStdinEOFError(promptErr)) {
+			throw new IgnoredBuildsError(packages, originalErr);
+		}
+		throw promptErr;
 	}
-
-	const approve = await inputPrompt<boolean>({
-		type: "confirm",
-		question: `Run \`pnpm approve-builds ${packages.join(" ")}\` and retry the install?`,
-		label: "approve-builds",
-		defaultValue: true,
-		throwOnError: true,
-	});
 
 	if (!approve) {
 		throw new IgnoredBuildsError(packages, originalErr);

@@ -1,9 +1,7 @@
 import { existsSync } from "node:fs";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
-import {
-	inputPrompt,
-	isInteractive,
-} from "@cloudflare/cli-shared-helpers/interactive";
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { npmInstall } from "helpers/packages";
 import { isIgnoredBuildsError } from "helpers/pnpmBuildApprovals";
 import { beforeEach, describe, test, vi } from "vitest";
@@ -32,8 +30,6 @@ describe("npmInstall", () => {
 		mockSpinner();
 		// project directory does not yet have node_modules
 		vi.mocked(existsSync).mockReturnValue(false);
-		// default to a non-interactive shell unless the test opts in
-		vi.mocked(isInteractive).mockReturnValue(false);
 	});
 
 	test("falls through to plain `npm install` for non-pnpm", async ({
@@ -91,31 +87,9 @@ describe("npmInstall", () => {
 			expect(inputPrompt).not.toHaveBeenCalled();
 		});
 
-		test("non-interactive: throws IgnoredBuildsError with parsed packages and never prompts", async ({
+		test("prompt approved: runs `pnpm approve-builds <pkgs>` and retries install once", async ({
 			expect,
 		}) => {
-			vi.mocked(runCommand).mockRejectedValueOnce(
-				pnpmIgnoredBuildsError("@parcel/watcher@2.5.6, lmdb@2.8.1")
-			);
-
-			let caught: unknown;
-			await npmInstall(ctx()).catch((e) => {
-				caught = e;
-			});
-
-			expect(isIgnoredBuildsError(caught)).toBe(true);
-			expect((caught as IgnoredBuildsError).packages).toEqual([
-				"@parcel/watcher",
-				"lmdb",
-			]);
-			expect(inputPrompt).not.toHaveBeenCalled();
-			expect(runCommand).toHaveBeenCalledTimes(1);
-		});
-
-		test("interactive + approved: runs `pnpm approve-builds <pkgs>` and retries install once", async ({
-			expect,
-		}) => {
-			vi.mocked(isInteractive).mockReturnValue(true);
 			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
 			// 1) install fails with ignored builds, 2) approve-builds OK, 3) retry install OK
 			vi.mocked(runCommand)
@@ -125,6 +99,7 @@ describe("npmInstall", () => {
 
 			await npmInstall(ctx());
 
+			expect(inputPrompt).toHaveBeenCalledTimes(1);
 			expect(runCommand).toHaveBeenCalledTimes(3);
 			expect(vi.mocked(runCommand).mock.calls[0][0]).toEqual([
 				"pnpm",
@@ -142,10 +117,9 @@ describe("npmInstall", () => {
 			]);
 		});
 
-		test("interactive + declined: throws IgnoredBuildsError without running approve-builds", async ({
+		test("prompt declined: throws IgnoredBuildsError without running approve-builds", async ({
 			expect,
 		}) => {
-			vi.mocked(isInteractive).mockReturnValue(true);
 			vi.mocked(inputPrompt).mockResolvedValueOnce(false);
 			vi.mocked(runCommand).mockRejectedValueOnce(
 				pnpmIgnoredBuildsError("@parcel/watcher@2.5.6")
@@ -163,10 +137,48 @@ describe("npmInstall", () => {
 			expect(runCommand).toHaveBeenCalledTimes(1); // no approve-builds, no retry
 		});
 
+		test("prompt cancelled (no TTY / Ctrl-C): throws IgnoredBuildsError carrying the parsed list", async ({
+			expect,
+		}) => {
+			// inputPrompt with `throwOnError: true` throws CancelError when the
+			// prompt is cancelled — e.g. stdin is at EOF in a non-TTY CI shell,
+			// or the user hits Ctrl-C. We must surface a concise
+			// IgnoredBuildsError instead of letting the CancelError propagate.
+			vi.mocked(inputPrompt).mockRejectedValueOnce(
+				new CancelError("Operation cancelled")
+			);
+			vi.mocked(runCommand).mockRejectedValueOnce(
+				pnpmIgnoredBuildsError("@parcel/watcher@2.5.6, lmdb@2.8.1")
+			);
+
+			let caught: unknown;
+			await npmInstall(ctx()).catch((e) => {
+				caught = e;
+			});
+
+			expect(isIgnoredBuildsError(caught)).toBe(true);
+			expect((caught as IgnoredBuildsError).packages).toEqual([
+				"@parcel/watcher",
+				"lmdb",
+			]);
+			expect(runCommand).toHaveBeenCalledTimes(1); // no approve-builds, no retry
+		});
+
+		test("prompt errors for an unrelated reason: rethrows verbatim", async ({
+			expect,
+		}) => {
+			const promptErr = new Error("rendering broke");
+			vi.mocked(inputPrompt).mockRejectedValueOnce(promptErr);
+			vi.mocked(runCommand).mockRejectedValueOnce(
+				pnpmIgnoredBuildsError("@parcel/watcher@2.5.6")
+			);
+
+			await expect(npmInstall(ctx())).rejects.toBe(promptErr);
+		});
+
 		test("retry still fails with ignored builds: throws IgnoredBuildsError carrying the second list", async ({
 			expect,
 		}) => {
-			vi.mocked(isInteractive).mockReturnValue(true);
 			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
 			vi.mocked(runCommand)
 				.mockRejectedValueOnce(pnpmIgnoredBuildsError("@parcel/watcher@2.5.6"))
@@ -185,7 +197,6 @@ describe("npmInstall", () => {
 		test("retry fails for an unrelated reason: rethrows verbatim", async ({
 			expect,
 		}) => {
-			vi.mocked(isInteractive).mockReturnValue(true);
 			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
 			const retryErr = new Error("disk full");
 			vi.mocked(runCommand)
@@ -199,7 +210,6 @@ describe("npmInstall", () => {
 		test("unparseable ignored-builds error: throws IgnoredBuildsError with empty list", async ({
 			expect,
 		}) => {
-			vi.mocked(isInteractive).mockReturnValue(true);
 			// pnpm error without a recognisable `Ignored build scripts:` line
 			vi.mocked(runCommand).mockRejectedValueOnce(
 				new Error("[ERR_PNPM_IGNORED_BUILDS] something unexpected")
