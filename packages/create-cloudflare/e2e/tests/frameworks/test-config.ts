@@ -90,6 +90,15 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "docusaurus:pages",
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun"],
+			// `create-docusaurus` installs its dependencies internally as part
+			// of `runFrameworkGenerator` (no `--no-install` switch is exposed),
+			// so the install runs before C3 reaches its own `npmInstall`
+			// recovery path. On pnpm >=11 the docusaurus template pulls in
+			// `@swc/core` and `core-js` whose postinstall scripts are
+			// unapproved, tripping `ERR_PNPM_IGNORED_BUILDS`. Until docusaurus
+			// approves those upstream (or gains a `--no-install` flag we can
+			// pass), this combination cannot succeed in CI.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
@@ -119,6 +128,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "docusaurus:workers",
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun"],
+			// See note on docusaurus:pages above.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
@@ -719,6 +730,10 @@ function getExperimentalFrameworkTestConfig(
 			name: "docusaurus:workers",
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun"],
+			// See note on docusaurus:pages in the non-experimental list:
+			// `create-docusaurus` installs internally, so pnpm 11 trips
+			// `ERR_PNPM_IGNORED_BUILDS` before C3's recovery can engage.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
