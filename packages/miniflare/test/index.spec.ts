@@ -1741,8 +1741,8 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 }) => {
 	const log = new TestLog();
 	const tmp = await useTmp();
-	await fs.writeFile(path.join(tmp, "foo.html"), "asset", "utf8");
-
+	await fs.writeFile(path.join(tmp, "foo.html"), "<!doctype html><p>asset</p>");
+	await fs.writeFile(path.join(tmp, "foo.md"), "asset");
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -1784,6 +1784,11 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 	expect(json.scheduledTime).toBe(undefined);
 
 	res = await mf.dispatchFetch("http://localhost/foo");
+	expect(res.headers.get("content-type")).toContain('text/html');
+	expect(await res.text()).toBe("<!doctype html><p>asset</p>");
+
+	res = await mf.dispatchFetch("http://localhost/foo.md");
+	expect(res.headers.get("content-type")).toContain('text/markdown');
 	expect(await res.text()).toBe("asset");
 
 	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
