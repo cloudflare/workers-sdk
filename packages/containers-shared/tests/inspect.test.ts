@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
-import { describe, expect, it, vi } from "vitest";
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import { afterEach, describe, it, vi } from "vitest";
 
 vi.mock("node:child_process", async () => {
 	return {
@@ -9,7 +10,7 @@ vi.mock("node:child_process", async () => {
 
 const getSpawnMock = async () => {
 	const mod = await import("node:child_process");
-	return mod.spawn as unknown as ReturnType<typeof vi.fn>;
+	return vi.mocked(mod.spawn);
 };
 
 const createMockProc = (
@@ -17,9 +18,9 @@ const createMockProc = (
 	stderrText: string,
 	exitCode: number
 ) => {
-	const proc = new EventEmitter() as any;
-	proc.stdout = new EventEmitter();
-	proc.stderr = new EventEmitter();
+	const proc = new EventEmitter() as unknown as ChildProcessWithoutNullStreams;
+	(proc as unknown as { stdout: EventEmitter }).stdout = new EventEmitter();
+	(proc as unknown as { stderr: EventEmitter }).stderr = new EventEmitter();
 
 	setTimeout(() => {
 		if (stderrText) {
@@ -34,8 +35,24 @@ const createMockProc = (
 	return proc;
 };
 
+const createMockSpawnFailure = (error: Error) => {
+	const proc = new EventEmitter() as unknown as ChildProcessWithoutNullStreams;
+	(proc as unknown as { stdout: EventEmitter }).stdout = new EventEmitter();
+	(proc as unknown as { stderr: EventEmitter }).stderr = new EventEmitter();
+
+	setTimeout(() => proc.emit("error", error), 0);
+
+	return proc;
+};
+
+afterEach(() => {
+	vi.useRealTimers();
+});
+
 describe("dockerImageInspect", () => {
-	it("retries on transient missing-image errors and eventually resolves", async () => {
+	it("retries on transient missing-image errors and eventually resolves", async ({
+		expect,
+	}) => {
 		vi.useFakeTimers();
 		vi.clearAllMocks();
 		const spawn = await getSpawnMock();
@@ -66,12 +83,24 @@ describe("dockerImageInspect", () => {
 		expect(spawn).toHaveBeenCalledTimes(3);
 	});
 
-	it("does not retry on non-transient inspect failures", async () => {
+	it("retries on transient failed-to-find-image errors and eventually resolves", async ({
+		expect,
+	}) => {
 		vi.useFakeTimers();
 		vi.clearAllMocks();
 		const spawn = await getSpawnMock();
+
+		let call = 0;
 		spawn.mockImplementation(() => {
-			return createMockProc("", "permission denied", 1);
+			call++;
+			if (call <= 2) {
+				return createMockProc(
+					"",
+					"Error response from daemon: failed to find image: cloudflare-dev/test:deadbeef",
+					1
+				);
+			}
+			return createMockProc("42\n", "", 0);
 		});
 
 		const { dockerImageInspect } = await import("../src/inspect");
@@ -80,9 +109,86 @@ describe("dockerImageInspect", () => {
 			imageTag: "cloudflare-dev/test:deadbeef",
 			formatString: "{{ .Id }}",
 		});
-		const assertion = expect(promise).rejects.toThrow(
-			/failed inspecting image locally/i
+		const assertion = expect(promise).resolves.toBe("42");
+
+		await vi.runAllTimersAsync();
+		await assertion;
+		expect(spawn).toHaveBeenCalledTimes(3);
+	});
+
+	it("throws after exhausting all transient missing-image retries", async ({
+		expect,
+	}) => {
+		vi.useFakeTimers();
+		vi.clearAllMocks();
+		const spawn = await getSpawnMock();
+
+		spawn.mockImplementation(() =>
+			createMockProc(
+				"",
+				"Error response from daemon: No such image: cloudflare-dev/test:deadbeef",
+				1
+			)
 		);
+
+		const { dockerImageInspect } = await import("../src/inspect");
+
+		const promise = dockerImageInspect("docker", {
+			imageTag: "cloudflare-dev/test:deadbeef",
+			formatString: "{{ .Id }}",
+		});
+		const assertion = expect(promise).rejects.toThrow(
+			"failed inspecting image locally: Error response from daemon: No such image: cloudflare-dev/test:deadbeef"
+		);
+
+		await vi.runAllTimersAsync();
+		await assertion;
+		expect(spawn).toHaveBeenCalledTimes(5);
+	});
+
+	it("does not retry on non-transient inspect failures", async ({ expect }) => {
+		vi.useFakeTimers();
+		vi.clearAllMocks();
+		const spawn = await getSpawnMock();
+
+		spawn.mockImplementation(() =>
+			createMockProc(
+				"",
+				"Error response from daemon: invalid reference format",
+				1
+			)
+		);
+
+		const { dockerImageInspect } = await import("../src/inspect");
+
+		const promise = dockerImageInspect("docker", {
+			imageTag: "cloudflare-dev/test:deadbeef",
+			formatString: "{{ .Id }}",
+		});
+		const assertion = expect(promise).rejects.toThrow(
+			"failed inspecting image locally: Error response from daemon: invalid reference format"
+		);
+
+		await vi.runAllTimersAsync();
+		await assertion;
+		expect(spawn).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not retry when the process fails to spawn", async ({ expect }) => {
+		vi.useFakeTimers();
+		vi.clearAllMocks();
+		const spawn = await getSpawnMock();
+		const error = new Error("spawn docker ENOENT");
+
+		spawn.mockImplementation(() => createMockSpawnFailure(error));
+
+		const { dockerImageInspect } = await import("../src/inspect");
+
+		const promise = dockerImageInspect("docker", {
+			imageTag: "cloudflare-dev/test:deadbeef",
+			formatString: "{{ .Id }}",
+		});
+		const assertion = expect(promise).rejects.toBe(error);
 
 		await vi.runAllTimersAsync();
 		await assertion;
