@@ -4,6 +4,11 @@ import { UserError } from "@cloudflare/workers-utils";
 const MAX_INSPECT_RETRIES = 5;
 const RETRY_DELAY_MS = 100;
 
+type InspectError = Error & {
+	stderr: string;
+	transientMissingImage: boolean;
+};
+
 const isTransientMissingImage = (stderr: string): boolean => {
 	const message = stderr.toLowerCase();
 	return (
@@ -12,13 +17,20 @@ const isTransientMissingImage = (stderr: string): boolean => {
 	);
 };
 
-const createInspectError = (stderr: string): UserError => {
+const createInspectError = (stderr: string): InspectError => {
 	const error = new UserError(
 		`failed inspecting image locally: ${stderr.trim()}`
 	);
 	return Object.assign(error, {
 		stderr: stderr.trim(),
 		transientMissingImage: isTransientMissingImage(stderr),
+	});
+};
+
+const createSpawnError = (error: Error): InspectError => {
+	return Object.assign(error, {
+		stderr: "",
+		transientMissingImage: false,
 	});
 };
 
@@ -54,33 +66,35 @@ const inspectOnce = async (
 			}
 			resolve(stdout.trim());
 		});
-		proc.on("error", (err) => reject(err));
+		proc.on("error", (error) => reject(createSpawnError(error)));
 	});
+};
+
+const isRetryableInspectError = (error: unknown): error is InspectError => {
+	return (
+		error instanceof Error &&
+		"transientMissingImage" in error &&
+		error.transientMissingImage === true
+	);
 };
 
 export async function dockerImageInspect(
 	dockerPath: string,
 	options: { imageTag: string; formatString: string }
 ): Promise<string> {
-	let lastError: unknown;
+	let attempt = 0;
 
-	for (let attempt = 1; attempt <= MAX_INSPECT_RETRIES; attempt++) {
+	while (true) {
+		attempt++;
+
 		try {
 			return await inspectOnce(dockerPath, options);
 		} catch (error) {
-			lastError = error;
-			const isRetryable =
-				error instanceof Error &&
-				"transientMissingImage" in error &&
-				(Boolean((error as { transientMissingImage?: boolean }).transientMissingImage));
-
-			if (!isRetryable || attempt === MAX_INSPECT_RETRIES) {
+			if (!isRetryableInspectError(error) || attempt === MAX_INSPECT_RETRIES) {
 				throw error;
 			}
 
 			await sleep(RETRY_DELAY_MS);
 		}
 	}
-
-	throw lastError;
 }
