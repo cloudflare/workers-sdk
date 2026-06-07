@@ -99,9 +99,19 @@ export const runC3 = async (
 
 	// Background responders fire independently of `promptHandlers` and don't
 	// participate in the ordered queue. They handle recovery-style prompts
-	// that may or may not appear, depending on the framework's dependency
-	// graph (e.g. pnpm 11's `pnpm approve-builds` confirmation, which only
-	// shows up when a framework pulls in unapproved build scripts).
+	// that may or may not appear, depending on the dependency graph (e.g.
+	// pnpm 11's `pnpm approve-builds` confirmation, which only shows up when
+	// installs trip `ERR_PNPM_IGNORED_BUILDS`).
+	//
+	// Note: a responder can only write to stdin while stdin is still open.
+	// `handlePrompt` closes stdin once the last *ordered* prompt handler is
+	// consumed (otherwise framework generators spawned with `stdio: "inherit"`
+	// keep stdin alive and hang on exit). So a background responder is only
+	// reliably answered for runs whose `promptHandlers` queue is empty
+	// (typically: simple worker templates, where no framework generator runs).
+	// Framework templates whose recovery prompt fires *after* the last
+	// ordered handler should opt out of the impacted package-manager version
+	// via `unsupportedPmRanges` in the test config.
 	const backgroundResponders: BackgroundResponder[] = [
 		{
 			matcher: /Run `pnpm approve-builds [^`]+` and retry the install\?/,
@@ -129,29 +139,7 @@ export const runC3 = async (
 			for (const keystroke of responder.keys) {
 				proc.stdin.write(keystroke);
 			}
-			// If this was the last interaction we expected (no ordered prompts
-			// left, all background responders fired), close stdin so C3 exits
-			// cleanly. Otherwise we'd leave the child process holding an open
-			// stdin pipe waiting for input that will never come.
-			maybeEndStdin();
 		}
-	};
-
-	// Close stdin once we've exhausted every prompt handler *and* every
-	// background responder has fired. Leaving stdin open until then is what
-	// allows opportunistic recovery prompts (e.g. `pnpm approve-builds` under
-	// pnpm 11) to be answered after the last ordered prompt.
-	const maybeEndStdin = () => {
-		if (promptHandlers[0] !== undefined) {
-			return;
-		}
-		const allBackgroundDone = backgroundResponders.every((responder) =>
-			handledBackground.has(responder)
-		);
-		if (!allBackgroundDone) {
-			return;
-		}
-		proc.stdin.end();
 	};
 
 	// Clone the prompt handlers so we can consume them destructively
@@ -262,10 +250,11 @@ export const runC3 = async (
 		// Consume the handler once we've used it
 		promptHandlers.shift();
 
-		// If we've consumed the last prompt handler, defer closing stdin to
-		// `maybeEndStdin` — it keeps stdin open while any background responder
-		// (e.g. the pnpm 11 `approve-builds` recovery prompt) is still pending.
-		maybeEndStdin();
+		// If we've consumed the last prompt handler, close the input stream
+		// Otherwise, the process wont exit properly
+		if (promptHandlers[0] === undefined) {
+			proc.stdin.end();
+		}
 	};
 
 	return waitForExit(proc, onData);

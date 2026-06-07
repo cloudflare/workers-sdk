@@ -385,6 +385,17 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 			unsupportedOSs: ["win32"],
+			// On pnpm >=11 Nuxt's deps (notably `@parcel/watcher`) trip
+			// `ERR_PNPM_IGNORED_BUILDS` when C3 runs its own `pnpm install`
+			// after the `--no-install` generator finishes. C3's interactive
+			// recovery prompt works for real TTY users, but the e2e harness
+			// has already closed stdin by the time the prompt fires (it
+			// closes after the last ordered `promptHandler` is consumed), so
+			// the background responder can't write to it. Skip in CI until
+			// either the harness can keep stdin open without hanging
+			// inherit-stdio framework generators, or Nuxt's template
+			// pre-approves its build scripts.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Welcome to Nuxt!",
@@ -410,6 +421,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 			unsupportedOSs: ["win32"],
+			// See note on nuxt:pages above.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Welcome to Nuxt!",
@@ -830,6 +843,10 @@ function getExperimentalFrameworkTestConfig(
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
+			// See note on nuxt:pages in the non-experimental list: the e2e
+			// harness can't answer C3's approve-builds recovery prompt for
+			// Nuxt under pnpm 11.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Welcome to Nuxt!",
