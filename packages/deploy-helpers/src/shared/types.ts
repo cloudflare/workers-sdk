@@ -5,8 +5,10 @@ import type {
 	CfModuleType,
 	Config,
 	EphemeralDirectory,
+	FetchKVGetValueFetcher,
 	FetchResultFetcher,
 	FetchListResultFetcher,
+	FetchPagedListResultFetcher,
 	Logger,
 	Route,
 	Entry,
@@ -20,6 +22,8 @@ import type { NodeJSCompatMode } from "miniflare";
 export type DeployHelpersContext = {
 	fetchResult: FetchResultFetcher;
 	fetchListResult: FetchListResultFetcher;
+	fetchPagedListResult: FetchPagedListResultFetcher;
+	fetchKVGetValue: FetchKVGetValueFetcher;
 	logger: Logger;
 	confirm: (
 		text: string,

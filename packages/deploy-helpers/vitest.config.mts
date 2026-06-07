@@ -7,5 +7,6 @@ export default defineConfig({
 		include: ["**/tests/**/*.test.ts"],
 		reporters: ["default"],
 		mockReset: true,
+		unstubEnvs: true,
 	},
 });

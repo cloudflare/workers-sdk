@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
@@ -18,7 +19,6 @@ import { isNavigatorDefined } from "../../navigator-user-agent";
 import { debounce } from "../../utils/debounce";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import { extractBindingsOfType } from "./utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigUpdateEvent } from "./events";

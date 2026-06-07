@@ -4,8 +4,11 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import type { DeployHelpersContext } from "../shared/types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import { confirm, fetchResult, logger, prompt } from "../shared/context";
+import type {
+	ComplianceConfig,
+	FetchResultFetcher,
+} from "@cloudflare/workers-utils";
 
 type WorkersDevSubdomainRegistrationContext = "workers_dev" | "workflows";
 
@@ -13,6 +16,7 @@ type GetWorkersDevSubdomainOptions = {
 	configPath?: string | undefined;
 	abortSignal?: AbortSignal | undefined;
 	registrationContext?: WorkersDevSubdomainRegistrationContext | undefined;
+	fetchResultOverride?: FetchResultFetcher | undefined;
 };
 
 /**
@@ -21,18 +25,19 @@ type GetWorkersDevSubdomainOptions = {
 export async function getWorkersDevSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	ctx: DeployHelpersContext,
 	options: GetWorkersDevSubdomainOptions = {}
 ): Promise<string> {
 	const {
 		configPath,
 		abortSignal,
 		registrationContext = "workers_dev",
+		fetchResultOverride,
 	} = options;
+	const fetch = fetchResultOverride ?? fetchResult;
 
 	try {
 		// note: API docs say that this field is "name", but they're lying.
-		const { subdomain } = await ctx.fetchResult<{ subdomain: string }>(
+		const { subdomain } = await fetch<{ subdomain: string }>(
 			complianceConfig,
 			`/accounts/${accountId}/workers/subdomain`,
 			undefined,
@@ -48,9 +53,9 @@ export async function getWorkersDevSubdomain(
 
 		// 10007 error code: not found
 		// https://api.cloudflare.com/#worker-subdomain-get-subdomain
-		ctx.logger.warn(getRegistrationWarning(registrationContext));
+		logger.warn(getRegistrationWarning(registrationContext));
 
-		const wantsToRegister = await ctx.confirm(
+		const wantsToRegister = await confirm(
 			"Would you like to register a workers.dev subdomain now?",
 			{ fallbackValue: false }
 		);
@@ -66,8 +71,7 @@ export async function getWorkersDevSubdomain(
 			complianceConfig,
 			accountId,
 			configPath,
-			registrationContext,
-			ctx
+			registrationContext
 		);
 	}
 }
@@ -118,25 +122,24 @@ async function registerSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	configPath: string | undefined,
-	registrationContext: WorkersDevSubdomainRegistrationContext,
-	ctx: DeployHelpersContext
+	registrationContext: WorkersDevSubdomainRegistrationContext
 ): Promise<string> {
 	let subdomain: string | undefined;
 
 	while (subdomain === undefined) {
-		const potentialName = await ctx.prompt(
+		const potentialName = await prompt(
 			"What would you like your workers.dev subdomain to be? It will be accessible at https://<subdomain>.workers.dev"
 		);
 
 		if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(potentialName)) {
-			ctx.logger.warn(
+			logger.warn(
 				`${potentialName} is invalid, please choose another subdomain.`
 			);
 			continue;
 		}
 
 		try {
-			await ctx.fetchResult<{ subdomain: string }>(
+			await fetchResult<{ subdomain: string }>(
 				complianceConfig,
 				`/accounts/${accountId}/workers/subdomains/${potentialName}`
 			);
@@ -151,18 +154,18 @@ async function registerSubdomain(
 					// oddly enough, this is a `subdomain_unavailable` error, meaning...that the subdomain
 					// doesn't exist. and we can register it. this is exactly how the dashboard does it.
 				} else if (subdomainAvailabilityCheckError.code === 10031) {
-					ctx.logger.error(
+					logger.error(
 						"Subdomain is unavailable, please try a different subdomain"
 					);
 					continue;
 				} else {
-					ctx.logger.error("An unexpected error occurred, please try again.");
+					logger.error("An unexpected error occurred, please try again.");
 					continue;
 				}
 			}
 		}
 
-		const ok = await ctx.confirm(
+		const ok = await confirm(
 			`Creating a workers.dev subdomain for your account at ${chalk.blue(
 				chalk.underline(
 					`https://${potentialName}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`
@@ -178,7 +181,7 @@ async function registerSubdomain(
 		}
 
 		try {
-			const result = await ctx.fetchResult<{ subdomain: string }>(
+			const result = await fetchResult<{ subdomain: string }>(
 				complianceConfig,
 				`/accounts/${accountId}/workers/subdomain`,
 				{
@@ -196,22 +199,20 @@ async function registerSubdomain(
 			) {
 				switch (subdomainCreationError.code) {
 					case 10031:
-						ctx.logger.error(
+						logger.error(
 							"Subdomain is unavailable, please try a different subdomain."
 						);
 						break;
 					default:
-						ctx.logger.error("An unexpected error occurred, please try again.");
+						logger.error("An unexpected error occurred, please try again.");
 						break;
 				}
 			}
 		}
 	}
 
-	ctx.logger.log(
-		"Success! It may take a few minutes for DNS records to update."
-	);
-	ctx.logger.log(
+	logger.log("Success! It may take a few minutes for DNS records to update.");
+	logger.log(
 		`Visit ${chalk.blue(
 			chalk.underline(
 				`https://dash.cloudflare.com/${accountId}/workers/subdomain`

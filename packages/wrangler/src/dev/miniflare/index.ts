@@ -2,15 +2,15 @@ import assert from "node:assert";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
+	extractBindingsOfType,
+	isUnsafeBindingType,
+} from "@cloudflare/deploy-helpers";
+import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
-import {
-	extractBindingsOfType,
-	isUnsafeBindingType,
-} from "../../api/startDevWorker/utils";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
 import { withSourceURLs } from "../../deployment-bundle/source-url";
 import { logger } from "../../logger";

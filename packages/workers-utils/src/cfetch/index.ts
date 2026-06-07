@@ -44,6 +44,13 @@ export type FetchListResultFetcher = <ResponseType>(
 	queryParams?: URLSearchParams
 ) => Promise<ResponseType[]>;
 
+export type FetchPagedListResultFetcher = <ResponseType>(
+	complianceConfig: ComplianceConfig,
+	resource: string,
+	init?: RequestInit,
+	queryParams?: URLSearchParams
+) => Promise<ResponseType[]>;
+
 function logHeaders(headers: Headers, logger: Logger): void {
 	const clone = cloneHeaders(headers);
 	clone.delete("Authorization");
@@ -464,6 +471,53 @@ function throwWAFBlockError(
 		telemetryMessage: false,
 	});
 }
+
+/**
+ * Fetch a raw KV value from the Cloudflare API.
+ *
+ * This is special-cased because it's the only API endpoint that returns raw
+ * binary data instead of a JSON envelope.
+ *
+ * Note: callers must call encodeURIComponent on `key` before passing it.
+ */
+export async function fetchKVGetValueBase(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceId: string,
+	key: string,
+	userAgent: string,
+	logger: Logger,
+	credentials: ApiCredentials
+): Promise<ArrayBuffer> {
+	const headers = new Headers();
+	addAuthorizationHeader(headers, credentials);
+	headers.set("User-Agent", userAgent);
+	maybeAddTraceHeader(headers);
+
+	const resource = `${getCloudflareApiBaseUrl(complianceConfig)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
+
+	logger.debug(`-- START CF API REQUEST: GET ${resource}`);
+	logger.debug("-- END CF API REQUEST");
+
+	const response = await fetch(resource, {
+		method: "GET",
+		headers,
+	});
+	if (response.ok) {
+		return await response.arrayBuffer();
+	} else {
+		throw new Error(
+			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
+		);
+	}
+}
+
+export type FetchKVGetValueFetcher = (
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceId: string,
+	key: string
+) => Promise<ArrayBuffer>;
 
 export function hasCursor(
 	result_info: unknown

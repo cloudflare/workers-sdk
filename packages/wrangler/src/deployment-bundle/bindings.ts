@@ -12,7 +12,6 @@ import {
 	getAgentMemoryNamespace,
 } from "../agent-memory/provisioning";
 import { createAISearchNamespace, getAISearchNamespace } from "../ai-search";
-import { convertConfigToBindings } from "../api/startDevWorker/utils";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
@@ -42,20 +41,7 @@ import type {
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
-export function getBindings(
-	config: Config | undefined,
-	options?: {
-		pages?: boolean;
-	}
-): NonNullable<StartDevWorkerInput["bindings"]> {
-	if (!config) {
-		return {};
-	}
-	return convertConfigToBindings(config, {
-		usePreviewIds: false,
-		pages: options?.pages,
-	});
-}
+export { getBindings } from "@cloudflare/deploy-helpers";
 
 export type Settings = {
 	bindings: Array<WorkerMetadataBinding>;

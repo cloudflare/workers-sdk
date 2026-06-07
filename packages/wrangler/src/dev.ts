@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import events from "node:events";
+import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	formatConfigSnippet,
@@ -7,7 +8,6 @@ import {
 } from "@cloudflare/workers-utils";
 import { getHostFromRoute } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
-import { convertConfigToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deployment-bundle/resolve-config-args";
