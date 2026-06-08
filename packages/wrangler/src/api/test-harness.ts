@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
 	normalizeAndValidateConfig,
 	UserError,
@@ -11,7 +12,6 @@ import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
-import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
 import type { StartDevWorkerInput } from "./startDevWorker/types";

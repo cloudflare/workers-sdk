@@ -1,6 +1,6 @@
-import { describe, it } from "vitest";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
 import { logger } from "@cloudflare/deploy-helpers/context";
+import { describe, it } from "vitest";
 
 describe("context singleton", () => {
 	// Verifies that both package entry points (. and ./context) share the same
