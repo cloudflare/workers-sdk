@@ -240,21 +240,24 @@ export function getOriginFromArgs<
 	if (!allowPartialOrigin) {
 		if (!args.originScheme) {
 			throw new UserError(
-				"You must specify the database protocol as --origin-scheme - e.g. 'postgresql'",
+				"Missing required option --origin-scheme. Specify the database protocol, e.g. --origin-scheme=postgresql. Supported values: postgres, postgresql, mysql. Alternatively, use --connection-string to provide all origin details at once.",
 				{ telemetryMessage: "hyperdrive origin missing protocol" }
 			);
 		} else if (!args.database) {
-			throw new UserError("You must provide a database name", {
-				telemetryMessage: "hyperdrive origin missing database",
-			});
+			throw new UserError(
+				"Missing required option --database. Specify the name of the database on the origin server, e.g. --database=mydb. Alternatively, use --connection-string to provide all origin details at once.",
+				{
+					telemetryMessage: "hyperdrive origin missing database",
+				}
+			);
 		} else if (!args.originUser) {
 			throw new UserError(
-				"You must provide a username for the origin database",
+				"Missing required option --origin-user. Specify the username for the origin database, e.g. --origin-user=myuser. Alternatively, use --connection-string to provide all origin details at once.",
 				{ telemetryMessage: "hyperdrive origin missing username" }
 			);
 		} else if (!args.originPassword) {
 			throw new UserError(
-				"You must provide a password for the origin database",
+				"Missing required option --origin-password. Specify the password for the origin database, e.g. --origin-password=mypassword. Alternatively, use --connection-string to provide all origin details at once.",
 				{ telemetryMessage: "hyperdrive origin missing password" }
 			);
 		}
@@ -277,14 +280,14 @@ export function getOriginFromArgs<
 	} else if (args.accessClientId || args.accessClientSecret) {
 		if (!args.accessClientId || !args.accessClientSecret) {
 			throw new UserError(
-				"You must provide both an Access Client ID and Access Client Secret when configuring Hyperdrive-over-Access",
+				"Missing required option --access-client-id or --access-client-secret. Both --access-client-id and --access-client-secret must be provided together when configuring Hyperdrive-over-Access.",
 				{ telemetryMessage: "hyperdrive access missing credentials" }
 			);
 		}
 
 		if (!args.originHost || args.originHost === "") {
 			throw new UserError(
-				"You must provide an origin hostname for the database",
+				"Missing required option --origin-host. Specify the hostname of the origin database, e.g. --origin-host=database.example.com.",
 				{ telemetryMessage: "hyperdrive access missing origin host" }
 			);
 		}
@@ -297,14 +300,14 @@ export function getOriginFromArgs<
 	} else if (args.originHost || args.originPort) {
 		if (!args.originHost) {
 			throw new UserError(
-				"You must provide an origin hostname for the database",
+				"Missing required option --origin-host. Specify the hostname of the origin database, e.g. --origin-host=database.example.com.",
 				{ telemetryMessage: "hyperdrive origin missing host" }
 			);
 		}
 
 		if (!args.originPort) {
 			throw new UserError(
-				"You must provide a nonzero origin port for the database",
+				"Missing required option --origin-port. Specify the port of the origin database, e.g. --origin-port=5432.",
 				{ telemetryMessage: "hyperdrive origin missing port" }
 			);
 		}
