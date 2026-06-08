@@ -213,6 +213,11 @@ async function writeVerdaccioConfig(
 		// @ts-expect-error the `listen` property can also be a simple string.
 		listen: `localhost:${registryPort}`,
 		storage: "./storage",
+		// Raise the publish payload limit well above Verdaccio's 10mb default.
+		// Workspace packages such as `wrangler` produce tarballs (with source
+		// maps and metafiles) whose base64-encoded JSON publish body now
+		// exceeds the default, causing HTTP 413 from `pnpm publish`.
+		max_body_size: "100mb",
 		uplinks: {
 			// Consider adding the Cloudflare internal mirror registry too.
 			npmJS: { url: "https://registry.npmjs.org/" },
