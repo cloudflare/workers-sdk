@@ -40,12 +40,34 @@ export type FrameworkTestConfig = RunnerConfig & {
 	unsupportedOSs?: string[];
 	/**
 	 * Per–package-manager semver ranges that should be skipped. Use this when a
-	 * framework template fails on a specific package-manager version (e.g.
-	 * Hono's `create-hono --install` step pulls in unapproved build scripts and
-	 * fails on pnpm >=11, which enforces `ERR_PNPM_IGNORED_BUILDS`).
+	 * framework template fails on a specific package-manager version. Two
+	 * recurring cases on pnpm >=11 (which makes `strictDepBuilds` the default
+	 * and turns ignored build scripts into a fatal `ERR_PNPM_IGNORED_BUILDS`):
 	 *
-	 * Keys are package-manager names ("pnpm", "npm", "yarn", "bun") and values
-	 * are semver ranges understood by `semver.satisfies`.
+	 * 1. The framework runs its own install inside the generator (e.g. Hono's
+	 *    `create-hono --install`, Docusaurus's internal install). The failure
+	 *    fires before C3's `npmInstall` recovery path can engage.
+	 *
+	 * 2. The framework template's deps trip `ERR_PNPM_IGNORED_BUILDS` *and*
+	 *    the test config defines an ordered `promptHandlers` entry. C3's
+	 *    recovery prompt would fire after the last ordered handler is
+	 *    consumed, but `runC3` closes the harness stdin at that point (it
+	 *    must, or framework generators spawned with `stdio: "inherit"` keep
+	 *    the harness alive past their work — see `e2e/helpers/run-c3.ts`).
+	 *    With stdin closed the background responder can no longer write to
+	 *    it, so the recovery prompt can't be answered in CI. The real-TTY
+	 *    end-user path is unaffected; only the e2e harness can't handle this
+	 *    combination today.
+	 *
+	 * Case 2 is currently latent for `qwik`/`react`/`vike` etc. — those
+	 * templates don't pull in unapproved build scripts beyond C3's
+	 * pre-approved set (`workerd`/`esbuild`/`sharp`), so the recovery prompt
+	 * never fires. If a future template change introduces such a dep, add a
+	 * matching `unsupportedPmRanges` entry rather than rely on this
+	 * happenstance.
+	 *
+	 * Keys are package-manager names ("pnpm", "npm", "yarn", "bun") and
+	 * values are semver ranges understood by `semver.satisfies`.
 	 */
 	unsupportedPmRanges?: Partial<Record<string, string>>;
 	flags?: string[];
