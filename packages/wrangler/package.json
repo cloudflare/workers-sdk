@@ -63,7 +63,7 @@
 	},
 	"scripts": {
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",
-		"build": "pnpm run clean && pnpm tsup && pnpm run generate-json-schema",
+		"build": "pnpm run clean && pnpm tsup && pnpm tsdown && pnpm run generate-json-schema",
 		"check:type": "tsc -p ./tsconfig.json && tsc -p ./templates/tsconfig.json",
 		"clean": "node -r esbuild-register ../../tools/clean/clean.ts wrangler-dist miniflare-dist emitted-types",
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src --watch ../containers-shared/src --watch ../cli\" \"pnpm run check:type --watch --preserveWatchOutput\"",
@@ -171,6 +171,7 @@
 		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"ts-json-schema-generator": "^1.5.0",
+		"tsdown": "0.16.3",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",

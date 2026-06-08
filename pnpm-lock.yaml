@@ -1611,7 +1611,7 @@ importers:
         version: 6.0.2
       tsdown:
         specifier: ^0.15.9
-        version: 0.15.9(typescript@5.9.3)
+        version: 0.15.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(typescript@5.9.3)
 
   packages/codemod:
     devDependencies:
@@ -4087,7 +4087,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: ^0.15.9
-        version: 0.15.9(typescript@5.8.3)
+        version: 0.15.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(typescript@5.8.3)
       tsup:
         specifier: 8.3.0
         version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.14)(supports-color@9.2.2)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.1)
@@ -4420,6 +4420,9 @@ importers:
       ts-json-schema-generator:
         specifier: ^1.5.0
         version: 1.5.0
+      tsdown:
+        specifier: 0.16.3
+        version: 0.16.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       tsup:
         specifier: 8.3.0
         version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.14)(supports-color@9.2.2)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.1)
@@ -6732,9 +6735,6 @@ packages:
     resolution: {integrity: sha512-EFd6cVbHsgLa6wa4RljGj6Wk75qoHxUSyc5asLyyPSyuhIcdS2Q3Phw6ImS1q+CkALthJRShiYfKANcQMuMqsQ==}
     engines: {node: '>=18'}
 
-  '@napi-rs/wasm-runtime@1.1.1':
-    resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
-
   '@napi-rs/wasm-runtime@1.1.4':
     resolution: {integrity: sha512-3NQNNgA1YSlJb/kMH1ildASP9HW7/7kYnRI2szWJaofaS1hWmbGI4H+d3+22aGzXXN9IJ+n+GiFVcGipJP18ow==}
     peerDependencies:
@@ -7350,6 +7350,9 @@ packages:
 
   '@quansync/fs@0.1.5':
     resolution: {integrity: sha512-lNS9hL2aS2NZgNW7BBj+6EBl4rOf8l+tQ0eRY6JWCI8jI2kc53gSoqbjojU0OnAWhzoXiOjFyGsHcDGePB3lhA==}
+
+  '@quansync/fs@1.0.0':
+    resolution: {integrity: sha512-4TJ3DFtlf1L5LDMaM6CanJ/0lckGNtJcMjQ1NAV6zDmA0tEHKZtxNKin8EgPaVX1YzljbxckyT2tJrpQKAtngQ==}
 
   '@radix-ui/number@1.0.1':
     resolution: {integrity: sha512-T5gIdVO2mmPW3NNhjNgEP3cqMXjXL9UbO0BzWcXfvdBs+BohbQxvd/K5hSVKmn9/lbTdsQVKbUcP5WLCwvUbBg==}
@@ -9462,6 +9465,10 @@ packages:
     resolution: {integrity: sha512-HqZ5rWlFjGiV0tDm3UxxgNRqsOTniqoKZu0pIAfh7TZQMGuZK+hH0drySty0si0QXj1ieop4+SkSfPZBPPkHig==}
     engines: {node: '>=14'}
 
+  ansis@4.3.1:
+    resolution: {integrity: sha512-BJ8/l4R5LRE7hW9WdSuGYrLSHi2ynxeFpDFbH0K/CgNeY/tyhk+vO6TYxXC5r5CpUhNVX310xzPsN/H9lCdfOA==}
+    engines: {node: '>=14'}
+
   any-promise@1.3.0:
     resolution: {integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==}
 
@@ -10644,6 +10651,10 @@ packages:
 
   empathic@2.0.0:
     resolution: {integrity: sha512-i6UzDscO/XfAcNYD75CfICkmfLedpyPDdozrLMmQc5ORaQcdMoc21OnlEylMIqI7U8eniKrPMxxtj8k0vhmJhA==}
+    engines: {node: '>=14'}
+
+  empathic@2.0.1:
+    resolution: {integrity: sha512-YGRs8knHhKHVShLkFET/rWAU8kmHbOV5LwN938RHI0pljAJ1Gf6SzXsSmRaEzcXTtOOmVqJ5+WtQPL5uigY50Q==}
     engines: {node: '>=14'}
 
   encodeurl@1.0.2:
@@ -13414,6 +13425,9 @@ packages:
   quansync@0.2.11:
     resolution: {integrity: sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA==}
 
+  quansync@1.0.0:
+    resolution: {integrity: sha512-5xZacEEufv3HSTPQuchrvV6soaiACMFnq1H8wkVioctoH3TRha9Sz66lOxRwPK/qZj7HPiSveih9yAyh98gvqA==}
+
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
@@ -13851,6 +13865,11 @@ packages:
 
   semver@7.7.3:
     resolution: {integrity: sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+  semver@7.8.2:
+    resolution: {integrity: sha512-c8jsqUZm3omBOI66G90z1Dyw5z622G8oLG+omfsHBJf3CWQTlOcwOjvOG6wtiNfW6anKm/eA39LMwMtMez2TiQ==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -14358,12 +14377,20 @@ packages:
     resolution: {integrity: sha512-W/KYk+NFhkmsYpuHq5JykngiOCnxeVL8v8dFnqxSD8qEEdRfXk1SDM6JzNqcERbcGYj9tMrDQBYV9cjgnunFIg==}
     engines: {node: '>=18'}
 
+  tinyexec@1.2.4:
+    resolution: {integrity: sha512-SHf/r48b7vOrjve9PxJo3MN5v5yuyjHvdUcrQffT3WXMUfnGmHDVbC4k3sHJaJTgZCwpUplIaAo5ANtMyp3YHg==}
+    engines: {node: '>=18'}
+
   tinyglobby@0.2.15:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
     engines: {node: '>=12.0.0'}
 
   tinyglobby@0.2.16:
     resolution: {integrity: sha512-pn99VhoACYR8nFHhxqix+uvsbXineAasWm5ojXoN8xEwK5Kd3/TrhNn1wByuD52UxWRLy8pu+kRMniEi6Eq9Zg==}
+    engines: {node: '>=12.0.0'}
+
+  tinyglobby@0.2.17:
+    resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
 
   tinypool@2.1.0:
@@ -14718,8 +14745,8 @@ packages:
   unbzip2-stream@1.4.3:
     resolution: {integrity: sha512-mlExGW4w71ebDJviH16lQLtZS32VKqsSfk80GCfUlwT/4/hNRFsoscrF/c++9xinkMzECL1uL9DDwXqFWkruPg==}
 
-  unconfig-core@7.4.1:
-    resolution: {integrity: sha512-Bp/bPZjV2Vl/fofoA2OYLSnw1Z0MOhCX7zHnVCYrazpfZvseBbGhwcNQMxsg185Mqh7VZQqK3C8hFG/Dyng+yA==}
+  unconfig-core@7.5.0:
+    resolution: {integrity: sha512-Su3FauozOGP44ZmKdHy2oE6LPjk51M/TRRjHv2HNCWiDvfvCoxC2lno6jevMA91MYAdCdwP05QnWdWpSbncX/w==}
 
   unconfig@7.3.3:
     resolution: {integrity: sha512-QCkQoOnJF8L107gxfHL0uavn7WD9b3dpBcFX6HtfQYmjw2YzWxGuFQ0N0J6tE9oguCBJn9KOvfqYDCMPHIZrBA==}
@@ -15821,7 +15848,7 @@ snapshots:
 
   '@babel/code-frame@7.26.2':
     dependencies:
-      '@babel/helper-validator-identifier': 7.25.9
+      '@babel/helper-validator-identifier': 7.28.5
       js-tokens: 4.0.0
       picocolors: 1.1.1
     optional: true
@@ -17865,13 +17892,6 @@ snapshots:
       outvariant: 1.4.3
       strict-event-emitter: 0.5.1
 
-  '@napi-rs/wasm-runtime@1.1.1':
-    dependencies:
-      '@emnapi/core': 1.10.0
-      '@emnapi/runtime': 1.10.0
-      '@tybys/wasm-util': 0.10.1
-    optional: true
-
   '@napi-rs/wasm-runtime@1.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
       '@emnapi/core': 1.10.0
@@ -18388,6 +18408,10 @@ snapshots:
     dependencies:
       quansync: 0.2.11
 
+  '@quansync/fs@1.0.0':
+    dependencies:
+      quansync: 1.0.0
+
   '@radix-ui/number@1.0.1':
     dependencies:
       '@babel/runtime': 7.28.6
@@ -18598,9 +18622,12 @@ snapshots:
   '@rolldown/binding-openharmony-arm64@1.0.1':
     optional: true
 
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.44':
+  '@rolldown/binding-wasm32-wasi@1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.1
+      '@napi-rs/wasm-runtime': 1.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
     optional: true
 
   '@rolldown/binding-wasm32-wasi@1.0.0-beta.49(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
@@ -19715,11 +19742,11 @@ snapshots:
       '@babel/generator': 7.29.1
       '@babel/parser': 7.29.0
       '@babel/types': 7.29.0
-      ansis: 4.2.0
+      ansis: 4.3.1
       babel-dead-code-elimination: 1.0.12
       diff: 8.0.3
       pathe: 2.0.3
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
     transitivePeerDependencies:
       - supports-color
 
@@ -20508,6 +20535,8 @@ snapshots:
   ansi-styles@6.2.1: {}
 
   ansis@4.2.0: {}
+
+  ansis@4.3.1: {}
 
   any-promise@1.3.0: {}
 
@@ -21551,6 +21580,8 @@ snapshots:
   emoji-regex@9.2.2: {}
 
   empathic@2.0.0: {}
+
+  empathic@2.0.1: {}
 
   encodeurl@1.0.2: {}
 
@@ -23074,7 +23105,7 @@ snapshots:
       lodash.isstring: 4.0.1
       lodash.once: 4.1.1
       ms: 2.1.3
-      semver: 7.7.3
+      semver: 7.8.2
 
   jsprim@2.0.2:
     dependencies:
@@ -23464,8 +23495,8 @@ snapshots:
       pkg-types: 1.3.1
       postcss: 8.5.14
       postcss-nested: 7.0.2(postcss@8.5.14)
-      semver: 7.7.3
-      tinyglobby: 0.2.16
+      semver: 7.8.2
+      tinyglobby: 0.2.17
     optionalDependencies:
       typescript: 5.8.3
       vue-tsc: 2.0.29(typescript@5.8.3)
@@ -23626,7 +23657,7 @@ snapshots:
 
   node-abi@3.62.0:
     dependencies:
-      semver: 7.7.3
+      semver: 7.8.2
     optional: true
 
   node-domexception@1.0.0: {}
@@ -23662,7 +23693,7 @@ snapshots:
   normalize-package-data@6.0.2:
     dependencies:
       hosted-git-info: 7.0.2
-      semver: 7.7.3
+      semver: 7.8.2
       validate-npm-package-license: 3.0.4
 
   normalize-path@3.0.0: {}
@@ -23693,7 +23724,7 @@ snapshots:
     dependencies:
       citty: 0.2.0
       pathe: 2.0.3
-      tinyexec: 1.0.2
+      tinyexec: 1.2.4
 
   object-assign@4.1.1: {}
 
@@ -24528,6 +24559,8 @@ snapshots:
 
   quansync@0.2.11: {}
 
+  quansync@1.0.0: {}
+
   queue-microtask@1.2.3: {}
 
   queue-tick@1.0.1: {}
@@ -24843,7 +24876,7 @@ snapshots:
 
   reusify@1.0.4: {}
 
-  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.3):
+  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.29.1
       '@babel/parser': 7.29.0
@@ -24854,14 +24887,14 @@ snapshots:
       dts-resolver: 2.1.3
       get-tsconfig: 4.13.6
       magic-string: 0.30.21
-      rolldown: 1.0.0-beta.44
+      rolldown: 1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:
       - oxc-resolver
       - supports-color
 
-  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44)(typescript@5.9.3):
+  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@5.9.3):
     dependencies:
       '@babel/generator': 7.29.1
       '@babel/parser': 7.29.0
@@ -24872,7 +24905,7 @@ snapshots:
       dts-resolver: 2.1.3
       get-tsconfig: 4.13.6
       magic-string: 0.30.21
-      rolldown: 1.0.0-beta.44
+      rolldown: 1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -24897,7 +24930,7 @@ snapshots:
       - ms
       - oxc-resolver
 
-  rolldown@1.0.0-beta.44:
+  rolldown@1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
     dependencies:
       '@oxc-project/types': 0.95.0
       '@rolldown/pluginutils': 1.0.0-beta.44
@@ -24912,10 +24945,13 @@ snapshots:
       '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.44
       '@rolldown/binding-linux-x64-musl': 1.0.0-beta.44
       '@rolldown/binding-openharmony-arm64': 1.0.0-beta.44
-      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.44
+      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.44
       '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.44
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.44
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
 
   rolldown@1.0.0-beta.49(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
     dependencies:
@@ -25138,6 +25174,8 @@ snapshots:
   semver@7.7.1: {}
 
   semver@7.7.3: {}
+
+  semver@7.8.2: {}
 
   send@0.19.0:
     dependencies:
@@ -25747,12 +25785,19 @@ snapshots:
 
   tinyexec@1.0.2: {}
 
+  tinyexec@1.2.4: {}
+
   tinyglobby@0.2.15:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
 
   tinyglobby@0.2.16:
+    dependencies:
+      fdir: 6.5.0(picomatch@4.0.4)
+      picomatch: 4.0.4
+
+  tinyglobby@0.2.17:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
@@ -25838,7 +25883,7 @@ snapshots:
       strip-bom: 3.0.0
       strip-json-comments: 2.0.1
 
-  tsdown@0.15.9(typescript@5.8.3):
+  tsdown@0.15.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(typescript@5.8.3):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -25847,8 +25892,8 @@ snapshots:
       diff: 8.0.3
       empathic: 2.0.0
       hookable: 5.5.3
-      rolldown: 1.0.0-beta.44
-      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.3)
+      rolldown: 1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@5.8.3)
       semver: 7.7.3
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
@@ -25857,13 +25902,15 @@ snapshots:
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
       - '@ts-macro/tsc'
       - '@typescript/native-preview'
       - oxc-resolver
       - supports-color
       - vue-tsc
 
-  tsdown@0.15.9(typescript@5.9.3):
+  tsdown@0.15.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(typescript@5.9.3):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -25872,8 +25919,8 @@ snapshots:
       diff: 8.0.3
       empathic: 2.0.0
       hookable: 5.5.3
-      rolldown: 1.0.0-beta.44
-      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44)(typescript@5.9.3)
+      rolldown: 1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@5.9.3)
       semver: 7.7.3
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
@@ -25882,6 +25929,8 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
       - '@ts-macro/tsc'
       - '@typescript/native-preview'
       - oxc-resolver
@@ -25890,20 +25939,20 @@ snapshots:
 
   tsdown@0.16.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3):
     dependencies:
-      ansis: 4.2.0
+      ansis: 4.3.1
       cac: 6.7.14
       chokidar: 4.0.3
       diff: 8.0.3
-      empathic: 2.0.0
+      empathic: 2.0.1
       hookable: 5.5.3
       obug: 0.1.3(ms@2.1.3)
       rolldown: 1.0.0-beta.49(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@5.8.3)
-      semver: 7.7.3
-      tinyexec: 1.0.2
-      tinyglobby: 0.2.16
+      semver: 7.8.2
+      tinyexec: 1.2.4
+      tinyglobby: 0.2.17
       tree-kill: 1.2.2
-      unconfig-core: 7.4.1
+      unconfig-core: 7.5.0
       unrun: 0.2.8(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(synckit@0.11.12)
     optionalDependencies:
       typescript: 5.8.3
@@ -26205,10 +26254,10 @@ snapshots:
       buffer: 5.7.1
       through: 2.3.8
 
-  unconfig-core@7.4.1:
+  unconfig-core@7.5.0:
     dependencies:
-      '@quansync/fs': 0.1.5
-      quansync: 0.2.11
+      '@quansync/fs': 1.0.0
+      quansync: 1.0.0
 
   unconfig@7.3.3:
     dependencies:
@@ -26621,7 +26670,7 @@ snapshots:
     dependencies:
       '@volar/typescript': 2.4.0-alpha.18
       '@vue/language-core': 2.0.29(typescript@5.8.3)
-      semver: 7.7.3
+      semver: 7.8.2
       typescript: 5.8.3
 
   w3c-keyname@2.2.8: {}
