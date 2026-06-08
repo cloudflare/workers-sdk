@@ -4,6 +4,10 @@ export default defineConfig(() => [
 	{
 		treeshake: true,
 		keepNames: true,
+		// Two entry points share context.ts as a singleton. esbuild's default
+		// `splitting: true` dedupes it into a shared chunk. If splitting is
+		// disabled, each entry bundles its own copy and init (via one entry)
+		// won't populate globals read via the other. Keep splitting enabled.
 		entry: {
 			index: "src/index.ts",
 			context: "src/shared/context.ts",

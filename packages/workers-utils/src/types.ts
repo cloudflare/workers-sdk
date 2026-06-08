@@ -438,8 +438,8 @@ export interface StartDevWorkerInput {
 	 * This is the `main` property of a Wrangler configuration file.
 	 */
 	entrypoint?: string;
-	/** The configuration path of the worker. */
-	config?: string;
+	/** The configuration path of the worker, or a normalized configuration object. */
+	config?: string | Config;
 
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
