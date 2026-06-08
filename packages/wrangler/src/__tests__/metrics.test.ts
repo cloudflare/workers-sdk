@@ -253,7 +253,6 @@ describe("metrics", () => {
 				agent: null,
 				sanitizedCommand: "docs",
 				sanitizedArgs: {},
-				currentAgentSkillsInstalled: null,
 			};
 			beforeEach(() => {
 				// Default: no agent detected
