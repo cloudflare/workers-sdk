@@ -1,5 +1,6 @@
-import { newWebSocketRpcSession } from "capnweb";
+import { newWebSocketRpcSession, RpcSession } from "capnweb";
 import type { SharedBindings } from "./constants";
+import type { RpcTransport } from "capnweb";
 
 /**
  * Common environment type for remote binding workers.
@@ -8,13 +9,15 @@ export type RemoteBindingEnv = {
 	remoteProxyConnectionString?: string;
 	binding: string;
 	cfTraceId?: string;
-	// Cloudflare Access Service Token credentials. When set, these are attached
-	// as CF-Access-Client-Id / CF-Access-Client-Secret headers to requests to
-	// the remote-bindings proxy server so that both HTTP (`makeFetch`) and
-	// WebSocket/capnweb (`makeRemoteProxyStub`) remote bindings pass through
-	// Access policies protecting the workers.dev domain.
-	accessClientId?: string;
-	accessClientSecret?: string;
+	// Opaque, JSON-encoded bag of extra headers attached to every request to the
+	// remote-bindings proxy server (e.g. a Cloudflare Access service token —
+	// `CF-Access-Client-Id` / `CF-Access-Client-Secret` — or a `cloudflared`
+	// `Cookie: CF_Authorization=…`). Computed wrangler-side via
+	// `getAccessHeaders()` and forwarded as a single binding so both the HTTP
+	// (`makeFetch`) and WebSocket/capnweb (`makeRemoteProxyStub`) paths can pass
+	// through Access policies protecting the workers.dev domain. The worker side
+	// stays agnostic to the auth scheme.
+	remoteProxyHeaders?: string;
 	// Optional loopback service used to surface diagnostics back to the
 	// Miniflare host (e.g. a Cloudflare Access block detected on the response
 	// from the remote-bindings proxy server).
@@ -126,8 +129,7 @@ export function makeFetch(
 	extraHeaders?: Headers,
 	cfTraceId?: string,
 	loopback?: Fetcher,
-	accessClientId?: string,
-	accessClientSecret?: string
+	remoteProxyHeaders?: Record<string, string>
 ) {
 	return async (
 		input: RequestInfo | URL,
@@ -156,15 +158,17 @@ export function makeFetch(
 			// Also forward through to the binding call via the MF-Header proxy mechanism
 			proxiedHeaders.set("MF-Header-cf-trace-id", cfTraceId);
 		}
-		// Attach Cloudflare Access Service Token credentials so the request to
-		// the remote-bindings proxy server (hosted on the workers.dev domain)
-		// passes through any Access policy protecting it. Wrapped-fetcher
-		// bindings such as AI, Vectorize, and Images route their
-		// `fetcher.fetch()` calls through here, so without these headers they
-		// fail with a 403/401 when the workers.dev domain is behind Access.
-		if (accessClientId && accessClientSecret) {
-			proxiedHeaders.set("CF-Access-Client-Id", accessClientId);
-			proxiedHeaders.set("CF-Access-Client-Secret", accessClientSecret);
+		// Attach any auth headers needed to reach the remote-bindings proxy
+		// server (hosted on the workers.dev domain) so the request passes through
+		// an Access policy protecting it. Wrapped-fetcher bindings such as AI,
+		// Vectorize, and Images route their `fetcher.fetch()` calls through here,
+		// so without these headers they fail with a 403/401 when the workers.dev
+		// domain is behind Access. The bag is opaque (service-token pair or a
+		// cookie), so we just spread it.
+		if (remoteProxyHeaders) {
+			for (const [name, value] of Object.entries(remoteProxyHeaders)) {
+				proxiedHeaders.set(name, value);
+			}
 		}
 		const req = new Request(request, {
 			headers: proxiedHeaders,
@@ -216,15 +220,170 @@ async function connectWebSocketWithHeaders(
 }
 
 /**
+ * A capnweb {@link RpcTransport} that establishes its WebSocket lazily via an
+ * async `connect()` callback (a `fetch()`-based Upgrade, so custom headers ride
+ * the handshake).
+ *
+ * capnweb's `newWebSocketRpcSession()` only accepts an already-open `WebSocket`
+ * or a URL string (which it opens with `new WebSocket(url)` — no header support
+ * in the Workers runtime). By implementing the transport ourselves we let
+ * capnweb build the session and stub *synchronously* while the authenticated
+ * upgrade completes in the background: sends are buffered until the socket
+ * opens, and connection failures propagate to RPC callers through `receive()`,
+ * per capnweb's documented transport contract. This keeps the proxy that wraps
+ * the stub trivial (it only has to intercept `.fetch`), with no thenable guard
+ * or lazy-stub bookkeeping.
+ *
+ * Mirrors capnweb's own (non-exported) `WebSocketTransport`, generalised to a
+ * promised socket.
+ */
+class FetchWebSocketTransport implements RpcTransport {
+	#socket?: WebSocket;
+	#sendQueue: string[] = [];
+	#receiveQueue: string[] = [];
+	#receiveResolver?: (message: string) => void;
+	#receiveRejecter?: (err: unknown) => void;
+	#error?: unknown;
+	#ready: Promise<void>;
+
+	constructor(connect: () => Promise<WebSocket>) {
+		this.#ready = connect().then(
+			(webSocket) => this.#onOpen(webSocket),
+			(err) => this.#receivedError(err)
+		);
+		// If neither `send()` nor `receive()` ever awaits `#ready` (e.g. only the
+		// HTTP `.fetch()` path of the binding is used), a failed upgrade would
+		// otherwise surface as an unhandled rejection. capnweb pumps `receive()`
+		// immediately for an active session, so in practice the error is consumed
+		// there; this guard just covers the never-used-as-RPC case.
+		this.#ready.catch(() => {});
+	}
+
+	#onOpen(webSocket: WebSocket): void {
+		// The session may have been aborted before the socket finished
+		// connecting; don't wire up a socket nobody is listening to.
+		if (this.#error !== undefined) {
+			try {
+				webSocket.close();
+			} catch {
+				// best-effort
+			}
+			return;
+		}
+		this.#socket = webSocket;
+		webSocket.addEventListener("message", (event: MessageEvent) => {
+			if (this.#error !== undefined) {
+				return;
+			}
+			if (typeof event.data === "string") {
+				if (this.#receiveResolver) {
+					this.#receiveResolver(event.data);
+					this.#receiveResolver = undefined;
+					this.#receiveRejecter = undefined;
+				} else {
+					this.#receiveQueue.push(event.data);
+				}
+			} else {
+				this.#receivedError(
+					new TypeError("Received non-string message from WebSocket.")
+				);
+			}
+		});
+		webSocket.addEventListener("close", (event: CloseEvent) => {
+			this.#receivedError(
+				new Error(`Peer closed WebSocket: ${event.code} ${event.reason}`)
+			);
+		});
+		webSocket.addEventListener("error", () => {
+			this.#receivedError(new Error("WebSocket connection failed."));
+		});
+		try {
+			for (const message of this.#sendQueue) {
+				webSocket.send(message);
+			}
+		} catch (err) {
+			this.#receivedError(err);
+		}
+		this.#sendQueue = [];
+	}
+
+	async send(message: string): Promise<void> {
+		if (this.#error !== undefined) {
+			throw this.#error;
+		}
+		if (this.#socket) {
+			this.#socket.send(message);
+		} else {
+			// Buffer until the upgrade completes; `#onOpen` flushes in order.
+			this.#sendQueue.push(message);
+		}
+	}
+
+	async receive(): Promise<string> {
+		if (this.#receiveQueue.length > 0) {
+			return this.#receiveQueue.shift() as string;
+		}
+		if (this.#error !== undefined) {
+			throw this.#error;
+		}
+		// Surface a slow or failed upgrade through `receive()`, which is where
+		// capnweb expects transport errors to propagate (it rejects all
+		// outstanding and future RPC calls).
+		if (!this.#socket) {
+			await this.#ready;
+			if (this.#receiveQueue.length > 0) {
+				return this.#receiveQueue.shift() as string;
+			}
+			if (this.#error !== undefined) {
+				throw this.#error;
+			}
+		}
+		return new Promise<string>((resolve, reject) => {
+			this.#receiveResolver = resolve;
+			this.#receiveRejecter = reject;
+		});
+	}
+
+	abort(reason: unknown): void {
+		if (this.#socket) {
+			const message = reason instanceof Error ? reason.message : `${reason}`;
+			try {
+				this.#socket.close(3000, message);
+			} catch {
+				// best-effort
+			}
+		}
+		if (this.#error === undefined) {
+			this.#error = reason;
+		}
+	}
+
+	#receivedError(reason: unknown): void {
+		if (this.#error === undefined) {
+			this.#error = reason;
+			if (this.#receiveRejecter) {
+				this.#receiveRejecter(reason);
+				this.#receiveResolver = undefined;
+				this.#receiveRejecter = undefined;
+			}
+		}
+	}
+}
+
+/**
  * Create a remote proxy stub that proxies to a remote binding via capnweb.
  *
- * Intercepts `.fetch()` to use plain HTTP; forwards other accesses to capnweb.
+ * Intercepts `.fetch()` to use plain HTTP; forwards every other access to the
+ * capnweb stub.
  *
- * When Access service token credentials are provided, the capnweb WebSocket is
- * established via `fetch()` with the CF-Access-Client-Id / CF-Access-Client-Secret
- * headers so RPC-based bindings (e.g. Artifacts) pass through Access policies
- * protecting the workers.dev domain. The `.fetch()` path threads the same
- * credentials through to `makeFetch`.
+ * When auth headers are provided (e.g. a Cloudflare Access service token), the
+ * capnweb WebSocket is established through {@link FetchWebSocketTransport} via a
+ * `fetch()` Upgrade so the headers ride the handshake — letting RPC bindings
+ * (e.g. Artifacts) pass through Access policies protecting the workers.dev
+ * domain. capnweb builds the stub synchronously either way, so the wrapping
+ * proxy only needs to special-case `.fetch`; everything else (including the
+ * `then === undefined` non-thenable behaviour) comes from the real stub. The
+ * `.fetch()` path threads the same headers through to `makeFetch`.
  */
 export function makeRemoteProxyStub(
 	remoteProxyConnectionString: string,
@@ -232,8 +391,7 @@ export function makeRemoteProxyStub(
 	metadata?: ProxyMetadata,
 	cfTraceId?: string,
 	loopback?: Fetcher,
-	accessClientId?: string,
-	accessClientSecret?: string
+	remoteProxyHeaders?: Record<string, string>
 ): Fetcher {
 	const wsUrl = new URL(remoteProxyConnectionString);
 	wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
@@ -251,35 +409,22 @@ export function makeRemoteProxyStub(
 		connect: never;
 	};
 
-	// Without Access credentials, hand capnweb the ws(s):// URL directly — it
-	// upgrades via `new WebSocket(url)` (no header support needed). With Access
-	// credentials, establish the WebSocket ourselves via a fetch() upgrade
-	// against the http(s):// URL so the Access headers ride along, then hand the
-	// connected socket to capnweb. RPC methods are async, so awaiting the
-	// connected socket is transparent to callers (e.g. `await env.X.method()`).
-	let resolvedStub: ProxiedService | undefined;
-	let stubPromise: Promise<ProxiedService> | undefined;
-
-	if (accessClientId && accessClientSecret) {
+	// Without auth headers, hand capnweb the ws(s):// URL directly — it upgrades
+	// via `new WebSocket(url)`. With headers — which `new WebSocket(url)` cannot
+	// send in the Workers runtime — drive the upgrade ourselves through a custom
+	// transport that does a `fetch()` Upgrade so the headers ride the handshake.
+	// Either way capnweb returns a real stub synchronously.
+	let stub: ProxiedService;
+	if (remoteProxyHeaders && Object.keys(remoteProxyHeaders).length > 0) {
 		// fetch() needs the http(s):// scheme; reuse the same query params.
 		const httpUrl = new URL(wsUrl.href);
 		httpUrl.protocol = httpUrl.protocol === "wss:" ? "https:" : "http:";
-		stubPromise = connectWebSocketWithHeaders(httpUrl.href, {
-			"CF-Access-Client-Id": accessClientId,
-			"CF-Access-Client-Secret": accessClientSecret,
-		}).then((ws) => {
-			resolvedStub = newWebSocketRpcSession(ws) as unknown as ProxiedService;
-			return resolvedStub;
-		});
-		// If the caller only ever uses the `.fetch()` (HTTP) path, `stubPromise`
-		// is never awaited — swallow the rejection here to avoid an orphaned
-		// unhandled rejection. The error still surfaces when an RPC property is
-		// accessed, because the async wrapper below awaits `stubPromise` directly.
-		stubPromise.catch(() => {});
+		const transport = new FetchWebSocketTransport(() =>
+			connectWebSocketWithHeaders(httpUrl.href, remoteProxyHeaders)
+		);
+		stub = new RpcSession(transport).getRemoteMain() as unknown as ProxiedService;
 	} else {
-		resolvedStub = newWebSocketRpcSession(
-			wsUrl.href
-		) as unknown as ProxiedService;
+		stub = newWebSocketRpcSession(wsUrl.href) as unknown as ProxiedService;
 	}
 
 	const headers = metadata
@@ -290,8 +435,8 @@ export function makeRemoteProxyStub(
 			)
 		: undefined;
 
-	return new Proxy<ProxiedService>({} as ProxiedService, {
-		get(_, p) {
+	return new Proxy<ProxiedService>(stub, {
+		get(target, p) {
 			if (p === "fetch") {
 				return makeFetch(
 					remoteProxyConnectionString,
@@ -299,36 +444,10 @@ export function makeRemoteProxyStub(
 					headers,
 					cfTraceId,
 					loopback,
-					accessClientId,
-					accessClientSecret
+					remoteProxyHeaders
 				);
 			}
-			if (resolvedStub) {
-				return Reflect.get(resolvedStub, p);
-			}
-			if (stubPromise) {
-				// While the WebSocket is still connecting, this branch handles
-				// every property access. Return `undefined` for `then` so the
-				// proxy is not mistaken for a thenable — otherwise `await`-ing
-				// the stub (or any implicit thenable check) would invoke the
-				// wrapper for `then` and dispatch a bogus remote `then` RPC.
-				if (p === "then") {
-					return undefined;
-				}
-				// The capnweb stub is itself a Proxy whose properties are RPC
-				// methods — they must be invoked as `stub[p](...args)` (calling
-				// `.apply()`/`.call()` would be interpreted as a remote method
-				// named "apply"/"call"). Return an async wrapper that awaits the
-				// authenticated WebSocket upgrade, then dispatches the RPC call.
-				return async (...args: unknown[]) => {
-					const stub = (await stubPromise) as Record<
-						string | symbol,
-						(...a: unknown[]) => unknown
-					>;
-					return stub[p](...args);
-				};
-			}
-			throwRemoteRequired(bindingName);
+			return Reflect.get(target, p);
 		},
 	});
 }

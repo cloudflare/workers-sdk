@@ -53,6 +53,10 @@ const remoteProxyConnectionString = new URL(
 let proxyWorkerBindings: Record<string, Binding> | undefined;
 let sessionOptions: StartRemoteProxySessionOptions | undefined;
 let startRemoteProxySessionCallCount = 0;
+// When set, the mocked session resolves these Access headers and carries them
+// on the connection string (mirroring what the real `startRemoteProxySession`
+// does after `getAccessHeaders()`), so we can assert they reach Miniflare.
+let mockRemoteProxyHeaders: Record<string, string> | undefined;
 vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 	const actual = await vi.importActual<
 		typeof import("../../api/remoteBindings/start-remote-proxy-session")
@@ -66,11 +70,17 @@ vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 			proxyWorkerBindings = remoteBindings;
 			sessionOptions = options;
 			startRemoteProxySessionCallCount++;
+			if (mockRemoteProxyHeaders) {
+				remoteProxyConnectionString.remoteProxyHeaders = mockRemoteProxyHeaders;
+			} else {
+				delete remoteProxyConnectionString.remoteProxyHeaders;
+			}
 			return {
 				ready: Promise.resolve(),
 				async dispose() {},
 				async updateBindings() {},
 				remoteProxyConnectionString,
+				remoteProxyHeaders: mockRemoteProxyHeaders,
 			};
 		},
 	};
@@ -120,6 +130,8 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		proxyWorkerBindings = undefined;
 		startRemoteProxySessionCallCount = 0;
 		workerOptions = [];
+		mockRemoteProxyHeaders = undefined;
+		delete remoteProxyConnectionString.remoteProxyHeaders;
 	});
 
 	// These test cases cover all the different types of remote bindings we support
@@ -544,6 +556,56 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			await wranglerStopped;
 		}
 	);
+
+	it("forwards the remote proxy session's Access headers into the Miniflare options", async ({
+		expect,
+	}) => {
+		// Mirror what the real session does after `getAccessHeaders()`: resolve a
+		// service-token bag and carry it on the connection string.
+		mockRemoteProxyHeaders = {
+			"CF-Access-Client-Id": "test-client-id.access",
+			"CF-Access-Client-Secret": "test-client-secret",
+		};
+		await seed({
+			"wrangler.jsonc": JSON.stringify(
+				{
+					name: "worker",
+					main: "index.js",
+					compatibility_date: "2025-01-01",
+					services: [
+						{
+							binding: "SERVICE",
+							service: "remote-service-binding-worker",
+							remote: true,
+						},
+					],
+				},
+				null,
+				2
+			),
+			"index.js": `export default { fetch() { return new Response("hello") } }`,
+		});
+		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
+			timeout: 5_000,
+		});
+
+		// The connection string carrying the headers must reach the Miniflare
+		// worker options (it is passed by reference onto each remote binding).
+		expect(workerOptions).toEqual([
+			expect.objectContaining({
+				serviceBindings: expect.objectContaining({
+					SERVICE: expect.objectContaining({ remoteProxyConnectionString }),
+				}),
+			}),
+		]);
+		expect(remoteProxyConnectionString.remoteProxyHeaders).toEqual(
+			mockRemoteProxyHeaders
+		);
+
+		await stopWrangler();
+		await wranglerStopped;
+	});
 
 	it("should attempt to setup remote $name bindings when updating config during a running `wrangler dev` session", async () => {
 		const { config, expectedProxyWorkerBindings, expectedWorkerOptions } =

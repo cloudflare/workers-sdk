@@ -179,6 +179,21 @@ export function namespaceKeys(
 
 export type RemoteProxyConnectionString = URL & {
 	__brand: "RemoteProxyConnectionString";
+	/**
+	 * Optional auth headers (e.g. a Cloudflare Access service token or a
+	 * `cloudflared` cookie) required to reach the remote-bindings proxy server.
+	 *
+	 * Computed wrangler-side via `getAccessHeaders()` and carried here so the
+	 * credentials travel *with* the connection string into Miniflare. This keeps
+	 * them correct per-worker in multiworker dev — where a single Miniflare
+	 * instance hosts several workers whose proxy sessions may target different
+	 * `workers.dev` hosts behind different Access applications — without leaking
+	 * wrangler-flavoured `process.env` reads into Miniflare.
+	 *
+	 * The bag is opaque: the worker side forwards it as a single JSON binding and
+	 * spreads it onto outgoing requests, so it is agnostic to the auth scheme.
+	 */
+	remoteProxyHeaders?: Record<string, string>;
 };
 
 export function namespaceEntries(

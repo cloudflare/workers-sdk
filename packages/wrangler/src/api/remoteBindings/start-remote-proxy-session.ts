@@ -132,6 +132,28 @@ export async function startRemoteProxySession(
 	const remoteProxyConnectionString =
 		(await worker.url) as RemoteProxyConnectionString;
 
+	// Authenticate the binding-proxy hop the same way the realish-preview hop is
+	// authenticated: resolve Access headers for the proxy server's host via the
+	// canonical `getAccessHeaders()` helper (service token, the
+	// "only one var set" warning, the non-interactive UserError, and interactive
+	// `cloudflared` cookie auth all come for free) and carry them on the
+	// connection string so Miniflare attaches them to every request it makes to
+	// the proxy server. Both hops terminate on the same workers.dev host behind
+	// the same Access application, so the lookup is typically already cached.
+	//
+	// Imported lazily: a static import pulls the `@cloudflare/workers-auth` /
+	// `@cloudflare/workers-utils` chain into this module's eval, which perturbs
+	// module init order for importers that only need the proxy session (e.g.
+	// tests that mock this function), so keep it off the module load path.
+	const { getAccessHeaders } = await import("../../user/access");
+	const remoteProxyHeaders = await getAccessHeaders(
+		remoteProxyConnectionString.hostname
+	);
+	const hasRemoteProxyHeaders = Object.keys(remoteProxyHeaders).length > 0;
+	if (hasRemoteProxyHeaders) {
+		remoteProxyConnectionString.remoteProxyHeaders = remoteProxyHeaders;
+	}
+
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
@@ -176,6 +198,7 @@ export async function startRemoteProxySession(
 	return {
 		ready: worker.ready,
 		remoteProxyConnectionString,
+		remoteProxyHeaders: hasRemoteProxyHeaders ? remoteProxyHeaders : undefined,
 		updateBindings,
 		dispose: worker.dispose,
 	};
@@ -184,6 +207,14 @@ export async function startRemoteProxySession(
 export type RemoteProxySession = Pick<Worker, "ready" | "dispose"> & {
 	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
 	remoteProxyConnectionString: RemoteProxyConnectionString;
+	/**
+	 * Auth headers resolved for the proxy server's host (e.g. a Cloudflare Access
+	 * service token or a `cloudflared` cookie), or `undefined` when the host is
+	 * not behind Access. Exposed for observability/testing; the same bag is also
+	 * carried on `remoteProxyConnectionString` so Miniflare forwards it on the
+	 * binding traffic.
+	 */
+	remoteProxyHeaders?: Record<string, string>;
 };
 
 /**

@@ -7,6 +7,15 @@ import {
 } from "./remote-bindings-utils";
 import type { RemoteBindingEnv } from "./remote-bindings-utils";
 
+/** Parse the opaque JSON header bag forwarded by `remoteProxyClientWorker`. */
+function parseRemoteProxyHeaders(
+	env: RemoteBindingEnv
+): Record<string, string> | undefined {
+	return env.remoteProxyHeaders
+		? (JSON.parse(env.remoteProxyHeaders) as Record<string, string>)
+		: undefined;
+}
+
 /** Generic remote proxy client for bindings. */
 export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 	fetch(request: Request): Promise<Response> {
@@ -16,8 +25,7 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 			undefined,
 			this.env.cfTraceId,
 			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK],
-			this.env.accessClientId,
-			this.env.accessClientSecret
+			parseRemoteProxyHeaders(this.env)
 		)(request);
 	}
 
@@ -31,8 +39,7 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 					undefined,
 					env.cfTraceId,
 					env[SharedBindings.MAYBE_SERVICE_LOOPBACK],
-					env.accessClientId,
-					env.accessClientSecret
+					parseRemoteProxyHeaders(env)
 				)
 			: undefined;
 

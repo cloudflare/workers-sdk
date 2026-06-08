@@ -84,16 +84,19 @@ export function remoteProxyClientWorker(
 	script?: () => string
 ) {
 	const cfTraceId = process.env.CF_TRACE_ID;
-	// Forward Cloudflare Access Service Token credentials to the proxy client
-	// worker so both the HTTP (`makeFetch`) and WebSocket/capnweb
-	// (`makeRemoteProxyStub`) paths can attach CF-Access-Client-Id /
-	// CF-Access-Client-Secret headers. Read from the environment (consistent
-	// with `getAccessHeaders()` used for the realish-preview HTTP path) rather
-	// than worker vars, since these are tooling credentials, not worker runtime
-	// configuration. Without them, remote bindings fail with a 401/403 when the
-	// workers.dev domain is protected by Access.
-	const accessClientId = process.env.CLOUDFLARE_ACCESS_CLIENT_ID;
-	const accessClientSecret = process.env.CLOUDFLARE_ACCESS_CLIENT_SECRET;
+	// Forward any auth headers needed to reach the remote-bindings proxy server
+	// (e.g. a Cloudflare Access service token or a `cloudflared` cookie) to the
+	// proxy client worker, so both the HTTP (`makeFetch`) and WebSocket/capnweb
+	// (`makeRemoteProxyStub`) paths can attach them. These are computed
+	// wrangler-side via `@cloudflare/workers-auth`'s `getAccessHeaders()` and
+	// carried on the connection string, rather than read from `process.env`
+	// here — so non-wrangler embedders (Vite plugin, vitest-pool-workers,
+	// getPlatformProxy, programmatic users) work too, and so multiworker dev
+	// stays correct when different workers target different Access-protected
+	// hosts. Forwarded as a single opaque JSON binding so the worker side stays
+	// agnostic to the auth scheme. Without them, remote bindings fail with a
+	// 401/403 when the workers.dev domain is protected by Access.
+	const remoteProxyHeaders = remoteProxyConnectionString?.remoteProxyHeaders;
 	return {
 		compatibilityDate: "2025-01-01",
 		modules: [
@@ -123,19 +126,11 @@ export function remoteProxyClientWorker(
 						},
 					]
 				: []),
-			...(accessClientId
+			...(remoteProxyHeaders && Object.keys(remoteProxyHeaders).length > 0
 				? [
 						{
-							name: "accessClientId",
-							text: accessClientId,
-						},
-					]
-				: []),
-			...(accessClientSecret
-				? [
-						{
-							name: "accessClientSecret",
-							text: accessClientSecret,
+							name: "remoteProxyHeaders",
+							text: JSON.stringify(remoteProxyHeaders),
 						},
 					]
 				: []),
