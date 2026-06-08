@@ -76,6 +76,13 @@ export const versionsDeployCommand = createCommand({
 			type: "string",
 			array: true,
 		},
+		"version-tag": {
+			describe:
+				"Worker Version tag(s) to deploy, resolved to a Version ID against the deployable versions. Supports the shorthand notation [<version-tag>@<percentage>..].",
+			type: "string",
+			array: true,
+			requiresArg: true,
+		},
 		message: {
 			describe: "Description of this deployment (optional)",
 			type: "string",
@@ -117,7 +124,9 @@ export const versionsDeployCommand = createCommand({
 
 		const versionCache: VersionCache = new Map();
 		const optionalVersionTraffic = parseVersionSpecs(args);
-		const acceptPromptDefaults = args.yes || optionalVersionTraffic.size > 0;
+		const tagTraffic = parseTagSpecs(args);
+		const acceptPromptDefaults =
+			args.yes || optionalVersionTraffic.size + tagTraffic.size > 0;
 
 		cli.startSection(
 			"Deploy Worker Versions",
@@ -126,6 +135,21 @@ export const versionsDeployCommand = createCommand({
 		);
 
 		await printLatestDeployment(config, accountId, workerName, versionCache);
+
+		// Resolve any --version-tag args to their Version IDs against the
+		// deployable versions, then merge them into the version traffic to deploy.
+		if (tagTraffic.size > 0) {
+			const resolvedTagTraffic = await resolveTagsToVersions(
+				config,
+				accountId,
+				workerName,
+				tagTraffic,
+				versionCache
+			);
+			for (const [versionId, percentage] of resolvedTagTraffic) {
+				optionalVersionTraffic.set(versionId, percentage);
+			}
+		}
 
 		// prompt to confirm or change the versionIds from the args
 		const confirmedVersionsToDeploy = await promptVersionsToDeploy(
@@ -635,6 +659,46 @@ async function maybePatchSettings(
 // ***********
 //    UNITS
 // ***********
+/**
+ * Parses an optional `@<percentage>` suffix from a shorthand spec (e.g.
+ * `<version-id>@<percentage>` or `<tag>@<percentage>`), validating that the
+ * percentage (if present) is a number between 0 and 100.
+ *
+ * @param percentageString The raw percentage portion (after the `@`), if any.
+ * @param spec The full spec string, used for error messages.
+ * @param specLabel A label describing the arg the spec came from, used for error messages.
+ * @returns The parsed percentage, or `null` if none was specified.
+ */
+function parseOptionalPercentage(
+	percentageString: string | undefined,
+	spec: string,
+	specLabel: string
+): OptionalPercentage {
+	if (percentageString === undefined || percentageString === "") {
+		return null;
+	}
+
+	const percentage = parseFloat(percentageString);
+
+	if (isNaN(percentage)) {
+		throw new UserError(
+			`Could not parse percentage value from ${specLabel} "${spec}"`,
+			{ telemetryMessage: "versions deploy percentage parse failed" }
+		);
+	}
+
+	if (percentage < 0 || percentage > 100) {
+		throw new UserError(
+			`Percentage value (${percentage}%) parsed from ${specLabel} "${spec}" must be between 0 and 100.`,
+			{
+				telemetryMessage: "versions deploy positional percentage out of range",
+			}
+		);
+	}
+
+	return percentage;
+}
+
 export type ParseVersionSpecsArgs = {
 	percentage?: number[];
 	versionId?: string[];
@@ -649,29 +713,11 @@ export function parseVersionSpecs(
 	for (const spec of args.versionSpecs ?? []) {
 		const [versionId, percentageString] = spec.split("@");
 
-		const percentage =
-			percentageString === undefined || percentageString === ""
-				? null
-				: parseFloat(percentageString);
-
-		if (percentage !== null) {
-			if (isNaN(percentage)) {
-				throw new UserError(
-					`Could not parse percentage value from version-spec positional arg "${spec}"`,
-					{ telemetryMessage: "versions deploy percentage parse failed" }
-				);
-			}
-
-			if (percentage < 0 || percentage > 100) {
-				throw new UserError(
-					`Percentage value (${percentage}%) parsed from version-spec positional arg "${spec}" must be between 0 and 100.`,
-					{
-						telemetryMessage:
-							"versions deploy positional percentage out of range",
-					}
-				);
-			}
-		}
+		const percentage = parseOptionalPercentage(
+			percentageString,
+			spec,
+			"version-spec positional arg"
+		);
 
 		versionIds.push(versionId);
 		percentages.push(percentage);
@@ -708,6 +754,156 @@ export function parseVersionSpecs(
 	);
 
 	return optionalVersionTraffic;
+}
+
+type ParseTagSpecsArgs = {
+	versionTag?: string[];
+};
+
+// A percentage suffix in a `<version-tag>@<percentage>` spec, e.g. "100", "100%"
+// or "50.5%". An out-of-range value like "101%" still matches (and is reported
+// later by parseOptionalPercentage); a non-numeric suffix does not.
+const PERCENTAGE_SUFFIX_REGEX = /^-?\d+(\.\d+)?%?$/;
+
+/**
+ * Splits a `<version-tag>@<percentage>` spec into its tag and percentage parts.
+ *
+ * Tags can contain `@` (the upload `--tag` flag accepts arbitrary strings), so
+ * we split on the *last* `@` and only treat the suffix as a percentage when it
+ * actually looks like one. That way `v1.0@beta@100%` parses as tag `v1.0@beta`
+ * at 100%, while `v1.0@beta` (no percentage) is kept whole as the tag rather
+ * than misreading `beta` as a percentage.
+ */
+function splitTagSpec(spec: string): {
+	tag: string;
+	percentageString: string | undefined;
+} {
+	const atIndex = spec.lastIndexOf("@");
+	if (atIndex === -1) {
+		return { tag: spec, percentageString: undefined };
+	}
+
+	const suffix = spec.substring(atIndex + 1);
+
+	// A trailing `@` (empty suffix) is an explicit "no percentage" separator,
+	// letting you keep a tag that ends in something percentage-like whole.
+	if (suffix === "") {
+		return { tag: spec.substring(0, atIndex), percentageString: undefined };
+	}
+
+	if (PERCENTAGE_SUFFIX_REGEX.test(suffix)) {
+		return { tag: spec.substring(0, atIndex), percentageString: suffix };
+	}
+
+	return { tag: spec, percentageString: undefined };
+}
+
+/**
+ * Parses the `--version-tag` args into a map of tag to optional percentage,
+ * supporting the `<version-tag>@<percentage>` shorthand. Tags are resolved to
+ * Version IDs later by {@link resolveTagsToVersions}.
+ */
+export function parseTagSpecs(
+	args: ParseTagSpecsArgs
+): Map<string, OptionalPercentage> {
+	const tagTraffic = new Map<string, OptionalPercentage>();
+
+	for (const spec of args.versionTag ?? []) {
+		const { tag, percentageString } = splitTagSpec(spec);
+
+		if (!tag) {
+			throw new UserError(
+				`Could not parse a tag from --version-tag arg "${spec}".`,
+				{ telemetryMessage: "versions deploy tag parse failed" }
+			);
+		}
+
+		const percentage = parseOptionalPercentage(
+			percentageString,
+			spec,
+			"--version-tag arg"
+		);
+
+		tagTraffic.set(tag, percentage);
+	}
+
+	return tagTraffic;
+}
+
+/**
+ * Resolves tags (e.g. commit SHAs supplied via `--version-tag`) to Version IDs by
+ * matching against the `workers/tag` annotation on the worker's deployable
+ * versions.
+ *
+ * Tags are not guaranteed to be unique, so this errors if a tag matches more
+ * than one version, prompting the user to disambiguate with a Version ID. It
+ * also errors if a tag matches no deployable version (e.g. the version has aged
+ * out of the deployable window).
+ *
+ * The fetched versions populate `versionCache`, so a subsequent
+ * `promptVersionsToDeploy` call can reuse them without re-fetching.
+ */
+async function resolveTagsToVersions(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	workerName: string,
+	tagTraffic: Map<string, OptionalPercentage>,
+	versionCache: VersionCache
+): Promise<Map<VersionId, OptionalPercentage>> {
+	const versions = await spinnerWhile({
+		startMessage: "Resolving tags to versions",
+		promise() {
+			return fetchDeployableVersions(
+				complianceConfig,
+				accountId,
+				workerName,
+				versionCache
+			);
+		},
+	});
+
+	// A tag may be present on more than one version (e.g. a re-deploy of the same
+	// commit, or a secret change inheriting the tag), so collect all matches.
+	const versionsByTag = new Map<string, ApiVersion[]>();
+	for (const version of versions) {
+		const tag = version.annotations?.["workers/tag"];
+		if (tag === undefined) {
+			continue;
+		}
+
+		const matches = versionsByTag.get(tag) ?? [];
+		matches.push(version);
+		versionsByTag.set(tag, matches);
+	}
+
+	const resolvedVersionTraffic = new Map<VersionId, OptionalPercentage>();
+	for (const [tag, percentage] of tagTraffic) {
+		const matches = versionsByTag.get(tag) ?? [];
+
+		if (matches.length === 0) {
+			throw new UserError(
+				`No deployable version found with tag "${tag}".\nTags can only be resolved against recent (deployable) versions. Run \`wrangler versions list\` to see available versions, or deploy by Version ID directly.`,
+				{ telemetryMessage: "versions deploy tag not found" }
+			);
+		}
+
+		if (matches.length > 1) {
+			const ids = matches
+				.sort((a, b) =>
+					b.metadata.created_on.localeCompare(a.metadata.created_on)
+				)
+				.map((version) => `  - ${version.id}`)
+				.join("\n");
+			throw new UserError(
+				`Tag "${tag}" matches multiple versions:\n${ids}\nDeploy by Version ID directly to disambiguate.`,
+				{ telemetryMessage: "versions deploy tag ambiguous" }
+			);
+		}
+
+		resolvedVersionTraffic.set(matches[0].id, percentage);
+	}
+
+	return resolvedVersionTraffic;
 }
 
 export function assignAndDistributePercentages(
