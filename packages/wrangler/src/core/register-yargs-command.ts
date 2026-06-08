@@ -135,25 +135,26 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		// Sentry breadcrumbs expect the `wrangler` prefix.
 		addBreadcrumb(def.command);
 
-		// Enforce the experimental `--x-new-config` scope. Only commands that
-		// explicitly declare `supportsNewConfig: true` (deploy, versions upload,
-		// versions deploy) and the two `provideConfig: false` commands that
-		// handle the flag themselves (dev, build) accept it. All others reject.
 		const newConfigEnabled = args.xNewConfig === true;
-		if (newConfigEnabled) {
-			const supportsNewConfig =
-				def.behaviour?.supportsNewConfig === true ||
-				def.command === "wrangler dev" ||
-				def.command === "wrangler build";
-			if (!supportsNewConfig) {
-				throw new UserError(
-					`--x-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy. The ${sanitizedCommand} command does not support --x-new-config.`,
-					{ telemetryMessage: "new-config command not supported" }
-				);
-			}
-		}
 
 		try {
+			// Enforce the experimental `--x-new-config` scope. Only commands that
+			// explicitly declare `supportsNewConfig: true` (deploy, versions upload,
+			// versions deploy) and the two `provideConfig: false` commands that
+			// handle the flag themselves (dev, build) accept it. All others reject.
+			if (newConfigEnabled) {
+				const supportsNewConfig =
+					def.behaviour?.supportsNewConfig === true ||
+					def.command === "wrangler dev" ||
+					def.command === "wrangler build";
+				if (!supportsNewConfig) {
+					throw new UserError(
+						`--x-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy. The ${sanitizedCommand} command does not support --x-new-config.`,
+						{ telemetryMessage: "new-config command not supported" }
+					);
+				}
+			}
+
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
 			const bannerEnabled =
 				shouldPrintBanner === true ||
