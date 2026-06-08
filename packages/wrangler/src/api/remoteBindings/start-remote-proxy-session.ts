@@ -119,6 +119,9 @@ export async function startRemoteProxySession(
 
 	if (maybeError && maybeError.error) {
 		const details = formatRemoteProxySessionError(maybeError.error);
+		// The worker started but then errored; dispose it so we don't leak the
+		// proxy process when we bail out.
+		await worker.dispose().catch(() => {});
 		throw new Error(
 			details
 				? `Failed to start the remote proxy session. ${details}`
@@ -145,10 +148,21 @@ export async function startRemoteProxySession(
 	// `@cloudflare/workers-utils` chain into this module's eval, which perturbs
 	// module init order for importers that only need the proxy session (e.g.
 	// tests that mock this function), so keep it off the module load path.
-	const { getAccessHeaders } = await import("../../user/access");
-	const remoteProxyHeaders = await getAccessHeaders(
-		remoteProxyConnectionString.hostname
-	);
+	//
+	// `getAccessHeaders()` can throw (a non-interactive `UserError` when the host
+	// is behind Access with no service token, or a `cloudflared` failure), so
+	// dispose the already-started worker before propagating to avoid leaking the
+	// proxy process for callers that catch and continue (e.g. getPlatformProxy).
+	let remoteProxyHeaders: Record<string, string>;
+	try {
+		const { getAccessHeaders } = await import("../../user/access");
+		remoteProxyHeaders = await getAccessHeaders(
+			remoteProxyConnectionString.hostname
+		);
+	} catch (error) {
+		await worker.dispose().catch(() => {});
+		throw error;
+	}
 	const hasRemoteProxyHeaders = Object.keys(remoteProxyHeaders).length > 0;
 	if (hasRemoteProxyHeaders) {
 		remoteProxyConnectionString.remoteProxyHeaders = remoteProxyHeaders;

@@ -7,8 +7,11 @@ import { getAccessHeaders } from "../../../user/access";
 // resolving `getAccessHeaders()` for the proxy host and carrying the result on
 // the connection string + session.
 let proxyUrl = new URL("https://proxy-a.example.workers.dev/");
+// Captures the most recently created fake worker so tests can assert on its
+// `dispose` (e.g. the cleanup-on-throw path).
+let lastFakeWorker: ReturnType<typeof makeFakeWorker> | undefined;
 function makeFakeWorker() {
-	return {
+	const worker = {
 		ready: Promise.resolve(),
 		url: Promise.resolve(proxyUrl),
 		dispose: vi.fn(async () => {}),
@@ -21,6 +24,8 @@ function makeFakeWorker() {
 			},
 		},
 	};
+	lastFakeWorker = worker;
+	return worker;
 }
 
 vi.mock("../../../api/startDevWorker", async (importOriginal) => {
@@ -39,6 +44,7 @@ vi.mock("../../../user/access", () => ({
 describe("startRemoteProxySession - Access auth", () => {
 	beforeEach(() => {
 		proxyUrl = new URL("https://proxy-a.example.workers.dev/");
+		lastFakeWorker = undefined;
 		vi.mocked(getAccessHeaders).mockReset();
 	});
 
@@ -133,5 +139,22 @@ describe("startRemoteProxySession - Access auth", () => {
 				"CF-Access-Client-Id"
 			]
 		).toBe("token-b.access");
+	});
+
+	it("disposes the proxy worker if getAccessHeaders throws (no leak)", async ({
+		expect,
+	}) => {
+		// e.g. a non-interactive UserError when the host is behind Access with no
+		// service token, or a cloudflared failure.
+		const accessError = new Error("Access auth failed");
+		vi.mocked(getAccessHeaders).mockRejectedValue(accessError);
+
+		await expect(startRemoteProxySession({})).rejects.toThrow(
+			"Access auth failed"
+		);
+
+		// The already-started worker must be cleaned up before the error
+		// propagates, since the caller never receives a session to dispose.
+		expect(lastFakeWorker?.dispose).toHaveBeenCalledTimes(1);
 	});
 });
