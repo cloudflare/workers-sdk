@@ -5,6 +5,7 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { Angular } from "../../../autoconfig/frameworks/angular";
 import { NpmPackageManager } from "../../../package-manager";
+import type { AutoConfigFrameworkPackageInfo } from "../../../autoconfig/frameworks";
 const BASE_OPTIONS = {
 	projectPath: process.cwd(),
 	workerName: "my-angular-app",
@@ -13,6 +14,21 @@ const BASE_OPTIONS = {
 	packageManager: NpmPackageManager,
 	isWorkspaceRoot: false,
 };
+
+const ANGULAR_PACKAGE_INFO: AutoConfigFrameworkPackageInfo = {
+	name: "@angular/core",
+	minimumVersion: "19.0.0",
+	maximumKnownMajorVersion: "22",
+};
+
+async function mockAngularCoreVersion(version: string) {
+	const pkgDir = resolve("node_modules/@angular/core");
+	await mkdir(pkgDir, { recursive: true });
+	await writeFile(
+		resolve(pkgDir, "package.json"),
+		JSON.stringify({ name: "@angular/core", version })
+	);
+}
 
 describe("Angular framework configure()", () => {
 	runInTempDir();
@@ -202,7 +218,9 @@ describe("Angular framework configure()", () => {
 		});
 
 		it("returns SSR wranglerConfig without crashing", async ({ expect }) => {
+			await mockAngularCoreVersion("21.0.0");
 			const framework = new Angular({ id: "angular", name: "Angular" });
+			framework.validateFrameworkVersion(process.cwd(), ANGULAR_PACKAGE_INFO);
 			const result = await framework.configure(BASE_OPTIONS);
 
 			expect(result.wranglerConfig).toEqual({
@@ -214,11 +232,13 @@ describe("Angular framework configure()", () => {
 			});
 		});
 
-		it("sets experimentalPlatform in angular.json when ssr was true", async ({
+		it("sets experimentalPlatform in angular.json when ssr was true (Angular <22)", async ({
 			expect,
 		}) => {
 			const { readFileSync } = await import("node:fs");
+			await mockAngularCoreVersion("21.0.0");
 			const framework = new Angular({ id: "angular", name: "Angular" });
+			framework.validateFrameworkVersion(process.cwd(), ANGULAR_PACKAGE_INFO);
 			await framework.configure(BASE_OPTIONS);
 
 			const angularJson = JSON.parse(
@@ -229,6 +249,24 @@ describe("Angular framework configure()", () => {
 			// The boolean `true` should have been promoted to an object
 			expect(typeof options.ssr).toBe("object");
 			expect(options.ssr.experimentalPlatform).toBe("neutral");
+		});
+
+		it("sets platform in angular.json when ssr was true (Angular >=22)", async ({
+			expect,
+		}) => {
+			const { readFileSync } = await import("node:fs");
+			await mockAngularCoreVersion("22.0.0");
+			const framework = new Angular({ id: "angular", name: "Angular" });
+			framework.validateFrameworkVersion(process.cwd(), ANGULAR_PACKAGE_INFO);
+			await framework.configure(BASE_OPTIONS);
+
+			const angularJson = JSON.parse(
+				readFileSync(resolve("angular.json"), "utf8")
+			);
+			const options =
+				angularJson.projects["my-angular-app"].architect.build.options;
+			expect(typeof options.ssr).toBe("object");
+			expect(options.ssr.platform).toBe("neutral");
 		});
 	});
 
@@ -265,7 +303,9 @@ describe("Angular framework configure()", () => {
 		it("returns SSR wranglerConfig with main and assets", async ({
 			expect,
 		}) => {
+			await mockAngularCoreVersion("21.0.0");
 			const framework = new Angular({ id: "angular", name: "Angular" });
+			framework.validateFrameworkVersion(process.cwd(), ANGULAR_PACKAGE_INFO);
 			const result = await framework.configure(BASE_OPTIONS);
 
 			expect(result.wranglerConfig).toEqual({
@@ -278,7 +318,9 @@ describe("Angular framework configure()", () => {
 		});
 
 		it("sets SSR configurationDescription", async ({ expect }) => {
+			await mockAngularCoreVersion("21.0.0");
 			const framework = new Angular({ id: "angular", name: "Angular" });
+			framework.validateFrameworkVersion(process.cwd(), ANGULAR_PACKAGE_INFO);
 			await framework.configure(BASE_OPTIONS);
 
 			expect(framework.configurationDescription).toBe(
@@ -286,9 +328,13 @@ describe("Angular framework configure()", () => {
 			);
 		});
 
-		it("sets experimentalPlatform in angular.json", async ({ expect }) => {
+		it("sets experimentalPlatform in angular.json (Angular <22)", async ({
+			expect,
+		}) => {
 			const { readFileSync } = await import("node:fs");
+			await mockAngularCoreVersion("21.0.0");
 			const framework = new Angular({ id: "angular", name: "Angular" });
+			framework.validateFrameworkVersion(process.cwd(), ANGULAR_PACKAGE_INFO);
 			await framework.configure(BASE_OPTIONS);
 
 			const angularJson = JSON.parse(
@@ -301,16 +347,37 @@ describe("Angular framework configure()", () => {
 			expect(options.ssr.experimentalPlatform).toBe("neutral");
 		});
 
+		it("sets platform in angular.json (Angular >=22)", async ({ expect }) => {
+			const { readFileSync } = await import("node:fs");
+			await mockAngularCoreVersion("22.0.0");
+			const framework = new Angular({ id: "angular", name: "Angular" });
+			framework.validateFrameworkVersion(process.cwd(), ANGULAR_PACKAGE_INFO);
+			await framework.configure(BASE_OPTIONS);
+
+			const angularJson = JSON.parse(
+				readFileSync(resolve("angular.json"), "utf8")
+			);
+			const options =
+				angularJson.projects["my-angular-app"].architect.build.options;
+			expect(options.outputMode).toBe("server");
+			expect(options.outputPath).toBe("dist");
+			expect(options.ssr.platform).toBe("neutral");
+		});
+
 		it("creates src/server.ts", async ({ expect }) => {
 			const { existsSync } = await import("node:fs");
+			await mockAngularCoreVersion("21.0.0");
 			const framework = new Angular({ id: "angular", name: "Angular" });
+			framework.validateFrameworkVersion(process.cwd(), ANGULAR_PACKAGE_INFO);
 			await framework.configure(BASE_OPTIONS);
 
 			expect(existsSync(resolve("src/server.ts"))).toBe(true);
 		});
 
 		it("installs additional dependencies", async ({ expect }) => {
+			await mockAngularCoreVersion("21.0.0");
 			const framework = new Angular({ id: "angular", name: "Angular" });
+			framework.validateFrameworkVersion(process.cwd(), ANGULAR_PACKAGE_INFO);
 			await framework.configure(BASE_OPTIONS);
 
 			expect(installSpy).toHaveBeenCalledWith(
