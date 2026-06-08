@@ -26,14 +26,14 @@ describe("getDurationDates()", () => {
 		expect,
 	}) => {
 		expect(() => getDurationDates("32d")).toThrowError(
-			"Duration cannot be greater than 31 days"
+			`Invalid --time-period value "32d": 32 days exceeds the maximum of 31 days. Provide a value of 31d or less.`
 		);
 	});
 	it("should throw an error if duration is greater than 31 days (in minutes)", ({
 		expect,
 	}) => {
 		expect(() => getDurationDates("44641m")).toThrowError(
-			"Duration cannot be greater than 44640 minutes (31 days)"
+			`Invalid --time-period value "44641m": 44641 minutes exceeds the maximum of 44640 minutes (31 days). Provide a value of 44640m or less.`
 		);
 	});
 
@@ -41,12 +41,14 @@ describe("getDurationDates()", () => {
 		expect,
 	}) => {
 		expect(() => getDurationDates("745h")).toThrowError(
-			"Duration cannot be greater than 744 hours (31 days)"
+			`Invalid --time-period value "745h": 745 hours exceeds the maximum of 744 hours (31 days). Provide a value of 744h or less.`
 		);
 	});
 
 	it("should throw an error if duration unit is invalid", ({ expect }) => {
-		expect(() => getDurationDates("1y")).toThrowError("Invalid duration unit");
+		expect(() => getDurationDates("1y")).toThrowError(
+			`Invalid --time-period unit "y" in "1y". Supported units: d (days), h (hours), m (minutes). Example: --time-period=7d.`
+		);
 	});
 
 	it("should return the correct start and end dates", ({ expect }) => {

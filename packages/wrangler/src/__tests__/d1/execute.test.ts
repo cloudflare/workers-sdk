@@ -46,7 +46,7 @@ describe("execute", () => {
 		});
 
 		await expect(runWrangler("d1 execute db")).rejects.toThrowError(
-			`Error: must provide --command or --file`
+			`Missing required option --command or --file. Provide a SQL command inline with --command="<SQL>", or a path to a SQL file with --file=<path>.`
 		);
 	});
 
@@ -81,7 +81,7 @@ describe("execute", () => {
 		await expect(
 			runWrangler(`d1 execute db --command "select;" --local --remote`)
 		).rejects.toThrowError(
-			"Error: can't use --local and --remote at the same time"
+			`Error: can't use --local and --remote at the same time`
 		);
 	});
 
@@ -95,7 +95,9 @@ describe("execute", () => {
 
 		await expect(
 			runWrangler(`d1 execute db --command "select;" --local --preview`)
-		).rejects.toThrowError(`Error: can't use --preview without --remote`);
+		).rejects.toThrowError(
+			`Cannot use --preview without --remote. The --preview flag targets a preview D1 database, which requires the --remote flag. Remove --preview or add --remote.`
+		);
 	});
 
 	it("should reject the use of --preview with --local with --json", async ({
@@ -114,7 +116,7 @@ describe("execute", () => {
 			JSON.stringify(
 				{
 					error: {
-						text: "Error: can't use --preview without --remote",
+						text: "Cannot use --preview without --remote. The --preview flag targets a preview D1 database, which requires the --remote flag. Remove --preview or add --remote.",
 					},
 				},
 				null,

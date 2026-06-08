@@ -92,9 +92,12 @@ export const d1ExportCommand = createCommand({
 			args;
 
 		if (!schema && !data) {
-			throw new UserError(`You cannot specify both --no-schema and --no-data`, {
-				telemetryMessage: "d1 export conflicting no-schema and no-data flags",
-			});
+			throw new UserError(
+				`Cannot use --no-schema and --no-data together. At least one of schema or data must be included in the export. Remove one of the flags.`,
+				{
+					telemetryMessage: "d1 export conflicting no-schema and no-data flags",
+				}
+			);
 		}
 
 		const stats = statSync(output, { throwIfNoEntry: false });
