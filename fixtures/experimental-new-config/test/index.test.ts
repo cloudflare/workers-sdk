@@ -4,8 +4,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { removeDir } from "@fixture/shared/src/fs-helpers";
-import { describe, test } from "vitest";
-import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
+import { afterAll, beforeAll, describe, test } from "vitest";
+import {
+	runWranglerDev,
+	wranglerEntryPath,
+} from "../../shared/src/run-wrangler-long-lived";
 
 const fixtureDir = path.resolve(__dirname, "..");
 
@@ -224,5 +227,35 @@ describe("--x-new-config deploy --dry-run", () => {
 		} finally {
 			removeDir(tmpDir, { fireAndForget: true });
 		}
+	});
+});
+
+describe("--x-new-config dev", () => {
+	let tmpDir: string;
+	let stop: (() => Promise<unknown>) | undefined;
+	let ip: string;
+	let port: number;
+
+	beforeAll(async () => {
+		tmpDir = await stageFixture();
+		({ ip, port, stop } = await runWranglerDev(tmpDir, [
+			"--x-new-config",
+			"--env",
+			"dev",
+			"--port=0",
+			"--inspector-port=0",
+		]));
+	});
+
+	afterAll(async () => {
+		await stop?.();
+		removeDir(tmpDir, { fireAndForget: true });
+	});
+
+	test("serves the correct response for a worker configured via cloudflare.config.ts", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/`);
+		expect(await response.text()).toBe("The mode is dev");
 	});
 });
