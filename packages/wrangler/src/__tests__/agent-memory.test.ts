@@ -39,13 +39,12 @@ describe("agent-memory help", () => {
 			  wrangler agent-memory namespace  Manage Agent Memory namespaces [private beta]
 
 			GLOBAL FLAGS
-			  -c, --config          Path to Wrangler configuration file  [string]
-			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-			  -v, --version         Show version number  [boolean]"
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 
@@ -68,13 +67,12 @@ describe("agent-memory help", () => {
 			  wrangler agent-memory namespace delete <namespace_name>  Delete a given Agent Memory namespace [private beta]
 
 			GLOBAL FLAGS
-			  -c, --config          Path to Wrangler configuration file  [string]
-			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-			  -v, --version         Show version number  [boolean]"
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
 		`);
 	});
 });

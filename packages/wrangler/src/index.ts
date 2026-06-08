@@ -547,12 +547,6 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: "x-auto-create",
 		},
-		"install-skills": {
-			describe:
-				"Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
-			type: "boolean",
-			default: false,
-		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -629,7 +623,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "env-file", "help", "install-skills", "version"],
+		["config", "cwd", "env", "env-file", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 

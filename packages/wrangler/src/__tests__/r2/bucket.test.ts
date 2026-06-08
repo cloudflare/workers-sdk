@@ -122,13 +122,12 @@ describe("r2", () => {
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
 
 				GLOBAL FLAGS
-				  -c, --config          Path to Wrangler configuration file  [string]
-				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-				  -v, --version         Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -166,13 +165,12 @@ describe("r2", () => {
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
 
 				GLOBAL FLAGS
-				  -c, --config          Path to Wrangler configuration file  [string]
-				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-				  -v, --version         Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -346,13 +344,12 @@ describe("r2", () => {
 					  name  The name of the new bucket  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: "weur", "eeur", "apac", "wnam", "enam", "oc"]
@@ -385,13 +382,12 @@ describe("r2", () => {
 					  name  The name of the new bucket  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: "weur", "eeur", "apac", "wnam", "enam", "oc"]
@@ -521,13 +517,12 @@ describe("r2", () => {
 					  wrangler r2 bucket update storage-class <name>  Update the default storage class of an existing R2 bucket
 
 					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
@@ -553,13 +548,12 @@ describe("r2", () => {
 						  name  The name of the existing bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction   The jurisdiction of the bucket to be updated  [string]
@@ -619,13 +613,12 @@ describe("r2", () => {
 					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -685,13 +678,12 @@ describe("r2", () => {
 					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -758,13 +750,12 @@ describe("r2", () => {
 					  wrangler r2 bucket sippy get <name>      Check the status of Sippy on an R2 bucket
 
 					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 			});
 
@@ -862,13 +853,12 @@ describe("r2", () => {
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
@@ -908,13 +898,12 @@ describe("r2", () => {
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -967,13 +956,12 @@ describe("r2", () => {
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -1043,13 +1031,12 @@ describe("r2", () => {
 					  wrangler r2 bucket catalog snapshot-expiration  Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog [open beta]
 
 					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]"
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
 				`);
 			});
 
@@ -1106,13 +1093,12 @@ describe("r2", () => {
 						  bucket  The name of the bucket to enable  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1140,13 +1126,12 @@ describe("r2", () => {
 						  bucket  The name of the bucket to disable the data catalog for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1239,13 +1224,12 @@ describe("r2", () => {
 						  bucket  The name of the R2 bucket whose data catalog status to retrieve  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1350,13 +1334,12 @@ describe("r2", () => {
 						  wrangler r2 bucket catalog compaction disable <bucket> [namespace] [table]  Disable automatic file compaction for your R2 data catalog or a specific table [open beta]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 				});
 
@@ -1429,13 +1412,12 @@ describe("r2", () => {
 							  table      The name of the table (optional, for table-level compaction)  [string]
 
 							GLOBAL FLAGS
-							  -c, --config          Path to Wrangler configuration file  [string]
-							      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-							  -v, --version         Show version number  [boolean]
+							  -c, --config    Path to Wrangler configuration file  [string]
+							      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+							  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+							      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+							  -h, --help      Show help  [boolean]
+							  -v, --version   Show version number  [boolean]
 
 							OPTIONS
 							      --target-size  The target size for compacted files in MB (allowed values: 64, 128, 256, 512)  [number] [default: 128]
@@ -1566,13 +1548,12 @@ describe("r2", () => {
 							  table      The name of the table (optional, for table-level compaction)  [string]
 
 							GLOBAL FLAGS
-							  -c, --config          Path to Wrangler configuration file  [string]
-							      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-							  -v, --version         Show version number  [boolean]"
+							  -c, --config    Path to Wrangler configuration file  [string]
+							      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+							  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+							      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+							  -h, --help      Show help  [boolean]
+							  -v, --version   Show version number  [boolean]"
 						`);
 						expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1713,13 +1694,12 @@ describe("r2", () => {
 						  wrangler r2 bucket catalog snapshot-expiration disable <bucket> [namespace] [table]  Disable automatic snapshot expiration for your R2 data catalog or a specific table [open beta]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
 					`);
 				});
 
@@ -1844,13 +1824,12 @@ describe("r2", () => {
 							  table      The name of the table (optional, for table-level snapshot expiration)  [string]
 
 							GLOBAL FLAGS
-							  -c, --config          Path to Wrangler configuration file  [string]
-							      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-							  -v, --version         Show version number  [boolean]
+							  -c, --config    Path to Wrangler configuration file  [string]
+							      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+							  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+							      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+							  -h, --help      Show help  [boolean]
+							  -v, --version   Show version number  [boolean]
 
 							OPTIONS
 							      --older-than-days  Delete snapshots older than this many days, defaults to 30  [number]
@@ -1964,13 +1943,12 @@ describe("r2", () => {
 							  table      The name of the table (optional, for table-level snapshot expiration)  [string]
 
 							GLOBAL FLAGS
-							  -c, --config          Path to Wrangler configuration file  [string]
-							      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-							  -v, --version         Show version number  [boolean]
+							  -c, --config    Path to Wrangler configuration file  [string]
+							      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+							  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+							      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+							  -h, --help      Show help  [boolean]
+							  -v, --version   Show version number  [boolean]
 
 							OPTIONS
 							      --force  Skip confirmation prompt  [boolean] [default: false]"
@@ -2268,13 +2246,12 @@ describe("r2", () => {
 						  bucket  The name of the R2 bucket to get event notification rules for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -2643,13 +2620,12 @@ describe("r2", () => {
 						  bucket  The name of the R2 bucket to create an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: "object-create", "object-delete"]
@@ -2810,13 +2786,12 @@ describe("r2", () => {
 						  bucket  The name of the R2 bucket to delete an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
 						      --queue         The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted  [string] [required]

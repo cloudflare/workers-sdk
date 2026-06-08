@@ -226,10 +226,6 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 	return realModule;
 });
 
-vi.mock("../agents-skills-install", () => ({
-	maybeInstallCloudflareSkillsGlobally: vi.fn().mockResolvedValue(undefined),
-}));
-
 vi.mock("prompts", () => {
 	return {
 		__esModule: true,

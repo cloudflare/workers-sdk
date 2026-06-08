@@ -49,13 +49,12 @@ describe("dispatch-namespace", () => {
 			  wrangler dispatch-namespace rename <oldName> <newName>  Rename a dispatch namespace
 
 			GLOBAL FLAGS
-			  -c, --config          Path to Wrangler configuration file  [string]
-			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-			  -v, --version         Show version number  [boolean]",
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]",
 			  "warn": "",
 			}
 		`);
@@ -104,13 +103,12 @@ describe("dispatch-namespace", () => {
 				  name  Name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config          Path to Wrangler configuration file  [string]
-				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-				  -v, --version         Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -157,13 +155,12 @@ describe("dispatch-namespace", () => {
 				  name  Name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config          Path to Wrangler configuration file  [string]
-				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-				  -v, --version         Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -219,13 +216,12 @@ describe("dispatch-namespace", () => {
 				  name  Name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config          Path to Wrangler configuration file  [string]
-				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-				  -v, --version         Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 
@@ -332,13 +328,12 @@ describe("dispatch-namespace", () => {
 				  newName  New name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config          Path to Wrangler configuration file  [string]
-				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-				  -v, --version         Show version number  [boolean]"
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
 			`);
 		});
 

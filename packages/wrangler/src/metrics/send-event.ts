@@ -71,8 +71,7 @@ export type EventNames =
 	| "update pipeline"
 	| "show pipeline"
 	| "provision resources"
-	| AutoConfigEvent
-	| SkillsInstallEvent;
+	| AutoConfigEvent;
 
 /** Event related to the autoconfig flow */
 type AutoConfigEvent =
@@ -82,9 +81,6 @@ type AutoConfigEvent =
 	| "autoconfig_detection_completed"
 	| "autoconfig_configuration_started"
 	| "autoconfig_configuration_completed";
-
-/** Event related to the agent skills install flow */
-type SkillsInstallEvent = "skills_install_skipped" | "skills_install_completed";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.
