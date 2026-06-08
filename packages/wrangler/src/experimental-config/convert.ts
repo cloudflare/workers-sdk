@@ -57,9 +57,16 @@ export function convertToolingConfig(
 		result.jsx_fragment = parsed.jsxFragment;
 	}
 	if (parsed.pythonModules !== undefined) {
-		result.python_modules = {
-			exclude: parsed.pythonModules.exclude ?? [],
-		};
+		// `convertToolingConfig` is a thin name/shape translator — it does not
+		// apply defaults. `pythonModules: {}` (no `exclude`) is passed through
+		// as `python_modules: {}`, even though `RawConfig.python_modules.exclude`
+		// is typed as required; downstream `normalizeAndValidateConfig` is
+		// responsible for resolving / defaulting / validating the shape.
+		result.python_modules = (
+			parsed.pythonModules.exclude !== undefined
+				? { exclude: parsed.pythonModules.exclude }
+				: {}
+		) as RawConfig["python_modules"];
 	}
 	if (parsed.uploadSourceMaps !== undefined) {
 		result.upload_source_maps = parsed.uploadSourceMaps;
