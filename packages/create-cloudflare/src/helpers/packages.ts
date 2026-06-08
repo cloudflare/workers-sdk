@@ -175,6 +175,15 @@ const promptOrEOF = async (packages: string[]): Promise<boolean> => {
 		process.stdin.resume();
 	});
 
+	// Attach a silent error handler to the prompt so a late rejection from
+	// clack (e.g. because stdin closed *after* the EOF race already won)
+	// can't surface as an unhandled rejection. `Promise.race` below also
+	// attaches handlers to both inputs, so in practice this is already
+	// covered today, but this extra `.catch` makes the safety property
+	// explicit and future-proofs against any change in Node's
+	// unhandled-rejection policy.
+	prompt.catch(() => {});
+
 	try {
 		return await Promise.race([prompt, eof]);
 	} finally {
