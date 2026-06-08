@@ -7,6 +7,18 @@ import type {
 	Logger,
 } from "@cloudflare/workers-utils";
 
+/**
+ * Module-level context globals for deploy-helpers.
+ *
+ * These are typed as non-nullable but are undefined until initDeployHelpersContext()
+ * is called. Consumers must import the live binding directly (e.g. `import { logger }`)
+ * and NOT destructure or cache the value at module-load time, otherwise they will
+ * capture `undefined` before init runs.
+ *
+ * Example:
+ *   import { logger } from "./context";  // correct: live binding
+ *   const { logger } = await import("./context");  // WRONG: captures undefined
+ */
 export let logger: Logger;
 export let fetchResult: FetchResultFetcher;
 export let fetchListResult: FetchListResultFetcher;

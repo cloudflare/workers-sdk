@@ -321,7 +321,7 @@ export const buildAssetManifest = async (dir: string) => {
 };
 
 function logAssetUpload(line: string, diffCount: number) {
-	const level = logger.loggerLevel;
+	const level = logger.loggerLevel ?? "log";
 	if (LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug) {
 		// If we're logging as debug level, we want *all* diff lines to be logged
 		// at debug level, not just the first MAX_DIFF_LINES
@@ -338,6 +338,10 @@ function logAssetUpload(line: string, diffCount: number) {
 	return ++diffCount;
 }
 
+/**
+ * Logs a summary of the assets upload status ("Uploaded <count> of <total> assets"),
+ * and the list of uploaded files if in debug log level.
+ */
 function logAssetsUploadStatus(
 	numberFilesToUpload: number,
 	uploadedAssetsCount: number,
@@ -351,6 +355,11 @@ function logAssetsUploadStatus(
 	uploadedAssetFiles.forEach((file) => logger.debug(`✨ ${file}`));
 }
 
+/**
+ * Logs a summary of files read from a given directory ("Read <count>
+ * files from directory <dir>"), and the list of read files if in
+ * debug log level.
+ */
 function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
 	logger.info(
 		`✨ Read ${assetFiles.length} file${
@@ -362,6 +371,10 @@ function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
 
 const WORKER_JS_FILENAME = "_worker.js";
 
+/**
+ * Throws an error if the project has no `.assetsIgnore` file and is uploading
+ * _worker.js code as an asset, which could expose server-side code publicly.
+ */
 function errorOnLegacyPagesWorkerJSAsset(
 	file: string,
 	hasAssetsIgnoreFile: boolean

@@ -18,6 +18,15 @@ export interface WorkflowConflict {
 
 export const WORKFLOW_NOT_FOUND_CODE = 10200;
 
+/**
+ * Fetches a workflow by name from the Cloudflare API.
+ *
+ * @param config - The compliance/config object for API requests
+ * @param accountId - The account ID
+ * @param workflowName - The name of the workflow to fetch
+ * @returns The workflow if it exists, or `null` if not found (API error code 10200)
+ * @throws {APIError} Re-throws any API error that is not a "workflow not found" error (e.g., network errors, auth errors, rate limits)
+ */
 async function getWorkflow(
 	config: Config,
 	accountId: string,

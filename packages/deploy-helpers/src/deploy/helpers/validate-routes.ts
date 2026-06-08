@@ -51,7 +51,8 @@ export const validateRoutes = (
 	if (mountedAssetRoutes.length > 0 && assets?.directory !== undefined) {
 		const relativeAssetsDir = path.relative(process.cwd(), assets.directory);
 
-		logger.once.warn(
+		const warnFn = logger.once?.warn ?? logger.warn;
+		warnFn(
 			`Warning: The following routes will attempt to serve Assets on a configured path:\n${mountedAssetRoutes
 				.map((route) => {
 					const routeNoScheme = route.replace(/https?:\/\//g, "");

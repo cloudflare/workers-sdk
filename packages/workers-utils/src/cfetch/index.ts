@@ -54,7 +54,7 @@ export type FetchPagedListResultFetcher = <ResponseType>(
 function logHeaders(headers: Headers, logger: Logger): void {
 	const clone = cloneHeaders(headers);
 	clone.delete("Authorization");
-	logger.debugWithSanitization(
+	logger.debugWithSanitization?.(
 		"HEADERS:",
 		JSON.stringify(Object.fromEntries(clone), null, 2)
 	);
@@ -90,12 +90,12 @@ export async function performApiFetchBase(
 	logger.debug(
 		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl(complianceConfig)}${resource}`
 	);
-	logger.debugWithSanitization("QUERY STRING:", queryString);
+	logger.debugWithSanitization?.("QUERY STRING:", queryString);
 	logHeaders(headers, logger);
 
-	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
+	logger.debugWithSanitization?.("INIT:", JSON.stringify({ ...init }, null, 2));
 	if (init.body instanceof FormData) {
-		logger.debugWithSanitization(
+		logger.debugWithSanitization?.(
 			"BODY:",
 			await new Response(init.body).text(),
 			null,
@@ -142,7 +142,7 @@ export async function fetchInternalBase<ResponseType>(
 		response.status
 	);
 	logHeaders(response.headers, logger);
-	logger.debugWithSanitization("RESPONSE:", jsonText);
+	logger.debugWithSanitization?.("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
 
 	if (!jsonText && (response.status === 204 || response.status === 205)) {
@@ -507,7 +507,7 @@ export async function fetchKVGetValueBase(
 		return await response.arrayBuffer();
 	} else {
 		throw new Error(
-			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
+			`Failed to fetch ${resource} - ${response.status}: ${response.statusText}`
 		);
 	}
 }

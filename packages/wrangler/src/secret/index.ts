@@ -1,4 +1,8 @@
-import { parseBulkInputToObject } from "@cloudflare/deploy-helpers";
+import {
+	fetchSecrets,
+	isWorkerNotFoundError,
+	parseBulkInputToObject,
+} from "@cloudflare/deploy-helpers";
 import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
@@ -7,11 +11,9 @@ import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { fetchSecrets } from "../utils/fetch-secrets";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
@@ -345,10 +347,15 @@ export const secretListCommand = createCommand({
 			);
 		}
 
+		const accountId = await requireAuth(config);
 		let secrets: Awaited<ReturnType<typeof fetchSecrets>>;
 
 		try {
-			secrets = await fetchSecrets({ ...config, name: scriptName }, args.env);
+			secrets = await fetchSecrets(
+				{ ...config, name: scriptName },
+				accountId,
+				args.env
+			);
 		} catch (e) {
 			if (isWorkerNotFoundError(e)) {
 				throw new UserError(

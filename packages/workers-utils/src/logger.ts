@@ -10,14 +10,14 @@ export const LOGGER_LEVELS = {
 export type LoggerLevel = keyof typeof LOGGER_LEVELS;
 
 export type Logger = {
-	loggerLevel: LoggerLevel;
+	loggerLevel?: LoggerLevel;
 	debug: typeof console.debug;
-	debugWithSanitization: (label: string, ...args: unknown[]) => void;
+	debugWithSanitization?: (label: string, ...args: unknown[]) => void;
 	log: typeof console.log;
 	info: typeof console.info;
 	warn: typeof console.warn;
 	error: typeof console.error;
-	once: {
+	once?: {
 		info: typeof console.info;
 		log: typeof console.log;
 		warn: typeof console.warn;
