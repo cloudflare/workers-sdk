@@ -1498,6 +1498,12 @@ describe("units", () => {
 			});
 		});
 
+		test("tag containing @ splits on the last @", ({ expect }) => {
+			const result = parseTagSpecs({ versionTag: ["v1.0@beta@100%"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({ "v1.0@beta": 100 });
+		});
+
 		test("throws on empty tag", ({ expect }) => {
 			expect(() => parseTagSpecs({ versionTag: ["@100%"] })).toThrowError(
 				`Could not parse a tag from --version-tag arg "@100%".`

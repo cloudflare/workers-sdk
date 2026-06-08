@@ -771,7 +771,12 @@ export function parseTagSpecs(
 	const tagTraffic = new Map<string, OptionalPercentage>();
 
 	for (const spec of args.versionTag ?? []) {
-		const [tag, percentageString] = spec.split("@");
+		// Split on the last `@` so that tags which themselves contain `@` (the
+		// upload `--tag` flag accepts arbitrary strings) are not truncated.
+		const atIndex = spec.lastIndexOf("@");
+		const tag = atIndex === -1 ? spec : spec.substring(0, atIndex);
+		const percentageString =
+			atIndex === -1 ? undefined : spec.substring(atIndex + 1);
 
 		if (!tag) {
 			throw new UserError(
