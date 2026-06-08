@@ -76,9 +76,9 @@ export const versionsDeployCommand = createCommand({
 			type: "string",
 			array: true,
 		},
-		tag: {
+		"version-tag": {
 			describe:
-				"Worker Version tag(s) to deploy, resolved to a Version ID against the deployable versions. Supports the shorthand notation [<tag>@<percentage>..].",
+				"Worker Version tag(s) to deploy, resolved to a Version ID against the deployable versions. Supports the shorthand notation [<version-tag>@<percentage>..].",
 			type: "string",
 			array: true,
 			requiresArg: true,
@@ -136,8 +136,8 @@ export const versionsDeployCommand = createCommand({
 
 		await printLatestDeployment(config, accountId, workerName, versionCache);
 
-		// Resolve any --tag args to their Version IDs against the deployable
-		// versions, then merge them into the version traffic to deploy.
+		// Resolve any --version-tag args to their Version IDs against the
+		// deployable versions, then merge them into the version traffic to deploy.
 		if (tagTraffic.size > 0) {
 			const resolvedTagTraffic = await resolveTagsToVersions(
 				config,
@@ -757,32 +757,33 @@ export function parseVersionSpecs(
 }
 
 type ParseTagSpecsArgs = {
-	tag?: string[];
+	versionTag?: string[];
 };
 
 /**
- * Parses the `--tag` args into a map of tag to optional percentage, supporting
- * the `<tag>@<percentage>` shorthand. Tags are resolved to Version IDs later by
- * {@link resolveTagsToVersions}.
+ * Parses the `--version-tag` args into a map of tag to optional percentage,
+ * supporting the `<version-tag>@<percentage>` shorthand. Tags are resolved to
+ * Version IDs later by {@link resolveTagsToVersions}.
  */
 export function parseTagSpecs(
 	args: ParseTagSpecsArgs
 ): Map<string, OptionalPercentage> {
 	const tagTraffic = new Map<string, OptionalPercentage>();
 
-	for (const spec of args.tag ?? []) {
+	for (const spec of args.versionTag ?? []) {
 		const [tag, percentageString] = spec.split("@");
 
 		if (!tag) {
-			throw new UserError(`Could not parse a tag from --tag arg "${spec}".`, {
-				telemetryMessage: "versions deploy tag parse failed",
-			});
+			throw new UserError(
+				`Could not parse a tag from --version-tag arg "${spec}".`,
+				{ telemetryMessage: "versions deploy tag parse failed" }
+			);
 		}
 
 		const percentage = parseOptionalPercentage(
 			percentageString,
 			spec,
-			"--tag arg"
+			"--version-tag arg"
 		);
 
 		tagTraffic.set(tag, percentage);
@@ -792,7 +793,7 @@ export function parseTagSpecs(
 }
 
 /**
- * Resolves tags (e.g. commit SHAs supplied via `--tag`) to Version IDs by
+ * Resolves tags (e.g. commit SHAs supplied via `--version-tag`) to Version IDs by
  * matching against the `workers/tag` annotation on the worker's deployable
  * versions.
  *

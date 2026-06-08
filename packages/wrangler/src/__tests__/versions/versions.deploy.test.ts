@@ -78,7 +78,7 @@ const mswGetVersion30000000 = http.get(
 
 // MSW handler for the deployable-versions endpoint (GET /versions?deployable=true)
 // returning versions that carry `workers/tag` annotations, used to test
-// `versions deploy --tag <tag>`.
+// `versions deploy --version-tag <version-tag>`.
 const mswListVersionsWithTags = http.get(
 	"*/accounts/:accountId/workers/scripts/:workerName/versions",
 	() =>
@@ -1301,7 +1301,7 @@ describe("versions deploy", () => {
 				const captured = captureDeployment();
 
 				await expect(
-					runWrangler("versions deploy --tag def5678@100% --yes")
+					runWrangler("versions deploy --version-tag def5678@100% --yes")
 				).resolves.toBeUndefined();
 
 				expect(captured.versions).toEqual([
@@ -1325,7 +1325,7 @@ describe("versions deploy", () => {
 
 				await expect(
 					runWrangler(
-						"versions deploy --tag abc1234@40% --tag def5678@60% --yes"
+						"versions deploy --version-tag abc1234@40% --version-tag def5678@60% --yes"
 					)
 				).resolves.toBeUndefined();
 
@@ -1348,7 +1348,7 @@ describe("versions deploy", () => {
 
 				await expect(
 					runWrangler(
-						"versions deploy 10000000-0000-0000-0000-000000000000@30% --tag def5678@70% --yes"
+						"versions deploy 10000000-0000-0000-0000-000000000000@30% --version-tag def5678@70% --yes"
 					)
 				).resolves.toBeUndefined();
 
@@ -1370,8 +1370,9 @@ describe("versions deploy", () => {
 				writeWranglerConfig();
 				msw.use(mswListVersionsWithTags);
 
-				await expect(runWrangler("versions deploy --tag nope@100% --yes"))
-					.rejects.toMatchInlineSnapshot(`
+				await expect(
+					runWrangler("versions deploy --version-tag nope@100% --yes")
+				).rejects.toMatchInlineSnapshot(`
 					[Error: No deployable version found with tag "nope".
 					Tags can only be resolved against recent (deployable) versions. Run \`wrangler versions list\` to see available versions, or deploy by Version ID directly.]
 				`);
@@ -1383,8 +1384,9 @@ describe("versions deploy", () => {
 				writeWranglerConfig();
 				msw.use(mswListVersionsWithDuplicateTags);
 
-				await expect(runWrangler("versions deploy --tag dupe@100% --yes"))
-					.rejects.toMatchInlineSnapshot(`
+				await expect(
+					runWrangler("versions deploy --version-tag dupe@100% --yes")
+				).rejects.toMatchInlineSnapshot(`
 					[Error: Tag "dupe" matches multiple versions:
 					  - 20000000-0000-0000-0000-000000000000
 					  - 10000000-0000-0000-0000-000000000000
@@ -1474,20 +1476,20 @@ describe("units", () => {
 		});
 
 		test("tag without percentage", ({ expect }) => {
-			const result = parseTagSpecs({ tag: ["abc1234"] });
+			const result = parseTagSpecs({ versionTag: ["abc1234"] });
 
 			expect(Object.fromEntries(result)).toMatchObject({ abc1234: null });
 		});
 
 		test("tag with percentage shorthand", ({ expect }) => {
-			const result = parseTagSpecs({ tag: ["abc1234@100%"] });
+			const result = parseTagSpecs({ versionTag: ["abc1234@100%"] });
 
 			expect(Object.fromEntries(result)).toMatchObject({ abc1234: 100 });
 		});
 
 		test("multiple tags with percentages", ({ expect }) => {
 			const result = parseTagSpecs({
-				tag: ["abc1234@40%", "def5678@60%"],
+				versionTag: ["abc1234@40%", "def5678@60%"],
 			});
 
 			expect(Object.fromEntries(result)).toMatchObject({
@@ -1497,20 +1499,24 @@ describe("units", () => {
 		});
 
 		test("throws on empty tag", ({ expect }) => {
-			expect(() => parseTagSpecs({ tag: ["@100%"] })).toThrowError(
-				`Could not parse a tag from --tag arg "@100%".`
+			expect(() => parseTagSpecs({ versionTag: ["@100%"] })).toThrowError(
+				`Could not parse a tag from --version-tag arg "@100%".`
 			);
 		});
 
 		test("throws on out-of-range percentage", ({ expect }) => {
-			expect(() => parseTagSpecs({ tag: ["abc1234@101%"] })).toThrowError(
-				`Percentage value (101%) parsed from --tag arg "abc1234@101%" must be between 0 and 100.`
+			expect(() =>
+				parseTagSpecs({ versionTag: ["abc1234@101%"] })
+			).toThrowError(
+				`Percentage value (101%) parsed from --version-tag arg "abc1234@101%" must be between 0 and 100.`
 			);
 		});
 
 		test("throws on unparseable percentage", ({ expect }) => {
-			expect(() => parseTagSpecs({ tag: ["abc1234@oops"] })).toThrowError(
-				`Could not parse percentage value from --tag arg "abc1234@oops"`
+			expect(() =>
+				parseTagSpecs({ versionTag: ["abc1234@oops"] })
+			).toThrowError(
+				`Could not parse percentage value from --version-tag arg "abc1234@oops"`
 			);
 		});
 	});
