@@ -1498,10 +1498,28 @@ describe("units", () => {
 			});
 		});
 
-		test("tag containing @ splits on the last @", ({ expect }) => {
+		test("tag containing @ with a percentage splits on the last @", ({
+			expect,
+		}) => {
 			const result = parseTagSpecs({ versionTag: ["v1.0@beta@100%"] });
 
 			expect(Object.fromEntries(result)).toMatchObject({ "v1.0@beta": 100 });
+		});
+
+		test("tag containing @ without a percentage is kept whole", ({
+			expect,
+		}) => {
+			const result = parseTagSpecs({ versionTag: ["v1.0@beta"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({ "v1.0@beta": null });
+		});
+
+		test("trailing @ keeps a percentage-like tag whole with no percentage", ({
+			expect,
+		}) => {
+			const result = parseTagSpecs({ versionTag: ["build@2@"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({ "build@2": null });
 		});
 
 		test("throws on empty tag", ({ expect }) => {
@@ -1518,12 +1536,12 @@ describe("units", () => {
 			);
 		});
 
-		test("throws on unparseable percentage", ({ expect }) => {
-			expect(() =>
-				parseTagSpecs({ versionTag: ["abc1234@oops"] })
-			).toThrowError(
-				`Could not parse percentage value from --version-tag arg "abc1234@oops"`
-			);
+		test("treats a non-numeric @ suffix as part of the tag", ({ expect }) => {
+			const result = parseTagSpecs({ versionTag: ["abc1234@oops"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({
+				"abc1234@oops": null,
+			});
 		});
 	});
 

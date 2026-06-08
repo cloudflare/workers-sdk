@@ -760,6 +760,44 @@ type ParseTagSpecsArgs = {
 	versionTag?: string[];
 };
 
+// A percentage suffix in a `<version-tag>@<percentage>` spec, e.g. "100", "100%"
+// or "50.5%". An out-of-range value like "101%" still matches (and is reported
+// later by parseOptionalPercentage); a non-numeric suffix does not.
+const PERCENTAGE_SUFFIX_REGEX = /^-?\d+(\.\d+)?%?$/;
+
+/**
+ * Splits a `<version-tag>@<percentage>` spec into its tag and percentage parts.
+ *
+ * Tags can contain `@` (the upload `--tag` flag accepts arbitrary strings), so
+ * we split on the *last* `@` and only treat the suffix as a percentage when it
+ * actually looks like one. That way `v1.0@beta@100%` parses as tag `v1.0@beta`
+ * at 100%, while `v1.0@beta` (no percentage) is kept whole as the tag rather
+ * than misreading `beta` as a percentage.
+ */
+function splitTagSpec(spec: string): {
+	tag: string;
+	percentageString: string | undefined;
+} {
+	const atIndex = spec.lastIndexOf("@");
+	if (atIndex === -1) {
+		return { tag: spec, percentageString: undefined };
+	}
+
+	const suffix = spec.substring(atIndex + 1);
+
+	// A trailing `@` (empty suffix) is an explicit "no percentage" separator,
+	// letting you keep a tag that ends in something percentage-like whole.
+	if (suffix === "") {
+		return { tag: spec.substring(0, atIndex), percentageString: undefined };
+	}
+
+	if (PERCENTAGE_SUFFIX_REGEX.test(suffix)) {
+		return { tag: spec.substring(0, atIndex), percentageString: suffix };
+	}
+
+	return { tag: spec, percentageString: undefined };
+}
+
 /**
  * Parses the `--version-tag` args into a map of tag to optional percentage,
  * supporting the `<version-tag>@<percentage>` shorthand. Tags are resolved to
@@ -771,12 +809,7 @@ export function parseTagSpecs(
 	const tagTraffic = new Map<string, OptionalPercentage>();
 
 	for (const spec of args.versionTag ?? []) {
-		// Split on the last `@` so that tags which themselves contain `@` (the
-		// upload `--tag` flag accepts arbitrary strings) are not truncated.
-		const atIndex = spec.lastIndexOf("@");
-		const tag = atIndex === -1 ? spec : spec.substring(0, atIndex);
-		const percentageString =
-			atIndex === -1 ? undefined : spec.substring(atIndex + 1);
+		const { tag, percentageString } = splitTagSpec(spec);
 
 		if (!tag) {
 			throw new UserError(
