@@ -195,13 +195,14 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			]);
 		});
 
-		test("skips silently when metadata file has accepted: 'SIGINT' (Ctrl+C dismissal)", async ({
+		test("skips and overwrites when metadata file has accepted: 'unanswered'", async ({
 			expect,
 		}) => {
 			writeMetadataFile({
 				version: 1,
-				accepted: "SIGINT",
+				accepted: "unanswered",
 				date: "2025-01-01T00:00:00Z",
+				pid: 99999,
 			});
 			const maybeInstallCloudflareSkillsGlobally = await freshImport();
 
@@ -210,6 +211,13 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			expect(mockRosieAgents).not.toHaveBeenCalled();
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).not.toHaveBeenCalled();
+
+			// The file should have been overwritten with this process's
+			// PID so the first instance can detect that a concurrent
+			// process started and skip its own prompt.
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe("unanswered");
+			expect(metadata.pid).toBe(process.pid);
 		});
 
 		test("force=true ignores existing metadata file", async ({ expect }) => {
@@ -431,60 +439,147 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			);
 		});
 
-		test("writes SIGINT metadata when user presses Ctrl+C during the prompt", async ({
+		test("writes 'unanswered' metadata before showing the prompt so concurrent instances and interruptions are handled", async ({
 			expect,
 		}) => {
-			// Stub process.exit so the abort flow doesn't terminate the test runner.
-			const exitSpy = vi
-				.spyOn(process, "exit")
-				.mockImplementation((() => {}) as never);
+			// Intercept the prompts call to verify the metadata file was
+			// written with accepted: "unanswered" BEFORE the prompt is shown.
+			(prompts as unknown as Mock).mockImplementationOnce(({ type, name }) => {
+				expect({ type, name }).toStrictEqual({
+					type: "confirm",
+					name: "value",
+				});
 
-			// Simulate Ctrl+C: invoke the onState callback with
-			// { aborted: true }, then resolve with { value: undefined }
-			// just as the real prompts library does on abort.
+				// At this point (before the user answers) the metadata file
+				// should already exist with accepted: "unanswered" and this
+				// process's PID.
+				const metadata = readMetadataFile();
+				expect(metadata.accepted).toBe("unanswered");
+				expect(metadata.version).toBe(1);
+				expect(metadata.pid).toBe(process.pid);
+
+				// Simulate the user accepting
+				return Promise.resolve({ value: true });
+			});
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			// After the user accepts, the metadata should be overwritten
+			// with accepted: true.
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe(true);
+			expect(mockRosieInstall).toHaveBeenCalled();
+		});
+
+		test("a concurrent wrangler instance overwrites the 'unanswered' metadata with its own PID and skips", async ({
+			expect,
+		}) => {
+			// Simulate a first instance having written the "unanswered"
+			// metadata (i.e. it is currently doing agent detection or
+			// showing its prompt).
+			const firstInstancePid = 99999;
+			writeMetadataFile({
+				version: 1,
+				accepted: "unanswered",
+				date: new Date().toISOString(),
+				pid: firstInstancePid,
+				detectedAgents: [
+					{
+						name: "Claude Code",
+						rosie: { id: "claude", globalPath: "/fake/.claude/skills" },
+					},
+				],
+			});
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			// The second instance should see the metadata file, overwrite
+			// it with its own PID (signalling to the first instance), and
+			// return immediately without prompting.
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			expect(mockRosieAgents).not.toHaveBeenCalled();
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+			expect(sendMetricsEvent).not.toHaveBeenCalled();
+
+			// The metadata file should now have this process's PID instead
+			// of the first instance's PID.
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe("unanswered");
+			expect(metadata.pid).toBe(process.pid);
+			expect(metadata.pid).not.toBe(firstInstancePid);
+		});
+
+		test("first instance detects a concurrent instance (before prompt) via PID change and skips the prompt", async ({
+			expect,
+		}) => {
+			// Simulate a concurrent wrangler instance overwriting the
+			// metadata file while the first instance is doing slow work
+			// (agent detection). We do this by intercepting the
+			// rosieAgents() call and overwriting the metadata file from
+			// inside it — this runs between the initial write and the
+			// re-read that happens before the prompt.
+			const secondInstancePid = 88888;
+			mockRosieAgents.mockImplementationOnce(async () => {
+				// Overwrite the metadata file with a different PID,
+				// simulating a second wrangler instance starting up.
+				writeMetadataFile({
+					version: 1,
+					accepted: "unanswered",
+					date: new Date().toISOString(),
+					pid: secondInstancePid,
+				});
+				return DEFAULT_AGENTS;
+			});
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			// The first instance should detect the PID mismatch and
+			// return without showing the prompt or installing.
+			expect(prompts).not.toHaveBeenCalled();
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+		});
+
+		test("first instance aborts active prompt when a concurrent instance overwrites the PID", async ({
+			expect,
+		}) => {
+			const secondInstancePid = 88888;
 			(prompts as unknown as Mock).mockImplementationOnce(
-				({ type, name, message, onState }) => {
-					expect({ type, name }).toStrictEqual({
-						type: "confirm",
-						name: "value",
+				({ onState }: { onState: (state: { aborted: boolean }) => void }) => {
+					// Overwrite the metadata file with a different PID,
+					// simulating a second wrangler instance starting up
+					// while the prompt is active.
+					writeMetadataFile({
+						version: 1,
+						accepted: "unanswered",
+						date: new Date().toISOString(),
+						pid: secondInstancePid,
 					});
-					expect(message).toContain("Claude Code");
 
-					// Trigger the abort handler (simulates Ctrl+C)
-					onState({ aborted: true });
-
-					return Promise.resolve({ value: undefined });
+					// Listen for the synthetic Ctrl+C keypress that the
+					// poll interval will emit when it detects the PID change.
+					return new Promise<{ value: undefined }>((resolve) => {
+						const keypressHandler = (
+							_ch: string,
+							key: { name: string; ctrl: boolean }
+						) => {
+							if (key?.ctrl && key?.name === "c") {
+								process.stdin.removeListener("keypress", keypressHandler);
+								onState({ aborted: true });
+								resolve({ value: undefined });
+							}
+						};
+						process.stdin.on("keypress", keypressHandler);
+					});
 				}
 			);
 			const maybeInstallCloudflareSkillsGlobally = await freshImport();
 
 			await maybeInstallCloudflareSkillsGlobally(false);
 
-			// Should have warned the user that Ctrl+C was treated as a decline
-			expect(std.warn).toContain(
-				"Ctrl+C received — skipping Cloudflare skills installation. This prompt will not be shown again."
-			);
-
-			// The onState abort handler should have written metadata
-			// with accepted: "SIGINT"
-			const metadata = readMetadataFile();
-			expect(metadata.accepted).toBe("SIGINT");
-			expect(metadata.version).toBe(1);
-
-			// Should not have attempted installation
+			// Should have aborted without installing or exiting.
 			expect(mockRosieInstall).not.toHaveBeenCalled();
-
-			// Should have sent a skipped metrics event
-			expect(sendMetricsEvent).toHaveBeenCalledWith(
-				"skills_install_skipped",
-				{ reason: "User dismissed (SIGINT)" },
-				{}
-			);
-
-			// Should have called process.exit(1) after flushing metrics
-			expect(exitSpy).toHaveBeenCalledWith(1);
-
-			exitSpy.mockRestore();
 		});
 
 		test("force=true installs skills without prompting", async ({ expect }) => {
@@ -997,7 +1092,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		expect(result).toBe("manual");
 	});
 
-	test("resolves to 'manual' when metadata has accepted: 'SIGINT' at primary path", async ({
+	test("resolves to 'manual' when metadata has accepted: 'unanswered' at primary path", async ({
 		expect,
 	}) => {
 		vi.mocked(detectAgenticEnvironment).mockReturnValue({
@@ -1012,7 +1107,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		const claudeGlobalSkillsPath = path.join(os.homedir(), ".claude", "skills");
 		writeMetadataFile({
 			version: 1,
-			accepted: "SIGINT",
+			accepted: "unanswered",
 			date: new Date().toISOString(),
 			detectedAgents: [
 				{
@@ -1029,7 +1124,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		expect(result).toBe("manual");
 	});
 
-	test("resolves to 'manual' when metadata has accepted: 'SIGINT' at alternativeGlobalPath", async ({
+	test("resolves to 'manual' when metadata has accepted: 'unanswered' at alternativeGlobalPath", async ({
 		expect,
 	}) => {
 		vi.mocked(detectAgenticEnvironment).mockReturnValue({
@@ -1043,7 +1138,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		mkdirSync(path.join(agentsSkills, "cloudflare"), { recursive: true });
 		writeMetadataFile({
 			version: 1,
-			accepted: "SIGINT",
+			accepted: "unanswered",
 			date: new Date().toISOString(),
 			detectedAgents: [
 				{

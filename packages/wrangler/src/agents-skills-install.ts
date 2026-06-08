@@ -13,7 +13,6 @@ import { fetch } from "undici";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { sendMetricsEvent } from "./metrics";
-import { allMetricsDispatchesCompleted } from "./metrics/metrics-dispatcher";
 
 /**
  * Detects AI coding agents installed on the user's machine and, if
@@ -57,10 +56,22 @@ export async function maybeInstallCloudflareSkillsGlobally(
 		}
 	};
 
-	// If the user has already been prompted, don't ask again
+	// If the user has already been prompted, don't ask again.
 	const existingConfig = readSkillsInstallMetadataFile();
 	if (existingConfig !== undefined && !force) {
-		// Note: no metrics event is sent in this case
+		if (existingConfig.accepted === "unanswered") {
+			// Another wrangler instance is currently showing the prompt (or
+			// was interrupted before it could answer). Overwrite the file
+			// with this process's PID so the first instance can detect that
+			// a concurrent process started and skip its own prompt, avoiding
+			// a stuck/corrupted TTY.
+			writeSkillsInstallMetadataFile({
+				version: 1,
+				accepted: "unanswered",
+				date: new Date().toISOString(),
+				pid: process.pid,
+			});
+		}
 		return;
 	}
 
@@ -68,6 +79,24 @@ export async function maybeInstallCloudflareSkillsGlobally(
 		// In CI environments, skip silently
 		sendResultMetricsEvent({ skippedBecause: "Running in CI" });
 		return;
+	}
+
+	// Write "unanswered" metadata as early as possible, before any slow
+	// operations (agent detection loads WASM). This ensures concurrent
+	// wrangler instances see the file and skip the prompt, and also
+	// handles interruptions (Ctrl+C, crash, kill -9) — the file is
+	// already on disk so the prompt won't reappear. The metadata is
+	// overwritten with the real answer once the user responds.
+	//
+	// We record our PID so we can detect whether a concurrent instance
+	// overwrote the file while we were doing slow work (agent detection).
+	if (!force) {
+		writeSkillsInstallMetadataFile({
+			version: 1,
+			accepted: "unanswered",
+			date: new Date().toISOString(),
+			pid: process.pid,
+		});
 	}
 
 	let detectedAgents: AgentInfo[];
@@ -97,46 +126,86 @@ export async function maybeInstallCloudflareSkillsGlobally(
 	}
 
 	let accepted: boolean;
-	let sigintReceived = false;
 	if (force) {
 		accepted = true;
 	} else {
-		// Use prompts directly (instead of the shared `confirm()` helper) so
-		// we can intercept the abort (Ctrl+C) and write SIGINT metadata
-		// before the process exits.  The prompts library's readline interface
-		// swallows SIGINT — it never reaches `process.on("SIGINT")` — so this
-		// `onState` callback is the only reliable place to handle it.
+		// Re-read the metadata file before showing the prompt. If a concurrent
+		// wrangler instance started while we were doing slow work (e.g. WASM
+		// agent detection), it will have overwritten the file with its own PID.
+		// Detecting this avoids showing a prompt that would be immediately
+		// corrupted by the other process's terminal output.
+		const currentMetadata = readSkillsInstallMetadataFile();
+		if (currentMetadata?.pid !== process.pid) {
+			return;
+		}
+
+		// Watch for concurrent instances while the prompt is active. If
+		// another wrangler process overwrites the metadata file with its
+		// own PID, we abort the prompt by emitting a synthetic Ctrl+C
+		// keypress on stdin. The `concurrentInstanceDetected` flag
+		// prevents the `onState` abort handler from calling
+		// `process.exit(1)` — we want to return silently instead.
+		let concurrentInstanceDetected = false;
+		const pollInterval = setInterval(() => {
+			const meta = readSkillsInstallMetadataFile();
+			if (meta?.pid !== process.pid) {
+				concurrentInstanceDetected = true;
+				clearInterval(pollInterval);
+				process.stdin.emit("keypress", "\x03", {
+					name: "c",
+					ctrl: true,
+				});
+			}
+		}, 300);
+
+		// Thin stdout proxy that can be muted to suppress the prompts
+		// library's abort rendering (the "✖ … yes" line it writes after
+		// the onState callback returns). Using a proxy keeps
+		// process.stdout untouched.
+		let muted = false;
+		const stdoutProxy = new Proxy(process.stdout, {
+			get(target, prop, receiver) {
+				if (prop === "write") {
+					return (...args: Parameters<typeof target.write>) =>
+						muted ? true : target.write(...args);
+				}
+				return Reflect.get(target, prop, receiver);
+			},
+		});
+
 		const { value } = await prompts({
 			type: "confirm",
 			name: "value",
 			message: `Wrangler detected the following AI coding agents: ${detectedAgents.map(({ name }) => name).join(", ")}. Would you like to install Cloudflare skills for them?`,
 			initial: true,
+			stdout: stdoutProxy,
 			onState: (state) => {
 				if (state.aborted) {
-					sigintReceived = true;
-					logger.warn(
-						"Ctrl+C received — skipping Cloudflare skills installation. This prompt will not be shown again."
-					);
-					// Write metadata synchronously so it survives the exit.
-					writeSkillsInstallMetadataFile({
-						version: 1,
-						accepted: "SIGINT",
-						date: new Date().toISOString(),
-						detectedAgents,
-					});
+					// Mute the stdout proxy so the prompts library's
+					// abort() → render() cycle doesn't print a "✖" line
+					// after this callback returns.
+					muted = true;
+					if (!concurrentInstanceDetected) {
+						process.nextTick(() => {
+							process.exit(1);
+						});
+					}
 				}
 			},
 		});
-		accepted = value;
-	}
+		clearInterval(pollInterval);
 
-	if (sigintReceived) {
-		// Metadata was already written in the onState callback.
-		// Send metrics and wait for the dispatch to complete before exiting.
-		sendResultMetricsEvent({ skippedBecause: "User dismissed (SIGINT)" });
-		await allMetricsDispatchesCompleted();
-		// Note: the return is unnecessary but it guards against tests that stub process.exit
-		return process.exit(1);
+		if (concurrentInstanceDetected) {
+			// Erase the prompt line that was already printed to stdout.
+			// The prompts library renders on a single line, so one
+			// cursor-up + erase-line sequence is enough to clean it up.
+			// This avoids leaving orphaned prompt text on the terminal
+			// when the abort was triggered by a concurrent instance.
+			process.stdout.write("\x1B[1A\x1B[2K");
+			return;
+		}
+
+		accepted = value;
 	}
 
 	if (!accepted) {
@@ -242,13 +311,24 @@ interface SkillsInstallMetadata {
 	 *
 	 * - `true` — the user explicitly accepted.
 	 * - `false` — the user explicitly declined.
-	 * - `"SIGINT"` — the user dismissed the prompt via Ctrl+C / SIGINT before
-	 *   answering. Treated as a decline but stored separately so we can
-	 *   distinguish these users in telemetry.
+	 * - `"unanswered"` — the prompt was written to disk before being shown but
+	 *   was never explicitly answered. This happens when the user presses
+	 *   Ctrl+C, the process crashes, or another concurrent wrangler instance
+	 *   starts up and skips the prompt because the file already exists.
 	 */
-	accepted: boolean | "SIGINT";
+	accepted: boolean | "unanswered";
 	/** ISO date string of when the user was prompted. */
 	date: string;
+	/**
+	 * PID of the wrangler process that wrote the metadata file when
+	 * `accepted` is `"unanswered"`. Used for concurrent-instance detection:
+	 * before showing the prompt, the process re-reads the file and compares
+	 * PIDs — if another process overwrote it with a different PID, the
+	 * prompt is skipped to avoid a stuck/corrupted TTY.
+	 *
+	 * Only present when `accepted` is `"unanswered"`.
+	 */
+	pid?: number;
 	/** All agents detected on the user's machine. */
 	detectedAgents?: AgentInfo[];
 	/**
