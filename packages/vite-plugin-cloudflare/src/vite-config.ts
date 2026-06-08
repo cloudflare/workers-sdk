@@ -1,9 +1,31 @@
 import assert from "node:assert";
+import { builtinModules } from "node:module";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type * as vite from "vite";
+
+// Node.js built-in module names in both bare and `node:` prefixed forms.
+// Vitest 4 automatically adds these to `resolve.external` for non-standard
+// environments (via its `runnerTransform` plugin). They are harmless for
+// Worker environments — Workers either handle them via the node-compat layer
+// or don't use them — so we filter them out before validation.
+const NODE_BUILTIN_SET = new Set([
+	...builtinModules,
+	...builtinModules.map((m) => `node:${m}`),
+]);
+
+function isOnlyNodeBuiltins(
+	external: vite.ResolveOptions["external"]
+): boolean {
+	if (external === true || !Array.isArray(external)) {
+		return false;
+	}
+	return external.every(
+		(entry) => typeof entry === "string" && NODE_BUILTIN_SET.has(entry)
+	);
+}
 
 interface DisallowedEnvironmentOptions {
 	resolveExternal?: vite.ResolveOptions["external"];
@@ -30,7 +52,10 @@ export function validateWorkerEnvironmentOptions(
 		const { resolve } = environmentOptions;
 		const disallowedEnvironmentOptions: DisallowedEnvironmentOptions = {};
 
-		if (resolve.external === true || resolve.external.length) {
+		if (
+			(resolve.external === true || resolve.external.length) &&
+			!isOnlyNodeBuiltins(resolve.external)
+		) {
 			disallowedEnvironmentOptions.resolveExternal = resolve.external;
 		}
 
