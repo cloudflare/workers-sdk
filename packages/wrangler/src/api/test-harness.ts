@@ -68,6 +68,9 @@ export type TestHarness = {
 	 * Starts the server and returns its current URL.
 	 * Calling this more than once returns the same running server session until
 	 * the server is closed or reset.
+	 *
+	 * If no options were passed to `createTestHarness()`, call `update(options)`
+	 * before starting the server.
 	 */
 	listen(): Promise<{
 		url: URL;
@@ -110,6 +113,9 @@ export type TestHarness = {
 	getWorker(name?: string): WorkerHandle;
 	/**
 	 * Updates the server configuration and reloads the running Workers.
+	 *
+	 * If the server has not started yet, this configures the options that will be
+	 * used by `listen()`.
 	 */
 	update(
 		options:
@@ -117,9 +123,8 @@ export type TestHarness = {
 			| ((currentOptions: TestHarnessOptions) => TestHarnessOptions)
 	): Promise<void>;
 	/**
-	 * Restores the server to its initial `createTestHarness()` options and restarts the
-	 * active server session. Storage is recreated, and the server URL may change
-	 * after reset.
+	 * Restores the server to the options used when the current session first
+	 * started. Storage is recreated, and the server URL may change after reset.
 	 */
 	reset(): Promise<void>;
 	/**
@@ -178,8 +183,8 @@ type ServerSession = {
  * await server.close();
  * ```
  */
-export function createTestHarness(options: TestHarnessOptions): TestHarness {
-	const initialOptions = options;
+export function createTestHarness(options?: TestHarnessOptions): TestHarness {
+	let initialOptions = options;
 	let currentOptions = options;
 	let serverSession: ServerSession | undefined;
 	let startPromise: Promise<ServerSession> | undefined;
@@ -377,7 +382,14 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 
 	async function startServerSession() {
 		if (!startPromise) {
-			startPromise = createSession(currentOptions)
+			if (currentOptions === undefined) {
+				throw new Error(
+					"Test harness options have not been configured. Pass options to createTestHarness() or call server.update(options) before server.listen()."
+				);
+			}
+
+			initialOptions = currentOptions;
+			startPromise = createSession(initialOptions)
 				.then((session) => {
 					serverSession = session;
 					return session;
@@ -572,10 +584,17 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 			};
 		},
 		async update(updateInput) {
-			const nextOptions =
-				typeof updateInput === "function"
-					? updateInput(currentOptions)
-					: updateInput;
+			let nextOptions: TestHarnessOptions;
+
+			if (typeof updateInput === "function") {
+				assert(
+					currentOptions,
+					"Cannot update test harness options with a function before options have been configured. Pass options to createTestHarness() or call server.update(options) first."
+				);
+				nextOptions = updateInput(currentOptions);
+			} else {
+				nextOptions = updateInput;
+			}
 
 			// If listen() is still starting, wait until serverSession is available so the update is applied to the running Workers.
 			if (startPromise) {
@@ -606,6 +625,11 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 		},
 		async reset() {
 			const session = await resolveSession();
+
+			assert(
+				initialOptions,
+				"Server has not been started. Start it with server.listen() before calling this method."
+			);
 
 			await teardownSession(session);
 			currentOptions = initialOptions;

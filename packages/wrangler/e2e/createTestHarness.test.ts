@@ -66,6 +66,59 @@ describe("createTestHarness", { sequential: true }, () => {
 		);
 	});
 
+	it("can be configured after creation", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "delayed-config-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"vars": { "GREETING": "initial" }
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					fetch(_request, env) {
+						return new Response(env.GREETING);
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness();
+		onTestFinished(server.close);
+
+		await expect(server.listen()).rejects.toThrow(
+			"Test harness options have not been configured."
+		);
+
+		await server.update({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		await server.listen();
+
+		const initialResponse = await server.fetch("/");
+		await expect(initialResponse.text()).resolves.toBe("initial");
+
+		await server.update((options) => ({
+			...options,
+			workers: options.workers.map((worker) =>
+				"configPath" in worker
+					? { ...worker, vars: { GREETING: "updated" } }
+					: worker
+			),
+		}));
+
+		const updatedResponse = await server.fetch("/");
+		await expect(updatedResponse.text()).resolves.toBe("updated");
+
+		await server.reset();
+
+		const resetResponse = await server.fetch("/");
+		await expect(resetResponse.text()).resolves.toBe("initial");
+	});
+
 	it("support fetching different workers from the same session", async ({
 		expect,
 	}) => {
