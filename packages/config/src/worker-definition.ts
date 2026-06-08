@@ -13,10 +13,12 @@ import type { UserConfig } from "./types";
 // TODO: Use declaration merging in the consuming package once this package is published
 export interface ConfigContext {
 	/**
-	 * The Vite [`mode`](https://vite.dev/guide/env-and-mode.html#modes) the
-	 * config is being evaluated in (e.g. `"development"`, `"production"`).
+	 * The mode the config is being evaluated in.
+	 * Set via the `--mode` CLI flag.
+	 * In Vite the mode defaults to `development` in `vite dev` and `production` in `vite build` ([more info](https://vite.dev/guide/env-and-mode.html#modes)).
+	 * In Wrangler the mode defaults to `undefined`.
 	 */
-	mode: string;
+	mode?: string;
 }
 
 // We currently use Symbol.for rather than Symbol so that the symbol matches if duplicated across bundles

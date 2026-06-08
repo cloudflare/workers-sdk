@@ -77,7 +77,7 @@ export async function loadNewConfig(options: {
 		? candidateWranglerConfigPath
 		: undefined;
 
-	const mode = options.args.env ?? getCloudflareEnv() ?? "";
+	const mode = options.args.env ?? getCloudflareEnv();
 
 	// ── Worker config ───────────────────────────────────────────────────
 	const workerConfigResult = await loadConfig(cloudflareConfigPath);
