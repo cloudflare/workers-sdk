@@ -153,10 +153,9 @@ describe("loadNewConfig", () => {
 			expect(result.rawConfig.name).toBe("worker-preview");
 		});
 
-		it("uses empty string when neither args.env nor CLOUDFLARE_ENV is set", async ({
+		it("uses undefined when neither args.env nor CLOUDFLARE_ENV is set", async ({
 			expect,
 		}) => {
-			vi.stubEnv("CLOUDFLARE_ENV", "");
 			await seed({
 				"cloudflare.config.ts": `
 					export default (ctx) => ({
@@ -171,7 +170,7 @@ describe("loadNewConfig", () => {
 				args: {},
 			});
 
-			expect(result.rawConfig.name).toBe("worker[]");
+			expect(result.rawConfig.name).toBe("worker[undefined]");
 		});
 
 		it("passes ctx.mode into the function-form wrangler.config.ts", async ({
