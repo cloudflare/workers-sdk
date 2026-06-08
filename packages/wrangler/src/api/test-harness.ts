@@ -732,16 +732,16 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			}
 
 			if (serverSession) {
+				debugLog("update - started");
+				const nextInputs = resolveWorkerInputs(nextOptions);
+
+				if (nextInputs.length !== serverSession.devEnvs.length) {
+					throw new Error(
+						`Updating the number of workers running in the server is not supported.`
+					);
+				}
+
 				try {
-					debugLog("update - started");
-					const nextInputs = resolveWorkerInputs(nextOptions);
-
-					if (nextInputs.length !== serverSession.devEnvs.length) {
-						throw new Error(
-							`Updating the number of workers running in the server is not supported.`
-						);
-					}
-
 					await Promise.all([
 						waitForReloadComplete(serverSession),
 						updateConfig(serverSession, nextInputs),
