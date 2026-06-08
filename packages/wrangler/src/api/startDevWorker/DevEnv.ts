@@ -169,6 +169,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			event.cause instanceof ParseError
 		) {
 			logger.error(event.cause);
+			this.emit("buildFailed", event);
 		}
 		// Build errors are recoverable by fixing the code and saving
 		else if (event.source === "BundlerController") {
@@ -179,6 +180,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			} else {
 				logger.error(event.cause.message);
 			}
+			this.emit("buildFailed", event);
 		}
 		// if other knowable + recoverable errors occur, handle them here
 		else {

@@ -37,6 +37,7 @@ import type {
 	Config,
 	ContainerEngine,
 	LegacyAssetPaths,
+	ServiceFetch,
 } from "@cloudflare/workers-utils";
 import type {
 	DOContainerOptions,
@@ -85,6 +86,7 @@ export interface ConfigBundle {
 	localPersistencePath: string | false;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
+	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
 	httpsKeyPath: string | undefined;
@@ -92,6 +94,7 @@ export interface ConfigBundle {
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
+	outboundService: ServiceFetch | undefined;
 	tails: Config["tail_consumers"] | undefined;
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
@@ -1139,6 +1142,8 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				routes: config.routes,
+				outboundService: config.outboundService,
 				containerEngine: config.containerEngine,
 				zone: config.zone,
 			},

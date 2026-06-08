@@ -58,6 +58,14 @@ export type {
 } from "./startDevWorker/events";
 export type { DevToolsEvent } from "./startDevWorker/devtools";
 
+// Exports from ./server
+export { createTestHarness } from "./test-harness";
+export type {
+	TestHarnessOptions,
+	WorkerHandle,
+	TestHarness,
+} from "./test-harness";
+
 // Exports from ./integrations
 export {
 	unstable_getVarsForDev,

@@ -1,0 +1,626 @@
+import assert from "node:assert";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+	normalizeAndValidateConfig,
+	UserError,
+} from "@cloudflare/workers-utils";
+import { Headers, Request } from "miniflare";
+import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import { logger } from "../logger";
+import { requireApiToken, requireAuth } from "../user";
+import { DevEnv } from "./startDevWorker/DevEnv";
+import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
+import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
+import { convertConfigToBindings } from "./startDevWorker/utils";
+import type { CfAccount } from "../dev/create-worker-preview";
+import type { ErrorEvent } from "./startDevWorker/events";
+import type { StartDevWorkerInput } from "./startDevWorker/types";
+import type {
+	FetcherScheduledOptions,
+	FetcherScheduledResult,
+} from "@cloudflare/workers-types/experimental";
+import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type { DispatchFetch, Json, Miniflare, RequestInfo } from "miniflare";
+
+export type TestHarnessOptions = {
+	/**
+	 * Base directory used to resolve relative worker config paths.
+	 * Defaults to `process.cwd()`.
+	 */
+	root?: string | undefined;
+	/**
+	 * Workers to run in this server. The first worker is the primary worker.
+	 */
+	workers: WorkerInput[];
+};
+
+export type WorkerHandle = {
+	/**
+	 * Dispatches a fetch event directly to this worker.
+	 * Relative URL inputs are resolved against the URL returned by `listen()`.
+	 *
+	 * @example
+	 * ```ts
+	 * const response = await worker.fetch("/", {
+	 *   method: "POST",
+	 *   body: "Hello, world!"
+	 * });
+	 * ```
+	 */
+	fetch: DispatchFetch;
+	/**
+	 * Dispatches a scheduled event directly to this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * const result = await worker.scheduled({
+	 *   cron: "0 * * * *",
+	 *   scheduledTime: new Date(),
+	 * });
+	 * ```
+	 */
+	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
+};
+
+export type TestHarness = {
+	/**
+	 * Starts the server and returns its current URL.
+	 * Calling this more than once returns the same running server session until
+	 * the server is closed or reset.
+	 */
+	listen(): Promise<{
+		url: URL;
+	}>;
+	/**
+	 * Dispatches a fetch request through the server.
+	 *
+	 * - Relative URLs are resolved against the current server URL. Absolute URLs
+	 * are also accepted, and can be used to control the hostname seen by the Worker.
+	 * - Requests are matched against each Worker's configured routes and dispatched to
+	 * the first matching Worker, or to the primary Worker if no routes match.
+	 * - To dispatch directly to a specific Worker, use `server.getWorker(name).fetch()`.
+	 *
+	 * @example
+	 * ```ts
+	 * const server = createTestHarness({
+	 *   workers: [
+	 *     { configPath: "./wrangler.dashboard.jsonc" }, // No route pattern
+	 *     { configPath: "./wrangler.api.jsonc" }, // Route pattern: "example.com/api/*"
+	 *     { configPath: "./wrangler.admin.jsonc" }, // Route pattern: "admin.example.com/*"
+	 *   ]
+	 * });
+	 *
+	 * await server.fetch("/users");
+	 * // Dispatches a request to the dashboard Worker (the first Worker) with URL "http://localhost:{port}/users"
+	 *
+	 * await server.fetch("http://admin.example.com/accounts");
+	 * // Dispatches a request to the admin Worker with URL "http://admin.example.com/accounts"
+	 *
+	 * await server.fetch("http://example.com/api/data");
+	 * // Dispatches a request to the API Worker with URL "http://example.com/api/data"
+	 * ```
+	 */
+	fetch: DispatchFetch;
+	/**
+	 * Returns a handle for dispatching events directly to a Worker.
+	 * When no name is provided, this returns the primary Worker, which is the first
+	 * Worker in the server's `workers` options.
+	 */
+	getWorker(name?: string): WorkerHandle;
+	/**
+	 * Updates the server configuration and reloads the running Workers.
+	 */
+	update(
+		options:
+			| TestHarnessOptions
+			| ((currentOptions: TestHarnessOptions) => TestHarnessOptions)
+	): Promise<void>;
+	/**
+	 * Restores the server to its initial `createTestHarness()` options and restarts the
+	 * active server session. Storage is recreated, and the server URL may change
+	 * after reset.
+	 */
+	reset(): Promise<void>;
+	/**
+	 * Stops the server and releases all runtime resources.
+	 */
+	close(): Promise<void>;
+};
+
+type InlineConfig = Omit<RawConfig, "env">;
+
+type WorkerInput =
+	| {
+			/**
+			 * Path to a Wrangler config file for this Worker.
+			 * Relative paths resolve from server `root`.
+			 */
+			configPath: string | URL;
+			/**
+			 * Wrangler environment to load from the config file.
+			 */
+			env?: string;
+			/**
+			 * Test-only vars that override vars from the Wrangler config.
+			 */
+			vars?: Record<string, Json>;
+			/**
+			 * Test-only secrets that override values loaded from `.dev.vars` and `.env` files.
+			 */
+			secrets?: Record<string, string>;
+	  }
+	| {
+			/**
+			 * Inline Wrangler config for this Worker.
+			 */
+			config: InlineConfig;
+	  };
+
+type ServerSession = {
+	primaryDevEnv: DevEnv;
+	devEnvs: DevEnv[];
+};
+
+/**
+ * Creates a local test server for running Workers.
+ *
+ * The server can run one or more Workers from Wrangler config files, including
+ * generated configs from Vite, or from inline configuration objects.
+ *
+ * @example
+ * ```ts
+ * const server = createTestHarness({
+ *   workers: [{ configPath: "./wrangler.jsonc" }],
+ * });
+ * await server.listen();
+ * const response = await server.fetch("/api/users");
+ * await server.close();
+ * ```
+ */
+export function createTestHarness(options: TestHarnessOptions): TestHarness {
+	const initialOptions = options;
+	let currentOptions = options;
+	let serverSession: ServerSession | undefined;
+	let startPromise: Promise<ServerSession> | undefined;
+
+	function resolvePath(basePath: string, maybePath: string | URL): string {
+		if (maybePath instanceof URL) {
+			return fileURLToPath(maybePath);
+		}
+
+		return path.isAbsolute(maybePath)
+			? maybePath
+			: path.resolve(basePath, maybePath);
+	}
+
+	function normalizeInlineWorkerConfig(
+		config: InlineConfig,
+		root: string
+	): Config {
+		const configPath = path.join(root, "wrangler.jsonc");
+		const { config: normalizedConfig, diagnostics } =
+			normalizeAndValidateConfig(config, configPath, configPath, {});
+
+		if (diagnostics.hasWarnings()) {
+			logger.warn(diagnostics.renderWarnings());
+		}
+
+		if (diagnostics.hasErrors()) {
+			throw new UserError(diagnostics.renderErrors(), {
+				telemetryMessage: "create server inline config validation failed",
+			});
+		}
+
+		return normalizedConfig;
+	}
+
+	function resolveWorkerInputs(
+		serverOptions: TestHarnessOptions
+	): StartDevWorkerInput[] {
+		if (serverOptions.workers.length === 0) {
+			throw new Error("Test harness requires at least one worker.");
+		}
+
+		const root = serverOptions.root ?? process.cwd();
+
+		return serverOptions.workers.map((input, index, list) => {
+			const isPrimaryWorker = index === 0;
+			const isMultiworker = list.length > 1;
+			const bindings = convertConfigToBindings(
+				{ vars: "vars" in input ? input.vars : undefined },
+				{ usePreviewIds: true }
+			);
+			const secrets = "secrets" in input ? input.secrets : undefined;
+			for (const [key, value] of Object.entries(secrets ?? {})) {
+				bindings[key] = { type: "secret_text", value };
+			}
+
+			return {
+				config:
+					"config" in input
+						? normalizeInlineWorkerConfig(input.config, root)
+						: resolvePath(root, input.configPath),
+				env: "env" in input ? input.env : undefined,
+				bindings,
+				dev: {
+					auth: serverAuthHook,
+					server: { hostname: "127.0.0.1", port: 0 },
+					logLevel: "error",
+					watch: false,
+					persist: false,
+					inspector: false,
+					registry: undefined,
+					outboundService: (request) => {
+						/**
+						 * Miniflare passes its own undici-based Request here. Pass the URL as
+						 * RequestInfo and the request as RequestInit so method, headers, body,
+						 * and duplex are preserved by global fetch.
+						 */
+						return globalThis.fetch(request.url, request);
+					},
+					multiworkerPrimary: isMultiworker ? isPrimaryWorker : undefined,
+					inferOriginFromRoutes: false,
+				},
+				build: {
+					nodejsCompatMode: (config) => {
+						return validateNodeCompatMode(
+							config.compatibility_date,
+							config.compatibility_flags ?? [],
+							{ noBundle: config.no_bundle }
+						);
+					},
+				},
+			};
+		});
+	}
+
+	async function createSession(
+		serverOptions: TestHarnessOptions
+	): Promise<ServerSession> {
+		const inputs = resolveWorkerInputs(serverOptions);
+		const [, ...auxiliaryWorkers] = inputs;
+		const isMultiworker = auxiliaryWorkers.length > 0;
+		const primaryDevEnv = isMultiworker
+			? new DevEnv({
+					runtimeFactories: [
+						(devEnv) => new MultiworkerRuntimeController(devEnv, inputs.length),
+					],
+				})
+			: new DevEnv();
+		const auxiliaryDevEnvs = auxiliaryWorkers.map(
+			() =>
+				new DevEnv({
+					runtimeFactories: [() => primaryDevEnv.runtimes[0]],
+					proxyFactory: (devEnv) => new NoOpProxyController(devEnv),
+				})
+		);
+		const session: ServerSession = {
+			primaryDevEnv,
+			devEnvs: [primaryDevEnv, ...auxiliaryDevEnvs],
+		};
+
+		try {
+			await updateConfig(session, inputs);
+			await waitForProxyReady(session);
+			return session;
+		} catch (error) {
+			await teardownSession(session);
+			throw error;
+		}
+	}
+
+	async function updateConfig(
+		session: ServerSession,
+		inputs: StartDevWorkerInput[]
+	) {
+		for (const [index, workerInput] of inputs.entries()) {
+			const devEnv = session.devEnvs[index];
+			await devEnv.config.set(workerInput, true);
+		}
+	}
+
+	async function resolveSession(workerName?: string) {
+		if (startPromise) {
+			const session = await startPromise;
+			assertWorkerExists(session, workerName);
+			return session;
+		}
+
+		assert(
+			serverSession,
+			"Server has not been started. Start it with server.listen() before calling this method."
+		);
+
+		assertWorkerExists(serverSession, workerName);
+
+		return serverSession;
+	}
+
+	function assertWorkerExists(
+		session: ServerSession,
+		workerName: string | undefined
+	) {
+		if (workerName === undefined) {
+			return;
+		}
+
+		const workerExists = session.devEnvs.some((devEnv) => {
+			return devEnv.config.latestConfig?.name === workerName;
+		});
+
+		if (!workerExists) {
+			throw new TypeError(
+				`Worker ${JSON.stringify(workerName)} does not exist in this server.`
+			);
+		}
+	}
+
+	async function serverAuthHook(
+		config: Pick<Config, "account_id">
+	): Promise<CfAccount> {
+		return {
+			accountId: await requireAuth(config),
+			apiToken: requireApiToken(),
+		};
+	}
+
+	async function teardownSession(session: ServerSession) {
+		try {
+			await Promise.all(session.devEnvs.map((devEnv) => devEnv.teardown()));
+		} finally {
+			if (session === serverSession) {
+				serverSession = undefined;
+			}
+		}
+	}
+
+	async function startServerSession() {
+		if (!startPromise) {
+			startPromise = createSession(currentOptions)
+				.then((session) => {
+					serverSession = session;
+					return session;
+				})
+				.finally(() => {
+					startPromise = undefined;
+				});
+		}
+
+		return await startPromise;
+	}
+
+	async function waitForProxyReady(session: ServerSession) {
+		return new Promise<
+			Awaited<typeof session.primaryDevEnv.proxy.ready.promise>
+		>((resolve, reject) => {
+			const cleanup = () => {
+				for (const devEnv of session.devEnvs) {
+					devEnv.off("error", onError);
+					devEnv.off("buildFailed", onBuildFailed);
+				}
+			};
+			const onError = (error: unknown) => {
+				cleanup();
+				reject(resolveErrorCause(error));
+			};
+			const onBuildFailed = (error: ErrorEvent) => {
+				cleanup();
+				reject(resolveErrorCause(error));
+			};
+
+			for (const devEnv of session.devEnvs) {
+				devEnv.once("error", onError);
+				devEnv.once("buildFailed", onBuildFailed);
+			}
+
+			void session.primaryDevEnv.proxy.ready.promise.then(
+				(ready) => {
+					cleanup();
+					resolve(ready);
+				},
+				(error: unknown) => {
+					cleanup();
+					reject(error);
+				}
+			);
+		});
+	}
+
+	async function waitForReloadComplete(session: ServerSession) {
+		return new Promise<void>((resolve, reject) => {
+			const cleanup = () => {
+				for (const devEnv of session.devEnvs) {
+					devEnv.off("error", onError);
+					devEnv.off("buildFailed", onBuildFailed);
+				}
+
+				session.primaryDevEnv.off("reloadComplete", onReloadComplete);
+			};
+			const onError = (error: unknown) => {
+				cleanup();
+				reject(resolveErrorCause(error));
+			};
+			const onBuildFailed = (error: ErrorEvent) => {
+				cleanup();
+				reject(resolveErrorCause(error));
+			};
+			const onReloadComplete = () => {
+				cleanup();
+				resolve();
+			};
+
+			for (const devEnv of session.devEnvs) {
+				devEnv.once("error", onError);
+				devEnv.once("buildFailed", onBuildFailed);
+			}
+
+			session.primaryDevEnv.once("reloadComplete", onReloadComplete);
+		});
+	}
+
+	function resolveErrorCause(error: unknown) {
+		if (isErrorEvent(error)) {
+			return error.cause;
+		}
+
+		return error;
+	}
+
+	function isErrorEvent(error: unknown): error is ErrorEvent {
+		return (
+			typeof error === "object" &&
+			error !== null &&
+			"type" in error &&
+			error.type === "error" &&
+			"cause" in error
+		);
+	}
+
+	async function getRuntimeMiniflare(session: ServerSession) {
+		await session.primaryDevEnv.proxy.runtimeMessageMutex.drained();
+		const miniflare = session.primaryDevEnv.runtimes[0].mf;
+		assert(miniflare, "Worker runtime is not available.");
+		return miniflare;
+	}
+
+	async function dispatchFetch(
+		miniflare: Miniflare,
+		input: RequestInfo,
+		init?: RequestInit,
+		worker?: string
+	) {
+		if (typeof input === "string") {
+			const session = await resolveSession();
+			const { url } = await waitForProxyReady(session);
+			const baseUrl = new URL(url);
+
+			if (
+				baseUrl.hostname === "0.0.0.0" ||
+				baseUrl.hostname === "::" ||
+				baseUrl.hostname === "[::]" ||
+				baseUrl.hostname === "*"
+			) {
+				baseUrl.hostname = "localhost";
+			}
+
+			input = new URL(input, baseUrl);
+		}
+
+		if (worker === undefined) {
+			return miniflare.dispatchFetch(input, init);
+		}
+
+		const request = new Request(input, init);
+		const headers = new Headers(request.headers);
+
+		headers.set("MF-Route-Override", worker);
+
+		return miniflare.dispatchFetch(request, { headers });
+	}
+
+	return {
+		async listen() {
+			const session = serverSession ?? (await startServerSession());
+			const ready = await waitForProxyReady(session);
+
+			return {
+				url: ready.url,
+			};
+		},
+		async fetch(input, init) {
+			const session = await resolveSession();
+			const miniflare = session.primaryDevEnv.proxy.proxyWorker;
+			assert(
+				miniflare,
+				"The proxy worker is not available yet. Did you call server.listen()?"
+			);
+
+			return dispatchFetch(miniflare, input, init);
+		},
+		getWorker(name?: string) {
+			return {
+				async fetch(input, init) {
+					const session = await resolveSession(name);
+					const miniflare = await getRuntimeMiniflare(session);
+
+					return dispatchFetch(miniflare, input, init, name);
+				},
+				async scheduled(scheduledOptions) {
+					const session = await resolveSession(name);
+					const miniflare = await getRuntimeMiniflare(session);
+					const url = new URL(
+						"http://localhost/cdn-cgi/handler/scheduled?format=json"
+					);
+
+					if (scheduledOptions?.cron !== undefined) {
+						url.searchParams.set("cron", scheduledOptions.cron);
+					}
+
+					if (scheduledOptions?.scheduledTime !== undefined) {
+						url.searchParams.set(
+							"time",
+							String(scheduledOptions.scheduledTime.getTime())
+						);
+					}
+
+					const response = await dispatchFetch(miniflare, url, undefined, name);
+					const result = await response.json();
+
+					return result as FetcherScheduledResult;
+				},
+			};
+		},
+		async update(updateInput) {
+			const nextOptions =
+				typeof updateInput === "function"
+					? updateInput(currentOptions)
+					: updateInput;
+
+			// If listen() is still starting, wait until serverSession is available so the update is applied to the running Workers.
+			if (startPromise) {
+				await startPromise;
+			}
+
+			if (serverSession) {
+				const nextInputs = resolveWorkerInputs(nextOptions);
+
+				if (nextInputs.length !== serverSession.devEnvs.length) {
+					throw new Error(
+						`Updating the number of workers running in the server is not supported.`
+					);
+				}
+
+				try {
+					await Promise.all([
+						waitForReloadComplete(serverSession),
+						updateConfig(serverSession, nextInputs),
+					]);
+				} catch (error) {
+					await teardownSession(serverSession);
+					throw error;
+				}
+			}
+
+			currentOptions = nextOptions;
+		},
+		async reset() {
+			const session = await resolveSession();
+
+			await teardownSession(session);
+			currentOptions = initialOptions;
+
+			await startServerSession();
+		},
+		async close() {
+			if (startPromise) {
+				// Wait for it to start before tearing down
+				// ignoring any errors since we're closing the server anyway
+				await startPromise.catch(() => undefined);
+			}
+			if (serverSession) {
+				await teardownSession(serverSession);
+			}
+		},
+	};
+}
