@@ -24,17 +24,24 @@ env:
 jobs:
   e2e:
     # Runs the non-frameworks C3 E2E tests on all supported operating systems
-    # and package managers. The Linux matrix exercises both pnpm 10.33.0 and
-    # pnpm 11.5.1 so any pnpm-version-specific regression in C3's CLI or
-    # workers scaffolding path is caught. Windows and the experimental matrix
-    # entries only run pnpm 11.5.1 — pnpm 11 is the current default and we
-    # rely on the Linux pnpm 10 entry to catch regressions on the older
-    # version.
+    # and package managers. The Linux base matrix exercises both pnpm 10.33.0
+    # (the monorepo's pinned default) and pnpm 11.5.1, so any
+    # pnpm-version-specific regression in C3's CLI or workers scaffolding
+    # path is caught. Windows and experimental matrix entries stay on the
+    # default pnpm — the Linux pnpm 11 entry covers that version's behaviour
+    # and the historical check names (e.g. `C3 E2E (pnpm, Windows) - cli`)
+    # are preserved for required-status-check stability.
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}-${{ matrix.filter }}
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
-    name: ${{ format('C3 E2E ({0}@{1}, {2}{3}) - {4}', matrix.pm.name, matrix.pm.version, matrix.os.description, matrix.experimental && ', experimental' || '', matrix.filter) }}
+    # `matrix.pm.label` is the display/identifier shown in the job name and
+    # artifact names. The default-version entry of each package manager uses
+    # the plain name (e.g. `pnpm`, `npm`) so the resulting check name matches
+    # what's historically been used as a required status check; non-default
+    # entries (e.g. pnpm 11) suffix the version so the two runs can be
+    # distinguished. Keep these in sync when adding new pm entries.
+    name: ${{ format('C3 E2E ({0}, {1}{2}) - {3}', matrix.pm.label, matrix.os.description, matrix.experimental && ', experimental' || '', matrix.filter) }}
     strategy:
       fail-fast: false
       matrix:
@@ -42,24 +49,28 @@ jobs:
         filter: ["cli", "workers"]
         os: [{ name: ubuntu-latest, description: Linux }]
         pm:
-          - { name: pnpm, version: "10.33.0" }
-          - { name: pnpm, version: "11.5.1" }
-          - { name: npm, version: "0.0.0" }
+          - { name: pnpm, version: "10.33.0", label: "pnpm" }
+          - { name: pnpm, version: "11.5.1", label: "pnpm@11.5.1" }
+          - { name: npm, version: "0.0.0", label: "npm" }
           # The yarn tests keep failing on Linux with out of space errors, with no clear reason why. Disabling for now.
-          # - { name: yarn, version: "1.0.0" }
+          # - { name: yarn, version: "1.0.0", label: "yarn" }
         include:
+          # Windows and experimental matrix entries stick to the default pnpm
+          # version so the resulting check names match what's historically
+          # been used as required checks. pnpm 11 coverage is exercised by
+          # the Linux base entries above.
           - os: { name: windows-latest, description: Windows }
-            pm: { name: pnpm, version: "11.5.1" }
+            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
             filter: "cli"
           - os: { name: windows-latest, description: Windows }
-            pm: { name: pnpm, version: "11.5.1" }
+            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
             filter: "workers"
           - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "11.5.1" }
+            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
             experimental: true
             filter: "cli"
           - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "11.5.1" }
+            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
             experimental: true
             filter: "workers"
     runs-on: ${{ matrix.os.name }}
@@ -164,7 +175,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('e2e-logs-{0}-{1}-{2}-{3}-{4}', matrix.pm.name, matrix.pm.version, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
+          name: ${{ format('e2e-logs-{0}-{1}-{2}-{3}', matrix.pm.label, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
           path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}/${{ matrix.pm.name }}/${{ matrix.filter }}
           include-hidden-files: true
 
@@ -172,7 +183,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('turbo-runs-{0}-{1}-{2}-{3}-{4}', matrix.pm.name, matrix.pm.version, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
+          name: ${{ format('turbo-runs-{0}-{1}-{2}-{3}', matrix.pm.label, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
           path: .turbo/runs
           include-hidden-files: true
 
@@ -198,7 +209,8 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-frameworks${{ matrix.experimental && '-experimental' || '' }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
-    name: ${{ format('C3 E2E ({0}@{1}, {2}{3}) - frameworks', matrix.pm.name, matrix.pm.version, matrix.os.description, matrix.experimental && ', experimental' || '') }}
+    # See the note on `matrix.pm.label` in the `e2e` job above.
+    name: ${{ format('C3 E2E ({0}, {1}{2}) - frameworks', matrix.pm.label, matrix.os.description, matrix.experimental && ', experimental' || '') }}
     strategy:
       fail-fast: false
       matrix:
@@ -206,15 +218,16 @@ jobs:
         os:
           - { name: ubuntu-latest, description: Linux }
         pm:
-          - { name: pnpm, version: "10.33.0" }
-          - { name: pnpm, version: "11.5.1" }
-          - { name: npm, version: "0.0.0" }
+          - { name: pnpm, version: "10.33.0", label: "pnpm" }
+          - { name: pnpm, version: "11.5.1", label: "pnpm@11.5.1" }
+          - { name: npm, version: "0.0.0", label: "npm" }
         include:
+          # Experimental stays on the default pnpm version so the check name
+          # matches what's historically been used as a required check.
+          # pnpm 11 coverage is exercised by the (non-experimental) Linux
+          # base entry above.
           - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "10.33.0" }
-            experimental: true
-          - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "11.5.1" }
+            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
             experimental: true
     runs-on: ${{ matrix.os.name }}
     steps:
@@ -332,7 +345,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('e2e-logs-{0}-{1}-{2}-{3}-frameworks', matrix.pm.name, matrix.pm.version, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
+          name: ${{ format('e2e-logs-{0}-{1}-{2}-frameworks', matrix.pm.label, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
           path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}/${{ matrix.pm.name }}/frameworks
           include-hidden-files: true
 
@@ -340,6 +353,6 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('turbo-runs-{0}-{1}-{2}-{3}-frameworks', matrix.pm.name, matrix.pm.version, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
+          name: ${{ format('turbo-runs-{0}-{1}-{2}-frameworks', matrix.pm.label, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
           path: .turbo/runs
           include-hidden-files: true
