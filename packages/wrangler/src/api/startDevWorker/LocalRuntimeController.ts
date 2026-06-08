@@ -220,6 +220,7 @@ export async function convertToConfigBundle(
 					secure: event.config.dev.server.secure,
 				})
 			: undefined,
+		structuredLogsHandler: event.config.dev.structuredLogsHandler,
 	};
 }
 

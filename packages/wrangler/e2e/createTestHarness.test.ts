@@ -1,9 +1,17 @@
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import dedent from "ts-dedent";
-import { beforeEach, describe, it, onTestFinished } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	it,
+	onTestFinished,
+	vi,
+} from "vitest";
 import {
 	importWrangler,
 	WranglerE2ETestHelper,
@@ -11,14 +19,26 @@ import {
 
 const { createTestHarness } = await importWrangler();
 
-describe("createTestHarness", { sequential: true }, () => {
+describe("createTestHarness", () => {
+	const logs = mockConsoleMethods();
+
 	let helper: WranglerE2ETestHelper;
+
+	function normalizeDebugOutput(output: string) {
+		return String(output)
+			.replace(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/gm, "<timestamp>")
+			.replace(/http:\/\/127\.0\.0\.1:\d+/g, "http://127.0.0.1:<port>");
+	}
 
 	beforeEach(() => {
 		helper = new WranglerE2ETestHelper();
 	});
 
-	it("starts with default server options", async ({ expect }) => {
+	afterEach(() => {
+		vi.resetAllMocks();
+	});
+
+	it("starts with default server options", async ({ expect, onTestFailed }) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`
 				{
@@ -45,6 +65,7 @@ describe("createTestHarness", { sequential: true }, () => {
 			],
 		});
 		onTestFinished(server.close);
+		onTestFailed(server.debug);
 
 		const { url } = await server.listen();
 
@@ -952,6 +973,19 @@ describe("createTestHarness", { sequential: true }, () => {
 
 		const afterScheduled = await server.fetch("/");
 		await expect(afterScheduled.text()).resolves.toBe("* * * * *");
+
+		server.debug();
+		expect(normalizeDebugOutput(logs.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] fetch - GET / - started
+			<timestamp> [server] fetch - GET / - 200
+			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/handler/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - started
+			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/handler/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - 200
+			<timestamp> [server] fetch - GET / - started
+			<timestamp> [server] fetch - GET / - 200"
+		`);
 	});
 
 	it("does not reload on source changes by default", async ({ expect }) => {
@@ -1013,5 +1047,145 @@ describe("createTestHarness", { sequential: true }, () => {
 
 		const response3 = await server.fetch("/");
 		await expect(response3.text()).resolves.toBe("Hello World");
+	});
+
+	it("captures runtime logs and prints debug timelines", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.primary.jsonc": dedent`
+				{
+					"name": "primary-worker",
+					"main": "src/primary.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"wrangler.auxiliary.jsonc": dedent`
+				{
+					"name": "auxiliary-worker",
+					"main": "src/auxiliary.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"src/primary.ts": dedent`
+				export default {
+					fetch() {
+						console.info("primary log");
+						return new Response("primary ok");
+					}
+				};
+			`,
+			"src/auxiliary.ts": dedent`
+				export default {
+					fetch() {
+						console.warn("auxiliary warning");
+						throw new Error("auxiliary failed");
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [
+				{ configPath: "./wrangler.primary.jsonc" },
+				{ configPath: "./wrangler.auxiliary.jsonc" },
+			],
+		});
+		onTestFinished(server.close);
+
+		server.debug();
+
+		expect(logs.getAndClearOut()).toMatchInlineSnapshot(
+			`"-------------- No debug log --------------"`
+		);
+
+		await server.listen();
+		expect(server.getLogs()).toEqual([]);
+
+		server.clearLogs();
+
+		const primaryResponse = await server.getWorker("primary-worker").fetch("/");
+
+		await expect(primaryResponse.text()).resolves.toBe("primary ok");
+		await expect(
+			server
+				.getWorker("auxiliary-worker")
+				.fetch("https://example.com/greet", { method: "post" })
+		).rejects.toThrow("auxiliary failed");
+		expect(server.getLogs()).toEqual([
+			{ timestamp: expect.any(Number), level: "info", message: "primary log" },
+			{
+				timestamp: expect.any(Number),
+				level: "warn",
+				message: "auxiliary warning",
+			},
+		]);
+
+		server.debug();
+		expect(normalizeDebugOutput(logs.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] [primary-worker] fetch - GET / - started
+			<timestamp> [runtime] info: primary log
+			<timestamp> [server] [primary-worker] fetch - GET / - 200
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
+			<timestamp> [runtime] warn: auxiliary warning
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - failed"
+		`);
+
+		server.clearLogs();
+		expect(server.getLogs()).toEqual([]);
+
+		server.debug();
+		expect(normalizeDebugOutput(logs.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] [primary-worker] fetch - GET / - started
+			<timestamp> [runtime] info: primary log
+			<timestamp> [server] [primary-worker] fetch - GET / - 200
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
+			<timestamp> [runtime] warn: auxiliary warning
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - failed"
+		`);
+
+		await server.reset();
+		expect(server.getLogs()).toEqual([]);
+
+		server.debug();
+		expect(normalizeDebugOutput(logs.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed"
+		`);
+
+		await server.update((options) => ({
+			...options,
+			workers: [...options.workers],
+		}));
+		expect(server.getLogs()).toEqual([]);
+
+		server.debug();
+		expect(normalizeDebugOutput(logs.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] update - started
+			<timestamp> [server] update - completed"
+		`);
+
+		// Make sure debug logs are still visible after server is closed
+		await server.close();
+
+		server.debug();
+		expect(normalizeDebugOutput(logs.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] update - started
+			<timestamp> [server] update - completed
+			<timestamp> [server] teardown - started
+			<timestamp> [server] teardown - completed"
+		`);
 	});
 });

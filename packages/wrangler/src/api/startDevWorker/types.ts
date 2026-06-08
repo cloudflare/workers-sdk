@@ -20,7 +20,12 @@ import type {
 	ServiceFetch,
 	Trigger,
 } from "@cloudflare/workers-utils";
-import type { DispatchFetch, Miniflare, NodeJSCompatMode } from "miniflare";
+import type {
+	DispatchFetch,
+	Miniflare,
+	NodeJSCompatMode,
+	WorkerdStructuredLog,
+} from "miniflare";
 import type * as undici from "undici";
 
 type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
@@ -166,6 +171,8 @@ export interface StartDevWorkerInput {
 		origin?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
 		/** A hook for outbound fetch calls from within the worker. */
 		outboundService?: ServiceFetch;
+		/** Handles structured runtime logs. */
+		structuredLogsHandler?: (log: WorkerdStructuredLog) => void;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
 		mockFetch?: undici.MockAgent;
 
