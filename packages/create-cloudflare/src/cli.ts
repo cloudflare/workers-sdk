@@ -259,8 +259,13 @@ const offerAgentsMd = async (ctx: C3Context) => {
 main(process.argv)
 	.catch((e) => {
 		if (e instanceof CancelError) {
+			// User-initiated cancellation (Ctrl-C, declined prompt) — not a
+			// failure from the script's perspective; leave the exit code at 0.
 			cancel(e.message);
-		} else if (isIgnoredBuildsError(e)) {
+			return;
+		}
+
+		if (isIgnoredBuildsError(e)) {
 			// pnpm refused to run dependency build scripts for packages C3
 			// does not pre-approve (e.g. framework-introduced native deps).
 			// `npmInstall` already attempted the interactive recovery path
@@ -272,12 +277,19 @@ main(process.argv)
 		} else {
 			error(e);
 		}
+
+		// Any error reaching here is a real failure: mark `process.exitCode`
+		// so CI / shell callers can detect it. The `process.exit()` call in
+		// the finally below picks this up automatically (per Node's docs,
+		// `exit()` without an explicit code uses `process.exitCode`).
+		process.exitCode = 1;
 	})
 	.finally(async () => {
 		await reporter.waitForAllEventsSettled();
 
-		// ensure we explicitly exit the process, otherwise any ongoing async
-		// calls or leftover tasks in the stack queue will keep running until
-		// completed
+		// Force-exit so any ongoing async calls or leftover tasks in the
+		// stack queue don't keep the event loop alive. The exit code falls
+		// through from `process.exitCode` set in the catch above (0 on
+		// success / user cancellation, 1 on error).
 		process.exit();
 	});
