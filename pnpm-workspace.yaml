@@ -43,10 +43,6 @@ minimumReleaseAgeExclude:
   # Platform-specific workerd binaries published in lock-step with workerd.
   - "@cloudflare/workerd-*"
   - "@cloudflare/workers-types"
-  # The below is to install the rosie-skills package and remove the problematic
-  # wasm module it brings as soon as possible
-  # TODO(dario): remove in a few days
-  - "rosie-skills"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build scripts
