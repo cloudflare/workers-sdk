@@ -233,7 +233,7 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		});
 		infoRequest.headers.set(
 			CoreHeaders.CUSTOM_FETCH_SERVICE,
-			CoreBindings.IMAGES_SERVICE
+			CoreBindings.IMAGES_BINDING_SERVICE
 		);
 
 		const response =
@@ -276,7 +276,7 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		const forwardRequest = new Request(request);
 		forwardRequest.headers.set(
 			CoreHeaders.CUSTOM_FETCH_SERVICE,
-			CoreBindings.IMAGES_SERVICE
+			CoreBindings.IMAGES_BINDING_SERVICE
 		);
 		forwardRequest.headers.set(CoreHeaders.ORIGINAL_URL, request.url);
 		return this.env[CoreBindings.SERVICE_LOOPBACK].fetch(forwardRequest);
