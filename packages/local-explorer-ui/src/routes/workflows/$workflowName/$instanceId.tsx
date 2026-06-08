@@ -500,13 +500,13 @@ function InstanceDetailView() {
 					from: getRestartFromStepParam(restartFromStepTarget),
 				},
 			});
-			setRestartFromStepTarget(null);
 			await fetchDetails();
 		} catch (err) {
 			setError(
 				err instanceof Error ? err.message : "Failed to restart from step"
 			);
 		} finally {
+			setRestartFromStepTarget(null);
 			setRestartingFromStep(false);
 		}
 	}, [restartFromStepTarget, params.workflowName, instanceId, fetchDetails]);
@@ -797,10 +797,8 @@ function InstanceDetailView() {
 						<div className="px-6 py-5">
 							<p className="text-sm text-kumo-subtle">
 								This will rerun the instance from{" "}
-							This will rerun the instance from{" "}
-							<span className="font-medium text-kumo-default">
-								{getStepDisplayName(restartFromStepTarget?.name)}
-							</span>
+								<span className="font-medium text-kumo-default">
+									{getStepDisplayName(restartFromStepTarget?.name)}
 								</span>
 								. Saved state for this step and later steps will be cleared,
 								while earlier completed steps are kept.
