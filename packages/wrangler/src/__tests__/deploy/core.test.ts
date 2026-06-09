@@ -839,6 +839,31 @@ describe("deploy", () => {
 			expect(std.out).toContain("Temporary account ready:");
 		});
 
+		it("aborts in interactive mode when the terms are not accepted", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+			mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "no" });
+			writeWranglerConfig();
+			writeWorkerSource();
+
+			let previewAccountRequests = 0;
+			msw.use(
+				http.post(temporaryPreviewAccountUrl, async () => {
+					previewAccountRequests += 1;
+					return HttpResponse.json({});
+				})
+			);
+
+			await expect(
+				runWrangler("deploy index.js --temporary")
+			).rejects.toThrowError(
+				/You must accept Cloudflare's Terms of Service .* to use --temporary\./
+			);
+
+			expect(previewAccountRequests).toBe(0);
+		});
+
 		describe("with an alternative auth domain", () => {
 			mockAuthDomain({ domain: "dash.staging.cloudflare.com" });
 

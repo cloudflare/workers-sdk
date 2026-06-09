@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { promptForExplicitYes } from "../dialogs";
+import { prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { TEMPORARY_TERMS_URLS } from "./temporary-terms-policy";
@@ -15,7 +15,8 @@ export async function ensureTemporaryTermsAccepted(): Promise<void> {
 		return;
 	}
 
-	if (await promptForExplicitYes(TEMPORARY_TERMS_PROMPT)) {
+	const answer = await prompt(TEMPORARY_TERMS_PROMPT);
+	if (typeof answer === "string" && answer.trim().toLowerCase() === "yes") {
 		return;
 	}
 
