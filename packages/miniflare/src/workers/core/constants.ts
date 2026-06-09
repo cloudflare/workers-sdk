@@ -22,7 +22,7 @@ export const CorePaths = {
 	/** Local image delivery endpoint for serving hosted images */
 	IMAGE_DELIVERY: "/cdn-cgi/mf/imagedelivery",
 	/** Public R2 bucket object serving endpoint */
-	R2_PUBLIC: "/cdn-cgi/mf/r2",
+	R2_PUBLIC: "/cdn-cgi/local/r2/public",
 } as const;
 
 export const CoreHeaders = {

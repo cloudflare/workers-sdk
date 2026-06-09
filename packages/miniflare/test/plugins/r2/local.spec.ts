@@ -15,7 +15,7 @@ const ctx = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 );
 
 function bucketUrl(path: string, base: URL): URL {
-	return new URL(`/cdn-cgi/mf/r2/bucket${path}`, base);
+	return new URL(`/cdn-cgi/local/r2/public/bucket${path}`, base);
 }
 
 test("serves object body with metadata over HTTP", async ({ expect }) => {
@@ -87,7 +87,9 @@ test("returns 404 for the bucket root (empty key)", async ({ expect }) => {
 });
 
 test("returns 404 for an unknown bucket id", async ({ expect }) => {
-	const res = await fetch(new URL("/cdn-cgi/mf/r2/unknown/key", ctx.url));
+	const res = await fetch(
+		new URL("/cdn-cgi/local/r2/public/unknown/key", ctx.url)
+	);
 	expect(res.status).toBe(404);
 });
 
@@ -296,11 +298,13 @@ test("multiple buckets are each independently reachable", async ({
 	await alpha.put("k", "alpha-body");
 	await beta.put("k", "beta-body");
 
-	const alphaRes = await fetch(new URL("/cdn-cgi/mf/r2/alpha/k", url));
+	const alphaRes = await fetch(
+		new URL("/cdn-cgi/local/r2/public/alpha/k", url)
+	);
 	expect(alphaRes.status).toBe(200);
 	expect(await alphaRes.text()).toBe("alpha-body");
 
-	const betaRes = await fetch(new URL("/cdn-cgi/mf/r2/beta/k", url));
+	const betaRes = await fetch(new URL("/cdn-cgi/local/r2/public/beta/k", url));
 	expect(betaRes.status).toBe(200);
 	expect(await betaRes.text()).toBe("beta-body");
 });
@@ -335,11 +339,13 @@ test("buckets across multiple workers are all reachable", async ({
 	await alpha.put("k", "alpha-body");
 	await beta.put("k", "beta-body");
 
-	const alphaRes = await fetch(new URL("/cdn-cgi/mf/r2/alpha/k", url));
+	const alphaRes = await fetch(
+		new URL("/cdn-cgi/local/r2/public/alpha/k", url)
+	);
 	expect(alphaRes.status).toBe(200);
 	expect(await alphaRes.text()).toBe("alpha-body");
 
-	const betaRes = await fetch(new URL("/cdn-cgi/mf/r2/beta/k", url));
+	const betaRes = await fetch(new URL("/cdn-cgi/local/r2/public/beta/k", url));
 	expect(betaRes.status).toBe(200);
 	expect(await betaRes.text()).toBe("beta-body");
 });
@@ -360,7 +366,7 @@ test("two bindings pointing at the same underlying bucket id share the same URL"
 	const a = await mf.getR2Bucket("ALIAS_A");
 	await a.put("k", "shared-body");
 
-	const res = await fetch(new URL("/cdn-cgi/mf/r2/shared/k", url));
+	const res = await fetch(new URL("/cdn-cgi/local/r2/public/shared/k", url));
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe("shared-body");
 });
