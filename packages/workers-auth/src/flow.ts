@@ -146,10 +146,14 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,
 	};
 
-	// Resolve the consumer's OAuth identity once, defaulting to Wrangler's so
+	// Resolve the consumer's OAuth identity, defaulting to Wrangler's so
 	// existing callers that pass none of these fields are unaffected.
+	//
+	// `clientId` is resolved lazily so that env-var-driven defaults (e.g.
+	// `CLOUDFLARE_API_ENVIRONMENT=staging`) are picked up at call time, not at
+	// flow construction time.
 	const storage = ctx.storage ?? defaultAuthConfigStorage();
-	const clientId = ctx.clientId ?? getClientIdFromEnv();
+	const getClientId = () => ctx.clientId ?? getClientIdFromEnv();
 	const consent = ctx.consent ?? WRANGLER_CONSENT_PAGES;
 	const redirectUri = ctx.callback?.redirectUri ?? OAUTH_CALLBACK_URL;
 
@@ -188,7 +192,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			{
 				browser: props.browser ?? true,
 				scopes: props.scopes,
-				clientId,
+				clientId: getClientId(),
 				redirectUri,
 				denied: consent.denied,
 				granted: consent.granted,
@@ -243,7 +247,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			} = await exchangeRefreshTokenForAccessToken(
 				ctx.logger,
 				ctx.isNonInteractiveOrCI,
-				clientId,
+				getClientId(),
 				storage
 			);
 			storage.write({
@@ -313,7 +317,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 
 		const body =
-			`client_id=${encodeURIComponent(clientId)}&` +
+			`client_id=${encodeURIComponent(getClientId())}&` +
 			`token_type_hint=refresh_token&` +
 			`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
 
