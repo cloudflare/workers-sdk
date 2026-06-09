@@ -101,7 +101,7 @@ export function getR2PublicService(
 	return {
 		name: R2_PUBLIC_SERVICE_NAME,
 		worker: {
-			compatibilityDate: "2023-07-24",
+			compatibilityDate: "2026-01-01",
 			modules: [{ name: "public.worker.js", esModule: SCRIPT_R2_PUBLIC() }],
 			bindings,
 		},
