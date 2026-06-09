@@ -414,10 +414,16 @@ export class InspectorProxyWorker implements DurableObject {
 				runtime
 			);
 		}
-		this.sendRuntimeMessage(
-			{ method: "Network.enable", id: this.nextCounter() },
-			runtime
-		);
+		// Only enable the Network domain when DevTools is attached. Otherwise the
+		// runtime streams a Network.dataReceived per response body chunk into a
+		// buffer that is never drained without a client (headless `wrangler dev`),
+		// flooding the inspector until the dev server stops accepting connections.
+		if (this.websockets.devtools !== undefined) {
+			this.sendRuntimeMessage(
+				{ method: "Network.enable", id: this.nextCounter() },
+				runtime
+			);
+		}
 
 		clearInterval(this.runtimeKeepAliveInterval);
 		this.runtimeKeepAliveInterval = setInterval(() => {
