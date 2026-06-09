@@ -8,7 +8,7 @@ It runs Workers in a local preview environment using production build output and
 
 Use it from any Node.js test runner to send requests to individual Workers, trigger scheduled events, reset the server between tests, and mock outbound requests with libraries that intercept `globalThis.fetch()`, such as MSW.
 
-This also captures Workers runtime logs for assertions and can print a diagnostic timeline when tests fail:
+You can also capture structured logs from your Workers with `getLogs()`, or dump out a diagnostic timeline with `debug()` when tests fail:
 
 ```ts
 import { createTestHarness } from "wrangler";
