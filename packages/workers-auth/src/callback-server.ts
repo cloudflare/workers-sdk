@@ -66,6 +66,12 @@ export async function getOauthToken(
 		state,
 		generators
 	);
+	// The path the local server must route the OAuth provider's redirect to is
+	// dictated by the registered `redirectUri` — not hardcoded. Without this,
+	// a consumer that registers e.g. `/my/callback` would have the provider
+	// redirect the browser there but the server would silently fall through
+	// with no response.
+	const callbackPath = new URL(options.redirectUri).pathname;
 	let server: http.Server;
 	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
 	const timerPromise = new Promise<AccessContext>((_, reject) => {
@@ -158,7 +164,7 @@ export async function getOauthToken(
 				return res.end("OK");
 			}
 			switch (pathname) {
-				case "/oauth/callback": {
+				case callbackPath: {
 					let hasAuthCode = false;
 					try {
 						hasAuthCode = isReturningFromAuthServer(query, state, ctx.logger);
