@@ -154,6 +154,25 @@ export class ProxyWorker implements DurableObject {
 				}
 			}
 
+			// TEMP DEBUG (#14198 investigation) — REMOVE BEFORE MERGE.
+			// Logs, for every request forwarded to the *.workers.dev edge (HTTP
+			// and WebSocket upgrades alike), whether the merged headers carry the
+			// Cloudflare Access credentials + preview token. This answers: do the
+			// Access headers reach the edge on the WS-upgrade hop? Grep for
+			// `mf-access-debug` in `WRANGLER_LOG=debug` output.
+			// eslint-disable-next-line no-console -- temporary investigation logging
+			console.log(
+				"[mf-access-debug] forward",
+				JSON.stringify({
+					to: userWorkerUrl.href,
+					upgrade: headers.get("upgrade") ?? null,
+					binding: headers.get("MF-Binding") ?? null,
+					hasAccessClientId: headers.has("CF-Access-Client-Id"),
+					hasCookie: headers.has("cookie"),
+					hasPreviewToken: headers.has("cf-workers-preview-token"),
+				})
+			);
+
 			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
 			void fetch(userWorkerUrl, new Request(request, { headers }))
 				.then(async (res) => {

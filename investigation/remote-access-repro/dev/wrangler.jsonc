@@ -1,0 +1,17 @@
+{
+	"name": "repro-remote-dev",
+	"main": "src/index.js",
+	"compatibility_date": "2025-04-28",
+	"ai": {
+		"binding": "AI",
+		"remote": true,
+	},
+	"services": [
+		{
+			"binding": "TARGET",
+			"service": "repro-remote-target",
+			"entrypoint": "Api",
+			"remote": true,
+		},
+	],
+}
