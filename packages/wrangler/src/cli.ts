@@ -104,7 +104,7 @@ export { resolveNamedTunnel as unstable_resolveNamedTunnel } from "./tunnel/clie
 
 // Entry for the `cf-wrangler` delegate binary (see `bin/cf-wrangler.js`),
 // which calls this in-process. Not a stable public API.
-export { runCfWrangler } from "./cf-wrangler";
+export { runDev as runCfWranglerDev } from "./cf-wrangler/dev";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
 export { splitSqlQuery as unstable_splitSqlQuery } from "./d1/splitter";

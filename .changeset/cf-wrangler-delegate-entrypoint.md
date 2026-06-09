@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Add an experimental `cf-wrangler` delegate entrypoint for projects that can't use `@cloudflare/vite-plugin` (service workers, old compatibility dates, Python, Rust, etc.).

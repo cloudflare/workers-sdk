@@ -1,5 +1,5 @@
 ---
-"@cloudflare/vite-plugin": minor
+"@cloudflare/vite-plugin": patch
 ---
 
 Drop the `--config` flag from the experimental internal `cf-vite` delegate binary.

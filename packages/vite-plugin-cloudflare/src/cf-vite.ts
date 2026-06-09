@@ -114,9 +114,6 @@ async function main(): Promise<number> {
 	//   - `--local`: overrides `remoteBindings` outright, mirroring
 	//     `wrangler dev --local` (force local even if config opts into
 	//     remote).
-	// The wrangler config file is not passed here — `cloudflare()`
-	// discovers it (or honours an explicit `configPath`), matching how
-	// `cf-wrangler` relies on wrangler's own config discovery.
 	if (args.local) {
 		process.env.CLOUDFLARE_VITE_FORCE_LOCAL = "true";
 	}
