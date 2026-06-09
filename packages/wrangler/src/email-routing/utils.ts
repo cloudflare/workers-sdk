@@ -2,6 +2,8 @@ import { UserError } from "@cloudflare/workers-utils";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import { retryOnAPIFailure } from "../utils/retry";
+import { listEmailSendingSubdomains } from "./client";
+import type { EmailSendingSubdomain } from "./index";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export async function resolveZoneId(
@@ -107,4 +109,20 @@ export async function resolveDomain(
 		`Could not find a zone for \`${domain}\`. Make sure the domain or its parent zone exists in your account.`,
 		{ telemetryMessage: "email routing domain zone not found" }
 	);
+}
+
+export async function resolveSendingSubdomain(
+	config: Config,
+	zoneId: string,
+	name: string
+): Promise<EmailSendingSubdomain> {
+	const subdomains = await listEmailSendingSubdomains(config, zoneId);
+	const match = subdomains.find((s) => s.name === name);
+	if (!match) {
+		throw new UserError(
+			`No sending subdomain found for \`${name}\`. Run \`wrangler email sending settings ${name}\` to see configured domains.`,
+			{ telemetryMessage: "email sending subdomain not found" }
+		);
+	}
+	return match;
 }

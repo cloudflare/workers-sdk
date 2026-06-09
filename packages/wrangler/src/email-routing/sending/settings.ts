@@ -1,11 +1,11 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { getEmailSendingSettings } from "../client";
-import { resolveDomain } from "../utils";
+import { getEmailSendingSubdomain } from "../client";
+import { resolveDomain, resolveSendingSubdomain } from "../utils";
 
 export const emailSendingSettingsCommand = createCommand({
 	metadata: {
-		description: "Get Email Sending settings for a zone",
+		description: "Get Email Sending settings for a domain",
 		status: "open beta",
 		owner: "Product: Email Service",
 	},
@@ -22,23 +22,20 @@ export const emailSendingSettingsCommand = createCommand({
 	},
 	positionalArgs: ["domain"],
 	async handler(args, { config }) {
-		const { zoneId } = await resolveDomain(config, args.domain, args.zoneId);
-		const settings = await getEmailSendingSettings(config, zoneId);
+		const { zoneId, domain } = await resolveDomain(
+			config,
+			args.domain,
+			args.zoneId
+		);
+		const match = await resolveSendingSubdomain(config, zoneId, domain);
+		const subdomain = await getEmailSendingSubdomain(config, zoneId, match.tag);
 
-		logger.log(`Email Sending for ${settings.name}:`);
-		logger.log(`  Enabled:  ${settings.enabled}`);
-		logger.log(`  Status:   ${settings.status}`);
-		logger.log(`  Created:  ${settings.created}`);
-		logger.log(`  Modified: ${settings.modified}`);
-
-		const subdomains = settings.subdomains;
-		if (Array.isArray(subdomains) && subdomains.length > 0) {
-			logger.log(`  Subdomains:`);
-			for (const s of subdomains) {
-				logger.log(
-					`    - ${s.name} (enabled: ${s.enabled}, status: ${s.status ?? "unknown"})`
-				);
-			}
-		}
+		logger.log(`Email Sending for ${subdomain.name}:`);
+		logger.log(`  Enabled:            ${subdomain.enabled}`);
+		logger.log(`  Tag:                ${subdomain.tag}`);
+		logger.log(`  Created:            ${subdomain.created ?? ""}`);
+		logger.log(`  Modified:           ${subdomain.modified ?? ""}`);
+		logger.log(`  DKIM selector:      ${subdomain.dkim_selector ?? ""}`);
+		logger.log(`  Return-path domain: ${subdomain.return_path_domain ?? ""}`);
 	},
 });
