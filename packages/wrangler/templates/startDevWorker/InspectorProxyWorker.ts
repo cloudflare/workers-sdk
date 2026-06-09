@@ -569,11 +569,19 @@ export class InspectorProxyWorker implements DurableObject {
 				if (this.websockets.devtools === devtools) {
 					this.websockets.devtools = undefined;
 
-					// Notify the runtime to disable the debugger when DevTools disconnects.
+					// Notify the runtime to disable the Debugger and Network domains when
+					// DevTools disconnects. Without disabling Network the runtime keeps
+					// streaming Network.dataReceived into runtimeMessageBuffer, which is no
+					// longer drained once devtools is undefined, reintroducing the same
+					// headless flood this proxy otherwise avoids.
 					if (this.websockets.runtime) {
 						this.sendRuntimeMessage({
 							id: this.nextCounter(),
 							method: "Debugger.disable",
+						});
+						this.sendRuntimeMessage({
+							id: this.nextCounter(),
+							method: "Network.disable",
 						});
 					}
 				}
