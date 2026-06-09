@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import SCRIPT_R2_BUCKET_OBJECT from "worker:r2/bucket";
-import SCRIPT_R2_LOCAL from "worker:r2/local";
+import SCRIPT_R2_PUBLIC from "worker:r2/public";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
@@ -102,7 +102,7 @@ export function getR2PublicService(
 		name: R2_PUBLIC_SERVICE_NAME,
 		worker: {
 			compatibilityDate: "2023-07-24",
-			modules: [{ name: "local.worker.js", esModule: SCRIPT_R2_LOCAL() }],
+			modules: [{ name: "public.worker.js", esModule: SCRIPT_R2_PUBLIC() }],
 			bindings,
 		},
 	};
