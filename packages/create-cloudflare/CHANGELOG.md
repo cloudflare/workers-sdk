@@ -1,5 +1,57 @@
 # create-cloudflare
 
+## 2.70.1
+
+### Patch Changes
+
+- [#14205](https://github.com/cloudflare/workers-sdk/pull/14205) [`d6fd677`](https://github.com/cloudflare/workers-sdk/commit/d6fd6770943042bccc996af1ef7cab7b0363df16) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.16.0 | 7.17.0 |
+
+- [#14206](https://github.com/cloudflare/workers-sdk/pull/14206) [`9c07154`](https://github.com/cloudflare/workers-sdk/commit/9c071540314d42a57a03f5240e6fc68e7f6e20bd) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.15.3 | 0.15.4 |
+
+- [#14207](https://github.com/cloudflare/workers-sdk/pull/14207) [`33ab99b`](https://github.com/cloudflare/workers-sdk/commit/33ab99b387a2083c07d337709bbe36556feba881) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.5.2 | 2.6.0 |
+
+- [#14208](https://github.com/cloudflare/workers-sdk/pull/14208) [`82c4d93`](https://github.com/cloudflare/workers-sdk/commit/82c4d9343954d3dcee1bace4bca96ee50b58bc7b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.2.6 | 16.2.7 |
+
+- [#14209](https://github.com/cloudflare/workers-sdk/pull/14209) [`e13b8c0`](https://github.com/cloudflare/workers-sdk/commit/e13b8c02db3b65861cf84faaf276ffb79025079f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | @angular/create | 21.2.13 | 22.0.0 |
+
+- [#14216](https://github.com/cloudflare/workers-sdk/pull/14216) [`6b903e5`](https://github.com/cloudflare/workers-sdk/commit/6b903e5e93f76084417df16764f15cbcc6f1f23a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.68.0 | 0.69.1 |
+
 ## 2.70.0
 
 ### Minor Changes
