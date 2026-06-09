@@ -4091,27 +4091,12 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (!isOptionalProperty(value, "experimental_local_public", "boolean")) {
-		diagnostics.errors.push(
-			`"${field}" bindings should, optionally, have a boolean "experimental_local_public" field but got ${JSON.stringify(
-				value
-			)}.`
-		);
-		isValid = false;
-	}
-	experimental(
-		diagnostics,
-		value as Record<string, unknown>,
-		"experimental_local_public"
-	);
-
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
 		"remote",
-		"experimental_local_public",
 	]);
 
 	return isValid;

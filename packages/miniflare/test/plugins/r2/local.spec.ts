@@ -10,7 +10,7 @@ interface Context extends MiniflareTestContext {
 }
 
 const ctx = miniflareTest<{ BUCKET: R2Bucket }, Context>(
-	{ r2Buckets: { BUCKET: { id: "bucket", experimentalLocalPublic: true } } },
+	{ r2Buckets: { BUCKET: "bucket" } },
 	async (global) => new global.Response(null, { status: 404 })
 );
 
@@ -87,9 +87,7 @@ test("returns 404 for the bucket root (empty key)", async ({ expect }) => {
 });
 
 test("returns 404 for an unknown bucket id", async ({ expect }) => {
-	const res = await fetch(
-		new URL("/cdn-cgi/mf/r2/unknown/key", ctx.url)
-	);
+	const res = await fetch(new URL("/cdn-cgi/mf/r2/unknown/key", ctx.url));
 	expect(res.status).toBe(404);
 });
 
@@ -280,39 +278,14 @@ test("reports 412 over 304 when both header families fail", async ({
 	expect(await res.text()).toBe("");
 });
 
-test("a bucket without `experimentalLocalPublic` is not served publicly", async ({
-	expect,
-}) => {
-	const opts: MiniflareOptions = {
-		modules: true,
-		script: "export default { fetch() { return new Response(null, { status: 404 }) } }",
-		r2Buckets: { PRIVATE: "private-bucket" },
-	};
-	const mf = new Miniflare(opts);
-	useDispose(mf);
-
-	const url = await mf.ready;
-	const r2 = await mf.getR2Bucket("PRIVATE");
-	await r2.put("private-key", "private-body");
-
-	const res = await fetch(
-		new URL("/cdn-cgi/mf/r2/private-bucket/private-key", url)
-	);
-	expect(res.status).toBe(404);
-	await res.arrayBuffer();
-});
-
-test("multiple opted-in buckets are each independently reachable", async ({
+test("multiple buckets are each independently reachable", async ({
 	expect,
 }) => {
 	const opts: MiniflareOptions = {
 		modules: true,
 		script:
 			"export default { fetch() { return new Response(null, { status: 404 }) } }",
-		r2Buckets: {
-			ALPHA: { id: "alpha", experimentalLocalPublic: true },
-			BETA: { id: "beta", experimentalLocalPublic: true },
-		},
+		r2Buckets: { ALPHA: "alpha", BETA: "beta" },
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);
@@ -332,37 +305,7 @@ test("multiple opted-in buckets are each independently reachable", async ({
 	expect(await betaRes.text()).toBe("beta-body");
 });
 
-test("a public bucket coexisting with a private bucket only exposes the public one", async ({
-	expect,
-}) => {
-	const opts: MiniflareOptions = {
-		modules: true,
-		script:
-			"export default { fetch() { return new Response(null, { status: 404 }) } }",
-		r2Buckets: {
-			PUBLIC: { id: "public", experimentalLocalPublic: true },
-			PRIVATE: "private",
-		},
-	};
-	const mf = new Miniflare(opts);
-	useDispose(mf);
-
-	const url = await mf.ready;
-	const pub = await mf.getR2Bucket("PUBLIC");
-	const priv = await mf.getR2Bucket("PRIVATE");
-	await pub.put("k", "public-body");
-	await priv.put("k", "private-body");
-
-	const pubRes = await fetch(new URL("/cdn-cgi/mf/r2/public/k", url));
-	expect(pubRes.status).toBe(200);
-	expect(await pubRes.text()).toBe("public-body");
-
-	const privRes = await fetch(new URL("/cdn-cgi/mf/r2/private/k", url));
-	expect(privRes.status).toBe(404);
-	await privRes.arrayBuffer();
-});
-
-test("public buckets across multiple workers are all reachable", async ({
+test("buckets across multiple workers are all reachable", async ({
 	expect,
 }) => {
 	const opts: MiniflareOptions = {
@@ -372,14 +315,14 @@ test("public buckets across multiple workers are all reachable", async ({
 				modules: true,
 				script:
 					"export default { fetch() { return new Response(null, { status: 404 }) } }",
-				r2Buckets: { BUCKET: { id: "alpha", experimentalLocalPublic: true } },
+				r2Buckets: { BUCKET: "alpha" },
 			},
 			{
 				name: "worker-b",
 				modules: true,
 				script:
 					"export default { fetch() { return new Response(null, { status: 404 }) } }",
-				r2Buckets: { BUCKET: { id: "beta", experimentalLocalPublic: true } },
+				r2Buckets: { BUCKET: "beta" },
 			},
 		],
 	};
@@ -408,10 +351,7 @@ test("two bindings pointing at the same underlying bucket id share the same URL"
 		modules: true,
 		script:
 			"export default { fetch() { return new Response(null, { status: 404 }) } }",
-		r2Buckets: {
-			ALIAS_A: { id: "shared", experimentalLocalPublic: true },
-			ALIAS_B: { id: "shared", experimentalLocalPublic: true },
-		},
+		r2Buckets: { ALIAS_A: "shared", ALIAS_B: "shared" },
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);

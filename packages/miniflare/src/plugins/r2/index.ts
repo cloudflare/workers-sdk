@@ -33,7 +33,6 @@ export const R2OptionsSchema = z.object({
 						remoteProxyConnectionString: z
 							.custom<RemoteProxyConnectionString>()
 							.optional(),
-						experimentalLocalPublic: z.boolean().optional(),
 					}),
 				])
 			),
@@ -58,11 +57,8 @@ const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 interface R2BucketEntry {
 	id: string;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
-	experimentalLocalPublic?: boolean;
 }
 
-// Like the shared `namespaceEntries`, except that it matches the
-// R2 bucket schema to extract `experimentalLocalPublic`.
 function r2BucketEntries(
 	buckets: z.infer<typeof R2OptionsSchema>["r2Buckets"]
 ): [bindingName: string, entry: R2BucketEntry][] {
@@ -85,10 +81,7 @@ export function getR2PublicService(
 	const publicBucketsById = new Map<string, R2BucketEntry>();
 	for (const worker of allWorkerOpts) {
 		for (const [, bucket] of r2BucketEntries(worker.r2?.r2Buckets)) {
-			if (
-				bucket.experimentalLocalPublic !== true ||
-				bucket.remoteProxyConnectionString !== undefined
-			) {
+			if (bucket.remoteProxyConnectionString !== undefined) {
 				continue;
 			}
 			publicBucketsById.set(bucket.id, bucket);

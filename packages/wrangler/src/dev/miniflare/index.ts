@@ -235,29 +235,17 @@ function kvNamespaceEntry(
 	return [binding, { id, remoteProxyConnectionString }];
 }
 function r2BucketEntry(
-	{
-		binding,
-		bucket_name,
-		remote,
-		experimental_local_public: experimentalLocalPublic,
-	}: CfR2Bucket,
+	{ binding, bucket_name, remote }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	{
-		id: string;
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		experimentalLocalPublic?: boolean;
-	},
+	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 ] {
 	const id = getRemoteId(bucket_name) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { id, experimentalLocalPublic }];
+		return [binding, { id }];
 	}
-	return [
-		binding,
-		{ id, remoteProxyConnectionString, experimentalLocalPublic },
-	];
+	return [binding, { id, remoteProxyConnectionString }];
 }
 function d1DatabaseEntry(
 	{ binding, database_id, preview_database_id, remote }: CfD1Database,

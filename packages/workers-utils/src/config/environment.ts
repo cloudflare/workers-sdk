@@ -972,8 +972,6 @@ export interface EnvironmentNonInheritable {
 		jurisdiction?: string;
 		/** Whether the R2 bucket should be remote or not in local development */
 		remote?: boolean;
-		/** If true, serve the local R2 bucket's objects publicly under `/cdn-cgi/mf/r2/<bucket-id>/<key>` on the dev server. The `<bucket-id>` is `bucket_name` when set, otherwise `binding`. */
-		experimental_local_public?: boolean;
 	}[];
 
 	/**
