@@ -12,16 +12,16 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 - `src/__tests__/` — Unit tests, helpers in `src/__tests__/helpers/`
 - `e2e/` — E2E tests, requires Cloudflare credentials
 - `bin/wrangler.js` — Shim that spawns Node with `--experimental-vm-modules`
-- `bin/cf-wrangler.js` — Tiny shim for the `cf-wrangler` delegate entrypoint; dispatches on the leading verb and calls `runCfWranglerDev` from `wrangler-dist/cli.js` in-process (no re-spawn — the parent tool owns the Node runtime)
+- `bin/cf-wrangler.js` — `cf-wrangler` delegate entrypoint. Owns verb dispatch, argv parsing (`parseCfWranglerArgs`), and the `StartDevOptions` literal; hands off to `runCfWranglerDev` from `wrangler-dist/cli.js` in-process (no re-spawn — the parent tool owns the Node runtime)
 - `src/cf-wrangler/` — The `cf-wrangler` delegate entrypoint (see below)
 - `templates/` — Worker templates
 
 ## Entry Points
 
-- `src/cli.ts` — Build entry AND library API surface (dual-purpose). Calls `main()` when run directly; re-exports `./api` when imported as library. Also re-exports `runCfWranglerDev` for the `cf-wrangler` bin to call in-process.
+- `src/cli.ts` — Build entry AND library API surface (dual-purpose). Calls `main()` when run directly; re-exports `./api` when imported as library. Also re-exports `parseCfWranglerArgs`, `ArgParseError`, and `runCfWranglerDev` for the `cf-wrangler` bin to call in-process.
 - `src/index.ts` — Yargs CLI tree builder (large file). Exports `main()`. NOT the package entry point despite the name.
 - `src/api/index.ts` — Public programmatic API barrel.
-- `src/cf-wrangler/` — The `cf-wrangler` delegate entrypoint, an experimental escape hatch for projects that can't use `@cloudflare/vite-plugin`. It sits directly on the internal `startDev` (the exact function `wrangler dev` runs) for byte-for-byte parity, exposing only `dev` + four flags (`--mode`, `--port`, `--host`, `--local`); the wrangler config file is found via wrangler's standard discovery (no `--config` flag). It is NOT a separate package and does NOT use the `unstable_dev` test harness. It shares its spawn contract (verb dispatch, flag vocabulary, exit-2 feature detection) with the sibling `cf-vite` delegate in `@cloudflare/vite-plugin`. Verb dispatch lives in `bin/cf-wrangler.js`; the dev verb implementation is exported from `cli.ts` as `runCfWranglerDev` and called by the bin in-process (reusing the main bundle to reach the internal `startDev`). The "unknown subcommand" error doubles as a feature-detection signal for the parent CLI.
+- `src/cf-wrangler/` — The `cf-wrangler` delegate entrypoint, an experimental escape hatch for projects that can't use `@cloudflare/vite-plugin`. It sits directly on the internal `startDev` (the exact function `wrangler dev` runs) for byte-for-byte parity, exposing only `dev` + four flags (`--mode`, `--port`, `--host`, `--local`); the wrangler config file is found via wrangler's standard discovery (no `--config` flag). It is NOT a separate package and does NOT use the `unstable_dev` test harness. It shares its spawn contract (verb dispatch, flag vocabulary, exit-2 feature detection) with the sibling `cf-vite` delegate in `@cloudflare/vite-plugin`. `bin/cf-wrangler.js` owns verb dispatch, argv parsing, and the `StartDevOptions` literal; `src/cf-wrangler/dev.ts` (exported as `runCfWranglerDev`) wraps `startDev` in the experimental-flags context and waits for teardown. `src/cf-wrangler/args.ts` (exported as `parseCfWranglerArgs` / `ArgParseError`) does the strict argv parse. The "unknown subcommand" error doubles as a feature-detection signal for the parent CLI.
 
 ## Conventions (Wrangler-Specific)
 

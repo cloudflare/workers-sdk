@@ -102,9 +102,13 @@ export type {
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";
 export { resolveNamedTunnel as unstable_resolveNamedTunnel } from "./tunnel/client";
 
-// Entry for the `cf-wrangler` delegate binary (see `bin/cf-wrangler.js`),
-// which calls this in-process. Not a stable public API.
-export { runDev as runCfWranglerDev } from "./cf-wrangler/dev";
+// Entries for the `cf-wrangler` delegate binary (see `bin/cf-wrangler.js`),
+// which calls these in-process. Not a stable public API.
+export { runCfWranglerDev } from "./cf-wrangler/dev";
+export {
+	ArgParseError,
+	parseArgs as parseCfWranglerArgs,
+} from "./cf-wrangler/args";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
 export { splitSqlQuery as unstable_splitSqlQuery } from "./d1/splitter";
