@@ -76,6 +76,10 @@ type AuthOverride = {
 };
 
 type AuthContext = {
+	// Whether the current command supports `--temporary` (set by the command
+	// registrar for commands the temporary deploy token can serve).
+	temporarySupported: boolean;
+	// Whether `--temporary` was passed.
 	allowTemporary: boolean;
 	override?: AuthOverride;
 };
@@ -83,12 +87,17 @@ type AuthContext = {
 const authContextStorage = new AsyncLocalStorage<AuthContext>();
 
 export function runWithAuthContext<T>(cb: () => T): T {
-	return authContextStorage.run({ allowTemporary: false }, cb);
+	return authContextStorage.run(
+		{ temporarySupported: false, allowTemporary: false },
+		cb
+	);
 }
 
+// Only called by the command registrar for commands that support `--temporary`.
 export function setAllowTemporary(allowTemporary: boolean): void {
 	const authContext = authContextStorage.getStore();
 	if (authContext) {
+		authContext.temporarySupported = true;
 		authContext.allowTemporary = allowTemporary;
 	}
 }
@@ -106,6 +115,10 @@ function setAuthOverride(override: AuthOverride): void {
 
 function shouldAllowTemporary(): boolean {
 	return authContextStorage.getStore()?.allowTemporary ?? false;
+}
+
+function isTemporarySupported(): boolean {
+	return authContextStorage.getStore()?.temporarySupported ?? false;
 }
 
 function logTemporaryPreviewAccount(
@@ -517,8 +530,12 @@ export async function requireAuth(
 		}
 
 		if (isNonInteractiveOrCI()) {
+			const message =
+				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.";
+			const temporaryHint =
+				"\n\nTo continue without logging in, rerun this command with `--temporary`. Wrangler will use a temporary account and print a claim URL.";
 			throw new UserError(
-				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.\n\nTo continue without logging in, rerun this command with `--temporary`. Wrangler will use a temporary account and print a claim URL.",
+				isTemporarySupported() ? message + temporaryHint : message,
 				{ telemetryMessage: "user auth missing api token non interactive" }
 			);
 		} else {

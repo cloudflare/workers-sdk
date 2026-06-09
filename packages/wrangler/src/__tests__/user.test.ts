@@ -24,6 +24,8 @@ import {
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
 	requireAuth,
+	runWithAuthContext,
+	setAllowTemporary,
 	writeAuthConfigFile,
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -444,10 +446,29 @@ describe("User", () => {
 		await expect(
 			requireAuth({} as Config)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.
-
-To continue without logging in, rerun this command with \`--temporary\`. Wrangler will use a temporary account and print a claim URL.]`
+			`[Error: In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.]`
 		);
+	});
+
+	it("suggests --temporary in the non-interactive auth error only for commands that support it", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+
+		// A command that does not support `--temporary` (no registrar opt-in).
+		await runWithAuthContext(async () => {
+			await expect(requireAuth({} as Config)).rejects.toThrowError(
+				/CLOUDFLARE_API_TOKEN\.$/
+			);
+		});
+
+		// A command that supports `--temporary` but wasn't passed the flag.
+		await runWithAuthContext(async () => {
+			setAllowTemporary(false);
+			await expect(requireAuth({} as Config)).rejects.toThrowError(
+				/rerun this command with `--temporary`/
+			);
+		});
 	});
 
 	it("should confirm no error message when refresh is successful", async ({
