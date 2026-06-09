@@ -68,13 +68,15 @@ function r2BucketEntries(
 ): [bindingName: string, entry: R2BucketEntry][] {
 	if (Array.isArray(buckets)) {
 		return buckets.map((bindingName) => [bindingName, { id: bindingName }]);
-	} else if (buckets !== undefined) {
+	}
+
+	if (buckets !== undefined) {
 		return Object.entries(buckets).map(([name, value]) =>
 			typeof value === "string" ? [name, { id: value }] : [name, value]
 		);
-	} else {
-		return [];
 	}
+
+	return [];
 }
 
 export function getR2PublicService(
