@@ -3274,7 +3274,8 @@ function validateContainerApp(
 			}
 			if (
 				!containerAppOptional.configuration?.image &&
-				!containerAppOptional.image
+				!containerAppOptional.image &&
+				containerAppOptional.rollout_kind !== "none"
 			) {
 				diagnostics.errors.push(
 					`"containers.image" field must be defined for each container app. This should be the path to your Dockerfile or an image URI pointing to the Cloudflare registry.`
@@ -6088,9 +6089,13 @@ function isRemoteValid(
  * @returns `true` if it is a dockerfile, `false` if it is a registry link, throws if neither
  */
 export function isDockerfile(
-	imagePath: string,
+	imagePath: string | undefined,
 	configPath: string | undefined
 ): boolean {
+	if (!imagePath) {
+		return false;
+	}
+
 	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
 	const maybeDockerfile = path.resolve(baseDir, imagePath);
 	if (fs.existsSync(maybeDockerfile)) {
