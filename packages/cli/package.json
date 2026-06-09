@@ -70,7 +70,7 @@
 	"dependencies": {
 		"@clack/core": "1.2.0",
 		"@cloudflare/workers-utils": "workspace:*",
-		"chalk": "5.3.0",
+		"chalk": "catalog:default",
 		"ci-info": "catalog:default",
 		"cross-spawn": "7.0.6",
 		"log-update": "5.0.1"

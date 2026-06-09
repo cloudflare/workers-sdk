@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	formatConfigSnippet,
@@ -20,6 +21,7 @@ import { getEntry } from "../../deployment-bundle/entry";
 import { getBindings, getHostAndRoutes, getInferredHost } from "../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
+import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -39,12 +41,13 @@ import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import { extractBindingsOfType, unwrapHook } from "./utils";
+import { unwrapHook } from "./utils";
 import type { DevRegistryUpdateEvent } from "./events";
 import type {
 	StartDevWorkerInput,
 	StartDevWorkerOptions,
 	Trigger,
+	WranglerStartDevWorkerInput,
 } from "./types";
 import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
@@ -54,7 +57,7 @@ const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
 
 async function resolveInspectorConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: WranglerStartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]["inspector"]> {
 	if (input.dev?.inspector === false) {
 		return false;
@@ -73,7 +76,7 @@ async function resolveInspectorConfig(
 
 async function resolveDevConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: WranglerStartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
 	const auth = async () => {
 		if (input.dev?.remote) {
@@ -206,6 +209,7 @@ async function resolveBindings(
 			{
 				registry,
 				local: !input.dev?.remote,
+				isMultiWorker: getFlag("MULTIWORKER"),
 				remoteBindingsDisabled: input.dev?.remote === false,
 				name: config.name,
 			}

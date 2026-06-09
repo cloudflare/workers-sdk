@@ -1,3 +1,4 @@
+import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
 import {
 	defaultWranglerConfig,
 	FatalError,
@@ -8,7 +9,12 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { maybeInstallCloudflareSkillsGlobally } from "../agents-skills-install";
-import { fetchResult, fetchListResult } from "../cfetch";
+import {
+	fetchKVGetValue,
+	fetchResult,
+	fetchListResult,
+	fetchPagedListResult,
+} from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { confirm, prompt } from "../dialogs";
@@ -261,6 +267,18 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				);
 
 				try {
+					// sets these values in the scope of deploy-helpers
+					initDeployHelpersContext({
+						logger,
+						fetchResult,
+						fetchListResult,
+						fetchPagedListResult,
+						fetchKVGetValue,
+						confirm,
+						prompt,
+						isNonInteractiveOrCI,
+					});
+
 					const result = await def.handler(args, {
 						sdk: createCloudflareClient(config),
 						config,
@@ -268,6 +286,8 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						logger,
 						fetchResult,
 						fetchListResult,
+						fetchPagedListResult,
+						fetchKVGetValue,
 						prompt,
 						confirm,
 						isNonInteractiveOrCI,

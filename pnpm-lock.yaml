@@ -30,9 +30,18 @@ catalogs:
     capnweb:
       specifier: 0.5.0
       version: 0.5.0
+    chalk:
+      specifier: 5.3.0
+      version: 5.3.0
     ci-info:
       specifier: 4.4.0
       version: 4.4.0
+    command-exists:
+      specifier: 1.2.9
+      version: 1.2.9
+    dotenv:
+      specifier: 16.3.1
+      version: 16.3.1
     esbuild:
       specifier: 0.27.3
       version: 0.27.3
@@ -1558,7 +1567,7 @@ importers:
         specifier: workspace:*
         version: link:../workers-utils
       chalk:
-        specifier: 5.3.0
+        specifier: catalog:default
         version: 5.3.0
       ci-info:
         specifier: catalog:default
@@ -1721,7 +1730,7 @@ importers:
         specifier: ^17.0.22
         version: 17.0.24
       command-exists:
-        specifier: ^1.2.9
+        specifier: catalog:default
         version: 1.2.9
       comment-json:
         specifier: ^4.5.0
@@ -1739,7 +1748,7 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
       dotenv:
-        specifier: ^16.0.0
+        specifier: catalog:default
         version: 16.3.1
       esbuild:
         specifier: catalog:default
@@ -1816,31 +1825,73 @@ importers:
 
   packages/deploy-helpers:
     dependencies:
-      '@cloudflare/workers-utils':
+      '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
-        version: link:../workers-utils
-    devDependencies:
+        version: link:../cli
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
-      '@cloudflare/workers-tsconfig':
+      '@cloudflare/workers-shared':
         specifier: workspace:*
-        version: link:../workers-tsconfig
-      '@types/node':
-        specifier: 22.15.17
-        version: 22.15.17
+        version: link:../workers-shared
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
+      blake3-wasm:
+        specifier: 2.1.5
+        version: 2.1.5
       chalk:
-        specifier: ^5.2.0
+        specifier: catalog:default
         version: 5.3.0
-      concurrently:
-        specifier: ^8.2.2
-        version: 8.2.2
+      command-exists:
+        specifier: catalog:default
+        version: 1.2.9
+      dotenv:
+        specifier: catalog:default
+        version: 16.3.1
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
       p-queue:
-        specifier: ^9.0.0
+        specifier: 9.0.0
         version: 9.0.0
+      pretty-bytes:
+        specifier: 6.1.1
+        version: 6.1.1
+      undici:
+        specifier: catalog:default
+        version: 7.24.8
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cspotcode/source-map-support':
+        specifier: 0.8.1
+        version: 0.8.1
+      '@types/command-exists':
+        specifier: ^1.2.0
+        version: 1.2.0
+      '@types/json-diff':
+        specifier: ^1.0.3
+        version: 1.0.3
+      '@types/node':
+        specifier: 22.15.17
+        version: 22.15.17
+      concurrently:
+        specifier: ^8.2.2
+        version: 8.2.2
+      devtools-protocol:
+        specifier: ^0.0.1182435
+        version: 0.0.1182435
+      esbuild:
+        specifier: catalog:default
+        version: 0.27.3
+      json-diff:
+        specifier: ^1.0.6
+        version: 1.0.6
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
       tsup:
         specifier: 8.3.0
         version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.14)(supports-color@9.2.2)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.1)
@@ -3990,7 +4041,7 @@ importers:
         specifier: ^5.2.0
         version: 5.2.0(encoding@0.1.13)
       command-exists:
-        specifier: ^1.2.9
+        specifier: catalog:default
         version: 1.2.9
       concurrently:
         specifier: ^8.2.2
@@ -4162,9 +4213,6 @@ importers:
       '@types/javascript-time-ago':
         specifier: ^2.0.3
         version: 2.0.3
-      '@types/json-diff':
-        specifier: ^1.0.3
-        version: 1.0.3
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -4211,7 +4259,7 @@ importers:
         specifier: catalog:default
         version: 0.5.0
       chalk:
-        specifier: ^5.2.0
+        specifier: catalog:default
         version: 5.3.0
       chokidar:
         specifier: ^4.0.1
@@ -4229,7 +4277,7 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       command-exists:
-        specifier: ^1.2.9
+        specifier: catalog:default
         version: 1.2.9
       concurrently:
         specifier: ^8.2.2
@@ -4241,7 +4289,7 @@ importers:
         specifier: ^0.0.1182435
         version: 0.0.1182435
       dotenv:
-        specifier: ^16.3.1
+        specifier: catalog:default
         version: 16.3.1
       dotenv-expand:
         specifier: ^12.0.2
@@ -4270,9 +4318,6 @@ importers:
       javascript-time-ago:
         specifier: ^2.5.4
         version: 2.5.7
-      json-diff:
-        specifier: ^1.0.6
-        version: 1.0.6
       jsonc-parser:
         specifier: catalog:default
         version: 3.2.0
@@ -4333,9 +4378,6 @@ importers:
       smol-toml:
         specifier: catalog:default
         version: 1.5.2
-      source-map:
-        specifier: ^0.6.1
-        version: 0.6.1
       supports-color:
         specifier: ^9.2.2
         version: 9.2.2

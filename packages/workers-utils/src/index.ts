@@ -116,7 +116,8 @@ export * from "./cfetch";
 export { fetchLatestNpmVersion } from "./update-check";
 export type { NpmVersionCheckResult } from "./update-check";
 
-export type { Logger } from "./logger";
+export { LOGGER_LEVELS } from "./logger";
+export type { Logger, LoggerLevel } from "./logger";
 
 export { retryOnAPIFailure } from "./retry";
 export { formatTime } from "./format-time";

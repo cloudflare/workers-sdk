@@ -1,3 +1,7 @@
+import { initApiDeployHelpersContext } from "./deploy-helpers-context";
+
+initApiDeployHelpersContext();
+
 export { unstable_dev } from "./dev";
 export type { Unstable_DevWorker, Unstable_DevOptions } from "./dev";
 export { unstable_pages } from "./pages";
@@ -17,7 +21,7 @@ export {
 } from "./mtls-certificate";
 
 // Exports from ./startDevWorker
-export { convertConfigBindingsToStartWorkerBindings } from "./startDevWorker/utils";
+export { convertConfigBindingsToStartWorkerBindings } from "./startDevWorker/binding-utils";
 export { DevEnv } from "./startDevWorker/DevEnv";
 export { startWorker } from "./startDevWorker";
 export type {

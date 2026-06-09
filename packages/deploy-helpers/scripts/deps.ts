@@ -5,7 +5,21 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
-	// Workspace package kept external so consumers share a single copy of
-	// workers-utils types and runtime code (e.g. ParseError instanceof checks).
+	// Workspace packages kept external so consumers share a single copy of
+	// types and runtime code (e.g. ParseError instanceof checks).
+	"@cloudflare/cli-shared-helpers",
+	"@cloudflare/containers-shared",
 	"@cloudflare/workers-utils",
+	"@cloudflare/workers-shared",
+	"miniflare",
+
+	// These are externalized to avoid duplication in wrangler's bundle,
+	// which already bundles these packages itself.
+	"blake3-wasm",
+	"chalk",
+	"command-exists",
+	"dotenv",
+	"p-queue",
+	"pretty-bytes",
+	"undici",
 ];

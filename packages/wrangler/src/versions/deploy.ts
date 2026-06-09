@@ -7,15 +7,14 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { type ApiVersion, printVersions } from "@cloudflare/deploy-helpers";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
-import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
 	fetchDeployableVersions,
@@ -24,13 +23,7 @@ import {
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
-import type {
-	ApiDeployment,
-	ApiVersion,
-	Percentage,
-	VersionCache,
-	VersionId,
-} from "./types";
+import type { Percentage, VersionCache, VersionId } from "./types";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
@@ -251,50 +244,10 @@ export const versionsDeployCommand = createCommand({
 	},
 });
 
-/**
- * Prompts the user for confirmation when overwriting the latest deployment, given that it's split.
- */
-export async function confirmLatestDeploymentOverwrite(
-	config: Config,
-	accountId: string,
-	scriptName: string
-) {
-	try {
-		const latest = await fetchLatestDeployment(config, accountId, scriptName);
-		if (latest && latest.versions.length >= 2) {
-			const versionCache: VersionCache = new Map();
-
-			// Print message and confirmation.
-
-			cli.warn(
-				`Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.`,
-				{ shape: cli.shapes.corners.tl, newlineBefore: false }
-			);
-			cli.newline();
-			await printDeployment(
-				config,
-				accountId,
-				scriptName,
-				latest,
-				"last",
-				versionCache
-			);
-
-			return inputPrompt<boolean>({
-				type: "confirm",
-				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
-				label: "",
-				defaultValue: isNonInteractiveOrCI(), // defaults to true in CI for back-compat
-				acceptDefault: isNonInteractiveOrCI(),
-			});
-		}
-	} catch (e) {
-		if (!isWorkerNotFoundError(e)) {
-			throw e;
-		}
-	}
-	return true;
-}
+export {
+	confirmLatestDeploymentOverwrite,
+	printVersions,
+} from "@cloudflare/deploy-helpers";
 
 export async function printLatestDeployment(
 	config: Config,
@@ -308,60 +261,17 @@ export async function printLatestDeployment(
 			return fetchLatestDeployment(config, accountId, workerName);
 		},
 	});
-	await printDeployment(
-		config,
-		accountId,
-		workerName,
-		latestDeployment,
-		"current",
-		versionCache
-	);
-}
-
-async function printDeployment(
-	config: Config,
-	accountId: string,
-	workerName: string,
-	deployment: ApiDeployment | undefined,
-	adjective: "current" | "last",
-	versionCache: VersionCache
-) {
 	const [versions, traffic] = await fetchDeploymentVersions(
 		config,
 		accountId,
 		workerName,
-		deployment,
+		latestDeployment,
 		versionCache
 	);
 	cli.logRaw(
-		`${leftT} Your ${adjective} deployment has ${versions.length} version(s):`
+		`${leftT} Your current deployment has ${versions.length} version(s):`
 	);
 	printVersions(versions, traffic);
-}
-
-export function printVersions(
-	versions: ApiVersion[],
-	traffic: Map<VersionId, Percentage>
-) {
-	cli.newline();
-	cli.log(formatVersions(versions, traffic));
-	cli.newline();
-}
-
-function formatVersions(
-	versions: ApiVersion[],
-	traffic: Map<VersionId, Percentage>
-) {
-	return versions
-		.map((version) => {
-			const trafficString = brandColor(`(${traffic.get(version.id)}%)`);
-			const versionIdString = white(version.id);
-			return gray(`${trafficString} ${versionIdString}
-      Created:  ${version.metadata.created_on}
-          Tag:  ${version.annotations?.["workers/tag"] ?? BLANK_INPUT}
-      Message:  ${version.annotations?.["workers/message"] ?? BLANK_INPUT}`);
-		})
-		.join("\n\n");
 }
 
 /**

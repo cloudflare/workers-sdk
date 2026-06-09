@@ -99,6 +99,9 @@ patchedDependencies:
 # ──────────────────────────────────────────────────────────────────────────────
 
 catalog:
+  chalk: "5.3.0"
+  command-exists: "1.2.9"
+  dotenv: "16.3.1"
   "@hey-api/openapi-ts": "0.94.0"
   "@types/node": "22.15.17"
 

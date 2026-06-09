@@ -61,7 +61,7 @@ export const triggersDeployCommand = createCommand({
 	behaviour: {
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
-	async handler(args, { config, ...ctx }) {
+	async handler(args, { config }) {
 		metrics.sendMetricsEvent("deploy worker triggers", {
 			sendMetrics: config.send_metrics,
 		});
@@ -76,15 +76,12 @@ export const triggersDeployCommand = createCommand({
 		const accountId = await requireAuth(config);
 		await ensureQueuesExistByConfig(config);
 
-		await triggersDeploy(
-			{
-				config,
-				accountId,
-				env: args.env,
-				firstDeploy: false,
-				...props,
-			},
-			ctx
-		);
+		await triggersDeploy({
+			config,
+			accountId,
+			env: args.env,
+			firstDeploy: false,
+			...props,
+		});
 	},
 });

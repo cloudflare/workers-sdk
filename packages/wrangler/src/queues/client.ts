@@ -11,7 +11,6 @@ import {
 } from "@cloudflare/deploy-helpers";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
-import { createDeployHelpersContext } from "../core/deploy-helpers-context";
 import { requireAuth } from "../user";
 import type {
 	CreateEventSubscriptionRequest,
@@ -99,13 +98,7 @@ export async function listQueues(
 ): Promise<QueueResponse[]> {
 	const accountId = await requireAuth(config);
 
-	return listQueuesImpl(
-		config,
-		accountId,
-		createDeployHelpersContext(),
-		page,
-		name
-	);
+	return listQueuesImpl(config, accountId, page, name);
 }
 
 async function listAllQueues(
@@ -127,12 +120,7 @@ export async function getQueue(
 	queueName: string
 ): Promise<QueueResponse> {
 	const accountId = await requireAuth(config);
-	return getQueueImpl(
-		config,
-		accountId,
-		queueName,
-		createDeployHelpersContext()
-	);
+	return getQueueImpl(config, accountId, queueName);
 }
 
 export async function ensureQueuesExistByConfig(config: Config) {
@@ -203,13 +191,7 @@ export async function postConsumer(
 	body: PostTypedConsumerBody
 ): Promise<TypedConsumerResponse> {
 	const accountId = await requireAuth(config);
-	return postConsumerImpl(
-		config,
-		accountId,
-		queueName,
-		body,
-		createDeployHelpersContext()
-	);
+	return postConsumerImpl(config, accountId, queueName, body);
 }
 
 export async function putConsumerById(
@@ -219,14 +201,7 @@ export async function putConsumerById(
 	body: PostTypedConsumerBody
 ): Promise<TypedConsumerResponse> {
 	const accountId = await requireAuth(config);
-	return putConsumerByIdImpl(
-		config,
-		accountId,
-		queueId,
-		consumerId,
-		body,
-		createDeployHelpersContext()
-	);
+	return putConsumerByIdImpl(config, accountId, queueId, consumerId, body);
 }
 
 export async function putConsumer(
@@ -243,8 +218,7 @@ export async function putConsumer(
 		queueName,
 		scriptName,
 		envName,
-		body,
-		createDeployHelpersContext()
+		body
 	);
 }
 
@@ -253,12 +227,7 @@ export async function deletePullConsumer(
 	queueName: string
 ): Promise<void> {
 	const accountId = await requireAuth(config);
-	return deletePullConsumerImpl(
-		config,
-		accountId,
-		queueName,
-		createDeployHelpersContext()
-	);
+	return deletePullConsumerImpl(config, accountId, queueName);
 }
 
 export async function listConsumers(
@@ -266,12 +235,7 @@ export async function listConsumers(
 	queueName: string
 ): Promise<Consumer[]> {
 	const accountId = await requireAuth(config);
-	return listConsumersImpl(
-		config,
-		accountId,
-		queueName,
-		createDeployHelpersContext()
-	);
+	return listConsumersImpl(config, accountId, queueName);
 }
 
 export async function deleteWorkerConsumer(
@@ -286,8 +250,7 @@ export async function deleteWorkerConsumer(
 		accountId,
 		queueName,
 		scriptName,
-		envName,
-		createDeployHelpersContext()
+		envName
 	);
 }
 
