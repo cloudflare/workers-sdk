@@ -1,4 +1,9 @@
-import type { fetchResult, fetchListResult } from "../cfetch";
+import type {
+	fetchKVGetValue,
+	fetchResult,
+	fetchListResult,
+	fetchPagedListResult,
+} from "../cfetch";
 import type { confirm, prompt } from "../dialogs";
 import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
@@ -111,6 +116,8 @@ export type HandlerContext = {
 	 */
 	fetchResult: typeof fetchResult;
 	fetchListResult: typeof fetchListResult;
+	fetchPagedListResult: typeof fetchPagedListResult;
+	fetchKVGetValue: typeof fetchKVGetValue;
 
 	/**
 	 * Interactive prompts

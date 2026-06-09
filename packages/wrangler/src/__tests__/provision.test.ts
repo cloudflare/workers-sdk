@@ -6,7 +6,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";
@@ -29,10 +29,6 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { DatabaseInfo } from "../d1/types";
 import type { ExpectStatic } from "vitest";
 
-vi.mock("../utils/fetch-secrets", () => ({
-	fetchSecrets: async () => [],
-}));
-
 describe("resource provisioning", () => {
 	const std = mockConsoleMethods();
 	mockAccountId();
@@ -44,7 +40,11 @@ describe("resource provisioning", () => {
 		setIsTTY(true);
 		msw.use(
 			...mswSuccessDeploymentScriptMetadata,
-			...mswListNewDeploymentsLatestFull
+			...mswListNewDeploymentsLatestFull,
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
 		mockSubDomainRequest();
 		writeWorkerSource();

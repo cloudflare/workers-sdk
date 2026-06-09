@@ -1,4 +1,10 @@
+import { deploy } from "@cloudflare/deploy-helpers";
+import { analyseBundle } from "../check/commands";
+import { buildContainer } from "../containers/build";
+import { getNormalizedContainerOptions } from "../containers/config";
+import { deployContainers } from "../containers/deploy";
 import { createCommand } from "../core/create-command";
+import { provisionBindings } from "../deployment-bundle/bindings";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -10,9 +16,9 @@ import {
 } from "../deployment-bundle/merge-config-args";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
+import { syncWorkersSite } from "../sites";
 import { getScriptName } from "../utils/getScriptName";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
-import deploy from "./deploy";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 
 export const deployCommand = createCommand({
@@ -104,7 +110,7 @@ export const deployCommand = createCommand({
 	validateArgs(args) {
 		validateDeployVersionsArgs(args, "deploy");
 	},
-	async handler(args, { config, ...ctx }) {
+	async handler(args, { config }) {
 		// --- Step 0. Auto-config --- //
 		const autoConfigResult = await maybeRunAutoConfig(args, config);
 		if (autoConfigResult.aborted) {
@@ -142,7 +148,14 @@ export const deployCommand = createCommand({
 				mergedProps,
 				config,
 				handleBuild,
-				ctx
+				{
+					syncWorkersSite,
+					provisionBindings,
+					getNormalizedContainerOptions,
+					buildContainer,
+					deployContainers,
+					analyseBundle,
+				}
 			);
 
 			writeOutput({

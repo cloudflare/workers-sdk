@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	formatConfigSnippet,
@@ -20,6 +21,7 @@ import { getEntry } from "../../deployment-bundle/entry";
 import { getBindings, getHostAndRoutes, getInferredHost } from "../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
+import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -39,12 +41,13 @@ import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import { extractBindingsOfType, unwrapHook } from "./utils";
+import { unwrapHook } from "./utils";
 import type { DevRegistryUpdateEvent } from "./events";
 import type {
 	StartDevWorkerInput,
 	StartDevWorkerOptions,
 	Trigger,
+	WranglerStartDevWorkerInput,
 } from "./types";
 import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
@@ -54,7 +57,7 @@ const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
 
 async function resolveInspectorConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: WranglerStartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]["inspector"]> {
 	if (input.dev?.inspector === false) {
 		return false;
@@ -73,7 +76,7 @@ async function resolveInspectorConfig(
 
 async function resolveDevConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: WranglerStartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
 	const auth = async () => {
 		if (input.dev?.remote) {
@@ -149,14 +152,22 @@ async function resolveDevConfig(
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
-			hostname: host ?? getInferredHost(routes, config.configPath),
+			hostname:
+				host ??
+				((input.dev?.inferOriginFromRoutes ?? true)
+					? getInferredHost(routes, config.configPath)
+					: undefined),
 		},
+		watch: input.dev?.watch,
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
+		outboundService: input.dev?.outboundService,
+		structuredLogsHandler: input.dev?.structuredLogsHandler,
 		// absolute resolved path
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
+		inferOriginFromRoutes: input.dev?.inferOriginFromRoutes ?? true,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
@@ -198,6 +209,7 @@ async function resolveBindings(
 			{
 				registry,
 				local: !input.dev?.remote,
+				isMultiWorker: getFlag("MULTIWORKER"),
 				remoteBindingsDisabled: input.dev?.remote === false,
 				name: config.name,
 			}
@@ -565,33 +577,39 @@ export class ConfigController extends Controller {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = readConfig(
-				{
-					script: input.entrypoint,
-					config: input.config,
-					env: input.env,
-					"dispatch-namespace": undefined,
-					"legacy-env": !input.legacy?.useServiceEnvironments,
-					remote: !!input.dev?.remote,
-					upstreamProtocol:
-						input.dev?.origin?.secure === undefined
-							? undefined
-							: input.dev?.origin?.secure
-								? "https"
-								: "http",
-					localProtocol:
-						input.dev?.server?.secure === undefined
-							? undefined
-							: input.dev?.server?.secure
-								? "https"
-								: "http",
-					generateTypes: input.dev?.generateTypes,
-				},
-				{ useRedirectIfAvailable: true }
-			);
+			const fileConfig =
+				typeof input.config === "object"
+					? input.config
+					: readConfig(
+							{
+								script: input.entrypoint,
+								config: input.config,
+								env: input.env,
+								"dispatch-namespace": undefined,
+								"legacy-env": !input.legacy?.useServiceEnvironments,
+								remote: !!input.dev?.remote,
+								upstreamProtocol:
+									input.dev?.origin?.secure === undefined
+										? undefined
+										: input.dev?.origin?.secure
+											? "https"
+											: "http",
+								localProtocol:
+									input.dev?.server?.secure === undefined
+										? undefined
+										: input.dev?.server?.secure
+											? "https"
+											: "http",
+								generateTypes: input.dev?.generateTypes,
+							},
+							{ useRedirectIfAvailable: true }
+						);
 
-			if (!getDisableConfigWatching()) {
+			if (!getDisableConfigWatching() && input.dev?.watch !== false) {
 				await this.#ensureWatchingConfig(fileConfig.configPath);
+			} else {
+				await this.#configWatcher?.close();
+				this.#configWatcher = undefined;
 			}
 
 			const { config: resolvedConfig, printCurrentBindings } =

@@ -4,116 +4,148 @@ import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli-shared-helpers";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
-import { triggersDeploy } from "@cloudflare/deploy-helpers";
 import {
 	APIError,
 	configFileName,
 	experimental_patchConfig,
-	getTodaysCompatDate,
 	formatConfigSnippet,
-	getDockerPath,
-	parseNonHyphenedUuid,
-	UserError,
 	formatTime,
+	getDockerPath,
+	getTodaysCompatDate,
+	parseNonHyphenedUuid,
+	retryOnAPIFailure,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import { buildAssetManifest, syncAssets } from "../assets";
-import { fetchResult } from "../cfetch";
-import { buildContainer } from "../containers/build";
-import { getNormalizedContainerOptions } from "../containers/config";
-import { deployContainers } from "../containers/deploy";
-import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
-import { printBundleSize } from "../deployment-bundle/bundle-reporter";
-import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { validateRoutes } from "../deployment-bundle/resolve-config-args";
-import {
-	addRequiredSecretsInheritBindings,
-	handleMissingSecretsError,
-} from "../deployment-bundle/secrets-validation";
-import { loadSourceMaps } from "../deployment-bundle/source-maps";
-import { confirm } from "../dialogs";
-import { getMigrationsToUpload } from "../durable";
+import { confirm, fetchResult, logger } from "../shared/context";
+import { triggersDeploy } from "../triggers/deploy";
+import { ensureQueuesExistByConfig } from "../triggers/queue-consumers";
+import { buildAssetManifest, syncAssets } from "./helpers/assets";
+import { getBindings } from "./helpers/binding-utils";
+import { printBundleSize } from "./helpers/bundle-reporter";
+import { checkRemoteSecretsOverride } from "./helpers/check-remote-secrets-override";
+import { checkWorkflowConflicts } from "./helpers/check-workflow-conflicts";
+import { getConfigPatch, getRemoteConfigDiff } from "./helpers/config-diffs";
+import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
+import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
+import { getDeployConfirmFunction } from "./helpers/deploy-confirm";
+import { deployWfpUserWorker } from "./helpers/deploy-wfp";
+import { downloadWorkerConfig } from "./helpers/download-worker-config";
+import { getMigrationsToUpload } from "./helpers/durable";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
-} from "../environments";
-import { isNonInteractiveOrCI } from "../is-interactive";
-import { logger } from "../logger";
-import { verifyWorkerMatchesCITag } from "../match-tag";
-import { ensureQueuesExistByConfig } from "../queues/client";
-import { parseBulkInputToObject } from "../secret";
-import { syncWorkersSite } from "../sites";
+} from "./helpers/environments";
+import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
+import { validateNodeCompatMode } from "./helpers/node-compat";
+import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
+import { parseConfigPlacement } from "./helpers/placement";
+import { printBindings } from "./helpers/print-bindings";
+import {
+	addRequiredSecretsInheritBindings,
+	handleMissingSecretsError,
+} from "./helpers/secrets-validation";
+import { loadSourceMaps } from "./helpers/source-maps";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
-} from "../sourcemap";
-import { downloadWorkerConfig } from "../utils/download-worker-config";
-import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
-import { parseConfigPlacement } from "../utils/placement";
-import { printBindings } from "../utils/print-bindings";
-import { retryOnAPIFailure } from "../utils/retry";
-import { useServiceEnvironments as useServiceEnvironmentsConfig } from "../utils/useServiceEnvironments";
-import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
+} from "./helpers/sourcemap";
+import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
+import { validateRoutes } from "./helpers/validate-routes";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
-} from "../versions/api";
-import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
-import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
-import { checkWorkflowConflicts } from "./check-workflow-conflicts";
-import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
-import type { StartDevWorkerInput } from "../api/startDevWorker/types";
-import type { HandlerContext } from "../core/types";
-import type { RetrieveSourceMapFunction } from "../sourcemap";
-import type { ApiVersion, Percentage, VersionId } from "../versions/types";
-import type { DeployProps, HandleBuild } from "@cloudflare/deploy-helpers";
+} from "./helpers/versions-api";
+import { isWorkerNotFoundError } from "./helpers/worker-not-found-error";
+import { addWorkersSitesBindings } from "./helpers/workers-sites-bindings";
+import type { DeployProps, HandleBuild } from "../shared/types";
+import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type {
+	ApiVersion,
+	Percentage,
+	VersionId,
+} from "./helpers/versions-types";
+import type {
+	ContainerNormalizedConfig,
+	ImageURIConfig,
+} from "@cloudflare/containers-shared";
+import type {
+	Binding,
 	CfModule,
-	CfScriptFormat,
 	CfWorkerInit,
+	ComplianceConfig,
 	Config,
+	LegacyAssetPaths,
 	RawConfig,
 } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 /**
- * Inject bindings into the Worker to support Workers Sites. These are injected at the last minute so that
- * they don't display in the output of `printBindings()`
+ * Wrangler-specific functions injected into `deploy()`. These remain in
+ * wrangler because they depend on wrangler-only systems (account selection,
+ * metrics, the dev-mode worker registry, container orchestration, etc.).
  */
-function addWorkersSitesBindings(
-	bindings: NonNullable<StartDevWorkerInput["bindings"]>,
-	namespace: string | undefined,
-	manifest:
-		| {
-				[filePath: string]: string;
-		  }
-		| undefined,
-	format: CfScriptFormat
-) {
-	const withSites = { ...bindings };
-	if (namespace) {
-		withSites["__STATIC_CONTENT"] = {
-			type: "kv_namespace",
-			id: namespace,
-		};
-	}
-
-	if (manifest && format === "service-worker") {
-		withSites["__STATIC_CONTENT_MANIFEST"] = {
-			type: "text_blob",
-			source: { contents: "__STATIC_CONTENT_MANIFEST" },
-		};
-	}
-	return withSites;
-}
+export type DeployCallbacks = {
+	syncWorkersSite:
+		| ((
+				complianceConfig: ComplianceConfig,
+				accountId: string | undefined,
+				scriptName: string,
+				siteAssets: LegacyAssetPaths | undefined,
+				preview: boolean,
+				dryRun: boolean | undefined,
+				oldAssetTTL: number | undefined
+		  ) => Promise<{
+				manifest: { [filePath: string]: string } | undefined;
+				namespace: string | undefined;
+		  }>)
+		| undefined;
+	provisionBindings:
+		| ((
+				bindings: Record<string, Binding>,
+				accountId: string,
+				scriptName: string,
+				autoCreate: boolean,
+				config: Config,
+				requireRemote?: boolean
+		  ) => Promise<void>)
+		| undefined;
+	getNormalizedContainerOptions:
+		| ((
+				config: Config,
+				args: {
+					containersRollout?: "gradual" | "immediate" | "none";
+					dryRun?: boolean;
+				}
+		  ) => Promise<ContainerNormalizedConfig[]>)
+		| undefined;
+	buildContainer:
+		| ((
+				containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
+				imageTag: string,
+				dryRun: boolean,
+				pathToDocker: string
+		  ) => Promise<unknown>)
+		| undefined;
+	deployContainers:
+		| ((
+				config: Config,
+				normalisedContainerConfig: ContainerNormalizedConfig[],
+				args: { versionId: string; accountId: string; scriptName: string }
+		  ) => Promise<void>)
+		| undefined;
+	analyseBundle:
+		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
+		| undefined;
+};
 
 export default async function deploy(
 	props: DeployProps,
 	config: Config,
 	buildWorker: HandleBuild,
-	ctx: Omit<HandlerContext, "config">
+	callbacks: DeployCallbacks
 ): Promise<{
 	sourceMapSize?: number;
 	versionId: string | null;
@@ -144,7 +176,9 @@ export default async function deploy(
 		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
 	}
 
-	const deployConfirm = getDeployConfirmFunction(props.strict);
+	const deployConfirm = getDeployConfirmFunction({
+		strictMode: props.strict,
+	});
 
 	// TODO: warn if git/hg has uncommitted changes
 	let workerTag: string | null = null;
@@ -245,6 +279,7 @@ export default async function deploy(
 	if (accountId) {
 		const remoteSecretsCheck = await checkRemoteSecretsOverride(
 			config,
+			accountId,
 			props.env
 		);
 
@@ -370,10 +405,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const isDryRun = props.dryRun;
 
-	const normalisedContainerConfig = await getNormalizedContainerOptions(
-		config,
-		props
-	);
+	const normalisedContainerConfig = callbacks.getNormalizedContainerOptions
+		? await callbacks.getNormalizedContainerOptions(config, props)
+		: [];
 	const {
 		modules,
 		dependencies,
@@ -413,19 +447,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		await buildAssetManifest(props.assetsOptions.directory);
 	}
 
-	const workersSitesAssets = await syncWorkersSite(
-		config,
-		accountId,
-		// When we're using the newer service environments, we wouldn't
-		// have added the env name on to the script name. However, we must
-		// include it in the kv namespace name regardless (since there's no
-		// concept of service environments for kv namespaces yet).
-		scriptName + (useServiceEnvironments ? `-${props.env}` : ""),
-		props.legacyAssetPaths,
-		false,
-		isDryRun,
-		props.oldAssetTtl
-	);
+	const workersSitesAssets = callbacks.syncWorkersSite
+		? await callbacks.syncWorkersSite(
+				config,
+				accountId,
+				// When we're using the newer service environments, we wouldn't
+				// have added the env name on to the script name. However, we must
+				// include it in the kv namespace name regardless (since there's no
+				// concept of service environments for kv namespaces yet).
+				scriptName + (useServiceEnvironments ? `-${props.env}` : ""),
+				props.legacyAssetPaths,
+				false,
+				isDryRun,
+				props.oldAssetTtl
+			)
+		: { manifest: undefined, namespace: undefined };
 
 	const bindings = getBindings(config);
 
@@ -567,8 +603,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	if (isDryRun) {
 		if (normalisedContainerConfig.length) {
 			for (const container of normalisedContainerConfig) {
-				if ("dockerfile" in container && props.containersRollout !== "none") {
-					await buildContainer(
+				if (
+					"dockerfile" in container &&
+					props.containersRollout !== "none" &&
+					callbacks.buildContainer
+				) {
+					await callbacks.buildContainer(
 						container,
 						workerTag ?? "worker-tag",
 						isDryRun,
@@ -602,8 +642,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	} else {
 		assert(accountId, "Missing accountId");
 
-		if (props.resourcesProvision) {
-			await provisionBindings(
+		if (props.resourcesProvision && callbacks.provisionBindings) {
+			await callbacks.provisionBindings(
 				bindings ?? {},
 				accountId,
 				scriptName,
@@ -625,7 +665,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 		);
 
-		await ensureQueuesExistByConfig(config);
+		await ensureQueuesExistByConfig(config, accountId);
 		let bindingsPrinted = false;
 
 		// Upload the script so it has time to propagate.
@@ -642,19 +682,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			// If we're using the new APIs, first upload the version
 			if (canUseNewVersionsDeploymentsApi) {
 				// Upload new version
-				const versionResult = await retryOnAPIFailure(async () =>
-					fetchResult<ApiVersion>(
-						config,
-						`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
-						{
-							method: "POST",
-							body: workerBundle,
-							headers: props.sendMetrics
-								? { metricsEnabled: "true" }
-								: undefined,
-						},
-						new URLSearchParams({ bindings_inherit: "strict" })
-					)
+				const versionResult = await retryOnAPIFailure(
+					async () =>
+						fetchResult<ApiVersion>(
+							config,
+							`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
+							{
+								method: "POST",
+								body: workerBundle,
+								headers: props.sendMetrics
+									? { metricsEnabled: "true" }
+									: undefined,
+							},
+							new URLSearchParams({ bindings_inherit: "strict" })
+						),
+					logger
 				);
 
 				// Deploy new version to 100%
@@ -665,7 +707,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					accountId,
 					scriptName,
 					versionMap,
-					props.message
+					props.message,
+					undefined
 				);
 
 				// Update service and environment tags when using environments
@@ -695,31 +738,33 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					startup_time_ms: versionResult.startup_time_ms,
 				};
 			} else {
-				result = await retryOnAPIFailure(async () =>
-					fetchResult<{
-						id: string | null;
-						etag: string | null;
-						pipeline_hash: string | null;
-						mutable_pipeline_id: string | null;
-						deployment_id: string | null;
-						startup_time_ms: number;
-					}>(
-						config,
-						workerUrl,
-						{
-							method: "PUT",
-							body: workerBundle,
-							headers: props.sendMetrics
-								? { metricsEnabled: "true" }
-								: undefined,
-						},
-						new URLSearchParams({
-							// pass excludeScript so the whole body of the
-							// script doesn't get included in the response
-							excludeScript: "true",
-							bindings_inherit: "strict",
-						})
-					)
+				result = await retryOnAPIFailure(
+					async () =>
+						fetchResult<{
+							id: string | null;
+							etag: string | null;
+							pipeline_hash: string | null;
+							mutable_pipeline_id: string | null;
+							deployment_id: string | null;
+							startup_time_ms: number;
+						}>(
+							config,
+							workerUrl,
+							{
+								method: "PUT",
+								body: workerBundle,
+								headers: props.sendMetrics
+									? { metricsEnabled: "true" }
+									: undefined,
+							},
+							new URLSearchParams({
+								// pass excludeScript so the whole body of the
+								// script doesn't get included in the response
+								excludeScript: "true",
+								bindings_inherit: "strict",
+							})
+						),
+					logger
 				);
 
 				// Update service and environment tags when using environments
@@ -789,7 +834,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				err,
 				dependencies,
 				workerBundle,
-				projectRoot
+				projectRoot,
+				callbacks.analyseBundle
 			);
 			if (message !== null) {
 				logger.error(message);
@@ -867,9 +913,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
-	if (normalisedContainerConfig.length && props.containersRollout !== "none") {
+	if (
+		normalisedContainerConfig.length &&
+		props.containersRollout !== "none" &&
+		callbacks.deployContainers
+	) {
 		assert(versionId && accountId);
-		await deployContainers(config, normalisedContainerConfig, {
+		await callbacks.deployContainers(config, normalisedContainerConfig, {
 			versionId,
 			accountId,
 			scriptName,
@@ -883,19 +933,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 	assert(accountId);
 	// deploy triggers
-	const targets = await triggersDeploy(
-		{
-			config,
-			accountId,
-			scriptName,
-			env: props.env,
-			crons: props.triggers,
-			useServiceEnvironments,
-			firstDeploy: !workerExists,
-			routes: allDeploymentRoutes,
-		},
-		ctx
-	);
+	const targets = await triggersDeploy({
+		config,
+		accountId,
+		scriptName,
+		env: props.env,
+		crons: props.triggers,
+		useServiceEnvironments,
+		firstDeploy: !workerExists,
+		routes: allDeploymentRoutes,
+	});
 
 	logger.log("Current Version ID:", versionId);
 
@@ -905,33 +952,4 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		workerTag,
 		targets: targets ?? [],
 	};
-}
-
-function deployWfpUserWorker(
-	dispatchNamespace: string,
-	versionId: string | null
-) {
-	// Will go under the "Uploaded" text
-	logger.log("  Dispatch Namespace:", dispatchNamespace);
-	logger.log("Current Version ID:", versionId);
-}
-
-function getDeployConfirmFunction(
-	strictMode = false
-): (text: string) => Promise<boolean> {
-	const nonInteractive = isNonInteractiveOrCI();
-
-	if (nonInteractive && strictMode) {
-		return async () => {
-			logger.error(
-				"Aborting the deployment operation because of conflicts. To override and deploy anyway remove the `--strict` flag"
-			);
-			process.exitCode = 1;
-			return false;
-		};
-	} else if (nonInteractive) {
-		// if its not in strict mode, continue without asking
-		return async () => true;
-	}
-	return confirm;
 }

@@ -2,6 +2,7 @@ import {
 	addAuthorizationHeader,
 	APIError,
 	fetchInternalBase,
+	fetchKVGetValueBase,
 	getCloudflareApiBaseUrl,
 	performApiFetchBase,
 	UserError,
@@ -187,22 +188,16 @@ export async function fetchKVGetValue(
 	namespaceId: string,
 	key: string
 ): Promise<ArrayBuffer> {
-	await requireLoggedIn(complianceConfig);
-	const auth = requireApiToken();
-	const headers = new Headers();
-	addAuthorizationHeader(headers, auth);
-	const resource = `${getCloudflareApiBaseUrl(complianceConfig)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
-	const response = await fetch(resource, {
-		method: "GET",
-		headers,
-	});
-	if (response.ok) {
-		return await response.arrayBuffer();
-	} else {
-		throw new Error(
-			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
-		);
-	}
+	const credentials = await resolveCredentials(complianceConfig);
+	return fetchKVGetValueBase(
+		complianceConfig,
+		accountId,
+		namespaceId,
+		key,
+		`wrangler/${wranglerVersion}`,
+		logger,
+		credentials
+	);
 }
 
 /**

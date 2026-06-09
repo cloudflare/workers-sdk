@@ -7,6 +7,12 @@ import {
 import chalk from "chalk";
 import PQueue from "p-queue";
 import {
+	fetchListResult,
+	fetchResult,
+	isNonInteractiveOrCI,
+	logger,
+} from "../shared/context";
+import {
 	publishCustomDomains,
 	publishRoutes,
 	renderRoute,
@@ -14,17 +20,12 @@ import {
 import { updateQueueConsumers } from "./queue-consumers";
 import { getWorkersDevSubdomain } from "./subdomain";
 import { getZoneForRoute } from "./zones";
-import type {
-	DeployHelpersContext,
-	TriggerDeployment,
-	TriggerProps,
-} from "../shared/types";
+import type { TriggerDeployment, TriggerProps } from "../shared/types";
 import type { RouteObject } from "./publish-routes";
 import type { Config, Route } from "@cloudflare/workers-utils";
 
 export async function triggersDeploy(
-	props: TriggerProps,
-	ctx: DeployHelpersContext
+	props: TriggerProps
 ): Promise<string[] | void> {
 	const { config, accountId, scriptName, routes, crons } = props;
 
@@ -61,8 +62,7 @@ export async function triggersDeploy(
 		workerUrl,
 		routes,
 		deployments,
-		props.firstDeploy,
-		ctx
+		props.firstDeploy
 	);
 
 	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
@@ -99,7 +99,6 @@ export async function triggersDeploy(
 					const zone = await getZoneForRoute(
 						config,
 						{ route, accountId },
-						ctx,
 						zoneIdCache
 					);
 					if (!zone) {
@@ -113,11 +112,11 @@ export async function triggersDeploy(
 					if (!routesInZone) {
 						routesInZone = retryOnAPIFailure(
 							() =>
-								ctx.fetchListResult<{
+								fetchListResult<{
 									pattern: string;
 									script: string;
 								}>(config, `/zones/${zone.id}/workers/routes`),
-							ctx.logger
+							logger
 						);
 						zoneRoutesCache.set(zone.id, routesInZone);
 					}
@@ -163,7 +162,7 @@ export async function triggersDeploy(
 	}
 
 	if (!wantWorkersDev && hasWorkflowsDefinedInThisScript) {
-		await getWorkersDevSubdomain(config, accountId, ctx, {
+		await getWorkersDevSubdomain(config, accountId, {
 			configPath: config.configPath,
 			registrationContext: "workflows",
 		});
@@ -172,17 +171,12 @@ export async function triggersDeploy(
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
-			publishRoutes(
-				config,
-				routesOnly,
-				{
-					workerUrl,
-					scriptName,
-					useServiceEnvironments: props.useServiceEnvironments,
-					accountId,
-				},
-				ctx
-			).then(
+			publishRoutes(config, routesOnly, {
+				workerUrl,
+				scriptName,
+				useServiceEnvironments: props.useServiceEnvironments,
+				accountId,
+			}).then(
 				() => {
 					if (routesOnly.length > 10) {
 						return {
@@ -206,8 +200,7 @@ export async function triggersDeploy(
 				config,
 				workerUrl,
 				accountId,
-				customDomainsOnly,
-				ctx
+				customDomainsOnly
 			).catch((error) => ({ targets: [], error }))
 		);
 	}
@@ -217,21 +210,19 @@ export async function triggersDeploy(
 	// If it is an empty array we will remove all schedules.
 	if (crons) {
 		deployments.push(
-			ctx
-				.fetchResult(config, `${workerUrl}/schedules`, {
-					// Note: PUT will override previous schedules on this script.
-					method: "PUT",
-					body: JSON.stringify(crons.map((cron) => ({ cron }))),
-					headers: {
-						"Content-Type": "application/json",
-					},
-				})
-				.then(
-					() => ({
-						targets: crons.map((trigger) => `schedule: ${trigger}`),
-					}),
-					(error) => ({ targets: [], error })
-				)
+			fetchResult(config, `${workerUrl}/schedules`, {
+				// Note: PUT will override previous schedules on this script.
+				method: "PUT",
+				body: JSON.stringify(crons.map((cron) => ({ cron }))),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			}).then(
+				() => ({
+					targets: crons.map((trigger) => `schedule: ${trigger}`),
+				}),
+				(error) => ({ targets: [], error })
+			)
 		);
 	}
 
@@ -248,8 +239,7 @@ export async function triggersDeploy(
 			config,
 			accountId,
 			scriptName,
-			config,
-			ctx
+			config
 		);
 		deployments.push(...consumerUpdates);
 	}
@@ -284,32 +274,30 @@ export async function triggersDeploy(
 			}
 
 			deployments.push(
-				ctx
-					.fetchResult(
-						config,
-						`/accounts/${accountId}/workflows/${workflow.name}`,
-						{
-							method: "PUT",
-							body: JSON.stringify({
-								script_name: scriptName,
-								class_name: workflow.class_name,
-								...(workflow.limits && { limits: workflow.limits }),
-								...(workflow.schedules && {
-									schedules: (Array.isArray(workflow.schedules)
-										? workflow.schedules
-										: [workflow.schedules]
-									).map((cron) => ({ cron })),
-								}),
+				fetchResult(
+					config,
+					`/accounts/${accountId}/workflows/${workflow.name}`,
+					{
+						method: "PUT",
+						body: JSON.stringify({
+							script_name: scriptName,
+							class_name: workflow.class_name,
+							...(workflow.limits && { limits: workflow.limits }),
+							...(workflow.schedules && {
+								schedules: (Array.isArray(workflow.schedules)
+									? workflow.schedules
+									: [workflow.schedules]
+								).map((cron) => ({ cron })),
 							}),
-							headers: {
-								"Content-Type": "application/json",
-							},
-						}
-					)
-					.then(
-						() => ({ targets: [`workflow: ${workflow.name}`] }),
-						(error) => ({ targets: [], error })
-					)
+						}),
+						headers: {
+							"Content-Type": "application/json",
+						},
+					}
+				).then(
+					() => ({ targets: [`workflow: ${workflow.name}`] }),
+					(error) => ({ targets: [], error })
+				)
 			);
 		}
 	}
@@ -328,12 +316,12 @@ export async function triggersDeploy(
 			(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
 		);
 	if (targets.length > 0) {
-		ctx.logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
+		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
 		for (const target of targets) {
-			ctx.logger.log(" ", target);
+			logger.log(" ", target);
 		}
 	} else {
-		ctx.logger.log("No targets deployed for", workerName, formatTime(deployMs));
+		logger.log("No targets deployed for", workerName, formatTime(deployMs));
 	}
 
 	const errors = completedDeployments
@@ -419,8 +407,7 @@ async function validateSubdomainMixedState(
 	scriptName: string,
 	before: { workers_dev: boolean; preview_urls: boolean },
 	after: { workers_dev: boolean; preview_urls: boolean },
-	firstDeploy: boolean,
-	ctx: DeployHelpersContext
+	firstDeploy: boolean
 ): Promise<{
 	workers_dev: boolean;
 	preview_urls: boolean;
@@ -442,7 +429,7 @@ async function validateSubdomainMixedState(
 	}
 
 	// Early return if non-interactive or CI
-	if (ctx.isNonInteractiveOrCI()) {
+	if (isNonInteractiveOrCI()) {
 		return after;
 	}
 
@@ -456,14 +443,14 @@ async function validateSubdomainMixedState(
 		return after;
 	}
 
-	const userSubdomain = await getWorkersDevSubdomain(config, accountId, ctx, {
+	const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
 		configPath: config.configPath,
 	});
 	const previewUrl = `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`;
 
 	// Scenario 1: User disables workers.dev while having preview URLs enabled
 	if (!after.workers_dev && after.preview_urls) {
-		ctx.logger.warn(
+		logger.warn(
 			[
 				"You are disabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still enabled.",
 				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
@@ -476,7 +463,7 @@ async function validateSubdomainMixedState(
 
 	// Scenario 2: User enables workers.dev when Preview URLs are off
 	if (after.workers_dev && !after.preview_urls) {
-		ctx.logger.warn(
+		logger.warn(
 			[
 				"You are enabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still disabled.",
 				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
@@ -498,8 +485,7 @@ async function subdomainDeploy(
 	workerUrl: string,
 	routes: Route[],
 	deployments: Promise<TriggerDeployment>[],
-	firstDeploy: boolean,
-	ctx: DeployHelpersContext
+	firstDeploy: boolean
 ) {
 	const { config } = props;
 
@@ -510,7 +496,7 @@ async function subdomainDeploy(
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 	if (wantWorkersDev) {
-		const userSubdomain = await getWorkersDevSubdomain(config, accountId, ctx, {
+		const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
 			configPath: config.configPath,
 		});
 		const workersDevURL =
@@ -521,7 +507,7 @@ async function subdomainDeploy(
 	}
 
 	// Get current subdomain enablement status.
-	const before = await ctx.fetchResult<{
+	const before = await fetchResult<{
 		enabled: boolean;
 		previews_enabled: boolean;
 	}>(config, `${workerUrl}/subdomain`);
@@ -531,7 +517,7 @@ async function subdomainDeploy(
 	// we retry this request a few times to mitigate that.
 	const after = await retryOnAPIFailure(
 		async () =>
-			ctx.fetchResult<{
+			fetchResult<{
 				enabled: boolean;
 				previews_enabled: boolean;
 			}>(config, `${workerUrl}/subdomain`, {
@@ -545,7 +531,7 @@ async function subdomainDeploy(
 					"Cloudflare-Workers-Script-Api-Date": "2025-08-01",
 				},
 			}),
-		ctx.logger
+		logger
 	);
 
 	// Warn about mismatching config and current values.
@@ -561,7 +547,7 @@ async function subdomainDeploy(
 				return enabled ? "enable" : "disable";
 			}
 		};
-		ctx.logger.warn(
+		logger.warn(
 			[
 				`Because 'workers_dev' is not in your Wrangler file, it will be ${status(after.enabled, true)} for this deployment by default.`,
 				`To override this setting, you can ${status(before.enabled, false)} workers.dev by explicitly setting 'workers_dev = ${before.enabled}' in your Wrangler file.`,
@@ -581,7 +567,7 @@ async function subdomainDeploy(
 				return enabled ? "enable" : "disable";
 			}
 		};
-		ctx.logger.warn(
+		logger.warn(
 			[
 				`Because your 'workers.dev' route is ${status(after.enabled, true)} and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be ${status(after.previews_enabled, true)} for this deployment by default.`,
 				`To override this setting, you can ${status(before.previews_enabled, false)} Preview URLs by explicitly setting 'preview_urls = ${before.previews_enabled}' in your Wrangler file.`,
@@ -596,8 +582,7 @@ async function subdomainDeploy(
 		scriptName,
 		{ workers_dev: before.enabled, preview_urls: before.previews_enabled },
 		{ workers_dev: after.enabled, preview_urls: after.previews_enabled },
-		firstDeploy,
-		ctx
+		firstDeploy
 	);
 
 	return {

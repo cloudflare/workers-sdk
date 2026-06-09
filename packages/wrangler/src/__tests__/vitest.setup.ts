@@ -1,11 +1,32 @@
 import { PassThrough } from "node:stream";
+import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
 import chalk from "chalk";
 import { passthrough } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
+import {
+	fetchKVGetValue,
+	fetchResult,
+	fetchListResult,
+	fetchPagedListResult,
+} from "../cfetch";
+import { confirm, prompt } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
 import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems
 chalk.level = 0;
+
+initDeployHelpersContext({
+	logger,
+	fetchResult,
+	fetchListResult,
+	fetchPagedListResult,
+	fetchKVGetValue,
+	confirm,
+	prompt,
+	isNonInteractiveOrCI,
+});
 
 // In general we don't want the ConfigController to watch the config files
 // as this tends to make the tests flaky.

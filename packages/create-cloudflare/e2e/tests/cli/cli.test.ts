@@ -322,21 +322,23 @@ describe("Create Cloudflare CLI", () => {
 		test.skipIf(isWindows)(
 			"Error when --lang=python is used with a category that has no Python templates",
 			async ({ expect, logStream, project }) => {
-				const { errors } = await runC3(
-					[
-						project.path,
-						"--lang=python",
-						"--category=demo",
-						"--no-deploy",
-						"--git=false",
-					],
-					[],
-					logStream
-				);
-
-				expect(errors).toContain(
-					`No templates available for language "python" in the "demo" category`
-				);
+				await expect(
+					runC3(
+						[
+							project.path,
+							"--lang=python",
+							"--category=demo",
+							"--no-deploy",
+							"--git=false",
+						],
+						[],
+						logStream
+					)
+				).rejects.toMatchObject({
+					errors: expect.stringContaining(
+						`No templates available for language "python" in the "demo" category`
+					),
+				});
 			}
 		);
 
@@ -745,14 +747,17 @@ describe("Create Cloudflare CLI", () => {
 				expect,
 				logStream,
 			}) => {
-				const { errors } = await runC3(
-					["--platform=pages", `--framework=${framework}`, "my-app"],
-					[],
-					logStream
-				);
-				expect(errors).toMatch(
-					/Error: The .*? framework doesn't support the "pages" platform/
-				);
+				await expect(
+					runC3(
+						["--platform=pages", `--framework=${framework}`, "my-app"],
+						[],
+						logStream
+					)
+				).rejects.toMatchObject({
+					errors: expect.stringMatching(
+						/Error: The .*? framework doesn't support the "pages" platform/
+					),
+				});
 			})
 		);
 
@@ -760,63 +765,72 @@ describe("Create Cloudflare CLI", () => {
 			expect,
 			logStream,
 		}) => {
-			const { errors } = await runC3(
-				[
-					"my-app",
-					"--framework=react",
-					"--platform=workers",
-					"--variant=invalid-variant",
-					"--no-deploy",
-					"--git=false",
-				],
-				[],
-				logStream
-			);
-			expect(errors).toContain(
-				'Unknown variant "invalid-variant". Valid variants are: react-ts, react'
-			);
+			await expect(
+				runC3(
+					[
+						"my-app",
+						"--framework=react",
+						"--platform=workers",
+						"--variant=invalid-variant",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream
+				)
+			).rejects.toMatchObject({
+				errors: expect.stringContaining(
+					'Unknown variant "invalid-variant". Valid variants are: react-ts, react'
+				),
+			});
 		});
 
 		test("error when using deprecated SWC --variant for React Workers framework", async ({
 			expect,
 			logStream,
 		}) => {
-			const { errors } = await runC3(
-				[
-					"my-app",
-					"--framework=react",
-					"--platform=workers",
-					"--variant=react-swc-ts",
-					"--no-deploy",
-					"--git=false",
-				],
-				[],
-				logStream
-			);
-			expect(errors).toContain(
-				'The React variant "react-swc-ts" is no longer available. Use "react-ts" instead.'
-			);
+			await expect(
+				runC3(
+					[
+						"my-app",
+						"--framework=react",
+						"--platform=workers",
+						"--variant=react-swc-ts",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream
+				)
+			).rejects.toMatchObject({
+				errors: expect.stringContaining(
+					'The React variant "react-swc-ts" is no longer available. Use "react-ts" instead.'
+				),
+			});
 		});
 
 		test("error when using invalid --variant for React Pages framework", async ({
 			expect,
 			logStream,
 		}) => {
-			const { errors } = await runC3(
-				[
-					"my-app",
-					"--framework=react",
-					"--platform=pages",
-					"--variant=invalid-variant",
-					"--no-deploy",
-					"--git=false",
-				],
-				[],
-				logStream
-			);
-			expect(errors).toContain(
-				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc'
-			);
+			await expect(
+				runC3(
+					[
+						"my-app",
+						"--framework=react",
+						"--platform=pages",
+						"--variant=invalid-variant",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream
+				)
+			).rejects.toMatchObject({
+				errors: expect.stringContaining(
+					'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc'
+				),
+			});
 		});
 
 		test("accepts --variant for React Pages framework without prompting", async ({
@@ -921,14 +935,17 @@ describe("Create Cloudflare CLI", () => {
 				logStream,
 				project,
 			}) => {
-				const { errors } = await runC3(
-					[project.path, "--platform=pages", `--category=${category}`],
-					[],
-					logStream
-				);
-				expect(errors).toContain(
-					`The "${category}" category is not available for the "pages" platform`
-				);
+				await expect(
+					runC3(
+						[project.path, "--platform=pages", `--category=${category}`],
+						[],
+						logStream
+					)
+				).rejects.toMatchObject({
+					errors: expect.stringContaining(
+						`The "${category}" category is not available for the "pages" platform`
+					),
+				});
 			})
 		);
 	});

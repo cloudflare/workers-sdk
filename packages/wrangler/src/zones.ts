@@ -1,7 +1,6 @@
 import { getZoneForRoute, getZoneIdFromHost } from "@cloudflare/deploy-helpers";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchListResult } from "./cfetch";
-import { createDeployHelpersContext } from "./core/deploy-helpers-context";
 import type { ZoneIdCache } from "@cloudflare/deploy-helpers";
 import type { ComplianceConfig, Route } from "@cloudflare/workers-utils";
 
@@ -19,7 +18,6 @@ export async function getZoneIdForPreview(
 		accountId: string;
 	}
 ) {
-	const ctx = createDeployHelpersContext();
 	const zoneIdCache: ZoneIdCache = new Map();
 	const { host, routes, accountId } = from;
 	let zoneId: string | undefined;
@@ -27,7 +25,6 @@ export async function getZoneIdForPreview(
 		zoneId = await getZoneIdFromHost(
 			complianceConfig,
 			{ host, accountId },
-			ctx,
 			zoneIdCache
 		);
 	}
@@ -39,7 +36,6 @@ export async function getZoneIdForPreview(
 				route: firstRoute,
 				accountId,
 			},
-			ctx,
 			zoneIdCache
 		);
 		if (zone) {
@@ -125,14 +121,10 @@ export async function getWorkerForZone(
 	configPath: string | undefined
 ) {
 	const { worker, accountId } = from;
-	const zone = await getZoneForRoute(
-		complianceConfig,
-		{
-			route: worker,
-			accountId,
-		},
-		createDeployHelpersContext()
-	);
+	const zone = await getZoneForRoute(complianceConfig, {
+		route: worker,
+		accountId,
+	});
 	if (!zone) {
 		throw new UserError(
 			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`,

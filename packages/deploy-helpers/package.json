@@ -21,6 +21,10 @@
 		".": {
 			"import": "./dist/index.mjs",
 			"types": "./dist/index.d.mts"
+		},
+		"./context": {
+			"import": "./dist/context.mjs",
+			"types": "./dist/context.d.mts"
 		}
 	},
 	"scripts": {
@@ -33,16 +37,30 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
-		"@cloudflare/workers-utils": "workspace:*"
+		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/workers-shared": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"blake3-wasm": "2.1.5",
+		"chalk": "catalog:default",
+		"command-exists": "catalog:default",
+		"dotenv": "catalog:default",
+		"miniflare": "workspace:*",
+		"p-queue": "9.0.0",
+		"pretty-bytes": "6.1.1",
+		"undici": "catalog:default"
 	},
 	"devDependencies": {
-		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cspotcode/source-map-support": "0.8.1",
+		"@types/command-exists": "^1.2.0",
+		"@types/json-diff": "^1.0.3",
 		"@types/node": "catalog:default",
-		"chalk": "^5.2.0",
 		"concurrently": "^8.2.2",
-		"miniflare": "workspace:*",
-		"p-queue": "^9.0.0",
+		"devtools-protocol": "^0.0.1182435",
+		"esbuild": "catalog:default",
+		"json-diff": "^1.0.6",
+		"ts-dedent": "^2.2.0",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"

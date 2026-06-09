@@ -79,6 +79,10 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
+	override get mf(): Miniflare | undefined {
+		return this.#mf;
+	}
+
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
 	#remoteProxySessionsData = new Map<
@@ -271,7 +275,10 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
 				// so only one update can happen at a time.
 				const userWorkerUrl = await this.#mf.ready;
-				const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
+				const userWorkerInspectorUrl =
+					data.config.dev.inspector !== false
+						? await this.#mf.getInspectorURL()
+						: null;
 				// If we received a new `bundleComplete` event for *any* worker
 				// before we were able to dispatch a `reloadComplete`, ignore
 				// this bundle — the later handler will apply the full config.
@@ -289,12 +296,14 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 							hostname: userWorkerUrl.hostname,
 							port: userWorkerUrl.port,
 						},
-						userWorkerInspectorUrl: {
-							protocol: userWorkerInspectorUrl.protocol,
-							hostname: userWorkerInspectorUrl.hostname,
-							port: userWorkerInspectorUrl.port,
-							pathname: `/core:user:${data.config.name}`,
-						},
+						userWorkerInspectorUrl: userWorkerInspectorUrl
+							? {
+									protocol: userWorkerInspectorUrl.protocol,
+									hostname: userWorkerInspectorUrl.hostname,
+									port: userWorkerInspectorUrl.port,
+									pathname: `/core:user:${data.config.name}`,
+								}
+							: undefined,
 						userWorkerInnerUrlOverrides: getUserWorkerInnerUrlOverrides(
 							data.config
 						),

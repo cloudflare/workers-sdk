@@ -1,5 +1,119 @@
 # wrangler
 
+## 4.99.0
+
+### Minor Changes
+
+- [#14169](https://github.com/cloudflare/workers-sdk/pull/14169) [`0706fbf`](https://github.com/cloudflare/workers-sdk/commit/0706fbf950548aaa8177a062a7c5d41822dfba0d) Thanks [@edmundhung](https://github.com/edmundhung)! - Introduce `createTestHarness()` for integration testing Workers
+
+  It runs Workers in a local preview environment using production build output and works with both Wrangler projects and Workers built by the Cloudflare Vite plugin.
+
+  Use it from any Node.js test runner to send requests to individual Workers, trigger scheduled events, reset the server between tests, and mock outbound requests with libraries that intercept `globalThis.fetch()`, such as MSW.
+
+  You can also capture structured logs from your Workers with `getLogs()`, or dump out a diagnostic timeline with `debug()` when tests fail:
+
+  ```ts
+  import { createTestHarness } from "wrangler";
+
+  const server = createTestHarness({
+    workers: [
+      { configPath: "./dist/web_worker/wrangler.json" },
+      { configPath: "./dist/api_worker/wrangler.json" },
+    ],
+  });
+
+  await server.listen();
+  await server.fetch("http://example.com");
+
+  const apiWorker = server.getWorker("api-worker");
+  await apiWorker.fetch("http://example.com/users/123");
+  await apiWorker.scheduled({ cron: "0 0 * * *" });
+
+  server.getLogs();
+
+  if (testFailed) {
+    server.debug();
+  }
+
+  await server.reset();
+  await server.close();
+  ```
+
+- [#14174](https://github.com/cloudflare/workers-sdk/pull/14174) [`8cf8c61`](https://github.com/cloudflare/workers-sdk/commit/8cf8c61efb9fd99892bcb250db12d7052b5fef08) Thanks [@oliy](https://github.com/oliy)! - Surface pipeline status and failure reasons in `wrangler pipelines list` and `wrangler pipelines get`
+
+  `wrangler pipelines list` now includes a `Status` column, and when any pipelines are in a `failed` state it prints a summary of each failing pipeline along with the reason reported by the API.
+
+  `wrangler pipelines get` now shows the pipeline `Status` in the general details and, for failed pipelines, highlights the failure with the reason returned by the server so it is clear why a pipeline is not running.
+
+- [#14211](https://github.com/cloudflare/workers-sdk/pull/14211) [`a61ac29`](https://github.com/cloudflare/workers-sdk/commit/a61ac2936ae6b35146d637c18beb94567bb40bfa) Thanks [@james-elicx](https://github.com/james-elicx)! - Add `--version-tag` support to `wrangler versions deploy` to deploy a version by its tag
+
+  You can now roll out or roll back a version by the tag it was uploaded with (e.g. a commit SHA passed to `--tag` at upload time) instead of first looking up its Version ID:
+
+  `wrangler versions deploy --version-tag <sha>@100%`
+
+  The tag is resolved to a Version ID against the worker's deployable versions, and the `<version-tag>@<percentage>` shorthand works just like the existing `<version-id>@<percentage>` notation, including splitting traffic across multiple `--version-tag` values. If a tag matches no deployable version, or matches more than one, the command errors and asks you to deploy by Version ID directly. Note that tags can only be resolved against recent (deployable) versions — older versions that have aged out of that window must still be deployed by Version ID.
+
+### Patch Changes
+
+- [#14163](https://github.com/cloudflare/workers-sdk/pull/14163) [`23aecac`](https://github.com/cloudflare/workers-sdk/commit/23aecac6a2d57ee5d4888405bd12cac66ab8a725) Thanks [@emily-shen](https://github.com/emily-shen)! - Print deploy warnings even in non-interactive contexts when strict mode is off
+
+  Currently, wrangler deploy checks whether the incoming deploy configuration has destructive conflicts with the current configuration. Previously, we only performed this check in interactive contexts, or if the `--strict` flag was passed in. Now this warning is always printed, and it remains non-blocking in non-interactive contexts.
+
+- [#14173](https://github.com/cloudflare/workers-sdk/pull/14173) [`b932e47`](https://github.com/cloudflare/workers-sdk/commit/b932e47d49e736cb59159341a92045dcc65df0c6) Thanks [@gpanders](https://github.com/gpanders)! - Handle API validation errors from `wrangler containers ssh`
+
+  Wrangler now lets the Containers API validate SSH instance IDs and preserves raw API error bodies such as `INVALID_INSTANCE_ID` when reporting validation failures.
+
+- [#14192](https://github.com/cloudflare/workers-sdk/pull/14192) [`d076bcc`](https://github.com/cloudflare/workers-sdk/commit/d076bcc847adc0cb52c34863d3ad77f8faee5fbb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260603.1 | 1.20260605.1 |
+
+- [#14217](https://github.com/cloudflare/workers-sdk/pull/14217) [`24497d0`](https://github.com/cloudflare/workers-sdk/commit/24497d0f5fb327d7c86f5f3022510b53cfec931d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260605.1 | 1.20260608.1 |
+
+- [#14231](https://github.com/cloudflare/workers-sdk/pull/14231) [`4bb572f`](https://github.com/cloudflare/workers-sdk/commit/4bb572f264089b2ec1ce3a4b0d2f48c226cb4431) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260608.1 | 1.20260609.1 |
+
+- [#14195](https://github.com/cloudflare/workers-sdk/pull/14195) [`165adb2`](https://github.com/cloudflare/workers-sdk/commit/165adb2084bde4bff453b54c4a984012b6999f29) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Show actionable error message when authentication fails during remote dev
+
+  When `wrangler dev` with remote bindings encountered an authentication error (expired token, revoked OAuth, or invalid API token), the user saw a generic "A request to the Cloudflare API failed" message with no indication that authentication was the problem.
+
+  Now, authentication failures during remote dev display a clear error message with actionable steps.
+
+- [#14034](https://github.com/cloudflare/workers-sdk/pull/14034) [`776098c`](https://github.com/cloudflare/workers-sdk/commit/776098c79672e4b16c53aea1c127f45fe66a14bf) Thanks [@matingathani](https://github.com/matingathani)! - Fix `wrangler types --check` reporting types as out of date in multi-worker setups
+
+  Previously, running `wrangler types --check -c primary/wrangler.jsonc` in a multi-worker project would incorrectly report types as out of date, even when they were current. This happened because the secondary worker config paths (passed via additional `-c` flags during generation) were not stored in the generated types file header, so `--check` had no way to resolve the secondary workers' service bindings when verifying the hash.
+
+  The fix stores secondary config paths in the generated file's header comment so that `--check` can recover them automatically. Users no longer need to re-pass every `-c` flag when running `--check` — only the primary config is required.
+
+- [#14053](https://github.com/cloudflare/workers-sdk/pull/14053) [`7993711`](https://github.com/cloudflare/workers-sdk/commit/79937112ff580c34b182b73ef830cdb17b5b798d) Thanks [@fallintoplace](https://github.com/fallintoplace)! - Prevent delete-only `wrangler secret bulk` input from creating a new Worker
+
+  Previously, `wrangler secret bulk` could create a draft Worker when the input only deleted secrets and the target Worker name did not exist. Delete-only bulk secret operations now leave Worker-not-found as an error instead of creating a new Worker.
+
+- [#14055](https://github.com/cloudflare/workers-sdk/pull/14055) [`8923f97`](https://github.com/cloudflare/workers-sdk/commit/8923f9769aaa13229d1cda535f95a9813465d765) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Preserve all deployment-affecting CLI flags in the interactive deploy config flow
+
+  When running `wrangler deploy` without a config file and going through the interactive setup flow, CLI flags beyond `--compatibility-flags` (such as `--routes`/`--route`, `--domains`/`--domain`, `--triggers`, `--var`, `--define`, `--alias`, `--jsx-factory`, `--jsx-fragment`, `--tsconfig`, `--minify`, `--upload-source-maps`, `--no-bundle`, `--logpush`, `--keep-vars`, `--legacy-env`, and `--dispatch-namespace`) were silently dropped. These flags are now persisted to the generated `wrangler.jsonc` config file (where a config field equivalent exists) and included in the suggested CLI command when the user declines config file generation.
+
+- [#14196](https://github.com/cloudflare/workers-sdk/pull/14196) [`b205fb7`](https://github.com/cloudflare/workers-sdk/commit/b205fb7ff0a1d897b5cbe2a9149978d9e581684c) Thanks [@odiak](https://github.com/odiak)! - Validate JSON stdin values for `wrangler secret bulk`
+
+  JSON input piped through stdin now validates that secret values are strings or null before sending them to the API, matching the existing behavior for file input.
+
+- Updated dependencies [[`d076bcc`](https://github.com/cloudflare/workers-sdk/commit/d076bcc847adc0cb52c34863d3ad77f8faee5fbb), [`24497d0`](https://github.com/cloudflare/workers-sdk/commit/24497d0f5fb327d7c86f5f3022510b53cfec931d), [`4bb572f`](https://github.com/cloudflare/workers-sdk/commit/4bb572f264089b2ec1ce3a4b0d2f48c226cb4431), [`48c4ff0`](https://github.com/cloudflare/workers-sdk/commit/48c4ff00483e9346c9fe6dcb981009b081c0a204)]:
+  - miniflare@4.20260609.0
+
 ## 4.98.0
 
 ### Minor Changes

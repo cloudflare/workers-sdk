@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import events from "node:events";
+import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	formatConfigSnippet,
@@ -7,7 +8,6 @@ import {
 } from "@cloudflare/workers-utils";
 import { getHostFromRoute } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
-import { convertConfigToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deployment-bundle/resolve-config-args";
@@ -521,6 +521,16 @@ export function getBindings(
 		usePreviewIds: true,
 	});
 
+	// createTestHarness() can override secrets through inputBindings.
+	// This filters out those required secrets so the logic doesn't consider them missing
+	const secrets = configParam.secrets
+		? {
+				...configParam.secrets,
+				required: configParam.secrets?.required?.filter(
+					(secret) => inputBindings?.[secret]?.type !== "secret_text"
+				),
+			}
+		: undefined;
 	// Override vars with .dev.vars (dev-specific)
 	// getVarsForDev returns typed bindings: config vars are plain_text/json,
 	// while .dev.vars/.env vars are secret_text.
@@ -531,7 +541,7 @@ export function getBindings(
 		configParam.vars,
 		env,
 		false,
-		configParam.secrets
+		secrets
 	);
 	for (const [name, binding] of Object.entries(vars)) {
 		// Only override plain_text/json/secret_text vars, not other binding types like kv_namespace

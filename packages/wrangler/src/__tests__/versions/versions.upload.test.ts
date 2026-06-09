@@ -1,4 +1,6 @@
+import assert from "node:assert";
 import * as fs from "node:fs";
+import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeRedirectedWranglerConfig,
@@ -9,10 +11,9 @@ import { http, HttpResponse } from "msw";
  * Uses assert/expect in MSW handlers and top-level mock setup
  * TODO: remove this `expect` import
  */
-import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
+import { beforeEach, describe, expect, it, test, vi } from "vitest";
 import { TEMPORARY_TERMS_NOTICE } from "../../user/temporary-terms";
 import { dedent } from "../../utils/dedent";
-import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";

@@ -99,6 +99,9 @@ patchedDependencies:
 # ──────────────────────────────────────────────────────────────────────────────
 
 catalog:
+  chalk: "5.3.0"
+  command-exists: "1.2.9"
+  dotenv: "16.3.1"
   "@hey-api/openapi-ts": "0.94.0"
   "@types/node": "22.15.17"
 
@@ -115,8 +118,8 @@ catalog:
   "ws": "8.20.1"
   esbuild: "0.27.3"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^4.20260605.1"
-  workerd: "1.20260605.1"
+  "@cloudflare/workers-types": "^4.20260609.1"
+  workerd: "1.20260609.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
   msw: 2.12.4

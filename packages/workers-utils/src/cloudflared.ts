@@ -27,6 +27,7 @@ import { getCloudflaredPathFromEnv } from "./environment-variables/misc-variable
 import { UserError } from "./errors";
 import { removeDirSync } from "./fs-helpers";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+import type { Logger } from "./logger";
 import type { ChildProcess } from "node:child_process";
 
 /**
@@ -49,12 +50,6 @@ interface VersionResponse {
 	shouldUpdate: boolean;
 	userMessage: string;
 	error: string;
-}
-
-export interface Logger {
-	log: typeof console.log;
-	warn: typeof console.warn;
-	debug: typeof console.debug;
 }
 
 const CLOUDFLARED_VERSION_PATTERN = /^\d{4}\.\d+\.\d+$/;
@@ -135,7 +130,7 @@ export function getAssetFilename(goOS: string, goArch: string): string {
 async function queryUpdateService(
 	goOS: string,
 	goArch: string,
-	options?: { logger?: Logger }
+	options?: { logger?: Pick<Logger, "debug" | "log" | "warn"> }
 ): Promise<VersionResponse | null> {
 	const { logger } = options ?? {};
 	const url = new URL(UPDATE_SERVICE_URL);
@@ -202,7 +197,7 @@ async function queryUpdateService(
  * the GitHub release URL directly.
  */
 async function getLatestVersionInfo(options?: {
-	logger?: Logger;
+	logger?: Pick<Logger, "debug" | "log" | "warn">;
 }): Promise<VersionResponse> {
 	const { logger } = options ?? {};
 	const goOS = getGoOS();
@@ -280,7 +275,10 @@ function isBinaryExecutable(binPath: string): boolean {
 /**
  * Validate that a binary works correctly by running --version.
  */
-function validateBinary(binPath: string, options?: { logger?: Logger }): void {
+function validateBinary(
+	binPath: string,
+	options?: { logger?: Pick<Logger, "debug" | "log" | "warn"> }
+): void {
 	const { logger } = options ?? {};
 	try {
 		const output = execFileSync(binPath, ["--version"], {
@@ -329,7 +327,7 @@ export function redactCloudflaredArgsForLogging(args: string[]): string[] {
 }
 
 function tryGetCloudflaredFromPath(options?: {
-	logger?: Logger;
+	logger?: Pick<Logger, "debug" | "log" | "warn">;
 }): string | null {
 	const { logger } = options ?? {};
 	if (!commandExistsSync("cloudflared")) {
@@ -388,7 +386,7 @@ export function isVersionOutdated(installed: string, latest: string): boolean {
  */
 async function warnIfOutdated(
 	binPath: string,
-	options?: { logger?: Logger }
+	options?: { logger?: Pick<Logger, "debug" | "log" | "warn"> }
 ): Promise<void> {
 	const { logger } = options ?? {};
 	try {
@@ -443,7 +441,7 @@ function writeFileAtomic(filePath: string, contents: Buffer): void {
 async function downloadCloudflared(
 	versionInfo: VersionResponse,
 	binPath: string,
-	options?: { logger?: Logger }
+	options?: { logger?: Pick<Logger, "debug" | "log" | "warn"> }
 ): Promise<void> {
 	const { logger } = options ?? {};
 	const { url, version, checksum, compressed } = versionInfo;
@@ -609,7 +607,7 @@ async function downloadBinary(
 export async function getCloudflaredPath(options?: {
 	skipVersionCheck?: boolean;
 	confirmDownload?: (message: string) => Promise<boolean>;
-	logger?: Logger;
+	logger?: Pick<Logger, "debug" | "log" | "warn">;
 }): Promise<string> {
 	const logger = options?.logger;
 	// Check for environment variable override first
@@ -700,7 +698,7 @@ export async function spawnCloudflared(
 		env?: Record<string, string>;
 		skipVersionCheck?: boolean;
 		confirmDownload?: (message: string) => Promise<boolean>;
-		logger?: Logger;
+		logger?: Pick<Logger, "debug" | "log" | "warn">;
 	}
 ): Promise<ChildProcess> {
 	const logger = options?.logger;

@@ -319,6 +319,66 @@ describe("Workflows", () => {
 			await waitForBreadcrumbText("Workflows", { timeout: 10_000 });
 			await waitForBreadcrumbText(WORKFLOW_NAME, { timeout: 10_000 });
 		});
+
+		test("opens restart-from-step confirmation dialog from a step row", async () => {
+			const workflow = await seedWorkflow(WORKFLOW_NAME);
+			await navigateToWorkflow(WORKFLOW_NAME);
+
+			await waitForText(workflow.id, { timeout: 10_000 });
+
+			const instanceRow = page
+				.locator("div.border-b")
+				.filter({ hasText: workflow.id })
+				.first();
+			await instanceRow.click();
+
+			await waitForText("Step History", { timeout: 10_000 });
+			await waitForText("greet", { timeout: 10_000 });
+
+			await page
+				.getByRole("button", { name: "Restart from this step" })
+				.first()
+				.click();
+
+			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
+			await waitForText("Restart from this step?");
+			await waitForText(
+				"Saved state for this step and later steps will be cleared"
+			);
+		});
+
+		test("cancels restart-from-step confirmation dialog", async () => {
+			const workflow = await seedWorkflow(WORKFLOW_NAME);
+			await navigateToWorkflow(WORKFLOW_NAME);
+
+			await waitForText(workflow.id, { timeout: 10_000 });
+
+			const instanceRow = page
+				.locator("div.border-b")
+				.filter({ hasText: workflow.id })
+				.first();
+			await instanceRow.click();
+
+			await waitForText("Step History", { timeout: 10_000 });
+			await waitForText("greet", { timeout: 10_000 });
+
+			await page
+				.getByRole("button", { name: "Restart from this step" })
+				.first()
+				.click();
+
+			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
+
+			await page
+				.getByRole("dialog")
+				.getByRole("button", { name: "Cancel" })
+				.click();
+
+			await page.waitForSelector('[role="dialog"]', {
+				state: "hidden",
+				timeout: 5_000,
+			});
+		});
 	});
 
 	describe("status filter", () => {

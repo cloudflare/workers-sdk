@@ -22,6 +22,11 @@ import {
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
+import {
+	getPnpmIgnoredBuildsGuidance,
+	isIgnoredBuildsError,
+	writePnpmBuildApprovals,
+} from "helpers/pnpmBuildApprovals";
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
@@ -151,6 +156,8 @@ const create = async (ctx: C3Context) => {
 	}
 	updatePackageName(ctx);
 
+	writePnpmBuildApprovals(ctx.project.path);
+
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
 	await rectifyPmMismatch(ctx);
@@ -245,17 +252,24 @@ const offerAgentsMd = async (ctx: C3Context) => {
 
 main(process.argv)
 	.catch((e) => {
+		// User-initiated cancellation isn't a failure; leave exit code at 0.
 		if (e instanceof CancelError) {
 			cancel(e.message);
+			return;
+		}
+
+		if (isIgnoredBuildsError(e)) {
+			error(`${e.message}\n\n${getPnpmIgnoredBuildsGuidance(e.packages)}`);
 		} else {
 			error(e);
 		}
+
+		// `process.exit()` in the finally below picks this up.
+		process.exitCode = 1;
 	})
 	.finally(async () => {
 		await reporter.waitForAllEventsSettled();
 
-		// ensure we explicitly exit the process, otherwise any ongoing async
-		// calls or leftover tasks in the stack queue will keep running until
-		// completed
+		// Force-exit so leftover async work doesn't keep the event loop alive.
 		process.exit();
 	});

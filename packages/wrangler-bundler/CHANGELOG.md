@@ -1,5 +1,12 @@
 # @cloudflare/wrangler-bundler
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`23aecac`](https://github.com/cloudflare/workers-sdk/commit/23aecac6a2d57ee5d4888405bd12cac66ab8a725), [`b932e47`](https://github.com/cloudflare/workers-sdk/commit/b932e47d49e736cb59159341a92045dcc65df0c6), [`d076bcc`](https://github.com/cloudflare/workers-sdk/commit/d076bcc847adc0cb52c34863d3ad77f8faee5fbb), [`24497d0`](https://github.com/cloudflare/workers-sdk/commit/24497d0f5fb327d7c86f5f3022510b53cfec931d), [`4bb572f`](https://github.com/cloudflare/workers-sdk/commit/4bb572f264089b2ec1ce3a4b0d2f48c226cb4431), [`165adb2`](https://github.com/cloudflare/workers-sdk/commit/165adb2084bde4bff453b54c4a984012b6999f29), [`776098c`](https://github.com/cloudflare/workers-sdk/commit/776098c79672e4b16c53aea1c127f45fe66a14bf), [`0706fbf`](https://github.com/cloudflare/workers-sdk/commit/0706fbf950548aaa8177a062a7c5d41822dfba0d), [`7993711`](https://github.com/cloudflare/workers-sdk/commit/79937112ff580c34b182b73ef830cdb17b5b798d), [`8cf8c61`](https://github.com/cloudflare/workers-sdk/commit/8cf8c61efb9fd99892bcb250db12d7052b5fef08), [`8923f97`](https://github.com/cloudflare/workers-sdk/commit/8923f9769aaa13229d1cda535f95a9813465d765), [`b205fb7`](https://github.com/cloudflare/workers-sdk/commit/b205fb7ff0a1d897b5cbe2a9149978d9e581684c), [`a61ac29`](https://github.com/cloudflare/workers-sdk/commit/a61ac2936ae6b35146d637c18beb94567bb40bfa)]:
+  - wrangler@4.99.0
+
 ## 0.1.2
 
 ### Patch Changes

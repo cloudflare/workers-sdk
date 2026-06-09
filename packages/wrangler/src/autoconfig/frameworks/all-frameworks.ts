@@ -43,8 +43,10 @@ export const allKnownFrameworks = [
 			// Angular 19 introduced ssr.experimentalPlatform and AngularAppEngine
 			// which are required for Cloudflare Workers support
 			// See: https://github.com/angular/angular-cli/releases/tag/19.0.0
+			// Angular 22 renamed experimentalPlatform to platform
+			// See: https://github.com/angular/angular-cli/commit/af2c7e9444fba81d3b1fd2d37dc4412f8305b5ed
 			minimumVersion: "19.0.0",
-			maximumKnownMajorVersion: "21",
+			maximumKnownMajorVersion: "22",
 		},
 		supported: true,
 	},

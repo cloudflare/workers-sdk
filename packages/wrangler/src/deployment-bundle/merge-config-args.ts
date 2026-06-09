@@ -1,3 +1,4 @@
+import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
 import {
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
@@ -14,7 +15,6 @@ import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironmentApi } from "../utils/useServiceEnvironments";
-import { generatePreviewAlias } from "../versions/upload";
 import { getEntry } from "./entry";
 import type { HandlerArgs } from "../core/types";
 import type { DeployArgs } from "../deploy/index";
