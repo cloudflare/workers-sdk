@@ -10,16 +10,21 @@ import type * as vite from "vite";
 // Vitest 4 automatically adds these to `resolve.external` for non-standard
 // environments (via its `runnerTransform` plugin). They are harmless for
 // Worker environments — Workers either handle them via the node-compat layer
-// or don't use them — so we filter them out before validation.
+// or don't use them — so validation is skipped when the array contains only
+// these entries.
 const NODE_BUILTIN_SET = new Set([
 	...builtinModules,
-	...builtinModules.map((m) => `node:${m}`),
+	// Only add the `node:` prefix for modules that don't already have it,
+	// avoiding hypothetical `node:node:*` entries on future Node versions.
+	...builtinModules
+		.filter((m) => !m.startsWith("node:"))
+		.map((m) => `node:${m}`),
 ]);
 
 function isOnlyNodeBuiltins(
 	external: vite.ResolveOptions["external"]
 ): boolean {
-	if (external === true || !Array.isArray(external)) {
+	if (!Array.isArray(external)) {
 		return false;
 	}
 	return external.every(
@@ -53,7 +58,8 @@ export function validateWorkerEnvironmentOptions(
 		const disallowedEnvironmentOptions: DisallowedEnvironmentOptions = {};
 
 		if (
-			(resolve.external === true || resolve.external.length) &&
+			(resolve.external === true ||
+				(Array.isArray(resolve.external) && resolve.external.length > 0)) &&
 			!isOnlyNodeBuiltins(resolve.external)
 		) {
 			disallowedEnvironmentOptions.resolveExternal = resolve.external;
