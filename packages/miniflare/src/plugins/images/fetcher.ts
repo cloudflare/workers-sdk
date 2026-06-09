@@ -325,7 +325,8 @@ function applyCfImageTransforms(
 			fit,
 			withoutEnlargement,
 			position: resolveGravity(options.gravity),
-			background: options.fit === "pad" ? "#ffffff" : undefined,
+			background:
+				options.background ?? (options.fit === "pad" ? "#ffffff" : undefined),
 		});
 	}
 }

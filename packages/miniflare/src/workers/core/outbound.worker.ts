@@ -95,13 +95,12 @@ async function resizeImage(
 
 	// If Sharp can't transform the image return the origin image
 	if (!transformed.ok) {
+		const headers = new Headers(originResponse.headers);
+		headers.delete("content-encoding");
+		headers.delete("content-length");
 		return new Response(source, {
-			status: 200,
-			headers: {
-				"content-type":
-					originResponse.headers.get("content-type") ??
-					"application/octet-stream",
-			},
+			status: originResponse.status,
+			headers,
 		});
 	}
 
