@@ -1,5 +1,7 @@
 import { assert, describe, test } from "vitest";
+import { COMMANDS_SUPPORTING_TEMPORARY } from "../core/temporary-commands";
 import { experimental_getWranglerCommands } from "../experimental-commands-api";
+import type { DefinitionTreeNode } from "../core/types";
 
 describe("experimental_getWranglerCommands", () => {
 	test("returns global flags", ({ expect }) => {
@@ -49,12 +51,6 @@ describe("experimental_getWranglerCommands", () => {
 			  "install-skills": {
 			    "default": false,
 			    "describe": "Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
-			    "type": "boolean",
-			  },
-			  "temporary": {
-			    "default": false,
-			    "describe": "Create a temporary preview account when a command needs authentication in non-interactive mode",
-			    "hidden": true,
 			    "type": "boolean",
 			  },
 			  "v": {
@@ -136,5 +132,25 @@ describe("experimental_getWranglerCommands", () => {
 			"open beta",
 			"stable",
 		]).toContain(metadata.status);
+	});
+
+	test("every COMMANDS_SUPPORTING_TEMPORARY entry is a real command", ({
+		expect,
+	}) => {
+		const registered = new Set<string>();
+		const walk = (node: DefinitionTreeNode) => {
+			if (node.definition?.type === "command") {
+				registered.add(node.definition.command);
+			}
+			for (const child of node.subtree.values()) {
+				walk(child);
+			}
+		};
+		walk(experimental_getWranglerCommands().registry);
+
+		const missing = [...COMMANDS_SUPPORTING_TEMPORARY].filter(
+			(command) => !registered.has(command)
+		);
+		expect(missing).toEqual([]);
 	});
 });

@@ -24,12 +24,17 @@ import {
 } from "../metrics/sanitization";
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
+import { setAllowTemporary } from "../user";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
+import {
+	COMMANDS_SUPPORTING_TEMPORARY,
+	temporaryArgDefinition,
+} from "./temporary-commands";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	HandlerArgs,
@@ -57,7 +62,11 @@ export function createRegisterYargsCommand(
 			(def.metadata?.hidden ? false : def.metadata?.description) as string, // Cast to satisfy TypeScript overload selection
 			(subYargs) => {
 				if (def.type === "command") {
-					const args = def.args ?? {};
+					const args: NamedArgDefinitions = COMMANDS_SUPPORTING_TEMPORARY.has(
+						def.command
+					)
+						? { ...def.args, temporary: temporaryArgDefinition }
+						: (def.args ?? {});
 
 					const positionalArgs = new Set(def.positionalArgs);
 
@@ -128,6 +137,10 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		// The command definition's `command` string is safe to use in sentry messages.
 		// Sentry breadcrumbs expect the `wrangler` prefix.
 		addBreadcrumb(def.command);
+
+		if (COMMANDS_SUPPORTING_TEMPORARY.has(def.command)) {
+			setAllowTemporary(Boolean((args as { temporary?: boolean }).temporary));
+		}
 
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;

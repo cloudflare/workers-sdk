@@ -121,6 +121,14 @@ describe("wrangler", () => {
 		});
 	});
 
+	describe("--temporary", () => {
+		it("is rejected on commands that don't opt in", async ({ expect }) => {
+			await expect(runWrangler("whoami --temporary")).rejects.toThrowError(
+				/Unknown argument: temporary/
+			);
+		});
+	});
+
 	describe("invalid command", () => {
 		it("should display an error", async ({ expect }) => {
 			await expect(
