@@ -39,35 +39,10 @@ export type FrameworkTestConfig = RunnerConfig & {
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
 	/**
-	 * Per–package-manager semver ranges that should be skipped. Use this when a
-	 * framework template fails on a specific package-manager version. Two
-	 * recurring cases on pnpm >=11 (which makes `strictDepBuilds` the default
-	 * and turns ignored build scripts into a fatal `ERR_PNPM_IGNORED_BUILDS`):
-	 *
-	 * 1. The framework runs its own install inside the generator (e.g. Hono's
-	 *    `create-hono --install`, Docusaurus's internal install). The failure
-	 *    fires before C3's `npmInstall` recovery path can engage.
-	 *
-	 * 2. The framework template's deps trip `ERR_PNPM_IGNORED_BUILDS` *and*
-	 *    the test config defines an ordered `promptHandlers` entry. C3's
-	 *    recovery prompt would fire after the last ordered handler is
-	 *    consumed, but `runC3` closes the harness stdin at that point (it
-	 *    must, or framework generators spawned with `stdio: "inherit"` keep
-	 *    the harness alive past their work — see `e2e/helpers/run-c3.ts`).
-	 *    With stdin closed the background responder can no longer write to
-	 *    it, so the recovery prompt can't be answered in CI. The real-TTY
-	 *    end-user path is unaffected; only the e2e harness can't handle this
-	 *    combination today.
-	 *
-	 * Case 2 is currently latent for `qwik`/`react`/`vike` etc. — those
-	 * templates don't pull in unapproved build scripts beyond C3's
-	 * pre-approved set (`workerd`/`esbuild`/`sharp`), so the recovery prompt
-	 * never fires. If a future template change introduces such a dep, add a
-	 * matching `unsupportedPmRanges` entry rather than rely on this
-	 * happenstance.
-	 *
-	 * Keys are package-manager names ("pnpm", "npm", "yarn", "bun") and
-	 * values are semver ranges understood by `semver.satisfies`.
+	 * Per–package-manager semver ranges to skip. Keys are pm names ("pnpm",
+	 * "npm", "yarn", "bun"); values are semver ranges. Used on pnpm >=11 for
+	 * frameworks that either run their own install (e.g. Hono) or whose
+	 * recovery prompt fires after the e2e harness has closed stdin.
 	 */
 	unsupportedPmRanges?: Partial<Record<string, string>>;
 	flags?: string[];
@@ -462,9 +437,7 @@ function isUnsupportedPmVersion(testConfig: FrameworkTestConfig): boolean {
 	if (!range || !testPackageManagerVersion) {
 		return false;
 	}
-	// Coerce to a clean semver in case the env value carries extra suffixes
-	// (e.g. "11.5.1-canary"). `semver.coerce` returns null for unparseable
-	// inputs — in that case we fall back to running the test.
+	// Coerce to handle suffixes like "11.5.1-canary"; unparseable → run test.
 	const coerced = semver.coerce(testPackageManagerVersion);
 	if (!coerced) {
 		return false;

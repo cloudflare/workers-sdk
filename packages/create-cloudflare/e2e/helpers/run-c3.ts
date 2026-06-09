@@ -23,10 +23,9 @@ export type PromptHandler = {
 };
 
 /**
- * A `BackgroundResponder` fires whenever its matcher appears in C3's stdout,
- * regardless of ordering in `promptHandlers`. It is meant for "opportunistic"
- * prompts that only show up under specific conditions (e.g. the pnpm 11
- * approve-builds confirmation). Each responder fires at most once per run.
+ * Responder for "opportunistic" prompts that only show up under specific
+ * conditions (e.g. the pnpm 11 approve-builds confirmation). Fires at most
+ * once per run, independent of the ordered `promptHandlers` queue.
  */
 type BackgroundResponder = {
 	matcher: RegExp;
@@ -97,25 +96,13 @@ export const runC3 = async (
 		logStream
 	);
 
-	// Background responders fire independently of `promptHandlers` and don't
-	// participate in the ordered queue. They handle recovery-style prompts
-	// that may or may not appear, depending on the dependency graph (e.g.
-	// pnpm 11's `pnpm approve-builds` confirmation, which only shows up when
-	// installs trip `ERR_PNPM_IGNORED_BUILDS`).
-	//
-	// Note: a responder can only write to stdin while stdin is still open.
-	// `handlePrompt` closes stdin once the last *ordered* prompt handler is
-	// consumed (otherwise framework generators spawned with `stdio: "inherit"`
-	// keep stdin alive and hang on exit). So a background responder is only
-	// reliably answered for runs whose `promptHandlers` queue is empty
-	// (typically: simple worker templates, where no framework generator runs).
-	// Framework templates whose recovery prompt fires *after* the last
-	// ordered handler should opt out of the impacted package-manager version
-	// via `unsupportedPmRanges` in the test config.
+	// Responders for prompts that may or may not appear. Note that a responder
+	// can only write to stdin while it's still open — `handlePrompt` closes
+	// stdin once the last ordered handler is consumed. Framework tests whose
+	// recovery prompt fires after that should opt out via `unsupportedPmRanges`.
 	const backgroundResponders: BackgroundResponder[] = [
 		{
 			matcher: /Run `pnpm approve-builds [^`]+` and retry the install\?/,
-			// Accept the default ("yes") to run approve-builds + retry.
 			keys: [keys.enter],
 		},
 	];

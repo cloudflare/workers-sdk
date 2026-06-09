@@ -71,8 +71,7 @@ describe("npmInstall", () => {
 			expect(runCommand).toHaveBeenCalledTimes(1);
 			const [cmd, opts] = vi.mocked(runCommand).mock.calls[0];
 			expect(cmd).toEqual(["pnpm", "install"]);
-			// We manage the spinner outside runCommand to suppress the noisy
-			// full-transcript dump on failure.
+			// Spinner managed outside runCommand to suppress noisy failure output.
 			expect(opts).toMatchObject({ silent: true, useSpinner: false });
 		});
 
@@ -140,10 +139,6 @@ describe("npmInstall", () => {
 		test("prompt cancelled (no TTY / Ctrl-C): throws IgnoredBuildsError carrying the parsed list", async ({
 			expect,
 		}) => {
-			// inputPrompt with `throwOnError: true` throws CancelError when the
-			// prompt is cancelled — e.g. stdin is at EOF in a non-TTY CI shell,
-			// or the user hits Ctrl-C. We must surface a concise
-			// IgnoredBuildsError instead of letting the CancelError propagate.
 			vi.mocked(inputPrompt).mockRejectedValueOnce(
 				new CancelError("Operation cancelled")
 			);

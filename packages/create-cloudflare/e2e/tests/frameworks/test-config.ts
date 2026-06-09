@@ -90,14 +90,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "docusaurus:pages",
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun"],
-			// `create-docusaurus` installs its dependencies internally as part
-			// of `runFrameworkGenerator` (no `--no-install` switch is exposed),
-			// so the install runs before C3 reaches its own `npmInstall`
-			// recovery path. On pnpm >=11 the docusaurus template pulls in
-			// `@swc/core` and `core-js` whose postinstall scripts are
-			// unapproved, tripping `ERR_PNPM_IGNORED_BUILDS`. Until docusaurus
-			// approves those upstream (or gains a `--no-install` flag we can
-			// pass), this combination cannot succeed in CI.
+			// `create-docusaurus` installs internally (no `--no-install`),
+			// tripping `ERR_PNPM_IGNORED_BUILDS` on pnpm 11 before C3's
+			// recovery path can engage.
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -257,16 +252,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
-			// `create-hono` is invoked with `--install`
-			// (`templates/hono/pages/c3.ts`), so the dependency install runs
-			// inside the framework generator, *before* C3 reaches its own
-			// `npmInstall`. On pnpm >=11 the default `strictDepBuilds=true`
-			// turns unapproved postinstall scripts (workerd, esbuild, sharp via
-			// wrangler) into a fatal `ERR_PNPM_IGNORED_BUILDS`. C3's
-			// approve-builds recovery path can't engage that early, so the
-			// generator fails before we ever return. Until `create-hono`
-			// supports `--no-install` (or approves its own build scripts), we
-			// skip this test on pnpm 11+.
+			// `create-hono --install` runs the install inside the generator,
+			// before C3's recovery path can engage. Fails on pnpm 11.
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
@@ -385,16 +372,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 			unsupportedOSs: ["win32"],
-			// On pnpm >=11 Nuxt's deps (notably `@parcel/watcher`) trip
-			// `ERR_PNPM_IGNORED_BUILDS` when C3 runs its own `pnpm install`
-			// after the `--no-install` generator finishes. C3's interactive
-			// recovery prompt works for real TTY users, but the e2e harness
-			// has already closed stdin by the time the prompt fires (it
-			// closes after the last ordered `promptHandler` is consumed), so
-			// the background responder can't write to it. Skip in CI until
-			// either the harness can keep stdin open without hanging
-			// inherit-stdio framework generators, or Nuxt's template
-			// pre-approves its build scripts.
+			// Nuxt's deps trip `ERR_PNPM_IGNORED_BUILDS` on pnpm 11; the e2e
+			// harness has closed stdin by the time C3's recovery prompt fires
+			// (real-TTY users are unaffected).
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
@@ -743,9 +723,7 @@ function getExperimentalFrameworkTestConfig(
 			name: "docusaurus:workers",
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun"],
-			// See note on docusaurus:pages in the non-experimental list:
-			// `create-docusaurus` installs internally, so pnpm 11 trips
-			// `ERR_PNPM_IGNORED_BUILDS` before C3's recovery can engage.
+			// See note on docusaurus:pages above.
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -843,9 +821,7 @@ function getExperimentalFrameworkTestConfig(
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
-			// See note on nuxt:pages in the non-experimental list: the e2e
-			// harness can't answer C3's approve-builds recovery prompt for
-			// Nuxt under pnpm 11.
+			// See note on nuxt:pages above.
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",

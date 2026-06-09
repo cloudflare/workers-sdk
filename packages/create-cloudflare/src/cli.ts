@@ -156,12 +156,6 @@ const create = async (ctx: C3Context) => {
 	}
 	updatePackageName(ctx);
 
-	// Pre-approve the build scripts C3 itself depends on (`workerd`, `esbuild`,
-	// `sharp` — via wrangler/miniflare). Required before any `pnpm install`
-	// on pnpm 11+, where unapproved build scripts are a fatal
-	// `ERR_PNPM_IGNORED_BUILDS`. Framework-introduced build scripts (e.g.
-	// `@parcel/watcher`, `lmdb`) are intentionally _not_ pre-approved here —
-	// `npmInstall` handles those interactively via `pnpm approve-builds`.
 	writePnpmBuildApprovals(ctx.project.path);
 
 	chdir(ctx.project.path);
@@ -258,38 +252,24 @@ const offerAgentsMd = async (ctx: C3Context) => {
 
 main(process.argv)
 	.catch((e) => {
+		// User-initiated cancellation isn't a failure; leave exit code at 0.
 		if (e instanceof CancelError) {
-			// User-initiated cancellation (Ctrl-C, declined prompt) — not a
-			// failure from the script's perspective; leave the exit code at 0.
 			cancel(e.message);
 			return;
 		}
 
 		if (isIgnoredBuildsError(e)) {
-			// pnpm refused to run dependency build scripts for packages C3
-			// does not pre-approve (e.g. framework-introduced native deps).
-			// `npmInstall` already attempted the interactive recovery path
-			// (`pnpm approve-builds <pkg>` + retry); reaching here means we
-			// either couldn't recover or the user declined. Print a concise
-			// summary with the parsed package list — not the full pnpm
-			// transcript — alongside actionable guidance.
 			error(`${e.message}\n\n${getPnpmIgnoredBuildsGuidance(e.packages)}`);
 		} else {
 			error(e);
 		}
 
-		// Any error reaching here is a real failure: mark `process.exitCode`
-		// so CI / shell callers can detect it. The `process.exit()` call in
-		// the finally below picks this up automatically (per Node's docs,
-		// `exit()` without an explicit code uses `process.exitCode`).
+		// `process.exit()` in the finally below picks this up.
 		process.exitCode = 1;
 	})
 	.finally(async () => {
 		await reporter.waitForAllEventsSettled();
 
-		// Force-exit so any ongoing async calls or leftover tasks in the
-		// stack queue don't keep the event loop alive. The exit code falls
-		// through from `process.exitCode` set in the catch above (0 on
-		// success / user cancellation, 1 on error).
+		// Force-exit so leftover async work doesn't keep the event loop alive.
 		process.exit();
 	});
