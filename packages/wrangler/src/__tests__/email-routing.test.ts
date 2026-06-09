@@ -792,7 +792,6 @@ describe("email sending commands", () => {
 		it("should get sending settings", async ({ expect }) => {
 			mockZoneLookup("example.com", "zone-id-1");
 			mockListSendingSubdomains([{ ...mockSubdomain, name: "example.com" }]);
-			mockGetSendingSubdomain({ ...mockSubdomain, name: "example.com" });
 
 			await runWrangler("email sending settings example.com");
 
@@ -1527,18 +1526,6 @@ function mockListSendingSubdomainsForZone(
 			}
 			return HttpResponse.json(createFetchResult(subdomains, true));
 		})
-	);
-}
-
-function mockGetSendingSubdomain(subdomain: typeof mockSubdomain) {
-	msw.use(
-		http.get(
-			"*/zones/:zoneId/email/sending/subdomains/:subdomainId",
-			() => {
-				return HttpResponse.json(createFetchResult(subdomain, true));
-			},
-			{ once: true }
-		)
 	);
 }
 

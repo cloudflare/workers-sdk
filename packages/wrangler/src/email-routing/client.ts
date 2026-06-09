@@ -286,18 +286,6 @@ export async function listEmailSendingSubdomains(
 	);
 }
 
-export async function getEmailSendingSubdomain(
-	config: Config,
-	zoneId: string,
-	subdomainId: string
-): Promise<EmailSendingSubdomain> {
-	await requireAuth(config);
-	return await fetchResult<EmailSendingSubdomain>(
-		config,
-		`/zones/${zoneId}/email/sending/subdomains/${subdomainId}`
-	);
-}
-
 export async function createEmailSendingSubdomain(
 	config: Config,
 	zoneId: string,

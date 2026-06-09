@@ -120,7 +120,7 @@ export async function resolveSendingSubdomain(
 	const match = subdomains.find((s) => s.name === name);
 	if (!match) {
 		throw new UserError(
-			`No sending subdomain found for \`${name}\`. Run \`wrangler email sending settings ${name}\` to see configured domains.`,
+			`No sending subdomain found for \`${name}\`. Run \`wrangler email sending list ${name}\` to see configured subdomains.`,
 			{ telemetryMessage: "email sending subdomain not found" }
 		);
 	}
