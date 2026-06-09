@@ -142,6 +142,12 @@ export const dev = createCommand({
 			describe: "Whether to build and enable containers during development",
 			hidden: true,
 		},
+		"privileged-containers": {
+			type: "boolean",
+			describe:
+				"Launch local containers with the elevated privileges required for FUSE (CAP_SYS_ADMIN, /dev/fuse, AppArmor unconfined)",
+			hidden: true,
+		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
 			type: "string",

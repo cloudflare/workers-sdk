@@ -167,6 +167,9 @@ async function resolveDevConfig(
 		inferOriginFromRoutes: input.dev?.inferOriginFromRoutes ?? true,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
+		privilegedContainers:
+			input.dev?.privilegedContainers ??
+			config.dev.privileged_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
 		containerEngine: useContainers
 			? (input.dev?.containerEngine ??
