@@ -528,4 +528,95 @@ describe("RemoteRuntimeController", () => {
 			});
 		});
 	});
+
+	// Baseline-characterisation tests for PR #14198 (krys-cf:fix/remote-bindings-access-service-token)
+	//
+	// These assert what the *existing* RemoteRuntimeController already does on `main` with regard
+	// to Cloudflare Access service-token headers. They are intentionally PR-independent — their
+	// purpose is to settle whether the PR's miniflare-side credential plumbing is necessary, by
+	// proving (or disproving) that the proxy session already places Access headers into the
+	// `proxyData` that the local ProxyWorker merges into every request it forwards to the edge.
+	//
+	// Companion baseline tests live in
+	//   packages/miniflare/test/plugins/shared/proxy-websocket-header-forwarding.spec.ts
+	//   packages/miniflare/test/plugins/shared/remote-bindings-access-warning.spec.ts
+	describe("Cloudflare Access headers in proxyData (baseline)", () => {
+		it("places service-token headers into proxyData on every reload, in remote: 'minimal' mode", async ({
+			expect,
+		}) => {
+			vi.mocked(getAccessHeaders).mockResolvedValue({
+				"CF-Access-Client-Id": "id.access",
+				"CF-Access-Client-Secret": "secret",
+			});
+
+			const { controller, bus } = setup();
+			// `remote: "minimal"` matches what `startRemoteProxySession` uses
+			// (packages/wrangler/src/api/remoteBindings/start-remote-proxy-session.ts:109).
+			const config = makeConfig({
+				dev: {
+					remote: "minimal",
+					persist: false,
+					auth: {
+						accountId: "test-account-id",
+						apiToken: { apiToken: "test-token" },
+					},
+				},
+			} as Partial<StartDevWorkerOptions>);
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			const reload = await bus.waitFor("reloadComplete");
+
+			// `getAccessHeaders` is called against the preview token's host
+			// (RemoteRuntimeController.ts:325) — the *.workers.dev preview host
+			// that's behind Cloudflare Access — NOT the loopback URL the
+			// remote-bindings proxy client connects to.
+			expect(getAccessHeaders).toHaveBeenCalledWith("test.workers.dev");
+
+			// The headers are spread into proxyData.headers verbatim, alongside
+			// the preview token. The local ProxyWorker's `processQueue` then
+			// merges these into every forwarded request (HTTP and WebSocket
+			// upgrades alike — see ProxyWorker.ts:146-158).
+			expect(reload).toMatchObject({
+				type: "reloadComplete",
+				proxyData: {
+					headers: {
+						"CF-Access-Client-Id": "id.access",
+						"CF-Access-Client-Secret": "secret",
+						"cf-workers-preview-token": "test-preview-token",
+					},
+				},
+			});
+		});
+
+		it("places cookie-based Access auth (cloudflared) into proxyData", async ({
+			expect,
+		}) => {
+			// `getAccessHeaders` can return either the service-token pair or a
+			// `Cookie: CF_Authorization=...` (from `cloudflared access login`).
+			// Either way it goes through the same proxyData channel — so the
+			// existing path covers both auth modes uniformly.
+			vi.mocked(getAccessHeaders).mockResolvedValue({
+				Cookie: "CF_Authorization=jwt-from-cloudflared-login",
+			});
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			const reload = await bus.waitFor("reloadComplete");
+
+			expect(reload).toMatchObject({
+				type: "reloadComplete",
+				proxyData: {
+					headers: {
+						Cookie: "CF_Authorization=jwt-from-cloudflared-login",
+					},
+				},
+			});
+		});
+	});
 });
