@@ -195,7 +195,7 @@ export const typesCommand = createCommand({
 
 		if (!args.includeEnv && !args.includeRuntime) {
 			throw new CommandLineArgsError(
-				`You cannot run this command without including either Env or Runtime types`,
+				"At least one of --include-env or --include-runtime must be enabled. Use --include-env to generate environment/binding types, or --include-runtime to generate Workers runtime types.",
 				{
 					telemetryMessage: "type generation args missing type selection",
 				}
@@ -698,7 +698,7 @@ function validateGenerateTypesOptions({
 
 	if (!includeEnv && !includeRuntime) {
 		throw new UserError(
-			`You cannot run this command without including either Env or Runtime types`,
+			"At least one of --include-env or --include-runtime must be enabled. Use --include-env to generate environment/binding types, or --include-runtime to generate Workers runtime types.",
 			{ telemetryMessage: "type generation args missing type selection" }
 		);
 	}

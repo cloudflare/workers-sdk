@@ -3897,7 +3897,7 @@ describe("generate types - API", () => {
 				includeRuntime: false,
 			})
 		).rejects.toThrow(
-			"You cannot run this command without including either Env or Runtime types"
+			"At least one of --include-env or --include-runtime must be enabled."
 		);
 
 		await expect(

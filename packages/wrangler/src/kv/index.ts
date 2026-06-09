@@ -493,7 +493,7 @@ export const kvKeyPutCommand = createCommand({
 	},
 	validateArgs(args) {
 		demandOneOfOption("binding", "namespace-id")(args);
-		demandOneOfOption("value", "path")(args);
+		demandOneOfOption("value", "path")(args, new Set(["value"]));
 	},
 
 	async handler({ key, ttl, expiration, metadata, ...args }) {

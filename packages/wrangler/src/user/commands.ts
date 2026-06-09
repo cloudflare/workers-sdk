@@ -4,6 +4,7 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
+	DefaultScopeKeys,
 	getAuthFromEnv,
 	getOAuthTokenFromLocalState,
 	listScopes,
@@ -72,8 +73,10 @@ export const loginCommand = createCommand({
 				return;
 			}
 			if (!validateScopeKeys(args.scopes)) {
+				const validSet = new Set<string>(DefaultScopeKeys);
+				const invalidScopes = args.scopes.filter((s) => !validSet.has(s));
 				throw new CommandLineArgsError(
-					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`,
+					`Invalid authentication scope${invalidScopes.length > 1 ? "s" : ""}: ${invalidScopes.map((s) => `"${s}"`).join(", ")}. Run "wrangler login --scopes-list" to see all valid scopes.`,
 					{ telemetryMessage: "user login invalid scope" }
 				);
 			}

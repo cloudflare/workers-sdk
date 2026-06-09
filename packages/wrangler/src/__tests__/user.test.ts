@@ -384,6 +384,26 @@ describe("User", () => {
 				);
 			});
 		});
+
+		it("should error if --scopes contains an invalid scope", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --scopes account:read bogus_scope")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid authentication scope: "bogus_scope". Run "wrangler login --scopes-list" to see all valid scopes.]`
+			);
+		});
+
+		it("should error if --scopes contains multiple invalid scopes", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --scopes bad_one bad_two")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid authentication scopes: "bad_one", "bad_two". Run "wrangler login --scopes-list" to see all valid scopes.]`
+			);
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async ({

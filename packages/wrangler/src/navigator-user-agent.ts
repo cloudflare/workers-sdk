@@ -8,9 +8,12 @@ export function isNavigatorDefined(
 		compatibility_flags.includes("global_navigator") &&
 		compatibility_flags.includes("no_global_navigator")
 	) {
-		throw new UserError("Can't both enable and disable a flag", {
-			telemetryMessage: "navigator user agent compatibility flags conflict",
-		});
+		throw new UserError(
+			'Conflicting compatibility flags: "global_navigator" and "no_global_navigator" cannot both be set. Remove one of these flags from your configuration.',
+			{
+				telemetryMessage: "navigator user agent compatibility flags conflict",
+			}
+		);
 	}
 
 	if (compatibility_flags.includes("global_navigator")) {

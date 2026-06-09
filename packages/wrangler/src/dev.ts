@@ -284,9 +284,12 @@ export const dev = createCommand({
 			);
 		}
 		if (args.tunnel && args.remote) {
-			throw new UserError("--tunnel is only supported in local mode.", {
-				telemetryMessage: "dev command tunnel remote conflict",
-			});
+			throw new UserError(
+				"--tunnel cannot be used with --remote. Tunnels expose your local dev server to the internet, which is only applicable in local mode. Remove --remote to use --tunnel, or remove --tunnel to use --remote.",
+				{
+					telemetryMessage: "dev command tunnel remote conflict",
+				}
+			);
 		}
 
 		if (isWebContainer()) {

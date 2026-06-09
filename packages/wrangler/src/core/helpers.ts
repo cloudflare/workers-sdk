@@ -8,26 +8,63 @@ import type {
 } from "./types";
 
 /**
+ * Formats an argument name for display in error messages.
+ * Positional arguments are shown as `<name>`, flags as `--name`.
+ *
+ * @param name - The argument name
+ * @param positionalArgs - Optional set of argument names that are positional (not flags)
+ * @returns The formatted argument name
+ */
+function formatArgName(
+	name: string,
+	positionalArgs?: ReadonlySet<string>
+): string {
+	return positionalArgs?.has(name) ? `<${name}>` : `--${name}`;
+}
+
+/**
+ * Joins a list of items with commas and "and" before the last item.
+ *
+ * @param items - The items to join
+ * @returns The joined string (e.g. "a, b and c")
+ */
+function joinWithAnd(items: string[]): string {
+	return items.length > 1
+		? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`
+		: items[0];
+}
+
+/**
  * A helper to demand one of a set of options
  * via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
+ *
+ * @param options - The option names to demand exactly one of
+ * @returns A validation function that checks the argv object. The returned function
+ *   accepts an optional `positionalArgs` set to distinguish positional arguments
+ *   from flags in error messages (positional args are shown as `<name>` instead of `--name`).
  */
 export function demandOneOfOption(...options: string[]) {
-	return function (argv: { [key: string]: unknown }) {
+	return function (
+		argv: { [key: string]: unknown },
+		positionalArgs?: ReadonlySet<string>
+	) {
 		const count = options.filter((option) => argv[option]).length;
-		const lastOption = options.pop();
+		const flagList = joinWithAnd(
+			options.map((o) => formatArgName(o, positionalArgs))
+		);
 
 		if (count === 0) {
 			throw new CommandLineArgsError(
-				`Exactly one of the arguments ${options.join(
-					", "
-				)} and ${lastOption} is required`,
+				`Missing required option: exactly one of ${flagList} must be provided`,
 				{ telemetryMessage: "core arguments missing exclusive option" }
 			);
 		} else if (count > 1) {
+			const provided = options
+				.filter((option) => argv[option])
+				.map((o) => formatArgName(o, positionalArgs));
+			const providedList = joinWithAnd(provided);
 			throw new CommandLineArgsError(
-				`Arguments ${options.join(
-					", "
-				)} and ${lastOption} are mutually exclusive`,
+				`Conflicting options: ${providedList} cannot be used together. Please provide only one.`,
 				{ telemetryMessage: "core arguments mutually exclusive options" }
 			);
 		}

@@ -3069,7 +3069,7 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --tunnel --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: --tunnel is only supported in local mode.]`
+				`[Error: --tunnel cannot be used with --remote. Tunnels expose your local dev server to the internet, which is only applicable in local mode. Remove --remote to use --tunnel, or remove --tunnel to use --remote.]`
 			);
 		});
 	});
