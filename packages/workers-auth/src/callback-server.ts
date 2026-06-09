@@ -32,12 +32,6 @@ export interface GetOauthTokenOptions {
 	browser: boolean;
 	scopes: string[];
 	clientId: string;
-	/**
-	 * The `redirect_uri` registered on the OAuth app. The provider redirects
-	 * here after consent; it must match a redirect URI configured for the
-	 * `clientId`. The local callback server (see `callbackHost`/`callbackPort`)
-	 * should normally listen on the same host/port this URL points at.
-	 */
 	redirectUri: string;
 	denied: {
 		url: string;

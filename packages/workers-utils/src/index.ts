@@ -88,7 +88,11 @@ export {
 
 export * from "./environment-variables/misc-variables";
 
-export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+export {
+	getGlobalConfigPath,
+	getGlobalWranglerConfigPath,
+} from "./global-wrangler-config-path";
+export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";
 
 export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
