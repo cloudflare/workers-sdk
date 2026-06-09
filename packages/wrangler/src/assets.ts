@@ -27,7 +27,7 @@ import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
-import type { StartDevWorkerOptions } from "./api";
+import type { StartDevWorkerOptions } from "./api/startDevWorker/types";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";

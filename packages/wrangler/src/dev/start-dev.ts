@@ -4,7 +4,7 @@ import { bold, green } from "@cloudflare/cli-shared-helpers/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getRegistryPath } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { DevEnv } from "../api";
+import { DevEnv } from "../api/startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { convertStartDevOptionsToBindings } from "../api/startDevWorker/utils";
@@ -19,7 +19,11 @@ import {
 	collectKeyValues,
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
-import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
+import type {
+	AsyncHook,
+	StartDevWorkerInput,
+	Trigger,
+} from "../api/startDevWorker/types";
 import type { StartDevOptionsBindings } from "../api/startDevWorker/utils";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";

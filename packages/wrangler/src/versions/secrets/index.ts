@@ -7,7 +7,7 @@ import {
 	fromMimeType,
 } from "../../deployment-bundle/create-worker-upload-form";
 import { getMetricsUsageHeaders } from "../../metrics";
-import type { StartDevWorkerOptions } from "../../api";
+import type { StartDevWorkerOptions } from "../../api/startDevWorker/types";
 import type {
 	CfModule,
 	CfPlacement,
