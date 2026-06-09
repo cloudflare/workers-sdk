@@ -1,9 +1,14 @@
+import { cors } from "hono/cors";
 import { Hono } from "hono/tiny";
 import { CorePaths } from "../core/constants";
 
 type Env = Record<string, R2Bucket>;
 
 const app = new Hono<{ Bindings: Env }>().basePath(CorePaths.R2_PUBLIC);
+
+app.use(
+	cors({ origin: "*", allowMethods: ["GET", "HEAD"], exposeHeaders: ["*"] })
+);
 
 app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 	const bucketId = decodeURIComponent(c.req.param("bucketId"));
@@ -66,7 +71,7 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 });
 
 app.all("/:bucketId/:key{.+}", (c) =>
-	c.text("Method Not Allowed", 405, { Allow: "GET, HEAD" })
+	c.text("Method Not Allowed", 405, { Allow: "GET, HEAD, OPTIONS" })
 );
 
 export default app;

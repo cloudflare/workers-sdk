@@ -156,12 +156,47 @@ test("rejects write methods with 405 and an Allow header", async ({
 			body: method === "DELETE" ? undefined : "tampered",
 		});
 		expect(res.status, `${method} should be rejected`).toBe(405);
-		expect(res.headers.get("Allow")).toBe("GET, HEAD");
+		expect(res.headers.get("Allow")).toBe("GET, HEAD, OPTIONS");
 		await res.arrayBuffer();
 	}
 
 	const after = await r2.get("readonly-key");
 	expect(await after?.text()).toBe("untouched");
+});
+
+// The entry worker rejects /cdn-cgi/* requests from non-localhost origins
+// before they reach this worker, so cross-origin here means a different
+// localhost port (e.g. a frontend dev server).
+test("answers CORS preflight requests", async ({ expect }) => {
+	const res = await fetch(bucketUrl("/any-key", ctx.url), {
+		method: "OPTIONS",
+		headers: {
+			Origin: "http://localhost:3000",
+			"Access-Control-Request-Method": "GET",
+			"Access-Control-Request-Headers": "If-None-Match",
+		},
+	});
+
+	expect(res.status).toBe(204);
+	expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+	expect(res.headers.get("Access-Control-Allow-Methods")).toBe("GET,HEAD");
+	expect(res.headers.get("Access-Control-Allow-Headers")).toBe("If-None-Match");
+});
+
+test("sets allow-all CORS headers on cross-origin GET responses", async ({
+	expect,
+}) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("cors-key", "cors-body");
+
+	const res = await fetch(bucketUrl("/cors-key", ctx.url), {
+		headers: { Origin: "http://localhost:3000" },
+	});
+
+	expect(res.status).toBe(200);
+	expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+	expect(res.headers.get("Access-Control-Expose-Headers")).toBe("*");
+	expect(await res.text()).toBe("cors-body");
 });
 
 // Conditional requests behave identically for GET and HEAD, except that
