@@ -812,19 +812,24 @@ describe("deploy", () => {
 					previewAccountRequests += 1;
 					contentTypeHeader = request.headers.get("Content-Type");
 					return HttpResponse.json({
-						account: {
-							id: "preview-account-id",
-							name: "Preview Account Alpha",
-							type: "standard",
-							apiToken: "preview-account-token",
-							tokenId: "preview-token-id",
-							expiresAt: "2027-01-01T00:00:00.000Z",
+						success: true,
+						result: {
+							account: {
+								id: "preview-account-id",
+								name: "Preview Account Alpha",
+								type: "standard",
+								apiToken: "preview-account-token",
+								tokenId: "preview-token-id",
+								expiresAt: "2027-01-01T00:00:00.000Z",
+							},
+							claim: {
+								token: "claim-token",
+								url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+								expiresAt: "2027-01-02T00:00:00.000Z",
+							},
 						},
-						claim: {
-							token: "claim-token",
-							url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
-							expiresAt: "2027-01-02T00:00:00.000Z",
-						},
+						errors: [],
+						messages: [],
 					});
 				})
 			);
@@ -1062,6 +1067,11 @@ describe("deploy", () => {
 				expect(std.out).toContain("Claim within:");
 				expect(fs.existsSync(globalTemporaryAccountPath)).toBe(true);
 				expect(fs.existsSync(localTemporaryAccountPath)).toBe(false);
+				if (process.platform !== "win32") {
+					expect(fs.statSync(globalTemporaryAccountPath).mode & 0o777).toBe(
+						0o600
+					);
+				}
 				expect(
 					JSON.parse(fs.readFileSync(globalTemporaryAccountPath, "utf-8"))
 				).toMatchObject({
@@ -1270,19 +1280,24 @@ describe("deploy", () => {
 					http.post(temporaryPreviewAccountUrl, async () => {
 						previewAccountRequests += 1;
 						return HttpResponse.json({
-							account: {
-								id: "preview-account-id",
-								name: "Preview Account Alpha",
-								type: "standard",
-								apiToken: "preview-account-token",
-								tokenId: "preview-token-id",
-								expiresAt: "2027-01-01T00:00:00.000Z",
+							success: true,
+							result: {
+								account: {
+									id: "preview-account-id",
+									name: "Preview Account Alpha",
+									type: "standard",
+									apiToken: "preview-account-token",
+									tokenId: "preview-token-id",
+									expiresAt: "2027-01-01T00:00:00.000Z",
+								},
+								claim: {
+									token: "claim-token",
+									url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+									expiresAt: "2027-01-02T00:00:00.000Z",
+								},
 							},
-							claim: {
-								token: "claim-token",
-								url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
-								expiresAt: "2027-01-02T00:00:00.000Z",
-							},
+							errors: [],
+							messages: [],
 						});
 					})
 				);
@@ -1342,19 +1357,24 @@ describe("deploy", () => {
 					http.post(temporaryPreviewAccountUrl, async () => {
 						previewAccountRequests += 1;
 						return HttpResponse.json({
-							account: {
-								id: "preview-account-id",
-								name: "Preview Account Alpha",
-								type: "standard",
-								apiToken: "preview-account-token",
-								tokenId: "preview-token-id",
-								expiresAt: "2027-01-01T00:00:00.000Z",
+							success: true,
+							result: {
+								account: {
+									id: "preview-account-id",
+									name: "Preview Account Alpha",
+									type: "standard",
+									apiToken: "preview-account-token",
+									tokenId: "preview-token-id",
+									expiresAt: "2027-01-01T00:00:00.000Z",
+								},
+								claim: {
+									token: "claim-token",
+									url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+									expiresAt: "2027-01-02T00:00:00.000Z",
+								},
 							},
-							claim: {
-								token: "claim-token",
-								url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
-								expiresAt: "2027-01-02T00:00:00.000Z",
-							},
+							errors: [],
+							messages: [],
 						});
 					})
 				);

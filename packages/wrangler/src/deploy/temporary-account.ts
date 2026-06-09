@@ -1,4 +1,5 @@
 import {
+	chmodSync,
 	existsSync,
 	mkdirSync,
 	readFileSync,
@@ -43,7 +44,7 @@ type TemporaryAccountPayload = {
 	};
 };
 
-type TemporaryAccountResponse = TemporaryAccountPayload & {
+type TemporaryAccountResponse = {
 	result?: TemporaryAccountPayload;
 };
 
@@ -115,10 +116,17 @@ function cacheTemporaryPreviewAccount(
 ): void {
 	const configPath = getTemporaryPreviewAccountConfigPath();
 	mkdirSync(path.dirname(configPath), { recursive: true });
+	// Restrict to the owner like the OAuth config (see writeAuthConfigFile): the
+	// `mode` option only applies on creation, so `chmodSync` also tightens any
+	// pre-existing file on save.
 	writeFileSync(
 		configPath,
-		JSON.stringify({ temporaryPreviewAccount }, null, 2)
+		JSON.stringify({ temporaryPreviewAccount }, null, 2),
+		{
+			mode: 0o600,
+		}
 	);
+	chmodSync(configPath, 0o600);
 }
 
 /**
@@ -164,13 +172,13 @@ export async function createTemporaryPreviewAccount(): Promise<TemporaryPreviewA
 		);
 	}
 
-	const previewAccount = responseBody.result ?? responseBody;
-	const accountId = previewAccount.account?.id;
-	const accountName = previewAccount.account?.name;
-	const apiToken = previewAccount.account?.apiToken;
-	const accountExpiresAt = previewAccount.account?.expiresAt;
-	const claimUrl = previewAccount.claim?.url;
-	const claimExpiresAt = previewAccount.claim?.expiresAt;
+	const previewAccount = responseBody.result;
+	const accountId = previewAccount?.account?.id;
+	const accountName = previewAccount?.account?.name;
+	const apiToken = previewAccount?.account?.apiToken;
+	const accountExpiresAt = previewAccount?.account?.expiresAt;
+	const claimUrl = previewAccount?.claim?.url;
+	const claimExpiresAt = previewAccount?.claim?.expiresAt;
 
 	if (
 		accountId === undefined ||

@@ -147,19 +147,24 @@ describe("versions upload", () => {
 				http.post(temporaryPreviewAccountUrl, async () => {
 					previewAccountRequests += 1;
 					return HttpResponse.json({
-						account: {
-							id: "preview-account-id",
-							name: "Preview Account Alpha",
-							type: "standard",
-							apiToken: "preview-account-token",
-							tokenId: "preview-token-id",
-							expiresAt: "2027-01-01T00:00:00.000Z",
+						success: true,
+						result: {
+							account: {
+								id: "preview-account-id",
+								name: "Preview Account Alpha",
+								type: "standard",
+								apiToken: "preview-account-token",
+								tokenId: "preview-token-id",
+								expiresAt: "2027-01-01T00:00:00.000Z",
+							},
+							claim: {
+								token: "claim-token",
+								url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+								expiresAt: "2027-01-02T00:00:00.000Z",
+							},
 						},
-						claim: {
-							token: "claim-token",
-							url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
-							expiresAt: "2027-01-02T00:00:00.000Z",
-						},
+						errors: [],
+						messages: [],
 					});
 				})
 			);
