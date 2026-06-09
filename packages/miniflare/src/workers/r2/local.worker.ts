@@ -30,6 +30,7 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 	const headers = new Headers();
 	object.writeHttpMetadata(headers);
 	headers.set("ETag", object.httpEtag);
+	headers.set("Last-Modified", object.uploaded.toUTCString());
 	headers.set("Accept-Ranges", "bytes");
 
 	if (c.req.method === "GET" && !("body" in object)) {

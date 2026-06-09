@@ -32,6 +32,7 @@ test("serves object body with metadata over HTTP", async ({ expect }) => {
 	expect(await res.text()).toBe("hello world");
 	expect(res.headers.get("Content-Type")).toBe("text/plain");
 	expect(res.headers.get("ETag")).toBe(stored.httpEtag);
+	expect(res.headers.get("Last-Modified")).toBe(stored.uploaded.toUTCString());
 });
 
 test("a plain GET returns the full object as 200, not 206", async ({
