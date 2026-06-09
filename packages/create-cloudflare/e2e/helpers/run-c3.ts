@@ -124,7 +124,9 @@ export const runC3 = async (
 			}
 			handledBackground.add(responder);
 			for (const keystroke of responder.keys) {
-				proc.stdin.write(keystroke);
+				if (proc.stdin.writable) {
+					proc.stdin.write(keystroke);
+				}
 			}
 		}
 	};
