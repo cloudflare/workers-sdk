@@ -7,7 +7,6 @@ import {
 } from "@cloudflare/workers-utils";
 import { Headers, Request } from "miniflare";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { logger } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
@@ -21,7 +20,13 @@ import type {
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
-import type { DispatchFetch, Json, Miniflare, RequestInfo } from "miniflare";
+import type {
+	DispatchFetch,
+	Json,
+	Miniflare,
+	RequestInfo,
+	WorkerdStructuredLog,
+} from "miniflare";
 
 export type TestHarnessOptions = {
 	/**
@@ -112,6 +117,23 @@ export type TestHarness = {
 	 */
 	getWorker(name?: string): WorkerHandle;
 	/**
+	 * Returns captured Workers runtime logs since the current server session
+	 * started or `clearLogs()` was last called.
+	 */
+	getLogs(): WorkerdStructuredLog[];
+	/**
+	 * Clears captured Workers runtime logs.
+	 */
+	clearLogs(): void;
+	/**
+	 * Prints a diagnostic timeline for this test server.
+	 *
+	 * Use this to trace the sequence of server events and Workers runtime logs
+	 * leading up to a test failure. Call `server.debug()` from your test runner's
+	 * failure or cleanup hook when the current test has failed.
+	 */
+	debug(): void;
+	/**
 	 * Updates the server configuration and reloads the running Workers.
 	 *
 	 * If the server has not started yet, this configures the options that will be
@@ -167,6 +189,14 @@ type ServerSession = {
 	devEnvs: DevEnv[];
 };
 
+type DebugLog = {
+	source: "server" | "runtime";
+	worker?: string;
+	level?: string;
+	message: string;
+	timestamp: number;
+};
+
 /**
  * Creates a local test server for running Workers.
  *
@@ -188,6 +218,34 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	let currentOptions = options;
 	let serverSession: ServerSession | undefined;
 	let startPromise: Promise<ServerSession> | undefined;
+	let workerdLogs: WorkerdStructuredLog[] = [];
+	let debugLogs: DebugLog[] = [];
+
+	function debugLog(message: string, worker?: string) {
+		debugLogs.push({
+			source: "server",
+			worker,
+			message,
+			timestamp: Date.now(),
+		});
+	}
+
+	function captureStructuredLog(log: WorkerdStructuredLog) {
+		workerdLogs.push(log);
+		debugLogs.push({
+			source: "runtime",
+			level: log.level,
+			message: log.message,
+			timestamp: log.timestamp,
+		});
+	}
+
+	function formatLocalTimestamp(timestamp: number) {
+		const date = new Date(timestamp);
+		const pad = (value: number) => String(value).padStart(2, "0");
+
+		return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+	}
 
 	function resolvePath(basePath: string, maybePath: string | URL): string {
 		if (maybePath instanceof URL) {
@@ -208,7 +266,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			normalizeAndValidateConfig(config, configPath, configPath, {});
 
 		if (diagnostics.hasWarnings()) {
-			logger.warn(diagnostics.renderWarnings());
+			debugLog(diagnostics.renderWarnings(), normalizedConfig.name);
 		}
 
 		if (diagnostics.hasErrors()) {
@@ -251,11 +309,12 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				dev: {
 					auth: serverAuthHook,
 					server: { hostname: "127.0.0.1", port: 0 },
-					logLevel: "error",
+					logLevel: "none",
 					watch: false,
 					persist: false,
 					inspector: false,
 					registry: undefined,
+					structuredLogsHandler: (log) => captureStructuredLog(log),
 					outboundService: (request) => {
 						/**
 						 * Miniflare passes its own undici-based Request here. Pass the URL as
@@ -304,12 +363,14 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			primaryDevEnv,
 			devEnvs: [primaryDevEnv, ...auxiliaryDevEnvs],
 		};
-
 		try {
+			debugLog("startup - started");
 			await updateConfig(session, inputs);
 			await waitForProxyReady(session);
+			debugLog("startup - completed");
 			return session;
 		} catch (error) {
+			debugLog("startup - failed");
 			await teardownSession(session);
 			throw error;
 		}
@@ -325,11 +386,9 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		}
 	}
 
-	async function resolveSession(workerName?: string) {
+	async function resolveSession() {
 		if (startPromise) {
-			const session = await startPromise;
-			assertWorkerExists(session, workerName);
-			return session;
+			return await startPromise;
 		}
 
 		assert(
@@ -337,17 +396,20 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			"Server has not been started. Start it with server.listen() before calling this method."
 		);
 
-		assertWorkerExists(serverSession, workerName);
-
 		return serverSession;
 	}
 
-	function assertWorkerExists(
+	function resolveWorkerName(
 		session: ServerSession,
 		workerName: string | undefined
 	) {
 		if (workerName === undefined) {
-			return;
+			const primaryWorkerName = session.primaryDevEnv.config.latestConfig?.name;
+			assert(
+				primaryWorkerName,
+				"Primary Worker name is not available. Add a Worker `name` or call server.getWorker(name)."
+			);
+			return primaryWorkerName;
 		}
 
 		const workerExists = session.devEnvs.some((devEnv) => {
@@ -359,6 +421,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				`Worker ${JSON.stringify(workerName)} does not exist in this server.`
 			);
 		}
+
+		return workerName;
 	}
 
 	async function serverAuthHook(
@@ -372,7 +436,12 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 	async function teardownSession(session: ServerSession) {
 		try {
+			debugLog("teardown - started");
 			await Promise.all(session.devEnvs.map((devEnv) => devEnv.teardown()));
+			debugLog("teardown - completed");
+		} catch (error) {
+			debugLog("teardown - failed");
+			throw error;
 		} finally {
 			if (session === serverSession) {
 				serverSession = undefined;
@@ -388,6 +457,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				);
 			}
 
+			workerdLogs = [];
+			debugLogs = [];
 			initialOptions = currentOptions;
 			startPromise = createSession(initialOptions)
 				.then((session) => {
@@ -496,13 +567,28 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return miniflare;
 	}
 
+	function getInputUrl(input: RequestInfo) {
+		if (typeof input === "string") {
+			return input;
+		}
+
+		if (input instanceof URL) {
+			return input.href;
+		}
+
+		return input.url;
+	}
+
 	async function dispatchFetch(
 		miniflare: Miniflare,
 		input: RequestInfo,
 		init?: RequestInit,
-		worker?: string
+		worker?: string,
+		event = "fetch"
 	) {
-		if (typeof input === "string") {
+		let resolvedInput = input;
+
+		if (typeof input === "string" && !URL.canParse(input)) {
 			const session = await resolveSession();
 			const { url } = await waitForProxyReady(session);
 			const baseUrl = new URL(url);
@@ -516,19 +602,26 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				baseUrl.hostname = "localhost";
 			}
 
-			input = new URL(input, baseUrl);
+			resolvedInput = new URL(input, baseUrl);
 		}
 
-		if (worker === undefined) {
-			return miniflare.dispatchFetch(input, init);
-		}
-
-		const request = new Request(input, init);
+		const request = new Request(resolvedInput, init);
 		const headers = new Headers(request.headers);
+		const context = `${event} - ${request.method} ${getInputUrl(input)}`;
 
-		headers.set("MF-Route-Override", worker);
+		if (worker) {
+			headers.set("MF-Route-Override", worker);
+		}
 
-		return miniflare.dispatchFetch(request, { headers });
+		try {
+			debugLog(`${context} - started`, worker);
+			const response = await miniflare.dispatchFetch(request, { headers });
+			debugLog(`${context} - ${response.status}`, worker);
+			return response;
+		} catch (error) {
+			debugLog(`${context} - failed`, worker);
+			throw error;
+		}
 	}
 
 	return {
@@ -553,35 +646,72 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		getWorker(name?: string) {
 			return {
 				async fetch(input, init) {
-					const session = await resolveSession(name);
+					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
 
-					return dispatchFetch(miniflare, input, init, name);
+					return dispatchFetch(miniflare, input, init, workerName);
 				},
 				async scheduled(scheduledOptions) {
-					const session = await resolveSession(name);
+					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
-					const url = new URL(
-						"http://localhost/cdn-cgi/handler/scheduled?format=json"
-					);
+					const workerName = resolveWorkerName(session, name);
+					const searchParams = new URLSearchParams({
+						format: "json",
+					});
 
 					if (scheduledOptions?.cron !== undefined) {
-						url.searchParams.set("cron", scheduledOptions.cron);
+						searchParams.set("cron", scheduledOptions.cron);
 					}
 
 					if (scheduledOptions?.scheduledTime !== undefined) {
-						url.searchParams.set(
+						searchParams.set(
 							"time",
 							String(scheduledOptions.scheduledTime.getTime())
 						);
 					}
 
-					const response = await dispatchFetch(miniflare, url, undefined, name);
+					const response = await dispatchFetch(
+						miniflare,
+						`/cdn-cgi/handler/scheduled?${searchParams.toString()}`,
+						undefined,
+						workerName,
+						"scheduled"
+					);
 					const result = await response.json();
 
 					return result as FetcherScheduledResult;
 				},
 			};
+		},
+		getLogs() {
+			return structuredClone(workerdLogs);
+		},
+		clearLogs() {
+			workerdLogs = [];
+		},
+		debug() {
+			let message = "-------------- No debug log --------------";
+
+			if (debugLogs.length > 0) {
+				const lines = debugLogs.map((log) => {
+					const tags = [log.source, log.worker]
+						.filter((tag) => tag !== undefined)
+						.map((tag) => `[${tag}]`)
+						.join(" ");
+
+					const level = log.level === undefined ? "" : `${log.level}: `;
+
+					return `${formatLocalTimestamp(log.timestamp)} ${tags} ${level}${log.message}`;
+				});
+
+				message = ["--------------- debug logs ---------------", ...lines].join(
+					"\n"
+				);
+			}
+
+			// oxlint-disable-next-line no-console -- Use console.log() directly as the logger is disabled
+			console.log(message);
 		},
 		async update(updateInput) {
 			let nextOptions: TestHarnessOptions;
@@ -602,6 +732,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			}
 
 			if (serverSession) {
+				debugLog("update - started");
 				const nextInputs = resolveWorkerInputs(nextOptions);
 
 				if (nextInputs.length !== serverSession.devEnvs.length) {
@@ -615,7 +746,9 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						waitForReloadComplete(serverSession),
 						updateConfig(serverSession, nextInputs),
 					]);
+					debugLog("update - completed");
 				} catch (error) {
+					debugLog("update - failed");
 					await teardownSession(serverSession);
 					throw error;
 				}

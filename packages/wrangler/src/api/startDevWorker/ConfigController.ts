@@ -159,6 +159,7 @@ async function resolveDevConfig(
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
 		outboundService: input.dev?.outboundService,
+		structuredLogsHandler: input.dev?.structuredLogsHandler,
 		// absolute resolved path
 		persist: localPersistencePath,
 		registry: input.dev?.registry,

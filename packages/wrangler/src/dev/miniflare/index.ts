@@ -108,6 +108,7 @@ export interface ConfigBundle {
 	// The stable, externally-reachable URL of the proxy server in front of
 	// this Miniflare instance (e.g. Wrangler's ProxyWorker URL).
 	publicUrl: string | undefined;
+	structuredLogsHandler: ((log: WorkerdStructuredLog) => void) | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -1130,7 +1131,7 @@ export async function buildMiniflareOptions(
 		logRequests: false,
 		log,
 		verbose: logger.loggerLevel === "debug",
-		handleStructuredLogs,
+		handleStructuredLogs: config.structuredLogsHandler ?? handleStructuredLogs,
 		defaultPersistRoot,
 		workers: [
 			{
