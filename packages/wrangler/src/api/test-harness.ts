@@ -314,7 +314,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					persist: false,
 					inspector: false,
 					registry: undefined,
-					structuredLogsHandler: (log: WorkerdStructuredLog) => captureStructuredLog(log),
+					structuredLogsHandler: (log: WorkerdStructuredLog) =>
+						captureStructuredLog(log),
 					outboundService: (request) => {
 						/**
 						 * Miniflare passes its own undici-based Request here. Pass the URL as

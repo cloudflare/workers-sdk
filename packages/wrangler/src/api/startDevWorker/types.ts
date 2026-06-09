@@ -21,11 +21,7 @@ import type {
 	StartDevWorkerInput,
 	Trigger,
 } from "@cloudflare/workers-utils";
-import type {
-	DispatchFetch,
-	Miniflare,
-	WorkerdStructuredLog,
-} from "miniflare";
+import type { DispatchFetch, Miniflare, WorkerdStructuredLog } from "miniflare";
 import type * as undici from "undici";
 
 type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
