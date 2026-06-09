@@ -1,5 +1,5 @@
 import { Miniflare } from "miniflare";
-import { assert, test } from "vitest";
+import { assert, describe, test } from "vitest";
 import { miniflareTest, useDispose } from "../../test-shared";
 import type { MiniflareTestContext } from "../../test-shared";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
@@ -104,7 +104,7 @@ test("decodes percent-encoded keys", async ({ expect }) => {
 	expect(await res.text()).toBe("nested");
 });
 
-test("supports range requests", async ({ expect }) => {
+test("GET supports range requests", async ({ expect }) => {
 	const r2 = await ctx.mf.getR2Bucket("BUCKET");
 	await r2.put("range-key", "0123456789");
 
@@ -164,121 +164,147 @@ test("rejects write methods with 405 and an Allow header", async ({
 	expect(await after?.text()).toBe("untouched");
 });
 
-test("returns 304 when If-None-Match matches", async ({ expect }) => {
-	const r2 = await ctx.mf.getR2Bucket("BUCKET");
-	await r2.put("conditional-key", "value");
-	const stored = await r2.head("conditional-key");
-	assert(stored !== null);
+// Conditional requests behave identically for GET and HEAD, except that
+// HEAD success responses have no body.
+describe.each(["GET", "HEAD"] as const)("%s conditional requests", (method) => {
+	function expectedBody(body: string): string {
+		return method === "GET" ? body : "";
+	}
 
-	const res = await fetch(bucketUrl("/conditional-key", ctx.url), {
-		headers: { "If-None-Match": stored.httpEtag },
+	test("returns 304 when If-None-Match matches", async ({ expect }) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-inm-hit-key`;
+		await r2.put(key, "value");
+		const stored = await r2.head(key);
+		assert(stored !== null);
+
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: { "If-None-Match": stored.httpEtag },
+		});
+
+		expect(res.status).toBe(304);
+		expect(res.headers.get("ETag")).toBe(stored.httpEtag);
+		expect(await res.text()).toBe("");
 	});
 
-	expect(res.status).toBe(304);
-	expect(res.headers.get("ETag")).toBe(stored.httpEtag);
-	expect(await res.text()).toBe("");
-});
+	test("returns 200 when If-None-Match does not match", async ({ expect }) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-inm-miss-key`;
+		await r2.put(key, "fresh");
 
-test("returns 200 when If-None-Match does not match", async ({ expect }) => {
-	const r2 = await ctx.mf.getR2Bucket("BUCKET");
-	await r2.put("inm-miss-key", "fresh");
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: { "If-None-Match": '"some-other-etag"' },
+		});
 
-	const res = await fetch(bucketUrl("/inm-miss-key", ctx.url), {
-		headers: { "If-None-Match": '"some-other-etag"' },
+		expect(res.status).toBe(200);
+		expect(res.headers.get("Content-Length")).toBe("5");
+		expect(await res.text()).toBe(expectedBody("fresh"));
 	});
 
-	expect(res.status).toBe(200);
-	expect(await res.text()).toBe("fresh");
-});
+	test("returns 412 when If-Match does not match", async ({ expect }) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-if-match-miss-key`;
+		await r2.put(key, "value");
 
-test("returns 412 when If-Match does not match", async ({ expect }) => {
-	const r2 = await ctx.mf.getR2Bucket("BUCKET");
-	await r2.put("if-match-key", "value");
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: { "If-Match": '"definitely-not-the-etag"' },
+		});
 
-	const res = await fetch(bucketUrl("/if-match-key", ctx.url), {
-		headers: { "If-Match": '"definitely-not-the-etag"' },
+		expect(res.status).toBe(412);
+		expect(await res.text()).toBe("");
 	});
 
-	expect(res.status).toBe(412);
-	expect(await res.text()).toBe("");
-});
+	test("returns 200 when If-Match matches", async ({ expect }) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-if-match-hit-key`;
+		await r2.put(key, "value");
+		const stored = await r2.head(key);
+		assert(stored !== null);
 
-test("returns 200 when If-Match matches", async ({ expect }) => {
-	const r2 = await ctx.mf.getR2Bucket("BUCKET");
-	await r2.put("if-match-hit-key", "value");
-	const stored = await r2.head("if-match-hit-key");
-	assert(stored !== null);
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: { "If-Match": stored.httpEtag },
+		});
 
-	const res = await fetch(bucketUrl("/if-match-hit-key", ctx.url), {
-		headers: { "If-Match": stored.httpEtag },
+		expect(res.status).toBe(200);
+		expect(res.headers.get("Content-Length")).toBe("5");
+		expect(await res.text()).toBe(expectedBody("value"));
 	});
 
-	expect(res.status).toBe(200);
-	expect(await res.text()).toBe("value");
-});
+	test("returns 304 when If-Modified-Since is after the upload time", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-ims-miss-key`;
+		await r2.put(key, "value");
 
-test("returns 304 when If-Modified-Since is after the upload time", async ({
-	expect,
-}) => {
-	const r2 = await ctx.mf.getR2Bucket("BUCKET");
-	await r2.put("ims-key", "value");
+		const future = new Date(Date.now() + 60_000).toUTCString();
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: { "If-Modified-Since": future },
+		});
 
-	const future = new Date(Date.now() + 60_000).toUTCString();
-	const res = await fetch(bucketUrl("/ims-key", ctx.url), {
-		headers: { "If-Modified-Since": future },
+		expect(res.status).toBe(304);
+		expect(await res.text()).toBe("");
 	});
 
-	expect(res.status).toBe(304);
-	expect(await res.text()).toBe("");
-});
+	test("returns 200 when If-Modified-Since is before the upload time", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-ims-hit-key`;
+		await r2.put(key, "fresh");
 
-test("returns 200 when If-Modified-Since is before the upload time", async ({
-	expect,
-}) => {
-	const r2 = await ctx.mf.getR2Bucket("BUCKET");
-	await r2.put("ims-hit-key", "fresh");
+		const past = new Date(Date.now() - 60_000).toUTCString();
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: { "If-Modified-Since": past },
+		});
 
-	const past = new Date(Date.now() - 60_000).toUTCString();
-	const res = await fetch(bucketUrl("/ims-hit-key", ctx.url), {
-		headers: { "If-Modified-Since": past },
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe(expectedBody("fresh"));
 	});
 
-	expect(res.status).toBe(200);
-	expect(await res.text()).toBe("fresh");
-});
+	test("returns 412 when If-Unmodified-Since is before the upload time", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-ius-miss-key`;
+		await r2.put(key, "value");
 
-test("returns 412 when If-Unmodified-Since is before the upload time", async ({
-	expect,
-}) => {
-	const r2 = await ctx.mf.getR2Bucket("BUCKET");
-	await r2.put("ius-key", "value");
+		const past = new Date(Date.now() - 60_000).toUTCString();
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: { "If-Unmodified-Since": past },
+		});
 
-	const past = new Date(Date.now() - 60_000).toUTCString();
-	const res = await fetch(bucketUrl("/ius-key", ctx.url), {
-		headers: { "If-Unmodified-Since": past },
+		expect(res.status).toBe(412);
+		expect(await res.text()).toBe("");
 	});
 
-	expect(res.status).toBe(412);
-	expect(await res.text()).toBe("");
-});
+	test("reports 412 over 304 when both header families fail", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-both-key`;
+		await r2.put(key, "value");
+		const stored = await r2.head(key);
+		assert(stored !== null);
 
-test("reports 412 over 304 when both header families fail", async ({
-	expect,
-}) => {
-	const r2 = await ctx.mf.getR2Bucket("BUCKET");
-	await r2.put("both-key", "value");
-	const stored = await r2.head("both-key");
-	assert(stored !== null);
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: {
+				"If-Match": '"definitely-not-the-etag"',
+				"If-None-Match": stored.httpEtag,
+			},
+		});
 
-	const res = await fetch(bucketUrl("/both-key", ctx.url), {
-		headers: {
-			"If-Match": '"definitely-not-the-etag"',
-			"If-None-Match": stored.httpEtag,
-		},
+		expect(res.status).toBe(412);
+		expect(await res.text()).toBe("");
 	});
-
-	expect(res.status).toBe(412);
-	expect(await res.text()).toBe("");
 });
 
 test("multiple buckets are each independently reachable", async ({

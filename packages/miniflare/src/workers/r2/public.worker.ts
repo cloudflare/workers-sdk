@@ -15,13 +15,13 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 	}
 
 	const hasRange = c.req.header("Range") !== undefined;
-	const object =
-		c.req.method === "HEAD"
-			? await bucket.head(key)
-			: await bucket.get(key, {
-					onlyIf: c.req.raw.headers,
-					range: hasRange ? c.req.raw.headers : undefined,
-				});
+	// `bucket.head()` cannot evaluate conditional headers (the R2 head
+	// operation only carries the key), so HEAD also uses `bucket.get()` and
+	// discards the body.
+	const object = await bucket.get(key, {
+		onlyIf: c.req.raw.headers,
+		range: hasRange && c.req.method === "GET" ? c.req.raw.headers : undefined,
+	});
 
 	if (object === null) {
 		return c.notFound();
@@ -33,7 +33,7 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 	headers.set("Last-Modified", object.uploaded.toUTCString());
 	headers.set("Accept-Ranges", "bytes");
 
-	if (c.req.method === "GET" && !("body" in object)) {
+	if (!("body" in object)) {
 		const is412 =
 			c.req.header("If-Match") !== undefined ||
 			c.req.header("If-Unmodified-Since") !== undefined;
@@ -45,25 +45,24 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 		return c.body(null, { headers });
 	}
 
-	const body = object as R2ObjectBody;
-	const range = body.range;
+	const range = object.range;
 	if (
 		hasRange &&
 		range !== undefined &&
 		"offset" in range &&
 		"length" in range
 	) {
-		const { offset = 0, length = body.size - offset } = range;
+		const { offset = 0, length = object.size - offset } = range;
 		headers.set(
 			"Content-Range",
-			`bytes ${offset}-${offset + length - 1}/${body.size}`
+			`bytes ${offset}-${offset + length - 1}/${object.size}`
 		);
 		headers.set("Content-Length", `${length}`);
-		return c.body(body.body, { status: 206, headers });
+		return c.body(object.body, { status: 206, headers });
 	}
 
-	headers.set("Content-Length", `${body.size}`);
-	return c.body(body.body, { headers });
+	headers.set("Content-Length", `${object.size}`);
+	return c.body(object.body, { headers });
 });
 
 app.all("/:bucketId/:key{.+}", (c) =>
