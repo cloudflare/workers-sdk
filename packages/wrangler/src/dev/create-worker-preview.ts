@@ -220,21 +220,6 @@ export async function createPreviewSession(
 				account.accountId,
 				{
 					abortSignal: withTimeout(abortSignal),
-					fetchResultOverride: (
-						compliance,
-						resource,
-						init,
-						queryParams,
-						signal
-					) =>
-						fetchResult(
-							compliance,
-							resource,
-							init,
-							queryParams,
-							signal,
-							apiToken
-						),
 				}
 			);
 			host = `${name ?? crypto.randomUUID()}.${subdomain}`;

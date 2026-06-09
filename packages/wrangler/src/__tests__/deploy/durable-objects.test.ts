@@ -439,8 +439,7 @@ describe("deploy", () => {
 				msw.use(
 					http.get(
 						"*/accounts/:accountId/workers/services/:scriptName/environments/:envName/secrets",
-						() => HttpResponse.json(createFetchResult([]), { status: 200 }),
-						{ once: true }
+						() => HttpResponse.json(createFetchResult([]), { status: 200 })
 					)
 				);
 				mockSubDomainRequest();

@@ -88,47 +88,57 @@ import type { FormData } from "undici";
  * metrics, the dev-mode worker registry, container orchestration, etc.).
  */
 export type DeployCallbacks = {
-	syncWorkersSite?: (
-		complianceConfig: ComplianceConfig,
-		accountId: string | undefined,
-		scriptName: string,
-		siteAssets: LegacyAssetPaths | undefined,
-		preview: boolean,
-		dryRun: boolean | undefined,
-		oldAssetTTL: number | undefined
-	) => Promise<{
-		manifest: { [filePath: string]: string } | undefined;
-		namespace: string | undefined;
-	}>;
-	provisionBindings?: (
-		bindings: Record<string, Binding>,
-		accountId: string,
-		scriptName: string,
-		autoCreate: boolean,
-		config: Config,
-		requireRemote?: boolean
-	) => Promise<void>;
-	getNormalizedContainerOptions?: (
-		config: Config,
-		args: {
-			containersRollout?: "gradual" | "immediate" | "none";
-			dryRun?: boolean;
-		}
-	) => Promise<ContainerNormalizedConfig[]>;
-	buildContainer?: (
-		containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
-		imageTag: string,
-		dryRun: boolean,
-		pathToDocker: string
-	) => Promise<unknown>;
-	deployContainers?: (
-		config: Config,
-		normalisedContainerConfig: ContainerNormalizedConfig[],
-		args: { versionId: string; accountId: string; scriptName: string }
-	) => Promise<void>;
-	analyseBundle?: (
-		workerBundle: string | FormData
-	) => Promise<Record<string, unknown>>;
+	syncWorkersSite:
+		| ((
+				complianceConfig: ComplianceConfig,
+				accountId: string | undefined,
+				scriptName: string,
+				siteAssets: LegacyAssetPaths | undefined,
+				preview: boolean,
+				dryRun: boolean | undefined,
+				oldAssetTTL: number | undefined
+		  ) => Promise<{
+				manifest: { [filePath: string]: string } | undefined;
+				namespace: string | undefined;
+		  }>)
+		| undefined;
+	provisionBindings:
+		| ((
+				bindings: Record<string, Binding>,
+				accountId: string,
+				scriptName: string,
+				autoCreate: boolean,
+				config: Config,
+				requireRemote?: boolean
+		  ) => Promise<void>)
+		| undefined;
+	getNormalizedContainerOptions:
+		| ((
+				config: Config,
+				args: {
+					containersRollout?: "gradual" | "immediate" | "none";
+					dryRun?: boolean;
+				}
+		  ) => Promise<ContainerNormalizedConfig[]>)
+		| undefined;
+	buildContainer:
+		| ((
+				containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
+				imageTag: string,
+				dryRun: boolean,
+				pathToDocker: string
+		  ) => Promise<unknown>)
+		| undefined;
+	deployContainers:
+		| ((
+				config: Config,
+				normalisedContainerConfig: ContainerNormalizedConfig[],
+				args: { versionId: string; accountId: string; scriptName: string }
+		  ) => Promise<void>)
+		| undefined;
+	analyseBundle:
+		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
+		| undefined;
 };
 
 export default async function deploy(

@@ -14,7 +14,7 @@ import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntim
 import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
 import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
-import type { StartDevWorkerInput } from "./startDevWorker/types";
+import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
 import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
@@ -280,7 +280,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 	function resolveWorkerInputs(
 		serverOptions: TestHarnessOptions
-	): StartDevWorkerInput[] {
+	): WranglerStartDevWorkerInput[] {
 		if (serverOptions.workers.length === 0) {
 			throw new Error("Test harness requires at least one worker.");
 		}
@@ -314,7 +314,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					persist: false,
 					inspector: false,
 					registry: undefined,
-					structuredLogsHandler: (log) => captureStructuredLog(log),
+					structuredLogsHandler: (log: WorkerdStructuredLog) => captureStructuredLog(log),
 					outboundService: (request) => {
 						/**
 						 * Miniflare passes its own undici-based Request here. Pass the URL as
@@ -378,7 +378,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 	async function updateConfig(
 		session: ServerSession,
-		inputs: StartDevWorkerInput[]
+		inputs: WranglerStartDevWorkerInput[]
 	) {
 		for (const [index, workerInput] of inputs.entries()) {
 			const devEnv = session.devEnvs[index];

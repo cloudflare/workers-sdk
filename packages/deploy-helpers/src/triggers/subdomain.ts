@@ -5,10 +5,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { confirm, fetchResult, logger, prompt } from "../shared/context";
-import type {
-	ComplianceConfig,
-	FetchResultFetcher,
-} from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 type WorkersDevSubdomainRegistrationContext = "workers_dev" | "workflows";
 
@@ -16,7 +13,6 @@ type GetWorkersDevSubdomainOptions = {
 	configPath?: string | undefined;
 	abortSignal?: AbortSignal | undefined;
 	registrationContext?: WorkersDevSubdomainRegistrationContext | undefined;
-	fetchResultOverride?: FetchResultFetcher | undefined;
 };
 
 /**
@@ -31,13 +27,11 @@ export async function getWorkersDevSubdomain(
 		configPath,
 		abortSignal,
 		registrationContext = "workers_dev",
-		fetchResultOverride,
 	} = options;
-	const fetch = fetchResultOverride ?? fetchResult;
 
 	try {
 		// note: API docs say that this field is "name", but they're lying.
-		const { subdomain } = await fetch<{ subdomain: string }>(
+		const { subdomain } = await fetchResult<{ subdomain: string }>(
 			complianceConfig,
 			`/accounts/${accountId}/workers/subdomain`,
 			undefined,

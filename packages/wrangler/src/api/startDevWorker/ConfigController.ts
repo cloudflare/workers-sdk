@@ -47,6 +47,7 @@ import type {
 	StartDevWorkerInput,
 	StartDevWorkerOptions,
 	Trigger,
+	WranglerStartDevWorkerInput,
 } from "./types";
 import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
@@ -56,7 +57,7 @@ const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
 
 async function resolveInspectorConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: WranglerStartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]["inspector"]> {
 	if (input.dev?.inspector === false) {
 		return false;
@@ -75,7 +76,7 @@ async function resolveInspectorConfig(
 
 async function resolveDevConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: WranglerStartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
 	const auth = async () => {
 		if (input.dev?.remote) {

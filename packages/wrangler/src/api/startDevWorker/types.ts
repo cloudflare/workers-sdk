@@ -29,6 +29,20 @@ import type {
 import type * as undici from "undici";
 
 type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
+
+/**
+ * Extended StartDevWorkerInput with wrangler-specific fields that depend on miniflare types.
+ * The base StartDevWorkerInput in workers-utils is kept dependency-free.
+ */
+export type WranglerStartDevWorkerInput = Omit<StartDevWorkerInput, "dev"> & {
+	dev?: StartDevWorkerInput["dev"] & {
+		/** Handles structured runtime logs. */
+		structuredLogsHandler?: (log: WorkerdStructuredLog) => void;
+		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
+		mockFetch?: undici.MockAgent;
+	};
+};
+
 export interface Worker {
 	ready: Promise<void>;
 	url: Promise<URL>;

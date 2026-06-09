@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import { fetchSecrets } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -47,10 +46,6 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
 vi.mock("@cloudflare/cli-shared-helpers/command");
-vi.mock("@cloudflare/deploy-helpers", async (importOriginal) => ({
-	...(await importOriginal()),
-	fetchSecrets: vi.fn(),
-}));
 
 describe("deploy: interactive deploy config prompts", () => {
 	mockAccountId();
@@ -74,7 +69,6 @@ describe("deploy: interactive deploy config prompts", () => {
 				return HttpResponse.json(createFetchResult({}));
 			})
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
