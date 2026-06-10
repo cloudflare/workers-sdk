@@ -37,13 +37,6 @@ describe("experimental_getWranglerCommands", () => {
 			    "hidden": true,
 			    "type": "boolean",
 			  },
-			  "experimental-new-config": {
-			    "alias": "x-new-config",
-			    "default": false,
-			    "describe": "[experimental] Use cloudflare.config.ts and wrangler.config.ts (only supported on dev, build, deploy, versions upload, versions deploy)",
-			    "hidden": true,
-			    "type": "boolean",
-			  },
 			  "experimental-provision": {
 			    "alias": [
 			      "x-provision",

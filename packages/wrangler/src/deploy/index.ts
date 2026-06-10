@@ -14,6 +14,7 @@ import {
 	cleanupDestination,
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
+import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { syncWorkersSite } from "../sites";
@@ -30,6 +31,7 @@ export const deployCommand = createCommand({
 	},
 	positionalArgs: ["path"],
 	args: {
+		...experimentalNewConfigArg,
 		...sharedDeployVersionsArgs,
 		triggers: {
 			describe: "cron schedules to attach",
@@ -106,7 +108,6 @@ export const deployCommand = createCommand({
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		printMetricsBanner: true,
-		supportsNewConfig: true,
 	},
 	validateArgs(args) {
 		validateDeployVersionsArgs(args, "deploy");

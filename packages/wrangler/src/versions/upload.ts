@@ -11,6 +11,7 @@ import {
 	cleanupDestination,
 	mergeVersionsUploadConfigArgs,
 } from "../deployment-bundle/merge-config-args";
+import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { getScriptName } from "../utils/getScriptName";
@@ -23,6 +24,7 @@ export const versionsUploadCommand = createCommand({
 	},
 	positionalArgs: ["path"],
 	args: {
+		...experimentalNewConfigArg,
 		...sharedDeployVersionsArgs,
 		"preview-alias": {
 			describe: "Name of an alias for this Worker version",
@@ -38,7 +40,6 @@ export const versionsUploadCommand = createCommand({
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
-		supportsNewConfig: true,
 	},
 	validateArgs(args) {
 		validateDeployVersionsArgs(args, "versions upload");

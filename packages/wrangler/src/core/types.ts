@@ -231,15 +231,6 @@ export type CommandDefinition<
 		 * @default false
 		 */
 		skipSkillsPrompt?: boolean;
-
-		/**
-		 * If true, this command accepts the experimental `--experimental-new-config`
-		 * flag (`cloudflare.config.ts` + `wrangler.config.ts`
-		 * instead of `wrangler.json[c]` / `wrangler.toml`).
-		 *
-		 * @default false
-		 */
-		supportsNewConfig?: boolean;
 	};
 
 	/**

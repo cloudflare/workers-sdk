@@ -115,26 +115,10 @@ describe("--x-new-config deploy --dry-run", () => {
 				"--x-new-config",
 			]);
 			expect(result.status).not.toBe(0);
-			expect(result.stderr.toString()).toContain(
-				"--experimental-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy"
-			);
-		} finally {
-			removeDir(tmpDir, { fireAndForget: true });
-		}
-	});
-
-	test("rejects wrangler types --x-new-config", async ({ expect }) => {
-		const tmpDir = await stageFixture();
-		try {
-			const result = spawnWrangler(tmpDir, ["types", "--x-new-config"]);
-			expect(result.status).not.toBe(0);
-			const stderr = result.stderr.toString();
-			expect(
-				stderr.includes("wrangler types is currently not supported") ||
-					stderr.includes(
-						"--experimental-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy"
-					)
-			).toBe(true);
+			// Yargs strict-mode rejection — the flag is only declared on the
+			// commands that support it, so yargs reports it as unknown elsewhere.
+			expect(result.stderr.toString()).toContain("Unknown arguments");
+			expect(result.stderr.toString()).toContain("x-new-config");
 		} finally {
 			removeDir(tmpDir, { fireAndForget: true });
 		}

@@ -1,4 +1,5 @@
 import { createCommand } from "../core/create-command";
+import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { createCLIParser } from "../index";
 
 export const buildCommand = createCommand({
@@ -11,7 +12,9 @@ export const buildCommand = createCommand({
 	behaviour: {
 		printBanner: false,
 		provideConfig: false,
-		supportsNewConfig: true,
+	},
+	args: {
+		...experimentalNewConfigArg,
 	},
 	async handler(buildArgs) {
 		const { wrangler } = createCLIParser([

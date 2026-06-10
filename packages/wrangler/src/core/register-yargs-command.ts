@@ -135,19 +135,10 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		// Sentry breadcrumbs expect the `wrangler` prefix.
 		addBreadcrumb(def.command);
 
-		const newConfigEnabled = args.experimentalNewConfig === true;
+		const newConfigEnabled =
+			"experimentalNewConfig" in args && args.experimentalNewConfig === true;
 
 		try {
-			// Enforce the experimental `--experimental-new-config` scope. Only
-			// commands that explicitly declare `supportsNewConfig: true` accept
-			// the flag; all others reject.
-			if (newConfigEnabled && def.behaviour?.supportsNewConfig !== true) {
-				throw new UserError(
-					`--experimental-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy. The ${sanitizedCommand} command does not support --experimental-new-config.`,
-					{ telemetryMessage: "new-config command not supported" }
-				);
-			}
-
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
 			const bannerEnabled =
 				shouldPrintBanner === true ||
