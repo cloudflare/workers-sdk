@@ -56,7 +56,12 @@ export {
 } from "./errors";
 
 export { createOAuthFlow, OAUTH_CALLBACK_URL } from "./flow";
-export type { LoginProps, OAuthFlowAPI } from "./flow";
+export type {
+	LoginOrRefreshFailureReason,
+	LoginOrRefreshResult,
+	LoginProps,
+	OAuthFlowAPI,
+} from "./flow";
 
 export { generateAuthUrl } from "./generate-auth-url";
 

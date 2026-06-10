@@ -157,12 +157,44 @@ export async function resolveCredentials(
 	return apiToken ?? requireApiToken();
 }
 
+/**
+ * Maps authentication failure reasons to user-facing error message bodies.
+ *
+ * Each key corresponds to a specific failure scenario returned by
+ * {@link loginOrRefreshIfRequired}, and the value is the descriptive message
+ * included in the {@link UserError} thrown by {@link requireLoggedIn}.
+ */
+const requireLoggedInErrorMessageBodies = {
+	"no-credentials-non-interactive": `Could not authenticate because no credentials were found and the environment is non-interactive. Set a CLOUDFLARE_API_TOKEN environment variable or run \`wrangler login\` in an interactive terminal first.`,
+	"no-credentials-login-failed": `No credentials were found and the login attempt was unsuccessful. Run \`wrangler login\` to try again.`,
+	"token-expired-non-interactive": `Your auth token has expired and could not be refreshed, and the environment is non-interactive. Run \`wrangler login\` in an interactive terminal or set a CLOUDFLARE_API_TOKEN.`,
+	"token-expired-login-failed": `Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful. Run \`wrangler login\` to try again.`,
+} as const;
+
+/**
+ * Tip appended to authentication error messages, prompting the user to run
+ * `wrangler whoami` to inspect their current login state.
+ *
+ * Used by {@link requireLoggedIn} when constructing the {@link UserError} message.
+ */
+const requireLoggedInErrorWhoAmITip =
+	"\nRun `wrangler whoami` to check your current authentication status." as const;
+
+/**
+ * Ensures the user is logged in before making an API request.
+ *
+ * @param complianceConfig - Compliance region configuration
+ * @throws {UserError} If the user could not be authenticated, with a message
+ *   describing the specific reason for failure.
+ */
 export async function requireLoggedIn(
 	complianceConfig: ComplianceConfig
 ): Promise<void> {
-	const loggedIn = await loginOrRefreshIfRequired(complianceConfig);
-	if (!loggedIn) {
-		throw new UserError("Not logged in.", {
+	const result = await loginOrRefreshIfRequired(complianceConfig);
+	if (!result.loggedIn) {
+		const errorMessageBody = requireLoggedInErrorMessageBodies[result.reason];
+		const errorMessage = `Not logged in. ${errorMessageBody}${requireLoggedInErrorWhoAmITip}`;
+		throw new UserError(errorMessage, {
 			telemetryMessage: "cfetch auth login required",
 		});
 	}
