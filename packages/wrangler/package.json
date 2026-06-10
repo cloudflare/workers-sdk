@@ -36,6 +36,7 @@
 		"directory": "packages/wrangler"
 	},
 	"bin": {
+		"cf-wrangler": "./bin/cf-wrangler.js",
 		"wrangler": "./bin/wrangler.js",
 		"wrangler2": "./bin/wrangler.js"
 	},

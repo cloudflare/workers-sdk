@@ -1,27 +1,15 @@
 /**
- * Argv parser for `cf-wrangler dev [args...]`.
- *
- * Deliberately minimal: only the five flags the cf-dev parent
- * process needs to pass through are accepted. Everything else
- * belongs in the user's `wrangler.jsonc`. Built on `node:util`'s
- * built-in `parseArgs` (strict mode → unknown flags throw).
+ * Strict argv parser for `cf-wrangler dev`. Only four flags are accepted;
+ * unknown flags throw. The config file comes from wrangler's standard
+ * discovery, not a flag.
  */
 import { parseArgs as nodeParseArgs } from "node:util";
 
 export interface DevArgs {
-	// Path to wrangler.jsonc / wrangler.toml.
-	config?: string;
-	// Named environment from wrangler.jsonc (`[env.X]`). Surfaced as
-	// `--mode` rather than `--env` to align with the cf-dev parent
-	// process's flag vocabulary; maps to wrangler's `env` option.
-	mode?: string;
-	// Listen port for the dev server.
+	mode?: string; // maps to wrangler's `env` (named environment)
 	port?: number;
-	// Acts-as-origin hostname override. Maps to wrangler's `--host`
-	// (`dev.origin.hostname`).
-	host?: string;
-	// Force local execution even when `dev.remote` is set in config.
-	local?: boolean;
+	host?: string; // acts-as-origin hostname (`dev.origin.hostname`)
+	local?: boolean; // force local even if a resource sets `remote = true`
 }
 
 export class ArgParseError extends Error {
@@ -37,7 +25,6 @@ export function parseArgs(argv: string[]): DevArgs {
 		parsed = nodeParseArgs({
 			args: argv,
 			options: {
-				config: { type: "string" },
 				mode: { type: "string" },
 				host: { type: "string" },
 				// `node:util.parseArgs` has no `number` type; coerce below.
@@ -46,19 +33,14 @@ export function parseArgs(argv: string[]): DevArgs {
 			},
 			strict: true,
 			allowPositionals: false,
-			// Deliberately NOT enabling `allowNegative`: `--no-local`
-			// would map to `local: false`, which `unstable_dev` reads
-			// as whole-worker remote dev — out of scope here. Falling
-			// into the generic "unknown flag" error is the right UX.
+			// No `allowNegative`: `--no-local` should be an unknown-flag
+			// error, not `local: false` (which would mean remote dev).
 		});
 	} catch (err) {
 		throw new ArgParseError(err instanceof Error ? err.message : String(err));
 	}
 
 	const out: DevArgs = {};
-	if (parsed.values.config !== undefined) {
-		out.config = parsed.values.config;
-	}
 	if (parsed.values.mode !== undefined) {
 		out.mode = parsed.values.mode;
 	}
@@ -68,7 +50,7 @@ export function parseArgs(argv: string[]): DevArgs {
 	if (parsed.values.port !== undefined) {
 		const raw = parsed.values.port;
 		const n = Number(raw);
-		// TCP port range. `0` means "let the OS pick" — valid.
+		// `0` = OS-assigned, so the valid range is 0–65535.
 		if (!Number.isInteger(n) || n < 0 || n > 65535) {
 			throw new ArgParseError(
 				`--port expects an integer between 0 and 65535, got "${raw}"`
