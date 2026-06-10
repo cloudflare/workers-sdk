@@ -18,7 +18,7 @@ export interface ConfigContext {
 	 * In Vite the mode defaults to `development` in `vite dev` and `production` in `vite build` ([more info](https://vite.dev/guide/env-and-mode.html#modes)).
 	 * In Wrangler the mode defaults to `undefined`.
 	 */
-	mode?: string;
+	mode: string | undefined;
 }
 
 // We currently use Symbol.for rather than Symbol so that the symbol matches if duplicated across bundles

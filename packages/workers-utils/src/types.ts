@@ -581,9 +581,7 @@ export interface StartDevWorkerInput {
 
 		/**
 		 * Experimental: Use `cloudflare.config.ts` + optional `wrangler.config.ts`
-		 * instead of `wrangler.json[c]` / `wrangler.toml`. Set via the
-		 * `--x-new-config` CLI flag. When `true`, the `ConfigController` calls
-		 * `loadNewConfig` directly and bypasses `readConfig`.
+		 * instead of `wrangler.json[c]` / `wrangler.toml`.
 		 */
 		experimentalNewConfig?: boolean;
 
