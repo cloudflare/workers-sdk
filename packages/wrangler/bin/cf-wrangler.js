@@ -107,4 +107,9 @@ const options = {
 	onReady: undefined,
 };
 
-runCfWranglerDev(options).then((code) => process.exit(code));
+runCfWranglerDev(options)
+	.then((code) => process.exit(code))
+	.catch((err) => {
+		process.stderr.write(`${(err && err.stack) || err}\n`);
+		process.exit(1);
+	});
