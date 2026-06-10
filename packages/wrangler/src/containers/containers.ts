@@ -85,10 +85,16 @@ export async function deleteCommand(
 }
 
 export function infoYargs(args: CommonYargsArgv) {
-	return args.positional("ID", {
-		describe: "id of the containers to view",
-		type: "string",
-	});
+	return args
+		.positional("ID", {
+			describe: "id of the containers to view",
+			type: "string",
+		})
+		.option("json", {
+			describe: "Return output as JSON",
+			type: "boolean",
+			default: false,
+		});
 }
 
 export async function infoCommand(
@@ -100,7 +106,7 @@ export async function infoCommand(
 			"You must provide an ID. Use 'wrangler containers list` to view your containers."
 		);
 	}
-	if (isNonInteractiveOrCI()) {
+	if (infoArgs.json || isNonInteractiveOrCI()) {
 		const application = await ApplicationsService.getApplication(infoArgs.ID);
 		logger.json(application);
 		return;
@@ -135,13 +141,18 @@ export const containersInfoCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
-		printBanner: () => !isNonInteractiveOrCI(),
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {
 		ID: {
 			describe: "ID of the container to view",
 			type: "string",
 			demandOption: true,
+		},
+		json: {
+			describe: "Return output as JSON",
+			type: "boolean",
+			default: false,
 		},
 	},
 	positionalArgs: ["ID"],
