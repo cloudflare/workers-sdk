@@ -138,21 +138,14 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		const newConfigEnabled = args.experimentalNewConfig === true;
 
 		try {
-			// Enforce the experimental `--experimental-new-config` scope. Only commands that
-			// explicitly declare `supportsNewConfig: true` (deploy, versions upload,
-			// versions deploy) and the two `provideConfig: false` commands that
-			// handle the flag themselves (dev, build) accept it. All others reject.
-			if (newConfigEnabled) {
-				const supportsNewConfig =
-					def.behaviour?.supportsNewConfig === true ||
-					def.command === "wrangler dev" ||
-					def.command === "wrangler build";
-				if (!supportsNewConfig) {
-					throw new UserError(
-						`--experimental-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy. The ${sanitizedCommand} command does not support --experimental-new-config.`,
-						{ telemetryMessage: "new-config command not supported" }
-					);
-				}
+			// Enforce the experimental `--experimental-new-config` scope. Only
+			// commands that explicitly declare `supportsNewConfig: true` accept
+			// the flag; all others reject.
+			if (newConfigEnabled && def.behaviour?.supportsNewConfig !== true) {
+				throw new UserError(
+					`--experimental-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy. The ${sanitizedCommand} command does not support --experimental-new-config.`,
+					{ telemetryMessage: "new-config command not supported" }
+				);
 			}
 
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;

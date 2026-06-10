@@ -11,6 +11,7 @@ export const buildCommand = createCommand({
 	behaviour: {
 		printBanner: false,
 		provideConfig: false,
+		supportsNewConfig: true,
 	},
 	async handler(buildArgs) {
 		const { wrangler } = createCLIParser([

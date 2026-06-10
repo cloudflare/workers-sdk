@@ -30,6 +30,7 @@ import type { Json } from "miniflare";
 export const dev = createCommand({
 	behaviour: {
 		provideConfig: false,
+		supportsNewConfig: true,
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
