@@ -233,7 +233,7 @@ export type CommandDefinition<
 		skipSkillsPrompt?: boolean;
 
 		/**
-		 * If true, this command supports the experimental `--x-new-config` flag
+		 * If true, this command supports the experimental `--experimental-new-config` flag
 		 * (TypeScript-based `cloudflare.config.ts` + `wrangler.config.ts` instead of
 		 * `wrangler.json[c]` / `wrangler.toml`).
 		 *
@@ -242,7 +242,7 @@ export type CommandDefinition<
 		 * handle the flag separately (`dev` via `ConfigController`; `build`
 		 * forwards the flag to its inner `deploy` invocation).
 		 *
-		 * All other commands reject `--x-new-config` with a `UserError`.
+		 * All other commands reject `--experimental-new-config` with a `UserError`.
 		 *
 		 * @default false
 		 */

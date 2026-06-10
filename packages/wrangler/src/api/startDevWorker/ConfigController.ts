@@ -530,7 +530,7 @@ async function resolveConfig(
 		}
 	}
 
-	// Skip the legacy `checkTypesDiff` call when `--x-new-config` is on.
+	// Skip the legacy `checkTypesDiff` call when `--experimental-new-config` is on.
 	// The new-config equivalent (`regenerateNewConfigTypes`) is invoked from
 	// `#updateConfig` directly using the structured `types` object returned
 	// by `loadNewConfig`.
@@ -684,7 +684,7 @@ export class ConfigController extends Controller {
 			}
 
 			if (!getDisableConfigWatching() && input.dev?.watch !== false) {
-				// Under `--x-new-config`, watch the transitive deps of both
+				// Under `--experimental-new-config`, watch the transitive deps of both
 				// `cloudflare.config.ts` and `wrangler.config.ts` (deduped, with
 				// `node_modules` excluded by `@cloudflare/config`'s loader).
 				// Otherwise fall back to the legacy single-file watch.
@@ -697,7 +697,7 @@ export class ConfigController extends Controller {
 				this.#configWatcher = undefined;
 			}
 
-			// Under `--x-new-config`, run the new-config type-gen path
+			// Under `--experimental-new-config`, run the new-config type-gen path
 			// instead of the legacy `checkTypesDiff`.
 			if (newConfig && fileConfig.configPath) {
 				await regenerateNewConfigTypes({

@@ -1036,7 +1036,7 @@ export const pagesDevCommand = createCommand({
 					enableContainers: false,
 					types: false,
 					tunnel: undefined,
-					xNewConfig: false,
+					experimentalNewConfig: false,
 				})
 		);
 

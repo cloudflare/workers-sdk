@@ -51,7 +51,7 @@ describe("loadNewConfig", () => {
 				loadNewConfig({ cwd: process.cwd(), args: {} })
 			).rejects.toMatchObject({
 				message: expect.stringContaining(
-					"cloudflare.config.ts is required when --x-new-config is enabled."
+					"cloudflare.config.ts is required when --experimental-new-config is enabled."
 				),
 				telemetryMessage: "new-config worker config file missing",
 			});

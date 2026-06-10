@@ -553,12 +553,13 @@ export function createCLIParser(argv: string[]) {
 			type: "boolean",
 			default: false,
 		},
-		"x-new-config": {
+		"experimental-new-config": {
 			describe:
 				"[experimental] Use cloudflare.config.ts and wrangler.config.ts (only supported on dev, build, deploy, versions upload, versions deploy)",
 			type: "boolean",
 			default: false,
 			hidden: true,
+			alias: "x-new-config",
 		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included

@@ -135,10 +135,10 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		// Sentry breadcrumbs expect the `wrangler` prefix.
 		addBreadcrumb(def.command);
 
-		const newConfigEnabled = args.xNewConfig === true;
+		const newConfigEnabled = args.experimentalNewConfig === true;
 
 		try {
-			// Enforce the experimental `--x-new-config` scope. Only commands that
+			// Enforce the experimental `--experimental-new-config` scope. Only commands that
 			// explicitly declare `supportsNewConfig: true` (deploy, versions upload,
 			// versions deploy) and the two `provideConfig: false` commands that
 			// handle the flag themselves (dev, build) accept it. All others reject.
@@ -149,7 +149,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					def.command === "wrangler build";
 				if (!supportsNewConfig) {
 					throw new UserError(
-						`--x-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy. The ${sanitizedCommand} command does not support --x-new-config.`,
+						`--experimental-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy. The ${sanitizedCommand} command does not support --experimental-new-config.`,
 						{ telemetryMessage: "new-config command not supported" }
 					);
 				}
@@ -245,7 +245,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					argv,
 				});
 
-				// Skip the multi-envs warning under `--x-new-config`: it re-reads
+				// Skip the multi-envs warning under `--experimental-new-config`: it re-reads
 				// `wrangler.json[c]` to enumerate envs, which is not applicable
 				// when the flag is on
 				if (

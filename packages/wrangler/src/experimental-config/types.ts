@@ -58,7 +58,7 @@ export interface WranglerConfig {
 		types?: { generate?: boolean };
 		/**
 		 * Container-related dev settings. `containers` itself is currently not
-		 * supported under `--x-new-config`, but these dev-time settings are
+		 * supported under `--experimental-new-config`, but these dev-time settings are
 		 * accepted so users can enable them ahead of `containers` opening up.
 		 * They're no-ops when `containers` is absent.
 		 */

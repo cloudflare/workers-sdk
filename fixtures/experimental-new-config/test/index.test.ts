@@ -96,7 +96,7 @@ describe("--x-new-config deploy --dry-run", () => {
 			]);
 			expect(result.status).not.toBe(0);
 			expect(result.stderr.toString()).toContain(
-				"--config is not supported with --x-new-config"
+				"--config is not supported with --experimental-new-config"
 			);
 		} finally {
 			removeDir(tmpDir, { fireAndForget: true });
@@ -116,7 +116,7 @@ describe("--x-new-config deploy --dry-run", () => {
 			]);
 			expect(result.status).not.toBe(0);
 			expect(result.stderr.toString()).toContain(
-				"--x-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy"
+				"--experimental-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy"
 			);
 		} finally {
 			removeDir(tmpDir, { fireAndForget: true });
@@ -132,7 +132,7 @@ describe("--x-new-config deploy --dry-run", () => {
 			expect(
 				stderr.includes("wrangler types is currently not supported") ||
 					stderr.includes(
-						"--x-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy"
+						"--experimental-new-config is currently only supported for wrangler dev, build, deploy, versions upload, and versions deploy"
 					)
 			).toBe(true);
 		} finally {
@@ -168,7 +168,7 @@ describe("--x-new-config deploy --dry-run", () => {
 			]);
 			expect(result.status).not.toBe(0);
 			expect(result.stderr.toString()).toContain(
-				"--x-new-config cannot be used when a redirected config exists at .wrangler/deploy/config.json"
+				"--experimental-new-config cannot be used when a redirected config exists at .wrangler/deploy/config.json"
 			);
 		} finally {
 			removeDir(tmpDir, { fireAndForget: true });

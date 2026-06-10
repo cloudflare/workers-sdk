@@ -19,7 +19,7 @@ export const buildCommand = createCommand({
 			"--outdir=dist",
 			...(buildArgs.env ? ["--env", buildArgs.env] : []),
 			...(buildArgs.config ? ["--config", buildArgs.config] : []),
-			...(buildArgs.xNewConfig ? ["--x-new-config"] : []),
+			...(buildArgs.experimentalNewConfig ? ["--experimental-new-config"] : []),
 		]);
 		await wrangler.parse();
 	},

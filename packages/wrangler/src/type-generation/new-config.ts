@@ -12,9 +12,9 @@ import type { NormalizedTypes } from "../experimental-config/load";
 
 /**
  * Re-generate `worker-configuration.d.ts` from `cloudflare.config.ts` under
- * `--x-new-config`. This is the new-config equivalent of the legacy
+ * `--experimental-new-config`. This is the new-config equivalent of the legacy
  * `checkTypesDiff` path — `checkTypesDiff` is NOT invoked when
- * `--x-new-config` is on.
+ * `--experimental-new-config` is on.
  */
 export async function regenerateNewConfigTypes(options: {
 	cloudflareConfigPath: string;

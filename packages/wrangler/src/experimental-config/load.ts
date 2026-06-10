@@ -64,7 +64,7 @@ export async function loadNewConfig(options: {
 	const cloudflareConfigPath = path.resolve(cwd, CLOUDFLARE_CONFIG_FILENAME);
 	if (!existsSync(cloudflareConfigPath)) {
 		throw new UserError(
-			`${CLOUDFLARE_CONFIG_FILENAME} is required when --x-new-config is enabled.`,
+			`${CLOUDFLARE_CONFIG_FILENAME} is required when --experimental-new-config is enabled.`,
 			{ telemetryMessage: "new-config worker config file missing" }
 		);
 	}

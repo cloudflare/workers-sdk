@@ -79,11 +79,11 @@ export interface NewConfig {
 
 /**
  * Load the experimental TypeScript-based configuration (`cloudflare.config.ts`
- * + optional `wrangler.config.ts`) used by `--x-new-config`.
+ * + optional `wrangler.config.ts`) used by `--experimental-new-config`.
  *
  * Steps:
  * 1. Hard error if `args.config` is set (no `--config` override under
- *    `--x-new-config`).
+ *    `--experimental-new-config`).
  * 2. Hard error if a `.wrangler/deploy/config.json` redirect exists (the
  *    redirect takes priority — users must pick one).
  * 3. Call `loadNewConfig(...)` to load + merge both files.
@@ -97,7 +97,7 @@ export async function readNewConfig(
 ): Promise<NewConfig> {
 	if (args.config !== undefined) {
 		throw new UserError(
-			`--config is not supported with --x-new-config. cloudflare.config.ts and wrangler.config.ts are loaded from the project root.`,
+			`--config is not supported with --experimental-new-config. cloudflare.config.ts and wrangler.config.ts are loaded from the project root.`,
 			{ telemetryMessage: "new-config config flag not supported" }
 		);
 	}
@@ -105,7 +105,7 @@ export async function readNewConfig(
 	const cwd = process.cwd();
 	if (hasRedirectedConfig(cwd)) {
 		throw new UserError(
-			`--x-new-config cannot be used when a redirected config exists at .wrangler/deploy/config.json. Remove the redirect or omit --x-new-config.`,
+			`--experimental-new-config cannot be used when a redirected config exists at .wrangler/deploy/config.json. Remove the redirect or omit --experimental-new-config.`,
 			{ telemetryMessage: "new-config redirect conflict" }
 		);
 	}
