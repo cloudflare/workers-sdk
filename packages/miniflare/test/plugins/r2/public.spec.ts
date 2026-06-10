@@ -340,6 +340,187 @@ describe.each(["GET", "HEAD"] as const)("%s conditional requests", (method) => {
 		expect(res.status).toBe(412);
 		expect(await res.text()).toBe("");
 	});
+
+	test("returns 304 when If-Match passes but If-None-Match fails", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-im-pass-inm-fail-key`;
+		await r2.put(key, "value");
+		const stored = await r2.head(key);
+		assert(stored !== null);
+
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: {
+				"If-Match": stored.httpEtag,
+				"If-None-Match": stored.httpEtag,
+			},
+		});
+
+		expect(res.status).toBe(304);
+		expect(res.headers.get("ETag")).toBe(stored.httpEtag);
+		expect(await res.text()).toBe("");
+	});
+
+	test("returns 304 when If-Unmodified-Since passes but If-None-Match fails", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-ius-pass-inm-fail-key`;
+		await r2.put(key, "value");
+		const stored = await r2.head(key);
+		assert(stored !== null);
+
+		const future = new Date(Date.now() + 60_000).toUTCString();
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: {
+				"If-Unmodified-Since": future,
+				"If-None-Match": stored.httpEtag,
+			},
+		});
+
+		expect(res.status).toBe(304);
+		expect(await res.text()).toBe("");
+	});
+
+	test("ignores failing If-Unmodified-Since when If-Match passes", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-im-overrides-ius-key`;
+		await r2.put(key, "value");
+		const stored = await r2.head(key);
+		assert(stored !== null);
+
+		const past = new Date(Date.now() - 60_000).toUTCString();
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: {
+				"If-Match": stored.httpEtag,
+				"If-Unmodified-Since": past,
+			},
+		});
+
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe(expectedBody("value"));
+	});
+
+	test("returns 200 when If-Unmodified-Since is after the upload time", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-ius-hit-key`;
+		await r2.put(key, "value");
+
+		const future = new Date(Date.now() + 60_000).toUTCString();
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: { "If-Unmodified-Since": future },
+		});
+
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe(expectedBody("value"));
+	});
+
+	test("ignores failing If-Modified-Since when If-None-Match passes", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-inm-overrides-ims-key`;
+		await r2.put(key, "value");
+
+		const future = new Date(Date.now() + 60_000).toUTCString();
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: {
+				"If-None-Match": '"some-other-etag"',
+				"If-Modified-Since": future,
+			},
+		});
+
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe(expectedBody("value"));
+	});
+
+	test("returns 304 when If-Match passes but If-Modified-Since fails", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-im-pass-ims-fail-key`;
+		await r2.put(key, "value");
+		const stored = await r2.head(key);
+		assert(stored !== null);
+
+		const future = new Date(Date.now() + 60_000).toUTCString();
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: {
+				"If-Match": stored.httpEtag,
+				"If-Modified-Since": future,
+			},
+		});
+
+		expect(res.status).toBe(304);
+		expect(await res.text()).toBe("");
+	});
+
+	test("reports 412 over 304 when If-Unmodified-Since and If-None-Match both fail", async ({
+		expect,
+	}) => {
+		const r2 = await ctx.mf.getR2Bucket("BUCKET");
+		const key = `${method}-ius-inm-both-fail-key`;
+		await r2.put(key, "value");
+		const stored = await r2.head(key);
+		assert(stored !== null);
+
+		const past = new Date(Date.now() - 60_000).toUTCString();
+		const res = await fetch(bucketUrl(`/${key}`, ctx.url), {
+			method,
+			headers: {
+				"If-Unmodified-Since": past,
+				"If-None-Match": stored.httpEtag,
+			},
+		});
+
+		expect(res.status).toBe(412);
+		expect(await res.text()).toBe("");
+	});
+
+	test("returns 404 for a missing key regardless of conditional headers", async ({
+		expect,
+	}) => {
+		const res = await fetch(bucketUrl(`/${method}-missing-key`, ctx.url), {
+			method,
+			headers: {
+				"If-Match": '"some-etag"',
+				"If-None-Match": '"some-etag"',
+			},
+		});
+
+		expect(res.status).toBe(404);
+	});
+});
+
+test("a failed conditional with a Range returns 304 without a partial body", async ({
+	expect,
+}) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("range-conditional-key", "0123456789");
+	const stored = await r2.head("range-conditional-key");
+	assert(stored !== null);
+
+	const res = await fetch(bucketUrl("/range-conditional-key", ctx.url), {
+		headers: {
+			Range: "bytes=0-3",
+			"If-None-Match": stored.httpEtag,
+		},
+	});
+
+	expect(res.status).toBe(304);
+	expect(res.headers.get("Content-Range")).toBeNull();
+	expect(await res.text()).toBe("");
 });
 
 test("multiple buckets are each independently reachable", async ({
