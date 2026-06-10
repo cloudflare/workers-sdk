@@ -8,6 +8,7 @@ import {
 	getPersistPath,
 	getUserBindingServiceName,
 	migrateDatabase,
+	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
@@ -54,50 +55,27 @@ const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	className: R2_BUCKET_OBJECT_CLASS_NAME,
 };
 
-interface R2BucketEntry {
-	id: string;
-	remoteProxyConnectionString?: RemoteProxyConnectionString;
-}
-
-function r2BucketEntries(
-	buckets: z.infer<typeof R2OptionsSchema>["r2Buckets"]
-): [bindingName: string, entry: R2BucketEntry][] {
-	if (Array.isArray(buckets)) {
-		return buckets.map((bindingName) => [bindingName, { id: bindingName }]);
-	}
-
-	if (buckets !== undefined) {
-		return Object.entries(buckets).map(([name, value]) =>
-			typeof value === "string" ? [name, { id: value }] : [name, value]
-		);
-	}
-
-	return [];
-}
-
 export function getR2PublicService(
 	allWorkerOpts: { r2?: z.infer<typeof R2OptionsSchema> }[]
 ): Service | undefined {
-	const publicBucketsById = new Map<string, R2BucketEntry>();
+	const publicBucketIds = new Set<string>();
 	for (const worker of allWorkerOpts) {
-		for (const [, bucket] of r2BucketEntries(worker.r2?.r2Buckets)) {
+		for (const [, bucket] of namespaceEntries(worker.r2?.r2Buckets)) {
 			if (bucket.remoteProxyConnectionString !== undefined) {
 				continue;
 			}
-			publicBucketsById.set(bucket.id, bucket);
+			publicBucketIds.add(bucket.id);
 		}
 	}
-	if (publicBucketsById.size === 0) {
+	if (publicBucketIds.size === 0) {
 		return undefined;
 	}
-	const bindings = Array.from(publicBucketsById.values()).map<Worker_Binding>(
-		({ id }) => ({
-			name: id,
-			r2Bucket: {
-				name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
-			},
-		})
-	);
+	const bindings = Array.from(publicBucketIds).map<Worker_Binding>((id) => ({
+		name: id,
+		r2Bucket: {
+			name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
+		},
+	}));
 	return {
 		name: R2_PUBLIC_SERVICE_NAME,
 		worker: {
@@ -115,7 +93,7 @@ export const R2_PLUGIN: Plugin<
 	options: R2OptionsSchema,
 	sharedOptions: R2SharedOptionsSchema,
 	getBindings(options) {
-		const buckets = r2BucketEntries(options.r2Buckets);
+		const buckets = namespaceEntries(options.r2Buckets);
 		return buckets.map<Worker_Binding>(([name, bucket]) => ({
 			name,
 			r2Bucket: {
@@ -142,7 +120,7 @@ export const R2_PLUGIN: Plugin<
 		unsafeStickyBlobs,
 	}) {
 		const persist = sharedOptions.r2Persist;
-		const buckets = r2BucketEntries(options.r2Buckets);
+		const buckets = namespaceEntries(options.r2Buckets);
 		const services = buckets.map<Service>(
 			([name, { id, remoteProxyConnectionString }]) => ({
 				name: getUserBindingServiceName(
