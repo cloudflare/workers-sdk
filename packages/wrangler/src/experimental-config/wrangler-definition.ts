@@ -20,5 +20,5 @@ export async function resolveWranglerConfig(
 	if (typeof raw === "function") {
 		raw = (raw as (ctx: ConfigContext) => unknown)(ctx);
 	}
-	return raw;
+	return await raw;
 }
