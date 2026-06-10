@@ -37,6 +37,8 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 		const { default: importedSharp } = await import("sharp");
 		sharp = importedSharp;
 	} catch {
+		// This should be unreachable, as we should have errored by now
+		// if sharp isn't installed
 		return errorResponse(
 			503,
 			9523,
@@ -160,6 +162,8 @@ async function runTransform(
 ): Promise<Response> {
 	for (const transform of transforms) {
 		if (transform.imageIndex !== undefined && transform.imageIndex !== 0) {
+			// We don't support draws, and this transform doesn't apply to the root
+			// image, so skip it
 			continue;
 		}
 
