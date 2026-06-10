@@ -31,7 +31,7 @@ export interface NormalizedTypes {
 
 export interface LoadNewConfigResult {
 	/** Merged result: `cloudflare.config.ts` runtime + `wrangler.config.ts` tooling. */
-	rawConfig: RawConfig;
+	rawConfig: Omit<RawConfig, "env">;
 	/** Resolved absolute path to `cloudflare.config.ts`. */
 	cloudflareConfigPath: string;
 	/** Resolved absolute path to `wrangler.config.ts`, if present. */
