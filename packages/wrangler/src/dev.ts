@@ -13,6 +13,7 @@ import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deployment-bundle/resolve-config-args";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
+import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
 import { logger } from "./logger";
 import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
@@ -45,6 +46,7 @@ export const dev = createCommand({
 	},
 	positionalArgs: ["script"],
 	args: {
+		...experimentalNewConfigArg,
 		script: {
 			describe: "The path to an entry point for your Worker",
 			type: "string",

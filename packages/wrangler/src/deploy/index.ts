@@ -9,11 +9,12 @@ import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
 } from "../deployment-bundle/deploy-args";
-import { handleBuild } from "../deployment-bundle/maybe-build-worker";
+import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import {
 	cleanupDestination,
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
+import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { syncWorkersSite } from "../sites";
@@ -30,6 +31,7 @@ export const deployCommand = createCommand({
 	},
 	positionalArgs: ["path"],
 	args: {
+		...experimentalNewConfigArg,
 		...sharedDeployVersionsArgs,
 		triggers: {
 			describe: "cron schedules to attach",
@@ -145,10 +147,14 @@ export const deployCommand = createCommand({
 
 			const beforeUpload = Date.now();
 
+			const buildResult = await buildWorker(mergedProps, config, {
+				metafile: mergedProps.metafile,
+			});
+
 			const { sourceMapSize, versionId, workerTag, targets } = await deploy(
 				mergedProps,
 				config,
-				handleBuild,
+				buildResult,
 				{
 					syncWorkersSite,
 					provisionBindings,

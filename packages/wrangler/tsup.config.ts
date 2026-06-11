@@ -110,5 +110,26 @@ export default defineConfig((options) => [
 				: {}),
 		},
 		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
+		esbuildOptions(esbuildOptions) {
+			esbuildOptions.logOverride = {
+				...esbuildOptions.logOverride,
+				// Suppress the warning for the intentional runtime dynamic
+				// `import()` in `@cloudflare/config`'s `loadConfig`
+				// (packages/config/src/load.ts). The import is unanalyzable by
+				// design: the specifier is computed at runtime and the
+				// `with: { cf: "no-cache" }` attribute is consumed by a Node
+				// `registerHooks` resolver. esbuild already preserves the call
+				// verbatim — only the warning is noise.
+				// tsup's *DTS* pipeline (Rollup) also emits a separate
+				// `INVALID_IMPORT_ATTRIBUTE` warning for the same call site
+				// ("…the attribute will be removed"). That warning is also
+				// cosmetic — the DTS step does not write `cli.js`, and `cli.d.ts`
+				// contains no runtime import calls — but tsup 8.3 does not
+				// expose a Rollup `onwarn` hook for the DTS pipeline, so we
+				// currently cannot silence it.
+				// Note: this is not necessary if we publish `@cloudflare/config` and include is as a dependency
+				"unsupported-dynamic-import": "silent",
+			};
+		},
 	},
 ]);

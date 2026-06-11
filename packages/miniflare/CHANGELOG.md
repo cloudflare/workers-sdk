@@ -1,5 +1,31 @@
 # miniflare
 
+## 4.20260611.0
+
+### Minor Changes
+
+- [#14119](https://github.com/cloudflare/workers-sdk/pull/14119) [`2047a32`](https://github.com/cloudflare/workers-sdk/commit/2047a32cf78886b71b794a3dfac946a146ab3ffe) Thanks [@tahmid-23](https://github.com/tahmid-23)! - Add support for serving R2 bucket objects publicly via the dev server
+
+  Each local R2 bucket is now exposed under `/cdn-cgi/local/r2/public/<bucket-id>/<key>` on the existing user-facing dev server. The `<bucket-id>` is the bucket's `id` when set, otherwise its binding name. Buckets with a `remoteProxyConnectionString` are not exposed. The endpoint supports GET and HEAD, range requests, conditional headers, and forwards stored HTTP metadata.
+
+### Patch Changes
+
+- [#14246](https://github.com/cloudflare/workers-sdk/pull/14246) [`f3990b2`](https://github.com/cloudflare/workers-sdk/commit/f3990b2358ef49cd6e1ab16de27e25dcd949896f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260609.1 | 1.20260610.1 |
+
+- [#14256](https://github.com/cloudflare/workers-sdk/pull/14256) [`4597f08`](https://github.com/cloudflare/workers-sdk/commit/4597f085d25c7d066ecf056de313e194f41094d1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260610.1 | 1.20260611.1 |
+
 ## 4.20260609.0
 
 ### Patch Changes

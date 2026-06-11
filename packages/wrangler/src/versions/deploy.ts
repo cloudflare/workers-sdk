@@ -11,6 +11,7 @@ import { type ApiVersion, printVersions } from "@cloudflare/deploy-helpers";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
+import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
@@ -46,6 +47,7 @@ export const versionsDeployCommand = createCommand({
 	},
 
 	args: {
+		...experimentalNewConfigArg,
 		name: {
 			describe: "Name of the worker",
 			type: "string",

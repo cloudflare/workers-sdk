@@ -1,0 +1,13 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
+	"compilerOptions": {
+		"allowImportingTsExtensions": true,
+		"types": ["@cloudflare/workers-types/experimental"]
+	},
+	"include": [
+		"src",
+		"cloudflare.config.ts",
+		"wrangler.config.ts",
+		"worker-configuration.d.ts"
+	]
+}
