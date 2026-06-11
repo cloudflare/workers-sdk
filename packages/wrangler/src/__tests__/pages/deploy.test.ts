@@ -5,9 +5,9 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
-import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
+import { x } from "tinyexec";
 import dedent from "ts-dedent";
 /* eslint-disable-next-line no-restricted-imports --
  * Uses expect in MSW handlers outside test callbacks
@@ -1816,7 +1816,7 @@ describe("pages deploy", () => {
 	}) => {
 		vi.mocked(ci).isCI = false;
 		setIsTTY(true);
-		await execa("git", ["init"]);
+		await x("git", ["init"], { throwOnError: true });
 		writeFileSync("logo.png", "foobar");
 		mockGetUploadTokenRequest(
 			expect,
