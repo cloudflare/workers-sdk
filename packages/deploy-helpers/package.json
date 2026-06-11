@@ -38,8 +38,6 @@
 	},
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
-		"@cloudflare/containers-shared": "workspace:*",
-		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"blake3-wasm": "2.1.5",
 		"chalk": "catalog:default",
@@ -52,6 +50,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/config": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@types/command-exists": "^1.2.0",
