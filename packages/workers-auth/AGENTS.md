@@ -12,7 +12,7 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/generate-random-state.ts` — CSRF state generator
 - `src/env-vars.ts` — `WRANGLER_*` env-var getters for OAuth endpoints
 - `src/access.ts` — Cloudflare Access detection + service-token / `cloudflared` headers
-- `src/auth-config-file.ts` — read/write the persisted TOML at `<globalWranglerConfigPath>/config/<env>.toml`
+- `src/auth-config-file.ts` — the `AuthConfigStorage` / `UserAuthConfig` storage contract (interfaces only; the default TOML-on-disk implementation lives in the consumer, e.g. wrangler's `src/user/auth-config-file.ts`)
 - `src/state.ts` — `readStoredAuthState()` + `StoredAuthState` shape
 - `src/token-exchange.ts` — auth-code → token + refresh-token rotation + `fetchAuthToken`
 - `src/callback-server.ts` — local HTTP server for the OAuth callback (listens on the host/port from the consumer's `redirectUri`)
@@ -34,14 +34,15 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `redirectUri` (required) — the registered redirect URI / local callback URL.
   The callback server's listen host/port and route path are all derived from it
   (per-call bind overrides via `LoginProps.callbackHost`/`callbackPort`)
+- `storage` (required) — the consumer's `AuthConfigStorage` token-persistence
+  backend (wrangler's TOML-on-disk default lives in `src/user/auth-config-file.ts`)
 - `purgeOnLoginOrLogout?()` — invalidate consumer-side caches after login/logout
-- `storage?` — optional; defaults to TOML under the global Wrangler config dir
 - `generateAuthUrl?` / `generateRandomState?` — test overrides for deterministic
   snapshot tests (defaults pull from `./generate-auth-url` / `./generate-random-state`)
 
-`clientId`, `consent`, and `redirectUri` are consumer-specific (Wrangler's live
-in `packages/wrangler/src/user/`), so they are required rather than defaulted
-here.
+`clientId`, `consent`, `redirectUri`, and `storage` are consumer-specific
+(Wrangler's live in `packages/wrangler/src/user/`), so they are required rather
+than defaulted here.
 
 Wrangler wires this once in `packages/wrangler/src/user/user.ts`.
 

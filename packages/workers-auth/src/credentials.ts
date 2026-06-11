@@ -79,9 +79,8 @@ export function getAuthFromEnv(
 }
 
 export interface GetAPITokenOptions extends GetAuthFromEnvOptions {
-	/** Persistence backend for the stored OAuth token. Defaults to the TOML
-	 * file under the global Wrangler config directory. */
-	storage?: AuthConfigStorage;
+	/** Persistence backend for the stored OAuth token.  */
+	storage: AuthConfigStorage;
 	/** Logger used to surface the one-time deprecated-v1-`api_token` warning. */
 	warningLogger?: Pick<OAuthFlowLogger, "warn">;
 }
@@ -100,7 +99,7 @@ export interface GetAPITokenOptions extends GetAuthFromEnvOptions {
  * `getOAuthTokenFromLocalState()` instead.
  */
 export function getAPIToken(
-	options?: GetAPITokenOptions
+	options: GetAPITokenOptions
 ): ApiCredentials | undefined {
 	const envAuth = getAuthFromEnv(options);
 	if (envAuth) {
@@ -108,8 +107,8 @@ export function getAPIToken(
 	}
 
 	const stored = readStoredAuthState({
-		storage: options?.storage,
-		warningLogger: options?.warningLogger,
+		storage: options.storage,
+		warningLogger: options.warningLogger,
 	});
 	if (stored.deprecatedApiToken) {
 		return { apiToken: stored.deprecatedApiToken };
@@ -125,7 +124,7 @@ export function getAPIToken(
  * Like {@link getAPIToken}, but throws a {@link UserError} when no credentials
  * are available.
  */
-export function requireApiToken(options?: GetAPITokenOptions): ApiCredentials {
+export function requireApiToken(options: GetAPITokenOptions): ApiCredentials {
 	const credentials = getAPIToken(options);
 	if (!credentials) {
 		throw new UserError("No API token found.", {

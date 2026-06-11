@@ -86,12 +86,9 @@ export interface OAuthFlowContext {
 	redirectUri: string;
 
 	/**
-	 * Persistence backend for the stored auth config. Defaults to a TOML file
-	 * under the global Wrangler config directory. Provide this to store tokens
-	 * elsewhere or in a different format (e.g. JSONC under another CLI's config
-	 * directory).
+	 * Persistence backend for the stored auth config.
 	 */
-	storage?: AuthConfigStorage;
+	storage: AuthConfigStorage;
 
 	/**
 	 * Override the OAuth authorize URL generator. Used by tests to produce a

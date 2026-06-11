@@ -6,12 +6,6 @@
 // `getAPIToken` resolver), or to inject deterministic implementations into
 // tests.
 
-export {
-	defaultAuthConfigStorage,
-	getAuthConfigFilePath,
-	readAuthConfigFile,
-	writeAuthConfigFile,
-} from "./auth-config-file";
 export type { AuthConfigStorage, UserAuthConfig } from "./auth-config-file";
 
 export {

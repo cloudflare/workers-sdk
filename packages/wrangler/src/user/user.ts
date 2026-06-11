@@ -26,6 +26,7 @@ import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
+import { defaultAuthConfigStorage } from "./auth-config-file";
 import {
 	getClientIdFromEnv,
 	getCloudflareAccountIdFromEnv,
@@ -68,6 +69,8 @@ const WRANGLER_CONSENT_PAGES = {
 	},
 };
 
+const authConfigStorage = defaultAuthConfigStorage();
+
 const oauthFlow = createOAuthFlow({
 	logger,
 	isNonInteractiveOrCI,
@@ -77,6 +80,7 @@ const oauthFlow = createOAuthFlow({
 	clientId: getClientIdFromEnv,
 	consent: WRANGLER_CONSENT_PAGES,
 	redirectUri: OAUTH_CALLBACK_URL,
+	storage: authConfigStorage,
 	generateAuthUrl,
 	generateRandomState,
 });
@@ -174,9 +178,10 @@ export function listScopes(message = "💁 Available scopes:"): void {
  * the user is not logged in via OAuth (e.g. env-based auth).
  */
 export function getScopes(): Scope[] | undefined {
-	return readStoredAuthState({ warningLogger: logger }).scopes as
-		| Scope[]
-		| undefined;
+	return readStoredAuthState({
+		warningLogger: logger,
+		storage: authConfigStorage,
+	}).scopes as Scope[] | undefined;
 }
 
 export function printScopes(scopes: Scope[]) {
@@ -193,14 +198,20 @@ export function printScopes(scopes: Scope[]) {
 // ---------------------------------------------------------------------------
 
 export function getAPIToken(): ApiCredentials | undefined {
-	return getAPITokenShared({ warningLogger: logger });
+	return getAPITokenShared({
+		warningLogger: logger,
+		storage: authConfigStorage,
+	});
 }
 
 /**
  * Throw an error if there is no API token available.
  */
 export function requireApiToken(): ApiCredentials {
-	return requireApiTokenShared({ warningLogger: logger });
+	return requireApiTokenShared({
+		warningLogger: logger,
+		storage: authConfigStorage,
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -254,13 +265,11 @@ export async function getOAuthTokenFromLocalState(): Promise<
 	return oauthFlow.getOAuthTokenFromLocalState();
 }
 
-// Re-export the auth-config-file pure helpers from the package so the
-// historical `from "../user"` import paths keep working.
 export {
 	getAuthConfigFilePath,
 	readAuthConfigFile,
 	writeAuthConfigFile,
-} from "@cloudflare/workers-auth";
+} from "./auth-config-file";
 export type { UserAuthConfig } from "@cloudflare/workers-auth";
 // `PKCE_CHARSET` is re-exported for any external consumers that used to
 // import it from this barrel.

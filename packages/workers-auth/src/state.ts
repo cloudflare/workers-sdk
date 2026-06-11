@@ -1,8 +1,4 @@
-import {
-	type AuthConfigStorage,
-	defaultAuthConfigStorage,
-	type UserAuthConfig,
-} from "./auth-config-file";
+import type { AuthConfigStorage, UserAuthConfig } from "./auth-config-file";
 import type { OAuthFlowLogger } from "./context";
 
 export interface RefreshToken {
@@ -68,16 +64,16 @@ export function _resetDeprecatedV1ApiTokenWarningLatch(): void {
  * @param options.warningLogger if provided, a one-time warning is emitted when a
  * deprecated v1 `api_token` is found on disk. Pass the consumer's logger (e.g.
  * wrangler's logger singleton) to surface this to the user.
- * @param options.storage the persistence backend to read from. Defaults to the
- * TOML-file-on-disk storage under the global Wrangler config directory.
+ * @param options.storage the persistence backend to read from, injected by the
+ * consumer (e.g. wrangler's TOML-file-on-disk storage under the global Wrangler
+ * config directory).
  */
-export function readStoredAuthState(options?: {
+export function readStoredAuthState(options: {
 	configOverride?: UserAuthConfig;
 	warningLogger?: Pick<OAuthFlowLogger, "warn">;
-	storage?: AuthConfigStorage;
+	storage: AuthConfigStorage;
 }): StoredAuthState {
-	const { configOverride, warningLogger } = options ?? {};
-	const storage = options?.storage ?? defaultAuthConfigStorage();
+	const { configOverride, warningLogger, storage } = options;
 
 	let parsed: UserAuthConfig;
 	try {

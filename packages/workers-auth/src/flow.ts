@@ -18,7 +18,6 @@ import {
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { defaultAuthConfigStorage } from "./auth-config-file";
 import { getOauthToken } from "./callback-server";
 import { getRevokeUrlFromEnv } from "./env-vars";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
@@ -127,7 +126,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,
 	};
 
-	const storage = ctx.storage ?? defaultAuthConfigStorage();
+	const storage = ctx.storage;
 	const getClientId = () =>
 		typeof ctx.clientId === "function" ? ctx.clientId() : ctx.clientId;
 	const consent = ctx.consent;
