@@ -72,9 +72,7 @@ const USER_AUTH_CONFIG_PATH = "config";
  */
 export function getAuthConfigFilePath(): string {
 	const environment = getCloudflareApiEnvironmentFromEnv();
-	const filePath = `${USER_AUTH_CONFIG_PATH}/${
-		environment === "production" ? "default.toml" : `${environment}.toml`
-	}`;
+	const filePath = `${USER_AUTH_CONFIG_PATH}/${environment === "production" ? "default.toml" : `${environment}.toml`}`;
 	return path.join(getGlobalWranglerConfigPath(), filePath);
 }
 

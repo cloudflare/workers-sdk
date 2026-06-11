@@ -1,8 +1,5 @@
 import type { AuthConfigStorage } from "./auth-config-file";
-import type {
-	generateAuthUrl as defaultGenerateAuthUrl,
-	OAUTH_CALLBACK_URL,
-} from "./generate-auth-url";
+import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 
 /**
@@ -15,23 +12,6 @@ export interface OAuthConsentPages {
 	/** Redirect target shown after the user denies consent, plus the error
 	 * surfaced to the terminal. */
 	denied: { url: string; error: string };
-}
-
-/**
- * Where the local OAuth callback server listens and which `redirect_uri` is
- * registered on the OAuth app.
- */
-export interface OAuthCallbackConfig {
-	/** Host the local callback server listens on. Defaults to `localhost`. */
-	host?: string;
-	/** Port the local callback server listens on. Defaults to `8976`. */
-	port?: number;
-	/**
-	 * The `redirect_uri` registered on the OAuth app. Defaults to
-	 * `http://localhost:8976/oauth/callback`. Must match a redirect URI the
-	 * `clientId`'s OAuth app is registered for.
-	 */
-	redirectUri?: string;
 }
 
 /**
@@ -88,24 +68,22 @@ export interface OAuthFlowContext {
 
 	/**
 	 * The OAuth client ID identifying the consuming CLI to the Cloudflare OAuth
-	 * server. Defaults to the value resolved from the environment
-	 * (`WRANGLER_CLIENT_ID`, falling back to Wrangler's well-known client ID).
-	 * Provide this to authenticate as a different OAuth app.
+	 * server. Consumer-specific (each CLI registers its own OAuth app), so it is
+	 * required. Pass a function to resolve it lazily — e.g. so an env-var read at
+	 * call time can switch between production and staging apps.
 	 */
-	clientId?: string;
+	clientId: string | (() => string);
 
 	/**
 	 * The branded consent pages the provider redirects to after the user grants
-	 * or denies consent. Defaults to Wrangler's consent pages.
+	 * or denies consent.
 	 */
-	consent?: OAuthConsentPages;
+	consent: OAuthConsentPages;
 
 	/**
-	 * Local callback server host/port and the registered `redirect_uri`.
-	 * Defaults to `localhost:8976` and `http://localhost:8976/oauth/callback`.
-	 * `LoginProps.callbackHost`/`callbackPort` override the host/port per call.
+	 * The `redirect_uri` registered on the consumer's OAuth app
 	 */
-	callback?: OAuthCallbackConfig;
+	redirectUri: string;
 
 	/**
 	 * Persistence backend for the stored auth config. Defaults to a TOML file
@@ -129,5 +107,3 @@ export interface OAuthFlowContext {
 	 */
 	generateRandomState?: typeof defaultGenerateRandomState;
 }
-
-export type { OAUTH_CALLBACK_URL };

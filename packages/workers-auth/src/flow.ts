@@ -20,32 +20,13 @@ import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { defaultAuthConfigStorage } from "./auth-config-file";
 import { getOauthToken } from "./callback-server";
-import { getClientIdFromEnv, getRevokeUrlFromEnv } from "./env-vars";
-import {
-	generateAuthUrl as defaultGenerateAuthUrl,
-	OAUTH_CALLBACK_URL,
-} from "./generate-auth-url";
+import { getRevokeUrlFromEnv } from "./env-vars";
+import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
-import type { OAuthConsentPages, OAuthFlowContext } from "./context";
+import type { OAuthFlowContext } from "./context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
-
-/**
- * Wrangler's default OAuth consent pages, used when the consumer does not
- * supply its own via `ctx.consent`.
- */
-const WRANGLER_CONSENT_PAGES: OAuthConsentPages = {
-	granted: {
-		url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
-	},
-	denied: {
-		url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
-		error:
-			"Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
-			"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable",
-	},
-};
 
 /**
  * Options for an interactive OAuth login.
@@ -146,16 +127,14 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,
 	};
 
-	// Resolve the consumer's OAuth identity, defaulting to Wrangler's so
-	// existing callers that pass none of these fields are unaffected.
-	//
-	// `clientId` is resolved lazily so that env-var-driven defaults (e.g.
-	// `CLOUDFLARE_API_ENVIRONMENT=staging`) are picked up at call time, not at
-	// flow construction time.
 	const storage = ctx.storage ?? defaultAuthConfigStorage();
-	const getClientId = () => ctx.clientId ?? getClientIdFromEnv();
-	const consent = ctx.consent ?? WRANGLER_CONSENT_PAGES;
-	const redirectUri = ctx.callback?.redirectUri ?? OAUTH_CALLBACK_URL;
+	const getClientId = () =>
+		typeof ctx.clientId === "function" ? ctx.clientId() : ctx.clientId;
+	const consent = ctx.consent;
+
+	const redirectUrl = new URL(ctx.redirectUri);
+	const defaultCallbackHost = redirectUrl.hostname;
+	const defaultCallbackPort = Number(redirectUrl.port);
 
 	async function login(props: LoginProps): Promise<boolean> {
 		if (ctx.hasEnvCredentials()) {
@@ -193,11 +172,11 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				browser: props.browser ?? true,
 				scopes: props.scopes,
 				clientId: getClientId(),
-				redirectUri,
+				redirectUri: ctx.redirectUri,
 				denied: consent.denied,
 				granted: consent.granted,
-				callbackHost: props.callbackHost ?? ctx.callback?.host ?? "localhost",
-				callbackPort: props.callbackPort ?? ctx.callback?.port ?? 8976,
+				callbackHost: props.callbackHost ?? defaultCallbackHost,
+				callbackPort: props.callbackPort ?? defaultCallbackPort,
 			},
 			oauthFlowState,
 			ctx,
@@ -369,7 +348,3 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		refreshToken,
 	};
 }
-
-// Re-export the constant for callers that want to know about the redirect URI
-// without depending on `./generate-auth-url`.
-export { OAUTH_CALLBACK_URL };

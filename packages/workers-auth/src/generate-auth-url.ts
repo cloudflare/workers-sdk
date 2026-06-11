@@ -4,15 +4,8 @@ interface GenerateAuthUrlProps {
 	scopes: string[];
 	stateQueryParam: string;
 	codeChallenge: string;
-	/**
-	 * The `redirect_uri` the OAuth provider will redirect back to. Defaults to
-	 * {@link OAUTH_CALLBACK_URL}. Consumers that register a different callback
-	 * URL on their OAuth app (e.g. a different port) pass it here.
-	 */
-	redirectUri?: string;
+	redirectUri: string;
 }
-
-export const OAUTH_CALLBACK_URL = "http://localhost:8976/oauth/callback";
 
 /**
  * Build the OAuth 2.0 authorize URL for the Cloudflare auth endpoint.
@@ -27,7 +20,7 @@ export const generateAuthUrl = ({
 	scopes,
 	stateQueryParam,
 	codeChallenge,
-	redirectUri = OAUTH_CALLBACK_URL,
+	redirectUri,
 }: GenerateAuthUrlProps) => {
 	return (
 		authUrl +

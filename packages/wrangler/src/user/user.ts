@@ -26,9 +26,12 @@ import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import { getCloudflareAccountIdFromEnv } from "./auth-variables";
+import {
+	getClientIdFromEnv,
+	getCloudflareAccountIdFromEnv,
+} from "./auth-variables";
 import { fetchAllAccounts } from "./fetch-accounts";
-import { generateAuthUrl } from "./generate-auth-url";
+import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { Account } from "./shared";
 import type { LoginProps } from "@cloudflare/workers-auth";
@@ -49,12 +52,31 @@ import type {
  * apply — the mocked versions are injected via the context here and used
  * internally by `@cloudflare/workers-auth`.
  */
+/**
+ * Wrangler's branded OAuth consent pages, shown to the user after they grant
+ * or deny consent to Wrangler's OAuth app.
+ */
+const WRANGLER_CONSENT_PAGES = {
+	granted: {
+		url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
+	},
+	denied: {
+		url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
+		error:
+			"Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
+			"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable",
+	},
+};
+
 const oauthFlow = createOAuthFlow({
 	logger,
 	isNonInteractiveOrCI,
 	openInBrowser,
 	hasEnvCredentials: () => getAuthFromEnv() !== undefined,
 	purgeOnLoginOrLogout: purgeConfigCaches,
+	clientId: getClientIdFromEnv,
+	consent: WRANGLER_CONSENT_PAGES,
+	redirectUri: OAUTH_CALLBACK_URL,
 	generateAuthUrl,
 	generateRandomState,
 });
@@ -201,8 +223,8 @@ function withDefaultScopes(
 		complianceConfig,
 		scopes: props?.scopes ?? DefaultScopeKeys,
 		browser: props?.browser ?? true,
-		callbackHost: props?.callbackHost ?? "localhost",
-		callbackPort: props?.callbackPort ?? 8976,
+		callbackHost: props?.callbackHost,
+		callbackPort: props?.callbackPort,
 	};
 }
 

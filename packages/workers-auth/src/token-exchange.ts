@@ -25,7 +25,6 @@ import {
 	ErrorUnknown,
 	toErrorClass,
 } from "./errors";
-import { OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generatePKCECodes, RECOMMENDED_STATE_LENGTH } from "./pkce";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
 import type { AuthConfigStorage } from "./auth-config-file";
@@ -231,7 +230,7 @@ export async function exchangeAuthCodeForAccessToken(
 	logger: OAuthFlowContext["logger"],
 	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
 	clientId: string,
-	redirectUri: string = OAUTH_CALLBACK_URL
+	redirectUri: string
 ): Promise<AccessContext> {
 	const { authorizationCode, codeVerifier = "" } = state;
 

@@ -1,5 +1,4 @@
 import { describe, it } from "vitest";
-import { generateAuthUrl, OAUTH_CALLBACK_URL } from "../src/generate-auth-url";
 import { readStoredAuthState } from "../src/state";
 import type {
 	AuthConfigStorage,
@@ -26,32 +25,6 @@ function memoryStorage(initial?: UserAuthConfig): AuthConfigStorage {
 		},
 	};
 }
-
-describe("generateAuthUrl redirectUri injection", () => {
-	const base = {
-		authUrl: "https://dash.cloudflare.com/oauth2/auth",
-		clientId: "client-123",
-		scopes: ["account:read"],
-		stateQueryParam: "state-123",
-		codeChallenge: "challenge-123",
-	};
-
-	it("defaults the redirect_uri to OAUTH_CALLBACK_URL", ({ expect }) => {
-		const url = generateAuthUrl(base);
-		expect(url).toContain(
-			`redirect_uri=${encodeURIComponent(OAUTH_CALLBACK_URL)}`
-		);
-	});
-
-	it("uses an injected redirect_uri when provided", ({ expect }) => {
-		const redirectUri = "http://localhost:8877/oauth/callback";
-		const url = generateAuthUrl({ ...base, redirectUri });
-		expect(url).toContain(`redirect_uri=${encodeURIComponent(redirectUri)}`);
-		expect(url).not.toContain(
-			`redirect_uri=${encodeURIComponent(OAUTH_CALLBACK_URL)}`
-		);
-	});
-});
 
 describe("readStoredAuthState storage injection", () => {
 	it("reads OAuth tokens from an injected storage backend", ({ expect }) => {
