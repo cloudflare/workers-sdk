@@ -1,6 +1,24 @@
-import type { AuthConfigStorage } from "./auth-config-file";
+import type { AuthConfigStorage } from "./config-file/auth";
+import type { TemporaryAccountStorage } from "./config-file/temporary";
 import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
+
+/**
+ * The dependencies the OAuth flow needs to mint/reuse a short-lived "temporary
+ * preview account"
+ */
+export interface OAuthFlowTemporaryContext {
+	/** Persistence backend for the cached temporary preview account. */
+	storage: TemporaryAccountStorage;
+	/**
+	 * Hook to customise the terms-acceptance interactive prompt
+	 *  - question: the question to ask a user in interactive mode.
+	 *    return answer === "yes" (must be the literal string)
+	 *  - notice: the notice to print on stderr if in non-interactive mode
+	 *    always return true
+	 */
+	prompt: (question: string, notice: string) => Promise<boolean>;
+}
 
 /**
  * The branded OAuth consent pages the provider redirects the browser to after
@@ -89,6 +107,18 @@ export interface OAuthFlowContext {
 	 * Persistence backend for the stored auth config.
 	 */
 	storage: AuthConfigStorage;
+
+	/**
+	 * Whether the flow's credential resolvers (`getAPIToken` / `requireApiToken`)
+	 * should honour the global API key + email pair in addition to scoped API
+	 * tokens.
+	 */
+	allowGlobalAuthKey: boolean;
+
+	/**
+	 * Dependencies for minting/reusing a temporary preview account.
+	 */
+	temporary: OAuthFlowTemporaryContext | undefined;
 
 	/**
 	 * Override the OAuth authorize URL generator. Used by tests to produce a

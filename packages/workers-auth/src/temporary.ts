@@ -1,32 +1,23 @@
 import {
-	chmodSync,
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
-import path from "node:path";
-import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	getCloudflareApiBaseUrl,
-	getCloudflareApiEnvironmentFromEnv,
-	getGlobalWranglerConfigPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
-import { TEMPORARY_TERMS_URLS } from "../user/temporary-terms-policy";
+import type {
+	TemporaryAccountStorage,
+	TemporaryPreviewAccount,
+} from "./config-file/temporary";
 
-function getTemporaryPreviewUrl(): string {
-	return `${getCloudflareApiBaseUrl(COMPLIANCE_REGION_CONFIG_PUBLIC)}/provisioning/previews`;
-}
+export const TEMPORARY_TERMS_URLS = {
+	termsOfService: "https://www.cloudflare.com/terms/",
+	privacyPolicy: "https://www.cloudflare.com/privacypolicy/",
+} as const;
 
-function getTemporaryAccountConfigFile(): string {
-	const environment = getCloudflareApiEnvironmentFromEnv();
-	return environment === "production"
-		? "wrangler-temporary-account.json"
-		: `wrangler-temporary-account.${environment}.json`;
-}
+export const TEMPORARY_TERMS_PROMPT = `You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) in order to continue. By typing "yes", you agree to these terms. Type "yes" to continue.`;
+export const TEMPORARY_TERMS_NOTICE = `Continuing means you accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}).`;
+
+const TEMPORARY_TERMS_ERROR = `You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) to use --temporary.`;
 
 type TemporaryAccountPayload = {
 	account?: {
@@ -48,38 +39,8 @@ type TemporaryAccountResponse = {
 	result?: TemporaryAccountPayload;
 };
 
-export type TemporaryPreviewAccount = {
-	account: {
-		id: string;
-		name: string;
-		apiToken: string;
-		expiresAt: string;
-	};
-	claim: {
-		url: string;
-		expiresAt: string;
-	};
-};
-
-type CachedTemporaryPreviewAccount = {
-	temporaryPreviewAccount: TemporaryPreviewAccount;
-};
-
-function getTemporaryPreviewAccountConfigPath(): string {
-	return path.join(
-		getGlobalWranglerConfigPath(),
-		getTemporaryAccountConfigFile()
-	);
-}
-
-function readTemporaryPreviewAccountConfig(): Partial<CachedTemporaryPreviewAccount> {
-	try {
-		return JSON.parse(
-			readFileSync(getTemporaryPreviewAccountConfigPath(), "utf-8")
-		) as Partial<CachedTemporaryPreviewAccount>;
-	} catch {
-		return {};
-	}
+function getTemporaryPreviewUrl(): string {
+	return `${getCloudflareApiBaseUrl(COMPLIANCE_REGION_CONFIG_PUBLIC)}/provisioning/previews`;
 }
 
 function isFutureTimestamp(timestamp: string): boolean {
@@ -87,11 +48,20 @@ function isFutureTimestamp(timestamp: string): boolean {
 	return !Number.isNaN(parsed) && parsed > Date.now();
 }
 
-export function getCachedTemporaryPreviewAccount():
-	| TemporaryPreviewAccount
-	| undefined {
-	const temporaryPreviewAccount =
-		readTemporaryPreviewAccountConfig().temporaryPreviewAccount;
+/**
+ * Read the cached temporary preview account from the injected storage,
+ * validating that it has all required fields and that neither the account nor
+ * the claim has expired. Returns `undefined` when there is no usable cache.
+ */
+export function getCachedTemporaryPreviewAccount(
+	storage: TemporaryAccountStorage
+): TemporaryPreviewAccount | undefined {
+	let temporaryPreviewAccount: TemporaryPreviewAccount | undefined;
+	try {
+		temporaryPreviewAccount = storage.read();
+	} catch {
+		return undefined;
+	}
 
 	if (!temporaryPreviewAccount) {
 		return undefined;
@@ -111,38 +81,10 @@ export function getCachedTemporaryPreviewAccount():
 	return temporaryPreviewAccount;
 }
 
-function cacheTemporaryPreviewAccount(
-	temporaryPreviewAccount: TemporaryPreviewAccount
-): void {
-	const configPath = getTemporaryPreviewAccountConfigPath();
-	mkdirSync(path.dirname(configPath), { recursive: true });
-	// Restrict to the owner like the OAuth config (see writeAuthConfigFile): the
-	// `mode` option only applies on creation, so `chmodSync` also tightens any
-	// pre-existing file on save.
-	writeFileSync(
-		configPath,
-		JSON.stringify({ temporaryPreviewAccount }, null, 2),
-		{
-			mode: 0o600,
-		}
-	);
-	chmodSync(configPath, 0o600);
-}
-
 /**
- * Returns whether a cached account existed before removal.
- *
- * Only clears the cache for the current `WRANGLER_API_ENVIRONMENT`; a cache
- * minted under a different environment is left untouched (low impact given the
- * short TTLs).
+ * Provision a brand new temporary preview account from the public provisioning
+ * endpoint
  */
-export function clearCachedTemporaryPreviewAccount(): boolean {
-	const configPath = getTemporaryPreviewAccountConfigPath();
-	const existed = existsSync(configPath);
-	rmSync(configPath, { force: true });
-	return existed;
-}
-
 export async function createTemporaryPreviewAccount(): Promise<TemporaryPreviewAccount> {
 	const response = await fetch(getTemporaryPreviewUrl(), {
 		method: "POST",
@@ -208,21 +150,38 @@ export async function createTemporaryPreviewAccount(): Promise<TemporaryPreviewA
 	};
 }
 
-export async function getOrCreateTemporaryPreviewAccount(options?: {
-	beforeCreate?: () => Promise<void>;
+/**
+ * Return the cached temporary preview account if one is still valid, otherwise
+ * mint a fresh one (running `beforeCreate` first, e.g. a terms-acceptance gate)
+ * and persist it to the injected storage.
+ */
+export async function getOrCreateTemporaryPreviewAccount(options: {
+	storage: TemporaryAccountStorage;
+	prompt: (question: string, notice: string) => Promise<boolean>;
 }): Promise<{
 	account: TemporaryPreviewAccount;
 	cached: boolean;
 }> {
-	const cachedPreviewAccount = getCachedTemporaryPreviewAccount();
+	const cachedPreviewAccount = getCachedTemporaryPreviewAccount(
+		options.storage
+	);
 	if (cachedPreviewAccount) {
 		return { account: cachedPreviewAccount, cached: true };
 	}
 
-	await options?.beforeCreate?.();
+	const termsAccepted = await options.prompt(
+		TEMPORARY_TERMS_PROMPT,
+		TEMPORARY_TERMS_NOTICE
+	);
+
+	if (!termsAccepted) {
+		throw new UserError(TEMPORARY_TERMS_ERROR, {
+			telemetryMessage: "user temporary terms not accepted",
+		});
+	}
 
 	const temporaryPreviewAccount = await createTemporaryPreviewAccount();
-	cacheTemporaryPreviewAccount(temporaryPreviewAccount);
+	options.storage.write(temporaryPreviewAccount);
 
 	return { account: temporaryPreviewAccount, cached: false };
 }

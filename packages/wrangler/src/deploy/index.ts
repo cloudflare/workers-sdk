@@ -98,6 +98,7 @@ export const deployCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		useConfigRedirectIfAvailable: true,
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,

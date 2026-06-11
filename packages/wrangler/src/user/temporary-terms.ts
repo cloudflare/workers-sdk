@@ -1,26 +1,20 @@
-import { UserError } from "@cloudflare/workers-utils";
 import { prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { TEMPORARY_TERMS_URLS } from "./temporary-terms-policy";
 
-export const TEMPORARY_TERMS_PROMPT = `You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) in order to continue. By typing "yes", you agree to these terms. Type "yes" to continue.`;
-export const TEMPORARY_TERMS_NOTICE = `Continuing means you accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}).`;
-
-const TEMPORARY_TERMS_ERROR = `You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) to use --temporary.`;
-
-export async function ensureTemporaryTermsAccepted(): Promise<void> {
+export async function ensureTemporaryTermsAccepted(
+	question: string,
+	notice: string
+): Promise<boolean> {
 	if (isNonInteractiveOrCI()) {
-		logger.log(TEMPORARY_TERMS_NOTICE);
-		return;
+		logger.log(notice);
+		return true;
 	}
 
-	const answer = await prompt(TEMPORARY_TERMS_PROMPT);
+	const answer = await prompt(question);
 	if (typeof answer === "string" && answer.trim().toLowerCase() === "yes") {
-		return;
+		return true;
 	}
 
-	throw new UserError(TEMPORARY_TERMS_ERROR, {
-		telemetryMessage: "user temporary terms not accepted",
-	});
+	return false;
 }

@@ -33,7 +33,7 @@ describe("logout", () => {
 	}) => {
 		const temporaryAccountConfigPath = path.join(
 			getGlobalWranglerConfigPath(),
-			"wrangler-temporary-account.json"
+			"wrangler-temporary-account.toml"
 		);
 		fs.mkdirSync(path.dirname(temporaryAccountConfigPath), { recursive: true });
 		fs.writeFileSync(
@@ -71,7 +71,7 @@ describe("logout", () => {
 	}) => {
 		const temporaryAccountConfigPath = path.join(
 			getGlobalWranglerConfigPath(),
-			"wrangler-temporary-account.json"
+			"wrangler-temporary-account.toml"
 		);
 		writeAuthConfigFile({
 			oauth_token: "some-oauth-tok",

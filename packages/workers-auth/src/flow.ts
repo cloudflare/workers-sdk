@@ -19,13 +19,19 @@ import {
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { getOauthToken } from "./callback-server";
+import { getAPIToken, requireApiToken } from "./credentials";
 import { getRevokeUrlFromEnv } from "./env-vars";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
+import { getOrCreateTemporaryPreviewAccount } from "./temporary";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
+import type { TemporaryPreviewAccount } from "./config-file/temporary";
 import type { OAuthFlowContext } from "./context";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ApiCredentials,
+	ComplianceConfig,
+} from "@cloudflare/workers-utils";
 
 /**
  * Reason why {@link OAuthFlowAPI.loginOrRefreshIfRequired} could not
@@ -124,18 +130,50 @@ export interface OAuthFlowAPI {
 	getOAuthTokenFromLocalState(): Promise<string | undefined>;
 
 	/**
-	 * Whether the stored OAuth access token has expired and a refresh is
-	 * required before it can be used. Returns `false` when env credentials are
-	 * present (per `ctx.hasEnvCredentials`), because the stored OAuth state is
-	 * not consulted in that case.
+	 * Resolve API credentials, preferring an active temporary preview account
+	 * (when one has been latched via {@link activateTemporaryAccount}) over the
+	 * env / stored-OAuth resolution performed by the shared credential resolver.
+	 *
+	 * Returns `undefined` when no credentials are available.
 	 */
-	isRefreshNeeded(): boolean;
+	getAPIToken(): ApiCredentials | undefined;
 
 	/**
-	 * Trigger an OAuth refresh-token rotation. Persists the new access/refresh
-	 * tokens to disk on success. Returns `false` on any failure.
+	 * Like {@link getAPIToken}, but throws a `UserError` when no credentials are
+	 * available.
 	 */
-	refreshToken(): Promise<boolean>;
+	requireApiToken(): ApiCredentials;
+
+	/**
+	 * Establish whether `--temporary` is permitted for this invocation. Called
+	 * once at command dispatch by the consumer. Also drops any temporary account
+	 * latched by a previous dispatch, so that — when multiple commands share a
+	 * process (e.g. in tests) — each invocation starts a fresh temporary session.
+	 * No-op when the flow was created without a `temporary` context.
+	 */
+	setTemporaryAllowed(allowed: boolean): void;
+
+	/**
+	 * Whether `--temporary` is permitted for this invocation (see
+	 * {@link setTemporaryAllowed}). Always `false` without a `temporary` context.
+	 */
+	isTemporaryAllowed(): boolean;
+
+	/**
+	 * The temporary preview account latched for this invocation, or `undefined`.
+	 * Only set after {@link activateTemporaryAccount} has run.
+	 */
+	getActiveTemporaryAccount(): TemporaryPreviewAccount | undefined;
+
+	/**
+	 * The sole creator of the temporary-account latch: mint a fresh temporary
+	 * preview account (or reuse a cached one), latch it for this invocation, and
+	 * return it. Requires a `temporary` context.
+	 */
+	activateTemporaryAccount(): Promise<{
+		account: TemporaryPreviewAccount;
+		cached: boolean;
+	}>;
 }
 
 /**
@@ -156,6 +194,9 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	const getClientId = () =>
 		typeof ctx.clientId === "function" ? ctx.clientId() : ctx.clientId;
 	const consent = ctx.consent;
+
+	let temporaryAllowed = false;
+	let activeTemporaryAccount: TemporaryPreviewAccount | undefined;
 
 	const redirectUrl = new URL(ctx.redirectUri);
 	const defaultCallbackHost = redirectUrl.hostname;
@@ -217,6 +258,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 		ctx.logger.log(`Successfully logged in.`);
 
+		clearTemporaryAccount();
 		ctx.purgeOnLoginOrLogout?.();
 
 		return true;
@@ -321,6 +363,8 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	}
 
 	async function logout(): Promise<void> {
+		const clearedTemporary = clearTemporaryAccount();
+
 		if (ctx.hasEnvCredentials()) {
 			// Env credentials override any login details, so we cannot log out.
 			ctx.logger.log(
@@ -335,7 +379,11 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			storage,
 		}).refreshToken;
 		if (!storedRefreshToken) {
-			ctx.logger.log("Not logged in, exiting...");
+			ctx.logger.log(
+				clearedTemporary
+					? "Cleared temporary preview account."
+					: "Not logged in, exiting..."
+			);
 			return;
 		}
 
@@ -383,12 +431,74 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		return stored.accessToken?.value;
 	}
 
+	function getAPITokenInternal(): ApiCredentials | undefined {
+		if (activeTemporaryAccount) {
+			return { apiToken: activeTemporaryAccount.account.apiToken };
+		}
+
+		return getAPIToken({
+			storage,
+			warningLogger: ctx.logger,
+			allowGlobalAuthKey: ctx.allowGlobalAuthKey,
+		});
+	}
+
+	function requireApiTokenInternal(): ApiCredentials {
+		if (activeTemporaryAccount) {
+			return { apiToken: activeTemporaryAccount.account.apiToken };
+		}
+
+		return requireApiToken({
+			storage,
+			warningLogger: ctx.logger,
+			allowGlobalAuthKey: ctx.allowGlobalAuthKey,
+		});
+	}
+
+	function setTemporaryAllowed(allowed: boolean): void {
+		temporaryAllowed = allowed && ctx.temporary !== undefined;
+		activeTemporaryAccount = undefined;
+	}
+
+	function isTemporaryAllowed(): boolean {
+		return temporaryAllowed;
+	}
+
+	function getActiveTemporaryAccount(): TemporaryPreviewAccount | undefined {
+		return activeTemporaryAccount;
+	}
+
+	async function activateTemporaryAccount(): Promise<{
+		account: TemporaryPreviewAccount;
+		cached: boolean;
+	}> {
+		if (!ctx.temporary) {
+			throw new UserError(
+				"Temporary preview accounts are not supported by this CLI.",
+				{ telemetryMessage: "user temporary account unsupported" }
+			);
+		}
+
+		const result = await getOrCreateTemporaryPreviewAccount(ctx.temporary);
+		activeTemporaryAccount = result.account;
+		return result;
+	}
+
+	function clearTemporaryAccount(): boolean {
+		activeTemporaryAccount = undefined;
+		return ctx.temporary?.storage.clear() ?? false;
+	}
+
 	return {
 		login,
 		logout,
 		loginOrRefreshIfRequired,
 		getOAuthTokenFromLocalState,
-		isRefreshNeeded,
-		refreshToken,
+		getAPIToken: getAPITokenInternal,
+		requireApiToken: requireApiTokenInternal,
+		setTemporaryAllowed,
+		isTemporaryAllowed,
+		getActiveTemporaryAccount,
+		activateTemporaryAccount,
 	};
 }

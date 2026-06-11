@@ -59,6 +59,7 @@ export const triggersDeployCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	async handler(args, { config }) {

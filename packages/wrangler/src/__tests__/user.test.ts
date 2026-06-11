@@ -24,8 +24,6 @@ import {
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
 	requireAuth,
-	runWithAuthContext,
-	setAllowTemporary,
 	writeAuthConfigFile,
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -108,7 +106,7 @@ describe("User", () => {
 			// stubs set by runInTempDir's beforeEach, rather than the real homedir.
 			const temporaryAccountConfigPath = path.join(
 				getGlobalWranglerConfigPath(),
-				"wrangler-temporary-account.json"
+				"wrangler-temporary-account.toml"
 			);
 
 			mockOAuthServerCallback("success");
@@ -450,26 +448,7 @@ describe("User", () => {
 		);
 	});
 
-	it("suggests --temporary in the non-interactive auth error only for commands that support it", async ({
-		expect,
-	}) => {
-		setIsTTY(false);
 
-		// A command that does not support `--temporary` (no registrar opt-in).
-		await runWithAuthContext(async () => {
-			await expect(requireAuth({} as Config)).rejects.toThrowError(
-				/CLOUDFLARE_API_TOKEN\.$/
-			);
-		});
-
-		// A command that supports `--temporary` but wasn't passed the flag.
-		await runWithAuthContext(async () => {
-			setAllowTemporary(false);
-			await expect(requireAuth({} as Config)).rejects.toThrowError(
-				/rerun this command with `--temporary`/
-			);
-		});
-	});
 
 	it("should confirm no error message when refresh is successful", async ({
 		expect,

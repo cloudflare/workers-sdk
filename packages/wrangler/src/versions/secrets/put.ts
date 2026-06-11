@@ -17,6 +17,7 @@ export const versionsSecretPutCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printConfigWarnings: false,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},

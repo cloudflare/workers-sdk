@@ -31,6 +31,7 @@ export const deploymentsStatusCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 	},
 	handler: async function versionsDeploymentsStatusHandler(args, { config }) {

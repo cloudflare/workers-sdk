@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
+import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
 import {
 	runInTempDir,
 	writeRedirectedWranglerConfig,
@@ -12,7 +13,6 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { beforeEach, describe, expect, it, test, vi } from "vitest";
-import { TEMPORARY_TERMS_NOTICE } from "../../user/temporary-terms";
 import { dedent } from "../../utils/dedent";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";

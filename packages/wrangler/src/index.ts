@@ -426,7 +426,6 @@ import { tunnelListCommand } from "./tunnel/list";
 import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
-import { runWithAuthContext } from "./user";
 import {
 	authNamespace,
 	authTokenCommand,
@@ -2404,9 +2403,7 @@ export async function main(argv: string[]): Promise<void> {
 
 	let cliHandlerThrew = false;
 	try {
-		await runWithAuthContext(async () => {
-			await wrangler.parse();
-		});
+		await wrangler.parse();
 	} catch (e) {
 		cliHandlerThrew = true;
 

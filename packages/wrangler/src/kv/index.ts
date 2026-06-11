@@ -84,6 +84,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
+	behaviour: { supportTemporary: true },
 
 	args: {
 		namespace: {
@@ -168,7 +169,11 @@ export const kvNamespaceListCommand = createCommand({
 
 	args: {},
 
-	behaviour: { printBanner: false, printResourceLocation: false },
+	behaviour: {
+		supportTemporary: true,
+		printBanner: false,
+		printResourceLocation: false,
+	},
 	async handler(_, { config, sdk }) {
 		const accountId = await requireAuth(config);
 
@@ -196,6 +201,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
+	behaviour: { supportTemporary: true },
 	positionalArgs: ["namespace"],
 	args: {
 		namespace: {
@@ -315,6 +321,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
+	behaviour: { supportTemporary: true },
 	positionalArgs: ["old-name"],
 	args: {
 		"old-name": {
@@ -471,6 +478,7 @@ export const kvKeyPutCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	positionalArgs: ["key", "value"],
@@ -564,6 +572,7 @@ export const kvKeyListCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		// implicitly expects to output JSON only
 		printResourceLocation: false,
 		printBanner: false,
@@ -688,6 +697,7 @@ export const kvKeyGetCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
 	},
@@ -795,6 +805,7 @@ export const kvKeyDeleteCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	positionalArgs: ["key"],
@@ -847,6 +858,7 @@ export const kvBulkGetCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
 	},
@@ -944,6 +956,7 @@ export const kvBulkPutCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	positionalArgs: ["filename"],
@@ -1069,6 +1082,7 @@ export const kvBulkDeleteCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	positionalArgs: ["filename"],

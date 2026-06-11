@@ -1,6 +1,10 @@
 import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
+import {
+	TEMPORARY_TERMS_NOTICE,
+	TEMPORARY_TERMS_PROMPT,
+} from "@cloudflare/workers-auth";
 import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
@@ -17,10 +21,6 @@ import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
-import {
-	TEMPORARY_TERMS_NOTICE,
-	TEMPORARY_TERMS_PROMPT,
-} from "../../user/temporary-terms";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -958,7 +958,7 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("does not create a temporary preview account when the user is already authenticated", async ({
+		it("throws when the user is already authenticated and requests a temporary account", async ({
 			expect,
 		}) => {
 			setIsTTY(false);
@@ -978,11 +978,12 @@ describe("deploy", () => {
 
 			await expect(
 				runWrangler("deploy index.js --temporary")
-			).resolves.toBeUndefined();
+			).rejects.toThrowError(
+				/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
+			);
 
 			expect(previewAccountRequests).toBe(0);
 			expect(std.out).not.toContain("Temporary account ready:");
-			expect(std.warn).toContain("already authenticated");
 		});
 
 		describe("with temporary preview accounts", () => {
@@ -1044,13 +1045,13 @@ describe("deploy", () => {
 
 				const globalTemporaryAccountPath = path.join(
 					getGlobalWranglerConfigPath(),
-					"wrangler-temporary-account.json"
+					"wrangler-temporary-account.toml"
 				);
 				const localTemporaryAccountPath = path.join(
 					process.cwd(),
 					".wrangler",
 					"cache",
-					"wrangler-temporary-account.json"
+					"wrangler-temporary-account.toml"
 				);
 
 				expect(previewContentType).toBe("application/json");
@@ -1073,83 +1074,50 @@ describe("deploy", () => {
 					);
 				}
 				expect(
-					JSON.parse(fs.readFileSync(globalTemporaryAccountPath, "utf-8"))
+					TOML.parse(fs.readFileSync(globalTemporaryAccountPath, "utf-8"))
 				).toMatchObject({
-					temporaryPreviewAccount: {
-						account: {
-							id: "preview-account-id",
-							apiToken: "preview-account-token",
-						},
-						claim: {
-							url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
-						},
+					account: {
+						id: "preview-account-id",
+						apiToken: "preview-account-token",
+					},
+					claim: {
+						url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
 					},
 				});
 			});
 
-			it("deploys temporarily even when an expired OAuth token that cannot refresh is on disk", async ({
+			it("throws when an OAuth token is on disk, even if it is expired and cannot refresh", async ({
 				expect,
 			}) => {
 				setIsTTY(true);
-				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
-				// A stale stored OAuth token whose refresh fails must not hijack the
-				// temporary override and abort the deploy with "Not logged in".
+				// A stored OAuth token counts as being authenticated even when
+				// expired — it would be refreshed on the next deploy — so
+				// `--temporary` must refuse rather than provision a throwaway
+				// account alongside it.
 				writeAuthConfigFile({
 					oauth_token: "expired-token",
 					refresh_token: "expired-refresh-token",
 					expiration_time: new Date(Date.now() - 1000).toISOString(),
 				});
-				mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
 				writeWranglerConfig();
 				writeWorkerSource();
-				mockSubDomainRequest("test-sub-domain", true, false);
-				mockUploadWorkerRequest({
-					expectedAccountId: "preview-account-id",
-				});
 
+				let previewAccountRequests = 0;
 				msw.use(
-					http.get(
-						"*/accounts/preview-account-id/workers/services/:scriptName",
-						() => {
-							return HttpResponse.json(
-								createFetchResult({
-									default_environment: {
-										script: { last_deployed_from: "wrangler" },
-									},
-								})
-							);
-						}
-					),
 					http.post(temporaryPreviewAccountUrl, async () => {
-						return HttpResponse.json({
-							success: true,
-							result: {
-								account: {
-									id: "preview-account-id",
-									name: "Preview Account Alpha",
-									type: "standard",
-									apiToken: "preview-account-token",
-									tokenId: "preview-token-id",
-									expiresAt: "2027-01-01T00:00:00.000Z",
-								},
-								claim: {
-									token: "claim-token",
-									url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
-									expiresAt: "2027-01-02T00:00:00.000Z",
-								},
-							},
-							errors: [],
-							messages: [],
-						});
+						previewAccountRequests += 1;
+						return HttpResponse.json({});
 					})
 				);
 
 				await expect(
 					runWrangler("deploy index.js --temporary")
-				).resolves.toBeUndefined();
+				).rejects.toThrowError(
+					/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
+				);
 
-				expect(std.out).toContain("Temporary account ready:");
-				expect(std.err).not.toContain("Not logged in");
+				expect(previewAccountRequests).toBe(0);
+				expect(std.out).not.toContain("Temporary account ready:");
 			});
 
 			it("provisions the preview account against the staging API and caches it per-environment", async ({
@@ -1214,11 +1182,11 @@ describe("deploy", () => {
 
 				const stagingTemporaryAccountPath = path.join(
 					getGlobalWranglerConfigPath(),
-					"wrangler-temporary-account.staging.json"
+					"wrangler-temporary-account.staging.toml"
 				);
 				const productionTemporaryAccountPath = path.join(
 					getGlobalWranglerConfigPath(),
-					"wrangler-temporary-account.json"
+					"wrangler-temporary-account.toml"
 				);
 
 				expect(stagingPreviewRequests).toBe(1);
@@ -1332,12 +1300,12 @@ describe("deploy", () => {
 				// reading `.account.expiresAt`.
 				const cachePath = path.join(
 					getGlobalWranglerConfigPath(),
-					"wrangler-temporary-account.json"
+					"wrangler-temporary-account.toml"
 				);
 				fs.mkdirSync(path.dirname(cachePath), { recursive: true });
 				fs.writeFileSync(
 					cachePath,
-					JSON.stringify({ temporaryPreviewAccount: {} })
+					TOML.stringify({ temporaryPreviewAccount: {} })
 				);
 
 				let previewAccountRequests = 0;
@@ -1385,12 +1353,10 @@ describe("deploy", () => {
 
 				expect(previewAccountRequests).toBe(1);
 				expect(std.out).toContain("Account: Preview Account Alpha (created)");
-				expect(JSON.parse(fs.readFileSync(cachePath, "utf-8"))).toMatchObject({
-					temporaryPreviewAccount: {
-						account: { id: "preview-account-id" },
-						claim: {
-							url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
-						},
+				expect(TOML.parse(fs.readFileSync(cachePath, "utf-8"))).toMatchObject({
+					account: { id: "preview-account-id" },
+					claim: {
+						url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
 					},
 				});
 			});

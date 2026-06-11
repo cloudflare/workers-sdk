@@ -36,6 +36,7 @@ export const d1MigrationsApplyCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	args: {

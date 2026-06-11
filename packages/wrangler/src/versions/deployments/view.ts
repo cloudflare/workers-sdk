@@ -8,6 +8,7 @@ export const deploymentsViewCommand = createCommand({
 		status: "stable",
 		hidden: true,
 	},
+	behaviour: { supportTemporary: true },
 	args: {
 		name: {
 			describe: "Name of the Worker",
