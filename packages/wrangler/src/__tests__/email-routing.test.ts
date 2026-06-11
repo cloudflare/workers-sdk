@@ -750,7 +750,6 @@ describe("email sending commands", () => {
 
 			await runWrangler("email sending list");
 
-			expect(std.out).toContain("example.com");
 			expect(std.out).toContain("sub.example.com");
 			expect(std.out).toContain("aabbccdd11223344aabbccdd11223344");
 			expect(std.out).toContain("yes");

@@ -1,4 +1,4 @@
-import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { fetchListResult, fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import type {
 	EmailRoutingAddress,
@@ -280,7 +280,7 @@ export async function listEmailSendingSubdomains(
 	zoneId: string
 ): Promise<EmailSendingSubdomain[]> {
 	await requireAuth(config);
-	return await fetchPagedListResult<EmailSendingSubdomain>(
+	return await fetchListResult<EmailSendingSubdomain>(
 		config,
 		`/zones/${zoneId}/email/sending/subdomains`
 	);
