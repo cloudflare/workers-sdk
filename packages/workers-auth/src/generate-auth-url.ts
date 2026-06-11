@@ -4,9 +4,8 @@ interface GenerateAuthUrlProps {
 	scopes: string[];
 	stateQueryParam: string;
 	codeChallenge: string;
+	redirectUri: string;
 }
-
-export const OAUTH_CALLBACK_URL = "http://localhost:8976/oauth/callback";
 
 /**
  * Build the OAuth 2.0 authorize URL for the Cloudflare auth endpoint.
@@ -21,12 +20,13 @@ export const generateAuthUrl = ({
 	scopes,
 	stateQueryParam,
 	codeChallenge,
+	redirectUri,
 }: GenerateAuthUrlProps) => {
 	return (
 		authUrl +
 		`?response_type=code&` +
 		`client_id=${encodeURIComponent(clientId)}&` +
-		`redirect_uri=${encodeURIComponent(OAUTH_CALLBACK_URL)}&` +
+		`redirect_uri=${encodeURIComponent(redirectUri)}&` +
 		// we add offline_access manually for every request
 		`scope=${encodeURIComponent([...scopes, "offline_access"].join(" "))}&` +
 		`state=${stateQueryParam}&` +

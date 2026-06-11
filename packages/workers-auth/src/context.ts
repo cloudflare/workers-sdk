@@ -1,8 +1,18 @@
-import type {
-	generateAuthUrl as defaultGenerateAuthUrl,
-	OAUTH_CALLBACK_URL,
-} from "./generate-auth-url";
+import type { AuthConfigStorage } from "./auth-config-file";
+import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
+
+/**
+ * The branded OAuth consent pages the provider redirects the browser to after
+ * the user grants or denies consent.
+ */
+export interface OAuthConsentPages {
+	/** Redirect target shown after the user grants consent. */
+	granted: { url: string };
+	/** Redirect target shown after the user denies consent, plus the error
+	 * surfaced to the terminal. */
+	denied: { url: string; error: string };
+}
 
 /**
  * Subset of the wrangler `logger` singleton used by the OAuth flow.
@@ -57,6 +67,30 @@ export interface OAuthFlowContext {
 	purgeOnLoginOrLogout?: () => void;
 
 	/**
+	 * The OAuth client ID identifying the consuming CLI to the Cloudflare OAuth
+	 * server. Consumer-specific (each CLI registers its own OAuth app), so it is
+	 * required. Pass a function to resolve it lazily — e.g. so an env-var read at
+	 * call time can switch between production and staging apps.
+	 */
+	clientId: string | (() => string);
+
+	/**
+	 * The branded consent pages the provider redirects to after the user grants
+	 * or denies consent.
+	 */
+	consent: OAuthConsentPages;
+
+	/**
+	 * The `redirect_uri` registered on the consumer's OAuth app
+	 */
+	redirectUri: string;
+
+	/**
+	 * Persistence backend for the stored auth config.
+	 */
+	storage: AuthConfigStorage;
+
+	/**
 	 * Override the OAuth authorize URL generator. Used by tests to produce a
 	 * deterministic URL for snapshot testing. Defaults to the standard
 	 * implementation.
@@ -70,5 +104,3 @@ export interface OAuthFlowContext {
 	 */
 	generateRandomState?: typeof defaultGenerateRandomState;
 }
-
-export type { OAUTH_CALLBACK_URL };

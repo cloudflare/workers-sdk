@@ -6,12 +6,17 @@
 // `getAPIToken` resolver), or to inject deterministic implementations into
 // tests.
 
+export type { AuthConfigStorage, UserAuthConfig } from "./auth-config-file";
+
 export {
-	getAuthConfigFilePath,
-	readAuthConfigFile,
-	writeAuthConfigFile,
-} from "./auth-config-file";
-export type { UserAuthConfig } from "./auth-config-file";
+	getAPIToken,
+	getAuthFromEnv,
+	getCloudflareAPITokenFromEnv,
+	getCloudflareGlobalAuthEmailFromEnv,
+	getCloudflareGlobalAuthKeyFromEnv,
+	requireApiToken,
+} from "./credentials";
+export type { GetAPITokenOptions, GetAuthFromEnvOptions } from "./credentials";
 
 export {
 	clearAccessCaches,
@@ -20,7 +25,11 @@ export {
 	getCloudflareAccessHeaders,
 } from "./access";
 
-export type { OAuthFlowContext, OAuthFlowLogger } from "./context";
+export type {
+	OAuthConsentPages,
+	OAuthFlowContext,
+	OAuthFlowLogger,
+} from "./context";
 
 export {
 	getAccessClientIdFromEnv,
@@ -28,7 +37,6 @@ export {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
 	getCfAuthorizationTokenFromEnv,
-	getClientIdFromEnv,
 	getRevokeUrlFromEnv,
 	getTokenUrlFromEnv,
 } from "./env-vars";
@@ -55,7 +63,7 @@ export {
 	toErrorClass,
 } from "./errors";
 
-export { createOAuthFlow, OAUTH_CALLBACK_URL } from "./flow";
+export { createOAuthFlow } from "./flow";
 export type {
 	LoginOrRefreshFailureReason,
 	LoginOrRefreshResult,

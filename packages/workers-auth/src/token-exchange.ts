@@ -18,7 +18,6 @@ import { domainUsesAccess, getCloudflareAccessHeaders } from "./access";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
-	getClientIdFromEnv,
 	getTokenUrlFromEnv,
 } from "./env-vars";
 import {
@@ -26,9 +25,9 @@ import {
 	ErrorUnknown,
 	toErrorClass,
 } from "./errors";
-import { OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generatePKCECodes, RECOMMENDED_STATE_LENGTH } from "./pkce";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
+import type { AuthConfigStorage } from "./auth-config-file";
 import type { OAuthFlowContext } from "./context";
 import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
@@ -101,6 +100,7 @@ export function isReturningFromAuthServer(
 export async function getAuthURL(
 	scopes: string[],
 	clientId: string,
+	redirectUri: string,
 	state: OAuthFlowState,
 	generators: {
 		generateAuthUrl: typeof defaultGenerateAuthUrl;
@@ -124,6 +124,7 @@ export async function getAuthURL(
 		scopes,
 		stateQueryParam,
 		codeChallenge,
+		redirectUri,
 	});
 }
 
@@ -132,12 +133,15 @@ export async function getAuthURL(
  */
 export async function exchangeRefreshTokenForAccessToken(
 	logger: OAuthFlowContext["logger"],
-	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"]
+	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
+	clientId: string,
+	storage: AuthConfigStorage
 ): Promise<AccessContext> {
 	// Read the refresh token fresh from disk on every call so we always pick up
 	// the latest rotation written by a sibling Wrangler process.
 	const storedRefreshToken = readStoredAuthState({
 		warningLogger: logger,
+		storage,
 	}).refreshToken;
 	if (!storedRefreshToken) {
 		logger.warn("No refresh token is present.");
@@ -146,7 +150,7 @@ export async function exchangeRefreshTokenForAccessToken(
 	const params = new URLSearchParams({
 		grant_type: "refresh_token",
 		refresh_token: storedRefreshToken?.value ?? "",
-		client_id: getClientIdFromEnv(),
+		client_id: clientId,
 	});
 
 	const response = await fetchAuthToken(params, logger, isNonInteractiveOrCI);
@@ -224,7 +228,9 @@ export async function exchangeRefreshTokenForAccessToken(
 export async function exchangeAuthCodeForAccessToken(
 	state: OAuthFlowState,
 	logger: OAuthFlowContext["logger"],
-	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"]
+	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
+	clientId: string,
+	redirectUri: string
 ): Promise<AccessContext> {
 	const { authorizationCode, codeVerifier = "" } = state;
 
@@ -237,8 +243,8 @@ export async function exchangeAuthCodeForAccessToken(
 	const params = new URLSearchParams({
 		grant_type: `authorization_code`,
 		code: authorizationCode ?? "",
-		redirect_uri: OAUTH_CALLBACK_URL,
-		client_id: getClientIdFromEnv(),
+		redirect_uri: redirectUri,
+		client_id: clientId,
 		code_verifier: codeVerifier,
 	});
 
@@ -357,7 +363,9 @@ async function getJSONFromResponse(
 			);
 			if (text.match(/challenge-platform/)) {
 				logger.error(
-					`It looks like you might have hit a bot challenge page. This may be transient but if not, please contact Cloudflare to find out what can be done. When you contact Cloudflare, please provide your Ray ID: ${response.headers.get("cf-ray")}`
+					`It looks like you might have hit a bot challenge page. This may be transient but if not, please contact Cloudflare to find out what can be done. When you contact Cloudflare, please provide your Ray ID: ${response.headers.get(
+						"cf-ray"
+					)}`
 				);
 			}
 		}
