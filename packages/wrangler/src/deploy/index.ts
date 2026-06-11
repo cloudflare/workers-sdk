@@ -9,7 +9,7 @@ import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
 } from "../deployment-bundle/deploy-args";
-import { handleBuild } from "../deployment-bundle/maybe-build-worker";
+import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import {
 	cleanupDestination,
 	mergeDeployConfigArgs,
@@ -144,10 +144,14 @@ export const deployCommand = createCommand({
 
 			const beforeUpload = Date.now();
 
+			const buildResult = await buildWorker(mergedProps, config, {
+				metafile: mergedProps.metafile,
+			});
+
 			const { sourceMapSize, versionId, workerTag, targets } = await deploy(
 				mergedProps,
 				config,
-				handleBuild,
+				buildResult,
 				{
 					syncWorkersSite,
 					provisionBindings,

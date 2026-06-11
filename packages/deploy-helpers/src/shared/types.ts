@@ -13,7 +13,6 @@ import type {
 	Route,
 	Entry,
 } from "@cloudflare/workers-utils";
-import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * client needs to handle logger and fetch/auth implementation
@@ -143,24 +142,13 @@ export type BuildBundleInfo = {
 	sourceMapMetadata?: { tmpDir: string; entryDirectory: string } | undefined;
 };
 
-export type HandleBuildResult = {
+export type WorkerBuildResult = {
 	modules: CfModule[];
 	dependencies: Record<string, { bytesInOutput: number }>;
 	resolvedEntryPointPath: string;
 	bundleType: CfModuleType;
 	content: string;
 	bundle: BuildBundleInfo;
-};
-
-export type HandleBuild = {
-	build: (
-		props: SharedDeployVersionsProps,
-		config: Config,
-		options: {
-			nodejsCompatMode: NodeJSCompatMode;
-			metafile?: string | boolean;
-		}
-	) => Promise<HandleBuildResult>;
 };
 
 export interface TriggerDeployment {

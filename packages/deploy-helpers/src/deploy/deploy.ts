@@ -39,7 +39,6 @@ import {
 } from "./helpers/environments";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
 import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
-import { validateNodeCompatMode } from "./helpers/node-compat";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
@@ -60,7 +59,7 @@ import {
 } from "./helpers/versions-api";
 import { isWorkerNotFoundError } from "./helpers/worker-not-found-error";
 import { addWorkersSitesBindings } from "./helpers/workers-sites-bindings";
-import type { DeployProps, HandleBuild } from "../shared/types";
+import type { DeployProps, WorkerBuildResult } from "../shared/types";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type {
 	ApiVersion,
@@ -144,7 +143,7 @@ export type DeployCallbacks = {
 export default async function deploy(
 	props: DeployProps,
 	config: Config,
-	buildWorker: HandleBuild,
+	buildResult: WorkerBuildResult,
 	callbacks: DeployCallbacks
 ): Promise<{
 	sourceMapSize?: number;
@@ -165,8 +164,6 @@ export default async function deploy(
 		compatibilityDate,
 		compatibilityFlags,
 		keepVars,
-		minify,
-		noBundle,
 		uploadSourceMaps,
 		accountId,
 	} = props;
@@ -318,19 +315,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	validateRoutes(allDeploymentRoutes, props.assetsOptions);
 
-	const nodejsCompatMode = validateNodeCompatMode(
-		compatibilityDate,
-		compatibilityFlags,
-		{ noBundle }
-	);
-
-	// Warn if user tries minify with no-bundle
-	if (noBundle && minify) {
-		logger.warn(
-			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
-		);
-	}
-
 	const scriptName = name;
 
 	assert(
@@ -415,10 +399,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		bundleType,
 		content,
 		bundle,
-	} = await buildWorker.build(props, config, {
-		nodejsCompatMode,
-		metafile: props.metafile,
-	});
+	} = buildResult;
 	// durable object migrations
 	const migrations = !isDryRun
 		? await getMigrationsToUpload(scriptName, {
