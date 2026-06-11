@@ -448,8 +448,6 @@ describe("User", () => {
 		);
 	});
 
-
-
 	it("should confirm no error message when refresh is successful", async ({
 		expect,
 	}) => {

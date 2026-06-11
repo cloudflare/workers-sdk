@@ -97,6 +97,30 @@ describe("deploy", () => {
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
 
+	// Mocks the proof-of-work challenge minting expects. Small k/g so the
+	// solve is instant.
+	function mockTemporaryPreviewChallenge(
+		url = `${temporaryPreviewAccountUrl}/challenge`
+	) {
+		msw.use(
+			http.post(url, () =>
+				HttpResponse.json({
+					success: true,
+					result: {
+						challengeToken: "challenge-token",
+						seed: Buffer.alloc(32, 1).toString("base64url"),
+						k: 2,
+						g: 2,
+						s: 16,
+						expiresAt: 9999999999,
+					},
+					errors: [],
+					messages: [],
+				})
+			)
+		);
+	}
+
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {
 			setImmediate(fn);
@@ -795,6 +819,7 @@ describe("deploy", () => {
 
 			let previewAccountRequests = 0;
 			let contentTypeHeader: string | null = null;
+			mockTemporaryPreviewChallenge();
 			msw.use(
 				http.get(
 					"*/accounts/preview-account-id/workers/services/:scriptName",
@@ -1000,6 +1025,7 @@ describe("deploy", () => {
 
 				let previewRequestBody: unknown;
 				let previewContentType: string | null = null;
+				mockTemporaryPreviewChallenge();
 				msw.use(
 					http.get(
 						"*/accounts/preview-account-id/workers/services/:scriptName",
@@ -1059,7 +1085,16 @@ describe("deploy", () => {
 					termsOfService: "https://www.cloudflare.com/terms/",
 					privacyPolicy: "https://www.cloudflare.com/privacypolicy/",
 					acceptTermsOfService: "yes",
+					challengeToken: "challenge-token",
+					solution: { checkpoints: expect.any(String) },
 				});
+				const { solution } = previewRequestBody as {
+					solution: { checkpoints: string };
+				};
+				// k+1 checkpoints of 32 bytes each (challenge mock uses k=2).
+				expect(Buffer.from(solution.checkpoints, "base64").length).toBe(
+					(2 + 1) * 32
+				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).not.toContain("Attempting to login via OAuth...");
 				expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
@@ -1135,6 +1170,9 @@ describe("deploy", () => {
 				});
 
 				let stagingPreviewRequests = 0;
+				mockTemporaryPreviewChallenge(
+					"https://api.staging.cloudflare.com/client/v4/provisioning/previews/challenge"
+				);
 				msw.use(
 					http.get(
 						"*/accounts/preview-account-id/workers/services/:scriptName",
@@ -1210,6 +1248,7 @@ describe("deploy", () => {
 				});
 
 				let previewAccountRequests = 0;
+				mockTemporaryPreviewChallenge();
 				msw.use(
 					http.get(
 						"*/accounts/preview-account-id/workers/services/:scriptName",
@@ -1309,6 +1348,7 @@ describe("deploy", () => {
 				);
 
 				let previewAccountRequests = 0;
+				mockTemporaryPreviewChallenge();
 				msw.use(
 					http.get(
 						"*/accounts/preview-account-id/workers/services/:scriptName",
@@ -1519,6 +1559,7 @@ describe("deploy", () => {
 				writeWranglerConfig();
 				writeWorkerSource();
 
+				mockTemporaryPreviewChallenge();
 				msw.use(
 					http.post(temporaryPreviewAccountUrl, async () => {
 						return new HttpResponse(null, {
@@ -1533,6 +1574,38 @@ describe("deploy", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Failed to create a temporary preview account (500 Internal Server Error).]`
 				);
+			});
+
+			it("fails the deploy when the proof-of-work challenge can't be obtained", async ({
+				expect,
+			}) => {
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+				writeWranglerConfig();
+				writeWorkerSource();
+
+				let previewRequests = 0;
+				msw.use(
+					http.post(
+						`${temporaryPreviewAccountUrl}/challenge`,
+						() =>
+							new HttpResponse(null, {
+								status: 500,
+								statusText: "Internal Server Error",
+							})
+					),
+					http.post(temporaryPreviewAccountUrl, async () => {
+						previewRequests += 1;
+						return HttpResponse.json({});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Failed to request a proof-of-work challenge (500 Internal Server Error).]`
+				);
+				expect(previewRequests).toBe(0);
 			});
 
 			it("should throw error with no account ID provided and no members retrieved", async ({

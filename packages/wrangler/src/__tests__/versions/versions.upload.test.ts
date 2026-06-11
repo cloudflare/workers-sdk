@@ -145,6 +145,21 @@ describe("versions upload", () => {
 		}) => {
 			let previewAccountRequests = 0;
 			msw.use(
+				http.post(`${temporaryPreviewAccountUrl}/challenge`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							challengeToken: "challenge-token",
+							seed: Buffer.alloc(32, 1).toString("base64url"),
+							k: 2,
+							g: 2,
+							s: 16,
+							expiresAt: 9999999999,
+						},
+						errors: [],
+						messages: [],
+					})
+				),
 				http.post(temporaryPreviewAccountUrl, async () => {
 					previewAccountRequests += 1;
 					return HttpResponse.json({

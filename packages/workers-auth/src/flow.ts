@@ -479,7 +479,10 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			);
 		}
 
-		const result = await getOrCreateTemporaryPreviewAccount(ctx.temporary);
+		const result = await getOrCreateTemporaryPreviewAccount({
+			...ctx.temporary,
+			logger: ctx.logger,
+		});
 		activeTemporaryAccount = result.account;
 		return result;
 	}

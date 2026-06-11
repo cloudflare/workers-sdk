@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 Handle Terms of Service and Privacy Policy for `--temporary`

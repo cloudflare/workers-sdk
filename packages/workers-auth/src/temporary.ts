@@ -4,10 +4,13 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
+import { POW_MAX_ITERATIONS, solveChallenge } from "./pow";
 import type {
 	TemporaryAccountStorage,
 	TemporaryPreviewAccount,
 } from "./config-file/temporary";
+import type { OAuthFlowLogger } from "./context";
+import type { PowSolution } from "./pow";
 
 export const TEMPORARY_TERMS_URLS = {
 	termsOfService: "https://www.cloudflare.com/terms/",
@@ -41,6 +44,10 @@ type TemporaryAccountResponse = {
 
 function getTemporaryPreviewUrl(): string {
 	return `${getCloudflareApiBaseUrl(COMPLIANCE_REGION_CONFIG_PUBLIC)}/provisioning/previews`;
+}
+
+function getTemporaryPreviewChallengeUrl(): string {
+	return `${getTemporaryPreviewUrl()}/challenge`;
 }
 
 function isFutureTimestamp(timestamp: string): boolean {
@@ -81,11 +88,88 @@ export function getCachedTemporaryPreviewAccount(
 	return temporaryPreviewAccount;
 }
 
+type PowChallengeResponse = {
+	result?: {
+		challengeToken?: string;
+		seed?: string;
+		k?: number;
+		g?: number;
+	};
+};
+
+// Requests a proof-of-work challenge and solves it. The challenge is required:
+// any failure aborts provisioning.
+async function requestPowSolution(
+	logger: OAuthFlowLogger
+): Promise<PowSolution> {
+	const response = await fetch(getTemporaryPreviewChallengeUrl(), {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: "{}",
+	});
+
+	if (!response.ok) {
+		throw new UserError(
+			`Failed to request a proof-of-work challenge (${response.status} ${response.statusText}).`,
+			{ telemetryMessage: "deploy temporary account challenge failed" }
+		);
+	}
+
+	let body: PowChallengeResponse;
+	try {
+		body = (await response.json()) as PowChallengeResponse;
+	} catch {
+		throw new UserError(
+			`Failed to request a proof-of-work challenge. Received an invalid response (${response.status} ${response.statusText}).`,
+			{
+				telemetryMessage: "deploy temporary account challenge invalid response",
+			}
+		);
+	}
+
+	const { challengeToken, seed, k, g } = body.result ?? {};
+	if (
+		challengeToken === undefined ||
+		seed === undefined ||
+		k === undefined ||
+		g === undefined
+	) {
+		throw new UserError(
+			"Failed to request a proof-of-work challenge because the response was missing required fields.",
+			{ telemetryMessage: "deploy temporary account challenge incomplete" }
+		);
+	}
+
+	if (
+		!Number.isInteger(k) ||
+		!Number.isInteger(g) ||
+		k <= 0 ||
+		g <= 0 ||
+		k * g > POW_MAX_ITERATIONS ||
+		Buffer.from(seed, "base64url").length !== 32
+	) {
+		throw new UserError(
+			"The proof-of-work challenge is not supported by this version of Wrangler.",
+			{
+				telemetryMessage:
+					"deploy temporary account challenge difficulty unsupported",
+			}
+		);
+	}
+
+	logger.log("Solving proof-of-work challenge…");
+	return solveChallenge({ challengeToken, seed, k, g });
+}
+
 /**
  * Provision a brand new temporary preview account from the public provisioning
  * endpoint
  */
-export async function createTemporaryPreviewAccount(): Promise<TemporaryPreviewAccount> {
+export async function createTemporaryPreviewAccount(
+	logger: OAuthFlowLogger
+): Promise<TemporaryPreviewAccount> {
+	const pow = await requestPowSolution(logger);
+
 	const response = await fetch(getTemporaryPreviewUrl(), {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -93,6 +177,8 @@ export async function createTemporaryPreviewAccount(): Promise<TemporaryPreviewA
 			termsOfService: TEMPORARY_TERMS_URLS.termsOfService,
 			privacyPolicy: TEMPORARY_TERMS_URLS.privacyPolicy,
 			acceptTermsOfService: "yes",
+			challengeToken: pow.challengeToken,
+			solution: pow.solution,
 		}),
 	});
 
@@ -158,6 +244,7 @@ export async function createTemporaryPreviewAccount(): Promise<TemporaryPreviewA
 export async function getOrCreateTemporaryPreviewAccount(options: {
 	storage: TemporaryAccountStorage;
 	prompt: (question: string, notice: string) => Promise<boolean>;
+	logger: OAuthFlowLogger;
 }): Promise<{
 	account: TemporaryPreviewAccount;
 	cached: boolean;
@@ -180,7 +267,9 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 		});
 	}
 
-	const temporaryPreviewAccount = await createTemporaryPreviewAccount();
+	const temporaryPreviewAccount = await createTemporaryPreviewAccount(
+		options.logger
+	);
 	options.storage.write(temporaryPreviewAccount);
 
 	return { account: temporaryPreviewAccount, cached: false };
