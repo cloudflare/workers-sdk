@@ -1,5 +1,5 @@
 import childProcess from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -119,41 +119,6 @@ describe("--x-new-config deploy --dry-run", () => {
 			// commands that support it, so yargs reports it as unknown elsewhere.
 			expect(result.stderr.toString()).toContain("Unknown arguments");
 			expect(result.stderr.toString()).toContain("x-new-config");
-		} finally {
-			removeDir(tmpDir, { fireAndForget: true });
-		}
-	});
-
-	test("rejects when .wrangler/deploy/config.json redirect exists", async ({
-		expect,
-	}) => {
-		const tmpDir = await stageFixture();
-		try {
-			const deployDir = path.join(tmpDir, ".wrangler", "deploy");
-			mkdirSync(deployDir, { recursive: true });
-			writeFileSync(
-				path.join(deployDir, "config.json"),
-				JSON.stringify({ configPath: "../../wrangler.jsonc" })
-			);
-			writeFileSync(
-				path.join(tmpDir, "wrangler.jsonc"),
-				JSON.stringify({
-					name: "redirected",
-					main: "src/index.ts",
-					compatibility_date: "2026-05-18",
-				})
-			);
-
-			const result = spawnWrangler(tmpDir, [
-				"deploy",
-				"--x-new-config",
-				"--dry-run",
-				`--outdir=${path.join(tmpDir, "out")}`,
-			]);
-			expect(result.status).not.toBe(0);
-			expect(result.stderr.toString()).toContain(
-				"--experimental-new-config cannot be used when a redirected config exists at .wrangler/deploy/config.json"
-			);
 		} finally {
 			removeDir(tmpDir, { fireAndForget: true });
 		}

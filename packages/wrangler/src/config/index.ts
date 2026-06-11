@@ -11,10 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { version as wranglerVersion } from "../../package.json";
-import {
-	hasRedirectedConfig,
-	loadNewConfig,
-} from "../experimental-config/load";
+import { loadNewConfig } from "../experimental-config/load";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { updateCheck } from "../update-check";
@@ -84,12 +81,10 @@ export interface NewConfig {
  * Steps:
  * 1. Hard error if `args.config` is set (no `--config` override under
  *    `--experimental-new-config`).
- * 2. Hard error if a `.wrangler/deploy/config.json` redirect exists (the
- *    redirect takes priority — users must pick one).
- * 3. Call `loadNewConfig(...)` to load + merge both files.
- * 4. Pass the merged `RawConfig` through the existing
- *    `normalizeAndValidateConfig` pipeline with `env` explicitly cleared
- * 5. Return the validated `Config` plus `dependencies` and `types`.
+ * 2. Call `loadNewConfig(...)` to load + merge both files.
+ * 3. Pass the merged `RawConfig` through the existing
+ *    `normalizeAndValidateConfig` pipeline with `env` explicitly cleared.
+ * 4. Return the validated `Config` plus `dependencies` and `types`.
  */
 export async function readNewConfig(
 	args: ReadConfigCommandArgs,
@@ -103,13 +98,6 @@ export async function readNewConfig(
 	}
 
 	const cwd = process.cwd();
-	if (hasRedirectedConfig(cwd)) {
-		throw new UserError(
-			`--experimental-new-config cannot be used when a redirected config exists at .wrangler/deploy/config.json. Remove the redirect or omit --experimental-new-config.`,
-			{ telemetryMessage: "new-config redirect conflict" }
-		);
-	}
-
 	const loaded = await loadNewConfig({ cwd, args });
 
 	// Construct a fresh `NormalizeAndValidateConfigArgs` with `env: undefined`.

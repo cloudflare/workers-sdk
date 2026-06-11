@@ -6,12 +6,7 @@ import {
 	loadConfig,
 	resolveWorkerDefinition,
 } from "@cloudflare/config";
-import {
-	getCloudflareEnv,
-	PATH_TO_DEPLOY_CONFIG,
-	UserError,
-} from "@cloudflare/workers-utils";
-import * as find from "empathic/find";
+import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
 import { convertToolingConfig } from "./convert";
 import {
 	WORKER_CONFIG_FIELD_HINTS,
@@ -40,14 +35,6 @@ export interface LoadNewConfigResult {
 	dependencies: Set<string>;
 	/** Normalized type-generation settings. */
 	types: NormalizedTypes;
-}
-
-/**
- * Detect whether a redirected `.wrangler/deploy/config.json` exists in
- * `cwd` or any ancestor.
- */
-export function hasRedirectedConfig(cwd: string): boolean {
-	return find.file(PATH_TO_DEPLOY_CONFIG, { cwd }) !== undefined;
 }
 
 /**
