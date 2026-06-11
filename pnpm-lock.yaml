@@ -383,7 +383,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20260610.1
+        version: 4.20260611.1
       '@fixture/shared':
         specifier: workspace:*
         version: link:../shared
