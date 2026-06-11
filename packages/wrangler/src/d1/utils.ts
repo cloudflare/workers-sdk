@@ -34,25 +34,6 @@ export function getDatabaseInfoFromConfig(
 	return null;
 }
 
-/**
- * In-memory cache of `GET /accounts/:accountId/d1/database/:name?fields=…`
- *
- * This matters for `d1 migrations apply` against an auto-provisioned binding,
- * where `executeSql` is called N+2 times (init, list-applied, then once per
- * migration) and each call would otherwise re-hit the API for the same name.
- *
- * Keyed by the resouce path (`/accounts/.../d1/database/...`)
- */
-const getDatabaseByNameOrBindingCache = new Map<
-	string,
-	{ uuid: string; name: string }
->();
-
-/** @internal — for use in test setup only. */
-export function clearGetDatabaseByNameOrBindingCache() {
-	getDatabaseByNameOrBindingCache.clear();
-}
-
 /** May do an api lookup to fill in uuid. Not suitable for --local mode. */
 export const getDatabaseByNameOrBinding = async (
 	config: Config,
@@ -67,34 +48,29 @@ export const getDatabaseByNameOrBinding = async (
 	// absent (auto-provisioned binding — see Workers automatic resource
 	// provisioning). Look up the real UUID via the D1 API.
 	const lookupName = dbFromConfig?.name ?? nameOrBinding;
-	const lookupUrl = `/accounts/${accountId}/d1/database/${encodeURIComponent(lookupName)}`;
-	let resolved = getDatabaseByNameOrBindingCache.get(lookupUrl);
-	if (!resolved) {
-		try {
-			resolved = await fetchResult<{ uuid: string; name: string }>(
-				config,
-				lookupUrl,
-				{},
-				new URLSearchParams({ fields: "uuid,name" })
+	let uuid: string;
+	let name: string;
+	try {
+		({ uuid, name } = await fetchResult<{ uuid: string; name: string }>(
+			config,
+			`/accounts/${accountId}/d1/database/${encodeURIComponent(lookupName)}`,
+			{},
+			new URLSearchParams({ fields: "uuid,name" })
+		));
+	} catch (err) {
+		// Only convert 404 into the friendly "not found" UserError. Anything
+		// else (401, 403, 429, 5xx, network) should propagate so the user
+		// sees the real failure instead of a misleading "DB not found".
+		if (err instanceof APIError && err.status === 404) {
+			throw new UserError(
+				dbFromConfig
+					? `Couldn't find a D1 DB named '${lookupName}' (bound as '${nameOrBinding}') in the API. Run 'wrangler d1 create ${lookupName}' to create it.`
+					: `Couldn't find a D1 DB with name or binding '${nameOrBinding}' in your config or the API. Run 'wrangler d1 create ${nameOrBinding}' to create it.`,
+				{ telemetryMessage: "d1 database lookup database not found" }
 			);
-		} catch (err) {
-			// Only convert 404 into the friendly "not found" UserError.
-			// Anything else (401, 403, 429, 5xx, network) should propagate so
-			// the user sees the real failure instead of a misleading "DB not
-			// found".
-			if (err instanceof APIError && err.status === 404) {
-				throw new UserError(
-					dbFromConfig
-						? `Couldn't find a D1 DB named '${lookupName}' (bound as '${nameOrBinding}') in the API. Run 'wrangler d1 create ${lookupName}' to create it.`
-						: `Couldn't find a D1 DB with name or binding '${nameOrBinding}' in your config or the API. Run 'wrangler d1 create ${nameOrBinding}' to create it.`,
-					{ telemetryMessage: "d1 database lookup database not found" }
-				);
-			}
-			throw err;
 		}
-		getDatabaseByNameOrBindingCache.set(lookupUrl, resolved);
+		throw err;
 	}
-	const { uuid, name } = resolved;
 
 	if (dbFromConfig) {
 		// Binding in config but no database_id — merge real uuid from API
