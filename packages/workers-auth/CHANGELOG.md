@@ -1,5 +1,21 @@
 # @cloudflare/workers-auth
 
+## 0.2.0
+
+### Minor Changes
+
+- [#14185](https://github.com/cloudflare/workers-sdk/pull/14185) [`98c9afe`](https://github.com/cloudflare/workers-sdk/commit/98c9afe2e3bb6cbed6d56d8ad781d50e9a604926) Thanks [@penalosa](https://github.com/penalosa)! - Make the OAuth identity and token storage injectable, and add a shared env-credential resolver
+
+  `createOAuthFlow` now takes the consumer's OAuth identity (`clientId`, `consent`, `redirectUri`) and token `storage` on its context, so other Cloudflare CLIs can reuse the flow under their own OAuth app and store tokens in their own location/format. Also adds a shared env→credential resolver (`getAuthFromEnv`, `getAPIToken`, `requireApiToken`).
+
+### Patch Changes
+
+- [#14213](https://github.com/cloudflare/workers-sdk/pull/14213) [`10b5538`](https://github.com/cloudflare/workers-sdk/commit/10b553819addbcd1224f66d5b52bb7c7f7c8e602) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve authentication error messages with specific failure reasons
+
+  When authentication fails (e.g. during `wrangler dev --remote` or when using remote bindings), the error message now explains exactly what went wrong -- whether no credentials were found, the token expired, or the environment is non-interactive -- and lists actionable steps to fix it, including a `wrangler whoami` tip.
+
+  Previously, auth failures could produce multiple confusing errors (e.g. "Failed to fetch auth token: 400 Bad Request" followed by "Failed to start the remote proxy session"). Now a single, clear error is shown.
+
 ## 0.1.1
 
 ### Patch Changes
