@@ -7,7 +7,7 @@ import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromIdOrName,
 } from "./utils";
-import type { D1MetricsGraphQLResponse, Database } from "./types";
+import type { D1MetricsGraphQLResponse } from "./types";
 
 export const d1InfoCommand = createCommand({
 	metadata: {
@@ -36,11 +36,7 @@ export const d1InfoCommand = createCommand({
 	positionalArgs: ["name"],
 	async handler({ name, json }, { config }) {
 		const accountId = await requireAuth(config);
-		const db: Database = await getDatabaseByNameOrBinding(
-			config,
-			accountId,
-			name
-		);
+		const db = await getDatabaseByNameOrBinding(config, accountId, name);
 
 		const result = await getDatabaseInfoFromIdOrName(
 			config,

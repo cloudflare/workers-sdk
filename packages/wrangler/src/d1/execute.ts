@@ -306,9 +306,7 @@ async function executeLocally({
 	input: ExecuteInput;
 	persistTo: string | undefined;
 }) {
-	const localDB = getDatabaseInfoFromConfig(config, name, {
-		requireDatabaseId: false,
-	});
+	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`,
@@ -316,7 +314,8 @@ async function executeLocally({
 		);
 	}
 
-	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
+	// TODO(#11870): Really we should prefer localDB.name here, but that would break users with existing local databases.
+	const id = localDB.previewDatabaseUuid ?? localDB.uuid ?? localDB.binding;
 	const persistencePath = getLocalPersistencePath(persistTo, config);
 	const d1Persist = path.join(persistencePath, "v3", "d1");
 

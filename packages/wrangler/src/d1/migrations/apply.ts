@@ -5,7 +5,6 @@ import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
-import { isLocal } from "../../utils/is-local";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
@@ -76,9 +75,7 @@ export const d1MigrationsApplyCommand = createCommand({
 			);
 		}
 
-		const databaseInfo = getDatabaseInfoFromConfig(config, database, {
-			requireDatabaseId: !isLocal({ local, remote }),
-		});
+		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 
 		if (!databaseInfo && remote) {
 			throw new UserError(
