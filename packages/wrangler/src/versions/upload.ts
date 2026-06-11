@@ -1,4 +1,4 @@
-import { versionsUpload as versionsUploadBase } from "@cloudflare/deploy-helpers";
+import { versionsUpload } from "@cloudflare/deploy-helpers";
 import { analyseBundle } from "../check/commands";
 import { createCommand } from "../core/create-command";
 import { provisionBindings } from "../deployment-bundle/bindings";
@@ -6,7 +6,7 @@ import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
 } from "../deployment-bundle/deploy-args";
-import { handleBuild } from "../deployment-bundle/maybe-build-worker";
+import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import {
 	cleanupDestination,
 	mergeVersionsUploadConfigArgs,
@@ -14,11 +14,6 @@ import {
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { getScriptName } from "../utils/getScriptName";
-import type {
-	HandleBuild,
-	VersionsUploadProps,
-} from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
 
 export const versionsUploadCommand = createCommand({
 	metadata: {
@@ -67,12 +62,17 @@ export const versionsUploadCommand = createCommand({
 			const workerNameOverridden =
 				mergedProps.name !== undefined && mergedProps.name !== preMergeName;
 
+			const buildResult = await buildWorker(mergedProps, config, {});
+
 			const {
 				versionId,
 				workerTag,
 				versionPreviewUrl,
 				versionPreviewAliasUrl,
-			} = await versionsUpload(mergedProps, config, handleBuild);
+			} = await versionsUpload(mergedProps, config, buildResult, {
+				provisionBindings: provisionBindings,
+				analyseBundle: analyseBundle,
+			});
 
 			writeOutput({
 				type: "version-upload",
@@ -92,19 +92,3 @@ export const versionsUploadCommand = createCommand({
 });
 
 export type VersionsUploadArgs = (typeof versionsUploadCommand)["args"];
-
-export default async function versionsUpload(
-	props: VersionsUploadProps,
-	config: Config,
-	buildWorker: HandleBuild
-): Promise<{
-	versionId: string | null;
-	workerTag: string | null;
-	versionPreviewUrl?: string | undefined;
-	versionPreviewAliasUrl?: string | undefined;
-}> {
-	return versionsUploadBase(props, config, buildWorker, {
-		provisionBindings,
-		analyseBundle,
-	});
-}

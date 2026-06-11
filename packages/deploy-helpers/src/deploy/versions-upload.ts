@@ -27,7 +27,6 @@ import {
 } from "./helpers/environments";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
 import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
-import { validateNodeCompatMode } from "./helpers/node-compat";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
@@ -43,7 +42,7 @@ import {
 import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
 import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
 import { isWorkerNotFoundError } from "./helpers/worker-not-found-error";
-import type { HandleBuild, VersionsUploadProps } from "../shared/types";
+import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
@@ -57,7 +56,7 @@ export type VersionsUploadCallbacks = Pick<
 export default async function versionsUpload(
 	props: VersionsUploadProps,
 	config: Config,
-	buildWorker: HandleBuild,
+	buildResult: WorkerBuildResult,
 	callbacks: VersionsUploadCallbacks
 ): Promise<{
 	versionId: string | null;
@@ -77,8 +76,6 @@ export default async function versionsUpload(
 		compatibilityDate,
 		compatibilityFlags,
 		keepVars,
-		minify,
-		noBundle,
 		uploadSourceMaps,
 		accountId,
 	} = props;
@@ -155,19 +152,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	const nodejsCompatMode = validateNodeCompatMode(
-		compatibilityDate,
-		compatibilityFlags,
-		{ noBundle }
-	);
-
-	// Warn if user tries minify or node-compat with no-bundle
-	if (noBundle && minify) {
-		logger.warn(
-			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
-		);
-	}
-
 	const scriptName = name;
 
 	if (config.site && !config.site.bucket) {
@@ -223,9 +207,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		bundleType,
 		content,
 		bundle,
-	} = await buildWorker.build(props, config, {
-		nodejsCompatMode,
-	});
+	} = buildResult;
 	const bindings = getBindings(config);
 
 	// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
