@@ -16,7 +16,7 @@ import {
 	fetchPagedListResult,
 } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
-import { readConfig } from "../config";
+import { readConfig, readNewConfig } from "../config";
 import { confirm, prompt } from "../dialogs";
 import { run } from "../experimental-flags";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -135,6 +135,9 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		// Sentry breadcrumbs expect the `wrangler` prefix.
 		addBreadcrumb(def.command);
 
+		const newConfigEnabled =
+			"experimentalNewConfig" in args && args.experimentalNewConfig === true;
+
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
 			const bannerEnabled =
@@ -206,11 +209,17 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 			await run(experimentalFlags, async () => {
 				const config =
 					(def.behaviour?.provideConfig ?? true)
-						? readConfig(args, {
-								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
-								useRedirectIfAvailable:
-									def.behaviour?.useConfigRedirectIfAvailable,
-							})
+						? newConfigEnabled
+							? (
+									await readNewConfig(args, {
+										hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+									})
+								).config
+							: readConfig(args, {
+									hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+									useRedirectIfAvailable:
+										def.behaviour?.useConfigRedirectIfAvailable,
+								})
 						: defaultWranglerConfig;
 
 				const dispatcher = getMetricsDispatcher({
@@ -220,7 +229,13 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					argv,
 				});
 
-				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
+				// Skip the multi-envs warning under `--experimental-new-config`: it re-reads
+				// `wrangler.json[c]` to enumerate envs, which is not applicable
+				// when the flag is on
+				if (
+					def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified &&
+					!newConfigEnabled
+				) {
 					if (
 						!("env" in args) &&
 						getCloudflareEnv() === undefined &&

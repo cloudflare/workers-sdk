@@ -579,6 +579,12 @@ export interface StartDevWorkerInput {
 		/** Re-generate your worker types when your Wrangler configuration file changes */
 		generateTypes?: boolean;
 
+		/**
+		 * Experimental: Use `cloudflare.config.ts` + optional `wrangler.config.ts`
+		 * instead of `wrangler.json[c]` / `wrangler.toml`.
+		 */
+		experimentalNewConfig?: boolean;
+
 		/** Tunnel configuration for this dev session. */
 		tunnel?: {
 			enabled: boolean;
