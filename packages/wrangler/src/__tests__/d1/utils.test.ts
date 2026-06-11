@@ -1,7 +1,8 @@
 import { type Config } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { describe, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import {
+	clearGetDatabaseByNameOrBindingCache,
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
 } from "../../d1/utils";
@@ -118,6 +119,10 @@ describe("getDatabaseInfoFromConfig", () => {
 describe("getDatabaseByNameOrBinding", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
+	// Tests here share (accountId, name) tuples — clear the module-level
+	// lookup cache between cases so the API mocks each test installs are
+	// actually consulted.
+	beforeEach(clearGetDatabaseByNameOrBindingCache);
 
 	it("should handle no database", async ({ expect }) => {
 		msw.use(
