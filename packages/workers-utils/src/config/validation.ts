@@ -4960,6 +4960,8 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		diagnostics.warnings.push(
 			`The "pipeline" field in "${field}" bindings is deprecated. Use "stream" instead.`
 		);
+		v.stream = v.pipeline;
+		delete v.pipeline;
 	} else {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a string "stream" field but got ${JSON.stringify(

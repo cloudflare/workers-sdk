@@ -113,7 +113,7 @@ export function getBindingValue(binding: Binding): string {
 		case "mtls_certificate":
 			return String(binding.certificate_id ?? "");
 		case "pipelines":
-			return String(binding.stream ?? binding.pipeline ?? "");
+			return String(binding.stream ?? "");
 		case "secrets_store_secret":
 			return binding.secret_name
 				? `${binding.store_id}/${binding.secret_name}`

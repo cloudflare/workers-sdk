@@ -291,38 +291,23 @@ function pipelineEntry(
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	(
-		| {
-				stream: string;
-				remoteProxyConnectionString?: RemoteProxyConnectionString;
-		  }
-		| {
-				pipeline: string;
-				remoteProxyConnectionString?: RemoteProxyConnectionString;
-		  }
-	),
+	{
+		stream: string;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+	},
 ] {
-	if (stream) {
-		return [
-			binding,
-			{
-				stream,
-				...(remoteProxyConnectionString &&
-					remote && { remoteProxyConnectionString }),
-			},
-		];
-	} else if (pipeline) {
-		return [
-			binding,
-			{
-				pipeline,
-				...(remoteProxyConnectionString &&
-					remote && { remoteProxyConnectionString }),
-			},
-		];
-	} else {
-		throw new Error("Pipeline must have either a stream");
+	const streamId = stream ?? pipeline;
+	if (!streamId) {
+		throw new Error("Pipeline must have a stream");
 	}
+	return [
+		binding,
+		{
+			stream: streamId,
+			...(remoteProxyConnectionString &&
+				remote && { remoteProxyConnectionString }),
+		},
+	];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];

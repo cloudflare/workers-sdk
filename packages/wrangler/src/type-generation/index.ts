@@ -4093,15 +4093,11 @@ function collectPipelinesPerEnvironment(
 				});
 			}
 
-			if (pipeline.stream) {
+			const streamId = pipeline.stream;
+			if (streamId) {
 				pipelines.push({
 					binding: pipeline.binding,
-					stream: pipeline.stream,
-				});
-			} else if (pipeline.pipeline) {
-				pipelines.push({
-					binding: pipeline.binding,
-					pipeline: pipeline.pipeline,
+					stream: streamId,
 				});
 			} else {
 				throwMissingBindingError({

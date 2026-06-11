@@ -107,7 +107,6 @@ function bindingEntries(
 					| string
 					| {
 							stream?: string;
-							pipeline?: string;
 							remoteProxyConnectionString?: RemoteProxyConnectionString;
 					  }
 				),
@@ -117,7 +116,7 @@ function bindingEntries(
 			typeof opts === "string"
 				? { id: opts }
 				: {
-						id: opts.stream ?? opts.pipeline ?? "",
+						id: opts.stream ?? "",
 						remoteProxyConnectionString: opts.remoteProxyConnectionString,
 					},
 		]);
