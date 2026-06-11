@@ -19,6 +19,7 @@ export const versionsViewCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	args: {
 		"version-id": {

@@ -43,6 +43,9 @@ export const versionsRollbackCommand = createCommand({
 		status: "stable",
 		category: "Compute & AI",
 	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
+	},
 	handler: async function handleRollback(args, { config }) {
 		const accountId = await requireAuth(config);
 		const workerName = args.name ?? config.name;

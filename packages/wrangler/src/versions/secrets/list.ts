@@ -16,6 +16,7 @@ export const versionsSecretsListCommand = createCommand({
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		name: {

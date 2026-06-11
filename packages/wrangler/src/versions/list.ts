@@ -18,6 +18,7 @@ export const versionsListCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	args: {
 		name: {

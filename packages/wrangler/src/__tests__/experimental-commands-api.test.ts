@@ -48,7 +48,7 @@ describe("experimental_getWranglerCommands", () => {
 			  },
 			  "install-skills": {
 			    "default": false,
-			    "describe": "Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
+			    "describe": "Install Cloudflare skills for detected AI coding agents before running the command",
 			    "type": "boolean",
 			  },
 			  "v": {

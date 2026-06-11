@@ -15,20 +15,53 @@ import { logger } from "./logger";
 import { sendMetricsEvent } from "./metrics";
 
 /**
- * Detects AI coding agents installed on the user's machine and, if
- * appropriate, offers to install Cloudflare skill files into their global
- * skills directories.
+ * Options for {@link runSkillsInstallFlow}.
  *
- * Skills are installed via the rosie-skills JS API, which handles
- * downloading from the `cloudflare/skills` GitHub repository, agent
- * detection, and file placement.
- *
- * @param force - When `true` the interactive prompt is skipped and skills are
- *   installed unconditionally (used by `--install-skills`).
+ * When `force` is `true`, the interactive prompt is skipped entirely so no
+ * `promptMessage` is needed. When `force` is `false`, a `promptMessage`
+ * function must be provided to generate the confirmation prompt shown to the user.
  */
-export async function maybeInstallCloudflareSkillsGlobally(
-	force: boolean
+type SkillsInstallFlowOptions =
+	| {
+			/** Skip the interactive prompt and install unconditionally. Metadata and CI checks are also bypassed. */
+			force: true;
+			/**
+			 * The wrangler command that triggered the skills install flow
+			 * (e.g. `"deploy"`, `"dev"`). Included in telemetry events so
+			 * we can correlate skills installs with the commands that prompted them.
+			 */
+			command?: string;
+	  }
+	| {
+			/** Show the interactive prompt before installing. */
+			force: false;
+			/**
+			 * The wrangler command that triggered the skills install flow
+			 * (e.g. `"deploy"`, `"dev"`). Included in telemetry events so
+			 * we can correlate skills installs with the commands that prompted them.
+			 */
+			command?: string;
+			/**
+			 * Returns the confirmation prompt message shown to the user.
+			 *
+			 * @param agentNames - Display names of the detected agents.
+			 * @returns The prompt string passed to {@link confirm}.
+			 */
+			promptMessage: (agentNames: string[]) => string;
+	  };
+
+/**
+ * Shared implementation for skills installation flows. Handles guard checks
+ * (metadata, CI, agent detection, interactivity), prompts the user with a
+ * caller-provided message, and performs the installation via rosie.
+ *
+ * @param options - Controls whether to force-install and what prompt to show.
+ */
+export async function runSkillsInstallFlow(
+	options: SkillsInstallFlowOptions
 ): Promise<void> {
+	const { force, command } = options;
+
 	const sendResultMetricsEvent = (
 		result:
 			| { skippedBecause: string; errorMessage?: string }
@@ -42,6 +75,7 @@ export async function maybeInstallCloudflareSkillsGlobally(
 				{
 					reason: result.skippedBecause,
 					...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
+					...(command ? { command } : {}),
 				},
 				{}
 			);
@@ -50,6 +84,7 @@ export async function maybeInstallCloudflareSkillsGlobally(
 				"skills_install_completed",
 				{
 					agents: result.targetedAgents,
+					...(command ? { command } : {}),
 				},
 				{}
 			);
@@ -95,12 +130,28 @@ export async function maybeInstallCloudflareSkillsGlobally(
 		return;
 	}
 
-	const accepted =
-		force ||
-		(await confirm(
-			`Wrangler detected the following AI coding agents: ${detectedAgents.map(({ name }) => name).join(", ")}. Would you like to install Cloudflare skills for them?`,
-			{ defaultValue: true, fallbackValue: false }
-		));
+	let accepted: boolean;
+	if (force) {
+		accepted = true;
+	} else {
+		// Persist an "unanswered" marker *before* showing the prompt so that if
+		// the user interrupts the process (CTRL+C, terminal closed, etc.) the
+		// metadata file already exists and the prompt won't reappear next time.
+		writeSkillsInstallMetadataFile({
+			version: 1,
+			accepted: "unanswered",
+			date: new Date().toISOString(),
+			detectedAgents,
+		});
+
+		logger.log();
+
+		const agentDisplayNames = detectedAgents.map(({ name }) => name);
+		accepted = await confirm(options.promptMessage(agentDisplayNames), {
+			defaultValue: true,
+			fallbackValue: false,
+		});
+	}
 
 	if (!accepted) {
 		writeSkillsInstallMetadataFile({
@@ -119,6 +170,10 @@ export async function maybeInstallCloudflareSkillsGlobally(
 			global: true,
 			agent: agentNames,
 			lockfile: false,
+			// rosie shows a bunch of extra logs regarding the installation
+			// we do not want to show them as standard output so we just log
+			// them at the debug level
+			onLog: ({ message }) => logger.debug(message),
 		});
 
 		const failedSet = new Set(failedAgents);
@@ -128,11 +183,12 @@ export async function maybeInstallCloudflareSkillsGlobally(
 
 		if (succeededAgents.length > 0) {
 			logger.log(
-				`Successfully installed Cloudflare skills for: ${succeededAgents.map(({ name }) => name).join(", ")}.`
+				`\n🚀 Successfully installed Cloudflare skills for: ${succeededAgents.map(({ name }) => name).join(", ")}.\n`
 			);
 		}
 
 		if (failedAgents.length > 0) {
+			logger.log();
 			logger.warn(
 				`Skills installation failed for agents: ${failedAgents.join(", ")}.`
 			);
@@ -200,8 +256,17 @@ type AgentInfo = {
 interface SkillsInstallMetadata {
 	/** Schema version for forward-compatibility. Currently always `1`. */
 	version: 1;
-	/** Whether the user accepted the prompt to install skills. */
-	accepted: boolean;
+	/**
+	 * Whether the user accepted the prompt to install skills.
+	 *
+	 * - `true`  — the user accepted and installation was attempted.
+	 * - `false` — the user explicitly declined.
+	 * - `"unanswered"` — the metadata file was written before the prompt was
+	 *   shown but the user never answered (e.g. CTRL+C, terminal closed).
+	 *   Treated the same as a decline for the purpose of suppressing future
+	 *   prompts.
+	 */
+	accepted: boolean | "unanswered";
 	/** ISO date string of when the user was prompted. */
 	date: string;
 	/** All agents detected on the user's machine. */
@@ -653,7 +718,7 @@ async function computeTelemetryCurrentAgentSkillsInstalled(): Promise<AgentSkill
 		// happens to match this alternative path (e.g. OpenCode reads
 		// ~/.agents/skills, which is Warp's rosie install target).
 		const metadata = readSkillsInstallMetadataFile();
-		if (metadata?.accepted) {
+		if (metadata?.accepted === true) {
 			const altAbsPath = path.resolve(matchedAlternativePath);
 			const wasInstalledForAnotherAgent = metadata.detectedAgents?.some(
 				(agent) => {
@@ -700,7 +765,7 @@ async function computeTelemetryCurrentAgentSkillsInstalled(): Promise<AgentSkill
 			));
 
 	if (
-		metadata.accepted &&
+		metadata.accepted === true &&
 		isInDetectedAgents === true &&
 		!installFailedForAgent
 	) {

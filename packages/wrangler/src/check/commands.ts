@@ -141,6 +141,9 @@ export const checkStartupCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "alpha",
 	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
+	},
 	handler: checkStartupHandler,
 });
 
