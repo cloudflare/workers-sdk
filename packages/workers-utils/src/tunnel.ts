@@ -1,6 +1,6 @@
 import { spawnCloudflared } from "./cloudflared";
 import { UserError } from "./errors";
-import type { Logger } from "./cloudflared";
+import type { Logger } from "./logger";
 import type { ChildProcess } from "node:child_process";
 
 /**
@@ -43,7 +43,7 @@ export interface TunnelOptions {
 	expiryMs?: number;
 	reminderIntervalMs?: number;
 	extendHint?: string;
-	logger?: Logger;
+	logger?: Pick<Logger, "debug" | "log" | "warn">;
 }
 
 /**
@@ -249,7 +249,7 @@ function terminateCloudflared(cloudflared: ChildProcess) {
 function waitForQuickTunnelReady(
 	cloudflared: ChildProcess,
 	timeoutMs: number,
-	options: { logger?: Logger; origin: URL }
+	options: { logger?: Pick<Logger, "debug" | "log" | "warn">; origin: URL }
 ): Promise<TunnelResult> {
 	return new Promise<TunnelResult>((resolve, reject) => {
 		let resolved = false;

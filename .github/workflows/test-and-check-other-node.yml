@@ -22,7 +22,7 @@ jobs:
       matrix:
         # expected_to_fail: if true, tests may fail on this Node version.
         # These versions are skipped on normal PRs but run on Version Packages PRs
-        # (changeset-release/main) or when the 'test all node versions' label is added.
+        # (changeset-release/main) or when the 'ci:test-all-node-versions' label is added.
         include:
           - { node_version: 24, description: "Node 24", expected_to_fail: true }
           - { node_version: 25, description: "Node 25", expected_to_fail: true }
@@ -47,7 +47,7 @@ jobs:
         env:
           CHANGES_EVERYTHING_BUT_MARKDOWN: ${{ steps.changes.outputs.everything_but_markdown }}
           EXPECTED_TO_FAIL: ${{ matrix.expected_to_fail }}
-          HAS_TEST_ALL_NODE_VERSIONS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'test all node versions') }}
+          HAS_TEST_ALL_NODE_VERSIONS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:test-all-node-versions') }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           if [[ "$CHANGES_EVERYTHING_BUT_MARKDOWN" == "true" ]] && \

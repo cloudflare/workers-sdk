@@ -43,12 +43,10 @@ describe("errors during dev with remote bindings", () => {
 
 		assert(thrownError);
 
-		expect(thrownError.message).toContain(
-			"Failed to start the remote proxy session"
-		);
-
-		// The issue here is that with the test setup there is more than one account available (but we're
-		// in non-interactive mode). Here we make sure that this information is presented in the thrown error
+		// UserErrors (like auth/account selection failures) are re-thrown
+		// directly without being wrapped in a generic "Failed to start the
+		// remote proxy session" envelope, so the user sees a single,
+		// actionable error message.
 		expect(thrownError.message).toContain(
 			"More than one account available but unable to select one in non-interactive mode."
 		);

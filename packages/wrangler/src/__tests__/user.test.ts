@@ -422,7 +422,10 @@ describe("User", () => {
 		vi.mocked(ci).isCI = true;
 		await expect(
 			loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
-		).resolves.toEqual(false);
+		).resolves.toEqual({
+			loggedIn: false,
+			reason: "no-credentials-non-interactive",
+		});
 	});
 
 	it("should revert to non-interactive mode if isTTY throws an error", async ({
@@ -436,7 +439,10 @@ describe("User", () => {
 		});
 		await expect(
 			loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
-		).resolves.toEqual(false);
+		).resolves.toEqual({
+			loggedIn: false,
+			reason: "no-credentials-non-interactive",
+		});
 	});
 
 	describe("CLOUDFLARE_API_TOKEN priority over stored OAuth state", () => {
@@ -488,7 +494,7 @@ describe("User", () => {
 
 			await expect(
 				loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
-			).resolves.toEqual(true);
+			).resolves.toEqual({ loggedIn: true });
 			expect(oauthRefreshCalled).toBe(false);
 		});
 

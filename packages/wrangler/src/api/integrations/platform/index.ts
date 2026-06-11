@@ -1,4 +1,5 @@
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	getDockerPath,
 	getRegistryPath,
@@ -21,7 +22,6 @@ import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { getZoneFromRoute } from "../../../zones";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
-import { extractBindingsOfType } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 // TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`

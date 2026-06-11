@@ -28,6 +28,31 @@ import type { OAuthFlowContext } from "./context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
+ * Reason why {@link OAuthFlowAPI.loginOrRefreshIfRequired} could not
+ * authenticate the user.
+ */
+export type LoginOrRefreshFailureReason =
+	/** no stored credentials and the environment is non-interactive (CI, piped stdin, etc.) so a browser login cannot be started. */
+	| "no-credentials-non-interactive"
+	/** stored credentials and the interactive login attempt was unsuccessful (user cancelled, etc.). */
+	| "no-credentials-login-failed"
+	/** the stored token has expired, refresh failed, and the environment is non-interactive so a browser login cannot be started. */
+	| "token-expired-non-interactive"
+	/** the stored token has expired, refresh failed, and the interactive login attempt was unsuccessful. */
+	| "token-expired-login-failed";
+
+/**
+ * Discriminated union returned by {@link OAuthFlowAPI.loginOrRefreshIfRequired}.
+ *
+ * When `loggedIn` is `true` the caller can proceed. When `false`, `reason`
+ * describes why authentication failed so the caller can surface a
+ * targeted error message.
+ */
+export type LoginOrRefreshResult =
+	| { loggedIn: true }
+	| { loggedIn: false; reason: LoginOrRefreshFailureReason };
+
+/**
  * Options for an interactive OAuth login.
  */
 export interface LoginProps {
@@ -81,11 +106,12 @@ export interface OAuthFlowAPI {
 	 * Scopes are required in case an interactive login is triggered — the
 	 * consumer's scope catalog lives outside this package.
 	 *
-	 * @returns `true` when the user is logged in (or env credentials are
-	 * present), `false` when interactive login was needed but skipped (e.g.
-	 * non-interactive environment).
+	 * @returns `{ loggedIn: true }` when the user is authenticated (or env
+	 * credentials are present). When authentication fails, returns
+	 * `{ loggedIn: false, reason }` describing why — see
+	 * {@link LoginOrRefreshFailureReason}.
 	 */
-	loginOrRefreshIfRequired(props: LoginProps): Promise<boolean>;
+	loginOrRefreshIfRequired(props: LoginProps): Promise<LoginOrRefreshResult>;
 
 	/**
 	 * Read the OAuth access token from local state, refreshing it first if
@@ -243,12 +269,14 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 	}
 
-	async function loginOrRefreshIfRequired(props: LoginProps): Promise<boolean> {
+	async function loginOrRefreshIfRequired(
+		props: LoginProps
+	): Promise<LoginOrRefreshResult> {
 		// If env credentials are present, the consumer's credential resolver
 		// will use those rather than the stored OAuth token, so we don't need
 		// to refresh or log in.
 		if (ctx.hasEnvCredentials()) {
-			return true;
+			return { loggedIn: true };
 		}
 		// TODO: ask permission before opening browser
 		const stored = readStoredAuthState({
@@ -258,20 +286,37 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		if (!stored.accessToken && !stored.deprecatedApiToken) {
 			// Not logged in.
 			// If we are not interactive, we cannot ask the user to login
-			return !ctx.isNonInteractiveOrCI() && (await login(props));
+			if (ctx.isNonInteractiveOrCI()) {
+				return {
+					loggedIn: false,
+					reason: "no-credentials-non-interactive",
+				};
+			}
+			if (await login(props)) {
+				return { loggedIn: true };
+			}
+			return { loggedIn: false, reason: "no-credentials-login-failed" };
 		} else if (isRefreshNeeded()) {
 			// We're logged in, but the refresh token seems to have expired,
 			// so let's try to refresh it
 			const didRefresh = await refreshToken();
 			if (didRefresh) {
 				// The token was refreshed, so we're done here
-				return true;
-			} else {
-				// If the refresh token isn't valid, then we ask the user to login again
-				return !ctx.isNonInteractiveOrCI() && (await login(props));
+				return { loggedIn: true };
 			}
+			// If the refresh token isn't valid, then we ask the user to login again
+			if (ctx.isNonInteractiveOrCI()) {
+				return {
+					loggedIn: false,
+					reason: "token-expired-non-interactive",
+				};
+			}
+			if (await login(props)) {
+				return { loggedIn: true };
+			}
+			return { loggedIn: false, reason: "token-expired-login-failed" };
 		} else {
-			return true;
+			return { loggedIn: true };
 		}
 	}
 

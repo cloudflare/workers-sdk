@@ -15,6 +15,7 @@ import {
 	startRemoteProxySession,
 	startWorker,
 	unstable_dev,
+	createTestHarness,
 	experimental_generateTypes,
 	unstable_getDevCompatibilityDate,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
@@ -40,6 +41,9 @@ import type {
 	Unstable_MiniflareWorkerOptions,
 	Unstable_RawConfig,
 	Unstable_RawEnvironment,
+	TestHarnessOptions,
+	WorkerHandle,
+	TestHarness,
 } from "./api";
 import type { Logger } from "./logger";
 import type { Request, Response } from "miniflare";
@@ -67,6 +71,7 @@ export {
 	unstable_pages,
 	DevEnv as unstable_DevEnv,
 	startWorker as unstable_startWorker,
+	createTestHarness,
 	unstable_getVarsForDev,
 	unstable_readConfig,
 	experimental_generateTypes,
@@ -89,10 +94,21 @@ export type {
 	Unstable_MiniflareWorkerOptions,
 	Experimental_GenerateTypesOptions,
 	Experimental_GenerateTypesResult,
+	TestHarnessOptions,
+	WorkerHandle,
+	TestHarness,
 };
 
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";
 export { resolveNamedTunnel as unstable_resolveNamedTunnel } from "./tunnel/client";
+
+// Entries for the `cf-wrangler` delegate binary (see `bin/cf-wrangler.js`),
+// which calls these in-process. Not a stable public API.
+export { runCfWranglerDev } from "./cf-wrangler/dev";
+export {
+	ArgParseError,
+	parseArgs as parseCfWranglerArgs,
+} from "./cf-wrangler/args";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
 export { splitSqlQuery as unstable_splitSqlQuery } from "./d1/splitter";

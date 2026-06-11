@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.98.0",
+	"version": "4.99.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -36,6 +36,7 @@
 		"directory": "packages/wrangler"
 	},
 	"bin": {
+		"cf-wrangler": "./bin/cf-wrangler.js",
 		"wrangler": "./bin/wrangler.js",
 		"wrangler2": "./bin/wrangler.js"
 	},
@@ -72,7 +73,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260603.1"
+		"workerd": "1.20260610.1"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -98,7 +99,6 @@
 		"@types/esprima": "^4.0.3",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/javascript-time-ago": "^2.0.3",
-		"@types/json-diff": "^1.0.3",
 		"@types/mime": "^3.0.4",
 		"@types/minimatch": "^5.1.2",
 		"@types/node": "catalog:default",
@@ -114,17 +114,17 @@
 		"@webcontainer/env": "^1.1.0",
 		"am-i-vibing": "^0.4.0",
 		"capnweb": "catalog:default",
-		"chalk": "^5.2.0",
+		"chalk": "catalog:default",
 		"chokidar": "^4.0.1",
 		"ci-info": "catalog:default",
 		"cli-table3": "^0.6.3",
 		"cloudflare": "^5.2.0",
 		"cmd-shim": "^4.1.0",
-		"command-exists": "^1.2.9",
+		"command-exists": "catalog:default",
 		"concurrently": "^8.2.2",
 		"date-fns": "^4.1.0",
 		"devtools-protocol": "^0.0.1182435",
-		"dotenv": "^16.3.1",
+		"dotenv": "catalog:default",
 		"dotenv-expand": "^12.0.2",
 		"empathic": "^2.0.0",
 		"esprima": "4.0.1",
@@ -134,7 +134,6 @@
 		"https-proxy-agent": "7.0.2",
 		"itty-time": "^1.0.6",
 		"javascript-time-ago": "^2.5.4",
-		"json-diff": "^1.0.6",
 		"jsonc-parser": "catalog:default",
 		"md5-file": "5.0.0",
 		"mime": "^3.0.0",
@@ -155,7 +154,6 @@
 		"shell-quote": "^1.8.1",
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
-		"source-map": "^0.6.1",
 		"supports-color": "^9.2.2",
 		"timeago.js": "4.0.2",
 		"tree-kill": "catalog:default",

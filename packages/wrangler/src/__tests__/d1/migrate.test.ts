@@ -291,7 +291,9 @@ describe("migrate", () => {
 
 			await expect(
 				runWrangler("d1 migrations apply --local db --preview")
-			).rejects.toThrowError(`Error: can't use --preview without --remote`);
+			).rejects.toThrowError(
+				`Cannot use --preview without --remote. The --preview flag targets a preview D1 database, which requires the --remote flag. Remove --preview or add --remote.`
+			);
 		});
 
 		it("multiple accounts: should throw when trying to apply migrations without an account_id in config", async ({

@@ -224,7 +224,15 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --remote index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local.]`
+				`
+				[Error: Could not start remote dev session. No credentials found, and the environment is non-interactive so browser login cannot be started.
+				Either:
+				 - Set a CLOUDFLARE_API_TOKEN environment variable
+				 - Run \`wrangler login\` in an interactive terminal first
+				 - Or use \`wrangler dev --local\` to develop locally (remote resources like KV, D1, etc. will use local simulators instead).
+
+				You can run \`wrangler whoami\` to check your current authentication status.]
+			`
 			);
 		});
 	});

@@ -1,5 +1,11 @@
 # edge-preview-authenticated-proxy
 
+## 0.3.2
+
+### Patch Changes
+
+- [#14157](https://github.com/cloudflare/workers-sdk/pull/14157) [`8444499`](https://github.com/cloudflare/workers-sdk/commit/84444993c1227c7aad42d24fcfe9c07c9f3e73aa) Thanks [@penalosa](https://github.com/penalosa)! - Internal infrastructure changes
+
 ## 0.3.1
 
 ### Patch Changes

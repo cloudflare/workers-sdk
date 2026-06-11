@@ -1,50 +1,50 @@
-import path, { resolve } from "path";
+import { resolve } from "path";
 import { afterAll, beforeAll, describe, it } from "vitest";
-import { unstable_startWorker } from "wrangler";
+import { createTestHarness } from "wrangler";
 
 const basePath = resolve(__dirname, "..");
+const server = createTestHarness({
+	root: basePath,
+	workers: [{ configPath: "wrangler.jsonc" }],
+});
 
 describe("Rate limiting bindings", () => {
-	let worker: Awaited<ReturnType<typeof unstable_startWorker>>;
-
 	beforeAll(async () => {
-		worker = await unstable_startWorker({
-			config: path.join(basePath, "wrangler.jsonc"),
-		});
+		await server.listen();
 	});
 
 	afterAll(async () => {
-		await worker.dispose();
+		await server.close();
 	});
 
 	it("ratelimit binding is defined ", async ({ expect }) => {
-		let response = await worker.fetch(`http://example.com`);
+		let response = await server.fetch("/");
 		let content = await response.text();
 		expect(content).toEqual("Success");
 
-		response = await worker.fetch(`http://example.com`);
+		response = await server.fetch("/");
 		content = await response.text();
 		expect(content).toEqual("Success");
 
-		response = await worker.fetch(`http://example.com`);
+		response = await server.fetch("/");
 		content = await response.text();
 		expect(content).toEqual("Success");
 
-		response = await worker.fetch(`http://example.com`);
+		response = await server.fetch("/");
 		content = await response.text();
 		expect(content).toEqual("Slow down");
 	});
 
 	it("ratelimit unsafe binding is defined ", async ({ expect }) => {
-		let response = await worker.fetch(`http://example.com/unsafe`);
+		let response = await server.fetch("/unsafe");
 		let content = await response.text();
 		expect(content).toEqual("unsafe: Success");
 
-		response = await worker.fetch(`http://example.com/unsafe`);
+		response = await server.fetch("/unsafe");
 		content = await response.text();
 		expect(content).toEqual("unsafe: Success");
 
-		response = await worker.fetch(`http://example.com/unsafe`);
+		response = await server.fetch("/unsafe");
 		content = await response.text();
 		expect(content).toEqual("unsafe: Slow down");
 	});

@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import SCRIPT_R2_BUCKET_OBJECT from "worker:r2/bucket";
+import SCRIPT_R2_PUBLIC from "worker:r2/public";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
@@ -47,11 +48,43 @@ export const R2SharedOptionsSchema = z.object({
 export const R2_PLUGIN_NAME = "r2";
 const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
 const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
+export const R2_PUBLIC_SERVICE_NAME = `${R2_PLUGIN_NAME}:public`;
 const R2_BUCKET_OBJECT_CLASS_NAME = "R2BucketObject";
 const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: R2_BUCKET_SERVICE_PREFIX,
 	className: R2_BUCKET_OBJECT_CLASS_NAME,
 };
+
+export function getR2PublicService(
+	allWorkerOpts: { r2?: z.infer<typeof R2OptionsSchema> }[]
+): Service | undefined {
+	const publicBucketIds = new Set<string>();
+	for (const worker of allWorkerOpts) {
+		for (const [, bucket] of namespaceEntries(worker.r2?.r2Buckets)) {
+			if (bucket.remoteProxyConnectionString !== undefined) {
+				continue;
+			}
+			publicBucketIds.add(bucket.id);
+		}
+	}
+	if (publicBucketIds.size === 0) {
+		return undefined;
+	}
+	const bindings = Array.from(publicBucketIds).map<Worker_Binding>((id) => ({
+		name: id,
+		r2Bucket: {
+			name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
+		},
+	}));
+	return {
+		name: R2_PUBLIC_SERVICE_NAME,
+		worker: {
+			compatibilityDate: "2026-01-01",
+			modules: [{ name: "public.worker.js", esModule: SCRIPT_R2_PUBLIC() }],
+			bindings,
+		},
+	};
+}
 
 export const R2_PLUGIN: Plugin<
 	typeof R2OptionsSchema,

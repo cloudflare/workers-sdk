@@ -1736,6 +1736,89 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 	expect(await res.text()).toBe("true");
 });
 
+test("Miniflare: manually triggered scheduled events with assets", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const tmp = await useTmp();
+	await fs.writeFile(
+		path.join(tmp, "foo.html"),
+		"<!doctype html><p>asset</p>",
+		"utf8"
+	);
+	await fs.writeFile(path.join(tmp, "foo.md"), "asset", "utf8");
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+				let scheduledRun = false;
+				let cron;
+				let scheduledTime;
+				export default {
+					fetch() {
+						return Response.json({ scheduledRun, cron, scheduledTime });
+					},
+					scheduled(controller, env, ctx) {
+						scheduledRun = true;
+						cron = controller.cron;
+						scheduledTime = Number(controller.scheduledTime);
+						controller.noRetry();
+					}
+				}`,
+		assets: {
+			directory: tmp,
+			routerConfig: {
+				has_user_worker: true,
+			},
+		},
+		unsafeTriggerHandlers: true,
+	});
+	useDispose(mf);
+
+	type ScheduledResult = {
+		scheduledRun: boolean;
+		cron?: string;
+		scheduledTime?: number;
+	};
+
+	let res = await mf.dispatchFetch("http://localhost");
+	let json = (await res.json()) as ScheduledResult;
+	expect(json.scheduledRun).toBe(false);
+	expect(json.cron).toBe(undefined);
+	expect(json.scheduledTime).toBe(undefined);
+
+	res = await mf.dispatchFetch("http://localhost/foo");
+	expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
+	expect(await res.text()).toBe("<!doctype html><p>asset</p>");
+
+	res = await mf.dispatchFetch("http://localhost/foo.md");
+	expect(res.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+	expect(await res.text()).toBe("asset");
+
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
+	expect(await res.text()).toBe("ok");
+
+	res = await mf.dispatchFetch("http://localhost");
+	json = (await res.json()) as ScheduledResult;
+	expect(json.scheduledRun).toBe(true);
+	expect(json.cron).toBe("");
+	expect(json.scheduledTime).toBeDefined();
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/scheduled?format=json&cron=0+0+0+0+0&time=1234567890987"
+	);
+	expect(await res.json()).toEqual({
+		outcome: "ok",
+		noRetry: true,
+	});
+
+	res = await mf.dispatchFetch("http://localhost");
+	json = (await res.json()) as ScheduledResult;
+	expect(json.scheduledRun).toBe(true);
+	expect(json.cron).toBe("0 0 0 0 0");
+	expect(json.scheduledTime).toBe(1234567890987);
+});
+
 test("Miniflare: manually triggered email handler - valid email", async ({
 	expect,
 }) => {

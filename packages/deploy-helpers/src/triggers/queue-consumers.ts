@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
-import type { DeployHelpersContext, TriggerDeployment } from "../shared/types";
+import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
+import type { TriggerDeployment } from "../shared/types";
 import type { Config, ComplianceConfig } from "@cloudflare/workers-utils";
 
 export interface PostQueueBody {
@@ -87,7 +88,6 @@ export interface PurgeQueueResponse {
 export async function listQueues(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	ctx: DeployHelpersContext,
 	page?: number,
 	name?: string
 ): Promise<QueueResponse[]> {
@@ -98,7 +98,7 @@ export async function listQueues(
 		params.append("name", name);
 	}
 
-	return ctx.fetchResult<QueueResponse[]>(
+	return fetchResult<QueueResponse[]>(
 		complianceConfig,
 		`/accounts/${accountId}/queues`,
 		{},
@@ -109,16 +109,9 @@ export async function listQueues(
 export async function getQueue(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	queueName: string,
-	ctx: DeployHelpersContext
+	queueName: string
 ): Promise<QueueResponse> {
-	const queues = await listQueues(
-		complianceConfig,
-		accountId,
-		ctx,
-		1,
-		queueName
-	);
+	const queues = await listQueues(complianceConfig, accountId, 1, queueName);
 	if (queues.length === 0) {
 		throw new UserError(
 			`Queue "${queueName}" does not exist. To create it, run: wrangler queues create ${queueName}`,
@@ -132,27 +125,19 @@ export async function postConsumer(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	queueName: string,
-	body: PostTypedConsumerBody,
-	ctx: DeployHelpersContext
+	body: PostTypedConsumerBody
 ): Promise<TypedConsumerResponse> {
-	const queue = await getQueue(complianceConfig, accountId, queueName, ctx);
-	return postConsumerById(
-		complianceConfig,
-		accountId,
-		ctx,
-		queue.queue_id,
-		body
-	);
+	const queue = await getQueue(complianceConfig, accountId, queueName);
+	return postConsumerById(complianceConfig, accountId, queue.queue_id, body);
 }
 
 async function postConsumerById(
 	config: ComplianceConfig,
 	accountId: string,
-	ctx: DeployHelpersContext,
 	queueId: string,
 	body: PostTypedConsumerBody
 ): Promise<TypedConsumerResponse> {
-	return ctx.fetchResult(
+	return fetchResult(
 		config,
 		`/accounts/${accountId}/queues/${queueId}/consumers`,
 		{
@@ -167,10 +152,9 @@ export async function putConsumerById(
 	accountId: string,
 	queueId: string,
 	consumerId: string,
-	body: PostTypedConsumerBody,
-	ctx: DeployHelpersContext
+	body: PostTypedConsumerBody
 ): Promise<TypedConsumerResponse> {
-	return ctx.fetchResult(
+	return fetchResult(
 		complianceConfig,
 		`/accounts/${accountId}/queues/${queueId}/consumers/${consumerId}`,
 		{
@@ -186,25 +170,22 @@ export async function putConsumer(
 	queueName: string,
 	scriptName: string,
 	envName: string | undefined,
-	body: PostTypedConsumerBody,
-	ctx: DeployHelpersContext
+	body: PostTypedConsumerBody
 ): Promise<TypedConsumerResponse> {
-	const queue = await getQueue(complianceConfig, accountId, queueName, ctx);
+	const queue = await getQueue(complianceConfig, accountId, queueName);
 	const targetConsumer = await resolveWorkerConsumerByName(
 		complianceConfig,
 		accountId,
 		scriptName,
 		envName,
-		queue,
-		ctx
+		queue
 	);
 	return putConsumerById(
 		complianceConfig,
 		accountId,
 		queue.queue_id,
 		targetConsumer.consumer_id,
-		body,
-		ctx
+		body
 	);
 }
 
@@ -213,8 +194,7 @@ async function resolveWorkerConsumerByName(
 	accountId: string,
 	consumerName: string,
 	envName: string | undefined,
-	queue: QueueResponse,
-	ctx: DeployHelpersContext
+	queue: QueueResponse
 ): Promise<Consumer> {
 	const queueName = queue.queue_name;
 	const consumers = queue.consumers.filter(
@@ -235,7 +215,7 @@ async function resolveWorkerConsumerByName(
 	if (consumers.length > 1) {
 		const targetEnv =
 			envName ??
-			(await getDefaultService(complianceConfig, accountId, consumerName, ctx));
+			(await getDefaultService(complianceConfig, accountId, consumerName));
 		const targetConsumers = consumers.filter(
 			(c) => c.environment === targetEnv
 		);
@@ -252,7 +232,7 @@ async function resolveWorkerConsumerByName(
 	if (consumers[0].service) {
 		const targetEnv =
 			envName ??
-			(await getDefaultService(complianceConfig, accountId, consumerName, ctx));
+			(await getDefaultService(complianceConfig, accountId, consumerName));
 		if (targetEnv != consumers[0].environment) {
 			throw new UserError(
 				`No worker consumer '${consumerName}' exists for queue ${queueName}`,
@@ -273,10 +253,9 @@ interface WorkerService {
 async function getDefaultService(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	serviceName: string,
-	ctx: DeployHelpersContext
+	serviceName: string
 ): Promise<string> {
-	const service = await ctx.fetchResult<WorkerService>(
+	const service = await fetchResult<WorkerService>(
 		complianceConfig,
 		`/accounts/${accountId}/workers/services/${serviceName}`,
 		{
@@ -284,7 +263,7 @@ async function getDefaultService(
 		}
 	);
 
-	ctx.logger.info(service);
+	logger.info(service);
 
 	return service.default_environment.environment;
 }
@@ -293,10 +272,9 @@ async function deleteConsumerById(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	queueId: string,
-	consumerId: string,
-	ctx: DeployHelpersContext
+	consumerId: string
 ): Promise<void> {
-	return ctx.fetchResult(
+	return fetchResult(
 		complianceConfig,
 		`/accounts/${accountId}/queues/${queueId}/consumers/${consumerId}`,
 		{
@@ -308,10 +286,9 @@ async function deleteConsumerById(
 export async function deletePullConsumer(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	queueName: string,
-	ctx: DeployHelpersContext
+	queueName: string
 ): Promise<void> {
-	const queue = await getQueue(complianceConfig, accountId, queueName, ctx);
+	const queue = await getQueue(complianceConfig, accountId, queueName);
 	const consumer = queue.consumers[0];
 	if (consumer?.type !== "http_pull") {
 		throw new UserError(`No http_pull consumer exists for queue ${queueName}`, {
@@ -322,18 +299,16 @@ export async function deletePullConsumer(
 		complianceConfig,
 		accountId,
 		queue.queue_id,
-		consumer.consumer_id,
-		ctx
+		consumer.consumer_id
 	);
 }
 
 export async function listConsumers(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	queueName: string,
-	ctx: DeployHelpersContext
+	queueName: string
 ): Promise<Consumer[]> {
-	const queue = await getQueue(complianceConfig, accountId, queueName, ctx);
+	const queue = await getQueue(complianceConfig, accountId, queueName);
 	return queue.consumers;
 }
 
@@ -342,24 +317,21 @@ export async function deleteWorkerConsumer(
 	accountId: string,
 	queueName: string,
 	scriptName: string,
-	envName: string | undefined,
-	ctx: DeployHelpersContext
+	envName: string | undefined
 ): Promise<void> {
-	const queue = await getQueue(complianceConfig, accountId, queueName, ctx);
+	const queue = await getQueue(complianceConfig, accountId, queueName);
 	const targetConsumer = await resolveWorkerConsumerByName(
 		complianceConfig,
 		accountId,
 		scriptName,
 		envName,
-		queue,
-		ctx
+		queue
 	);
 	return deleteConsumerById(
 		complianceConfig,
 		accountId,
 		queue.queue_id,
-		targetConsumer.consumer_id,
-		ctx
+		targetConsumer.consumer_id
 	);
 }
 
@@ -367,18 +339,12 @@ export async function updateQueueConsumers(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	config: Config,
-	ctx: DeployHelpersContext
+	config: Config
 ): Promise<Promise<TriggerDeployment>[]> {
 	const consumers = config.queues.consumers || [];
 	const updateConsumers: Promise<TriggerDeployment>[] = [];
 	for (const consumer of consumers) {
-		const queue = await getQueue(
-			complianceConfig,
-			accountId,
-			consumer.queue,
-			ctx
-		);
+		const queue = await getQueue(complianceConfig, accountId, consumer.queue);
 
 		const body: PostTypedConsumerBody = {
 			type: "worker",
@@ -410,8 +376,7 @@ export async function updateQueueConsumers(
 					consumer.queue,
 					scriptName,
 					envName,
-					body,
-					ctx
+					body
 				).then(
 					() => ({ targets: [`Consumer for ${consumer.queue}`] }),
 					(error) => ({ targets: [], error })
@@ -420,7 +385,7 @@ export async function updateQueueConsumers(
 			continue;
 		}
 		updateConsumers.push(
-			postConsumer(complianceConfig, accountId, consumer.queue, body, ctx).then(
+			postConsumer(complianceConfig, accountId, consumer.queue, body).then(
 				() => ({
 					targets: [`Consumer for ${consumer.queue}`],
 				}),
@@ -430,4 +395,54 @@ export async function updateQueueConsumers(
 	}
 
 	return updateConsumers;
+}
+
+const queuesUrl = (accountId: string, queueId?: string): string => {
+	let url = `/accounts/${accountId}/queues`;
+	if (queueId) {
+		url += `/${queueId}`;
+	}
+	return url;
+};
+
+export async function ensureQueuesExistByConfig(
+	config: Config,
+	accountId: string
+) {
+	const producers = (config.queues.producers || []).map(
+		(producer) => producer.queue
+	);
+	const consumers = (config.queues.consumers || []).map(
+		(consumer) => consumer.queue
+	);
+
+	const queueNames = producers.concat(consumers);
+	if (queueNames.length > 0) {
+		const params = new URLSearchParams();
+		queueNames.forEach((e) => {
+			params.append("name", e);
+		});
+
+		const existingQueues = (
+			await fetchPagedListResult<QueueResponse>(
+				config,
+				queuesUrl(accountId),
+				{},
+				params
+			)
+		).map((q) => q.queue_name);
+
+		if (queueNames.length !== existingQueues.length) {
+			const queueSet = new Set(existingQueues);
+
+			for (const queue of queueNames) {
+				if (!queueSet.has(queue)) {
+					throw new UserError(
+						`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`,
+						{ telemetryMessage: "queues config missing queue" }
+					);
+				}
+			}
+		}
+	}
 }

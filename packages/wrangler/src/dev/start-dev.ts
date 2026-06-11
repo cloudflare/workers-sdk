@@ -5,9 +5,9 @@ import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getRegistryPath } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
+import { convertStartDevOptionsToBindings } from "../api/startDevWorker/binding-utils";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
-import { convertStartDevOptionsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
 import isInteractive from "../is-interactive";
@@ -20,7 +20,7 @@ import {
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
 import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
-import type { StartDevOptionsBindings } from "../api/startDevWorker/utils";
+import type { StartDevOptionsBindings } from "../api/startDevWorker/binding-utils";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";

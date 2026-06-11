@@ -238,9 +238,12 @@ export async function executeSql({
 				? ({ command } as ExecuteInput)
 				: null;
 		if (!input) {
-			throw new UserError(`Error: must provide --command or --file.`, {
-				telemetryMessage: "d1 execute missing command or file",
-			});
+			throw new UserError(
+				`Missing required option --command or --file. Provide a SQL command inline with --command="<SQL>", or a path to a SQL file with --file=<path>.`,
+				{
+					telemetryMessage: "d1 execute missing command or file",
+				}
+			);
 		}
 		if (local && remote) {
 			throw new UserError(
@@ -251,14 +254,20 @@ export async function executeSql({
 			);
 		}
 		if (preview && !remote) {
-			throw new UserError(`Error: can't use --preview without --remote`, {
-				telemetryMessage: "d1 execute preview requires remote",
-			});
+			throw new UserError(
+				`Cannot use --preview without --remote. The --preview flag targets a preview D1 database, which requires the --remote flag. Remove --preview or add --remote.`,
+				{
+					telemetryMessage: "d1 execute preview requires remote",
+				}
+			);
 		}
 		if (persistTo && !local) {
-			throw new UserError(`Error: can't use --persist-to without --local`, {
-				telemetryMessage: "d1 execute persist-to requires local",
-			});
+			throw new UserError(
+				`Cannot use --persist-to without --local. The --persist-to flag specifies a local persistence directory, which requires the --local flag. Remove --persist-to or add --local.`,
+				{
+					telemetryMessage: "d1 execute persist-to requires local",
+				}
+			);
 		}
 		if (input.file) {
 			await checkForSQLiteBinary(input.file);

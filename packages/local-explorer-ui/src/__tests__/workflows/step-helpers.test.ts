@@ -3,6 +3,7 @@ import {
 	getStepDisplayName,
 	getStepKey,
 } from "../../components/workflows/StepRow";
+import { getRestartFromStepParam } from "../../components/workflows/types";
 
 describe("getStepKey", () => {
 	test("produces key from type and name", ({ expect }) => {
@@ -51,5 +52,57 @@ describe("getStepDisplayName", () => {
 
 	test("handles name that is just a number suffix", ({ expect }) => {
 		expect(getStepDisplayName("step-0")).toBe("step");
+	});
+});
+
+describe("getRestartFromStepParam", () => {
+	test("strips counter suffix into name + count for do steps", ({ expect }) => {
+		expect(
+			getRestartFromStepParam({ type: "step", name: "generate-summary-1" })
+		).toEqual({ name: "generate-summary", count: 1, type: "do" });
+	});
+
+	test("preserves multi-digit counter as count", ({ expect }) => {
+		expect(
+			getRestartFromStepParam({ type: "step", name: "process-item-12" })
+		).toEqual({ name: "process-item", count: 12, type: "do" });
+	});
+
+	test("maps sleep step type to sleep", ({ expect }) => {
+		expect(getRestartFromStepParam({ type: "sleep", name: "wait-1" })).toEqual({
+			name: "wait",
+			count: 1,
+			type: "sleep",
+		});
+	});
+
+	test("maps waitForEvent step type to waitForEvent", ({ expect }) => {
+		expect(
+			getRestartFromStepParam({
+				type: "waitForEvent",
+				name: "trigger-2",
+			})
+		).toEqual({ name: "trigger", count: 2, type: "waitForEvent" });
+	});
+
+	test("omits count when name has no counter suffix", ({ expect }) => {
+		expect(getRestartFromStepParam({ type: "step", name: "greet" })).toEqual({
+			name: "greet",
+			type: "do",
+		});
+	});
+
+	test("omits type when step has unknown type", ({ expect }) => {
+		expect(getRestartFromStepParam({ name: "foo-1" })).toEqual({
+			name: "foo",
+			count: 1,
+		});
+	});
+
+	test("returns empty name when step has no name", ({ expect }) => {
+		expect(getRestartFromStepParam({ type: "step" })).toEqual({
+			name: "",
+			type: "do",
+		});
 	});
 });

@@ -15,6 +15,7 @@ type Env = {
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
+	[CoreBindings.SERVICE_R2_PUBLIC]?: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
@@ -603,6 +604,15 @@ export default <ExportedHandler<Env>>{
 				streamService
 			) {
 				return await streamService.fetch(request);
+			}
+
+			const r2PublicService = env[CoreBindings.SERVICE_R2_PUBLIC];
+			if (
+				(url.pathname === CorePaths.R2_PUBLIC ||
+					url.pathname.startsWith(`${CorePaths.R2_PUBLIC}/`)) &&
+				r2PublicService
+			) {
+				return await r2PublicService.fetch(request);
 			}
 
 			let response = await service.fetch(request);

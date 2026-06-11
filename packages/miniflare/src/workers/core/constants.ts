@@ -21,6 +21,8 @@ export const CorePaths = {
 	STREAM_VIDEO: "/cdn-cgi/mf/stream",
 	/** Local image delivery endpoint for serving hosted images */
 	IMAGE_DELIVERY: "/cdn-cgi/mf/imagedelivery",
+	/** Public R2 bucket object serving endpoint */
+	R2_PUBLIC: "/cdn-cgi/local/r2/public",
 } as const;
 
 export const CoreHeaders = {
@@ -81,6 +83,7 @@ export const CoreBindings = {
 	DEV_REGISTRY_DEBUG_PORT: "DEV_REGISTRY_DEBUG_PORT",
 	SERVICE_STREAM: "MINIFLARE_STREAM",
 	SERVICE_IMAGES_DELIVERY: "MINIFLARE_IMAGES_DELIVERY",
+	SERVICE_R2_PUBLIC: "MINIFLARE_R2_PUBLIC",
 } as const;
 
 export const ProxyOps = {

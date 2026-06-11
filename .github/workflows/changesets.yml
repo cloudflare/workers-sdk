@@ -61,7 +61,7 @@ jobs:
 
       - name: Create Version PR or Publish to NPM
         id: changesets
-        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           version: node .github/changeset-version.js
           publish: pnpm exec changeset publish

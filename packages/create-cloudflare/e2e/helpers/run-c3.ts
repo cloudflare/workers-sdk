@@ -22,6 +22,16 @@ export type PromptHandler = {
 		  };
 };
 
+/**
+ * Responder for "opportunistic" prompts that only show up under specific
+ * conditions (e.g. the pnpm 11 approve-builds confirmation). Fires at most
+ * once per run, independent of the ordered `promptHandlers` queue.
+ */
+type BackgroundResponder = {
+	matcher: RegExp;
+	keys: string[];
+};
+
 export type RunnerConfig = {
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
@@ -86,8 +96,39 @@ export const runC3 = async (
 		logStream
 	);
 
+	// Responders for prompts that may or may not appear. Note that a responder
+	// can only write to stdin while it's still open — `handlePrompt` closes
+	// stdin once the last ordered handler is consumed. Framework tests whose
+	// recovery prompt fires after that should opt out via `unsupportedPmRanges`.
+	const backgroundResponders: BackgroundResponder[] = [
+		{
+			matcher: /Run `pnpm approve-builds [^`]+` and retry the install\?/,
+			keys: [keys.enter],
+		},
+	];
+	const handledBackground = new WeakSet<BackgroundResponder>();
+
 	const onData = (data: string) => {
+		handleBackgroundPrompts(data);
 		handlePrompt(data);
+	};
+
+	const handleBackgroundPrompts = (data: string) => {
+		const text = stripAnsi(data.toString());
+		for (const responder of backgroundResponders) {
+			if (handledBackground.has(responder)) {
+				continue;
+			}
+			if (!responder.matcher.test(text)) {
+				continue;
+			}
+			handledBackground.add(responder);
+			for (const keystroke of responder.keys) {
+				if (proc.stdin.writable) {
+					proc.stdin.write(keystroke);
+				}
+			}
+		}
 	};
 
 	// Clone the prompt handlers so we can consume them destructively

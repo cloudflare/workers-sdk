@@ -1,5 +1,37 @@
 # miniflare
 
+## 4.20260609.0
+
+### Patch Changes
+
+- [#14192](https://github.com/cloudflare/workers-sdk/pull/14192) [`d076bcc`](https://github.com/cloudflare/workers-sdk/commit/d076bcc847adc0cb52c34863d3ad77f8faee5fbb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260603.1 | 1.20260605.1 |
+
+- [#14217](https://github.com/cloudflare/workers-sdk/pull/14217) [`24497d0`](https://github.com/cloudflare/workers-sdk/commit/24497d0f5fb327d7c86f5f3022510b53cfec931d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260605.1 | 1.20260608.1 |
+
+- [#14231](https://github.com/cloudflare/workers-sdk/pull/14231) [`4bb572f`](https://github.com/cloudflare/workers-sdk/commit/4bb572f264089b2ec1ce3a4b0d2f48c226cb4431) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260608.1 | 1.20260609.1 |
+
+- [#14177](https://github.com/cloudflare/workers-sdk/pull/14177) [`48c4ff0`](https://github.com/cloudflare/workers-sdk/commit/48c4ff00483e9346c9fe6dcb981009b081c0a204) Thanks [@ktKongTong](https://github.com/ktKongTong)! - Enable local scheduled handler dispatch for Workers + Assets (#9882)
+
+  It is now possible to trigger a scheduled handler on a Worker that has assets.
+
 ## 4.20260603.0
 
 ### Minor Changes

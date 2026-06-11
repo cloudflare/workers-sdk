@@ -112,10 +112,13 @@ export async function convertToConfigBundle(
 	const bindings: Record<string, Binding> = { ...event.config.bindings };
 
 	const crons = [];
+	const routes = [];
 	const queueConsumers = [];
 	for (const trigger of event.config.triggers ?? []) {
 		if (trigger.type === "cron") {
 			crons.push(trigger.cron);
+		} else if (trigger.type === "route") {
+			routes.push(trigger.pattern);
 		} else if (trigger.type === "queue-consumer") {
 			const { type: _, ...consumer } = trigger;
 			queueConsumers.push(consumer);
@@ -191,7 +194,9 @@ export async function convertToConfigBundle(
 		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
+		routes,
 		queueConsumers,
+		outboundService: event.config.dev.outboundService,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
 		httpsCertPath: event.config.dev?.server?.httpsCertPath,
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
@@ -215,6 +220,7 @@ export async function convertToConfigBundle(
 					secure: event.config.dev.server.secure,
 				})
 			: undefined,
+		structuredLogsHandler: event.config.dev.structuredLogsHandler,
 	};
 }
 
@@ -236,6 +242,10 @@ export class LocalRuntimeController extends RuntimeController {
 	// wrap updates in a mutex, so they're always applied in invocation order.
 	#mutex = new Mutex();
 	#mf?: Miniflare;
+
+	override get mf(): Miniflare | undefined {
+		return this.#mf;
+	}
 
 	#remoteProxySessionData: {
 		session: RemoteProxySession;

@@ -18,17 +18,53 @@ import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
+import { collectKeyValues } from "../utils/collectKeyValues";
 import type { ReadConfigCommandArgs } from "../config";
 
-type AutoConfigArgs = ReadConfigCommandArgs & {
-	experimentalAutoconfig: boolean | undefined;
-	assets: string | undefined;
-	path: string | undefined;
-	dryRun: boolean | undefined;
-	latest: boolean | undefined;
+/**
+ * CLI flags that affect the worker's deployment configuration.
+ * These are persisted to the generated wrangler.jsonc and/or included
+ * in the suggested CLI command during the interactive deploy flow.
+ */
+type DeployConfigFlags = {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
+	// Routing & scheduling
+	routes: string[] | undefined;
+	domains: string[] | undefined;
+	triggers: string[] | undefined;
+	// Variables & build-time substitutions
+	var: string[] | undefined;
+	define: string[] | undefined;
+	alias: string[] | undefined;
+	// Build configuration
+	jsxFactory: string | undefined;
+	jsxFragment: string | undefined;
+	tsconfig: string | undefined;
+	minify: boolean | undefined;
+	uploadSourceMaps: boolean | undefined;
+	bundle: boolean | undefined;
+	// Deployment behavior
+	logpush: boolean | undefined;
+	keepVars: boolean | undefined;
+	legacyEnv: boolean | undefined;
+	dispatchNamespace: string | undefined;
 };
+
+/**
+ * The full set of CLI args consumed by the interactive deploy autoconfig flow.
+ * Combines the base config/script/name args from {@link ReadConfigCommandArgs},
+ * all deployment-affecting flags from {@link DeployConfigFlags}, and the
+ * autoconfig-specific control flags (experimentalAutoconfig, assets, dryRun, latest).
+ */
+type AutoConfigArgs = ReadConfigCommandArgs &
+	DeployConfigFlags & {
+		experimentalAutoconfig: boolean | undefined;
+		path: string | undefined;
+		assets: string | undefined;
+		dryRun: boolean | undefined;
+		latest: boolean | undefined;
+	};
 
 /**
  * Runs autoconfig if applicable, including open-next delegation and interactive
@@ -204,6 +240,52 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 		if (args.compatibilityFlags?.length) {
 			configContent.compatibility_flags = args.compatibilityFlags;
 		}
+		if (args.routes?.length || args.domains?.length) {
+			const routeEntries: unknown[] = [...(args.routes ?? [])];
+			for (const domain of args.domains ?? []) {
+				routeEntries.push({ pattern: domain, custom_domain: true });
+			}
+			configContent.routes = routeEntries;
+		}
+		if (args.triggers?.length) {
+			configContent.triggers = { crons: args.triggers };
+		}
+		if (args.var?.length) {
+			configContent.vars = collectKeyValues(args.var);
+		}
+		if (args.define?.length) {
+			configContent.define = collectKeyValues(args.define);
+		}
+		if (args.alias?.length) {
+			configContent.alias = collectKeyValues(args.alias);
+		}
+		if (args.jsxFactory) {
+			configContent.jsx_factory = args.jsxFactory;
+		}
+		if (args.jsxFragment) {
+			configContent.jsx_fragment = args.jsxFragment;
+		}
+		if (args.tsconfig) {
+			configContent.tsconfig = args.tsconfig;
+		}
+		if (args.minify) {
+			configContent.minify = true;
+		}
+		if (args.uploadSourceMaps) {
+			configContent.upload_source_maps = true;
+		}
+		if (args.bundle === false) {
+			configContent.no_bundle = true;
+		}
+		if (args.logpush) {
+			configContent.logpush = true;
+		}
+		if (args.keepVars) {
+			configContent.keep_vars = true;
+		}
+		if (args.legacyEnv) {
+			configContent.legacy_env = true;
+		}
 
 		const writeConfigFile = await confirm(
 			`Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\n${chalk.dim(
@@ -233,6 +315,28 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 					: "",
 				...(args.compatibilityFlags?.length
 					? [`--compatibility-flags ${args.compatibilityFlags.join(" ")}`]
+					: []),
+				...(args.routes?.length ? [`--routes ${args.routes.join(" ")}`] : []),
+				...(args.domains?.length
+					? [`--domains ${args.domains.join(" ")}`]
+					: []),
+				...(args.triggers?.length
+					? [`--triggers ${args.triggers.map((t) => `'${t}'`).join(" ")}`]
+					: []),
+				...(args.var?.length ? [`--var ${args.var.join(" ")}`] : []),
+				...(args.define?.length ? [`--define ${args.define.join(" ")}`] : []),
+				...(args.alias?.length ? [`--alias ${args.alias.join(" ")}`] : []),
+				...(args.jsxFactory ? [`--jsx-factory ${args.jsxFactory}`] : []),
+				...(args.jsxFragment ? [`--jsx-fragment ${args.jsxFragment}`] : []),
+				...(args.tsconfig ? [`--tsconfig ${args.tsconfig}`] : []),
+				...(args.minify ? ["--minify"] : []),
+				...(args.uploadSourceMaps ? ["--upload-source-maps"] : []),
+				...(args.bundle === false ? ["--no-bundle"] : []),
+				...(args.logpush ? ["--logpush"] : []),
+				...(args.keepVars ? ["--keep-vars"] : []),
+				...(args.legacyEnv ? ["--legacy-env"] : []),
+				...(args.dispatchNamespace
+					? [`--dispatch-namespace ${args.dispatchNamespace}`]
 					: []),
 			]
 				.filter(Boolean)
