@@ -63,6 +63,15 @@
 & packages/miniflare/test/plugins/kv/** @cloudflare/workers-kv
 
 # ----------------------------------------------------------
+# R2 ownership (AND: requires wrangler + r2)
+# ----------------------------------------------------------
+& packages/wrangler/src/r2/** @cloudflare/r2
+& packages/wrangler/src/__tests__/r2/** @cloudflare/r2
+& packages/miniflare/src/plugins/r2/** @cloudflare/r2
+& packages/miniflare/src/workers/r2/** @cloudflare/r2
+& packages/miniflare/test/plugins/r2/** @cloudflare/r2
+
+# ----------------------------------------------------------
 # Workflows ownership (AND: requires wrangler + workflows)
 # ----------------------------------------------------------
 # */** excludes root-level files (CHANGELOG.md, package.json)
