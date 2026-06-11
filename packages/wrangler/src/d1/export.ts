@@ -137,9 +137,7 @@ async function exportLocal(
 	noSchema: boolean,
 	noData: boolean
 ) {
-	const localDB = getDatabaseInfoFromConfig(config, name, {
-		requireDatabaseId: false,
-	});
+	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`,
@@ -147,7 +145,8 @@ async function exportLocal(
 		);
 	}
 
-	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
+	// TODO(#11870): Really we should prefer localDB.name here, but that would break users with existing local databases.
+	const id = localDB.previewDatabaseUuid ?? localDB.uuid ?? localDB.binding;
 
 	// TODO: should we allow customising persistence path?
 	// Should it be --persist-to for consistency (even though this isn't persisting anything)?

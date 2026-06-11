@@ -2,7 +2,6 @@ import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { isLocal } from "../../utils/is-local";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
 	getMigrationsPath,
@@ -61,9 +60,7 @@ export const d1MigrationsListCommand = createCommand({
 			);
 		}
 
-		const databaseInfo = getDatabaseInfoFromConfig(config, database, {
-			requireDatabaseId: !isLocal({ local, remote }), // Only require database_id for remote operations
-		});
+		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && remote) {
 			throw new UserError(
 				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`,

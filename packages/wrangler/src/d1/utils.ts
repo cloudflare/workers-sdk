@@ -1,40 +1,25 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { DEFAULT_MIGRATION_TABLE } from "./constants";
-import { listDatabases } from "./list";
-import type { Database, DatabaseInfo } from "./types";
+import {
+	type DatabaseWithUuid,
+	hasUuid,
+	type Database,
+	type DatabaseInfo,
+} from "./types";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export function getDatabaseInfoFromConfig(
 	config: Config,
-	name: string,
-	options?: {
-		/**
-		 * Local databases might not have a database id, so we don't require it for local-only operations
-		 * @default true
-		 */
-		requireDatabaseId?: boolean;
-	}
+	nameOrBinding: string
 ): Database | null {
-	const requireDatabaseId = options?.requireDatabaseId ?? true;
-
 	for (const d1Database of config.d1_databases) {
-		if (name === d1Database.database_name || name === d1Database.binding) {
-			if (requireDatabaseId && !d1Database.database_id) {
-				throw new UserError(
-					`Found a database with name or binding ${name} but it is missing a database_id, which is needed for operations on remote resources. Please create the remote D1 database by deploying your project or running 'wrangler d1 create ${name}'.`,
-					{ telemetryMessage: "d1 database config missing database id" }
-				);
-			}
-			// If requireDatabaseId is true (default), skip entries without database_id
-			// This is needed for remote operations that require a real database UUID
-
-			// For local operations, fall back to using the binding as the ID
-			// This matches the behavior in wrangler dev (see d1DatabaseEntry in dev/miniflare/index.ts)
-			const uuid = d1Database.database_id ?? d1Database.binding;
-
+		if (
+			nameOrBinding === d1Database.database_name ||
+			nameOrBinding === d1Database.binding
+		) {
 			return {
-				uuid,
+				uuid: d1Database.database_id,
 				previewDatabaseUuid: d1Database.preview_database_id,
 				binding: d1Database.binding,
 				name: d1Database.database_name,
@@ -49,24 +34,60 @@ export function getDatabaseInfoFromConfig(
 	return null;
 }
 
+/** May do an api lookup to fill in uuid. Not suitable for --local mode. */
 export const getDatabaseByNameOrBinding = async (
 	config: Config,
 	accountId: string,
-	name: string
-): Promise<Database> => {
-	const dbFromConfig = getDatabaseInfoFromConfig(config, name);
-	if (dbFromConfig) {
+	nameOrBinding: string
+): Promise<DatabaseWithUuid> => {
+	const dbFromConfig = getDatabaseInfoFromConfig(config, nameOrBinding);
+	if (hasUuid(dbFromConfig)) {
 		return dbFromConfig;
 	}
-
-	const allDBs = await listDatabases(config, accountId);
-	const matchingDB = allDBs.find((db) => db.name === name);
-	if (!matchingDB) {
-		throw new UserError(`Couldn't find DB with name '${name}'`, {
-			telemetryMessage: "d1 database lookup database not found",
-		});
+	// Either not in config at all, or the binding exists but `database_id` is
+	// absent (auto-provisioned binding — see Workers automatic resource
+	// provisioning). Look up the real UUID via the D1 API.
+	const lookupName = dbFromConfig?.name ?? nameOrBinding;
+	let uuid: string;
+	let name: string;
+	try {
+		({ uuid, name } = await fetchResult<{ uuid: string; name: string }>(
+			config,
+			`/accounts/${accountId}/d1/database/${encodeURIComponent(lookupName)}`,
+			{},
+			new URLSearchParams({ fields: "uuid,name" })
+		));
+	} catch (err) {
+		// Only convert 404 into the friendly "not found" UserError. Anything
+		// else (401, 403, 429, 5xx, network) should propagate so the user
+		// sees the real failure instead of a misleading "DB not found".
+		if (err instanceof APIError && err.status === 404) {
+			throw new UserError(
+				dbFromConfig
+					? `Couldn't find a D1 DB named '${lookupName}' (bound as '${nameOrBinding}') in the API. Run 'wrangler d1 create ${lookupName}' to create it.`
+					: `Couldn't find a D1 DB with name or binding '${nameOrBinding}' in your config or the API. Run 'wrangler d1 create ${nameOrBinding}' to create it.`,
+				{ telemetryMessage: "d1 database lookup database not found" }
+			);
+		}
+		throw err;
 	}
-	return matchingDB;
+
+	if (dbFromConfig) {
+		// Binding in config but no database_id — merge real uuid from API
+		// with migration settings from config.
+		return {
+			...dbFromConfig,
+			name,
+			uuid,
+		};
+	}
+
+	return {
+		uuid,
+		name,
+		binding: nameOrBinding,
+		migrationsTableName: DEFAULT_MIGRATION_TABLE,
+	};
 };
 
 export const getDatabaseInfoFromIdOrName = async (
