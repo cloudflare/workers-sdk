@@ -1,5 +1,105 @@
 # wrangler
 
+## 4.100.0
+
+### Minor Changes
+
+- [#14119](https://github.com/cloudflare/workers-sdk/pull/14119) [`2047a32`](https://github.com/cloudflare/workers-sdk/commit/2047a32cf78886b71b794a3dfac946a146ab3ffe) Thanks [@tahmid-23](https://github.com/tahmid-23)! - Serve local R2 bucket objects publicly via the dev server
+
+  When running `wrangler dev` locally, objects in each local R2 binding are now reachable under `/cdn-cgi/local/r2/public/<bucket-id>/<key>` on the existing dev server, simulating a public bucket. The `<bucket-id>` is the bucket's `bucket_name` when set, otherwise its `binding`. Bindings configured with `remote: true` are not exposed.
+
+- [#14202](https://github.com/cloudflare/workers-sdk/pull/14202) [`e8561c2`](https://github.com/cloudflare/workers-sdk/commit/e8561c2621ebc5e0c28848fb5a87a982dc77647f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add experimental `--x-new-config` flag for authoring config in TypeScript
+
+  This is an experimental, opt-in feature. When enabled, `wrangler dev`, `wrangler build`, `wrangler deploy`, `wrangler versions upload`, and `wrangler versions deploy` load the Worker's configuration from a `cloudflare.config.ts` file instead of `wrangler.json` / `wrangler.jsonc` / `wrangler.toml`. Additionally, an optional `wrangler.config.ts` file can be provided for Wrangler-specific dev/build configuration.
+
+  - **`cloudflare.config.ts`** (required) — Worker runtime configuration (bindings, triggers, observability, placement, limits, compatibility, routes, etc.). Authored via `defineWorker` from `wrangler/experimental-config`.
+  - **`wrangler.config.ts`** (optional) — Tooling / bundling / dev-server configuration (`noBundle`, `minify`, `alias`, `define`, `rules`, `tsconfig`, `build`, `dev`, `assetsDirectory`, etc.). Authored via `defineWranglerConfig` from `wrangler/experimental-config`.
+
+  Per-environment configuration is via `ctx.mode` branching inside the function form of either file.
+
+  Example `cloudflare.config.ts`:
+
+  ```ts
+  import { defineWorker, bindings } from "wrangler/experimental-config";
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export default defineWorker((ctx) => ({
+  	name: "my-worker",
+  	entrypoint,
+  	compatibilityDate: "2026-05-18",
+  	env: {
+  		MY_KV: bindings.kv(),
+  		MY_TEXT: bindings.text(`The mode is ${ctx.mode}`),
+  	},
+  }));
+  ```
+
+  Example `wrangler.config.ts`:
+
+  ```ts
+  import { defineWranglerConfig } from "wrangler/experimental-config";
+
+  export default defineWranglerConfig({
+    minify: true,
+    assetsDirectory: "./public",
+  });
+  ```
+
+  Because this is experimental, the flag, the config formats, and the `wrangler/experimental-config` exports may change in any release.
+
+### Patch Changes
+
+- [#14185](https://github.com/cloudflare/workers-sdk/pull/14185) [`98c9afe`](https://github.com/cloudflare/workers-sdk/commit/98c9afe2e3bb6cbed6d56d8ad781d50e9a604926) Thanks [@penalosa](https://github.com/penalosa)! - Use the shared env-credential resolver from `@cloudflare/workers-auth`
+
+  No user-facing behaviour change. Credential resolution order (global API key + email → `CLOUDFLARE_API_TOKEN` → stored OAuth token) is preserved.
+
+- [#14184](https://github.com/cloudflare/workers-sdk/pull/14184) [`e305126`](https://github.com/cloudflare/workers-sdk/commit/e30512641a194a628767ca9c44ff0499a4b326c1) Thanks [@penalosa](https://github.com/penalosa)! - Add an experimental `cf-wrangler` delegate entrypoint for projects that can't use `@cloudflare/vite-plugin` (service workers, old compatibility dates, Python, Rust, etc.).
+
+  `cf-wrangler dev` starts the same local dev server as `wrangler dev` — it sits directly on wrangler's internal dev server, so the bundling and runtime behaviour are identical — but exposes a deliberately narrow CLI surface (`--mode`, `--port`, `--host`, `--local`) for a parent CLI to delegate to, and other dev server config options are read from the wrangler config file.
+
+  This replaces the separate `@cloudflare/wrangler-bundler` package. This is an internal integration point and is not intended to be run directly by users.
+
+- [#14246](https://github.com/cloudflare/workers-sdk/pull/14246) [`f3990b2`](https://github.com/cloudflare/workers-sdk/commit/f3990b2358ef49cd6e1ab16de27e25dcd949896f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260609.1 | 1.20260610.1 |
+
+- [#14256](https://github.com/cloudflare/workers-sdk/pull/14256) [`4597f08`](https://github.com/cloudflare/workers-sdk/commit/4597f085d25c7d066ecf056de313e194f41094d1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260610.1 | 1.20260611.1 |
+
+- [#14243](https://github.com/cloudflare/workers-sdk/pull/14243) [`25722ac`](https://github.com/cloudflare/workers-sdk/commit/25722acff7a195cffb858791cfcd43c79a70e217) Thanks [@com6056](https://github.com/com6056)! - Fix a memory leak that could make long-running headless `wrangler dev` sessions unresponsive
+
+  Long-running `wrangler dev` sessions with no DevTools attached (for example using the containers feature under sustained traffic) could gradually consume unbounded memory and eventually stop accepting connections. The inspector proxy now only enables network tracking while a DevTools client is connected, so the buildup no longer happens. Interactive debugging is unaffected. Fixes #14191.
+
+- [#14230](https://github.com/cloudflare/workers-sdk/pull/14230) [`41f75c0`](https://github.com/cloudflare/workers-sdk/commit/41f75c0b2ba3f0f4a88ca792c1b5c8914374d61d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve D1 error messages for missing or conflicting options
+
+  Error messages for `d1 execute`, `d1 export`, `d1 time-travel restore`, and `d1 insights` now clearly state which option is missing or conflicting, explain why the combination is invalid, and suggest how to fix the issue.
+
+  Additionally, duration validation errors in `d1 insights` are now thrown as `UserError` instead of plain `Error`, ensuring they are displayed cleanly to users rather than as unexpected crashes.
+
+- [#14213](https://github.com/cloudflare/workers-sdk/pull/14213) [`10b5538`](https://github.com/cloudflare/workers-sdk/commit/10b553819addbcd1224f66d5b52bb7c7f7c8e602) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve authentication error messages with specific failure reasons
+
+  When authentication fails (e.g. during `wrangler dev --remote` or when using remote bindings), the error message now explains exactly what went wrong -- whether no credentials were found, the token expired, or the environment is non-interactive -- and lists actionable steps to fix it, including a `wrangler whoami` tip.
+
+  Previously, auth failures could produce multiple confusing errors (e.g. "Failed to fetch auth token: 400 Bad Request" followed by "Failed to start the remote proxy session"). Now a single, clear error is shown.
+
+- [#14233](https://github.com/cloudflare/workers-sdk/pull/14233) [`818c105`](https://github.com/cloudflare/workers-sdk/commit/818c105522e6d198f92cc31fd465477774c1bcf2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve R2 Sippy error messages
+
+  Now error messages in `wrangler r2 bucket sippy` follow a consistent pattern: they describe what is missing, name the exact `--flag` to use, and provide context (e.g. example values, links to the dashboard). Previously, many errors said only "Error: must provide --flag." with no guidance on what the flag does or how to obtain the value.
+
+- [#14259](https://github.com/cloudflare/workers-sdk/pull/14259) [`2ae6099`](https://github.com/cloudflare/workers-sdk/commit/2ae6099db77c076fb7e6e782d2f0ebd7ba86dbbb) Thanks [@emily-shen](https://github.com/emily-shen)! - Move worker build step earlier in deploy/upload step, before upload specific config validation
+
+- Updated dependencies [[`f3990b2`](https://github.com/cloudflare/workers-sdk/commit/f3990b2358ef49cd6e1ab16de27e25dcd949896f), [`4597f08`](https://github.com/cloudflare/workers-sdk/commit/4597f085d25c7d066ecf056de313e194f41094d1), [`2047a32`](https://github.com/cloudflare/workers-sdk/commit/2047a32cf78886b71b794a3dfac946a146ab3ffe)]:
+  - miniflare@4.20260611.0
+
 ## 4.99.0
 
 ### Minor Changes

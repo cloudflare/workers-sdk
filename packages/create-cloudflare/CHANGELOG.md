@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.70.2
+
+### Patch Changes
+
+- [#14193](https://github.com/cloudflare/workers-sdk/pull/14193) [`88519f9`](https://github.com/cloudflare/workers-sdk/commit/88519f9d0c3caf9a008a228c31568010477d80c6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix `create cloudflare` exiting with code `0` even after an unhandled error
+
+- [#14235](https://github.com/cloudflare/workers-sdk/pull/14235) [`13abd5a`](https://github.com/cloudflare/workers-sdk/commit/13abd5a1c4e51b264ac9dea02f86024a6cff570c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.69.1 | 0.69.2 |
+
+- [#14193](https://github.com/cloudflare/workers-sdk/pull/14193) [`88519f9`](https://github.com/cloudflare/workers-sdk/commit/88519f9d0c3caf9a008a228c31568010477d80c6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix `create cloudflare` aborting with `ERR_PNPM_IGNORED_BUILDS` on pnpm 11
+
+  pnpm 11 flipped `strictDepBuilds` to `true` by default, which makes the install fail when dependencies have unapproved build scripts. `wrangler` depends on `workerd` and `esbuild`, and (via miniflare) on `sharp` — all three need their postinstall scripts to produce platform binaries.
+
+  C3 now writes or merges in a `pnpm-workspace.yaml` in the generated project that approves exactly those three packages. If other packages trigger this error, C3 also now interactively offers to retry with `pnpm approve-builds <pkg>…`
+
 ## 2.70.1
 
 ### Patch Changes
