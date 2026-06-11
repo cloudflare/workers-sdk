@@ -1,5 +1,5 @@
 ---
-"@cloudflare/deploy-helpers": patch
+"@cloudflare/deploy-helpers": minor
 ---
 
 Expose Cloudflare config conversion utilities from deploy helpers
