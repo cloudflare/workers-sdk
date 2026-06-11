@@ -1,5 +1,6 @@
 import events from "node:events";
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
@@ -116,6 +117,13 @@ export async function startRemoteProxySession(
 		},
 		bindings: rawBindings,
 	}).catch((startWorkerError) => {
+		// If the error is already a UserError (e.g. an auth failure from
+		// ConfigController), re-throw it directly so the top-level error
+		// handler can display the original, actionable message without
+		// wrapping it in a generic "Failed to start" envelope.
+		if (startWorkerError instanceof UserError) {
+			throw startWorkerError;
+		}
 		let errorMessage = startWorkerError;
 		if (startWorkerError instanceof Error) {
 			if (startWorkerError.cause instanceof Error) {

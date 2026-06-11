@@ -12,7 +12,12 @@
 
 import assert from "node:assert";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { readStoredAuthState } from "@cloudflare/workers-auth";
+import {
+	getAPIToken as getAPITokenShared,
+	getAuthFromEnv as getAuthFromEnvShared,
+	readStoredAuthState,
+	requireApiToken as requireApiTokenShared,
+} from "@cloudflare/workers-auth";
 import { createOAuthFlow } from "@cloudflare/workers-auth";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import ci from "ci-info";
@@ -27,19 +32,21 @@ import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
+import { defaultAuthConfigStorage } from "./auth-config-file";
 import {
+	getClientIdFromEnv,
 	getCloudflareAccountIdFromEnv,
-	getCloudflareAPITokenFromEnv,
-	getCloudflareGlobalAuthEmailFromEnv,
-	getCloudflareGlobalAuthKeyFromEnv,
 } from "./auth-variables";
 import { fetchAllAccounts } from "./fetch-accounts";
-import { generateAuthUrl } from "./generate-auth-url";
+import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import { ensureTemporaryTermsAccepted } from "./temporary-terms";
 import type { TemporaryPreviewAccount } from "../deploy/temporary-account";
 import type { Account } from "./shared";
-import type { LoginProps } from "@cloudflare/workers-auth";
+import type {
+	LoginOrRefreshResult,
+	LoginProps,
+} from "@cloudflare/workers-auth";
 import type {
 	ApiCredentials,
 	ComplianceConfig,
@@ -57,12 +64,34 @@ import type {
  * apply — the mocked versions are injected via the context here and used
  * internally by `@cloudflare/workers-auth`.
  */
+/**
+ * Wrangler's branded OAuth consent pages, shown to the user after they grant
+ * or deny consent to Wrangler's OAuth app.
+ */
+const WRANGLER_CONSENT_PAGES = {
+	granted: {
+		url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
+	},
+	denied: {
+		url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
+		error:
+			"Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
+			"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable",
+	},
+};
+
+const authConfigStorage = defaultAuthConfigStorage();
+
 const oauthFlow = createOAuthFlow({
 	logger,
 	isNonInteractiveOrCI,
 	openInBrowser,
 	hasEnvCredentials: () => getAuthFromEnv() !== undefined,
 	purgeOnLoginOrLogout: purgeConfigCaches,
+	clientId: getClientIdFromEnv,
+	consent: WRANGLER_CONSENT_PAGES,
+	redirectUri: OAUTH_CALLBACK_URL,
+	storage: authConfigStorage,
 	generateAuthUrl,
 	generateRandomState,
 });
@@ -138,24 +167,17 @@ function logTemporaryPreviewAccount(
 /**
  * Try to read API credentials from environment variables.
  *
+ * Delegates to the shared resolver in `@cloudflare/workers-auth`. Wrangler
+ * supports the global API key + email pair in addition to API tokens, so the
+ * default (`allowGlobalAuthKey: true`) is used.
+ *
  * Authentication priority (highest to lowest):
  * 1. Global API Key + Email (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL)
  * 2. API Token (CLOUDFLARE_API_TOKEN)
  * 3. OAuth token from local state (via `wrangler login`) - not handled here
- *
- * Note: Global API Key + Email requires two headers (X-Auth-Key + X-Auth-Email),
- * while API Token and OAuth token are both used as Bearer tokens.
  */
 export function getAuthFromEnv(): ApiCredentials | undefined {
-	const globalApiKey = getCloudflareGlobalAuthKeyFromEnv();
-	const globalApiEmail = getCloudflareGlobalAuthEmailFromEnv();
-	const apiToken = getCloudflareAPITokenFromEnv();
-
-	if (globalApiKey && globalApiEmail) {
-		return { authKey: globalApiKey, authEmail: globalApiEmail };
-	} else if (apiToken) {
-		return { apiToken };
-	}
+	return getAuthFromEnvShared();
 }
 
 // ---------------------------------------------------------------------------
@@ -235,9 +257,10 @@ export function listScopes(message = "💁 Available scopes:"): void {
  * the user is not logged in via OAuth (e.g. env-based auth).
  */
 export function getScopes(): Scope[] | undefined {
-	return readStoredAuthState({ warningLogger: logger }).scopes as
-		| Scope[]
-		| undefined;
+	return readStoredAuthState({
+		warningLogger: logger,
+		storage: authConfigStorage,
+	}).scopes as Scope[] | undefined;
 }
 
 export function printScopes(scopes: Scope[]) {
@@ -254,38 +277,27 @@ export function printScopes(scopes: Scope[]) {
 // ---------------------------------------------------------------------------
 
 export function getAPIToken(): ApiCredentials | undefined {
+	// A temporary-account override (set by `requireAuth`) takes precedence over
+	// env/stored credentials for the rest of the invocation.
 	const authOverride = getAuthOverride();
 	if (authOverride) {
 		return authOverride.apiToken;
 	}
 
-	const envAuth = getAuthFromEnv();
-	if (envAuth) {
-		return envAuth;
-	}
-
-	const stored = readStoredAuthState({ warningLogger: logger });
-	if (stored.deprecatedApiToken) {
-		return { apiToken: stored.deprecatedApiToken };
-	}
-	if (stored.accessToken?.value) {
-		return { apiToken: stored.accessToken.value };
-	}
-
-	return undefined;
+	return getAPITokenShared({
+		warningLogger: logger,
+		storage: authConfigStorage,
+	});
 }
 
 /**
  * Throw an error if there is no API token available.
  */
 export function requireApiToken(): ApiCredentials {
-	const credentials = getAPIToken();
-	if (!credentials) {
-		throw new UserError("No API token found.", {
-			telemetryMessage: "user auth missing api token",
-		});
-	}
-	return credentials;
+	return requireApiTokenShared({
+		warningLogger: logger,
+		storage: authConfigStorage,
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -308,8 +320,8 @@ function withDefaultScopes(
 		complianceConfig,
 		scopes: props?.scopes ?? DefaultScopeKeys,
 		browser: props?.browser ?? true,
-		callbackHost: props?.callbackHost ?? "localhost",
-		callbackPort: props?.callbackPort ?? 8976,
+		callbackHost: props?.callbackHost,
+		callbackPort: props?.callbackPort,
 	};
 }
 
@@ -335,7 +347,8 @@ export async function logout(): Promise<void> {
 	if (
 		clearedTemporary &&
 		!getAuthFromEnv() &&
-		!readStoredAuthState({ warningLogger: logger }).refreshToken
+		!readStoredAuthState({ warningLogger: logger, storage: authConfigStorage })
+			.refreshToken
 	) {
 		logger.log("Cleared temporary preview account.");
 		return;
@@ -344,27 +357,41 @@ export async function logout(): Promise<void> {
 	return oauthFlow.logout();
 }
 
+/**
+ * Attempt to ensure the user is authenticated, refreshing or prompting for
+ * login as needed.
+ *
+ * @param complianceConfig - Compliance region configuration
+ * @param props - Optional overrides for scopes, browser behaviour, etc.
+ * @returns A {@link LoginOrRefreshResult} indicating success or the specific
+ *   reason authentication could not be established.
+ */
 export async function loginOrRefreshIfRequired(
 	complianceConfig: ComplianceConfig,
 	props?: WranglerLoginProps,
 	{ allowLogin = true }: { allowLogin?: boolean } = {}
-): Promise<boolean> {
+): Promise<LoginOrRefreshResult> {
 	// A temporary-account override is a complete credential; don't try to
 	// refresh a stored OAuth token (which would fail and report "not logged in").
 	if (getAuthOverride()) {
-		return true;
+		return { loggedIn: true };
 	}
 
 	if (!allowLogin) {
 		// `--temporary`: use existing credentials if usable, but never start an
 		// interactive OAuth login. A stale token is still refreshed if possible.
 		if (getAuthFromEnv()) {
-			return true;
+			return { loggedIn: true };
 		}
 		if (!getAPIToken()) {
-			return false;
+			return { loggedIn: false, reason: "no-credentials-non-interactive" };
 		}
-		return oauthFlow.isRefreshNeeded() ? oauthFlow.refreshToken() : true;
+		if (oauthFlow.isRefreshNeeded()) {
+			return (await oauthFlow.refreshToken())
+				? { loggedIn: true }
+				: { loggedIn: false, reason: "token-expired-non-interactive" };
+		}
+		return { loggedIn: true };
 	}
 
 	return oauthFlow.loginOrRefreshIfRequired(
@@ -378,13 +405,11 @@ export async function getOAuthTokenFromLocalState(): Promise<
 	return oauthFlow.getOAuthTokenFromLocalState();
 }
 
-// Re-export the auth-config-file pure helpers from the package so the
-// historical `from "../user"` import paths keep working.
 export {
 	getAuthConfigFilePath,
 	readAuthConfigFile,
 	writeAuthConfigFile,
-} from "@cloudflare/workers-auth";
+} from "./auth-config-file";
 export type { UserAuthConfig } from "@cloudflare/workers-auth";
 // `PKCE_CHARSET` is re-exported for any external consumers that used to
 // import it from this barrel.
@@ -478,12 +503,16 @@ export async function getOrSelectAccountId(
 			const redactAccountName = ci.isCI;
 			throw new UserError(
 				`More than one account available but unable to select one in non-interactive mode.
-Please set the appropriate \`account_id\` in your ${configFileName(undefined)} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
+Please set the appropriate \`account_id\` in your ${configFileName(
+					undefined
+				)} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map(
 		(account: Account) =>
-			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
+			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${
+				account.id
+			}\``
 	)
 	.join("\n")}`,
 				{ telemetryMessage: "user account selection unavailable" }
@@ -510,10 +539,10 @@ export async function requireAuth(
 	}
 ): Promise<string> {
 	const allowTemporary = shouldAllowTemporary();
-	const loggedIn = await loginOrRefreshIfRequired(config, undefined, {
+	const result = await loginOrRefreshIfRequired(config, undefined, {
 		allowLogin: !allowTemporary,
 	});
-	if (!loggedIn) {
+	if (!result.loggedIn) {
 		if (allowTemporary) {
 			const { account: temporaryPreviewAccount, cached } =
 				await getOrCreateTemporaryPreviewAccount({
@@ -529,11 +558,14 @@ export async function requireAuth(
 			return temporaryPreviewAccount.account.id;
 		}
 
-		if (isNonInteractiveOrCI()) {
-			const message =
-				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.";
-			const temporaryHint =
-				"\n\nTo continue without logging in, rerun this command with `--temporary`. Wrangler will use a temporary account and print a claim URL.";
+		const message =
+			"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.";
+		const temporaryHint =
+			"\n\nTo continue without logging in, rerun this command with `--temporary`. Wrangler will use a temporary account and print a claim URL.";
+		if (
+			result.reason === "no-credentials-non-interactive" ||
+			result.reason === "token-expired-non-interactive"
+		) {
 			throw new UserError(
 				isTemporarySupported() ? message + temporaryHint : message,
 				{ telemetryMessage: "user auth missing api token non interactive" }

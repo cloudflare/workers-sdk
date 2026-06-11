@@ -4,22 +4,6 @@ import {
 } from "@cloudflare/workers-utils";
 
 /**
- * `WRANGLER_CLIENT_ID` is a UUID that is used to identify Wrangler
- * to the Cloudflare APIs.
- *
- * Normally you should not need to set this explicitly.
- * If you want to switch to the staging environment set the
- * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
- */
-export const getClientIdFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_CLIENT_ID",
-	defaultValue: () =>
-		getCloudflareApiEnvironmentFromEnv() === "staging"
-			? "4b2ea6cc-9421-4761-874b-ce550e0e3def"
-			: "54d11594-84e4-41aa-b438-e81b8fa78ee7",
-});
-
-/**
  * `WRANGLER_AUTH_DOMAIN` is the URL base domain that is used
  * to access OAuth URLs for the Cloudflare APIs.
  *

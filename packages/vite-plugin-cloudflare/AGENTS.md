@@ -26,24 +26,24 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 `bin/cf-vite` is an experimental, internal delegate binary spawned by
 Cloudflare's "cf-dev" parent process — NOT part of the plugin's public
 API and not meant for direct end-user invocation. It is the sibling of
-`@cloudflare/wrangler-bundler`'s `cf-wrangler` binary, and the two MUST
-keep a shared spawn contract so the parent can drive either impl
-interchangeably.
+`wrangler`'s `cf-wrangler` binary, and the two MUST keep a shared spawn
+contract so the parent can drive either impl interchangeably.
 
 - **Verb dispatch.** `cf-vite <verb> [flags]`. `dev` is the only verb
   today; future verbs (`build`, `deploy`) follow the same shape.
   Unknown/missing verbs exit `2` (this doubles as the parent's
   version-detection signal — no JSON handshake).
-- **Shared flag vocabulary.** Only `--config`, `--mode`, `--port`,
-  `--host`, `--local` are accepted, mirroring `cf-wrangler` exactly.
-  Parsed with `node:util.parseArgs` strict mode → unknown flags exit
-  `2`. Do NOT add flags here unless `cf-wrangler` grows them too.
+- **Shared flag vocabulary.** Only `--mode`, `--port`, `--host`,
+  `--local` are accepted, mirroring `cf-wrangler` exactly. Parsed with
+  `node:util.parseArgs` strict mode → unknown flags exit `2`. Do NOT add
+  flags here unless `cf-wrangler` grows them too. (There is no `--config`
+  flag: the wrangler config is discovered by `cloudflare()` itself.)
 - **Flag wiring.** `cf-vite` boots Vite via `createServer()` against the
   user's own `vite.config.ts` (which must include `cloudflare()`).
   Plugin-owned flags are bridged via env vars the plugin already reads
-  (`--config` → `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH`, `--local` →
-  `CLOUDFLARE_VITE_FORCE_LOCAL`); Vite-owned flags go through inline
-  config (`--port`/`--host` → `server.*`, `--mode` → `mode`).
+  (`--local` → `CLOUDFLARE_VITE_FORCE_LOCAL`); Vite-owned flags go
+  through inline config (`--port`/`--host` → `server.*`, `--mode` →
+  `mode`).
 - **`--local`** forces remote bindings off. There is no plugin env knob
   for `remoteBindings` other than `CLOUDFLARE_VITE_FORCE_LOCAL`, which
   `resolvePluginConfig` in `plugin-config.ts` honours by overriding the

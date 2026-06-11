@@ -1,12 +1,10 @@
 import { describe, it } from "vitest";
-import { ArgParseError, parseArgs } from "../args.js";
+import { ArgParseError, parseArgs } from "../../cf-wrangler/args";
 
-describe("parseArgs", () => {
+describe("cf-wrangler parseArgs", () => {
 	describe("happy paths", () => {
 		it("parses all flags in --flag value form", ({ expect }) => {
 			const out = parseArgs([
-				"--config",
-				"wrangler.jsonc",
 				"--mode",
 				"production",
 				"--port",
@@ -16,7 +14,6 @@ describe("parseArgs", () => {
 				"--local",
 			]);
 			expect(out).toEqual({
-				config: "wrangler.jsonc",
 				mode: "production",
 				port: 8788,
 				host: "example.com",
@@ -26,14 +23,12 @@ describe("parseArgs", () => {
 
 		it("parses all flags in --flag=value form", ({ expect }) => {
 			const out = parseArgs([
-				"--config=wrangler.jsonc",
 				"--mode=production",
 				"--port=8788",
 				"--host=example.com",
 				"--local",
 			]);
 			expect(out).toEqual({
-				config: "wrangler.jsonc",
 				mode: "production",
 				port: 8788,
 				host: "example.com",
@@ -48,7 +43,7 @@ describe("parseArgs", () => {
 		it("omits unset flags from the output", ({ expect }) => {
 			const out = parseArgs(["--port", "8788"]);
 			expect(out).toEqual({ port: 8788 });
-			expect(out.config).toBeUndefined();
+			expect(out.mode).toBeUndefined();
 			expect(out.local).toBeUndefined();
 		});
 
@@ -116,6 +111,14 @@ describe("parseArgs", () => {
 
 		it("rejects --env (must use --mode)", ({ expect }) => {
 			expect(() => parseArgs(["--env", "production"])).toThrow(
+				/Unknown option/
+			);
+		});
+
+		it("rejects --config (config comes from wrangler's discovery)", ({
+			expect,
+		}) => {
+			expect(() => parseArgs(["--config", "wrangler.jsonc"])).toThrow(
 				/Unknown option/
 			);
 		});

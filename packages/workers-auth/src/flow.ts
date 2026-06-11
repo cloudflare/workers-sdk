@@ -12,25 +12,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { rmSync } from "node:fs";
 import {
 	getCloudflareComplianceRegion,
 	UserError,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { getAuthConfigFilePath, writeAuthConfigFile } from "./auth-config-file";
 import { getOauthToken } from "./callback-server";
-import { getClientIdFromEnv, getRevokeUrlFromEnv } from "./env-vars";
-import {
-	generateAuthUrl as defaultGenerateAuthUrl,
-	OAUTH_CALLBACK_URL,
-} from "./generate-auth-url";
+import { getRevokeUrlFromEnv } from "./env-vars";
+import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
 import type { OAuthFlowContext } from "./context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
+
+/**
+ * Reason why {@link OAuthFlowAPI.loginOrRefreshIfRequired} could not
+ * authenticate the user.
+ */
+export type LoginOrRefreshFailureReason =
+	/** no stored credentials and the environment is non-interactive (CI, piped stdin, etc.) so a browser login cannot be started. */
+	| "no-credentials-non-interactive"
+	/** stored credentials and the interactive login attempt was unsuccessful (user cancelled, etc.). */
+	| "no-credentials-login-failed"
+	/** the stored token has expired, refresh failed, and the environment is non-interactive so a browser login cannot be started. */
+	| "token-expired-non-interactive"
+	/** the stored token has expired, refresh failed, and the interactive login attempt was unsuccessful. */
+	| "token-expired-login-failed";
+
+/**
+ * Discriminated union returned by {@link OAuthFlowAPI.loginOrRefreshIfRequired}.
+ *
+ * When `loggedIn` is `true` the caller can proceed. When `false`, `reason`
+ * describes why authentication failed so the caller can surface a
+ * targeted error message.
+ */
+export type LoginOrRefreshResult =
+	| { loggedIn: true }
+	| { loggedIn: false; reason: LoginOrRefreshFailureReason };
 
 /**
  * Options for an interactive OAuth login.
@@ -86,11 +106,12 @@ export interface OAuthFlowAPI {
 	 * Scopes are required in case an interactive login is triggered — the
 	 * consumer's scope catalog lives outside this package.
 	 *
-	 * @returns `true` when the user is logged in (or env credentials are
-	 * present), `false` when interactive login was needed but skipped (e.g.
-	 * non-interactive environment).
+	 * @returns `{ loggedIn: true }` when the user is authenticated (or env
+	 * credentials are present). When authentication fails, returns
+	 * `{ loggedIn: false, reason }` describing why — see
+	 * {@link LoginOrRefreshFailureReason}.
 	 */
-	loginOrRefreshIfRequired(props: LoginProps): Promise<boolean>;
+	loginOrRefreshIfRequired(props: LoginProps): Promise<LoginOrRefreshResult>;
 
 	/**
 	 * Read the OAuth access token from local state, refreshing it first if
@@ -131,6 +152,15 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,
 	};
 
+	const storage = ctx.storage;
+	const getClientId = () =>
+		typeof ctx.clientId === "function" ? ctx.clientId() : ctx.clientId;
+	const consent = ctx.consent;
+
+	const redirectUrl = new URL(ctx.redirectUri);
+	const defaultCallbackHost = redirectUrl.hostname;
+	const defaultCallbackPort = Number(redirectUrl.port);
+
 	async function login(props: LoginProps): Promise<boolean> {
 		if (ctx.hasEnvCredentials()) {
 			// Env credentials override any login details, so no point in allowing
@@ -166,25 +196,19 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			{
 				browser: props.browser ?? true,
 				scopes: props.scopes,
-				clientId: getClientIdFromEnv(),
-				denied: {
-					url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
-					error:
-						"Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
-						"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable",
-				},
-				granted: {
-					url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
-				},
-				callbackHost: props.callbackHost ?? "localhost",
-				callbackPort: props.callbackPort ?? 8976,
+				clientId: getClientId(),
+				redirectUri: ctx.redirectUri,
+				denied: consent.denied,
+				granted: consent.granted,
+				callbackHost: props.callbackHost ?? defaultCallbackHost,
+				callbackPort: props.callbackPort ?? defaultCallbackPort,
 			},
 			oauthFlowState,
 			ctx,
 			generators
 		);
 
-		writeAuthConfigFile({
+		storage.write({
 			oauth_token: oauth.token?.value ?? "",
 			expiration_time: oauth.token?.expiry,
 			refresh_token: oauth.refreshToken?.value,
@@ -202,7 +226,10 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		if (ctx.hasEnvCredentials()) {
 			return false;
 		}
-		const { accessToken } = readStoredAuthState({ warningLogger: ctx.logger });
+		const { accessToken } = readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage,
+		});
 		return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 	}
 
@@ -223,9 +250,11 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				scopes,
 			} = await exchangeRefreshTokenForAccessToken(
 				ctx.logger,
-				ctx.isNonInteractiveOrCI
+				ctx.isNonInteractiveOrCI,
+				getClientId(),
+				storage
 			);
-			writeAuthConfigFile({
+			storage.write({
 				oauth_token,
 				expiration_time,
 				refresh_token,
@@ -240,32 +269,54 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 	}
 
-	async function loginOrRefreshIfRequired(props: LoginProps): Promise<boolean> {
+	async function loginOrRefreshIfRequired(
+		props: LoginProps
+	): Promise<LoginOrRefreshResult> {
 		// If env credentials are present, the consumer's credential resolver
 		// will use those rather than the stored OAuth token, so we don't need
 		// to refresh or log in.
 		if (ctx.hasEnvCredentials()) {
-			return true;
+			return { loggedIn: true };
 		}
 		// TODO: ask permission before opening browser
-		const stored = readStoredAuthState({ warningLogger: ctx.logger });
+		const stored = readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage,
+		});
 		if (!stored.accessToken && !stored.deprecatedApiToken) {
 			// Not logged in.
 			// If we are not interactive, we cannot ask the user to login
-			return !ctx.isNonInteractiveOrCI() && (await login(props));
+			if (ctx.isNonInteractiveOrCI()) {
+				return {
+					loggedIn: false,
+					reason: "no-credentials-non-interactive",
+				};
+			}
+			if (await login(props)) {
+				return { loggedIn: true };
+			}
+			return { loggedIn: false, reason: "no-credentials-login-failed" };
 		} else if (isRefreshNeeded()) {
 			// We're logged in, but the refresh token seems to have expired,
 			// so let's try to refresh it
 			const didRefresh = await refreshToken();
 			if (didRefresh) {
 				// The token was refreshed, so we're done here
-				return true;
-			} else {
-				// If the refresh token isn't valid, then we ask the user to login again
-				return !ctx.isNonInteractiveOrCI() && (await login(props));
+				return { loggedIn: true };
 			}
+			// If the refresh token isn't valid, then we ask the user to login again
+			if (ctx.isNonInteractiveOrCI()) {
+				return {
+					loggedIn: false,
+					reason: "token-expired-non-interactive",
+				};
+			}
+			if (await login(props)) {
+				return { loggedIn: true };
+			}
+			return { loggedIn: false, reason: "token-expired-login-failed" };
 		} else {
-			return true;
+			return { loggedIn: true };
 		}
 	}
 
@@ -281,6 +332,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 		const storedRefreshToken = readStoredAuthState({
 			warningLogger: ctx.logger,
+			storage,
 		}).refreshToken;
 		if (!storedRefreshToken) {
 			ctx.logger.log("Not logged in, exiting...");
@@ -288,7 +340,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 
 		const body =
-			`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
+			`client_id=${encodeURIComponent(getClientId())}&` +
 			`token_type_hint=refresh_token&` +
 			`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
 
@@ -300,14 +352,14 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			},
 		});
 		await response.text(); // blank text? would be nice if it was something meaningful
-		rmSync(getAuthConfigFilePath());
+		storage.clear();
 		ctx.logger.log(`Successfully logged out.`);
 		ctx.purgeOnLoginOrLogout?.();
 	}
 
 	async function getOAuthTokenFromLocalState(): Promise<string | undefined> {
 		// Check if we have an OAuth token
-		let stored = readStoredAuthState({ warningLogger: ctx.logger });
+		let stored = readStoredAuthState({ warningLogger: ctx.logger, storage });
 		if (!stored.accessToken) {
 			return undefined;
 		}
@@ -325,7 +377,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				return undefined;
 			}
 			// Re-read after the refresh has persisted the new token to disk.
-			stored = readStoredAuthState({ warningLogger: ctx.logger });
+			stored = readStoredAuthState({ warningLogger: ctx.logger, storage });
 		}
 
 		return stored.accessToken?.value;
@@ -340,7 +392,3 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		refreshToken,
 	};
 }
-
-// Re-export the constant for callers that want to know about the redirect URI
-// without depending on `./generate-auth-url`.
-export { OAUTH_CALLBACK_URL };

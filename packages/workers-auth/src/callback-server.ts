@@ -32,6 +32,7 @@ export interface GetOauthTokenOptions {
 	browser: boolean;
 	scopes: string[];
 	clientId: string;
+	redirectUri: string;
 	denied: {
 		url: string;
 		error: string;
@@ -61,9 +62,16 @@ export async function getOauthToken(
 	const urlToOpen = await getAuthURL(
 		options.scopes,
 		options.clientId,
+		options.redirectUri,
 		state,
 		generators
 	);
+	// The path the local server must route the OAuth provider's redirect to is
+	// dictated by the registered `redirectUri` — not hardcoded. Without this,
+	// a consumer that registers e.g. `/my/callback` would have the provider
+	// redirect the browser there but the server would silently fall through
+	// with no response.
+	const callbackPath = new URL(options.redirectUri).pathname;
 	let server: http.Server;
 	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
 	const timerPromise = new Promise<AccessContext>((_, reject) => {
@@ -156,7 +164,7 @@ export async function getOauthToken(
 				return res.end("OK");
 			}
 			switch (pathname) {
-				case "/oauth/callback": {
+				case callbackPath: {
 					let hasAuthCode = false;
 					try {
 						hasAuthCode = isReturningFromAuthServer(query, state, ctx.logger);
@@ -207,7 +215,9 @@ export async function getOauthToken(
 						const exchange = await exchangeAuthCodeForAccessToken(
 							state,
 							ctx.logger,
-							ctx.isNonInteractiveOrCI
+							ctx.isNonInteractiveOrCI,
+							options.clientId,
+							options.redirectUri
 						);
 						res.writeHead(307, {
 							Location: options.granted.url,
@@ -237,12 +247,23 @@ export async function getOauthToken(
 			}
 		});
 
-		if (options.callbackHost !== "localhost" || options.callbackPort !== 8976) {
+		// Warn only when the local server listens somewhere other than where the
+		// OAuth provider will redirect to (the registered `redirectUri`) — e.g.
+		// a container forwarding a different host/port. When they match (the
+		// common case), there is nothing to forward and no warning is needed.
+		const redirect = new URL(options.redirectUri);
+		const redirectPort = Number(
+			redirect.port || (redirect.protocol === "https:" ? 443 : 80)
+		);
+		if (
+			redirect.hostname !== options.callbackHost ||
+			redirectPort !== options.callbackPort
+		) {
 			ctx.logger.log(
 				`Temporary login server listening on ${options.callbackHost}:${options.callbackPort}`
 			);
 			ctx.logger.log(
-				"Note that the OAuth login page will always redirect to `localhost:8976`.\n" +
+				`Note that the OAuth login page will always redirect to \`${options.redirectUri}\`.\n` +
 					"If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly."
 			);
 		}

@@ -27,6 +27,7 @@ import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import { IMAGES_PLUGIN_NAME } from "../images";
+import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
 import {
 	getUserBindingServiceName,
 	kUnsafeEphemeralUniqueKey,
@@ -1097,6 +1098,13 @@ export function getGlobalServices({
 			},
 		});
 	}
+	const r2PublicService = getR2PublicService(allWorkerOpts ?? []);
+	if (r2PublicService !== undefined) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_R2_PUBLIC,
+			service: { name: R2_PUBLIC_SERVICE_NAME },
+		});
+	}
 	const imagesBinding = allWorkerOpts
 		?.map((worker) => worker.images?.images)
 		.find(
@@ -1179,6 +1187,10 @@ export function getGlobalServices({
 			},
 		},
 	];
+
+	if (r2PublicService !== undefined) {
+		services.push(r2PublicService);
+	}
 
 	if (sharedOptions.unsafeLocalExplorer) {
 		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);

@@ -5,8 +5,8 @@ import {
 	getAuthConfigFilePath,
 	readAuthConfigFile,
 	writeAuthConfigFile,
-} from "../src/auth-config-file";
-import type { UserAuthConfig } from "../src/auth-config-file";
+} from "../user";
+import type { UserAuthConfig } from "../user";
 
 const SAMPLE_CONFIG: UserAuthConfig = {
 	oauth_token: "test-oauth-token",
