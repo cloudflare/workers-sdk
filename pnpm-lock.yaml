@@ -1886,6 +1886,9 @@ importers:
         specifier: catalog:default
         version: 7.24.8
     devDependencies:
+      '@cloudflare/config':
+        specifier: workspace:*
+        version: link:../config
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig

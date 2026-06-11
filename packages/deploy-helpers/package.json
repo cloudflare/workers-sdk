@@ -51,6 +51,7 @@
 		"undici": "catalog:default"
 	},
 	"devDependencies": {
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@types/command-exists": "^1.2.0",
