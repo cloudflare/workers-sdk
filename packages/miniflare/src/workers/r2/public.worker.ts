@@ -60,13 +60,14 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 		return c.body(null, 400);
 	}
 
+	// R2 honors Range on HEAD too (206 + Content-Range, no body)
 	const hasRange = rangeHeader !== undefined;
 	// `bucket.head()` cannot evaluate conditional headers (the R2 head
 	// operation only carries the key), so HEAD also uses `bucket.get()` and
 	// discards the body.
 	const object = await bucket.get(key, {
 		onlyIf: c.req.raw.headers,
-		range: hasRange && c.req.method === "GET" ? c.req.raw.headers : undefined,
+		range: hasRange ? c.req.raw.headers : undefined,
 	});
 
 	if (object === null) {
@@ -110,10 +111,7 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 		return c.body(null, { status: 304, headers });
 	}
 
-	if (c.req.method === "HEAD") {
-		headers.set("Content-Length", `${object.size}`);
-		return c.body(null, { headers });
-	}
+	const body = c.req.method === "HEAD" ? null : object.body;
 
 	const range = object.range;
 	if (
@@ -128,11 +126,11 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 			`bytes ${offset}-${offset + length - 1}/${object.size}`
 		);
 		headers.set("Content-Length", `${length}`);
-		return c.body(object.body, { status: 206, headers });
+		return new Response(body, { status: 206, headers });
 	}
 
 	headers.set("Content-Length", `${object.size}`);
-	return c.body(object.body, { headers });
+	return new Response(body, { headers });
 });
 
 app.all("/:bucketId/:key{.+}", (c) => c.body(null, 401));

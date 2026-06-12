@@ -118,6 +118,23 @@ test("GET supports range requests", async ({ expect }) => {
 	expect(res.headers.get("Content-Length")).toBe("4");
 });
 
+test("HEAD honors Range with a bodyless 206", async ({
+	expect,
+}) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("head-range-key", "0123456789");
+
+	const res = await fetch(bucketUrl("/head-range-key", ctx.url), {
+		method: "HEAD",
+		headers: { Range: "bytes=0-3" },
+	});
+
+	expect(res.status).toBe(206);
+	expect(res.headers.get("Content-Range")).toBe("bytes 0-3/10");
+	expect(res.headers.get("Content-Length")).toBe("4");
+	expect(await res.text()).toBe("");
+});
+
 test("HEAD returns headers without a body", async ({ expect }) => {
 	const r2 = await ctx.mf.getR2Bucket("BUCKET");
 	await r2.put("head-key", "abcdef", {
