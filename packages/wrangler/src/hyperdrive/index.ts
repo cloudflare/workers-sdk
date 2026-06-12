@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { UserError } from "@cloudflare/workers-utils";
 import { createNamespace } from "../core/create-command";
 import { MySqlSslmode, PostgresSslmode } from "./client";
@@ -238,12 +239,12 @@ export function getOriginFromArgs<
 	}
 
 	if (!allowPartialOrigin) {
-		if (!args.originScheme) {
-			throw new UserError(
-				"Missing required option --origin-scheme. Specify the database protocol, e.g. --origin-scheme=postgresql. Supported values: postgres, postgresql, mysql. Alternatively, use --connection-string to provide all origin details at once.",
-				{ telemetryMessage: "hyperdrive origin missing protocol" }
-			);
-		} else if (!args.database) {
+		// --origin-scheme always has a default value ("postgresql") when
+		// allowPartialOrigin is false (the create command), so this assertion
+		// should never fire. It narrows the type for downstream code.
+		assert(args.originScheme, "Expected --origin-scheme to be set");
+
+		if (!args.database) {
 			throw new UserError(
 				"Missing required option --database. Specify the name of the database on the origin server, e.g. --database=mydb. Alternatively, use --connection-string to provide all origin details at once.",
 				{
