@@ -7,10 +7,10 @@ type Env = Record<string, R2Bucket>;
 // Accept only a single range with start <= end; reject anything else
 // (including multiple ranges) with an endpoint-specific 400 rather than
 // ignoring it
-const RANGE_HEADER = /^bytes=(?:(\d+)-(\d+)?|-\d+)$/;
+const RANGE_HEADER = /^bytes=(?:(\d+)-(\d+)?|-(\d+))$/;
 
 type ParsedRangeHeader =
-	| { error: "malformed" | "inverted" }
+	| { error: "malformed" | "inverted" | "unsatisfiable" }
 	// `start` is undefined for suffix ranges (`bytes=-N`)
 	| { start?: number };
 
@@ -19,9 +19,11 @@ function parseRangeHeader(header: string): ParsedRangeHeader {
 	if (match === null) {
 		return { error: "malformed" };
 	}
-	const [, start, end] = match;
+	const [, start, end, suffix] = match;
 	if (start === undefined) {
-		return {};
+		// A zero suffix length (`bytes=-0`) is unsatisfiable for any object;
+		// the simulator would ignore the range and serve the full body
+		return Number(suffix) === 0 ? { error: "unsatisfiable" } : {};
 	}
 	if (end !== undefined && Number(start) > Number(end)) {
 		return { error: "inverted" };
@@ -54,10 +56,12 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 	}
 
 	// Reject malformed, multiple, and inverted ranges with 400 rather than
-	// ignoring them
+	// ignoring them, and zero-length suffix ranges (`bytes=-0`) with 416
 	const rangeHeader = c.req.header("Range");
-	if (rangeHeader !== undefined && "error" in parseRangeHeader(rangeHeader)) {
-		return c.body(null, 400);
+	const parsedRange =
+		rangeHeader === undefined ? undefined : parseRangeHeader(rangeHeader);
+	if (parsedRange !== undefined && "error" in parsedRange) {
+		return c.body(null, parsedRange.error === "unsatisfiable" ? 416 : 400);
 	}
 
 	// R2 honors Range on HEAD too (206 + Content-Range, no body)
@@ -115,6 +119,15 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 
 	const range = object.range;
 	if (hasRange && range !== undefined) {
+		// The simulator clamps out-of-bounds ranges and serves a zero-length
+		// range for empty objects; r2.dev rejects both with 416 (any range on a
+		// 0-byte object, or a range starting at or beyond the object size)
+		if (
+			object.size === 0 ||
+			(parsedRange?.start !== undefined && parsedRange.start >= object.size)
+		) {
+			return c.body(null, 416);
+		}
 		// The returned range may carry all keys with some `undefined` (e.g.
 		// `suffix` present but undefined on an offset range), so normalize by
 		// value rather than by key presence

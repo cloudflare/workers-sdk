@@ -207,6 +207,35 @@ test("rejects malformed and multiple ranges with 400", async ({
 	}
 });
 
+test("rejects unsatisfiable ranges with 416", async ({
+	expect,
+}) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("unsat-range-key", "0123456789");
+
+	const res = await fetch(bucketUrl("/unsat-range-key", ctx.url), {
+		headers: { Range: "bytes=99999-" },
+	});
+	expect(res.status).toBe(416);
+	await res.arrayBuffer();
+
+	// A zero suffix length is unsatisfiable for any object
+	const zeroSuffix = await fetch(bucketUrl("/unsat-range-key", ctx.url), {
+		headers: { Range: "bytes=-0" },
+	});
+	expect(zeroSuffix.status).toBe(416);
+	await zeroSuffix.arrayBuffer();
+
+	// Any range on a zero-length object is unsatisfiable, including a suffix
+	// range (which the simulator would otherwise serve as a zero-length 206)
+	await r2.put("empty-range-key", "");
+	const emptySuffix = await fetch(bucketUrl("/empty-range-key", ctx.url), {
+		headers: { Range: "bytes=-5" },
+	});
+	expect(emptySuffix.status).toBe(416);
+	await emptySuffix.arrayBuffer();
+});
+
 // The entry worker rejects /cdn-cgi/* requests from non-localhost origins
 // before they reach this worker, so cross-origin here means a different
 // localhost port (e.g. a frontend dev server).
