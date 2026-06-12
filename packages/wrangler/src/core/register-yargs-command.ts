@@ -318,7 +318,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 								force: false,
 								command: sanitizedCommand,
 								promptMessage: (agents) =>
-									`Before you go, Wrangler detected potential configurations for the following AI coding agents on your system likely without Cloudflare skills: ${agents.join(", ")}. Would you like Wrangler to automatically install the Cloudflare skills for you?`,
+									`Before you go, Wrangler detected AI coding agents that may not be best configured to work with Cloudflare: ${agents.join(", ")}. Would you like Wrangler to automatically install Cloudflare skills for the best experience?`,
 							});
 						} catch (skillsErr) {
 							logger.debug(
