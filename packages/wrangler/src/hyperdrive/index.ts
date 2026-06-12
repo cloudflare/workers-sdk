@@ -317,6 +317,11 @@ export function getOriginFromArgs<
 			host: args.originHost,
 			port: args.originPort,
 		};
+	} else if (!allowPartialOrigin) {
+		throw new UserError(
+			"Missing required network origin options. Provide the origin host and port via --origin-host and --origin-port, a Workers VPC Service ID via --service-id, or use --connection-string to provide all origin details at once.",
+			{ telemetryMessage: "hyperdrive origin missing network origin" }
+		);
 	}
 
 	const origin = {

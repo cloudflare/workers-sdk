@@ -1449,6 +1449,27 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
+	it("should throw an exception when creating a hyperdrive config without network origin options", async ({
+		expect,
+	}) => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --database=mydb --origin-user=newuser --origin-password=mypassword"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required network origin options. Provide the origin host and port via --origin-host and --origin-port, a Workers VPC Service ID via --service-id, or use --connection-string to provide all origin details at once.[0m
+
+			"
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			"
+		`);
+	});
+
 	it("should throw an exception when updating a hyperdrive config's origin but not all fields are set", async ({
 		expect,
 	}) => {
