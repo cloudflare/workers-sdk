@@ -523,6 +523,17 @@ async function verifyPresigned(
 	);
 }
 
+/** Whether the request carries either SigV4 authentication method */
+export function hasAuthentication(
+	request: Request,
+	params: URLSearchParams
+): boolean {
+	return (
+		request.headers.get("Authorization") !== null ||
+		params.has("X-Amz-Credential")
+	);
+}
+
 /**
  * Verifies a request against AWS Signature Version 4, returning an R2-style
  * XML error `Response` on failure, or `undefined` if authentication succeeds.

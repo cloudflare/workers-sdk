@@ -20,8 +20,8 @@ app.use(
 	})
 );
 
-app.all("/:bucketId/:key{.+}", (c) => dispatch(c));
-app.all("/:bucketId", (c) => dispatch(c));
+app.all("/:bucketId/:key{.+}", (c) => dispatch(c, c.req.param("key")));
+app.all("/:bucketId", (c) => dispatch(c, undefined));
 app.all("/", (c) => stripBodyForHead(c, routeNotFound()));
 
 export default app;

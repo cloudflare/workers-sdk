@@ -1,6 +1,8 @@
 import { Sha256 } from "@aws-crypto/sha256-js";
 import {
 	GetObjectCommand,
+	ListMultipartUploadsCommand,
+	ListPartsCommand,
 	S3Client,
 	S3ServiceException,
 } from "@aws-sdk/client-s3";
@@ -74,6 +76,9 @@ async function expectSdkError(
 	return error;
 }
 
+function bucket() {
+	return ctx.mf.getR2Bucket("BUCKET");
+}
 function toAmzDate(date: Date): string {
 	return date
 		.toISOString()
@@ -305,6 +310,14 @@ test("reports credential scope errors like R2", async ({ expect }) => {
 	await expectError(noHost, 401, "Unauthorized", expect);
 });
 
+test("rejects x-amz-security-token", async ({ expect }) => {
+	const res = await s3Fetch("bucket/key.txt", {
+		headers: { "x-amz-security-token": "bogus" },
+	});
+	expect(res.status).toBe(400);
+	expect(await res.text()).toContain("<Message>X-Amz-Security-Token</Message>");
+});
+
 test("rejects an empty X-Amz-Expires as not a number", async ({ expect }) => {
 	const url = s3Url("bucket/key.txt");
 	url.search = new URLSearchParams({
@@ -392,6 +405,144 @@ test("returns NoSuchBucket for an unknown bucket id", async ({ expect }) => {
 	const head = await s3Fetch("not-a-bucket/key.txt", { method: "HEAD" });
 	expect(head.status).toBe(404);
 	expect(await head.text()).toBe("");
+});
+
+test("unimplemented multipart surfaces respond with NotImplemented", async ({
+	expect,
+}) => {
+	const client = s3();
+	await expectSdkError(
+		client.send(new ListMultipartUploadsCommand({ Bucket: "bucket" })),
+		501,
+		"NotImplemented",
+		expect
+	);
+
+	await expectSdkError(
+		client.send(
+			new ListPartsCommand({
+				Bucket: "bucket",
+				Key: "mp/x.bin",
+				UploadId: "any",
+			})
+		),
+		501,
+		"NotImplemented",
+		expect
+	);
+
+	const r2 = await bucket();
+	await r2.put("mp/pn.txt", "x");
+	await expectSdkError(
+		client.send(
+			new GetObjectCommand({
+				Bucket: "bucket",
+				Key: "mp/pn.txt",
+				PartNumber: 1,
+			})
+		),
+		501,
+		"NotImplemented",
+		expect
+	);
+});
+
+// ## Recognized-but-unimplemented surfaces (messages match real R2)
+
+test("bucket subresource GETs return R2's templated errors", async ({
+	expect,
+}) => {
+	const policy = await s3Fetch("bucket?policy");
+	expect(policy.status).toBe(501);
+	expect(await policy.text()).toContain(
+		"<Message>GetBucketPolicy not implemented</Message>"
+	);
+
+	const versions = await s3Fetch("bucket?versions");
+	expect(versions.status).toBe(501);
+	expect(await versions.text()).toContain(
+		"<Message>ListObjectVersions not implemented</Message>"
+	);
+
+	const tiering = await s3Fetch("bucket?intelligent-tiering");
+	expect(tiering.status).toBe(501);
+	expect(await tiering.text()).toContain(
+		"<Message>GetBucketIntelligentTieringConfiguration not implemented</Message>"
+	);
+
+	const policyStatus = await s3Fetch("bucket?policyStatus");
+	expect(policyStatus.status).toBe(501);
+	expect(await policyStatus.text()).toContain(
+		"<Message>GetGetBucketPolicyStatus not implemented</Message>"
+	);
+});
+
+test("unroutable requests match R2's responses", async ({ expect }) => {
+	const patch = await s3Fetch("bucket/x.txt", { method: "PATCH" });
+	expect(patch.status).toBe(404);
+	expect(await patch.text()).toContain(
+		"<Code>RouteNotFound</Code><Message>No route matches this url.</Message>"
+	);
+
+	// R2 responds 200 to a plain *signed* bucket-level POST
+	const post = await s3Fetch("bucket", { method: "POST" });
+	expect(post.status).toBe(200);
+	expect(await post.text()).toBe("");
+
+	// An unsigned bucket-level POST is an attempted browser form upload
+	// (AWS's POST Object, with auth in the form fields); R2 recognizes the
+	// shape but does not implement it, with a doubled "not implemented"
+	// (theirs, verbatim)
+	const form = new FormData();
+	form.set("key", "form.txt");
+	const unsignedPost = await fetch(s3Url("bucket"), {
+		method: "POST",
+		body: form,
+	});
+	expect(unsignedPost.status).toBe(501);
+	expect(await unsignedPost.text()).toContain(
+		"<Message>Presigned post requests are not yet implemented not implemented</Message>"
+	);
+
+	// CreateBucket is meaningless locally (buckets come from config)
+	const put = await s3Fetch("bucket", { method: "PUT" });
+	expect(put.status).toBe(501);
+	expect(await put.text()).toContain(
+		"<Message>CreateBucket not implemented</Message>"
+	);
+});
+
+test("bucket-level PUT/DELETE subresources match real R2's routing", async ({
+	expect,
+}) => {
+	// A recognized subresource wins, in any position
+	const putTagging = await s3Fetch("bucket?junk&tagging", { method: "PUT" });
+	expect(putTagging.status).toBe(501);
+	expect(await putTagging.text()).toContain(
+		"<Message>PutBucketTagging not implemented</Message>"
+	);
+
+	const deletePolicy = await s3Fetch("bucket?policy", { method: "DELETE" });
+	expect(deletePolicy.status).toBe(501);
+	expect(await deletePolicy.text()).toContain(
+		"<Message>DeleteBucketPolicy not implemented</Message>"
+	);
+
+	// Subresources for other methods and unknown params are all rejected
+	// together with R2's bucket-route error
+	const deleteVersioning = await s3Fetch("bucket?versioning&junk", {
+		method: "DELETE",
+	});
+	expect(deleteVersioning.status).toBe(400);
+	expect(await deleteVersioning.text()).toContain(
+		"<Message>Unsupported search param(s) &quot;versioning&quot;, &quot;junk&quot; on a DELETE bucket route</Message>"
+	);
+
+	const putJunk = await s3Fetch("bucket?junk", { method: "PUT" });
+	expect(putJunk.status).toBe(400);
+	expect(await putJunk.text()).toContain(
+		"<Message>Unsupported search param(s) &quot;junk&quot; on a PUT bucket route</Message>"
+	);
 });
 
 // Unlike real R2 (which only answers preflights according to the bucket's
