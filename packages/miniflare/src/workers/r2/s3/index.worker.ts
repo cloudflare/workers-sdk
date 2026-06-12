@@ -5,9 +5,8 @@
 import { cors } from "hono/cors";
 import { Hono } from "hono/tiny";
 import { CorePaths } from "../../core/constants";
-import { stripBodyForHead } from "./common.worker";
+import { listBuckets } from "./account.worker";
 import { dispatch } from "./dispatch.worker";
-import { routeNotFound } from "./errors.worker";
 import type { Env } from "./common.worker";
 
 const app = new Hono<{ Bindings: Env }>().basePath(CorePaths.R2_S3);
@@ -22,6 +21,6 @@ app.use(
 
 app.all("/:bucketId/:key{.+}", (c) => dispatch(c, c.req.param("key")));
 app.all("/:bucketId", (c) => dispatch(c, undefined));
-app.all("/", (c) => stripBodyForHead(c, routeNotFound()));
+app.all("/", (c) => listBuckets(c));
 
 export default app;

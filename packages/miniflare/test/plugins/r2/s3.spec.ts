@@ -14,6 +14,7 @@ import {
 	HeadBucketCommand,
 	HeadObjectCommand,
 	ListMultipartUploadsCommand,
+	ListBucketsCommand,
 	ListObjectsCommand,
 	ListObjectsV2Command,
 	ListPartsCommand,
@@ -1957,6 +1958,40 @@ test("static bucket-configuration reads match real R2", async ({ expect }) => {
 	const cors = await s3Fetch("bucket?cors");
 	expect(cors.status).toBe(501);
 	expect(await cors.text()).toContain("GetBucketCors not implemented");
+});
+
+test("ListBuckets lists buckets for the presented credentials", async ({
+	expect,
+}) => {
+	const res = await s3().send(new ListBucketsCommand({}));
+	expect(res.Buckets?.map((bucket) => bucket.Name)).toEqual([
+		"bucket",
+		"other-bucket",
+	]);
+
+	const third = await s3({ credentials: THIRD_CREDENTIALS }).send(
+		new ListBucketsCommand({})
+	);
+	expect(third.Buckets?.map((bucket) => bucket.Name)).toEqual(["third-bucket"]);
+
+	await expectSdkError(
+		s3({
+			credentials: { ...CREDENTIALS, secretAccessKey: "wrong" },
+		}).send(new ListBucketsCommand({})),
+		403,
+		"SignatureDoesNotMatch",
+		expect
+	);
+
+	const unknownParam = await s3Fetch("?foobar=1");
+	expect(unknownParam.status).toBe(501);
+	expect(await unknownParam.text()).toContain(
+		"<Message>ListBuckets search parameter foobar not implemented</Message>"
+	);
+
+	// Only GET is routable at the account level
+	const post = await s3Fetch("", { method: "POST" });
+	await expectError(post, 404, "RouteNotFound", expect);
 });
 
 test("V1 lists reject continuation-token with R2's bespoke error", async ({
