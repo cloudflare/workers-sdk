@@ -168,7 +168,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				}
 			}
 
-			await def.validateArgs?.(args);
+			await def.validateArgs?.(args, def);
 
 			const shouldPrintResourceLocation =
 				typeof def.behaviour?.printResourceLocation === "function"

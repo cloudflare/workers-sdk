@@ -30,15 +30,19 @@ const listFormatter = new Intl.ListFormat("en-US");
  * via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
  *
  * @param options - The option names to demand exactly one of
- * @returns A validation function that checks the argv object. The returned function
- *   accepts an optional `positionalArgs` set to distinguish positional arguments
+ * @param def - Optional command definition used to distinguish positional arguments
  *   from flags in error messages (positional args are shown as `<name>` instead of `--name`).
+ * @returns A validation function that checks the argv object
  */
-export function demandOneOfOption(...options: string[]) {
-	return function (
-		argv: { [key: string]: unknown },
-		positionalArgs?: ReadonlySet<string>
-	) {
+export function demandOneOfOption(
+	options: string[],
+	def?: { positionalArgs?: ReadonlyArray<string> }
+) {
+	const positionalArgs = def?.positionalArgs
+		? new Set(def.positionalArgs)
+		: undefined;
+
+	return function (argv: { [key: string]: unknown }) {
 		const count = options.filter((option) => argv[option]).length;
 		const flagList = listFormatter.format(
 			options.map((o) => formatArgName(o, positionalArgs))

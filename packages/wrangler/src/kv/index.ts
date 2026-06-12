@@ -491,9 +491,9 @@ export const kvKeyPutCommand = createCommand({
 		},
 		...putCommonArgs,
 	},
-	validateArgs(args) {
-		demandOneOfOption("binding", "namespace-id")(args);
-		demandOneOfOption("value", "path")(args, new Set(["value"]));
+	validateArgs(args, def) {
+		demandOneOfOption(["binding", "namespace-id"])(args);
+		demandOneOfOption(["value", "path"], def)(args);
 	},
 
 	async handler({ key, ttl, expiration, metadata, ...args }) {
@@ -606,7 +606,7 @@ export const kvKeyListCommand = createCommand({
 		},
 	},
 	validateArgs(args) {
-		demandOneOfOption("binding", "namespace-id")(args);
+		demandOneOfOption(["binding", "namespace-id"])(args);
 	},
 
 	async handler({ prefix, ...args }) {
@@ -706,7 +706,7 @@ export const kvKeyGetCommand = createCommand({
 		...getCommonArgs,
 	},
 	validateArgs(args) {
-		demandOneOfOption("binding", "namespace-id")(args);
+		demandOneOfOption(["binding", "namespace-id"])(args);
 	},
 	async handler({ key, ...args }) {
 		const localMode = isLocal(args);
