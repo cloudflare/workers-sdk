@@ -11,7 +11,9 @@ export type BucketOperation =
 	| "GetBucketVersioning"
 	| "GetBucketTagging"
 	| "GetObjectLockConfiguration"
-	| "GetBucketReplication";
+	| "GetBucketReplication"
+	| "ListObjects"
+	| "ListObjectsV2";
 
 export type ObjectOperation =
 	| "GetObject"
@@ -129,8 +131,61 @@ const BUCKET_GET_STATIC: Partial<Record<string, BucketOperation>> = {
 	replication: "GetBucketReplication",
 };
 
+/**
+ * Query parameters R2 accepts on list requests. Reject anything else
+ * (excluding presign parameters and the SDK's x-id) with R2's
+ * "search parameter" error.
+ */
+const LIST_OBJECTS_PARAMS = new Set([
+	"prefix",
+	"delimiter",
+	"marker",
+	"max-keys",
+	"encoding-type",
+]);
+const LIST_OBJECTS_V2_PARAMS = new Set([
+	"list-type",
+	"prefix",
+	"delimiter",
+	"continuation-token",
+	"start-after",
+	"max-keys",
+	"encoding-type",
+	"fetch-owner",
+]);
+
 export function isScreenedParam(name: string): boolean {
 	return name.startsWith("X-Amz-") || name === "x-id";
+}
+
+function detectListOperation(
+	params: URLSearchParams
+): BucketOperation | Response {
+	const listType = params.get("list-type");
+	if (listType !== null && listType !== "2") {
+		return notImplementedOperation(`ListObjectsV${listType}`);
+	}
+
+	const v2 = listType === "2";
+	// Reject V2-only pagination on V1
+	if (!v2 && params.has("continuation-token")) {
+		return errorResponse(
+			400,
+			"InvalidArgument",
+			"continuation-token not supported in ListObjects"
+		);
+	}
+
+	const allowed = v2 ? LIST_OBJECTS_V2_PARAMS : LIST_OBJECTS_PARAMS;
+	for (const name of params.keys()) {
+		if (!allowed.has(name) && !isScreenedParam(name)) {
+			return notImplemented(
+				`ListObjectsV${v2 ? "2" : "1"} search parameter ${name} not implemented`
+			);
+		}
+	}
+
+	return v2 ? "ListObjectsV2" : "ListObjects";
 }
 
 /**
@@ -172,7 +227,7 @@ function detectBucketMutation(
 export function detectBucketOperation(
 	method: string,
 	params: URLSearchParams
-): BucketOperation | Response | undefined {
+): BucketOperation | Response {
 	switch (method) {
 		case "HEAD":
 			return "HeadBucket";
@@ -227,7 +282,7 @@ export function detectBucketOperation(
 				}
 			}
 
-			return undefined;
+			return detectListOperation(params);
 		}
 		default:
 			return routeNotFound();

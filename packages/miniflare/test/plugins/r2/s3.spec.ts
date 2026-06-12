@@ -9,6 +9,8 @@ import {
 	HeadBucketCommand,
 	HeadObjectCommand,
 	ListMultipartUploadsCommand,
+	ListObjectsCommand,
+	ListObjectsV2Command,
 	ListPartsCommand,
 	PutObjectCommand,
 	S3Client,
@@ -944,6 +946,130 @@ test("SSE-C reads get InvalidRequest, writes get NotImplemented", async ({
 	);
 });
 
+async function seedListKeys() {
+	const r2 = await bucket();
+	await r2.put("ls/a.txt", "aaa");
+	await r2.put("ls/b.txt", "bbbb");
+	await r2.put("ls/sub/c.txt", "cc");
+}
+
+test("ListObjectsV2 lists with prefix and KeyCount", async ({ expect }) => {
+	await seedListKeys();
+	const res = await s3().send(
+		new ListObjectsV2Command({ Bucket: "bucket", Prefix: "ls/" })
+	);
+	expect(res.Name).toBe("bucket");
+	expect(res.KeyCount).toBe(3);
+	expect(res.IsTruncated).toBe(false);
+	expect(res.Contents?.map((object) => object.Key)).toEqual([
+		"ls/a.txt",
+		"ls/b.txt",
+		"ls/sub/c.txt",
+	]);
+	expect(res.Contents?.[0]?.Size).toBe(3);
+	expect(res.Contents?.[0]?.StorageClass).toBe("STANDARD");
+});
+
+test("ListObjectsV2 groups keys with a delimiter", async ({ expect }) => {
+	await seedListKeys();
+	const res = await s3().send(
+		new ListObjectsV2Command({
+			Bucket: "bucket",
+			Prefix: "ls/",
+			Delimiter: "/",
+		})
+	);
+	expect(res.Contents?.map((object) => object.Key)).toEqual([
+		"ls/a.txt",
+		"ls/b.txt",
+	]);
+	expect(res.CommonPrefixes).toEqual([{ Prefix: "ls/sub/" }]);
+});
+
+test("ListObjectsV2 paginates with continuation tokens", async ({ expect }) => {
+	await seedListKeys();
+	const client = s3();
+	const first = await client.send(
+		new ListObjectsV2Command({ Bucket: "bucket", Prefix: "ls/", MaxKeys: 2 })
+	);
+	expect(first.IsTruncated).toBe(true);
+	assert(first.NextContinuationToken !== undefined);
+
+	const second = await client.send(
+		new ListObjectsV2Command({
+			Bucket: "bucket",
+			Prefix: "ls/",
+			MaxKeys: 2,
+			ContinuationToken: first.NextContinuationToken,
+		})
+	);
+	expect(second.Contents?.map((object) => object.Key)).toEqual([
+		"ls/sub/c.txt",
+	]);
+	expect(second.IsTruncated).toBe(false);
+});
+
+test("ListObjectsV2 honors start-after", async ({ expect }) => {
+	await seedListKeys();
+	const res = await s3().send(
+		new ListObjectsV2Command({
+			Bucket: "bucket",
+			Prefix: "ls/",
+			StartAfter: "ls/b.txt",
+		})
+	);
+	expect(res.Contents?.map((object) => object.Key)).toEqual(["ls/sub/c.txt"]);
+});
+
+test("ListObjects (V1) supports Marker", async ({ expect }) => {
+	await seedListKeys();
+	const res = await s3().send(
+		new ListObjectsCommand({
+			Bucket: "bucket",
+			Prefix: "ls/",
+			Marker: "ls/a.txt",
+		})
+	);
+	expect(res.Marker).toBe("ls/a.txt");
+	expect(res.Contents?.map((object) => object.Key)).toEqual([
+		"ls/b.txt",
+		"ls/sub/c.txt",
+	]);
+});
+
+test("ListObjects (V1) NextMarker can be a CommonPrefix", async ({
+	expect,
+}) => {
+	const r2 = await bucket();
+	await r2.put("nm/a.txt", "a");
+	await r2.put("nm/sub/c.txt", "c");
+	await r2.put("nm/z.txt", "z");
+
+	const res = await s3().send(
+		new ListObjectsCommand({
+			Bucket: "bucket",
+			Prefix: "nm/",
+			Delimiter: "/",
+			MaxKeys: 2,
+		})
+	);
+	expect(res.IsTruncated).toBe(true);
+	expect(res.Contents?.map((object) => object.Key)).toEqual(["nm/a.txt"]);
+	expect(res.CommonPrefixes?.map((p) => p.Prefix)).toEqual(["nm/sub/"]);
+	expect(res.NextMarker).toBe("nm/sub/");
+});
+
+test("encoding-type=url encodes keys", async ({ expect }) => {
+	await seedListKeys();
+	const res = await s3Fetch(
+		"bucket?list-type=2&prefix=ls/sub&encoding-type=url"
+	);
+	const text = await res.text();
+	expect(text).toContain("<Key>ls%2Fsub%2Fc.txt</Key>");
+	expect(text).toContain("<Prefix>ls%2Fsub</Prefix>");
+	expect(text).toContain("<EncodingType>url</EncodingType>");
+});
+
 test("unimplemented multipart surfaces respond with NotImplemented", async ({
 	expect,
 }) => {
@@ -1038,6 +1164,26 @@ test("bucket subresource GETs return R2's templated errors", async ({
 	expect(policyStatus.status).toBe(501);
 	expect(await policyStatus.text()).toContain(
 		"<Message>GetGetBucketPolicyStatus not implemented</Message>"
+	);
+});
+
+test("lists reject unknown search parameters like R2", async ({ expect }) => {
+	const v1 = await s3Fetch("bucket?foobar=1");
+	expect(v1.status).toBe(501);
+	expect(await v1.text()).toContain(
+		"<Message>ListObjectsV1 search parameter foobar not implemented</Message>"
+	);
+
+	const v2 = await s3Fetch("bucket?list-type=2&foobar=1");
+	expect(v2.status).toBe(501);
+	expect(await v2.text()).toContain(
+		"<Message>ListObjectsV2 search parameter foobar not implemented</Message>"
+	);
+
+	const v3 = await s3Fetch("bucket?list-type=3");
+	expect(v3.status).toBe(501);
+	expect(await v3.text()).toContain(
+		"<Message>ListObjectsV3 not implemented</Message>"
 	);
 });
 
@@ -1164,6 +1310,49 @@ test("static bucket-configuration reads match real R2", async ({ expect }) => {
 	const cors = await s3Fetch("bucket?cors");
 	expect(cors.status).toBe(501);
 	expect(await cors.text()).toContain("GetBucketCors not implemented");
+});
+
+test("V1 lists reject continuation-token with R2's bespoke error", async ({
+	expect,
+}) => {
+	const res = await s3Fetch("bucket?continuation-token=x");
+	expect(res.status).toBe(400);
+	expect(await res.text()).toContain(
+		"<Message>continuation-token not supported in ListObjects</Message>"
+	);
+});
+
+test("list edge cases match real R2", async ({ expect }) => {
+	await seedListKeys();
+
+	// max-keys=0 reports IsTruncated based on whether matching keys exist
+	const zero = await s3Fetch("bucket?prefix=ls/&max-keys=0");
+	const zeroText = await zero.text();
+	expect(zeroText).toContain("<IsTruncated>true</IsTruncated>");
+	expect(zeroText).toContain("<MaxKeys>0</MaxKeys>");
+	expect(zeroText).not.toContain("<Contents>");
+
+	// fractional values are floored
+	const fractional = await s3Fetch("bucket?prefix=ls/&max-keys=1.5");
+	expect(await fractional.text()).toContain("<MaxKeys>1</MaxKeys>");
+
+	const emptyMaxKeys = await s3Fetch("bucket?max-keys=");
+	await expectError(emptyMaxKeys, 400, "InvalidMaxKeys", expect);
+
+	const nonFinite = await s3Fetch("bucket?max-keys=Infinity");
+	await expectError(nonFinite, 400, "InvalidMaxKeys", expect);
+
+	const invalid = await s3Fetch("bucket?max-keys=abc");
+	expect(invalid.status).toBe(400);
+	expect(await invalid.text()).toContain(
+		"<Code>InvalidMaxKeys</Code><Message>MaxKeys params must be positive integer &lt;= 1000.</Message>"
+	);
+
+	const encoding = await s3Fetch("bucket?encoding-type=weird");
+	expect(encoding.status).toBe(501);
+	expect(await encoding.text()).toContain(
+		"Unrecognized encoding-type &quot;weird&quot; not implemented"
+	);
 });
 
 // Unlike real R2 (which only answers preflights according to the bucket's

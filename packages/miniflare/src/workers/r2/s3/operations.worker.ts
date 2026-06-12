@@ -1,6 +1,7 @@
 import { parseRangeHeader, serveR2Object } from "../serve.worker";
-import { hex, xmlResponse } from "./common.worker";
-import { errorResponse } from "./errors.worker";
+import { awsUriEncode } from "./auth.worker";
+import { hex, MAX_LIST_KEYS, xmlResponse } from "./common.worker";
+import { errorResponse, notImplemented } from "./errors.worker";
 import type { S3Context } from "./common.worker";
 import type { BucketOperation, ObjectOperation } from "./detect.worker";
 import type { Awaitable } from "miniflare:shared";
@@ -21,6 +22,12 @@ const PRECONDITION_FAILED: S3Error = {
 	code: "PreconditionFailed",
 	message: "At least one of the pre-conditions you specified did not hold.",
 };
+const NO_SUCH_UPLOAD: S3Error = {
+	status: 404,
+	code: "NoSuchUpload",
+	message: "The specified multipart upload does not exist.",
+};
+
 const s3Error = (error: S3Error) =>
 	errorResponse(error.status, error.code, error.message);
 
@@ -34,6 +41,56 @@ const notImplementedHeader = (name: string, value: string) =>
 		"NotImplemented",
 		`Header '${name}' with value '${value}' not implemented`
 	);
+
+/**
+ * R2 binding errors carry a stable v4 error code in their message (e.g.
+ * "completeMultipartUpload: The specified multipart upload does not exist.
+ * (10024)"); map those onto the S3 error responses real R2 returns.
+ */
+const BINDING_ERRORS: Partial<Record<number, S3Error>> = {
+	// NO_SUCH_OBJECT_KEY
+	10007: NO_SUCH_KEY,
+	// ENTITY_TOO_SMALL
+	10011: {
+		status: 400,
+		code: "EntityTooSmall",
+		message:
+			"Your proposed upload is smaller than the minimum allowed object size.",
+	},
+	// NO_SUCH_UPLOAD
+	10024: NO_SUCH_UPLOAD,
+	// INVALID_PART
+	10025: {
+		status: 400,
+		code: "InvalidPart",
+		message: "One or more of the specified parts could not be found.",
+	},
+	// PRECONDITION_FAILED
+	10031: PRECONDITION_FAILED,
+	// INVALID_RANGE
+	10039: {
+		status: 416,
+		code: "InvalidRange",
+		message: "The requested range is not satisfiable",
+	},
+};
+
+/**
+ * Parsing the message is the only option: workerd deliberately throws plain
+ * Errors formatted as "<action>: <message> (<v4Code>)"; its structured
+ * R2Error type is disabled (r2-rpc.c++, "all we can send back to the user
+ * is a message").
+ */
+function bindingError(e: unknown): Response {
+	const message = e instanceof Error ? e.message : String(e);
+	const v4Code = /\((\d+)\)$/.exec(message);
+	const known = v4Code === null ? undefined : BINDING_ERRORS[Number(v4Code[1])];
+	if (known !== undefined) {
+		return s3Error(known);
+	}
+
+	return errorResponse(500, "InternalError", message);
+}
 
 const BUCKET_OWNER = ["x-amz-expected-bucket-owner"];
 const MFA_AND_LOCK_BYPASS = ["x-amz-mfa", "x-amz-bypass-governance-retention"];
@@ -330,6 +387,129 @@ function serveObject(
 	);
 }
 
+async function listObjects(
+	params: URLSearchParams,
+	bucket: R2Bucket,
+	bucketId: string,
+	v2: boolean
+): Promise<Response> {
+	const encodingType = params.get("encoding-type");
+	if (encodingType !== null && encodingType !== "url") {
+		return notImplemented(
+			`Unrecognized encoding-type "${encodingType}" not implemented`
+		);
+	}
+
+	const encode = (value: string) =>
+		encodingType === "url" ? awsUriEncode(value) : value;
+
+	// R2 floors fractional values and allows 0 and values above the limit
+	// (clamping the effective page size but echoing the requested MaxKeys)
+	let maxKeys = MAX_LIST_KEYS;
+	const maxKeysParam = params.get("max-keys");
+	if (maxKeysParam !== null) {
+		// `Number("")` is 0, but R2 rejects an empty max-keys
+		const value =
+			maxKeysParam.trim() === "" ? Number.NaN : Number(maxKeysParam);
+		if (!Number.isFinite(value) || value < 0) {
+			return errorResponse(
+				400,
+				"InvalidMaxKeys",
+				"MaxKeys params must be positive integer <= 1000."
+			);
+		}
+
+		maxKeys = Math.floor(value);
+	}
+	const limit = Math.min(maxKeys, MAX_LIST_KEYS);
+
+	const prefix = params.get("prefix") ?? "";
+	const delimiter = params.get("delimiter") ?? undefined;
+	const marker = v2 ? undefined : (params.get("marker") ?? undefined);
+	const startAfter = v2 ? (params.get("start-after") ?? undefined) : marker;
+	const continuationToken = v2
+		? (params.get("continuation-token") ?? undefined)
+		: undefined;
+
+	let objects: R2Object[] = [];
+	let delimitedPrefixes: string[] = [];
+	let truncated = false;
+	let cursor: string | undefined;
+	let result;
+	try {
+		result = await bucket.list({
+			prefix,
+			delimiter,
+			// For max-keys=0, list one key anyway: R2 reports IsTruncated based
+			// on whether any matching keys exist
+			limit: Math.max(limit, 1),
+			startAfter,
+			cursor: continuationToken,
+		});
+	} catch (e) {
+		return bindingError(e);
+	}
+
+	if (limit === 0) {
+		truncated =
+			result.objects.length > 0 || result.delimitedPrefixes.length > 0;
+	} else {
+		objects = result.objects;
+		delimitedPrefixes = result.delimitedPrefixes;
+		truncated = result.truncated;
+		cursor = result.truncated ? result.cursor : undefined;
+	}
+
+	const contents = objects.map((object) => ({
+		Key: encode(object.key),
+		Size: object.size,
+		LastModified: object.uploaded.toISOString(),
+		ETag: object.httpEtag,
+		// The local simulator does not store storage classes
+		StorageClass: "STANDARD",
+	}));
+	const commonPrefixes = delimitedPrefixes.map((value) => ({
+		Prefix: encode(value),
+	}));
+	// NextMarker is the lexicographically last returned item, which can be a
+	// CommonPrefix (prefixes sort after the keys they group)
+	const lastObjectKey = objects[objects.length - 1]?.key;
+	const lastPrefix = delimitedPrefixes[delimitedPrefixes.length - 1];
+	const lastKey =
+		lastPrefix !== undefined &&
+		(lastObjectKey === undefined || lastPrefix > lastObjectKey)
+			? lastPrefix
+			: lastObjectKey;
+
+	return xmlResponse("ListBucketResult", {
+		Name: bucketId,
+		...(contents.length > 0 ? { Contents: contents } : {}),
+		IsTruncated: truncated,
+		...(commonPrefixes.length > 0 ? { CommonPrefixes: commonPrefixes } : {}),
+		Prefix: encode(prefix),
+		...(delimiter !== undefined ? { Delimiter: encode(delimiter) } : {}),
+		...(v2
+			? {
+					...(startAfter !== undefined
+						? { StartAfter: encode(startAfter) }
+						: {}),
+					...(continuationToken !== undefined
+						? { ContinuationToken: continuationToken }
+						: {}),
+					...(cursor !== undefined ? { NextContinuationToken: cursor } : {}),
+				}
+			: {
+					Marker: encode(marker ?? ""),
+					...(truncated && lastKey !== undefined
+						? { NextMarker: encode(lastKey) }
+						: {}),
+				}),
+		MaxKeys: maxKeys,
+		...(v2 ? { KeyCount: contents.length + commonPrefixes.length } : {}),
+		...(encodingType !== null ? { EncodingType: encodingType } : {}),
+	});
+}
+
 export const OBJECT_OPERATIONS: Record<
 	ObjectOperation,
 	OperationDefinition<ObjectOperationContext> & ScreeningRules
@@ -437,5 +617,15 @@ export const BUCKET_OPERATIONS: Record<
 				"ReplicationConfigurationNotFoundError",
 				"The replication configuration was not found."
 			),
+	},
+	ListObjects: {
+		unsupportedHeaders: BUCKET_OWNER,
+		handle: ({ params, bucket, bucketId }) =>
+			listObjects(params, bucket, bucketId, false),
+	},
+	ListObjectsV2: {
+		unsupportedHeaders: BUCKET_OWNER,
+		handle: ({ params, bucket, bucketId }) =>
+			listObjects(params, bucket, bucketId, true),
 	},
 };

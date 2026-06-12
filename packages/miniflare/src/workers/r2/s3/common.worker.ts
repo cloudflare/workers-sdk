@@ -20,6 +20,7 @@ export function stripBodyForHead(c: S3Context, response: Response): Response {
 }
 
 const XMLNS = "http://s3.amazonaws.com/doc/2006-03-01/";
+export const MAX_LIST_KEYS = 1000;
 
 const xmlBuilder = new XMLBuilder({ ignoreAttributes: false });
 

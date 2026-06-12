@@ -108,9 +108,6 @@ function detectOperation(
 		if (detected instanceof Response) {
 			return detected;
 		}
-		if (detected === undefined) {
-			return NOT_IMPLEMENTED;
-		}
 
 		return bind(detected, BUCKET_OPERATIONS, { c, bucket, bucketId, params });
 	}
