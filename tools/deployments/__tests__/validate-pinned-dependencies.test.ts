@@ -103,7 +103,7 @@ describe("validatePackagePins()", () => {
 	it("should pass when all dependencies are pinned", ({ expect }) => {
 		const errors = validatePackagePins("test-package", "test-package", {
 			name: "test-package",
-			dependencies: { "blake3-wasm": "2.1.5", "path-to-regexp": "6.3.0" },
+			dependencies: { "blake3-wasm": "3.0.0", "path-to-regexp": "6.3.0" },
 		});
 		expect(errors).toEqual([]);
 	});
@@ -158,7 +158,7 @@ describe("validatePackagePins()", () => {
 	it("should report multiple violations across sections", ({ expect }) => {
 		const errors = validatePackagePins("test-package", "test-package", {
 			name: "test-package",
-			dependencies: { zod: "^3.25.76", "blake3-wasm": "2.1.5" },
+			dependencies: { zod: "^3.25.76", "blake3-wasm": "3.0.0" },
 			optionalDependencies: { fsevents: "~2.3.2" },
 		});
 		expect(errors).toHaveLength(2);

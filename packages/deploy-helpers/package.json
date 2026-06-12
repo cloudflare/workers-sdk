@@ -41,7 +41,7 @@
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
-		"blake3-wasm": "2.1.5",
+		"blake3-wasm": "3.0.0",
 		"chalk": "catalog:default",
 		"command-exists": "catalog:default",
 		"dotenv": "catalog:default",

@@ -86,6 +86,7 @@ catalogs:
       version: 8.20.1
 
 overrides:
+  '@c4312/blake3-internal': 3.0.0
   '@types/react-dom@18>@types/react': ^18
   '@types/react-tabs>@types/react': ^18
   '@types/react-transition-group>@types/react': ^18
@@ -1838,8 +1839,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-utils
       blake3-wasm:
-        specifier: 2.1.5
-        version: 2.1.5
+        specifier: 3.0.0
+        version: 3.0.0
       chalk:
         specifier: catalog:default
         version: 5.3.0
@@ -4126,8 +4127,8 @@ importers:
         specifier: workspace:*
         version: link:../unenv-preset
       blake3-wasm:
-        specifier: 2.1.5
-        version: 2.1.5
+        specifier: 3.0.0
+        version: 3.0.0
       esbuild:
         specifier: catalog:default
         version: 0.27.3
@@ -5021,6 +5022,10 @@ packages:
 
   '@bugsnag/safe-json-stringify@6.1.0':
     resolution: {integrity: sha512-ImA35rnM7bGr+J30R979FQ95BhRB4UO1KfJA0J2sVqc8nwnrS9hhE5mkTmQWMs8Vh1Da+hkLKs5jJB4JjNZp4A==}
+
+  '@c4312/blake3-internal@3.0.0':
+    resolution: {integrity: sha512-USnabcn5uQDbEEryzjK4F3L7HVbMsWtqkTjDbZ/zyMp2vXwlOVnYZbn2WEGx+RmN84U5S1dTe1+RI0fKBWxQsA==}
+    engines: {node: '>=16'}
 
   '@cdktf/node-pty-prebuilt-multiarch@0.10.2':
     resolution: {integrity: sha512-Bpb0v9bzejJUAGmn8HfDFH6pYxFVHokiWV4mHvTao2XoYcEvETFVrniYIXlIg0e4yLlKB/U/z5WsC5PBsi3xEQ==}
@@ -9680,6 +9685,10 @@ packages:
 
   blake3-wasm@2.1.5:
     resolution: {integrity: sha512-F1+K8EbfOZE49dtoPtmxUQrpXaBIl3ICvasLh+nJta0xkz+9kF/7uet9fLnwKqhDrmj6g+6K3Tw9yQPUg2ka5g==}
+
+  blake3-wasm@3.0.0:
+    resolution: {integrity: sha512-X410nN2AIX6k8gHQmXruQ9YV3U8fe7ZrfLMp88qBcGx5oEIGzz305HvquXoSTPdaR74EA99KHBTb8El9q0vjqQ==}
+    engines: {node: '>=16'}
 
   body-parser@1.20.3:
     resolution: {integrity: sha512-7rAxByjUMqQ3/bHJy7D6OGXvx/MMc4IqBn/X0fcM1QUcAItpZrBEYhWGem+tzXH90c+G01ypMcYJBO9Y30203g==}
@@ -16241,6 +16250,8 @@ snapshots:
 
   '@bugsnag/safe-json-stringify@6.1.0': {}
 
+  '@c4312/blake3-internal@3.0.0': {}
+
   '@cdktf/node-pty-prebuilt-multiarch@0.10.2':
     dependencies:
       nan: 2.18.0
@@ -20686,6 +20697,10 @@ snapshots:
     optional: true
 
   blake3-wasm@2.1.5: {}
+
+  blake3-wasm@3.0.0:
+    dependencies:
+      '@c4312/blake3-internal': 3.0.0
 
   body-parser@1.20.3:
     dependencies:

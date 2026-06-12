@@ -72,6 +72,9 @@ allowBuilds:
 # ──────────────────────────────────────────────────────────────────────────────
 
 overrides:
+  # blake3-wasm@3.0.0 declares @c4312/blake3-internal@2.1.7 which was never
+  # published; only 3.0.0 exists. Force resolution to the published version.
+  "@c4312/blake3-internal": "3.0.0"
   "@types/react-dom@18>@types/react": "^18"
   "@types/react-tabs>@types/react": "^18"
   "@types/react-transition-group>@types/react": "^18"

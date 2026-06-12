@@ -137,7 +137,7 @@ export const validate = async (args: {
 						path: filepath,
 						contentType: getType(name) || "application/octet-stream",
 						sizeInBytes: filestat.size,
-						hash: hashFile(filepath),
+						hash: await hashFile(filepath),
 					});
 				}
 			})
