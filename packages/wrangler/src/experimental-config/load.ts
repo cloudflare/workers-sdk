@@ -1,11 +1,10 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { loadConfig, resolveWorkerDefinition } from "@cloudflare/config";
 import {
 	ConfigSchema,
 	convertToWranglerConfig,
-	loadConfig,
-	resolveWorkerDefinition,
-} from "@cloudflare/config";
+} from "@cloudflare/deploy-helpers";
 import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
 import { convertToolingConfig } from "./convert";
 import {

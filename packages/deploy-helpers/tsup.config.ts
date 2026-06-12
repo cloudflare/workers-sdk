@@ -21,7 +21,6 @@ export default defineConfig(() => [
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		noExternal: [
 			"@cloudflare/config",
-			"@cloudflare/config/cf",
 			"@cloudflare/containers-shared",
 			/^@cloudflare\/workers-shared(\/.*)?$/,
 		],

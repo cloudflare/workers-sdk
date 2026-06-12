@@ -25,10 +25,6 @@
 		"./public": {
 			"types": "./dist/public.d.mts",
 			"import": "./dist/public.mjs"
-		},
-		"./cf": {
-			"types": "./dist/cf.d.mts",
-			"import": "./dist/cf.mjs"
 		}
 	},
 	"scripts": {
