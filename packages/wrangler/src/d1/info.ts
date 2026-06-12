@@ -49,19 +49,21 @@ export const d1InfoCommand = createCommand({
 			output["database_size"] = output["file_size"];
 			delete output["file_size"];
 		}
-		if (output["version"] !== "alpha") {
-			delete output["version"];
-		}
-		if (result.version !== "alpha") {
-			const today = new Date();
-			const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
 
-			const graphqlResult = await fetchGraphqlResult<D1MetricsGraphQLResponse>(
-				config,
-				{
-					method: "POST",
-					body: JSON.stringify({
-						query: `query getD1MetricsOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
+		// Snip off the "uuid" property from the response. We use it as the header.
+		delete output["uuid"];
+		// All alpha databses have been deleted, so version is useless noise.
+		delete output["version"];
+
+		const today = new Date();
+		const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
+
+		const graphqlResult = await fetchGraphqlResult<D1MetricsGraphQLResponse>(
+			config,
+			{
+				method: "POST",
+				body: JSON.stringify({
+					query: `query getD1MetricsOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
 								viewer {
 									accounts(filter: {accountTag: $accountTag}) {
 										d1AnalyticsAdaptiveGroups(limit: 10000, filter: $filter) {
@@ -78,46 +80,45 @@ export const d1InfoCommand = createCommand({
 								}
 							}
 						}`,
-						operationName: "getD1MetricsOverviewQuery",
-						variables: {
-							accountTag: accountId,
-							filter: {
-								AND: [
-									{
-										datetimeHour_geq: yesterday.toISOString(),
-										datetimeHour_leq: today.toISOString(),
-										databaseId: db.uuid,
-									},
-								],
-							},
+					operationName: "getD1MetricsOverviewQuery",
+					variables: {
+						accountTag: accountId,
+						filter: {
+							AND: [
+								{
+									datetimeHour_geq: yesterday.toISOString(),
+									datetimeHour_leq: today.toISOString(),
+									databaseId: db.uuid,
+								},
+							],
 						},
-					}),
-					headers: {
-						"Content-Type": "application/json",
 					},
+				}),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			}
+		);
+
+		const metrics = {
+			readQueries: 0,
+			writeQueries: 0,
+			rowsRead: 0,
+			rowsWritten: 0,
+		};
+		if (graphqlResult) {
+			graphqlResult.data?.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups?.forEach(
+				(row) => {
+					metrics.readQueries += row?.sum?.readQueries ?? 0;
+					metrics.writeQueries += row?.sum?.writeQueries ?? 0;
+					metrics.rowsRead += row?.sum?.rowsRead ?? 0;
+					metrics.rowsWritten += row?.sum?.rowsWritten ?? 0;
 				}
 			);
-
-			const metrics = {
-				readQueries: 0,
-				writeQueries: 0,
-				rowsRead: 0,
-				rowsWritten: 0,
-			};
-			if (graphqlResult) {
-				graphqlResult.data?.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups?.forEach(
-					(row) => {
-						metrics.readQueries += row?.sum?.readQueries ?? 0;
-						metrics.writeQueries += row?.sum?.writeQueries ?? 0;
-						metrics.rowsRead += row?.sum?.rowsRead ?? 0;
-						metrics.rowsWritten += row?.sum?.rowsWritten ?? 0;
-					}
-				);
-				output.read_queries_24h = metrics.readQueries;
-				output.write_queries_24h = metrics.writeQueries;
-				output.rows_read_24h = metrics.rowsRead;
-				output.rows_written_24h = metrics.rowsWritten;
-			}
+			output.read_queries_24h = metrics.readQueries;
+			output.write_queries_24h = metrics.writeQueries;
+			output.rows_read_24h = metrics.rowsRead;
+			output.rows_written_24h = metrics.rowsWritten;
 		}
 
 		if (json) {
@@ -129,12 +130,7 @@ export const d1InfoCommand = createCommand({
 				delete output["read_replication"];
 			}
 
-			// Snip off the "uuid" property from the response and use those as the header
-			const entries = Object.entries(output).filter(
-				// also remove any version that isn't "alpha"
-				([k, v]) => k !== "uuid" && !(k === "version" && v !== "alpha")
-			);
-			const data = entries.map(([k, v]) => {
+			const data = Object.entries(output).map(([k, v]) => {
 				let value;
 				if (k === "database_size") {
 					value = prettyBytes(Number(v));
