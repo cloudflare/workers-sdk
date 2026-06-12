@@ -1,6 +1,14 @@
+import { XMLValidator } from "fast-xml-parser";
 import { parseRangeHeader, serveR2Object } from "../serve.worker";
 import { awsUriEncode } from "./auth.worker";
-import { hex, MAX_LIST_KEYS, xmlResponse } from "./common.worker";
+import {
+	coerceArray,
+	hex,
+	MAX_DELETE_KEYS,
+	MAX_LIST_KEYS,
+	xmlParser,
+	xmlResponse,
+} from "./common.worker";
 import { errorResponse, notImplemented } from "./errors.worker";
 import type { S3Context } from "./common.worker";
 import type { BucketOperation, ObjectOperation } from "./detect.worker";
@@ -34,6 +42,13 @@ const s3Error = (error: S3Error) =>
 const noSuchKey = () => s3Error(NO_SUCH_KEY);
 
 const preconditionFailed = () => s3Error(PRECONDITION_FAILED);
+
+const malformedXml = () =>
+	errorResponse(
+		400,
+		"MalformedXML",
+		"The XML you provided was not well formed or did not validate against our published schema."
+	);
 
 const notImplementedHeader = (name: string, value: string) =>
 	errorResponse(
@@ -627,5 +642,59 @@ export const BUCKET_OPERATIONS: Record<
 		unsupportedHeaders: BUCKET_OWNER,
 		handle: ({ params, bucket, bucketId }) =>
 			listObjects(params, bucket, bucketId, true),
+	},
+	DeleteObjects: {
+		unsupportedHeaders: [...BUCKET_OWNER, ...MFA_AND_LOCK_BYPASS],
+		async handle({ c, bucket }) {
+			const body = await c.req.raw.arrayBuffer();
+			const digestError = await verifyContentMD5(c, body);
+			if (digestError !== undefined) {
+				return digestError;
+			}
+
+			const text = new TextDecoder().decode(body);
+			if (XMLValidator.validate(text) !== true) {
+				return malformedXml();
+			}
+
+			const parsed: unknown = xmlParser.parse(text);
+			const request = (
+				parsed as { Delete?: { Object?: unknown; Quiet?: unknown } }
+			).Delete;
+			if (request === undefined) {
+				return malformedXml();
+			}
+
+			const keys: string[] = [];
+			for (const object of coerceArray(request.Object)) {
+				const key = (object as { Key?: unknown }).Key;
+				if (typeof key !== "string") {
+					return malformedXml();
+				}
+
+				keys.push(key);
+			}
+
+			if (keys.length === 0 || keys.length > MAX_DELETE_KEYS) {
+				return malformedXml();
+			}
+
+			// R2 validates Quiet strictly but then ignores it.
+			// The Deleted list is returned even in quiet mode.
+			if (
+				request.Quiet !== undefined &&
+				request.Quiet !== "true" &&
+				request.Quiet !== "false"
+			) {
+				return malformedXml();
+			}
+
+			await bucket.delete(keys);
+
+			// Deletes are idempotent: missing keys are still reported as Deleted
+			return xmlResponse("DeleteResult", {
+				Deleted: keys.map((key) => ({ Key: key })),
+			});
+		},
 	},
 };

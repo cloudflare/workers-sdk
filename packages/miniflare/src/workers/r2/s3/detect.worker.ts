@@ -13,7 +13,8 @@ export type BucketOperation =
 	| "GetObjectLockConfiguration"
 	| "GetBucketReplication"
 	| "ListObjects"
-	| "ListObjectsV2";
+	| "ListObjectsV2"
+	| "DeleteObjects";
 
 export type ObjectOperation =
 	| "GetObject"
@@ -249,7 +250,7 @@ export function detectBucketOperation(
 			// ?delete is DeleteObjects; respond 200 with an empty body to
 			// any other bucket-level POST
 			return params.has("delete")
-				? notImplementedOperation("DeleteObjects")
+				? "DeleteObjects"
 				: new Response(null, { status: 200 });
 		case "GET": {
 			if (params.has("uploads")) {

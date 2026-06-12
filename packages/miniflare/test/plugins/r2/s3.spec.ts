@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import {
 	DeleteObjectCommand,
+	DeleteObjectsCommand,
 	GetObjectCommand,
 	GetBucketEncryptionCommand,
 	GetBucketLocationCommand,
@@ -1068,6 +1069,85 @@ test("encoding-type=url encodes keys", async ({ expect }) => {
 	expect(text).toContain("<Key>ls%2Fsub%2Fc.txt</Key>");
 	expect(text).toContain("<Prefix>ls%2Fsub</Prefix>");
 	expect(text).toContain("<EncodingType>url</EncodingType>");
+});
+
+test("DeleteObjects deletes keys, reporting missing keys as Deleted", async ({
+	expect,
+}) => {
+	const r2 = await bucket();
+	await r2.put("batch/a.txt", "x");
+	await r2.put("batch/b.txt", "x");
+	const res = await s3().send(
+		new DeleteObjectsCommand({
+			Bucket: "bucket",
+			Delete: {
+				Objects: [
+					{ Key: "batch/a.txt" },
+					{ Key: "batch/b.txt" },
+					{ Key: "batch/missing.txt" },
+				],
+			},
+		})
+	);
+	expect(res.Deleted?.map((deleted) => deleted.Key)).toEqual([
+		"batch/a.txt",
+		"batch/b.txt",
+		"batch/missing.txt",
+	]);
+	expect(await r2.head("batch/a.txt")).toBe(null);
+	expect(await r2.head("batch/b.txt")).toBe(null);
+});
+
+test("DeleteObjects validates Quiet but ignores it", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("batch/q.txt", "x");
+	// Unlike AWS S3, R2 returns the Deleted list even in quiet mode
+	const res = await s3().send(
+		new DeleteObjectsCommand({
+			Bucket: "bucket",
+			Delete: { Quiet: true, Objects: [{ Key: "batch/q.txt" }] },
+		})
+	);
+	expect(res.Deleted?.map((deleted) => deleted.Key)).toEqual(["batch/q.txt"]);
+	expect(await r2.head("batch/q.txt")).toBe(null);
+
+	// Only literal true/false are accepted as Quiet values
+	const invalid = await s3Fetch("bucket?delete", {
+		method: "POST",
+		body: "<Delete><Quiet>TRUE</Quiet><Object><Key>x</Key></Object></Delete>",
+	});
+	await expectError(invalid, 400, "MalformedXML", expect);
+});
+
+test("DeleteObjects rejects malformed XML", async ({ expect }) => {
+	const res = await s3Fetch("bucket?delete", {
+		method: "POST",
+		body: "<NotDelete/>",
+	});
+	await expectError(res, 400, "MalformedXML", expect);
+
+	// An empty object list is malformed too
+	const empty = await s3Fetch("bucket?delete", {
+		method: "POST",
+		body: "<Delete></Delete>",
+	});
+	await expectError(empty, 400, "MalformedXML", expect);
+
+	const missingKey = await s3Fetch("bucket?delete", {
+		method: "POST",
+		body: "<Delete><Object><NotKey>x</NotKey></Object></Delete>",
+	});
+	await expectError(missingKey, 400, "MalformedXML", expect);
+
+	// At most 1000 keys per request
+	const tooMany = await s3Fetch("bucket?delete", {
+		method: "POST",
+		body: `<Delete>${Array.from(
+			{ length: 1001 },
+			(_, i) => `<Object><Key>k${i}</Key></Object>`
+		).join("")}</Delete>`,
+	});
+	await expectError(tooMany, 400, "MalformedXML", expect);
 });
 
 test("unimplemented multipart surfaces respond with NotImplemented", async ({

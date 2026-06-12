@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { XMLBuilder } from "fast-xml-parser";
+import { XMLBuilder, XMLParser } from "fast-xml-parser";
 import type { R2S3Bindings, S3Credentials } from "../constants";
 import type { Context } from "hono";
 
@@ -21,8 +21,13 @@ export function stripBodyForHead(c: S3Context, response: Response): Response {
 
 const XMLNS = "http://s3.amazonaws.com/doc/2006-03-01/";
 export const MAX_LIST_KEYS = 1000;
+export const MAX_DELETE_KEYS = 1000;
 
 const xmlBuilder = new XMLBuilder({ ignoreAttributes: false });
+export const xmlParser = new XMLParser({
+	ignoreAttributes: true,
+	parseTagValue: false,
+});
 
 export function xmlResponse(
 	root: string,
@@ -40,4 +45,12 @@ export function xmlResponse(
 
 export function hex(bytes: ArrayLike<number> | ArrayBuffer): string {
 	return Buffer.from(bytes).toString("hex");
+}
+
+export function coerceArray<T>(value: T | T[] | undefined): T[] {
+	if (value === undefined) {
+		return [];
+	}
+
+	return Array.isArray(value) ? value : [value];
 }
