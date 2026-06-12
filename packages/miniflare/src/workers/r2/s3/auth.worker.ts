@@ -17,11 +17,13 @@
 // echoed for debugging, like AWS) for signature mismatches, and 403
 // `ExpiredRequest` for expired presigned URLs.
 
+import assert from "node:assert";
 import { hex } from "./common.worker";
 import { errorResponse } from "./errors.worker";
 import type { S3Credentials } from "../constants";
 
 const ALGORITHM = "AWS4-HMAC-SHA256";
+const MAX_EXPIRES_SECONDS = 604_800;
 const MAX_SKEW_MILLIS = 15 * 60 * 1000;
 
 const encoder = new TextEncoder();
@@ -430,6 +432,97 @@ async function verifyAuthorizationHeader(
 	return undefined;
 }
 
+async function verifyPresigned(
+	request: Request,
+	url: URL,
+	credentials: S3Credentials
+): Promise<Response | undefined> {
+	const params = url.searchParams;
+
+	const missing = [
+		"X-Amz-Algorithm",
+		"X-Amz-Signature",
+		"X-Amz-Date",
+		"X-Amz-SignedHeaders",
+		"X-Amz-Expires",
+	].filter((name) => !params.has(name));
+	if (missing.length === 1) {
+		return invalidArgument(`Required search parameter ${missing[0]} missing`);
+	}
+	if (missing.length > 1) {
+		return invalidArgument(
+			`Required search parameters ${missing.join(",  ")} missing`
+		);
+	}
+
+	if (params.get("X-Amz-Algorithm") !== ALGORITHM) {
+		return unsupportedAlgorithm();
+	}
+
+	const amzDate = params.get("X-Amz-Date");
+	const expiresParam = params.get("X-Amz-Expires");
+	const signedHeadersParam = params.get("X-Amz-SignedHeaders");
+	const provided = params.get("X-Amz-Signature");
+	assert(
+		amzDate !== null &&
+			expiresParam !== null &&
+			signedHeadersParam !== null &&
+			provided !== null
+	);
+
+	const date = parseAmzDate(amzDate);
+	if (date === undefined) {
+		return invalidArgument(
+			`Date provided in X-Amz-Date (${amzDate}) didn't parse successfully`
+		);
+	}
+
+	const credentialParam = params.get("X-Amz-Credential");
+	assert(credentialParam !== null);
+	const credential = checkCredentialScope(
+		credentialParam,
+		amzDate,
+		credentials
+	);
+	if ("error" in credential) {
+		return credential.error;
+	}
+
+	// `Number("")` is 0, but we must reject an empty X-Amz-Expires.
+	const expires =
+		expiresParam.trim() === "" ? Number.NaN : Number(expiresParam);
+	if (Number.isNaN(expires)) {
+		return invalidArgument("X-Amz-Expires should be a number");
+	}
+	if (expires > MAX_EXPIRES_SECONDS) {
+		return invalidArgument(
+			`X-Amz-Expires must be less than a week (in seconds); that is, the given X-Amz-Expires must be less than ${MAX_EXPIRES_SECONDS} seconds`
+		);
+	}
+	if (expires < 1 || Date.now() > date.getTime() + expires * 1000) {
+		return errorResponse(403, "ExpiredRequest", "Request has expired");
+	}
+
+	const signedHeaders = parseSignedHeaders(signedHeadersParam);
+	if ("error" in signedHeaders) {
+		return signedHeaders.error;
+	}
+
+	// Presigned URLs sign the payload as UNSIGNED-PAYLOAD since the body is
+	// not known at signing time
+	return checkSignature(
+		request,
+		url,
+		credentials,
+		credential,
+		amzDate,
+		signedHeaders,
+		"UNSIGNED-PAYLOAD",
+		true,
+		provided
+	);
+}
+
 /**
  * Verifies a request against AWS Signature Version 4, returning an R2-style
  * XML error `Response` on failure, or `undefined` if authentication succeeds.
@@ -440,9 +533,14 @@ export async function verifyRequest(
 ): Promise<Response | undefined> {
 	const url = new URL(request.url);
 
+	// The Authorization header takes precedence over presigned query params.
 	const authorization = request.headers.get("Authorization");
 	if (authorization !== null) {
 		return verifyAuthorizationHeader(request, url, credentials, authorization);
+	}
+
+	if (url.searchParams.has("X-Amz-Credential")) {
+		return verifyPresigned(request, url, credentials);
 	}
 
 	return invalidArgument("Authorization");

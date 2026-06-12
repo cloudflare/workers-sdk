@@ -4,6 +4,7 @@ import {
 	S3Client,
 	S3ServiceException,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { SignatureV4 } from "@smithy/signature-v4";
 import { Miniflare } from "miniflare";
 import { assert, onTestFinished, test } from "vitest";
@@ -302,6 +303,77 @@ test("reports credential scope errors like R2", async ({ expect }) => {
 		),
 	});
 	await expectError(noHost, 401, "Unauthorized", expect);
+});
+
+test("rejects an empty X-Amz-Expires as not a number", async ({ expect }) => {
+	const url = s3Url("bucket/key.txt");
+	url.search = new URLSearchParams({
+		"X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+		"X-Amz-Date": "20260612T000000Z",
+		"X-Amz-Expires": "",
+		"X-Amz-SignedHeaders": "host",
+		"X-Amz-Signature": "abc",
+		"X-Amz-Credential": `${CREDENTIALS.accessKeyId}/20260612/auto/s3/aws4_request`,
+	}).toString();
+	const res = await fetch(url);
+	expect(res.status).toBe(400);
+	expect(await res.text()).toContain(
+		"<Message>X-Amz-Expires should be a number</Message>"
+	);
+});
+
+test("rejects expired presigned URLs", async ({ expect }) => {
+	const url = await getSignedUrl(
+		s3(),
+		new GetObjectCommand({ Bucket: "bucket", Key: "presigned.txt" }),
+		{ expiresIn: 60, signingDate: new Date(Date.now() - 3600_000) }
+	);
+	const res = await fetch(url);
+	await expectError(res, 403, "ExpiredRequest", expect);
+});
+
+test("rejects presigned URLs with too-long expiry", async ({ expect }) => {
+	const signed = await getSignedUrl(
+		s3(),
+		new GetObjectCommand({ Bucket: "bucket", Key: "presigned.txt" })
+	);
+	const url = new URL(signed);
+	url.searchParams.set("X-Amz-Expires", "700000");
+	const res = await fetch(url);
+	expect(res.status).toBe(400);
+	expect(await res.text()).toContain("X-Amz-Expires must be less than a week");
+});
+
+test("rejects tampered presigned URLs", async ({ expect }) => {
+	const signed = await getSignedUrl(
+		s3(),
+		new GetObjectCommand({ Bucket: "bucket", Key: "presigned.txt" })
+	);
+	const url = new URL(signed);
+	url.pathname = url.pathname.replace("presigned", "evil");
+	const res = await fetch(url);
+	await expectError(res, 403, "SignatureDoesNotMatch", expect);
+	// (re-fetch since expectError consumed the body)
+	const body = await (await fetch(url)).text();
+	expect(body).toContain("<StringToSign>");
+	expect(body).toContain("<CanonicalRequest>");
+	expect(body).toContain("<SignatureProvided>");
+});
+
+test("reports missing presigned parameters together", async ({ expect }) => {
+	const url = s3Url("bucket/key.txt");
+	url.searchParams.set(
+		"X-Amz-Credential",
+		`${CREDENTIALS.accessKeyId}/20260611/auto/s3/aws4_request`
+	);
+	url.searchParams.set("X-Amz-Date", "20260611T000000Z");
+	url.searchParams.set("X-Amz-Expires", "60");
+	url.searchParams.set("X-Amz-SignedHeaders", "host");
+	const res = await fetch(url);
+	expect(res.status).toBe(400);
+	expect(await res.text()).toContain(
+		"Required search parameters X-Amz-Algorithm,  X-Amz-Signature missing"
+	);
 });
 
 test("returns NoSuchBucket for an unknown bucket id", async ({ expect }) => {
