@@ -30,6 +30,7 @@ export const loginCommand = createCommand({
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		"scopes-list": {
@@ -110,6 +111,7 @@ export const logoutCommand = createCommand({
 	behaviour: {
 		printConfigWarnings: false,
 		provideConfig: false,
+		suggestSkillsAfterHandler: true,
 	},
 	async handler() {
 		await logout();
@@ -137,6 +139,7 @@ export const whoamiCommand = createCommand({
 	behaviour: {
 		printBanner: (args) => !args.json,
 		printConfigWarnings: false,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	args: {
 		account: {
@@ -177,6 +180,7 @@ export const authTokenCommand = createCommand({
 	behaviour: {
 		printBanner: (args) => !args.json,
 		printConfigWarnings: false,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	args: {
 		json: {

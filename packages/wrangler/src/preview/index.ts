@@ -61,6 +61,7 @@ export const previewCommand = createCommand({
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
 		printBanner: (args) => args.json !== true,
+		suggestSkillsAfterHandler: (args) => args.json !== true,
 	},
 	handler: handlePreviewCommand,
 });
@@ -92,6 +93,9 @@ export const previewDeleteCommand = createCommand({
 			requiresArg: true,
 		},
 	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
+	},
 	handler: handlePreviewDeleteCommand,
 });
 
@@ -116,6 +120,9 @@ export const previewSettingsUpdateCommand = createCommand({
 			default: false,
 			alias: "y",
 		},
+	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
 	},
 	handler: handlePreviewSettingsUpdateCommand,
 });
@@ -142,6 +149,7 @@ export const previewSettingsCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => args.json !== true,
+		suggestSkillsAfterHandler: (args) => args.json !== true,
 	},
 	handler: handlePreviewSettingsCommand,
 });
@@ -176,6 +184,9 @@ export const previewSecretPutCommand = createCommand({
 			requiresArg: true,
 		},
 	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
+	},
 	handler: handlePreviewSecretPutCommand,
 });
 
@@ -206,6 +217,9 @@ export const previewSecretDeleteCommand = createCommand({
 			requiresArg: true,
 		},
 	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
+	},
 	handler: handlePreviewSecretDeleteCommand,
 });
 
@@ -231,6 +245,7 @@ export const previewSecretListCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => args.json !== true,
+		suggestSkillsAfterHandler: (args) => args.json !== true,
 	},
 	handler: handlePreviewSecretListCommand,
 });
@@ -254,6 +269,9 @@ export const previewSecretBulkCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
 	},
 	handler: handlePreviewSecretBulkCommand,
 });

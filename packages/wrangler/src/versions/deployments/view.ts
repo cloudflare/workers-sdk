@@ -8,6 +8,9 @@ export const deploymentsViewCommand = createCommand({
 		status: "stable",
 		hidden: true,
 	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
+	},
 	args: {
 		name: {
 			describe: "Name of the Worker",

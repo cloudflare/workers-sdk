@@ -8,7 +8,10 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { maybeInstallCloudflareSkillsGlobally } from "../agents-skills-install";
+import {
+	runSkillsInstallFlow,
+	skillInstallPromptMessageAfterWranglerCommandHandler,
+} from "../agents-skills-install";
 import {
 	fetchKVGetValue,
 	fetchResult,
@@ -149,8 +152,8 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await printWranglerBanner();
 			}
 
-			if (!def.behaviour?.skipSkillsPrompt || args.installSkills) {
-				await maybeInstallCloudflareSkillsGlobally(args.installSkills);
+			if (args.installSkills) {
+				await runSkillsInstallFlow({ force: true, command: sanitizedCommand });
 			}
 
 			if (!getWranglerHideBanner()) {
@@ -319,6 +322,28 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						},
 						def.behaviour
 					);
+
+					const shouldSuggestSkills =
+						def.behaviour?.suggestSkillsAfterHandler ?? false;
+					const suggestSkillsEnabled =
+						shouldSuggestSkills === true ||
+						(typeof shouldSuggestSkills === "function" &&
+							shouldSuggestSkills(args) === true);
+
+					if (suggestSkillsEnabled) {
+						try {
+							await runSkillsInstallFlow({
+								force: false,
+								command: sanitizedCommand,
+								promptMessage:
+									skillInstallPromptMessageAfterWranglerCommandHandler,
+							});
+						} catch (skillsErr) {
+							logger.debug(
+								`Skills suggestion failed: ${skillsErr instanceof Error ? skillsErr.message : skillsErr}`
+							);
+						}
+					}
 
 					return result;
 				} catch (err) {

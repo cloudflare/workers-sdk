@@ -114,6 +114,7 @@ export const typesCommand = createCommand({
 	},
 	behaviour: {
 		provideConfig: false,
+		suggestSkillsAfterHandler: true,
 	},
 	positionalArgs: ["path"],
 	args: {

@@ -32,6 +32,7 @@ export const deploymentsStatusCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	handler: async function versionsDeploymentsStatusHandler(args, { config }) {
 		metrics.sendMetricsEvent("view latest versioned deployment", {

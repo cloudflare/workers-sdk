@@ -43,6 +43,7 @@ export const versionsDeployCommand = createCommand({
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 
 	args: {
