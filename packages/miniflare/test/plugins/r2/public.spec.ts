@@ -118,6 +118,20 @@ test("GET supports range requests", async ({ expect }) => {
 	expect(res.headers.get("Content-Length")).toBe("4");
 });
 
+test("GET honors suffix ranges with a partial 206", async ({ expect }) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("suffix-range-key", "0123456789");
+
+	const res = await fetch(bucketUrl("/suffix-range-key", ctx.url), {
+		headers: { Range: "bytes=-4" },
+	});
+
+	expect(res.status).toBe(206);
+	expect(await res.text()).toBe("6789");
+	expect(res.headers.get("Content-Range")).toBe("bytes 6-9/10");
+	expect(res.headers.get("Content-Length")).toBe("4");
+});
+
 test("HEAD honors Range with a bodyless 206", async ({
 	expect,
 }) => {

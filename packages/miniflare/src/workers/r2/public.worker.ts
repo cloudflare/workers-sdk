@@ -114,13 +114,22 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 	const body = c.req.method === "HEAD" ? null : object.body;
 
 	const range = object.range;
-	if (
-		hasRange &&
-		range !== undefined &&
-		"offset" in range &&
-		"length" in range
-	) {
-		const { offset = 0, length = object.size - offset } = range;
+	if (hasRange && range !== undefined) {
+		// The returned range may carry all keys with some `undefined` (e.g.
+		// `suffix` present but undefined on an offset range), so normalize by
+		// value rather than by key presence
+		const normalized: { offset?: number; length?: number; suffix?: number } = {
+			...range,
+		};
+		let offset: number;
+		let length: number;
+		if (normalized.suffix !== undefined) {
+			length = Math.min(normalized.suffix, object.size);
+			offset = object.size - length;
+		} else {
+			offset = normalized.offset ?? 0;
+			length = normalized.length ?? object.size - offset;
+		}
 		headers.set(
 			"Content-Range",
 			`bytes ${offset}-${offset + length - 1}/${object.size}`
