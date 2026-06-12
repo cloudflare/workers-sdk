@@ -35,6 +35,9 @@ export default defineConfig(() => [
 			"dotenv",
 			"command-exists",
 			"esbuild",
+			// Keep zod external so wrangler (the only consumer) bundles a single
+			// shared copy rather than inlining one here.
+			/^zod(\/.*)?$/,
 		],
 	},
 ]);

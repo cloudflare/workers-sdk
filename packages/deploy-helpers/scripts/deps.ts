@@ -20,4 +20,9 @@ export const EXTERNAL_DEPENDENCIES = [
 	"p-queue",
 	"pretty-bytes",
 	"undici",
+
+	// Externalized so wrangler bundles a single shared zod copy instead of
+	// inlining one via this package. Declared as a peerDependency (the
+	// consumer provides zod).
+	"zod",
 ];
