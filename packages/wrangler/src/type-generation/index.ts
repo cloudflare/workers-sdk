@@ -207,6 +207,7 @@ export const typesCommand = createCommand({
 			logSecondaryEntries: true,
 			validateOptions: false,
 			validateOutputPath: false,
+			source: "cli",
 		});
 
 		resolvedOptions.envHeaderCommand = buildGenerateTypesHeaderCommand(
@@ -297,6 +298,7 @@ export async function generateTypesFromWranglerOptions(
 		logSecondaryEntries: false,
 		validateOptions: true,
 		validateOutputPath: false,
+		source: "api",
 	});
 	resolvedOptions.envHeaderCommand = buildGenerateTypesHeaderCommand(
 		options,
@@ -409,10 +411,12 @@ async function resolveGenerateTypesOptions(
 		logSecondaryEntries,
 		validateOptions,
 		validateOutputPath,
+		source,
 	}: {
 		logSecondaryEntries: boolean;
 		validateOptions: boolean;
 		validateOutputPath: boolean;
+		source: "cli" | "api";
 	}
 ): Promise<ResolvedGenerateTypesOptions> {
 	const envInterface = options.envInterface ?? "Env";
@@ -428,6 +432,7 @@ async function resolveGenerateTypesOptions(
 			includeRuntime,
 			path,
 			validateOutputPath,
+			source,
 		});
 	}
 
@@ -655,12 +660,15 @@ function assertConfigFileDetected(
 }
 
 /**
- * Validates programmatic type-generation options.
+ * Validates type-generation options.
  *
  * Applies the same constraints as CLI argument validation for env interface
  * naming, output file extension, and include-env/include-runtime combinations.
  *
  * @param options - Normalized options to validate.
+ * @param options.source - Whether the caller is `"cli"` or `"api"`, so error
+ *   messages can reference CLI flags (`--include-env`) or JS option names
+ *   (`includeEnv`) accordingly.
  *
  * @throws {UserError} When any option is invalid.
  */
@@ -670,12 +678,14 @@ function validateGenerateTypesOptions({
 	includeRuntime,
 	path,
 	validateOutputPath,
+	source,
 }: {
 	envInterface: string;
 	includeEnv: boolean;
 	includeRuntime: boolean;
 	path: string;
 	validateOutputPath: boolean;
+	source: "cli" | "api";
 }): void {
 	const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 	if (!validInterfaceRegex.test(envInterface)) {
@@ -697,8 +707,13 @@ function validateGenerateTypesOptions({
 	}
 
 	if (!includeEnv && !includeRuntime) {
+		const [envOpt, runtimeOpt] =
+			source === "cli"
+				? ["--include-env", "--include-runtime"]
+				: ["includeEnv", "includeRuntime"];
+
 		throw new UserError(
-			"At least one of --include-env or --include-runtime must be enabled. Use --include-env to generate environment/binding types, or --include-runtime to generate Workers runtime types.",
+			`At least one of ${envOpt} or ${runtimeOpt} must be enabled. Use ${envOpt} to generate environment/binding types, or ${runtimeOpt} to generate Workers runtime types.`,
 			{ telemetryMessage: "type generation args missing type selection" }
 		);
 	}

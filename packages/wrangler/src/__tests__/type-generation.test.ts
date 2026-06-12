@@ -3413,6 +3413,24 @@ describe("generate types - CLI", () => {
 					);
 				}
 			});
+
+			it("should error if both --include-env and --include-runtime are false", async ({
+				expect,
+			}) => {
+				fs.writeFileSync(
+					"./wrangler.jsonc",
+					JSON.stringify({
+						vars: bindingsConfigMock.vars,
+					}),
+					"utf-8"
+				);
+
+				await expect(
+					runWrangler("types --include-env=false --include-runtime=false")
+				).rejects.toThrowError(
+					"At least one of --include-env or --include-runtime must be enabled."
+				);
+			});
 		});
 
 		it("should allow multiple customizations to be applied together", async ({
@@ -3897,7 +3915,7 @@ describe("generate types - API", () => {
 				includeRuntime: false,
 			})
 		).rejects.toThrow(
-			"At least one of --include-env or --include-runtime must be enabled."
+			"At least one of includeEnv or includeRuntime must be enabled."
 		);
 
 		await expect(
