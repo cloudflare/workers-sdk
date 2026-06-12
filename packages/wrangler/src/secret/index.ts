@@ -99,6 +99,7 @@ export const secretPutCommand = createCommand({
 	},
 	positionalArgs: ["key"],
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		suggestSkillsAfterHandler: true,
 	},
@@ -230,6 +231,7 @@ export const secretDeleteCommand = createCommand({
 	},
 	positionalArgs: ["key"],
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		suggestSkillsAfterHandler: true,
 	},
@@ -330,6 +332,7 @@ export const secretListCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => args.format === "pretty",
 		suggestSkillsAfterHandler: (args) => args.format === "pretty",
 	},
@@ -433,6 +436,7 @@ export const secretBulkCommand = createCommand({
 	},
 	positionalArgs: ["file"],
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		suggestSkillsAfterHandler: true,
 	},

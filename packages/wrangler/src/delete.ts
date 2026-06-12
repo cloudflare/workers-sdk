@@ -66,6 +66,7 @@ export const deleteCommand = createCommand({
 		category: "Compute & AI",
 	},
 	behaviour: {
+		supportTemporary: true,
 		suggestSkillsAfterHandler: true,
 	},
 	args: {

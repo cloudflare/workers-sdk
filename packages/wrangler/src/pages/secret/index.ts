@@ -81,8 +81,11 @@ async function pagesProject(
 	const configCache = getConfigCache<PagesConfigCache>(
 		PAGES_CONFIG_CACHE_FILENAME
 	);
-	const accountId =
-		getCloudflareAccountIdFromEnv() ?? (await requireAuth(configCache));
+	const envAccountId = getCloudflareAccountIdFromEnv();
+	const accountId = await requireAuth({
+		...configCache,
+		...(envAccountId ? { account_id: envAccountId } : {}),
+	});
 
 	const projectName =
 		cliProjectName ?? config?.name ?? configCache.project_name;

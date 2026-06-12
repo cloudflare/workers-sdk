@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalWranglerConfigPath,
@@ -95,6 +97,48 @@ describe("User", () => {
 				expiration_time: expect.any(String),
 				scopes: ["account:read"],
 			});
+		});
+
+		it("should clear the cached temporary preview account when logging in", async ({
+			expect,
+		}) => {
+			// Resolve the path inside the test so it picks up the HOME/XDG_CONFIG_HOME
+			// stubs set by runInTempDir's beforeEach, rather than the real homedir.
+			const temporaryAccountConfigPath = path.join(
+				getGlobalWranglerConfigPath(),
+				"wrangler-temporary-account.toml"
+			);
+
+			mockOAuthServerCallback("success");
+
+			fs.mkdirSync(path.dirname(temporaryAccountConfigPath), {
+				recursive: true,
+			});
+			fs.writeFileSync(
+				temporaryAccountConfigPath,
+				JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
+			);
+
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () => {
+						return HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			expect(fs.existsSync(temporaryAccountConfigPath)).toBe(true);
+
+			await runWrangler("login");
+
+			expect(fs.existsSync(temporaryAccountConfigPath)).toBe(false);
 		});
 
 		it("should login a user when `wrangler login` is run with an ip address for custom callback-host", async ({

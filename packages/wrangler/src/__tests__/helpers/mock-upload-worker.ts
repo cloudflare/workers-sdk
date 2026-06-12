@@ -31,6 +31,8 @@ export function mockUploadWorkerRequest(
 	options: {
 		wranglerConfigPath?: string;
 		expectedBaseUrl?: string;
+		expectedAccountId?: string;
+		expectedAuthToken?: string;
 		expectedEntry?: string | RegExp | ((entry: string | null) => void);
 		expectedMainModule?: string;
 		expectedType?: "esm" | "sw" | "none";
@@ -68,7 +70,14 @@ export function mockUploadWorkerRequest(
 		expect(url.hostname).toMatch(
 			options.expectedBaseUrl ?? "api.cloudflare.com"
 		);
-		expect(params.accountId).toEqual("some-account-id");
+		expect(params.accountId).toEqual(
+			options.expectedAccountId ?? "some-account-id"
+		);
+		if (options.expectedAuthToken !== undefined) {
+			expect(request.headers.get("Authorization")).toEqual(
+				`Bearer ${options.expectedAuthToken}`
+			);
+		}
 		expect(params.scriptName).toEqual(expectedScriptName);
 		if (useServiceEnvironments) {
 			expect(params.envName).toEqual(env);
@@ -307,6 +316,7 @@ export function mockUploadWorkerRequest(
 		previews_enabled: subdomainDefaults.preview_urls,
 		env,
 		useServiceEnvironments,
+		expectedAccountId: options.expectedAccountId,
 		expectedScriptName,
 	});
 	const subdomainValues = getSubdomainValues(
@@ -323,6 +333,7 @@ export function mockUploadWorkerRequest(
 		},
 		env,
 		useServiceEnvironments,
+		expectedAccountId: options.expectedAccountId,
 		expectedScriptName,
 	});
 }

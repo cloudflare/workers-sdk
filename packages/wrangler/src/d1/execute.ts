@@ -50,6 +50,7 @@ export const d1ExecuteCommand = createCommand({
 			"You must provide either --command or --file for this command to run successfully.",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 		printResourceLocation: (args) => !args.json,
 	},

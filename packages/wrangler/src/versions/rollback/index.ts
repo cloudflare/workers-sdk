@@ -44,6 +44,7 @@ export const versionsRollbackCommand = createCommand({
 		category: "Compute & AI",
 	},
 	behaviour: {
+		supportTemporary: true,
 		suggestSkillsAfterHandler: true,
 	},
 	handler: async function handleRollback(args, { config }) {

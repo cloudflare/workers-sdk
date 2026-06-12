@@ -9,6 +9,7 @@ export const deploymentsViewCommand = createCommand({
 		hidden: true,
 	},
 	behaviour: {
+		supportTemporary: true,
 		suggestSkillsAfterHandler: true,
 	},
 	args: {

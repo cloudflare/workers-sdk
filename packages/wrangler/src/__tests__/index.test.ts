@@ -2,12 +2,13 @@ import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager } from "../package-manager";
 import { updateCheck } from "../update-check";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { clearDialogs } from "./helpers/mock-dialogs";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { PackageManager } from "../package-manager";
@@ -26,6 +27,10 @@ describe("wrangler", () => {
 			install: vi.fn(),
 		};
 		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
+	});
+
+	afterEach(() => {
+		clearDialogs();
 	});
 
 	const std = mockConsoleMethods();
@@ -103,6 +108,24 @@ describe("wrangler", () => {
 			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not require temporary terms acceptance before root help", async ({
+			expect,
+		}) => {
+			await runWrangler("--help --temporary");
+
+			expect(std.out).toContain("wrangler");
+			expect(std.out).toContain("COMMANDS");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("--temporary", () => {
+		it("is rejected on commands that don't opt in", async ({ expect }) => {
+			await expect(runWrangler("whoami --temporary")).rejects.toThrowError(
+				/Unknown argument: temporary/
+			);
 		});
 	});
 

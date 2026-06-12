@@ -28,6 +28,7 @@ export const d1MigrationsCreateCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: true,
 	},
 	args: {

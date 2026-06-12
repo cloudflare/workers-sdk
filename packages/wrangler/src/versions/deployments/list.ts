@@ -31,6 +31,7 @@ export const deploymentsListCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 		suggestSkillsAfterHandler: (args) => !args.json,
 	},

@@ -1,4 +1,10 @@
-import { chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import {
 	getCloudflareApiEnvironmentFromEnv,
@@ -9,8 +15,44 @@ import {
 import TOML from "smol-toml";
 import type {
 	AuthConfigStorage,
+	ConfigStorage,
 	UserAuthConfig,
 } from "@cloudflare/workers-auth";
+
+/**
+ * A TOML-file-on-disk storage backend, parameterised by the path it reads and
+ * writes. Shared by the OAuth auth-config store ({@link defaultAuthConfigStorage})
+ * and the temporary-preview-account store (`defaultTemporaryAccountStorage`) so
+ * both get identical owner-only permission handling.
+ *
+ * `read()` throws when the file is missing or cannot be parsed — callers treat a
+ * throw as "nothing stored". Files are written with mode `0o600` on creation and
+ * re-`chmod`'d on every save (the `mode` option only applies on creation) so
+ * other local users on shared hosts can't read the stored credentials.
+ */
+export function createTomlFileStorage<T extends object>(
+	getPath: () => string
+): ConfigStorage<T> {
+	return {
+		read: () => parseTOML(readFileSync(getPath())) as T,
+		write(config) {
+			const configPath = getPath();
+			mkdirSync(path.dirname(configPath), { recursive: true });
+			writeFileSync(configPath, TOML.stringify(config), {
+				encoding: "utf-8",
+				mode: 0o600,
+			});
+			chmodSync(configPath, 0o600);
+		},
+		clear() {
+			const configPath = getPath();
+			const existed = existsSync(configPath);
+			rmSync(configPath, { force: true });
+			return existed;
+		},
+		path: getPath,
+	};
+}
 
 /**
  * Wrangler's default `AuthConfigStorage`: a TOML file on disk, located under
@@ -20,12 +62,7 @@ import type {
  * `readStoredAuthState`), which no longer ships a default of its own.
  */
 export function defaultAuthConfigStorage(): AuthConfigStorage {
-	return {
-		read: readAuthConfigFile,
-		write: writeAuthConfigFile,
-		clear: () => rmSync(getAuthConfigFilePath()),
-		path: getAuthConfigFilePath,
-	};
+	return createTomlFileStorage<UserAuthConfig>(getAuthConfigFilePath);
 }
 
 /**
@@ -55,22 +92,7 @@ export function getAuthConfigFilePath(): string {
  * purging (e.g. via the `OAuthFlowContext.purgeOnLoginOrLogout` hook).
  */
 export function writeAuthConfigFile(config: UserAuthConfig): void {
-	const configPath = getAuthConfigFilePath();
-
-	mkdirSync(path.dirname(configPath), {
-		recursive: true,
-	});
-	// Write with mode 0o600 on creation and re-`chmod` on every save so
-	// other local users on shared hosts can't read the OAuth tokens.
-	// `writeFileSync`'s `mode` option only applies when the file is
-	// being created — the explicit `chmodSync` ensures that pre-existing
-	// files (e.g. written by an older Wrangler version with the process
-	// umask) get tightened on the next save too.
-	writeFileSync(configPath, TOML.stringify(config), {
-		encoding: "utf-8",
-		mode: 0o600,
-	});
-	chmodSync(configPath, 0o600);
+	createTomlFileStorage<UserAuthConfig>(getAuthConfigFilePath).write(config);
 }
 
 /**
@@ -80,5 +102,5 @@ export function writeAuthConfigFile(config: UserAuthConfig): void {
  * typically catch this and treat the failure as "not logged in via local OAuth".
  */
 export function readAuthConfigFile(): UserAuthConfig {
-	return parseTOML(readFileSync(getAuthConfigFilePath())) as UserAuthConfig;
+	return createTomlFileStorage<UserAuthConfig>(getAuthConfigFilePath).read();
 }

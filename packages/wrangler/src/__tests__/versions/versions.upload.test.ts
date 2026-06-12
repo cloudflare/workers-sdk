@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
+import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
 import {
 	runInTempDir,
 	writeRedirectedWranglerConfig,
@@ -36,6 +37,8 @@ describe("versions upload", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const assertApiRequest = makeApiRequestAsserter(std);
+	const temporaryPreviewAccountUrl =
+		"https://api.cloudflare.com/client/v4/provisioning/previews";
 
 	function mockGetScript(result?: unknown) {
 		msw.use(
@@ -132,6 +135,76 @@ describe("versions upload", () => {
 			await toString(formBody.get("metadata"))
 		) as WorkerMetadata;
 	}
+
+	describe("with --temporary", () => {
+		mockAccountId({ accountId: null });
+		mockApiToken({ apiToken: null });
+
+		test("should create a temporary account in non-interactive mode after printing terms notice", async ({
+			expect,
+		}) => {
+			let previewAccountRequests = 0;
+			msw.use(
+				http.post(`${temporaryPreviewAccountUrl}/challenge`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							challengeToken: "challenge-token",
+							seed: Buffer.alloc(32, 1).toString("base64url"),
+							k: 2,
+							g: 2,
+							s: 16,
+							expiresAt: 9999999999,
+						},
+						errors: [],
+						messages: [],
+					})
+				),
+				http.post(temporaryPreviewAccountUrl, async () => {
+					previewAccountRequests += 1;
+					return HttpResponse.json({
+						success: true,
+						result: {
+							account: {
+								id: "preview-account-id",
+								name: "Preview Account Alpha",
+								type: "standard",
+								apiToken: "preview-account-token",
+								tokenId: "preview-token-id",
+								expiresAt: "2027-01-01T00:00:00.000Z",
+							},
+							claim: {
+								token: "claim-token",
+								url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+								expiresAt: "2027-01-02T00:00:00.000Z",
+							},
+						},
+						errors: [],
+						messages: [],
+					});
+				})
+			);
+
+			mockGetScript();
+			mockUploadVersion(false, 0);
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			await expect(
+				runWrangler("versions upload --temporary")
+			).resolves.toBeUndefined();
+
+			expect(previewAccountRequests).toBe(1);
+			expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
+			expect(std.out).toContain("Temporary account ready:");
+			expect(std.out).toContain("Account: Preview Account Alpha (created)");
+			expect(std.out).toContain("Uploaded test-name");
+		});
+	});
 
 	test("should print bindings & startup time on versions upload", async () => {
 		mockGetScript();

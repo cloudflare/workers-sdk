@@ -238,6 +238,15 @@ export type CommandDefinition<
 		suggestSkillsAfterHandler?:
 			| boolean
 			| ((args: HandlerArgs<NamedArgDefs>) => boolean);
+
+		/**
+		 * Whether this command can authenticate with a temporary preview account
+		 * (via the hidden `--temporary` flag) when no real credentials are available.
+		 * Only enable this for commands whose API calls are covered by the temporary
+		 * preview-account deploy token (Workers, KV, D1, Hyperdrive, Queues, SSL/Certs).
+		 * @default false
+		 */
+		supportTemporary?: boolean;
 	};
 
 	/**

@@ -33,12 +33,14 @@ import {
 } from "../metrics/sanitization";
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
+import { setTemporaryAllowed } from "../user";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
+import { temporaryArgDefinition } from "./temporary-commands";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	HandlerArgs,
@@ -66,7 +68,9 @@ export function createRegisterYargsCommand(
 			(def.metadata?.hidden ? false : def.metadata?.description) as string, // Cast to satisfy TypeScript overload selection
 			(subYargs) => {
 				if (def.type === "command") {
-					const args = def.args ?? {};
+					const args: NamedArgDefinitions = def.behaviour?.supportTemporary
+						? { ...def.args, temporary: temporaryArgDefinition }
+						: (def.args ?? {});
 
 					const positionalArgs = new Set(def.positionalArgs);
 
@@ -208,6 +212,11 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
 						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
+
+			setTemporaryAllowed(
+				def.behaviour?.supportTemporary === true &&
+					Boolean((args as { temporary?: boolean }).temporary)
+			);
 
 			await run(experimentalFlags, async () => {
 				const config =
@@ -367,6 +376,18 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						},
 						def.behaviour
 					);
+
+					// For commands that support `--temporary`, nudge users towards a
+					// temporary account when they hit the non-interactive auth error.
+					if (
+						def.behaviour?.supportTemporary &&
+						err instanceof UserError &&
+						err.telemetryMessage ===
+							"user auth missing api token non interactive"
+					) {
+						err.message +=
+							"\n\nTo continue without logging in, rerun this command with `--temporary`. Wrangler will use a temporary account and print a claim URL.";
+					}
 
 					await handleError(err, args, argv);
 

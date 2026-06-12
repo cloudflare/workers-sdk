@@ -17,6 +17,7 @@ export const versionsListCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 		suggestSkillsAfterHandler: (args) => !args.json,
 	},
