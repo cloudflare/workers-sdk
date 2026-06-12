@@ -61,11 +61,33 @@ export const loginCommand = createCommand({
 			requiresArg: false,
 			default: 8976,
 		},
+		"experimental-device": {
+			describe:
+				"(Experimental) Use the OAuth 2.0 Device Authorization Grant (RFC 8628) instead of the localhost callback flow. Useful in containers, remote SSH sessions, or other environments where localhost:8976 is unreachable from your browser.",
+			type: "boolean",
+			default: false,
+		},
 	},
 	async handler(args, { config }) {
 		if (args.scopesList) {
 			listScopes();
 			return;
+		}
+		// `--callback-host` / `--callback-port` configure the temporary local
+		// callback server used by the authorization-code flow. The device
+		// authorization flow has no callback server, so the combination is
+		// invalid rather than merely ignored.
+		if (
+			args.experimentalDevice &&
+			(args.callbackHost !== "localhost" || args.callbackPort !== 8976)
+		) {
+			throw new CommandLineArgsError(
+				"`--callback-host` and `--callback-port` cannot be used with `--experimental-device`; the device authorization flow does not use a local callback server.",
+				{
+					telemetryMessage:
+						"user login callback args incompatible with device flow",
+				}
+			);
 		}
 		if (args.scopes) {
 			if (args.scopes.length === 0) {
@@ -86,6 +108,7 @@ export const loginCommand = createCommand({
 				browser: args.browser,
 				callbackHost: args.callbackHost,
 				callbackPort: args.callbackPort,
+				device: args.experimentalDevice,
 			});
 			return;
 		}
@@ -93,6 +116,7 @@ export const loginCommand = createCommand({
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
+			device: args.experimentalDevice,
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,

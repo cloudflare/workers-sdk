@@ -41,6 +41,7 @@ import {
 import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
+import { renderDeviceQrCode } from "./qr";
 import { getTemporaryPreviewAccountConfigPath } from "./temporary-account-path";
 import { ensureTemporaryTermsAccepted } from "./temporary-terms";
 import type { Account } from "./shared";
@@ -103,6 +104,7 @@ const oauthFlow = createOAuthFlow({
 	},
 	generateAuthUrl,
 	generateRandomState,
+	renderDeviceQrCode,
 });
 
 /**
@@ -260,6 +262,12 @@ type WranglerLoginProps = {
 	browser?: boolean;
 	callbackHost?: string;
 	callbackPort?: number;
+	/**
+	 * When `true`, use the OAuth 2.0 Device Authorization Grant (RFC 8628)
+	 * instead of the authorization-code-with-PKCE flow. Gated behind the
+	 * `--experimental-device` flag on `wrangler login`.
+	 */
+	device?: boolean;
 };
 
 function withDefaultScopes(
@@ -272,6 +280,7 @@ function withDefaultScopes(
 		browser: props?.browser ?? true,
 		callbackHost: props?.callbackHost,
 		callbackPort: props?.callbackPort,
+		device: props?.device,
 	};
 }
 

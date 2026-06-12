@@ -228,6 +228,17 @@ afterEach(() => {
 	vi.mocked(_ci.default).CLOUDFLARE_WORKERS = false;
 });
 
+// Mock the device-flow QR renderer so device-flow tests get a deterministic,
+// compact placeholder in their snapshot output rather than a real ~30-line
+// ASCII QR code. Injected into the OAuth flow context by `../user/user.ts`.
+vi.mock("../user/qr", () => ({
+	renderDeviceQrCode: vi
+		.fn()
+		.mockImplementation(
+			(verificationUrl: string) => `[MOCK QR for ${verificationUrl}]`
+		),
+}));
+
 vi.mock("../user/generate-random-state", () => {
 	return {
 		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
