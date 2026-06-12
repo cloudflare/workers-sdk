@@ -326,6 +326,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					},
 					multiworkerPrimary: isMultiworker ? isPrimaryWorker : undefined,
 					inferOriginFromRoutes: false,
+					routeRequestsByRoutes: true,
 				},
 				build: {
 					nodejsCompatMode: (config) => {

@@ -562,6 +562,8 @@ export interface StartDevWorkerInput {
 		multiworkerPrimary?: boolean;
 		/** Whether to infer the local request origin from configured routes. */
 		inferOriginFromRoutes?: boolean;
+		/** Whether local requests should be matched against configured routes. */
+		routeRequestsByRoutes?: boolean;
 
 		containerBuildId?: string;
 		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
