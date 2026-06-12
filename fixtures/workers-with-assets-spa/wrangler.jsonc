@@ -9,4 +9,6 @@
 		"not_found_handling": "single-page-application",
 		"run_worker_first": false,
 	},
+	// should not affect routing
+	"routes": [{ "pattern": "spa-repro.example.com", "custom_domain": true }],
 }
