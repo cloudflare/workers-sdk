@@ -72,7 +72,7 @@ async function dispatchInner(
 		return detected;
 	}
 
-	const screenError = screenHeaders(c, detected.rules);
+	const screenError = screenHeaders(c, detected.operation, detected.rules);
 	if (screenError !== undefined) {
 		return screenError;
 	}
@@ -82,14 +82,10 @@ async function dispatchInner(
 
 /** A detected operation, bound to the context its handler needs */
 interface BoundOperation {
+	operation: S3Operation;
 	rules: ScreeningRules;
 	run(): Awaitable<Response>;
 }
-
-const NOT_IMPLEMENTED: BoundOperation = {
-	rules: { unsupportedHeaders: [] },
-	run: () => notImplemented("S3 operations are not yet implemented"),
-};
 
 /**
  * Detection and the operation tables are split by addressing level
@@ -116,9 +112,6 @@ function detectOperation(
 	if (detected instanceof Response) {
 		return detected;
 	}
-	if (detected === undefined) {
-		return NOT_IMPLEMENTED;
-	}
 
 	return bind(detected, OBJECT_OPERATIONS, {
 		c,
@@ -136,6 +129,7 @@ function bind<Operation extends S3Operation, Context>(
 ): BoundOperation {
 	const definition = table[operation];
 	return {
+		operation,
 		rules: definition,
 		run: () => definition.handle(context),
 	};

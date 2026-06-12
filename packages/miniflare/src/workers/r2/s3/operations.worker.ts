@@ -1,6 +1,8 @@
+import assert from "node:assert";
 import { XMLValidator } from "fast-xml-parser";
+import { R2S3Bindings } from "../constants";
 import { parseRangeHeader, serveR2Object } from "../serve.worker";
-import { awsUriEncode } from "./auth.worker";
+import { awsUriEncode, credentialsEqual } from "./auth.worker";
 import {
 	coerceArray,
 	hex,
@@ -9,9 +11,13 @@ import {
 	xmlParser,
 	xmlResponse,
 } from "./common.worker";
-import { errorResponse, notImplemented } from "./errors.worker";
+import { errorResponse, noSuchBucket, notImplemented } from "./errors.worker";
 import type { S3Context } from "./common.worker";
-import type { BucketOperation, ObjectOperation } from "./detect.worker";
+import type {
+	BucketOperation,
+	ObjectOperation,
+	S3Operation,
+} from "./detect.worker";
 import type { Awaitable } from "miniflare:shared";
 
 interface S3Error {
@@ -108,6 +114,7 @@ function bindingError(e: unknown): Response {
 }
 
 const BUCKET_OWNER = ["x-amz-expected-bucket-owner"];
+const SOURCE_BUCKET_OWNER = ["x-amz-source-expected-bucket-owner"];
 const MFA_AND_LOCK_BYPASS = ["x-amz-mfa", "x-amz-bypass-governance-retention"];
 /** Headers R2 recognizes but rejects on every write operation */
 const WRITE_UNSUPPORTED = [
@@ -174,6 +181,7 @@ const CANNED_ACLS = new Set([
 
 export function screenHeaders(
 	c: S3Context,
+	operation: S3Operation,
 	rules: ScreeningRules
 ): Response | undefined {
 	// Reject session tokens on every operation (auth-level, not
@@ -204,7 +212,7 @@ export function screenHeaders(
 	}
 
 	if (rules.ssec !== undefined) {
-		return screenSSECHeaders(c, rules.ssec);
+		return screenSSECHeaders(c, operation, rules.ssec);
 	}
 
 	return undefined;
@@ -212,55 +220,64 @@ export function screenHeaders(
 
 function screenSSECHeaders(
 	c: S3Context,
+	operation: S3Operation,
 	mode: "read" | "write"
 ): Response | undefined {
-	const algorithmName = "x-amz-server-side-encryption-customer-algorithm";
-	const algorithm = c.req.header(algorithmName);
-	const key = c.req.header("x-amz-server-side-encryption-customer-key");
-	const keyMd5 = c.req.header("x-amz-server-side-encryption-customer-key-MD5");
-	if (algorithm === undefined && key === undefined && keyMd5 === undefined) {
-		return undefined;
-	}
+	const prefixes =
+		operation === "CopyObject" ? ["x-amz-", "x-amz-copy-source-"] : ["x-amz-"];
+	for (const prefix of prefixes) {
+		const algorithmName = `${prefix}server-side-encryption-customer-algorithm`;
+		const algorithm = c.req.header(algorithmName);
+		const key = c.req.header(`${prefix}server-side-encryption-customer-key`);
+		const keyMd5 = c.req.header(
+			`${prefix}server-side-encryption-customer-key-MD5`
+		);
+		if (algorithm === undefined && key === undefined && keyMd5 === undefined) {
+			continue;
+		}
 
-	// R2 requires the full header triple, checked in this order
-	if (key === undefined) {
-		return errorResponse(
-			400,
-			"InvalidArgument",
-			"Requests specifying Server Side Encryption with Customer provided keys must provide an appropriate secret key."
-		);
-	}
-	if (keyMd5 === undefined) {
-		return errorResponse(
-			400,
-			"InvalidArgument",
-			"Requests specifying Server Side Encryption with Customer provided keys must provide the client calculated MD5 of the secret key."
-		);
-	}
-	if (algorithm === undefined) {
-		return errorResponse(
-			400,
-			"InvalidArgument",
-			"Requests specifying Server Side Encryption with Customer provided keys must provide a valid encryption algorithm."
-		);
-	}
-	// After the triple is complete, R2 validates the algorithm value (on
-	// reads, writes, and copy sources alike) before anything else
-	if (algorithm !== "AES256") {
-		return errorResponse(
-			400,
-			"InvalidEncryptionAlgorithmError",
-			"The encryption request that you specified is not valid. The valid value is AES256."
-		);
-	}
-
-	return mode === "read"
-		? errorResponse(
+		// R2 requires the full header triple, checked in this order
+		if (key === undefined) {
+			return errorResponse(
 				400,
-				"InvalidRequest",
-				"The encryption parameters are not applicable to this object."
-			)
-		: notImplementedHeader(algorithmName, algorithm);
+				"InvalidArgument",
+				"Requests specifying Server Side Encryption with Customer provided keys must provide an appropriate secret key."
+			);
+		}
+		if (keyMd5 === undefined) {
+			return errorResponse(
+				400,
+				"InvalidArgument",
+				"Requests specifying Server Side Encryption with Customer provided keys must provide the client calculated MD5 of the secret key."
+			);
+		}
+		if (algorithm === undefined) {
+			return errorResponse(
+				400,
+				"InvalidArgument",
+				"Requests specifying Server Side Encryption with Customer provided keys must provide a valid encryption algorithm."
+			);
+		}
+		// After the triple is complete, R2 validates the algorithm value (on
+		// reads, writes, and copy sources alike) before anything else
+		if (algorithm !== "AES256") {
+			return errorResponse(
+				400,
+				"InvalidEncryptionAlgorithmError",
+				"The encryption request that you specified is not valid. The valid value is AES256."
+			);
+		}
+
+		return mode === "read"
+			? errorResponse(
+					400,
+					"InvalidRequest",
+					"The encryption parameters are not applicable to this object."
+				)
+			: notImplementedHeader(algorithmName, algorithm);
+	}
+
+	return undefined;
 }
 
 const CONDITIONAL_HEADERS = [
@@ -348,6 +365,59 @@ function collectCustomMetadata(c: S3Context): Record<string, string> {
 	}
 
 	return customMetadata;
+}
+
+/**
+ * Parses `x-amz-copy-source` (`/bucket/key` or `bucket/key`) and resolves
+ * the source bucket binding.
+ */
+function parseCopySource(
+	c: S3Context,
+	bucketId: string
+): { bucket: R2Bucket; key: string } | Response {
+	// detectObjectOperation() only routes to copy operations when the header
+	// exists
+	const header = c.req.header("x-amz-copy-source");
+	assert(header !== undefined);
+	const raw = decodeURIComponent(header);
+	const source = raw.startsWith("/") ? raw.slice(1) : raw;
+	const separator = source.indexOf("/");
+	if (separator === -1 || separator === source.length - 1) {
+		return errorResponse(400, "InvalidArgument", "copy source bucket name");
+	}
+
+	const sourceBucketId = source.slice(0, separator);
+	const bucket = c.env[`${R2S3Bindings.BUCKET_PREFIX}${sourceBucketId}`];
+	if (bucket === undefined) {
+		return noSuchBucket();
+	}
+
+	// Credentials are per-bucket: the pair the request authenticated with
+	// (the target bucket's) must also grant access to the source bucket.
+	// Real R2 credentials are account-scoped, so it has no equivalent check.
+	const credentials = c.env[R2S3Bindings.JSON_CREDENTIALS];
+	const sourceCredentials = credentials[sourceBucketId];
+	const targetCredentials = credentials[bucketId];
+	assert(sourceCredentials !== undefined && targetCredentials !== undefined);
+	if (!credentialsEqual(sourceCredentials, targetCredentials)) {
+		return errorResponse(401, "Unauthorized", "Unauthorized");
+	}
+
+	return { bucket, key: source.slice(separator + 1) };
+}
+
+/** Maps x-amz-copy-source-if-* headers onto standard conditional headers */
+function copySourceConditionals(c: S3Context): Headers | undefined {
+	let headers: Headers | undefined;
+	for (const standard of CONDITIONAL_HEADERS) {
+		const value = c.req.header(`x-amz-copy-source-${standard.toLowerCase()}`);
+		if (value !== undefined) {
+			headers ??= new Headers();
+			headers.set(standard, value);
+		}
+	}
+
+	return headers;
 }
 
 function serveObject(
@@ -567,6 +637,61 @@ export const OBJECT_OPERATIONS: Record<
 				return preconditionFailed();
 			}
 			return c.body(null, { headers: { ETag: object.httpEtag } });
+		},
+	},
+	CopyObject: {
+		unsupportedHeaders: [
+			...WRITE_UNSUPPORTED,
+			...SOURCE_BUCKET_OWNER,
+			"x-amz-tagging-directive",
+			"x-amz-checksum-algorithm",
+		],
+		validatesWriteHeaders: true,
+		ssec: "write",
+		async handle({ c, bucket, bucketId, key }) {
+			const directive = c.req.header("x-amz-metadata-directive") ?? "COPY";
+			if (directive !== "COPY" && directive !== "REPLACE") {
+				return errorResponse(
+					400,
+					"InvalidArgument",
+					`metadata directive ${directive}.`
+				);
+			}
+			const storageClass = parseStorageClass(c);
+			if (storageClass instanceof Response) {
+				return storageClass;
+			}
+			const source = parseCopySource(c, bucketId);
+			if (source instanceof Response) {
+				return source;
+			}
+
+			const sourceObject = await source.bucket.get(source.key, {
+				onlyIf: copySourceConditionals(c),
+			});
+			if (sourceObject === null) {
+				return noSuchKey();
+			}
+			if (!("body" in sourceObject)) {
+				return preconditionFailed();
+			}
+
+			const object = await bucket.put(key, sourceObject.body, {
+				httpMetadata:
+					directive === "COPY" ? sourceObject.httpMetadata : c.req.raw.headers,
+				customMetadata:
+					directive === "COPY"
+						? sourceObject.customMetadata
+						: collectCustomMetadata(c),
+				storageClass,
+			});
+			if (object === null) {
+				return preconditionFailed();
+			}
+			return xmlResponse("CopyObjectResult", {
+				ETag: object.httpEtag,
+				LastModified: object.uploaded.toISOString(),
+			});
 		},
 	},
 	DeleteObject: {

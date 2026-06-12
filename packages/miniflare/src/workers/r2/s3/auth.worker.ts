@@ -523,6 +523,17 @@ async function verifyPresigned(
 	);
 }
 
+/** Timing-safe comparison of credential pairs */
+export function credentialsEqual(
+	expected: S3Credentials,
+	provided: S3Credentials
+): boolean {
+	return (
+		timingSafeStringsEqual(expected.accessKeyId, provided.accessKeyId) &&
+		timingSafeStringsEqual(expected.secretAccessKey, provided.secretAccessKey)
+	);
+}
+
 /** Whether the request carries either SigV4 authentication method */
 export function hasAuthentication(
 	request: Request,

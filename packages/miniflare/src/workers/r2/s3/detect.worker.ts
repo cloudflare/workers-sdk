@@ -20,6 +20,7 @@ export type ObjectOperation =
 	| "GetObject"
 	| "HeadObject"
 	| "PutObject"
+	| "CopyObject"
 	| "DeleteObject";
 
 export type S3Operation = BucketOperation | ObjectOperation;
@@ -307,7 +308,7 @@ function objectSubresourceError(
 export function detectObjectOperation(
 	c: S3Context,
 	params: URLSearchParams
-): ObjectOperation | Response | undefined {
+): ObjectOperation | Response {
 	const method = c.req.method;
 
 	if (params.has("uploadId") && method === "GET") {
@@ -339,7 +340,7 @@ export function detectObjectOperation(
 			}
 
 			return c.req.header("x-amz-copy-source") !== undefined
-				? undefined
+				? "CopyObject"
 				: "PutObject";
 		}
 		case "POST":

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import {
+	CopyObjectCommand,
 	DeleteObjectCommand,
 	DeleteObjectsCommand,
 	GetObjectCommand,
@@ -1148,6 +1149,179 @@ test("DeleteObjects rejects malformed XML", async ({ expect }) => {
 		).join("")}</Delete>`,
 	});
 	await expectError(tooMany, 400, "MalformedXML", expect);
+});
+
+test("CopyObject copies an object, preserving metadata", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("copy/src.txt", "copy me", {
+		httpMetadata: { contentType: "text/csv" },
+		customMetadata: { original: "yes" },
+	});
+	const client = s3();
+	const res = await client.send(
+		new CopyObjectCommand({
+			Bucket: "bucket",
+			Key: "copy/dst.txt",
+			CopySource: "/bucket/copy/src.txt",
+		})
+	);
+	expect(res.CopyObjectResult?.ETag).toBeDefined();
+	expect(res.CopyObjectResult?.LastModified).toBeDefined();
+
+	const get = await client.send(
+		new GetObjectCommand({ Bucket: "bucket", Key: "copy/dst.txt" })
+	);
+	assert(get.Body !== undefined);
+	expect(await get.Body.transformToString()).toBe("copy me");
+	expect(get.ContentType).toBe("text/csv");
+	expect(get.Metadata).toEqual({ original: "yes" });
+});
+
+test("CopyObject REPLACE directive uses request metadata", async ({
+	expect,
+}) => {
+	const r2 = await bucket();
+	await r2.put("copy/src2.txt", "data", {
+		httpMetadata: { contentType: "text/csv" },
+	});
+	const client = s3();
+	await client.send(
+		new CopyObjectCommand({
+			Bucket: "bucket",
+			Key: "copy/dst2.txt",
+			CopySource: "/bucket/copy/src2.txt",
+			MetadataDirective: "REPLACE",
+			ContentType: "application/json",
+			Metadata: { new: "1" },
+		})
+	);
+	const get = await client.send(
+		new GetObjectCommand({ Bucket: "bucket", Key: "copy/dst2.txt" })
+	);
+	expect(get.ContentType).toBe("application/json");
+	expect(get.Metadata).toEqual({ new: "1" });
+});
+
+test("CopyObject works across buckets", async ({ expect }) => {
+	const other = await ctx.mf.getR2Bucket("OTHER");
+	await other.put("cross.txt", "from the other bucket");
+	const client = s3();
+	await client.send(
+		new CopyObjectCommand({
+			Bucket: "bucket",
+			Key: "cross-copied.txt",
+			CopySource: "/other-bucket/cross.txt",
+		})
+	);
+	const get = await client.send(
+		new GetObjectCommand({ Bucket: "bucket", Key: "cross-copied.txt" })
+	);
+	assert(get.Body !== undefined);
+	expect(await get.Body.transformToString()).toBe("from the other bucket");
+});
+
+test("CopyObject error cases", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("copy/src3.txt", "x");
+	const client = s3();
+
+	await expectSdkError(
+		client.send(
+			new CopyObjectCommand({
+				Bucket: "bucket",
+				Key: "copy/dst3.txt",
+				CopySource: "/bucket/copy/nope.txt",
+			})
+		),
+		404,
+		"NoSuchKey",
+		expect
+	);
+
+	await expectSdkError(
+		client.send(
+			new CopyObjectCommand({
+				Bucket: "bucket",
+				Key: "copy/dst3.txt",
+				CopySource: "/no-such-bucket/x.txt",
+			})
+		),
+		404,
+		"NoSuchBucket",
+		expect
+	);
+
+	// third-bucket is configured with different credentials; the verified
+	// pair must also grant access to the copy source
+	await expectSdkError(
+		client.send(
+			new CopyObjectCommand({
+				Bucket: "bucket",
+				Key: "copy/dst3.txt",
+				CopySource: "/third-bucket/x.txt",
+			})
+		),
+		401,
+		"Unauthorized",
+		expect
+	);
+
+	await expectSdkError(
+		client.send(
+			new CopyObjectCommand({
+				Bucket: "bucket",
+				Key: "copy/dst3.txt",
+				CopySource: "/bucket/copy/src3.txt",
+				CopySourceIfMatch: '"0123456789abcdef0123456789abcdef"',
+			})
+		),
+		412,
+		"PreconditionFailed",
+		expect
+	);
+
+	const badDirective = await s3Fetch("bucket/copy/dst3.txt", {
+		method: "PUT",
+		headers: {
+			"x-amz-copy-source": "/bucket/copy/src3.txt",
+			"x-amz-metadata-directive": "WAT",
+		},
+	});
+	expect(badDirective.status).toBe(400);
+	expect(await badDirective.text()).toContain("metadata directive WAT.");
+
+	const badSource = await s3Fetch("bucket/copy/dst3.txt", {
+		method: "PUT",
+		headers: { "x-amz-copy-source": "no-slash" },
+	});
+	expect(badSource.status).toBe(400);
+	expect(await badSource.text()).toContain("copy source bucket name");
+});
+
+test("CopyObject decodes the copy source and allows self-copies", async ({
+	expect,
+}) => {
+	const r2 = await bucket();
+	await r2.put("copy/sp ace.txt", "spaced");
+
+	// Copy sources arrive percent-encoded
+	const encoded = await s3Fetch("bucket/copy/dst-encoded.txt", {
+		method: "PUT",
+		headers: { "x-amz-copy-source": "/bucket/copy/sp%20ace.txt" },
+	});
+	expect(encoded.status).toBe(200);
+	const copied = await r2.get("copy/dst-encoded.txt");
+	expect(await copied?.text()).toBe("spaced");
+
+	// Copying an object onto itself is allowed
+	const self = await s3Fetch("bucket/copy/sp%20ace.txt", {
+		method: "PUT",
+		headers: { "x-amz-copy-source": "/bucket/copy/sp%20ace.txt" },
+	});
+	expect(self.status).toBe(200);
+	expect(await self.text()).toContain("<CopyObjectResult");
+	const after = await r2.get("copy/sp ace.txt");
+	expect(await after?.text()).toBe("spaced");
 });
 
 test("unimplemented multipart surfaces respond with NotImplemented", async ({
