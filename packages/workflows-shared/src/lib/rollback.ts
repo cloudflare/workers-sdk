@@ -1,6 +1,7 @@
 import { InstanceEvent } from "../instance";
 import { WorkflowFatalError } from "./errors";
 import { isValidStepConfig } from "./validators";
+import type { WorkflowStepContext } from "../context";
 import type { Engine } from "../engine";
 import type { WorkflowStepConfig } from "cloudflare:workers";
 
@@ -12,9 +13,9 @@ type UserErrorField = {
 export const ROLLBACK_CACHE_KEY_PREFIX = "rollback:";
 
 export type RollbackContext = {
+	ctx: WorkflowStepContext;
 	error: Error;
 	output: unknown;
-	stepName: string;
 };
 
 // dup() to outlive the originating step.do call; Symbol.dispose locally
@@ -32,6 +33,7 @@ export type WorkflowStepRollbackOptions = {
 export type RollbackRegistryEntry = {
 	fn: RollbackFn;
 	stepName: string;
+	stepContext: WorkflowStepContext;
 	output?: unknown;
 	config?: WorkflowStepConfig;
 };
@@ -99,7 +101,7 @@ export function registerRollbackFn(
 	registry: Map<string, RollbackRegistryEntry>,
 	registration: RollbackRegistration
 ): void {
-	const { cacheKey, fn, stepName, output, config } = registration;
+	const { cacheKey, fn, stepName, stepContext, output, config } = registration;
 	const existing = registry.get(cacheKey);
 	if (existing) {
 		disposeRollbackStub(existing.fn);
@@ -107,6 +109,7 @@ export function registerRollbackFn(
 	registry.set(cacheKey, {
 		fn: dupRollbackStub(fn),
 		stepName,
+		stepContext,
 		...("output" in registration && { output }),
 		...(config !== undefined && { config }),
 	});
@@ -176,9 +179,9 @@ export async function executeRollbacks(
 		try {
 			await ctx.do(entry.stepName, entry.config ?? {}, async () => {
 				await entry.fn({
+					ctx: structuredClone(entry.stepContext),
 					error: triggerError,
 					output: entry.output,
-					stepName: entry.stepName,
 				});
 			});
 			completed++;
