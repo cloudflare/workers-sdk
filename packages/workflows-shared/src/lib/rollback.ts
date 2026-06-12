@@ -32,7 +32,7 @@ export type WorkflowStepRollbackOptions = {
 
 export type RollbackRegistryEntry = {
 	fn: RollbackFn;
-	target: string;
+	stepName: string;
 	stepContext: WorkflowStepContext;
 	output?: unknown;
 	config?: WorkflowStepConfig;
@@ -43,7 +43,7 @@ export type RollbackRegistration = RollbackRegistryEntry & {
 };
 
 export function parseRollbackOptions(
-	target: string,
+	stepName: string,
 	options: unknown
 ): WorkflowStepRollbackOptions | undefined {
 	if (options === undefined) {
@@ -56,7 +56,7 @@ export function parseRollbackOptions(
 		Array.isArray(options)
 	) {
 		const error = new WorkflowFatalError(
-			`Rollback options for "${target}" must be an object`
+			`Rollback options for "${stepName}" must be an object`
 		) as Error & UserErrorField;
 		error.isUserError = true;
 		throw error;
@@ -65,7 +65,7 @@ export function parseRollbackOptions(
 	const rollbackOptions = options as Partial<WorkflowStepRollbackOptions>;
 	if (typeof rollbackOptions.rollback !== "function") {
 		const error = new WorkflowFatalError(
-			`Rollback for "${target}" must be a function`
+			`Rollback for "${stepName}" must be a function`
 		) as Error & UserErrorField;
 		error.isUserError = true;
 		throw error;
@@ -76,7 +76,7 @@ export function parseRollbackOptions(
 		!isValidStepConfig(rollbackOptions.rollbackConfig)
 	) {
 		const error = new WorkflowFatalError(
-			`Rollback config for "${target}" is in a invalid format. See https://developers.cloudflare.com/workflows/build/sleeping-and-retrying/`
+			`Rollback config for "${stepName}" is in a invalid format. See https://developers.cloudflare.com/workflows/build/sleeping-and-retrying/`
 		) as Error & UserErrorField;
 		error.isUserError = true;
 		throw error;
@@ -101,14 +101,14 @@ export function registerRollbackFn(
 	registry: Map<string, RollbackRegistryEntry>,
 	registration: RollbackRegistration
 ): void {
-	const { cacheKey, fn, target, stepContext, output, config } = registration;
+	const { cacheKey, fn, stepName, stepContext, output, config } = registration;
 	const existing = registry.get(cacheKey);
 	if (existing) {
 		disposeRollbackStub(existing.fn);
 	}
 	registry.set(cacheKey, {
 		fn: dupRollbackStub(fn),
-		target,
+		stepName,
 		stepContext,
 		...("output" in registration && { output }),
 		...(config !== undefined && { config }),
@@ -177,7 +177,7 @@ export async function executeRollbacks(
 	for (const [i, [cacheKey, entry]] of entries.entries()) {
 		const ctx = engine.createRollbackContext({ cacheKey });
 		try {
-			await ctx.do(entry.target, entry.config ?? {}, async () => {
+			await ctx.do(entry.stepName, entry.config ?? {}, async () => {
 				await entry.fn({
 					ctx: structuredClone(entry.stepContext),
 					error: triggerError,

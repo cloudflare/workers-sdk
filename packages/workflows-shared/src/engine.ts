@@ -585,8 +585,11 @@ export class Engine extends DurableObject<Env> {
 		string,
 		{ resolve: (v: unknown) => void; reject: (e: unknown) => void }
 	> = new Map();
-	async waitForStepResult(name: string, stepCount?: number): Promise<unknown> {
-		const hash = await computeHash(name);
+	async waitForStepResult(
+		stepName: string,
+		stepCount?: number
+	): Promise<unknown> {
+		const hash = await computeHash(stepName);
 		const count = stepCount ?? 1;
 		const cacheKey = `${hash}-${count}`;
 
