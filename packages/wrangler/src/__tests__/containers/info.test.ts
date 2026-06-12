@@ -75,8 +75,8 @@ describe("containers info", () => {
 				{ once: true }
 			)
 		);
-		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler("containers info asdf --json");
+		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
 			    "id": "asdf",
@@ -135,6 +135,8 @@ describe("containers info", () => {
 		await expect(
 			runWrangler("containers info asdf --json")
 		).rejects.toThrowError(/There has been an internal error/);
+		expect(() => JSON.parse(std.out)).not.toThrow();
+		expect(JSON.parse(std.out)).toHaveProperty("error");
 	});
 
 	it("should show a single container when given an ID (json)", async ({
@@ -154,8 +156,8 @@ describe("containers info", () => {
 				{ once: true }
 			)
 		);
-		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler("containers info asdf");
+		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
 			    "id": "asdf",
