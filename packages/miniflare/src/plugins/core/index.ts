@@ -1058,7 +1058,7 @@ export function getGlobalServices({
 				: allWorkerOpts?.find(
 						(worker) =>
 							(worker.core.name ?? "") === name && worker.assets?.assets
-						);
+					);
 			return {
 				name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
 				service: {
