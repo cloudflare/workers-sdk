@@ -1,8 +1,11 @@
 import fs from "node:fs/promises";
 import SCRIPT_R2_BUCKET_OBJECT from "worker:r2/bucket";
 import SCRIPT_R2_PUBLIC from "worker:r2/public";
+import SCRIPT_R2_S3 from "worker:r2/s3/index";
 import { z } from "zod";
+import { MiniflareCoreError } from "../../shared";
 import { SharedBindings } from "../../workers";
+import { R2S3Bindings } from "../../workers/r2/constants";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
@@ -21,7 +24,15 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
+import type { S3Credentials } from "../../workers/r2/constants";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
+
+export const R2S3CredentialsSchema = z.object({
+	accessKeyId: z.string(),
+	secretAccessKey: z.string(),
+}) satisfies z.ZodType<S3Credentials>;
+
+export type R2S3Credentials = z.infer<typeof R2S3CredentialsSchema>;
 
 export const R2OptionsSchema = z.object({
 	r2Buckets: z
@@ -34,6 +45,7 @@ export const R2OptionsSchema = z.object({
 						remoteProxyConnectionString: z
 							.custom<RemoteProxyConnectionString>()
 							.optional(),
+						s3Credentials: R2S3CredentialsSchema.optional(),
 					}),
 				])
 			),
@@ -49,18 +61,27 @@ export const R2_PLUGIN_NAME = "r2";
 const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
 const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
 export const R2_PUBLIC_SERVICE_NAME = `${R2_PLUGIN_NAME}:public`;
+export const R2_S3_SERVICE_NAME = `${R2_PLUGIN_NAME}:s3`;
 const R2_BUCKET_OBJECT_CLASS_NAME = "R2BucketObject";
 const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: R2_BUCKET_SERVICE_PREFIX,
 	className: R2_BUCKET_OBJECT_CLASS_NAME,
 };
 
+interface R2BucketEntry {
+	id: string;
+	remoteProxyConnectionString?: RemoteProxyConnectionString;
+	s3Credentials?: R2S3Credentials;
+}
+
 export function getR2PublicService(
 	allWorkerOpts: { r2?: z.infer<typeof R2OptionsSchema> }[]
 ): Service | undefined {
 	const publicBucketIds = new Set<string>();
 	for (const worker of allWorkerOpts) {
-		for (const [, bucket] of namespaceEntries(worker.r2?.r2Buckets)) {
+		for (const [, bucket] of namespaceEntries<R2BucketEntry>(
+			worker.r2?.r2Buckets
+		)) {
 			if (bucket.remoteProxyConnectionString !== undefined) {
 				continue;
 			}
@@ -86,6 +107,67 @@ export function getR2PublicService(
 	};
 }
 
+export function getR2S3Service(
+	allWorkerOpts: { r2?: z.infer<typeof R2OptionsSchema> }[]
+): Service | undefined {
+	const credentialsById: Record<
+		string,
+		z.infer<typeof R2S3CredentialsSchema>
+	> = {};
+	for (const worker of allWorkerOpts) {
+		for (const [, bucket] of namespaceEntries<R2BucketEntry>(
+			worker.r2?.r2Buckets
+		)) {
+			if (
+				bucket.remoteProxyConnectionString !== undefined ||
+				bucket.s3Credentials === undefined
+			) {
+				continue;
+			}
+
+			const existing = credentialsById[bucket.id];
+			if (
+				existing !== undefined &&
+				(existing.accessKeyId !== bucket.s3Credentials.accessKeyId ||
+					existing.secretAccessKey !== bucket.s3Credentials.secretAccessKey)
+			) {
+				throw new MiniflareCoreError(
+					"ERR_DIFFERENT_S3_CREDENTIALS",
+					`Bucket "${bucket.id}" is bound by multiple Workers with different S3 credentials`
+				);
+			}
+
+			credentialsById[bucket.id] = bucket.s3Credentials;
+		}
+	}
+
+	const bucketIds = Object.keys(credentialsById);
+	if (bucketIds.length === 0) {
+		return undefined;
+	}
+
+	const bindings = bucketIds.map<Worker_Binding>((id) => ({
+		name: `${R2S3Bindings.BUCKET_PREFIX}${id}`,
+		r2Bucket: {
+			name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
+		},
+	}));
+	bindings.push({
+		name: R2S3Bindings.JSON_CREDENTIALS,
+		json: JSON.stringify(credentialsById),
+	});
+
+	return {
+		name: R2_S3_SERVICE_NAME,
+		worker: {
+			compatibilityDate: "2026-01-01",
+			compatibilityFlags: ["nodejs_compat"],
+			modules: [{ name: "s3.worker.js", esModule: SCRIPT_R2_S3() }],
+			bindings,
+		},
+	};
+}
+
 export const R2_PLUGIN: Plugin<
 	typeof R2OptionsSchema,
 	typeof R2SharedOptionsSchema
@@ -94,7 +176,7 @@ export const R2_PLUGIN: Plugin<
 	sharedOptions: R2SharedOptionsSchema,
 	bindingTypeDescription: "R2 bucket",
 	getBindings(options) {
-		const buckets = namespaceEntries(options.r2Buckets);
+		const buckets = namespaceEntries<R2BucketEntry>(options.r2Buckets);
 		return buckets.map<Worker_Binding>(([name, bucket]) => ({
 			name,
 			r2Bucket: {
@@ -121,7 +203,7 @@ export const R2_PLUGIN: Plugin<
 		unsafeStickyBlobs,
 	}) {
 		const persist = sharedOptions.r2Persist;
-		const buckets = namespaceEntries(options.r2Buckets);
+		const buckets = namespaceEntries<R2BucketEntry>(options.r2Buckets);
 		const services = buckets.map<Service>(
 			([name, { id, remoteProxyConnectionString }]) => ({
 				name: getUserBindingServiceName(
