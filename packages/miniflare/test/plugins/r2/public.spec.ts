@@ -144,9 +144,7 @@ test("HEAD returns 404 for a missing key", async ({ expect }) => {
 	await res.arrayBuffer();
 });
 
-test("rejects write methods with 405 and an Allow header", async ({
-	expect,
-}) => {
+test("rejects write methods with 401", async ({ expect }) => {
 	const r2 = await ctx.mf.getR2Bucket("BUCKET");
 	await r2.put("readonly-key", "untouched");
 
@@ -155,8 +153,7 @@ test("rejects write methods with 405 and an Allow header", async ({
 			method,
 			body: method === "DELETE" ? undefined : "tampered",
 		});
-		expect(res.status, `${method} should be rejected`).toBe(405);
-		expect(res.headers.get("Allow")).toBe("GET, HEAD, OPTIONS");
+		expect(res.status, `${method} should be rejected`).toBe(401);
 		await res.arrayBuffer();
 	}
 

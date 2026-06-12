@@ -70,7 +70,7 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 				return c.notFound();
 			}
 			if (!("body" in recheck)) {
-				return c.body(null, { status: 412, headers: objectHeaders(recheck) });
+				return c.body(null, 412);
 			}
 		}
 
@@ -103,8 +103,6 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 	return c.body(object.body, { headers });
 });
 
-app.all("/:bucketId/:key{.+}", (c) =>
-	c.text("Method Not Allowed", 405, { Allow: "GET, HEAD, OPTIONS" })
-);
+app.all("/:bucketId/:key{.+}", (c) => c.body(null, 401));
 
 export default app;
