@@ -38,8 +38,6 @@
 	},
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
-		"@cloudflare/containers-shared": "workspace:*",
-		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"blake3-wasm": "2.1.5",
 		"chalk": "catalog:default",
@@ -51,6 +49,9 @@
 		"undici": "catalog:default"
 	},
 	"devDependencies": {
+		"@cloudflare/config": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@types/command-exists": "^1.2.0",
@@ -63,7 +64,16 @@
 		"ts-dedent": "^2.2.0",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"zod": "^4.4.3"
+	},
+	"peerDependencies": {
+		"zod": "^4.4.3"
+	},
+	"peerDependenciesMeta": {
+		"zod": {
+			"optional": true
+		}
 	},
 	"volta": {
 		"extends": "../../package.json"
