@@ -109,6 +109,8 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 			if (!("body" in recheck)) {
 				return c.body(null, 412);
 			}
+			// An unread recheck body would hold a read stream open
+			void recheck.body.cancel();
 		}
 
 		// Otherwise, the preconditions hold, so the failure came from a cache validator.
@@ -116,6 +118,10 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 	}
 
 	const body = c.req.method === "HEAD" ? null : object.body;
+	if (body === null) {
+		// An unread body would hold a read stream open
+		void object.body.cancel();
+	}
 
 	const range = object.range;
 	if (hasRange && range !== undefined) {
@@ -126,6 +132,9 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 			object.size === 0 ||
 			(parsedRange?.start !== undefined && parsedRange.start >= object.size)
 		) {
+			if (body !== null) {
+				void body.cancel();
+			}
 			return c.body(null, 416);
 		}
 		// The returned range may carry all keys with some `undefined` (e.g.
