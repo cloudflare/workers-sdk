@@ -3,6 +3,10 @@ import { errorResponse, notImplemented, routeNotFound } from "./errors.worker";
 const notImplementedOperation = (name: string) =>
 	notImplemented(`${name} not implemented`);
 
+export type ObjectOperation = "GetObject" | "HeadObject";
+
+export type S3Operation = ObjectOperation;
+
 /**
  * Object-level subresource query parameters map onto operations R2's S3
  * endpoint recognizes but does not implement. Subresource parameters
@@ -184,10 +188,24 @@ export function detectBucketOperation(
 	}
 }
 
+/** A recognized object subresource wins with its named templated error */
+function objectSubresourceError(
+	params: URLSearchParams,
+	method: string
+): Response | undefined {
+	for (const name of params.keys()) {
+		const subresource = OBJECT_SUBRESOURCES[name]?.[method];
+		if (subresource !== undefined) {
+			return notImplementedOperation(subresource);
+		}
+	}
+	return undefined;
+}
+
 export function detectObjectOperation(
 	method: string,
 	params: URLSearchParams
-): Response | undefined {
+): ObjectOperation | Response | undefined {
 	if (params.has("uploadId") && method === "GET") {
 		// Real R2 implements ListParts; the local R2 binding cannot list parts
 		return notImplementedOperation("ListParts");
@@ -206,26 +224,12 @@ export function detectObjectOperation(
 
 			if (method === "HEAD") {
 				// Real R2 HEAD ignores subresource parameters
-				return undefined;
+				return "HeadObject";
 			}
 
-			for (const name of params.keys()) {
-				const subresource = OBJECT_SUBRESOURCES[name]?.[method];
-				if (subresource !== undefined) {
-					return notImplementedOperation(subresource);
-				}
-			}
-
-			return undefined;
+			return objectSubresourceError(params, method) ?? "GetObject";
 		case "PUT":
-			for (const name of params.keys()) {
-				const subresource = OBJECT_SUBRESOURCES[name]?.[method];
-				if (subresource !== undefined) {
-					return notImplementedOperation(subresource);
-				}
-			}
-
-			return undefined;
+			return objectSubresourceError(params, method);
 		case "POST":
 		case "DELETE":
 			return undefined;

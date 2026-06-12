@@ -6,9 +6,10 @@ import { hasAuthentication, verifyRequest } from "./auth.worker";
 import { stripBodyForHead } from "./common.worker";
 import { detectBucketOperation, detectObjectOperation } from "./detect.worker";
 import { noSuchBucket, notImplemented } from "./errors.worker";
-import { screenHeaders } from "./operations.worker";
+import { OBJECT_OPERATIONS, screenHeaders } from "./operations.worker";
 import type { S3Context } from "./common.worker";
-import type { ScreeningRules } from "./operations.worker";
+import type { S3Operation } from "./detect.worker";
+import type { OperationDefinition, ScreeningRules } from "./operations.worker";
 import type { Awaitable } from "miniflare:shared";
 
 export async function dispatch(
@@ -35,6 +36,10 @@ async function dispatchInner(
 		return noSuchBucket();
 	}
 
+	// The plugin binds exactly the buckets in the credential map
+	const bucket = c.env[`${R2S3Bindings.BUCKET_PREFIX}${bucketId}`];
+	assert(bucket !== undefined);
+
 	const params = new URL(c.req.url).searchParams;
 
 	// R2 interprets a bucket-level POST carrying no auth at all as an
@@ -58,7 +63,7 @@ async function dispatchInner(
 		return authError;
 	}
 
-	const detected = detectOperation(c, key, params);
+	const detected = detectOperation(c, bucket, bucketId, key, params);
 	if (detected instanceof Response) {
 		return detected;
 	}
@@ -82,8 +87,15 @@ const NOT_IMPLEMENTED: BoundOperation = {
 	run: () => notImplemented("S3 operations are not yet implemented"),
 };
 
+/**
+ * Detection and the operation tables are split by addressing level
+ * (bucket- and object-level operations take different contexts). Binding
+ * the context here keeps those splits out of `dispatch()`.
+ */
 function detectOperation(
 	c: S3Context,
+	bucket: R2Bucket,
+	bucketId: string,
 	key: string | undefined,
 	params: URLSearchParams
 ): BoundOperation | Response {
@@ -91,5 +103,31 @@ function detectOperation(
 		return detectBucketOperation(c.req.method, params) ?? NOT_IMPLEMENTED;
 	}
 
-	return detectObjectOperation(c.req.method, params) ?? NOT_IMPLEMENTED;
+	const detected = detectObjectOperation(c.req.method, params);
+	if (detected instanceof Response) {
+		return detected;
+	}
+	if (detected === undefined) {
+		return NOT_IMPLEMENTED;
+	}
+
+	return bind(detected, OBJECT_OPERATIONS, {
+		c,
+		bucket,
+		bucketId,
+		key,
+		params,
+	});
+}
+
+function bind<Operation extends S3Operation, Context>(
+	operation: Operation,
+	table: Record<Operation, OperationDefinition<Context> & ScreeningRules>,
+	context: Context
+): BoundOperation {
+	const definition = table[operation];
+	return {
+		rules: definition,
+		run: () => definition.handle(context),
+	};
 }

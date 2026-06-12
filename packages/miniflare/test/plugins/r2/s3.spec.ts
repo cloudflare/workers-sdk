@@ -1,6 +1,7 @@
 import { Sha256 } from "@aws-crypto/sha256-js";
 import {
 	GetObjectCommand,
+	HeadObjectCommand,
 	ListMultipartUploadsCommand,
 	ListPartsCommand,
 	S3Client,
@@ -188,6 +189,15 @@ test("rejects an unknown access key id with 401 Unauthorized", async ({
 	);
 });
 
+test("accepts valid header auth", async ({ expect }) => {
+	await expectSdkError(
+		s3().send(new GetObjectCommand({ Bucket: "bucket", Key: "missing.txt" })),
+		404,
+		"NoSuchKey",
+		expect
+	);
+});
+
 test("requires x-amz-content-sha256", async ({ expect }) => {
 	const url = s3Url("bucket/key.txt");
 	const res = await fetch(url, {
@@ -318,6 +328,18 @@ test("rejects x-amz-security-token", async ({ expect }) => {
 	expect(await res.text()).toContain("<Message>X-Amz-Security-Token</Message>");
 });
 
+test("serves presigned GETs", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("presigned.txt", "presigned content");
+	const url = await getSignedUrl(
+		s3(),
+		new GetObjectCommand({ Bucket: "bucket", Key: "presigned.txt" })
+	);
+	const res = await fetch(url);
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("presigned content");
+});
+
 test("rejects an empty X-Amz-Expires as not a number", async ({ expect }) => {
 	const url = s3Url("bucket/key.txt");
 	url.search = new URLSearchParams({
@@ -405,6 +427,160 @@ test("returns NoSuchBucket for an unknown bucket id", async ({ expect }) => {
 	const head = await s3Fetch("not-a-bucket/key.txt", { method: "HEAD" });
 	expect(head.status).toBe(404);
 	expect(await head.text()).toBe("");
+});
+
+test("HeadObject returns metadata with an empty body", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("head.txt", "abcde");
+	const head = await s3().send(
+		new HeadObjectCommand({ Bucket: "bucket", Key: "head.txt" })
+	);
+	expect(head.ContentLength).toBe(5);
+});
+
+test("GetObject returns NoSuchKey XML; HeadObject errors have no body", async ({
+	expect,
+}) => {
+	const get = await s3Fetch("bucket/missing.txt");
+	await expectError(get, 404, "NoSuchKey", expect);
+	const head = await s3Fetch("bucket/missing.txt", { method: "HEAD" });
+	expect(head.status).toBe(404);
+	expect(await head.text()).toBe("");
+	// The SDK models bodyless HEAD errors as NotFound
+	await expectSdkError(
+		s3().send(new HeadObjectCommand({ Bucket: "bucket", Key: "missing.txt" })),
+		404,
+		"NotFound",
+		expect
+	);
+	// Auth errors on HEAD are bodyless too
+	const headAuth = await s3Fetch("bucket/missing.txt", {
+		method: "HEAD",
+		credentials: {
+			accessKeyId: CREDENTIALS.accessKeyId,
+			secretAccessKey: "wrong-secret",
+		},
+	});
+	expect(headAuth.status).toBe(403);
+	expect(await headAuth.text()).toBe("");
+});
+
+test("conditional GETs return 304 and 412", async ({ expect }) => {
+	const r2 = await bucket();
+	const object = await r2.put("cond.txt", "x");
+	assert(object !== null);
+
+	// The SDK surfaces 304s as (unparseable, bodyless) errors
+	const notModified = await s3()
+		.send(
+			new GetObjectCommand({
+				Bucket: "bucket",
+				Key: "cond.txt",
+				IfNoneMatch: object.httpEtag,
+			})
+		)
+		.then(
+			() => undefined,
+			(e: unknown) => e
+		);
+	assert(notModified instanceof S3ServiceException);
+	expect(notModified.$metadata.httpStatusCode).toBe(304);
+
+	await expectSdkError(
+		s3().send(
+			new GetObjectCommand({
+				Bucket: "bucket",
+				Key: "cond.txt",
+				IfMatch: '"0123456789abcdef0123456789abcdef"',
+			})
+		),
+		412,
+		"PreconditionFailed",
+		expect
+	);
+});
+
+test("range requests work, including suffix ranges", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("range.txt", "0123456789");
+	const client = s3();
+
+	const partial = await client.send(
+		new GetObjectCommand({
+			Bucket: "bucket",
+			Key: "range.txt",
+			Range: "bytes=2-4",
+		})
+	);
+	expect(partial.$metadata.httpStatusCode).toBe(206);
+	assert(partial.Body !== undefined);
+	expect(await partial.Body.transformToString()).toBe("234");
+	expect(partial.ContentRange).toBe("bytes 2-4/10");
+
+	const suffix = await client.send(
+		new GetObjectCommand({
+			Bucket: "bucket",
+			Key: "range.txt",
+			Range: "bytes=-3",
+		})
+	);
+	assert(suffix.Body !== undefined);
+	expect(await suffix.Body.transformToString()).toBe("789");
+	expect(suffix.ContentRange).toBe("bytes 7-9/10");
+});
+
+test("rejects unsatisfiable and malformed ranges", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("range2.txt", "0123456789");
+
+	await expectSdkError(
+		s3().send(
+			new GetObjectCommand({
+				Bucket: "bucket",
+				Key: "range2.txt",
+				Range: "bytes=99999-",
+			})
+		),
+		416,
+		"InvalidRange",
+		expect
+	);
+
+	const malformed = await s3Fetch("bucket/range2.txt", {
+		headers: { Range: "bytes=zzz" },
+	});
+	expect(malformed.status).toBe(400);
+	expect(await malformed.text()).toContain(
+		"&apos;bytes=-suffix&apos;.&apos;</Message>"
+	);
+
+	const inverted = await s3Fetch("bucket/range2.txt", {
+		headers: { Range: "bytes=5-2" },
+	});
+	expect(inverted.status).toBe(400);
+	expect(await inverted.text()).toContain(
+		"<Message>range must be positive.</Message>"
+	);
+
+	// A zero suffix length is unsatisfiable for any object
+	const zeroSuffix = await s3Fetch("bucket/range2.txt", {
+		headers: { Range: "bytes=-0" },
+	});
+	await expectError(zeroSuffix, 416, "InvalidRange", expect);
+});
+
+test("HEAD honors Range with a bodyless 206", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("head-range.txt", "0123456789");
+
+	const res = await s3Fetch("bucket/head-range.txt", {
+		method: "HEAD",
+		headers: { Range: "bytes=0-4" },
+	});
+	expect(res.status).toBe(206);
+	expect(res.headers.get("Content-Range")).toBe("bytes 0-4/10");
+	expect(res.headers.get("Content-Length")).toBe("5");
+	expect(await res.text()).toBe("");
 });
 
 test("unimplemented multipart surfaces respond with NotImplemented", async ({
@@ -568,6 +744,17 @@ test("answers CORS preflights, including for presigned browser uploads", async (
 	);
 });
 
+test("sets CORS headers on cross-origin responses", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("cors.txt", "x");
+	const res = await s3Fetch("bucket/cors.txt", {
+		headers: { Origin: "http://localhost:3000" },
+	});
+	expect(res.status).toBe(200);
+	expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+	expect(res.headers.get("Access-Control-Expose-Headers")).toBe("*");
+});
+
 test("rejects different s3Credentials for the same bucket", async ({
 	expect,
 }) => {
@@ -600,4 +787,38 @@ test("rejects different s3Credentials for the same bucket", async ({
 	);
 	// dispose() would re-await the failed init and rethrow
 	await mf.dispose().catch(() => {});
+});
+
+test("verifies signatures against the original host when `upstream` is set", async ({
+	expect,
+}) => {
+	// With `upstream` configured, the entry worker rewrites the request URL
+	// and Host header before dispatching to the S3 service; signatures must
+	// still be verified against the host the client signed
+	const mf = new Miniflare({
+		modules: true,
+		script:
+			"export default { fetch: () => new Response(null, { status: 404 }) };",
+		r2Buckets: { BUCKET: { id: "bucket", s3Credentials: CREDENTIALS } },
+		upstream: "https://example.com/",
+	});
+	onTestFinished(() => mf.dispose());
+	const url = await mf.ready;
+	const r2 = await mf.getR2Bucket("BUCKET");
+	await r2.put("up.txt", "upstream");
+
+	const client = new S3Client({
+		region: "auto",
+		endpoint: new URL("/cdn-cgi/local/r2/s3/", url).href,
+		credentials: CREDENTIALS,
+		forcePathStyle: true,
+	});
+	client.middlewareStack.remove("addExpectContinueMiddleware");
+	onTestFinished(() => client.destroy());
+
+	const res = await client.send(
+		new GetObjectCommand({ Bucket: "bucket", Key: "up.txt" })
+	);
+	assert(res.Body !== undefined);
+	expect(await res.Body.transformToString()).toBe("upstream");
 });
