@@ -17,13 +17,12 @@
 // echoed for debugging, like AWS) for signature mismatches, and 403
 // `ExpiredRequest` for expired presigned URLs.
 
-/* eslint-disable no-unused-vars -- shared SigV4 helpers; the verifiers that
-   call them land in the next two commits */
 import { hex } from "./common.worker";
 import { errorResponse } from "./errors.worker";
 import type { S3Credentials } from "../constants";
 
 const ALGORITHM = "AWS4-HMAC-SHA256";
+const MAX_SKEW_MILLIS = 15 * 60 * 1000;
 
 const encoder = new TextEncoder();
 
@@ -327,13 +326,124 @@ async function checkSignature(
 		: signatureDoesNotMatch(computed, provided);
 }
 
+async function verifyAuthorizationHeader(
+	request: Request,
+	url: URL,
+	credentials: S3Credentials,
+	authorization: string
+): Promise<Response | undefined> {
+	const payloadHash = request.headers.get("x-amz-content-sha256");
+	if (payloadHash === null) {
+		return errorResponse(400, "InvalidRequest", "Missing x-amz-content-sha256");
+	}
+
+	let amzDate = request.headers.get("x-amz-date");
+	let dateSource = "'x-amz-date' header";
+	if (amzDate === null) {
+		amzDate = request.headers.get("date");
+		dateSource = "'date' header";
+	}
+	if (amzDate === null) {
+		return invalidArgument("No date provided in x-amz-date nor date header");
+	}
+	const date = parseAmzDate(amzDate);
+	if (date === undefined) {
+		return invalidArgument(
+			`Date provided in ${dateSource} (${amzDate}) didn't parse successfully`
+		);
+	}
+	if (Math.abs(Date.now() - date.getTime()) > MAX_SKEW_MILLIS) {
+		return errorResponse(
+			403,
+			"RequestTimeTooSkewed",
+			"The difference between the request time and the server's time is too large."
+		);
+	}
+
+	// `AWS4-HMAC-SHA256 Credential=<scope>, SignedHeaders=<h1;h2>, Signature=<hex>`
+	const fields = new Map<string, string>();
+	if (authorization.startsWith(`${ALGORITHM} `)) {
+		for (const component of authorization.slice(ALGORITHM.length).split(",")) {
+			const separator = component.indexOf("=");
+			if (separator === -1) {
+				continue;
+			}
+			fields.set(
+				component.slice(0, separator).trim(),
+				component.slice(separator + 1).trim()
+			);
+		}
+	}
+	const credentialField = fields.get("Credential");
+	const signedHeadersField = fields.get("SignedHeaders");
+	const signatureField = fields.get("Signature");
+	if (
+		credentialField === undefined ||
+		signedHeadersField === undefined ||
+		signatureField === undefined
+	) {
+		return unsupportedAlgorithm();
+	}
+
+	const credential = checkCredentialScope(
+		credentialField,
+		amzDate,
+		credentials
+	);
+	if ("error" in credential) {
+		return credential.error;
+	}
+
+	const signedHeaders = parseSignedHeaders(signedHeadersField);
+	if ("error" in signedHeaders) {
+		return signedHeaders.error;
+	}
+
+	const mismatch = await checkSignature(
+		request,
+		url,
+		credentials,
+		credential,
+		amzDate,
+		signedHeaders,
+		payloadHash,
+		false,
+		signatureField
+	);
+	if (mismatch !== undefined) {
+		return mismatch;
+	}
+
+	// When a literal payload hash was signed (rather than UNSIGNED-PAYLOAD or
+	// a streaming sentinel), verify the body actually matches it
+	if (/^[0-9a-f]{64}$/.test(payloadHash)) {
+		const body = await request.clone().arrayBuffer();
+		if ((await sha256Hex(body)) !== payloadHash) {
+			return errorResponse(
+				400,
+				"XAmzContentSHA256Mismatch",
+				"The provided 'x-amz-content-sha256' header does not match what was computed."
+			);
+		}
+	}
+
+	return undefined;
+}
+
 /**
  * Verifies a request against AWS Signature Version 4, returning an R2-style
  * XML error `Response` on failure, or `undefined` if authentication succeeds.
  */
-export function verifyRequest(
-	_request: Request,
-	_credentials: S3Credentials
-): Response | undefined {
+export async function verifyRequest(
+	request: Request,
+	credentials: S3Credentials
+): Promise<Response | undefined> {
+	const url = new URL(request.url);
+
+	const authorization = request.headers.get("Authorization");
+	if (authorization !== null) {
+		return verifyAuthorizationHeader(request, url, credentials, authorization);
+	}
+
 	return invalidArgument("Authorization");
 }

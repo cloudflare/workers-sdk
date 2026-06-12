@@ -7,11 +7,11 @@ import { stripBodyForHead } from "./common.worker";
 import { noSuchBucket, notImplemented } from "./errors.worker";
 import type { S3Context } from "./common.worker";
 
-export function dispatch(c: S3Context): Response {
-	return stripBodyForHead(c, dispatchInner(c));
+export async function dispatch(c: S3Context): Promise<Response> {
+	return stripBodyForHead(c, await dispatchInner(c));
 }
 
-function dispatchInner(c: S3Context): Response {
+async function dispatchInner(c: S3Context): Promise<Response> {
 	// Both routes that reach `dispatch()` carry a :bucketId segment
 	const bucketId = c.req.param("bucketId");
 	assert(bucketId !== undefined);
@@ -25,9 +25,9 @@ function dispatchInner(c: S3Context): Response {
 		return noSuchBucket();
 	}
 
-	const authError = verifyRequest(c.req.raw, credentials);
+	const authError = await verifyRequest(c.req.raw, credentials);
 	if (authError !== undefined) {
-		return stripBodyForHead(c, authError);
+		return authError;
 	}
 
 	return notImplemented("S3 operations are not yet implemented");
