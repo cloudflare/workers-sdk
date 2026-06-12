@@ -20,6 +20,7 @@ export const versionsViewCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printBanner: (args) => !args.json,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	args: {
 		"version-id": {

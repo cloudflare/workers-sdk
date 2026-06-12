@@ -33,6 +33,7 @@ export const deploymentsStatusCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printBanner: (args) => !args.json,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	handler: async function versionsDeploymentsStatusHandler(args, { config }) {
 		metrics.sendMetricsEvent("view latest versioned deployment", {

@@ -55,11 +55,11 @@ type DeployConfigFlags = {
  * The full set of CLI args consumed by the interactive deploy autoconfig flow.
  * Combines the base config/script/name args from {@link ReadConfigCommandArgs},
  * all deployment-affecting flags from {@link DeployConfigFlags}, and the
- * autoconfig-specific control flags (experimentalAutoconfig, assets, dryRun, latest).
+ * autoconfig-specific control flags (autoconfig, assets, dryRun, latest).
  */
 type AutoConfigArgs = ReadConfigCommandArgs &
 	DeployConfigFlags & {
-		experimentalAutoconfig: boolean | undefined;
+		autoconfig: boolean | undefined;
 		path: string | undefined;
 		assets: string | undefined;
 		dryRun: boolean | undefined;
@@ -77,7 +77,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	config: Config
 ): Promise<{ config: Config; aborted: boolean }> {
 	const shouldRunAutoConfig =
-		args.experimentalAutoconfig &&
+		args.autoconfig &&
 		// If there is a positional parameter, an assets directory specified via --assets, or an
 		// explicit --config path then we don't want to run autoconfig since we assume that the
 		// user knows what they are doing and that they are specifying what needs to be deployed

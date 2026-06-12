@@ -101,6 +101,7 @@ export const secretPutCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		key: {
@@ -232,6 +233,7 @@ export const secretDeleteCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		key: {
@@ -332,6 +334,7 @@ export const secretListCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printBanner: (args) => args.format === "pretty",
+		suggestSkillsAfterHandler: (args) => args.format === "pretty",
 	},
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
@@ -435,6 +438,7 @@ export const secretBulkCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		file: {

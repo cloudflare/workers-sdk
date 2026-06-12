@@ -566,7 +566,7 @@ describe("deploy", () => {
 		`);
 	});
 
-	it("should error helpfully if pages_build_output_dir is set in wrangler.toml when --x-autoconfig=false", async ({
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml when --no-autoconfig", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -574,7 +574,7 @@ describe("deploy", () => {
 			name: "test-name",
 		});
 		await expect(
-			runWrangler("deploy --x-autoconfig=false")
+			runWrangler("deploy --no-autoconfig")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`
 			[Error: It looks like you've run a Workers-specific command in a Pages project.
@@ -583,7 +583,7 @@ describe("deploy", () => {
 		);
 	});
 
-	it("should error helpfully if pages_build_output_dir is set in wrangler.toml and --x-autoconfig is provided", async ({
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async ({
 		expect,
 	}) => {
 		mockConfirm({
@@ -595,13 +595,13 @@ describe("deploy", () => {
 			pages_build_output_dir: "public",
 			name: "test-name",
 		});
-		await expect(runWrangler("deploy --x-autoconfig")).rejects.toThrowError();
+		await expect(runWrangler("deploy")).rejects.toThrowError();
 		expect(std.warn).toContain(
 			"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead."
 		);
 	});
 
-	it("should attempt to run the autoconfig flow when pages_build_output_dir and (--x-autoconfig is used)", async ({
+	it("should attempt to run the autoconfig flow when pages_build_output_dir", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -634,7 +634,7 @@ describe("deploy", () => {
 			result: false,
 		});
 
-		await runWrangler("deploy --x-autoconfig");
+		await runWrangler("deploy");
 
 		expect(getDetailsForAutoConfigSpy).toHaveBeenCalled();
 
@@ -643,7 +643,7 @@ describe("deploy", () => {
 		);
 	});
 
-	it("in non-interactive mode, attempts to deploy a Pages project when --x-autoconfig is used", async ({
+	it("in non-interactive mode, attempts to deploy a Pages project using autoconfig", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
@@ -673,7 +673,7 @@ describe("deploy", () => {
 
 		// The command will fail later due to missing entry-point, but we can still verify
 		// that the deployment of the (Pages) project was attempted
-		await expect(runWrangler("deploy --x-autoconfig")).rejects.toThrow();
+		await expect(runWrangler("deploy")).rejects.toThrow();
 
 		expect(getDetailsForAutoConfigSpy).toHaveBeenCalled();
 
@@ -2030,7 +2030,7 @@ describe("deploy", () => {
 			};
 		});
 
-		await runWrangler("deploy --x-autoconfig --dry-run", {
+		await runWrangler("deploy --dry-run", {
 			...process.env,
 			WRANGLER_OUTPUT_FILE_PATH: outputFile,
 		});

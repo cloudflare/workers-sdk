@@ -61,6 +61,7 @@ export const triggersDeployCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	async handler(args, { config }) {
 		metrics.sendMetricsEvent("deploy worker triggers", {

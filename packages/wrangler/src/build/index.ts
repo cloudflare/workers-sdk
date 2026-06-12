@@ -12,6 +12,7 @@ export const buildCommand = createCommand({
 	behaviour: {
 		printBanner: false,
 		provideConfig: false,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		...experimentalNewConfigArg,

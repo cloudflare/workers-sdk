@@ -19,6 +19,7 @@ export const versionsSecretBulkCommand = createCommand({
 		supportTemporary: true,
 		printConfigWarnings: false,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		file: {

@@ -17,6 +17,7 @@ export const versionsSecretsListCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printConfigWarnings: false,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		name: {

@@ -19,6 +19,7 @@ export const versionsSecretDeleteCommand = createCommand({
 		supportTemporary: true,
 		printConfigWarnings: false,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		key: {

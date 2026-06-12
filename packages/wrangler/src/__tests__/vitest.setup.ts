@@ -250,10 +250,7 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 vi.mock("../agents-skills-install", async (importOriginal) => {
 	const realModule =
 		await importOriginal<typeof import("../agents-skills-install")>();
-	vi.spyOn(
-		realModule,
-		"maybeInstallCloudflareSkillsGlobally"
-	).mockResolvedValue(undefined);
+	vi.spyOn(realModule, "runSkillsInstallFlow").mockResolvedValue(undefined);
 	vi.spyOn(realModule, "telemetryCurrentAgentSkillsInstalled").mockReturnValue(
 		Promise.resolve(null)
 	);

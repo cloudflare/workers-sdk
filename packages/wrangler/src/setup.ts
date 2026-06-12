@@ -17,6 +17,9 @@ export const setupCommand = createCommand({
 		status: "stable",
 		category: "Compute & AI",
 	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
+	},
 	args: {
 		yes: {
 			describe: 'Answer "yes" to any prompts for configuring your project',
