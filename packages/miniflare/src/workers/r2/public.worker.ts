@@ -47,8 +47,8 @@ app.use(
 );
 
 app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
-	const bucketId = decodeURIComponent(c.req.param("bucketId"));
-	const key = decodeURIComponent(c.req.param("key"));
+	const bucketId = c.req.param("bucketId");
+	const key = c.req.param("key");
 
 	const bucket = c.env[bucketId];
 	if (bucket === undefined) {

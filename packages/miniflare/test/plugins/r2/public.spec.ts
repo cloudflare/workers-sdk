@@ -102,6 +102,12 @@ test("decodes percent-encoded keys", async ({ expect }) => {
 
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe("nested");
+
+	// Keys containing `%` must be decoded exactly once
+	await r2.put("100%/a%2Bb.txt", "percent");
+	const percent = await fetch(bucketUrl("/100%25/a%252Bb.txt", ctx.url));
+	expect(percent.status).toBe(200);
+	expect(await percent.text()).toBe("percent");
 });
 
 test("GET supports range requests", async ({ expect }) => {
