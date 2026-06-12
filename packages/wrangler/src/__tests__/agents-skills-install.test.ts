@@ -8,15 +8,16 @@ import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import prompts from "prompts";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import {
+	skillInstallPromptMessageAfterWranglerCommandHandler,
+	type runSkillsInstallFlow as RunFlowFnType,
+	type telemetryCurrentAgentSkillsInstalled as TelemetryFnType,
+} from "../agents-skills-install";
 import { sendMetricsEvent } from "../metrics/send-event";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
-import type {
-	runSkillsInstallFlow as RunFlowFnType,
-	telemetryCurrentAgentSkillsInstalled as TelemetryFnType,
-} from "../agents-skills-install";
 import type * as SendEventModule from "../metrics/send-event";
 
 // Undo the global no-op mock from vitest.setup.ts so we test the real implementation
@@ -829,10 +830,6 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
-	/** The prompt message used by register-yargs-command.ts for suggestSkillsAfterHandler. */
-	const suggestPromptMessage = (agents: string[]) =>
-		`Before you go, Wrangler detected potential configurations for the following AI coding agents on your system likely without Cloudflare skills: ${agents.join(", ")}. Would you like Wrangler to automatically install the Cloudflare skills for you?`;
-
 	beforeEach(() => {
 		setIsTTY(true);
 		mockRosieAgents.mockResolvedValue(DEFAULT_AGENTS);
@@ -848,7 +845,10 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 			writeMetadataFile({ accepted: true, date: "2025-01-01T00:00:00Z" });
 			const flow = await freshImport();
 
-			await flow({ force: false, promptMessage: suggestPromptMessage });
+			await flow({
+				force: false,
+				promptMessage: skillInstallPromptMessageAfterWranglerCommandHandler,
+			});
 
 			expect(mockRosieAgents).not.toHaveBeenCalled();
 			expect(mockRosieInstall).not.toHaveBeenCalled();
@@ -861,7 +861,10 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 			writeMetadataFile({ accepted: false, date: "2025-01-01T00:00:00Z" });
 			const flow = await freshImport();
 
-			await flow({ force: false, promptMessage: suggestPromptMessage });
+			await flow({
+				force: false,
+				promptMessage: skillInstallPromptMessageAfterWranglerCommandHandler,
+			});
 
 			expect(mockRosieAgents).not.toHaveBeenCalled();
 			expect(mockRosieInstall).not.toHaveBeenCalled();
@@ -878,7 +881,10 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 			});
 			const flow = await freshImport();
 
-			await flow({ force: false, promptMessage: suggestPromptMessage });
+			await flow({
+				force: false,
+				promptMessage: skillInstallPromptMessageAfterWranglerCommandHandler,
+			});
 
 			expect(mockRosieAgents).not.toHaveBeenCalled();
 			expect(mockRosieInstall).not.toHaveBeenCalled();
@@ -889,7 +895,10 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 			vi.mocked(ci).isCI = true;
 			const flow = await freshImport();
 
-			await flow({ force: false, promptMessage: suggestPromptMessage });
+			await flow({
+				force: false,
+				promptMessage: skillInstallPromptMessageAfterWranglerCommandHandler,
+			});
 
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
@@ -903,7 +912,10 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 			setIsTTY(false);
 			const flow = await freshImport();
 
-			await flow({ force: false, promptMessage: suggestPromptMessage });
+			await flow({
+				force: false,
+				promptMessage: skillInstallPromptMessageAfterWranglerCommandHandler,
+			});
 
 			expect(std.out).toEqual("");
 			expect(mockRosieInstall).not.toHaveBeenCalled();
@@ -918,7 +930,10 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 			mockRosieAgents.mockResolvedValueOnce([]);
 			const flow = await freshImport();
 
-			await flow({ force: false, promptMessage: suggestPromptMessage });
+			await flow({
+				force: false,
+				promptMessage: skillInstallPromptMessageAfterWranglerCommandHandler,
+			});
 
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
@@ -932,12 +947,15 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 	describe("prompt message", () => {
 		test("uses the caller-provided prompt message", async ({ expect }) => {
 			mockConfirm({
-				text: "Before you go, Wrangler detected potential configurations for the following AI coding agents on your system likely without Cloudflare skills: Claude Code. Would you like Wrangler to automatically install the Cloudflare skills for you?",
+				text: "Before you go, Wrangler detected AI coding agents that may not be best configured to work with Cloudflare: Claude Code. Would you like Wrangler to automatically install Cloudflare skills for the best experience?",
 				result: false,
 			});
 			const flow = await freshImport();
 
-			await flow({ force: false, promptMessage: suggestPromptMessage });
+			await flow({
+				force: false,
+				promptMessage: skillInstallPromptMessageAfterWranglerCommandHandler,
+			});
 
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
 				"skills_install_skipped",
@@ -951,13 +969,16 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 		test("installs skills when user accepts", async ({ expect }) => {
 			mockConfirm({
 				text: expect.stringContaining(
-					"without Cloudflare skills"
+					"Would you like Wrangler to automatically install Cloudflare skills"
 				) as unknown as string,
 				result: true,
 			});
 			const flow = await freshImport();
 
-			await flow({ force: false, promptMessage: suggestPromptMessage });
+			await flow({
+				force: false,
+				promptMessage: skillInstallPromptMessageAfterWranglerCommandHandler,
+			});
 
 			expect(mockRosieInstall).toHaveBeenCalledWith("cloudflare/skills", {
 				global: true,
@@ -980,13 +1001,16 @@ describe("runSkillsInstallFlow with custom prompt message", () => {
 		}) => {
 			mockConfirm({
 				text: expect.stringContaining(
-					"without Cloudflare skills"
+					"Would you like Wrangler to automatically install Cloudflare skills"
 				) as unknown as string,
 				result: false,
 			});
 			const flow = await freshImport();
 
-			await flow({ force: false, promptMessage: suggestPromptMessage });
+			await flow({
+				force: false,
+				promptMessage: skillInstallPromptMessageAfterWranglerCommandHandler,
+			});
 
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 

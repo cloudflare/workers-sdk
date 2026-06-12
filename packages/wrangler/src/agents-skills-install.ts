@@ -227,6 +227,24 @@ export async function runSkillsInstallFlow(
 	}
 }
 
+/**
+ * Builds the confirmation prompt shown to the user after a wrangler command
+ * completes, asking whether to install Cloudflare skills for detected AI
+ * coding agents.
+ *
+ * Used as the {@link SkillsInstallFlowOptions.promptMessage} callback when
+ * skills installation is suggested via `suggestSkillsAfterHandler`.
+ *
+ * @param agentNames - Display names of the detected AI coding agents
+ *   (e.g. `["Claude Code", "Cursor"]`).
+ * @returns The formatted confirmation prompt string passed to {@link confirm}.
+ */
+export function skillInstallPromptMessageAfterWranglerCommandHandler(
+	agentNames: string[]
+): string {
+	return `Before you go, Wrangler detected AI coding agents that may not be best configured to work with Cloudflare: ${agentNames.join(", ")}. Would you like Wrangler to automatically install Cloudflare skills for the best experience?`;
+}
+
 /** The GitHub repo spec for Cloudflare skills, used with rosie.install(). */
 const SKILLS_REPO = "cloudflare/skills";
 

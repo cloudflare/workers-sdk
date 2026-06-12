@@ -8,7 +8,10 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { runSkillsInstallFlow } from "../agents-skills-install";
+import {
+	runSkillsInstallFlow,
+	skillInstallPromptMessageAfterWranglerCommandHandler,
+} from "../agents-skills-install";
 import {
 	fetchKVGetValue,
 	fetchResult,
@@ -317,8 +320,8 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 							await runSkillsInstallFlow({
 								force: false,
 								command: sanitizedCommand,
-								promptMessage: (agents) =>
-									`Before you go, Wrangler detected AI coding agents that may not be best configured to work with Cloudflare: ${agents.join(", ")}. Would you like Wrangler to automatically install Cloudflare skills for the best experience?`,
+								promptMessage:
+									skillInstallPromptMessageAfterWranglerCommandHandler,
 							});
 						} catch (skillsErr) {
 							logger.debug(
