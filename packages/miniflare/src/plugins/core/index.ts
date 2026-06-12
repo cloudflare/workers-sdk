@@ -1052,10 +1052,22 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_USER_FALLBACK,
 			service: { name: fallbackWorkerName },
 		},
-		...workerNames.map((name) => ({
-			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
-			service: { name: getUserServiceName(name) },
-		})),
+		...workerNames.map((name) => {
+			const assetWorker = name.startsWith(`${RPC_PROXY_SERVICE_NAME}:`)
+				? undefined
+				: allWorkerOpts?.find(
+						(worker) =>
+							(worker.core.name ?? "") === name && worker.assets?.assets
+						);
+			return {
+				name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
+				service: {
+					name: assetWorker?.assets.assets
+						? `${RPC_PROXY_SERVICE_NAME}:${assetWorker.assets.assets.workerName}`
+						: getUserServiceName(name),
+				},
+			};
+		}),
 		{
 			name: CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,
 			durableObjectNamespace: { className: "ProxyServer" },
