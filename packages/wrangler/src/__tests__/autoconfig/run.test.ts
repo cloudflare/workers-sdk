@@ -92,21 +92,38 @@ describe("autoconfig (deploy)", () => {
 		clearOutputFilePath();
 	});
 
-	it("should not check for autoconfig when `deploy` is run with `--x-autoconfig=false`", async ({
+	it("should not run autoconfig when `deploy` is run with `--no-autoconfig`", async ({
 		expect,
 	}) => {
 		writeWorkerSource();
 		writeWranglerConfig({ main: "index.js" });
 		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
-		await runDeploy(expect, `--x-autoconfig=false`);
+		const runSpy = vi.spyOn(run, "runAutoConfig");
+
+		await runDeploy(expect, `--no-autoconfig`);
 
 		expect(getDetailsSpy).not.toHaveBeenCalled();
+		expect(runSpy).not.toHaveBeenCalled();
+	});
+
+	it("should not run autoconfig when `deploy` is run with `--autoconfig=false`", async ({
+		expect,
+	}) => {
+		writeWorkerSource();
+		writeWranglerConfig({ main: "index.js" });
+		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
+		const runSpy = vi.spyOn(run, "runAutoConfig");
+
+		await runDeploy(expect, `--autoconfig=false`);
+
+		expect(getDetailsSpy).not.toHaveBeenCalled();
+		expect(runSpy).not.toHaveBeenCalled();
 	});
 
 	it("should check for autoconfig with flag", async ({ expect }) => {
 		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
 
-		await runDeploy(expect, "--x-autoconfig");
+		await runDeploy(expect, "--autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 	});
@@ -128,7 +145,7 @@ describe("autoconfig (deploy)", () => {
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
-		await runDeploy(expect, "--x-autoconfig");
+		await runDeploy(expect, "--autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 		expect(runSpy).toHaveBeenCalled();
@@ -149,7 +166,7 @@ describe("autoconfig (deploy)", () => {
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
-		await runDeploy(expect, "--x-autoconfig");
+		await runDeploy(expect, "--autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 		expect(runSpy).not.toHaveBeenCalled();
@@ -182,7 +199,7 @@ describe("autoconfig (deploy)", () => {
 		});
 
 		// Should not throw - just return early
-		await runWrangler("deploy --x-autoconfig");
+		await runWrangler("deploy --autoconfig");
 
 		// Should show warning about Pages project
 		expect(std.warn).toContain(
