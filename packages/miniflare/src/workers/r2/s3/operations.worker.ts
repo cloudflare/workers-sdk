@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { XMLValidator } from "fast-xml-parser";
+import { CorePaths } from "../../core/constants";
 import { R2S3Bindings } from "../constants";
 import { parseRangeHeader, serveR2Object } from "../serve.worker";
 import { awsUriEncode, credentialsEqual } from "./auth.worker";
@@ -15,6 +16,7 @@ import { errorResponse, noSuchBucket, notImplemented } from "./errors.worker";
 import type { S3Context } from "./common.worker";
 import type {
 	BucketOperation,
+	MultipartOperation,
 	ObjectOperation,
 	S3Operation,
 } from "./detect.worker";
@@ -116,6 +118,12 @@ function bindingError(e: unknown): Response {
 const BUCKET_OWNER = ["x-amz-expected-bucket-owner"];
 const SOURCE_BUCKET_OWNER = ["x-amz-source-expected-bucket-owner"];
 const MFA_AND_LOCK_BYPASS = ["x-amz-mfa", "x-amz-bypass-governance-retention"];
+const COPY_SOURCE_CONDITIONALS = [
+	"x-amz-copy-source-if-match",
+	"x-amz-copy-source-if-none-match",
+	"x-amz-copy-source-if-modified-since",
+	"x-amz-copy-source-if-unmodified-since",
+];
 /** Headers R2 recognizes but rejects on every write operation */
 const WRITE_UNSUPPORTED = [
 	...BUCKET_OWNER,
@@ -145,6 +153,11 @@ export interface BucketOperationContext {
 /** Object-level operations additionally address a key within the bucket */
 export interface ObjectOperationContext extends BucketOperationContext {
 	key: string;
+}
+
+/** Multipart operations additionally address an in-progress upload */
+export interface MultipartOperationContext extends ObjectOperationContext {
+	uploadId: string;
 }
 
 export interface ScreeningRules {
@@ -224,7 +237,9 @@ function screenSSECHeaders(
 	mode: "read" | "write"
 ): Response | undefined {
 	const prefixes =
-		operation === "CopyObject" ? ["x-amz-", "x-amz-copy-source-"] : ["x-amz-"];
+		operation === "CopyObject" || operation === "UploadPartCopy"
+			? ["x-amz-", "x-amz-copy-source-"]
+			: ["x-amz-"];
 	for (const prefix of prefixes) {
 		const algorithmName = `${prefix}server-side-encryption-customer-algorithm`;
 		const algorithm = c.req.header(algorithmName);
@@ -595,6 +610,22 @@ async function listObjects(
 	});
 }
 
+function parsePartNumber(params: URLSearchParams): number | Response {
+	// detectObjectOperation() only routes to part operations when partNumber is
+	// present and integer-shaped (possibly empty, padded, or signed)
+	const raw = params.get("partNumber");
+	assert(raw !== null);
+	const partNumber = raw.trim() === "" ? Number.NaN : Number(raw);
+	if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000) {
+		return errorResponse(
+			400,
+			"InvalidArgument",
+			"Part number must be an integer between 1 and 10000, inclusive."
+		);
+	}
+	return partNumber;
+}
+
 export const OBJECT_OPERATIONS: Record<
 	ObjectOperation,
 	OperationDefinition<ObjectOperationContext> & ScreeningRules
@@ -698,6 +729,225 @@ export const OBJECT_OPERATIONS: Record<
 		unsupportedHeaders: [...BUCKET_OWNER, ...MFA_AND_LOCK_BYPASS],
 		async handle({ c, bucket, key }) {
 			await bucket.delete(key);
+			return c.body(null, 204);
+		},
+	},
+	CreateMultipartUpload: {
+		unsupportedHeaders: WRITE_UNSUPPORTED,
+		validatesWriteHeaders: true,
+		ssec: "write",
+		async handle({ c, bucket, bucketId, key }) {
+			const storageClass = parseStorageClass(c);
+			if (storageClass instanceof Response) {
+				return storageClass;
+			}
+			const upload = await bucket.createMultipartUpload(key, {
+				httpMetadata: c.req.raw.headers,
+				customMetadata: collectCustomMetadata(c),
+				storageClass,
+			});
+			return xmlResponse("InitiateMultipartUploadResult", {
+				UploadId: upload.uploadId,
+				Bucket: bucketId,
+				Key: key,
+			});
+		},
+	},
+};
+
+/** Operations on an in-progress multipart upload (?uploadId) */
+export const MULTIPART_OPERATIONS: Record<
+	MultipartOperation,
+	OperationDefinition<MultipartOperationContext> & ScreeningRules
+> = {
+	UploadPart: {
+		unsupportedHeaders: [...BUCKET_OWNER, "x-amz-server-side-encryption"],
+		ssec: "write",
+		async handle({ c, bucket, key, uploadId, params }) {
+			const partNumber = parsePartNumber(params);
+			if (partNumber instanceof Response) {
+				return partNumber;
+			}
+
+			const body = await verifiedRequestBody(c);
+			if (body instanceof Response) {
+				return body;
+			}
+
+			// `resumeMultipartUpload` never validates: it just constructs the
+			// upload object; an unknown id only fails once the upload is used
+			const upload = bucket.resumeMultipartUpload(key, uploadId);
+			try {
+				const part = await upload.uploadPart(partNumber, body);
+				return c.body(null, { headers: { ETag: `"${part.etag}"` } });
+			} catch (e) {
+				return bindingError(e);
+			}
+		},
+	},
+	UploadPartCopy: {
+		unsupportedHeaders: [
+			...BUCKET_OWNER,
+			...SOURCE_BUCKET_OWNER,
+			...COPY_SOURCE_CONDITIONALS,
+		],
+		ssec: "write",
+		async handle({ c, bucket, bucketId, key, uploadId, params }) {
+			const partNumber = parsePartNumber(params);
+			if (partNumber instanceof Response) {
+				return partNumber;
+			}
+			const source = parseCopySource(c, bucketId);
+			if (source instanceof Response) {
+				return source;
+			}
+			let range: R2Range | undefined;
+			const rangeHeader = c.req.header("x-amz-copy-source-range");
+			if (rangeHeader !== undefined) {
+				const match = /^bytes=(\d+)-(\d+)$/.exec(rangeHeader);
+				if (match === null) {
+					return errorResponse(
+						400,
+						"InvalidArgument",
+						`Invalid x-amz-copy-source-range: ${rangeHeader}`
+					);
+				}
+				const offset = Number(match[1]);
+				const end = Number(match[2]);
+				// R2 clamps out-of-bounds ends (the simulator does too) but
+				// rejects inverted ranges
+				if (end < offset) {
+					return errorResponse(
+						400,
+						"InvalidArgument",
+						"x-amz-copy-source-range must be positive."
+					);
+				}
+				range = { offset, length: end - offset + 1 };
+			}
+
+			let sourceObject;
+			try {
+				sourceObject = await source.bucket.get(source.key, { range });
+			} catch (e) {
+				return bindingError(e);
+			}
+			if (sourceObject === null) {
+				return noSuchKey();
+			}
+
+			const upload = bucket.resumeMultipartUpload(key, uploadId);
+			try {
+				const part = await upload.uploadPart(partNumber, sourceObject.body);
+				return xmlResponse("CopyPartResult", {
+					ETag: `"${part.etag}"`,
+					LastModified: new Date().toISOString(),
+				});
+			} catch (e) {
+				return bindingError(e);
+			}
+		},
+	},
+	CompleteMultipartUpload: {
+		unsupportedHeaders: BUCKET_OWNER,
+		async handle({ c, bucket, bucketId, key, uploadId }) {
+			const text = await c.req.raw.text();
+			if (XMLValidator.validate(text) !== true) {
+				return malformedXml();
+			}
+
+			const parsed: unknown = xmlParser.parse(text);
+			const request = (
+				parsed as { CompleteMultipartUpload?: { Part?: unknown } }
+			).CompleteMultipartUpload;
+			if (request === undefined) {
+				return malformedXml();
+			}
+
+			const parts: R2UploadedPart[] = [];
+			const seenPartNumbers = new Set<number>();
+			for (const part of coerceArray(request.Part)) {
+				const { PartNumber, ETag } = part as {
+					PartNumber?: unknown;
+					ETag?: unknown;
+				};
+
+				const partNumber = Number(PartNumber);
+				if (!Number.isInteger(partNumber) || typeof ETag !== "string") {
+					return malformedXml();
+				}
+
+				// Real R2 treats out-of-range part numbers in the XML as parts that
+				// cannot exist, not as malformed arguments (unlike ?partNumber=)
+				if (partNumber < 1 || partNumber > 10000) {
+					return errorResponse(
+						400,
+						"InvalidPart",
+						"One or more of the specified parts could not be found."
+					);
+				}
+
+				// The simulator reports duplicate part numbers with the same
+				// internal error (10001) as an unknown upload id, so screen them
+				// here with the error real R2 returns for duplicates
+				if (seenPartNumbers.has(partNumber)) {
+					return errorResponse(
+						400,
+						"InvalidPart",
+						"There was a problem with the multipart upload."
+					);
+				}
+				seenPartNumbers.add(partNumber);
+
+				parts.push({ partNumber, etag: ETag.replace(/^"|"$/g, "") });
+			}
+
+			if (parts.length === 0) {
+				return malformedXml();
+			}
+
+			const upload = bucket.resumeMultipartUpload(key, uploadId);
+			try {
+				const object = await upload.complete(parts);
+				const url = new URL(c.req.url);
+				return xmlResponse("CompleteMultipartUploadResult", {
+					Bucket: bucketId,
+					Key: key,
+					ETag: object.httpEtag,
+					Location: `${url.origin}${CorePaths.R2_S3}/${bucketId}/${awsUriEncode(key)}`,
+				});
+			} catch (e) {
+				const response = bindingError(e);
+
+				// Like abort, the simulator reports an unknown upload id on
+				// complete as an internal error (10001) rather than
+				// NO_SUCH_UPLOAD. Duplicate part numbers, its only other 10001
+				// source here, are screened during parsing above.
+				if (response.status === 500) {
+					return s3Error(NO_SUCH_UPLOAD);
+				}
+
+				return response;
+			}
+		},
+	},
+	AbortMultipartUpload: {
+		unsupportedHeaders: [],
+		async handle({ c, bucket, key, uploadId }) {
+			const upload = bucket.resumeMultipartUpload(key, uploadId);
+			try {
+				await upload.abort();
+			} catch (e) {
+				const response = bindingError(e);
+				// The simulator reports an unknown upload id on abort as an
+				// internal error (10001) rather than NO_SUCH_UPLOAD; aborting is
+				// its only failure mode, so map it onto the NoSuchUpload R2's S3
+				// API returns
+				if (response.status === 500) {
+					return s3Error(NO_SUCH_UPLOAD);
+				}
+				return response;
+			}
 			return c.body(null, 204);
 		},
 	},

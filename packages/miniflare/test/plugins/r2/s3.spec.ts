@@ -1,7 +1,10 @@
 import crypto from "node:crypto";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import {
+	AbortMultipartUploadCommand,
+	CompleteMultipartUploadCommand,
 	CopyObjectCommand,
+	CreateMultipartUploadCommand,
 	DeleteObjectCommand,
 	DeleteObjectsCommand,
 	GetObjectCommand,
@@ -17,6 +20,8 @@ import {
 	PutObjectCommand,
 	S3Client,
 	S3ServiceException,
+	UploadPartCommand,
+	UploadPartCopyCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { SignatureV4 } from "@smithy/signature-v4";
@@ -1324,6 +1329,394 @@ test("CopyObject decodes the copy source and allows self-copies", async ({
 	expect(await after?.text()).toBe("spaced");
 });
 
+test("multipart upload lifecycle", async ({ expect }) => {
+	const client = s3();
+	const create = await client.send(
+		new CreateMultipartUploadCommand({
+			Bucket: "bucket",
+			Key: "mp/obj.bin",
+			ContentType: "application/x-thing",
+			Metadata: { mp: "1" },
+		})
+	);
+	expect(create.Bucket).toBe("bucket");
+	expect(create.Key).toBe("mp/obj.bin");
+	assert(create.UploadId !== undefined);
+
+	const part = await client.send(
+		new UploadPartCommand({
+			Bucket: "bucket",
+			Key: "mp/obj.bin",
+			UploadId: create.UploadId,
+			PartNumber: 1,
+			Body: "part-one-data",
+		})
+	);
+	assert(part.ETag !== undefined);
+
+	const complete = await client.send(
+		new CompleteMultipartUploadCommand({
+			Bucket: "bucket",
+			Key: "mp/obj.bin",
+			UploadId: create.UploadId,
+			MultipartUpload: { Parts: [{ PartNumber: 1, ETag: part.ETag }] },
+		})
+	);
+	expect(complete.Key).toBe("mp/obj.bin");
+	expect(complete.Location).toContain("mp%2Fobj.bin");
+	// Multipart ETags carry a part-count suffix
+	expect(complete.ETag).toMatch(/^"[0-9a-f]{32}-1"$/);
+
+	const get = await client.send(
+		new GetObjectCommand({ Bucket: "bucket", Key: "mp/obj.bin" })
+	);
+	assert(get.Body !== undefined);
+	expect(await get.Body.transformToString()).toBe("part-one-data");
+	expect(get.ContentType).toBe("application/x-thing");
+	expect(get.Metadata).toEqual({ mp: "1" });
+
+	// The upload is gone after completion
+	await expectSdkError(
+		client.send(
+			new CompleteMultipartUploadCommand({
+				Bucket: "bucket",
+				Key: "mp/obj.bin",
+				UploadId: create.UploadId,
+				MultipartUpload: { Parts: [{ PartNumber: 1, ETag: part.ETag }] },
+			})
+		),
+		404,
+		"NoSuchUpload",
+		expect
+	);
+});
+
+test("multipart error cases", async ({ expect }) => {
+	const client = s3();
+	await expectSdkError(
+		client.send(
+			new UploadPartCommand({
+				Bucket: "bucket",
+				Key: "mp/err.bin",
+				UploadId: "bogus",
+				PartNumber: 1,
+				Body: "x",
+			})
+		),
+		404,
+		"NoSuchUpload",
+		expect
+	);
+
+	await expectSdkError(
+		client.send(
+			new AbortMultipartUploadCommand({
+				Bucket: "bucket",
+				Key: "mp/err.bin",
+				UploadId: "bogus",
+			})
+		),
+		404,
+		"NoSuchUpload",
+		expect
+	);
+
+	const create = await client.send(
+		new CreateMultipartUploadCommand({ Bucket: "bucket", Key: "mp/err.bin" })
+	);
+	assert(create.UploadId !== undefined);
+
+	const badNumber = await expectSdkError(
+		client.send(
+			new UploadPartCommand({
+				Bucket: "bucket",
+				Key: "mp/err.bin",
+				UploadId: create.UploadId,
+				PartNumber: 0,
+				Body: "x",
+			})
+		),
+		400,
+		"InvalidArgument",
+		expect
+	);
+	expect(badNumber.message).toContain(
+		"Part number must be an integer between 1 and 10000, inclusive."
+	);
+
+	const duplicate = await expectSdkError(
+		client.send(
+			new CompleteMultipartUploadCommand({
+				Bucket: "bucket",
+				Key: "mp/err.bin",
+				UploadId: create.UploadId,
+				MultipartUpload: {
+					Parts: [
+						{ PartNumber: 1, ETag: '"0123456789abcdef0123456789abcdef"' },
+						{ PartNumber: 1, ETag: '"0123456789abcdef0123456789abcdef"' },
+					],
+				},
+			})
+		),
+		400,
+		"InvalidPart",
+		expect
+	);
+	expect(duplicate.message).toBe(
+		"There was a problem with the multipart upload."
+	);
+
+	await client.send(
+		new UploadPartCommand({
+			Bucket: "bucket",
+			Key: "mp/err.bin",
+			UploadId: create.UploadId,
+			PartNumber: 1,
+			Body: "data",
+		})
+	);
+	await expectSdkError(
+		client.send(
+			new CompleteMultipartUploadCommand({
+				Bucket: "bucket",
+				Key: "mp/err.bin",
+				UploadId: create.UploadId,
+				MultipartUpload: {
+					Parts: [
+						{
+							PartNumber: 1,
+							ETag: '"0123456789abcdef0123456789abcdef"',
+						},
+					],
+				},
+			})
+		),
+		400,
+		"InvalidPart",
+		expect
+	);
+
+	const malformed = await s3Fetch(
+		`bucket/mp/err.bin?uploadId=${encodeURIComponent(create.UploadId)}`,
+		{ method: "POST", body: "<wat/>" }
+	);
+	await expectError(malformed, 400, "MalformedXML", expect);
+
+	// R2's part routes only match integer-shaped partNumber values; padded
+	// and zero-prefixed integers are accepted, anything else is RouteNotFound
+	const uid = encodeURIComponent(create.UploadId);
+	const padded = await s3Fetch(
+		`bucket/mp/err.bin?uploadId=${uid}&partNumber=01`,
+		{
+			method: "PUT",
+			body: "x",
+		}
+	);
+	expect(padded.status).toBe(200);
+	const fractional = await s3Fetch(
+		`bucket/mp/err.bin?uploadId=${uid}&partNumber=1.0`,
+		{ method: "PUT", body: "x" }
+	);
+	await expectError(fractional, 404, "RouteNotFound", expect);
+	const empty = await s3Fetch(`bucket/mp/err.bin?uploadId=${uid}&partNumber=`, {
+		method: "PUT",
+		body: "x",
+	});
+	await expectError(empty, 400, "InvalidArgument", expect);
+
+	// Inside the Complete XML (unlike the ?partNumber= query param), real R2
+	// reports non-integer part numbers as MalformedXML and out-of-range
+	// integers as InvalidPart (a part that does not exist)
+	const uploadId = create.UploadId;
+	const completeWith = (partNumber: string) =>
+		s3Fetch(`bucket/mp/err.bin?uploadId=${encodeURIComponent(uploadId)}`, {
+			method: "POST",
+			body: `<CompleteMultipartUpload><Part><PartNumber>${partNumber}</PartNumber><ETag>"0123456789abcdef0123456789abcdef"</ETag></Part></CompleteMultipartUpload>`,
+		});
+	await expectError(await completeWith("abc"), 400, "MalformedXML", expect);
+	await expectError(await completeWith("1.5"), 400, "MalformedXML", expect);
+	await expectError(await completeWith("0"), 400, "InvalidPart", expect);
+	await expectError(await completeWith("10001"), 400, "InvalidPart", expect);
+
+	// An empty part list is malformed too
+	const emptyComplete = await s3Fetch(
+		`bucket/mp/err.bin?uploadId=${encodeURIComponent(uploadId)}`,
+		{
+			method: "POST",
+			body: "<CompleteMultipartUpload></CompleteMultipartUpload>",
+		}
+	);
+	await expectError(emptyComplete, 400, "MalformedXML", expect);
+
+	await client.send(
+		new AbortMultipartUploadCommand({
+			Bucket: "bucket",
+			Key: "mp/err.bin",
+			UploadId: create.UploadId,
+		})
+	);
+
+	await expectSdkError(
+		client.send(
+			new UploadPartCommand({
+				Bucket: "bucket",
+				Key: "mp/err.bin",
+				UploadId: create.UploadId,
+				PartNumber: 1,
+				Body: "x",
+			})
+		),
+		404,
+		"NoSuchUpload",
+		expect
+	);
+});
+
+test("PUT with uploadId but no partNumber is a plain PutObject", async ({
+	expect,
+}) => {
+	const client = s3();
+	const create = await client.send(
+		new CreateMultipartUploadCommand({ Bucket: "bucket", Key: "mp/plain.bin" })
+	);
+	assert(create.UploadId !== undefined);
+
+	const res = await s3Fetch(
+		`bucket/mp/plain.bin?uploadId=${encodeURIComponent(create.UploadId)}`,
+		{ method: "PUT", body: "not-a-part" }
+	);
+	expect(res.status).toBe(200);
+
+	// The object was written directly; the multipart upload saw no parts
+	const r2 = await bucket();
+	const object = await r2.get("mp/plain.bin");
+	expect(await object?.text()).toBe("not-a-part");
+	await client.send(
+		new AbortMultipartUploadCommand({
+			Bucket: "bucket",
+			Key: "mp/plain.bin",
+			UploadId: create.UploadId,
+		})
+	);
+});
+
+test("complete rejects non-final parts below the minimum size", async ({
+	expect,
+}) => {
+	const client = s3();
+	const create = await client.send(
+		new CreateMultipartUploadCommand({ Bucket: "bucket", Key: "mp/small.bin" })
+	);
+	assert(create.UploadId !== undefined);
+
+	const parts = [];
+	for (const partNumber of [1, 2]) {
+		const part = await client.send(
+			new UploadPartCommand({
+				Bucket: "bucket",
+				Key: "mp/small.bin",
+				UploadId: create.UploadId,
+				PartNumber: partNumber,
+				Body: `tiny${partNumber}`,
+			})
+		);
+		parts.push({ PartNumber: partNumber, ETag: part.ETag });
+	}
+	await expectSdkError(
+		client.send(
+			new CompleteMultipartUploadCommand({
+				Bucket: "bucket",
+				Key: "mp/small.bin",
+				UploadId: create.UploadId,
+				MultipartUpload: { Parts: parts },
+			})
+		),
+		400,
+		"EntityTooSmall",
+		expect
+	);
+	await client.send(
+		new AbortMultipartUploadCommand({
+			Bucket: "bucket",
+			Key: "mp/small.bin",
+			UploadId: create.UploadId,
+		})
+	);
+});
+
+test("UploadPartCopy copies a part, optionally with a range", async ({
+	expect,
+}) => {
+	const r2 = await bucket();
+	await r2.put("mp/copy-src.txt", "0123456789");
+	const client = s3();
+
+	const create = await client.send(
+		new CreateMultipartUploadCommand({ Bucket: "bucket", Key: "mp/copied.bin" })
+	);
+	assert(create.UploadId !== undefined);
+
+	const copied = await client.send(
+		new UploadPartCopyCommand({
+			Bucket: "bucket",
+			Key: "mp/copied.bin",
+			UploadId: create.UploadId,
+			PartNumber: 1,
+			CopySource: "/bucket/mp/copy-src.txt",
+			CopySourceRange: "bytes=0-4",
+		})
+	);
+	assert(copied.CopyPartResult?.ETag !== undefined);
+
+	// Only `bytes=start-end` is accepted for x-amz-copy-source-range
+	const badRange = await s3Fetch(
+		`bucket/mp/copied.bin?uploadId=${encodeURIComponent(create.UploadId)}&partNumber=2`,
+		{
+			method: "PUT",
+			headers: {
+				"x-amz-copy-source": "/bucket/mp/copy-src.txt",
+				"x-amz-copy-source-range": "bytes=0-",
+			},
+		}
+	);
+	expect(badRange.status).toBe(400);
+	expect(await badRange.text()).toContain(
+		"<Message>Invalid x-amz-copy-source-range: bytes=0-</Message>"
+	);
+
+	// Inverted ranges are rejected (out-of-bounds ends are clamped instead)
+	const invertedRange = await s3Fetch(
+		`bucket/mp/copied.bin?uploadId=${encodeURIComponent(create.UploadId)}&partNumber=2`,
+		{
+			method: "PUT",
+			headers: {
+				"x-amz-copy-source": "/bucket/mp/copy-src.txt",
+				"x-amz-copy-source-range": "bytes=5-2",
+			},
+		}
+	);
+	expect(invertedRange.status).toBe(400);
+	expect(await invertedRange.text()).toContain(
+		"<Message>x-amz-copy-source-range must be positive.</Message>"
+	);
+
+	await client.send(
+		new CompleteMultipartUploadCommand({
+			Bucket: "bucket",
+			Key: "mp/copied.bin",
+			UploadId: create.UploadId,
+			MultipartUpload: {
+				Parts: [{ PartNumber: 1, ETag: copied.CopyPartResult.ETag }],
+			},
+		})
+	);
+	const get = await client.send(
+		new GetObjectCommand({ Bucket: "bucket", Key: "mp/copied.bin" })
+	);
+	assert(get.Body !== undefined);
+	expect(await get.Body.transformToString()).toBe("01234");
+});
+
 test("unimplemented multipart surfaces respond with NotImplemented", async ({
 	expect,
 }) => {
@@ -1606,6 +1999,28 @@ test("list edge cases match real R2", async ({ expect }) => {
 	expect(encoding.status).toBe(501);
 	expect(await encoding.text()).toContain(
 		"Unrecognized encoding-type &quot;weird&quot; not implemented"
+	);
+});
+
+test("Complete with unknown uploadId returns NoSuchUpload", async ({
+	expect,
+}) => {
+	await expectSdkError(
+		s3().send(
+			new CompleteMultipartUploadCommand({
+				Bucket: "bucket",
+				Key: "mp/nope.bin",
+				UploadId: "bogus",
+				MultipartUpload: {
+					Parts: [
+						{ PartNumber: 1, ETag: '"0123456789abcdef0123456789abcdef"' },
+					],
+				},
+			})
+		),
+		404,
+		"NoSuchUpload",
+		expect
 	);
 });
 

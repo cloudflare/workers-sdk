@@ -8,6 +8,7 @@ import { detectBucketOperation, detectObjectOperation } from "./detect.worker";
 import { noSuchBucket, notImplemented } from "./errors.worker";
 import {
 	BUCKET_OPERATIONS,
+	MULTIPART_OPERATIONS,
 	OBJECT_OPERATIONS,
 	screenHeaders,
 } from "./operations.worker";
@@ -88,8 +89,8 @@ interface BoundOperation {
 }
 
 /**
- * Detection and the operation tables are split by addressing level
- * (bucket- and object-level operations take different contexts). Binding
+ * Detection and the operation tables are split by addressing level (bucket-,
+ * object-, and multipart-level operations take different contexts). Binding
  * the context here keeps those splits out of `dispatch()`.
  */
 function detectOperation(
@@ -113,13 +114,16 @@ function detectOperation(
 		return detected;
 	}
 
-	return bind(detected, OBJECT_OPERATIONS, {
-		c,
-		bucket,
-		bucketId,
-		key,
-		params,
-	});
+	const context = { c, bucket, bucketId, key, params };
+	// Multipart operations, uniquely, are detected as an `object`
+	if (typeof detected === "object") {
+		return bind(detected.operation, MULTIPART_OPERATIONS, {
+			...context,
+			uploadId: detected.uploadId,
+		});
+	}
+
+	return bind(detected, OBJECT_OPERATIONS, context);
 }
 
 function bind<Operation extends S3Operation, Context>(

@@ -21,9 +21,25 @@ export type ObjectOperation =
 	| "HeadObject"
 	| "PutObject"
 	| "CopyObject"
-	| "DeleteObject";
+	| "DeleteObject"
+	| "CreateMultipartUpload";
 
-export type S3Operation = BucketOperation | ObjectOperation;
+/** Operations on an in-progress multipart upload, addressed by ?uploadId */
+export type MultipartOperation =
+	| "UploadPart"
+	| "UploadPartCopy"
+	| "CompleteMultipartUpload"
+	| "AbortMultipartUpload";
+
+export type S3Operation =
+	| BucketOperation
+	| ObjectOperation
+	| MultipartOperation;
+
+export interface MultipartDetection {
+	operation: MultipartOperation;
+	uploadId: string;
+}
 
 /**
  * Object-level subresource query parameters map onto operations R2's S3
@@ -308,16 +324,57 @@ function objectSubresourceError(
 export function detectObjectOperation(
 	c: S3Context,
 	params: URLSearchParams
-): ObjectOperation | Response {
+): ObjectOperation | MultipartDetection | Response {
 	const method = c.req.method;
 
-	if (params.has("uploadId") && method === "GET") {
-		// Real R2 implements ListParts; the local R2 binding cannot list parts
-		return notImplementedOperation("ListParts");
+	const uploadId = params.get("uploadId");
+	if (uploadId !== null) {
+		// R2's part routes only match when partNumber looks like an
+		// (optionally space-padded, signed) integer; other values (e.g.
+		// `1.0`) match no route at all, and range validation happens later
+		const partNumber = params.get("partNumber");
+		if (partNumber !== null && !/^ *-?\d*$/.test(partNumber)) {
+			return routeNotFound();
+		}
+		switch (method) {
+			case "GET":
+				// Real R2 implements ListParts when partNumber is also present
+				// (and reports it unimplemented otherwise). The local R2
+				// binding cannot list parts either way.
+				return notImplementedOperation("ListParts");
+			case "PUT":
+				if (partNumber === null) {
+					// Without partNumber, ignore `uploadId` entirely and
+					// treat the request as a plain PutObject/CopyObject
+					break;
+				}
+
+				return {
+					operation:
+						c.req.header("x-amz-copy-source") !== undefined
+							? "UploadPartCopy"
+							: "UploadPart",
+					uploadId,
+				};
+			case "POST":
+				return { operation: "CompleteMultipartUpload", uploadId };
+			case "DELETE":
+				return { operation: "AbortMultipartUpload", uploadId };
+			case "HEAD":
+				return "HeadObject";
+			default:
+				return routeNotFound();
+		}
 	}
-	if (params.has("uploads") && method === "GET") {
+	if (params.has("uploads")) {
+		if (method === "POST") {
+			return "CreateMultipartUpload";
+		}
+
 		// Serve the bucket's upload list even on object paths
-		return notImplementedOperation("ListMultipartUploads");
+		if (method === "GET") {
+			return notImplementedOperation("ListMultipartUploads");
+		}
 	}
 	switch (method) {
 		case "GET":
