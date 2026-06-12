@@ -6,7 +6,11 @@ import { hasAuthentication, verifyRequest } from "./auth.worker";
 import { stripBodyForHead } from "./common.worker";
 import { detectBucketOperation, detectObjectOperation } from "./detect.worker";
 import { noSuchBucket, notImplemented } from "./errors.worker";
-import { OBJECT_OPERATIONS, screenHeaders } from "./operations.worker";
+import {
+	BUCKET_OPERATIONS,
+	OBJECT_OPERATIONS,
+	screenHeaders,
+} from "./operations.worker";
 import type { S3Context } from "./common.worker";
 import type { S3Operation } from "./detect.worker";
 import type { OperationDefinition, ScreeningRules } from "./operations.worker";
@@ -100,7 +104,15 @@ function detectOperation(
 	params: URLSearchParams
 ): BoundOperation | Response {
 	if (key === undefined) {
-		return detectBucketOperation(c.req.method, params) ?? NOT_IMPLEMENTED;
+		const detected = detectBucketOperation(c.req.method, params);
+		if (detected instanceof Response) {
+			return detected;
+		}
+		if (detected === undefined) {
+			return NOT_IMPLEMENTED;
+		}
+
+		return bind(detected, BUCKET_OPERATIONS, { c, bucket, bucketId, params });
 	}
 
 	const detected = detectObjectOperation(c, params);

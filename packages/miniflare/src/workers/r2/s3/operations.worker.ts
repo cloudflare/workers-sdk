@@ -1,8 +1,8 @@
 import { parseRangeHeader, serveR2Object } from "../serve.worker";
-import { hex } from "./common.worker";
+import { hex, xmlResponse } from "./common.worker";
 import { errorResponse } from "./errors.worker";
 import type { S3Context } from "./common.worker";
-import type { ObjectOperation } from "./detect.worker";
+import type { BucketOperation, ObjectOperation } from "./detect.worker";
 import type { Awaitable } from "miniflare:shared";
 
 interface S3Error {
@@ -380,5 +380,62 @@ export const OBJECT_OPERATIONS: Record<
 			await bucket.delete(key);
 			return c.body(null, 204);
 		},
+	},
+};
+
+export const BUCKET_OPERATIONS: Record<
+	BucketOperation,
+	OperationDefinition<BucketOperationContext> & ScreeningRules
+> = {
+	HeadBucket: {
+		unsupportedHeaders: BUCKET_OWNER,
+		// The bucket exists, or routing would have 404ed already
+		handle: ({ c }) => c.body(null, 200),
+	},
+	GetBucketLocation: {
+		unsupportedHeaders: BUCKET_OWNER,
+		// Real R2 reports the bucket's location hint (e.g. ENAM); local
+		// buckets have no location
+		handle: () => xmlResponse("LocationConstraint", { "#text": "auto" }),
+	},
+	// R2 always encrypts at rest with AES256; there is no per-bucket config
+	GetBucketEncryption: {
+		unsupportedHeaders: BUCKET_OWNER,
+		handle: () =>
+			xmlResponse("ServerSideEncryptionConfiguration", {
+				Rule: {
+					ApplyServerSideEncryptionByDefault: { SSEAlgorithm: "AES256" },
+					BucketKeyEnabled: true,
+				},
+			}),
+	},
+	// R2 has no bucket versioning, tagging, object lock, or replication;
+	// these responses are identical for every bucket
+	GetBucketVersioning: {
+		unsupportedHeaders: BUCKET_OWNER,
+		handle: () => xmlResponse("VersioningConfiguration", {}),
+	},
+	GetBucketTagging: {
+		unsupportedHeaders: BUCKET_OWNER,
+		handle: () =>
+			errorResponse(404, "NoSuchTagSet", "The TagSet does not exist."),
+	},
+	GetObjectLockConfiguration: {
+		unsupportedHeaders: BUCKET_OWNER,
+		handle: () =>
+			errorResponse(
+				404,
+				"ObjectLockConfigurationNotFoundError",
+				"Object Lock configuration does not exist for this bucket."
+			),
+	},
+	GetBucketReplication: {
+		unsupportedHeaders: BUCKET_OWNER,
+		handle: () =>
+			errorResponse(
+				404,
+				"ReplicationConfigurationNotFoundError",
+				"The replication configuration was not found."
+			),
 	},
 };

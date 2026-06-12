@@ -2369,6 +2369,9 @@ importers:
       expect-type:
         specifier: ^0.15.0
         version: 0.15.0
+      fast-xml-parser:
+        specifier: ^4.4.1
+        version: 4.4.1
       get-port:
         specifier: ^7.1.0
         version: 7.1.0

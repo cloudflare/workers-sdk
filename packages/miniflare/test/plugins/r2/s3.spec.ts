@@ -3,6 +3,10 @@ import { Sha256 } from "@aws-crypto/sha256-js";
 import {
 	DeleteObjectCommand,
 	GetObjectCommand,
+	GetBucketEncryptionCommand,
+	GetBucketLocationCommand,
+	GetBucketVersioningCommand,
+	HeadBucketCommand,
 	HeadObjectCommand,
 	ListMultipartUploadsCommand,
 	ListPartsCommand,
@@ -1037,6 +1041,23 @@ test("bucket subresource GETs return R2's templated errors", async ({
 	);
 });
 
+test("HeadBucket and GetBucketLocation work", async ({ expect }) => {
+	const client = s3();
+	const head = await client.send(new HeadBucketCommand({ Bucket: "bucket" }));
+	expect(head.$metadata.httpStatusCode).toBe(200);
+
+	const location = await client.send(
+		new GetBucketLocationCommand({ Bucket: "bucket" })
+	);
+	expect(location.LocationConstraint).toBe("auto");
+
+	const extraParam = await s3Fetch("bucket?location&foobar=1");
+	expect(extraParam.status).toBe(400);
+	expect(await extraParam.text()).toContain(
+		"<Message>Search param foobar is unsupported for bucket location</Message>"
+	);
+});
+
 test("unroutable requests match R2's responses", async ({ expect }) => {
 	const patch = await s3Fetch("bucket/x.txt", { method: "PATCH" });
 	expect(patch.status).toBe(404);
@@ -1103,6 +1124,46 @@ test("bucket-level PUT/DELETE subresources match real R2's routing", async ({
 	expect(await putJunk.text()).toContain(
 		"<Message>Unsupported search param(s) &quot;junk&quot; on a PUT bucket route</Message>"
 	);
+});
+
+test("static bucket-configuration reads match real R2", async ({ expect }) => {
+	const client = s3();
+	const encryption = await client.send(
+		new GetBucketEncryptionCommand({ Bucket: "bucket" })
+	);
+	const rule = encryption.ServerSideEncryptionConfiguration?.Rules?.[0];
+	expect(rule?.ApplyServerSideEncryptionByDefault?.SSEAlgorithm).toBe("AES256");
+	expect(rule?.BucketKeyEnabled).toBe(true);
+
+	// R2 has no bucket versioning; the configuration is always empty
+	const versioning = await client.send(
+		new GetBucketVersioningCommand({ Bucket: "bucket" })
+	);
+	expect(versioning.Status).toBeUndefined();
+
+	const tagging = await s3Fetch("bucket?tagging");
+	await expectError(tagging, 404, "NoSuchTagSet", expect);
+
+	const objectLock = await s3Fetch("bucket?object-lock");
+	await expectError(
+		objectLock,
+		404,
+		"ObjectLockConfigurationNotFoundError",
+		expect
+	);
+
+	const replication = await s3Fetch("bucket?replication");
+	await expectError(
+		replication,
+		404,
+		"ReplicationConfigurationNotFoundError",
+		expect
+	);
+
+	// Stateful bucket configuration cannot be simulated locally
+	const cors = await s3Fetch("bucket?cors");
+	expect(cors.status).toBe(501);
+	expect(await cors.text()).toContain("GetBucketCors not implemented");
 });
 
 // Unlike real R2 (which only answers preflights according to the bucket's

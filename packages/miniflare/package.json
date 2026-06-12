@@ -93,6 +93,7 @@
 		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "catalog:default",
 		"expect-type": "^0.15.0",
+		"fast-xml-parser": "^4.4.1",
 		"get-port": "^7.1.0",
 		"glob-to-regexp": "0.4.1",
 		"hono": "^4.12.5",

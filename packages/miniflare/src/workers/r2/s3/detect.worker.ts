@@ -4,13 +4,22 @@ import type { S3Context } from "./common.worker";
 const notImplementedOperation = (name: string) =>
 	notImplemented(`${name} not implemented`);
 
+export type BucketOperation =
+	| "HeadBucket"
+	| "GetBucketLocation"
+	| "GetBucketEncryption"
+	| "GetBucketVersioning"
+	| "GetBucketTagging"
+	| "GetObjectLockConfiguration"
+	| "GetBucketReplication";
+
 export type ObjectOperation =
 	| "GetObject"
 	| "HeadObject"
 	| "PutObject"
 	| "DeleteObject";
 
-export type S3Operation = ObjectOperation;
+export type S3Operation = BucketOperation | ObjectOperation;
 
 /**
  * Object-level subresource query parameters map onto operations R2's S3
@@ -107,6 +116,19 @@ const BUCKET_DELETE_NOT_IMPLEMENTED: Partial<Record<string, string>> = {
 	lifecycle: "DeleteBucketLifecycle",
 };
 
+/**
+ * Bucket-configuration reads with static responses on R2 (identical
+ * for every bucket, since R2 has no versioning/tagging/object
+ * lock/replication and always encrypts with AES256)
+ */
+const BUCKET_GET_STATIC: Partial<Record<string, BucketOperation>> = {
+	encryption: "GetBucketEncryption",
+	versioning: "GetBucketVersioning",
+	tagging: "GetBucketTagging",
+	"object-lock": "GetObjectLockConfiguration",
+	replication: "GetBucketReplication",
+};
+
 export function isScreenedParam(name: string): boolean {
 	return name.startsWith("X-Amz-") || name === "x-id";
 }
@@ -150,8 +172,10 @@ function detectBucketMutation(
 export function detectBucketOperation(
 	method: string,
 	params: URLSearchParams
-): Response | undefined {
+): BucketOperation | Response | undefined {
 	switch (method) {
+		case "HEAD":
+			return "HeadBucket";
 		case "PUT":
 			return detectBucketMutation(
 				"PUT",
@@ -177,7 +201,26 @@ export function detectBucketOperation(
 				return notImplementedOperation("ListMultipartUploads");
 			}
 
+			if (params.has("location")) {
+				for (const name of params.keys()) {
+					if (name !== "location" && !isScreenedParam(name)) {
+						return errorResponse(
+							400,
+							"InvalidArgument",
+							`Search param ${name} is unsupported for bucket location`
+						);
+					}
+				}
+
+				return "GetBucketLocation";
+			}
+
 			for (const name of params.keys()) {
+				const staticOperation = BUCKET_GET_STATIC[name];
+				if (staticOperation !== undefined) {
+					return staticOperation;
+				}
+
 				const notImplementedName = BUCKET_GET_NOT_IMPLEMENTED[name];
 				if (notImplementedName !== undefined) {
 					return notImplementedOperation(notImplementedName);
@@ -186,8 +229,6 @@ export function detectBucketOperation(
 
 			return undefined;
 		}
-		case "HEAD":
-			return undefined;
 		default:
 			return routeNotFound();
 	}
