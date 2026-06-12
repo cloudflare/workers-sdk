@@ -22,17 +22,8 @@ function formatArgName(
 	return positionalArgs?.has(name) ? `<${name}>` : `--${name}`;
 }
 
-/**
- * Joins a list of items with commas and "and" before the last item.
- *
- * @param items - The items to join
- * @returns The joined string (e.g. "a, b and c")
- */
-function joinWithAnd(items: string[]): string {
-	return items.length > 1
-		? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`
-		: items[0];
-}
+/** Formats a list of items as a human-readable conjunction (e.g. "a, b, and c"). */
+const listFormatter = new Intl.ListFormat("en-US");
 
 /**
  * A helper to demand one of a set of options
@@ -49,7 +40,7 @@ export function demandOneOfOption(...options: string[]) {
 		positionalArgs?: ReadonlySet<string>
 	) {
 		const count = options.filter((option) => argv[option]).length;
-		const flagList = joinWithAnd(
+		const flagList = listFormatter.format(
 			options.map((o) => formatArgName(o, positionalArgs))
 		);
 
@@ -62,7 +53,7 @@ export function demandOneOfOption(...options: string[]) {
 			const provided = options
 				.filter((option) => argv[option])
 				.map((o) => formatArgName(o, positionalArgs));
-			const providedList = joinWithAnd(provided);
+			const providedList = listFormatter.format(provided);
 			throw new CommandLineArgsError(
 				`Conflicting options: ${providedList} cannot be used together. Please provide only one.`,
 				{ telemetryMessage: "core arguments mutually exclusive options" }
