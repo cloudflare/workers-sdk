@@ -1,5 +1,6 @@
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	FatalError,
 	getCloudflareApiBaseUrl,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -109,7 +110,7 @@ async function requestPowSolution(
 	});
 
 	if (!response.ok) {
-		throw new UserError(
+		throw new FatalError(
 			`Failed to request a proof-of-work challenge (${response.status} ${response.statusText}).`,
 			{ telemetryMessage: "deploy temporary account challenge failed" }
 		);
@@ -119,7 +120,7 @@ async function requestPowSolution(
 	try {
 		body = (await response.json()) as PowChallengeResponse;
 	} catch {
-		throw new UserError(
+		throw new FatalError(
 			`Failed to request a proof-of-work challenge. Received an invalid response (${response.status} ${response.statusText}).`,
 			{
 				telemetryMessage: "deploy temporary account challenge invalid response",
@@ -134,7 +135,7 @@ async function requestPowSolution(
 		k === undefined ||
 		g === undefined
 	) {
-		throw new UserError(
+		throw new FatalError(
 			"Failed to request a proof-of-work challenge because the response was missing required fields.",
 			{ telemetryMessage: "deploy temporary account challenge incomplete" }
 		);
@@ -148,7 +149,7 @@ async function requestPowSolution(
 		k * g > POW_MAX_ITERATIONS ||
 		Buffer.from(seed, "base64url").length !== 32
 	) {
-		throw new UserError(
+		throw new FatalError(
 			"The proof-of-work challenge is not supported by this version of Wrangler.",
 			{
 				telemetryMessage:
@@ -183,7 +184,7 @@ export async function createTemporaryPreviewAccount(
 	});
 
 	if (!response.ok) {
-		throw new UserError(
+		throw new FatalError(
 			`Failed to create a temporary preview account (${response.status} ${response.statusText}).`,
 			{ telemetryMessage: "deploy temporary account create failed" }
 		);
@@ -194,7 +195,7 @@ export async function createTemporaryPreviewAccount(
 	try {
 		responseBody = (await response.json()) as TemporaryAccountResponse;
 	} catch {
-		throw new UserError(
+		throw new FatalError(
 			`Failed to create a temporary preview account. Received an invalid response (${response.status} ${response.statusText}).`,
 			{ telemetryMessage: "deploy temporary account invalid response" }
 		);
@@ -216,7 +217,7 @@ export async function createTemporaryPreviewAccount(
 		claimUrl === undefined ||
 		claimExpiresAt === undefined
 	) {
-		throw new UserError(
+		throw new FatalError(
 			"Failed to create a temporary preview account because the response was missing required fields.",
 			{ telemetryMessage: "deploy temporary account response incomplete" }
 		);
