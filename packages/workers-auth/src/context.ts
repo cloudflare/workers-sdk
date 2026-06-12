@@ -94,6 +94,20 @@ export interface OAuthFlowContext {
 	consent: OAuthConsentPages;
 
 	/**
+	 * The consuming CLI's branded name (e.g. `"Wrangler"`, `"cf"`), interpolated
+	 * into the copy the flow prints to the user — "To authorize <name>, please
+	 * visit ...". Consumer-specific, so it is required.
+	 */
+	displayName: string;
+
+	/**
+	 * The command that restarts the device authorization flow (e.g.
+	 * `"wrangler login --device"`), quoted when a device code is denied,
+	 * expires, or the flow times out. Consumer-specific, so it is required.
+	 */
+	deviceLoginCommand: string;
+
+	/**
 	 * The `redirect_uri` registered on the consumer's OAuth app
 	 */
 	redirectUri: string;
