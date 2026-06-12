@@ -91,10 +91,9 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
-		"experimental-autoconfig": {
-			alias: ["x-autoconfig"],
+		autoconfig: {
 			describe:
-				"Experimental: Enables framework detection and automatic configuration when deploying",
+				"Enables framework detection and automatic configuration when deploying",
 			type: "boolean",
 			default: true,
 		},
@@ -127,7 +126,7 @@ export const deployCommand = createCommand({
 		// As a precaution we're gating the feature under the autoconfig flag for the time being.
 		// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
 		if (
-			args.experimentalAutoconfig &&
+			args.autoconfig &&
 			!args.config &&
 			!args.dryRun &&
 			(await maybeDelegateToOpenNextDeployCommand(process.cwd()))
