@@ -1,9 +1,14 @@
 import { errorResponse, notImplemented, routeNotFound } from "./errors.worker";
+import type { S3Context } from "./common.worker";
 
 const notImplementedOperation = (name: string) =>
 	notImplemented(`${name} not implemented`);
 
-export type ObjectOperation = "GetObject" | "HeadObject";
+export type ObjectOperation =
+	| "GetObject"
+	| "HeadObject"
+	| "PutObject"
+	| "DeleteObject";
 
 export type S3Operation = ObjectOperation;
 
@@ -203,9 +208,11 @@ function objectSubresourceError(
 }
 
 export function detectObjectOperation(
-	method: string,
+	c: S3Context,
 	params: URLSearchParams
 ): ObjectOperation | Response | undefined {
+	const method = c.req.method;
+
 	if (params.has("uploadId") && method === "GET") {
 		// Real R2 implements ListParts; the local R2 binding cannot list parts
 		return notImplementedOperation("ListParts");
@@ -228,11 +235,24 @@ export function detectObjectOperation(
 			}
 
 			return objectSubresourceError(params, method) ?? "GetObject";
-		case "PUT":
-			return objectSubresourceError(params, method);
+		case "PUT": {
+			const subresource = objectSubresourceError(params, method);
+			if (subresource !== undefined) {
+				return subresource;
+			}
+
+			return c.req.header("x-amz-copy-source") !== undefined
+				? undefined
+				: "PutObject";
+		}
 		case "POST":
+			// R2 treats POST on an object key as PutObject, ignoring
+			// subresource parameters. Unlike PUT, x-amz-copy-source does NOT
+			// make it a CopyObject: R2 ignores the header and stores the
+			// request body.
+			return "PutObject";
 		case "DELETE":
-			return undefined;
+			return "DeleteObject";
 		default:
 			return routeNotFound();
 	}

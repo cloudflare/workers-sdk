@@ -103,7 +103,7 @@ function detectOperation(
 		return detectBucketOperation(c.req.method, params) ?? NOT_IMPLEMENTED;
 	}
 
-	const detected = detectObjectOperation(c.req.method, params);
+	const detected = detectObjectOperation(c, params);
 	if (detected instanceof Response) {
 		return detected;
 	}

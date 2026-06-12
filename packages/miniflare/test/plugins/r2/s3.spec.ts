@@ -1,9 +1,12 @@
+import crypto from "node:crypto";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import {
+	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
 	ListMultipartUploadsCommand,
 	ListPartsCommand,
+	PutObjectCommand,
 	S3Client,
 	S3ServiceException,
 } from "@aws-sdk/client-s3";
@@ -80,6 +83,10 @@ async function expectSdkError(
 function bucket() {
 	return ctx.mf.getR2Bucket("BUCKET");
 }
+function sha256Hex(data: string | Uint8Array): string {
+	return crypto.createHash("sha256").update(data).digest("hex");
+}
+
 function toAmzDate(date: Date): string {
 	return date
 		.toISOString()
@@ -328,6 +335,23 @@ test("rejects x-amz-security-token", async ({ expect }) => {
 	expect(await res.text()).toContain("<Message>X-Amz-Security-Token</Message>");
 });
 
+test("detects a payload hash mismatch", async ({ expect }) => {
+	const res = await s3Fetch("bucket/hash.txt", {
+		method: "PUT",
+		body: "actual body",
+		payloadHash: sha256Hex("a different body"),
+	});
+	await expectError(res, 400, "XAmzContentSHA256Mismatch", expect);
+
+	// The UNSIGNED-PAYLOAD sentinel skips body verification entirely
+	const unsigned = await s3Fetch("bucket/hash.txt", {
+		method: "PUT",
+		body: "any body at all",
+		payloadHash: "UNSIGNED-PAYLOAD",
+	});
+	expect(unsigned.status).toBe(200);
+});
+
 test("serves presigned GETs", async ({ expect }) => {
 	const r2 = await bucket();
 	await r2.put("presigned.txt", "presigned content");
@@ -338,6 +362,19 @@ test("serves presigned GETs", async ({ expect }) => {
 	const res = await fetch(url);
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe("presigned content");
+});
+
+test("supports presigned PUTs", async ({ expect }) => {
+	const url = await getSignedUrl(
+		s3(),
+		new PutObjectCommand({ Bucket: "bucket", Key: "presigned-put.txt" })
+	);
+	const res = await fetch(url, { method: "PUT", body: "uploaded" });
+	expect(res.status).toBe(200);
+	const r2 = await bucket();
+	const object = await r2.get("presigned-put.txt");
+	assert(object !== null);
+	expect(await object.text()).toBe("uploaded");
 });
 
 test("rejects an empty X-Amz-Expires as not a number", async ({ expect }) => {
@@ -429,6 +466,92 @@ test("returns NoSuchBucket for an unknown bucket id", async ({ expect }) => {
 	expect(await head.text()).toBe("");
 });
 
+test("PutObject stores body, metadata, and returns the ETag", async ({
+	expect,
+}) => {
+	const client = s3();
+	const put = await client.send(
+		new PutObjectCommand({
+			Bucket: "bucket",
+			Key: "put.txt",
+			Body: "0123456789",
+			ContentType: "text/markdown",
+			CacheControl: "max-age=60",
+			Metadata: { hello: "world" },
+		})
+	);
+	expect(put.ETag).toBe(
+		`"${crypto.createHash("md5").update("0123456789").digest("hex")}"`
+	);
+
+	const get = await client.send(
+		new GetObjectCommand({ Bucket: "bucket", Key: "put.txt" })
+	);
+	assert(get.Body !== undefined);
+	expect(await get.Body.transformToString()).toBe("0123456789");
+	expect(get.ContentType).toBe("text/markdown");
+	expect(get.CacheControl).toBe("max-age=60");
+	expect(get.Metadata).toEqual({ hello: "world" });
+	expect(get.AcceptRanges).toBe("bytes");
+});
+
+test("round-trips special-character keys", async ({ expect }) => {
+	// Exercises canonical-URI handling: the S3 canonical URI is the
+	// percent-encoded path exactly as sent, never re-encoded
+	const key = "späcial dir/key with spaces+(parens)&'quote.txt";
+	const client = s3();
+	await client.send(
+		new PutObjectCommand({ Bucket: "bucket", Key: key, Body: "special" })
+	);
+
+	const get = await client.send(
+		new GetObjectCommand({ Bucket: "bucket", Key: key })
+	);
+	assert(get.Body !== undefined);
+	expect(await get.Body.transformToString()).toBe("special");
+
+	// The stored key is the decoded form
+	const r2 = await bucket();
+	const object = await r2.get(key);
+	expect(await object?.text()).toBe("special");
+
+	// Keys containing `%` must be decoded exactly once
+	const percentKey = "literal 100%/a%2Bb.txt";
+	await client.send(
+		new PutObjectCommand({ Bucket: "bucket", Key: percentKey, Body: "percent" })
+	);
+	const percent = await client.send(
+		new GetObjectCommand({ Bucket: "bucket", Key: percentKey })
+	);
+	assert(percent.Body !== undefined);
+	expect(await percent.Body.transformToString()).toBe("percent");
+	expect(await (await r2.get(percentKey))?.text()).toBe("percent");
+});
+
+test("POST on an object key behaves like PutObject (R2 quirk)", async ({
+	expect,
+}) => {
+	const res = await s3Fetch("bucket/posted.txt", {
+		method: "POST",
+		body: "posted",
+	});
+	expect(res.status).toBe(200);
+	const get = await s3Fetch("bucket/posted.txt");
+	expect(await get.text()).toBe("posted");
+
+	const r2 = await bucket();
+	await r2.put("post-copy-source.txt", "source content");
+	const postCopy = await s3Fetch("bucket/posted.txt", {
+		method: "POST",
+		body: "body wins",
+		headers: { "x-amz-copy-source": "bucket/post-copy-source.txt" },
+	});
+	expect(postCopy.status).toBe(200);
+	expect(await postCopy.text()).toBe("");
+	const getCopy = await s3Fetch("bucket/posted.txt");
+	expect(await getCopy.text()).toBe("body wins");
+});
+
 test("HeadObject returns metadata with an empty body", async ({ expect }) => {
 	const r2 = await bucket();
 	await r2.put("head.txt", "abcde");
@@ -465,6 +588,20 @@ test("GetObject returns NoSuchKey XML; HeadObject errors have no body", async ({
 	expect(await headAuth.text()).toBe("");
 });
 
+test("DeleteObject returns 204, even for missing keys", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("del.txt", "x");
+	const client = s3();
+	await client.send(
+		new DeleteObjectCommand({ Bucket: "bucket", Key: "del.txt" })
+	);
+	expect(await r2.head("del.txt")).toBe(null);
+	// Deleting a missing key still succeeds
+	await client.send(
+		new DeleteObjectCommand({ Bucket: "bucket", Key: "del.txt" })
+	);
+});
+
 test("conditional GETs return 304 and 412", async ({ expect }) => {
 	const r2 = await bucket();
 	const object = await r2.put("cond.txt", "x");
@@ -492,6 +629,24 @@ test("conditional GETs return 304 and 412", async ({ expect }) => {
 				Bucket: "bucket",
 				Key: "cond.txt",
 				IfMatch: '"0123456789abcdef0123456789abcdef"',
+			})
+		),
+		412,
+		"PreconditionFailed",
+		expect
+	);
+});
+
+test("conditional PUTs return 412 on failure", async ({ expect }) => {
+	const r2 = await bucket();
+	await r2.put("cond-put.txt", "x");
+	await expectSdkError(
+		s3().send(
+			new PutObjectCommand({
+				Bucket: "bucket",
+				Key: "cond-put.txt",
+				Body: "y",
+				IfNoneMatch: "*",
 			})
 		),
 		412,
@@ -583,6 +738,208 @@ test("HEAD honors Range with a bodyless 206", async ({ expect }) => {
 	expect(await res.text()).toBe("");
 });
 
+test("verifies Content-MD5", async ({ expect }) => {
+	const good = await s3Fetch("bucket/md5.txt", {
+		method: "PUT",
+		body: "data",
+		headers: {
+			"Content-MD5": crypto.createHash("md5").update("data").digest("base64"),
+		},
+	});
+	expect(good.status).toBe(200);
+
+	const bad = await s3Fetch("bucket/md5.txt", {
+		method: "PUT",
+		body: "data",
+		headers: {
+			"Content-MD5": crypto.createHash("md5").update("other").digest("base64"),
+		},
+	});
+	await expectError(bad, 400, "BadDigest", expect);
+
+	const invalid = await s3Fetch("bucket/md5.txt", {
+		method: "PUT",
+		body: "data",
+		headers: { "Content-MD5": "not-base64!!!" },
+	});
+	await expectError(invalid, 400, "InvalidDigest", expect);
+});
+
+test("validates x-amz-storage-class", async ({ expect }) => {
+	const ok = await s3Fetch("bucket/sc.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-storage-class": "STANDARD" },
+	});
+	expect(ok.status).toBe(200);
+
+	const ia = await s3Fetch("bucket/sc.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-storage-class": "STANDARD_IA" },
+	});
+	await expectError(ia, 501, "NotImplemented", expect);
+
+	const bad = await s3Fetch("bucket/sc.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-storage-class": "GLACIER" },
+	});
+	await expectError(bad, 400, "InvalidStorageClass", expect);
+});
+
+test("screens unsupported headers per operation", async ({ expect }) => {
+	// x-amz-tagging is rejected on PutObject...
+	const put = await s3Fetch("bucket/screen.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-tagging": "a=b" },
+	});
+	expect(put.status).toBe(501);
+	expect(await put.text()).toContain(
+		"Header &apos;x-amz-tagging&apos; with value &apos;a=b&apos; not implemented"
+	);
+
+	// ...but ignored on GetObject
+	const r2 = await bucket();
+	await r2.put("screen.txt", "x");
+	const get = await s3Fetch("bucket/screen.txt", {
+		headers: { "x-amz-tagging": "a=b" },
+	});
+	expect(get.status).toBe(200);
+
+	// x-amz-mfa is rejected on DeleteObject only
+	const del = await s3Fetch("bucket/screen.txt", {
+		method: "DELETE",
+		headers: { "x-amz-mfa": "device 123456" },
+	});
+	expect(del.status).toBe(501);
+	const putMfa = await s3Fetch("bucket/screen.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-mfa": "device 123456" },
+	});
+	expect(putMfa.status).toBe(200);
+});
+
+test("validates x-amz-acl and x-amz-server-side-encryption values", async ({
+	expect,
+}) => {
+	const cannedAcl = await s3Fetch("bucket/acl.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-acl": "public-read" },
+	});
+	expect(cannedAcl.status).toBe(200);
+
+	const badAcl = await s3Fetch("bucket/acl.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-acl": "lol-no" },
+	});
+	expect(badAcl.status).toBe(501);
+
+	const aes = await s3Fetch("bucket/sse.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-server-side-encryption": "AES256" },
+	});
+	expect(aes.status).toBe(200);
+
+	const kms = await s3Fetch("bucket/sse.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-server-side-encryption": "aws:kms" },
+	});
+	expect(kms.status).toBe(501);
+});
+
+test("ignores unrecognized x-amz-* headers", async ({ expect }) => {
+	const res = await s3Fetch("bucket/unknown-header.txt", {
+		method: "PUT",
+		body: "x",
+		headers: { "x-amz-foobar": "whatever" },
+	});
+	expect(res.status).toBe(200);
+});
+
+test("SSE-C reads get InvalidRequest, writes get NotImplemented", async ({
+	expect,
+}) => {
+	const r2 = await bucket();
+	await r2.put("ssec.txt", "x");
+	const key = Buffer.alloc(32, 7).toString("base64");
+	const keyMd5 = crypto
+		.createHash("md5")
+		.update(Buffer.alloc(32, 7))
+		.digest("base64");
+	const fullSet = {
+		"x-amz-server-side-encryption-customer-algorithm": "AES256",
+		"x-amz-server-side-encryption-customer-key": key,
+		"x-amz-server-side-encryption-customer-key-MD5": keyMd5,
+	};
+
+	// Incomplete header triples are rejected before anything else
+	const noKey = await s3Fetch("bucket/ssec.txt", {
+		headers: { "x-amz-server-side-encryption-customer-algorithm": "AES256" },
+	});
+	expect(noKey.status).toBe(400);
+	expect(await noKey.text()).toContain(
+		"must provide an appropriate secret key."
+	);
+
+	const noMd5 = await s3Fetch("bucket/ssec.txt", {
+		headers: {
+			"x-amz-server-side-encryption-customer-algorithm": "AES256",
+			"x-amz-server-side-encryption-customer-key": key,
+		},
+	});
+	expect(noMd5.status).toBe(400);
+	expect(await noMd5.text()).toContain(
+		"must provide the client calculated MD5 of the secret key."
+	);
+
+	const noAlgorithm = await s3Fetch("bucket/ssec.txt", {
+		headers: {
+			"x-amz-server-side-encryption-customer-key": key,
+			"x-amz-server-side-encryption-customer-key-MD5": keyMd5,
+		},
+	});
+	expect(noAlgorithm.status).toBe(400);
+	expect(await noAlgorithm.text()).toContain(
+		"must provide a valid encryption algorithm."
+	);
+
+	// A complete triple with a bad algorithm value is rejected next, on
+	// reads and writes alike (probed against R2)
+	const badAlgorithm = await s3Fetch("bucket/ssec.txt", {
+		headers: {
+			...fullSet,
+			"x-amz-server-side-encryption-customer-algorithm": "AES128",
+		},
+	});
+	expect(badAlgorithm.status).toBe(400);
+	expect(await badAlgorithm.text()).toContain(
+		"<Code>InvalidEncryptionAlgorithmError</Code><Message>The encryption request that you specified is not valid. The valid value is AES256.</Message>"
+	);
+
+	const get = await s3Fetch("bucket/ssec.txt", { headers: fullSet });
+	expect(get.status).toBe(400);
+	expect(await get.text()).toContain(
+		"The encryption parameters are not applicable to this object."
+	);
+
+	const put = await s3Fetch("bucket/ssec.txt", {
+		method: "PUT",
+		body: "x",
+		headers: fullSet,
+	});
+	expect(put.status).toBe(501);
+	expect(await put.text()).toContain(
+		"x-amz-server-side-encryption-customer-algorithm"
+	);
+});
+
 test("unimplemented multipart surfaces respond with NotImplemented", async ({
 	expect,
 }) => {
@@ -624,6 +981,33 @@ test("unimplemented multipart surfaces respond with NotImplemented", async ({
 });
 
 // ## Recognized-but-unimplemented surfaces (messages match real R2)
+
+test("object subresource operations return R2's templated errors", async ({
+	expect,
+}) => {
+	const r2 = await bucket();
+	await r2.put("sub/x.txt", "x");
+
+	const getTagging = await s3Fetch("bucket/sub/x.txt?tagging");
+	expect(getTagging.status).toBe(501);
+	expect(await getTagging.text()).toContain(
+		"<Message>GetObjectTagging not implemented</Message>"
+	);
+
+	const putAcl = await s3Fetch("bucket/sub/x.txt?acl", {
+		method: "PUT",
+		body: "x",
+	});
+	expect(putAcl.status).toBe(501);
+	expect(await putAcl.text()).toContain(
+		"<Message>PutObjectAcl not implemented</Message>"
+	);
+
+	// DELETE ignores subresource parameters on R2 and just deletes the object
+	const del = await s3Fetch("bucket/sub/x.txt?tagging", { method: "DELETE" });
+	expect(del.status).toBe(204);
+	expect(await r2.head("sub/x.txt")).toBe(null);
+});
 
 test("bucket subresource GETs return R2's templated errors", async ({
 	expect,
