@@ -50,8 +50,6 @@ export const d1InfoCommand = createCommand({
 			delete output["file_size"];
 		}
 
-		// Snip off the "uuid" property from the response. We use it as the header.
-		delete output["uuid"];
 		// All alpha databses have been deleted, so version is useless noise.
 		delete output["version"];
 
@@ -124,6 +122,9 @@ export const d1InfoCommand = createCommand({
 		if (json) {
 			logger.log(JSON.stringify(output, null, 2));
 		} else {
+			// Snip off the "uuid" property from the response. We use it as the header instead.
+			delete output["uuid"];
+
 			// Selectively bring the nested read_replication info at the top level.
 			if (result.read_replication) {
 				output["read_replication.mode"] = result.read_replication.mode;
