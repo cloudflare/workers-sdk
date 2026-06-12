@@ -72,6 +72,29 @@ export const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
+ * The path used by the OAuth provider for the OAuth 2.0 Device Authorization
+ * endpoint (RFC 8628 §3.1).
+ */
+const DEVICE_AUTH_PATH = "/oauth2/device/auth";
+
+/**
+ * The URL used to obtain a device code and user code from the OAuth 2.0 Device
+ * Authorization endpoint (RFC 8628 §3.1).
+ *
+ * Deliberately **not** environment-overridable (there is no
+ * `WRANGLER_DEVICE_AUTH_URL`): the device authorization endpoint must live on
+ * the same auth domain as the token endpoint it is paired with (the flow polls
+ * `/oauth2/token` on the same host), and the device flow is a phishing-sensitive
+ * surface — the user is told to visit the verification URL this endpoint
+ * returns. It therefore derives strictly from the resolved auth domain
+ * (production vs. staging, selected by `WRANGLER_API_ENVIRONMENT`), exactly
+ * like {@link getTokenUrlFromEnv}.
+ */
+export function getDeviceAuthUrl(): string {
+	return `https://${getAuthDomainFromEnv()}${DEVICE_AUTH_PATH}`;
+}
+
+/**
  * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID of a Cloudflare Access Service Token.
  * Used together with `CLOUDFLARE_ACCESS_CLIENT_SECRET` to authenticate with
  * Access-protected domains in non-interactive environments (e.g. CI).

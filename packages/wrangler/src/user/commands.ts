@@ -83,6 +83,12 @@ export const loginCommand = createCommand({
 			// touches the persisted preference when the user actually opts in
 			// or out.
 		},
+		"experimental-device": {
+			describe:
+				"(Experimental) Use the OAuth 2.0 Device Authorization Grant (RFC 8628) instead of the localhost callback flow. Useful in containers, remote SSH sessions, or other environments where localhost:8976 is unreachable from your browser.",
+			type: "boolean",
+			default: false,
+		},
 	},
 	validateArgs(args) {
 		if (args.profile) {
@@ -117,10 +123,28 @@ export const loginCommand = createCommand({
 			setKeyringPreference(args.useKeyring, { logger, getCredentialStore });
 		}
 
+		// `--callback-host` / `--callback-port` configure the temporary local
+		// callback server used by the authorization-code flow. The device
+		// authorization flow has no callback server, so the combination is
+		// invalid rather than merely ignored.
+		if (
+			args.experimentalDevice &&
+			(args.callbackHost !== "localhost" || args.callbackPort !== 8976)
+		) {
+			throw new CommandLineArgsError(
+				"`--callback-host` and `--callback-port` cannot be used with `--experimental-device`; the device authorization flow does not use a local callback server.",
+				{
+					telemetryMessage:
+						"user login callback args incompatible with device flow",
+				}
+			);
+		}
+
 		// Validate `--scopes` up front so we can share a single `login(...)`
 		// call (and a single `sendMetricsEvent("login user", ...)` site) between
 		// the scoped and unscoped paths.
 		let scopes: typeof DefaultScopeKeys | undefined;
+
 		if (args.scopes) {
 			if (args.scopes.length === 0) {
 				// don't allow no scopes to be passed, that would be weird
@@ -143,6 +167,7 @@ export const loginCommand = createCommand({
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
 			profile: "default",
+			device: args.experimentalDevice,
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
