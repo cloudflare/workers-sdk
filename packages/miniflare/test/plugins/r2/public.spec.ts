@@ -161,6 +161,21 @@ test("rejects write methods with 401", async ({ expect }) => {
 	expect(await after?.text()).toBe("untouched");
 });
 
+test("rejects malformed and multiple ranges with 400", async ({
+	expect,
+}) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("bad-range-key", "0123456789");
+
+	for (const range of ["bytes=zzz", "bytes=0-1,3-4", "0-3", "bytes=5-2"]) {
+		const res = await fetch(bucketUrl("/bad-range-key", ctx.url), {
+			headers: { Range: range },
+		});
+		expect(res.status, `"${range}" should be rejected`).toBe(400);
+		await res.arrayBuffer();
+	}
+});
+
 // The entry worker rejects /cdn-cgi/* requests from non-localhost origins
 // before they reach this worker, so cross-origin here means a different
 // localhost port (e.g. a frontend dev server).

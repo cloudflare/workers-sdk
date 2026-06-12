@@ -4,6 +4,31 @@ import { CorePaths } from "../core/constants";
 
 type Env = Record<string, R2Bucket>;
 
+// Accept only a single range with start <= end; reject anything else
+// (including multiple ranges) with an endpoint-specific 400 rather than
+// ignoring it
+const RANGE_HEADER = /^bytes=(?:(\d+)-(\d+)?|-\d+)$/;
+
+type ParsedRangeHeader =
+	| { error: "malformed" | "inverted" }
+	// `start` is undefined for suffix ranges (`bytes=-N`)
+	| { start?: number };
+
+function parseRangeHeader(header: string): ParsedRangeHeader {
+	const match = RANGE_HEADER.exec(header);
+	if (match === null) {
+		return { error: "malformed" };
+	}
+	const [, start, end] = match;
+	if (start === undefined) {
+		return {};
+	}
+	if (end !== undefined && Number(start) > Number(end)) {
+		return { error: "inverted" };
+	}
+	return { start: Number(start) };
+}
+
 function objectHeaders(object: R2Object): Headers {
 	const headers = new Headers();
 	object.writeHttpMetadata(headers);
@@ -28,7 +53,14 @@ app.on(["GET", "HEAD"], "/:bucketId/:key{.+}", async (c) => {
 		return c.notFound();
 	}
 
-	const hasRange = c.req.header("Range") !== undefined;
+	// Reject malformed, multiple, and inverted ranges with 400 rather than
+	// ignoring them
+	const rangeHeader = c.req.header("Range");
+	if (rangeHeader !== undefined && "error" in parseRangeHeader(rangeHeader)) {
+		return c.body(null, 400);
+	}
+
+	const hasRange = rangeHeader !== undefined;
 	// `bucket.head()` cannot evaluate conditional headers (the R2 head
 	// operation only carries the key), so HEAD also uses `bucket.get()` and
 	// discards the body.
