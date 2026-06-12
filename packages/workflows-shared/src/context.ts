@@ -143,7 +143,7 @@ export class Context extends RpcTarget {
 	#registerRollback(options: {
 		cacheKey: string;
 		rollbackFn: RollbackFn | undefined;
-		stepName: string;
+		target: string;
 		stepContext: WorkflowStepContext;
 		output?: unknown;
 		rollbackConfig?: WorkflowStepConfig;
@@ -151,7 +151,7 @@ export class Context extends RpcTarget {
 		const {
 			cacheKey,
 			rollbackFn,
-			stepName,
+			target,
 			stepContext,
 			output,
 			rollbackConfig,
@@ -160,7 +160,7 @@ export class Context extends RpcTarget {
 			registerRollbackFn(this.#engine.rollbackRegistry, {
 				cacheKey,
 				fn: rollbackFn,
-				stepName,
+				target,
 				stepContext,
 				...("output" in options && { output }),
 				...(rollbackConfig !== undefined && { config: rollbackConfig }),
@@ -268,17 +268,17 @@ export class Context extends RpcTarget {
 
 		let cacheKey: string;
 		let count: number;
-		let stepNameWithCounter: string;
+		let target: string;
 		const rollbackStep = this.#rollbackStep;
 		if (rollbackStep !== undefined) {
 			cacheKey = `${ROLLBACK_CACHE_KEY_PREFIX}${rollbackStep.cacheKey}`;
 			count = 1;
-			stepNameWithCounter = name;
+			target = name;
 		} else {
 			const hash = await computeHash(name);
 			count = this.#getCount("run-" + name);
 			cacheKey = `${hash}-${count}`;
-			stepNameWithCounter = `${name}-${count}`;
+			target = `${name}-${count}`;
 		}
 
 		const valueKey = `${cacheKey}-value`;
@@ -310,7 +310,7 @@ export class Context extends RpcTarget {
 			);
 			if (maybeOutputError !== undefined) {
 				throw new WorkflowInternalError(
-					`Stored output for ${stepNameWithCounter} is corrupt or incomplete.`
+					`Stored output for ${target} is corrupt or incomplete.`
 				);
 			}
 
@@ -322,7 +322,7 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
+				target,
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
@@ -349,7 +349,7 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
+				target,
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
@@ -412,18 +412,13 @@ export class Context extends RpcTarget {
 				// @ts-expect-error priorityQueue is initiated in init
 				this.#engine.priorityQueue.remove(timeoutEntryPQ);
 			}
-			this.#engine.writeLog(
-				events.attemptFailure,
-				cacheKey,
-				stepNameWithCounter,
-				{
-					attempt: stepState.attemptedCount,
-					error: {
-						name: "WorkflowInternalError",
-						message: `Attempt failed due to internal workflows error`,
-					},
-				}
-			);
+			this.#engine.writeLog(events.attemptFailure, cacheKey, target, {
+				attempt: stepState.attemptedCount,
+				error: {
+					name: "WorkflowInternalError",
+					message: `Attempt failed due to internal workflows error`,
+				},
+			});
 
 			await this.#state.storage.put(stepStateKey, stepState);
 		}
@@ -450,7 +445,7 @@ export class Context extends RpcTarget {
 			await this.#engine.timeoutHandler.acquire(this.#engine);
 
 			if (stepState.attemptedCount == 0) {
-				this.#engine.writeLog(events.start, cacheKey, stepNameWithCounter, {
+				this.#engine.writeLog(events.start, cacheKey, target, {
 					config,
 				});
 			} else {
@@ -528,14 +523,9 @@ export class Context extends RpcTarget {
 					throw error;
 				};
 
-				this.#engine.writeLog(
-					events.attemptStart,
-					cacheKey,
-					stepNameWithCounter,
-					{
-						attempt: stepState.attemptedCount + 1,
-					}
-				);
+				this.#engine.writeLog(events.attemptStart, cacheKey, target, {
+					attempt: stepState.attemptedCount + 1,
+				});
 				stepState.attemptedCount++;
 				await this.#state.storage.put(stepStateKey, stepState);
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
@@ -671,21 +661,11 @@ export class Context extends RpcTarget {
 						e instanceof OversizedStreamChunkError ||
 						e instanceof UnsupportedStreamChunkError
 					) {
-						this.#engine.writeLog(
-							events.attemptFailure,
-							cacheKey,
-							stepNameWithCounter,
-							{
-								attempt: stepState.attemptedCount,
-								error: new WorkflowFatalError(e.message),
-							}
-						);
-						this.#engine.writeLog(
-							events.failure,
-							cacheKey,
-							stepNameWithCounter,
-							{}
-						);
+						this.#engine.writeLog(events.attemptFailure, cacheKey, target, {
+							attempt: stepState.attemptedCount,
+							error: new WorkflowFatalError(e.message),
+						});
+						this.#engine.writeLog(events.failure, cacheKey, target, {});
 						this.#engine.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
 							error: new WorkflowFatalError(
 								`The execution of the Workflow instance was terminated, as the step "${name}" returned an invalid ReadableStream output. ${e.message}`
@@ -703,21 +683,11 @@ export class Context extends RpcTarget {
 					}
 
 					if (e instanceof StreamOutputStorageLimitError) {
-						this.#engine.writeLog(
-							events.attemptFailure,
-							cacheKey,
-							stepNameWithCounter,
-							{
-								attempt: stepState.attemptedCount,
-								error: new WorkflowFatalError(e.message),
-							}
-						);
-						this.#engine.writeLog(
-							events.failure,
-							cacheKey,
-							stepNameWithCounter,
-							{}
-						);
+						this.#engine.writeLog(events.attemptFailure, cacheKey, target, {
+							attempt: stepState.attemptedCount,
+							error: new WorkflowFatalError(e.message),
+						});
+						this.#engine.writeLog(events.failure, cacheKey, target, {});
 						this.#engine.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
 							error: new WorkflowFatalError(
 								"The instance has exceeded the 1GiB storage limit"
@@ -736,23 +706,13 @@ export class Context extends RpcTarget {
 
 					// something that cannot be written to storage
 					if (e instanceof Error && e.name === "DataCloneError") {
-						this.#engine.writeLog(
-							events.attemptFailure,
-							cacheKey,
-							stepNameWithCounter,
-							{
-								attempt: stepState.attemptedCount,
-								error: new WorkflowFatalError(
-									`Value returned from step "${name}" is not serialisable`
-								),
-							}
-						);
-						this.#engine.writeLog(
-							events.failure,
-							cacheKey,
-							stepNameWithCounter,
-							{}
-						);
+						this.#engine.writeLog(events.attemptFailure, cacheKey, target, {
+							attempt: stepState.attemptedCount,
+							error: new WorkflowFatalError(
+								`Value returned from step "${name}" is not serialisable`
+							),
+						});
+						this.#engine.writeLog(events.failure, cacheKey, target, {});
 						this.#engine.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
 							error: new WorkflowFatalError(
 								`The execution of the Workflow instance was terminated, as the step "${name}" returned a value which is not serialisable`
@@ -771,12 +731,12 @@ export class Context extends RpcTarget {
 						e.message.includes("string or blob too big: SQLITE_TOOBIG")
 					) {
 						throw new WorkflowInternalError(
-							`Step ${stepNameWithCounter} output is too large. Maximum allowed size is 1MiB.`
+							`Step ${target} output is too large. Maximum allowed size is 1MiB.`
 						);
 					} else {
 						// TODO (WOR-77): Send this to Sentry
 						throw new WorkflowInternalError(
-							`Storage failure for ${stepNameWithCounter} due to internal error.`
+							`Storage failure for ${target} due to internal error.`
 						);
 					}
 					return;
@@ -789,14 +749,9 @@ export class Context extends RpcTarget {
 					type: "timeout",
 				});
 
-				this.#engine.writeLog(
-					events.attemptSuccess,
-					cacheKey,
-					stepNameWithCounter,
-					{
-						attempt: stepState.attemptedCount,
-					}
-				);
+				this.#engine.writeLog(events.attemptSuccess, cacheKey, target, {
+					attempt: stepState.attemptedCount,
+				});
 			} catch (e) {
 				const error = e as Error;
 				// if we reach here, means that the closure ran but errored out and we can remove the timeout from the PQ
@@ -830,25 +785,15 @@ export class Context extends RpcTarget {
 								`Step threw a NonRetryableError with message "${e.message}"`
 							);
 
-					this.#engine.writeLog(
-						events.attemptFailure,
-						cacheKey,
-						stepNameWithCounter,
-						{
-							attempt: stepState.attemptedCount,
-							error: attemptError,
-						}
-					);
-					this.#engine.writeLog(
-						events.failure,
-						cacheKey,
-						stepNameWithCounter,
-						{}
-					);
+					this.#engine.writeLog(events.attemptFailure, cacheKey, target, {
+						attempt: stepState.attemptedCount,
+						error: attemptError,
+					});
+					this.#engine.writeLog(events.failure, cacheKey, target, {});
 					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepName: stepNameWithCounter,
+						target,
 						stepContext: forwardStepContext(),
 						rollbackConfig,
 					});
@@ -856,20 +801,15 @@ export class Context extends RpcTarget {
 					throw error;
 				}
 
-				this.#engine.writeLog(
-					events.attemptFailure,
-					cacheKey,
-					stepNameWithCounter,
-					{
-						attempt: stepState.attemptedCount,
-						error: {
-							name: error.name,
-							message: error.message,
-							// TODO (WOR-79): Stacks are all incorrect over RPC and need work
-							// stack: error.stack,
-						},
-					}
-				);
+				this.#engine.writeLog(events.attemptFailure, cacheKey, target, {
+					attempt: stepState.attemptedCount,
+					error: {
+						name: error.name,
+						message: error.message,
+						// TODO (WOR-79): Stacks are all incorrect over RPC and need work
+						// stack: error.stack,
+					},
+				});
 
 				await this.#state.storage.put(stepStateKey, stepState);
 
@@ -942,16 +882,11 @@ export class Context extends RpcTarget {
 					} catch {
 						// Best-effort cleanup
 					}
-					this.#engine.writeLog(
-						events.failure,
-						cacheKey,
-						stepNameWithCounter,
-						{}
-					);
+					this.#engine.writeLog(events.failure, cacheKey, target, {});
 					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepName: stepNameWithCounter,
+						target,
 						stepContext: forwardStepContext(),
 						rollbackConfig,
 					});
@@ -961,7 +896,7 @@ export class Context extends RpcTarget {
 				}
 			}
 
-			this.#engine.writeLog(events.success, cacheKey, stepNameWithCounter, {
+			this.#engine.writeLog(events.success, cacheKey, target, {
 				// TODO (WOR-86): Add limits, figure out serialization
 				result: lastStreamMeta ? undefined : result,
 				...(lastStreamMeta && {
@@ -971,7 +906,7 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
+				target,
 				stepContext: forwardStepContext(),
 				output: result,
 				rollbackConfig,
