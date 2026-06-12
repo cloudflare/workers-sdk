@@ -1,11 +1,14 @@
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { detectAgenticEnvironment } from "am-i-vibing";
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { mockConsoleMethods } from "./../helpers/mock-console";
 import { msw } from "./../helpers/msw";
 import { runWrangler } from "./../helpers/run-wrangler";
+
+vi.mock("am-i-vibing");
 
 describe("pages project create", () => {
 	const std = mockConsoleMethods();
@@ -13,6 +16,15 @@ describe("pages project create", () => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
+
+	beforeEach(() => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: false,
+			id: null,
+			name: null,
+			type: null,
+		});
+	});
 
 	afterEach(async () => {
 		// Force a tick to ensure that all promises resolve
@@ -67,6 +79,71 @@ describe("pages project create", () => {
 			✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
 			To deploy a folder of assets, run 'wrangler pages deploy [directory]'."
 		`);
+	});
+
+	it("should ask agents to confirm Pages before creating a project", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "test-agent",
+			name: "Test Agent",
+			type: "agent",
+		});
+
+		await expect(
+			runWrangler(
+				"pages project create regex-tester --production-branch main"
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Before creating a Pages project, ask the user whether they're sure they want to use Pages instead of Workers. Cloudflare recommends Workers for new static sites. See the compatibility matrix: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/#compatibility-matrix
+
+If the user explicitly wants Pages, rerun with \`--force\`.]`
+		);
+	});
+
+	it("should allow agents to force Pages project creation", async ({ expect }) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "test-agent",
+			name: "Test Agent",
+			type: "agent",
+		});
+
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/pages/projects",
+				async ({ request }) => {
+					const body = (await request.json()) as Record<string, unknown>;
+					expect(body).toEqual({
+						name: "regex-tester",
+						production_branch: "main",
+						deployment_configs: {
+							preview: {},
+							production: {},
+						},
+					});
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								...body,
+								subdomain: "regex-tester.pages.dev",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler(
+			"pages project create regex-tester --production-branch main --force"
+		);
 	});
 
 	it("should create a project with compatibility flags", async ({ expect }) => {

@@ -1,4 +1,5 @@
 import { execFileSync, execSync } from "node:child_process";
+import { lstatSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -9,6 +10,7 @@ import {
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { detectAgenticEnvironment } from "am-i-vibing";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { analyseBundle } from "../check/commands";
@@ -113,6 +115,12 @@ export const pagesDeployCommand = createCommand({
 			description:
 				"Whether to upload any server-side sourcemaps with this deployment",
 		},
+		force: {
+			type: "boolean",
+			default: false,
+			description:
+				"Deploy a static Pages project from an agentic environment anyway",
+		},
 	},
 	positionalArgs: ["directory"],
 	async handler(args) {
@@ -184,6 +192,7 @@ export const pagesDeployCommand = createCommand({
 				{ code: 1, telemetryMessage: "pages deploy missing directory" }
 			);
 		}
+		const isStaticPagesProject = detectStaticPagesProject(directory);
 
 		const configCache = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
@@ -210,6 +219,17 @@ export const pagesDeployCommand = createCommand({
 				}
 			}
 		}
+
+		maybeThrowAgentStaticPagesDeployError({
+			projectState:
+				projectName === undefined
+					? "unknown"
+					: isExistingProject
+						? "existing"
+						: "new",
+			isStaticPagesProject,
+			force: args.force,
+		});
 
 		const isInteractive = process.stdin.isTTY;
 		if ((!projectName || !isExistingProject) && isInteractive) {
@@ -270,9 +290,20 @@ export const pagesDeployCommand = createCommand({
 			switch (existingOrNew) {
 				case "existing": {
 					projectName = await promptSelectProject({ accountId });
+					maybeThrowAgentStaticPagesDeployError({
+						projectState: "existing",
+						isStaticPagesProject,
+						force: args.force,
+					});
 					break;
 				}
 				case "new": {
+					maybeThrowAgentStaticPagesDeployError({
+						projectState: "new",
+						isStaticPagesProject,
+						force: args.force,
+					});
+
 					if (!projectName) {
 						projectName = await prompt("Enter the name of your new project:");
 
@@ -606,4 +637,50 @@ function promptSelectExistingOrNewProject(
 	return select(message, {
 		choices: items.map((i) => ({ title: i.label, value: i.value })),
 	});
+}
+
+function detectStaticPagesProject(directory: string): boolean {
+	const workerPath = path.resolve(directory, "_worker.js");
+	const functionsPath = path.resolve(process.cwd(), "functions");
+	const workerStats = lstatSync(workerPath, { throwIfNoEntry: false });
+	const functionsStats = lstatSync(functionsPath, { throwIfNoEntry: false });
+
+	return workerStats === undefined && functionsStats?.isDirectory() !== true;
+}
+
+function maybeThrowAgentStaticPagesDeployError({
+	projectState,
+	isStaticPagesProject,
+	force,
+}: {
+	projectState: "new" | "existing" | "unknown";
+	isStaticPagesProject: boolean;
+	force: boolean;
+}) {
+	if (projectState === "unknown" || !isStaticPagesProject || force) {
+		return;
+	}
+
+	let isAgentic = false;
+	try {
+		isAgentic = detectAgenticEnvironment(process.env, []).isAgentic;
+	} catch {}
+
+	if (isAgentic) {
+		const message =
+			projectState === "existing"
+				? "Before deploying an existing Pages project, ask the user whether they want to migrate it to Workers. Use this prompt for guidance: https://developers.cloudflare.com/workers/prompts/pages-to-workers.txt\n\nIf the user explicitly wants Pages, rerun with `--force`."
+				: "Deploy with `wrangler deploy` instead. Or, run with `--force` if you absolutely have to use pages.";
+
+		throw new FatalError(
+			message,
+			{
+				code: 1,
+				telemetryMessage:
+					projectState === "existing"
+						? "pages deploy agent static existing project blocked"
+						: "pages deploy agent static new project blocked",
+			}
+		);
+	}
 }
