@@ -395,9 +395,9 @@ const UnsafeSchema = z.strictObject({
 });
 
 export const ConfigSchema = z.strictObject({
-	name: z.string().optional(),
+	name: z.string(),
 	accountId: z.string().optional(),
-	compatibilityDate: z.string().optional(),
+	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	entrypoint: z
 		.union([z.string(), z.strictObject({ default: z.string() })])

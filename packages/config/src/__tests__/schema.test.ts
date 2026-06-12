@@ -1,21 +1,24 @@
 import { describe, it } from "vitest";
 import { ConfigSchema } from "../schema";
 
+const baseConfig = { name: "worker", compatibilityDate: "2026-06-01" } as const;
+
 describe("env singleton bindings", () => {
 	it("accepts undefined env", ({ expect }) => {
-		const result = ConfigSchema.safeParse({});
+		const result = ConfigSchema.safeParse({ ...baseConfig });
 
 		expect(result.success).toBe(true);
 	});
 
 	it("accepts empty env", ({ expect }) => {
-		const result = ConfigSchema.safeParse({ env: {} });
+		const result = ConfigSchema.safeParse({ ...baseConfig, env: {} });
 
 		expect(result.success).toBe(true);
 	});
 
 	it("accepts a single singleton binding of each type", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				MY_AI: { type: "ai" },
 				MY_ASSETS: { type: "assets" },
@@ -35,6 +38,7 @@ describe("env singleton bindings", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				KV_1: { type: "kv" },
 				KV_2: { type: "kv" },
@@ -47,6 +51,7 @@ describe("env singleton bindings", () => {
 
 	it("accepts multiple agent-memory bindings", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				MEM_1: { type: "agent-memory", namespace: "ns-1" },
 				MEM_2: { type: "agent-memory", namespace: "ns-2" },
@@ -67,6 +72,7 @@ describe("env singleton bindings", () => {
 		["web-search"],
 	] as const)("rejects two %s bindings", ([type], { expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				BINDING_1: { type },
 				BINDING_2: { type },
@@ -86,6 +92,7 @@ describe("env singleton bindings", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				AI_1: { type: "ai" },
 				AI_2: { type: "ai" },
@@ -107,6 +114,7 @@ describe("env singleton bindings", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				AI_1: { type: "ai" },
 				AI_2: { type: "ai" },
@@ -130,6 +138,7 @@ describe("env singleton bindings", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				STREAM_1: { type: "stream" },
 				STREAM_2: { type: "stream" },
@@ -149,6 +158,7 @@ describe("env singleton bindings", () => {
 
 	it("ignores non-singleton duplicates when reporting", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				AI_1: { type: "ai" },
 				AI_2: { type: "ai" },
@@ -171,7 +181,10 @@ describe("entrypoint", () => {
 	it("accepts a string entrypoint and passes it through unchanged", ({
 		expect,
 	}) => {
-		const result = ConfigSchema.safeParse({ entrypoint: "./src/index.ts" });
+		const result = ConfigSchema.safeParse({
+			...baseConfig,
+			entrypoint: "./src/index.ts",
+		});
 
 		expect(result.success).toBe(true);
 		if (result.success) {
@@ -183,6 +196,7 @@ describe("entrypoint", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			entrypoint: { default: "./src/index.ts" },
 		});
 
@@ -196,6 +210,7 @@ describe("entrypoint", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			entrypoint: { default: 123 },
 		});
 
@@ -204,6 +219,7 @@ describe("entrypoint", () => {
 
 	it("rejects a namespace object missing a default export", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			entrypoint: { other: "value" },
 		});
 
@@ -211,7 +227,7 @@ describe("entrypoint", () => {
 	});
 
 	it("accepts an undefined entrypoint", ({ expect }) => {
-		const result = ConfigSchema.safeParse({});
+		const result = ConfigSchema.safeParse({ ...baseConfig });
 
 		expect(result.success).toBe(true);
 		if (result.success) {
@@ -223,7 +239,7 @@ describe("entrypoint", () => {
 describe("unknown property rejection", () => {
 	it("rejects unknown top-level keys (typo)", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
-			name: "w",
+			...baseConfig,
 			// Typo: should be `compatibilityDate`
 			compatibilityDates: "2025-01-01",
 		});
@@ -243,6 +259,7 @@ describe("unknown property rejection", () => {
 
 	it("rejects unknown keys inside `assets`", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			assets: {
 				// Typo: should be `htmlHandling`
 				htmlHnadling: "none",
@@ -264,6 +281,7 @@ describe("unknown property rejection", () => {
 
 	it("rejects unknown keys inside a binding", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				MY_KV: {
 					type: "kv",
@@ -286,6 +304,7 @@ describe("unknown property rejection", () => {
 
 	it("rejects unknown keys inside `observability.logs`", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			observability: {
 				logs: {
 					enabled: true,
@@ -310,6 +329,7 @@ describe("unknown property rejection", () => {
 
 	it("rejects unknown keys inside a trigger", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			triggers: [
 				{
 					type: "scheduled",
@@ -337,6 +357,7 @@ describe("unknown property rejection", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				MY_UNSAFE: {
 					type: "unsafe:some-future-runtime-feature",
@@ -353,6 +374,7 @@ describe("unknown property rejection", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				MY_UNSAFE: {
 					type: "unsafe:ratelimit",
@@ -374,6 +396,7 @@ describe("unknown property rejection", () => {
 
 	it("rejects `unsafe:` (empty suffix)", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				MY_UNSAFE: { type: "unsafe:" },
 			},
@@ -386,6 +409,7 @@ describe("unknown property rejection", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				MY_WEIRDLY_NAMED_BINDING_1234: { type: "kv" },
 			},
@@ -398,6 +422,7 @@ describe("unknown property rejection", () => {
 describe("vpc-network binding", () => {
 	it("accepts a binding with `tunnelId`", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: { V: { type: "vpc-network", tunnelId: "tun-1" } },
 		});
 
@@ -406,6 +431,7 @@ describe("vpc-network binding", () => {
 
 	it("accepts a binding with `networkId`", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: { V: { type: "vpc-network", networkId: "net-1" } },
 		});
 
@@ -416,6 +442,7 @@ describe("vpc-network binding", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: { V: { type: "vpc-network" } },
 		});
 
@@ -424,6 +451,7 @@ describe("vpc-network binding", () => {
 
 	it("rejects a binding with both `tunnelId` and `networkId`", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				V: { type: "vpc-network", tunnelId: "tun-1", networkId: "net-1" },
 			},
@@ -434,6 +462,7 @@ describe("vpc-network binding", () => {
 
 	it("rejects unknown keys on a `vpc-network` binding", ({ expect }) => {
 		const result = ConfigSchema.safeParse({
+			...baseConfig,
 			env: {
 				V: { type: "vpc-network", tunnelId: "tun-1", unknownField: "x" },
 			},

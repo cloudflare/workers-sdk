@@ -120,7 +120,7 @@ export interface UserConfig {
 	/**
 	 * The name of your Worker.
 	 */
-	name?: string;
+	name: string;
 
 	/**
 	 * This is the ID of the account associated with your zone.
@@ -137,7 +137,7 @@ export interface UserConfig {
 	 *
 	 * More details at https://developers.cloudflare.com/workers/configuration/compatibility-dates
 	 */
-	compatibilityDate?: string;
+	compatibilityDate: string;
 
 	/**
 	 * A list of flags that enable features from upcoming features of

@@ -7,11 +7,14 @@
 		"#modules/html-example.html": "./src/modules/html-example.html"
 	},
 	"scripts": {
-		"build:default": "vite build --app",
+		"build:default": "vite build",
+		"build:cf-build-output": "vite build -c ./vite.config.cf-build-output.ts",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
+		"dev:cf-build-output": "vite dev -c ./vite.config.cf-build-output.ts",
 		"dev:new-module-registry": "vite dev -c ./vite.config.new-module-registry.ts",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"preview:cf-build-output": "vite preview -c ./vite.config.cf-build-output.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",

@@ -4,6 +4,8 @@ import * as path from "node:path";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
+import { getWorkerAssetsDir, getWorkerBundleDir } from "../build-output";
+import { writeOutputWorkerConfig } from "../build-output";
 import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
@@ -87,6 +89,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					ctx.resolvedPluginConfig,
 					ctx.resolvedViteConfig
 				);
+				forceBuildOutputDirs(ctx, resolvedViteConfig);
 			}
 		},
 		buildStart() {
@@ -151,8 +154,12 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					`No "${entryWorkerEnvironmentName}" environment`
 				);
 
+				const cfBuildOutput =
+					ctx.resolvedPluginConfig.experimental.newConfig?.cfBuildOutput ===
+					true;
+
 				if (entryWorkerEnvironment.isBuilt) {
-					if (!builder.environments.client?.isBuilt) {
+					if (!builder.environments.client?.isBuilt && !cfBuildOutput) {
 						// The client environment was not built so we remove the assets config
 
 						const entryWorkerBuildDirectory = path.resolve(
@@ -163,7 +170,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						removeAssetsField(entryWorkerBuildDirectory);
 					}
 				} else {
-					// The entry Worker was only used in development so we emit an assets-only config to the client build output
+					// The entry Worker was only used in development so we emit an assets-only config
 
 					const clientEnvironment = builder.environments.client;
 					assert(clientEnvironment, 'No "client" environment');
@@ -174,45 +181,56 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						);
 					}
 
-					const entryWorkerConfig = ctx.getWorkerConfig(
-						entryWorkerEnvironmentName
-					);
-					assert(
-						entryWorkerConfig,
-						`No config found for "${entryWorkerEnvironmentName}" environment`
-					);
+					if (cfBuildOutput) {
+						const entryWorkerNewConfig = ctx.getWorkerNewConfig(
+							entryWorkerEnvironmentName
+						);
+						assert(
+							entryWorkerNewConfig,
+							`No config found for "${entryWorkerEnvironmentName}" environment`
+						);
+						writeOutputWorkerConfig(builder.config.root, entryWorkerNewConfig);
+					} else {
+						const entryWorkerConfig = ctx.getWorkerConfig(
+							entryWorkerEnvironmentName
+						);
+						assert(
+							entryWorkerConfig,
+							`No config found for "${entryWorkerEnvironmentName}" environment`
+						);
 
-					const outputConfig: Unstable_RawConfig = {
-						...entryWorkerConfig,
-						main: undefined,
-						assets: {
-							...entryWorkerConfig.assets,
-							directory: ".",
-							binding: undefined,
-						},
-					};
+						const outputConfig: Unstable_RawConfig = {
+							...entryWorkerConfig,
+							main: undefined,
+							assets: {
+								...entryWorkerConfig.assets,
+								directory: ".",
+								binding: undefined,
+							},
+						};
 
-					if (
-						outputConfig.unsafe &&
-						Object.keys(outputConfig.unsafe).length === 0
-					) {
-						outputConfig.unsafe = undefined;
+						if (
+							outputConfig.unsafe &&
+							Object.keys(outputConfig.unsafe).length === 0
+						) {
+							outputConfig.unsafe = undefined;
+						}
+
+						fs.writeFileSync(
+							path.resolve(
+								builder.config.root,
+								clientEnvironment.config.build.outDir,
+								"wrangler.json"
+							),
+							JSON.stringify(outputConfig)
+						);
+
+						writeDeployConfig(
+							ctx.resolvedPluginConfig,
+							ctx.resolvedViteConfig,
+							true
+						);
 					}
-
-					fs.writeFileSync(
-						path.resolve(
-							builder.config.root,
-							clientEnvironment.config.build.outDir,
-							"wrangler.json"
-						),
-						JSON.stringify(outputConfig)
-					);
-
-					writeDeployConfig(
-						ctx.resolvedPluginConfig,
-						ctx.resolvedViteConfig,
-						true
-					);
 				}
 			},
 		},
@@ -296,6 +314,65 @@ function getEnvironmentsConfig(
 			},
 		},
 	};
+}
+
+/**
+ * When the Build Output API is enabled,
+ * force every Worker environment's and the client environment's `build.outDir`
+ * to the spec-mandated location.
+ *
+ * Runs after Vite's merge in `configResolved`, so it overrides any
+ * user-supplied `build.outDir`
+ */
+function forceBuildOutputDirs(
+	ctx: PluginContext,
+	resolvedViteConfig: import("vite").ResolvedConfig
+): void {
+	assertIsNotPreview(ctx);
+
+	const newConfig = ctx.resolvedPluginConfig.experimental.newConfig;
+	if (!newConfig?.cfBuildOutput) {
+		return;
+	}
+
+	const root = resolvedViteConfig.root;
+	let clientWorkerName: string;
+
+	if (ctx.resolvedPluginConfig.type === "workers") {
+		for (const [environmentName, worker] of ctx.resolvedPluginConfig
+			.environmentNameToWorkerMap) {
+			const environment = resolvedViteConfig.environments[environmentName];
+			if (!environment) {
+				continue;
+			}
+			assert(worker.parsedNewConfig, "Expected parsedNewConfig to be defined");
+			environment.build.outDir = getWorkerBundleDir(
+				root,
+				worker.parsedNewConfig.name
+			);
+		}
+
+		const entryName = ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
+		const entryWorker =
+			ctx.resolvedPluginConfig.environmentNameToWorkerMap.get(entryName);
+		assert(entryWorker, `Expected entry worker for environment "${entryName}"`);
+		assert(
+			entryWorker.parsedNewConfig,
+			"Expected parsedNewConfig to be defined"
+		);
+		clientWorkerName = entryWorker.parsedNewConfig.name;
+	} else {
+		assert(
+			ctx.resolvedPluginConfig.parsedNewConfig,
+			"Expected parsedNewConfig to be defined"
+		);
+		clientWorkerName = ctx.resolvedPluginConfig.parsedNewConfig.name;
+	}
+
+	const clientEnvironment = resolvedViteConfig.environments.client;
+	if (clientEnvironment) {
+		clientEnvironment.build.outDir = getWorkerAssetsDir(root, clientWorkerName);
+	}
 }
 
 function getAllowedHosts(

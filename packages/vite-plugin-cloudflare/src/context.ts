@@ -12,6 +12,7 @@ import type {
 	Worker,
 	WorkersResolvedConfig,
 } from "./plugin-config";
+import type { ParsedConfig } from "@cloudflare/config";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 import type { Unstable_Config } from "wrangler";
@@ -206,9 +207,13 @@ export class PluginContext {
 		return this.#getWorker(environmentName)?.config;
 	}
 
+	getWorkerNewConfig(environmentName: string): ParsedConfig | undefined {
+		return this.#getWorker(environmentName)?.parsedNewConfig;
+	}
+
 	get allWorkerConfigs(): Unstable_Config[] {
 		if (this.resolvedPluginConfig.type === "preview") {
-			return this.resolvedPluginConfig.workers;
+			return this.resolvedPluginConfig.workers.map((worker) => worker.config);
 		}
 
 		return Array.from(

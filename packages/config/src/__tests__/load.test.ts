@@ -125,7 +125,7 @@ describe("loadConfig", () => {
 			"src/index.ts": `// not executed`,
 			"cloudflare.config.ts": `
 				import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
-				export default { name: "w", entrypoint };
+				export default { name: "worker", compatibilityDate: "2026-06-01", entrypoint };
 			`,
 		});
 

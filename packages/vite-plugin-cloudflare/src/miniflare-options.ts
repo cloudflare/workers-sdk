@@ -36,6 +36,8 @@ import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
 import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
+import type { ModuleType } from "./build-output";
+import type { Bundle } from "./build-output-preview";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
 import type {
@@ -46,6 +48,7 @@ import type {
 import type { PersistState } from "./plugin-config";
 import type {
 	MiniflareOptions,
+	ModuleRuleType,
 	WorkerdStructuredLog,
 	WorkerOptions,
 } from "miniflare";
@@ -561,6 +564,72 @@ function getPreviewModules(
 	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
 }
 
+/**
+ * Translate a Build Output API module type to a Miniflare module type.
+ */
+function toMiniflareModuleType(type: ModuleType): ModuleRuleType | null {
+	switch (type) {
+		case "esm":
+			return "ESModule";
+		case "cjs":
+			return "CommonJS";
+		case "wasm":
+			return "CompiledWasm";
+		case "text":
+			return "Text";
+		case "data":
+			return "Data";
+		case "json":
+			return "Data";
+		case "python":
+			return "PythonModule";
+		case "pythonRequirement":
+			return null;
+		case "sourcemap":
+			return null;
+	}
+}
+
+/**
+ * Get Miniflare's module list directly from the `modules` manifest.
+ *
+ * Miniflare uses the first module in the list as the entry, so the
+ * `mainModule` is hoisted to index 0 regardless of the manifest's
+ * order.
+ */
+export function getModulesFromManifest(bundle: Bundle) {
+	const { mainModule } = bundle;
+	const mainEntry = bundle.modules[mainModule];
+	assert(
+		mainEntry !== undefined,
+		`Build Output API: \`mainModule\` "${mainModule}" is missing from \`modules\`.`
+	);
+
+	const ordered: Array<[string, { type: ModuleType }]> = [
+		[mainModule, mainEntry],
+	];
+	for (const [modulePath, value] of Object.entries(bundle.modules)) {
+		if (modulePath !== mainModule) {
+			ordered.push([modulePath, value]);
+		}
+	}
+
+	const modules = ordered
+		.map(([modulePath, { type }]) => {
+			const miniflareType = toMiniflareModuleType(type);
+			if (miniflareType === null) {
+				return null;
+			}
+			return { type: miniflareType, path: modulePath } as const;
+		})
+		.filter((m): m is NonNullable<typeof m> => m !== null);
+
+	return {
+		rootPath: bundle.rootPath,
+		modules,
+	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
+}
+
 export async function getPreviewMiniflareOptions(
 	ctx: PreviewPluginContext,
 	vitePreviewServer: vite.PreviewServer
@@ -577,7 +646,8 @@ export async function getPreviewMiniflareOptions(
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			resolvedPluginConfig.workers.map(async (workerConfig) => {
+			resolvedPluginConfig.workers.map(async (previewWorker) => {
+				const workerConfig = previewWorker.config;
 				const bindings =
 					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 						workerConfig
@@ -638,14 +708,21 @@ export async function getPreviewMiniflareOptions(
 				const { modulesRules, ...workerOptions } =
 					miniflareWorkerOptions.workerOptions;
 
+				// Build Output API workers carry an explicit modules manifest
+				// that drives Miniflare's module loader directly, bypassing the
+				// extension-glob-based discovery in `getPreviewModules`. This
+				// preserves the exact module list (with its declared types)
+				// rather than rediscovering it by walking the filesystem.
 				return [
 					{
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inputInspectorPort !== false,
-						...(miniflareWorkerOptions.main
-							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
-							: { modules: true, script: "" }),
+						...(previewWorker.source === "build-output" && previewWorker.bundle
+							? getModulesFromManifest(previewWorker.bundle)
+							: miniflareWorkerOptions.main
+								? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
+								: { modules: true, script: "" }),
 					},
 					...externalWorkers,
 				] satisfies Array<WorkerOptions>;
