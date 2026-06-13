@@ -2666,36 +2666,43 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	// Check `getD1Database()`
 	let binding: unknown = await mf.getD1Database("DB");
 	expect(binding).toBeDefined();
+	await expect(() => mf.getD1Database("DO")).rejects.toThrow(
+		new TypeError(`No D1 database binding named "DO" found in the worker.`)
+	);
 	await expect(() => mf.getD1Database("DB", "c")).rejects.toThrow(
-		new TypeError(`"DB" unbound in "c" worker`)
+		new TypeError(`No D1 database binding named "DB" found in "c" worker.`)
 	);
 
 	// Check `getDurableObjectNamespace()`
 	binding = await mf.getDurableObjectNamespace("DO");
 	expect(binding).toBeDefined();
 	await expect(() => mf.getDurableObjectNamespace("DO", "c")).rejects.toThrow(
-		new TypeError(`"DO" unbound in "c" worker`)
+		new TypeError(
+			`No Durable Object namespace binding named "DO" found in "c" worker.`
+		)
 	);
 
 	// Check `getKVNamespace()`
 	binding = await mf.getKVNamespace("KV", "");
 	expect(binding).toBeDefined();
 	await expect(() => mf.getKVNamespace("KV", "c")).rejects.toThrow(
-		new TypeError(`"KV" unbound in "c" worker`)
+		new TypeError(`No KV namespace binding named "KV" found in "c" worker.`)
 	);
 
 	// Check `getQueueProducer()`
 	binding = await mf.getQueueProducer("QUEUE", "");
 	expect(binding).toBeDefined();
 	await expect(() => mf.getQueueProducer("QUEUE", "c")).rejects.toThrow(
-		new TypeError(`"QUEUE" unbound in "c" worker`)
+		new TypeError(
+			`No Queue producer binding named "QUEUE" found in "c" worker.`
+		)
 	);
 
 	// Check `getR2Bucket()`
 	binding = await mf.getR2Bucket("BUCKET", "b");
 	expect(binding).toBeDefined();
 	await expect(() => mf.getR2Bucket("BUCKET", "c")).rejects.toThrow(
-		new TypeError(`"BUCKET" unbound in "c" worker`)
+		new TypeError(`No R2 bucket binding named "BUCKET" found in "c" worker.`)
 	);
 });
 
