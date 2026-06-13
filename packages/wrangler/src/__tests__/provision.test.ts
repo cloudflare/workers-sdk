@@ -1317,6 +1317,45 @@ describe("resource provisioning", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should connect to existing KV namespace under autoCreate when default title already exists (#14284)", async ({
+			expect,
+		}) => {
+			// Workers Builds re-deploy scenario: the first deploy created the
+			// `<worker>-<binding>` KV namespace via autoCreate, and the second
+			// deploy was hitting `error: a namespace with this account ID and
+			// title already exists [code: 10014]`. With the fix, the provisioning
+			// flow first scans the loaded list and connects to the existing
+			// namespace by id rather than re-issuing `create`.
+			writeWranglerConfig({
+				main: "index.js",
+				kv_namespaces: [{ binding: "SESSION" }],
+			});
+			mockGetSettings();
+			mockListKVNamespacesRequest(expect, {
+				title: "test-name-session",
+				id: "existing-session-kv-id",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "SESSION",
+						type: "kv_namespace",
+						namespace_id: "existing-session-kv-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.out).toContain(
+				'🔗 Connecting to existing KV Namespace "test-name-session"...'
+			);
+			expect(std.out).not.toContain(
+				'🌀 Creating new KV Namespace "test-name-session"...'
+			);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("provisions agent_memory bindings", () => {

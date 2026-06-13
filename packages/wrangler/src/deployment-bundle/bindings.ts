@@ -898,13 +898,29 @@ async function runProvisioningFlow(
 
 	if (item.handler.name) {
 		logger.log("Resource name found in config:", item.handler.name);
-		logger.log(
-			`🌀 Creating new ${friendlyBindingName} "${item.handler.name}"...`
-		);
-		await item.handler.provision(item.handler.name);
+		const existing = preExisting.find((r) => r.title === item.handler.name);
+		if (existing) {
+			logger.log(
+				`🔗 Connecting to existing ${friendlyBindingName} "${item.handler.name}"...`
+			);
+			item.handler.connect(existing.value);
+		} else {
+			logger.log(
+				`🌀 Creating new ${friendlyBindingName} "${item.handler.name}"...`
+			);
+			await item.handler.provision(item.handler.name);
+		}
 	} else if (autoCreate) {
-		logger.log(`🌀 Creating new ${friendlyBindingName} "${defaultName}"...`);
-		await item.handler.provision(defaultName);
+		const existing = preExisting.find((r) => r.title === defaultName);
+		if (existing) {
+			logger.log(
+				`🔗 Connecting to existing ${friendlyBindingName} "${defaultName}"...`
+			);
+			item.handler.connect(existing.value);
+		} else {
+			logger.log(`🌀 Creating new ${friendlyBindingName} "${defaultName}"...`);
+			await item.handler.provision(defaultName);
+		}
 	} else {
 		let action: string = NEW_OPTION_VALUE;
 
