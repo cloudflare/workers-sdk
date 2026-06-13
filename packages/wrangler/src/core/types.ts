@@ -267,8 +267,14 @@ export type CommandDefinition<
 	 * A hook to implement custom validation of the args before the handler is called.
 	 * Throw `CommandLineArgsError` with actionable error message if args are invalid.
 	 * The return value is ignored.
+	 *
+	 * @param args - The parsed CLI arguments
+	 * @param def - The command definition, useful for passing to helpers like `demandOneOfOption`
 	 */
-	validateArgs?: (args: HandlerArgs<NamedArgDefs>) => void | Promise<void>;
+	validateArgs?: (
+		args: HandlerArgs<NamedArgDefs>,
+		def: CommandDefinition<NamedArgDefs>
+	) => void | Promise<void>;
 
 	/**
 	 * The implementation of the command which is given camelCase'd args

@@ -441,7 +441,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key put --remote foo bar")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Exactly one of the arguments binding and namespace-id is required]`
+					`[Error: Missing required option: exactly one of --binding and --namespace-id must be provided]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -479,7 +479,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required option: exactly one of --binding and --namespace-id must be provided[0m
 
 			          "
 		        `);
@@ -493,7 +493,7 @@ describe("kv", () => {
 						"kv key put --remote foo bar --binding x --namespace-id y"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Arguments binding and namespace-id are mutually exclusive]`
+					`[Error: Conflicting options: --binding and --namespace-id cannot be used together. Please provide only one.]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -531,7 +531,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mConflicting options: --binding and --namespace-id cannot be used together. Please provide only one.[0m
 
 			          "
 		        `);
@@ -543,7 +543,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key put --remote key --namespace-id 12345")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Exactly one of the arguments value and path is required]`
+					`[Error: Missing required option: exactly one of <value> and --path must be provided]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -581,7 +581,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required option: exactly one of <value> and --path must be provided[0m
 
 			          "
 		        `);
@@ -642,7 +642,7 @@ describe("kv", () => {
 						"kv key put --remote key value --path xyz --namespace-id 12345"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Arguments value and path are mutually exclusive]`
+					`[Error: Conflicting options: <value> and --path cannot be used together. Please provide only one.]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -680,7 +680,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mConflicting options: <value> and --path cannot be used together. Please provide only one.[0m
 
 			          "
 		        `);
@@ -1133,7 +1133,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key get --remote foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Exactly one of the arguments binding and namespace-id is required]`
+					`[Error: Missing required option: exactly one of --binding and --namespace-id must be provided]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -1163,7 +1163,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required option: exactly one of --binding and --namespace-id must be provided[0m
 
 			          "
 		        `);
@@ -1175,7 +1175,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key get --remote foo --binding x --namespace-id y")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Arguments binding and namespace-id are mutually exclusive]`
+					`[Error: Conflicting options: --binding and --namespace-id cannot be used together. Please provide only one.]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1206,7 +1206,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mConflicting options: --binding and --namespace-id cannot be used together. Please provide only one.[0m
 
 			          "
 		        `);
