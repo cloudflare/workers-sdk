@@ -1,4 +1,5 @@
 import { deploy } from "@cloudflare/deploy-helpers";
+import { UserError } from "@cloudflare/workers-utils";
 import { analyseBundle } from "../check/commands";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -120,6 +121,16 @@ export const deployCommand = createCommand({
 			return;
 		}
 		config = autoConfigResult.config;
+
+		// `standalone` declares the Worker targets a self-hosted workerd runtime,
+		// not the Cloudflare platform — so deploying it is a mistake. (Dry runs are
+		// allowed: `wrangler compile` reuses the dry-run bundling pipeline.)
+		if (config.standalone && !args.dryRun) {
+			throw new UserError(
+				"This Worker has `standalone` set, so it targets a self-hosted workerd runtime rather than Cloudflare. Use `wrangler compile` to build a standalone bundle, or remove `standalone` from your configuration to deploy to Cloudflare.",
+				{ telemetryMessage: "deploy standalone worker" }
+			);
+		}
 
 		// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
 		args = await promptForMissingDeployConfig(args, config);

@@ -173,7 +173,7 @@ function getModuleType(entry: FormDataEntryValue) {
 	}
 }
 
-async function convertWorkerBundleToModules(
+export async function convertWorkerBundleToModules(
 	workerBundle: FormData
 ): Promise<ModuleDefinition[]> {
 	return await Promise.all(
@@ -193,7 +193,7 @@ async function convertWorkerBundleToModules(
 	);
 }
 
-async function parseFormDataFromFile(file: string): Promise<FormData> {
+export async function parseFormDataFromFile(file: string): Promise<FormData> {
 	const bundle = await readFile(file);
 	const firstLine = bundle.findIndex((v) => v === 10);
 	const boundary = Uint8Array.prototype.slice

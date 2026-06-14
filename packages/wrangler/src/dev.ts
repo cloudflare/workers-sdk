@@ -9,12 +9,17 @@ import {
 import { getHostFromRoute } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
 import { getAssetsOptions } from "./assets";
+import { readConfig } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deployment-bundle/resolve-config-args";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
 import { logger } from "./logger";
+import {
+	formatStandaloneBindingIssues,
+	getStandaloneBindingIssues,
+} from "./standalone/validate";
 import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -72,6 +77,12 @@ export const dev = createCommand({
 			describe: "Use the latest version of the Workers runtime",
 			type: "boolean",
 			default: true,
+		},
+		standalone: {
+			describe:
+				"Validate this Worker against the features supported by standalone workerd (see `wrangler compile`)",
+			type: "boolean",
+			hidden: true,
 		},
 		assets: {
 			describe: "Static assets to be served. Replaces Workers Sites.",
@@ -304,6 +315,7 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
+		maybeWarnStandaloneBindings(args);
 		const devInstance = await startDev(args);
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
@@ -312,6 +324,42 @@ export const dev = createCommand({
 		devInstance.unregisterHotKeys?.();
 	},
 });
+
+/**
+ * When a project targets standalone workerd (`standalone` in config or
+ * `--standalone`), warn about bindings that work in local dev but aren't yet
+ * supported by `wrangler compile`, so the standalone limitations surface in the
+ * inner loop. Best-effort and never fatal to `wrangler dev`.
+ */
+function maybeWarnStandaloneBindings(args: {
+	config?: string | string[];
+	env?: string;
+	standalone?: boolean;
+}): void {
+	if (Array.isArray(args.config)) {
+		// Multi-worker dev is out of scope for the standalone check for now.
+		return;
+	}
+	let config: Config;
+	try {
+		// `args` carries the full handler args at runtime; readConfig reads what it needs.
+		config = readConfig(args as Parameters<typeof readConfig>[0]);
+	} catch {
+		return;
+	}
+	if (!(args.standalone ?? config.standalone)) {
+		return;
+	}
+	const issues = getStandaloneBindingIssues(config);
+	if (issues.length === 0) {
+		return;
+	}
+	logger.warn(
+		`This Worker targets standalone workerd, but the following bindings work in local dev only and aren't supported by \`wrangler compile\` yet:\n${formatStandaloneBindingIssues(
+			issues
+		)}`
+	);
+}
 
 export type AdditionalDevProps = {
 	/**

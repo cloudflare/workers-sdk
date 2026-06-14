@@ -14,6 +14,7 @@ import {
 	maybeStartOrUpdateRemoteProxySession,
 	startRemoteProxySession,
 	startWorker,
+	unstable_compileStandalone,
 	unstable_dev,
 	createTestHarness,
 	experimental_generateTypes,
@@ -28,6 +29,7 @@ import {
 import { main } from "./index";
 import type {
 	Binding,
+	CompileStandaloneOptions,
 	GetPlatformProxyOptions,
 	PlatformProxy,
 	RemoteProxySession,
@@ -80,6 +82,7 @@ export {
 	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
+	unstable_compileStandalone,
 };
 
 export type {
@@ -97,6 +100,7 @@ export type {
 	TestHarnessOptions,
 	WorkerHandle,
 	TestHarness,
+	CompileStandaloneOptions,
 };
 
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";

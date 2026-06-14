@@ -1,0 +1,618 @@
+import { spawn } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
+import { getWranglerTmpDir, UserError } from "@cloudflare/workers-utils";
+import {
+	emitStandaloneBundle,
+	Log,
+	LogLevel,
+	Miniflare,
+	STANDALONE_CONFIG_FILENAME,
+} from "miniflare";
+import { fetch } from "undici";
+import workerdPath from "workerd";
+import { version as workerdVersion } from "workerd/package.json";
+import { createCLIParser } from "..";
+import { unstable_getMiniflareWorkerOptions } from "../api/integrations";
+import {
+	convertWorkerBundleToModules,
+	parseFormDataFromFile,
+} from "../check/commands";
+import { readConfig } from "../config";
+import { createCommand } from "../core/create-command";
+import { logger } from "../logger";
+import {
+	formatStandaloneBindingIssues,
+	getStandaloneBindingIssues,
+} from "../standalone/validate";
+import type { Config } from "@cloudflare/workers-utils";
+import type {
+	EmitStandaloneResult,
+	ModuleDefinition,
+	StandaloneConfigFormat,
+} from "miniflare";
+
+const DEFAULT_OUTDIR = "dist-standalone";
+const DEFAULT_SERVE_PORT = 8080;
+const DEFAULT_SERVE_IP = "127.0.0.1";
+const DEFAULT_FORMAT: StandaloneConfigFormat = "text";
+
+/**
+ * Builds the user Worker into a deployable bundle (reusing the `deploy
+ * --dry-run` pipeline, which requires no Cloudflare account) and returns its
+ * modules in Miniflare's format, with the entrypoint module first.
+ */
+async function buildWorkerModules(
+	config: Config,
+	env: string | undefined
+): Promise<ModuleDefinition[]> {
+	const tmpDir = getWranglerTmpDir(
+		config.configPath ? path.dirname(config.configPath) : undefined,
+		"compile"
+	);
+	const bundlePath = path.join(tmpDir.path, "worker.bundle");
+
+	const previousLevel = logger.loggerLevel;
+	if (logger.loggerLevel !== "debug") {
+		logger.loggerLevel = "error";
+	}
+	try {
+		const { wrangler } = createCLIParser([
+			"deploy",
+			"--dry-run",
+			`--outfile=${bundlePath}`,
+			...(config.configPath ? ["--config", config.configPath] : []),
+			...(env ? ["--env", env] : []),
+		]);
+		await wrangler.parse();
+	} finally {
+		logger.loggerLevel = previousLevel;
+	}
+
+	const bundle = await parseFormDataFromFile(bundlePath);
+	const metadata = JSON.parse(bundle.get("metadata") as string);
+	if (!("main_module" in metadata)) {
+		throw new UserError(
+			"`wrangler compile` only supports module-format Workers. Refer to https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/ for migration guidance.",
+			{ telemetryMessage: "compile service worker format unsupported" }
+		);
+	}
+
+	const modules = await convertWorkerBundleToModules(bundle);
+	// Miniflare treats the first module as the entrypoint.
+	modules.sort((a, b) =>
+		a.path === metadata.main_module
+			? -1
+			: b.path === metadata.main_module
+				? 1
+				: 0
+	);
+	return modules;
+}
+
+/**
+ * Computes the deepest directory shared by every module path. Used as Miniflare's
+ * `modulesRoot` so emitted module names stay relative (e.g. `index.js`) instead of
+ * leaking the dry-run temp directory the bundle was produced in.
+ */
+function commonModulesRoot(modules: ModuleDefinition[]): string {
+	const dirs = modules.map((module) =>
+		path.posix.dirname(module.path.replace(/\\/g, "/"))
+	);
+	if (dirs.length === 0) {
+		return "/";
+	}
+	let segments = dirs[0].split("/");
+	for (const dir of dirs.slice(1)) {
+		const other = dir.split("/");
+		let i = 0;
+		while (
+			i < segments.length &&
+			i < other.length &&
+			segments[i] === other[i]
+		) {
+			i++;
+		}
+		segments = segments.slice(0, i);
+	}
+	const root = segments.join("/");
+	return root === "" ? "/" : root;
+}
+
+/**
+ * Assembles the resolved `workerd` config for `config` by driving Miniflare with
+ * the bundled worker modules and the project's bindings/assets, then disposing.
+ */
+async function assembleWorkerdConfig(
+	config: Config,
+	env: string | undefined,
+	modules: ModuleDefinition[]
+) {
+	const { workerOptions, externalWorkers } = unstable_getMiniflareWorkerOptions(
+		config,
+		env
+	);
+
+	const mf = new Miniflare({
+		log: new Log(LogLevel.WARN),
+		workers: [
+			{
+				...workerOptions,
+				name: config.name ?? "worker",
+				compatibilityDate:
+					workerOptions.compatibilityDate ?? config.compatibility_date,
+				modulesRoot: commonModulesRoot(modules),
+				modules,
+			},
+			...externalWorkers,
+		],
+	});
+	try {
+		await mf.ready;
+		return await mf.unstable_getConfig();
+	} finally {
+		await mf.dispose();
+	}
+}
+
+interface RuntimeFileOptions {
+	configFile: string;
+	binary: boolean;
+}
+
+/** `workerd serve` flags shared by the entrypoint, Dockerfile, and docs. */
+function serveArgs(options: RuntimeFileOptions): string {
+	return `${options.binary ? "--binary " : ""}${options.configFile}`;
+}
+
+function writeRuntimeFiles(
+	outDir: string,
+	workerName: string,
+	options: RuntimeFileOptions
+): void {
+	const args = serveArgs(options);
+	const entrypoint = `#!/bin/sh
+# Entrypoint for the standalone workerd bundle generated by \`wrangler compile\`.
+# The listen port defaults to 8080 and can be overridden with the PORT env var
+# (common on platforms like Railway, Render, and Fly.io).
+set -e
+exec ./node_modules/.bin/workerd serve ${args} \\
+	--socket-addr=http=0.0.0.0:"\${PORT:-8080}" "$@"
+`;
+	writeFileSync(path.join(outDir, "entrypoint.sh"), entrypoint, {
+		mode: 0o755,
+	});
+
+	// Pin the runtime to the workerd version this bundle was generated against.
+	// While standalone is in alpha the config shape tracks the runtime, so an
+	// unpinned install risks a runtime/config mismatch.
+	const workerdSpec = workerdVersion ? `workerd@${workerdVersion}` : "workerd";
+	const dockerfile = `# Dockerfile generated by \`wrangler compile\` for "${workerName}".
+# Builds a self-contained image that serves the Worker on bare workerd.
+FROM node:20-slim
+WORKDIR /app
+COPY . /app
+# Installs the workerd runtime binary for the image platform, pinned to the
+# version this bundle was generated against. Change it deliberately.
+RUN npm install ${workerdSpec} --no-save
+ENV PORT=8080
+EXPOSE 8080
+ENTRYPOINT ["sh", "/app/entrypoint.sh"]
+`;
+	writeFileSync(path.join(outDir, "Dockerfile"), dockerfile);
+}
+
+/**
+ * Writes a human-facing `README.md` to the bundle with copy-pasteable run
+ * instructions for the common deploy targets. The machine-oriented capability
+ * detail (services kept/stripped, warnings) lives in `COMPILE_REPORT.md`.
+ */
+function writeReadme(
+	outDir: string,
+	workerName: string,
+	options: RuntimeFileOptions
+): void {
+	const args = serveArgs(options);
+	const workerdSpec = workerdVersion ? `workerd@${workerdVersion}` : "workerd";
+	const readme = `# ${workerName} — standalone \`workerd\` bundle
+
+This directory is a self-contained [\`workerd\`](https://github.com/cloudflare/workerd)
+bundle produced by \`wrangler compile\`. It runs anywhere \`workerd\` runs — no
+Cloudflare account or platform required.
+
+> Generated against \`${workerdSpec}\`. Install that exact version for a faithful runtime.
+
+## Run locally
+
+\`\`\`sh
+# With the workerd binary on your PATH:
+workerd serve ${args} --socket-addr=http=0.0.0.0:8080
+
+# ...or with npx (no global install):
+npx ${workerdSpec} serve ${args} --socket-addr=http=0.0.0.0:8080
+\`\`\`
+
+Then open <http://localhost:8080>.
+
+## Run with Docker
+
+\`\`\`sh
+docker build -t ${workerName} .
+docker run -p 8080:8080 ${workerName}
+\`\`\`
+
+## Deploy to a PaaS (Railway, Render, Fly.io, …)
+
+These platforms inject a \`PORT\` environment variable. \`entrypoint.sh\` honours it
+(defaulting to 8080), so point your platform at the Dockerfile and it will bind
+the right port automatically. For a generic host, run \`sh entrypoint.sh\`.
+
+## What's in here
+
+| Path | Purpose |
+| --- | --- |
+| \`${options.configFile}\` | The \`workerd\` config (${options.binary ? "encoded binary message" : "human-readable Cap'n Proto"}). |
+${options.binary ? "" : "| `src/` | Embedded Worker modules and data blobs. |\n"}| \`disk/\` | Static assets served read-only by \`workerd\`. |
+| \`Dockerfile\` | Builds a self-contained image. |
+| \`entrypoint.sh\` | \`$PORT\`-aware launch script. |
+| \`COMPILE_REPORT.md\` | Which bindings/services are wired, simulated, or stripped. |
+`;
+	writeFileSync(
+		path.join(outDir, "README.md"),
+		readme.replace(/\n\n+/g, "\n\n")
+	);
+}
+
+function writeReport(
+	outDir: string,
+	result: EmitStandaloneResult,
+	workerName: string,
+	options: RuntimeFileOptions
+): void {
+	const lines: string[] = [
+		`# \`wrangler compile\` report — ${workerName}`,
+		"",
+		"This bundle runs on a standalone, self-hosted `workerd` runtime (no Cloudflare platform).",
+		`Generated against \`workerd@${workerdVersion ?? "(unknown)"}\` in \`${result.format}\` format. See README.md to run it.`,
+		"",
+		"## Run it",
+		"",
+		"```sh",
+		"# Locally (requires the `workerd` binary on your PATH):",
+		`cd ${path.basename(outDir)} && workerd serve ${serveArgs(options)} --socket-addr=http=0.0.0.0:8080`,
+		"",
+		"# Or build the container:",
+		`docker build -t ${workerName} ${path.basename(outDir)} && docker run -p 8080:8080 ${workerName}`,
+		"```",
+		"",
+		"## Entry service",
+		"",
+		`- \`${result.entryService}\``,
+		"",
+		"## Services included",
+		"",
+		...result.keptServices.map((service) => `- \`${service}\``),
+	];
+	if (result.droppedServices.length > 0) {
+		lines.push(
+			"",
+			"## Development-only services stripped",
+			"",
+			...result.droppedServices.map((service) => `- \`${service}\``)
+		);
+	}
+	if (result.droppedExtensionModules.length > 0) {
+		lines.push(
+			"",
+			"## Unused runtime extensions pruned",
+			"",
+			...result.droppedExtensionModules.map((module) => `- \`${module}\``)
+		);
+	}
+	if (result.warnings.length > 0) {
+		lines.push(
+			"",
+			"## Warnings",
+			"",
+			...result.warnings.map((warning) => `- ${warning}`)
+		);
+	}
+	writeFileSync(
+		path.join(outDir, "COMPILE_REPORT.md"),
+		lines.join("\n") + "\n"
+	);
+}
+
+/**
+ * Runs the freshly-emitted bundle with the bundled `workerd` binary — the exact
+ * artifact that ships, not a dev-mode approximation. Resolves only when the
+ * server exits (Ctrl-C / SIGTERM / `workerd` crash), so callers should treat it
+ * as long-running.
+ *
+ * `workerd` resolves `disk` service paths relative to its working directory, so
+ * the process is launched with `cwd` set to the bundle root.
+ */
+async function serveStandaloneBundle(
+	outDir: string,
+	workerName: string,
+	port: number,
+	ip: string,
+	runtimeOptions: RuntimeFileOptions
+): Promise<void> {
+	const binaryPath = process.env.MINIFLARE_WORKERD_PATH ?? workerdPath;
+	const child = spawn(
+		binaryPath,
+		[
+			"serve",
+			...(runtimeOptions.binary ? ["--binary"] : []),
+			runtimeOptions.configFile,
+			`--socket-addr=http=${ip}:${port}`,
+		],
+		{ cwd: outDir, stdio: "inherit" }
+	);
+
+	let exited = false;
+	let exitError: Error | undefined;
+	const exitPromise = new Promise<void>((resolve) => {
+		child.on("exit", (code, signal) => {
+			exited = true;
+			if (code !== 0 && code !== null && signal === null) {
+				exitError = new Error(`workerd exited with code ${code}`);
+			}
+			resolve();
+		});
+		child.on("error", (error) => {
+			exited = true;
+			exitError = error;
+			resolve();
+		});
+	});
+
+	// Forward termination signals so Ctrl-C / container stop tears down workerd.
+	const forward = (signal: NodeJS.Signals) => () => {
+		if (!child.killed) {
+			child.kill(signal);
+		}
+	};
+	const onSigint = forward("SIGINT");
+	const onSigterm = forward("SIGTERM");
+	process.once("SIGINT", onSigint);
+	process.once("SIGTERM", onSigterm);
+
+	try {
+		// `workerd serve` emits no structured ready signal here, so poll the
+		// socket until it accepts a request (or the process dies).
+		const url = `http://${ip}:${port}/`;
+		const deadline = Date.now() + 10_000;
+		let ready = false;
+		while (!exited && Date.now() < deadline) {
+			try {
+				await fetch(url);
+				ready = true;
+				break;
+			} catch {
+				await sleep(100);
+			}
+		}
+
+		if (exited) {
+			throw exitError ?? new Error("workerd exited before it started serving");
+		}
+		if (!ready) {
+			throw new Error(
+				`Timed out waiting for the standalone bundle to start serving on ${url}`
+			);
+		}
+
+		logger.log(
+			[
+				`✨ Serving "${workerName}" on http://localhost:${port} (Ctrl-C to stop)`,
+				"This is the exact bundle that will run under `workerd serve` in production.",
+			].join("\n")
+		);
+
+		await exitPromise;
+		if (exitError) {
+			throw exitError;
+		}
+	} finally {
+		process.off("SIGINT", onSigint);
+		process.off("SIGTERM", onSigterm);
+		if (!exited && !child.killed) {
+			child.kill("SIGTERM");
+		}
+	}
+}
+
+export const compileCommand = createCommand({
+	metadata: {
+		description:
+			"🧱 Compile your Worker into a standalone workerd bundle for self-hosting",
+		owner: "Workers: Authoring and Testing",
+		status: "experimental",
+	},
+	args: {
+		outdir: {
+			describe: "Directory to write the standalone bundle to",
+			type: "string",
+			default: DEFAULT_OUTDIR,
+		},
+		force: {
+			describe:
+				"Compile even if the Worker uses bindings not yet supported by standalone workerd",
+			type: "boolean",
+			default: false,
+		},
+		format: {
+			describe:
+				"Config output format: 'text' (human-readable config.capnp + embedded modules) or 'binary' (a single self-contained config.bin)",
+			type: "string",
+			choices: ["text", "binary"] as const,
+			default: DEFAULT_FORMAT,
+		},
+		serve: {
+			describe:
+				"After compiling, run the produced bundle locally with the bundled workerd binary (the exact production artifact)",
+			type: "boolean",
+			default: false,
+		},
+		port: {
+			describe: "Port to serve on when using --serve",
+			type: "number",
+			default: DEFAULT_SERVE_PORT,
+		},
+		ip: {
+			describe: "IP address to bind to when using --serve",
+			type: "string",
+			default: DEFAULT_SERVE_IP,
+		},
+	},
+	behaviour: {
+		printBanner: true,
+	},
+	async handler(args, { config }) {
+		await runStandaloneCompile(config, {
+			env: config.targetEnvironment,
+			outDir: args.outdir,
+			force: args.force,
+			format: args.format,
+			log: true,
+			serve: args.serve,
+			port: args.port,
+			ip: args.ip,
+		});
+	},
+});
+
+export interface RunStandaloneCompileOptions {
+	/** The active environment name (for config resolution / bundling). */
+	env?: string;
+	/** Output directory for the bundle (resolved against cwd). */
+	outDir: string;
+	/** Compile even when unsupported bindings are present. */
+	force?: boolean;
+	/** Config output format (default `"text"`). */
+	format?: StandaloneConfigFormat;
+	/** Whether to log progress/success (off for programmatic callers). */
+	log?: boolean;
+	/** After emitting, run the bundle with the bundled `workerd` binary. */
+	serve?: boolean;
+	/** Port for `--serve` (default 8080). */
+	port?: number;
+	/** Bind address for `--serve` (default 127.0.0.1). */
+	ip?: string;
+}
+
+/**
+ * Shared orchestration behind `wrangler compile` and the programmatic
+ * {@link unstable_compileStandalone} API: validate bindings, bundle the Worker,
+ * assemble the resolved `workerd` config via Miniflare, and emit the standalone
+ * bundle plus its Dockerfile/entrypoint/report.
+ */
+export async function runStandaloneCompile(
+	config: Config,
+	options: RunStandaloneCompileOptions
+): Promise<EmitStandaloneResult> {
+	const workerName = config.name ?? "worker";
+	const outDir = path.resolve(options.outDir);
+	const log = options.log ?? true;
+
+	const issues = getStandaloneBindingIssues(config);
+	if (issues.length > 0) {
+		const message = `The following bindings are not yet supported by standalone workerd:\n${formatStandaloneBindingIssues(
+			issues
+		)}`;
+		if (!options.force) {
+			throw new UserError(
+				`${message}\n\nThese have no standalone production story yet. Re-run with --force to compile anyway (they will be omitted or may not work).`,
+				{ telemetryMessage: "compile unsupported bindings" }
+			);
+		}
+		logger.warn(message);
+	}
+
+	if (log) {
+		logger.log(`Compiling "${workerName}" for standalone workerd...`);
+	}
+
+	const format = options.format ?? DEFAULT_FORMAT;
+	const modules = await buildWorkerModules(config, options.env);
+	const workerdConfig = await assembleWorkerdConfig(
+		config,
+		options.env,
+		modules
+	);
+	const result = emitStandaloneBundle(workerdConfig, outDir, { format });
+
+	for (const warning of result.warnings) {
+		logger.warn(warning);
+	}
+
+	const runtimeOptions: RuntimeFileOptions = {
+		configFile: STANDALONE_CONFIG_FILENAME[result.format],
+		binary: result.format === "binary",
+	};
+	writeRuntimeFiles(outDir, workerName, runtimeOptions);
+	writeReport(outDir, result, workerName, runtimeOptions);
+	writeReadme(outDir, workerName, runtimeOptions);
+
+	if (log) {
+		logger.log(
+			[
+				`✨ Compiled standalone bundle to ${path.relative(process.cwd(), outDir) || "."}`,
+				"",
+				"Run it with:",
+				`  cd ${path.relative(process.cwd(), outDir) || "."} && workerd serve ${serveArgs(runtimeOptions)}`,
+				"or build the generated Dockerfile. See README.md for details.",
+			].join("\n")
+		);
+	}
+
+	if (options.serve) {
+		await serveStandaloneBundle(
+			outDir,
+			workerName,
+			options.port ?? DEFAULT_SERVE_PORT,
+			options.ip ?? DEFAULT_SERVE_IP,
+			runtimeOptions
+		);
+	}
+
+	return result;
+}
+
+export interface CompileStandaloneOptions {
+	/** Path to the Wrangler config to compile (e.g. a generated `wrangler.json`). */
+	configPath?: string;
+	/** The Cloudflare environment to resolve the config against. */
+	env?: string;
+	/** Output directory for the standalone bundle. */
+	outDir: string;
+	/** Compile even when unsupported bindings are present. */
+	force?: boolean;
+	/** Config output format (default `"text"`). */
+	format?: StandaloneConfigFormat;
+	/** Whether to log progress/success. Defaults to `true`. */
+	log?: boolean;
+}
+
+/**
+ * Programmatic entry point for producing a standalone `workerd` bundle from a
+ * Wrangler config. Used by `@cloudflare/vite-plugin`'s `standalone` mode so the
+ * Vite build and `wrangler compile` share one implementation.
+ *
+ * @experimental
+ */
+export async function unstable_compileStandalone(
+	options: CompileStandaloneOptions
+): Promise<EmitStandaloneResult> {
+	const config = readConfig({ config: options.configPath, env: options.env });
+	return runStandaloneCompile(config, {
+		env: config.targetEnvironment,
+		outDir: options.outDir,
+		force: options.force,
+		format: options.format,
+		log: options.log ?? true,
+	});
+}
