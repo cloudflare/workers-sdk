@@ -896,9 +896,17 @@ async function runProvisioningFlow(
 	const defaultName = `${scriptName}-${item.binding.toLowerCase().replaceAll("_", "-")}`;
 	logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
 
+	// `preExisting` carries only `{title, value}`; for R2 the loaded title is
+	// the bucket name without jurisdiction, so a name-match could route to a
+	// bucket in the wrong jurisdiction. KV / D1 / AI Search / Agent Memory
+	// names are unique within an account, so the lookup is safe there.
+	const canReuseByTitle = item.resourceType !== "r2_bucket";
+
 	if (item.handler.name) {
 		logger.log("Resource name found in config:", item.handler.name);
-		const existing = preExisting.find((r) => r.title === item.handler.name);
+		const existing = canReuseByTitle
+			? preExisting.find((r) => r.title === item.handler.name)
+			: undefined;
 		if (existing) {
 			logger.log(
 				`🔗 Connecting to existing ${friendlyBindingName} "${item.handler.name}"...`
@@ -911,7 +919,9 @@ async function runProvisioningFlow(
 			await item.handler.provision(item.handler.name);
 		}
 	} else if (autoCreate) {
-		const existing = preExisting.find((r) => r.title === defaultName);
+		const existing = canReuseByTitle
+			? preExisting.find((r) => r.title === defaultName)
+			: undefined;
 		if (existing) {
 			logger.log(
 				`🔗 Connecting to existing ${friendlyBindingName} "${defaultName}"...`
