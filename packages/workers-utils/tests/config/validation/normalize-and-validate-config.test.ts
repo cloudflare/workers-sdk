@@ -114,6 +114,7 @@ describe("normalizeAndValidateConfig()", () => {
 			minify: undefined,
 			first_party_worker: undefined,
 			keep_vars: undefined,
+			standalone: undefined,
 			logpush: undefined,
 			upload_source_maps: undefined,
 			placement: undefined,
@@ -211,6 +212,33 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected "dev.local_protocol" field to be one of ["http","https"] but got "wss".
 				  - Expected "dev.upstream_protocol" field to be one of ["http","https"] but got "ws"."
 			`);
+		});
+
+		it("should accept a boolean `standalone` field", ({ expect }) => {
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				{ standalone: true } as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(config.standalone).toBe(true);
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(false);
+		});
+
+		it("should error when `standalone` is not a boolean", ({ expect }) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{ standalone: "yes" } as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(true);
+			expect(diagnostics.renderErrors()).toContain(
+				'Expected "standalone" to be of type boolean but got "yes".'
+			);
 		});
 
 		it("should warn on and remove unexpected top level fields", ({

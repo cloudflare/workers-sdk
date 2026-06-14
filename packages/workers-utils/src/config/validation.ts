@@ -315,6 +315,14 @@ export function normalizeAndValidateConfig(
 	validateOptionalProperty(
 		diagnostics,
 		"",
+		"standalone",
+		rawConfig.standalone,
+		"boolean"
+	);
+
+	validateOptionalProperty(
+		diagnostics,
+		"",
 		"pages_build_output_dir",
 		rawConfig.pages_build_output_dir,
 		"string"
@@ -499,6 +507,7 @@ export function normalizeAndValidateConfig(
 		legacy_env: !useServiceEnvironments,
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
+		standalone: rawConfig.standalone,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
 		site: normalizeAndValidateSite(
