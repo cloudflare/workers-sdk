@@ -977,6 +977,61 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 	});
 });
 
+describe("resolvePluginConfig - standalone option", () => {
+	let tempDir: string;
+
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(
+			path.join(tempDir, "wrangler.jsonc"),
+			JSON.stringify({
+				name: "worker",
+				main: "./src/index.ts",
+				compatibility_date: "2024-01-01",
+			})
+		);
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+	});
+
+	afterEach(() => {
+		removeDirSync(tempDir);
+	});
+
+	const viteEnv = { mode: "production", command: "build" as const };
+
+	test("defaults to disabled", async ({ expect }) => {
+		const result = await resolvePluginConfig({}, { root: tempDir }, viteEnv);
+		expect(result.standalone).toBe(false);
+	});
+
+	test("standalone: true resolves to default output directory", async ({
+		expect,
+	}) => {
+		const result = await resolvePluginConfig(
+			{ standalone: true },
+			{ root: tempDir },
+			viteEnv
+		);
+		expect(result.standalone).toEqual({
+			outDir: "dist-standalone",
+			force: false,
+		});
+	});
+
+	test("standalone object overrides outDir and force", async ({ expect }) => {
+		const result = await resolvePluginConfig(
+			{ standalone: { outDir: "out/standalone", force: true } },
+			{ root: tempDir },
+			viteEnv
+		);
+		expect(result.standalone).toEqual({
+			outDir: "out/standalone",
+			force: true,
+		});
+	});
+});
+
 describe("resolvePluginConfig - environment name validation", () => {
 	let tempDir: string;
 

@@ -15,6 +15,7 @@ import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
 import { rscPlugin } from "./plugins/rsc";
 import { shortcutsPlugin } from "./plugins/shortcuts";
+import { standalonePlugin } from "./plugins/standalone";
 import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import { tunnelPlugin } from "./plugins/tunnel";
 import {
@@ -111,5 +112,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		nodeJsAlsPlugin(ctx),
 		nodeJsCompatPlugin(ctx),
 		nodeJsCompatWarningsPlugin(ctx),
+		standalonePlugin(ctx),
 	];
 }
