@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
+import { getWorkerNameFromProject } from "@cloudflare/workers-utils";
 import { defu } from "defu";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
@@ -362,9 +363,7 @@ function resolveWorkerConfig(
 	workerConfig.compatibility_date ??= DEFAULT_COMPAT_DATE;
 
 	if (isEntryWorker) {
-		workerConfig.name ??= wrangler.unstable_getWorkerNameFromProject(
-			options.root
-		);
+		workerConfig.name ??= getWorkerNameFromProject(options.root);
 	}
 	// Auto-populate topLevelName from name
 	workerConfig.topLevelName ??= workerConfig.name;

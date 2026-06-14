@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
+import * as run from "@cloudflare/autoconfig";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, assert, describe, test, vi } from "vitest";
-import * as run from "../autoconfig/run";
 import { clearOutputFilePath } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runWrangler } from "./helpers/run-wrangler";

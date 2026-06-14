@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import {
 	normalizeString,
 	runInTempDir,
@@ -9,7 +10,6 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -49,8 +49,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
