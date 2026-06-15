@@ -12,12 +12,36 @@ import { assertIsNotPreview } from "../context";
 import { writeDeployConfig } from "../deploy-config";
 import { hasLocalDevVarsFileChanged } from "../dev-vars";
 import { resolveDevOnly } from "../plugin-config";
-import { createPlugin, debuglog, getOutputDirectory } from "../utils";
+import {
+	createPlugin,
+	debuglog,
+	getOutputDirectory,
+	satisfiesMinimumViteVersion,
+} from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
+import { emitStandaloneBuild } from "./standalone";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
 import type { Unstable_RawConfig } from "wrangler";
+
+/**
+ * Wraps the app builder so that, on Vite 6 (where the `buildApp` plugin hook is
+ * unavailable), the standalone bundle is emitted once the build completes. On
+ * Vite 7+ this is a no-op here and `standalonePlugin`'s `buildApp` post hook
+ * handles it instead.
+ */
+function wrapBuildAppWithStandalone(
+	buildApp: ReturnType<typeof createBuildApp>,
+	ctx: PluginContext
+): ReturnType<typeof createBuildApp> {
+	return async (builder) => {
+		await buildApp(builder);
+		if (!satisfiesMinimumViteVersion("7.0.0")) {
+			await emitStandaloneBuild(ctx);
+		}
+	};
+}
 
 /**
  * Plugin to handle configuration and config file watching
@@ -75,7 +99,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				builder: {
 					buildApp:
 						userConfig.builder?.buildApp ??
-						createBuildApp(ctx.resolvedPluginConfig),
+						wrapBuildAppWithStandalone(
+							createBuildApp(ctx.resolvedPluginConfig),
+							ctx
+						),
 				},
 			};
 		},

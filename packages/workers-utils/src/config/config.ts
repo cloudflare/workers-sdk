@@ -181,6 +181,20 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 * @nonInheritable
 	 */
 	keep_vars?: boolean;
+
+	/**
+	 * Declares that this Worker targets a self-hosted, standalone `workerd`
+	 * runtime (e.g. via `wrangler compile`) rather than the Cloudflare platform.
+	 *
+	 * When set, `wrangler dev` validates the configuration against the features
+	 * supported by standalone `workerd` (surfacing unsupported bindings as
+	 * warnings), and `wrangler deploy` refuses to run (use `wrangler compile`).
+	 *
+	 * @experimental This field is experimental and its shape may change.
+	 * @default false
+	 * @nonInheritable
+	 */
+	standalone?: boolean;
 }
 
 // Pages-specific configuration fields
@@ -364,6 +378,7 @@ export const defaultWranglerConfig: Config = {
 	text_blobs: undefined,
 	data_blobs: undefined,
 	keep_vars: undefined,
+	standalone: undefined,
 	alias: undefined,
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/

@@ -90,6 +90,10 @@ export type {
 	Unstable_MiniflareWorkerOptions,
 } from "./integrations";
 
+// Exports from ./compile
+export { unstable_compileStandalone } from "../compile";
+export type { CompileStandaloneOptions } from "../compile";
+
 // Exports from ./remoteBindings
 export {
 	startRemoteProxySession,

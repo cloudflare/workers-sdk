@@ -980,6 +980,10 @@ export class Miniflare {
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
+	// The most recent `workerd` config assembled by `#assembleAndUpdateConfig()`.
+	// Exposed (alpha) via `unstable_getConfig()` so tooling (e.g. `wrangler compile`)
+	// can transform it into a standalone bundle without re-deriving the service graph.
+	#lastAssembledConfig?: Config;
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
@@ -2415,6 +2419,7 @@ export class Miniflare {
 			loopbackPort,
 			this.#devRegistry.isEnabled()
 		);
+		this.#lastAssembledConfig = config;
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -2661,6 +2666,26 @@ export class Miniflare {
 		assert(this.#runtimeEntryURL !== undefined);
 		// Return a copy so external mutations don't propagate to `#runtimeEntryURL`
 		return new URL(this.#runtimeEntryURL.toString());
+	}
+
+	/**
+	 * Returns the `workerd` {@link Config} most recently assembled for this
+	 * instance, waiting for initialisation to complete first.
+	 *
+	 * This is an alpha API intended for tooling that needs the fully-resolved
+	 * service graph (e.g. `wrangler compile`, which transforms it into a
+	 * standalone bundle via {@link toStandaloneConfig}). The shape is not yet
+	 * stable and may change without notice.
+	 */
+	async unstable_getConfig(): Promise<Config> {
+		this.#checkDisposed();
+		await this.#initPromise;
+		await this.#runtimeMutex.drained();
+		assert(
+			this.#lastAssembledConfig !== undefined,
+			"Config has not been assembled yet"
+		);
+		return this.#lastAssembledConfig;
 	}
 
 	async #registerWorkers(): Promise<void> {
@@ -3243,6 +3268,7 @@ export * from "./http";
 export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
+export * from "./standalone";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";

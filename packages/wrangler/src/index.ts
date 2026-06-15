@@ -87,6 +87,7 @@ import {
 	cloudchamberSshListCommand,
 	cloudchamberSshNamespace,
 } from "./cloudchamber";
+import { compileCommand } from "./compile";
 import { completionsCommand } from "./complete";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import {
@@ -828,6 +829,14 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("deploy");
+
+	registry.define([
+		{
+			command: "wrangler compile",
+			definition: compileCommand,
+		},
+	]);
+	registry.registerNamespace("compile");
 
 	registry.define([
 		{ command: "wrangler preview", definition: previewCommand },

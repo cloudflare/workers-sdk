@@ -56,6 +56,10 @@ export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
 } from "./config/binding-local-support";
+export {
+	type StandaloneSupport,
+	getStandaloneSupport,
+} from "./config/standalone-support";
 
 export { validatePagesConfig } from "./config/validation-pages";
 

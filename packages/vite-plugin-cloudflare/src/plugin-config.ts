@@ -144,6 +144,22 @@ type WorkerConfigCustomizer<TIsEntryWorker extends boolean> =
 					]
 	  ) => Partial<WorkerConfig> | void);
 
+/**
+ * Configuration for compiling the built app into a standalone, self-hosted
+ * `workerd` bundle (the Vite equivalent of `wrangler compile`).
+ */
+export interface StandaloneConfig {
+	/** Output directory for the standalone bundle. Defaults to `dist-standalone`. */
+	outDir?: string;
+	/** Compile even when the Worker uses bindings unsupported by standalone workerd. */
+	force?: boolean;
+}
+
+export interface ResolvedStandaloneConfig {
+	outDir: string;
+	force: boolean;
+}
+
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
 	persistState?: PersistState;
@@ -151,6 +167,13 @@ export interface PluginConfig extends EntryWorkerConfig {
 	remoteBindings?: boolean;
 	tunnel?: boolean | TunnelConfig;
 	experimental?: Experimental;
+	/**
+	 * When set, `vite build` also emits a standalone `workerd` bundle (config +
+	 * assets + Dockerfile) for self-hosting outside Cloudflare. Experimental.
+	 *
+	 * @experimental
+	 */
+	standalone?: boolean | StandaloneConfig;
 }
 
 export interface ResolvedAssetsOnlyConfig extends WorkerConfig {
@@ -177,6 +200,7 @@ interface BaseResolvedConfig {
 	};
 	remoteBindings: boolean;
 	tunnel: TunnelConfig;
+	standalone: ResolvedStandaloneConfig | false;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -354,6 +378,19 @@ function resolveWorkerConfig(
 	});
 }
 
+function resolveStandaloneConfig(
+	standalone: boolean | StandaloneConfig | undefined
+): ResolvedStandaloneConfig | false {
+	if (!standalone) {
+		return false;
+	}
+	const config = standalone === true ? {} : standalone;
+	return {
+		outDir: config.outDir ?? "dist-standalone",
+		force: config.force ?? false,
+	};
+}
+
 export async function resolvePluginConfig(
 	pluginConfig: PluginConfig,
 	userConfig: vite.UserConfig,
@@ -377,6 +414,7 @@ export async function resolvePluginConfig(
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
 			newConfig: resolvedNewConfig,
 		},
+		standalone: resolveStandaloneConfig(pluginConfig.standalone),
 	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const prefixedEnv = vite.loadEnv(viteEnv.mode, root, [
