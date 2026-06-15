@@ -13,6 +13,7 @@ import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../config-cache";
+import * as metricsModule from "../metrics";
 import {
 	fetchAllAccounts,
 	getAccountFromCache,
@@ -447,6 +448,39 @@ describe("User", () => {
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Invalid authentication scopes: "bad_one", "bad_two". Run "wrangler login --scopes-list" to see all valid scopes.]`
 			);
+		});
+
+		it("should send the `login user` metric when `--scopes` is provided", async ({
+			expect,
+		}) => {
+			// Regression: the scoped login path used to early-return before
+			// `sendMetricsEvent("login user", ...)` could run, so successful
+			// logins via `wrangler login --scopes ...` were never counted.
+			const sendMetricsEventSpy = vi.spyOn(metricsModule, "sendMetricsEvent");
+			try {
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						async () =>
+							HttpResponse.json({
+								access_token: "test-access-token",
+								expires_in: 100000,
+								refresh_token: "test-refresh-token",
+								scope: "account:read",
+							}),
+						{ once: true }
+					)
+				);
+
+				await runWrangler("login --scopes account:read");
+
+				expect(sendMetricsEventSpy).toHaveBeenCalledWith("login user", {
+					sendMetrics: undefined,
+				});
+			} finally {
+				sendMetricsEventSpy.mockRestore();
+			}
 		});
 	});
 
