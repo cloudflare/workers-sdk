@@ -1499,14 +1499,14 @@ describe("wrangler pipelines", () => {
 
 				Then send events:
 
-				  await env.MY_STREAM.send([{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1781200927146}]);
+				  await env.MY_STREAM.send([{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1781495934630}]);
 
 				Or via HTTP:
 
 				  curl -X POST https://pipelines.cloudflare.com/my_stream /
 				     -H "Authorization: Bearer YOUR_API_TOKEN" /
 				     -H "Content-Type: application/json" /
-				     -d '[{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1781200927146}]'
+				     -d '[{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1781495934630}]'
 
 				  (Replace YOUR_API_TOKEN with your Cloudflare API token)
 				Docs: https://developers.cloudflare.com/pipelines/
@@ -1577,14 +1577,14 @@ describe("wrangler pipelines", () => {
 
 				Then send events:
 
-				  await env.MY_STREAM.send([{"id":"sample_id","timestamp":1781200927155}]);
+				  await env.MY_STREAM.send([{"id":"sample_id","timestamp":1781495934639}]);
 
 				Or via HTTP:
 
 				  curl -X POST https://pipelines.cloudflare.com/my_stream /
 				     -H "Authorization: Bearer YOUR_API_TOKEN" /
 				     -H "Content-Type: application/json" /
-				     -d '[{"id":"sample_id","timestamp":1781200927155}]'
+				     -d '[{"id":"sample_id","timestamp":1781495934639}]'
 
 				  (Replace YOUR_API_TOKEN with your Cloudflare API token)
 				Docs: https://developers.cloudflare.com/pipelines/
