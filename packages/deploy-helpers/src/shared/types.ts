@@ -4,7 +4,6 @@ import type {
 	CfModule,
 	CfModuleType,
 	Config,
-	EphemeralDirectory,
 	FetchKVGetValueFetcher,
 	FetchResultFetcher,
 	FetchListResultFetcher,
@@ -52,41 +51,32 @@ export type SharedDeployVersionsProps = {
 	compatibilityDate: string | undefined;
 	/** Merged: --compatibility-flags arg ?? config.compatibility_flags. */
 	compatibilityFlags: string[];
-	/** Merged from --assets arg and config.assets. */
-	assetsOptions: AssetsOptions | undefined;
-	/** Merged: --jsx-factory arg || config.jsx_factory. */
-	jsxFactory: string;
-	/** Merged: --jsx-fragment arg || config.jsx_fragment. */
-	jsxFragment: string;
-	/** Merged: --tsconfig arg ?? config.tsconfig. */
-	tsconfig: string | undefined;
-	/** Merged: --minify arg ?? config.minify. */
-	minify: boolean | undefined;
-	/** Merged: !(--bundle arg ?? !config.no_bundle). */
-	noBundle: boolean;
+	/**
+	 * Validated/resolved assets directory, merged from --assets arg and
+	 * config.assets. The full AssetsOptions are resolved later via
+	 * `resolveAssetOptions`.
+	 */
+	assetsDir: ValidatedAssetsOptions | undefined;
+	/**
+	 * The user Worker entry, merged: --script arg ?? config.main. Undefined for
+	 * assets-only Workers. Drives `has_user_worker` when resolving assets.
+	 */
+	main: string | undefined;
 	/** Merged: --upload-source-maps arg ?? config.upload_source_maps. */
 	uploadSourceMaps: boolean | undefined;
 	/** Merged: --keep-vars arg || config.keep_vars. */
 	keepVars: boolean;
 	/** Merged from --site arg and config.site. */
 	isWorkersSite: boolean;
-	/** Merged: { ...config.define, ...--define arg }. CLI overrides config. */
-	defines: Record<string, string>;
-	/** Merged: { ...config.alias, ...--alias arg }. CLI overrides config. */
-	alias: Record<string, string>;
 	/**
 	 * Whether to use the deprecated service environments API path.
 	 * True only when config opts in (legacy_env: false) AND --env is specified.
 	 */
 	useServiceEnvApiPath: boolean;
-	/** Output directory for the bundled Worker. From --outdir arg or a temp directory. */
-	destination: string | EphemeralDirectory;
 	/** From --dry-run arg. */
 	dryRun: boolean;
 	/** From --env arg. */
 	env: string | undefined;
-	/** From --outdir arg. Already used to derive `destination`, but also needed for outdir README and noBundleWorker. */
-	outdir: string | undefined;
 	/** From --outfile arg. */
 	outfile: string | undefined;
 	/** From --tag arg. */
@@ -122,8 +112,6 @@ export type DeployProps = SharedDeployVersionsProps & {
 	dispatchNamespace: string | undefined;
 	/** From --strict arg. Deploy-only. */
 	strict: boolean;
-	/** From --metafile arg. Deploy-only. */
-	metafile: string | boolean | undefined;
 	/** From --old-asset-ttl arg. Deploy-only. */
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
