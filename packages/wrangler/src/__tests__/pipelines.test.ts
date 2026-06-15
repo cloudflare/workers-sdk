@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -1372,6 +1372,12 @@ describe("wrangler pipelines", () => {
 
 	describe("pipelines streams create", () => {
 		const { setIsTTY } = useMockIsTTY();
+		beforeEach(() => {
+			vi.useFakeTimers({ now: new Date("2026-01-01T00:00:00Z") });
+		});
+		afterEach(() => {
+			vi.useRealTimers();
+		});
 		function mockCreateStreamRequest(
 			expect: ExpectStatic,
 			expectedRequest: {
@@ -1499,14 +1505,14 @@ describe("wrangler pipelines", () => {
 
 				Then send events:
 
-				  await env.MY_STREAM.send([{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1781495934630}]);
+				  await env.MY_STREAM.send([{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1767225600000}]);
 
 				Or via HTTP:
 
 				  curl -X POST https://pipelines.cloudflare.com/my_stream /
 				     -H "Authorization: Bearer YOUR_API_TOKEN" /
 				     -H "Content-Type: application/json" /
-				     -d '[{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1781495934630}]'
+				     -d '[{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1767225600000}]'
 
 				  (Replace YOUR_API_TOKEN with your Cloudflare API token)
 				Docs: https://developers.cloudflare.com/pipelines/
@@ -1577,14 +1583,14 @@ describe("wrangler pipelines", () => {
 
 				Then send events:
 
-				  await env.MY_STREAM.send([{"id":"sample_id","timestamp":1781495934639}]);
+				  await env.MY_STREAM.send([{"id":"sample_id","timestamp":1767225600000}]);
 
 				Or via HTTP:
 
 				  curl -X POST https://pipelines.cloudflare.com/my_stream /
 				     -H "Authorization: Bearer YOUR_API_TOKEN" /
 				     -H "Content-Type: application/json" /
-				     -d '[{"id":"sample_id","timestamp":1781495934639}]'
+				     -d '[{"id":"sample_id","timestamp":1767225600000}]'
 
 				  (Replace YOUR_API_TOKEN with your Cloudflare API token)
 				Docs: https://developers.cloudflare.com/pipelines/
