@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 Send the `login user` telemetry event when `wrangler login --scopes ...` succeeds
