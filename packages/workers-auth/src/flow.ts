@@ -20,6 +20,7 @@ import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { getOauthToken } from "./callback-server";
 import { getAPIToken, requireApiToken } from "./credentials";
+import { getOauthTokenViaDeviceFlow } from "./device-flow";
 import { getRevokeUrlFromEnv } from "./env-vars";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
@@ -77,6 +78,15 @@ export interface LoginProps {
 	callbackHost?: string;
 	/** Port the local callback server listens on. Defaults to `8976`. */
 	callbackPort?: number;
+	/**
+	 * When `true`, authenticate using the OAuth 2.0 Device Authorization Grant
+	 * (RFC 8628) instead of the authorization-code-with-PKCE callback flow. The
+	 * device flow does not start a local callback server and works in
+	 * environments where `localhost:8976` is unreachable from the user's
+	 * browser (containers, remote SSH sessions, Codespaces). `callbackHost` and
+	 * `callbackPort` are ignored when this is set.
+	 */
+	device?: boolean;
 }
 
 /**
@@ -231,23 +241,43 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			);
 		}
 
-		ctx.logger.log("Attempting to login via OAuth...");
-
-		const oauth = await getOauthToken(
-			{
+		let oauth;
+		if (props.device) {
+			// The device authorization flow does not start a local callback
+			// server, so `callbackHost` / `callbackPort` are meaningless here.
+			// Consumers are expected to reject that flag combination before
+			// calling `login` (wrangler does so with a `CommandLineArgsError`).
+			ctx.logger.log(
+				"Attempting to login via OAuth Device Authorization Grant (experimental)..."
+			);
+			oauth = await getOauthTokenViaDeviceFlow({
 				browser: props.browser ?? true,
 				scopes: props.scopes,
 				clientId: getClientId(),
-				redirectUri: ctx.redirectUri,
-				denied: consent.denied,
-				granted: consent.granted,
-				callbackHost: props.callbackHost ?? defaultCallbackHost,
-				callbackPort: props.callbackPort ?? defaultCallbackPort,
-			},
-			oauthFlowState,
-			ctx,
-			generators
-		);
+				logger: ctx.logger,
+				openInBrowser: ctx.openInBrowser,
+				isNonInteractiveOrCI: ctx.isNonInteractiveOrCI,
+				renderQrCode: ctx.renderDeviceQrCode,
+			});
+		} else {
+			ctx.logger.log("Attempting to login via OAuth...");
+
+			oauth = await getOauthToken(
+				{
+					browser: props.browser ?? true,
+					scopes: props.scopes,
+					clientId: getClientId(),
+					redirectUri: ctx.redirectUri,
+					denied: consent.denied,
+					granted: consent.granted,
+					callbackHost: props.callbackHost ?? defaultCallbackHost,
+					callbackPort: props.callbackPort ?? defaultCallbackPort,
+				},
+				oauthFlowState,
+				ctx,
+				generators
+			);
+		}
 
 		storage.write({
 			oauth_token: oauth.token?.value ?? "",

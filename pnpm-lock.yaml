@@ -3831,6 +3831,9 @@ importers:
       msw:
         specifier: catalog:default
         version: 2.12.4(@types/node@22.15.17)(typescript@5.8.3)
+      qr:
+        specifier: ^0.6.0
+        version: 0.6.0
       smol-toml:
         specifier: catalog:default
         version: 1.5.2

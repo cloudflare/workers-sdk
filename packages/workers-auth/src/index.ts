@@ -31,7 +31,11 @@ export type {
 	LoginProps,
 } from "./flow";
 
+export { renderDeviceQrCode } from "./device-flow";
+
 export { generateAuthUrl } from "./generate-auth-url";
+
+export { generateVerificationUrl } from "./generate-device-auth-url";
 
 export { generateRandomState } from "./generate-random-state";
 export { TEMPORARY_TERMS_NOTICE, TEMPORARY_TERMS_PROMPT } from "./temporary";
