@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
-import { ConfigSchema } from "../schema";
+import { InputWorkerSchema } from "../schema";
 
 // Vitest's module runner intercepts dynamic imports before Node's
 // `module.registerHooks` can see them, so we cannot exercise `loadConfig`
@@ -118,7 +118,7 @@ describe("loadConfig", () => {
 		});
 	});
 
-	it("produces an entrypoint namespace that ConfigSchema.parse collapses to a string", async ({
+	it("produces an entrypoint namespace that InputWorkerSchema.parse collapses to a string", async ({
 		expect,
 	}) => {
 		await seed({
@@ -133,7 +133,7 @@ describe("loadConfig", () => {
 			cwd: process.cwd(),
 			configPath: "./cloudflare.config.ts",
 		});
-		const parsed = ConfigSchema.parse(result.config);
+		const parsed = InputWorkerSchema.parse(result.config);
 
 		expect(parsed.entrypoint).toBe("./src/index.ts");
 	});

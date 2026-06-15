@@ -1,2 +1,2 @@
-import { ConfigSchema, convertToWranglerConfig } from "@cloudflare/config";
-export { ConfigSchema, convertToWranglerConfig };
+import { InputWorkerSchema, convertToWranglerConfig } from "@cloudflare/config";
+export { InputWorkerSchema, convertToWranglerConfig };

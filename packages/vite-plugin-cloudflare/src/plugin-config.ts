@@ -23,7 +23,7 @@ import type {
 	WorkerResolvedConfig,
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
-import type { ParsedConfig } from "@cloudflare/config";
+import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { Unstable_Config } from "wrangler";
@@ -179,7 +179,7 @@ export interface Worker {
 	config: ResolvedWorkerConfig;
 	nodeJsCompat: NodeJsCompat | undefined;
 	devOnly: DevOnly | undefined;
-	parsedNewConfig: ParsedConfig | undefined;
+	parsedNewConfig: ParsedInputWorkerConfig | undefined;
 }
 
 interface BaseResolvedConfig {
@@ -203,7 +203,7 @@ interface NonPreviewResolvedConfig extends BaseResolvedConfig {
 export interface AssetsOnlyResolvedConfig extends NonPreviewResolvedConfig {
 	type: "assets-only";
 	config: ResolvedAssetsOnlyConfig;
-	parsedNewConfig: ParsedConfig | undefined;
+	parsedNewConfig: ParsedInputWorkerConfig | undefined;
 	rawConfigs: {
 		entryWorker: AssetsOnlyWorkerResolvedConfig;
 	};
@@ -441,7 +441,7 @@ export async function resolvePluginConfig(
 
 	let configPath: string | undefined;
 	let rawConfigOverride: RawConfig | undefined;
-	let parsedNewConfig: ParsedConfig | undefined;
+	let parsedNewConfig: ParsedInputWorkerConfig | undefined;
 
 	if (resolvedNewConfig) {
 		if (pluginConfig.configPath) {
@@ -726,7 +726,7 @@ export function resolveDevOnly(devOnly: DevOnly | undefined): boolean {
 function resolveWorker(
 	workerConfig: ResolvedWorkerConfig,
 	devOnly: DevOnly | undefined,
-	parsedNewConfig?: ParsedConfig
+	parsedNewConfig?: ParsedInputWorkerConfig
 ): Worker {
 	return {
 		config: workerConfig,
@@ -758,7 +758,7 @@ async function loadNewConfig(options: {
 	generateTypes: boolean;
 }): Promise<{
 	rawConfig: RawConfig;
-	parsedConfig: ParsedConfig;
+	parsedConfig: ParsedInputWorkerConfig;
 	configPath: string;
 	dependencies: Set<string>;
 }> {
@@ -774,7 +774,7 @@ async function loadNewConfig(options: {
 	// pay the cost of loading `@cloudflare/config` (and its Node module hooks).
 	const {
 		loadConfig,
-		ConfigSchema,
+		InputWorkerSchema,
 		convertToWranglerConfig,
 		generateTypes: generateTypesFn,
 		resolveWorkerDefinition,
@@ -786,7 +786,7 @@ async function loadNewConfig(options: {
 		mode: options.mode,
 	});
 
-	const parsed = ConfigSchema.safeParse(resolved);
+	const parsed = InputWorkerSchema.safeParse(resolved);
 	if (!parsed.success) {
 		throw new Error(
 			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${parsed.error.message}`

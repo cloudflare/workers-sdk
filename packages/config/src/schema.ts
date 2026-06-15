@@ -394,15 +394,15 @@ const UnsafeSchema = z.strictObject({
 		.optional(),
 });
 
-export const ConfigSchema = z.strictObject({
+/**
+ * Base Worker schema — the set of fields shared between the input
+ * (user-authored) and output (on-disk) Worker configs.
+ */
+const BaseWorkerSchema = z.strictObject({
 	name: z.string(),
 	accountId: z.string().optional(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
-	entrypoint: z
-		.union([z.string(), z.strictObject({ default: z.string() })])
-		.transform((value) => (typeof value === "string" ? value : value.default))
-		.optional(),
 	assets: AssetsSchema.optional(),
 	domains: z.array(z.string()).optional(),
 	triggers: z.array(TriggerSchema).optional(),
@@ -423,14 +423,53 @@ export const ConfigSchema = z.strictObject({
 });
 
 /**
- * Parsed (post-validation) config returned by `ConfigSchema.parse(...)`.
+ * Input Worker schema — the shape that user-authored `cloudflare.config.ts`
+ * files are validated against. Adds an optional `entrypoint` field to the
+ * base schema.
  */
-export type ParsedConfig = z.output<typeof ConfigSchema>;
+export const InputWorkerSchema = BaseWorkerSchema.extend({
+	entrypoint: z
+		.union([z.string(), z.strictObject({ default: z.string() })])
+		.transform((value) => (typeof value === "string" ? value : value.default))
+		.optional(),
+});
+
+export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
+
+export const ModuleTypeSchema = z.enum([
+	"esm",
+	"cjs",
+	"python",
+	"pythonRequirement",
+	"wasm",
+	"text",
+	"data",
+	"json",
+	"sourcemap",
+]);
+
+export type ModuleType = z.output<typeof ModuleTypeSchema>;
+
+const ManifestSchema = z.strictObject({
+	mainModule: z.string(),
+	modules: z.record(z.string(), z.strictObject({ type: ModuleTypeSchema })),
+});
 
 /**
- * Bidirectional drift check between {@link ConfigSchema} and the public
- * {@link UserConfig} interface. Excludes `entrypoint` and `env`, which
- * deliberately differ:
+ * Output Worker schema — the shape of `worker.config.json` in the
+ * Build Output API. Adds an optional `manifest` field to the
+ * base schema.
+ */
+export const OutputWorkerSchema = BaseWorkerSchema.extend({
+	manifest: ManifestSchema.optional(),
+});
+
+export type ParsedOutputWorkerConfig = z.output<typeof OutputWorkerSchema>;
+
+/**
+ * Bidirectional drift check between {@link InputWorkerSchema} and the
+ * public {@link UserConfig} interface. Excludes `entrypoint` and `env`,
+ * which deliberately differ:
  *
  * - `entrypoint`: the public type accepts a `WorkerModule` namespace
  *   (produced by `import ... with { type: "cf-worker" }`), but the schema
@@ -439,7 +478,7 @@ export type ParsedConfig = z.output<typeof ConfigSchema>;
  * - `env`: see the separate unidirectional drift check below.
  */
 type _ComparableInput = Omit<
-	z.input<typeof ConfigSchema>,
+	z.input<typeof InputWorkerSchema>,
 	"entrypoint" | "env"
 >;
 type _ComparableUserConfig = Omit<UserConfig, "entrypoint" | "env">;
@@ -460,14 +499,14 @@ void _assertSchemaMatchesUserConfig;
  * runtime, so a bidirectional check would always fail in that direction.
  *
  * We therefore only assert that `UserConfig['env']` is assignable to
- * `z.input<typeof ConfigSchema>['env']` — i.e. every binding shape the
- * public type accepts is something the schema is willing to parse. This
- * catches drift where the public type drops a field the schema still
- * requires, renames a field, changes a field's type to one the schema
- * rejects, or adds a binding the schema doesn't know about.
+ * `z.input<typeof InputWorkerSchema>['env']` — i.e. every binding shape
+ * the public type accepts is something the schema is willing to parse.
+ * This catches drift where the public type drops a field the schema
+ * still requires, renames a field, changes a field's type to one the
+ * schema rejects, or adds a binding the schema doesn't know about.
  */
 type _AssertUserConfigEnvExtendsSchema = UserConfig["env"] extends z.input<
-	typeof ConfigSchema
+	typeof InputWorkerSchema
 >["env"]
 	? true
 	: false;

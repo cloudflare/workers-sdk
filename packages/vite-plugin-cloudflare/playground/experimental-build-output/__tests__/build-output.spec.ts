@@ -35,12 +35,12 @@ describe.runIf(isBuild)("Build Output API spec", () => {
 	test("emits a bundle/ directory with the entry chunk", ({ expect }) => {
 		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
-			mainModule: string;
+			manifest: { mainModule: string };
 		};
 		const entryPath = path.join(
 			getBuildOutputDir(),
 			"bundle",
-			config.mainModule
+			config.manifest.mainModule
 		);
 		expect(fs.existsSync(entryPath)).toBe(true);
 	});
@@ -50,7 +50,7 @@ describe.runIf(isBuild)("Build Output API spec", () => {
 		expect(fs.existsSync(assetsDir)).toBe(true);
 	});
 
-	test("strips `entrypoint` in worker.config.json and adds `mainModule` + `modules`", ({
+	test("strips `entrypoint` in worker.config.json and adds `manifest`", ({
 		expect,
 	}) => {
 		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
@@ -59,35 +59,41 @@ describe.runIf(isBuild)("Build Output API spec", () => {
 			unknown
 		>;
 		expect(config).not.toHaveProperty("entrypoint");
-		expect(typeof config.mainModule).toBe("string");
-		expect(typeof config.modules).toBe("object");
+		expect(typeof config.manifest).toBe("object");
+		const manifest = config.manifest as Record<string, unknown>;
+		expect(typeof manifest.mainModule).toBe("string");
+		expect(typeof manifest.modules).toBe("object");
 	});
 
-	test("includes every module in `modules` on disk under bundle/", ({
+	test("includes every module in `manifest.modules` on disk under bundle/", ({
 		expect,
 	}) => {
 		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
-			modules: Record<string, { type: string }>;
+			manifest: { modules: Record<string, { type: string }> };
 		};
 		const bundleDir = path.join(getBuildOutputDir(), "bundle");
 
-		for (const moduleName of Object.keys(config.modules)) {
+		for (const moduleName of Object.keys(config.manifest.modules)) {
 			const modulePath = path.join(bundleDir, moduleName);
 			expect(fs.existsSync(modulePath), modulePath).toBe(true);
 		}
 	});
 
-	test("includes source maps in `modules` with type `sourcemap`", ({
+	test("includes source maps in `manifest.modules` with type `sourcemap`", ({
 		expect,
 	}) => {
 		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
-			mainModule: string;
-			modules: Record<string, { type: string }>;
+			manifest: {
+				mainModule: string;
+				modules: Record<string, { type: string }>;
+			};
 		};
-		const sourceMapName = `${config.mainModule}.map`;
-		expect(config.modules[sourceMapName]).toEqual({ type: "sourcemap" });
+		const sourceMapName = `${config.manifest.mainModule}.map`;
+		expect(config.manifest.modules[sourceMapName]).toEqual({
+			type: "sourcemap",
+		});
 		const sourceMapPath = path.join(
 			getBuildOutputDir(),
 			"bundle",

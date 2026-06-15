@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { detectModuleType, writeOutputWorkerConfig } from "../build-output";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
-import type { ModuleType } from "../build-output";
+import type { ModuleType } from "@cloudflare/config";
 
 /**
  * Build Output API plugin. Replaces `outputConfigPlugin` when

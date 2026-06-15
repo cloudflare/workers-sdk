@@ -8,7 +8,7 @@ import {
 	getWorkerConfigPath,
 	WORKER_CONFIG_FILENAME,
 } from "./build-output";
-import type { ModuleType, OutputWorkerConfig } from "./build-output";
+import type { ModuleType } from "@cloudflare/config";
 import type { Unstable_Config } from "wrangler";
 
 export interface Bundle {
@@ -47,7 +47,8 @@ export async function readBuildOutputWorkers(
 		);
 	}
 
-	const { convertToWranglerConfig } = await import("@cloudflare/config");
+	const { OutputWorkerSchema, convertToWranglerConfig } =
+		await import("@cloudflare/config");
 
 	return workerNames.map((workerName) => {
 		const configPath = getWorkerConfigPath(root, workerName);
@@ -55,10 +56,11 @@ export async function readBuildOutputWorkers(
 			fs.existsSync(configPath),
 			`Build Output API: missing \`${WORKER_CONFIG_FILENAME}\` for Worker "${workerName}" at ${configPath}.`
 		);
-		const outputConfig = JSON.parse(
-			fs.readFileSync(configPath, "utf-8")
-		) as OutputWorkerConfig;
-		const rawConfig = convertToWranglerConfig(outputConfig);
+		const outputConfig = OutputWorkerSchema.parse(
+			JSON.parse(fs.readFileSync(configPath, "utf-8"))
+		);
+		const { manifest, ...inputShape } = outputConfig;
+		const rawConfig = convertToWranglerConfig(inputShape);
 
 		const { config, diagnostics } = normalizeAndValidateConfig(
 			rawConfig,
@@ -86,12 +88,12 @@ export async function readBuildOutputWorkers(
 		}
 
 		let bundle: Bundle | undefined;
-		if ("mainModule" in outputConfig) {
-			config.main = outputConfig.mainModule;
+		if (manifest) {
+			config.main = manifest.mainModule;
 			bundle = {
 				rootPath: bundleDir,
-				mainModule: outputConfig.mainModule,
-				modules: outputConfig.modules,
+				mainModule: manifest.mainModule,
+				modules: manifest.modules,
 			};
 		}
 

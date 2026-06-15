@@ -36,7 +36,6 @@ import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
 import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
-import type { ModuleType } from "./build-output";
 import type { Bundle } from "./build-output-preview";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
@@ -46,6 +45,7 @@ import type {
 	WorkersPluginContext,
 } from "./context";
 import type { PersistState } from "./plugin-config";
+import type { ModuleType } from "@cloudflare/config";
 import type {
 	MiniflareOptions,
 	ModuleRuleType,

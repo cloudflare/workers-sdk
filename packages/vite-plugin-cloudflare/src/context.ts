@@ -12,7 +12,7 @@ import type {
 	Worker,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type { ParsedConfig } from "@cloudflare/config";
+import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 import type { Unstable_Config } from "wrangler";
@@ -207,7 +207,9 @@ export class PluginContext {
 		return this.#getWorker(environmentName)?.config;
 	}
 
-	getWorkerNewConfig(environmentName: string): ParsedConfig | undefined {
+	getWorkerNewConfig(
+		environmentName: string
+	): ParsedInputWorkerConfig | undefined {
 		return this.#getWorker(environmentName)?.parsedNewConfig;
 	}
 

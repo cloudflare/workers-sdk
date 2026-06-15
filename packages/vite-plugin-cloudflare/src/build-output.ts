@@ -1,6 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { ParsedConfig } from "@cloudflare/config";
+import type {
+	ModuleType,
+	ParsedInputWorkerConfig,
+	ParsedOutputWorkerConfig,
+} from "@cloudflare/config";
 
 /**
  * Initial draft version of the Build Output API.
@@ -48,23 +52,6 @@ export function getWorkerAssetsDir(root: string, workerName: string): string {
 }
 
 /**
- * Module types.
- *
- * `esm`, `wasm`, `data`, `text`, `sourcemap` are produced by the Vite plugin today.
- * `cjs`, `python`, `pythonRequirement`, `json` are reserved for future use.
- */
-export type ModuleType =
-	| "esm"
-	| "cjs"
-	| "python"
-	| "pythonRequirement"
-	| "wasm"
-	| "text"
-	| "data"
-	| "json"
-	| "sourcemap";
-
-/**
  * Map a bundle filename to its declared module type.
  */
 export function detectModuleType(filename: string): ModuleType {
@@ -92,31 +79,19 @@ export function detectModuleType(filename: string): ModuleType {
 }
 
 /**
- * The output `worker.config.json`.
+ * Write the output `worker.config.json` for a given Worker to the Build
+ * Output API tree.
  *
- * - Workers mode: `bundle/` present, `mainModule` + `modules` required.
- * - Assets-only mode: `bundle/` absent, `mainModule` + `modules` omitted.
+ * - Workers mode: `manifest` is provided (bundle/ present on disk).
+ * - Assets-only mode: `manifest` is omitted (no bundle/ directory).
  */
-export type OutputWorkerConfig = Omit<ParsedConfig, "entrypoint"> &
-	(
-		| {
-				mainModule: string;
-				modules: Record<string, { type: ModuleType }>;
-		  }
-		// oxlint-disable-next-line typescript/no-empty-object-type -- needed for type intersection
-		| {}
-	);
-
 export function writeOutputWorkerConfig(
 	root: string,
-	parsedConfig: ParsedConfig,
-	bundle?: {
-		mainModule: string;
-		modules: Record<string, { type: ModuleType }>;
-	}
+	parsedConfig: ParsedInputWorkerConfig,
+	manifest?: ParsedOutputWorkerConfig["manifest"]
 ): void {
-	const { entrypoint, ...rest } = parsedConfig;
-	const outputConfig = { ...rest, ...bundle };
+	const { entrypoint: _entrypoint, ...rest } = parsedConfig;
+	const outputConfig: ParsedOutputWorkerConfig = { ...rest, manifest };
 	const workerOutputDir = path.join(getWorkersDir(root), outputConfig.name);
 	fs.mkdirSync(workerOutputDir, { recursive: true });
 	const configPath = getWorkerConfigPath(root, outputConfig.name);

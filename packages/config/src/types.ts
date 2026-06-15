@@ -113,7 +113,7 @@ type Export = DurableObjectExport;
  * Worker configuration. This is the input shape passed to
  * [`defineWorker`](https://developers.cloudflare.com/workers/wrangler/configuration/).
  *
- * Fields are validated at runtime by `ConfigSchema` and normalised before
+ * Fields are validated at runtime by `InputWorkerSchema` and normalised before
  * being passed to downstream tooling.
  */
 export interface UserConfig {
