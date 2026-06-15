@@ -39,7 +39,7 @@ async function mergeSharedConfigArgs(
 
 	validateAssetsArgsAndConfig(args, config);
 
-	const assetsOptions = getAssetsOptions({ args, config });
+	const assetsDir = validateAssetsOptions({ args, config });
 
 	let name = getScriptName(args, config);
 

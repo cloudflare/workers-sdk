@@ -1,5 +1,5 @@
 import type {
-	AssetsOptions,
+	ValidatedAssetsOptions,
 	LegacyAssetPaths,
 	CfModule,
 	CfModuleType,
