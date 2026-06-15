@@ -143,7 +143,6 @@ export class Context extends RpcTarget {
 	#registerRollback(options: {
 		cacheKey: string;
 		rollbackFn: RollbackFn | undefined;
-		stepName: string;
 		stepContext: WorkflowStepContext;
 		output?: unknown;
 		rollbackConfig?: WorkflowStepConfig;
@@ -151,7 +150,6 @@ export class Context extends RpcTarget {
 		const {
 			cacheKey,
 			rollbackFn,
-			stepName,
 			stepContext,
 			output,
 			rollbackConfig,
@@ -160,7 +158,6 @@ export class Context extends RpcTarget {
 			registerRollbackFn(this.#engine.rollbackRegistry, {
 				cacheKey,
 				fn: rollbackFn,
-				stepName,
 				stepContext,
 				...("output" in options && { output }),
 				...(rollbackConfig !== undefined && { config: rollbackConfig }),
@@ -322,7 +319,6 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
@@ -349,7 +345,6 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
@@ -848,7 +843,6 @@ export class Context extends RpcTarget {
 					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepName: stepNameWithCounter,
 						stepContext: forwardStepContext(),
 						rollbackConfig,
 					});
@@ -951,7 +945,6 @@ export class Context extends RpcTarget {
 					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepName: stepNameWithCounter,
 						stepContext: forwardStepContext(),
 						rollbackConfig,
 					});
@@ -971,7 +964,6 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
 				stepContext: forwardStepContext(),
 				output: result,
 				rollbackConfig,

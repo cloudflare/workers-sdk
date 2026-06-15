@@ -32,7 +32,6 @@ export type WorkflowStepRollbackOptions = {
 
 export type RollbackRegistryEntry = {
 	fn: RollbackFn;
-	stepName: string;
 	stepContext: WorkflowStepContext;
 	output?: unknown;
 	config?: WorkflowStepConfig;
@@ -101,14 +100,13 @@ export function registerRollbackFn(
 	registry: Map<string, RollbackRegistryEntry>,
 	registration: RollbackRegistration
 ): void {
-	const { cacheKey, fn, stepName, stepContext, output, config } = registration;
+	const { cacheKey, fn, stepContext, output, config } = registration;
 	const existing = registry.get(cacheKey);
 	if (existing) {
 		disposeRollbackStub(existing.fn);
 	}
 	registry.set(cacheKey, {
 		fn: dupRollbackStub(fn),
-		stepName,
 		stepContext,
 		...("output" in registration && { output }),
 		...(config !== undefined && { config }),
@@ -176,8 +174,9 @@ export async function executeRollbacks(
 
 	for (const [i, [cacheKey, entry]] of entries.entries()) {
 		const ctx = engine.createRollbackContext({ cacheKey });
+		const rollbackName = `${entry.stepContext.step.name}-${entry.stepContext.step.count}`;
 		try {
-			await ctx.do(entry.stepName, entry.config ?? {}, async () => {
+			await ctx.do(rollbackName, entry.config ?? {}, async () => {
 				await entry.fn({
 					ctx: structuredClone(entry.stepContext),
 					error: triggerError,
