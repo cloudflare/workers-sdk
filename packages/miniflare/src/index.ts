@@ -3001,19 +3001,27 @@ export class Miniflare {
 		workerName?: string
 	): Promise<T> {
 		const proxyClient = await this._getProxyClient();
+		const resolvedWorkerName =
+			workerName ?? this.#workerOpts[0].core.name ?? "";
 		const proxyBindingName = getProxyBindingName(
 			pluginName,
-			// Default to entrypoint worker if none specified
-			workerName ?? this.#workerOpts[0].core.name ?? "",
+			resolvedWorkerName,
 			bindingName
 		);
 		const proxy = proxyClient.env[proxyBindingName];
 		if (proxy === undefined) {
 			// If the user specified an invalid binding/worker name, throw
-			const friendlyWorkerName =
-				workerName === undefined ? "entrypoint" : JSON.stringify(workerName);
+			const friendlyWorkerName = resolvedWorkerName
+				? `${JSON.stringify(resolvedWorkerName)} worker`
+				: "the worker";
+			const bindingTypeDescription = Object.fromEntries(
+				this.#mergedPluginEntries
+			)[pluginName]?.bindingTypeDescription;
+			const bindingType = bindingTypeDescription
+				? `${bindingTypeDescription} binding`
+				: "binding";
 			throw new TypeError(
-				`${JSON.stringify(bindingName)} unbound in ${friendlyWorkerName} worker`
+				`No ${bindingType} named ${JSON.stringify(bindingName)} found in ${friendlyWorkerName}.`
 			);
 		}
 		return proxy as T;

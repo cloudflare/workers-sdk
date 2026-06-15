@@ -40,6 +40,7 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 	typeof DispatchNamespaceOptionsSchema
 > = {
 	options: DispatchNamespaceOptionsSchema,
+	bindingTypeDescription: "Dispatch namespace",
 	async getBindings(options) {
 		if (!options.dispatchNamespaces) {
 			return [];

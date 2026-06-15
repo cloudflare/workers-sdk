@@ -43,6 +43,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 	typeof BrowserRenderingOptionsSchema
 > = {
 	options: BrowserRenderingOptionsSchema,
+	bindingTypeDescription: "Browser Rendering",
 	async getBindings(options) {
 		if (!options.browserRendering) {
 			return [];

@@ -28,6 +28,7 @@ const AI_SEARCH_INST_SCOPE = "ai-search-inst";
 
 export const AI_SEARCH_PLUGIN: Plugin<typeof AISearchOptionsSchema> = {
 	options: AISearchOptionsSchema,
+	bindingTypeDescription: "AI Search",
 	async getBindings(options) {
 		const bindings: {
 			name: string;

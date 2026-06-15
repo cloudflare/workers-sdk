@@ -66,6 +66,49 @@ export type WorkerHandle = {
 	 * ```
 	 */
 	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
+	/**
+	 * Returns a KV namespace binding configured on this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * const store = await worker.getKVNamespace("STORE");
+	 * const value = await store.get("key");
+	 * ```
+	 */
+	getKVNamespace(bindingName: string): ReturnType<Miniflare["getKVNamespace"]>;
+	/**
+	 * Returns an R2 bucket binding configured on this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * const bucket = await worker.getR2Bucket("BUCKET");
+	 * const object = await bucket.get("key");
+	 * ```
+	 */
+	getR2Bucket(bindingName: string): ReturnType<Miniflare["getR2Bucket"]>;
+	/**
+	 * Returns a D1 database binding configured on this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * const db = await worker.getD1Database("DB");
+	 * const value = await db.prepare("SELECT value FROM entries").first("value");
+	 * ```
+	 */
+	getD1Database(bindingName: string): ReturnType<Miniflare["getD1Database"]>;
+	/**
+	 * Returns a Durable Object namespace binding configured on this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * const namespace = await worker.getDurableObjectNamespace("OBJECT");
+	 * const stub = namespace.getByName("counter");
+	 * const response = await stub.fetch("http://example.com/");
+	 * ```
+	 */
+	getDurableObjectNamespace(
+		bindingName: string
+	): ReturnType<Miniflare["getDurableObjectNamespace"]>;
 };
 
 export type TestHarness = {
@@ -366,8 +409,11 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		};
 		try {
 			debugLog("startup - started");
-			await updateConfig(session, inputs);
-			await waitForProxyReady(session);
+			await Promise.all([
+				waitForProxyReady(session),
+				waitForReloadComplete(session),
+				updateConfig(session, inputs),
+			]);
 			debugLog("startup - completed");
 			return session;
 		} catch (error) {
@@ -562,7 +608,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	async function getRuntimeMiniflare(session: ServerSession) {
-		await session.primaryDevEnv.proxy.runtimeMessageMutex.drained();
 		const miniflare = session.primaryDevEnv.runtimes[0].mf;
 		assert(miniflare, "Worker runtime is not available.");
 		return miniflare;
@@ -591,7 +636,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 		if (typeof input === "string" && !URL.canParse(input)) {
 			const session = await resolveSession();
-			const { url } = await waitForProxyReady(session);
+			const { url } = await session.primaryDevEnv.proxy.ready.promise;
 			const baseUrl = new URL(url);
 
 			if (
@@ -628,7 +673,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	return {
 		async listen() {
 			const session = serverSession ?? (await startServerSession());
-			const ready = await waitForProxyReady(session);
+			const ready = await session.primaryDevEnv.proxy.ready.promise;
 
 			return {
 				url: ready.url,
@@ -682,6 +727,34 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const result = await response.json();
 
 					return result as FetcherScheduledResult;
+				},
+				async getKVNamespace(bindingName) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+
+					return miniflare.getKVNamespace(bindingName, workerName);
+				},
+				async getR2Bucket(bindingName) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+
+					return miniflare.getR2Bucket(bindingName, workerName);
+				},
+				async getD1Database(bindingName) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+
+					return miniflare.getD1Database(bindingName, workerName);
+				},
+				async getDurableObjectNamespace(bindingName) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+
+					return miniflare.getDurableObjectNamespace(bindingName, workerName);
 				},
 			};
 		},
