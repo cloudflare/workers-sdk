@@ -311,7 +311,7 @@ export const buildAssetManifest = async (dir: string) => {
 					);
 				}
 				manifest[normalizeFilePath(relativeFilepath)] = {
-					hash: await hashFile(filepath),
+					hash: hashFile(filepath),
 					size: filestat.size,
 				};
 			}

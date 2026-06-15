@@ -68,7 +68,6 @@
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
-		"blake3-wasm": "3.0.0",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
@@ -92,6 +91,7 @@
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@netlify/build-info": "^10.5.1",
+		"@noble/hashes": "2.2.0",
 		"@sentry/node": "^7.86.0",
 		"@sentry/types": "^7.86.0",
 		"@sentry/utils": "^7.86.0",

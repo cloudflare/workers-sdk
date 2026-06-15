@@ -1,16 +1,15 @@
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
-import { hash as blake3hash, load } from "blake3-wasm";
+import { blake3 } from "@noble/hashes/blake3.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 
-let loaded: Promise<void> | undefined;
-export async function hashFile(filepath: string) {
-	await (loaded ??= load());
-
+export function hashFile(filepath: string) {
 	const contents = readFileSync(filepath);
 	const base64Contents = contents.toString("base64");
 	const extension = extname(filepath).substring(1);
 
-	return blake3hash(base64Contents + extension)
-		.toString("hex")
-		.slice(0, 32);
+	return bytesToHex(blake3(Buffer.from(base64Contents + extension))).slice(
+		0,
+		32
+	);
 }

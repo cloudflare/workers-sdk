@@ -21,7 +21,6 @@ export default defineConfig(() => [
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		external: [
 			/^@cloudflare\//,
-			"blake3-wasm",
 			"miniflare",
 			"p-queue",
 			"pretty-bytes",

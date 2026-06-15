@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { hashFile } from "@cloudflare/deploy-helpers";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
 import { parseHeaders, parseRedirects } from "@cloudflare/workers-shared";
 import { watch } from "chokidar";
@@ -8,7 +9,6 @@ import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
 import { Dispatcher, getGlobalDispatcher } from "undici";
 import { logger } from "../logger";
-import { hashFile } from "../pages/hash";
 import type { Logger } from "../logger";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
@@ -239,7 +239,7 @@ async function generateAssetsFetch(
 					lstatSync(filepath, { throwIfNoEntry: false })?.isFile() &&
 					!ignoredFiles.includes(filepath)
 				) {
-					const hash = await hashFile(filepath);
+					const hash = hashFile(filepath);
 					assetKeyEntryMap.set(hash, filepath);
 					return hash;
 				}
