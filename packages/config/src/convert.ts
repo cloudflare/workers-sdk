@@ -1,5 +1,5 @@
 import { isParsedUnsafeBinding } from "./schema";
-import type { ParsedConfig } from "./schema";
+import type { ParsedInputWorkerConfig } from "./schema";
 import type { Json } from "./utils";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -7,12 +7,14 @@ import type { RawConfig } from "@cloudflare/workers-utils";
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
  *
  * The caller is responsible for unwrapping any function/promise wrapper around
- * the config and validating it against `ConfigSchema` before passing it in.
+ * the config and validating it against `InputWorkerSchema` before passing it in.
  *
  * @param config The parsed (post-validation) config.
  * @returns The corresponding Wrangler `RawConfig`.
  */
-export function convertToWranglerConfig(config: ParsedConfig): RawConfig {
+export function convertToWranglerConfig(
+	config: ParsedInputWorkerConfig
+): RawConfig {
 	const result: RawConfig = {};
 
 	convertTopLevel(config, result);
@@ -29,7 +31,10 @@ export function convertToWranglerConfig(config: ParsedConfig): RawConfig {
 // TOP-LEVEL FIELDS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertTopLevel(config: ParsedConfig, result: RawConfig): void {
+function convertTopLevel(
+	config: ParsedInputWorkerConfig,
+	result: RawConfig
+): void {
 	if (config.name !== undefined) {
 		result.name = config.name;
 	}
@@ -87,7 +92,7 @@ function convertTopLevel(config: ParsedConfig, result: RawConfig): void {
 }
 
 function convertObservability(
-	observability: NonNullable<ParsedConfig["observability"]>
+	observability: NonNullable<ParsedInputWorkerConfig["observability"]>
 ): NonNullable<RawConfig["observability"]> {
 	const out: NonNullable<RawConfig["observability"]> = {};
 	if (observability.enabled !== undefined) {
@@ -140,7 +145,7 @@ function convertObservability(
 }
 
 function convertUnsafeTopLevel(
-	unsafe: NonNullable<ParsedConfig["unsafe"]>
+	unsafe: NonNullable<ParsedInputWorkerConfig["unsafe"]>
 ): NonNullable<RawConfig["unsafe"]> {
 	const out: NonNullable<RawConfig["unsafe"]> = {};
 	if (unsafe.metadata !== undefined) {
@@ -164,7 +169,7 @@ function convertUnsafeTopLevel(
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertBindingsAndAssets(
-	config: ParsedConfig,
+	config: ParsedInputWorkerConfig,
 	result: RawConfig
 ): void {
 	let assetsBindingName: string | undefined;
@@ -651,7 +656,10 @@ function convertBindingsAndAssets(
 // EXPORTS (Durable Objects + Workflows)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertExports(config: ParsedConfig, _result: RawConfig): void {
+function convertExports(
+	config: ParsedInputWorkerConfig,
+	_result: RawConfig
+): void {
 	const exports = config.exports;
 	if (!exports) {
 		return;
@@ -669,7 +677,10 @@ function convertExports(config: ParsedConfig, _result: RawConfig): void {
 // TRIGGERS (scheduled + fetch + queue consumer)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertTriggers(config: ParsedConfig, result: RawConfig): void {
+function convertTriggers(
+	config: ParsedInputWorkerConfig,
+	result: RawConfig
+): void {
 	const triggers = config.triggers;
 	if (!triggers || triggers.length === 0) {
 		return;
@@ -732,7 +743,10 @@ function convertTriggers(config: ParsedConfig, result: RawConfig): void {
 // DOMAINS (top-level domains -> custom-domain routes)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertDomains(config: ParsedConfig, result: RawConfig): void {
+function convertDomains(
+	config: ParsedInputWorkerConfig,
+	result: RawConfig
+): void {
 	if (!config.domains || config.domains.length === 0) {
 		return;
 	}
@@ -749,7 +763,10 @@ function convertDomains(config: ParsedConfig, result: RawConfig): void {
 // TAIL CONSUMERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertTailConsumers(config: ParsedConfig, result: RawConfig): void {
+function convertTailConsumers(
+	config: ParsedInputWorkerConfig,
+	result: RawConfig
+): void {
 	const consumers = config.tailConsumers;
 	if (!consumers || consumers.length === 0) {
 		return;

@@ -28,7 +28,7 @@ const depsStore = new AsyncLocalStorage<Set<string>>();
  * Returns the module's default export, plus the set of file paths
  * imported during resolution. Callers are responsible for unwrapping
  * function/promise wrappers around the returned value and validating it
- * against `ConfigSchema`.
+ * against `InputWorkerSchema`.
  *
  * @param configPath Filesystem path to the config file. Relative paths are
  *   resolved against `process.cwd()`.
