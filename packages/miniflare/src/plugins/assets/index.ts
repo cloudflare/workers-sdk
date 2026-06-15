@@ -60,6 +60,7 @@ const tempDirCache = new Map<string, string>();
 
 export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 	options: AssetsOptionsSchema,
+	bindingTypeDescription: "Assets",
 	async getBindings(options: z.infer<typeof AssetsOptionsSchema>) {
 		if (!options.assets?.binding) {
 			return [];

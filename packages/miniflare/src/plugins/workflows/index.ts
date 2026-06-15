@@ -49,6 +49,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 > = {
 	options: WorkflowsOptionsSchema,
 	sharedOptions: WorkflowsSharedOptionsSchema,
+	bindingTypeDescription: "Workflow",
 	async getBindings(options: z.infer<typeof WorkflowsOptionsSchema>) {
 		return Object.entries(options.workflows ?? {}).map(
 			([bindingName, workflow]) => ({

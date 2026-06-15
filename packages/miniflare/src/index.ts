@@ -2998,8 +2998,7 @@ export class Miniflare {
 	async #getProxy<T>(
 		pluginName: string,
 		bindingName: string,
-		workerName?: string,
-		expectedBindingType?: string
+		workerName?: string
 	): Promise<T> {
 		const proxyClient = await this._getProxyClient();
 		const resolvedWorkerName =
@@ -3012,11 +3011,14 @@ export class Miniflare {
 		const proxy = proxyClient.env[proxyBindingName];
 		if (proxy === undefined) {
 			// If the user specified an invalid binding/worker name, throw
-			const friendlyWorkerName = workerName
-				? `${JSON.stringify(workerName)} worker`
+			const friendlyWorkerName = resolvedWorkerName
+				? `${JSON.stringify(resolvedWorkerName)} worker`
 				: "the worker";
-			const bindingType = expectedBindingType
-				? `${expectedBindingType} binding`
+			const bindingTypeDescription = Object.fromEntries(
+				this.#mergedPluginEntries
+			)[pluginName]?.bindingTypeDescription;
+			const bindingType = bindingTypeDescription
+				? `${bindingTypeDescription} binding`
 				: "binding";
 			throw new TypeError(
 				`No ${bindingType} named ${JSON.stringify(bindingName)} found in ${friendlyWorkerName}.`
@@ -3070,34 +3072,19 @@ export class Miniflare {
 		return result.deleted;
 	}
 	getD1Database(bindingName: string, workerName?: string): Promise<D1Database> {
-		return this.#getProxy(
-			D1_PLUGIN_NAME,
-			bindingName,
-			workerName,
-			"D1 database"
-		);
+		return this.#getProxy(D1_PLUGIN_NAME, bindingName, workerName);
 	}
 	getDurableObjectNamespace(
 		bindingName: string,
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
-		return this.#getProxy(
-			DURABLE_OBJECTS_PLUGIN_NAME,
-			bindingName,
-			workerName,
-			"Durable Object namespace"
-		);
+		return this.#getProxy(DURABLE_OBJECTS_PLUGIN_NAME, bindingName, workerName);
 	}
 	getKVNamespace(
 		bindingName: string,
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<KVNamespace>> {
-		return this.#getProxy(
-			KV_PLUGIN_NAME,
-			bindingName,
-			workerName,
-			"KV namespace"
-		);
+		return this.#getProxy(KV_PLUGIN_NAME, bindingName, workerName);
 	}
 	getSecretsStoreSecretAPI(
 		bindingName: string,
@@ -3122,18 +3109,13 @@ export class Miniflare {
 		bindingName: string,
 		workerName?: string
 	): Promise<Queue<Body>> {
-		return this.#getProxy(
-			QUEUES_PLUGIN_NAME,
-			bindingName,
-			workerName,
-			"Queue producer"
-		);
+		return this.#getProxy(QUEUES_PLUGIN_NAME, bindingName, workerName);
 	}
 	getR2Bucket(
 		bindingName: string,
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<R2Bucket>> {
-		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName, "R2 bucket");
+		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
 	}
 	getImagesBinding(
 		bindingName: string,

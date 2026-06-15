@@ -92,6 +92,7 @@ export const R2_PLUGIN: Plugin<
 > = {
 	options: R2OptionsSchema,
 	sharedOptions: R2SharedOptionsSchema,
+	bindingTypeDescription: "R2 bucket",
 	getBindings(options) {
 		const buckets = namespaceEntries(options.r2Buckets);
 		return buckets.map<Worker_Binding>(([name, bucket]) => ({

@@ -2667,7 +2667,7 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	let binding: unknown = await mf.getD1Database("DB");
 	expect(binding).toBeDefined();
 	await expect(() => mf.getD1Database("DO")).rejects.toThrow(
-		new TypeError(`No D1 database binding named "DO" found in the worker.`)
+		new TypeError(`No D1 database binding named "DO" found in "a" worker.`)
 	);
 	await expect(() => mf.getD1Database("DB", "c")).rejects.toThrow(
 		new TypeError(`No D1 database binding named "DB" found in "c" worker.`)

@@ -26,6 +26,7 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 > = {
 	options: AnalyticsEngineSchemaOptionsSchema,
 	sharedOptions: AnalyticsEngineSchemaSharedOptionsSchema,
+	bindingTypeDescription: "Analytics Engine dataset",
 	async getBindings(options) {
 		if (!options.analyticsEngineDatasets) {
 			return [];

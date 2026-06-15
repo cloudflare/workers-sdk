@@ -34,6 +34,7 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 
 export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 	options: RatelimitOptionsSchema,
+	bindingTypeDescription: "Rate Limit",
 	getBindings(options: z.infer<typeof RatelimitOptionsSchema>) {
 		if (!options.ratelimits) {
 			return [];
