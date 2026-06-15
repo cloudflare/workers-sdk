@@ -35,7 +35,7 @@ describe("time-travel", () => {
 					"d1 time-travel restore db --timestamp=1234 --bookmark=5678"
 				)
 			).rejects.toThrowError(
-				`Provide either a timestamp, or a bookmark - not both.`
+				`Cannot use --timestamp and --bookmark together. Provide only one: --timestamp to restore to a point in time, or --bookmark to restore to a specific bookmark.`
 			);
 		});
 	});

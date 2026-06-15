@@ -8,7 +8,6 @@ import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { WORKFLOW_NOT_FOUND_CODE } from "../../deploy/check-workflow-conflicts";
 import { clearOutputFilePath } from "../../output";
-import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -35,8 +34,6 @@ vi.mock("../../check/commands", async (importOriginal) => {
 		},
 	};
 });
-
-vi.mock("../../utils/fetch-secrets");
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -76,9 +73,12 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
@@ -318,7 +318,7 @@ describe("deploy", () => {
 					expect(body).toEqual({
 						script_name: "test-name",
 						class_name: "MyWorkflow",
-						schedules: "0 * * * *",
+						schedules: [{ cron: "0 * * * *" }],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -375,7 +375,7 @@ describe("deploy", () => {
 					expect(body).toEqual({
 						script_name: "test-name",
 						class_name: "MyWorkflow",
-						schedules: ["0 * * * *", "0 9 * * 1"],
+						schedules: [{ cron: "0 * * * *" }, { cron: "0 9 * * 1" }],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -434,7 +434,7 @@ describe("deploy", () => {
 						script_name: "test-name",
 						class_name: "MyWorkflow",
 						limits: { steps: 5000 },
-						schedules: "*/15 * * * *",
+						schedules: [{ cron: "*/15 * * * *" }],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -818,7 +818,7 @@ describe("deploy", () => {
 						expect(body).toEqual({
 							script_name: "my-app-staging",
 							class_name: "MyWorkflow",
-							schedules: "0 * * * *",
+							schedules: [{ cron: "0 * * * *" }],
 						});
 						return HttpResponse.json(
 							createFetchResult({ id: "mock-new-workflow-id" })

@@ -77,6 +77,7 @@ export const HyperdriveInputOptionsSchema = z.object({
 
 export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 	options: HyperdriveInputOptionsSchema,
+	bindingTypeDescription: "Hyperdrive",
 	getBindings(options) {
 		return Object.entries(options.hyperdrives ?? {}).map<Worker_Binding>(
 			([name, url]) => {

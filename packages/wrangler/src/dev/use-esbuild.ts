@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
-import { watch } from "chokidar";
+import { watch as watchPaths } from "chokidar";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -58,6 +58,7 @@ export function runBuild(
 		local,
 		targetConsumer,
 		testScheduled,
+		watch,
 		projectRoot,
 		onStart,
 		defineNavigatorUserAgent,
@@ -86,6 +87,7 @@ export function runBuild(
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled: boolean;
+		watch: boolean;
 		projectRoot: string | undefined;
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
@@ -161,7 +163,7 @@ export function runBuild(
 						additionalModules: newAdditionalModules,
 						jsxFactory,
 						jsxFragment,
-						watch: true,
+						watch,
 						tsconfig,
 						minify,
 						keepNames,
@@ -198,9 +200,9 @@ export function runBuild(
 
 		// if "noBundle" is true, then we need to manually watch all modules and
 		// trigger "builds" when any change
-		if (noBundle) {
+		if (noBundle && watch) {
 			const watching = [path.resolve(entry.moduleRoot)];
-			const watcher = watch(watching, {
+			const watcher = watchPaths(watching, {
 				persistent: true,
 				// Ignore VCS dirs, dependencies, and the .wrangler dir (which
 				// contains miniflare state/cache files written by workerd at

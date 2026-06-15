@@ -43,6 +43,7 @@ export const STREAM_PLUGIN: Plugin<
 > = {
 	options: StreamOptionsSchema,
 	sharedOptions: StreamSharedOptionsSchema,
+	bindingTypeDescription: "Stream",
 	async getBindings(options) {
 		if (!options.stream) {
 			return [];

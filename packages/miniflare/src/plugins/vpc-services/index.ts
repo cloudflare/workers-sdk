@@ -21,6 +21,7 @@ export const VPC_SERVICES_PLUGIN_NAME = "vpc-services";
 
 export const VPC_SERVICES_PLUGIN: Plugin<typeof VpcServicesOptionsSchema> = {
 	options: VpcServicesOptionsSchema,
+	bindingTypeDescription: "VPC service",
 	async getBindings(options) {
 		if (!options.vpcServices) {
 			return [];

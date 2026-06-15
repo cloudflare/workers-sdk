@@ -1,0 +1,72 @@
+{
+	"name": "@cloudflare/workers-auth",
+	"version": "0.2.0",
+	"description": "Internal OAuth 2.0 + PKCE flow for Cloudflare CLIs. Not intended for external use — APIs may change without notice.",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-auth#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "workers-devprod@cloudflare.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/workers-auth"
+	},
+	"files": [
+		"dist"
+	],
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.mts"
+		},
+		"./test-helpers": {
+			"import": "./dist/test-helpers/index.mjs",
+			"types": "./dist/test-helpers/index.d.mts"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"check:type": "tsc -p ./tsconfig.json",
+		"deploy": "echo 'no deploy'",
+		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
+		"test": "vitest",
+		"test:ci": "vitest run"
+	},
+	"dependencies": {
+		"@cloudflare/workers-utils": "workspace:*",
+		"undici": "catalog:default"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@types/node": "catalog:default",
+		"@vitest/ui": "catalog:default",
+		"concurrently": "^8.2.2",
+		"msw": "catalog:default",
+		"smol-toml": "catalog:default",
+		"ts-dedent": "^2.2.0",
+		"tsup": "8.3.0",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"peerDependencies": {
+		"msw": "catalog:default",
+		"vitest": "^4.1.0"
+	},
+	"peerDependenciesMeta": {
+		"msw": {
+			"optional": true
+		},
+		"vitest": {
+			"optional": true
+		}
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}

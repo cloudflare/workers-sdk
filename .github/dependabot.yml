@@ -20,9 +20,9 @@ updates:
     commit-message:
       prefix: "[C3] "
     labels:
-      - "c3"
+      - "package:c3"
       - "dependencies"
-      - "skip-pr-description-validation"
+      - "ci:skip-pr-description-validation"
 
   # Check for workerd & workers-types updates for Miniflare
   - package-ecosystem: "npm"
@@ -42,7 +42,7 @@ updates:
     labels:
       - "miniflare"
       - "dependencies"
-      - "skip-pr-description-validation"
+      - "ci:skip-pr-description-validation"
     allow:
       - dependency-name: "workerd"
       - dependency-name: "@cloudflare/workers-types"

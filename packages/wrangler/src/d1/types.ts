@@ -5,7 +5,17 @@ export type Database = {
 	binding: string;
 	internal_env?: string;
 	migrationsTableName: string;
-	migrationsFolderPath: string;
+	/**
+	 * The raw `migrations_dir` value the user set in their Wrangler config,
+	 * or undefined if they did not set one.
+	 */
+	migrationsDirRaw?: string;
+	/**
+	 * Optional glob (relative to the Wrangler config file) for discovering
+	 * migration files. When not set, callers should default to
+	 * `${migrationsDirRaw ?? DEFAULT_MIGRATION_PATH}/*.sql`.
+	 */
+	migrationsPattern?: string;
 };
 
 export type DatabaseCreationResult = {

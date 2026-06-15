@@ -21,6 +21,7 @@ export const AI_PLUGIN_NAME = "ai";
 
 export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 	options: AIOptionsSchema,
+	bindingTypeDescription: "AI",
 	async getBindings(options) {
 		if (!options.ai) {
 			return [];

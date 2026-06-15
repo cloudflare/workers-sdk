@@ -1789,6 +1789,27 @@
 										"type": "string",
 										"enum": ["pause", "resume", "restart", "terminate"],
 										"description": "The action to perform on the workflow instance."
+									},
+									"from": {
+										"type": "object",
+										"description": "The step to restart the instance from. Only valid when action is restart.",
+										"required": ["name"],
+										"properties": {
+											"name": {
+												"type": "string",
+												"description": "The name of the step."
+											},
+											"count": {
+												"type": "integer",
+												"minimum": 1,
+												"description": "The 1-based index of the step when multiple steps share the same name and type. Defaults to 1."
+											},
+											"type": {
+												"type": "string",
+												"enum": ["do", "sleep", "waitForEvent"],
+												"description": "The step type. Defaults to do."
+											}
+										}
 									}
 								}
 							}

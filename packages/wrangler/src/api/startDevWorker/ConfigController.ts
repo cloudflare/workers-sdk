@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	formatConfigSnippet,
@@ -13,15 +14,17 @@ import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
-import { readConfig } from "../../config";
+import { readConfig, readNewConfig } from "../../config";
 import { containersScope } from "../../containers";
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
 import { getBindings, getHostAndRoutes, getInferredHost } from "../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
+import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
+import { regenerateNewConfigTypes } from "../../type-generation/new-config";
 import {
 	loginOrRefreshIfRequired,
 	requireApiToken,
@@ -39,13 +42,16 @@ import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import { extractBindingsOfType, unwrapHook } from "./utils";
+import { unwrapHook } from "./utils";
+import type { NewConfig, ReadConfigCommandArgs } from "../../config";
 import type { DevRegistryUpdateEvent } from "./events";
 import type {
 	StartDevWorkerInput,
 	StartDevWorkerOptions,
 	Trigger,
+	WranglerStartDevWorkerInput,
 } from "./types";
+import type { LoginOrRefreshFailureReason } from "@cloudflare/workers-auth";
 import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
 
@@ -54,7 +60,7 @@ const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
 
 async function resolveInspectorConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: WranglerStartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]["inspector"]> {
 	if (input.dev?.inspector === false) {
 		return false;
@@ -73,16 +79,19 @@ async function resolveInspectorConfig(
 
 async function resolveDevConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: WranglerStartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
 	const auth = async () => {
 		if (input.dev?.remote) {
-			const isLoggedIn = await loginOrRefreshIfRequired(config);
-			if (!isLoggedIn) {
-				throw new UserError(
-					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local.",
-					{ telemetryMessage: "api dev remote login required" }
+			const result = await loginOrRefreshIfRequired(config);
+			if (!result.loggedIn) {
+				const errorMessage = getLoginOrRefreshFailureErrorMessage(
+					input.dev.remote,
+					result.reason
 				);
+				throw new UserError(errorMessage, {
+					telemetryMessage: "api dev remote login required",
+				});
 			}
 		}
 
@@ -149,14 +158,22 @@ async function resolveDevConfig(
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
-			hostname: host ?? getInferredHost(routes, config.configPath),
+			hostname:
+				host ??
+				((input.dev?.inferOriginFromRoutes ?? true)
+					? getInferredHost(routes, config.configPath)
+					: undefined),
 		},
+		watch: input.dev?.watch,
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
+		outboundService: input.dev?.outboundService,
+		structuredLogsHandler: input.dev?.structuredLogsHandler,
 		// absolute resolved path
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
+		inferOriginFromRoutes: input.dev?.inferOriginFromRoutes ?? true,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
@@ -169,6 +186,55 @@ async function resolveDevConfig(
 		generateTypes: input.dev?.generateTypes ?? config.dev.generate_types,
 		tunnel: input.dev?.tunnel,
 	} satisfies StartDevWorkerOptions["dev"];
+}
+
+/**
+ * Maps a {@link LoginOrRefreshFailureReason} to a user-facing error message
+ * with actionable remediation steps (e.g. re-running `wrangler login`,
+ * setting `CLOUDFLARE_API_TOKEN`, or falling back to local dev).
+ *
+ * @param remoteMode - The remote dev mode that was requested. When
+ *   `"minimal"` (remote-bindings mode), the suggestion to fall back to
+ *   `--local` dev is omitted because local dev is not a useful alternative.
+ * @param failureReason - The specific {@link LoginOrRefreshFailureReason}
+ *   that describes why login or token refresh could not succeed.
+ * @returns A formatted error message string prefixed with a generic failure
+ *   summary, followed by reason-specific guidance and a `wrangler whoami` tip.
+ */
+function getLoginOrRefreshFailureErrorMessage(
+	remoteMode: boolean | "minimal",
+	failureReason: LoginOrRefreshFailureReason
+) {
+	const errorMessagePrefix = "Could not start remote dev session.";
+	const localFallback =
+		remoteMode === "minimal"
+			? "" // Remote bindings mode — local dev is not a useful fallback
+			: "\n - Or use `wrangler dev --local` to develop locally (remote resources like KV, D1, etc. will use local simulators instead).";
+	const whoamiTip =
+		"\n\nYou can run `wrangler whoami` to check your current authentication status.";
+	const errorMessageBodies = {
+		"no-credentials-non-interactive":
+			" No credentials found, and the environment is non-interactive so browser login cannot be started.\n" +
+			"Either:\n" +
+			" - Set a CLOUDFLARE_API_TOKEN environment variable\n" +
+			` - Run \`wrangler login\` in an interactive terminal first${localFallback}${whoamiTip}`,
+		"no-credentials-login-failed":
+			" No credentials found and the login attempt was unsuccessful.\n" +
+			"Either:\n" +
+			` - Run \`wrangler login\` to try again${localFallback}${whoamiTip}`,
+		"token-expired-non-interactive":
+			" Your auth token has expired and could not be refreshed, and the environment is non-interactive so browser login cannot be started.\n" +
+			"Either:\n" +
+			" - Run `wrangler login` in an interactive terminal\n" +
+			` - Set a CLOUDFLARE_API_TOKEN environment variable${localFallback}${whoamiTip}`,
+		"token-expired-login-failed":
+			" Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful.\n" +
+			"Either:\n" +
+			` - Run \`wrangler login\` to try again${localFallback}${whoamiTip}`,
+	};
+	const errorMessageBody = errorMessageBodies[failureReason];
+	const errorMessage = errorMessagePrefix + errorMessageBody;
+	return errorMessage;
 }
 
 async function resolveBindings(
@@ -198,6 +264,7 @@ async function resolveBindings(
 			{
 				registry,
 				local: !input.dev?.remote,
+				isMultiWorker: getFlag("MULTIWORKER"),
 				remoteBindingsDisabled: input.dev?.remote === false,
 				name: config.name,
 			}
@@ -268,7 +335,8 @@ async function resolveConfig(
 	config: Config,
 	input: StartDevWorkerInput,
 	// If the worker name was previously autogenerated, keep the same one
-	previousName: string | undefined
+	previousName: string | undefined,
+	newConfigEnabled: boolean
 ): Promise<{
 	config: StartDevWorkerOptions;
 	printCurrentBindings: (registry: WorkerRegistry | null) => void;
@@ -409,7 +477,7 @@ async function resolveConfig(
 		logger.once.warn(
 			"Setting upstream-protocol to http is not currently supported for remote mode.\n" +
 				"If this is required in your project, please add your use case to the following issue:\n" +
-				"https://github.com/cloudflare/workers-sdk/issues/583."
+				"https://github.com/cloudflare/workers-sdk/issues/583"
 		);
 	}
 
@@ -462,7 +530,13 @@ async function resolveConfig(
 		}
 	}
 
-	await checkTypesDiff(config, entry);
+	// Skip the legacy `checkTypesDiff` call when `--experimental-new-config` is on.
+	// The new-config equivalent (`regenerateNewConfigTypes`) is invoked from
+	// `#updateConfig` directly using the structured `types` object returned
+	// by `loadNewConfig`.
+	if (!newConfigEnabled) {
+		await checkTypesDiff(config, entry);
+	}
 
 	return { config: resolved, printCurrentBindings };
 }
@@ -502,33 +576,38 @@ export class ConfigController extends Controller {
 	#configWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
 
-	async #ensureWatchingConfig(configPath: string | undefined) {
+	async #ensureWatchingConfig(configPaths: string | string[] | undefined) {
 		await this.#configWatcher?.close();
-		if (configPath) {
-			this.#configWatcher = watch(configPath, {
-				persistent: true,
-				ignoreInitial: true,
-			}).on("change", async (_event) => {
-				if (this.#configWatcher?.closed) {
-					return;
-				}
-				logger.debug(`${path.basename(configPath)} changed...`);
-				assert(
-					this.latestInput,
-					"Cannot be watching config without having first set an input"
-				);
-				logger.debug("config file changed", configPath);
-				this.#updateConfig(this.latestInput).catch((err) => {
-					this.emitErrorEvent({
-						type: "error",
-						reason: "Error resolving config after change",
-						cause: castErrorCause(err),
-						source: "ConfigController",
-						data: undefined,
-					});
+		if (configPaths === undefined) {
+			return;
+		}
+		const paths = typeof configPaths === "string" ? [configPaths] : configPaths;
+		if (paths.length === 0) {
+			return;
+		}
+		this.#configWatcher = watch(paths, {
+			persistent: true,
+			ignoreInitial: true,
+		}).on("change", async (changedPath) => {
+			if (this.#configWatcher?.closed) {
+				return;
+			}
+			logger.debug(`${path.basename(changedPath)} changed...`);
+			assert(
+				this.latestInput,
+				"Cannot be watching config without having first set an input"
+			);
+			logger.debug("config file changed", changedPath);
+			this.#updateConfig(this.latestInput).catch((err) => {
+				this.emitErrorEvent({
+					type: "error",
+					reason: "Error resolving config after change",
+					cause: castErrorCause(err),
+					source: "ConfigController",
+					data: undefined,
 				});
 			});
-		}
+		});
 	}
 
 	public set(input: StartDevWorkerInput, throwErrors = false) {
@@ -565,8 +644,14 @@ export class ConfigController extends Controller {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = readConfig(
-				{
+			const newConfigEnabled = input.dev?.experimentalNewConfig === true;
+
+			let newConfig: NewConfig | undefined;
+			let fileConfig: Config;
+			if (typeof input.config === "object") {
+				fileConfig = input.config;
+			} else {
+				const readConfigArgs: ReadConfigCommandArgs = {
 					script: input.entrypoint,
 					config: input.config,
 					env: input.env,
@@ -586,16 +671,48 @@ export class ConfigController extends Controller {
 								? "https"
 								: "http",
 					generateTypes: input.dev?.generateTypes,
-				},
-				{ useRedirectIfAvailable: true }
-			);
+				};
 
-			if (!getDisableConfigWatching()) {
-				await this.#ensureWatchingConfig(fileConfig.configPath);
+				if (newConfigEnabled) {
+					newConfig = await readNewConfig(readConfigArgs);
+					fileConfig = newConfig.config;
+				} else {
+					fileConfig = readConfig(readConfigArgs, {
+						useRedirectIfAvailable: true,
+					});
+				}
+			}
+
+			if (!getDisableConfigWatching() && input.dev?.watch !== false) {
+				// Under `--experimental-new-config`, watch the transitive deps of both
+				// `cloudflare.config.ts` and `wrangler.config.ts` (deduped, with
+				// `node_modules` excluded by `@cloudflare/config`'s loader).
+				// Otherwise fall back to the legacy single-file watch.
+				const watchPaths = newConfig
+					? Array.from(newConfig.dependencies)
+					: fileConfig.configPath;
+				await this.#ensureWatchingConfig(watchPaths);
+			} else {
+				await this.#configWatcher?.close();
+				this.#configWatcher = undefined;
+			}
+
+			// Under `--experimental-new-config`, run the new-config type-gen path
+			// instead of the legacy `checkTypesDiff`.
+			if (newConfig && fileConfig.configPath) {
+				await regenerateNewConfigTypes({
+					cloudflareConfigPath: fileConfig.configPath,
+					types: newConfig.types,
+				});
 			}
 
 			const { config: resolvedConfig, printCurrentBindings } =
-				await resolveConfig(fileConfig, input, this.latestConfig?.name);
+				await resolveConfig(
+					fileConfig,
+					input,
+					this.latestConfig?.name,
+					newConfigEnabled
+				);
 
 			if (signal.aborted) {
 				return;

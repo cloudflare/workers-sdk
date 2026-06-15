@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import { APIError } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
 	runInTempDir,
@@ -9,7 +8,6 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
-import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -50,8 +48,6 @@ vi.mock("../../check/commands", async (importOriginal) => {
 	};
 });
 
-vi.mock("../../utils/fetch-secrets");
-
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
 	sniffUserAgent: () => "npm",
@@ -89,9 +85,12 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
@@ -381,8 +380,6 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				? Would you like to continue?
-				🤖 Using fallback value in non-interactive context: yes
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -540,17 +537,22 @@ describe("deploy", () => {
 				},
 			} as unknown as ServiceMetadataRes["default_environment"]);
 
-			vi.mocked(fetchSecrets).mockResolvedValue([
-				{ name: "MY_SECRET", type: "secret_text" },
-			]);
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+					() =>
+						HttpResponse.json(
+							createFetchResult([{ name: "MY_SECRET", type: "secret_text" }])
+						),
+					{ once: true }
+				)
+			);
 			mockConfirm({
 				text: "Would you like to continue?",
 				result: true,
 			});
 
 			await runWrangler("deploy");
-
-			expect(fetchSecrets).toHaveBeenCalled();
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
 				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.
 
@@ -581,23 +583,19 @@ describe("deploy", () => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
-					() => {
-						const workerNotFoundAPIError = new APIError({
-							status: 404,
-							text: "A request to the Cloudflare API (/accounts/xxx/workers/scripts/yyy/secrets) failed.",
-							telemetryMessage: false,
-						});
-
-						workerNotFoundAPIError.code = 10007;
-						throw workerNotFoundAPIError;
-					},
+					() =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10007, message: "workers.api.error.not_found" },
+							]),
+							{ status: 404 }
+						),
 					{ once: true }
 				)
 			);
 
 			await runWrangler("deploy");
 
-			expect(fetchSecrets).toHaveBeenCalled();
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -637,13 +635,8 @@ describe("deploy", () => {
 			// Note: we don't set any mocks here since in dry-run we don't expect wragnler to interact
 			//       with the rest API in any way
 
-			vi.mocked(fetchSecrets).mockResolvedValue([
-				{ name: "MY_SECRET", type: "secret_text" },
-			]);
-
 			await runWrangler("deploy --dry-run");
 
-			expect(fetchSecrets).not.toHaveBeenCalled();
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`""`);
 		});
 
@@ -689,13 +682,18 @@ describe("deploy", () => {
 				},
 			} as unknown as ServiceMetadataRes["default_environment"]);
 
-			vi.mocked(fetchSecrets).mockResolvedValue([
-				{ name: "MY_SECRET", type: "secret_text" },
-			]);
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+					() =>
+						HttpResponse.json(
+							createFetchResult([{ name: "MY_SECRET", type: "secret_text" }])
+						),
+					{ once: true }
+				)
+			);
 
 			await runWrangler("deploy --strict");
-
-			expect(fetchSecrets).toHaveBeenCalled();
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
 				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.

@@ -2562,6 +2562,13 @@ describe("wrangler deploy with containers and dispatch namespace", () => {
 	beforeEach(() => {
 		msw.use(...mswSuccessDeploymentScriptMetadata);
 		msw.use(...mswListNewDeploymentsLatestFull);
+		msw.use(
+			http.get(
+				`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+				() => HttpResponse.json(createFetchResult([])),
+				{ once: false }
+			)
+		);
 		mockSubDomainRequest();
 		mockServiceScriptData({
 			script: { id: "test-name", migration_tag: "v1" },
@@ -2819,6 +2826,13 @@ function setupDockerMocks(
 function setupCommonMocks() {
 	msw.use(...mswSuccessDeploymentScriptMetadata);
 	msw.use(...mswListNewDeploymentsLatestFull);
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+			() => HttpResponse.json(createFetchResult([])),
+			{ once: false }
+		)
+	);
 	mockSubDomainRequest();
 	mockLegacyScriptData({
 		scripts: [{ id: "test-name", migration_tag: "v1" }],

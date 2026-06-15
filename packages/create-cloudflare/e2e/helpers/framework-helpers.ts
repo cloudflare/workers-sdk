@@ -14,6 +14,7 @@ import {
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import * as jsonc from "jsonc-parser";
+import semver from "semver";
 import { fetch } from "undici";
 import { version } from "../../package.json";
 import { getFrameworkMap } from "../../src/templates";
@@ -23,6 +24,7 @@ import {
 	isExperimental,
 	runDeployTests,
 	testPackageManager,
+	testPackageManagerVersion,
 } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging } from "./spawn";
@@ -36,6 +38,13 @@ export type FrameworkTestConfig = RunnerConfig & {
 	nodeCompat: boolean;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
+	/**
+	 * Per–package-manager semver ranges to skip. Keys are pm names ("pnpm",
+	 * "npm", "yarn", "bun"); values are semver ranges. Used on pnpm >=11 for
+	 * frameworks that either run their own install (e.g. Hono) or whose
+	 * recovery prompt fires after the e2e harness has closed stdin.
+	 */
+	unsupportedPmRanges?: Partial<Record<string, string>>;
 	flags?: string[];
 	extraEnv?: Record<string, string | undefined>;
 };
@@ -417,8 +426,23 @@ export function shouldRunTest(testConfig: FrameworkTestConfig) {
 		// Skip if the package manager is unsupported
 		!testConfig.unsupportedPms?.includes(testPackageManager) &&
 		// Skip if the OS is unsupported
-		!testConfig.unsupportedOSs?.includes(process.platform)
+		!testConfig.unsupportedOSs?.includes(process.platform) &&
+		// Skip if the package-manager version falls inside an unsupported range
+		!isUnsupportedPmVersion(testConfig)
 	);
+}
+
+function isUnsupportedPmVersion(testConfig: FrameworkTestConfig): boolean {
+	const range = testConfig.unsupportedPmRanges?.[testPackageManager];
+	if (!range || !testPackageManagerVersion) {
+		return false;
+	}
+	// Coerce to handle suffixes like "11.5.1-canary"; unparseable → run test.
+	const coerced = semver.coerce(testPackageManagerVersion);
+	if (!coerced) {
+		return false;
+	}
+	return semver.satisfies(coerced, range);
 }
 
 /**

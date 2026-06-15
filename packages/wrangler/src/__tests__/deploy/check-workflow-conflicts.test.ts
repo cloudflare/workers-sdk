@@ -1,49 +1,49 @@
-import { APIError } from "@cloudflare/workers-utils";
-import { describe, it, vi } from "vitest";
-import { fetchResult } from "../../cfetch";
+import { http, HttpResponse } from "msw";
+import { describe, it } from "vitest";
 import {
 	checkWorkflowConflicts,
 	WORKFLOW_NOT_FOUND_CODE,
 } from "../../deploy/check-workflow-conflicts";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { createFetchResult, msw } from "../helpers/msw";
 import type { WorkflowConflict } from "../../deploy/check-workflow-conflicts";
 import type { Workflow } from "../../workflows/types";
 import type { Config } from "@cloudflare/workers-utils";
 
-vi.mock("../../cfetch");
-
 function mockWorkflowGet(workflowsByName: Record<string, Workflow | null>) {
-	vi.mocked(fetchResult).mockImplementation(
-		async (_config, resource: string) => {
-			const match = resource.match(/\/accounts\/[^/]+\/workflows\/(.+)$/);
-			if (match) {
-				const workflowName = match[1];
-				const workflow = workflowsByName[workflowName];
-				if (workflow === null || workflow === undefined) {
-					const error = new APIError({
-						text: "Workflow not found",
-						telemetryMessage: false,
-					});
-					error.code = WORKFLOW_NOT_FOUND_CODE;
-					throw error;
-				}
-				return workflow;
+	msw.use(
+		http.get("*/accounts/:accountId/workflows/:workflowName", ({ params }) => {
+			const workflowName = params["workflowName"] as string;
+			const workflow = workflowsByName[workflowName];
+			if (workflow === null || workflow === undefined) {
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{
+							code: WORKFLOW_NOT_FOUND_CODE,
+							message: "Workflow not found",
+						},
+					]),
+					{ status: 404 }
+				);
 			}
-			throw new Error(`Unexpected resource: ${resource}`);
-		}
+			return HttpResponse.json(createFetchResult(workflow));
+		})
 	);
 }
 
 describe("checkWorkflowConflicts", () => {
+	mockAccountId();
+	mockApiToken();
+
 	it("should return { hasConflicts: false } when there are no workflows in config", async ({
 		expect,
 	}) => {
 		const result = await checkWorkflowConflicts(
 			{ workflows: [] } as unknown as Config,
-			"account-id",
+			"some-account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(false);
-		expect(fetchResult).not.toHaveBeenCalled();
 	});
 
 	it("should return { hasConflicts: false } when workflows is undefined", async ({
@@ -51,11 +51,10 @@ describe("checkWorkflowConflicts", () => {
 	}) => {
 		const result = await checkWorkflowConflicts(
 			{} as Config,
-			"account-id",
+			"some-account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(false);
-		expect(fetchResult).not.toHaveBeenCalled();
 	});
 
 	it("should return { hasConflicts: false } when workflow does not exist yet", async ({
@@ -68,7 +67,7 @@ describe("checkWorkflowConflicts", () => {
 					{ binding: "WF", name: "my-workflow", class_name: "MyWorkflow" },
 				],
 			} as unknown as Config,
-			"account-id",
+			"some-account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(false);
@@ -93,7 +92,7 @@ describe("checkWorkflowConflicts", () => {
 					{ binding: "WF", name: "my-workflow", class_name: "MyWorkflow" },
 				],
 			} as unknown as Config,
-			"account-id",
+			"some-account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(false);
@@ -118,7 +117,7 @@ describe("checkWorkflowConflicts", () => {
 					{ binding: "WF", name: "my-workflow", class_name: "MyWorkflow" },
 				],
 			} as unknown as Config,
-			"account-id",
+			"some-account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(true);
@@ -163,7 +162,7 @@ describe("checkWorkflowConflicts", () => {
 					{ binding: "WF2", name: "workflow-b", class_name: "B" },
 				],
 			} as unknown as Config,
-			"account-id",
+			"some-account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(true);
@@ -182,8 +181,6 @@ describe("checkWorkflowConflicts", () => {
 	it("should skip workflows that bind to another script", async ({
 		expect,
 	}) => {
-		// This workflow exists and belongs to other-worker, but we're not deploying it
-		// (it has script_name pointing to the external worker)
 		mockWorkflowGet({
 			"external-workflow": {
 				id: "1",
@@ -205,13 +202,10 @@ describe("checkWorkflowConflicts", () => {
 					},
 				],
 			} as unknown as Config,
-			"account-id",
+			"some-account-id",
 			"my-worker"
 		);
-		// This workflow has script_name set to another worker, so it's not being deployed by us
 		expect(result.hasConflicts).toBe(false);
-		// fetchResult should not have been called because the workflow is filtered out
-		expect(fetchResult).not.toHaveBeenCalled();
 	});
 
 	it("should only flag workflows being deployed by this script", async ({
@@ -226,14 +220,11 @@ describe("checkWorkflowConflicts", () => {
 				created_on: "",
 				modified_on: "",
 			},
-			// external-workflow won't be queried because it's filtered out
 		});
 		const result = await checkWorkflowConflicts(
 			{
 				workflows: [
-					// This one will be deployed by us (no script_name)
 					{ binding: "WF1", name: "local-workflow", class_name: "A" },
-					// This one is external (script_name points to another worker)
 					{
 						binding: "WF2",
 						name: "external-workflow",
@@ -242,7 +233,7 @@ describe("checkWorkflowConflicts", () => {
 					},
 				],
 			} as unknown as Config,
-			"account-id",
+			"some-account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(true);
@@ -251,7 +242,6 @@ describe("checkWorkflowConflicts", () => {
 			conflicts: WorkflowConflict[];
 			message: string;
 		};
-		// Only the local workflow should be flagged as a conflict
 		expect(conflicts).toHaveLength(1);
 		expect(conflicts[0].name).toBe("local-workflow");
 	});
@@ -275,7 +265,7 @@ describe("checkWorkflowConflicts", () => {
 					{ binding: "WF", name: "my-workflow", class_name: "MyWorkflow" },
 				],
 			} as unknown as Config,
-			"account-id",
+			"some-account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(true);

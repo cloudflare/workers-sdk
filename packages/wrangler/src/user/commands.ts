@@ -4,6 +4,7 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
+	DefaultScopeKeys,
 	getAuthFromEnv,
 	getOAuthTokenFromLocalState,
 	listScopes,
@@ -30,6 +31,7 @@ export const loginCommand = createCommand({
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		"scopes-list": {
@@ -65,6 +67,10 @@ export const loginCommand = createCommand({
 			listScopes();
 			return;
 		}
+		// Validate `--scopes` up front so we can share a single `login(...)`
+		// call (and a single `sendMetricsEvent("login user", ...)` site) between
+		// the scoped and unscoped paths.
+		let scopes: typeof DefaultScopeKeys | undefined;
 		if (args.scopes) {
 			if (args.scopes.length === 0) {
 				// don't allow no scopes to be passed, that would be weird
@@ -72,20 +78,17 @@ export const loginCommand = createCommand({
 				return;
 			}
 			if (!validateScopeKeys(args.scopes)) {
+				const validSet = new Set<string>(DefaultScopeKeys);
+				const invalidScopes = args.scopes.filter((s) => !validSet.has(s));
 				throw new CommandLineArgsError(
-					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`,
+					`Invalid authentication scope${invalidScopes.length > 1 ? "s" : ""}: ${invalidScopes.map((s) => `"${s}"`).join(", ")}. Run "wrangler login --scopes-list" to see all valid scopes.`,
 					{ telemetryMessage: "user login invalid scope" }
 				);
 			}
-			await login(config, {
-				scopes: args.scopes,
-				browser: args.browser,
-				callbackHost: args.callbackHost,
-				callbackPort: args.callbackPort,
-			});
-			return;
+			scopes = args.scopes;
 		}
 		await login(config, {
+			scopes,
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
@@ -110,6 +113,7 @@ export const logoutCommand = createCommand({
 	behaviour: {
 		printConfigWarnings: false,
 		provideConfig: false,
+		suggestSkillsAfterHandler: true,
 	},
 	async handler() {
 		await logout();
@@ -137,6 +141,7 @@ export const whoamiCommand = createCommand({
 	behaviour: {
 		printBanner: (args) => !args.json,
 		printConfigWarnings: false,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	args: {
 		account: {
@@ -177,6 +182,7 @@ export const authTokenCommand = createCommand({
 	behaviour: {
 		printBanner: (args) => !args.json,
 		printConfigWarnings: false,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	args: {
 		json: {

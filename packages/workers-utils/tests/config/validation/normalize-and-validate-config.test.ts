@@ -37,6 +37,7 @@ describe("normalizeAndValidateConfig()", () => {
 			vectorize: [],
 			ai_search_namespaces: [],
 			ai_search: [],
+			agent_memory: [],
 			hyperdrive: [],
 			dev: {
 				ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
@@ -89,7 +90,7 @@ describe("normalizeAndValidateConfig()", () => {
 			text_blobs: undefined,
 			browser: undefined,
 			ai: undefined,
-			web_search: undefined,
+			websearch: undefined,
 			version_metadata: undefined,
 			triggers: {
 				crons: undefined,
@@ -2020,10 +2021,10 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("[web_search]", () => {
-			it("should accept a valid web_search binding", ({ expect }) => {
+		describe("[websearch]", () => {
+			it("should accept a valid websearch binding", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ web_search: { binding: "WEBSEARCH" } } as RawConfig,
+					{ websearch: { binding: "WEBSEARCH" } } as RawConfig,
 					undefined,
 					undefined,
 					{ env: undefined }
@@ -2033,9 +2034,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error if web_search is an array", ({ expect }) => {
+			it("should error if websearch is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ web_search: [] } as unknown as RawConfig,
+					{ websearch: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
 					{ env: undefined }
@@ -2044,13 +2045,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The field "web_search" should be an object but got []."
+					  - The field "websearch" should be an object but got []."
 				`);
 			});
 
-			it("should error if web_search has no binding name", ({ expect }) => {
+			it("should error if websearch has no binding name", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ web_search: {} } as unknown as RawConfig,
+					{ websearch: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
 					{ env: undefined }
@@ -2314,6 +2315,137 @@ describe("normalizeAndValidateConfig()", () => {
 							{
 								binding: "BLOG_SEARCH",
 								instance_name: "cloudflare-blog",
+								extra_field: "unexpected",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain("extra_field");
+			});
+		});
+
+		describe("[agent_memory]", () => {
+			it("should error if agent_memory is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ agent_memory: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "agent_memory" should be an array but got {}."
+				`);
+			});
+
+			it("should error if agent_memory is a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ agent_memory: "BAD" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "agent_memory" should be an array but got "BAD"."
+				`);
+			});
+
+			it("should error if agent_memory is a number", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ agent_memory: 999 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "agent_memory" should be an array but got 999."
+				`);
+			});
+
+			it("should error if agent_memory is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ agent_memory: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "agent_memory" should be an array but got null."
+				`);
+			});
+
+			it("should error if agent_memory bindings are not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						agent_memory: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, namespace: 2111 },
+							{
+								binding: "BINDING_2",
+								namespace: "my-namespace",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "agent_memory[0]" bindings should have a string "binding" field but got {}.
+					  - "agent_memory[0]" bindings must have a "namespace" field but got {}.
+					  - "agent_memory[1]" bindings must have a "namespace" field but got {"binding":"VALID"}.
+					  - "agent_memory[2]" bindings should have a string "binding" field but got {"binding":2000,"namespace":2111}.
+					  - "agent_memory[2]" bindings must have a "namespace" field but got {"binding":2000,"namespace":2111}."
+				`);
+			});
+
+			it("should accept valid agent_memory bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						agent_memory: [
+							{
+								binding: "MEMORY",
+								namespace: "my-namespace",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error on additional properties", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						agent_memory: [
+							{
+								binding: "MEMORY",
+								namespace: "my-namespace",
 								extra_field: "unexpected",
 							},
 						],

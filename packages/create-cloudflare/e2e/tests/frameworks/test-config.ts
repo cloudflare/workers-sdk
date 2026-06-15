@@ -90,6 +90,10 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "docusaurus:pages",
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun"],
+			// `create-docusaurus` installs internally (no `--no-install`),
+			// tripping `ERR_PNPM_IGNORED_BUILDS` on pnpm 11 before C3's
+			// recovery path can engage.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
@@ -119,6 +123,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "docusaurus:workers",
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun"],
+			// See note on docusaurus:pages above.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
@@ -246,6 +252,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
+			// `create-hono --install` runs the install inside the generator,
+			// before C3's recovery path can engage. Fails on pnpm 11.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Hello!",
@@ -268,6 +277,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
+			// See note on hono:pages above.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/message",
 				expectedText: "Hello Hono!",
@@ -361,6 +372,10 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 			unsupportedOSs: ["win32"],
+			// Nuxt's deps trip `ERR_PNPM_IGNORED_BUILDS` on pnpm 11; the e2e
+			// harness has closed stdin by the time C3's recovery prompt fires
+			// (real-TTY users are unaffected).
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Welcome to Nuxt!",
@@ -386,6 +401,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 			unsupportedOSs: ["win32"],
+			// See note on nuxt:pages above.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Welcome to Nuxt!",
@@ -706,6 +723,8 @@ function getExperimentalFrameworkTestConfig(
 			name: "docusaurus:workers",
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun"],
+			// See note on docusaurus:pages above.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
@@ -802,6 +821,8 @@ function getExperimentalFrameworkTestConfig(
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
+			// See note on nuxt:pages above.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Welcome to Nuxt!",

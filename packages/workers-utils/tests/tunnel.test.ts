@@ -355,7 +355,7 @@ describe("startTunnel", () => {
 			"Cloudflare Quick Tunnel creation was rate limited."
 		);
 		await expect(() => tunnel.ready()).rejects.toThrow(
-			"The local dev server started at http://localhost:8787/."
+			"The local dev server started at http://localhost:8787/"
 		);
 		await expect(() => tunnel.ready()).rejects.toBeInstanceOf(UserError);
 	});
@@ -387,7 +387,7 @@ describe("startTunnel", () => {
 
 		await vi.advanceTimersByTimeAsync(60_000);
 		expect(logger.log).toHaveBeenCalledWith(
-			"The tunnel is still open at https://my-tunnel.trycloudflare.com. It expires in 1m. Press [t] to extend by 1 hour."
+			"Tunnel still open, expires in 1m: https://my-tunnel.trycloudflare.com Press [t] to extend by 1 hour."
 		);
 
 		await vi.advanceTimersByTimeAsync(60_000);
@@ -429,7 +429,7 @@ describe("startTunnel", () => {
 		);
 		expect(killSpy).not.toHaveBeenCalled();
 		expect(logger.log).toHaveBeenCalledWith(
-			"The tunnel is still open at https://my-tunnel.trycloudflare.com. It expires in 1m. "
+			"Tunnel still open, expires in 1m: https://my-tunnel.trycloudflare.com"
 		);
 
 		await vi.advanceTimersByTimeAsync(60_000);

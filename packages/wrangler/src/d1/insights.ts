@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchGraphqlResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
@@ -25,7 +26,10 @@ export function getDurationDates(durationString: string) {
 	switch (durationUnit) {
 		case "d":
 			if (durationValue > 31) {
-				throw new Error("Duration cannot be greater than 31 days");
+				throw new UserError(
+					`Invalid --time-period value "${durationString}": ${durationValue} days exceeds the maximum of 31 days. Provide a value of 31d or less.`,
+					{ telemetryMessage: "d1 insights duration exceeds maximum" }
+				);
 			}
 			startDate = new Date(
 				endDate.getTime() - durationValue * 24 * 60 * 60 * 1000
@@ -33,22 +37,27 @@ export function getDurationDates(durationString: string) {
 			break;
 		case "m":
 			if (durationValue > 31 * 24 * 60) {
-				throw new Error(
-					`Duration cannot be greater than ${31 * 24 * 60} minutes (31 days)`
+				throw new UserError(
+					`Invalid --time-period value "${durationString}": ${durationValue} minutes exceeds the maximum of ${31 * 24 * 60} minutes (31 days). Provide a value of ${31 * 24 * 60}m or less.`,
+					{ telemetryMessage: "d1 insights duration exceeds maximum" }
 				);
 			}
 			startDate = new Date(endDate.getTime() - durationValue * 60 * 1000);
 			break;
 		case "h":
 			if (durationValue > 31 * 24) {
-				throw new Error(
-					`Duration cannot be greater than ${31 * 24} hours (31 days)`
+				throw new UserError(
+					`Invalid --time-period value "${durationString}": ${durationValue} hours exceeds the maximum of ${31 * 24} hours (31 days). Provide a value of ${31 * 24}h or less.`,
+					{ telemetryMessage: "d1 insights duration exceeds maximum" }
 				);
 			}
 			startDate = new Date(endDate.getTime() - durationValue * 60 * 60 * 1000);
 			break;
 		default:
-			throw new Error("Invalid duration unit");
+			throw new UserError(
+				`Invalid --time-period unit "${durationUnit}" in "${durationString}". Supported units: d (days), h (hours), m (minutes). Example: --time-period=7d.`,
+				{ telemetryMessage: "d1 insights invalid duration unit" }
+			);
 	}
 
 	return [startDate.toISOString(), endDate.toISOString()];
@@ -62,6 +71,7 @@ export const d1InsightsCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 	},
 	args: {

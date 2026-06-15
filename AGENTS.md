@@ -199,6 +199,7 @@ start with a capital letter and describe the change directly (e.g., "Remove unus
 - Config examples must use `wrangler.json` (JSONC), not `wrangler.toml`
 - Separate changesets for distinct changes; do not lump unrelated changes
 - Focus on user-facing impact; reference the public-facing package, not internal implementation packages
+- If the change collects more analytics, it should be a minor even though there is no user-visible change
 
 ## Anti-Patterns
 

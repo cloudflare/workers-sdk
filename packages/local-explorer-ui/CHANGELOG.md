@@ -1,5 +1,11 @@
 # @cloudflare/local-explorer-ui
 
+## 0.14.0
+
+### Minor Changes
+
+- [#14154](https://github.com/cloudflare/workers-sdk/pull/14154) [`204f90a`](https://github.com/cloudflare/workers-sdk/commit/204f90a39000e54a9387eb45b54b2a6d894d8dcd) Thanks [@pombosilva](https://github.com/pombosilva)! - Add a restart-from-step button to each row in the workflow instance step list
+
 ## 0.13.3
 
 ### Patch Changes

@@ -6,7 +6,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";
@@ -29,10 +29,6 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { DatabaseInfo } from "../d1/types";
 import type { ExpectStatic } from "vitest";
 
-vi.mock("../utils/fetch-secrets", () => ({
-	fetchSecrets: async () => [],
-}));
-
 describe("resource provisioning", () => {
 	const std = mockConsoleMethods();
 	mockAccountId();
@@ -44,7 +40,11 @@ describe("resource provisioning", () => {
 		setIsTTY(true);
 		msw.use(
 			...mswSuccessDeploymentScriptMetadata,
-			...mswListNewDeploymentsLatestFull
+			...mswListNewDeploymentsLatestFull,
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
 		mockSubDomainRequest();
 		writeWorkerSource();
@@ -447,45 +447,45 @@ describe("resource provisioning", () => {
 			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
 
-			Experimental: The following bindings need to be provisioned:
-			Binding        Resource
-			env.KV         KV Namespace
-			env.D1         D1 Database
-			env.R2         R2 Bucket
+				Experimental: The following bindings need to be provisioned:
+				Binding        Resource
+				env.KV         KV Namespace
+				env.D1         D1 Database
+				env.R2         R2 Bucket
 
 
-			Provisioning KV (KV Namespace)...
-			🌀 Creating new KV Namespace "new-kv"...
-			✨ KV provisioned 🎉
+				Provisioning KV (KV Namespace)...
+				🌀 Creating new KV Namespace "new-kv"...
+				✨ KV provisioned 🎉
 
-			Provisioning D1 (D1 Database)...
-			🌀 Creating new D1 Database "new-d1"...
-			✨ D1 provisioned 🎉
+				Provisioning D1 (D1 Database)...
+				🌀 Creating new D1 Database "new-d1"...
+				✨ D1 provisioned 🎉
 
-			Provisioning R2 (R2 Bucket)...
-			🌀 Creating new R2 Bucket "new-r2"...
-			✨ R2 provisioned 🎉
+				Provisioning R2 (R2 Bucket)...
+				🌀 Creating new R2 Bucket "new-r2"...
+				✨ R2 provisioned 🎉
 
-			Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-			🎉 All resources provisioned, continuing with deployment...
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
+				🎉 All resources provisioned, continuing with deployment...
 
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                 Resource
-			env.KV (new-kv-id)      KV Namespace
-			env.D1 (new-d1-id)      D1 Database
-			env.R2 (new-r2)         R2 Bucket
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                 Resource
+				env.KV (new-kv-id)      KV Namespace
+				env.D1 (new-d1-id)      D1 Database
+				env.R2 (new-r2)         R2 Bucket
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 
@@ -1319,6 +1319,86 @@ describe("resource provisioning", () => {
 		});
 	});
 
+	describe("provisions agent_memory bindings", () => {
+		beforeEach(() => {
+			writeWranglerConfig({
+				main: "index.js",
+				agent_memory: [{ binding: "MEMORY", namespace: "my-agent-namespace" }],
+			});
+		});
+
+		it("should inherit agent_memory binding if found in the deployed settings", async ({
+			expect,
+		}) => {
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "agent_memory",
+							name: "MEMORY",
+							namespace: "my-agent-namespace",
+						},
+					],
+				},
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "MEMORY",
+						type: "inherit",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain("env.MEMORY (inherited)");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should connect to existing agent_memory namespace if it already exists", async ({
+			expect,
+		}) => {
+			mockGetSettings();
+			mockGetAgentMemoryNamespace(expect, "my-agent-namespace", false);
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "MEMORY",
+						type: "agent_memory",
+						namespace: "my-agent-namespace",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain("env.MEMORY");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create agent_memory namespace if it does not exist", async ({
+			expect,
+		}) => {
+			mockGetSettings();
+			mockGetAgentMemoryNamespace(expect, "my-agent-namespace", true);
+			mockCreateAgentMemoryNamespace(expect, {
+				assertName: "my-agent-namespace",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "MEMORY",
+						type: "agent_memory",
+						namespace: "my-agent-namespace",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain("env.MEMORY");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
+
 	it("should error if used with a service environment", async ({ expect }) => {
 		writeWorkerSource();
 		writeWranglerConfig({
@@ -1428,6 +1508,60 @@ function mockGetD1Database(
 					);
 				}
 				return HttpResponse.json(createFetchResult(databaseInfo));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGetAgentMemoryNamespace(
+	expect: ExpectStatic,
+	namespaceName: string,
+	missing: boolean = false
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/agent-memory/namespaces/:namespaceName",
+			async ({ params }) => {
+				expect(params.namespaceName).toEqual(namespaceName);
+				if (missing) {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10006, message: "namespace not found" },
+						]),
+						{ status: 404 }
+					);
+				}
+				return HttpResponse.json(
+					createFetchResult({
+						id: "agent-memory-namespace-id",
+						name: namespaceName,
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockCreateAgentMemoryNamespace(
+	expect: ExpectStatic,
+	options: { assertName?: string } = {}
+) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/agent-memory/namespaces",
+			async ({ request }) => {
+				if (options.assertName) {
+					const requestBody = await request.json();
+					expect(requestBody).toEqual({ name: options.assertName });
+				}
+				return HttpResponse.json(
+					createFetchResult({
+						id: "new-agent-memory-namespace-id",
+						name: options.assertName ?? "test-namespace",
+					})
+				);
 			},
 			{ once: true }
 		)

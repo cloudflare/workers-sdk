@@ -11,7 +11,6 @@ import * as TOML from "smol-toml";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
-import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs } from "../helpers/mock-dialogs";
@@ -40,8 +39,6 @@ vi.mock("../../check/commands", async (importOriginal) => {
 		},
 	};
 });
-
-vi.mock("../../utils/fetch-secrets");
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -83,7 +80,19 @@ describe("deploy", () => {
 				return HttpResponse.json(createFetchResult({}));
 			})
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
+		// Pretend all Agent Memory namespaces exist for the same reason.
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/agent-memory/namespaces/:namespaceName",
+				async () => {
+					return HttpResponse.json(createFetchResult({}));
+				}
+			),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
+		);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
@@ -2138,6 +2147,46 @@ describe("deploy", () => {
 					Your Worker has access to the following bindings:
 					Binding                                       Resource
 					env.foo (Foo (outbound -> foo_outbound))      Dispatch Namespace
+
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+		});
+
+		describe("[agent_memory]", () => {
+			it("should support agent_memory bindings", async ({ expect }) => {
+				writeWranglerConfig({
+					agent_memory: [
+						{ binding: "MEMORY", namespace: "my-agent-namespace" },
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							name: "MEMORY",
+							type: "agent_memory",
+							namespace: "my-agent-namespace",
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                              Resource
+					env.MEMORY (my-agent-namespace)      Agent Memory
 
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)

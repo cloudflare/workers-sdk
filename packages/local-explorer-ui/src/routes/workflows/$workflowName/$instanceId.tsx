@@ -45,11 +45,13 @@ import {
 } from "../../../components/workflows/StepRow";
 import {
 	getAvailableActions,
+	getRestartFromStepParam,
 	isTerminalStatus,
 } from "../../../components/workflows/types";
 import type {
 	Action,
 	InstanceDetails,
+	StepData,
 } from "../../../components/workflows/types";
 
 export const Route = createFileRoute("/workflows/$workflowName/$instanceId")({
@@ -241,8 +243,10 @@ const STEP_TYPE_FILTERS = [
 
 const StepHistory = memo(function StepHistory({
 	steps,
+	onRestartFromStep,
 }: {
 	steps: InstanceDetails["steps"];
+	onRestartFromStep?: (step: StepData) => void;
 }) {
 	const stepList = steps ?? [];
 	const [search, setSearch] = useState("");
@@ -356,6 +360,7 @@ const StepHistory = memo(function StepHistory({
 									step={step}
 									isExpanded={expandedStepKeys.has(key)}
 									onToggleExpanded={() => toggleStepExpanded(key)}
+									onRestartFromStep={onRestartFromStep}
 								/>
 							);
 						})
@@ -385,6 +390,9 @@ function InstanceDetailView() {
 	const [eventType, setEventType] = useState("");
 	const [eventPayload, setEventPayload] = useState("");
 	const [sendingEvent, setSendingEvent] = useState(false);
+	const [restartFromStepTarget, setRestartFromStepTarget] =
+		useState<StepData | null>(null);
+	const [restartingFromStep, setRestartingFromStep] = useState(false);
 
 	// Track last-seen JSON so we skip state updates when polled data is unchanged
 	const lastDetailsJsonRef = useRef(JSON.stringify(loaderData.details));
@@ -470,6 +478,38 @@ function InstanceDetailView() {
 		},
 		[params.workflowName, instanceId, fetchDetails]
 	);
+
+	const handleRestartFromStep = useCallback((step: StepData) => {
+		setRestartFromStepTarget(step);
+	}, []);
+
+	const handleConfirmRestartFromStep = useCallback(async () => {
+		if (!restartFromStepTarget) {
+			return;
+		}
+		setRestartingFromStep(true);
+		setError(null);
+		try {
+			await workflowsChangeInstanceStatus({
+				path: {
+					workflow_name: params.workflowName,
+					instance_id: instanceId,
+				},
+				body: {
+					action: "restart",
+					from: getRestartFromStepParam(restartFromStepTarget),
+				},
+			});
+			await fetchDetails();
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Failed to restart from step"
+			);
+		} finally {
+			setRestartFromStepTarget(null);
+			setRestartingFromStep(false);
+		}
+	}, [restartFromStepTarget, params.workflowName, instanceId, fetchDetails]);
 
 	return (
 		<div className="flex h-full flex-col">
@@ -737,6 +777,54 @@ function InstanceDetailView() {
 					</Dialog>
 				</Dialog.Root>
 
+				{/* Restart from step confirmation dialog */}
+				<Dialog.Root
+					open={restartFromStepTarget !== null}
+					onOpenChange={(open) => {
+						if (!open && !restartingFromStep) {
+							setRestartFromStepTarget(null);
+						}
+					}}
+				>
+					<Dialog size="lg" className="w-lg">
+						<div className="border-b border-kumo-fill px-6 py-4">
+							{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+							<Dialog.Title className="text-lg font-semibold text-kumo-default">
+								Restart from this step?
+							</Dialog.Title>
+						</div>
+
+						<div className="px-6 py-5">
+							<p className="text-sm text-kumo-subtle">
+								This will rerun the instance from{" "}
+								<span className="font-medium text-kumo-default">
+									{getStepDisplayName(restartFromStepTarget?.name)}
+								</span>
+								. Saved state for this step and later steps will be cleared,
+								while earlier completed steps are kept.
+							</p>
+						</div>
+
+						<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
+							<Button
+								variant="secondary"
+								onClick={() => setRestartFromStepTarget(null)}
+								disabled={restartingFromStep}
+							>
+								Cancel
+							</Button>
+							<Button
+								variant="primary"
+								disabled={restartingFromStep}
+								loading={restartingFromStep}
+								onClick={() => void handleConfirmRestartFromStep()}
+							>
+								Restart from step
+							</Button>
+						</div>
+					</Dialog>
+				</Dialog.Root>
+
 				{/* Content */}
 				<div className="space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 lg:px-12 xl:px-20 2xl:px-32">
 					{error && (
@@ -749,7 +837,10 @@ function InstanceDetailView() {
 
 					{details.error && <ErrorCard error={details.error} />}
 
-					<StepHistory steps={details.steps} />
+					<StepHistory
+						steps={details.steps}
+						onRestartFromStep={handleRestartFromStep}
+					/>
 				</div>
 			</div>
 		</div>

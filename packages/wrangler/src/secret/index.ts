@@ -1,14 +1,9 @@
-import path from "node:path";
-import readline from "node:readline";
 import {
-	APIError,
-	configFileName,
-	FatalError,
-	parseJSON,
-	readFileSync,
-	UserError,
-} from "@cloudflare/workers-utils";
-import { parse as dotenvParse } from "dotenv";
+	fetchSecrets,
+	isWorkerNotFoundError,
+	parseBulkInputToObject,
+} from "@cloudflare/deploy-helpers";
+import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -16,11 +11,9 @@ import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { fetchSecrets } from "../utils/fetch-secrets";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
@@ -106,7 +99,9 @@ export const secretPutCommand = createCommand({
 	},
 	positionalArgs: ["key"],
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		key: {
@@ -236,7 +231,9 @@ export const secretDeleteCommand = createCommand({
 	},
 	positionalArgs: ["key"],
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		key: {
@@ -335,7 +332,9 @@ export const secretListCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => args.format === "pretty",
+		suggestSkillsAfterHandler: (args) => args.format === "pretty",
 	},
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
@@ -354,10 +353,15 @@ export const secretListCommand = createCommand({
 			);
 		}
 
+		const accountId = await requireAuth(config);
 		let secrets: Awaited<ReturnType<typeof fetchSecrets>>;
 
 		try {
-			secrets = await fetchSecrets({ ...config, name: scriptName }, args.env);
+			secrets = await fetchSecrets(
+				{ ...config, name: scriptName },
+				accountId,
+				args.env
+			);
 		} catch (e) {
 			if (isWorkerNotFoundError(e)) {
 				throw new UserError(
@@ -425,17 +429,20 @@ async function putBulkSecrets(
 
 export const secretBulkCommand = createCommand({
 	metadata: {
-		description: "Upload multiple secrets for a Worker at once",
+		description:
+			"Create, update, or delete multiple secrets for a Worker in a single request, with up to 100 secrets per command.",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["file"],
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		file: {
-			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .env file in the form KEY=VALUE. If omitted, Wrangler expects to receive input from stdin rather than a file.`,
+			describe: `The file of key-value pairs to create, update, or delete, as JSON in form {"key": "value", ...} or .env file in the form KEY=VALUE. Set a key to null in the JSON file to delete it. Deletion is not supported with .env files. If omitted, Wrangler expects to receive input from stdin rather than a file.`,
 			type: "string",
 		},
 		name: {
@@ -486,6 +493,9 @@ export const secretBulkCommand = createCommand({
 		}
 
 		const { content, secretSource, secretFormat } = result;
+		const hasSecretsToCreate = Object.values(content).some(
+			(value) => value != null
+		);
 
 		let created: Array<string> = [];
 		let deleted: Array<string> = [];
@@ -501,6 +511,9 @@ export const secretBulkCommand = createCommand({
 				);
 			} catch (e) {
 				if (!isWorkerNotFoundError(e)) {
+					throw e;
+				}
+				if (!hasSecretsToCreate) {
 					throw e;
 				}
 				// Worker doesn't exist yet — create a draft worker, then retry
@@ -564,117 +577,12 @@ export const secretBulkCommand = createCommand({
 	},
 });
 
-export function validateFileSecrets(
-	content: unknown,
-	jsonFilePath: string
-): content is Record<string, string | null> {
-	if (content === null || typeof content !== "object") {
-		throw new FatalError(
-			`The contents of "${jsonFilePath}" is not valid. It should be a JSON object of string values.`,
-			{ telemetryMessage: "secret bulk file invalid contents" }
-		);
-	}
-	const entries = Object.entries(content);
-	for (const [key, value] of entries) {
-		if (value != null && typeof value !== "string") {
-			throw new FatalError(
-				`The value for "${key}" in "${jsonFilePath}" is not null or a "string" instead it is of type "${typeof value}"`,
-				{ telemetryMessage: "secret bulk file invalid value type" }
-			);
-		}
-	}
-	return true;
-}
-
-/** Error thrown when no input is provided to parseBulkInputToObject */
-export class NoInputError extends Error {
-	constructor() {
-		super("No input provided");
-		this.name = "NoInputError";
-	}
-}
-
-/** Result from parsing bulk secret input without nullable values, including metadata for analytics */
-export type BulkInputResult = {
-	content: Record<string, string>;
-	secretSource: "file" | "stdin";
-	secretFormat: "json" | "dotenv";
-};
-
-/** Result from parsing bulk secret input with nullable values, including metadata for analytics */
-export type BulkInputNullableResult = {
-	content: Record<string, string | null>;
-	secretSource: "file" | "stdin";
-	secretFormat: "json" | "dotenv";
-};
-
-/** Override for callers that need non-nullable */
-export async function parseBulkInputToObject(
-	input?: string,
-	includeNull?: false
-): Promise<BulkInputResult | undefined>;
-
-/** Override for callers that need nullable */
-export async function parseBulkInputToObject(
-	input?: string,
-	includeNull?: true
-): Promise<BulkInputNullableResult | undefined>;
-
-export async function parseBulkInputToObject(
-	input?: string,
-	includeNull: boolean = false
-): Promise<BulkInputResult | BulkInputNullableResult | undefined> {
-	let content: Record<string, string | null>;
-	let secretSource: "file" | "stdin";
-	let secretFormat: "json" | "dotenv";
-
-	if (input) {
-		secretSource = "file";
-		const jsonFilePath = path.resolve(input);
-		const fileContent = readFileSync(jsonFilePath);
-		try {
-			content = parseJSON(fileContent) as Record<string, string | null>;
-			secretFormat = "json";
-		} catch {
-			content = dotenvParse(fileContent);
-			secretFormat = "dotenv";
-			// dotenvParse does not error unless fileContent is undefined, no keys === error
-			if (Object.keys(content).length === 0) {
-				throw new UserError(`The contents of "${input}" is not valid.`, {
-					telemetryMessage: "secret bulk invalid input",
-				});
-			}
-		}
-		validateFileSecrets(content, input);
-		if (!includeNull) {
-			content = Object.fromEntries(
-				Object.entries(content).filter(
-					(entry): entry is [string, string] => entry[1] != null
-				)
-			);
-		}
-	} else {
-		secretSource = "stdin";
-		try {
-			const rl = readline.createInterface({ input: process.stdin });
-			let pipedInput = "";
-			for await (const line of rl) {
-				pipedInput += line;
-			}
-			try {
-				content = parseJSON(pipedInput) as Record<string, string | null>;
-				secretFormat = "json";
-			} catch (e) {
-				content = dotenvParse(pipedInput);
-				secretFormat = "dotenv";
-				// dotenvParse does not error unless fileContent is undefined, no keys === error
-				if (Object.keys(content).length === 0) {
-					throw e;
-				}
-			}
-		} catch {
-			return;
-		}
-	}
-	return { content, secretSource, secretFormat };
-}
+export {
+	validateFileSecrets,
+	NoInputError,
+	parseBulkInputToObject,
+} from "@cloudflare/deploy-helpers";
+export type {
+	BulkInputResult,
+	BulkInputNullableResult,
+} from "@cloudflare/deploy-helpers";

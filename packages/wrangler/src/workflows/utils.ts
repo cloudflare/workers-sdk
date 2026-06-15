@@ -1,6 +1,11 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
-import type { Instance, InstanceStatus, InstanceTriggerName } from "./types";
+import type {
+	Instance,
+	InstanceStatus,
+	InstanceTriggerName,
+	WorkflowInstanceRestartFrom,
+} from "./types";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const emojifyInstanceStatus = (status: InstanceStatus) => {
@@ -116,8 +121,11 @@ export async function updateInstanceStatus(
 	accountId: string,
 	workflowName: string,
 	instanceId: string,
-	status: "pause" | "resume" | "restart" | "terminate"
+	status: "pause" | "resume" | "restart" | "terminate",
+	from?: WorkflowInstanceRestartFrom
 ): Promise<void> {
+	const body = from ? { status, from } : { status };
+
 	await fetchResult(
 		config,
 		`/accounts/${accountId}/workflows/${workflowName}/instances/${instanceId}/status`,
@@ -126,7 +134,7 @@ export async function updateInstanceStatus(
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ status }),
+			body: JSON.stringify(body),
 		}
 	);
 }

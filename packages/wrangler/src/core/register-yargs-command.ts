@@ -1,3 +1,4 @@
+import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
 import {
 	defaultWranglerConfig,
 	FatalError,
@@ -7,11 +8,21 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { maybeInstallCloudflareSkillsGlobally } from "../agents-skills-install";
-import { fetchResult } from "../cfetch";
+import {
+	runSkillsInstallFlow,
+	skillInstallPromptMessageAfterWranglerCommandHandler,
+} from "../agents-skills-install";
+import {
+	fetchKVGetValue,
+	fetchResult,
+	fetchListResult,
+	fetchPagedListResult,
+} from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
-import { readConfig } from "../config";
+import { readConfig, readNewConfig } from "../config";
+import { confirm, prompt } from "../dialogs";
 import { run } from "../experimental-flags";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
 import {
@@ -22,12 +33,14 @@ import {
 } from "../metrics/sanitization";
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
+import { setTemporaryAllowed } from "../user";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
+import { temporaryArgDefinition } from "./temporary-commands";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	HandlerArgs,
@@ -55,7 +68,9 @@ export function createRegisterYargsCommand(
 			(def.metadata?.hidden ? false : def.metadata?.description) as string, // Cast to satisfy TypeScript overload selection
 			(subYargs) => {
 				if (def.type === "command") {
-					const args = def.args ?? {};
+					const args: NamedArgDefinitions = def.behaviour?.supportTemporary
+						? { ...def.args, temporary: temporaryArgDefinition }
+						: (def.args ?? {});
 
 					const positionalArgs = new Set(def.positionalArgs);
 
@@ -127,6 +142,9 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		// Sentry breadcrumbs expect the `wrangler` prefix.
 		addBreadcrumb(def.command);
 
+		const newConfigEnabled =
+			"experimentalNewConfig" in args && args.experimentalNewConfig === true;
+
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
 			const bannerEnabled =
@@ -138,7 +156,9 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await printWranglerBanner();
 			}
 
-			await maybeInstallCloudflareSkillsGlobally(args.installSkills);
+			if (args.installSkills) {
+				await runSkillsInstallFlow({ force: true, command: sanitizedCommand });
+			}
 
 			if (!getWranglerHideBanner()) {
 				if (def.metadata.deprecated) {
@@ -158,7 +178,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				}
 			}
 
-			await def.validateArgs?.(args);
+			await def.validateArgs?.(args, def);
 
 			const shouldPrintResourceLocation =
 				typeof def.behaviour?.printResourceLocation === "function"
@@ -193,14 +213,25 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
 
+			setTemporaryAllowed(
+				def.behaviour?.supportTemporary === true &&
+					Boolean((args as { temporary?: boolean }).temporary)
+			);
+
 			await run(experimentalFlags, async () => {
 				const config =
 					(def.behaviour?.provideConfig ?? true)
-						? readConfig(args, {
-								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
-								useRedirectIfAvailable:
-									def.behaviour?.useConfigRedirectIfAvailable,
-							})
+						? newConfigEnabled
+							? (
+									await readNewConfig(args, {
+										hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+									})
+								).config
+							: readConfig(args, {
+									hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+									useRedirectIfAvailable:
+										def.behaviour?.useConfigRedirectIfAvailable,
+								})
 						: defaultWranglerConfig;
 
 				const dispatcher = getMetricsDispatcher({
@@ -210,7 +241,13 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					argv,
 				});
 
-				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
+				// Skip the multi-envs warning under `--experimental-new-config`: it re-reads
+				// `wrangler.json[c]` to enumerate envs, which is not applicable
+				// when the flag is on
+				if (
+					def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified &&
+					!newConfigEnabled
+				) {
 					if (
 						!("env" in args) &&
 						getCloudflareEnv() === undefined &&
@@ -257,12 +294,30 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				);
 
 				try {
+					// sets these values in the scope of deploy-helpers
+					initDeployHelpersContext({
+						logger,
+						fetchResult,
+						fetchListResult,
+						fetchPagedListResult,
+						fetchKVGetValue,
+						confirm,
+						prompt,
+						isNonInteractiveOrCI,
+					});
+
 					const result = await def.handler(args, {
 						sdk: createCloudflareClient(config),
 						config,
 						errors: { UserError, FatalError },
 						logger,
 						fetchResult,
+						fetchListResult,
+						fetchPagedListResult,
+						fetchKVGetValue,
+						prompt,
+						confirm,
+						isNonInteractiveOrCI,
 					});
 
 					const durationMs = Date.now() - startTime;
@@ -276,6 +331,28 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						},
 						def.behaviour
 					);
+
+					const shouldSuggestSkills =
+						def.behaviour?.suggestSkillsAfterHandler ?? false;
+					const suggestSkillsEnabled =
+						shouldSuggestSkills === true ||
+						(typeof shouldSuggestSkills === "function" &&
+							shouldSuggestSkills(args) === true);
+
+					if (suggestSkillsEnabled) {
+						try {
+							await runSkillsInstallFlow({
+								force: false,
+								command: sanitizedCommand,
+								promptMessage:
+									skillInstallPromptMessageAfterWranglerCommandHandler,
+							});
+						} catch (skillsErr) {
+							logger.debug(
+								`Skills suggestion failed: ${skillsErr instanceof Error ? skillsErr.message : skillsErr}`
+							);
+						}
+					}
 
 					return result;
 				} catch (err) {
@@ -299,6 +376,18 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						},
 						def.behaviour
 					);
+
+					// For commands that support `--temporary`, nudge users towards a
+					// temporary account when they hit the non-interactive auth error.
+					if (
+						def.behaviour?.supportTemporary &&
+						err instanceof UserError &&
+						err.telemetryMessage ===
+							"user auth missing api token non interactive"
+					) {
+						err.message +=
+							"\n\nTo continue without logging in, rerun this command with `--temporary`. Wrangler will use a temporary account and print a claim URL.";
+					}
 
 					await handleError(err, args, argv);
 

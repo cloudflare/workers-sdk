@@ -1,19 +1,20 @@
 import assert from "node:assert";
 import events from "node:events";
+import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { getHostFromRoute } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
-import { convertConfigToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
-import { validateRoutes } from "./deploy/deploy";
+import { validateRoutes } from "./deployment-bundle/resolve-config-args";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
+import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
 import { logger } from "./logger";
-import { getHostFromRoute } from "./zones";
 import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -45,6 +46,7 @@ export const dev = createCommand({
 	},
 	positionalArgs: ["script"],
 	args: {
+		...experimentalNewConfigArg,
 		script: {
 			describe: "The path to an entry point for your Worker",
 			type: "string",
@@ -284,9 +286,12 @@ export const dev = createCommand({
 			);
 		}
 		if (args.tunnel && args.remote) {
-			throw new UserError("--tunnel is only supported in local mode.", {
-				telemetryMessage: "dev command tunnel remote conflict",
-			});
+			throw new UserError(
+				"--tunnel cannot be used with --remote. Tunnels expose your local dev server to the internet, which is only applicable in local mode. Remove --remote to use --tunnel, or remove --tunnel to use --remote.",
+				{
+					telemetryMessage: "dev command tunnel remote conflict",
+				}
+			);
 		}
 
 		if (isWebContainer()) {
@@ -521,6 +526,16 @@ export function getBindings(
 		usePreviewIds: true,
 	});
 
+	// createTestHarness() can override secrets through inputBindings.
+	// This filters out those required secrets so the logic doesn't consider them missing
+	const secrets = configParam.secrets
+		? {
+				...configParam.secrets,
+				required: configParam.secrets?.required?.filter(
+					(secret) => inputBindings?.[secret]?.type !== "secret_text"
+				),
+			}
+		: undefined;
 	// Override vars with .dev.vars (dev-specific)
 	// getVarsForDev returns typed bindings: config vars are plain_text/json,
 	// while .dev.vars/.env vars are secret_text.
@@ -531,7 +546,7 @@ export function getBindings(
 		configParam.vars,
 		env,
 		false,
-		configParam.secrets
+		secrets
 	);
 	for (const [name, binding] of Object.entries(vars)) {
 		// Only override plain_text/json/secret_text vars, not other binding types like kv_namespace

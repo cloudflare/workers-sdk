@@ -11,6 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
+import { analyseBundle } from "../check/commands";
 import { readPagesConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createAlias, createCommand } from "../core/create-command";
@@ -187,8 +188,11 @@ export const pagesDeployCommand = createCommand({
 		const configCache = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId =
-			getCloudflareAccountIdFromEnv() ?? (await requireAuth(configCache));
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...configCache,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		let projectName =
 			args.projectName ?? config?.name ?? configCache.project_name;
@@ -543,7 +547,8 @@ export const pagesDeployCommand = createCommand({
 					await diagnoseStartupError(
 						startupError,
 						filePath,
-						getPagesProjectRoot()
+						getPagesProjectRoot(),
+						analyseBundle
 					),
 					{ telemetryMessage: "pages deploy startup error" }
 				);

@@ -25,6 +25,12 @@ export type InstanceStatus =
 	| "waitingForPause"
 	| "complete";
 
+export type WorkflowInstanceRestartFrom = {
+	name: string;
+	count?: number;
+	type?: "do" | "sleep" | "waitForEvent";
+};
+
 export type InstanceWithoutDates = {
 	status: InstanceStatus;
 	id: string;

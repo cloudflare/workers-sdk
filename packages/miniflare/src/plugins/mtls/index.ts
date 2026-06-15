@@ -21,6 +21,7 @@ export const MTLS_PLUGIN_NAME = "mtls";
 
 export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 	options: MtlsOptionsSchema,
+	bindingTypeDescription: "mTLS certificate",
 	async getBindings(options) {
 		if (!options.mtlsCertificates) {
 			return [];

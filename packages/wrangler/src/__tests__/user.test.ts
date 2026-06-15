@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalWranglerConfigPath,
@@ -11,6 +13,7 @@ import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../config-cache";
+import * as metricsModule from "../metrics";
 import {
 	fetchAllAccounts,
 	getAccountFromCache,
@@ -85,7 +88,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -95,6 +98,48 @@ describe("User", () => {
 				expiration_time: expect.any(String),
 				scopes: ["account:read"],
 			});
+		});
+
+		it("should clear the cached temporary preview account when logging in", async ({
+			expect,
+		}) => {
+			// Resolve the path inside the test so it picks up the HOME/XDG_CONFIG_HOME
+			// stubs set by runInTempDir's beforeEach, rather than the real homedir.
+			const temporaryAccountConfigPath = path.join(
+				getGlobalWranglerConfigPath(),
+				"wrangler-temporary-account.toml"
+			);
+
+			mockOAuthServerCallback("success");
+
+			fs.mkdirSync(path.dirname(temporaryAccountConfigPath), {
+				recursive: true,
+			});
+			fs.writeFileSync(
+				temporaryAccountConfigPath,
+				JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
+			);
+
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () => {
+						return HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			expect(fs.existsSync(temporaryAccountConfigPath)).toBe(true);
+
+			await runWrangler("login");
+
+			expect(fs.existsSync(temporaryAccountConfigPath)).toBe(false);
 		});
 
 		it("should login a user when `wrangler login` is run with an ip address for custom callback-host", async ({
@@ -129,9 +174,9 @@ describe("User", () => {
 				──────────────────
 				Attempting to login via OAuth...
 				Temporary login server listening on 0.0.0.0:8976
-				Note that the OAuth login page will always redirect to \`localhost:8976\`.
+				Note that the OAuth login page will always redirect to \`http://localhost:8976/oauth/callback\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -175,9 +220,9 @@ describe("User", () => {
 				──────────────────
 				Attempting to login via OAuth...
 				Temporary login server listening on mylocalhost.local:8976
-				Note that the OAuth login page will always redirect to \`localhost:8976\`.
+				Note that the OAuth login page will always redirect to \`http://localhost:8976/oauth/callback\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -221,9 +266,9 @@ describe("User", () => {
 				──────────────────
 				Attempting to login via OAuth...
 				Temporary login server listening on localhost:8787
-				Note that the OAuth login page will always redirect to \`localhost:8976\`.
+				Note that the OAuth login page will always redirect to \`http://localhost:8976/oauth/callback\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -265,7 +310,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 
@@ -290,6 +335,152 @@ describe("User", () => {
 			[Error: OAuth login is not supported in the \`fedramp_high\` compliance region.
 			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the \`CLOUDFLARE_API_ENVIRONMENT\` environment variable.]
 		`);
+		});
+
+		// Regression coverage for the OAuth callback hang. When the OAuth
+		// provider redirected to `/oauth/callback?error=...` with any error
+		// other than `access_denied`, Wrangler used to never write a response,
+		// causing `server.close()` to wait forever for the connection to drain
+		// and the login command to hang until the 120s OAuth timeout. The
+		// tightened `mock-http-server.ts` faithfully reproduces those
+		// production semantics, so a regression would cause these tests to
+		// fail at the vitest test timeout rather than passing by accident.
+		describe("OAuth callback error handling", () => {
+			it("rejects with the bare OAuth error code when no description is provided", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback({ error: "invalid_scope" });
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_scope]`
+				);
+			});
+
+			it("rejects with both the OAuth error code and error_description", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback({
+					error: "invalid_scope",
+					error_description:
+						"The OAuth 2.0 Client is not allowed to request scope 'browser:write'.",
+				});
+
+				await expect(runWrangler("login")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: OAuth error: invalid_scope
+					  The OAuth 2.0 Client is not allowed to request scope 'browser:write'.]
+				`);
+			});
+
+			it("rejects with the existing consent-denied message for access_denied", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback({ error: "access_denied" });
+
+				await expect(runWrangler("login")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Error: Consent denied. You must grant consent to Wrangler in order to login.
+					If you don't want to do this consider passing an API token via the \`CLOUDFLARE_API_TOKEN\` environment variable]
+				`);
+			});
+
+			it("rejects with the provider error when /oauth2/token fails after a valid auth code", async ({
+				expect,
+			}) => {
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						() =>
+							HttpResponse.json({ error: "invalid_grant" }, { status: 400 }),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_grant]`
+				);
+			});
+
+			it("rejects with the provider error when /oauth2/token returns 2xx with an error body", async ({
+				expect,
+			}) => {
+				// Defensive handling of the (non-standard) case where the token
+				// endpoint returns a success status but the body still carries an
+				// OAuth `error` field. The error should still be surfaced via
+				// `toErrorClass` rather than as a plain `Error`.
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						() => HttpResponse.json({ error: "invalid_token" }),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_token]`
+				);
+			});
+		});
+
+		it("should error if --scopes contains an invalid scope", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --scopes account:read bogus_scope")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid authentication scope: "bogus_scope". Run "wrangler login --scopes-list" to see all valid scopes.]`
+			);
+		});
+
+		it("should error if --scopes contains multiple invalid scopes", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --scopes bad_one bad_two")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid authentication scopes: "bad_one", "bad_two". Run "wrangler login --scopes-list" to see all valid scopes.]`
+			);
+		});
+
+		it("should send the `login user` metric when `--scopes` is provided", async ({
+			expect,
+		}) => {
+			// Regression: the scoped login path used to early-return before
+			// `sendMetricsEvent("login user", ...)` could run, so successful
+			// logins via `wrangler login --scopes ...` were never counted.
+			const sendMetricsEventSpy = vi.spyOn(metricsModule, "sendMetricsEvent");
+			try {
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						async () =>
+							HttpResponse.json({
+								access_token: "test-access-token",
+								expires_in: 100000,
+								refresh_token: "test-refresh-token",
+								scope: "account:read",
+							}),
+						{ once: true }
+					)
+				);
+
+				await runWrangler("login --scopes account:read");
+
+				expect(sendMetricsEventSpy).toHaveBeenCalledWith("login user", {
+					sendMetrics: undefined,
+				});
+			} finally {
+				sendMetricsEventSpy.mockRestore();
+			}
 		});
 	});
 
@@ -321,7 +512,7 @@ describe("User", () => {
 		});
 
 		// Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
-		await expect(requireAuth({} as Config)).rejects.toThrowError();
+		await expect(requireAuth({} as Config)).rejects.toThrow();
 		expect(std.err).toContain("");
 	});
 
@@ -329,7 +520,10 @@ describe("User", () => {
 		vi.mocked(ci).isCI = true;
 		await expect(
 			loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
-		).resolves.toEqual(false);
+		).resolves.toEqual({
+			loggedIn: false,
+			reason: "no-credentials-non-interactive",
+		});
 	});
 
 	it("should revert to non-interactive mode if isTTY throws an error", async ({
@@ -343,7 +537,10 @@ describe("User", () => {
 		});
 		await expect(
 			loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
-		).resolves.toEqual(false);
+		).resolves.toEqual({
+			loggedIn: false,
+			reason: "no-credentials-non-interactive",
+		});
 	});
 
 	describe("CLOUDFLARE_API_TOKEN priority over stored OAuth state", () => {
@@ -395,7 +592,7 @@ describe("User", () => {
 
 			await expect(
 				loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
-			).resolves.toEqual(true);
+			).resolves.toEqual({ loggedIn: true });
 			expect(oauthRefreshCalled).toBe(false);
 		});
 
@@ -483,7 +680,7 @@ describe("User", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 			Successfully logged in."
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -629,7 +826,7 @@ describe("User", () => {
 		});
 
 		it("should error when not logged in", async ({ expect }) => {
-			await expect(runWrangler("auth token")).rejects.toThrowError(
+			await expect(runWrangler("auth token")).rejects.toThrow(
 				"Not logged in. Please run `wrangler login` to authenticate."
 			);
 		});
@@ -650,7 +847,7 @@ describe("User", () => {
 			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
 			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
 
-			await expect(runWrangler("auth token")).rejects.toThrowError(
+			await expect(runWrangler("auth token")).rejects.toThrow(
 				"Cannot output a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL"
 			);
 		});
@@ -719,7 +916,7 @@ describe("User", () => {
 
 			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
 
-			await expect(runWrangler("auth token")).rejects.toThrowError(
+			await expect(runWrangler("auth token")).rejects.toThrow(
 				"Not logged in. Please run `wrangler login` to authenticate."
 			);
 		});
@@ -1032,7 +1229,7 @@ describe("User", () => {
 		it("should throw when no accounts are found", async ({ expect }) => {
 			msw.use(...getMswSuccessMembershipHandlers([]));
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/Failed to automatically retrieve account IDs for the logged in user/
 			);
 		});
@@ -1064,7 +1261,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/Failed to automatically retrieve account IDs for the logged in user/
 			);
 		});
@@ -1132,7 +1329,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/incorrect permissions on your API token/
 			);
 		});
@@ -1192,7 +1389,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/incorrect permissions on your API token/
 			);
 		});
@@ -1222,7 +1419,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/CLOUDFLARE_API_TOKEN/
 			);
 		});
@@ -1244,7 +1441,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/A request to the Cloudflare API \(\/memberships\) failed/
 			);
 		});

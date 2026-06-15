@@ -322,21 +322,23 @@ describe("Create Cloudflare CLI", () => {
 		test.skipIf(isWindows)(
 			"Error when --lang=python is used with a category that has no Python templates",
 			async ({ expect, logStream, project }) => {
-				const { errors } = await runC3(
-					[
-						project.path,
-						"--lang=python",
-						"--category=demo",
-						"--no-deploy",
-						"--git=false",
-					],
-					[],
-					logStream
-				);
-
-				expect(errors).toContain(
-					`No templates available for language "python" in the "demo" category`
-				);
+				await expect(
+					runC3(
+						[
+							project.path,
+							"--lang=python",
+							"--category=demo",
+							"--no-deploy",
+							"--git=false",
+						],
+						[],
+						logStream
+					)
+				).rejects.toMatchObject({
+					errors: expect.stringContaining(
+						`No templates available for language "python" in the "demo" category`
+					),
+				});
 			}
 		);
 
@@ -740,19 +742,22 @@ describe("Create Cloudflare CLI", () => {
 	});
 
 	describe("frameworks related", () => {
-		["solid", "next"].forEach((framework) =>
+		["solid", "next", "react-router", "analog"].forEach((framework) =>
 			test(`error when trying to create a ${framework} app on Pages`, async ({
 				expect,
 				logStream,
 			}) => {
-				const { errors } = await runC3(
-					["--platform=pages", `--framework=${framework}`, "my-app"],
-					[],
-					logStream
-				);
-				expect(errors).toMatch(
-					/Error: The .*? framework doesn't support the "pages" platform/
-				);
+				await expect(
+					runC3(
+						["--platform=pages", `--framework=${framework}`, "my-app"],
+						[],
+						logStream
+					)
+				).rejects.toMatchObject({
+					errors: expect.stringMatching(
+						/Error: The .*? framework doesn't support the "pages" platform/
+					),
+				});
 			})
 		);
 
@@ -760,63 +765,72 @@ describe("Create Cloudflare CLI", () => {
 			expect,
 			logStream,
 		}) => {
-			const { errors } = await runC3(
-				[
-					"my-app",
-					"--framework=react",
-					"--platform=workers",
-					"--variant=invalid-variant",
-					"--no-deploy",
-					"--git=false",
-				],
-				[],
-				logStream
-			);
-			expect(errors).toContain(
-				'Unknown variant "invalid-variant". Valid variants are: react-ts, react'
-			);
+			await expect(
+				runC3(
+					[
+						"my-app",
+						"--framework=react",
+						"--platform=workers",
+						"--variant=invalid-variant",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream
+				)
+			).rejects.toMatchObject({
+				errors: expect.stringContaining(
+					'Unknown variant "invalid-variant". Valid variants are: react-ts, react'
+				),
+			});
 		});
 
 		test("error when using deprecated SWC --variant for React Workers framework", async ({
 			expect,
 			logStream,
 		}) => {
-			const { errors } = await runC3(
-				[
-					"my-app",
-					"--framework=react",
-					"--platform=workers",
-					"--variant=react-swc-ts",
-					"--no-deploy",
-					"--git=false",
-				],
-				[],
-				logStream
-			);
-			expect(errors).toContain(
-				'The React variant "react-swc-ts" is no longer available. Use "react-ts" instead.'
-			);
+			await expect(
+				runC3(
+					[
+						"my-app",
+						"--framework=react",
+						"--platform=workers",
+						"--variant=react-swc-ts",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream
+				)
+			).rejects.toMatchObject({
+				errors: expect.stringContaining(
+					'The React variant "react-swc-ts" is no longer available. Use "react-ts" instead.'
+				),
+			});
 		});
 
 		test("error when using invalid --variant for React Pages framework", async ({
 			expect,
 			logStream,
 		}) => {
-			const { errors } = await runC3(
-				[
-					"my-app",
-					"--framework=react",
-					"--platform=pages",
-					"--variant=invalid-variant",
-					"--no-deploy",
-					"--git=false",
-				],
-				[],
-				logStream
-			);
-			expect(errors).toContain(
-				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc'
-			);
+			await expect(
+				runC3(
+					[
+						"my-app",
+						"--framework=react",
+						"--platform=pages",
+						"--variant=invalid-variant",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream
+				)
+			).rejects.toMatchObject({
+				errors: expect.stringContaining(
+					'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc'
+				),
+			});
 		});
 
 		test("accepts --variant for React Pages framework without prompting", async ({
@@ -838,6 +852,102 @@ describe("Create Cloudflare CLI", () => {
 			expect(output).toContain("--template react-ts");
 			expect(output).not.toContain("Select a variant");
 		});
+	});
+
+	describe.skipIf(isExperimental)("platform filtering", () => {
+		test.skipIf(isWindows)(
+			"--platform=pages hides non-framework categories",
+			async ({ expect, logStream, project }) => {
+				const { output } = await runC3(
+					[project.path, "--platform=pages"],
+					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								target: "Framework Starter",
+								// "Framework Starter" should be the default (first visible)
+								// option since "Hello World example" is hidden
+								assertDefaultSelection: "Framework Starter",
+							},
+						},
+						{
+							matcher: /Which development framework do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Angular",
+							},
+						},
+						{
+							matcher: /Do you want to use git for version control/,
+							input: ["n"],
+						},
+						{
+							matcher: /Do you want to deploy your application/,
+							input: ["n"],
+						},
+					],
+					logStream
+				);
+
+				expect(output).toContain("category Framework Starter");
+				expect(output).not.toContain("Hello World");
+				expect(output).not.toContain("Application Starter");
+			}
+		);
+
+		test.skipIf(isWindows)(
+			"--platform=pages filters out workers-only frameworks",
+			async ({ expect, logStream, project }) => {
+				const { output } = await runC3(
+					[project.path, "--platform=pages", "--category=web-framework"],
+					[
+						{
+							matcher: /Which development framework do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Angular",
+							},
+						},
+						{
+							matcher: /Do you want to use git for version control/,
+							input: ["n"],
+						},
+						{
+							matcher: /Do you want to deploy your application/,
+							input: ["n"],
+						},
+					],
+					logStream
+				);
+
+				// Workers-only frameworks should not appear in the output
+				expect(output).not.toContain("Next");
+				expect(output).not.toContain("SolidStart");
+				expect(output).not.toContain("React Router");
+				expect(output).not.toContain("Analog");
+			}
+		);
+
+		["hello-world", "demo"].forEach((category) =>
+			test(`--platform=pages --category=${category} errors for workers-only category`, async ({
+				expect,
+				logStream,
+				project,
+			}) => {
+				await expect(
+					runC3(
+						[project.path, "--platform=pages", `--category=${category}`],
+						[],
+						logStream
+					)
+				).rejects.toMatchObject({
+					errors: expect.stringContaining(
+						`The "${category}" category is not available for the "pages" platform`
+					),
+				});
+			})
+		);
 	});
 });
 

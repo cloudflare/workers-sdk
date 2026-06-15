@@ -224,7 +224,15 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --remote index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local.]`
+				`
+				[Error: Could not start remote dev session. No credentials found, and the environment is non-interactive so browser login cannot be started.
+				Either:
+				 - Set a CLOUDFLARE_API_TOKEN environment variable
+				 - Run \`wrangler login\` in an interactive terminal first
+				 - Or use \`wrangler dev --local\` to develop locally (remote resources like KV, D1, etc. will use local simulators instead).
+
+				You can run \`wrangler whoami\` to check your current authentication status.]
+			`
 			);
 		});
 	});
@@ -1287,7 +1295,7 @@ describe.sequential("wrangler dev", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently supported for remote mode.[0m
 
 				  If this is required in your project, please add your use case to the following issue:
-				  [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m.
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m
 
 				"
 			`);
@@ -3069,7 +3077,7 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --tunnel --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: --tunnel is only supported in local mode.]`
+				`[Error: --tunnel cannot be used with --remote. Tunnels expose your local dev server to the internet, which is only applicable in local mode. Remove --remote to use --tunnel, or remove --tunnel to use --remote.]`
 			);
 		});
 	});

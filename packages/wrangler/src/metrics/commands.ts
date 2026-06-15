@@ -29,6 +29,7 @@ export const telemetryDisableCommand = createCommand({
 	},
 	behaviour: {
 		sendMetrics: false,
+		suggestSkillsAfterHandler: true,
 	},
 	async handler() {
 		updateMetricsPermission(false);
@@ -45,6 +46,9 @@ export const telemetryEnableCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
+	},
 	async handler() {
 		updateMetricsPermission(true);
 		logTelemetryStatus(true);
@@ -59,6 +63,9 @@ export const telemetryStatusCommand = createCommand({
 		description: "Check whether Wrangler telemetry collection is enabled",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
 	},
 	async handler(_, { config }) {
 		const savedConfig = readMetricsConfig();

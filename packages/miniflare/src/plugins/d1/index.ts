@@ -60,6 +60,7 @@ export const D1_PLUGIN: Plugin<
 > = {
 	options: D1OptionsSchema,
 	sharedOptions: D1SharedOptionsSchema,
+	bindingTypeDescription: "D1 database",
 	getBindings(options) {
 		const databases = namespaceEntries(options.d1Databases);
 		return databases.map<Worker_Binding>(

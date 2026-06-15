@@ -41,6 +41,7 @@ export const IMAGES_PLUGIN: Plugin<
 > = {
 	options: ImagesOptionsSchema,
 	sharedOptions: ImagesSharedOptionsSchema,
+	bindingTypeDescription: "Images",
 	async getBindings(options) {
 		if (!options.images) {
 			return [];

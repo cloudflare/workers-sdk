@@ -120,7 +120,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		return () => removeDirSync(tempDir);
 	});
 
-	function createMockContext(options?: {
+	async function createMockContext(options?: {
 		auxiliaryWorkers?: Array<{ configPath: string }>;
 	}) {
 		const mockContext = new PluginContext({
@@ -130,7 +130,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		});
 
 		mockContext.setResolvedPluginConfig(
-			resolvePluginConfig(
+			await resolvePluginConfig(
 				{
 					configPath: primaryConfigPath,
 					auxiliaryWorkers: options?.auxiliaryWorkers,
@@ -143,9 +143,9 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		return mockContext;
 	}
 
-	test("prints shortcut hints in registration order", ({ expect }) => {
+	test("prints shortcut hints in registration order", async ({ expect }) => {
 		vi.spyOn(tunnelPlugin, "isTunnelOpen").mockReturnValue(false);
-		addShortcuts(mockServer, createMockContext());
+		addShortcuts(mockServer, await createMockContext());
 
 		serverLogs.info = [];
 		mockServer.bindCLIShortcuts();
@@ -163,10 +163,10 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		);
 	});
 
-	test("registers custom shortcuts in order", ({ expect }) => {
+	test("registers custom shortcuts in order", async ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
 
-		addShortcuts(mockServer, createMockContext());
+		addShortcuts(mockServer, await createMockContext());
 
 		expect(mockServer.bindCLIShortcuts).not.toBe(mockBindCLIShortcuts);
 		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
@@ -195,9 +195,9 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		});
 	});
 
-	test("prints bindings with a single Worker", ({ expect }) => {
+	test("prints bindings with a single Worker", async ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
-		addShortcuts(mockServer, createMockContext());
+		addShortcuts(mockServer, await createMockContext());
 
 		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
 		const printBindingShortcut = customShortcuts?.find((s) => s.key === "b");
@@ -220,11 +220,11 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		`);
 	});
 
-	test("prints bindings with multi Workers", ({ expect }) => {
+	test("prints bindings with multi Workers", async ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
 		addShortcuts(
 			mockServer,
-			createMockContext({
+			await createMockContext({
 				auxiliaryWorkers: [{ configPath: auxiliaryConfigPath }],
 			})
 		);
@@ -256,7 +256,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 
 	test("registers explorer shortcut with correct URL", async ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
-		addShortcuts(mockServer, createMockContext());
+		addShortcuts(mockServer, await createMockContext());
 
 		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
 		const explorerShortcut = customShortcuts?.find((s) => s.key === "e");
@@ -276,7 +276,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 			.spyOn(tunnelPlugin, "extendTunnelExpiry")
 			.mockImplementation(() => {});
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
-		addShortcuts(mockServer, createMockContext());
+		addShortcuts(mockServer, await createMockContext());
 
 		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
 		const toggleShortcut = customShortcuts?.find((s) => s.key === "t");
@@ -289,12 +289,12 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		expect(extendExpirySpy).toHaveBeenCalledTimes(1);
 	});
 
-	test("display tunnel shortcut hint", ({ expect }) => {
+	test("display tunnel shortcut hint", async ({ expect }) => {
 		vi.spyOn(tunnelPlugin, "isTunnelOpen")
 			.mockReturnValueOnce(false)
 			.mockReturnValueOnce(true);
 
-		addShortcuts(mockServer, createMockContext());
+		addShortcuts(mockServer, await createMockContext());
 
 		serverLogs.info = [];
 		mockServer.bindCLIShortcuts();

@@ -209,6 +209,17 @@ class StartupLogBuffer {
 				`Address already in use (${match[1]}:${match[2]}). Please check that you are not already running a server on this address or specify a different port with --port.`
 			);
 		}
+
+		// If stderr contains any output, surface it so the user can diagnose
+		// the failure (e.g. bind errors on IPv6 addresses, permission denied,
+		// missing libraries, etc.)
+		const stderr = this.stderrBuffer.join("").trim();
+		if (stderr.length > 0) {
+			throw new MiniflareCoreError(
+				"ERR_RUNTIME_FAILURE",
+				`The Workers runtime failed to start. There was likely a problem with the workerd binary or your configuration.\nRuntime stderr:\n${stderr}`
+			);
+		}
 	}
 }
 
@@ -246,7 +257,8 @@ export class Runtime {
 		});
 		const startupLogBuffer = new StartupLogBuffer();
 		this.#process = runtimeProcess;
-		this.#processExitPromise = waitForExit(runtimeProcess);
+		const processExitPromise = waitForExit(runtimeProcess);
+		this.#processExitPromise = processExitPromise;
 
 		const handleRuntimeStdio =
 			options.handleRuntimeStdio ??
@@ -279,8 +291,15 @@ export class Runtime {
 		runtimeProcess.stdin.end();
 		await once(runtimeProcess.stdin, "finish");
 
-		// 4. Wait for sockets to start listening
-		const ports = await waitForPorts(controlPipe, options);
+		// 4. Wait for sockets to start listening, racing against the process
+		// exiting early. If workerd exits before all required sockets report
+		// their ports (e.g. due to a bind failure), `waitForPorts()` would
+		// hang indefinitely. Racing against the exit promise ensures we
+		// detect this and return `undefined` promptly.
+		const ports = await Promise.race([
+			waitForPorts(controlPipe, options),
+			processExitPromise.then(() => undefined),
+		]);
 		if (ports?.has(kInspectorSocket) && process.env.VSCODE_INSPECTOR_OPTIONS) {
 			// We have an inspector socket and we're in a VSCode Debug Terminal.
 			// Let's startup a watchdog service to register ourselves as a debuggable target

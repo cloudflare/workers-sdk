@@ -172,7 +172,7 @@ async function handleRequest(request: Request, env: Env) {
 
 /**
  * Given a preview token, this endpoint allows for raw http calls to be inspected
- * It must be called with a random subdomain (i.e. some-random-data.rawhttp.devprod.cloudflare.dev)
+ * It must be called with a random subdomain (i.e. some-random-data.rawhttp.cloudflarepreviews.com)
  * for consistency with the preview endpoint. This is not currently used, but may be in future
  *
  * It requires two parameters, passed as headers:
@@ -285,7 +285,7 @@ async function handleRawHttp(request: Request, url: URL) {
  *  - `prewarm` A fire-and-forget prewarm endpoint to hit to start up the preview
  *  - `suffix`  (optional) The pathname + search to hit on the preview worker once redirected
  *
- * It must be called with a random subdomain (i.e. some-random-data.preview.devprod.cloudflare.dev)
+ * It must be called with a random subdomain (i.e. some-random-data.preview.cloudflarepreviews.com)
  * to provide cookie isolation for the preview.
  *
  * It will redirect to the suffix provide, setting a cookie with the `token` and `remote`

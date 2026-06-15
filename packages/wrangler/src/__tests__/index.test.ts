@@ -2,12 +2,13 @@ import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager } from "../package-manager";
 import { updateCheck } from "../update-check";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { clearDialogs } from "./helpers/mock-dialogs";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { PackageManager } from "../package-manager";
@@ -26,6 +27,10 @@ describe("wrangler", () => {
 			install: vi.fn(),
 		};
 		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
+	});
+
+	afterEach(() => {
+		clearDialogs();
 	});
 
 	const std = mockConsoleMethods();
@@ -50,12 +55,13 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
+				  wrangler agent-memory           🧠 Manage Agent Memory namespaces [private beta]
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler ai-search              🔍 Manage AI Search instances [open beta]
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
 				  wrangler containers             📦 Manage Containers
 				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
@@ -95,13 +101,31 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 				  -v, --version         Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not require temporary terms acceptance before root help", async ({
+			expect,
+		}) => {
+			await runWrangler("--help --temporary");
+
+			expect(std.out).toContain("wrangler");
+			expect(std.out).toContain("COMMANDS");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("--temporary", () => {
+		it("is rejected on commands that don't opt in", async ({ expect }) => {
+			await expect(runWrangler("whoami --temporary")).rejects.toThrowError(
+				/Unknown argument: temporary/
+			);
 		});
 	});
 
@@ -130,12 +154,13 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
+				  wrangler agent-memory           🧠 Manage Agent Memory namespaces [private beta]
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler ai-search              🔍 Manage AI Search instances [open beta]
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
 				  wrangler containers             📦 Manage Containers
 				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
@@ -175,7 +200,7 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 				  -v, --version         Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -265,7 +290,7 @@ describe("wrangler", () => {
 				  wrangler secret put <key>     Create or update a secret for a Worker
 				  wrangler secret delete <key>  Delete a secret from a Worker
 				  wrangler secret list          List all secrets for a Worker
-				  wrangler secret bulk [file]   Upload multiple secrets for a Worker at once
+				  wrangler secret bulk [file]   Create, update, or delete multiple secrets for a Worker in a single request, with up to 100 secrets per command.
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]
@@ -273,7 +298,7 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -300,7 +325,7 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -327,7 +352,7 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -353,7 +378,7 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -379,7 +404,7 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
