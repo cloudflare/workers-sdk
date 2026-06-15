@@ -478,7 +478,7 @@ describe("User", () => {
 		});
 
 		// Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
-		await expect(requireAuth({} as Config)).rejects.toThrowError();
+		await expect(requireAuth({} as Config)).rejects.toThrow();
 		expect(std.err).toContain("");
 	});
 
@@ -792,7 +792,7 @@ describe("User", () => {
 		});
 
 		it("should error when not logged in", async ({ expect }) => {
-			await expect(runWrangler("auth token")).rejects.toThrowError(
+			await expect(runWrangler("auth token")).rejects.toThrow(
 				"Not logged in. Please run `wrangler login` to authenticate."
 			);
 		});
@@ -813,7 +813,7 @@ describe("User", () => {
 			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
 			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
 
-			await expect(runWrangler("auth token")).rejects.toThrowError(
+			await expect(runWrangler("auth token")).rejects.toThrow(
 				"Cannot output a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL"
 			);
 		});
@@ -882,7 +882,7 @@ describe("User", () => {
 
 			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
 
-			await expect(runWrangler("auth token")).rejects.toThrowError(
+			await expect(runWrangler("auth token")).rejects.toThrow(
 				"Not logged in. Please run `wrangler login` to authenticate."
 			);
 		});
@@ -1195,7 +1195,7 @@ describe("User", () => {
 		it("should throw when no accounts are found", async ({ expect }) => {
 			msw.use(...getMswSuccessMembershipHandlers([]));
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/Failed to automatically retrieve account IDs for the logged in user/
 			);
 		});
@@ -1227,7 +1227,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/Failed to automatically retrieve account IDs for the logged in user/
 			);
 		});
@@ -1295,7 +1295,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/incorrect permissions on your API token/
 			);
 		});
@@ -1355,7 +1355,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/incorrect permissions on your API token/
 			);
 		});
@@ -1385,7 +1385,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/CLOUDFLARE_API_TOKEN/
 			);
 		});
@@ -1407,7 +1407,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/A request to the Cloudflare API \(\/memberships\) failed/
 			);
 		});
