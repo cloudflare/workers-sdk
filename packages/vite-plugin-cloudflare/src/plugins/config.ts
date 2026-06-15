@@ -4,8 +4,12 @@ import * as path from "node:path";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
-import { getWorkerAssetsDir, getWorkerBundleDir } from "../build-output";
-import { writeOutputWorkerConfig } from "../build-output";
+import {
+	cleanBuildOutputDir,
+	getWorkerAssetsDir,
+	getWorkerBundleDir,
+	writeOutputWorkerConfig,
+} from "../build-output";
 import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
@@ -13,12 +17,17 @@ import {
 import { assertIsNotPreview } from "../context";
 import { writeDeployConfig } from "../deploy-config";
 import { hasLocalDevVarsFileChanged } from "../dev-vars";
-import { resolveDevOnly } from "../plugin-config";
+import {
+	resolveDevOnly,
+	type AssetsOnlyResolvedConfig,
+	type WorkersResolvedConfig,
+} from "../plugin-config";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
+import type * as vite from "vite";
 import type { Unstable_RawConfig } from "wrangler";
 
 /**
@@ -84,12 +93,20 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		configResolved(resolvedViteConfig) {
 			ctx.setResolvedViteConfig(resolvedViteConfig);
 
-			if (ctx.resolvedPluginConfig.type !== "preview") {
-				validateWorkerEnvironmentOptions(
-					ctx.resolvedPluginConfig,
-					ctx.resolvedViteConfig
-				);
-				forceBuildOutputDirs(ctx, resolvedViteConfig);
+			if (ctx.resolvedPluginConfig.type === "preview") {
+				return;
+			}
+
+			validateWorkerEnvironmentOptions(
+				ctx.resolvedPluginConfig,
+				ctx.resolvedViteConfig
+			);
+
+			if (ctx.resolvedPluginConfig.experimental.newConfig?.cfBuildOutput) {
+				forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
+				if (ctx.resolvedViteConfig.command === "build") {
+					cleanBuildOutputDir(ctx.resolvedViteConfig.root);
+				}
 			}
 		},
 		buildStart() {
@@ -325,22 +342,22 @@ function getEnvironmentsConfig(
  * user-supplied `build.outDir`
  */
 function forceBuildOutputDirs(
-	ctx: PluginContext,
-	resolvedViteConfig: import("vite").ResolvedConfig
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
+	resolvedViteConfig: vite.ResolvedConfig
 ): void {
-	assertIsNotPreview(ctx);
-
-	const newConfig = ctx.resolvedPluginConfig.experimental.newConfig;
+	const newConfig = resolvedPluginConfig.experimental.newConfig;
 	if (!newConfig?.cfBuildOutput) {
 		return;
 	}
 
-	const root = resolvedViteConfig.root;
+	const { root } = resolvedViteConfig;
 	let clientWorkerName: string;
 
-	if (ctx.resolvedPluginConfig.type === "workers") {
-		for (const [environmentName, worker] of ctx.resolvedPluginConfig
-			.environmentNameToWorkerMap) {
+	if (resolvedPluginConfig.type === "workers") {
+		for (const [
+			environmentName,
+			worker,
+		] of resolvedPluginConfig.environmentNameToWorkerMap) {
 			const environment = resolvedViteConfig.environments[environmentName];
 			if (!environment) {
 				continue;
@@ -352,9 +369,9 @@ function forceBuildOutputDirs(
 			);
 		}
 
-		const entryName = ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
+		const entryName = resolvedPluginConfig.entryWorkerEnvironmentName;
 		const entryWorker =
-			ctx.resolvedPluginConfig.environmentNameToWorkerMap.get(entryName);
+			resolvedPluginConfig.environmentNameToWorkerMap.get(entryName);
 		assert(entryWorker, `Expected entry worker for environment "${entryName}"`);
 		assert(
 			entryWorker.parsedNewConfig,
@@ -363,10 +380,10 @@ function forceBuildOutputDirs(
 		clientWorkerName = entryWorker.parsedNewConfig.name;
 	} else {
 		assert(
-			ctx.resolvedPluginConfig.parsedNewConfig,
+			resolvedPluginConfig.parsedNewConfig,
 			"Expected parsedNewConfig to be defined"
 		);
-		clientWorkerName = ctx.resolvedPluginConfig.parsedNewConfig.name;
+		clientWorkerName = resolvedPluginConfig.parsedNewConfig.name;
 	}
 
 	const clientEnvironment = resolvedViteConfig.environments.client;

@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
 	ParsedInputWorkerConfig,
@@ -24,10 +25,26 @@ const BUILD_OUTPUT_ROOT = ".cloudflare/output";
 export const WORKER_CONFIG_FILENAME = "worker.config.json";
 
 /**
+ * Absolute path to the Build Output API root for the current project.
+ */
+function getBuildOutputDir(root: string): string {
+	return path.resolve(root, BUILD_OUTPUT_ROOT);
+}
+
+/**
+ * Clean the build output directory
+ *
+ * Called once at the start of each build
+ */
+export function cleanBuildOutputDir(root: string): void {
+	removeDirSync(getBuildOutputDir(root));
+}
+
+/**
  * Absolute path to the workers output directory
  */
 export function getWorkersDir(root: string): string {
-	return path.resolve(root, BUILD_OUTPUT_ROOT, BUILD_OUTPUT_VERSION, "workers");
+	return path.join(getBuildOutputDir(root), BUILD_OUTPUT_VERSION, "workers");
 }
 
 /**
