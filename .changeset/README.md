@@ -28,6 +28,7 @@ pnpm changeset
 
 - Major versions for `wrangler` are currently **forbidden**. This rule will be removed when we are preparing for the next major release of `wrangler`.
 - Major versions for other packages require strong justification
+- If the change collects more analytics, it should be a minor even though there is no user-visible change.
 
 ## Changeset Message Format
 
