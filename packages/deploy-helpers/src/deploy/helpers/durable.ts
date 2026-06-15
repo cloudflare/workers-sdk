@@ -1,8 +1,17 @@
 import assert from "node:assert";
-import { configFileName } from "@cloudflare/workers-utils";
+import {
+	assertDoExportsEnabledIfConfigured,
+	configFileName,
+	getDoExportsEnabledFromEnv,
+} from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type {
+	CfDurableObjectExports,
+	CfWorkerInit,
+	Config,
+	DoExportsOptInContext,
+} from "@cloudflare/workers-utils";
 
 /**
  * For a given Worker + migrations config, figure out which migrations
@@ -106,3 +115,59 @@ const suppressNotFoundError = (err: unknown) => {
 		throw err;
 	}
 };
+
+/**
+ * Resolve which Durable Object lifecycle payload to send with the upload.
+ * `migrations` and `exports` are mutually exclusive: only one will be set on
+ * any given upload. The choice is driven by:
+ *
+ *  - whether the `X_DO_EXPORTS` environment variable is set; and
+ *  - whether the user's config declares `exports` entries.
+ *
+ * When `exports` is set in config but the env var is off, the upstream
+ * `assertDoExportsEnabledIfConfigured` helper throws a `UserError` so the
+ * user discovers the missing opt-in locally before the payload is silently
+ * downgraded to legacy `migrations`.
+ */
+export async function resolveDoLifecyclePayload(props: {
+	scriptName: string;
+	isDryRun: boolean | undefined;
+	accountId: string | undefined;
+	config: Config;
+	useServiceEnvironments: boolean | undefined;
+	env: string | undefined;
+	dispatchNamespace: string | undefined;
+	optInContext?: DoExportsOptInContext;
+}): Promise<{
+	migrations: CfWorkerInit["migrations"];
+	exports: CfWorkerInit["exports"];
+}> {
+	assertDoExportsEnabledIfConfigured(
+		props.config.exports,
+		props.optInContext ?? "deploy"
+	);
+
+	const exportsEntries = Object.keys(props.config.exports ?? {});
+	if (getDoExportsEnabledFromEnv() && exportsEntries.length > 0) {
+		// `exports` is mutually exclusive with `migrations` at the config-
+		// validation boundary (see `errorIfMigrationsAndExportsBothSet` in
+		// `@cloudflare/workers-utils/config/validation`), so we don't need to
+		// guard against both being set here.
+		return {
+			migrations: undefined,
+			exports: props.config.exports as CfDurableObjectExports,
+		};
+	}
+
+	const migrations = !props.isDryRun
+		? await getMigrationsToUpload(props.scriptName, {
+				accountId: props.accountId,
+				config: props.config,
+				useServiceEnvironments: props.useServiceEnvironments,
+				env: props.env,
+				dispatchNamespace: props.dispatchNamespace,
+			})
+		: undefined;
+
+	return { migrations, exports: undefined };
+}

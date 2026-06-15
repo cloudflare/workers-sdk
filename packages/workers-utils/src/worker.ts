@@ -424,6 +424,77 @@ export interface CfDurableObjectMigrations {
 	}[];
 }
 
+/**
+ * Storage backend for a declarative Durable Object export.
+ *
+ *  - `"sqlite"` selects the SQLite-backed storage (recommended; the only path
+ *    for new namespaces).
+ *  - `"legacy_kv"` selects the legacy KV storage. Only accepted by EWC when
+ *    the script already has a KV-backed namespace for that class; creating a
+ *    new legacy-KV namespace via the declarative flow is rejected.
+ */
+export type CfDurableObjectExportStorage = "sqlite" | "legacy_kv";
+
+/**
+ * Lifecycle state of a Durable Object export entry. The default is
+ * `"created"` (live) when the field is omitted. Tombstones retire / rename /
+ * transfer a provisioned namespace; `"expecting_transfer"` is a live state
+ * that names the receiving side of a two-phase cross-script transfer.
+ */
+export type CfDurableObjectExportState =
+	| "created"
+	| "deleted"
+	| "renamed"
+	| "transferred"
+	| "expecting_transfer";
+
+/**
+ * A single declarative Durable Object export entry. Discriminated union of
+ * `type` (kind, always `"durable_object"` today) and `state` (lifecycle,
+ * defaults to `"created"` when omitted).
+ *
+ *  - `created` (default, live): `storage` is required.
+ *  - `deleted` (tombstone): retire a provisioned namespace whose class has
+ *    been removed from code.
+ *  - `renamed` (tombstone): rewrite a provisioned namespace's class name to
+ *    `renamed_to`. The target must appear as a live (state `"created"`)
+ *    `durable_object` entry in the same map.
+ *  - `transferred` (tombstone): hand ownership of the namespace to another
+ *    script in the same account (`transfer_to_script`). Two-phase commit; the
+ *    receiving script must first deploy an `expecting_transfer` entry naming
+ *    this script via `transfer_from`.
+ *  - `expecting_transfer` (live): receiving side of a two-phase transfer;
+ *    both `storage` and `transfer_from` are required.
+ *
+ * See the spec for full semantics:
+ * https://wiki.cfdata.org/spaces/WX/pages/1396640001
+ */
+export type CfDurableObjectExport =
+	| {
+			type: "durable_object";
+			state?: "created";
+			storage: CfDurableObjectExportStorage;
+	  }
+	| { type: "durable_object"; state: "deleted" }
+	| { type: "durable_object"; state: "renamed"; renamed_to: string }
+	| {
+			type: "durable_object";
+			state: "transferred";
+			transfer_to_script: string;
+	  }
+	| {
+			type: "durable_object";
+			state: "expecting_transfer";
+			storage: CfDurableObjectExportStorage;
+			transfer_from: string;
+	  };
+
+/**
+ * The declarative `exports` map keyed by class name. Mutually exclusive with
+ * {@link CfDurableObjectMigrations} at the EWC upload boundary.
+ */
+export type CfDurableObjectExports = Record<string, CfDurableObjectExport>;
+
 export type CfPlacement =
 	| { mode: "smart"; hint?: string }
 	| { mode?: "targeted"; region: string }
@@ -464,6 +535,12 @@ export interface CfWorkerInit {
 	containers: { class_name: string }[] | undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
+	/**
+	 * Declarative Durable Object exports. When set, this is sent to EWC
+	 * instead of `migrations`. Gated behind the `X_DO_EXPORTS` environment
+	 * variable for `wrangler deploy` and `wrangler versions upload`.
+	 */
+	exports: CfDurableObjectExports | undefined;
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
 	keepVars: boolean | undefined;

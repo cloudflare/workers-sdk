@@ -61,7 +61,10 @@ export const getNormalizedContainerOptions = async (
 
 	for (const container of config.containers) {
 		assert(container.name, "container name should have been set by validation");
-		const allDOs = getDurableObjectClassNameToUseSQLiteMap(config.migrations);
+		const allDOs = getDurableObjectClassNameToUseSQLiteMap(
+			config.migrations,
+			config.exports
+		);
 
 		if (
 			!allDOs.has(container.class_name) &&

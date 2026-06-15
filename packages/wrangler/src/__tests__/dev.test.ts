@@ -1752,6 +1752,47 @@ describe.sequential("wrangler dev", () => {
 				"
 			`);
 		});
+
+		describe("declarative `exports` opt-in", () => {
+			it("errors when `exports` is set but the `X_DO_EXPORTS` env var is off", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					durable_objects: {
+						bindings: [{ name: "DO", class_name: "MyDO" }],
+					},
+					exports: {
+						MyDO: { type: "durable_object", storage: "sqlite" },
+					},
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+
+				await expect(runWranglerUntilConfig("dev")).rejects.toThrow(
+					/`X_DO_EXPORTS` environment variable is not set/
+				);
+			});
+
+			it("starts dev when `exports` is set and `X_DO_EXPORTS=true`", async ({
+				expect,
+			}) => {
+				vi.stubEnv("X_DO_EXPORTS", "true");
+				writeWranglerConfig({
+					name: "test-do-exports-dev",
+					main: "index.js",
+					durable_objects: {
+						bindings: [{ name: "DO", class_name: "MyDO" }],
+					},
+					exports: {
+						MyDO: { type: "durable_object", storage: "sqlite" },
+					},
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+
+				const config = await runWranglerUntilConfig("dev");
+				expect(config.name).toBe("test-do-exports-dev");
+			});
+		});
 	});
 
 	describe("variable display", () => {
