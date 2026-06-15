@@ -76,7 +76,10 @@ import {
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
-import { imagesLocalFetcher } from "./plugins/images/fetcher";
+import {
+	cfImageLocalFetcher,
+	imagesLocalFetcher,
+} from "./plugins/images/fetcher";
 import {
 	HttpOptions_Style,
 	kInspectorSocket,
@@ -1231,8 +1234,12 @@ export class Miniflare {
 		customService: string
 	): Promise<Response> {
 		let service: z.infer<typeof ServiceDesignatorSchema> | undefined;
-		if (customService === CoreBindings.IMAGES_SERVICE) {
+		// IMAGES_BINDING_SERVICE backs the Images binding (`env.IMAGES`).
+		// IMAGES_FETCH_SERVICE backs `fetch(url, { cf: { image } })` transforms.
+		if (customService === CoreBindings.IMAGES_BINDING_SERVICE) {
 			service = imagesLocalFetcher;
+		} else if (customService === CoreBindings.IMAGES_FETCH_SERVICE) {
+			service = cfImageLocalFetcher;
 		} else {
 			const { workerIndex, serviceKind, serviceName } =
 				extractCustomService(customService);

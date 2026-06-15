@@ -17,7 +17,7 @@ import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containe
 import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
-import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
+import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
 import { fetch } from "../../http";
 import { kVoid } from "../../runtime";
@@ -550,8 +550,8 @@ export function maybeWrappedModuleToWorkerName(
 	}
 }
 
-function getStripCfConnectingIpName(workerIndex: number) {
-	return `strip-cf-connecting-ip:${workerIndex}`;
+function getOutboundInterceptorName(workerIndex: number) {
+	return `outbound:${workerIndex}`;
 }
 
 function getGlobalOutbound(
@@ -893,9 +893,7 @@ export const CORE_PLUGIN: Plugin<
 							: options.unsafeEphemeralDurableObjects
 								? { inMemory: kVoid }
 								: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
-					globalOutbound: options.stripCfConnectingIp
-						? { name: getStripCfConnectingIpName(workerIndex) }
-						: getGlobalOutbound(workerIndex, options),
+					globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&
@@ -972,17 +970,17 @@ export const CORE_PLUGIN: Plugin<
 			if (maybeService !== undefined) services.push(maybeService);
 		}
 
-		if (options.stripCfConnectingIp) {
+		{
 			// Use the zone option if provided, otherwise default to `${worker-name}.example.com`
 			const workerName = options.name ?? "worker";
 			const cfWorkerValue = options.zone ?? `${workerName}.example.com`;
 			services.push({
-				name: getStripCfConnectingIpName(workerIndex),
+				name: getOutboundInterceptorName(workerIndex),
 				worker: {
 					modules: [
 						{
 							name: "index.js",
-							esModule: STRIP_CF_CONNECTING_IP(),
+							esModule: OUTBOUND_WORKER(),
 						},
 					],
 					compatibilityDate: "2025-01-01",
@@ -992,6 +990,11 @@ export const CORE_PLUGIN: Plugin<
 							name: "CF_WORKER_ZONE",
 							text: cfWorkerValue,
 						},
+						{
+							name: "STRIP_CF_CONNECTING_IP",
+							json: JSON.stringify(options.stripCfConnectingIp ?? true),
+						},
+						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					globalOutbound: getGlobalOutbound(workerIndex, options),
 				},
