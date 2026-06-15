@@ -194,7 +194,7 @@ export async function convertToConfigBundle(
 		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
-		routes,
+		routes: event.config.dev.routeRequestsByRoutes ? routes : undefined,
 		queueConsumers,
 		outboundService: event.config.dev.outboundService,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
