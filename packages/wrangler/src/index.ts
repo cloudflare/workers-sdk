@@ -2419,7 +2419,16 @@ export async function main(argv: string[]): Promise<void> {
 			if (dispatcher) {
 				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
 			}
-			await handleError(e, configArgs, argv);
+			try {
+				await handleError(e, configArgs, argv);
+			} catch {
+				// handleError itself threw before it could log the error.
+				// Fall back to raw stderr so the user always sees something.
+				const message = e instanceof Error ? e.message : String(e);
+				if (message) {
+					process.stderr.write(`\n${message}\n`);
+				}
+			}
 			throw e;
 		}
 	} finally {
