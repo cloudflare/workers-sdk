@@ -67,6 +67,10 @@ export const loginCommand = createCommand({
 			listScopes();
 			return;
 		}
+		// Validate `--scopes` up front so we can share a single `login(...)`
+		// call (and a single `sendMetricsEvent("login user", ...)` site) between
+		// the scoped and unscoped paths.
+		let scopes: typeof DefaultScopeKeys | undefined;
 		if (args.scopes) {
 			if (args.scopes.length === 0) {
 				// don't allow no scopes to be passed, that would be weird
@@ -81,15 +85,10 @@ export const loginCommand = createCommand({
 					{ telemetryMessage: "user login invalid scope" }
 				);
 			}
-			await login(config, {
-				scopes: args.scopes,
-				browser: args.browser,
-				callbackHost: args.callbackHost,
-				callbackPort: args.callbackPort,
-			});
-			return;
+			scopes = args.scopes;
 		}
 		await login(config, {
+			scopes,
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
