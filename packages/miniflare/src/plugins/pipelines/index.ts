@@ -104,24 +104,24 @@ function bindingEntries(
 			Object.entries(namespaces) as [
 				string,
 				(
-			| string
-				| {
+					| string
+					| {
 							stream?: string;
 							/** @deprecated Use `stream` instead. */
 							pipeline?: string;
 							remoteProxyConnectionString?: RemoteProxyConnectionString;
 					  }
-			),
-		][]
-	).map(([name, opts]) => [
-		name,
-		typeof opts === "string"
-			? { id: opts }
-			: {
-					id: opts.stream ?? opts.pipeline ?? "",
-					remoteProxyConnectionString: opts.remoteProxyConnectionString,
-				},
-	]);
+				),
+			][]
+		).map(([name, opts]) => [
+			name,
+			typeof opts === "string"
+				? { id: opts }
+				: {
+						id: opts.stream ?? opts.pipeline ?? "",
+						remoteProxyConnectionString: opts.remoteProxyConnectionString,
+					},
+		]);
 	} else {
 		return [];
 	}
