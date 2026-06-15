@@ -438,6 +438,12 @@ export function throwFetchError(
 	if (code) {
 		error.code = code;
 	}
+	// hoist the first error's `meta` (if any) so consumers can inspect
+	// endpoint-specific structured error payloads without re-parsing the body
+	const meta = errors[0]?.meta;
+	if (meta) {
+		error.meta = meta;
+	}
 	// extract the account tag from the resource (if any)
 	error.accountTag = extractAccountTag(resource);
 	throw error;

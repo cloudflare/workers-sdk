@@ -289,6 +289,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			bindings,
 			queueConsumers: undefined,
 			migrations: config.migrations,
+			exports: config.exports,
 			tails: [],
 			streamingTails: [],
 			containerDOClassNames: new Set(
@@ -462,6 +463,7 @@ export function unstable_getMiniflareWorkerOptions(
 			bindings,
 			queueConsumers: config.queues.consumers,
 			migrations: config.migrations,
+			exports: config.exports,
 			tails: config.tail_consumers,
 			streamingTails: config.streaming_tail_consumers,
 			containerDOClassNames,

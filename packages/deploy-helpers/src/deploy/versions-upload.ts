@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
+	APIError,
 	configFileName,
 	formatConfigSnippet,
 	formatTime,
@@ -19,12 +20,18 @@ import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
-import { getMigrationsToUpload } from "./helpers/durable";
+import { resolveDoLifecyclePayload } from "./helpers/durable";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
+import {
+	EXPORTS_RECONCILIATION_ERROR_CODE,
+	isExportsReconciliationErrorDetails,
+	renderExportsReconciliationError,
+	renderExportsReconciliationSuccess,
+} from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
 import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
@@ -44,7 +51,11 @@ import { isWorkerNotFoundError } from "./helpers/worker-not-found-error";
 import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerInit,
+	Config,
+	ExportsReconciliationResult,
+} from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 export type VersionsUploadCallbacks = Pick<
@@ -222,16 +233,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		};
 	}
 
-	// durable object migrations
-	const migrations = !props.dryRun
-		? await getMigrationsToUpload(scriptName, {
-				accountId,
-				config,
-				useServiceEnvironments: useServiceEnvironmentsConfig(config),
-				env: props.env,
-				dispatchNamespace: undefined,
-			})
-		: undefined;
+	// Durable Object lifecycle is expressed via one of two mutually-exclusive
+	// surfaces: the legacy `migrations` steps (computed against the deployed
+	// `migration_tag`) or the declarative `exports` map (sent verbatim and
+	// reconciled server-side). The `exports` flow is gated behind the
+	// `X_DO_EXPORTS` environment variable — see DEVX-2572.
+	const { migrations, exports } = await resolveDoLifecyclePayload({
+		scriptName,
+		isDryRun: props.dryRun,
+		accountId,
+		config,
+		useServiceEnvironments: useServiceEnvironmentsConfig(config),
+		env: props.env,
+		dispatchNamespace: undefined,
+		optInContext: "versions upload",
+	});
 
 	// Upload assets if assets is being used
 	const assetsJwt =
@@ -268,6 +284,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		name: scriptName,
 		main,
 		migrations,
+		exports,
 		modules,
 		containers: config.containers,
 		sourceMaps,
@@ -356,6 +373,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						metadata: {
 							has_preview: boolean;
 						};
+						exports_reconciliation?: ExportsReconciliationResult;
 					}>(
 						config,
 						`${workerUrl}/versions`,
@@ -380,6 +398,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				undefined,
 				{ unsafeMetadata: config.unsafe?.metadata }
 			);
+			if (result.exports_reconciliation) {
+				renderExportsReconciliationSuccess(result.exports_reconciliation);
+			}
 			versionId = result.id;
 			hasPreview = result.metadata.has_preview;
 		} catch (err) {
@@ -390,6 +411,26 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config.streaming_tail_consumers,
 					undefined,
 					{ unsafeMetadata: config.unsafe?.metadata }
+				);
+			}
+
+			// Declarative DO exports reconciliation errors come back from EWC
+			// with a structured `meta.details[]` payload. Render the per-class
+			// detail in a familiar format before re-throwing so the user sees
+			// every blocking scenario in one round trip (matches the EWC
+			// "Multi-DO error handling" guarantee — see spec §3.2).
+			if (
+				err instanceof APIError &&
+				err.code === EXPORTS_RECONCILIATION_ERROR_CODE &&
+				isExportsReconciliationErrorDetails(err.meta?.details)
+			) {
+				err.preventReport();
+				throw new UserError(
+					renderExportsReconciliationError(err.meta.details),
+					{
+						telemetryMessage:
+							"versions upload do exports reconciliation failed",
+					}
 				);
 			}
 

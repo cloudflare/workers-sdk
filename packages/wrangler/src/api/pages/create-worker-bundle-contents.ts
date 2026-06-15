@@ -59,6 +59,7 @@ function createWorkerBundleFormData(
 			main: mainModule,
 			modules: workerBundle.modules,
 			migrations: undefined,
+			exports: undefined,
 			compatibility_date: config?.compatibility_date,
 			compatibility_flags: config?.compatibility_flags,
 			keepVars: undefined,

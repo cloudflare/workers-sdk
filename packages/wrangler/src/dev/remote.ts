@@ -233,6 +233,7 @@ export async function createRemoteWorkerInit(props: {
 		modules,
 		bindings,
 		migrations: undefined, // no migrations in dev
+		exports: undefined, // no declarative DO exports in dev either
 		compatibility_date: props.compatibilityDate,
 		compatibility_flags: props.compatibilityFlags,
 		keepVars: true,

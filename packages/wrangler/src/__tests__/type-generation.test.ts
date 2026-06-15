@@ -3717,6 +3717,118 @@ describe("generate types - CLI", () => {
 			"
 		`);
 	});
+
+	describe("declarative Durable Object `exports`", () => {
+		it("populates `durableNamespaces` from live `exports` entries (including unbound + `expecting_transfer`) and excludes tombstones", async ({
+			expect,
+		}) => {
+			vi.stubEnv("X_DO_EXPORTS", "true");
+
+			// Source defines all three live classes. Two are accessible via a
+			// binding (`BoundDO`) and the others (`UnboundDO`, `IncomingDO`) are
+			// only reachable through `ctx.exports`, which is typed via
+			// `Cloudflare.GlobalProps.durableNamespaces`.
+			fs.writeFileSync(
+				"./index.ts",
+				`import { DurableObject } from "cloudflare:workers";
+export class BoundDO extends DurableObject {}
+export class UnboundDO extends DurableObject {}
+export class IncomingDO extends DurableObject {}
+export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-exports-types",
+					main: "./index.ts",
+					durable_objects: {
+						bindings: [{ name: "BOUND_DO", class_name: "BoundDO" }],
+					},
+					exports: {
+						BoundDO: { type: "durable_object", storage: "sqlite" },
+						UnboundDO: { type: "durable_object", storage: "sqlite" },
+						IncomingDO: {
+							type: "durable_object",
+							state: "expecting_transfer",
+							storage: "sqlite",
+							transfer_from: "source-worker",
+						},
+						// Tombstones — must NOT appear in `durableNamespaces`.
+						OldGone: { type: "durable_object", state: "deleted" },
+						LegacyName: {
+							type: "durable_object",
+							state: "renamed",
+							renamed_to: "BoundDO",
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			// The single snapshot below pins everything we care about:
+			//   - `env.BOUND_DO` is typed via the bound entry.
+			//   - No `env.X` entries for `UnboundDO` / `IncomingDO`.
+			//   - `durableNamespaces` is the union of the three live classes.
+			//   - Tombstone class names are absent from `durableNamespaces`.
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				interface __BaseEnv_Env {
+					BOUND_DO: DurableObjectNamespace<import("./index").BoundDO>;
+				}
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						mainModule: typeof import("./index");
+						durableNamespaces: "BoundDO" | "UnboundDO" | "IncomingDO";
+					}
+					interface Env extends __BaseEnv_Env {}
+				}
+				interface Env extends __BaseEnv_Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("rejects when `exports` is configured but `X_DO_EXPORTS` is unset", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"./index.ts",
+				`import { DurableObject } from "cloudflare:workers";
+export class MyDO extends DurableObject {}
+export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-exports-types-gate",
+					main: "./index.ts",
+					durable_objects: {
+						bindings: [{ name: "MY_DO", class_name: "MyDO" }],
+					},
+					exports: {
+						MyDO: { type: "durable_object", storage: "sqlite" },
+					},
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --include-runtime=false")
+			).rejects.toThrow(/`X_DO_EXPORTS` environment variable is not set/);
+		});
+	});
 });
 
 describe("generate types - API", () => {

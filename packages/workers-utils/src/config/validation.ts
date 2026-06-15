@@ -3,7 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
-import { getCloudflareEnv } from "../environment-variables/misc-variables";
+import {
+	getCloudflareEnv,
+	getDoExportsEnabledFromEnv,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
@@ -1688,6 +1691,14 @@ function normalizeAndValidateEnvironment(
 			validateMigrations,
 			[]
 		),
+		exports: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"exports",
+			validateExports,
+			{}
+		),
 		kv_namespaces: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2138,11 +2149,18 @@ function normalizeAndValidateEnvironment(
 		),
 	};
 
-	warnIfDurableObjectsHaveNoMigrations(
+	warnIfDurableObjectsHaveNoLifecycleConfig(
 		diagnostics,
 		environment.durable_objects,
 		environment.migrations,
+		environment.exports,
 		configPath
+	);
+
+	errorIfMigrationsAndExportsBothSet(
+		diagnostics,
+		environment.migrations,
+		environment.exports
 	);
 
 	// top level 'rawEnv' includes inheritable keys and is validated elsewhere
@@ -5835,6 +5853,358 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 	return valid;
 };
 
+/**
+ * Cap on the number of declarative export entries per upload. Matches the
+ * server-side `maxExportsPerScript` constant in EWC's
+ * `internal/api/script/reader/types.go`.
+ */
+const MAX_EXPORTS_PER_SCRIPT = 100;
+
+/**
+ * Cap on the length of each class-name key. Matches the server-side
+ * `maxExportClassNameLen`.
+ */
+const MAX_EXPORT_CLASS_NAME_LEN = 128;
+
+const VALID_EXPORT_TYPES = new Set(["durable_object"]);
+
+const VALID_EXPORT_STATES = new Set([
+	"created",
+	"deleted",
+	"renamed",
+	"transferred",
+	"expecting_transfer",
+]);
+
+const VALID_EXPORT_STORAGES = new Set(["sqlite", "legacy_kv"]);
+
+/**
+ * Approximate JavaScript IdentifierName matcher used for tombstone `renamed_to`
+ * validation. EWC defers the full ES grammar check to the runtime validator;
+ * this is a best-effort client-side fence that catches the common mistakes
+ * (whitespace, punctuation, leading digit). Identical to the pattern used
+ * for tombstone validation server-side.
+ */
+const JS_IDENTIFIER_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+/**
+ * Validate the `exports` configuration. The shape mirrors the server-side
+ * `ExportConfig` discriminated union in EWC: `type` carries the export kind
+ * (currently always `"durable_object"`) and the new `state` field carries
+ * the lifecycle (`"created"` default, `"deleted"`, `"renamed"`,
+ * `"transferred"`, `"expecting_transfer"`). See the spec for full
+ * semantics:
+ * https://wiki.cfdata.org/spaces/WX/pages/1396640001
+ */
+const validateExports: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined || value === null) {
+		return true;
+	}
+
+	if (
+		typeof value !== "object" ||
+		Array.isArray(value) ||
+		value instanceof Date
+	) {
+		diagnostics.errors.push(
+			`The optional "${field}" field should be an object keyed by class name, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+
+	const rawExports = value as Record<string, unknown>;
+	const classNames = Object.keys(rawExports);
+
+	if (classNames.length > MAX_EXPORTS_PER_SCRIPT) {
+		diagnostics.errors.push(
+			`"${field}" has ${classNames.length} entries; the maximum allowed is ${MAX_EXPORTS_PER_SCRIPT}.`
+		);
+		return false;
+	}
+
+	let valid = true;
+	// Track every class name declared as a live `durable_object` entry (i.e.
+	// effective state `"created"`) so renamed tombstones can verify their
+	// `renamed_to` target lands on a live entry in the same map. Mirrors the
+	// EWC reader's cross-entry check; per spec T4, `expecting_transfer`
+	// entries do NOT count as valid rename targets — they haven't taken
+	// ownership of a namespace on this script yet.
+	const liveClassNames = new Set<string>();
+	for (const className of classNames) {
+		const entry = rawExports[className];
+		if (
+			typeof entry === "object" &&
+			entry !== null &&
+			!Array.isArray(entry) &&
+			(entry as { type?: unknown }).type === "durable_object"
+		) {
+			const rawState = (entry as { state?: unknown }).state;
+			const effectiveState =
+				rawState === undefined || rawState === null ? "created" : rawState;
+			if (effectiveState === "created") {
+				liveClassNames.add(className);
+			}
+		}
+	}
+
+	for (const className of classNames) {
+		if (className === "") {
+			diagnostics.errors.push(`"${field}" keys cannot be the empty string.`);
+			valid = false;
+			continue;
+		}
+		if (className.length > MAX_EXPORT_CLASS_NAME_LEN) {
+			diagnostics.errors.push(
+				`"${field}" class name "${className.slice(
+					0,
+					32
+				)}..." exceeds the maximum length of ${MAX_EXPORT_CLASS_NAME_LEN} characters.`
+			);
+			valid = false;
+			continue;
+		}
+
+		const entry = rawExports[className];
+		const entryField = `${field}.${className}`;
+
+		if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+			diagnostics.errors.push(
+				`"${entryField}" should be an object but got ${JSON.stringify(entry)}`
+			);
+			valid = false;
+			continue;
+		}
+
+		const {
+			type,
+			state,
+			storage,
+			renamed_to,
+			transfer_to_script,
+			transfer_from,
+			...rest
+		} = entry as {
+			type?: unknown;
+			state?: unknown;
+			storage?: unknown;
+			renamed_to?: unknown;
+			transfer_to_script?: unknown;
+			transfer_from?: unknown;
+		};
+
+		valid =
+			validateAdditionalProperties(
+				diagnostics,
+				entryField,
+				Object.keys(rest),
+				[]
+			) && valid;
+
+		if (typeof type !== "string" || !VALID_EXPORT_TYPES.has(type)) {
+			diagnostics.errors.push(
+				`"${entryField}.type" must be one of ${[...VALID_EXPORT_TYPES]
+					.map((t) => `"${t}"`)
+					.join(", ")}, but got ${JSON.stringify(type)}`
+			);
+			valid = false;
+			continue;
+		}
+
+		// `state` defaults to "created" when omitted. Any other value must be
+		// one of the declared states.
+		let effectiveState: string;
+		if (state === undefined || state === null) {
+			effectiveState = "created";
+		} else if (typeof state === "string" && VALID_EXPORT_STATES.has(state)) {
+			effectiveState = state;
+		} else {
+			diagnostics.errors.push(
+				`"${entryField}.state" must be one of ${[...VALID_EXPORT_STATES]
+					.map((s) => `"${s}"`)
+					.join(", ")}, but got ${JSON.stringify(state)}`
+			);
+			valid = false;
+			continue;
+		}
+
+		switch (effectiveState) {
+			case "created": {
+				if (
+					typeof storage !== "string" ||
+					!VALID_EXPORT_STORAGES.has(storage)
+				) {
+					diagnostics.errors.push(
+						`"${entryField}.storage" is required for state "created" and must be one of ${[
+							...VALID_EXPORT_STORAGES,
+						]
+							.map((s) => `"${s}"`)
+							.join(", ")}, but got ${JSON.stringify(storage)}`
+					);
+					valid = false;
+				}
+				if (renamed_to !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.renamed_to" is forbidden on state "created".`
+					);
+					valid = false;
+				}
+				if (transfer_to_script !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_to_script" is forbidden on state "created".`
+					);
+					valid = false;
+				}
+				if (transfer_from !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_from" is forbidden on state "created"; use state "expecting_transfer" for the receiving side of a two-phase transfer.`
+					);
+					valid = false;
+				}
+				break;
+			}
+			case "deleted": {
+				if (storage !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.storage" is forbidden on state "deleted".`
+					);
+					valid = false;
+				}
+				if (renamed_to !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.renamed_to" is forbidden on state "deleted".`
+					);
+					valid = false;
+				}
+				if (transfer_to_script !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_to_script" is forbidden on state "deleted".`
+					);
+					valid = false;
+				}
+				if (transfer_from !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_from" is forbidden on state "deleted".`
+					);
+					valid = false;
+				}
+				break;
+			}
+			case "renamed": {
+				if (typeof renamed_to !== "string" || renamed_to === "") {
+					diagnostics.errors.push(
+						`"${entryField}.renamed_to" is required for state "renamed" and must be a non-empty string.`
+					);
+					valid = false;
+				} else {
+					if (!JS_IDENTIFIER_RE.test(renamed_to)) {
+						diagnostics.errors.push(
+							`"${entryField}.renamed_to" must be a valid JavaScript identifier (got "${renamed_to}").`
+						);
+						valid = false;
+					}
+					if (renamed_to === className) {
+						diagnostics.errors.push(
+							`"${entryField}.renamed_to" cannot equal the source class name "${className}".`
+						);
+						valid = false;
+					} else if (!liveClassNames.has(renamed_to)) {
+						diagnostics.errors.push(
+							`"${entryField}.renamed_to" target "${renamed_to}" must appear as a live "durable_object" entry (state "created") in the same "${field}" map.`
+						);
+						valid = false;
+					}
+				}
+				if (storage !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.storage" is forbidden on state "renamed".`
+					);
+					valid = false;
+				}
+				if (transfer_to_script !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_to_script" is forbidden on state "renamed".`
+					);
+					valid = false;
+				}
+				if (transfer_from !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_from" is forbidden on state "renamed".`
+					);
+					valid = false;
+				}
+				break;
+			}
+			case "transferred": {
+				if (
+					typeof transfer_to_script !== "string" ||
+					transfer_to_script === ""
+				) {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_to_script" is required for state "transferred" and must be a non-empty string.`
+					);
+					valid = false;
+				}
+				if (storage !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.storage" is forbidden on state "transferred".`
+					);
+					valid = false;
+				}
+				if (renamed_to !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.renamed_to" is forbidden on state "transferred".`
+					);
+					valid = false;
+				}
+				if (transfer_from !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_from" is forbidden on state "transferred".`
+					);
+					valid = false;
+				}
+				break;
+			}
+			case "expecting_transfer": {
+				if (
+					typeof storage !== "string" ||
+					!VALID_EXPORT_STORAGES.has(storage)
+				) {
+					diagnostics.errors.push(
+						`"${entryField}.storage" is required for state "expecting_transfer" and must be one of ${[
+							...VALID_EXPORT_STORAGES,
+						]
+							.map((s) => `"${s}"`)
+							.join(", ")}, but got ${JSON.stringify(storage)}`
+					);
+					valid = false;
+				}
+				if (typeof transfer_from !== "string" || transfer_from === "") {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_from" is required for state "expecting_transfer" and must be a non-empty string.`
+					);
+					valid = false;
+				}
+				if (renamed_to !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.renamed_to" is forbidden on state "expecting_transfer".`
+					);
+					valid = false;
+				}
+				if (transfer_to_script !== undefined) {
+					diagnostics.errors.push(
+						`"${entryField}.transfer_to_script" is forbidden on state "expecting_transfer".`
+					);
+					valid = false;
+				}
+				break;
+			}
+		}
+	}
+	return valid;
+};
+
 const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined) {
 		return true;
@@ -6051,48 +6421,135 @@ const validateCache: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
-function warnIfDurableObjectsHaveNoMigrations(
+/**
+ * Emit a warning if a DO binding's class isn't covered by either a live
+ * `exports` entry or a `migrations` block, suggesting the appropriate
+ * lifecycle declaration based on what the user appears to be using.
+ *
+ * The warning branches between three shapes:
+ *
+ *  1. The config already declares any `exports` entries — suggest extending
+ *     the `exports` map with live `durable_object` entries for the
+ *     uncovered classes.
+ *  2. Neither `migrations` nor `exports` are declared, but the
+ *     `X_DO_EXPORTS` environment variable is set — the user has opted into
+ *     the new declarative flow, so suggest an `exports` map.
+ *  3. Otherwise — the user is on the legacy `migrations` path; suggest the
+ *     `migrations` block (existing behaviour).
+ */
+function warnIfDurableObjectsHaveNoLifecycleConfig(
 	diagnostics: Diagnostics,
 	durableObjects: Config["durable_objects"],
 	migrations: Config["migrations"],
+	exports: Config["exports"],
 	configPath: string | undefined
 ) {
 	if (
-		Array.isArray(durableObjects.bindings) &&
-		durableObjects.bindings.length > 0
+		!Array.isArray(durableObjects.bindings) ||
+		durableObjects.bindings.length === 0
 	) {
-		// intrinsic [durable_objects] implies [migrations]
-		const exportedDurableObjects = (durableObjects.bindings || []).filter(
-			(binding) => !binding.script_name
-		);
-		if (exportedDurableObjects.length > 0 && migrations.length === 0) {
-			if (
-				!exportedDurableObjects.some(
-					(exportedDurableObject) =>
-						typeof exportedDurableObject.class_name !== "string"
-				)
-			) {
-				const durableObjectClassnames = exportedDurableObjects.map(
-					(durable) => durable.class_name
-				);
+		return;
+	}
 
-				diagnostics.warnings.push(dedent`
-				In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your ${configFileName(configPath)} file. Add the following configuration:
-
-				\`\`\`
-				${formatConfigSnippet(
-					{
-						migrations: [
-							{ tag: "v1", new_sqlite_classes: durableObjectClassnames },
-						],
-					},
-					configPath
-				)}
-				\`\`\`
-
-				Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
-			}
+	// intrinsic [durable_objects] implies [migrations] (or `exports`)
+	const exportedDurableObjects = durableObjects.bindings.filter(
+		(binding) => !binding.script_name
+	);
+	// A DO binding is "covered" if its class appears as a live
+	// `durable_object` entry in `exports` — either the default
+	// `state: "created"` or `state: "expecting_transfer"`. Tombstones
+	// (`deleted`, `renamed`, `transferred`) don't satisfy the rule on
+	// their own because the class is being retired/moved.
+	const exportsCovers = (className: string) => {
+		const entry = exports?.[className];
+		if (entry === undefined || entry.type !== "durable_object") {
+			return false;
 		}
+		const state = entry.state ?? "created";
+		return state === "created" || state === "expecting_transfer";
+	};
+	const uncoveredByExports = exportedDurableObjects.filter(
+		(binding) =>
+			typeof binding.class_name !== "string" ||
+			!exportsCovers(binding.class_name)
+	);
+
+	if (uncoveredByExports.length === 0 || migrations.length > 0) {
+		return;
+	}
+	if (
+		uncoveredByExports.some(
+			(exportedDurableObject) =>
+				typeof exportedDurableObject.class_name !== "string"
+		)
+	) {
+		return;
+	}
+
+	const durableObjectClassnames = uncoveredByExports.map(
+		(durable) => durable.class_name
+	) as string[];
+
+	// Decide which lifecycle declaration to suggest based on user intent.
+	// If the config already has *any* `exports` entries (live or tombstone),
+	// the user is on the declarative path — extend it. If neither lifecycle
+	// is declared but `X_DO_EXPORTS` is set, they've opted in to the new
+	// flow. Otherwise, fall back to suggesting a `migrations` block.
+	const usingExports = exports !== undefined && Object.keys(exports).length > 0;
+	const preferExports = usingExports || getDoExportsEnabledFromEnv();
+
+	if (preferExports) {
+		const suggestedExports: NonNullable<RawConfig["exports"]> = {};
+		for (const className of durableObjectClassnames) {
+			suggestedExports[className] = {
+				type: "durable_object",
+				storage: "sqlite",
+			};
+		}
+
+		diagnostics.warnings.push(dedent`
+		In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable_object\` entry to \`exports\` for each. Add the following configuration:
+
+		\`\`\`
+		${formatConfigSnippet({ exports: suggestedExports }, configPath)}
+		\`\`\``);
+		return;
+	}
+
+	diagnostics.warnings.push(dedent`
+	In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your ${configFileName(configPath)} file. Add the following configuration:
+
+	\`\`\`
+	${formatConfigSnippet(
+		{
+			migrations: [{ tag: "v1", new_sqlite_classes: durableObjectClassnames }],
+		},
+		configPath
+	)}
+	\`\`\`
+
+	Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
+}
+
+/**
+ * `migrations` and `exports` are mutually exclusive ways to declare Durable
+ * Object lifecycle. EWC rejects an upload that has both; we enforce the same
+ * rule at config-validation time so the user sees the problem before the
+ * network round trip.
+ */
+function errorIfMigrationsAndExportsBothSet(
+	diagnostics: Diagnostics,
+	migrations: Config["migrations"],
+	exports: Config["exports"]
+) {
+	if (
+		migrations.length > 0 &&
+		exports !== undefined &&
+		Object.keys(exports).length > 0
+	) {
+		diagnostics.errors.push(
+			`\`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both.`
+		);
 	}
 }
 

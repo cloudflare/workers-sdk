@@ -46,7 +46,13 @@ import type {
 	// TODO: re-enable when workflow bindings return.
 	// WorkflowBinding,
 } from "./bindings";
-import type { DurableObjectExport } from "./exports";
+import type {
+	DurableObjectDeletedExport,
+	DurableObjectExpectingTransferExport,
+	DurableObjectExport,
+	DurableObjectRenamedExport,
+	DurableObjectTransferredExport,
+} from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
 	FetchTrigger,
@@ -103,9 +109,19 @@ type Binding =
 type Trigger = FetchTrigger | QueueConsumerTrigger | ScheduledTrigger;
 
 /**
- * Union of all export definitions accepted in `exports`.
+ * Union of all export definitions accepted in `exports`. The live variant
+ * is `DurableObjectExport` (`type: "durable-object"`, state defaults to
+ * `"created"`); the three tombstone variants (`deleted`, `renamed`,
+ * `transferred`) express explicit lifecycle operations on previously
+ * provisioned namespaces. `DurableObjectExpectingTransferExport` names the
+ * receiving side of a two-phase cross-script transfer.
  */
-type Export = DurableObjectExport;
+type Export =
+	| DurableObjectExport
+	| DurableObjectDeletedExport
+	| DurableObjectRenamedExport
+	| DurableObjectTransferredExport
+	| DurableObjectExpectingTransferExport;
 // TODO: support Workflows
 // type Export = DurableObjectExport | WorkflowExport;
 

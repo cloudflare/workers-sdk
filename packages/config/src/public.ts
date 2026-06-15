@@ -58,7 +58,15 @@ export type {
 	ScheduledTrigger,
 } from "./triggers";
 export { triggers } from "./triggers";
-export type { Exports, DurableObjectExport, WorkflowExport } from "./exports";
+export type {
+	Exports,
+	DurableObjectExport,
+	DurableObjectDeletedExport,
+	DurableObjectRenamedExport,
+	DurableObjectTransferredExport,
+	DurableObjectExpectingTransferExport,
+	WorkflowExport,
+} from "./exports";
 export { exports } from "./exports";
 export type {
 	InferEnv,

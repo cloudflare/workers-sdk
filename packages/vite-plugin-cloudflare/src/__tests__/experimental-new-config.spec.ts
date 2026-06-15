@@ -345,30 +345,39 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 	test.for([
 		{ mode: "development", command: "serve" as const },
 		{ mode: "production", command: "build" as const },
-	])("throws on durable-object exports ($command)", async (env, { expect }) => {
-		seedWorkerSource();
-		writeWorkerConfig(
-			[
-				"import { defineWorker } from '@cloudflare/config';",
-				"export default defineWorker({",
-				"  name: 'experimental-config-worker',",
-				"  entrypoint: './src/index.ts',",
-				"  compatibilityDate: '2024-12-30',",
-				"  exports: {",
-				"    Counter: { type: 'durable-object', storage: 'sqlite' },",
-				"  },",
-				"});",
-			].join("\n")
-		);
+	])(
+		"accepts durable-object exports and converts to the wrangler schema ($command)",
+		async (env, { expect }) => {
+			seedWorkerSource();
+			writeWorkerConfig(
+				[
+					"import { defineWorker } from '@cloudflare/config';",
+					"export default defineWorker({",
+					"  name: 'experimental-config-worker',",
+					"  entrypoint: './src/index.ts',",
+					"  compatibilityDate: '2024-12-30',",
+					"  exports: {",
+					"    Counter: { type: 'durable-object', storage: 'sqlite' },",
+					"  },",
+					"});",
+				].join("\n")
+			);
 
-		const pluginConfig: PluginConfig = {
-			experimental: { newConfig: true },
-		};
+			const pluginConfig: PluginConfig = {
+				experimental: { newConfig: true },
+			};
 
-		await expect(
-			resolvePluginConfig(pluginConfig, { root: tempDir }, env)
-		).rejects.toThrow(/Durable Object exports/);
-	});
+			// `convertExports` previously threw "Durable Object exports are not
+			// currently supported" for any DO export. After DEVX-2572 it emits
+			// the declarative `exports` field on the wrangler-shape config,
+			// keyed by class name with snake_case fields. We assert the
+			// resolution simply succeeds — the conversion shape is covered by
+			// the @cloudflare/config unit tests in `convert.test.ts`.
+			await expect(
+				resolvePluginConfig(pluginConfig, { root: tempDir }, env)
+			).resolves.toBeDefined();
+		}
+	);
 
 	test("does not rewrite worker-configuration.d.ts when content is unchanged", async ({
 		expect,

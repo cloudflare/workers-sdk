@@ -35,12 +35,18 @@ import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { getDeployConfirmFunction } from "./helpers/deploy-confirm";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
 import { downloadWorkerConfig } from "./helpers/download-worker-config";
-import { getMigrationsToUpload } from "./helpers/durable";
+import { resolveDoLifecyclePayload } from "./helpers/durable";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
+import {
+	EXPORTS_RECONCILIATION_ERROR_CODE,
+	isExportsReconciliationErrorDetails,
+	renderExportsReconciliationError,
+	renderExportsReconciliationSuccess,
+} from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
 import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
@@ -79,6 +85,7 @@ import type {
 	CfWorkerInit,
 	ComplianceConfig,
 	Config,
+	ExportsReconciliationResult,
 	LegacyAssetPaths,
 	RawConfig,
 } from "@cloudflare/workers-utils";
@@ -407,16 +414,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		content,
 		sourceMaps,
 	} = buildResult;
-	// durable object migrations
-	const migrations = !isDryRun
-		? await getMigrationsToUpload(scriptName, {
-				accountId,
-				config,
-				useServiceEnvironments: useServiceEnvironmentsConfig(config),
-				env: props.env,
-				dispatchNamespace: props.dispatchNamespace,
-			})
-		: undefined;
+	// Durable Object lifecycle is expressed via one of two mutually-exclusive
+	// surfaces: the legacy `migrations` steps (computed against the deployed
+	// `migration_tag`) or the declarative `exports` map (sent verbatim and
+	// reconciled server-side). The `exports` flow is gated behind the
+	// `X_DO_EXPORTS` environment variable — see DEVX-2572.
+	const { migrations, exports } = await resolveDoLifecyclePayload({
+		scriptName,
+		isDryRun,
+		accountId,
+		config,
+		useServiceEnvironments: useServiceEnvironmentsConfig(config),
+		env: props.env,
+		dispatchNamespace: props.dispatchNamespace,
+	});
 
 	// Upload assets if assets is being used
 	const assetsJwt =
@@ -503,6 +514,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		name: scriptName,
 		main,
 		migrations,
+		exports,
 		modules,
 		containers: config.containers,
 		sourceMaps,
@@ -553,6 +565,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// * aren't a service env deploy
 	// * aren't a service Worker
 	// * we don't have DO migrations
+	// * we don't have declarative DO `exports` (the legacy PUT path is the
+	//   only path that surfaces the `exports_reconciliation` envelope today)
 	// * we aren't an fpw
 	// * not a container worker
 	const canUseNewVersionsDeploymentsApi =
@@ -561,6 +575,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		!useServiceEnvironments &&
 		format === "modules" &&
 		migrations === undefined &&
+		exports === undefined &&
 		!config.first_party_worker &&
 		config.containers === undefined;
 
@@ -726,7 +741,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					startup_time_ms: versionResult.startup_time_ms,
 				};
 			} else {
-				result = await retryOnAPIFailure(
+				const uploadResult = await retryOnAPIFailure(
 					async () =>
 						fetchResult<{
 							id: string | null;
@@ -735,6 +750,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							mutable_pipeline_id: string | null;
 							deployment_id: string | null;
 							startup_time_ms: number;
+							exports_reconciliation?: ExportsReconciliationResult;
 						}>(
 							config,
 							workerUrl,
@@ -754,6 +770,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						),
 					logger
 				);
+				result = uploadResult;
+				if (uploadResult.exports_reconciliation) {
+					renderExportsReconciliationSuccess(
+						uploadResult.exports_reconciliation
+					);
+				}
 
 				// Update service and environment tags when using environments
 				const nextTags = applyServiceAndEnvironmentTags(config, tags);
@@ -818,6 +840,24 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					{ unsafeMetadata: config.unsafe?.metadata }
 				);
 			}
+
+			// Declarative DO exports reconciliation errors come back from EWC
+			// with a structured `meta.details[]` payload. Render the per-class
+			// detail in a familiar format before re-throwing so the user sees
+			// every blocking scenario in one round trip (matches the EWC
+			// "Multi-DO error handling" guarantee — see spec §3.2).
+			if (
+				err instanceof APIError &&
+				err.code === EXPORTS_RECONCILIATION_ERROR_CODE &&
+				isExportsReconciliationErrorDetails(err.meta?.details)
+			) {
+				err.preventReport();
+				throw new UserError(
+					renderExportsReconciliationError(err.meta.details),
+					{ telemetryMessage: "deploy do exports reconciliation failed" }
+				);
+			}
+
 			const message = await helpIfErrorIsSizeOrScriptStartup(
 				err,
 				dependencies,

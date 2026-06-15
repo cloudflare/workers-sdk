@@ -287,10 +287,36 @@ const EnvSchema = z
 	})
 	.optional();
 
-const ExportSchema = z.discriminatedUnion("type", [
+// `state` is the lifecycle discriminator for Durable Object exports. It
+// defaults to `"created"` (live) when omitted, mirroring the EWC wire
+// contract. Tombstones use one of `"deleted"`, `"renamed"`,
+// `"transferred"`; `"expecting-transfer"` is a live entry awaiting incoming
+// data via the two-phase cross-script transfer flow.
+const ExportSchema = z.union([
 	z.strictObject({
 		type: z.literal("durable-object"),
+		state: z.literal("created").optional(),
 		storage: z.enum(["sqlite", "legacy-kv"]),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("deleted"),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("renamed"),
+		renamedTo: z.string(),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("transferred"),
+		transferTo: z.string(),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("expecting-transfer"),
+		storage: z.enum(["sqlite", "legacy-kv"]),
+		transferFrom: z.string(),
 	}),
 	// TODO: support Workflows
 	// z.strictObject({

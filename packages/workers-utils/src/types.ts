@@ -4,6 +4,7 @@ import type {
 	CustomDomainRoute,
 	ContainerApp,
 	ContainerEngine,
+	DurableObjectExports,
 	DurableObjectMigration,
 	Observability,
 	Rule,
@@ -21,6 +22,7 @@ import type {
 	CfD1Database,
 	CfDispatchNamespace,
 	CfDurableObject,
+	CfDurableObjectExports,
 	CfDurableObjectMigrations,
 	CfFlagship,
 	CfHelloWorld,
@@ -271,6 +273,7 @@ type WorkerMetadataPut = {
 	compatibility_flags?: string[];
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
+	exports?: CfDurableObjectExports;
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
 	keep_bindings?: (
@@ -300,6 +303,83 @@ type WorkerMetadataVersionsPost = WorkerMetadataPut & {
 };
 
 export type WorkerMetadata = WorkerMetadataPut | WorkerMetadataVersionsPost;
+
+/**
+ * Structured per-class entry returned by the EWC declarative exports
+ * reconciliation flow.
+ *
+ * The same shape is used for both successful info entries (under
+ * `exports_reconciliation.info[]`) and blocking errors (under the v4 error
+ * envelope's `meta.details[]`). The `scenario` tag is the stable, machine-
+ * readable identifier of which reconciliation case produced the entry.
+ *
+ * See the spec for the full set of scenario tags:
+ * https://wiki.cfdata.org/spaces/WX/pages/1396640001
+ */
+export type ExportsReconciliationEntryBase = {
+	class: string;
+	scenario: string;
+	message: string;
+	namespace_id?: string;
+};
+
+export type ExportsReconciliationInfo = ExportsReconciliationEntryBase & {
+	/**
+	 * Workers in the account that still bind to the source class name and must
+	 * be redeployed before the tombstone is safe to remove. Populated only for
+	 * stale renamed / transferred tombstones (T1b / T1c during rollout, and
+	 * T5 / T7 after the rollout completes).
+	 *
+	 * Same shape as `ExportsReconciliationErrorDetail.referencing_scripts`;
+	 * both envelopes name the field consistently per the spec.
+	 */
+	referencing_scripts?: string[];
+};
+
+export type ExportsReconciliationWarning = ExportsReconciliationEntryBase;
+
+export type ExportsReconciliationErrorDetail =
+	ExportsReconciliationEntryBase & {
+		suggestion?: string;
+		referencing_scripts?: string[];
+	};
+
+export type ExportsReconciliationRename = {
+	from: string;
+	to: string;
+};
+
+export type ExportsReconciliationTransfer = {
+	class: string;
+	to_script: string;
+	phase: "committed";
+};
+
+export type ExportsReconciliationTransferPending = {
+	class: string;
+	from_script: string;
+};
+
+/**
+ * The customer-visible summary of a successful exports reconciliation,
+ * embedded in the upload response under `exports_reconciliation`. Mirrors the
+ * server's `internal/models/exportsreconcile.Result` type.
+ *
+ * All slice fields are present (possibly empty) on the wire — see the server
+ * struct for the explicit non-`omitempty` annotation. The wrangler-side type
+ * marks them as required to match.
+ */
+export type ExportsReconciliationResult = {
+	created: string[];
+	updated: string[];
+	deleted: string[];
+	renamed: ExportsReconciliationRename[];
+	transferred?: ExportsReconciliationTransfer[];
+	transfer_pending?: ExportsReconciliationTransferPending[];
+	warnings: ExportsReconciliationWarning[];
+	info: ExportsReconciliationInfo[];
+	removable_entries: string[];
+};
 
 export type ServiceMetadataRes = {
 	id: string;
@@ -484,6 +564,7 @@ export interface StartDevWorkerInput {
 	 */
 	defaultBindings?: Record<string, Extract<Binding, { type: "plain_text" }>>;
 	migrations?: DurableObjectMigration[];
+	exports?: DurableObjectExports;
 	containers?: ContainerApp[];
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];

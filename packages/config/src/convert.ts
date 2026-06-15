@@ -656,21 +656,96 @@ function convertBindingsAndAssets(
 // EXPORTS (Durable Objects + Workflows)
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * Convert the new-config `exports` map (camelCase property names,
+ * kebab-case enumeration values) into the wrangler `exports` shape
+ * (snake_case throughout, matching the EWC upload metadata wire format).
+ * The wrangler-side schema is documented in
+ * `@cloudflare/workers-utils/config/environment#DurableObjectExports`.
+ *
+ * The structural shape is identical between `@cloudflare/config`, wrangler,
+ * and EWC; the only differences are the two stylistic transforms applied
+ * here.
+ *
+ * Workflows are not yet supported on the export path; entries with
+ * non-Durable-Object types will be added here as those land.
+ */
 function convertExports(
 	config: ParsedInputWorkerConfig,
-	_result: RawConfig
+	result: RawConfig
 ): void {
 	const exports = config.exports;
 	if (!exports) {
 		return;
 	}
 
-	for (const value of Object.values(exports)) {
-		if (value.type === "durable-object") {
-			throw new Error("Durable Object exports are not currently supported.");
+	const converted: Record<string, unknown> = {};
+	for (const [className, value] of Object.entries(exports)) {
+		if (value.type !== "durable-object") {
+			// Reserved for future export kinds (e.g. workflows). Skip until
+			// they land.
+			continue;
 		}
-		// TODO: support Workflows
+		// Switch on `value.state` directly so TS narrows the discriminated
+		// union to the variant that carries the right fields.
+		switch (value.state) {
+			case undefined:
+			case "created": {
+				converted[className] = {
+					type: "durable_object",
+					storage: snakeStorage(value.storage),
+				};
+				break;
+			}
+			case "deleted": {
+				converted[className] = {
+					type: "durable_object",
+					state: "deleted",
+				};
+				break;
+			}
+			case "renamed": {
+				converted[className] = {
+					type: "durable_object",
+					state: "renamed",
+					renamed_to: value.renamedTo,
+				};
+				break;
+			}
+			case "transferred": {
+				converted[className] = {
+					type: "durable_object",
+					state: "transferred",
+					transfer_to_script: value.transferTo,
+				};
+				break;
+			}
+			case "expecting-transfer": {
+				converted[className] = {
+					type: "durable_object",
+					state: "expecting_transfer",
+					storage: snakeStorage(value.storage),
+					transfer_from: value.transferFrom,
+				};
+				break;
+			}
+		}
 	}
+	if (Object.keys(converted).length > 0) {
+		// `RawConfig.exports` is typed in `@cloudflare/workers-utils`. Use an
+		// index assignment so this file does not need to import the heavy
+		// wrangler config types just for the discriminated-union shape; the
+		// shape is validated end-to-end by the wrangler validator anyway.
+		(result as Record<string, unknown>).exports = converted;
+	}
+}
+
+/**
+ * Translate the kebab-case storage enumeration value used by
+ * `@cloudflare/config` into the snake_case value expected by wrangler/EWC.
+ */
+function snakeStorage(storage: "sqlite" | "legacy-kv"): "sqlite" | "legacy_kv" {
+	return storage === "legacy-kv" ? "legacy_kv" : "sqlite";
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

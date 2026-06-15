@@ -8,6 +8,10 @@ export type {
 } from "./config";
 export * from "./config/environment";
 export {
+	assertDoExportsEnabledIfConfigured,
+	type DoExportsOptInContext,
+} from "./config/durable-object-exports";
+export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,
 } from "./config/config";

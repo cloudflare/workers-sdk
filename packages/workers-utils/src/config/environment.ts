@@ -351,6 +351,82 @@ export type DurableObjectMigration = {
 };
 
 /**
+ * Storage backend for a declarative Durable Object export. See
+ * {@link DurableObjectExport}.
+ */
+export type DurableObjectExportStorage = "sqlite" | "legacy_kv";
+
+/**
+ * Lifecycle state of a Durable Object export entry. The default is
+ * `"created"` (live) when the field is omitted. Tombstone states retire,
+ * rename, or transfer a provisioned namespace; `"expecting_transfer"` is a
+ * live state that names the receiving side of a two-phase cross-script
+ * transfer.
+ */
+export type DurableObjectExportState =
+	| "created"
+	| "deleted"
+	| "renamed"
+	| "transferred"
+	| "expecting_transfer";
+
+/**
+ * A single declarative Durable Object export entry in the `exports` config
+ * map. Discriminated union of `type` (kind) and `state` (lifecycle). `type`
+ * is reserved for the export kind and is always `"durable_object"` today;
+ * future export kinds (e.g. workflows, containers) will be added here.
+ * `state` carries the lifecycle and defaults to `"created"` (live) when
+ * omitted.
+ *
+ * Mutually exclusive with {@link DurableObjectMigration} at the config-
+ * validation boundary.
+ *
+ *  - `created` (default, live): `storage` is required.
+ *  - `deleted` (tombstone): retire a provisioned namespace whose class has
+ *    been removed from code.
+ *  - `renamed` (tombstone): rewrite a provisioned namespace's class name to
+ *    `renamed_to`. The target name must also appear as a live (state
+ *    `"created"`) `durable_object` entry in the same map.
+ *  - `transferred` (tombstone): hand ownership of the namespace to another
+ *    script in the same account (`transfer_to_script`). Two-phase commit;
+ *    the target must first deploy an `expecting_transfer` entry naming this
+ *    script via `transfer_from`.
+ *  - `expecting_transfer` (live): receiving side of a two-phase transfer;
+ *    `storage` and `transfer_from` are both required.
+ *
+ * See the full spec for semantics, validation rules, and the rollout
+ * sequencing for renames and transfers:
+ * https://wiki.cfdata.org/spaces/WX/pages/1396640001
+ */
+export type DurableObjectExport =
+	| {
+			type: "durable_object";
+			state?: "created";
+			storage: DurableObjectExportStorage;
+	  }
+	| { type: "durable_object"; state: "deleted" }
+	| { type: "durable_object"; state: "renamed"; renamed_to: string }
+	| {
+			type: "durable_object";
+			state: "transferred";
+			transfer_to_script: string;
+	  }
+	| {
+			type: "durable_object";
+			state: "expecting_transfer";
+			storage: DurableObjectExportStorage;
+			transfer_from: string;
+	  };
+
+/**
+ * The declarative `exports` map keyed by class name. Mutually exclusive with
+ * `migrations` at the wrangler config layer. Gated behind the
+ * `X_DO_EXPORTS` environment variable for `wrangler deploy` and
+ * `wrangler versions upload`.
+ */
+export type DurableObjectExports = Record<string, DurableObjectExport>;
+
+/**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
  */
@@ -509,6 +585,21 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	migrations: DurableObjectMigration[];
+
+	/**
+	 * Declarative Durable Object exports — a map of class name to export
+	 * configuration. Mutually exclusive with `migrations`.
+	 *
+	 * Gated behind the `X_DO_EXPORTS` environment variable for `wrangler
+	 * deploy` and `wrangler versions upload`.
+	 *
+	 * See the spec for the full set of variants and validation rules:
+	 * https://wiki.cfdata.org/spaces/WX/pages/1396640001
+	 *
+	 * @default {}
+	 * @inheritable
+	 */
+	exports: DurableObjectExports;
 
 	/**
 	 * "Cron" definitions to trigger a Worker's "scheduled" function.
