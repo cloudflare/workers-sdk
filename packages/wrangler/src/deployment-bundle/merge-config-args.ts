@@ -76,8 +76,6 @@ async function mergeSharedConfigArgs(
 		compatibilityFlags,
 		assetsDir,
 		main: args.script ?? config.main,
-
-		uploadSourceMaps: args.uploadSourceMaps ?? config.upload_source_maps,
 		keepVars: Boolean(args.keepVars || config.keep_vars),
 		isWorkersSite: Boolean(args.site || config.site),
 		useServiceEnvApiPath: useServiceEnvironmentApi(args, config),

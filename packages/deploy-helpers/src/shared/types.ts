@@ -3,6 +3,7 @@ import type {
 	LegacyAssetPaths,
 	CfModule,
 	CfModuleType,
+	CfWorkerSourceMap,
 	Config,
 	FetchKVGetValueFetcher,
 	FetchResultFetcher,
@@ -62,8 +63,6 @@ export type SharedDeployVersionsProps = {
 	 * assets-only Workers. Drives `has_user_worker` when resolving assets.
 	 */
 	main: string | undefined;
-	/** Merged: --upload-source-maps arg ?? config.upload_source_maps. */
-	uploadSourceMaps: boolean | undefined;
 	/** Merged: --keep-vars arg || config.keep_vars. */
 	keepVars: boolean;
 	/** Merged from --site arg and config.site. */
@@ -125,18 +124,13 @@ export type VersionsUploadProps = SharedDeployVersionsProps & {
 	previewAlias: string | undefined;
 };
 
-export type BuildBundleInfo = {
-	sourceMapPath?: string | undefined;
-	sourceMapMetadata?: { tmpDir: string; entryDirectory: string } | undefined;
-};
-
 export type WorkerBuildResult = {
 	modules: CfModule[];
+	sourceMaps: CfWorkerSourceMap[] | undefined;
 	dependencies: Record<string, { bytesInOutput: number }>;
 	resolvedEntryPointPath: string;
 	bundleType: CfModuleType;
 	content: string;
-	bundle: BuildBundleInfo;
 };
 
 export interface TriggerDeployment {

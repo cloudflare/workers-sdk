@@ -15,7 +15,6 @@ export * from "./deploy/helpers/worker-not-found-error";
 export * from "./deploy/helpers/use-service-environments";
 export * from "./deploy/helpers/error-codes";
 export * from "./deploy/helpers/secrets-validation";
-export * from "./deploy/helpers/source-maps";
 export * from "./deploy/helpers/diff-json";
 export * from "./deploy/helpers/config-diffs";
 export * from "./deploy/helpers/parse-bulk-input";

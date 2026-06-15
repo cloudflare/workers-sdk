@@ -10,8 +10,10 @@ import {
 	getWrangler1xLegacyModuleReferences,
 } from "./module-collection";
 import { noBundleWorker } from "./no-bundle-worker";
+import { loadSourceMaps } from "./source-maps";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type {
+	CfModule,
 	Config,
 	EphemeralDirectory,
 	Entry,
@@ -193,13 +195,22 @@ export async function buildWorker(
 	const content = readFileSync(resolvedEntryPointPath, {
 		encoding: "utf-8",
 	});
+	const main: CfModule = {
+		name: path.basename(resolvedEntryPointPath),
+		filePath: resolvedEntryPointPath,
+		content,
+		type: bundleType,
+	};
+	const sourceMaps = uploadSourceMaps
+		? loadSourceMaps(main, modules, bundle)
+		: undefined;
 
 	return {
 		modules,
+		sourceMaps,
 		dependencies,
 		resolvedEntryPointPath,
 		bundleType,
 		content,
-		bundle,
 	};
 }

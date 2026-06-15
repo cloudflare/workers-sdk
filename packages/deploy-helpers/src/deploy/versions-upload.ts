@@ -34,7 +34,6 @@ import {
 	addRequiredSecretsInheritBindings,
 	handleMissingSecretsError,
 } from "./helpers/secrets-validation";
-import { loadSourceMaps } from "./helpers/source-maps";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -76,7 +75,6 @@ export default async function versionsUpload(
 		compatibilityDate,
 		compatibilityFlags,
 		keepVars,
-		uploadSourceMaps,
 		accountId,
 	} = props;
 
@@ -208,7 +206,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		resolvedEntryPointPath,
 		bundleType,
 		content,
-		bundle,
+		sourceMaps,
 	} = buildResult;
 	const bindings = getBindings(config);
 
@@ -269,9 +267,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		migrations,
 		modules,
 		containers: config.containers,
-		sourceMaps: uploadSourceMaps
-			? loadSourceMaps(main, modules, bundle)
-			: undefined,
+		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
 		keepVars,
