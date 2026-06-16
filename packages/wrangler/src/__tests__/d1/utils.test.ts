@@ -293,8 +293,14 @@ describe("getDatabaseByNameOrBinding", () => {
 		} as unknown as Config;
 		await expect(
 			getDatabaseByNameOrBinding(config, "123", "DB")
-		).rejects.toThrow(
-			"Found a database with binding 'DB' but it has no 'database_name' or 'database_id'. This is needed for operations on remote resources unless the workers project has been auto-provisioned with a top-level 'name' set. Please create the remote D1 database by deploying your project or running 'wrangler d1 create DB' adding 'database_name' / 'database_id' to your config"
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: Found a database binding named 'DB' but it has no 'database_name' or 'database_id', and the worker has no 'name'.
+
+			In order to connect to an existing database, please specify either 'database_name' or 'database_id' in the binding.
+
+			Alternatively specify a 'name' for the worker and then run 'wrangler deploy'. This will auto-provision a database named '<worker-name>-db'.]
+		`
 		);
 	});
 

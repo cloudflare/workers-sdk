@@ -9,6 +9,7 @@ import {
 	type DatabaseInfo,
 } from "./types";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import { dedent } from "ts-dedent";
 
 export function getDatabaseInfoFromConfig(
 	config: Config,
@@ -69,7 +70,12 @@ export const getDatabaseByNameOrBinding = async (
 			// bind to an unrelated DB on the account that happens to share
 			// the binding name.
 			throw new UserError(
-				`Found a database with binding '${nameOrBinding}' but it has no 'database_name' or 'database_id'. This is needed for operations on remote resources unless the workers project has been auto-provisioned with a top-level 'name' set. Please create the remote D1 database by deploying your project or running 'wrangler d1 create ${nameOrBinding}' adding 'database_name' / 'database_id' to your config`,
+				dedent`Found a database binding named '${nameOrBinding}' but it has no 'database_name' or 'database_id', and the worker has no 'name'.
+
+				In order to connect to an existing database, please specify either 'database_name' or 'database_id' in the binding.
+
+				Alternatively specify a 'name' for the worker and then run 'wrangler deploy'. This will auto-provision a database named '${autoProvisionedResourceName('<worker-name>', nameOrBinding)}'.
+				`,
 				{
 					telemetryMessage: "d1 database lookup missing name and id",
 				}
