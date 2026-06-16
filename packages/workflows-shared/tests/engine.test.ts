@@ -1558,6 +1558,8 @@ describe("Rollback", () => {
 						ctx.error.name !== "Error" ||
 						ctx.error.message !== "boom" ||
 						ctx.output !== "out" ||
+						ctx.ctx.step.name !== "ctx-step" ||
+						ctx.ctx.step.count !== 1 ||
 						ctx.stepName !== "ctx-step-1"
 					) {
 						throw new Error("unexpected rollback context");
@@ -1589,6 +1591,8 @@ describe("Rollback", () => {
 						if (
 							ctx.error.message !== "step-boom" ||
 							ctx.output !== undefined ||
+							ctx.ctx.step.name !== "failed-step" ||
+							ctx.ctx.step.count !== 1 ||
 							ctx.stepName !== "failed-step-1"
 						) {
 							throw new Error("unexpected failed-step rollback context");
