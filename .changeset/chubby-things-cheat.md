@@ -3,7 +3,6 @@
 "miniflare": patch
 "@cloudflare/pages-shared": patch
 "@cloudflare/quick-edit": patch
-"@cloudflare/quick-edit-extension": patch
 "@cloudflare/vitest-pool-workers": patch
 "@cloudflare/workers-shared": patch
 "@cloudflare/workflows-shared": patch
