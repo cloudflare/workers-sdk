@@ -428,7 +428,7 @@ export class Context extends RpcTarget {
 			const forwardStepContext = (): WorkflowStepContext => ({
 				step: { name, count },
 				attempt: stepState.attemptedCount,
-				config: structuredClone(config),
+				config,
 			});
 
 			// NOTE(caio): this might be a stream returning step - if so cleanup stale data from previous lifetimes

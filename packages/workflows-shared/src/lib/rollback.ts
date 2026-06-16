@@ -16,7 +16,7 @@ export type RollbackContext = {
 	ctx: WorkflowStepContext;
 	error: Error;
 	output: unknown;
-	/** @deprecated Use `ctx.step.name` and `ctx.step.count` instead. */
+	/** @deprecated Use `${ctx.step.name}-${ctx.step.count}` instead. */
 	stepName: string;
 };
 
