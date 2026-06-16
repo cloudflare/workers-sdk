@@ -419,6 +419,8 @@ function getCustomServiceDesignator(
 			if (service.name === kCurrentWorker) {
 				// TODO when fetch on WorkerEntrypoints with assets is fixed in dev: point this Router Worker if assets are present.
 				serviceName = getUserServiceName(refererName);
+			} else if (service.entrypoint === undefined) {
+				serviceName = `${RPC_PROXY_SERVICE_NAME}:${service.name}`;
 			} else {
 				serviceName = getUserServiceName(service.name);
 			}
@@ -438,7 +440,7 @@ function getCustomServiceDesignator(
 			: getUserServiceName(refererName);
 	} else {
 		// Regular user worker
-		serviceName = getUserServiceName(service);
+		serviceName = `${RPC_PROXY_SERVICE_NAME}:${service}`;
 	}
 	return { name: serviceName, entrypoint, props };
 }

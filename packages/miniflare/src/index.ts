@@ -2095,29 +2095,6 @@ export class Miniflare {
 								});
 							}
 						}
-						if (
-							"service" in binding &&
-							binding.service !== undefined &&
-							!binding.service.entrypoint
-						) {
-							const targetServiceName = binding.service.name;
-							const userServiceNamePrefix = getUserServiceName();
-							if (
-								targetServiceName?.startsWith(userServiceNamePrefix) &&
-								targetServiceName !== getUserServiceName(workerName)
-							) {
-								const targetWorkerName = targetServiceName.substring(
-									userServiceNamePrefix.length
-								);
-								if (
-									allWorkerOpts.some(
-										(worker) => (worker.core.name ?? "") === targetWorkerName
-									)
-								) {
-									binding.service.name = `${RPC_PROXY_SERVICE_NAME}:${targetWorkerName}`;
-								}
-							}
-						}
 					}
 				}
 			}
