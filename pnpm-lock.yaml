@@ -43,8 +43,8 @@ catalogs:
       specifier: 16.3.1
       version: 16.3.1
     esbuild:
-      specifier: 0.27.3
-      version: 0.27.3
+      specifier: 0.28.1
+      version: 0.28.1
     jsonc-parser:
       specifier: 3.2.0
       version: 3.2.0
@@ -143,10 +143,10 @@ importers:
         version: 7.3.0
       esbuild:
         specifier: catalog:default
-        version: 0.27.3
+        version: 0.28.1
       esbuild-register:
         specifier: ^3.5.0
-        version: 3.5.0(esbuild@0.27.3)
+        version: 3.5.0(esbuild@0.28.1)
       eslint-plugin-turbo:
         specifier: ^2.8.17
         version: 2.8.20(eslint@9.39.1(jiti@2.6.1))(turbo@2.7.2)

@@ -116,7 +116,7 @@ catalog:
   vitest: "4.1.0"
   vite: "8.0.13"
   "ws": "8.20.1"
-  esbuild: "0.27.3"
+  esbuild: "0.28.1"
   playwright-chromium: "1.60.0"
   "@cloudflare/workers-types": "^4.20260616.1"
   workerd: "1.20260616.1"
