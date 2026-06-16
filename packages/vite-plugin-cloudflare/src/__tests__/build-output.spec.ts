@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { detectModuleType } from "../build-output";
+import { detectModuleType } from "../plugins/build-output";
 
 describe("detectModuleType", () => {
 	const cases: Array<[filename: string, expected: string]> = [

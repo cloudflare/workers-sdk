@@ -1,15 +1,15 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { normalizePath } from "vite";
-import { hasAssetsConfigChanged } from "../asset-config";
-import { createBuildApp, removeAssetsField } from "../build";
 import {
 	cleanBuildOutputDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	writeOutputWorkerConfig,
-} from "../build-output";
+} from "@cloudflare/config";
+import { normalizePath } from "vite";
+import { hasAssetsConfigChanged } from "../asset-config";
+import { createBuildApp, removeAssetsField } from "../build";
 import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,

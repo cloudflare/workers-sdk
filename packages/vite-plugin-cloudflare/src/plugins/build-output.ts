@@ -1,5 +1,6 @@
 import assert from "node:assert";
-import { detectModuleType, writeOutputWorkerConfig } from "../build-output";
+import * as path from "node:path";
+import { writeOutputWorkerConfig } from "@cloudflare/config";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
@@ -79,3 +80,30 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 		},
 	};
 });
+
+/**
+ * Map a bundle filename to its declared module type.
+ */
+export function detectModuleType(filename: string): ModuleType {
+	const ext = path.extname(filename).toLowerCase();
+
+	switch (ext) {
+		case ".js":
+		case ".mjs":
+			return "esm";
+		case ".wasm":
+			return "wasm";
+		case ".bin":
+			return "data";
+		case ".txt":
+		case ".html":
+		case ".sql":
+			return "text";
+		case ".json":
+			return "json";
+		case ".map":
+			return "sourcemap";
+		default:
+			return "data";
+	}
+}
