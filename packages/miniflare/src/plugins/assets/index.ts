@@ -85,8 +85,14 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 	},
 
-	async getServices({ options, log, workerName }) {
+	async getServices({ options, log, workerName, wrappedBindingNames }) {
 		const targetWorkerName = options.assets?.workerName ?? workerName;
+
+		// Wrapped binding workers are extensions only, so core doesn't define a `core:user:*` service for them.
+		if (wrappedBindingNames.has(targetWorkerName)) {
+			return;
+		}
+
 		const userServiceName = getUserServiceName(targetWorkerName);
 		const assetsProxyService: Service = {
 			name: `${RPC_PROXY_SERVICE_NAME}:${targetWorkerName}`,

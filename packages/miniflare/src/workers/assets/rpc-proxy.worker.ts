@@ -56,6 +56,21 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 		);
 	}
 
+	// Streaming tail dispatch doesn't use the JS proxy fallback, so these handlers must exist on the proxy itself.
+	tailStream(
+		event: Parameters<NonNullable<WorkerEntrypoint["tailStream"]>>[0]
+	) {
+		// @ts-expect-error tailStream is not in the `Service` type but it's a valid handler.
+		return this.env.RPC_TARGET.tailStream(event);
+	}
+
+	trace(events: TraceItem[]) {
+		// @ts-expect-error trace is not in the `Service` type but it's a valid handler.
+		return this.env.RPC_TARGET.trace(
+			JSON.parse(JSON.stringify(events, tailEventsReplacer), tailEventsReviver)
+		);
+	}
+
 	constructor(ctx: ExecutionContext, env: Env) {
 		super(ctx, env);
 		/*
