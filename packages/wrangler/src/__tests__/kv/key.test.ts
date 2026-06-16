@@ -396,38 +396,6 @@ describe("kv", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler kv key put <key> [value]
-
-					Write a single key/value pair to the given namespace
-
-					POSITIONALS
-					  key    The key to write to  [string] [required]
-					  value  The value to write  [string]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --path          Read value from the file at a given path  [string]
-					      --binding       The binding name to the namespace to write to  [string]
-					      --namespace-id  The id of the namespace to write to  [string]
-					      --preview       Interact with a preview namespace  [boolean]
-					      --ttl           Time for which the entries should be visible  [number]
-					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --local         Interact with local storage  [boolean]
-					      --remote        Interact with remote storage  [boolean]
-					      --persist-to    Directory for local persistence  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -441,45 +409,10 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key put --remote foo bar")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Missing required option: exactly one of --binding and --namespace-id must be provided]`
+					`[Error: Exactly one of the arguments binding and namespace-id is required]`
 				);
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-
-					wrangler kv key put <key> [value]
-
-					Write a single key/value pair to the given namespace
-
-					POSITIONALS
-					  key    The key to write to  [string] [required]
-					  value  The value to write  [string]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --path          Read value from the file at a given path  [string]
-					      --binding       The binding name to the namespace to write to  [string]
-					      --namespace-id  The id of the namespace to write to  [string]
-					      --preview       Interact with a preview namespace  [boolean]
-					      --ttl           Time for which the entries should be visible  [number]
-					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --local         Interact with local storage  [boolean]
-					      --remote        Interact with remote storage  [boolean]
-					      --persist-to    Directory for local persistence  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required option: exactly one of --binding and --namespace-id must be provided[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
 
 			          "
 		        `);
@@ -493,45 +426,11 @@ describe("kv", () => {
 						"kv key put --remote foo bar --binding x --namespace-id y"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Conflicting options: --binding and --namespace-id cannot be used together. Please provide only one.]`
+					`[Error: Arguments binding and namespace-id are mutually exclusive]`
 				);
 
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-
-					wrangler kv key put <key> [value]
-
-					Write a single key/value pair to the given namespace
-
-					POSITIONALS
-					  key    The key to write to  [string] [required]
-					  value  The value to write  [string]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --path          Read value from the file at a given path  [string]
-					      --binding       The binding name to the namespace to write to  [string]
-					      --namespace-id  The id of the namespace to write to  [string]
-					      --preview       Interact with a preview namespace  [boolean]
-					      --ttl           Time for which the entries should be visible  [number]
-					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --local         Interact with local storage  [boolean]
-					      --remote        Interact with remote storage  [boolean]
-					      --persist-to    Directory for local persistence  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mConflicting options: --binding and --namespace-id cannot be used together. Please provide only one.[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
 
 			          "
 		        `);
@@ -543,45 +442,11 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key put --remote key --namespace-id 12345")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Missing required option: exactly one of <value> and --path must be provided]`
+					`[Error: Exactly one of the arguments value and path is required]`
 				);
 
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-
-					wrangler kv key put <key> [value]
-
-					Write a single key/value pair to the given namespace
-
-					POSITIONALS
-					  key    The key to write to  [string] [required]
-					  value  The value to write  [string]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --path          Read value from the file at a given path  [string]
-					      --binding       The binding name to the namespace to write to  [string]
-					      --namespace-id  The id of the namespace to write to  [string]
-					      --preview       Interact with a preview namespace  [boolean]
-					      --ttl           Time for which the entries should be visible  [number]
-					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --local         Interact with local storage  [boolean]
-					      --remote        Interact with remote storage  [boolean]
-					      --persist-to    Directory for local persistence  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required option: exactly one of <value> and --path must be provided[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
 
 			          "
 		        `);
@@ -596,37 +461,6 @@ describe("kv", () => {
 					`[Error: Arguments remote and local are mutually exclusive]`
 				);
 
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler kv key put <key> [value]
-
-					Write a single key/value pair to the given namespace
-
-					POSITIONALS
-					  key    The key to write to  [string] [required]
-					  value  The value to write  [string]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --path          Read value from the file at a given path  [string]
-					      --binding       The binding name to the namespace to write to  [string]
-					      --namespace-id  The id of the namespace to write to  [string]
-					      --preview       Interact with a preview namespace  [boolean]
-					      --ttl           Time for which the entries should be visible  [number]
-					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --local         Interact with local storage  [boolean]
-					      --remote        Interact with remote storage  [boolean]
-					      --persist-to    Directory for local persistence  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments remote and local are mutually exclusive[0m
 
@@ -642,45 +476,10 @@ describe("kv", () => {
 						"kv key put --remote key value --path xyz --namespace-id 12345"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Conflicting options: <value> and --path cannot be used together. Please provide only one.]`
+					`[Error: Arguments value and path are mutually exclusive]`
 				);
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-
-					wrangler kv key put <key> [value]
-
-					Write a single key/value pair to the given namespace
-
-					POSITIONALS
-					  key    The key to write to  [string] [required]
-					  value  The value to write  [string]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --path          Read value from the file at a given path  [string]
-					      --binding       The binding name to the namespace to write to  [string]
-					      --namespace-id  The id of the namespace to write to  [string]
-					      --preview       Interact with a preview namespace  [boolean]
-					      --ttl           Time for which the entries should be visible  [number]
-					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --local         Interact with local storage  [boolean]
-					      --remote        Interact with remote storage  [boolean]
-					      --persist-to    Directory for local persistence  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mConflicting options: <value> and --path cannot be used together. Please provide only one.[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
 
 			          "
 		        `);
@@ -1093,33 +892,6 @@ describe("kv", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler kv key get <key>
-
-					Read a single value by key from the given namespace
-
-					POSITIONALS
-					  key  The key value to get.  [string] [required]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
-					      --binding       The binding name to the namespace to get from  [string]
-					      --namespace-id  The id of the namespace to get from  [string]
-					      --preview       Interact with a preview namespace  [boolean] [default: false]
-					      --local         Interact with local storage  [boolean]
-					      --remote        Interact with remote storage  [boolean]
-					      --persist-to    Directory for local persistence  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1133,37 +905,10 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key get --remote foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Missing required option: exactly one of --binding and --namespace-id must be provided]`
+					`[Error: Exactly one of the arguments binding and namespace-id is required]`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler kv key get <key>
-
-					Read a single value by key from the given namespace
-
-					POSITIONALS
-					  key  The key value to get.  [string] [required]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
-					      --binding       The binding name to the namespace to get from  [string]
-					      --namespace-id  The id of the namespace to get from  [string]
-					      --preview       Interact with a preview namespace  [boolean] [default: false]
-					      --local         Interact with local storage  [boolean]
-					      --remote        Interact with remote storage  [boolean]
-					      --persist-to    Directory for local persistence  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required option: exactly one of --binding and --namespace-id must be provided[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
 
 			          "
 		        `);
@@ -1175,38 +920,10 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key get --remote foo --binding x --namespace-id y")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Conflicting options: --binding and --namespace-id cannot be used together. Please provide only one.]`
+					`[Error: Arguments binding and namespace-id are mutually exclusive]`
 				);
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler kv key get <key>
-
-					Read a single value by key from the given namespace
-
-					POSITIONALS
-					  key  The key value to get.  [string] [required]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
-					      --binding       The binding name to the namespace to get from  [string]
-					      --namespace-id  The id of the namespace to get from  [string]
-					      --preview       Interact with a preview namespace  [boolean] [default: false]
-					      --local         Interact with local storage  [boolean]
-					      --remote        Interact with remote storage  [boolean]
-					      --persist-to    Directory for local persistence  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mConflicting options: --binding and --namespace-id cannot be used together. Please provide only one.[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
 
 			          "
 		        `);

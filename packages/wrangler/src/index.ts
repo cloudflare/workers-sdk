@@ -553,6 +553,11 @@ export function createCLIParser(argv: string[]) {
 			type: "boolean",
 			default: false,
 		},
+		profile: {
+			describe: "Use a specific auth profile",
+			type: "string",
+			requiresArg: true,
+		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -629,7 +634,16 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "env-file", "help", "install-skills", "version"],
+		[
+			"config",
+			"cwd",
+			"env",
+			"env-file",
+			"help",
+			"install-skills",
+			"profile",
+			"version",
+		],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 
