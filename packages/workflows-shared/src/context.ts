@@ -147,13 +147,8 @@ export class Context extends RpcTarget {
 		output?: unknown;
 		rollbackConfig?: WorkflowStepConfig;
 	}): void {
-		const {
-			cacheKey,
-			rollbackFn,
-			stepContext,
-			output,
-			rollbackConfig,
-		} = options;
+		const { cacheKey, rollbackFn, stepContext, output, rollbackConfig } =
+			options;
 		if (rollbackFn && this.#rollbackStep === undefined) {
 			registerRollbackFn(this.#engine.rollbackRegistry, {
 				cacheKey,
@@ -298,6 +293,9 @@ export class Context extends RpcTarget {
 			| StreamOutputMeta
 			| undefined
 			| null;
+		const cachedConfig = maybeMap.get(configKey) as
+			| ResolvedStepConfig
+			| undefined;
 		if (maybeStreamMeta?.state === StreamOutputState.Complete) {
 			const cachedState = maybeMap.get(stepStateKey) as StepState | undefined;
 			const maybeOutputError = getInvalidStoredStreamOutputError(
@@ -322,9 +320,7 @@ export class Context extends RpcTarget {
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
-					config:
-						(maybeMap.get(configKey) as ResolvedStepConfig | undefined) ??
-						config,
+					config: cachedConfig ?? config,
 				},
 				output: result,
 				rollbackConfig,
@@ -348,9 +344,7 @@ export class Context extends RpcTarget {
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
-					config:
-						(maybeMap.get(configKey) as ResolvedStepConfig | undefined) ??
-						config,
+					config: cachedConfig ?? config,
 				},
 				output: result,
 				rollbackConfig,
@@ -368,10 +362,10 @@ export class Context extends RpcTarget {
 		}
 
 		// Persist initial config because user can pass in dynamic config
-		if (!maybeMap.has(configKey)) {
+		if (cachedConfig === undefined) {
 			await this.#state.storage.put(configKey, config);
 		} else {
-			config = maybeMap.get(configKey) as ResolvedStepConfig;
+			config = cachedConfig;
 		}
 
 		const attemptLogs = this.#engine
