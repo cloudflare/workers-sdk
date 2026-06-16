@@ -1,5 +1,5 @@
 export * from "./shared/types";
-export { InputWorkerSchema, convertToWranglerConfig } from "./config";
+export * from "./config";
 export { initDeployHelpersContext } from "./shared/context";
 export { default as deploy } from "./deploy/deploy";
 export type { DeployCallbacks } from "./deploy/deploy";
