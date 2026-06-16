@@ -325,7 +325,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	} else {
 		assert(accountId, "Missing accountId");
-		if (props.resourcesProvision && callbacks.provisionBindings) {
+		if (props.assetsOptions?.routerConfig.has_user_worker === false) {
+			logger.debug("skipping provisioning on assets-only project");
+		} else if (props.resourcesProvision && callbacks.provisionBindings) {
 			await callbacks.provisionBindings(
 				bindings,
 				accountId,
