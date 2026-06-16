@@ -138,27 +138,34 @@ export function getSourceMappedString(
 	const callSiteLines = Array.from(value.matchAll(CALL_SITE_REGEXP));
 	const callSites = callSiteLines.map(lineMatchToCallSite);
 	const prepareStack = getSourceMappingPrepareStackTrace(retrieveSourceMap);
-	const sourceMappedStackTrace: string = prepareStack(
-		placeholderError,
-		callSites
-	);
-	const sourceMappedCallSiteLines = sourceMappedStackTrace.split("\n").slice(1);
-
-	for (let i = 0; i < callSiteLines.length; i++) {
-		// If a call site doesn't have a file name, it's likely invalid, so don't
-		// apply source mapping (see cloudflare/workers-sdk#4668)
-		if (callSites[i].getFileName() === undefined) {
-			continue;
-		}
-
-		const callSiteLine = callSiteLines[i][0];
-		const callSiteAtIndex = callSiteLine.indexOf("at");
-		assert(callSiteAtIndex !== -1); // Matched against `CALL_SITE_REGEXP`
-		const callSiteLineLeftPad = callSiteLine.substring(0, callSiteAtIndex);
-		value = value.replace(
-			callSiteLine,
-			callSiteLineLeftPad + sourceMappedCallSiteLines[i].trimStart()
+	try {
+		const sourceMappedStackTrace: string = prepareStack(
+			placeholderError,
+			callSites
 		);
+		const sourceMappedCallSiteLines = sourceMappedStackTrace
+			.split("\n")
+			.slice(1);
+
+		for (let i = 0; i < callSiteLines.length; i++) {
+			// If a call site doesn't have a file name, it's likely invalid, so don't
+			// apply source mapping (see cloudflare/workers-sdk#4668)
+			if (callSites[i].getFileName() === undefined) {
+				continue;
+			}
+
+			const callSiteLine = callSiteLines[i][0];
+			const callSiteAtIndex = callSiteLine.indexOf("at");
+			assert(callSiteAtIndex !== -1); // Matched against `CALL_SITE_REGEXP`
+			const callSiteLineLeftPad = callSiteLine.substring(0, callSiteAtIndex);
+			value = value.replace(
+				callSiteLine,
+				callSiteLineLeftPad + sourceMappedCallSiteLines[i].trimStart()
+			);
+		}
+	} catch {
+		// Source map processing failed (e.g. truncated stderr chunk with an invalid
+		// column number). Return the original string unchanged.
 	}
 	return value;
 }
