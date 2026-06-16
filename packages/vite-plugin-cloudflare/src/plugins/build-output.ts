@@ -10,7 +10,7 @@ import type { ModuleType } from "@cloudflare/config";
  */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 	return {
-		writeBundle(_options, bundle) {
+		async writeBundle(_, bundle) {
 			if (ctx.isChildEnvironment(this.environment.name)) {
 				return;
 			}
@@ -24,7 +24,10 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					workerNewConfig,
 					"Expected parsedNewConfig on assets-only resolved config"
 				);
-				writeOutputWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig);
+				await writeOutputWorkerConfig(
+					ctx.resolvedViteConfig.root,
+					workerNewConfig
+				);
 				return;
 			}
 
@@ -65,10 +68,14 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				modules[fileName] = { type: detectModuleType(fileName) };
 			}
 
-			writeOutputWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig, {
-				mainModule: entryChunk.fileName,
-				modules,
-			});
+			await writeOutputWorkerConfig(
+				ctx.resolvedViteConfig.root,
+				workerNewConfig,
+				{
+					mainModule: entryChunk.fileName,
+					modules,
+				}
+			);
 		},
 	};
 });

@@ -90,7 +90,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				},
 			};
 		},
-		configResolved(resolvedViteConfig) {
+		async configResolved(resolvedViteConfig) {
 			ctx.setResolvedViteConfig(resolvedViteConfig);
 
 			if (ctx.resolvedPluginConfig.type === "preview") {
@@ -105,7 +105,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			if (ctx.resolvedPluginConfig.experimental.newConfig?.cfBuildOutput) {
 				forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
 				if (ctx.resolvedViteConfig.command === "build") {
-					cleanBuildOutputDir(ctx.resolvedViteConfig.root);
+					await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
 				}
 			}
 		},
@@ -206,7 +206,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 							entryWorkerNewConfig,
 							`No config found for "${entryWorkerEnvironmentName}" environment`
 						);
-						writeOutputWorkerConfig(builder.config.root, entryWorkerNewConfig);
+						await writeOutputWorkerConfig(
+							builder.config.root,
+							entryWorkerNewConfig
+						);
 					} else {
 						const entryWorkerConfig = ctx.getWorkerConfig(
 							entryWorkerEnvironmentName
