@@ -227,6 +227,17 @@ export type AssetsOptions = {
 };
 
 /**
+ * The result of validating and resolving the assets directory, before the
+ * full {@link AssetsOptions} are resolved. Produced by the validation half of
+ * `getAssetsOptions` and consumed by `resolveAssetOptions`.
+ */
+export type ValidatedAssetsOptions = {
+	directory: string;
+	binding?: string;
+	directoryExists: boolean;
+};
+
+/**
  * Information about the assets that should be uploaded
  */
 export interface LegacyAssetPaths {

@@ -1,13 +1,17 @@
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
+	HEADERS_FILENAME,
 	MAX_ASSET_SIZE,
+	REDIRECTS_FILENAME,
 } from "@cloudflare/workers-shared/utils/constants";
 import {
 	createAssetsIgnoreFunction,
 	getContentType,
+	maybeGetFile,
 	normalizeFilePath,
 } from "@cloudflare/workers-shared/utils/helpers";
 import {
@@ -24,7 +28,13 @@ import { FormData } from "undici";
 import { fetchResult, logger } from "../../shared/context";
 import { hashFile } from "./hash";
 import { isJwtExpired } from "./jwt";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { SharedDeployVersionsProps } from "../../shared/types";
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type {
+	AssetsOptions,
+	ComplianceConfig,
+	Config,
+} from "@cloudflare/workers-utils";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -398,4 +408,81 @@ If you do want to upload this ${workerJsType}, you can add an empty "${CF_ASSETS
 			);
 		}
 	}
+}
+
+export function resolveAssetOptions(
+	{ assetsDir, main }: Pick<SharedDeployVersionsProps, "assetsDir" | "main">,
+	config: Config
+): AssetsOptions | undefined {
+	if (!assetsDir) {
+		return undefined;
+	}
+
+	const { directory, binding, directoryExists } = assetsDir;
+
+	const routerConfig: RouterConfig = {
+		has_user_worker: main !== undefined,
+	};
+
+	if (typeof config.assets?.run_worker_first === "boolean") {
+		routerConfig.invoke_user_worker_ahead_of_assets =
+			config.assets.run_worker_first;
+	} else if (Array.isArray(config.assets?.run_worker_first)) {
+		routerConfig.static_routing = parseStaticRouting(
+			config.assets.run_worker_first
+		);
+	}
+
+	// User Worker always ahead of assets, but no assets binding provided
+	if (
+		routerConfig.invoke_user_worker_ahead_of_assets &&
+		!config?.assets?.binding
+	) {
+		logger.warn(
+			"run_worker_first=true set without an assets binding\n" +
+				"Setting run_worker_first to true will always invoke your Worker script.\n" +
+				"To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.\n\n" +
+				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
+		);
+	}
+
+	// Using run_worker_first but didn't provide a Worker script
+	if (
+		!routerConfig.has_user_worker &&
+		(routerConfig.invoke_user_worker_ahead_of_assets === true ||
+			routerConfig.static_routing)
+	) {
+		throw new UserError(
+			"Cannot set run_worker_first without a Worker script.\n" +
+				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`).",
+			{ telemetryMessage: "assets router missing worker script" }
+		);
+	}
+
+	const _redirects = directoryExists
+		? maybeGetFile(path.join(directory, REDIRECTS_FILENAME))
+		: undefined;
+	const _headers = directoryExists
+		? maybeGetFile(path.join(directory, HEADERS_FILENAME))
+		: undefined;
+
+	// defaults are set in asset worker
+	const assetConfig: AssetConfig = {
+		html_handling: config.assets?.html_handling,
+		not_found_handling: config.assets?.not_found_handling,
+		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
+		compatibility_date: config.compatibility_date,
+		compatibility_flags: config.compatibility_flags,
+	};
+
+	return {
+		directory,
+		binding,
+		routerConfig,
+		assetConfig,
+		_redirects,
+		_headers,
+		// raw static routing rules for upload. routerConfig.static_routing contains the rules processed for dev.
+		run_worker_first: config.assets?.run_worker_first,
+	};
 }

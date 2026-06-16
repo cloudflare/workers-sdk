@@ -48,6 +48,10 @@ describe("createWorkerUploadForm — basic structure", () => {
 						name: "index.js.map",
 						content: '{"version":3}',
 					},
+					{
+						name: "chunk.js.map",
+						content: '{"version":3,"file":"chunk.js"}',
+					},
 				],
 			}),
 			{}
@@ -55,6 +59,9 @@ describe("createWorkerUploadForm — basic structure", () => {
 		const mapPart = form.get("index.js.map") as File;
 		expect(mapPart).not.toBeNull();
 		expect(mapPart.type).toBe("application/source-map");
+		const chunkMapPart = form.get("chunk.js.map") as File;
+		expect(chunkMapPart).not.toBeNull();
+		expect(chunkMapPart.type).toBe("application/source-map");
 	});
 
 	it("should include additional ESM modules as form parts", ({ expect }) => {
