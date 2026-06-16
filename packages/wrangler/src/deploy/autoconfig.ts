@@ -20,6 +20,7 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { isAgenticAgent } from "../utils/detect-agent";
 import type { ReadConfigCommandArgs } from "../config";
 
 /**
@@ -137,6 +138,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				const autoConfigSummary = await runAutoConfigLogic(details, {
 					context: autoConfigContext,
 					dryRun: !!args.dryRun,
+					skipConfirmations: isAgenticAgent(),
 				});
 
 				writeOutput({

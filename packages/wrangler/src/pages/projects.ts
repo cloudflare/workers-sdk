@@ -12,6 +12,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
+import { maybeRedirectPagesToWorkers } from "./redirect-to-workers";
 import type { PagesConfigCache, Project } from "./types";
 
 export const pagesProjectListCommand = createCommand({
@@ -136,6 +137,17 @@ export const pagesProjectCreateCommand = createCommand({
 			PAGES_CONFIG_CACHE_FILENAME
 		);
 		const accountId = await requireAuth(config);
+
+		// Experiment: when run by an AI agent, redirect new static Pages projects
+		// to a Workers static-assets deploy of the current directory. Falls back
+		// to creating the Pages project on failure.
+		const redirect = await maybeRedirectPagesToWorkers({
+			command: "create",
+			projectPath: process.cwd(),
+		});
+		if (redirect.handled) {
+			return;
+		}
 
 		const isInteractive = process.stdin.isTTY;
 		if (!projectName && isInteractive) {
