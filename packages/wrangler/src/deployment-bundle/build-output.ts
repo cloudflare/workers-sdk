@@ -118,8 +118,8 @@ async function writeBundleFile(
 	key: string,
 	content: string | Buffer | Uint8Array
 ): Promise<void> {
-	await fsp.mkdir(bundleDir, { recursive: true });
 	const target = path.join(bundleDir, key);
+	await fsp.mkdir(path.dirname(target), { recursive: true });
 	await fsp.writeFile(target, content);
 }
 
