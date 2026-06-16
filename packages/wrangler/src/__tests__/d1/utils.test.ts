@@ -134,7 +134,7 @@ describe("getDatabaseByNameOrBinding", () => {
 		} as unknown as Config;
 		await expect(
 			getDatabaseByNameOrBinding(config, "123", "db")
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			"Couldn't find a D1 DB with name or binding 'db' in your config or the API. Run 'wrangler d1 create db' to create it."
 		);
 	});
