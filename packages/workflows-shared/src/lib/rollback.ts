@@ -16,6 +16,8 @@ export type RollbackContext = {
 	ctx: WorkflowStepContext;
 	error: Error;
 	output: unknown;
+	/** @deprecated Use `ctx.step.name` and `ctx.step.count` instead. */
+	stepName: string;
 };
 
 // dup() to outlive the originating step.do call; Symbol.dispose locally
@@ -25,9 +27,14 @@ export type RollbackFn = ((ctx: RollbackContext) => Promise<void>) & {
 	[Symbol.dispose]?: () => void;
 };
 
+export type WorkflowStepRollbackConfig = Pick<
+	WorkflowStepConfig,
+	"retries" | "timeout"
+>;
+
 export type WorkflowStepRollbackOptions = {
 	rollback: RollbackFn;
-	rollbackConfig?: WorkflowStepConfig;
+	rollbackConfig?: WorkflowStepRollbackConfig;
 };
 
 export type RollbackRegistryEntry = {
@@ -181,6 +188,7 @@ export async function executeRollbacks(
 					ctx: structuredClone(entry.stepContext),
 					error: triggerError,
 					output: entry.output,
+					stepName: rollbackName,
 				});
 			});
 			completed++;
