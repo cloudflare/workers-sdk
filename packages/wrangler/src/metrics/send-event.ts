@@ -47,6 +47,7 @@ export type EventNames =
 	| "create pages project"
 	| "list pages projects"
 	| "create pages deployment"
+	| "pages redirect to workers"
 	| "list pages deployments"
 	| "delete pages deployment"
 	| "build pages functions"

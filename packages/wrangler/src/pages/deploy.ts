@@ -29,6 +29,7 @@ import {
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
+import { maybeRedirectPagesToWorkers } from "./redirect-to-workers";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
 import type { PagesConfigCache } from "./types";
 import type {
@@ -212,6 +213,18 @@ export const pagesDeployCommand = createCommand({
 					isExistingProject = false;
 				}
 			}
+		}
+
+		// Experiment: when run by an AI agent, redirect brand-new static Pages
+		// deploys to a Workers static-assets deploy. Falls back to Pages on failure.
+		const redirect = await maybeRedirectPagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			assetsDirectory: directory,
+			existingProject: Boolean(projectName) && isExistingProject,
+		});
+		if (redirect.handled) {
+			return;
 		}
 
 		const isInteractive = process.stdin.isTTY;
