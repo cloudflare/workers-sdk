@@ -3,11 +3,10 @@ import {
 	tailEventsReplacer,
 	tailEventsReviver,
 } from "../core/dev-registry-proxy-shared.worker";
-import type RouterWorker from "@cloudflare/workers-shared/asset-worker";
 
 interface Env {
-	ROUTER_WORKER: Service<RouterWorker>;
-	USER_WORKER: Fetcher | Service;
+	FETCH_TARGET: Fetcher | Service;
+	RPC_TARGET: Fetcher | Service;
 }
 
 /*
@@ -23,7 +22,7 @@ interface Env {
  */
 export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 	async fetch(request: Request) {
-		return this.env.ROUTER_WORKER.fetch(request);
+		return this.env.FETCH_TARGET.fetch(request);
 	}
 
 	// Forward scheduled events to the User Worker. The proxy itself doesn't run
@@ -32,7 +31,7 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 	// decision back onto this controller so the outcome surfaces correctly to
 	// the caller (e.g. the entry worker's `/cdn-cgi/handler/scheduled` handler).
 	async scheduled(controller: ScheduledController) {
-		const result = await this.env.USER_WORKER.scheduled?.({
+		const result = await this.env.RPC_TARGET.scheduled?.({
 			cron: controller.cron,
 			scheduledTime: new Date(controller.scheduledTime),
 		});
@@ -52,7 +51,7 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 		// Temporary workaround: the tail events is not serializable over capnproto yet
 		// But they are effectively JSON, so we are serializing them to JSON and parsing it back to make it transferable.
 		// @ts-expect-error FIXME when https://github.com/cloudflare/workerd/pull/4595 lands
-		return this.env.USER_WORKER.tail(
+		return this.env.RPC_TARGET.tail(
 			JSON.parse(JSON.stringify(events, tailEventsReplacer), tailEventsReviver)
 		);
 	}
@@ -80,7 +79,7 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 				/*
 				 * Otherwise, forward to the USER_WORKER and return its response
 				 */
-				return Reflect.get(target.env.USER_WORKER, prop);
+				return Reflect.get(target.env.RPC_TARGET, prop);
 			},
 		});
 	}

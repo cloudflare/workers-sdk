@@ -85,9 +85,40 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 	},
 
-	async getServices({ options, log }) {
+	async getServices({ options, log, workerName }) {
+		const targetWorkerName = options.assets?.workerName ?? workerName;
+		const userServiceName = getUserServiceName(targetWorkerName);
+		const assetsProxyService: Service = {
+			name: `${RPC_PROXY_SERVICE_NAME}:${targetWorkerName}`,
+			worker: {
+				compatibilityDate: "2024-08-01",
+				compatibilityFlags: ["service_binding_extra_handlers"],
+				modules: [
+					{
+						name: "assets-proxy-worker.mjs",
+						esModule: SCRIPT_RPC_PROXY(),
+					},
+				],
+				bindings: [
+					{
+						name: "FETCH_TARGET",
+						service: {
+							name:
+								options.assets === undefined
+									? userServiceName
+									: `${ROUTER_SERVICE_NAME}:${targetWorkerName}`,
+						},
+					},
+					{
+						name: "RPC_TARGET",
+						service: { name: userServiceName },
+					},
+				],
+			},
+		};
+
 		if (!options.assets) {
-			return [];
+			return [assetsProxyService];
 		}
 
 		let assetDirectory = options.assets.directory;
@@ -181,10 +212,8 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			has_static_routing: Boolean(options.assets.routerConfig?.static_routing),
 		};
 
-		const id = options.assets.workerName;
-
 		const namespaceService: Service = {
-			name: `${ASSETS_KV_SERVICE_NAME}:${id}`,
+			name: `${ASSETS_KV_SERVICE_NAME}:${targetWorkerName}`,
 			worker: {
 				compatibilityDate: "2023-07-24",
 				compatibilityFlags: ["nodejs_compat"],
@@ -208,7 +237,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 
 		const assetService: Service = {
-			name: `${ASSETS_SERVICE_NAME}:${id}`,
+			name: `${ASSETS_SERVICE_NAME}:${targetWorkerName}`,
 			worker: {
 				// TODO: read these from the wrangler.toml
 				compatibilityDate: "2024-07-31",
@@ -223,7 +252,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					{
 						name: "ASSETS_KV_NAMESPACE",
 						kvNamespace: {
-							name: `${ASSETS_KV_SERVICE_NAME}:${id}`,
+							name: `${ASSETS_KV_SERVICE_NAME}:${targetWorkerName}`,
 						},
 					},
 					{
@@ -239,7 +268,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 
 		const routerService: Service = {
-			name: `${ROUTER_SERVICE_NAME}:${id}`,
+			name: `${ROUTER_SERVICE_NAME}:${targetWorkerName}`,
 			worker: {
 				// TODO: read these from the wrangler.toml
 				compatibilityDate: "2024-07-31",
@@ -258,44 +287,16 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					{
 						name: "ASSET_WORKER",
 						service: {
-							name: `${ASSETS_SERVICE_NAME}:${id}`,
+							name: `${ASSETS_SERVICE_NAME}:${targetWorkerName}`,
 						},
 					},
 					{
 						name: "USER_WORKER",
-						service: { name: getUserServiceName(id) },
+						service: { name: getUserServiceName(targetWorkerName) },
 					},
 					{
 						name: "CONFIG",
 						json: JSON.stringify(options.assets.routerConfig ?? {}),
-					},
-				],
-			},
-		};
-
-		const assetsProxyService: Service = {
-			name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
-			worker: {
-				compatibilityDate: "2024-08-01",
-				compatibilityFlags: ["service_binding_extra_handlers"],
-				modules: [
-					{
-						name: "assets-proxy-worker.mjs",
-						esModule: SCRIPT_RPC_PROXY(),
-					},
-				],
-				bindings: [
-					{
-						name: "ROUTER_WORKER",
-						service: {
-							name: `${ROUTER_SERVICE_NAME}:${id}`,
-						},
-					},
-					{
-						name: "USER_WORKER",
-						service: {
-							name: getUserServiceName(id),
-						},
 					},
 				],
 			},
