@@ -146,6 +146,6 @@ function toManifestType(cfType: CfModuleType): ModuleType {
 		case "python":
 			return "python";
 		case "python-requirement":
-			return "pythonRequirement";
+			return "python-requirement";
 	}
 }
