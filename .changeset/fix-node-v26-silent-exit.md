@@ -2,10 +2,10 @@
 "wrangler": patch
 ---
 
-fix: remove deprecated `--experimental-vm-modules` flag and prevent silent exit on unexpected errors
+Remove deprecated `--experimental-vm-modules` flag and prevent silent exit on unexpected errors
 
-`wrangler` was silently exiting with code 1 on Node.js v26 with no error message. Two changes address this:
+`wrangler` was silently exiting with code 1 on Node.js v26 with no error message shown. This release fixes two independent issues that caused this behaviour:
 
-1. Remove `--experimental-vm-modules` from the child process spawn flags in `bin/wrangler.js`. This flag was deprecated when `vm.Module` became stable in Node.js v22, and the compiled `wrangler-dist/cli.js` does not use VM Modules. The stale flag could cause unexpected behaviour on Node.js v26.
+1. A stale Node.js flag that caused unexpected behaviour on Node.js v26 has been removed.
 
-2. Wrap the `handleError()` call in a try-catch so that if `handleError()` itself throws, the original error message is written directly to stderr instead of being silently swallowed by the top-level `.catch()` in `cli.ts`.
+2. If an error occurs in a situation where the normal error reporting path itself fails, `wrangler` now always prints the original error to stderr so the cause is visible rather than silently disappearing.

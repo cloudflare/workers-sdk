@@ -11,8 +11,8 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 - `src/` — CLI source
 - `src/__tests__/` — Unit tests, helpers in `src/__tests__/helpers/`
 - `e2e/` — E2E tests, requires Cloudflare credentials
-- `bin/wrangler.js` — Shim that spawns Node with `--experimental-vm-modules`
-- `bin/cf-wrangler.js` — `cf-wrangler` delegate entrypoint. Owns verb dispatch and argv parsing (`parseCfWranglerArgs`, `parseCfWranglerBuildArgs`); hands off to `runCfWranglerDev` / `runCfWranglerBuild` from `wrangler-dist/cli.js` in-process (no re-spawn — the parent tool owns the Node runtime)
+- `bin/wrangler.js` — Shim that spawns Node to run `wrangler-dist/cli.js`, forwarding stdio and IPC
+- `bin/cf-wrangler.js` — `cf-wrangler` delegate entrypoint. Owns verb dispatch, argv parsing (`parseCfWranglerArgs`), and the `StartDevOptions` literal; hands off to `runCfWranglerDev` from `wrangler-dist/cli.js` in-process (no re-spawn — the parent tool owns the Node runtime)
 - `src/cf-wrangler/` — The `cf-wrangler` delegate entrypoint (see below)
 - `templates/` — Worker templates
 
