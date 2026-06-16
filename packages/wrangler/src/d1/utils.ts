@@ -1,4 +1,5 @@
 import { APIError, UserError } from "@cloudflare/workers-utils";
+import { dedent } from "ts-dedent";
 import { fetchResult } from "../cfetch";
 import { autoProvisionedResourceName } from "../deployment-bundle/auto-provisioned-name";
 import { DEFAULT_MIGRATION_TABLE } from "./constants";
@@ -9,7 +10,6 @@ import {
 	type DatabaseInfo,
 } from "./types";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
-import { dedent } from "ts-dedent";
 
 export function getDatabaseInfoFromConfig(
 	config: Config,
@@ -74,7 +74,7 @@ export const getDatabaseByNameOrBinding = async (
 
 				In order to connect to an existing database, please specify either 'database_name' or 'database_id' in the binding.
 
-				Alternatively specify a 'name' for the worker and then run 'wrangler deploy'. This will auto-provision a database named '${autoProvisionedResourceName('<worker-name>', nameOrBinding)}'.
+				Alternatively specify a 'name' for the worker and then run 'wrangler deploy'. This will auto-provision a database named '${autoProvisionedResourceName("<worker-name>", nameOrBinding)}'.
 				`,
 				{
 					telemetryMessage: "d1 database lookup missing name and id",
