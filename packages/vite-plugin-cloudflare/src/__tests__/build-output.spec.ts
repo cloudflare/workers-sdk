@@ -2,30 +2,31 @@ import { describe, it } from "vitest";
 import { detectModuleType } from "../plugins/build-output";
 
 describe("detectModuleType", () => {
-	const cases: Array<[filename: string, expected: string]> = [
-		["entry.js", "esm"],
-		["entry.mjs", "esm"],
-		["lib.wasm", "wasm"],
-		["raw.bin", "data"],
-		["greeting.txt", "text"],
-		["page.html", "text"],
-		["query.sql", "text"],
-		["data.json", "json"],
-		["bundle.js.map", "sourcemap"],
-		["unknown.xyz", "data"],
+	const cases: Array<{ filename: string; expected: string }> = [
+		{ filename: "entry.js", expected: "esm" },
+		{ filename: "entry.mjs", expected: "esm" },
+		{ filename: "lib.wasm", expected: "wasm" },
+		{ filename: "raw.bin", expected: "data" },
+		{ filename: "greeting.txt", expected: "text" },
+		{ filename: "page.html", expected: "text" },
+		{ filename: "query.sql", expected: "text" },
+		{ filename: "data.json", expected: "json" },
+		{ filename: "bundle.js.map", expected: "sourcemap" },
+		{ filename: "unknown.xyz", expected: "data" },
 		// Case-insensitive on extension
-		["ENTRY.JS", "esm"],
-		["LIB.WASM", "wasm"],
+		{ filename: "ENTRY.JS", expected: "esm" },
+		{ filename: "LIB.WASM", expected: "wasm" },
 		// No extension → default `data`
-		["LICENSE", "data"],
+		{ filename: "LICENSE", expected: "data" },
 		// Nested paths — only the extension matters
-		["chunks/foo.js", "esm"],
-		["chunks/foo.wasm", "wasm"],
+		{ filename: "chunks/foo.js", expected: "esm" },
+		{ filename: "chunks/foo.wasm", expected: "wasm" },
 	];
 
-	for (const [filename, expected] of cases) {
-		it(`maps ${filename} → ${expected}`, ({ expect }) => {
+	it.for(cases)(
+		"maps $filename → $expected",
+		({ filename, expected }, { expect }) => {
 			expect(detectModuleType(filename)).toBe(expected);
-		});
-	}
+		}
+	);
 });
