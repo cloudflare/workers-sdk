@@ -22,7 +22,6 @@ describe("findPackageNames()", () => {
 	}) => {
 		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
-				"@cloudflare/autoconfig",
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli-shared-helpers",
 				"@cloudflare/codemod",
