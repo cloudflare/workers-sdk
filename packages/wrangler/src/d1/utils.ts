@@ -1,5 +1,6 @@
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
+import { autoProvisionedResourceName } from "../deployment-bundle/auto-provisioned-name";
 import { DEFAULT_MIGRATION_TABLE } from "./constants";
 import {
 	type DatabaseWithUuid,
@@ -47,7 +48,39 @@ export const getDatabaseByNameOrBinding = async (
 	// Either not in config at all, or the binding exists but `database_id` is
 	// absent (auto-provisioned binding — see Workers automatic resource
 	// provisioning). Look up the real UUID via the D1 API.
-	const lookupName = dbFromConfig?.name ?? nameOrBinding;
+	//
+	let lookupName: string;
+	if (dbFromConfig?.name) {
+		// Config has `database_name` — use it directly.
+		lookupName = dbFromConfig.name;
+	} else if (dbFromConfig) {
+		// Binding is in config but has no `database_name`. Use the name
+		// `wrangler deploy` would create (`<worker name>-<binding>`),
+		// if the worker has a `name`.
+		if (config.name) {
+			lookupName = autoProvisionedResourceName(
+				config.name,
+				dbFromConfig.binding
+			);
+		} else {
+			// No worker name, no database_name, no database_id — there's no
+			// way to pick out which D1 database the binding refers to. Refuse
+			// rather than silently falling back to nameOrBinding, which could
+			// bind to an unrelated DB on the account that happens to share
+			// the binding name.
+			throw new UserError(
+				`Found a database with binding '${nameOrBinding}' but it has no 'database_name' or 'database_id'. This is needed for operations on remote resources unless the workers project has been auto-provisioned with a top-level 'name' set. Please create the remote D1 database by deploying your project or running 'wrangler d1 create ${nameOrBinding}' adding 'database_name' / 'database_id' to your config`,
+				{
+					telemetryMessage: "d1 database lookup missing name and id",
+				}
+			);
+		}
+	} else {
+		// Not in config at all — treat `nameOrBinding` as a literal name
+		// (e.g. `wrangler d1 execute <db-name>` with no matching config entry).
+		lookupName = nameOrBinding;
+	}
+
 	let uuid: string;
 	let name: string;
 	try {
@@ -62,10 +95,26 @@ export const getDatabaseByNameOrBinding = async (
 		// else (401, 403, 429, 5xx, network) should propagate so the user
 		// sees the real failure instead of a misleading "DB not found".
 		if (err instanceof APIError && err.status === 404) {
+			if (dbFromConfig?.name) {
+				throw new UserError(
+					`Couldn't find a D1 DB named '${lookupName}' (bound as '${nameOrBinding}') in the API. Run 'wrangler d1 create ${lookupName}' to create it.`,
+					{ telemetryMessage: "d1 database lookup database not found" }
+				);
+			}
+			if (dbFromConfig) {
+				// Binding-only config — `lookupName` is the auto-provisioned
+				// guess. The DB doesn't exist yet, so point the user at
+				// `wrangler deploy` rather than `wrangler d1 create`.
+				throw new UserError(
+					`Couldn't find an auto-provisioned D1 DB named '${lookupName}' for binding '${nameOrBinding}'. Run 'wrangler deploy' to provision it, or add 'database_name' / 'database_id' to your config.`,
+					{
+						telemetryMessage:
+							"d1 database lookup auto-provisioned database not found",
+					}
+				);
+			}
 			throw new UserError(
-				dbFromConfig
-					? `Couldn't find a D1 DB named '${lookupName}' (bound as '${nameOrBinding}') in the API. Run 'wrangler d1 create ${lookupName}' to create it.`
-					: `Couldn't find a D1 DB with name or binding '${nameOrBinding}' in your config or the API. Run 'wrangler d1 create ${nameOrBinding}' to create it.`,
+				`Couldn't find a D1 DB with name or binding '${nameOrBinding}' in your config or the API. Run 'wrangler d1 create ${nameOrBinding}' to create it.`,
 				{ telemetryMessage: "d1 database lookup database not found" }
 			);
 		}

@@ -10,4 +10,6 @@ Remote D1 subcommands (`d1 execute --remote`, `d1 export --remote`, `d1 info`, `
 
 when the `[[d1_databases]]` config entry only had `binding` and `database_name` (the shape `wrangler deploy` writes for automatically-provisioned bindings). They now resolve the real database UUID via `GET /accounts/:accountId/d1/database/:name?fields=uuid` and proceed as if `database_id` had been set in config.
 
+If the config entry only has a `binding` (no `database_name`, no `database_id`), the lookup uses the same name `wrangler deploy` would create via auto provisioning (`<worker name>-<binding-lowercased-with-dashes>`).
+
 Non-404 API failures (auth, rate-limit, server errors) now propagate verbatim instead of being masked as "database not found".

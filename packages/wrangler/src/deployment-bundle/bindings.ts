@@ -28,6 +28,7 @@ import {
 } from "../r2/helpers/bucket";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import { autoProvisionedResourceName } from "./auto-provisioned-name";
 import type { Binding, StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
 	CfAgentMemory,
@@ -893,7 +894,7 @@ async function runProvisioningFlow(
 		});
 	}
 
-	const defaultName = `${scriptName}-${item.binding.toLowerCase().replaceAll("_", "-")}`;
+	const defaultName = autoProvisionedResourceName(scriptName, item.binding);
 	logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
 
 	if (item.handler.name) {

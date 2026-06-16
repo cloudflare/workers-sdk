@@ -208,6 +208,96 @@ describe("getDatabaseByNameOrBinding", () => {
 		});
 	});
 
+	it("resolves a binding-only config via the auto-provisioned name (worker name + binding)", async ({
+		expect,
+	}) => {
+		const uuid = "c0ffee00-c0ffee00-c0ffee00-c0ffee000000";
+		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "IG-88", name: "enterprise" }]),
+			http.get(
+				"*/accounts/:accountId/d1/database/:name",
+				async ({ params }) => {
+					// Mirrors runProvisioningFlow's defaultName:
+					// `${scriptName}-${binding.toLowerCase().replaceAll("_", "-")}`
+					expect(params.name).toBe("my-worker-d1-binding-name");
+					return HttpResponse.json({
+						result: {
+							uuid,
+							name: params.name,
+						},
+						success: true,
+						errors: [],
+						messages: [],
+					});
+				}
+			)
+		);
+		const config = {
+			name: "my-worker",
+			d1_databases: [
+				{
+					binding: "D1_BINDING_NAME",
+				},
+			],
+		} as unknown as Config;
+		await expect(
+			getDatabaseByNameOrBinding(config, "123", "D1_BINDING_NAME")
+		).resolves.toStrictEqual({
+			binding: "D1_BINDING_NAME",
+			name: "my-worker-d1-binding-name",
+			uuid,
+			migrationsTableName: "d1_migrations",
+			migrationsDirRaw: undefined,
+			migrationsPattern: undefined,
+			previewDatabaseUuid: undefined,
+			internal_env: undefined,
+		});
+	});
+
+	it("does not silently bind to an unrelated DB with the same name as the binding", async ({
+		expect,
+	}) => {
+		// Foot-gun guard: even though a DB literally named "DB" exists on the
+		// account, the auto-provisioned name is `<worker>-db`, so we must look
+		// for that and 404 — not bind to the unrelated "DB" database.
+		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "IG-88", name: "enterprise" }]),
+			http.get(
+				"*/accounts/:accountId/d1/database/:name",
+				async ({ params }) => {
+					expect(params.name).toBe("my-worker-db");
+					return HttpResponse.json(
+						{ success: false, errors: [{ code: 7404, message: "Not Found" }] },
+						{ status: 404 }
+					);
+				}
+			)
+		);
+		const config = {
+			name: "my-worker",
+			d1_databases: [{ binding: "DB" }],
+		} as unknown as Config;
+		await expect(
+			getDatabaseByNameOrBinding(config, "123", "DB")
+		).rejects.toThrow(
+			"Couldn't find an auto-provisioned D1 DB named 'my-worker-db' for binding 'DB'. Run 'wrangler deploy' to provision it, or add 'database_name' / 'database_id' to your config."
+		);
+	});
+
+	it("refuses to guess when binding has no database_name/id and worker has no name", async ({
+		expect,
+	}) => {
+		// No HTTP handler — we want to confirm we never call out.
+		const config = {
+			d1_databases: [{ binding: "DB" }],
+		} as unknown as Config;
+		await expect(
+			getDatabaseByNameOrBinding(config, "123", "DB")
+		).rejects.toThrow(
+			"Found a database with binding 'DB' but it has no 'database_name' or 'database_id'. This is needed for operations on remote resources unless the workers project has been auto-provisioned with a top-level 'name' set. Please create the remote D1 database by deploying your project or running 'wrangler d1 create DB' adding 'database_name' / 'database_id' to your config"
+		);
+	});
+
 	it("propagates non-404 API errors instead of masking them as not-found", async ({
 		expect,
 	}) => {
