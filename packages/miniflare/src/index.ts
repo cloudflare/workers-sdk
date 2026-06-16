@@ -2317,7 +2317,7 @@ export class Miniflare {
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
-			fallbackWorkerName: `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name ?? ''}`,
+			fallbackWorkerName: `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name ?? ""}`,
 			loopbackPort,
 			tmpPath: this.#tmpPath,
 			log: this.#log,
