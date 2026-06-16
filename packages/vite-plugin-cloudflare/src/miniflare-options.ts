@@ -761,7 +761,7 @@ export async function getPreviewMiniflareOptions(
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			resolvedPluginConfig.workers.map(async (previewWorker) => {
+			resolvedPluginConfig.workers.map(async (previewWorker, index) => {
 				const workerConfig = previewWorker.config;
 				const bindings =
 					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
@@ -840,10 +840,15 @@ export async function getPreviewMiniflareOptions(
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inputInspectorPort !== false,
-						// When enabled, wrap the entry so its response body is buffered
-						// in-worker and streaming errors surface as a real 500 rather
-						// than a silently-truncated 200.
-						...maybeBufferPreviewEntry(bufferPreviewResponses, modulesAndRoot),
+						// When enabled, wrap the entry Worker so its response body is
+						// buffered in-worker and streaming errors surface as a real 500
+						// rather than a silently-truncated 200. Only the entry Worker
+						// (the request dispatch target, i.e. the first Worker) is wrapped;
+						// auxiliary/service-bound Workers keep their streaming behaviour.
+						...maybeBufferPreviewEntry(
+							bufferPreviewResponses && index === 0,
+							modulesAndRoot
+						),
 					},
 					...externalWorkers,
 				] satisfies Array<WorkerOptions>;
