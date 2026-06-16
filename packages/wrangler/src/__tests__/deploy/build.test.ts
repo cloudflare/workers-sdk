@@ -1223,6 +1223,49 @@ export default { fetch() { return new Response(mod); } };`;
 			await runWrangler("deploy index.js --no-bundle --dry-run --outdir dist");
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
+
+		it("should collect additional modules when find_additional_modules is not set", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				rules: [{ type: "CompiledWasm", globs: ["**/*.wasm"] }],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync("hello.wasm", "");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"hello.wasm": expect.any(String),
+				},
+			});
+			await runWrangler("deploy");
+		});
+
+		it("should not collect additional modules when find_additional_modules is false", async () => {
+			writeWranglerConfig({
+				no_bundle: true,
+				find_additional_modules: false,
+				main: "index.js",
+				rules: [{ type: "CompiledWasm", globs: ["**/*.wasm"] }],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync("hello.wasm", "");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				excludedModules: ["hello.wasm"],
+			});
+			await runWrangler("deploy");
+		});
 	});
 	describe("--no-bundle --minify", () => {
 		it("should warn that no-bundle and minify can't be used together", async ({

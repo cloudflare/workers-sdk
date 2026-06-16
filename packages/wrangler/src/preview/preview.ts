@@ -201,7 +201,8 @@ async function getDeploymentModules(
 				entry,
 				getRules(config),
 				destination,
-				config.python_modules.exclude
+				config.python_modules.exclude,
+				config.find_additional_modules !== false
 			)
 		: await bundleWorker(entry, destination, {
 				bundle: true,

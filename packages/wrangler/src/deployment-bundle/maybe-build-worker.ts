@@ -91,7 +91,8 @@ export async function buildWorker(
 				entry,
 				config.rules ?? [],
 				props.outdir,
-				config.python_modules.exclude
+				config.python_modules.exclude,
+				config.find_additional_modules !== false
 			)
 		: await bundleWorker(
 				entry,
