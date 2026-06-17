@@ -100,6 +100,26 @@ describe("wrangler", () => {
 			});
 		});
 
+		describe("--executable-name", () => {
+			test("should embed the overridden executable name in the script", async ({
+				expect,
+			}) => {
+				await runWrangler(
+					`complete powershell --executable-name "npx wrangler"`
+				);
+
+				expect(std.out).toContain("npx wrangler complete");
+			});
+
+			test("should default to wrangler when not provided", async ({
+				expect,
+			}) => {
+				await runWrangler("complete powershell");
+
+				expect(std.out).toContain("wrangler complete --");
+			});
+		});
+
 		describe("bash", () => {
 			test.skipIf(!shellAvailable("bash"))(
 				"should generate valid bash syntax",

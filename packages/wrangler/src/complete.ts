@@ -140,6 +140,12 @@ export const completionsCommand = createCommand({
 			describe: "Shell type to generate completions for",
 			type: "string",
 		},
+		"executable-name": {
+			describe:
+				"Override the executable name used in the generated completion script (e.g. 'npx wrangler')",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	handler(args) {
 		// When shells request completions, they call: wrangler complete -- <partial-command>
@@ -160,7 +166,9 @@ export const completionsCommand = createCommand({
 			});
 		}
 
+		const executableName = args["executable-name"] ?? "wrangler";
+
 		setupCompletions();
-		t.setup("wrangler", "wrangler", args.shell);
+		t.setup(executableName, executableName, args.shell);
 	},
 });
