@@ -1855,9 +1855,6 @@ importers:
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
-      blake3-wasm:
-        specifier: 2.1.5
-        version: 2.1.5
       chalk:
         specifier: catalog:default
         version: 5.3.0
@@ -1895,6 +1892,9 @@ importers:
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
+      '@noble/hashes':
+        specifier: 2.2.0
+        version: 2.2.0
       '@types/command-exists':
         specifier: ^1.2.0
         version: 1.2.0
@@ -4176,9 +4176,6 @@ importers:
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
-      blake3-wasm:
-        specifier: 2.1.5
-        version: 2.1.5
       esbuild:
         specifier: catalog:default
         version: 0.27.3
@@ -6779,6 +6776,10 @@ packages:
 
   '@noble/hashes@2.0.1':
     resolution: {integrity: sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==}
+    engines: {node: '>= 20.19.0'}
+
+  '@noble/hashes@2.2.0':
+    resolution: {integrity: sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg==}
     engines: {node: '>= 20.19.0'}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -17942,6 +17943,8 @@ snapshots:
   '@noble/ciphers@2.1.1': {}
 
   '@noble/hashes@2.0.1': {}
+
+  '@noble/hashes@2.2.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

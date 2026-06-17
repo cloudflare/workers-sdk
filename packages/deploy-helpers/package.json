@@ -39,7 +39,6 @@
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
-		"blake3-wasm": "2.1.5",
 		"chalk": "catalog:default",
 		"command-exists": "catalog:default",
 		"dotenv": "catalog:default",
@@ -54,6 +53,7 @@
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
+		"@noble/hashes": "2.2.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/json-diff": "^1.0.3",
 		"@types/node": "catalog:default",
