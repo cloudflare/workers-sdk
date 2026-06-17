@@ -14,7 +14,14 @@ import { createPlugin } from "../utils";
 import type { WorkerOptions } from "miniflare";
 
 export const workerdOutputPlugin = createPlugin("workerd-output", (ctx) => {
+	let outDir = "dist";
+
 	return {
+		config(userConfig) {
+			if (userConfig.build?.outDir) {
+				outDir = userConfig.build.outDir;
+			}
+		},
 		buildApp: {
 			order: "post",
 			async handler() {
@@ -26,14 +33,10 @@ export const workerdOutputPlugin = createPlugin("workerd-output", (ctx) => {
 					return;
 				}
 
-				const entryEnvironment =
-					ctx.resolvedViteConfig.environments[
-						resolvedPluginConfig.entryWorkerEnvironmentName
-					];
-				assert(entryEnvironment, "Expected entry Worker environment");
-				const outDir = path.resolve(
+				const workerdOutDir = path.resolve(
 					ctx.resolvedViteConfig.root,
-					entryEnvironment.build.outDir
+					outDir,
+					"workerd"
 				);
 				const workers: WorkerOptions[] = [];
 				for (const workerConfig of getWorkerConfigs(
@@ -44,10 +47,12 @@ export const workerdOutputPlugin = createPlugin("workerd-output", (ctx) => {
 						wrangler.unstable_getMiniflareWorkerOptions(workerConfig);
 					const { modulesRules, ...options } = workerOptions;
 					assert(main, "Expected built Worker entrypoint");
+					const modules = getPreviewModules(main, modulesRules);
 					workers.push(
 						{
 							...options,
-							...getPreviewModules(main, modulesRules),
+							...modules,
+							modulesRoot: modules.rootPath,
 							name: options.name ?? workerConfig.name,
 							cache: false,
 							unsafeUseModuleFallbackService: false,
@@ -59,11 +64,12 @@ export const workerdOutputPlugin = createPlugin("workerd-output", (ctx) => {
 				const config = await unstable_assembleWorkerdConfig({
 					log: new Log(LogLevel.WARN),
 					unsafeWorkerdOutput: true,
-					defaultPersistRoot: path.join(outDir, ".workerd", "state"),
+					defaultPersistRoot: path.join(workerdOutDir, ".workerd", "state"),
 					workers,
 				});
+				fs.mkdirSync(workerdOutDir, { recursive: true });
 				fs.writeFileSync(
-					path.join(outDir, "config.bin"),
+					path.join(workerdOutDir, "config.bin"),
 					serializeConfig(config)
 				);
 			},
