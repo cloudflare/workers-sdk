@@ -200,18 +200,26 @@ export function cleanupDestination(
 }
 
 /**
- * Build the inputs for the standalone
- * `wrangler build --experimental-cf-build-output` path
+ * Get the inputs for the standalone
+ * `wrangler build --experimental-cf-build-output` path.
  */
 export async function mergeBuildOutputProps(config: Config): Promise<{
-	buildProps: BuildProps;
+	buildProps: BuildProps | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }> {
-	const entry = await getEntry({}, config, "deploy");
 	const assetsOptions = getAssetsOptions({
 		args: { assets: undefined },
 		config,
 	});
+	const isAssetsOnly =
+		assetsOptions !== undefined &&
+		assetsOptions.routerConfig.has_user_worker === false;
+
+	if (isAssetsOnly) {
+		return { buildProps: undefined, assetsOptions };
+	}
+
+	const entry = await getEntry({}, config, "deploy");
 	const buildProps: BuildProps = {
 		entry,
 		name: config.name,

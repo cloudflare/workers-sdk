@@ -10,8 +10,7 @@ import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 /**
  * Run the standalone Build Output API path for `wrangler build`.
  *
- * The output is a self-contained `.cloudflare/output/v0/` directory ready to be
- * consumed by the new `cf` CLI.
+ * The output is a self-contained `.cloudflare/output/v0/` directory.
  */
 export async function runBuildOutput(buildArgs: {
 	env?: string;
@@ -20,23 +19,23 @@ export async function runBuildOutput(buildArgs: {
 		env: buildArgs.env,
 	});
 	const { buildProps, assetsOptions } = await mergeBuildOutputProps(config);
-	const isAssetsOnly =
-		assetsOptions !== undefined &&
-		assetsOptions.routerConfig.has_user_worker === false;
+	const root = process.cwd();
 
 	let buildResult: WorkerBuildResult | undefined;
 	try {
-		if (!isAssetsOnly) {
+		if (buildProps) {
 			buildResult = await buildWorker(buildProps, config);
 		}
 
 		await writeBuildOutput({
-			root: buildProps.entry.projectRoot,
+			root,
 			parsedWorkerConfig,
 			buildResult,
 			assetsOptions,
 		});
 	} finally {
-		cleanupDestination(buildProps.destination);
+		if (buildProps) {
+			cleanupDestination(buildProps.destination);
+		}
 	}
 }
