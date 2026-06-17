@@ -247,6 +247,15 @@ export type CommandDefinition<
 		 * @default false
 		 */
 		supportTemporary?: boolean;
+
+		/**
+		 * By default, the banner will print "Active profile: <name>" when a non-default
+		 * profile is resolved. Set to `false` to suppress this line while still printing
+		 * the rest of the banner.
+		 *
+		 * @default true
+		 */
+		printActiveProfile?: boolean;
 	};
 
 	/**

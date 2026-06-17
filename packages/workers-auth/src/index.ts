@@ -37,6 +37,8 @@ export { generateRandomState } from "./generate-random-state";
 export { TEMPORARY_TERMS_NOTICE, TEMPORARY_TERMS_PROMPT } from "./temporary";
 export { PKCE_CHARSET } from "./pkce";
 
+export * from "./profiles";
+
 export { readStoredAuthState } from "./state";
 
 export type { TemporaryPreviewAccount } from "./config-file/temporary";

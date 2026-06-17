@@ -26,6 +26,7 @@ import { generateRandomState as defaultGenerateRandomState } from "./generate-ra
 import { readStoredAuthState, type OAuthFlowState } from "./state";
 import { getOrCreateTemporaryPreviewAccount } from "./temporary";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
+import type { AuthConfigStorage } from "./config-file/auth";
 import type { TemporaryPreviewAccount } from "./config-file/temporary";
 import type { OAuthFlowContext } from "./context";
 import type {
@@ -77,6 +78,12 @@ export interface LoginProps {
 	callbackHost?: string;
 	/** Port the local callback server listens on. Defaults to `8976`. */
 	callbackPort?: number;
+	/**
+	 * Named auth profile to store the token under. When omitted, the default
+	 * profile (`default.toml`) is used.
+	 * Only for use by 'auth create', not exposed to the user
+	 */
+	profile?: string;
 }
 
 /**
@@ -84,12 +91,25 @@ export interface LoginProps {
  */
 export interface OAuthFlowAPI {
 	/**
+	 * Set the active auth profile for all subsequent storage lookups.
+	 *
+	 * Called once at top of  command dispatch by the consumer (e.g. after
+	 * `resolveProfile()`).`"default"` if never called.
+	 */
+	setProfile(profile: string): void;
+
+	getActiveProfile(): string;
+
+	/**
 	 * Open the authorize URL in the user's browser, wait for the callback to be
 	 * hit on the local HTTP server, exchange the code for an access token, and
 	 * persist the result to disk.
 	 *
 	 * Refuses to start when `ctx.hasEnvCredentials()` returns `true`.
 	 * Refuses to start when the compliance region is `fedramp_high`.
+	 *
+	 * When `props.profile` is set, the token is stored under that profile
+	 * instead of the active one. This is used by `auth create <name>`.
 	 *
 	 * @returns `true` on success, `false` when env credentials are present.
 	 */
@@ -101,8 +121,11 @@ export interface OAuthFlowAPI {
 	 *
 	 * No-op when `ctx.hasEnvCredentials()` returns `true` (env credentials
 	 * cannot be revoked).
+	 *
+	 * When `profile` is passed, operates on that profile instead of the
+	 * active one. This is used by `auth delete <name>`.
 	 */
-	logout(): Promise<void>;
+	logout(profile?: string): Promise<void>;
 
 	/**
 	 * If the user has no stored OAuth token, attempt an interactive login.
@@ -143,6 +166,12 @@ export interface OAuthFlowAPI {
 	 * available.
 	 */
 	requireApiToken(): ApiCredentials;
+
+	/**
+	 * Return the scopes granted to the stored OAuth token for the active
+	 * profile, or `undefined` when no OAuth token is stored.
+	 */
+	getScopes(): string[] | undefined;
 
 	/**
 	 * Establish whether `--temporary` is permitted for this invocation. Called
@@ -190,7 +219,12 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,
 	};
 
-	const storage = ctx.storage;
+	let activeProfile = "default";
+
+	function getStorage(profile?: string): AuthConfigStorage {
+		return ctx.storage(profile ?? activeProfile);
+	}
+
 	const getClientId = () =>
 		typeof ctx.clientId === "function" ? ctx.clientId() : ctx.clientId;
 	const consent = ctx.consent;
@@ -249,7 +283,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			generators
 		);
 
-		storage.write({
+		getStorage(props.profile).write({
 			oauth_token: oauth.token?.value ?? "",
 			expiration_time: oauth.token?.expiry,
 			refresh_token: oauth.refreshToken?.value,
@@ -270,7 +304,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 		const { accessToken } = readStoredAuthState({
 			warningLogger: ctx.logger,
-			storage,
+			storage: getStorage(),
 		});
 		return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 	}
@@ -294,9 +328,9 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				ctx.logger,
 				ctx.isNonInteractiveOrCI,
 				getClientId(),
-				storage
+				getStorage()
 			);
-			storage.write({
+			getStorage().write({
 				oauth_token,
 				expiration_time,
 				refresh_token,
@@ -323,7 +357,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		// TODO: ask permission before opening browser
 		const stored = readStoredAuthState({
 			warningLogger: ctx.logger,
-			storage,
+			storage: getStorage(props.profile),
 		});
 		if (!stored.accessToken && !stored.deprecatedApiToken) {
 			// Not logged in.
@@ -362,7 +396,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 	}
 
-	async function logout(): Promise<void> {
+	async function logout(profile?: string): Promise<void> {
 		const clearedTemporary = clearTemporaryAccount();
 
 		if (ctx.hasEnvCredentials()) {
@@ -376,7 +410,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 		const storedRefreshToken = readStoredAuthState({
 			warningLogger: ctx.logger,
-			storage,
+			storage: getStorage(profile),
 		}).refreshToken;
 		if (!storedRefreshToken) {
 			ctx.logger.log(
@@ -400,14 +434,17 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			},
 		});
 		await response.text(); // blank text? would be nice if it was something meaningful
-		storage.clear();
+		getStorage(profile).clear();
 		ctx.logger.log(`Successfully logged out.`);
 		ctx.purgeOnLoginOrLogout?.();
 	}
 
 	async function getOAuthTokenFromLocalState(): Promise<string | undefined> {
 		// Check if we have an OAuth token
-		let stored = readStoredAuthState({ warningLogger: ctx.logger, storage });
+		let stored = readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage: getStorage(),
+		});
 		if (!stored.accessToken) {
 			return undefined;
 		}
@@ -425,7 +462,10 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				return undefined;
 			}
 			// Re-read after the refresh has persisted the new token to disk.
-			stored = readStoredAuthState({ warningLogger: ctx.logger, storage });
+			stored = readStoredAuthState({
+				warningLogger: ctx.logger,
+				storage: getStorage(),
+			});
 		}
 
 		return stored.accessToken?.value;
@@ -437,7 +477,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 
 		return getAPIToken({
-			storage,
+			storage: getStorage(),
 			warningLogger: ctx.logger,
 			allowGlobalAuthKey: ctx.allowGlobalAuthKey,
 		});
@@ -449,7 +489,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 
 		return requireApiToken({
-			storage,
+			storage: getStorage(),
 			warningLogger: ctx.logger,
 			allowGlobalAuthKey: ctx.allowGlobalAuthKey,
 		});
@@ -492,13 +532,31 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		return ctx.temporary?.storage.clear() ?? false;
 	}
 
+	function setProfile(profile: string): void {
+		activeProfile = profile;
+	}
+
+	function getActiveProfile(): string {
+		return activeProfile;
+	}
+
+	function getScopes(): string[] | undefined {
+		return readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage: getStorage(),
+		}).scopes;
+	}
+
 	return {
+		setProfile,
+		getActiveProfile,
 		login,
 		logout,
 		loginOrRefreshIfRequired,
 		getOAuthTokenFromLocalState,
 		getAPIToken: getAPITokenInternal,
 		requireApiToken: requireApiTokenInternal,
+		getScopes,
 		setTemporaryAllowed,
 		isTemporaryAllowed,
 		getActiveTemporaryAccount,

@@ -433,6 +433,13 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
+import {
+	authActivateCommand,
+	authCreateCommand,
+	authDeactivateCommand,
+	authDeleteCommand,
+	authListCommand,
+} from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
@@ -2293,6 +2300,26 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler auth token",
 			definition: authTokenCommand,
+		},
+		{
+			command: "wrangler auth create",
+			definition: authCreateCommand,
+		},
+		{
+			command: "wrangler auth delete",
+			definition: authDeleteCommand,
+		},
+		{
+			command: "wrangler auth activate",
+			definition: authActivateCommand,
+		},
+		{
+			command: "wrangler auth deactivate",
+			definition: authDeactivateCommand,
+		},
+		{
+			command: "wrangler auth list",
+			definition: authListCommand,
 		},
 	]);
 	registry.registerNamespace("auth");
