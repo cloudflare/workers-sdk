@@ -796,7 +796,6 @@ async function loadNewConfig(options: {
 		writeWorkerConfigurationDts({
 			root: options.root,
 			configPath,
-			generateTypes,
 		});
 	}
 
@@ -820,12 +819,11 @@ async function loadNewConfig(options: {
 function writeWorkerConfigurationDts(options: {
 	root: string;
 	configPath: string;
-	generateTypes: (opts: { configPath: string; packageName?: string }) => string;
 }): void {
 	const outputPath = path.resolve(options.root, TYPES_OUTPUT_FILENAME);
 	const relativeConfigPath =
 		"./" + path.relative(options.root, options.configPath);
-	const content = options.generateTypes({
+	const content = generateTypes({
 		configPath: relativeConfigPath,
 		packageName: EXPERIMENTAL_CONFIG_PKG,
 	});
