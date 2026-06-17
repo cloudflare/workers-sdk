@@ -94,6 +94,8 @@ export type SharedDeployVersionsProps = {
 	sendMetrics: boolean;
 	/** Resolved from getFlag("RESOURCES_PROVISION"). Controls whether bindings are auto-provisioned before upload. */
 	resourcesProvision: boolean;
+	/** temporary hack - cf is not yet a recognised deploy source, so any deploys from cf comes back normalised to 'api'*/
+	skipLastDeployedFromApiCheck: boolean;
 };
 
 export type DeployProps = SharedDeployVersionsProps & {
