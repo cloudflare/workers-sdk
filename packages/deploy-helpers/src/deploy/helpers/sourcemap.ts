@@ -122,6 +122,24 @@ function callFrameToCallSite(frame: Protocol.Runtime.CallFrame): CallSite {
 	});
 }
 
+/**
+ * Calls `prepareStack` and returns `null` if it throws (e.g. when a truncated
+ * stderr chunk produces an invalid column number). Returning `null` lets
+ * `getSourceMappedString` fall back to the original string without executing
+ * the replacement loop against a partially-computed result.
+ */
+function tryPrepareStack(
+	prepareStack: ReturnType<typeof getSourceMappingPrepareStackTrace>,
+	error: Error,
+	callSites: NodeJS.CallSite[]
+): string | null {
+	try {
+		return prepareStack(error, callSites);
+	} catch {
+		return null;
+	}
+}
+
 const placeholderError = new Error();
 export function getSourceMappedString(
 	value: string,
@@ -138,12 +156,12 @@ export function getSourceMappedString(
 	const callSiteLines = Array.from(value.matchAll(CALL_SITE_REGEXP));
 	const callSites = callSiteLines.map(lineMatchToCallSite);
 	const prepareStack = getSourceMappingPrepareStackTrace(retrieveSourceMap);
-	let sourceMappedStackTrace: string;
-	try {
-		sourceMappedStackTrace = prepareStack(placeholderError, callSites);
-	} catch {
-		// prepareStack threw (e.g. truncated stderr chunk with an invalid column
-		// number). Return the original string unchanged.
+	const sourceMappedStackTrace = tryPrepareStack(
+		prepareStack,
+		placeholderError,
+		callSites
+	);
+	if (sourceMappedStackTrace === null) {
 		return value;
 	}
 	const sourceMappedCallSiteLines = sourceMappedStackTrace.split("\n").slice(1);
