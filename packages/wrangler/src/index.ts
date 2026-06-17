@@ -2424,8 +2424,7 @@ export async function main(argv: string[]): Promise<void> {
 			} catch (handleErrorErr) {
 				// handleError itself threw before it could log the error.
 				// Fall back to raw stderr so the user always sees something.
-				const message =
-					e instanceof Error ? (e.stack ?? e.message) : String(e);
+				const message = e instanceof Error ? (e.stack ?? e.message) : String(e);
 				const handlerMessage =
 					handleErrorErr instanceof Error
 						? (handleErrorErr.stack ?? handleErrorErr.message)
