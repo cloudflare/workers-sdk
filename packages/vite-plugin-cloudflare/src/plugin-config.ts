@@ -1,5 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import {
+	convertToWranglerConfig,
+	generateTypes,
+	InputWorkerSchema,
+	loadConfig,
+	resolveWorkerDefinition,
+} from "@cloudflare/config";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import { defu } from "defu";
 import * as vite from "vite";
@@ -770,16 +777,6 @@ async function loadNewConfig(options: {
 		);
 	}
 
-	// Dynamic import so users who don't enable `experimental.newConfig` never
-	// pay the cost of loading `@cloudflare/config` (and its Node module hooks).
-	const {
-		loadConfig,
-		InputWorkerSchema,
-		convertToWranglerConfig,
-		generateTypes: generateTypesFn,
-		resolveWorkerDefinition,
-	} = await import("@cloudflare/config");
-
 	const { config: rawExport, dependencies } = await loadConfig(configPath);
 
 	const resolved = await resolveWorkerDefinition(rawExport, {
@@ -799,7 +796,6 @@ async function loadNewConfig(options: {
 		writeWorkerConfigurationDts({
 			root: options.root,
 			configPath,
-			generateTypes: generateTypesFn,
 		});
 	}
 
@@ -823,12 +819,11 @@ async function loadNewConfig(options: {
 function writeWorkerConfigurationDts(options: {
 	root: string;
 	configPath: string;
-	generateTypes: (opts: { configPath: string; packageName?: string }) => string;
 }): void {
 	const outputPath = path.resolve(options.root, TYPES_OUTPUT_FILENAME);
 	const relativeConfigPath =
 		"./" + path.relative(options.root, options.configPath);
-	const content = options.generateTypes({
+	const content = generateTypes({
 		configPath: relativeConfigPath,
 		packageName: EXPERIMENTAL_CONFIG_PKG,
 	});

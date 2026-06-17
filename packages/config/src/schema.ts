@@ -440,7 +440,7 @@ export const ModuleTypeSchema = z.enum([
 	"esm",
 	"cjs",
 	"python",
-	"pythonRequirement",
+	"python-requirement",
 	"wasm",
 	"text",
 	"data",
