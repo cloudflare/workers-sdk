@@ -471,6 +471,18 @@ describe("whoami", () => {
 		expect(output).toEqual({ loggedIn: false });
 	});
 
+	it("should suggest a temporary preview account when not authenticated", async ({
+		expect,
+	}) => {
+		await runWrangler("whoami");
+		expect(std.out).toContain(
+			"You are not authenticated. Please run `wrangler login`."
+		);
+		expect(std.out).toContain(
+			"To deploy without logging in, run a command like `wrangler deploy --temporary` to use a temporary preview account."
+		);
+	});
+
 	it("should output JSON with API token auth type", async ({ expect }) => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 		msw.use(
