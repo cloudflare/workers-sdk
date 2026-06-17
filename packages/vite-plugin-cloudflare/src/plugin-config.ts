@@ -157,6 +157,7 @@ type WorkerConfigCustomizer<TIsEntryWorker extends boolean> =
 	  ) => Partial<WorkerConfig> | void);
 
 export interface PluginConfig extends EntryWorkerConfig {
+	target?: "cloudflare" | "workerd";
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
 	persistState?: PersistState;
 	inspectorPort?: number | false;
@@ -183,6 +184,7 @@ export interface Worker {
 }
 
 interface BaseResolvedConfig {
+	target: "cloudflare" | "workerd";
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport"> & {
@@ -386,6 +388,7 @@ export async function resolvePluginConfig(
 		pluginConfig.experimental?.newConfig
 	);
 	const shared = {
+		target: pluginConfig.target ?? "cloudflare",
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
 		tunnel:

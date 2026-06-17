@@ -537,7 +537,7 @@ export async function getDevMiniflareOptions(
 	};
 }
 
-function getPreviewModules(
+export function getPreviewModules(
 	main: string,
 	modulesRules: SourcelessWorkerOptions["modulesRules"]
 ) {

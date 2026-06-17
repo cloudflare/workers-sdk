@@ -983,6 +983,7 @@ export class Miniflare {
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
+	#lastAssembledConfig?: Config;
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
@@ -1124,41 +1125,46 @@ export class Miniflare {
 			`miniflare-${crypto.randomBytes(16).toString("hex")}`
 		);
 
-		// Setup runtime
-		this.#runtime = new Runtime();
-		this.#removeExitHook = exitHook(() => {
-			void this.#runtime?.dispose();
-			// This exit hook is synchronous — the event loop will never run again
-			// after it returns, so any operation that schedules a microtask (like
-			// fs.promises.rm) will never even be executed, let alone completed.
-			// We must use the sync variant here.
-			// `Runtime#dispose()` should kill the runtime immediately but it might not,
-			// so we only clean up on a best effort basis.
-			try {
-				removeDirSync(this.#tmpPath);
-			} catch (e) {
-				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
-			}
-			// Unregister all workers from the dev registry. Note that dispose()
-			// does synchronous cleanup (unregistering workers) then returns a
-			// Promise for async cleanup (closing watcher, terminating proxy).
-			// The .catch() will never run since the event loop won't tick again,
-			// but the synchronous portion still executes.
-			this.#devRegistry.dispose();
-		});
+		if (!this.#sharedOpts.core.unsafeWorkerdOutput) {
+			// Setup runtime
+			this.#runtime = new Runtime();
+			this.#removeExitHook = exitHook(() => {
+				void this.#runtime?.dispose();
+				// This exit hook is synchronous — the event loop will never run again
+				// after it returns, so any operation that schedules a microtask (like
+				// fs.promises.rm) will never even be executed, let alone completed.
+				// We must use the sync variant here.
+				// `Runtime#dispose()` should kill the runtime immediately but it might not,
+				// so we only clean up on a best effort basis.
+				try {
+					removeDirSync(this.#tmpPath);
+				} catch (e) {
+					this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
+				}
+				// Unregister all workers from the dev registry. Note that dispose()
+				// does synchronous cleanup (unregistering workers) then returns a
+				// Promise for async cleanup (closing watcher, terminating proxy).
+				// The .catch() will never run since the event loop won't tick again,
+				// but the synchronous portion still executes.
+				this.#devRegistry.dispose();
+			});
+		}
 
 		this.#disposeController = new AbortController();
 		this.#runtimeMutex = new Mutex();
-		this.#initPromise = this.#runtimeMutex
-			.runWith(() => this.#assembleAndUpdateConfig())
-			.catch((e) => {
-				// If initialisation failed, attempting to `dispose()` this instance
-				// will too. Therefore, remove from the instance registry now, so we
-				// can still test async initialisation failures, without test failures
-				// telling us to `dispose()` the instance.
-				maybeInstanceRegistry?.delete(this);
-				throw e;
-			});
+		const initPromise = this.#sharedOpts.core.unsafeWorkerdOutput
+			? this.#assembleConfig("127.0.0.1", 0, false).then((config) => {
+					this.#lastAssembledConfig = config;
+				})
+			: this.#runtimeMutex.runWith(() => this.#assembleAndUpdateConfig());
+		this.#initPromise = initPromise.catch((e) => {
+			// If initialisation failed, attempting to `dispose()` this instance
+			// will too. Therefore, remove from the instance registry now, so we
+			// can still test async initialisation failures, without test failures
+			// telling us to `dispose()` the instance.
+			maybeInstanceRegistry?.delete(this);
+			throw e;
+		});
 	}
 
 	#workerNamesToProxy() {
@@ -1866,6 +1872,10 @@ export class Miniflare {
 	}
 
 	#stopLoopbackServer(): Promise<void> {
+		if (this.#loopbackServer === undefined) {
+			return Promise.resolve();
+		}
+
 		return new Promise((resolve, reject) => {
 			assert(this.#loopbackServer !== undefined);
 			this.#loopbackServer.stop((err) => (err ? reject(err) : resolve()));
@@ -1969,7 +1979,6 @@ export class Miniflare {
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
 		const workerNames = [...allWorkerRoutes.keys()];
-
 		// Use Map to dedupe services by name
 		const services = new Map<string, Service>();
 		const extensions: Extension[] = [
@@ -1989,7 +1998,10 @@ export class Miniflare {
 			},
 		];
 		const configuredHost = sharedOpts.core.host ?? DEFAULT_HOST;
-		if (maybeGetLocallyAccessibleHost(configuredHost) === undefined) {
+		if (
+			!sharedOpts.core.unsafeWorkerdOutput &&
+			maybeGetLocallyAccessibleHost(configuredHost) === undefined
+		) {
 			// If we aren't able to locally access `workerd` on the configured host, configure an additional socket that's
 			// only accessible on `127.0.0.1:0`
 			sockets.push({
@@ -2146,6 +2158,7 @@ export class Miniflare {
 				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
+				unsafeWorkerdOutput: sharedOpts.core.unsafeWorkerdOutput,
 				queueProducers,
 				queueConsumers,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
@@ -2422,6 +2435,7 @@ export class Miniflare {
 			loopbackPort,
 			this.#devRegistry.isEnabled()
 		);
+		this.#lastAssembledConfig = config;
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -2728,6 +2742,16 @@ export class Miniflare {
 		await this.ready;
 
 		return JSON.parse(JSON.stringify(this.#cfObject));
+	}
+
+	async unstable_getConfig(): Promise<Config> {
+		this.#checkDisposed();
+		await this.#initPromise;
+		assert(
+			this.#lastAssembledConfig !== undefined,
+			"Expected workerd config to be assembled"
+		);
+		return this.#lastAssembledConfig;
 	}
 
 	async getInspectorURL(): Promise<URL> {
@@ -3232,6 +3256,18 @@ export class Miniflare {
 			// all dispose steps complete
 			maybeInstanceRegistry?.delete(this);
 		}
+	}
+}
+
+export async function unstable_assembleWorkerdConfig(
+	options: MiniflareOptions
+): Promise<Config> {
+	const mf = new Miniflare(options);
+
+	try {
+		return await mf.unstable_getConfig();
+	} finally {
+		await mf.dispose();
 	}
 }
 
