@@ -1266,6 +1266,54 @@ export default { fetch() { return new Response(mod); } };`;
 			});
 			await runWrangler("deploy");
 		});
+
+		it("should not error when a file matches only a default rule removed by a `fallthrough: false` rule of the same type", async () => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				rules: [
+					{ type: "Text", globs: ["**/*.specific.html"], fallthrough: false },
+				],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("ok"); } };`
+			);
+			// `other.html` matches only the default Text rule (**/*.html), which is
+			// silently removed because the user's Text rule sets `fallthrough: false`.
+			fs.writeFileSync("other.html", "<p>not bundled</p>");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				excludedModules: ["other.html"],
+			});
+			await runWrangler("deploy");
+		});
+
+		it("should bundle a file that matches a `fallthrough: false` rule's glob", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				rules: [
+					{ type: "Text", globs: ["**/*.specific.html"], fallthrough: false },
+				],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync("page.specific.html", "<p>bundled as text</p>");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"page.specific.html": expect.any(String),
+				},
+			});
+			await runWrangler("deploy");
+		});
 	});
 	describe("--no-bundle --minify", () => {
 		it("should warn that no-bundle and minify can't be used together", async ({

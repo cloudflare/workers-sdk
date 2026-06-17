@@ -14,6 +14,11 @@ export const DEFAULT_MODULE_RULES: Rule[] = [
 export interface ParsedRules {
 	rules: Rule[];
 	removedRules: Rule[];
+	// Default rules removed because a user rule of the same type was explicitly
+	// marked `fallthrough: false`. Files matching only these rules are silently
+	// skipped instead of erroring, since the user intentionally opted out of the
+	// remaining defaults for that type.
+	silentlyRemovedRules: Rule[];
 }
 
 interface RedundantRule {
@@ -28,22 +33,34 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 	const redundantRules: Record<string, RedundantRule[]> = {};
 	let index = 0;
 	const rulesToRemove: Rule[] = [];
+	const rulesToSilentlyRemove: Rule[] = [];
 	for (const rule of rules) {
 		if (rule.type in completedRuleLocations) {
-			if (rules[completedRuleLocations[rule.type]].fallthrough !== false) {
-				if (rule.type in redundantRules) {
-					redundantRules[rule.type].push({
-						index,
-						default: index >= userRules.length,
-					});
-				} else {
-					redundantRules[rule.type] = [
-						{ index, default: index >= userRules.length },
-					];
-				}
-			}
+			const isDefaultRule = index >= userRules.length;
+			const completingRuleHasExplicitNoFallthrough =
+				rules[completedRuleLocations[rule.type]].fallthrough === false;
 
-			rulesToRemove.push(rule);
+			// When a user marks their rule `fallthrough: false`, they've declared it
+			// the final rule for that type. A *default* rule shadowed by it should be
+			// dropped silently — the user opted out of those defaults on purpose. A
+			// user's own subsequent rule that gets shadowed still warns/errors, since
+			// that's likely a misconfiguration worth surfacing.
+			if (completingRuleHasExplicitNoFallthrough && isDefaultRule) {
+				rulesToSilentlyRemove.push(rule);
+			} else {
+				if (rules[completedRuleLocations[rule.type]].fallthrough !== false) {
+					if (rule.type in redundantRules) {
+						redundantRules[rule.type].push({
+							index,
+							default: isDefaultRule,
+						});
+					} else {
+						redundantRules[rule.type] = [{ index, default: isDefaultRule }];
+					}
+				}
+
+				rulesToRemove.push(rule);
+			}
 		}
 		if (!(rule.type in completedRuleLocations) && rule.fallthrough !== true) {
 			completedRuleLocations[rule.type] = index;
@@ -74,6 +91,11 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 	}
 
 	rulesToRemove.forEach((rule) => rules.splice(rules.indexOf(rule), 1));
+	rulesToSilentlyRemove.forEach((rule) => rules.splice(rules.indexOf(rule), 1));
 
-	return { rules, removedRules: rulesToRemove };
+	return {
+		rules,
+		removedRules: rulesToRemove,
+		silentlyRemovedRules: rulesToSilentlyRemove,
+	};
 }

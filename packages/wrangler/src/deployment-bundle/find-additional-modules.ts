@@ -169,6 +169,7 @@ export async function findAdditionalModules(
 				await matchFiles(pythonModulesFiles, pythonModulesDir, {
 					rules: vendoredRules,
 					removedRules: [],
+					silentlyRemovedRules: [],
 				})
 			)
 				.filter((m) => {
@@ -259,7 +260,7 @@ export async function findAdditionalModules(
 async function matchFiles(
 	files: AsyncGenerator<string>,
 	relativeTo: string,
-	{ rules, removedRules }: ParsedRules
+	{ rules, removedRules, silentlyRemovedRules }: ParsedRules
 ) {
 	const modules: CfModule[] = [];
 
@@ -299,6 +300,16 @@ async function matchFiles(
 					);
 				}
 			}
+		}
+
+		// Files matching a default rule that was silently removed (because a user
+		// rule of the same type was explicitly marked `fallthrough: false`) are
+		// intentionally skipped without erroring.
+		const silentlySkipped = silentlyRemovedRules.some((rule) =>
+			rule.globs.some((glob) => globToRegExp(glob).test(filePath))
+		);
+		if (silentlySkipped) {
+			continue;
 		}
 
 		// This is just a sanity check verifying that no files match rules that were removed

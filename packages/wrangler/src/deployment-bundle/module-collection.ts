@@ -368,6 +368,11 @@ export function createModuleCollector(props: {
 					});
 				});
 
+				// Note: `parsedRules.silentlyRemovedRules` are intentionally not
+				// registered here. They are default rules removed because a user rule
+				// of the same type was explicitly marked `fallthrough: false`, so files
+				// matching only those rules should fall through to esbuild's default
+				// resolution rather than erroring.
 				parsedRules.removedRules.forEach((rule) => {
 					rule.globs.forEach((glob) => {
 						build.onResolve(
