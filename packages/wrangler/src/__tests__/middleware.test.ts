@@ -980,6 +980,8 @@ describe("middleware", () => {
 				    this.cron = cron;
 				    this.#noRetry = noRetry;
 				  }
+				  scheduledTime;
+				  cron;
 				  static {
 				    __name(this, "__Facade_ScheduledController__");
 				  }

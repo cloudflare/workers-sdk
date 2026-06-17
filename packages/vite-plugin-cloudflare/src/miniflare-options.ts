@@ -583,7 +583,7 @@ function toMiniflareModuleType(type: ModuleType): ModuleRuleType | null {
 			return "Data";
 		case "python":
 			return "PythonModule";
-		case "pythonRequirement":
+		case "python-requirement":
 			return null;
 		case "sourcemap":
 			return null;

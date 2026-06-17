@@ -118,12 +118,14 @@ export function runBuild(
 	async function getAdditionalModules() {
 		return noBundle
 			? dedupeModulesByName([
-					...((await doFindAdditionalModules(
-						entry,
-						rules,
-						false,
-						pythonModulesExcludes ?? []
-					)) ?? []),
+					...(findAdditionalModules !== false
+						? ((await doFindAdditionalModules(
+								entry,
+								rules,
+								false,
+								pythonModulesExcludes ?? []
+							)) ?? [])
+						: []),
 					...additionalModules,
 				])
 			: additionalModules;
