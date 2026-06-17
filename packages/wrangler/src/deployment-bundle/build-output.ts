@@ -6,6 +6,7 @@ import {
 	getWorkerBundleDir,
 	writeOutputWorkerConfig,
 } from "@cloudflare/config";
+import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
 	ParsedInputWorkerConfig,
@@ -31,6 +32,12 @@ export async function writeBuildOutput({
 	buildResult,
 	assetsOptions,
 }: WriteBuildOutputArgs): Promise<void> {
+	if (buildResult === undefined && assetsOptions === undefined) {
+		throw new UserError(
+			"Cannot emit build output: the Worker has no entrypoint and no assets directory.",
+			{ telemetryMessage: "build output missing entrypoint and assets" }
+		);
+	}
 	await cleanBuildOutputDir(root);
 
 	const [manifest] = await Promise.all([
