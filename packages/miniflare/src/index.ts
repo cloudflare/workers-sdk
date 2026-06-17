@@ -2130,6 +2130,27 @@ export class Miniflare {
 					}
 				}
 			}
+			if (
+				sharedOpts.core.unsafeWorkerdOutput &&
+				workerOpts.core.secretTextBindings !== undefined
+			) {
+				const secretNames = new Set(
+					Object.keys(workerOpts.core.secretTextBindings)
+				);
+
+				for (let i = 0; i < workerBindings.length; i++) {
+					const binding = workerBindings[i];
+					if (binding.name !== undefined && secretNames.has(binding.name)) {
+						workerBindings[i] = {
+							name: binding.name,
+							fromEnvironment: getWorkerdEnvBindingName(
+								workerOpts.core.name,
+								binding.name
+							),
+						};
+					}
+				}
+			}
 
 			// Collect all services required by this worker
 			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
@@ -3257,6 +3278,17 @@ export class Miniflare {
 			maybeInstanceRegistry?.delete(this);
 		}
 	}
+}
+
+export function getWorkerdEnvBindingName(
+	workerName: string | undefined,
+	bindingName: string
+): string {
+	const prefix = (workerName ?? "worker")
+		.replace(/[^a-zA-Z0-9_]/g, "_")
+		.toUpperCase();
+	const name = bindingName.replace(/[^a-zA-Z0-9_]/g, "_").toUpperCase();
+	return `${prefix}_${name}`;
 }
 
 export async function unstable_assembleWorkerdConfig(

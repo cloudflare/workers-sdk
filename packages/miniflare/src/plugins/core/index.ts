@@ -157,6 +157,7 @@ const CoreOptionsSchemaInput = z.intersection(
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
+		secretTextBindings: z.record(z.string()).optional(),
 		wasmBindings: z
 			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
@@ -584,6 +585,14 @@ export const CORE_PLUGIN: Plugin<
 		if (options.bindings !== undefined) {
 			bindings.push(...buildBindings(options.bindings));
 		}
+		if (options.secretTextBindings !== undefined) {
+			bindings.push(
+				...Object.entries(options.secretTextBindings).map(([name, value]) => ({
+					name,
+					text: value,
+				}))
+			);
+		}
 		if (options.wasmBindings !== undefined) {
 			bindings.push(
 				...Object.entries(options.wasmBindings).map(([name, value]) =>
@@ -668,6 +677,9 @@ export const CORE_PLUGIN: Plugin<
 					JSON.parse(JSON.stringify(value)),
 				])
 			);
+		}
+		if (options.secretTextBindings !== undefined) {
+			bindingEntries.push(...Object.entries(options.secretTextBindings));
 		}
 		if (options.wasmBindings !== undefined) {
 			bindingEntries.push(
@@ -1200,11 +1212,9 @@ export function getGlobalServices({
 		{
 			name: "internet",
 			network: {
-				allow: sharedOptions.unsafeWorkerdOutput
-					? ["public"]
-					: // Allow access to private/public addresses:
-						// https://github.com/cloudflare/miniflare/issues/412
-						["public", "private", "240.0.0.0/4"],
+				// Allow access to private/public addresses:
+				// https://github.com/cloudflare/miniflare/issues/412
+				allow: ["public", "private", "240.0.0.0/4"],
 				deny: [],
 				tlsOptions: {
 					trustBrowserCas: true,
