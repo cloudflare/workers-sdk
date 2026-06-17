@@ -133,7 +133,7 @@ export async function buildWorker(
 				config.rules ?? [],
 				props.outdir,
 				config.python_modules.exclude,
-				config.find_additional_modules !== false
+				config.find_additional_modules
 			)
 		: await bundleWorker(
 				entry,
