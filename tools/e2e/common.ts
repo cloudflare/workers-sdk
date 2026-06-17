@@ -71,7 +71,7 @@ export type MTlsCertificateResponse = {
 
 class ApiError extends Error {
 	readonly status: number;
-	readonly statusText: string
+	readonly statusText: string;
 	readonly text: Promise<string>;
 
 	constructor(
@@ -127,7 +127,7 @@ async function apiFetch<T>(
 			if (e instanceof ApiError) {
 				console.error(e.url, e.init);
 				console.error(`(${e.status}) ${e.statusText}`);
-				const body = (JSON.parse(await e.text)) as ApiErrorBody;
+				const body = JSON.parse(await e.text) as ApiErrorBody;
 				console.error(body.errors);
 			} else {
 				console.error(e);
@@ -162,7 +162,7 @@ async function apiFetchAllPages<T>(
 		if (e instanceof ApiError) {
 			console.error(e.url, e.init);
 			console.error(`(${e.status}) ${e.statusText}`);
-			const body = (JSON.parse(await e.text)) as ApiErrorBody;
+			const body = JSON.parse(await e.text) as ApiErrorBody;
 			console.error(body.errors);
 		} else {
 			console.error(e);
@@ -223,7 +223,7 @@ async function apiFetchList<T>(path: string, queryParams = {}): Promise<T[]> {
 		if (e instanceof ApiError) {
 			console.error(e.url, e.init);
 			console.error(`(${e.status}) ${e.statusText}`);
-			const body = (JSON.parse(await e.text)) as ApiErrorBody;
+			const body = JSON.parse(await e.text) as ApiErrorBody;
 			console.error(body.errors);
 		} else {
 			console.error(e);
