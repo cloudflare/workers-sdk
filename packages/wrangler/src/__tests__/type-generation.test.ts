@@ -739,6 +739,52 @@ describe("generate types - CLI", () => {
 		`);
 	});
 
+	it("should emit mainModule when the entrypoint is a regular source file", async ({
+		expect,
+	}) => {
+		fs.writeFileSync("./index.ts", `export default { fetch() {} };`);
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "./index.ts",
+				vars: { var: "value" },
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		const output = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
+		expect(output).toContain(`mainModule: typeof import("./index")`);
+	});
+
+	it("should not emit mainModule when the entrypoint is inside a framework build output directory", async ({
+		expect,
+	}) => {
+		fs.mkdirSync("./.svelte-kit/cloudflare", { recursive: true });
+		fs.writeFileSync(
+			"./.svelte-kit/cloudflare/_worker.js",
+			`export default { fetch() {} };`
+		);
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "./.svelte-kit/cloudflare/_worker.js",
+				vars: { var: "value" },
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		const output = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
+		expect(output).not.toContain("mainModule");
+	});
+
 	it("should log the interface type generated and declare modules", async ({
 		expect,
 	}) => {

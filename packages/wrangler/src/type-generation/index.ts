@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
-import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import {
+	basename,
+	dirname,
+	extname,
+	join,
+	relative,
+	resolve,
+	sep,
+} from "node:path";
 import {
 	CommandLineArgsError,
 	configFileName,
@@ -776,6 +784,48 @@ export function generateImportSpecifier(from: string, to: string) {
 }
 
 /**
+ * Determines whether the entrypoint lives inside a framework build output
+ * directory (e.g. `.svelte-kit`, `.next`, `.nuxt`, `.output`) relative to the
+ * config directory. Emitting a `mainModule` import that points into such a
+ * directory makes `tsc`/`svelte-check` follow the import and report errors on
+ * generated code, so the declaration is skipped in that case.
+ */
+function isEntrypointInBuildOutputDir(
+	configDir: string,
+	entrypointFile: string
+): boolean {
+	const rel = relative(configDir, entrypointFile);
+	if (rel.startsWith("..")) {
+		return true;
+	}
+	return rel
+		.split(sep)
+		.some(
+			(segment) =>
+				segment.startsWith(".") && segment !== "." && segment !== ".."
+		);
+}
+
+/**
+ * Computes the `mainModule` import specifier for the entrypoint, returning
+ * `undefined` when the entrypoint is inside a framework build output directory.
+ */
+function getEntrypointModule(
+	config: Config,
+	fullOutputPath: string,
+	entrypoint: Entry | undefined
+): string | undefined {
+	if (!entrypoint) {
+		return undefined;
+	}
+	const configDir = dirname(config.configPath ?? resolve("wrangler.json"));
+	if (isEntrypointInBuildOutputDir(configDir, entrypoint.file)) {
+		return undefined;
+	}
+	return generateImportSpecifier(fullOutputPath, entrypoint.file);
+}
+
+/**
  * Checks whether any config level (top-level or any named environment) declares
  * `secrets`. Used to determine if the project has opted into config-based
  * secret declarations, which replaces `.dev.vars`/`.env` inference for type generation.
@@ -1207,9 +1257,7 @@ async function generateSimpleEnvTypes(
 			stringKeys,
 			config.compatibility_date,
 			config.compatibility_flags,
-			entrypoint
-				? generateImportSpecifier(fullOutputPath, entrypoint.file)
-				: undefined,
+			getEntrypointModule(config, fullOutputPath, entrypoint),
 			[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
 			typeDefinitions
 		);
@@ -1660,9 +1708,7 @@ async function generatePerEnvironmentTypes(
 		stringKeys,
 		config.compatibility_date,
 		config.compatibility_flags,
-		entrypoint
-			? generateImportSpecifier(fullOutputPath, entrypoint.file)
-			: undefined,
+		getEntrypointModule(config, fullOutputPath, entrypoint),
 		[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
 		[...typeDefinitions]
 	);
