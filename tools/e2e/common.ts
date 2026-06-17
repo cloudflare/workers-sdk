@@ -70,12 +70,19 @@ export type MTlsCertificateResponse = {
 };
 
 class ApiError extends Error {
+	readonly status: number;
+	readonly statusText: string
+	readonly text: Promise<string>;
+
 	constructor(
 		readonly url: string,
 		readonly init: RequestInit,
-		readonly response: Response
+		response: Response
 	) {
 		super();
+		this.status = response.status;
+		this.statusText = response.statusText;
+		this.text = response.text();
 	}
 }
 
@@ -125,8 +132,8 @@ async function apiFetch<T>(
 		if (!failSilently) {
 			if (e instanceof ApiError) {
 				console.error(e.url, e.init);
-				console.error(`(${e.response.status}) ${e.response.statusText}`);
-				const body = (await e.response.json()) as ApiErrorBody;
+				console.error(`(${e.status}) ${e.statusText}`);
+				const body = (JSON.parse(await e.text)) as ApiErrorBody;
 				console.error(body.errors);
 			} else {
 				console.error(e);
@@ -160,8 +167,8 @@ async function apiFetchAllPages<T>(
 	} catch (e) {
 		if (e instanceof ApiError) {
 			console.error(e.url, e.init);
-			console.error(`(${e.response.status}) ${e.response.statusText}`);
-			const body = (await e.response.json()) as ApiErrorBody;
+			console.error(`(${e.status}) ${e.statusText}`);
+			const body = (JSON.parse(await e.text)) as ApiErrorBody;
 			console.error(body.errors);
 		} else {
 			console.error(e);
@@ -221,8 +228,8 @@ async function apiFetchList<T>(path: string, queryParams = {}): Promise<T[]> {
 	} catch (e) {
 		if (e instanceof ApiError) {
 			console.error(e.url, e.init);
-			console.error(`(${e.response.status}) ${e.response.statusText}`);
-			const body = (await e.response.json()) as ApiErrorBody;
+			console.error(`(${e.status}) ${e.statusText}`);
+			const body = (JSON.parse(await e.text)) as ApiErrorBody;
 			console.error(body.errors);
 		} else {
 			console.error(e);
