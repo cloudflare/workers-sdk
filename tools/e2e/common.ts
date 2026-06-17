@@ -7,8 +7,8 @@ type ApiErrorBody = {
 	errors: string[];
 };
 
-type ApiSuccessBody = {
-	result: unknown[];
+type ApiSuccessBody<T> = {
+	result: T[];
 };
 
 export type Project = {
@@ -28,7 +28,7 @@ export type ContainerApplication = {
 };
 
 export type Worker = {
-	id: string;
+	script_name: string;
 	created_on: string;
 };
 
@@ -70,12 +70,19 @@ export type MTlsCertificateResponse = {
 };
 
 class ApiError extends Error {
+	readonly status: number;
+	readonly statusText: string;
+	readonly text: Promise<string>;
+
 	constructor(
 		readonly url: string,
 		readonly init: RequestInit,
-		readonly response: Response
+		response: Response
 	) {
 		super();
+		this.status = response.status;
+		this.statusText = response.statusText;
+		this.text = response.text();
 	}
 }
 
@@ -83,7 +90,7 @@ async function apiFetchResponse(
 	path: string,
 	init = { method: "GET" },
 	queryParams = {}
-): Promise<Response | false> {
+): Promise<Response> {
 	const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`;
 	let queryString = new URLSearchParams(queryParams).toString();
 	if (queryString) {
@@ -98,14 +105,8 @@ async function apiFetchResponse(
 		},
 	});
 
-	if (response.status >= 400) {
-		console.error(
-			"API Fetch failed",
-			response.status,
-			response.statusText,
-			await response.text()
-		);
-		throw { url, init, response };
+	if (!response.ok || response.status >= 400) {
+		throw new ApiError(url, init, response);
 	}
 
 	return response;
@@ -114,23 +115,19 @@ async function apiFetchResponse(
 async function apiFetch<T>(
 	path: string,
 	method: string,
-	failSilently = false
+	queryParams: Record<string, unknown> = {},
+	failSilently: boolean = false
 ): Promise<false | T> {
 	try {
-		const response = await apiFetchResponse(path, { method });
-
-		if (!response || response.ok === false) {
-			return false;
-		}
-
-		const json = (await response.json()) as ApiSuccessBody;
+		const response = await apiFetchResponse(path, { method }, queryParams);
+		const json = (await response.json()) as ApiSuccessBody<T>;
 		return json.result as T;
 	} catch (e) {
 		if (!failSilently) {
 			if (e instanceof ApiError) {
 				console.error(e.url, e.init);
-				console.error(`(${e.response.status}) ${e.response.statusText}`);
-				const body = (await e.response.json()) as ApiErrorBody;
+				console.error(`(${e.status}) ${e.statusText}`);
+				const body = JSON.parse(await e.text) as ApiErrorBody;
 				console.error(body.errors);
 			} else {
 				console.error(e);
@@ -138,6 +135,40 @@ async function apiFetch<T>(
 		}
 		return false;
 	}
+}
+
+async function apiFetchAllPages<T>(
+	path: string,
+	queryParams = {}
+): Promise<T[]> {
+	const result: T[] = [];
+	try {
+		let page = 1;
+		while (true) {
+			const response = await apiFetchResponse(
+				path,
+				{ method: "GET" },
+				{ page, per_page: 100, ...queryParams }
+			);
+			const json = (await response.json()) as ApiSuccessBody<T>;
+			if (json.result.length === 0) {
+				// We hit an empty page so we are done.
+				break;
+			}
+			result.push(...json.result);
+			page++;
+		}
+	} catch (e) {
+		if (e instanceof ApiError) {
+			console.error(e.url, e.init);
+			console.error(`(${e.status}) ${e.statusText}`);
+			const body = JSON.parse(await e.text) as ApiErrorBody;
+			console.error(body.errors);
+		} else {
+			console.error(e);
+		}
+	}
+	return result;
 }
 
 async function apiFetchList<T>(path: string, queryParams = {}): Promise<T[]> {
@@ -159,7 +190,7 @@ async function apiFetchList<T>(path: string, queryParams = {}): Promise<T[]> {
 				return [];
 			}
 
-			const json = (await response.json()) as ApiSuccessBody;
+			const json = (await response.json()) as ApiSuccessBody<T>;
 			if ("result_info" in json && Array.isArray(json.result)) {
 				const result_info = json.result_info as {
 					page: number;
@@ -191,8 +222,8 @@ async function apiFetchList<T>(path: string, queryParams = {}): Promise<T[]> {
 	} catch (e) {
 		if (e instanceof ApiError) {
 			console.error(e.url, e.init);
-			console.error(`(${e.response.status}) ${e.response.statusText}`);
-			const body = (await e.response.json()) as ApiErrorBody;
+			console.error(`(${e.status}) ${e.statusText}`);
+			const body = JSON.parse(await e.text) as ApiErrorBody;
 			console.error(body.errors);
 		} else {
 			console.error(e);
@@ -215,18 +246,19 @@ export const deleteProject = async (project: string) => {
 };
 
 export const listTmpE2EWorkers = async () => {
-	return (await apiFetchList<Worker>(`/workers/scripts`)).filter(
+	const workers = await apiFetchAllPages<Worker>(`/workers/scripts-search`);
+	return workers.filter(
 		(p) =>
-			!p.id.startsWith("preserve-e2e-") &&
-			p.id !== "stratus-e2e-test-worker" &&
-			p.id !== "existing-script-test-do-not-delete" &&
+			!p.script_name.startsWith("preserve-e2e-") &&
+			p.script_name !== "stratus-e2e-test-worker" &&
+			p.script_name !== "existing-script-test-do-not-delete" &&
 			// Workers are more than an hour old
 			Date.now() - new Date(p.created_on).valueOf() > 1000 * 60 * 60
 	);
 };
 
-export const deleteWorker = async (id: string) => {
-	return await apiFetch(`/workers/scripts/${id}`, "DELETE");
+export const deleteWorker = async (script_name: string) => {
+	return await apiFetch(`/workers/scripts/${script_name}`, "DELETE");
 };
 
 export const listTmpE2EContainerApplications = async () => {
@@ -275,6 +307,7 @@ export const deleteKVNamespace = async (id: string) => {
 	return await apiFetch(
 		`/storage/kv/namespaces/${id}`,
 		"DELETE",
+		{},
 		/* failSilently */ true
 	);
 };
@@ -299,6 +332,7 @@ export const deleteR2Bucket = async (name: string) => {
 	return await apiFetch(
 		`/r2/buckets/${name}`,
 		"DELETE",
+		{},
 		/* failSilently */ true
 	);
 };
