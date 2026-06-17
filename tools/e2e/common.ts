@@ -106,12 +106,6 @@ async function apiFetchResponse(
 	});
 
 	if (!response.ok || response.status >= 400) {
-		console.error(
-			"API Fetch failed",
-			response.status,
-			response.statusText,
-			await response.text()
-		);
 		throw new ApiError(url, init, response);
 	}
 
