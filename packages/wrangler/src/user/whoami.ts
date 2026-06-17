@@ -67,6 +67,9 @@ export async function whoami(
 	const user = await getUserInfo(complianceConfig);
 	if (!user) {
 		logger.log("You are not authenticated. Please run `wrangler login`.");
+		logger.log(
+			"To deploy without logging in, run a command like `wrangler deploy --temporary` to use a temporary preview account."
+		);
 		return;
 	}
 	printUserEmail(user);
