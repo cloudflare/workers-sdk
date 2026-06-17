@@ -738,7 +738,7 @@ test("Miniflare: preserves multiple Set-Cookie headers on WebSocket 101 upgrade 
 	onTestFinished,
 }) => {
 	// External WebSocket origin server that returns two Set-Cookie headers on the
-	// 101 upgrade response. The second cookie contains a comma in its Expires
+	// 101 upgrade response. The first cookie contains a comma in its Expires
 	// attribute — the exact value that gets mangled when the Headers object is
 	// iterated with `for…of` instead of `getSetCookie()`.
 	const server = http.createServer();
@@ -751,7 +751,10 @@ test("Miniflare: preserves multiple Set-Cookie headers on WebSocket 101 upgrade 
 	});
 	const port = await new Promise<number>((resolve) => {
 		server.listen(0, () => {
-			onTestFinished(() => server.close());
+			onTestFinished(() => {
+				wss.close();
+				server.close();
+			});
 			resolve((server.address() as AddressInfo).port);
 		});
 	});
