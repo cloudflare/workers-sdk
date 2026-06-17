@@ -260,7 +260,10 @@ export default async function deploy(
 						return { versionId, workerTag };
 					}
 				}
-			} else if (script.last_deployed_from === "api") {
+			} else if (
+				script.last_deployed_from === "api" &&
+				!props.skipLastDeployedFromApiCheck
+			) {
 				logger.warn(
 					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);

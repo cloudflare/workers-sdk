@@ -118,7 +118,10 @@ export default async function versionsUpload(
 						workerTag,
 					};
 				}
-			} else if (script.last_deployed_from === "api") {
+			} else if (
+				script.last_deployed_from === "api" &&
+				!props.skipLastDeployedFromApiCheck
+			) {
 				logger.warn(
 					`You are about to upload a Workers Version that was last updated via the API.\nEdits that have been made via the API will be overridden by your local code and config.`
 				);
