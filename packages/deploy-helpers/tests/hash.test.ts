@@ -6,8 +6,9 @@ import { beforeEach, describe, it } from "vitest";
 import { hashFile } from "../src/deploy/helpers/hash";
 
 // Golden values pre-computed from blake3-wasm@2.1.5 to lock in byte-for-byte
-// compatibility. These must never change — they form the asset manifest hash
-// contract sent to the Cloudflare API, so any drift would break asset deploys.
+// compatibility with the previous implementation. These must never change —
+// they form the asset manifest hash contract sent to the Cloudflare API, so any
+// drift would break asset deploys.
 const GOLDEN_VALUES: Array<{
 	label: string;
 	content: Buffer;
@@ -53,16 +54,16 @@ describe("hashFile", () => {
 	});
 
 	for (const { label, content, ext, hash } of GOLDEN_VALUES) {
-		it(`produces stable hash for ${label}`, ({ expect }) => {
+		it(`produces stable hash for ${label}`, async ({ expect }) => {
 			const filepath = join(tmpDir, `file${ext}`);
 			writeFileSync(filepath, content);
-			expect(hashFile(filepath)).toBe(hash);
+			expect(await hashFile(filepath)).toBe(hash);
 		});
 	}
 
-	it("returns a 32-character hex string", ({ expect }) => {
+	it("returns a 32-character hex string", async ({ expect }) => {
 		const filepath = join(tmpDir, "test.js");
 		writeFileSync(filepath, "console.log('hello')");
-		expect(hashFile(filepath)).toMatch(/^[0-9a-f]{32}$/);
+		expect(await hashFile(filepath)).toMatch(/^[0-9a-f]{32}$/);
 	});
 });
