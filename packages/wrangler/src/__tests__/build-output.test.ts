@@ -102,6 +102,35 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect(fs.existsSync(bundlePath("index.js"))).toBe(true);
 	});
 
+	it("uses the .js extension for the manifest key even when the entrypoint is .ts", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": `export default {
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+				entrypoint: "./src/index.ts",
+			};`,
+			"src/index.ts": `export default {
+				async fetch(): Promise<Response> { return new Response("hello"); }
+			};`,
+		});
+
+		await runWrangler(
+			"build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		const config = readOutputConfig();
+		const manifest = config.manifest as {
+			mainModule: string;
+			modules: Record<string, { type: string }>;
+		};
+		expect(manifest).toBeDefined();
+		expect(manifest.mainModule).toBe("index.js");
+		expect(manifest.modules["index.js"]).toEqual({ type: "esm" });
+		expect(fs.existsSync(bundlePath("index.js"))).toBe(true);
+	});
+
 	it("includes modules matched by custom `rules` and types them in the manifest", async ({
 		expect,
 	}) => {
