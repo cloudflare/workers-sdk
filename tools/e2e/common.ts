@@ -140,9 +140,9 @@ async function apiFetchAllPages<T>(
 	path: string,
 	queryParams = {}
 ): Promise<T[]> {
+	const result: T[] = [];
 	try {
 		let page = 1;
-		const result: T[] = [];
 		while (true) {
 			const response = await apiFetchResponse(
 				path,
@@ -152,7 +152,7 @@ async function apiFetchAllPages<T>(
 			const json = (await response.json()) as ApiSuccessBody<T>;
 			if (json.result.length === 0) {
 				// We hit an empty page so we are done.
-				return result;
+				break;
 			}
 			result.push(...json.result);
 			page++;
@@ -167,7 +167,7 @@ async function apiFetchAllPages<T>(
 			console.error(e);
 		}
 	}
-	return [];
+	return result;
 }
 
 async function apiFetchList<T>(path: string, queryParams = {}): Promise<T[]> {
