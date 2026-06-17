@@ -10,16 +10,57 @@ import {
 	getWrangler1xLegacyModuleReferences,
 } from "./module-collection";
 import { noBundleWorker } from "./no-bundle-worker";
+import { loadSourceMaps } from "./source-maps";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
-import type { SharedDeployVersionsProps } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type {
+	CfModule,
+	Config,
+	EphemeralDirectory,
+	Entry,
+} from "@cloudflare/workers-utils";
+
+/**
+ * The subset of merged config/args needed to build (bundle) a Worker.
+ *
+ * Building now happens separately from deploy/versions-upload, so these props
+ * are passed only to `buildWorker` — not to `deploy()` / `versionsUpload()`.
+ */
+export type BuildProps = {
+	/** Merged from args.script/config.main/config.site.entry-point/config.assets. */
+	entry: Entry;
+	/** Merged: --name arg ?? config.name, with CI override applied. Used for the outdir README. */
+	name: string | undefined;
+	/** Merged: --compatibility-date arg ?? config.compatibility_date. */
+	compatibilityDate: string | undefined;
+	/** Merged: --compatibility-flags arg ?? config.compatibility_flags. */
+	compatibilityFlags: string[];
+	/** Merged: --upload-source-maps arg ?? config.upload_source_maps. */
+	uploadSourceMaps: boolean | undefined;
+	/** Merged: --jsx-factory arg || config.jsx_factory. */
+	jsxFactory: string;
+	/** Merged: --jsx-fragment arg || config.jsx_fragment. */
+	jsxFragment: string;
+	/** Merged: --tsconfig arg ?? config.tsconfig. */
+	tsconfig: string | undefined;
+	/** Merged: --minify arg ?? config.minify. */
+	minify: boolean | undefined;
+	/** Merged: !(--bundle arg ?? !config.no_bundle). */
+	noBundle: boolean;
+	/** Merged: { ...config.define, ...--define arg }. CLI overrides config. */
+	defines: Record<string, string>;
+	/** Merged: { ...config.alias, ...--alias arg }. CLI overrides config. */
+	alias: Record<string, string>;
+	/** Output directory for the bundled Worker. From --outdir arg or a temp directory. */
+	destination: string | EphemeralDirectory;
+	/** From --outdir arg. Used for the outdir README and noBundleWorker. */
+	outdir: string | undefined;
+	/** From --metafile arg. Deploy-only; undefined for versions upload. */
+	metafile: string | boolean | undefined;
+};
 
 export async function buildWorker(
-	props: SharedDeployVersionsProps,
-	config: Config,
-	options: {
-		metafile?: string | boolean;
-	}
+	props: BuildProps,
+	config: Config
 ): Promise<WorkerBuildResult> {
 	const nodejsCompatMode = validateNodeCompatMode(
 		props.compatibilityDate,
@@ -98,7 +139,7 @@ export async function buildWorker(
 				entry,
 				typeof destination === "string" ? destination : destination.path,
 				{
-					metafile: options.metafile,
+					metafile: props.metafile,
 					bundle: true,
 					additionalModules: [],
 					moduleCollector,
@@ -155,13 +196,22 @@ export async function buildWorker(
 	const content = readFileSync(resolvedEntryPointPath, {
 		encoding: "utf-8",
 	});
+	const main: CfModule = {
+		name: path.basename(resolvedEntryPointPath),
+		filePath: resolvedEntryPointPath,
+		content,
+		type: bundleType,
+	};
+	const sourceMaps = uploadSourceMaps
+		? loadSourceMaps(main, modules, bundle)
+		: undefined;
 
 	return {
 		modules,
+		sourceMaps,
 		dependencies,
 		resolvedEntryPointPath,
 		bundleType,
 		content,
-		bundle,
 	};
 }

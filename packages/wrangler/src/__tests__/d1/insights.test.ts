@@ -83,34 +83,16 @@ describe("insights", () => {
 		setIsTTY(false);
 		msw.use(
 			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
-			http.get("*/accounts/:accountId/d1/database", async () => {
+			http.get("*/accounts/:accountId/d1/database/:name", async () => {
 				return HttpResponse.json(
-					{
-						result: [
-							{
-								created_at: "2022-11-15T18:25:44.442097Z",
-								name: "my-database",
-								uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-								version: "production",
-							},
-						],
-						success: true,
-						result_info: {
-							count: 1,
-							page: 1,
-							per_page: 10,
-							total_count: 1,
-						},
-						errors: [],
-						messages: [],
-					},
-					{ status: 200 }
+					{ success: false, errors: [{ code: 7404, message: "Not Found" }] },
+					{ status: 404 }
 				);
 			})
 		);
 
 		await expect(() => runWrangler("d1 insights not-a-db")).rejects.toThrow(
-			"Couldn't find DB with name 'not-a-db'"
+			"Couldn't find a D1 DB with name or binding 'not-a-db' in your config or the API."
 		);
 	});
 
@@ -127,46 +109,16 @@ describe("insights", () => {
 		});
 		msw.use(
 			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
-			http.get("*/accounts/:accountId/d1/database", async () => {
-				return HttpResponse.json(
-					{
-						result: [
-							{
-								created_at: "2022-11-15T18:25:44.442097Z",
-								name: "my-database",
-								uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-								version: "production",
-							},
-						],
-						success: true,
-						errors: [],
-						messages: [],
+			http.get("*/accounts/:accountId/d1/database/:name", async () => {
+				return HttpResponse.json({
+					result: {
+						uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+						name: "northwind",
 					},
-					{ status: 200 }
-				);
-			})
-		);
-		msw.use(
-			http.get("*/accounts/:accountId/d1/database/*", async () => {
-				return HttpResponse.json(
-					{
-						result: [
-							{
-								uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-								name: "northwind",
-								created_at: "2023-05-23T08:33:54.590Z",
-								version: "beta",
-								num_tables: 13,
-								file_size: 33067008,
-								running_in_region: "WEUR",
-							},
-						],
-						success: true,
-						errors: [],
-						messages: [],
-					},
-					{ status: 200 }
-				);
+					success: true,
+					errors: [],
+					messages: [],
+				});
 			})
 		);
 		msw.use(

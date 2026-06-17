@@ -136,23 +136,21 @@ export const deployCommand = createCommand({
 			return;
 		}
 
-		// Merge CLI args with config into a single props object
-		const mergedProps = await mergeDeployConfigArgs(args, config);
+		// Merge CLI args with config into props for building and deploying
+		const { props, buildProps } = await mergeDeployConfigArgs(args, config);
 
 		try {
 			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 			const preMergeName = getScriptName(args, config);
 			const workerNameOverridden =
-				mergedProps.name !== undefined && mergedProps.name !== preMergeName;
+				props.name !== undefined && props.name !== preMergeName;
 
 			const beforeUpload = Date.now();
 
-			const buildResult = await buildWorker(mergedProps, config, {
-				metafile: mergedProps.metafile,
-			});
+			const buildResult = await buildWorker(buildProps, config);
 
 			const { sourceMapSize, versionId, workerTag, targets } = await deploy(
-				mergedProps,
+				props,
 				config,
 				buildResult,
 				{
@@ -168,7 +166,7 @@ export const deployCommand = createCommand({
 			writeOutput({
 				type: "deploy",
 				version: 1,
-				worker_name: mergedProps.name ?? null,
+				worker_name: props.name ?? null,
 				worker_tag: workerTag,
 				version_id: versionId,
 				targets,
@@ -179,7 +177,7 @@ export const deployCommand = createCommand({
 			metrics.sendMetricsEvent(
 				"deploy worker script",
 				{
-					usesTypeScript: /\.tsx?$/.test(mergedProps.entry.file),
+					usesTypeScript: /\.tsx?$/.test(props.entry.file),
 					durationMs: Date.now() - beforeUpload,
 					sourceMapSize,
 				},
@@ -188,7 +186,7 @@ export const deployCommand = createCommand({
 				}
 			);
 		} finally {
-			cleanupDestination(mergedProps.destination);
+			cleanupDestination(buildProps.destination);
 		}
 	},
 });

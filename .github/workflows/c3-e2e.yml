@@ -89,12 +89,6 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-python-uv
 
-      - name: Bump package versions
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: node .github/changeset-version.js
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
       # Needed because gatsby requires git
       - name: Configure Git
         shell: bash
@@ -250,12 +244,6 @@ jobs:
       - name: Install Python uv
         if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-python-uv
-
-      - name: Bump package versions
-        if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
-        run: node .github/changeset-version.js
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Configure Git
         if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'

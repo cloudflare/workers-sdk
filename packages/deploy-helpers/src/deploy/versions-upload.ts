@@ -15,7 +15,7 @@ import { Response } from "undici";
 import { confirm, fetchResult, logger } from "../shared/context";
 import { ensureQueuesExistByConfig } from "../triggers/queue-consumers";
 import { getWorkersDevSubdomain } from "../triggers/subdomain";
-import { syncAssets } from "./helpers/assets";
+import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
@@ -34,7 +34,6 @@ import {
 	addRequiredSecretsInheritBindings,
 	handleMissingSecretsError,
 } from "./helpers/secrets-validation";
-import { loadSourceMaps } from "./helpers/source-maps";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -76,9 +75,10 @@ export default async function versionsUpload(
 		compatibilityDate,
 		compatibilityFlags,
 		keepVars,
-		uploadSourceMaps,
 		accountId,
 	} = props;
+
+	const assetsOptions = resolveAssetOptions(props, config);
 
 	if (!props.dryRun) {
 		assert(accountId, "Missing account ID");
@@ -206,7 +206,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		resolvedEntryPointPath,
 		bundleType,
 		content,
-		bundle,
+		sourceMaps,
 	} = buildResult;
 	const bindings = getBindings(config);
 
@@ -232,13 +232,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	// Upload assets if assets is being used
 	const assetsJwt =
-		props.assetsOptions && !props.dryRun
-			? await syncAssets(
-					config,
-					accountId,
-					props.assetsOptions.directory,
-					scriptName
-				)
+		assetsOptions && !props.dryRun
+			? await syncAssets(config, accountId, assetsOptions.directory, scriptName)
 			: undefined;
 
 	if (props.secretsFile) {
@@ -272,9 +267,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		migrations,
 		modules,
 		containers: config.containers,
-		sourceMaps: uploadSourceMaps
-			? loadSourceMaps(main, modules, bundle)
-			: undefined,
+		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
 		keepVars,
@@ -290,14 +283,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			"workers/alias": props.previewAlias,
 		},
 		assets:
-			props.assetsOptions && assetsJwt
+			assetsOptions && assetsJwt
 				? {
 						jwt: assetsJwt,
-						routerConfig: props.assetsOptions.routerConfig,
-						assetConfig: props.assetsOptions.assetConfig,
-						_redirects: props.assetsOptions._redirects,
-						_headers: props.assetsOptions._headers,
-						run_worker_first: props.assetsOptions.run_worker_first,
+						routerConfig: assetsOptions.routerConfig,
+						assetConfig: assetsOptions.assetConfig,
+						_redirects: assetsOptions._redirects,
+						_headers: assetsOptions._headers,
+						run_worker_first: assetsOptions.run_worker_first,
 					}
 				: undefined,
 		logpush: undefined, // logpush and observability are non-versioned settings
@@ -332,7 +325,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	} else {
 		assert(accountId, "Missing accountId");
-		if (props.resourcesProvision && callbacks.provisionBindings) {
+		if (assetsOptions?.routerConfig.has_user_worker === false) {
+			logger.debug("skipping provisioning on assets-only project");
+		} else if (props.resourcesProvision && callbacks.provisionBindings) {
 			await callbacks.provisionBindings(
 				bindings,
 				accountId,

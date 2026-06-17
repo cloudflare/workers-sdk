@@ -1263,6 +1263,51 @@ describe("deploy", () => {
 			await runWrangler("deploy");
 		});
 
+		it("should not provision bindings for an asset-only project", async ({
+			expect,
+		}) => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			const listNamespaces = vi.fn(() =>
+				HttpResponse.json(createFetchResult([]))
+			);
+
+			writeAssets(assets);
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				compatibility_date: "2024-09-27",
+				compatibility_flags: ["nodejs_compat"],
+				assets: {
+					directory: "assets",
+					html_handling: "none",
+				},
+				kv_namespaces: [{ binding: "KV" }],
+			});
+			await mockAUSRequest();
+			mockSubDomainRequest();
+			msw.use(
+				http.get("*/accounts/:accountId/storage/kv/namespaces", listNamespaces)
+			);
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: { html_handling: "none" },
+				},
+				expectedCompatibilityDate: "2024-09-27",
+				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedMainModule: undefined,
+			});
+
+			await runWrangler("deploy", { WRANGLER_LOG: "debug" });
+
+			expect(listNamespaces).not.toHaveBeenCalled();
+			expect(std.debug).toContain(
+				"skipping provisioning on assets-only project"
+			);
+		});
+
 		it("should be able to upload to a WfP script", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },

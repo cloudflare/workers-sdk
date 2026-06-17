@@ -143,16 +143,17 @@ export class Context extends RpcTarget {
 	#registerRollback(options: {
 		cacheKey: string;
 		rollbackFn: RollbackFn | undefined;
-		stepName: string;
+		stepContext: WorkflowStepContext;
 		output?: unknown;
 		rollbackConfig?: WorkflowStepConfig;
 	}): void {
-		const { cacheKey, rollbackFn, stepName, output, rollbackConfig } = options;
+		const { cacheKey, rollbackFn, stepContext, output, rollbackConfig } =
+			options;
 		if (rollbackFn && this.#rollbackStep === undefined) {
 			registerRollbackFn(this.#engine.rollbackRegistry, {
 				cacheKey,
 				fn: rollbackFn,
-				stepName,
+				stepContext,
 				...("output" in options && { output }),
 				...(rollbackConfig !== undefined && { config: rollbackConfig }),
 			});
@@ -284,6 +285,7 @@ export class Context extends RpcTarget {
 			streamMetaKey,
 			configKey,
 			errorKey,
+			stepStateKey,
 		]);
 
 		// Check cache -- streams first, then plain values
@@ -291,7 +293,11 @@ export class Context extends RpcTarget {
 			| StreamOutputMeta
 			| undefined
 			| null;
+		const cachedConfig = maybeMap.get(configKey) as
+			| ResolvedStepConfig
+			| undefined;
 		if (maybeStreamMeta?.state === StreamOutputState.Complete) {
+			const cachedState = maybeMap.get(stepStateKey) as StepState | undefined;
 			const maybeOutputError = getInvalidStoredStreamOutputError(
 				this.#state.storage,
 				cacheKey,
@@ -311,7 +317,11 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
+				stepContext: {
+					step: { name, count },
+					attempt: cachedState?.attemptedCount ?? 1,
+					config: cachedConfig ?? config,
+				},
 				output: result,
 				rollbackConfig,
 			});
@@ -326,11 +336,16 @@ export class Context extends RpcTarget {
 		const maybeResult = maybeMap.get(valueKey);
 
 		if (maybeResult) {
+			const cachedState = maybeMap.get(stepStateKey) as StepState | undefined;
 			const result = (maybeResult as { value: T }).value;
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
+				stepContext: {
+					step: { name, count },
+					attempt: cachedState?.attemptedCount ?? 1,
+					config: cachedConfig ?? config,
+				},
 				output: result,
 				rollbackConfig,
 			});
@@ -347,10 +362,10 @@ export class Context extends RpcTarget {
 		}
 
 		// Persist initial config because user can pass in dynamic config
-		if (!maybeMap.has(configKey)) {
+		if (cachedConfig === undefined) {
 			await this.#state.storage.put(configKey, config);
 		} else {
-			config = maybeMap.get(configKey) as ResolvedStepConfig;
+			config = cachedConfig;
 		}
 
 		const attemptLogs = this.#engine
@@ -410,6 +425,11 @@ export class Context extends RpcTarget {
 			)) as StepState) ?? {
 				attemptedCount: 0,
 			};
+			const forwardStepContext = (): WorkflowStepContext => ({
+				step: { name, count },
+				attempt: stepState.attemptedCount,
+				config,
+			});
 
 			// NOTE(caio): this might be a stream returning step - if so cleanup stale data from previous lifetimes
 			await cleanupPendingStreamOutput(this.#state.storage, cacheKey).catch(
@@ -817,7 +837,7 @@ export class Context extends RpcTarget {
 					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepName: stepNameWithCounter,
+						stepContext: forwardStepContext(),
 						rollbackConfig,
 					});
 
@@ -919,7 +939,7 @@ export class Context extends RpcTarget {
 					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepName: stepNameWithCounter,
+						stepContext: forwardStepContext(),
 						rollbackConfig,
 					});
 
@@ -938,7 +958,7 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
+				stepContext: forwardStepContext(),
 				output: result,
 				rollbackConfig,
 			});
