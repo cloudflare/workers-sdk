@@ -69,7 +69,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: changes
         with:
           filters: |
@@ -119,7 +119,7 @@ jobs:
           "
       - name: Install matrix pnpm version for scaffolded installs
         if: matrix.pm.name == 'pnpm' && steps.changes.outputs.everything_but_markdown == 'true'
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+        uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
         with:
           version: ${{ matrix.pm.version }}
           package_json_file: .ci-pnpm-setup-stub/package.json
@@ -149,7 +149,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }} # Needed for begit to clone the repo in the e2e tests for solid-start
 
       - name: Upload Logs
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('e2e-logs-{0}-{1}-{2}-{3}', matrix.pm.label, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
@@ -157,7 +157,7 @@ jobs:
           include-hidden-files: true
 
       - name: Upload Turbo Summary
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('turbo-runs-{0}-{1}-{2}-{3}', matrix.pm.label, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
@@ -199,7 +199,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: changes
         with:
           filters: |
@@ -267,7 +267,7 @@ jobs:
           "
       - name: Install matrix pnpm version for scaffolded installs
         if: matrix.pm.name == 'pnpm' && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+        uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
         with:
           version: ${{ matrix.pm.version }}
           package_json_file: .ci-pnpm-setup-stub/package.json
@@ -295,7 +295,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Upload Logs
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('e2e-logs-{0}-{1}-{2}-frameworks', matrix.pm.label, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
@@ -303,7 +303,7 @@ jobs:
           include-hidden-files: true
 
       - name: Upload Turbo Summary
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('turbo-runs-{0}-{1}-{2}-frameworks', matrix.pm.label, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
