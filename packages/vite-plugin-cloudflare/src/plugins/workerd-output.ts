@@ -40,14 +40,14 @@ export const workerdOutputPlugin = createPlugin("workerd-output", (ctx) => {
 					ctx.resolvedViteConfig.root,
 					false
 				)) {
-					const { workerOptions, externalWorkers } =
+					const { workerOptions, main, externalWorkers } =
 						wrangler.unstable_getMiniflareWorkerOptions(workerConfig);
 					const { modulesRules, ...options } = workerOptions;
-					assert(workerOptions.main, "Expected built Worker entrypoint");
+					assert(main, "Expected built Worker entrypoint");
 					workers.push(
 						{
 							...options,
-							...getPreviewModules(workerOptions.main, modulesRules),
+							...getPreviewModules(main, modulesRules),
 							name: options.name ?? workerConfig.name,
 							cache: false,
 							unsafeUseModuleFallbackService: false,
