@@ -1102,9 +1102,12 @@ export class Miniflare {
 				// Preserve multiple Set-Cookie values verbatim — iterating `Headers`
 				// with `for…of` collapses them into a single comma-joined string
 				// (web-platform limitation), which corrupts cookies containing commas
-				// (e.g. `Expires=Wed, 09 Jun 2026 …`).
-				for (const cookie of extra.getSetCookie()) {
-					headers.push(`Set-Cookie: ${cookie}`);
+				// (e.g. `Expires=Wed, 09 Jun 2026 …`). `getSetCookie` is not part of
+				// the standard Fetch API, so guard before calling it.
+				if (typeof extra.getSetCookie === "function") {
+					for (const cookie of extra.getSetCookie()) {
+						headers.push(`Set-Cookie: ${cookie}`);
+					}
 				}
 				for (const [key, value] of extra) {
 					if (key.toLowerCase() === "set-cookie") continue;
