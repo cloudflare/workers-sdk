@@ -1,5 +1,6 @@
 import { assertWranglerVersion } from "./assert-wrangler-version";
 import { DEFAULT_COMPAT_DATE } from "./build-constants";
+import { isForcedBuildOutput } from "./build-output-env";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
@@ -70,7 +71,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const newConfig = pluginConfig.experimental?.newConfig;
 	const cfBuildOutput =
-		typeof newConfig === "object" && newConfig?.cfBuildOutput === true;
+		isForcedBuildOutput() ||
+		(typeof newConfig === "object" && newConfig?.cfBuildOutput === true);
 	const outputPlugin = cfBuildOutput
 		? buildOutputPlugin(ctx)
 		: outputConfigPlugin(ctx);

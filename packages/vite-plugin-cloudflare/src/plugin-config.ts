@@ -12,6 +12,7 @@ import { defu } from "defu";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
 import { DEFAULT_COMPAT_DATE } from "./build-constants";
+import { isForcedBuildOutput } from "./build-output-env";
 import { readBuildOutputWorkers } from "./build-output-preview";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
@@ -135,6 +136,20 @@ interface Experimental {
 function normalizeNewConfig(
 	option: boolean | ExperimentalNewConfig | undefined
 ): ResolvedExperimentalNewConfig | undefined {
+	// The `cf-vite build` delegate sets `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT`
+	// to enable the Build Output API by default. This forces
+	// `experimental.newConfig` on (the Build Output API requires
+	// `cloudflare.config.ts`) and `cfBuildOutput` to `true`, overriding the
+	// values in the plugin config.
+	if (isForcedBuildOutput()) {
+		return {
+			types: {
+				generate:
+					typeof option === "object" ? (option.types?.generate ?? true) : true,
+			},
+			cfBuildOutput: true,
+		};
+	}
 	if (option === undefined || option === false) {
 		return undefined;
 	}
