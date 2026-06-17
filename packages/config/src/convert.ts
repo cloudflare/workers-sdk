@@ -657,15 +657,16 @@ function convertBindingsAndAssets(
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Convert the new-config `exports` map (camelCase property names,
- * kebab-case enumeration values) into the wrangler `exports` shape
- * (snake_case throughout, matching the EWC upload metadata wire format).
- * The wrangler-side schema is documented in
+ * Convert the new-config `exports` map (camelCase property names) into the
+ * wrangler `exports` shape (snake_case property names; kebab-case enum
+ * values for `type`, `state`, and `storage`, matching the EWC upload
+ * metadata wire format). The wrangler-side schema is documented in
  * `@cloudflare/workers-utils/config/environment#DurableObjectExports`.
  *
  * The structural shape is identical between `@cloudflare/config`, wrangler,
- * and EWC; the only differences are the two stylistic transforms applied
- * here.
+ * and EWC; the only differences are the camelCase → snake_case property
+ * name transforms applied here for the few fields where they differ
+ * (`renamedTo`, `transferTo`, `transferFrom`).
  *
  * Workflows are not yet supported on the export path; entries with
  * non-Durable-Object types will be added here as those land.
@@ -692,21 +693,21 @@ function convertExports(
 			case undefined:
 			case "created": {
 				converted[className] = {
-					type: "durable_object",
-					storage: snakeStorage(value.storage),
+					type: "durable-object",
+					storage: value.storage,
 				};
 				break;
 			}
 			case "deleted": {
 				converted[className] = {
-					type: "durable_object",
+					type: "durable-object",
 					state: "deleted",
 				};
 				break;
 			}
 			case "renamed": {
 				converted[className] = {
-					type: "durable_object",
+					type: "durable-object",
 					state: "renamed",
 					renamed_to: value.renamedTo,
 				};
@@ -714,17 +715,17 @@ function convertExports(
 			}
 			case "transferred": {
 				converted[className] = {
-					type: "durable_object",
+					type: "durable-object",
 					state: "transferred",
-					transfer_to_script: value.transferTo,
+					transfer_to: value.transferTo,
 				};
 				break;
 			}
 			case "expecting-transfer": {
 				converted[className] = {
-					type: "durable_object",
-					state: "expecting_transfer",
-					storage: snakeStorage(value.storage),
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: value.storage,
 					transfer_from: value.transferFrom,
 				};
 				break;
@@ -738,14 +739,6 @@ function convertExports(
 		// shape is validated end-to-end by the wrangler validator anyway.
 		(result as Record<string, unknown>).exports = converted;
 	}
-}
-
-/**
- * Translate the kebab-case storage enumeration value used by
- * `@cloudflare/config` into the snake_case value expected by wrangler/EWC.
- */
-function snakeStorage(storage: "sqlite" | "legacy-kv"): "sqlite" | "legacy_kv" {
-	return storage === "legacy-kv" ? "legacy_kv" : "sqlite";
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

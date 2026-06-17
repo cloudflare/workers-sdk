@@ -1837,12 +1837,12 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[exports]", () => {
-			it("accepts a live durable_object entry with sqlite storage and no explicit state", ({
+			it("accepts a live durable-object entry with sqlite storage and no explicit state", ({
 				expect,
 			}) => {
 				const expectedConfig: RawConfig = {
 					exports: {
-						MyDO: { type: "durable_object", storage: "sqlite" },
+						MyDO: { type: "durable-object", storage: "sqlite" },
 					},
 				};
 
@@ -1858,13 +1858,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it('accepts a live durable_object entry with an explicit state of "created"', ({
+			it('accepts a live durable-object entry with an explicit state of "created"', ({
 				expect,
 			}) => {
 				const expectedConfig: RawConfig = {
 					exports: {
 						MyDO: {
-							type: "durable_object",
+							type: "durable-object",
 							state: "created",
 							storage: "sqlite",
 						},
@@ -1883,26 +1883,26 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("accepts all tombstone states and expecting_transfer alongside a live entry", ({
+			it("accepts all tombstone states and expecting-transfer alongside a live entry", ({
 				expect,
 			}) => {
 				const expectedConfig: RawConfig = {
 					exports: {
-						NewName: { type: "durable_object", storage: "sqlite" },
-						OldGone: { type: "durable_object", state: "deleted" },
+						NewName: { type: "durable-object", storage: "sqlite" },
+						OldGone: { type: "durable-object", state: "deleted" },
 						OldName: {
-							type: "durable_object",
+							type: "durable-object",
 							state: "renamed",
 							renamed_to: "NewName",
 						},
 						Movee: {
-							type: "durable_object",
+							type: "durable-object",
 							state: "transferred",
-							transfer_to_script: "target-worker",
+							transfer_to: "target-worker",
 						},
 						Incoming: {
-							type: "durable_object",
-							state: "expecting_transfer",
+							type: "durable-object",
+							state: "expecting-transfer",
 							storage: "sqlite",
 							transfer_from: "source-worker",
 						},
@@ -1926,7 +1926,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						exports: {
 							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
-							MyDO: { type: "durable_object" } as any,
+							MyDO: { type: "durable-object" } as any,
 						},
 					},
 					undefined,
@@ -1945,7 +1945,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						exports: {
 							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
-							MyDO: { type: "durable_object", storage: "kv" } as any,
+							MyDO: { type: "durable-object", storage: "kv" } as any,
 						},
 					},
 					undefined,
@@ -1964,7 +1964,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						exports: {
 							OldName: {
-								type: "durable_object",
+								type: "durable-object",
 								state: "renamed",
 								renamed_to: "NewName",
 							},
@@ -1977,24 +1977,24 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					'must appear as a live "durable_object" entry (state "created")'
+					'must appear as a live "durable-object" entry (state "created")'
 				);
 			});
 
-			it("errors when a renamed tombstone targets an expecting_transfer entry", ({
+			it("errors when a renamed tombstone targets an expecting-transfer entry", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						exports: {
 							OldName: {
-								type: "durable_object",
+								type: "durable-object",
 								state: "renamed",
 								renamed_to: "Pending",
 							},
 							Pending: {
-								type: "durable_object",
-								state: "expecting_transfer",
+								type: "durable-object",
+								state: "expecting-transfer",
 								storage: "sqlite",
 								transfer_from: "source-worker",
 							},
@@ -2007,7 +2007,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					'must appear as a live "durable_object" entry (state "created")'
+					'must appear as a live "durable-object" entry (state "created")'
 				);
 			});
 
@@ -2018,7 +2018,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						exports: {
 							Same: {
-								type: "durable_object",
+								type: "durable-object",
 								state: "renamed",
 								renamed_to: "Same",
 							},
@@ -2042,7 +2042,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						exports: {
 							Bad: {
-								type: "durable_object",
+								type: "durable-object",
 								state: "deleted",
 								storage: "sqlite",
 							} as DurableObjectExport,
@@ -2059,14 +2059,14 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it("errors when a transferred tombstone omits transfer_to_script", ({
+			it("errors when a transferred tombstone omits transfer_to", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						exports: {
 							Movee: {
-								type: "durable_object",
+								type: "durable-object",
 								state: "transferred",
 							} as DurableObjectExport,
 						},
@@ -2078,19 +2078,19 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					'"exports.Movee.transfer_to_script" is required'
+					'"exports.Movee.transfer_to" is required'
 				);
 			});
 
-			it("errors when an expecting_transfer entry omits transfer_from", ({
+			it("errors when an expecting-transfer entry omits transfer_from", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						exports: {
 							Incoming: {
-								type: "durable_object",
-								state: "expecting_transfer",
+								type: "durable-object",
+								state: "expecting-transfer",
 								storage: "sqlite",
 							} as DurableObjectExport,
 						},
@@ -2106,15 +2106,15 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it("errors when an expecting_transfer entry omits storage", ({
+			it("errors when an expecting-transfer entry omits storage", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						exports: {
 							Incoming: {
-								type: "durable_object",
-								state: "expecting_transfer",
+								type: "durable-object",
+								state: "expecting-transfer",
 								transfer_from: "source-worker",
 							} as DurableObjectExport,
 						},
@@ -2126,7 +2126,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					'"exports.Incoming.storage" is required for state "expecting_transfer"'
+					'"exports.Incoming.storage" is required for state "expecting-transfer"'
 				);
 			});
 
@@ -2137,7 +2137,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						exports: {
 							MyDO: {
-								type: "durable_object",
+								type: "durable-object",
 								storage: "sqlite",
 								transfer_from: "source-worker",
 							} as DurableObjectExport,
@@ -2178,7 +2178,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						exports: {
 							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
-							Weird: { type: "durable_object", state: "rebooted" } as any,
+							Weird: { type: "durable-object", state: "rebooted" } as any,
 						},
 					},
 					undefined,
@@ -2199,7 +2199,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						migrations: [{ tag: "v1", new_sqlite_classes: ["MyDO"] }],
 						exports: {
-							MyDO: { type: "durable_object", storage: "sqlite" },
+							MyDO: { type: "durable-object", storage: "sqlite" },
 						},
 					},
 					undefined,
@@ -2222,7 +2222,7 @@ describe("normalizeAndValidateConfig()", () => {
 							bindings: [{ name: "DO", class_name: "MyDO" }],
 						},
 						exports: {
-							MyDO: { type: "durable_object", storage: "sqlite" },
+							MyDO: { type: "durable-object", storage: "sqlite" },
 						},
 					},
 					undefined,
@@ -2243,7 +2243,7 @@ describe("normalizeAndValidateConfig()", () => {
 							bindings: [{ name: "DO", class_name: "MyDO" }],
 						},
 						exports: {
-							MyDO: { type: "durable_object", state: "deleted" },
+							MyDO: { type: "durable-object", state: "deleted" },
 						},
 					},
 					undefined,
@@ -2254,7 +2254,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				const rendered = diagnostics.renderWarnings();
 				expect(rendered).toContain("no live `exports` entry for them");
-				expect(rendered).toContain('"type": "durable_object"');
+				expect(rendered).toContain('"type": "durable-object"');
 				expect(rendered).toContain('"storage": "sqlite"');
 				expect(rendered).not.toContain("new_sqlite_classes");
 			});
@@ -2271,7 +2271,7 @@ describe("normalizeAndValidateConfig()", () => {
 							// User is already on the `exports` path (unrelated
 							// tombstone present) but forgot to add a live entry
 							// for `MyDO`.
-							OldGone: { type: "durable_object", state: "deleted" },
+							OldGone: { type: "durable-object", state: "deleted" },
 						},
 					},
 					undefined,
@@ -2305,7 +2305,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasWarnings()).toBe(true);
 					const rendered = diagnostics.renderWarnings();
 					expect(rendered).toContain("no live `exports` entry for them");
-					expect(rendered).toContain('"type": "durable_object"');
+					expect(rendered).toContain('"type": "durable-object"');
 					expect(rendered).not.toContain("new_sqlite_classes");
 				} finally {
 					vi.unstubAllEnvs();

@@ -354,12 +354,12 @@ export type DurableObjectMigration = {
  * Storage backend for a declarative Durable Object export. See
  * {@link DurableObjectExport}.
  */
-export type DurableObjectExportStorage = "sqlite" | "legacy_kv";
+export type DurableObjectExportStorage = "sqlite" | "legacy-kv";
 
 /**
  * Lifecycle state of a Durable Object export entry. The default is
  * `"created"` (live) when the field is omitted. Tombstone states retire,
- * rename, or transfer a provisioned namespace; `"expecting_transfer"` is a
+ * rename, or transfer a provisioned namespace; `"expecting-transfer"` is a
  * live state that names the receiving side of a two-phase cross-script
  * transfer.
  */
@@ -368,12 +368,12 @@ export type DurableObjectExportState =
 	| "deleted"
 	| "renamed"
 	| "transferred"
-	| "expecting_transfer";
+	| "expecting-transfer";
 
 /**
  * A single declarative Durable Object export entry in the `exports` config
  * map. Discriminated union of `type` (kind) and `state` (lifecycle). `type`
- * is reserved for the export kind and is always `"durable_object"` today;
+ * is reserved for the export kind and is always `"durable-object"` today;
  * future export kinds (e.g. workflows, containers) will be added here.
  * `state` carries the lifecycle and defaults to `"created"` (live) when
  * omitted.
@@ -386,12 +386,12 @@ export type DurableObjectExportState =
  *    been removed from code.
  *  - `renamed` (tombstone): rewrite a provisioned namespace's class name to
  *    `renamed_to`. The target name must also appear as a live (state
- *    `"created"`) `durable_object` entry in the same map.
+ *    `"created"`) `durable-object` entry in the same map.
  *  - `transferred` (tombstone): hand ownership of the namespace to another
- *    script in the same account (`transfer_to_script`). Two-phase commit;
- *    the target must first deploy an `expecting_transfer` entry naming this
+ *    script in the same account (`transfer_to`). Two-phase commit;
+ *    the target must first deploy an `expecting-transfer` entry naming this
  *    script via `transfer_from`.
- *  - `expecting_transfer` (live): receiving side of a two-phase transfer;
+ *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
  *    `storage` and `transfer_from` are both required.
  *
  * See the full spec for semantics, validation rules, and the rollout
@@ -400,20 +400,20 @@ export type DurableObjectExportState =
  */
 export type DurableObjectExport =
 	| {
-			type: "durable_object";
+			type: "durable-object";
 			state?: "created";
 			storage: DurableObjectExportStorage;
 	  }
-	| { type: "durable_object"; state: "deleted" }
-	| { type: "durable_object"; state: "renamed"; renamed_to: string }
+	| { type: "durable-object"; state: "deleted" }
+	| { type: "durable-object"; state: "renamed"; renamed_to: string }
 	| {
-			type: "durable_object";
+			type: "durable-object";
 			state: "transferred";
-			transfer_to_script: string;
+			transfer_to: string;
 	  }
 	| {
-			type: "durable_object";
-			state: "expecting_transfer";
+			type: "durable-object";
+			state: "expecting-transfer";
 			storage: DurableObjectExportStorage;
 			transfer_from: string;
 	  };

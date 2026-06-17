@@ -67,12 +67,12 @@ export function renderExportsReconciliationSuccess(
 	}
 	if (result.transferred && result.transferred.length > 0) {
 		for (const t of result.transferred) {
-			logger.log(`  Transferred (${t.phase}): ${t.class} → ${t.to_script}`);
+			logger.log(`  Transferred (${t.phase}): ${t.class} → ${t.transfer_to}`);
 		}
 	}
 	if (result.transfer_pending && result.transfer_pending.length > 0) {
 		for (const t of result.transfer_pending) {
-			logger.log(`  Transfer pending: ${t.class} ← ${t.from_script}`);
+			logger.log(`  Transfer pending: ${t.class} ← ${t.transfer_from}`);
 		}
 	}
 

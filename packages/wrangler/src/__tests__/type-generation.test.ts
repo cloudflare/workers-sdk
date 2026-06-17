@@ -3719,7 +3719,7 @@ describe("generate types - CLI", () => {
 	});
 
 	describe("declarative Durable Object `exports`", () => {
-		it("populates `durableNamespaces` from live `exports` entries (including unbound + `expecting_transfer`) and excludes tombstones", async ({
+		it("populates `durableNamespaces` from live `exports` entries (including unbound + `expecting-transfer`) and excludes tombstones", async ({
 			expect,
 		}) => {
 			vi.stubEnv("X_DO_EXPORTS", "true");
@@ -3746,18 +3746,18 @@ export default { async fetch() { return new Response("ok"); } };`
 						bindings: [{ name: "BOUND_DO", class_name: "BoundDO" }],
 					},
 					exports: {
-						BoundDO: { type: "durable_object", storage: "sqlite" },
-						UnboundDO: { type: "durable_object", storage: "sqlite" },
+						BoundDO: { type: "durable-object", storage: "sqlite" },
+						UnboundDO: { type: "durable-object", storage: "sqlite" },
 						IncomingDO: {
-							type: "durable_object",
-							state: "expecting_transfer",
+							type: "durable-object",
+							state: "expecting-transfer",
 							storage: "sqlite",
 							transfer_from: "source-worker",
 						},
 						// Tombstones — must NOT appear in `durableNamespaces`.
-						OldGone: { type: "durable_object", state: "deleted" },
+						OldGone: { type: "durable-object", state: "deleted" },
 						LegacyName: {
-							type: "durable_object",
+							type: "durable-object",
 							state: "renamed",
 							renamed_to: "BoundDO",
 						},
@@ -3818,7 +3818,7 @@ export default { async fetch() { return new Response("ok"); } };`
 						bindings: [{ name: "MY_DO", class_name: "MyDO" }],
 					},
 					exports: {
-						MyDO: { type: "durable_object", storage: "sqlite" },
+						MyDO: { type: "durable-object", storage: "sqlite" },
 					},
 				}),
 				"utf-8"

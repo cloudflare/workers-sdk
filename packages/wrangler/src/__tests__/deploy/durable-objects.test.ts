@@ -766,7 +766,7 @@ describe("deploy", () => {
 					bindings: [{ name: "DO", class_name: "MyDO" }],
 				},
 				exports: {
-					MyDO: { type: "durable_object", storage: "sqlite" },
+					MyDO: { type: "durable-object", storage: "sqlite" },
 				},
 			});
 			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
@@ -785,14 +785,14 @@ describe("deploy", () => {
 					bindings: [{ name: "DO", class_name: "MyDO" }],
 				},
 				exports: {
-					MyDO: { type: "durable_object", storage: "sqlite" },
+					MyDO: { type: "durable-object", storage: "sqlite" },
 				},
 			});
 			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedExports: {
-					MyDO: { type: "durable_object", storage: "sqlite" },
+					MyDO: { type: "durable-object", storage: "sqlite" },
 				},
 				expectedMigrations: undefined,
 				useOldUploadApi: true,
@@ -812,16 +812,16 @@ describe("deploy", () => {
 					bindings: [{ name: "DO", class_name: "MyDO" }],
 				},
 				exports: {
-					MyDO: { type: "durable_object", storage: "sqlite" },
-					OldGone: { type: "durable_object", state: "deleted" },
+					MyDO: { type: "durable-object", storage: "sqlite" },
+					OldGone: { type: "durable-object", state: "deleted" },
 				},
 			});
 			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedExports: {
-					MyDO: { type: "durable_object", storage: "sqlite" },
-					OldGone: { type: "durable_object", state: "deleted" },
+					MyDO: { type: "durable-object", storage: "sqlite" },
+					OldGone: { type: "durable-object", state: "deleted" },
 				},
 				useOldUploadApi: true,
 				mockUploadReturnsExportsReconciliation: {
@@ -859,7 +859,7 @@ describe("deploy", () => {
 					bindings: [{ name: "DO", class_name: "MyDO" }],
 				},
 				exports: {
-					MyDO: { type: "durable_object", storage: "sqlite" },
+					MyDO: { type: "durable-object", storage: "sqlite" },
 				},
 			});
 			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);

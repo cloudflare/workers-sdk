@@ -1763,7 +1763,7 @@ describe.sequential("wrangler dev", () => {
 						bindings: [{ name: "DO", class_name: "MyDO" }],
 					},
 					exports: {
-						MyDO: { type: "durable_object", storage: "sqlite" },
+						MyDO: { type: "durable-object", storage: "sqlite" },
 					},
 				});
 				fs.writeFileSync("index.js", `export default {};`);
@@ -1784,7 +1784,7 @@ describe.sequential("wrangler dev", () => {
 						bindings: [{ name: "DO", class_name: "MyDO" }],
 					},
 					exports: {
-						MyDO: { type: "durable_object", storage: "sqlite" },
+						MyDO: { type: "durable-object", storage: "sqlite" },
 					},
 				});
 				fs.writeFileSync("index.js", `export default {};`);
