@@ -1104,13 +1104,14 @@ export class Miniflare {
 				// (web-platform limitation), which corrupts cookies containing commas
 				// (e.g. `Expires=Wed, 09 Jun 2026 …`). `getSetCookie` is not part of
 				// the standard Fetch API, so guard before calling it.
-				if (typeof extra.getSetCookie === "function") {
+				const hasGetSetCookie = typeof extra.getSetCookie === "function";
+				if (hasGetSetCookie) {
 					for (const cookie of extra.getSetCookie()) {
 						headers.push(`Set-Cookie: ${cookie}`);
 					}
 				}
 				for (const [key, value] of extra) {
-					if (key.toLowerCase() === "set-cookie") continue;
+					if (hasGetSetCookie && key.toLowerCase() === "set-cookie") continue;
 					if (!restrictedWebSocketUpgradeHeaders.includes(key.toLowerCase())) {
 						headers.push(`${key}: ${value}`);
 					}
