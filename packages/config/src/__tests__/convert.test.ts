@@ -612,7 +612,7 @@ describe("convertToWranglerConfig", () => {
 	});
 
 	describe("exports", () => {
-		it("converts a sqlite durable-object export to snake_case wrangler shape (no `state` when default)", ({
+		it("converts a sqlite durable-object export to the wrangler shape (no `state` when default)", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
@@ -622,11 +622,11 @@ describe("convertToWranglerConfig", () => {
 				},
 			});
 			expect((result as { exports?: unknown }).exports).toEqual({
-				MyDO: { type: "durable_object", storage: "sqlite" },
+				MyDO: { type: "durable-object", storage: "sqlite" },
 			});
 		});
 
-		it("converts a legacy-kv durable-object export to legacy_kv wrangler shape", ({
+		it("passes a legacy-kv storage value through to the wrangler shape", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
@@ -636,7 +636,7 @@ describe("convertToWranglerConfig", () => {
 				},
 			});
 			expect((result as { exports?: unknown }).exports).toEqual({
-				LegacyDO: { type: "durable_object", storage: "legacy_kv" },
+				LegacyDO: { type: "durable-object", storage: "legacy-kv" },
 			});
 		});
 
@@ -654,7 +654,7 @@ describe("convertToWranglerConfig", () => {
 				},
 			});
 			expect((result as { exports?: unknown }).exports).toEqual({
-				MyDO: { type: "durable_object", storage: "sqlite" },
+				MyDO: { type: "durable-object", storage: "sqlite" },
 			});
 		});
 
@@ -668,7 +668,7 @@ describe("convertToWranglerConfig", () => {
 				},
 			});
 			expect((result as { exports?: unknown }).exports).toEqual({
-				OldClass: { type: "durable_object", state: "deleted" },
+				OldClass: { type: "durable-object", state: "deleted" },
 			});
 		});
 
@@ -687,14 +687,14 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect((result as { exports?: unknown }).exports).toEqual({
 				OldName: {
-					type: "durable_object",
+					type: "durable-object",
 					state: "renamed",
 					renamed_to: "NewName",
 				},
 			});
 		});
 
-		it("converts a transferred tombstone (camelCase `transferTo` -> snake_case `transfer_to_script`)", ({
+		it("converts a transferred tombstone (camelCase `transferTo` -> snake_case `transfer_to`)", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
@@ -709,14 +709,14 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect((result as { exports?: unknown }).exports).toEqual({
 				Movee: {
-					type: "durable_object",
+					type: "durable-object",
 					state: "transferred",
-					transfer_to_script: "target-worker",
+					transfer_to: "target-worker",
 				},
 			});
 		});
 
-		it("converts an expecting-transfer entry (camelCase `transferFrom`, kebab-case `expecting-transfer`)", ({
+		it("converts an expecting-transfer entry (camelCase `transferFrom` -> snake_case `transfer_from`)", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
@@ -732,8 +732,8 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect((result as { exports?: unknown }).exports).toEqual({
 				Incoming: {
-					type: "durable_object",
-					state: "expecting_transfer",
+					type: "durable-object",
+					state: "expecting-transfer",
 					storage: "sqlite",
 					transfer_from: "source-worker",
 				},

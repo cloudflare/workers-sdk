@@ -34,7 +34,7 @@ const TIMEOUT = 60_000;
  *   - `zero-downtime rename` — three-step rename of `Counter` → `CounterV2`
  *     using a live target + `renamed` tombstone in the same map.
  *   - `cross-script transfer` — two-phase commit handing a namespace from
- *     script A to script B (target's `expecting_transfer` entry first, then
+ *     script A to script B (target's `expecting-transfer` entry first, then
  *     source's `transferred` tombstone).
  *
  * The rename / transfer assertions encode the renderer contract in
@@ -70,7 +70,7 @@ describe.skipIf(!E2E_GATE_ON)(
 						bindings = [{ name = "DO", class_name = "MyDO" }]
 
 						[exports.MyDO]
-						type = "durable_object"
+						type = "durable-object"
 						storage = "sqlite"
 					`,
 					"src/index.ts": dedent`
@@ -122,7 +122,7 @@ describe.skipIf(!E2E_GATE_ON)(
 						compatibility_date = "2024-01-01"
 
 						[exports.MyDO]
-						type = "durable_object"
+						type = "durable-object"
 						state = "deleted"
 					`,
 					"src/index.ts": dedent`
@@ -163,7 +163,7 @@ describe.skipIf(!E2E_GATE_ON)(
 						compatibility_date = "2024-01-01"
 
 						[exports.Phantom]
-						type = "durable_object"
+						type = "durable-object"
 						storage = "sqlite"
 					`,
 					"src/index.ts": dedent`
@@ -206,7 +206,7 @@ describe.skipIf(!E2E_GATE_ON)(
 						bindings = [{ name = "DO", class_name = "MyDO" }]
 
 						[exports.MyDO]
-						type = "durable_object"
+						type = "durable-object"
 						storage = "sqlite"
 					`,
 					"src/index.ts": dedent`
@@ -254,7 +254,7 @@ describe.skipIf(!E2E_GATE_ON)(
 						compatibility_date = "2024-01-01"
 
 						[exports.Phantom]
-						type = "durable_object"
+						type = "durable-object"
 						storage = "sqlite"
 					`,
 					"src/index.ts": dedent`
@@ -279,7 +279,7 @@ describe.skipIf(!E2E_GATE_ON)(
 		describe("zero-downtime rename", () => {
 			// Three-step rename, using the `renamed` tombstone state. The
 			// validation layer requires the `renamed_to` target ("CounterV2")
-			// to also appear as a live (state="created") `durable_object` entry
+			// to also appear as a live (state="created") `durable-object` entry
 			// in the same map, so step 2 contains both entries (see
 			// `packages/workers-utils/src/config/validation.ts`).
 			const workerName = generateResourceName();
@@ -300,7 +300,7 @@ describe.skipIf(!E2E_GATE_ON)(
 						bindings = [{ name = "DO", class_name = "Counter" }]
 
 						[exports.Counter]
-						type = "durable_object"
+						type = "durable-object"
 						storage = "sqlite"
 					`,
 					"src/index.ts": dedent`
@@ -339,11 +339,11 @@ describe.skipIf(!E2E_GATE_ON)(
 						bindings = [{ name = "DO", class_name = "CounterV2" }]
 
 						[exports.CounterV2]
-						type = "durable_object"
+						type = "durable-object"
 						storage = "sqlite"
 
 						[exports.Counter]
-						type = "durable_object"
+						type = "durable-object"
 						state = "renamed"
 						renamed_to = "CounterV2"
 					`,
@@ -380,7 +380,7 @@ describe.skipIf(!E2E_GATE_ON)(
 						bindings = [{ name = "DO", class_name = "CounterV2" }]
 
 						[exports.CounterV2]
-						type = "durable_object"
+						type = "durable-object"
 						storage = "sqlite"
 					`,
 					"src/index.ts": dedent`
@@ -406,12 +406,12 @@ describe.skipIf(!E2E_GATE_ON)(
 		describe("cross-script transfer", () => {
 			// Two-phase commit (see CfDurableObjectExport docs in
 			// `packages/workers-utils/src/worker.ts`):
-			//   1. Target script (B) deploys an `expecting_transfer` state
+			//   1. Target script (B) deploys an `expecting-transfer` state
 			//      entry with `transfer_from = "<sourceScript>"`; reconciliation
 			//      emits a `Transfer pending:` info entry because A hasn't
 			//      released the namespace yet.
 			//   2. Source script (A) deploys a `transferred` tombstone naming B
-			//      as `transfer_to_script`; reconciliation emits
+			//      as `transfer_to`; reconciliation emits
 			//      `Transferred (committed):` once the handoff lands.
 			const workerA = generateResourceName();
 			const workerB = generateResourceName();
@@ -434,7 +434,7 @@ describe.skipIf(!E2E_GATE_ON)(
 						bindings = [{ name = "WIDGET", class_name = "Widget" }]
 
 						[exports.Widget]
-						type = "durable_object"
+						type = "durable-object"
 						storage = "sqlite"
 					`,
 					"src/index.ts": dedent`
@@ -460,7 +460,7 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect(output.stdout).toContain("Created: Widget");
 			});
 
-			it("step 2: target script deploys expecting_transfer → Transfer pending", async ({
+			it("step 2: target script deploys expecting-transfer → Transfer pending", async ({
 				expect,
 			}) => {
 				await helperB.seed({
@@ -473,8 +473,8 @@ describe.skipIf(!E2E_GATE_ON)(
 						bindings = [{ name = "WIDGET", class_name = "Widget" }]
 
 						[exports.Widget]
-						type = "durable_object"
-						state = "expecting_transfer"
+						type = "durable-object"
+						state = "expecting-transfer"
 						storage = "sqlite"
 						transfer_from = "${workerA}"
 					`,
@@ -513,9 +513,9 @@ describe.skipIf(!E2E_GATE_ON)(
 						compatibility_date = "2024-01-01"
 
 						[exports.Widget]
-						type = "durable_object"
+						type = "durable-object"
 						state = "transferred"
-						transfer_to_script = "${workerB}"
+						transfer_to = "${workerB}"
 					`,
 					"src/index.ts": dedent`
 						export default {

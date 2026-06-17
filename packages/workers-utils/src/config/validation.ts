@@ -5866,17 +5866,17 @@ const MAX_EXPORTS_PER_SCRIPT = 100;
  */
 const MAX_EXPORT_CLASS_NAME_LEN = 128;
 
-const VALID_EXPORT_TYPES = new Set(["durable_object"]);
+const VALID_EXPORT_TYPES = new Set(["durable-object"]);
 
 const VALID_EXPORT_STATES = new Set([
 	"created",
 	"deleted",
 	"renamed",
 	"transferred",
-	"expecting_transfer",
+	"expecting-transfer",
 ]);
 
-const VALID_EXPORT_STORAGES = new Set(["sqlite", "legacy_kv"]);
+const VALID_EXPORT_STORAGES = new Set(["sqlite", "legacy-kv"]);
 
 /**
  * Approximate JavaScript IdentifierName matcher used for tombstone `renamed_to`
@@ -5890,9 +5890,9 @@ const JS_IDENTIFIER_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 /**
  * Validate the `exports` configuration. The shape mirrors the server-side
  * `ExportConfig` discriminated union in EWC: `type` carries the export kind
- * (currently always `"durable_object"`) and the new `state` field carries
+ * (currently always `"durable-object"`) and the new `state` field carries
  * the lifecycle (`"created"` default, `"deleted"`, `"renamed"`,
- * `"transferred"`, `"expecting_transfer"`). See the spec for full
+ * `"transferred"`, `"expecting-transfer"`). See the spec for full
  * semantics:
  * https://wiki.cfdata.org/spaces/WX/pages/1396640001
  */
@@ -5925,10 +5925,10 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	let valid = true;
-	// Track every class name declared as a live `durable_object` entry (i.e.
+	// Track every class name declared as a live `durable-object` entry (i.e.
 	// effective state `"created"`) so renamed tombstones can verify their
 	// `renamed_to` target lands on a live entry in the same map. Mirrors the
-	// EWC reader's cross-entry check; per spec T4, `expecting_transfer`
+	// EWC reader's cross-entry check; per spec T4, `expecting-transfer`
 	// entries do NOT count as valid rename targets — they haven't taken
 	// ownership of a namespace on this script yet.
 	const liveClassNames = new Set<string>();
@@ -5938,7 +5938,7 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 			typeof entry === "object" &&
 			entry !== null &&
 			!Array.isArray(entry) &&
-			(entry as { type?: unknown }).type === "durable_object"
+			(entry as { type?: unknown }).type === "durable-object"
 		) {
 			const rawState = (entry as { state?: unknown }).state;
 			const effectiveState =
@@ -5982,7 +5982,7 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 			state,
 			storage,
 			renamed_to,
-			transfer_to_script,
+			transfer_to,
 			transfer_from,
 			...rest
 		} = entry as {
@@ -5990,7 +5990,7 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 			state?: unknown;
 			storage?: unknown;
 			renamed_to?: unknown;
-			transfer_to_script?: unknown;
+			transfer_to?: unknown;
 			transfer_from?: unknown;
 		};
 
@@ -6050,15 +6050,15 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 					);
 					valid = false;
 				}
-				if (transfer_to_script !== undefined) {
+				if (transfer_to !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to_script" is forbidden on state "created".`
+						`"${entryField}.transfer_to" is forbidden on state "created".`
 					);
 					valid = false;
 				}
 				if (transfer_from !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_from" is forbidden on state "created"; use state "expecting_transfer" for the receiving side of a two-phase transfer.`
+						`"${entryField}.transfer_from" is forbidden on state "created"; use state "expecting-transfer" for the receiving side of a two-phase transfer.`
 					);
 					valid = false;
 				}
@@ -6077,9 +6077,9 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 					);
 					valid = false;
 				}
-				if (transfer_to_script !== undefined) {
+				if (transfer_to !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to_script" is forbidden on state "deleted".`
+						`"${entryField}.transfer_to" is forbidden on state "deleted".`
 					);
 					valid = false;
 				}
@@ -6111,7 +6111,7 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 						valid = false;
 					} else if (!liveClassNames.has(renamed_to)) {
 						diagnostics.errors.push(
-							`"${entryField}.renamed_to" target "${renamed_to}" must appear as a live "durable_object" entry (state "created") in the same "${field}" map.`
+							`"${entryField}.renamed_to" target "${renamed_to}" must appear as a live "durable-object" entry (state "created") in the same "${field}" map.`
 						);
 						valid = false;
 					}
@@ -6122,9 +6122,9 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 					);
 					valid = false;
 				}
-				if (transfer_to_script !== undefined) {
+				if (transfer_to !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to_script" is forbidden on state "renamed".`
+						`"${entryField}.transfer_to" is forbidden on state "renamed".`
 					);
 					valid = false;
 				}
@@ -6137,12 +6137,9 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 				break;
 			}
 			case "transferred": {
-				if (
-					typeof transfer_to_script !== "string" ||
-					transfer_to_script === ""
-				) {
+				if (typeof transfer_to !== "string" || transfer_to === "") {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to_script" is required for state "transferred" and must be a non-empty string.`
+						`"${entryField}.transfer_to" is required for state "transferred" and must be a non-empty string.`
 					);
 					valid = false;
 				}
@@ -6166,13 +6163,13 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 				}
 				break;
 			}
-			case "expecting_transfer": {
+			case "expecting-transfer": {
 				if (
 					typeof storage !== "string" ||
 					!VALID_EXPORT_STORAGES.has(storage)
 				) {
 					diagnostics.errors.push(
-						`"${entryField}.storage" is required for state "expecting_transfer" and must be one of ${[
+						`"${entryField}.storage" is required for state "expecting-transfer" and must be one of ${[
 							...VALID_EXPORT_STORAGES,
 						]
 							.map((s) => `"${s}"`)
@@ -6182,19 +6179,19 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 				}
 				if (typeof transfer_from !== "string" || transfer_from === "") {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_from" is required for state "expecting_transfer" and must be a non-empty string.`
+						`"${entryField}.transfer_from" is required for state "expecting-transfer" and must be a non-empty string.`
 					);
 					valid = false;
 				}
 				if (renamed_to !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.renamed_to" is forbidden on state "expecting_transfer".`
+						`"${entryField}.renamed_to" is forbidden on state "expecting-transfer".`
 					);
 					valid = false;
 				}
-				if (transfer_to_script !== undefined) {
+				if (transfer_to !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to_script" is forbidden on state "expecting_transfer".`
+						`"${entryField}.transfer_to" is forbidden on state "expecting-transfer".`
 					);
 					valid = false;
 				}
@@ -6429,7 +6426,7 @@ const validateCache: ValidatorFn = (diagnostics, field, value) => {
  * The warning branches between three shapes:
  *
  *  1. The config already declares any `exports` entries — suggest extending
- *     the `exports` map with live `durable_object` entries for the
+ *     the `exports` map with live `durable-object` entries for the
  *     uncovered classes.
  *  2. Neither `migrations` nor `exports` are declared, but the
  *     `X_DO_EXPORTS` environment variable is set — the user has opted into
@@ -6456,17 +6453,17 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 		(binding) => !binding.script_name
 	);
 	// A DO binding is "covered" if its class appears as a live
-	// `durable_object` entry in `exports` — either the default
-	// `state: "created"` or `state: "expecting_transfer"`. Tombstones
+	// `durable-object` entry in `exports` — either the default
+	// `state: "created"` or `state: "expecting-transfer"`. Tombstones
 	// (`deleted`, `renamed`, `transferred`) don't satisfy the rule on
 	// their own because the class is being retired/moved.
 	const exportsCovers = (className: string) => {
 		const entry = exports?.[className];
-		if (entry === undefined || entry.type !== "durable_object") {
+		if (entry === undefined || entry.type !== "durable-object") {
 			return false;
 		}
 		const state = entry.state ?? "created";
-		return state === "created" || state === "expecting_transfer";
+		return state === "created" || state === "expecting-transfer";
 	};
 	const uncoveredByExports = exportedDurableObjects.filter(
 		(binding) =>
@@ -6502,13 +6499,13 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 		const suggestedExports: NonNullable<RawConfig["exports"]> = {};
 		for (const className of durableObjectClassnames) {
 			suggestedExports[className] = {
-				type: "durable_object",
+				type: "durable-object",
 				storage: "sqlite",
 			};
 		}
 
 		diagnostics.warnings.push(dedent`
-		In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable_object\` entry to \`exports\` for each. Add the following configuration:
+		In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
 
 		\`\`\`
 		${formatConfigSnippet({ exports: suggestedExports }, configPath)}

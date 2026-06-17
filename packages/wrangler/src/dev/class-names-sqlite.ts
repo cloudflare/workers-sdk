@@ -12,8 +12,8 @@ import type { Config } from "@cloudflare/workers-utils";
  * boundary, but this function tolerates both being present defensively.
  *
  * The `exports` config — when set — contributes one entry per live
- * `durable_object` export: `state: "created"` (the default) and
- * `state: "expecting_transfer"` are both treated as live for local-dev
+ * `durable-object` export: `state: "created"` (the default) and
+ * `state: "expecting-transfer"` are both treated as live for local-dev
  * purposes. Tombstone states (`deleted`, `renamed`, `transferred`) are
  * skipped because they retire the namespace from this script.
  *
@@ -84,21 +84,21 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 	});
 
 	// Apply declarative `exports` entries. Live entries (`created` /
-	// `expecting_transfer`) declare a class + storage backend; tombstones
+	// `expecting-transfer`) declare a class + storage backend; tombstones
 	// retire a namespace and don't contribute a live class to local dev.
 	if (exports) {
 		for (const [className, entry] of Object.entries(exports)) {
-			if (entry.type !== "durable_object") {
+			if (entry.type !== "durable-object") {
 				continue;
 			}
 			// `state` defaults to `"created"` on the wire when omitted. Both
-			// `"created"` and `"expecting_transfer"` are live states and carry
+			// `"created"` and `"expecting-transfer"` are live states and carry
 			// a `storage` field — narrow on `entry.state` directly so TS picks
 			// the right discriminant.
 			if (
 				entry.state === undefined ||
 				entry.state === "created" ||
-				entry.state === "expecting_transfer"
+				entry.state === "expecting-transfer"
 			) {
 				durableObjectClassNameToUseSQLiteMap.set(
 					className,
