@@ -460,6 +460,64 @@ describe("deploy", () => {
 			expect(std.out).toContain("workflow: my-workflow");
 		});
 
+		it("should include API error notes in the trigger failure message when workflow deploy fails", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						schedules: "*/5 * * * *",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workflows/:workflowName",
+					() =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: 10202,
+									message: "cron_requires_paid_plan",
+								},
+							])
+						),
+					{ once: true }
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Some triggers failed to deploy for test-name:
+				  - A request to the Cloudflare API (/accounts/some-account-id/workflows/my-workflow) failed.
+				    cron_requires_paid_plan [code: 10202]]
+			`);
+		});
+
 		it("should not call Workflow's API if the workflow binds to another script", async ({
 			expect,
 		}) => {
