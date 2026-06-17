@@ -732,6 +732,58 @@ test("Miniflare: web socket kitchen sink", async ({
 	expect(serverCloseEvent.reason).toBe("Test Closure");
 });
 
+// https://github.com/cloudflare/workers-sdk/issues/14145
+test("Miniflare: preserves multiple Set-Cookie headers on WebSocket 101 upgrade response", async ({
+	expect,
+	onTestFinished,
+}) => {
+	// External WebSocket origin server that returns two Set-Cookie headers on the
+	// 101 upgrade response. The second cookie contains a comma in its Expires
+	// attribute — the exact value that gets mangled when the Headers object is
+	// iterated with `for…of` instead of `getSetCookie()`.
+	const server = http.createServer();
+	const wss = new WebSocketServer({ server });
+	wss.on("headers", (headers) => {
+		headers.push(
+			"Set-Cookie: session=abc; Path=/; Expires=Wed, 09 Jun 2026 10:18:14 GMT"
+		);
+		headers.push("Set-Cookie: theme=dark; Path=/; HttpOnly");
+	});
+	const port = await new Promise<number>((resolve) => {
+		server.listen(0, () => {
+			onTestFinished(() => server.close());
+			resolve((server.address() as AddressInfo).port);
+		});
+	});
+
+	const mf = new Miniflare({
+		script: `addEventListener("fetch", (event) => {
+			event.respondWith(CUSTOM.fetch(event.request));
+		})`,
+		serviceBindings: {
+			CUSTOM(request) {
+				return fetch(`http://localhost:${port}`, request);
+			},
+		},
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		headers: {
+			Upgrade: "websocket",
+		},
+	});
+
+	// Both cookies must be returned as separate entries, not collapsed into a
+	// single comma-joined string (which would corrupt the Expires date).
+	const cookies = res.headers.getSetCookie();
+	expect(cookies).toHaveLength(2);
+	expect(cookies[0]).toBe(
+		"session=abc; Path=/; Expires=Wed, 09 Jun 2026 10:18:14 GMT"
+	);
+	expect(cookies[1]).toBe("theme=dark; Path=/; HttpOnly");
+});
+
 test("Miniflare: custom service binding to another Miniflare instance", async ({
 	expect,
 }) => {

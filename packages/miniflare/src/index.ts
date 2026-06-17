@@ -1099,7 +1099,15 @@ export class Miniflare {
 			const extra = this.#webSocketExtraHeaders.get(req);
 			this.#webSocketExtraHeaders.delete(req);
 			if (extra) {
+				// Preserve multiple Set-Cookie values verbatim — iterating `Headers`
+				// with `for…of` collapses them into a single comma-joined string
+				// (web-platform limitation), which corrupts cookies containing commas
+				// (e.g. `Expires=Wed, 09 Jun 2026 …`).
+				for (const cookie of extra.getSetCookie()) {
+					headers.push(`Set-Cookie: ${cookie}`);
+				}
 				for (const [key, value] of extra) {
+					if (key.toLowerCase() === "set-cookie") continue;
 					if (!restrictedWebSocketUpgradeHeaders.includes(key.toLowerCase())) {
 						headers.push(`${key}: ${value}`);
 					}
