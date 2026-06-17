@@ -21,6 +21,8 @@ export const CorePaths = {
 	STREAM_VIDEO: "/cdn-cgi/mf/stream",
 	/** Local image delivery endpoint for serving hosted images */
 	IMAGE_DELIVERY: "/cdn-cgi/mf/imagedelivery",
+	/** Public R2 bucket object serving endpoint */
+	R2_PUBLIC: "/cdn-cgi/local/r2/public",
 } as const;
 
 export const CoreHeaders = {
@@ -58,7 +60,10 @@ export const CoreBindings = {
 	SERVICE_USER_ROUTE_PREFIX: "MINIFLARE_USER_ROUTE_",
 	SERVICE_USER_FALLBACK: "MINIFLARE_USER_FALLBACK",
 	TEXT_CUSTOM_SERVICE: "MINIFLARE_CUSTOM_SERVICE",
-	IMAGES_SERVICE: "MINIFLARE_IMAGES_SERVICE",
+	// Backs the Images binding (`env.IMAGES`) — see imagesLocalFetcher.
+	IMAGES_BINDING_SERVICE: "MINIFLARE_IMAGES_BINDING_SERVICE",
+	// Backs `fetch(url, { cf: { image } })` transforms — see cfImageLocalFetcher.
+	IMAGES_FETCH_SERVICE: "MINIFLARE_IMAGES_FETCH_SERVICE",
 	TEXT_UPSTREAM_URL: "MINIFLARE_UPSTREAM_URL",
 	JSON_CF_BLOB: "CF_BLOB",
 	JSON_ROUTES: "MINIFLARE_ROUTES",
@@ -81,6 +86,7 @@ export const CoreBindings = {
 	DEV_REGISTRY_DEBUG_PORT: "DEV_REGISTRY_DEBUG_PORT",
 	SERVICE_STREAM: "MINIFLARE_STREAM",
 	SERVICE_IMAGES_DELIVERY: "MINIFLARE_IMAGES_DELIVERY",
+	SERVICE_R2_PUBLIC: "MINIFLARE_R2_PUBLIC",
 } as const;
 
 export const ProxyOps = {

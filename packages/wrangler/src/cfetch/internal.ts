@@ -1,9 +1,10 @@
-import assert from "node:assert";
 import {
+	addAuthorizationHeader,
 	APIError,
+	fetchInternalBase,
+	fetchKVGetValueBase,
 	getCloudflareApiBaseUrl,
-	getTraceHeader,
-	parseJSON,
+	performApiFetchBase,
 	UserError,
 } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
@@ -11,8 +12,11 @@ import { fetch, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
-import type { ApiCredentials } from "../user";
-import type { ComplianceConfig, Message } from "@cloudflare/workers-utils";
+import type {
+	ApiCredentials,
+	ComplianceConfig,
+	Message,
+} from "@cloudflare/workers-utils";
 import type { URLSearchParams } from "node:url";
 import type { HeadersInit, RequestInfo, RequestInit } from "undici";
 
@@ -94,52 +98,16 @@ export async function performApiFetch(
 	abortSignal?: AbortSignal,
 	apiToken?: ApiCredentials
 ) {
-	const method = init.method ?? "GET";
-	assert(
-		resource.startsWith("/"),
-		`CF API fetch - resource path must start with a "/" but got "${resource}"`
-	);
-	await requireLoggedIn(complianceConfig);
-	apiToken ??= requireApiToken();
-	const headers = cloneHeaders(new Headers(init.headers));
-	addAuthorizationHeader(headers, apiToken);
-	addUserAgent(headers);
-	maybeAddTraceHeader(headers);
-
-	const queryString = queryParams ? `?${queryParams.toString()}` : "";
-	logger.debug(
-		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl(complianceConfig)}${resource}`
-	);
-	logger.debugWithSanitization("QUERY STRING:", queryString);
-	logHeaders(headers);
-
-	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
-	if (init.body instanceof FormData) {
-		logger.debugWithSanitization(
-			"BODY:",
-			await new Response(init.body).text(),
-			null,
-			2
-		);
-	}
-	logger.debug("-- END CF API REQUEST");
-	return await fetch(
-		`${getCloudflareApiBaseUrl(complianceConfig)}${resource}${queryString}`,
-		{
-			method,
-			...init,
-			headers,
-			signal: abortSignal,
-		}
-	);
-}
-
-function logHeaders(headers: Headers) {
-	headers = cloneHeaders(headers);
-	headers.delete("Authorization");
-	logger.debugWithSanitization(
-		"HEADERS:",
-		JSON.stringify(Object.fromEntries(headers), null, 2)
+	apiToken = await resolveCredentials(complianceConfig, apiToken);
+	return performApiFetchBase(
+		complianceConfig,
+		resource,
+		init,
+		`wrangler/${wranglerVersion}`,
+		logger,
+		queryParams,
+		abortSignal,
+		apiToken
 	);
 }
 
@@ -160,184 +128,80 @@ export async function fetchInternal<ResponseType>(
 	abortSignal?: AbortSignal,
 	apiToken?: ApiCredentials
 ): Promise<{ response: ResponseType; status: number }> {
-	const method = init.method ?? "GET";
-	const response = await performApiFetch(
+	apiToken = await resolveCredentials(complianceConfig, apiToken);
+	return fetchInternalBase(
 		complianceConfig,
 		resource,
 		init,
+		`wrangler/${wranglerVersion}`,
+		logger,
 		queryParams,
 		abortSignal,
 		apiToken
 	);
-	const jsonText = await response.text();
-	logger.debug(
-		"-- START CF API RESPONSE:",
-		response.statusText,
-		response.status
-	);
-	logHeaders(response.headers);
-	logger.debugWithSanitization("RESPONSE:", jsonText);
-	logger.debug("-- END CF API RESPONSE");
-
-	// HTTP 204 and HTTP 205 responses do not return a body. We need to special-case this
-	// as otherwise parseJSON will throw an error back to the user.
-	if (!jsonText && (response.status === 204 || response.status === 205)) {
-		return {
-			response: {
-				result: {},
-				success: true,
-				errors: [],
-				messages: [],
-			} as ResponseType,
-			status: response.status,
-		};
-	}
-
-	// Detect Cloudflare WAF block pages via the cf-mitigated response header.
-	// Without this check, the JSON parser throws a confusing "malformed response" error.
-	if (isWAFBlockResponse(response.headers)) {
-		throwWAFBlockError(
-			response.headers,
-			method,
-			resource,
-			response.status,
-			response.statusText
-		);
-	}
-
-	try {
-		const json = parseJSON(jsonText) as ResponseType;
-		return { response: json, status: response.status };
-	} catch {
-		const rayId = extractWAFBlockRayId(response.headers);
-
-		throw new APIError({
-			text: "Received a malformed response from the API",
-			notes: [
-				{
-					text: truncate(jsonText, 100),
-				},
-				{
-					text: `${method} ${resource} -> ${response.status} ${response.statusText}`,
-				},
-				...(rayId ? [{ text: `Cloudflare Ray ID: ${rayId}` }] : []),
-			],
-			status: response.status,
-			telemetryMessage: false,
-		});
-	}
-}
-
-export function truncate(text: string, maxLength: number): string {
-	const { length } = text;
-	if (length <= maxLength) {
-		return text;
-	}
-	return `${text.substring(0, maxLength)}... (length = ${length})`;
-}
-
-/**
- * Checks whether the response was blocked by Cloudflare's WAF by inspecting
- * the `cf-mitigated` response header. When the WAF blocks or challenges a
- * request the response will include `cf-mitigated: challenge`.
- *
- * @see https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/
- *
- * @param headers - The response headers to inspect.
- * @returns `true` if the response was mitigated by the WAF.
- */
-export function isWAFBlockResponse(headers: Headers): boolean {
-	return headers.get("cf-mitigated") === "challenge";
-}
-
-/**
- * Extracts the Cloudflare Ray ID from the `cf-ray` response header.
- *
- * @param headers - The response headers to inspect.
- * @returns The Ray ID string, or `undefined` if the header is absent.
- */
-export function extractWAFBlockRayId(headers: Headers): string | undefined {
-	return headers.get("cf-ray") ?? undefined;
-}
-
-/**
- * Throws a descriptive {@link APIError} for a WAF block response.
- *
- * @param headers - The response headers (used to extract the Ray ID).
- * @param method - The HTTP method of the blocked request.
- * @param resource - The URL or path that was requested.
- * @param status - The HTTP status code returned.
- * @param statusText - The HTTP status text returned.
- * @throws {APIError} Always — this function never returns.
- */
-function throwWAFBlockError(
-	headers: Headers,
-	method: string,
-	resource: string,
-	status: number,
-	statusText: string
-): never {
-	const rayId = extractWAFBlockRayId(headers);
-	throw new APIError({
-		text: "The Cloudflare API responded with a WAF block page instead of the expected JSON response",
-		notes: [
-			{
-				text: "Cloudflare's firewall (WAF) blocked this API request. This is usually a false positive.",
-			},
-			...(rayId ? [{ text: `Cloudflare Ray ID: ${rayId}` }] : []),
-			{
-				text: rayId
-					? "If the issue persists, please open a Cloudflare Support ticket and include the Ray ID above."
-					: "If the issue persists, please open a Cloudflare Support ticket. You can find the Cloudflare Ray ID on the block page in your browser.",
-			},
-			{
-				text: `${method} ${resource} -> ${status} ${statusText}`,
-			},
-		],
-		status,
-		telemetryMessage: false,
-	});
 }
 
 function cloneHeaders(headers: HeadersInit | undefined): Headers {
 	return new Headers(headers);
 }
 
+/**
+ *
+ * Triggers a login or token refresh if necessary
+ */
+export async function resolveCredentials(
+	complianceConfig: ComplianceConfig,
+	apiToken?: ApiCredentials
+): Promise<ApiCredentials> {
+	await requireLoggedIn(complianceConfig);
+	return apiToken ?? requireApiToken();
+}
+
+/**
+ * Maps authentication failure reasons to user-facing error message bodies.
+ *
+ * Each key corresponds to a specific failure scenario returned by
+ * {@link loginOrRefreshIfRequired}, and the value is the descriptive message
+ * included in the {@link UserError} thrown by {@link requireLoggedIn}.
+ */
+const requireLoggedInErrorMessageBodies = {
+	"no-credentials-non-interactive": `Could not authenticate because no credentials were found and the environment is non-interactive. Set a CLOUDFLARE_API_TOKEN environment variable or run \`wrangler login\` in an interactive terminal first.`,
+	"no-credentials-login-failed": `No credentials were found and the login attempt was unsuccessful. Run \`wrangler login\` to try again.`,
+	"token-expired-non-interactive": `Your auth token has expired and could not be refreshed, and the environment is non-interactive. Run \`wrangler login\` in an interactive terminal or set a CLOUDFLARE_API_TOKEN.`,
+	"token-expired-login-failed": `Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful. Run \`wrangler login\` to try again.`,
+} as const;
+
+/**
+ * Tip appended to authentication error messages, prompting the user to run
+ * `wrangler whoami` to inspect their current login state.
+ *
+ * Used by {@link requireLoggedIn} when constructing the {@link UserError} message.
+ */
+const requireLoggedInErrorWhoAmITip =
+	"\nRun `wrangler whoami` to check your current authentication status." as const;
+
+/**
+ * Ensures the user is logged in before making an API request.
+ *
+ * @param complianceConfig - Compliance region configuration
+ * @throws {UserError} If the user could not be authenticated, with a message
+ *   describing the specific reason for failure.
+ */
 export async function requireLoggedIn(
 	complianceConfig: ComplianceConfig
 ): Promise<void> {
-	const loggedIn = await loginOrRefreshIfRequired(complianceConfig);
-	if (!loggedIn) {
-		throw new UserError("Not logged in.", {
+	const result = await loginOrRefreshIfRequired(complianceConfig);
+	if (!result.loggedIn) {
+		const errorMessageBody = requireLoggedInErrorMessageBodies[result.reason];
+		const errorMessage = `Not logged in. ${errorMessageBody}${requireLoggedInErrorWhoAmITip}`;
+		throw new UserError(errorMessage, {
 			telemetryMessage: "cfetch auth login required",
 		});
 	}
 }
 
-export function addAuthorizationHeader(
-	headers: Headers,
-	auth: ApiCredentials,
-	overrideExisting = false
-): void {
-	if (!headers.has("Authorization") || overrideExisting) {
-		if ("apiToken" in auth) {
-			headers.set("Authorization", `Bearer ${auth.apiToken}`);
-		} else {
-			headers.set("X-Auth-Key", auth.authKey);
-			headers.set("X-Auth-Email", auth.authEmail);
-		}
-	}
-}
-
 export function addUserAgent(headers: Headers): void {
 	headers.set("User-Agent", `wrangler/${wranglerVersion}`);
-}
-
-export function maybeAddTraceHeader(headers: Headers): void {
-	const traceHeader = getTraceHeader();
-	if (traceHeader) {
-		headers.set("Cf-Trace-Id", traceHeader);
-	}
 }
 
 /**
@@ -356,22 +220,16 @@ export async function fetchKVGetValue(
 	namespaceId: string,
 	key: string
 ): Promise<ArrayBuffer> {
-	await requireLoggedIn(complianceConfig);
-	const auth = requireApiToken();
-	const headers = new Headers();
-	addAuthorizationHeader(headers, auth);
-	const resource = `${getCloudflareApiBaseUrl(complianceConfig)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
-	const response = await fetch(resource, {
-		method: "GET",
-		headers,
-	});
-	if (response.ok) {
-		return await response.arrayBuffer();
-	} else {
-		throw new Error(
-			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
-		);
-	}
+	const credentials = await resolveCredentials(complianceConfig);
+	return fetchKVGetValueBase(
+		complianceConfig,
+		accountId,
+		namespaceId,
+		key,
+		`wrangler/${wranglerVersion}`,
+		logger,
+		credentials
+	);
 }
 
 /**

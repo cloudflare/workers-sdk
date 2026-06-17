@@ -1,15 +1,7 @@
-import { webcrypto as crypto } from "node:crypto";
-import { PKCE_CHARSET } from "../user";
-
-/**
- * Generates random state to be passed for anti-csrf.
- * extracted from  user.tsx to make it possible to
- * mock the generated URL
- */
-export function generateRandomState(lengthOfState: number): string {
-	const output = new Uint32Array(lengthOfState);
-	crypto.getRandomValues(output);
-	return Array.from(output)
-		.map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
-		.join("");
-}
+// Re-export shim. The real implementation lives in `@cloudflare/workers-auth`.
+//
+// This file exists so wrangler's tests can continue to `vi.mock("../user/generate-random-state", ...)`
+// to produce deterministic CSRF state values for snapshot testing. The
+// mocked export is imported by `./user.ts` and injected into the OAuth flow
+// context, where the workers-auth package uses it internally.
+export { generateRandomState } from "@cloudflare/workers-auth";

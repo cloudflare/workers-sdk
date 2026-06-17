@@ -1,5 +1,6 @@
 import { assert, describe, test } from "vitest";
 import { experimental_getWranglerCommands } from "../experimental-commands-api";
+import type { DefinitionTreeNode } from "../core/types";
 
 describe("experimental_getWranglerCommands", () => {
 	test("returns global flags", ({ expect }) => {
@@ -48,7 +49,7 @@ describe("experimental_getWranglerCommands", () => {
 			  },
 			  "install-skills": {
 			    "default": false,
-			    "describe": "Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
+			    "describe": "Install Cloudflare skills for detected AI coding agents before running the command",
 			    "type": "boolean",
 			  },
 			  "v": {
@@ -130,5 +131,102 @@ describe("experimental_getWranglerCommands", () => {
 			"open beta",
 			"stable",
 		]).toContain(metadata.status);
+	});
+
+	test("commands opting in to `--temporary` match the expected set", ({
+		expect,
+	}) => {
+		const supporting: string[] = [];
+		const walk = (node: DefinitionTreeNode) => {
+			if (
+				node.definition?.type === "command" &&
+				node.definition.behaviour?.supportTemporary
+			) {
+				supporting.push(node.definition.command);
+			}
+			for (const child of node.subtree.values()) {
+				walk(child);
+			}
+		};
+		walk(experimental_getWranglerCommands().registry);
+
+		expect(supporting.sort()).toMatchInlineSnapshot(`
+			[
+			  "wrangler cert delete",
+			  "wrangler cert list",
+			  "wrangler cert upload certificate-authority",
+			  "wrangler cert upload mtls-certificate",
+			  "wrangler d1 create",
+			  "wrangler d1 delete",
+			  "wrangler d1 execute",
+			  "wrangler d1 export",
+			  "wrangler d1 info",
+			  "wrangler d1 insights",
+			  "wrangler d1 list",
+			  "wrangler d1 migrations apply",
+			  "wrangler d1 migrations create",
+			  "wrangler d1 migrations list",
+			  "wrangler d1 time-travel info",
+			  "wrangler d1 time-travel restore",
+			  "wrangler delete",
+			  "wrangler deploy",
+			  "wrangler deployments list",
+			  "wrangler deployments status",
+			  "wrangler deployments view",
+			  "wrangler hyperdrive create",
+			  "wrangler hyperdrive delete",
+			  "wrangler hyperdrive get",
+			  "wrangler hyperdrive list",
+			  "wrangler hyperdrive update",
+			  "wrangler kv bulk delete",
+			  "wrangler kv bulk get",
+			  "wrangler kv bulk put",
+			  "wrangler kv key delete",
+			  "wrangler kv key get",
+			  "wrangler kv key list",
+			  "wrangler kv key put",
+			  "wrangler kv namespace create",
+			  "wrangler kv namespace delete",
+			  "wrangler kv namespace list",
+			  "wrangler kv namespace rename",
+			  "wrangler queues consumer add",
+			  "wrangler queues consumer http add",
+			  "wrangler queues consumer http list",
+			  "wrangler queues consumer http remove",
+			  "wrangler queues consumer list",
+			  "wrangler queues consumer remove",
+			  "wrangler queues consumer worker add",
+			  "wrangler queues consumer worker list",
+			  "wrangler queues consumer worker remove",
+			  "wrangler queues create",
+			  "wrangler queues delete",
+			  "wrangler queues info",
+			  "wrangler queues list",
+			  "wrangler queues pause-delivery",
+			  "wrangler queues purge",
+			  "wrangler queues resume-delivery",
+			  "wrangler queues subscription create",
+			  "wrangler queues subscription delete",
+			  "wrangler queues subscription get",
+			  "wrangler queues subscription list",
+			  "wrangler queues subscription update",
+			  "wrangler queues update",
+			  "wrangler rollback",
+			  "wrangler secret bulk",
+			  "wrangler secret delete",
+			  "wrangler secret list",
+			  "wrangler secret put",
+			  "wrangler tail",
+			  "wrangler triggers deploy",
+			  "wrangler versions deploy",
+			  "wrangler versions list",
+			  "wrangler versions secret bulk",
+			  "wrangler versions secret delete",
+			  "wrangler versions secret list",
+			  "wrangler versions secret put",
+			  "wrangler versions upload",
+			  "wrangler versions view",
+			]
+		`);
 	});
 });

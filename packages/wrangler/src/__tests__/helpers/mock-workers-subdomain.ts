@@ -41,6 +41,7 @@ export function mockGetWorkerSubdomain({
 	previews_enabled = enabled,
 	env,
 	useServiceEnvironments = true,
+	expectedAccountId = "some-account-id",
 	expectedScriptName = "test-name" +
 		(!useServiceEnvironments && env ? `-${env}` : ""),
 }: {
@@ -48,6 +49,7 @@ export function mockGetWorkerSubdomain({
 	previews_enabled?: boolean;
 	env?: string | undefined;
 	useServiceEnvironments?: boolean | undefined;
+	expectedAccountId?: string;
 	expectedScriptName?: string | false;
 }) {
 	const url =
@@ -58,7 +60,7 @@ export function mockGetWorkerSubdomain({
 		http.get(
 			url,
 			({ params }) => {
-				assert(params.accountId === "some-account-id");
+				assert(params.accountId === expectedAccountId);
 				if (expectedScriptName !== false) {
 					assert(params.scriptName === expectedScriptName);
 				}
@@ -85,6 +87,7 @@ export function mockUpdateWorkerSubdomain({
 	},
 	env,
 	useServiceEnvironments = true,
+	expectedAccountId = "some-account-id",
 	expectedScriptName = "test-name" +
 		(!useServiceEnvironments && env ? `-${env}` : ""),
 	flakeCount = 0,
@@ -99,6 +102,7 @@ export function mockUpdateWorkerSubdomain({
 	};
 	env?: string | undefined;
 	useServiceEnvironments?: boolean | undefined;
+	expectedAccountId?: string;
 	expectedScriptName?: string | false;
 	flakeCount?: number; // The first `flakeCount` requests will fail with a 500 error
 }) {
@@ -111,7 +115,7 @@ export function mockUpdateWorkerSubdomain({
 		http.post(
 			url,
 			async ({ request, params }) => {
-				assert(params.accountId === "some-account-id");
+				assert(params.accountId === expectedAccountId);
 				if (expectedScriptName !== false) {
 					assert(params.scriptName === expectedScriptName);
 				}

@@ -457,6 +457,55 @@ describe("Engine", () => {
 		).toBe(true);
 	});
 
+	it("should complete a step that returns a large Uint8Array without SQLITE_TOOBIG", async ({
+		expect,
+	}) => {
+		// Regression: JSON.stringify(Uint8Array) encodes each byte as a numeric key,
+		// producing a string far larger than byteLength. A 200 KB Uint8Array → ~2 MB JSON
+		// → SQLITE_TOOBIG. writeLog must use a replacer to sanitize TypedArrays.
+		const instanceId = "LARGE-UINT8ARRAY-RESULT";
+		const engineId = env.ENGINE.idFromName(instanceId);
+		const engineStub = env.ENGINE.get(engineId);
+
+		await runWorkflowAndAwait(instanceId, async (_event, step) => {
+			await step.do("large-binary-step", async () => {
+				return new Uint8Array(200_000); // ~200 KB, triggers SQLITE_TOOBIG without fix
+			});
+		});
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
+	it("should complete a step that returns an object containing a large Uint8Array without SQLITE_TOOBIG", async ({
+		expect,
+	}) => {
+		// Regression: nested TypedArrays inside objects also cause SQLITE_TOOBIG without
+		// the JSON.stringify replacer, since sanitization must be recursive.
+		const instanceId = "NESTED-UINT8ARRAY-RESULT";
+		const engineId = env.ENGINE.idFromName(instanceId);
+		const engineStub = env.ENGINE.get(engineId);
+
+		await runWorkflowAndAwait(instanceId, async (_event, step) => {
+			await step.do("nested-binary-step", async () => {
+				return { payload: new Uint8Array(200_000), label: "test" };
+			});
+		});
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
 	describe("step limits", () => {
 		it("should enforce step limit when exceeded", async ({ expect }) => {
 			const stepLimit = 3;
@@ -699,6 +748,72 @@ describe("Engine", () => {
 			expect(
 				logs.logs.some((log) => log.event === InstanceEvent.WORKFLOW_SUCCESS)
 			).toBe(true);
+		});
+
+		it("should default restart from step type to step.do", async ({
+			expect,
+		}) => {
+			const instanceId = "RESTART-FROM-STEP-DEFAULT-DO";
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			const engineStub = await runWorkflowAndAwait(
+				instanceId,
+				async (_event: unknown, step: WorkflowStep) => {
+					const setup = await step.do("setup", async () => crypto.randomUUID());
+					await step.sleep("checkpoint", 1);
+					const between = await step.do("between", async () =>
+						crypto.randomUUID()
+					);
+					const checkpoint = await step.do("checkpoint", async () =>
+						crypto.randomUUID()
+					);
+					const after = await step.do("after", async () => crypto.randomUUID());
+					return { setup, between, checkpoint, after };
+				}
+			);
+
+			const logsBefore = (await engineStub.readLogs()) as EngineLogs;
+			const stepResultsBefore = logsBefore.logs
+				.filter((log) => log.event === InstanceEvent.STEP_SUCCESS)
+				.map((log) => log.metadata.result);
+
+			try {
+				await runInDurableObject(engineStub, async (engine) => {
+					await engine.changeInstanceStatus("restart", {
+						name: "checkpoint",
+					});
+				});
+			} catch (e) {
+				if (!isAbortError(e)) {
+					throw e;
+				}
+			}
+
+			const restartedStub = env.ENGINE.get(engineId);
+
+			await runInDurableObject(restartedStub, async (engine) => {
+				await engine.attemptRestart();
+			});
+
+			await vi.waitUntil(
+				async () => {
+					const status = await runInDurableObject(restartedStub, (engine) =>
+						engine.getStatus()
+					);
+					return status === InstanceStatus.Complete;
+				},
+				{ timeout: 5000 }
+			);
+
+			const logsAfter = (await restartedStub.readLogs()) as EngineLogs;
+			const stepResultsAfter = logsAfter.logs
+				.filter((log) => log.event === InstanceEvent.STEP_SUCCESS)
+				.map((log) => log.metadata.result);
+
+			expect(stepResultsAfter[0]).toEqual(stepResultsBefore[0]);
+			expect(stepResultsAfter[1]).toEqual(stepResultsBefore[1]);
+			expect(stepResultsAfter[2]).not.toEqual(stepResultsBefore[2]);
+			expect(stepResultsAfter[3]).not.toEqual(stepResultsBefore[3]);
 		});
 
 		it("should throw when restarting from a non-existing step", async ({
@@ -1443,6 +1558,8 @@ describe("Rollback", () => {
 						ctx.error.name !== "Error" ||
 						ctx.error.message !== "boom" ||
 						ctx.output !== "out" ||
+						ctx.ctx.step.name !== "ctx-step" ||
+						ctx.ctx.step.count !== 1 ||
 						ctx.stepName !== "ctx-step-1"
 					) {
 						throw new Error("unexpected rollback context");
@@ -1474,6 +1591,8 @@ describe("Rollback", () => {
 						if (
 							ctx.error.message !== "step-boom" ||
 							ctx.output !== undefined ||
+							ctx.ctx.step.name !== "failed-step" ||
+							ctx.ctx.step.count !== 1 ||
 							ctx.stepName !== "failed-step-1"
 						) {
 							throw new Error("unexpected failed-step rollback context");

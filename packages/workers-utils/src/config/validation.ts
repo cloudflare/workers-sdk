@@ -42,6 +42,7 @@ import type {
 	Assets,
 	CacheOptions,
 	ContainerApp,
+	CustomDomainRoute,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -82,7 +83,8 @@ export type ConfigBindingFieldName =
 	| "vectorize"
 	| "ai_search_namespaces"
 	| "ai_search"
-	| "web_search"
+	| "websearch"
+	| "agent_memory"
 	| "hyperdrive"
 	| "r2_buckets"
 	| "logfwdr"
@@ -125,7 +127,8 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespaces: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	web_search: "Web Search",
+	websearch: "Web Search",
+	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
 	logfwdr: "logfwdr",
@@ -183,7 +186,8 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespace: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	web_search: "Web Search",
+	websearch: "Web Search",
+	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
 	fetcher: "Service Binding",
@@ -1131,9 +1135,10 @@ function normalizeAndValidateRoute(
 function validateRoutes(
 	diagnostics: Diagnostics,
 	topLevelEnv: Environment | undefined,
-	rawEnv: RawEnvironment
+	rawEnv: RawEnvironment,
+	envName?: string
 ): Config["routes"] {
-	return inheritable(
+	const result = inheritable(
 		diagnostics,
 		topLevelEnv,
 		rawEnv,
@@ -1141,6 +1146,25 @@ function validateRoutes(
 		all(isRouteArray, isMutuallyExclusiveWith(rawEnv, "route")),
 		undefined
 	);
+
+	if (
+		topLevelEnv !== undefined &&
+		envName !== undefined &&
+		rawEnv.routes === undefined
+	) {
+		const customDomainRoutes = topLevelEnv.routes?.filter(
+			(r): r is CustomDomainRoute =>
+				typeof r === "object" && r !== null && r.custom_domain === true
+		);
+		if (customDomainRoutes && customDomainRoutes.length > 0) {
+			const customDomains = customDomainRoutes.map((r) => r.pattern).join(", ");
+			diagnostics.warnings.push(
+				`The "env.${envName}" environment inherits the top-level \`routes\` configuration, which includes the custom domain(s): ${customDomains}. Deploying this environment will reassign these custom domains away from the top-level Worker. Add \`"routes": []\` to "env.${envName}" to prevent inheritance, or copy the route configuration from the top level to hide this warning.`
+			);
+		}
+	}
+
+	return result;
 }
 
 function normalizeAndValidatePlacement(
@@ -1453,7 +1477,12 @@ function normalizeAndValidateEnvironment(
 		undefined
 	);
 
-	const routes = validateRoutes(diagnostics, topLevelEnv, rawEnv);
+	const routes = validateRoutes(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		topLevelEnv === undefined ? undefined : envName
+	);
 
 	const workers_dev = inheritable(
 		diagnostics,
@@ -1759,15 +1788,25 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateAISearchBinding),
 			[]
 		),
-		web_search: notInheritable(
+		websearch: notInheritable(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
 			envName,
-			"web_search",
+			"websearch",
 			validateNamedSimpleBinding(envName),
 			undefined
+		),
+		agent_memory: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"agent_memory",
+			validateBindingArray(envName, validateAgentMemoryBinding),
+			[]
 		),
 		hyperdrive: notInheritable(
 			diagnostics,
@@ -3077,7 +3116,8 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
-			"web_search",
+			"websearch",
+			"agent_memory",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
@@ -4103,12 +4143,22 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isOptionalProperty(value, "migrations_pattern", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "migrations_pattern" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"database_id",
 		"database_internal_env",
 		"database_name",
 		"migrations_dir",
+		"migrations_pattern",
 		"migrations_table",
 		"preview_database_id",
 		"remote",
@@ -4221,6 +4271,40 @@ const validateAISearchBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"instance_name",
+		"remote",
+	]);
+
+	return isValid;
+};
+
+const validateAgentMemoryBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"agent_memory" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
 		"remote",
 	]);
 

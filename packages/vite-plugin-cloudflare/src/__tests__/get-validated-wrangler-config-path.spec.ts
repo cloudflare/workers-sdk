@@ -60,7 +60,7 @@ describe("invalid cases", () => {
 					join(fixturesPath, "simple-wrangler"),
 					forAuxiliaryWorker
 				);
-			}).toThrowError(
+			}).toThrow(
 				forAuxiliaryWorker
 					? /The provided configPath \(.*?simple-wrangler\) requested for one of your auxiliary workers doesn't point to a file with the correct file extension. It should point to a jsonc, json or toml file \(no extension found instead\)/
 					: /The provided configPath \(.*?simple-wrangler\) doesn't point to a file with the correct file extension. It should point to a jsonc, json or toml file \(no extension found instead\)/
@@ -76,7 +76,7 @@ describe("invalid cases", () => {
 					join(fixturesPath, "simple-wrangler.txt"),
 					forAuxiliaryWorker
 				);
-			}).toThrowError(
+			}).toThrow(
 				forAuxiliaryWorker
 					? /The provided configPath \(.*?simple-wrangler\.txt\) requested for one of your auxiliary workers doesn't point to a file with the correct file extension. It should point to a jsonc, json or toml file \("txt" found instead\)/
 					: /The provided configPath \(.*?simple-wrangler\.txt\) doesn't point to a file with the correct file extension. It should point to a jsonc, json or toml file \("txt" found instead\)/
@@ -92,7 +92,7 @@ describe("invalid cases", () => {
 					join(fixturesPath, "empty-dir.jsonc"),
 					forAuxiliaryWorker
 				);
-			}).toThrowError(
+			}).toThrow(
 				forAuxiliaryWorker
 					? /The provided configPath \(.*?empty-dir.jsonc\) requested for one of your auxiliary workers points to a directory\. It should point to a file\./
 					: /The provided configPath \(.*?empty-dir.jsonc\) points to a directory\. It should point to a file\./
@@ -108,7 +108,7 @@ describe("invalid cases", () => {
 					join(fixturesPath, "empty-dir/wrangler.jsonc"),
 					forAuxiliaryWorker
 				);
-			}).toThrowError(
+			}).toThrow(
 				forAuxiliaryWorker
 					? /The provided configPath \(.*?wrangler.jsonc\) requested for one of your auxiliary workers doesn't point to an existing file/
 					: /The provided configPath \(.*?wrangler.jsonc\) doesn't point to an existing file/

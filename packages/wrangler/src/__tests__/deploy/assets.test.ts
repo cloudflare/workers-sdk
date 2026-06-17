@@ -8,7 +8,6 @@ import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
-import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs } from "../helpers/mock-dialogs";
@@ -40,8 +39,6 @@ vi.mock("../../check/commands", async (importOriginal) => {
 		},
 	};
 });
-
-vi.mock("../../utils/fetch-secrets");
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -81,9 +78,12 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
@@ -1261,6 +1261,51 @@ describe("deploy", () => {
 				expectedMainModule: undefined,
 			});
 			await runWrangler("deploy");
+		});
+
+		it("should not provision bindings for an asset-only project", async ({
+			expect,
+		}) => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			const listNamespaces = vi.fn(() =>
+				HttpResponse.json(createFetchResult([]))
+			);
+
+			writeAssets(assets);
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				compatibility_date: "2024-09-27",
+				compatibility_flags: ["nodejs_compat"],
+				assets: {
+					directory: "assets",
+					html_handling: "none",
+				},
+				kv_namespaces: [{ binding: "KV" }],
+			});
+			await mockAUSRequest();
+			mockSubDomainRequest();
+			msw.use(
+				http.get("*/accounts/:accountId/storage/kv/namespaces", listNamespaces)
+			);
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: { html_handling: "none" },
+				},
+				expectedCompatibilityDate: "2024-09-27",
+				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedMainModule: undefined,
+			});
+
+			await runWrangler("deploy", { WRANGLER_LOG: "debug" });
+
+			expect(listNamespaces).not.toHaveBeenCalled();
+			expect(std.debug).toContain(
+				"skipping provisioning on assets-only project"
+			);
 		});
 
 		it("should be able to upload to a WfP script", async () => {

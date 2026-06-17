@@ -1736,6 +1736,89 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 	expect(await res.text()).toBe("true");
 });
 
+test("Miniflare: manually triggered scheduled events with assets", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const tmp = await useTmp();
+	await fs.writeFile(
+		path.join(tmp, "foo.html"),
+		"<!doctype html><p>asset</p>",
+		"utf8"
+	);
+	await fs.writeFile(path.join(tmp, "foo.md"), "asset", "utf8");
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+				let scheduledRun = false;
+				let cron;
+				let scheduledTime;
+				export default {
+					fetch() {
+						return Response.json({ scheduledRun, cron, scheduledTime });
+					},
+					scheduled(controller, env, ctx) {
+						scheduledRun = true;
+						cron = controller.cron;
+						scheduledTime = Number(controller.scheduledTime);
+						controller.noRetry();
+					}
+				}`,
+		assets: {
+			directory: tmp,
+			routerConfig: {
+				has_user_worker: true,
+			},
+		},
+		unsafeTriggerHandlers: true,
+	});
+	useDispose(mf);
+
+	type ScheduledResult = {
+		scheduledRun: boolean;
+		cron?: string;
+		scheduledTime?: number;
+	};
+
+	let res = await mf.dispatchFetch("http://localhost");
+	let json = (await res.json()) as ScheduledResult;
+	expect(json.scheduledRun).toBe(false);
+	expect(json.cron).toBe(undefined);
+	expect(json.scheduledTime).toBe(undefined);
+
+	res = await mf.dispatchFetch("http://localhost/foo");
+	expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
+	expect(await res.text()).toBe("<!doctype html><p>asset</p>");
+
+	res = await mf.dispatchFetch("http://localhost/foo.md");
+	expect(res.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+	expect(await res.text()).toBe("asset");
+
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
+	expect(await res.text()).toBe("ok");
+
+	res = await mf.dispatchFetch("http://localhost");
+	json = (await res.json()) as ScheduledResult;
+	expect(json.scheduledRun).toBe(true);
+	expect(json.cron).toBe("");
+	expect(json.scheduledTime).toBeDefined();
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/scheduled?format=json&cron=0+0+0+0+0&time=1234567890987"
+	);
+	expect(await res.json()).toEqual({
+		outcome: "ok",
+		noRetry: true,
+	});
+
+	res = await mf.dispatchFetch("http://localhost");
+	json = (await res.json()) as ScheduledResult;
+	expect(json.scheduledRun).toBe(true);
+	expect(json.cron).toBe("0 0 0 0 0");
+	expect(json.scheduledTime).toBe(1234567890987);
+});
+
 test("Miniflare: manually triggered email handler - valid email", async ({
 	expect,
 }) => {
@@ -2583,36 +2666,43 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	// Check `getD1Database()`
 	let binding: unknown = await mf.getD1Database("DB");
 	expect(binding).toBeDefined();
+	await expect(() => mf.getD1Database("DO")).rejects.toThrow(
+		new TypeError(`No D1 database binding named "DO" found in "a" worker.`)
+	);
 	await expect(() => mf.getD1Database("DB", "c")).rejects.toThrow(
-		new TypeError(`"DB" unbound in "c" worker`)
+		new TypeError(`No D1 database binding named "DB" found in "c" worker.`)
 	);
 
 	// Check `getDurableObjectNamespace()`
 	binding = await mf.getDurableObjectNamespace("DO");
 	expect(binding).toBeDefined();
 	await expect(() => mf.getDurableObjectNamespace("DO", "c")).rejects.toThrow(
-		new TypeError(`"DO" unbound in "c" worker`)
+		new TypeError(
+			`No Durable Object namespace binding named "DO" found in "c" worker.`
+		)
 	);
 
 	// Check `getKVNamespace()`
 	binding = await mf.getKVNamespace("KV", "");
 	expect(binding).toBeDefined();
 	await expect(() => mf.getKVNamespace("KV", "c")).rejects.toThrow(
-		new TypeError(`"KV" unbound in "c" worker`)
+		new TypeError(`No KV namespace binding named "KV" found in "c" worker.`)
 	);
 
 	// Check `getQueueProducer()`
 	binding = await mf.getQueueProducer("QUEUE", "");
 	expect(binding).toBeDefined();
 	await expect(() => mf.getQueueProducer("QUEUE", "c")).rejects.toThrow(
-		new TypeError(`"QUEUE" unbound in "c" worker`)
+		new TypeError(
+			`No Queue producer binding named "QUEUE" found in "c" worker.`
+		)
 	);
 
 	// Check `getR2Bucket()`
 	binding = await mf.getR2Bucket("BUCKET", "b");
 	expect(binding).toBeDefined();
 	await expect(() => mf.getR2Bucket("BUCKET", "c")).rejects.toThrow(
-		new TypeError(`"BUCKET" unbound in "c" worker`)
+		new TypeError(`No R2 bucket binding named "BUCKET" found in "c" worker.`)
 	);
 });
 
@@ -2749,6 +2839,32 @@ unixSerialTest(
 		expect(await res.text()).toBe(
 			"When I grow up, I want to be a big workerd!"
 		);
+	}
+);
+
+// When workerd exits before sending all listen events on FD3, Miniflare should
+// detect this and throw ERR_RUNTIME_FAILURE instead of hanging indefinitely.
+// See https://github.com/cloudflare/workers-sdk/issues/14077
+unixSerialTest(
+	"Miniflare: throws ERR_RUNTIME_FAILURE when workerd exits before all sockets are ready",
+	async ({ expect, onTestFinished }) => {
+		const workerdPath = path.join(FIXTURES_PATH, "crashing-workerd.mjs");
+
+		const original = process.env.MINIFLARE_WORKERD_PATH;
+		process.env.MINIFLARE_WORKERD_PATH = workerdPath;
+		onTestFinished(() => {
+			if (original === undefined) {
+				delete process.env.MINIFLARE_WORKERD_PATH;
+			} else {
+				process.env.MINIFLARE_WORKERD_PATH = original;
+			}
+		});
+
+		const mf = new Miniflare({ script: "" });
+		onTestFinished(() => mf.dispose().catch(() => {}));
+
+		await expect(mf.ready).rejects.toThrow(MiniflareCoreError);
+		await expect(mf.ready).rejects.toThrow(/Workers runtime failed to start/);
 	}
 );
 

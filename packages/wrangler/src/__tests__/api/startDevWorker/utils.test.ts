@@ -2,7 +2,7 @@ import { assert, describe, it } from "vitest";
 import {
 	convertConfigBindingsToStartWorkerBindings,
 	convertStartDevOptionsToBindings,
-} from "../../../api/startDevWorker/utils";
+} from "../../../api/startDevWorker/binding-utils";
 
 describe("convertConfigBindingsToStartWorkerBindings", () => {
 	it("converts config bindings into startWorker bindings", async ({

@@ -349,6 +349,7 @@ describe("whoami", () => {
 			  - ai-search:write
 			  - ai-search:run
 			  - websearch.run
+			  - agent-memory:write
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
@@ -424,6 +425,7 @@ describe("whoami", () => {
 			  - ai-search:write
 			  - ai-search:run
 			  - websearch.run
+			  - agent-memory:write
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
@@ -467,6 +469,18 @@ describe("whoami", () => {
 		await expect(runWrangler("whoami --json")).rejects.toThrow();
 		const output = JSON.parse(std.out);
 		expect(output).toEqual({ loggedIn: false });
+	});
+
+	it("should suggest a temporary preview account when not authenticated", async ({
+		expect,
+	}) => {
+		await runWrangler("whoami");
+		expect(std.out).toContain(
+			"You are not authenticated. Please run `wrangler login`."
+		);
+		expect(std.out).toContain(
+			"To deploy without logging in, run a command like `wrangler deploy --temporary` to use a temporary preview account."
+		);
 	});
 
 	it("should output JSON with API token auth type", async ({ expect }) => {
@@ -541,6 +555,7 @@ describe("whoami", () => {
 			  - ai-search:write
 			  - ai-search:run
 			  - websearch.run
+			  - agent-memory:write
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write

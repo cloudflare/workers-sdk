@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
-import { transformFile } from "@cloudflare/codemod";
+import { parseFile, transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
@@ -15,23 +15,123 @@ import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
+import type { Program } from "esprima";
 
 const b = recast.types.builders;
 
+/**
+ * Resolves the path to the React Router config file (`react-router.config.ts` or `.js`)
+ * in the given project directory.
+ *
+ * @param projectPath - Absolute path to the project root.
+ * @returns The resolved config file path, or `null` if neither `.ts` nor `.js` variant exists.
+ */
+function getReactRouterConfigPath(projectPath: string): string | null {
+	const filePathTS = path.join(projectPath, "react-router.config.ts");
+	const filePathJS = path.join(projectPath, "react-router.config.js");
+
+	if (existsSync(filePathTS)) {
+		return filePathTS;
+	}
+
+	if (existsSync(filePathJS)) {
+		return filePathJS;
+	}
+
+	return null;
+}
+
+/**
+ * Checks whether the user's `react-router.config.ts` (or `.js`) has `v8_middleware: true`
+ * set in its `future` block. This determines which code pattern to generate:
+ * - With middleware: simplified fetch handler using `cloudflare:workers` env pattern
+ * - Without middleware: traditional `AppLoadContext` pattern with `env`/`ctx` params
+ *
+ * Parses the config file read-only (via `parseFile`) without writing anything to disk.
+ * Handles both TS `satisfies`/`as` expressions and plain object exports.
+ *
+ * @param projectPath - Absolute path to the project root containing the React Router config file.
+ * @returns `true` if `future.v8_middleware` is explicitly set to `true`, `false` otherwise
+ *   (including when the config file is missing or has no `future` block).
+ */
+export function hasV8MiddlewareFlag(projectPath: string): boolean {
+	const filePath = getReactRouterConfigPath(projectPath);
+	if (!filePath) {
+		return false;
+	}
+
+	let ast: Program | null = null;
+	try {
+		ast = parseFile(filePath);
+	} catch {}
+
+	if (!ast) {
+		return false;
+	}
+
+	let found = false;
+	recast.visit(ast, {
+		visitExportDefaultDeclaration(n) {
+			let node: recast.types.namedTypes.ObjectExpression | null = null;
+			if (
+				(n.node.declaration.type === "TSAsExpression" ||
+					n.node.declaration.type === "TSSatisfiesExpression") &&
+				n.node.declaration.expression.type === "ObjectExpression"
+			) {
+				node = n.node.declaration.expression;
+			} else if (n.node.declaration.type === "ObjectExpression") {
+				node = n.node.declaration;
+			}
+
+			if (node) {
+				const futureProp = node.properties.find(
+					(p) =>
+						p.type === "ObjectProperty" &&
+						p.key.type === "Identifier" &&
+						p.key.name === "future" &&
+						p.value.type === "ObjectExpression"
+				);
+				if (
+					futureProp?.type === "ObjectProperty" &&
+					futureProp.value.type === "ObjectExpression"
+				) {
+					found = futureProp.value.properties.some(
+						(p) =>
+							p.type === "ObjectProperty" &&
+							p.key.type === "Identifier" &&
+							p.key.name === "v8_middleware" &&
+							p.value.type === "BooleanLiteral" &&
+							p.value.value === true
+					);
+				}
+			}
+			return false;
+		},
+	});
+
+	return found;
+}
+
+/**
+ * Transforms the user's `react-router.config.ts` (or `.js`) to ensure the
+ * `future.unstable_viteEnvironmentApi` or `future.v8_viteEnvironmentApi` flag
+ * is set to `true`. If a `future` block already exists, the flag is added or
+ * updated in place; otherwise a new `future` block is created.
+ *
+ * Supports TS `as` and `satisfies` expressions wrapping the default export object.
+ *
+ * @param projectPath - Absolute path to the project root containing the React Router config file.
+ * @param viteEnvironmentKey - The config property name to set, either
+ *   `"unstable_viteEnvironmentApi"` (React Router < 7.10.0) or `"v8_viteEnvironmentApi"`.
+ * @throws {Error} If no `react-router.config.ts` or `.js` file exists in the project.
+ * @throws {Error} If the default export cannot be parsed as an object expression.
+ */
 function transformReactRouterConfig(
 	projectPath: string,
 	viteEnvironmentKey: ReturnType<typeof configPropertyName>
 ) {
-	const filePathTS = path.join(projectPath, `react-router.config.ts`);
-	const filePathJS = path.join(projectPath, `react-router.config.js`);
-
-	let filePath: string;
-
-	if (existsSync(filePathTS)) {
-		filePath = filePathTS;
-	} else if (existsSync(filePathJS)) {
-		filePath = filePathJS;
-	} else {
+	const filePath = getReactRouterConfigPath(projectPath);
+	if (!filePath) {
 		throw new Error("Could not find React Router config file to modify");
 	}
 
@@ -127,6 +227,15 @@ function transformReactRouterConfig(
 	});
 }
 
+/**
+ * Returns the correct future flag property name for enabling the Vite Environment API
+ * based on the installed React Router version.
+ *
+ * @param reactRouterVersion - The installed React Router semver version string (e.g. `"7.16.0"`).
+ *   When empty, defaults to the stable `"v8_viteEnvironmentApi"` name.
+ * @returns `"unstable_viteEnvironmentApi"` for versions before 7.10.0,
+ *   or `"v8_viteEnvironmentApi"` for 7.10.0 and later.
+ */
 function configPropertyName(reactRouterVersion: string) {
 	if (!reactRouterVersion) {
 		return "v8_viteEnvironmentApi";
@@ -140,6 +249,184 @@ function configPropertyName(reactRouterVersion: string) {
 	}
 }
 
+/**
+ * Writes the `workers/app.ts` Worker entry point. When `v8_middleware` is enabled,
+ * generates a simplified fetch handler that delegates directly to the request handler.
+ * Otherwise generates the traditional pattern with `AppLoadContext` module augmentation
+ * and explicit `env`/`ctx` forwarding.
+ *
+ * @param useMiddlewarePattern - Whether `v8_middleware` is enabled in the user's config.
+ */
+function writeAppTs(useMiddlewarePattern: boolean) {
+	if (useMiddlewarePattern) {
+		writeFileSync(
+			"workers/app.ts",
+			dedent /* javascript */ `
+				import { createRequestHandler } from "react-router";
+
+				const requestHandler = createRequestHandler(
+					() => import("virtual:react-router/server-build"),
+					import.meta.env.MODE,
+				);
+
+				export default {
+					async fetch(request) {
+						return requestHandler(request);
+					},
+				} satisfies ExportedHandler<Env>;
+			`
+		);
+		return;
+	}
+
+	writeFileSync(
+		"workers/app.ts",
+		dedent /* javascript */ `
+				import { createRequestHandler } from "react-router";
+
+				declare module "react-router" {
+					export interface AppLoadContext {
+						cloudflare: {
+							env: Env;
+							ctx: ExecutionContext;
+						};
+					}
+				}
+
+				const requestHandler = createRequestHandler(
+					() => import("virtual:react-router/server-build"),
+					import.meta.env.MODE
+				);
+
+				export default {
+					async fetch(request, env, ctx) {
+						return requestHandler(request, {
+							cloudflare: { env, ctx },
+						});
+					},
+				} satisfies ExportedHandler<Env>;
+			`
+	);
+}
+
+/**
+ * Writes `app/entry.server.tsx` if it does not already exist. When `v8_middleware`
+ * is enabled, the generated file omits the `AppLoadContext` import and `_loadContext`
+ * parameter. Otherwise uses the traditional signature that includes both.
+ *
+ * If the file already exists on disk it is left untouched and a warning is logged.
+ *
+ * @param useMiddlewarePattern - Whether `v8_middleware` is enabled in the user's config.
+ */
+function writeEntryServerTsx(useMiddlewarePattern: boolean) {
+	if (existsSync("app/entry.server.tsx")) {
+		logger.warn(
+			"The file `app/entry.server.tsx` already exists on disk, and so we're not modifying it. This may lead to deployment failures if `app/entry.server.tsx` is not set up correctly."
+		);
+		return;
+	}
+
+	if (useMiddlewarePattern) {
+		writeFileSync(
+			`app/entry.server.tsx`,
+			dedent /* javascript */ `
+			import type { EntryContext } from "react-router";
+			import { ServerRouter } from "react-router";
+			import { isbot } from "isbot";
+			import { renderToReadableStream } from "react-dom/server";
+
+			export default async function handleRequest(
+				request: Request,
+				responseStatusCode: number,
+				responseHeaders: Headers,
+				routerContext: EntryContext,
+			) {
+				let shellRendered = false;
+				const userAgent = request.headers.get("user-agent");
+
+				const body = await renderToReadableStream(
+					<ServerRouter context={routerContext} url={request.url} />,
+					{
+						onError(error: unknown) {
+							responseStatusCode = 500;
+							// Log streaming rendering errors from inside the shell.  Don't log
+							// errors encountered during initial shell rendering since they'll
+							// reject and get logged in handleDocumentRequest.
+							if (shellRendered) {
+								console.error(error);
+							}
+						},
+					},
+				);
+				shellRendered = true;
+
+				// Ensure requests from bots and SPA Mode renders wait for all content to load before responding
+				// https://react.dev/reference/react-dom/server/renderToPipeableStream#waiting-for-all-content-to-load-for-crawlers-and-static-generation
+				if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
+					await body.allReady;
+				}
+
+				responseHeaders.set("Content-Type", "text/html");
+				return new Response(body, {
+					headers: responseHeaders,
+					status: responseStatusCode,
+				});
+			}
+		`
+		);
+		return;
+	}
+
+	writeFileSync(
+		`app/entry.server.tsx`,
+		dedent /* javascript */ `
+			import type { AppLoadContext, EntryContext } from "react-router";
+			import { ServerRouter } from "react-router";
+			import { isbot } from "isbot";
+			import { renderToReadableStream } from "react-dom/server";
+
+			export default async function handleRequest(
+				request: Request,
+				responseStatusCode: number,
+				responseHeaders: Headers,
+				routerContext: EntryContext,
+				_loadContext: AppLoadContext
+			) {
+				let shellRendered = false;
+				const userAgent = request.headers.get("user-agent");
+
+				const body = await renderToReadableStream(
+					<ServerRouter context={routerContext} url={request.url} />,
+					{
+						onError(error: unknown) {
+							responseStatusCode = 500;
+							// Log streaming rendering errors from inside the shell.  Don't log
+							// errors encountered during initial shell rendering since they'll
+							// reject and get logged in handleDocumentRequest.
+							if (shellRendered) {
+								console.error(error);
+							}
+						},
+					}
+				);
+				shellRendered = true;
+
+				// Ensure requests from bots and SPA Mode renders wait for all content to load before responding
+				// https://react.dev/reference/react-dom/server/renderToPipeableStream#waiting-for-all-content-to-load-for-crawlers-and-static-generation
+				if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
+					await body.allReady;
+				}
+
+				responseHeaders.set("Content-Type", "text/html");
+				return new Response(body, {
+					headers: responseHeaders,
+					status: responseStatusCode,
+				});
+			}
+		`
+	);
+}
+
 export class ReactRouter extends Framework {
 	async configure({
 		dryRun,
@@ -148,6 +435,7 @@ export class ReactRouter extends Framework {
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const viteEnvironmentKey = configPropertyName(this.frameworkVersion);
+		const useMiddlewarePattern = hasV8MiddlewareFlag(projectPath);
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
@@ -157,34 +445,7 @@ export class ReactRouter extends Framework {
 
 			mkdirSync("workers");
 
-			writeFileSync(
-				"workers/app.ts",
-				dedent /* javascript */ `
-					import { createRequestHandler } from "react-router";
-
-					declare module "react-router" {
-						export interface AppLoadContext {
-							cloudflare: {
-								env: Env;
-								ctx: ExecutionContext;
-							};
-						}
-					}
-
-					const requestHandler = createRequestHandler(
-						() => import("virtual:react-router/server-build"),
-						import.meta.env.MODE
-					);
-
-					export default {
-						async fetch(request, env, ctx) {
-							return requestHandler(request, {
-								cloudflare: { env, ctx },
-							});
-						},
-					} satisfies ExportedHandler<Env>;
-				`
-			);
+			writeAppTs(useMiddlewarePattern);
 
 			await installPackages(packageManager.type, ["isbot"], {
 				dev: true,
@@ -193,60 +454,7 @@ export class ReactRouter extends Framework {
 				isWorkspaceRoot,
 			});
 
-			if (!existsSync("app/entry.server.tsx")) {
-				writeFileSync(
-					`app/entry.server.tsx`,
-					dedent /* javascript */ `
-					import type { AppLoadContext, EntryContext } from "react-router";
-					import { ServerRouter } from "react-router";
-					import { isbot } from "isbot";
-					import { renderToReadableStream } from "react-dom/server";
-
-					export default async function handleRequest(
-						request: Request,
-						responseStatusCode: number,
-						responseHeaders: Headers,
-						routerContext: EntryContext,
-						_loadContext: AppLoadContext
-					) {
-						let shellRendered = false;
-						const userAgent = request.headers.get("user-agent");
-
-						const body = await renderToReadableStream(
-							<ServerRouter context={routerContext} url={request.url} />,
-							{
-								onError(error: unknown) {
-									responseStatusCode = 500;
-									// Log streaming rendering errors from inside the shell.  Don't log
-									// errors encountered during initial shell rendering since they'll
-									// reject and get logged in handleDocumentRequest.
-									if (shellRendered) {
-										console.error(error);
-									}
-								},
-							}
-						);
-						shellRendered = true;
-
-						// Ensure requests from bots and SPA Mode renders wait for all content to load before responding
-						// https://react.dev/reference/react-dom/server/renderToPipeableStream#waiting-for-all-content-to-load-for-crawlers-and-static-generation
-						if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
-							await body.allReady;
-						}
-
-						responseHeaders.set("Content-Type", "text/html");
-						return new Response(body, {
-							headers: responseHeaders,
-							status: responseStatusCode,
-						});
-					}
-				`
-				);
-			} else {
-				logger.warn(
-					"The file `app/entry.server.tsx` already exists on disk, and so we're not modifying it. This may lead to deployment failures if `app/entry.server.tsx` is not set up correctly."
-				);
-			}
+			writeEntryServerTsx(useMiddlewarePattern);
 
 			transformViteConfig(projectPath, {
 				viteEnvironmentName: "ssr",

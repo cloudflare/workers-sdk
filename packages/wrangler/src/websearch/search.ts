@@ -2,7 +2,7 @@ import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { search } from "./client";
 
-export const webSearchSearchCommand = createCommand({
+export const websearchSearchCommand = createCommand({
 	metadata: {
 		description: "Run a query against Cloudflare Web Search",
 		status: "experimental",

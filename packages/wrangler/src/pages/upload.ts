@@ -1,10 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import { isJwtExpired } from "@cloudflare/deploy-helpers";
 import {
 	APIError,
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
+	formatTime,
 	UserError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
@@ -25,6 +27,8 @@ import { ApiErrorCodes } from "./errors";
 import { validate } from "./validate";
 import type { UploadPayloadFile } from "./types";
 import type { FileContainer } from "./validate";
+
+export { isJwtExpired } from "@cloudflare/deploy-helpers";
 
 export const pagesProjectUploadCommand = createCommand({
 	metadata: {
@@ -390,32 +394,6 @@ export const upload = async (
 	);
 };
 
-// Decode and check that the current JWT has not expired
-export const isJwtExpired = (token: string): boolean | undefined => {
-	// During testing we don't use valid JWTs, so don't try and parse them
-	if (
-		typeof vitest !== "undefined" &&
-		(token === "<<funfetti-auth-jwt>>" ||
-			token === "<<funfetti-auth-jwt2>>" ||
-			token === "<<aus-completion-token>>")
-	) {
-		return false;
-	}
-	try {
-		const decodedJwt = JSON.parse(
-			Buffer.from(token.split(".")[1], "base64").toString()
-		);
-
-		const dateNow = new Date().getTime() / 1000;
-
-		return decodedJwt.exp <= dateNow;
-	} catch (e) {
-		if (e instanceof Error) {
-			throw new Error(`Invalid token: ${e.message}`);
-		}
-	}
-};
-
 export const maxFileCountAllowedFromClaims = (token: string): number => {
 	// During testing we don't use valid JWTs, so don't try and parse them
 	if (
@@ -447,10 +425,6 @@ export const maxFileCountAllowedFromClaims = (token: string): number => {
 		return MAX_ASSET_COUNT_DEFAULT;
 	}
 };
-
-function formatTime(duration: number) {
-	return `(${(duration / 1000).toFixed(2)} sec)`;
-}
 
 function renderProgress(done: number, total: number) {
 	const s = spinner();

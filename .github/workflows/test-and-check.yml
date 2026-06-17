@@ -45,11 +45,6 @@ jobs:
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
-      - name: Bump package versions
-        run: node .github/changeset-version.js
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
       - name: Check for errors
         run: pnpm run check --summarize
         env:
@@ -131,12 +126,6 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      - name: Bump package versions
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: node .github/changeset-version.js
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
       # Browser Run tests in `packages/miniflare/test/plugins/browser/index.spec.ts`
       # and the `fixtures/browser-run` fixture use `@puppeteer/browsers` to

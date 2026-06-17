@@ -354,6 +354,42 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should error if --metadata is not valid JSON", async ({ expect }) => {
+				await expect(
+					runWrangler(
+						`kv key put --remote dKey dVal --namespace-id some-namespace-id --metadata not-valid-json`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --metadata must be valid JSON. Received: not-valid-json]`
+				);
+			});
+
+			it("should error if --metadata is not a JSON object", async ({
+				expect,
+			}) => {
+				await expect(
+					runWrangler(
+						`kv key put --remote dKey dVal --namespace-id some-namespace-id --metadata '"a-string"'`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --metadata must be a JSON object. Received: "a-string"]`
+				);
+				await expect(
+					runWrangler(
+						`kv key put --remote dKey dVal --namespace-id some-namespace-id --metadata '[1,2,3]'`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --metadata must be a JSON object. Received: [1,2,3]]`
+				);
+				await expect(
+					runWrangler(
+						`kv key put --remote dKey dVal --namespace-id some-namespace-id --metadata null`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --metadata must be a JSON object. Received: null]`
+				);
+			});
+
 			it("should error if no key is provided", async ({ expect }) => {
 				await expect(
 					runWrangler("kv key put")
@@ -377,7 +413,7 @@ describe("kv", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -405,7 +441,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key put --remote foo bar")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Exactly one of the arguments binding and namespace-id is required]`
+					`[Error: Missing required option: exactly one of --binding and --namespace-id must be provided]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -427,7 +463,7 @@ describe("kv", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -443,7 +479,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required option: exactly one of --binding and --namespace-id must be provided[0m
 
 			          "
 		        `);
@@ -457,7 +493,7 @@ describe("kv", () => {
 						"kv key put --remote foo bar --binding x --namespace-id y"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Arguments binding and namespace-id are mutually exclusive]`
+					`[Error: Conflicting options: --binding and --namespace-id cannot be used together. Please provide only one.]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -479,7 +515,7 @@ describe("kv", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -495,7 +531,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mConflicting options: --binding and --namespace-id cannot be used together. Please provide only one.[0m
 
 			          "
 		        `);
@@ -507,7 +543,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key put --remote key --namespace-id 12345")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Exactly one of the arguments value and path is required]`
+					`[Error: Missing required option: exactly one of <value> and --path must be provided]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -529,7 +565,7 @@ describe("kv", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -545,7 +581,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required option: exactly one of <value> and --path must be provided[0m
 
 			          "
 		        `);
@@ -576,7 +612,7 @@ describe("kv", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -606,7 +642,7 @@ describe("kv", () => {
 						"kv key put --remote key value --path xyz --namespace-id 12345"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Arguments value and path are mutually exclusive]`
+					`[Error: Conflicting options: <value> and --path cannot be used together. Please provide only one.]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -628,7 +664,7 @@ describe("kv", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -644,7 +680,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mConflicting options: <value> and --path cannot be used together. Please provide only one.[0m
 
 			          "
 		        `);
@@ -1072,7 +1108,7 @@ describe("kv", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -1097,7 +1133,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key get --remote foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Exactly one of the arguments binding and namespace-id is required]`
+					`[Error: Missing required option: exactly one of --binding and --namespace-id must be provided]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -1114,7 +1150,7 @@ describe("kv", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -1127,7 +1163,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required option: exactly one of --binding and --namespace-id must be provided[0m
 
 			          "
 		        `);
@@ -1139,7 +1175,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key get --remote foo --binding x --namespace-id y")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Arguments binding and namespace-id are mutually exclusive]`
+					`[Error: Conflicting options: --binding and --namespace-id cannot be used together. Please provide only one.]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1157,7 +1193,7 @@ describe("kv", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -1170,7 +1206,7 @@ describe("kv", () => {
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
+			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mConflicting options: --binding and --namespace-id cannot be used together. Please provide only one.[0m
 
 			          "
 		        `);
@@ -1258,7 +1294,7 @@ describe("kv", () => {
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
 						You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
-						Check your environment and unset or correct any Cloudflare credential variables, or run \`wrangler logout\` followed by \`wrangler login\` to re-authenticate.
+						Check your environment and unset or correct any Cloudflare credential variables, or run \`wrangler login\` to re-authenticate.
 						You can also skip this account check by adding an \`account_id\` in your Wrangler configuration file, or by setting the value of CLOUDFLARE_ACCOUNT_ID]
 					`);
 				});

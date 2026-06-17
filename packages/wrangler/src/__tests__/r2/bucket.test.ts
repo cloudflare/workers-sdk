@@ -127,7 +127,7 @@ describe("r2", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -171,7 +171,7 @@ describe("r2", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -351,7 +351,7 @@ describe("r2", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -390,7 +390,7 @@ describe("r2", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -526,7 +526,7 @@ describe("r2", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -558,7 +558,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]
 
 						OPTIONS
@@ -624,7 +624,7 @@ describe("r2", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -690,7 +690,7 @@ describe("r2", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -763,7 +763,7 @@ describe("r2", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]"
 				`);
 			});
@@ -867,7 +867,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]
 
 						OPTIONS
@@ -884,10 +884,154 @@ describe("r2", () => {
 						      --r2-secret-access-key      The secret access key for this R2 bucket  [string]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+						"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
-				"
-			`);
+						"
+					`);
+				});
+
+				describe("validation errors", () => {
+					it("should error when --provider is missing in non-interactive mode", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler("r2 bucket sippy enable testBucket")
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing cloud storage provider. Use --provider to specify the source provider (AWS or GCS).]`
+						);
+					});
+
+					it("should error when AWS --region is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=AWS --bucket=awsBucket --access-key-id=aws-key --secret-access-key=aws-secret --r2-access-key-id=r2-key --r2-secret-access-key=r2-secret"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing AWS region. Use --region to specify the AWS region of your S3 bucket (e.g., us-west-2).]`
+						);
+					});
+
+					it("should error when AWS --bucket is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=AWS --region=us-west-2 --access-key-id=aws-key --secret-access-key=aws-secret --r2-access-key-id=r2-key --r2-secret-access-key=r2-secret"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing upstream bucket name. Use --bucket to specify the name of your AWS S3 bucket.]`
+						);
+					});
+
+					it("should error when AWS --access-key-id is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=AWS --region=us-west-2 --bucket=awsBucket --secret-access-key=aws-secret --r2-access-key-id=r2-key --r2-secret-access-key=r2-secret"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing AWS access key. Use --access-key-id to specify the AWS access key ID with read and list access to your S3 bucket.]`
+						);
+					});
+
+					it("should error when AWS --secret-access-key is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=AWS --region=us-west-2 --bucket=awsBucket --access-key-id=aws-key --r2-access-key-id=r2-key --r2-secret-access-key=r2-secret"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing AWS secret access key. Use --secret-access-key to specify the AWS secret access key for your S3 bucket.]`
+						);
+					});
+
+					it("should error when AWS --r2-access-key-id is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=AWS --region=us-west-2 --bucket=awsBucket --access-key-id=aws-key --secret-access-key=aws-secret --r2-secret-access-key=r2-secret"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing R2 access key. Use --r2-access-key-id to specify the R2 access key ID with read and write access to your R2 bucket. You can create API tokens at https://dash.cloudflare.com/?to=/:account/r2/api-tokens.]`
+						);
+					});
+
+					it("should error when AWS --r2-secret-access-key is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=AWS --region=us-west-2 --bucket=awsBucket --access-key-id=aws-key --secret-access-key=aws-secret --r2-access-key-id=r2-key"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing R2 secret access key. Use --r2-secret-access-key to specify the R2 secret access key for your R2 bucket.]`
+						);
+					});
+
+					it("should error when GCS --bucket is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=GCS --client-email=gcs-email --private-key=gcs-key --r2-access-key-id=r2-key --r2-secret-access-key=r2-secret"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing upstream bucket name. Use --bucket to specify the name of your GCS bucket.]`
+						);
+					});
+
+					it("should error when GCS --client-email is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=GCS --bucket=gcsBucket --private-key=gcs-key --r2-access-key-id=r2-key --r2-secret-access-key=r2-secret"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing GCS client email. Use --service-account-key-file to provide your Google Cloud service account key JSON file, or specify --client-email directly.]`
+						);
+					});
+
+					it("should error when GCS --private-key is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=GCS --bucket=gcsBucket --client-email=gcs-email --r2-access-key-id=r2-key --r2-secret-access-key=r2-secret"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing GCS private key. Use --service-account-key-file to provide your Google Cloud service account key JSON file, or specify --private-key directly.]`
+						);
+					});
+
+					it("should error when GCS --r2-access-key-id is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=GCS --bucket=gcsBucket --client-email=gcs-email --private-key=gcs-key --r2-secret-access-key=r2-secret"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing R2 access key. Use --r2-access-key-id to specify the R2 access key ID with read and write access to your R2 bucket. You can create API tokens at https://dash.cloudflare.com/?to=/:account/r2/api-tokens.]`
+						);
+					});
+
+					it("should error when GCS --r2-secret-access-key is missing", async () => {
+						setIsTTY(false);
+
+						await expect(
+							runWrangler(
+								"r2 bucket sippy enable testBucket --provider=GCS --bucket=gcsBucket --client-email=gcs-email --private-key=gcs-key --r2-access-key-id=r2-key"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Missing R2 secret access key. Use --r2-secret-access-key to specify the R2 secret access key for your R2 bucket.]`
+						);
+					});
 				});
 			});
 
@@ -913,7 +1057,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]
 
 						OPTIONS
@@ -972,7 +1116,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]
 
 						OPTIONS
@@ -1048,7 +1192,7 @@ describe("r2", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 					  -v, --version         Show version number  [boolean]"
 				`);
 			});
@@ -1111,7 +1255,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
@@ -1145,7 +1289,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
@@ -1244,7 +1388,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]"
 					`);
 					expect(std.err).toMatchInlineSnapshot(`
@@ -1355,7 +1499,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]"
 					`);
 				});
@@ -1434,7 +1578,7 @@ describe("r2", () => {
 							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+							      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 							  -v, --version         Show version number  [boolean]
 
 							OPTIONS
@@ -1571,7 +1715,7 @@ describe("r2", () => {
 							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+							      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 							  -v, --version         Show version number  [boolean]"
 						`);
 						expect(std.err).toMatchInlineSnapshot(`
@@ -1718,7 +1862,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]"
 					`);
 				});
@@ -1849,7 +1993,7 @@ describe("r2", () => {
 							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+							      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 							  -v, --version         Show version number  [boolean]
 
 							OPTIONS
@@ -1969,7 +2113,7 @@ describe("r2", () => {
 							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+							      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 							  -v, --version         Show version number  [boolean]
 
 							OPTIONS
@@ -2273,7 +2417,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]
 
 						OPTIONS
@@ -2648,7 +2792,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]
 
 						OPTIONS
@@ -2815,7 +2959,7 @@ describe("r2", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 						  -v, --version         Show version number  [boolean]
 
 						OPTIONS

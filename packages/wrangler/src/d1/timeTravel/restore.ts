@@ -22,6 +22,7 @@ export const d1TimeTravelRestoreCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 	},
 	args: {
@@ -49,17 +50,20 @@ export const d1TimeTravelRestoreCommand = createCommand({
 	validateArgs(args) {
 		if (args.timestamp && args.bookmark) {
 			throw new UserError(
-				"Provide either a timestamp, or a bookmark - not both.",
+				"Cannot use --timestamp and --bookmark together. Provide only one: --timestamp to restore to a point in time, or --bookmark to restore to a specific bookmark.",
 				{
 					telemetryMessage:
 						"d1 time travel restore conflicting timestamp and bookmark",
 				}
 			);
 		} else if (!args.timestamp && !args.bookmark) {
-			throw new UserError("Provide either a timestamp or a bookmark", {
-				telemetryMessage:
-					"d1 time travel restore missing timestamp or bookmark",
-			});
+			throw new UserError(
+				"Missing required option --timestamp or --bookmark. Provide --timestamp to restore to a point in time (e.g. --timestamp=2023-07-13T08:46:42.228Z), or --bookmark to restore to a specific bookmark.",
+				{
+					telemetryMessage:
+						"d1 time travel restore missing timestamp or bookmark",
+				}
+			);
 		}
 	},
 	async handler({ database, json, timestamp, bookmark }, { config }) {

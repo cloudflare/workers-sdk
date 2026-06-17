@@ -1,7 +1,10 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { logger } from "../logger";
-import type { InstanceStatusAndLogs } from "./types";
+import type {
+	InstanceStatusAndLogs,
+	WorkflowInstanceRestartFrom,
+} from "./types";
 
 const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer/api";
 const DEFAULT_LOCAL_PORT = 8787;
@@ -139,15 +142,18 @@ export async function updateLocalInstanceStatus(
 	port: number,
 	workflowName: string,
 	instanceId: string,
-	action: "pause" | "resume" | "restart" | "terminate"
+	action: "pause" | "resume" | "restart" | "terminate",
+	from?: WorkflowInstanceRestartFrom
 ): Promise<void> {
+	const body = from ? { action, from } : { action };
+
 	await fetchLocalResult<{ success: boolean }>(
 		port,
 		`/workflows/${encodeURIComponent(workflowName)}/instances/${encodeURIComponent(instanceId)}/status`,
 		{
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ action }),
+			body: JSON.stringify(body),
 		}
 	);
 }

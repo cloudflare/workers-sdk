@@ -2,11 +2,11 @@ import { describe, it } from "vitest";
 import { validateDescription } from "../validate-pr-description";
 
 describe("validateDescription()", () => {
-	it("should skip validation with the `skip-pr-description-validation` label", ({
+	it("should skip validation with the `ci:skip-pr-description-validation` label", ({
 		expect,
 	}) => {
 		expect(
-			validateDescription("", "", '["skip-pr-description-validation"]', "[]")
+			validateDescription("", "", '["ci:skip-pr-description-validation"]', "[]")
 		).toHaveLength(0);
 	});
 
@@ -45,8 +45,8 @@ In particular, for non-trivial changes, please always engage on the issue or cre
 			)
 		).toMatchInlineSnapshot(`
 			[
-			  "Your PR must include tests, or provide justification for why no tests are required in the PR description and apply the \`no-tests\` label",
-			  "Your PR doesn't include a changeset. Either include one (following the instructions in CONTRIBUTING.md) or add the 'no-changeset-required' label to bypass this check. Most PRs should have a changeset, so only bypass this check if you're sure that your change doesn't need one: see https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets for more details.",
+			  "Your PR must include tests, or provide justification for why no tests are required in the PR description and apply the \`ci:no-tests\` label",
+			  "Your PR doesn't include a changeset. Either include one (following the instructions in CONTRIBUTING.md) or add the 'ci:no-changeset-required' label to bypass this check. Most PRs should have a changeset, so only bypass this check if you're sure that your change doesn't need one: see https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets for more details.",
 			  "Your PR must include documentation (in the form of a link to a Cloudflare Docs issue or PR), or provide justification for why no documentation is required",
 			]
 		`);
@@ -79,7 +79,7 @@ The following selections do not need to be completed if this PR only contains ch
 Have you read our [Contributing guide](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md)?
 In particular, for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.
 -->`,
-				'["no-changeset-required"]',
+				'["ci:no-changeset-required"]',
 				"[]"
 			)
 		).toMatchInlineSnapshot(`[]`);

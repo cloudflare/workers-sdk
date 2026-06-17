@@ -1,4 +1,4 @@
-import { statSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
@@ -18,16 +18,53 @@ import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
+import { collectKeyValues } from "../utils/collectKeyValues";
 import type { ReadConfigCommandArgs } from "../config";
 
-type AutoConfigArgs = ReadConfigCommandArgs & {
-	experimentalAutoconfig: boolean | undefined;
-	assets: string | undefined;
-	dryRun: boolean | undefined;
-	latest: boolean | undefined;
+/**
+ * CLI flags that affect the worker's deployment configuration.
+ * These are persisted to the generated wrangler.jsonc and/or included
+ * in the suggested CLI command during the interactive deploy flow.
+ */
+type DeployConfigFlags = {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
+	// Routing & scheduling
+	routes: string[] | undefined;
+	domains: string[] | undefined;
+	triggers: string[] | undefined;
+	// Variables & build-time substitutions
+	var: string[] | undefined;
+	define: string[] | undefined;
+	alias: string[] | undefined;
+	// Build configuration
+	jsxFactory: string | undefined;
+	jsxFragment: string | undefined;
+	tsconfig: string | undefined;
+	minify: boolean | undefined;
+	uploadSourceMaps: boolean | undefined;
+	bundle: boolean | undefined;
+	// Deployment behavior
+	logpush: boolean | undefined;
+	keepVars: boolean | undefined;
+	legacyEnv: boolean | undefined;
+	dispatchNamespace: string | undefined;
 };
+
+/**
+ * The full set of CLI args consumed by the interactive deploy autoconfig flow.
+ * Combines the base config/script/name args from {@link ReadConfigCommandArgs},
+ * all deployment-affecting flags from {@link DeployConfigFlags}, and the
+ * autoconfig-specific control flags (autoconfig, assets, dryRun, latest).
+ */
+type AutoConfigArgs = ReadConfigCommandArgs &
+	DeployConfigFlags & {
+		autoconfig: boolean | undefined;
+		path: string | undefined;
+		assets: string | undefined;
+		dryRun: boolean | undefined;
+		latest: boolean | undefined;
+	};
 
 /**
  * Runs autoconfig if applicable, including open-next delegation and interactive
@@ -40,10 +77,11 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	config: Config
 ): Promise<{ config: Config; aborted: boolean }> {
 	const shouldRunAutoConfig =
-		args.experimentalAutoconfig &&
+		args.autoconfig &&
 		// If there is a positional parameter, an assets directory specified via --assets, or an
 		// explicit --config path then we don't want to run autoconfig since we assume that the
 		// user knows what they are doing and that they are specifying what needs to be deployed
+		!args.path &&
 		!args.script &&
 		!args.assets &&
 		!args.config;
@@ -128,81 +166,6 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 }
 
 /**
- * Interactively prompts for missing deploy configuration. Handles two phases:
- *
- * 1. If the positional `script` arg is a directory and no config file exists,
- *    asks whether the user intends to deploy static assets.
- * 2. Prompts for missing name and compatibility date, and optionally writes a
- *    new wrangler.jsonc config file.
- *
- * No-op in non-interactive / CI environments.
- */
-export async function promptForMissingConfig<Args extends AutoConfigArgs>(
-	args: Args,
-	config: { configPath?: string; compatibility_date?: string; name?: string }
-): Promise<Args> {
-	// Phase 1: detect `wrangler deploy <directory>` and offer to treat it as assets
-	let scriptIsDirectory = false;
-	if (!config.configPath && args.script) {
-		try {
-			const stats = statSync(args.script);
-			if (stats.isDirectory()) {
-				scriptIsDirectory = true;
-				args = await promptForMissingAssetFlag(args.script, args);
-			}
-		} catch (error) {
-			// If this is our UserError, re-throw it
-			if (error instanceof UserError) {
-				throw error;
-			}
-			// If stat fails, let the original flow handle the error
-		}
-	}
-
-	// Phase 2: prompt for name / compat-date / config file.
-	// Skip when the user was offered an assets deployment and declined (script is still a directory) —
-	// getEntry will produce the appropriate error about the directory entry point.
-	if (scriptIsDirectory && !args.assets) {
-		return args;
-	}
-
-	return promptForMissingDeployConfig(args, config);
-}
-
-/**
- * Handles the case where a user provides a directory as a positional argument,
- * probably intending to deploy static assets. e.g. `wrangler deploy ./public`.
- * If the user confirms, sets `args.assets` and clears `args.script`.
- */
-export async function promptForMissingAssetFlag<Args extends AutoConfigArgs>(
-	assetDirectory: string,
-	args: Args
-): Promise<Args> {
-	if (isNonInteractiveOrCI()) {
-		return args;
-	}
-
-	// Ask if user intended to deploy assets only
-	logger.log("");
-	if (!args.assets) {
-		const deployAssets = await confirm(
-			"It looks like you are trying to deploy a directory of static assets only. Is this correct?",
-			{ defaultValue: true }
-		);
-		logger.log("");
-		if (deployAssets) {
-			args.assets = assetDirectory;
-			args.script = undefined;
-		} else {
-			// let the usual error handling path kick in
-			return args;
-		}
-	}
-
-	return args;
-}
-
-/**
  * Interactively prompts for missing deployment configuration (name, compatibility date,
  * and optionally config file writing when no config file exists).
  * No-op in non-interactive/CI environments or when all required config is already present.
@@ -277,6 +240,52 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 		if (args.compatibilityFlags?.length) {
 			configContent.compatibility_flags = args.compatibilityFlags;
 		}
+		if (args.routes?.length || args.domains?.length) {
+			const routeEntries: unknown[] = [...(args.routes ?? [])];
+			for (const domain of args.domains ?? []) {
+				routeEntries.push({ pattern: domain, custom_domain: true });
+			}
+			configContent.routes = routeEntries;
+		}
+		if (args.triggers?.length) {
+			configContent.triggers = { crons: args.triggers };
+		}
+		if (args.var?.length) {
+			configContent.vars = collectKeyValues(args.var);
+		}
+		if (args.define?.length) {
+			configContent.define = collectKeyValues(args.define);
+		}
+		if (args.alias?.length) {
+			configContent.alias = collectKeyValues(args.alias);
+		}
+		if (args.jsxFactory) {
+			configContent.jsx_factory = args.jsxFactory;
+		}
+		if (args.jsxFragment) {
+			configContent.jsx_fragment = args.jsxFragment;
+		}
+		if (args.tsconfig) {
+			configContent.tsconfig = args.tsconfig;
+		}
+		if (args.minify) {
+			configContent.minify = true;
+		}
+		if (args.uploadSourceMaps) {
+			configContent.upload_source_maps = true;
+		}
+		if (args.bundle === false) {
+			configContent.no_bundle = true;
+		}
+		if (args.logpush) {
+			configContent.logpush = true;
+		}
+		if (args.keepVars) {
+			configContent.keep_vars = true;
+		}
+		if (args.legacyEnv) {
+			configContent.legacy_env = true;
+		}
 
 		const writeConfigFile = await confirm(
 			`Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\n${chalk.dim(
@@ -293,22 +302,48 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 				`\nSimply run ${chalk.bold("`wrangler deploy`")} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
 			);
 		} else {
-			const scriptPart = args.script ? `${args.script} ` : "";
+			const pathPart =
+				(args.path ?? args.script) ? `${args.path ?? args.script} ` : "";
 			const flagParts = [
 				args.name ? `--name ${args.name}` : "",
 				effectiveCompatDate
 					? `--compatibility-date ${effectiveCompatDate}`
 					: "",
-				args.assets ? `--assets ${args.assets}` : "",
+				// Only omit --assets when the positional path already covers the assets directory
+				args.assets && args.assets !== args.path
+					? `--assets ${args.assets}`
+					: "",
 				...(args.compatibilityFlags?.length
 					? [`--compatibility-flags ${args.compatibilityFlags.join(" ")}`]
+					: []),
+				...(args.routes?.length ? [`--routes ${args.routes.join(" ")}`] : []),
+				...(args.domains?.length
+					? [`--domains ${args.domains.join(" ")}`]
+					: []),
+				...(args.triggers?.length
+					? [`--triggers ${args.triggers.map((t) => `'${t}'`).join(" ")}`]
+					: []),
+				...(args.var?.length ? [`--var ${args.var.join(" ")}`] : []),
+				...(args.define?.length ? [`--define ${args.define.join(" ")}`] : []),
+				...(args.alias?.length ? [`--alias ${args.alias.join(" ")}`] : []),
+				...(args.jsxFactory ? [`--jsx-factory ${args.jsxFactory}`] : []),
+				...(args.jsxFragment ? [`--jsx-fragment ${args.jsxFragment}`] : []),
+				...(args.tsconfig ? [`--tsconfig ${args.tsconfig}`] : []),
+				...(args.minify ? ["--minify"] : []),
+				...(args.uploadSourceMaps ? ["--upload-source-maps"] : []),
+				...(args.bundle === false ? ["--no-bundle"] : []),
+				...(args.logpush ? ["--logpush"] : []),
+				...(args.keepVars ? ["--keep-vars"] : []),
+				...(args.legacyEnv ? ["--legacy-env"] : []),
+				...(args.dispatchNamespace
+					? [`--dispatch-namespace ${args.dispatchNamespace}`]
 					: []),
 			]
 				.filter(Boolean)
 				.join(" ");
 			logger.log(
 				`\nYou should run ${chalk.bold(
-					`wrangler deploy ${scriptPart}${flagParts}`
+					`wrangler deploy ${pathPart}${flagParts}`
 				)} next time to deploy this Worker without going through this flow again.`
 			);
 		}

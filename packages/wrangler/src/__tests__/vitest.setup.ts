@@ -1,12 +1,32 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports -- Setup file uses dynamic imports where typeof requires value imports */
 import { PassThrough } from "node:stream";
+import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
 import chalk from "chalk";
 import { passthrough } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
+import {
+	fetchKVGetValue,
+	fetchResult,
+	fetchListResult,
+	fetchPagedListResult,
+} from "../cfetch";
+import { confirm, prompt } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
 import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems
 chalk.level = 0;
+
+initDeployHelpersContext({
+	logger,
+	fetchResult,
+	fetchListResult,
+	fetchPagedListResult,
+	fetchKVGetValue,
+	confirm,
+	prompt,
+	isNonInteractiveOrCI,
+});
 
 // In general we don't want the ConfigController to watch the config files
 // as this tends to make the tests flaky.
@@ -230,10 +250,7 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 vi.mock("../agents-skills-install", async (importOriginal) => {
 	const realModule =
 		await importOriginal<typeof import("../agents-skills-install")>();
-	vi.spyOn(
-		realModule,
-		"maybeInstallCloudflareSkillsGlobally"
-	).mockResolvedValue(undefined);
+	vi.spyOn(realModule, "runSkillsInstallFlow").mockResolvedValue(undefined);
 	vi.spyOn(realModule, "telemetryCurrentAgentSkillsInstalled").mockReturnValue(
 		Promise.resolve(null)
 	);

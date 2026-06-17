@@ -520,6 +520,18 @@ export async function handleModuleFallbackRequest(
 		specifier = fileURLToPath(specifier);
 	}
 
+	// When the raw specifier is a `file://` URL (e.g. from vitest's dynamic
+	// imports using `import.meta.url`), workerd may double-encode spaces in the
+	// resolved `specifier` (%20 → %2520). Use the raw specifier to recover the
+	// correct filesystem path for resolution. We override `specifier` (not
+	// `target`) so that `buildModuleResponse` still uses the original module name
+	// that workerd expects, and the mismatch triggers a redirect.
+	// See https://github.com/cloudflare/workers-sdk/issues/14107
+	const rawSpecifier = url.searchParams.get("rawSpecifier");
+	if (rawSpecifier?.startsWith("file:")) {
+		specifier = ensurePosixLikePath(fileURLToPath(rawSpecifier));
+	}
+
 	if (isWindows) {
 		// Convert paths like `/C:/a/index.mjs` to `C:/a/index.mjs` so they can be
 		// passed to Node `fs` functions.

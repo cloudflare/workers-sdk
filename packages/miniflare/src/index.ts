@@ -76,7 +76,10 @@ import {
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
-import { imagesLocalFetcher } from "./plugins/images/fetcher";
+import {
+	cfImageLocalFetcher,
+	imagesLocalFetcher,
+} from "./plugins/images/fetcher";
 import {
 	HttpOptions_Style,
 	kInspectorSocket,
@@ -583,6 +586,31 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 					};
 
 					getEntrypoints(scriptName).classNames.add(className);
+				}
+			}
+		}
+
+		// Cross-worker workflow bindings: when `scriptName` refers to a worker
+		// outside this Miniflare instance (registered in the dev registry), mark
+		// the workflow `external` so the workflows plugin reroutes the engine's
+		// USER_WORKFLOW binding through the dev-registry-proxy. Mirrors the DO
+		// block above. Without this, the engine binds to a non-existent local
+		// service `core:user:<scriptName>` and workerd refuses to start.
+		if (workerOpts.workflows.workflows) {
+			for (const [bindingName, workflow] of Object.entries(
+				workerOpts.workflows.workflows
+			)) {
+				const { scriptName, className, remoteProxyConnectionString } = workflow;
+				if (
+					remoteProxyConnectionString === undefined &&
+					scriptName &&
+					!allWorkerNames.includes(scriptName)
+				) {
+					workerOpts.workflows.workflows[bindingName] = {
+						...workflow,
+						external: true,
+					};
+					getEntrypoints(scriptName).entrypoints.add(className);
 				}
 			}
 		}
@@ -1206,8 +1234,12 @@ export class Miniflare {
 		customService: string
 	): Promise<Response> {
 		let service: z.infer<typeof ServiceDesignatorSchema> | undefined;
-		if (customService === CoreBindings.IMAGES_SERVICE) {
+		// IMAGES_BINDING_SERVICE backs the Images binding (`env.IMAGES`).
+		// IMAGES_FETCH_SERVICE backs `fetch(url, { cf: { image } })` transforms.
+		if (customService === CoreBindings.IMAGES_BINDING_SERVICE) {
 			service = imagesLocalFetcher;
+		} else if (customService === CoreBindings.IMAGES_FETCH_SERVICE) {
+			service = cfImageLocalFetcher;
 		} else {
 			const { workerIndex, serviceKind, serviceName } =
 				extractCustomService(customService);
@@ -2429,7 +2461,13 @@ export class Miniflare {
 			runtimeInspectorAddress = this.#getSocketAddress(
 				kInspectorSocket,
 				this.#previousRuntimeInspectorPort,
-				"localhost",
+				// Use "127.0.0.1" explicitly instead of "localhost" to avoid
+				// DNS resolution issues. On systems where getaddrinfo("localhost")
+				// returns ::1 but IPv6 is disabled, workerd fails to bind the
+				// inspector socket and silently continues without emitting the
+				// listen-inspector event, causing waitForPorts() to hang.
+				// See https://github.com/cloudflare/workers-sdk/issues/14077
+				"127.0.0.1",
 				runtimeInspectorPort
 			);
 			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
@@ -2970,19 +3008,27 @@ export class Miniflare {
 		workerName?: string
 	): Promise<T> {
 		const proxyClient = await this._getProxyClient();
+		const resolvedWorkerName =
+			workerName ?? this.#workerOpts[0].core.name ?? "";
 		const proxyBindingName = getProxyBindingName(
 			pluginName,
-			// Default to entrypoint worker if none specified
-			workerName ?? this.#workerOpts[0].core.name ?? "",
+			resolvedWorkerName,
 			bindingName
 		);
 		const proxy = proxyClient.env[proxyBindingName];
 		if (proxy === undefined) {
 			// If the user specified an invalid binding/worker name, throw
-			const friendlyWorkerName =
-				workerName === undefined ? "entrypoint" : JSON.stringify(workerName);
+			const friendlyWorkerName = resolvedWorkerName
+				? `${JSON.stringify(resolvedWorkerName)} worker`
+				: "the worker";
+			const bindingTypeDescription = Object.fromEntries(
+				this.#mergedPluginEntries
+			)[pluginName]?.bindingTypeDescription;
+			const bindingType = bindingTypeDescription
+				? `${bindingTypeDescription} binding`
+				: "binding";
 			throw new TypeError(
-				`${JSON.stringify(bindingName)} unbound in ${friendlyWorkerName} worker`
+				`No ${bindingType} named ${JSON.stringify(bindingName)} found in ${friendlyWorkerName}.`
 			);
 		}
 		return proxy as T;

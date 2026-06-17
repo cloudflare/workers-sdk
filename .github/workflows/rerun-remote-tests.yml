@@ -22,7 +22,7 @@ permissions: {}
 jobs:
   rerun-e2e:
     name: "Rerun E2E Tests"
-    if: github.event.label.name == 'run-remote-tests' || github.event.label.name == 'run-c3-frameworks-tests'
+    if: github.event.label.name == 'ci:run-remote-tests' || github.event.label.name == 'run-c3-frameworks-tests'
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -35,7 +35,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           # Determine which workflows to re-run based on the label.
-          if [ "$LABEL_NAME" = "run-remote-tests" ]; then
+          if [ "$LABEL_NAME" = "ci:run-remote-tests" ]; then
             WORKFLOWS="e2e-wrangler.yml e2e-vite.yml c3-e2e.yml"
           else
             WORKFLOWS="c3-e2e.yml"

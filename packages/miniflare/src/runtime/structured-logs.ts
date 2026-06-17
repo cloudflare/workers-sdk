@@ -126,7 +126,7 @@ function wrapStructuredLogsHandler(
 					error +=
 						"\nOn Windows, this may be caused by an outdated Microsoft Visual C++ Redistributable library.\n" +
 						"Check that you have the latest version installed.\n" +
-						"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist.";
+						"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist";
 				}
 
 				return structuredLogsHandler({

@@ -5,6 +5,7 @@ import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { parseJSONC } from "@cloudflare/workers-utils";
+import semiver from "semiver";
 import { dedent } from "../../utils/dedent";
 import { Framework } from "./framework-class";
 import type { PackageManager } from "../../package-manager";
@@ -28,7 +29,7 @@ export class Angular extends Framework {
 		if (hasSsr(angularJson, workerName)) {
 			this.configurationDescription = "Configuring project for Angular";
 			if (!dryRun) {
-				await updateAngularJson(workerName, angularJson);
+				await updateAngularJson(workerName, angularJson, this.frameworkVersion);
 				await overrideServerFile();
 				await installAdditionalDependencies(packageManager, isWorkspaceRoot);
 			}
@@ -66,7 +67,8 @@ function hasSsr(angularJson: AngularJson, projectName: string): boolean {
 
 async function updateAngularJson(
 	projectName: string,
-	angularJson: AngularJson
+	angularJson: AngularJson,
+	frameworkVersion: string
 ) {
 	const s = spinner();
 	s.start(`Updating angular.json config`);
@@ -82,7 +84,11 @@ async function updateAngularJson(
 	if (typeof architectSection.build.options.ssr === "boolean") {
 		architectSection.build.options.ssr = {};
 	}
-	architectSection.build.options.ssr["experimentalPlatform"] = "neutral";
+	const platformKey =
+		semiver(frameworkVersion, "22.0.0") >= 0
+			? "platform"
+			: "experimentalPlatform";
+	architectSection.build.options.ssr[platformKey] = "neutral";
 
 	await writeFile(
 		resolve("angular.json"),

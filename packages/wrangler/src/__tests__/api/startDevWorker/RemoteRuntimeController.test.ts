@@ -1,3 +1,4 @@
+import { APIError } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
 // Import the mocked functions so we can set their behavior
@@ -8,6 +9,8 @@ import {
 import {
 	createRemoteWorkerInit,
 	getWorkerAccountAndContext,
+	handlePreviewSessionCreationError,
+	handlePreviewSessionUploadError,
 } from "../../../dev/remote";
 import { getAccessHeaders } from "../../../user/access";
 import { FakeBus } from "../../helpers/fake-bus";
@@ -152,6 +155,50 @@ describe("RemoteRuntimeController", () => {
 		});
 
 		vi.mocked(getAccessHeaders).mockResolvedValue({});
+	});
+
+	describe("stale bundle bail-out", () => {
+		it("should skip stale bundles and only reload once for rapid updates", async ({
+			expect,
+		}) => {
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			// Initial bundle
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// Record events before rapid updates
+			const eventsBefore = bus.events.length;
+			vi.mocked(createWorkerPreview).mockClear();
+
+			// Fire many rapid updates
+			for (let i = 0; i < 5; i++) {
+				controller.onBundleStart({ type: "bundleStart", config });
+				controller.onBundleComplete({
+					type: "bundleComplete",
+					config,
+					bundle,
+				});
+			}
+
+			// Wait for the final reloadComplete
+			await bus.waitFor("reloadComplete");
+
+			// Give stale bundles time to flush through the mutex
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			// Stale bundles should bail out early — only one reloadComplete
+			const reloadCompleteEvents = bus.events
+				.slice(eventsBefore)
+				.filter((e) => e.type === "reloadComplete");
+			expect(reloadCompleteEvents).toHaveLength(1);
+
+			// The API should only be called once (for the winning bundle)
+			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+		});
 	});
 
 	describe("proactive token refresh", () => {
@@ -371,6 +418,113 @@ describe("RemoteRuntimeController", () => {
 						"cf-workers-preview-token": "test-preview-token",
 					},
 				},
+			});
+		});
+	});
+
+	describe("authentication error handling", () => {
+		/**
+		 * Creates an APIError that simulates a Cloudflare API authentication failure.
+		 *
+		 * @param code - the Cloudflare API error code (e.g. 9106, 10000)
+		 * @param noteText - the note text from the API response
+		 * @returns an APIError with the specified code
+		 */
+		function makeAuthError(code: number, noteText: string): APIError {
+			const error = new APIError({
+				text: "A request to the Cloudflare API (/accounts/test/workers/subdomain/edge-preview) failed.",
+				notes: [{ text: noteText }],
+				status: 400,
+				telemetryMessage: false,
+			});
+			error.code = code;
+			return error;
+		}
+
+		it("should call handlePreviewSessionCreationError when createPreviewSession throws a code 10000 auth error", async ({
+			expect,
+		}) => {
+			const authError = makeAuthError(
+				10000,
+				"Authentication error [code: 10000]"
+			);
+			vi.mocked(createPreviewSession).mockRejectedValue(authError);
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+
+			const errorEvent = await bus.waitFor("error");
+
+			expect(handlePreviewSessionCreationError).toHaveBeenCalledWith(
+				authError,
+				"test-account-id"
+			);
+			expect(errorEvent).toMatchObject({
+				type: "error",
+				reason: "Error reloading remote server",
+				source: "RemoteRuntimeController",
+			});
+		});
+
+		it("should call handlePreviewSessionCreationError when createPreviewSession throws a code 9106 auth error", async ({
+			expect,
+		}) => {
+			const authError = makeAuthError(
+				9106,
+				"Authentication failed (status: 400) [code: 9106]"
+			);
+			vi.mocked(createPreviewSession).mockRejectedValue(authError);
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+
+			const errorEvent = await bus.waitFor("error");
+
+			expect(handlePreviewSessionCreationError).toHaveBeenCalledWith(
+				authError,
+				"test-account-id"
+			);
+			expect(errorEvent).toMatchObject({
+				type: "error",
+				reason: "Error reloading remote server",
+				source: "RemoteRuntimeController",
+			});
+		});
+
+		it("should call handlePreviewSessionUploadError when createWorkerPreview throws a code 10000 auth error", async ({
+			expect,
+		}) => {
+			const authError = makeAuthError(
+				10000,
+				"Authentication error [code: 10000]"
+			);
+			vi.mocked(createWorkerPreview).mockRejectedValue(authError);
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+
+			const errorEvent = await bus.waitFor("error");
+
+			expect(handlePreviewSessionUploadError).toHaveBeenCalledWith(
+				authError,
+				"test-account-id"
+			);
+			expect(errorEvent).toMatchObject({
+				type: "error",
+				reason: "Failed to obtain a preview token",
+				source: "RemoteRuntimeController",
 			});
 		});
 	});

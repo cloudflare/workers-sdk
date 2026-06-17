@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { Mutex } from "miniflare";
+import { Mutex, type Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { version as packageVersion } from "../../../package.json";
 import {
@@ -365,6 +365,11 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
+		// A newer bundle has already been queued — skip this stale one.
+		if (id !== this.#currentBundleId) {
+			return;
+		}
+
 		logger.log(chalk.dim("⎔ Starting remote preview..."));
 
 		try {
@@ -481,6 +486,10 @@ export class RemoteRuntimeController extends RuntimeController {
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
 		logger.log(chalk.dim("⎔ Refreshing preview token..."));
 		void this.#mutex.runWith(() => this.#refreshPreviewToken());
+	}
+
+	override get mf(): Miniflare | undefined {
+		return undefined;
 	}
 
 	override async teardown() {

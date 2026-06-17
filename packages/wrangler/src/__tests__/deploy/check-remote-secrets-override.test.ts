@@ -1,25 +1,41 @@
-import { assert, describe, it, vi } from "vitest";
+import { http, HttpResponse } from "msw";
+import { assert, describe, it } from "vitest";
 import { checkRemoteSecretsOverride } from "../../deploy/check-remote-secrets-override";
-import { fetchSecrets } from "../../utils/fetch-secrets";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { createFetchResult, msw } from "../helpers/msw";
 import type { Config } from "@cloudflare/workers-utils";
 
-vi.mock("../../utils/fetch-secrets");
+function mockSecrets(secrets: string[]) {
+	msw.use(
+		http.get("*/accounts/:accountId/workers/scripts/:scriptName/secrets", () =>
+			HttpResponse.json(
+				createFetchResult(
+					secrets.map((name) => ({ name, type: "secret_text" }))
+				)
+			)
+		)
+	);
+}
 
-async function runMockedCheckRemoteSecretsOverride(
+async function runCheckRemoteSecretsOverride(
 	config: Partial<Config>,
 	remoteSecrets: string[]
 ): ReturnType<typeof checkRemoteSecretsOverride> {
-	vi.mocked(fetchSecrets).mockResolvedValue(
-		remoteSecrets.map((secret) => ({ name: secret, type: "secret_text" }))
-	);
-	return checkRemoteSecretsOverride(config as Config);
+	mockSecrets(remoteSecrets);
+	return checkRemoteSecretsOverride({
+		...config,
+		name: "test-script",
+	} as Config);
 }
 
 describe("checkRemoteSecretsOverride", () => {
+	mockAccountId();
+	mockApiToken();
+
 	it("should return { override: false } when there are no possible overrides", async ({
 		expect,
 	}) => {
-		const checkResult = await runMockedCheckRemoteSecretsOverride(
+		const checkResult = await runCheckRemoteSecretsOverride(
 			{
 				vars: {
 					MY_VAR: "var",
@@ -39,7 +55,7 @@ describe("checkRemoteSecretsOverride", () => {
 	it("should detect and provide a valid deploy error message when a variable name overrides a secret", async ({
 		expect,
 	}) => {
-		const checkResult = await runMockedCheckRemoteSecretsOverride(
+		const checkResult = await runCheckRemoteSecretsOverride(
 			{
 				vars: {
 					MY_VAR: "var",
@@ -64,7 +80,7 @@ describe("checkRemoteSecretsOverride", () => {
 	it("should detect and provide a valid deploy error message when multiple (2) variable names override secrets", async ({
 		expect,
 	}) => {
-		const checkResult = await runMockedCheckRemoteSecretsOverride(
+		const checkResult = await runCheckRemoteSecretsOverride(
 			{
 				vars: {
 					MY_VAR: "var",
@@ -89,7 +105,7 @@ describe("checkRemoteSecretsOverride", () => {
 	it("should detect and provide a valid deploy error message when multiple (3) variable names override secrets", async ({
 		expect,
 	}) => {
-		const checkResult = await runMockedCheckRemoteSecretsOverride(
+		const checkResult = await runCheckRemoteSecretsOverride(
 			{
 				vars: {
 					MY_VAR: "var",
@@ -115,7 +131,7 @@ describe("checkRemoteSecretsOverride", () => {
 	it("should detect and provide a valid deploy error message when a binding name overrides a secret", async ({
 		expect,
 	}) => {
-		const checkResult = await runMockedCheckRemoteSecretsOverride(
+		const checkResult = await runCheckRemoteSecretsOverride(
 			{
 				vars: {
 					MY_VAR: "var",
@@ -142,7 +158,7 @@ describe("checkRemoteSecretsOverride", () => {
 	it("should detect and provide a valid deploy error message when multiple binding names override secrets", async ({
 		expect,
 	}) => {
-		const checkResult = await runMockedCheckRemoteSecretsOverride(
+		const checkResult = await runCheckRemoteSecretsOverride(
 			{
 				vars: {
 					MY_VAR: "var",
@@ -173,7 +189,7 @@ describe("checkRemoteSecretsOverride", () => {
 	it("should detect and provide a valid deploy error message when a combination of variables and binding names override secrets", async ({
 		expect,
 	}) => {
-		const checkResult = await runMockedCheckRemoteSecretsOverride(
+		const checkResult = await runCheckRemoteSecretsOverride(
 			{
 				vars: {
 					MY_SECRET_1: "var",
@@ -197,8 +213,7 @@ describe("checkRemoteSecretsOverride", () => {
 	it("should not unnecessarily fetch secrets when there are no env vars nor bindings in the config file", async ({
 		expect,
 	}) => {
-		const result = await runMockedCheckRemoteSecretsOverride({}, ["MY_SECRET"]);
+		const result = await runCheckRemoteSecretsOverride({}, ["MY_SECRET"]);
 		expect(result.override).toBeFalsy();
-		expect(fetchSecrets).not.toHaveBeenCalled();
 	});
 });

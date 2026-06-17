@@ -69,8 +69,18 @@ export const cliDefinition: ArgumentsDefinition = {
 			description: `Specifies the kind of templates that should be created`,
 			values(args) {
 				const experimental = Boolean(args?.["experimental"]);
+				const platform = args?.["platform"] as string | undefined;
 				if (experimental) {
 					return [{ name: "web-framework", description: "Framework Starter" }];
+				} else if (platform === "pages") {
+					// Only framework starters can produce Pages projects
+					return [
+						{ name: "web-framework", description: "Framework Starter" },
+						{
+							name: "remote-template",
+							description: "Template from a GitHub repo",
+						},
+					];
 				} else {
 					return [
 						{ name: "hello-world", description: "Hello World Starter" },

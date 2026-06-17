@@ -29,6 +29,7 @@ export const VPC_NETWORKS_PLUGIN_NAME = "vpc-networks";
 
 export const VPC_NETWORKS_PLUGIN: Plugin<typeof VpcNetworksOptionsSchema> = {
 	options: VpcNetworksOptionsSchema,
+	bindingTypeDescription: "VPC network",
 	async getBindings(options) {
 		if (!options.vpcNetworks) {
 			return [];

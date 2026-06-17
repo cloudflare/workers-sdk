@@ -52,6 +52,7 @@ const QUEUE_BROKER_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 
 export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 	options: QueuesOptionsSchema,
+	bindingTypeDescription: "Queue producer",
 	getBindings(options) {
 		const queues = bindingEntries(options.queueProducers);
 		return queues.map<Worker_Binding>(([name, id]) => ({

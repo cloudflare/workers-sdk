@@ -33,7 +33,9 @@ describe("execute", () => {
 		await expect(
 			runWrangler("d1 execute db --command 'select 1;' --remote")
 		).rejects.toThrowError(
-			`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.`
+			`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.
+
+To continue without logging in, rerun this command with \`--temporary\`. Wrangler will use a temporary account and print a claim URL.`
 		);
 	});
 
@@ -46,7 +48,7 @@ describe("execute", () => {
 		});
 
 		await expect(runWrangler("d1 execute db")).rejects.toThrowError(
-			`Error: must provide --command or --file`
+			`Missing required option --command or --file. Provide a SQL command inline with --command="<SQL>", or a path to a SQL file with --file=<path>.`
 		);
 	});
 
@@ -81,7 +83,7 @@ describe("execute", () => {
 		await expect(
 			runWrangler(`d1 execute db --command "select;" --local --remote`)
 		).rejects.toThrowError(
-			"Error: can't use --local and --remote at the same time"
+			`Error: can't use --local and --remote at the same time`
 		);
 	});
 
@@ -95,7 +97,9 @@ describe("execute", () => {
 
 		await expect(
 			runWrangler(`d1 execute db --command "select;" --local --preview`)
-		).rejects.toThrowError(`Error: can't use --preview without --remote`);
+		).rejects.toThrowError(
+			`Cannot use --preview without --remote. The --preview flag targets a preview D1 database, which requires the --remote flag. Remove --preview or add --remote.`
+		);
 	});
 
 	it("should reject the use of --preview with --local with --json", async ({
@@ -114,7 +118,7 @@ describe("execute", () => {
 			JSON.stringify(
 				{
 					error: {
-						text: "Error: can't use --preview without --remote",
+						text: "Cannot use --preview without --remote. The --preview flag targets a preview D1 database, which requires the --remote flag. Remove --preview or add --remote.",
 					},
 				},
 				null,

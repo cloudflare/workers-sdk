@@ -28,6 +28,7 @@ export const d1ExportCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	args: {
@@ -92,9 +93,12 @@ export const d1ExportCommand = createCommand({
 			args;
 
 		if (!schema && !data) {
-			throw new UserError(`You cannot specify both --no-schema and --no-data`, {
-				telemetryMessage: "d1 export conflicting no-schema and no-data flags",
-			});
+			throw new UserError(
+				`Cannot use --no-schema and --no-data together. At least one of schema or data must be included in the export. Remove one of the flags.`,
+				{
+					telemetryMessage: "d1 export conflicting no-schema and no-data flags",
+				}
+			);
 		}
 
 		const stats = statSync(output, { throwIfNoEntry: false });
@@ -134,9 +138,7 @@ async function exportLocal(
 	noSchema: boolean,
 	noData: boolean
 ) {
-	const localDB = getDatabaseInfoFromConfig(config, name, {
-		requireDatabaseId: false,
-	});
+	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`,
@@ -144,7 +146,8 @@ async function exportLocal(
 		);
 	}
 
-	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
+	// TODO(#11870): Really we should prefer localDB.name here, but that would break users with existing local databases.
+	const id = localDB.previewDatabaseUuid ?? localDB.uuid ?? localDB.binding;
 
 	// TODO: should we allow customising persistence path?
 	// Should it be --persist-to for consistency (even though this isn't persisting anything)?
