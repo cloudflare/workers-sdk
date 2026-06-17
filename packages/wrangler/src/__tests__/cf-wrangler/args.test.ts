@@ -1,5 +1,9 @@
 import { describe, it } from "vitest";
-import { ArgParseError, parseArgs } from "../../cf-wrangler/args";
+import {
+	ArgParseError,
+	parseArgs,
+	parseBuildArgs,
+} from "../../cf-wrangler/args";
 
 describe("cf-wrangler parseArgs", () => {
 	describe("happy paths", () => {
@@ -146,6 +150,56 @@ describe("cf-wrangler parseArgs", () => {
 				expect(err).toBeInstanceOf(ArgParseError);
 				expect((err as Error).name).toBe("ArgParseError");
 			}
+		});
+	});
+});
+
+describe("cf-wrangler parseBuildArgs", () => {
+	describe("happy paths", () => {
+		it("returns an empty object for no flags", ({ expect }) => {
+			expect(parseBuildArgs([])).toEqual({});
+		});
+
+		it("parses --mode", ({ expect }) => {
+			expect(parseBuildArgs(["--mode", "production"])).toEqual({
+				mode: "production",
+			});
+		});
+
+		it("parses --mode=value", ({ expect }) => {
+			expect(parseBuildArgs(["--mode=production"])).toEqual({
+				mode: "production",
+			});
+		});
+	});
+
+	describe("rejections", () => {
+		it("rejects --env (must use --mode)", ({ expect }) => {
+			expect(() => parseBuildArgs(["--env", "production"])).toThrow(
+				ArgParseError
+			);
+			expect(() => parseBuildArgs(["--env", "production"])).toThrow(
+				/Unknown option/
+			);
+		});
+
+		it("rejects --config (config comes from wrangler's discovery)", ({
+			expect,
+		}) => {
+			expect(() => parseBuildArgs(["--config", "wrangler.json"])).toThrow(
+				/Unknown option/
+			);
+		});
+
+		it("rejects unknown flags", ({ expect }) => {
+			expect(() => parseBuildArgs(["--definitely-not-a-flag"])).toThrow(
+				/Unknown option/
+			);
+		});
+
+		it("rejects positional arguments", ({ expect }) => {
+			expect(() => parseBuildArgs(["./worker.ts"])).toThrow(ArgParseError);
+			expect(() => parseBuildArgs(["./worker.ts"])).toThrow(/positional/);
 		});
 	});
 });
