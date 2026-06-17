@@ -71,14 +71,8 @@ export function handleMissingSecretsError(
 
 	if (missingSecretNames.length > 0) {
 		err.preventReport();
-		const secretPutCommand =
-			options.type === "deploy"
-				? "wrangler secret put"
-				: "wrangler versions secret put";
-		const secretsFileCommand =
-			options.type === "deploy"
-				? "wrangler deploy --secrets-file <path-to-file>"
-				: "wrangler versions upload --secrets-file <path-to-file>";
+		const secretPutCommand = `wrangler ${options.type === "deploy" ? "" : "versions "}secret put`;
+		const secretsFileCommand = `wrangler ${options.type === "deploy" ? "deploy" : "versions upload"} --secrets-file <path-to-file>`;
 		const action = options.type === "deploy" ? "deploying" : "uploading";
 		throw new UserError(
 			`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +
