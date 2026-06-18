@@ -100,6 +100,8 @@ describe("deploy", () => {
 	} = mockOAuthFlow();
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
+	const temporaryTermsUrl = "https://www.cloudflare.com/terms/";
+	const legacyTemporaryTermsUrl = "https://www.cloudflare.com/website-terms/";
 
 	// Mocks the proof-of-work challenge minting expects. Small k/g so the
 	// solve is instant.
@@ -1080,7 +1082,7 @@ describe("deploy", () => {
 
 				expect(previewContentType).toBe("application/json");
 				expect(previewRequestBody).toEqual({
-					termsOfService: "https://www.cloudflare.com/terms/",
+					termsOfService: temporaryTermsUrl,
 					privacyPolicy: "https://www.cloudflare.com/privacypolicy/",
 					acceptTermsOfService: "yes",
 					challengeToken: "challenge-token",
@@ -1096,6 +1098,8 @@ describe("deploy", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).not.toContain("Attempting to login via OAuth...");
 				expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
+				expect(std.out).toContain(temporaryTermsUrl);
+				expect(std.out).not.toContain(legacyTemporaryTermsUrl);
 				expect(std.out).toContain("Temporary account ready:");
 				expect(std.out).toContain("Account: Preview Account Alpha (created)");
 				expect(std.out).toContain("Claim within:");

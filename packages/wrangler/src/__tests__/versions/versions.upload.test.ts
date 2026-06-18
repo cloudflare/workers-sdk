@@ -39,6 +39,8 @@ describe("versions upload", () => {
 	const assertApiRequest = makeApiRequestAsserter(std);
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
+	const temporaryTermsUrl = "https://www.cloudflare.com/terms/";
+	const legacyTemporaryTermsUrl = "https://www.cloudflare.com/website-terms/";
 
 	function mockGetScript(result?: unknown) {
 		msw.use(
@@ -200,6 +202,8 @@ describe("versions upload", () => {
 
 			expect(previewAccountRequests).toBe(1);
 			expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
+			expect(std.out).toContain(temporaryTermsUrl);
+			expect(std.out).not.toContain(legacyTemporaryTermsUrl);
 			expect(std.out).toContain("Temporary account ready:");
 			expect(std.out).toContain("Account: Preview Account Alpha (created)");
 			expect(std.out).toContain("Uploaded test-name");
