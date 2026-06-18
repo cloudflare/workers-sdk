@@ -38,6 +38,9 @@ type KvArgs = {
 /**
  * Create a new namespace under the given `accountId` with the given `title`.
  *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
+ *
  * @returns the generated id of the created namespace.
  */
 export async function createKVNamespace(
@@ -73,6 +76,9 @@ export interface KVNamespaceInfo {
 
 /**
  * Fetch a list of all the namespaces under the given `accountId`.
+ *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
  */
 export async function listKVNamespaces(
 	complianceConfig: ComplianceConfig,
