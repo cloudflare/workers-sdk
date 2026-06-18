@@ -784,11 +784,15 @@ export function generateImportSpecifier(from: string, to: string) {
 }
 
 /**
- * Determines whether the entrypoint lives inside a framework build output
- * directory (e.g. `.svelte-kit`, `.next`, `.nuxt`, `.output`) relative to the
- * config directory. Emitting a `mainModule` import that points into such a
- * directory makes `tsc`/`svelte-check` follow the import and report errors on
- * generated code, so the declaration is skipped in that case.
+ * Determines whether the entrypoint lives inside a build output directory
+ * relative to the config directory. Any path segment that starts with `.`
+ * (e.g. `.svelte-kit`, `.next`, `.nuxt`, `.output`) is treated as a build
+ * output directory — frameworks consistently use hidden directories for
+ * generated output. Emitting a `mainModule` import that points into such a
+ * directory causes `tsc`/`svelte-check` to follow the import and report errors
+ * on generated code, so the declaration is skipped in that case.
+ * Entrypoints that are simply outside the config directory (relative path
+ * starts with `..`) are NOT treated as build output directories.
  */
 function isEntrypointInBuildOutputDir(
 	configDir: string,

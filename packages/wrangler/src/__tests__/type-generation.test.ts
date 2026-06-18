@@ -810,6 +810,32 @@ describe("generate types - CLI", () => {
 		expect(output).toContain("mainModule");
 	});
 
+	it("should not emit mainModule when the entrypoint is in any hidden directory", async ({
+		expect,
+	}) => {
+		// Any path segment starting with "." is treated as build output — not just known frameworks
+		fs.mkdirSync("./.hidden-src", { recursive: true });
+		fs.writeFileSync(
+			"./.hidden-src/_worker.js",
+			`export default { fetch() {} };`
+		);
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "./.hidden-src/_worker.js",
+				vars: { var: "value" },
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		const output = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
+		expect(output).not.toContain("mainModule");
+	});
+
 	it("should log the interface type generated and declare modules", async ({
 		expect,
 	}) => {
