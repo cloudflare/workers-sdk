@@ -1,5 +1,19 @@
 # @cloudflare/workflows-shared
 
+## 0.11.2
+
+### Patch Changes
+
+- [#14318](https://github.com/cloudflare/workers-sdk/pull/14318) [`f32e9c1`](https://github.com/cloudflare/workers-sdk/commit/f32e9c1fdbf8ab7c0e68afa613ec61e367be04cb) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add step context to Workflows rollback handlers
+
+  Rollback handlers now receive the original step context under `ctx`, making `ctx.step.name`, `ctx.step.count`, `ctx.attempt`, and the resolved step `config` available during rollback. The legacy `stepName` field remains available and is equivalent to `${ctx.step.name}-${ctx.step.count}`.
+
+  `rollbackConfig` is now limited to retry and timeout settings, matching the behavior supported by rollback handlers.
+
+- [#14314](https://github.com/cloudflare/workers-sdk/pull/14314) [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6) Thanks [@harryzcy](https://github.com/harryzcy)! - Bump esbuild to 0.28.1
+
+  This update includes several bug fixes from esbuild versions 0.27.3 through 0.28.1. See the [esbuild changelog](https://github.com/evanw/esbuild/blob/v0.28.1/CHANGELOG.md) for details.
+
 ## 0.11.1
 
 ### Patch Changes
