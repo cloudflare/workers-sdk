@@ -125,6 +125,12 @@ export const pagesProjectCreateCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		force: {
+			type: "boolean",
+			default: false,
+			description:
+				"Create a Cloudflare Pages project directly, bypassing the automatic redirect to Cloudflare Workers for new static projects",
+		},
 	},
 	positionalArgs: ["project-name"],
 	async handler({
@@ -132,6 +138,7 @@ export const pagesProjectCreateCommand = createCommand({
 		compatibilityFlags,
 		compatibilityDate,
 		projectName,
+		force,
 	}) {
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
@@ -144,6 +151,7 @@ export const pagesProjectCreateCommand = createCommand({
 		const redirect = await maybeRedirectPagesToWorkers({
 			command: "create",
 			projectPath: process.cwd(),
+			force,
 		});
 		if (redirect.handled) {
 			return;
