@@ -334,7 +334,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				accountId,
 				scriptName,
 				props.experimentalAutoCreate,
-				config
+				config,
+				{
+					skipConfigWriteback: props.skipProvisioningConfigWriteback,
+				}
 			);
 		}
 		workerBundle = createWorkerUploadForm(worker, bindings, {

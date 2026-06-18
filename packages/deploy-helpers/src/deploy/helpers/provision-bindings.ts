@@ -697,8 +697,7 @@ async function collectPendingResources(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	bindings: StartDevWorkerInput["bindings"],
-	requireRemote: boolean
+	bindings: StartDevWorkerInput["bindings"]
 ): Promise<PendingResource[]> {
 	let settings: Settings | undefined;
 
@@ -712,10 +711,6 @@ async function collectPendingResources(
 
 	for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
 		if (!isProvisionableBinding(binding)) {
-			continue;
-		}
-
-		if (requireRemote && !("remote" in binding && binding.remote)) {
 			continue;
 		}
 
@@ -746,15 +741,16 @@ export async function provisionBindings(
 	scriptName: string,
 	autoCreate: boolean,
 	config: Config,
-	requireRemote = false
+	options: {
+		skipConfigWriteback?: boolean;
+	}
 ): Promise<void> {
 	const configPath = config.userConfigPath ?? config.configPath;
 	const pendingResources = await collectPendingResources(
 		config,
 		accountId,
 		scriptName,
-		bindings,
-		requireRemote
+		bindings
 	);
 
 	if (pendingResources.length > 0) {
@@ -857,7 +853,11 @@ export async function provisionBindings(
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
 		// This is not necessary, as future deploys can use inherited resources, but it can help with
 		// portability of the config file, and adds robustness to bindings being renamed.
-		if (!isNonInteractiveOrCI()) {
+		if (options.skipConfigWriteback) {
+			logger.log(
+				"Your Worker was deployed with provisioned resources. You may add the resource IDs to your config file if you wish, but future deploys will continue to work even without IDs."
+			);
+		} else if (!isNonInteractiveOrCI()) {
 			try {
 				await experimental_patchConfig(configPath, patch, false);
 				logger.log(
