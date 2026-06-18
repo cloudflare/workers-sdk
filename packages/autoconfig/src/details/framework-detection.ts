@@ -57,10 +57,7 @@ export async function detectFramework(
 
 	const project = new Project(fs, projectPath, projectPath)
 		.setEnvironment(process.env)
-		.setNodeVersion(process.version)
-		.setReportFn((err) => {
-			context.reportError?.(err);
-		});
+		.setNodeVersion(process.version);
 
 	const buildSettings = await project.getBuildSettings();
 

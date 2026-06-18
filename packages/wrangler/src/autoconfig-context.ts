@@ -1,4 +1,3 @@
-import { captureException } from "@sentry/node";
 import { getCacheFolder } from "./config-cache";
 import { confirm, prompt, select } from "./dialogs";
 import { isNonInteractiveOrCI } from "./is-interactive";
@@ -16,7 +15,6 @@ export function createWranglerAutoConfigContext(): AutoConfigContext {
 	return {
 		logger,
 		dialogs: { confirm, prompt, select },
-		reportError: captureException,
 		runCommand: async (command, cwd, label) => {
 			const { runCommand: runCustomBuild } =
 				await import("./deployment-bundle/run-custom-build");

@@ -82,13 +82,6 @@ export interface AutoConfigContext {
 	/** Dialogs used for interactive prompts. */
 	dialogs: AutoConfigDialogs;
 	/**
-	 * Optional error reporting callback (e.g., for Sentry integration).
-	 * Called when an internal library encounters an error worth reporting.
-	 *
-	 * @param error - The error to report
-	 */
-	reportError?: (error: unknown) => void;
-	/**
 	 * Runs a shell command in the given directory.
 	 *
 	 * @param command - The shell command string to execute

@@ -26,7 +26,6 @@ export function createMockContext(
 			prompt: vi.fn().mockResolvedValue(""),
 			select: vi.fn().mockResolvedValue(""),
 		},
-		reportError: vi.fn(),
 		runCommand: vi.fn(),
 		isNonInteractiveOrCI: () => false,
 		getCacheFolder: () => undefined,
