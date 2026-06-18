@@ -1,5 +1,15 @@
 # @cloudflare/workers-utils
 
+## 0.23.2
+
+### Patch Changes
+
+- [#14347](https://github.com/cloudflare/workers-sdk/pull/14347) [`673b09e`](https://github.com/cloudflare/workers-sdk/commit/673b09e0fa26368125fb527596a8eb5d31c27302) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update undici from 7.24.8 to 7.28.0
+
+- [#14269](https://github.com/cloudflare/workers-sdk/pull/14269) [`5dfb788`](https://github.com/cloudflare/workers-sdk/commit/5dfb788595a2104b4b0922cfce3d69a2f1d881eb) Thanks [@mattjohnsonpint](https://github.com/mattjohnsonpint)! - Support `dev.plugin` on typed services bindings
+
+  Wrangler only honored `dev.plugin` on `unsafe.bindings` entries, so users authoring a service binding via `services[]` could not wire it to a local Miniflare plugin during `wrangler dev` — they had to fall back to `unsafe.bindings` and accept a "directly supported by wrangler" warning. Typed services bindings now accept the same `dev: { plugin, options? }` shape, route the binding through Miniflare's external-plugin pathway in `wrangler dev`, and strip the field at deploy time. Validation rejects malformed `dev` shapes.
+
 ## 0.23.1
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @cloudflare/pages-shared
 
+## 0.13.147
+
+### Patch Changes
+
+- [#14314](https://github.com/cloudflare/workers-sdk/pull/14314) [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6) Thanks [@harryzcy](https://github.com/harryzcy)! - Bump esbuild to 0.28.1
+
+  This update includes several bug fixes from esbuild versions 0.27.3 through 0.28.1. See the [esbuild changelog](https://github.com/evanw/esbuild/blob/v0.28.1/CHANGELOG.md) for details.
+
+- Updated dependencies [[`673b09e`](https://github.com/cloudflare/workers-sdk/commit/673b09e0fa26368125fb527596a8eb5d31c27302), [`e930bd4`](https://github.com/cloudflare/workers-sdk/commit/e930bd4ca9880eb0b68ce6d1933c1d9ce290317d), [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6), [`296ad65`](https://github.com/cloudflare/workers-sdk/commit/296ad659305ee150d61451991f04a135fe99d264)]:
+  - miniflare@4.20260617.0
+
 ## 0.13.146
 
 ### Patch Changes
