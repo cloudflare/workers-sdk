@@ -61,17 +61,18 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect,
 			}) => {
 				await helper.seed({
-					"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[durable_objects]
-						bindings = [{ name = "DO", class_name = "MyDO" }]
-
-						[exports.MyDO]
-						type = "durable-object"
-						storage = "sqlite"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [{ "name": "DO", "class_name": "MyDO" }],
+							},
+							"exports": {
+								"MyDO": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						import { DurableObject } from "cloudflare:workers";
@@ -116,14 +117,15 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect,
 			}) => {
 				await helper.seed({
-					"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[exports.MyDO]
-						type = "durable-object"
-						state = "deleted"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"exports": {
+								"MyDO": { "type": "durable-object", "state": "deleted" },
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						export default {
@@ -157,14 +159,15 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect,
 			}) => {
 				await helper.seed({
-					"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[exports.Phantom]
-						type = "durable-object"
-						storage = "sqlite"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"exports": {
+								"Phantom": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						export default {
@@ -197,17 +200,18 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect,
 			}) => {
 				await helper.seed({
-					"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[durable_objects]
-						bindings = [{ name = "DO", class_name = "MyDO" }]
-
-						[exports.MyDO]
-						type = "durable-object"
-						storage = "sqlite"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [{ "name": "DO", "class_name": "MyDO" }],
+							},
+							"exports": {
+								"MyDO": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						import { DurableObject } from "cloudflare:workers";
@@ -248,14 +252,15 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect,
 			}) => {
 				await helper.seed({
-					"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[exports.Phantom]
-						type = "durable-object"
-						storage = "sqlite"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"exports": {
+								"Phantom": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						export default {
@@ -291,17 +296,18 @@ describe.skipIf(!E2E_GATE_ON)(
 
 			it("step 1: creates the original Counter class", async ({ expect }) => {
 				await helper.seed({
-					"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[durable_objects]
-						bindings = [{ name = "DO", class_name = "Counter" }]
-
-						[exports.Counter]
-						type = "durable-object"
-						storage = "sqlite"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [{ "name": "DO", "class_name": "Counter" }],
+							},
+							"exports": {
+								"Counter": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						import { DurableObject } from "cloudflare:workers";
@@ -330,22 +336,23 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect,
 			}) => {
 				await helper.seed({
-					"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[durable_objects]
-						bindings = [{ name = "DO", class_name = "CounterV2" }]
-
-						[exports.CounterV2]
-						type = "durable-object"
-						storage = "sqlite"
-
-						[exports.Counter]
-						type = "durable-object"
-						state = "renamed"
-						renamed_to = "CounterV2"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [{ "name": "DO", "class_name": "CounterV2" }],
+							},
+							"exports": {
+								"CounterV2": { "type": "durable-object", "storage": "sqlite" },
+								"Counter": {
+									"type": "durable-object",
+									"state": "renamed",
+									"renamed_to": "CounterV2",
+								},
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						import { DurableObject } from "cloudflare:workers";
@@ -371,17 +378,18 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect,
 			}) => {
 				await helper.seed({
-					"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[durable_objects]
-						bindings = [{ name = "DO", class_name = "CounterV2" }]
-
-						[exports.CounterV2]
-						type = "durable-object"
-						storage = "sqlite"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [{ "name": "DO", "class_name": "CounterV2" }],
+							},
+							"exports": {
+								"CounterV2": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						import { DurableObject } from "cloudflare:workers";
@@ -425,17 +433,18 @@ describe.skipIf(!E2E_GATE_ON)(
 
 			it("step 1: source script provisions Widget", async ({ expect }) => {
 				await helperA.seed({
-					"wrangler.toml": dedent`
-						name = "${workerA}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[durable_objects]
-						bindings = [{ name = "WIDGET", class_name = "Widget" }]
-
-						[exports.Widget]
-						type = "durable-object"
-						storage = "sqlite"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerA}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [{ "name": "WIDGET", "class_name": "Widget" }],
+							},
+							"exports": {
+								"Widget": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						import { DurableObject } from "cloudflare:workers";
@@ -464,19 +473,23 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect,
 			}) => {
 				await helperB.seed({
-					"wrangler.toml": dedent`
-						name = "${workerB}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[durable_objects]
-						bindings = [{ name = "WIDGET", class_name = "Widget" }]
-
-						[exports.Widget]
-						type = "durable-object"
-						state = "expecting-transfer"
-						storage = "sqlite"
-						transfer_from = "${workerA}"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerB}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [{ "name": "WIDGET", "class_name": "Widget" }],
+							},
+							"exports": {
+								"Widget": {
+									"type": "durable-object",
+									"state": "expecting-transfer",
+									"storage": "sqlite",
+									"transfer_from": "${workerA}",
+								},
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						import { DurableObject } from "cloudflare:workers";
@@ -507,15 +520,19 @@ describe.skipIf(!E2E_GATE_ON)(
 				expect,
 			}) => {
 				await helperA.seed({
-					"wrangler.toml": dedent`
-						name = "${workerA}"
-						main = "src/index.ts"
-						compatibility_date = "2024-01-01"
-
-						[exports.Widget]
-						type = "durable-object"
-						state = "transferred"
-						transferred_to = "${workerB}"
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerA}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"exports": {
+								"Widget": {
+									"type": "durable-object",
+									"state": "transferred",
+									"transferred_to": "${workerB}",
+								},
+							},
+						}
 					`,
 					"src/index.ts": dedent`
 						export default {
