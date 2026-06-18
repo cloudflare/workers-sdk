@@ -160,6 +160,52 @@ export async function listTraces(
 	return rows as unknown as TraceRow[];
 }
 
+/** A persisted console.log event (the "Events" view). */
+export interface LogEvent {
+	trace_id: string;
+	span_id: string | null;
+	seq: number;
+	ts_ms: number | null;
+	level: string | null;
+	/** JSON-stringified console.log message */
+	message: string | null;
+	operation: string | null;
+	created_at: string | null;
+}
+
+export interface EventFilters {
+	search?: string;
+	/** "all" | debug | info | log | warn | error */
+	level?: string;
+	limit?: number;
+}
+
+/** Fetch recent log events (most recent first), applying simple filters. */
+export async function listEvents(
+	databaseId: string,
+	filters: EventFilters = {}
+): Promise<LogEvent[]> {
+	const limit = Number(filters.limit ?? 200);
+	const where: string[] = [];
+
+	if (filters.level && filters.level !== "all") {
+		where.push(`level = '${esc(filters.level)}'`);
+	}
+	const q = filters.search?.trim();
+	if (q) {
+		const like = `%${esc(q)}%`;
+		where.push(`(message LIKE '${like}' OR operation LIKE '${like}')`);
+	}
+
+	const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+	const rows = await runSql(
+		databaseId,
+		`SELECT trace_id, span_id, seq, ts_ms, level, message, operation, created_at
+		 FROM logs ${whereSql} ORDER BY created_at DESC, ROWID DESC LIMIT ${limit}`
+	);
+	return rows as unknown as LogEvent[];
+}
+
 /** Distinct attribute/tag keys present across all spans (for the tag filter). */
 export async function getTagKeys(databaseId: string): Promise<string[]> {
 	const rows = await runSql(

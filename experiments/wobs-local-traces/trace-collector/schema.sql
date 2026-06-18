@@ -35,3 +35,19 @@ CREATE INDEX IF NOT EXISTS idx_traces_created ON traces(created_at);
 CREATE INDEX IF NOT EXISTS idx_spans_trace ON spans(trace_id);
 CREATE INDEX IF NOT EXISTS idx_spans_kind ON spans(kind);
 CREATE INDEX IF NOT EXISTS idx_spans_duration ON spans(duration_ms);
+
+-- One row per console.log emitted during a trace (the "Events" view).
+CREATE TABLE IF NOT EXISTS logs (
+  trace_id   TEXT NOT NULL,
+  span_id    TEXT,
+  seq        INTEGER NOT NULL,   -- order within the trace
+  ts_ms      REAL,               -- offset from trace start
+  level      TEXT,               -- debug | info | log | warn | error
+  message    TEXT,               -- JSON-stringified console.log message
+  operation  TEXT,               -- root operation name (for the events list)
+  created_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (trace_id, seq)
+);
+
+CREATE INDEX IF NOT EXISTS idx_logs_created ON logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level);

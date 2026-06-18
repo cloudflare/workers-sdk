@@ -6,6 +6,7 @@ import {
 	useSidebar,
 } from "@cloudflare/kumo";
 import {
+	ListBulletsIcon,
 	MonitorIcon,
 	MoonIcon,
 	PulseIcon,
@@ -254,7 +255,19 @@ export function AppSidebar({
 							currentPath === "/observability" && "bg-kumo-tint"
 						)}
 					>
-						Observability
+						Traces
+					</Sidebar.MenuButton>
+					<Sidebar.MenuButton
+						icon={<ListBulletsIcon width={20} height={20} />}
+						onClick={() =>
+							router.navigate({ to: "/events", search: workerSearch })
+						}
+						className={cn(
+							"cursor-pointer",
+							currentPath === "/events" && "bg-kumo-tint"
+						)}
+					>
+						Events
 					</Sidebar.MenuButton>
 				</Sidebar.MenuItem>
 

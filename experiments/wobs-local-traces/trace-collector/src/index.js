@@ -107,7 +107,13 @@ export default class TraceCollector extends WorkerEntrypoint {
 				}
 				case "log": {
 					const s = spans.get(ctxSpanId) ?? spans.get(rootId);
-					if (s) s.logs.push({ level: ev.level, msg: cleanMsg(ev.message) });
+					if (s)
+						s.logs.push({
+							level: ev.level,
+							msg: cleanMsg(ev.message),
+							message: ev.message,
+							ts: toMs(e.timestamp),
+						});
 					break;
 				}
 				case "exception": {
@@ -197,10 +203,45 @@ async function persistTrace(db, spans, order, rootId, traceId) {
 		);
 	}
 
+	// Persist console.log events for the Events view
+	let logSeq = 0;
+	for (const id of order) {
+		const s = spans.get(id);
+		if (!s) continue;
+		for (const l of s.logs) {
+			stmts.push(
+				db
+					.prepare(
+						`INSERT OR REPLACE INTO logs
+						 (trace_id, span_id, seq, ts_ms, level, message, operation)
+						 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+					)
+					.bind(
+						tid,
+						s.id,
+						logSeq,
+						round((l.ts ?? t0) - t0),
+						l.level ?? "log",
+						safeStringify(l.message),
+						root.name ?? null,
+					),
+			);
+			logSeq++;
+		}
+	}
+
 	await db.batch(stmts);
 }
 
 const round = (n) => Math.round((n ?? 0) * 100) / 100;
+
+function safeStringify(v) {
+	try {
+		return JSON.stringify(v, replacer);
+	} catch {
+		return String(v);
+	}
+}
 
 // ---- attribute extraction ---------------------------------------------------
 

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ObservabilityRouteImport } from './routes/observability'
+import { Route as EventsRouteImport } from './routes/events'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkflowsWorkflowNameRouteImport } from './routes/workflows/$workflowName'
 import { Route as R2BucketNameRouteImport } from './routes/r2/$bucketName'
@@ -26,6 +27,11 @@ import { Route as R2BucketNameObjectSplatRouteImport } from './routes/r2/$bucket
 const ObservabilityRoute = ObservabilityRouteImport.update({
   id: '/observability',
   path: '/observability',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -93,6 +99,7 @@ const R2BucketNameObjectSplatRoute = R2BucketNameObjectSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/events': typeof EventsRoute
   '/observability': typeof ObservabilityRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/do/$className': typeof DoClassNameRouteWithChildren
@@ -108,6 +115,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/events': typeof EventsRoute
   '/observability': typeof ObservabilityRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
@@ -121,6 +129,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/events': typeof EventsRoute
   '/observability': typeof ObservabilityRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/do/$className': typeof DoClassNameRouteWithChildren
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/events'
     | '/observability'
     | '/d1/$databaseId'
     | '/do/$className'
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/events'
     | '/observability'
     | '/d1/$databaseId'
     | '/kv/$namespaceId'
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/events'
     | '/observability'
     | '/d1/$databaseId'
     | '/do/$className'
@@ -181,6 +193,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EventsRoute: typeof EventsRoute
   ObservabilityRoute: typeof ObservabilityRoute
   D1DatabaseIdRoute: typeof D1DatabaseIdRoute
   DoClassNameRoute: typeof DoClassNameRouteWithChildren
@@ -196,6 +209,13 @@ declare module '@tanstack/react-router' {
       path: '/observability'
       fullPath: '/observability'
       preLoaderRoute: typeof ObservabilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -330,6 +350,7 @@ const WorkflowsWorkflowNameRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EventsRoute: EventsRoute,
   ObservabilityRoute: ObservabilityRoute,
   D1DatabaseIdRoute: D1DatabaseIdRoute,
   DoClassNameRoute: DoClassNameRouteWithChildren,
