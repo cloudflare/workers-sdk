@@ -785,6 +785,31 @@ describe("generate types - CLI", () => {
 		expect(output).not.toContain("mainModule");
 	});
 
+	it("should still emit mainModule when the entrypoint is outside the config directory", async ({
+		expect,
+	}) => {
+		// entrypoint in root; config in ./config/ — so relative path from config to entrypoint starts with ".."
+		fs.mkdirSync("./config", { recursive: true });
+		fs.writeFileSync("./index.js", `export default { fetch() {} };`);
+		fs.writeFileSync(
+			"./config/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "../index.js",
+				vars: { var: "value" },
+			}),
+			"utf-8"
+		);
+
+		await runWrangler(
+			"types --config config/wrangler.jsonc --include-runtime=false"
+		);
+
+		const output = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
+		expect(output).toContain("mainModule");
+	});
+
 	it("should log the interface type generated and declare modules", async ({
 		expect,
 	}) => {

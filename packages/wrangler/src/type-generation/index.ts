@@ -796,7 +796,7 @@ function isEntrypointInBuildOutputDir(
 ): boolean {
 	const rel = relative(configDir, entrypointFile);
 	if (rel.startsWith("..")) {
-		return true;
+		return false;
 	}
 	return rel
 		.split(sep)
