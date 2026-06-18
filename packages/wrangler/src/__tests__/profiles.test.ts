@@ -24,6 +24,10 @@ function configDir(): string {
 	return getGlobalWranglerConfigPath();
 }
 
+function pathArg(filePath: string): string {
+	return filePath.replace(/\\/g, "/");
+}
+
 function createProfileFile(name: string, token = `${name}-token`) {
 	const profilesDir = path.join(configDir(), "config");
 	mkdirSync(profilesDir, { recursive: true });
@@ -31,6 +35,15 @@ function createProfileFile(name: string, token = `${name}-token`) {
 	writeFileSync(
 		path.join(profilesDir, `${name}.toml`),
 		`oauth_token = "${token}"\nrefresh_token = "test-refresh"\nexpiration_time = "${futureDate}"\n`
+	);
+}
+
+function createDeprecatedProfileFile(name: string) {
+	const profilesDir = path.join(configDir(), "config");
+	mkdirSync(profilesDir, { recursive: true });
+	writeFileSync(
+		path.join(profilesDir, `${name}.toml`),
+		`api_token = "token"\n`
 	);
 }
 
@@ -258,9 +271,22 @@ describe("Profiles", () => {
 			expect(getBindingsForProfile(configDir(), "client-a")).toHaveLength(0);
 			const out = normalizeString(std.out);
 			expect(out).toContain("Removed directory bindings:");
-			expect(out).toContain(dirA);
-			expect(out).toContain(dirAv2);
+			expect(out).toContain(normalizeString(dirA));
+			expect(out).toContain(normalizeString(dirAv2));
 			expect(out).toContain("Successfully logged out.");
+			expect(out).toContain('Profile "client-a" deleted.');
+		});
+
+		it("deletes a profile file when logout returns before clearing storage", async ({
+			expect,
+		}) => {
+			createDeprecatedProfileFile("client-a");
+
+			await runWrangler("auth delete client-a");
+
+			expect(profileExists(configDir(), "client-a")).toBe(false);
+			const out = normalizeString(std.out);
+			expect(out).toContain("Not logged in, exiting...");
 			expect(out).toContain('Profile "client-a" deleted.');
 		});
 
@@ -312,11 +338,11 @@ describe("Profiles", () => {
 			const targetDir = path.resolve("/projects/client-a");
 			createProfileFile("client-a");
 
-			await runWrangler(`auth activate client-a ${targetDir}`);
+			await runWrangler(`auth activate client-a ${pathArg(targetDir)}`);
 
 			expect(getProfileForDirectory(configDir(), targetDir)).toBe("client-a");
 			expect(normalizeString(std.out)).toContain(
-				`Profile "client-a" activated for "${targetDir}".`
+				`Profile "client-a" activated for "${normalizeString(targetDir)}".`
 			);
 		});
 	});
@@ -334,11 +360,12 @@ describe("Profiles", () => {
 			expect,
 		}) => {
 			const targetDir = path.resolve("/projects/client-a");
+			const subDir = path.resolve("/projects/client-a/sub");
 			createProfileFile("client-a");
-			await runWrangler(`auth activate client-a ${targetDir}`);
+			await runWrangler(`auth activate client-a ${pathArg(targetDir)}`);
 
 			await expect(
-				runWrangler(`auth deactivate ${path.resolve("/projects/client-a/sub")}`)
+				runWrangler(`auth deactivate ${pathArg(subDir)}`)
 			).rejects.toThrow(/No profile is directly bound/);
 		});
 
@@ -393,12 +420,12 @@ describe("Profiles", () => {
 	describe("wrangler auth list", () => {
 		it("shows message when no profiles exist", async ({ expect }) => {
 			await runWrangler("auth list");
-			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				No profiles found. Run \`wrangler login\` to get started."
-			`);
+
+			const out = normalizeString(std.out);
+			expect(out).toContain("wrangler x.x.x");
+			expect(out).toContain(
+				"No profiles found. Run `wrangler login` to get started."
+			);
 		});
 
 		it("lists profiles with bound directories", async ({ expect }) => {
@@ -475,8 +502,7 @@ describe("Profiles", () => {
 			// whoami prints the banner (with active profile) before failing on auth
 			await runWrangler("whoami").catch(() => {});
 
-			// expect(normalizeString(std.out)).toContain("Active profile: my-profile");
-			expect(std.out).toMatchInlineSnapshot(`
+			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
@@ -531,7 +557,7 @@ describe("Profiles", () => {
 
 			// whoami with --config pointing to the project resolves the profile from the config's directory
 			await runWrangler(
-				`whoami --config ${path.join(projectDir, "wrangler.json")}`
+				`whoami --config ${pathArg(path.join(projectDir, "wrangler.json"))}`
 			).catch(() => {});
 
 			expect(std.out).toContain("Active profile: project-profile");
@@ -546,7 +572,7 @@ describe("Profiles", () => {
 			activateProfileForDirectory(configDir(), "workspace-profile", subDir);
 
 			// whoami with --cwd resolves the profile from that directory
-			await runWrangler(`whoami --cwd ${subDir}`).catch(() => {});
+			await runWrangler(`whoami --cwd ${pathArg(subDir)}`).catch(() => {});
 
 			expect(std.out).toContain("Active profile: workspace-profile");
 		});
@@ -561,7 +587,7 @@ describe("Profiles", () => {
 			activateProfileForDirectory(configDir(), "inherited-profile", parentDir);
 
 			// whoami from a nested subdirectory inherits the parent's profile
-			await runWrangler(`whoami --cwd ${childDir}`).catch(() => {});
+			await runWrangler(`whoami --cwd ${pathArg(childDir)}`).catch(() => {});
 
 			expect(std.out).toContain("Active profile: inherited-profile");
 		});

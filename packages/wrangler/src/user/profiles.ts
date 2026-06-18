@@ -2,6 +2,7 @@ import path from "node:path";
 import {
 	activateProfileForDirectory,
 	deactivateDirectory,
+	deleteProfileFile,
 	getProfileForDirectory,
 	listProfiles,
 	profileExists,
@@ -162,6 +163,7 @@ export const authDeleteCommand = createCommand({
 		}
 
 		await logout(args.name);
+		deleteProfileFile(configDir(), args.name);
 
 		logger.log(`Profile "${args.name}" deleted.`);
 

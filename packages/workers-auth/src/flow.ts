@@ -298,23 +298,24 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		return true;
 	}
 
-	function isRefreshNeeded(): boolean {
+	function isRefreshNeeded(profile?: string): boolean {
 		if (ctx.hasEnvCredentials()) {
 			return false;
 		}
 		const { accessToken } = readStoredAuthState({
 			warningLogger: ctx.logger,
-			storage: getStorage(),
+			storage: getStorage(profile),
 		});
 		return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 	}
 
-	async function refreshToken(): Promise<boolean> {
+	async function refreshToken(profile?: string): Promise<boolean> {
 		// `exchangeRefreshTokenForAccessToken` reads the refresh token fresh from
 		// disk on every call, so we always pick up the latest rotation written by a
 		// sibling Wrangler process. Refresh tokens are single-use, so a long-lived
 		// process such as `wrangler dev` would otherwise send a stale value and get
 		// a 401 from the token endpoint.
+		const storage = getStorage(profile);
 
 		try {
 			const {
@@ -328,9 +329,9 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				ctx.logger,
 				ctx.isNonInteractiveOrCI,
 				getClientId(),
-				getStorage()
+				storage
 			);
-			getStorage().write({
+			storage.write({
 				oauth_token,
 				expiration_time,
 				refresh_token,
@@ -372,10 +373,10 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				return { loggedIn: true };
 			}
 			return { loggedIn: false, reason: "no-credentials-login-failed" };
-		} else if (isRefreshNeeded()) {
+		} else if (isRefreshNeeded(props.profile)) {
 			// We're logged in, but the refresh token seems to have expired,
 			// so let's try to refresh it
-			const didRefresh = await refreshToken();
+			const didRefresh = await refreshToken(props.profile);
 			if (didRefresh) {
 				// The token was refreshed, so we're done here
 				return { loggedIn: true };
