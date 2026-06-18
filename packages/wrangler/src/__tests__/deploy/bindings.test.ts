@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -9,7 +10,6 @@ import { sync } from "command-exists";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -51,8 +51,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -1968,6 +1971,55 @@ describe("deploy", () => {
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should strip the local-dev `dev` field from a typed service binding at deploy time", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					services: [
+						{
+							binding: "ENTITLEMENTS",
+							service: "edge-entitlements",
+							entrypoint: "EntitlementsRPCService",
+							// @ts-expect-error - cross_account_grant and dev are not in the public config types
+							cross_account_grant: "entitlements-grant",
+							dev: {
+								plugin: {
+									package: "@cloudflare/workers-toolbox-plugins",
+									name: "entitlements",
+								},
+								options: {
+									entitlements: [
+										{
+											key: "containers.enabled",
+											targets: ["account"],
+											type: "bool",
+										},
+									],
+									mapping: { "*": { "containers.enabled": true } },
+								},
+							},
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "service",
+							name: "ENTITLEMENTS",
+							service: "edge-entitlements",
+							entrypoint: "EntitlementsRPCService",
+							cross_account_grant: "entitlements-grant",
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});

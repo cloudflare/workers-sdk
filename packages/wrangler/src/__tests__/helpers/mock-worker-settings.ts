@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { assert } from "vitest";
 import { msw } from "./msw";
-import type { Settings } from "../../deployment-bundle/bindings";
+import type { Settings } from "@cloudflare/deploy-helpers";
 
 export function mockGetSettings(
 	options: {

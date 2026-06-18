@@ -103,7 +103,8 @@ export class BundlerController extends Controller {
 						entry,
 						config.build.moduleRules,
 						this.#tmpDir.path,
-						config.pythonModules?.exclude ?? []
+						config.pythonModules?.exclude ?? [],
+						config.build.findAdditionalModules !== false
 					)
 				: await bundleWorker(entry, this.#tmpDir.path, {
 						bundle: true,

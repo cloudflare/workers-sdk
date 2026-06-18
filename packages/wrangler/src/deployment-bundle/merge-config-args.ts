@@ -6,7 +6,11 @@ import {
 	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { validateAssetsArgsAndConfig, validateAssetsOptions } from "../assets";
+import {
+	getAssetsOptions,
+	validateAssetsArgsAndConfig,
+	validateAssetsOptions,
+} from "../assets";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -26,6 +30,7 @@ import type {
 	SharedDeployVersionsProps,
 	VersionsUploadProps,
 } from "@cloudflare/deploy-helpers";
+import type { AssetsOptions } from "@cloudflare/workers-utils";
 import type { EphemeralDirectory } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -90,6 +95,8 @@ async function mergeSharedConfigArgs(
 		accountId,
 		sendMetrics,
 		resourcesProvision: getFlag("RESOURCES_PROVISION") ?? false,
+		skipProvisioningConfigWriteback: false,
+		skipLastDeployedFromApiCheck: false,
 	};
 
 	const buildProps: BuildProps = {
@@ -192,4 +199,46 @@ export function cleanupDestination(
 	if (typeof destination !== "string") {
 		destination.remove();
 	}
+}
+
+/**
+ * Get the inputs for the standalone
+ * `wrangler build --experimental-cf-build-output` path.
+ */
+export async function mergeBuildOutputProps(config: Config): Promise<{
+	buildProps: BuildProps | undefined;
+	assetsOptions: AssetsOptions | undefined;
+}> {
+	const assetsOptions = getAssetsOptions({
+		args: { assets: undefined },
+		config,
+	});
+	const isAssetsOnly =
+		assetsOptions !== undefined &&
+		assetsOptions.routerConfig.has_user_worker === false;
+
+	if (isAssetsOnly) {
+		return { buildProps: undefined, assetsOptions };
+	}
+
+	const entry = await getEntry({}, config, "deploy");
+	const buildProps: BuildProps = {
+		entry,
+		name: config.name,
+		compatibilityDate: config.compatibility_date,
+		compatibilityFlags: config.compatibility_flags,
+		uploadSourceMaps: config.upload_source_maps,
+		jsxFactory: config.jsx_factory,
+		jsxFragment: config.jsx_fragment,
+		tsconfig: config.tsconfig,
+		minify: config.minify,
+		noBundle: config.no_bundle ?? false,
+		defines: { ...config.define },
+		alias: { ...config.alias },
+		destination: getWranglerTmpDir(entry.projectRoot, "build"),
+		outdir: undefined,
+		metafile: undefined,
+	};
+
+	return { buildProps, assetsOptions };
 }
