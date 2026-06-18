@@ -1898,7 +1898,7 @@ describe("normalizeAndValidateConfig()", () => {
 						Movee: {
 							type: "durable-object",
 							state: "transferred",
-							transfer_to: "target-worker",
+							transferred_to: "target-worker",
 						},
 						Incoming: {
 							type: "durable-object",
@@ -2059,7 +2059,7 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it("errors when a transferred tombstone omits transfer_to", ({
+			it("errors when a transferred tombstone omits transferred_to", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -2078,7 +2078,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					'"exports.Movee.transfer_to" is required'
+					'"exports.Movee.transferred_to" is required'
 				);
 			});
 

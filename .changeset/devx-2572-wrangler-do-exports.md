@@ -21,7 +21,7 @@ Each entry in `exports` is keyed by Durable Object class name. `type` carries th
 		"Movee": {
 			"type": "durable-object",
 			"state": "transferred",
-			"transfer_to": "target-worker",
+			"transferred_to": "target-worker",
 		},
 		"Incoming": {
 			"type": "durable-object",

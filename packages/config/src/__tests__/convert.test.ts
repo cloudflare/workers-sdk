@@ -694,7 +694,7 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
-		it("converts a transferred tombstone (camelCase `transferTo` -> snake_case `transfer_to`)", ({
+		it("converts a transferred tombstone (camelCase `transferredTo` -> snake_case `transferred_to`)", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
@@ -703,7 +703,7 @@ describe("convertToWranglerConfig", () => {
 					Movee: {
 						type: "durable-object",
 						state: "transferred",
-						transferTo: "target-worker",
+						transferredTo: "target-worker",
 					},
 				},
 			});
@@ -711,7 +711,7 @@ describe("convertToWranglerConfig", () => {
 				Movee: {
 					type: "durable-object",
 					state: "transferred",
-					transfer_to: "target-worker",
+					transferred_to: "target-worker",
 				},
 			});
 		});

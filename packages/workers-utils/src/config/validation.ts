@@ -5982,7 +5982,7 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 			state,
 			storage,
 			renamed_to,
-			transfer_to,
+			transferred_to,
 			transfer_from,
 			...rest
 		} = entry as {
@@ -5990,7 +5990,7 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 			state?: unknown;
 			storage?: unknown;
 			renamed_to?: unknown;
-			transfer_to?: unknown;
+			transferred_to?: unknown;
 			transfer_from?: unknown;
 		};
 
@@ -6050,9 +6050,9 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 					);
 					valid = false;
 				}
-				if (transfer_to !== undefined) {
+				if (transferred_to !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to" is forbidden on state "created".`
+						`"${entryField}.transferred_to" is forbidden on state "created".`
 					);
 					valid = false;
 				}
@@ -6077,9 +6077,9 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 					);
 					valid = false;
 				}
-				if (transfer_to !== undefined) {
+				if (transferred_to !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to" is forbidden on state "deleted".`
+						`"${entryField}.transferred_to" is forbidden on state "deleted".`
 					);
 					valid = false;
 				}
@@ -6122,9 +6122,9 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 					);
 					valid = false;
 				}
-				if (transfer_to !== undefined) {
+				if (transferred_to !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to" is forbidden on state "renamed".`
+						`"${entryField}.transferred_to" is forbidden on state "renamed".`
 					);
 					valid = false;
 				}
@@ -6137,9 +6137,9 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 				break;
 			}
 			case "transferred": {
-				if (typeof transfer_to !== "string" || transfer_to === "") {
+				if (typeof transferred_to !== "string" || transferred_to === "") {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to" is required for state "transferred" and must be a non-empty string.`
+						`"${entryField}.transferred_to" is required for state "transferred" and must be a non-empty string.`
 					);
 					valid = false;
 				}
@@ -6189,9 +6189,9 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 					);
 					valid = false;
 				}
-				if (transfer_to !== undefined) {
+				if (transferred_to !== undefined) {
 					diagnostics.errors.push(
-						`"${entryField}.transfer_to" is forbidden on state "expecting-transfer".`
+						`"${entryField}.transferred_to" is forbidden on state "expecting-transfer".`
 					);
 					valid = false;
 				}

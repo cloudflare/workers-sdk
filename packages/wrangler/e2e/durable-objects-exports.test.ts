@@ -411,7 +411,7 @@ describe.skipIf(!E2E_GATE_ON)(
 			//      emits a `Transfer pending:` info entry because A hasn't
 			//      released the namespace yet.
 			//   2. Source script (A) deploys a `transferred` tombstone naming B
-			//      as `transfer_to`; reconciliation emits
+			//      as `transferred_to`; reconciliation emits
 			//      `Transferred (committed):` once the handoff lands.
 			const workerA = generateResourceName();
 			const workerB = generateResourceName();
@@ -515,7 +515,7 @@ describe.skipIf(!E2E_GATE_ON)(
 						[exports.Widget]
 						type = "durable-object"
 						state = "transferred"
-						transfer_to = "${workerB}"
+						transferred_to = "${workerB}"
 					`,
 					"src/index.ts": dedent`
 						export default {

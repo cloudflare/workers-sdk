@@ -666,7 +666,7 @@ function convertBindingsAndAssets(
  * The structural shape is identical between `@cloudflare/config`, wrangler,
  * and EWC; the only differences are the camelCase → snake_case property
  * name transforms applied here for the few fields where they differ
- * (`renamedTo`, `transferTo`, `transferFrom`).
+ * (`renamedTo`, `transferredTo`, `transferFrom`).
  *
  * Workflows are not yet supported on the export path; entries with
  * non-Durable-Object types will be added here as those land.
@@ -717,7 +717,7 @@ function convertExports(
 				converted[className] = {
 					type: "durable-object",
 					state: "transferred",
-					transfer_to: value.transferTo,
+					transferred_to: value.transferredTo,
 				};
 				break;
 			}

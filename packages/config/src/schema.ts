@@ -310,7 +310,7 @@ const ExportSchema = z.union([
 	z.strictObject({
 		type: z.literal("durable-object"),
 		state: z.literal("transferred"),
-		transferTo: z.string(),
+		transferredTo: z.string(),
 	}),
 	z.strictObject({
 		type: z.literal("durable-object"),
