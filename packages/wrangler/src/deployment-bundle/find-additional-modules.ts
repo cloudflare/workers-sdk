@@ -260,7 +260,7 @@ export async function findAdditionalModules(
 async function matchFiles(
 	files: AsyncGenerator<string>,
 	relativeTo: string,
-	{ rules, removedRules, silentlyRemovedRules }: ParsedRules
+	{ rules, removedRules }: ParsedRules
 ) {
 	const modules: CfModule[] = [];
 
@@ -269,6 +269,7 @@ async function matchFiles(
 	const moduleNames = new Set<string>();
 
 	for await (const filePath of files) {
+		let matchedActiveRule = false;
 		for (const rule of rules) {
 			for (const glob of rule.globs) {
 				const regexp = globToRegExp(glob, {
@@ -299,22 +300,24 @@ async function matchFiles(
 						)} (${chalk.green(module.type ?? "")})`
 					);
 				}
+				matchedActiveRule = true;
 			}
 		}
 
-		// Check removedRules first — a file matching a rule removed due to
-		// fallthrough:true (or the default) should always error, even if its
-		// glob also appears in silentlyRemovedRules.
-		for (const rule of removedRules) {
-			for (const glob of rule.globs) {
-				const regexp = globToRegExp(glob);
-				if (regexp.test(filePath)) {
-					throw new UserError(
-						`The file ${filePath} matched a module rule in your configuration (${JSON.stringify(
-							rule
-						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`,
-						{ telemetryMessage: "module rule ignored without fallthrough" }
-					);
+		if (!matchedActiveRule) {
+			// Only error for files that matched no active rule. A file that matched
+			// an active rule is already included; the removed rule is irrelevant.
+			for (const rule of removedRules) {
+				for (const glob of rule.globs) {
+					const regexp = globToRegExp(glob, { globstar: true });
+					if (regexp.test(filePath)) {
+						throw new UserError(
+							`The file ${filePath} matched a module rule in your configuration (${JSON.stringify(
+								rule
+							)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`,
+							{ telemetryMessage: "module rule ignored without fallthrough" }
+						);
+					}
 				}
 			}
 		}
