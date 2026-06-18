@@ -5,8 +5,9 @@ import {
 	PulseIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { FilterSelect } from "../components/observability/FilterSelect";
+import { ObservabilityViewSwitcher } from "../components/observability/ObservabilityViewSwitcher";
 import { TraceWaterfall } from "../components/observability/TraceWaterfall";
 import {
 	findTraceDatabaseId,
@@ -39,6 +40,7 @@ function isError(t: TraceRow): boolean {
 
 function ObservabilityView(): JSX.Element {
 	const rootData = rootRoute.useLoaderData();
+	const { worker } = Route.useSearch();
 
 	const databaseId = useMemo(() => {
 		for (const worker of rootData.workers) {
@@ -112,6 +114,12 @@ function ObservabilityView(): JSX.Element {
 		void refresh();
 	}, [refresh]);
 
+	// auto-refresh the trace list so new traces appear without clicking Refresh
+	useEffect(() => {
+		const id = setInterval(() => void refresh(), 3000);
+		return () => clearInterval(id);
+	}, [refresh]);
+
 	const selectTrace = useCallback(
 		async (trace: TraceRow) => {
 			setSelected(trace);
@@ -147,10 +155,8 @@ function ObservabilityView(): JSX.Element {
 			<header className="border-kumo-fill flex min-h-14 items-center gap-2.5 border-b px-4">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<h2 className="text-kumo-default text-sm font-semibold leading-tight">
-						Traces
-					</h2>
-					<span className="text-kumo-subtle text-[11px] leading-tight">
+					<ObservabilityViewSwitcher current="traces" worker={worker} />
+					<span className="text-kumo-subtle pl-1 text-[11px] leading-tight">
 						{traces.length} trace{traces.length === 1 ? "" : "s"}
 					</span>
 				</div>
@@ -268,8 +274,8 @@ function ObservabilityView(): JSX.Element {
 								const dur = t.duration_ms ?? 0;
 								const { value, unit } = splitDuration(dur);
 								return (
+									<Fragment key={t.trace_id}>
 									<tr
-										key={t.trace_id}
 										onClick={() => void selectTrace(t)}
 										className={cn(
 											"border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5 cursor-pointer border-b",
@@ -325,33 +331,35 @@ function ObservabilityView(): JSX.Element {
 											)}
 										</td>
 									</tr>
+									{isSel && spans.length > 0 ? (
+										<tr className="bg-black/[0.02] dark:bg-white/[0.02]">
+											<td colSpan={5} className="border-kumo-fill border-b p-4">
+												<div className="mb-2 flex items-baseline gap-2">
+													<span className="text-kumo-default font-mono text-sm font-semibold">
+														{t.name ?? t.trace_id}
+													</span>
+													<span className="text-kumo-subtle font-mono text-[11px]">
+														{t.trace_id.slice(0, 16)}
+													</span>
+													<span className="text-kumo-subtle text-[11px]">
+														· {Math.round(t.duration_ms ?? 0)}ms ·{" "}
+														{t.span_count ?? spans.length} spans
+													</span>
+												</div>
+												<TraceWaterfall
+													spans={spans}
+													rootSpanId={t.root_span_id}
+													traceDurationMs={t.duration_ms ?? 0}
+												/>
+											</td>
+										</tr>
+									) : null}
+									</Fragment>
 								);
 							})}
 						</tbody>
 					</table>
 				)}
-
-				{selected && spans.length > 0 ? (
-					<div className="border-kumo-fill mt-2 border-t p-4">
-						<div className="mb-2 flex items-baseline gap-2">
-							<span className="text-kumo-default font-mono text-sm font-semibold">
-								{selected.name ?? selected.trace_id}
-							</span>
-							<span className="text-kumo-subtle font-mono text-[11px]">
-								{selected.trace_id.slice(0, 16)}
-							</span>
-							<span className="text-kumo-subtle text-[11px]">
-								· {Math.round(selected.duration_ms ?? 0)}ms ·{" "}
-								{selected.span_count ?? spans.length} spans
-							</span>
-						</div>
-						<TraceWaterfall
-							spans={spans}
-							rootSpanId={selected.root_span_id}
-							traceDurationMs={selected.duration_ms ?? 0}
-						/>
-					</div>
-				) : null}
 			</div>
 		</div>
 	);

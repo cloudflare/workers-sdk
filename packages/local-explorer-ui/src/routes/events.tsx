@@ -8,6 +8,7 @@ import {
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FilterSelect } from "../components/observability/FilterSelect";
+import { ObservabilityViewSwitcher } from "../components/observability/ObservabilityViewSwitcher";
 import {
 	findTraceDatabaseId,
 	listEvents,
@@ -60,6 +61,7 @@ function levelClass(level: string | null): string {
 
 function EventsView(): JSX.Element {
 	const rootData = rootRoute.useLoaderData();
+	const { worker } = Route.useSearch();
 
 	const databaseId = useMemo(() => {
 		for (const worker of rootData.workers) {
@@ -118,10 +120,8 @@ function EventsView(): JSX.Element {
 			<header className="border-kumo-fill flex min-h-14 items-center gap-2.5 border-b px-4">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<h2 className="text-kumo-default text-sm font-semibold leading-tight">
-						Events
-					</h2>
-					<span className="text-kumo-subtle text-[11px] leading-tight">
+					<ObservabilityViewSwitcher current="events" worker={worker} />
+					<span className="text-kumo-subtle pl-1 text-[11px] leading-tight">
 						{events.length} event{events.length === 1 ? "" : "s"}
 					</span>
 				</div>
