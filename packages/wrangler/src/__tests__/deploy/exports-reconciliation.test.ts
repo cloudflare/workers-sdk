@@ -72,11 +72,9 @@ describe("renderExportsReconciliationSuccess", () => {
 		renderExportsReconciliationSuccess(
 			emptyResult({
 				transferred: [
-					{ class: "Movee", transfer_to: "target-worker", phase: "committed" },
+					{ class: "Movee", to: "target-worker", phase: "committed" },
 				],
-				transfer_pending: [
-					{ class: "Incoming", transfer_from: "source-worker" },
-				],
+				transfer_pending: [{ class: "Incoming", from: "source-worker" }],
 			})
 		);
 

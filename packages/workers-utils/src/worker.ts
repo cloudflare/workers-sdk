@@ -460,7 +460,7 @@ export type CfDurableObjectExportState =
  *    `renamed_to`. The target must appear as a live (state `"created"`)
  *    `durable-object` entry in the same map.
  *  - `transferred` (tombstone): hand ownership of the namespace to another
- *    script in the same account (`transfer_to`). Two-phase commit; the
+ *    script in the same account (`transferred_to`). Two-phase commit; the
  *    receiving script must first deploy an `expecting-transfer` entry naming
  *    this script via `transfer_from`.
  *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
@@ -480,7 +480,7 @@ export type CfDurableObjectExport =
 	| {
 			type: "durable-object";
 			state: "transferred";
-			transfer_to: string;
+			transferred_to: string;
 	  }
 	| {
 			type: "durable-object";

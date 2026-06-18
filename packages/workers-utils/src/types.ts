@@ -351,13 +351,13 @@ export type ExportsReconciliationRename = {
 
 export type ExportsReconciliationTransfer = {
 	class: string;
-	transfer_to: string;
+	to: string;
 	phase: "committed";
 };
 
 export type ExportsReconciliationTransferPending = {
 	class: string;
-	transfer_from: string;
+	from: string;
 };
 
 /**

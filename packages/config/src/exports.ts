@@ -5,7 +5,7 @@
 // The TS-facing API follows the same structural shape as the wrangler /
 // EWC wire format, with two stylistic transforms:
 //
-//   - property names are camelCased (`renamedTo`, `transferTo`,
+//   - property names are camelCased (`renamedTo`, `transferredTo`,
 //     `transferFrom`),
 //   - enumeration values are kebab-cased (`type: "durable-object"`,
 //     `state: "expecting-transfer"`, `storage: "legacy-kv"`).
@@ -79,7 +79,7 @@ interface DurableObjectTransferredExportOptions {
 	 * The destination script. Must reference a script in the same account.
 	 * Cross-dispatch-namespace transfers are rejected.
 	 */
-	transferTo: string;
+	transferredTo: string;
 }
 
 /**
@@ -187,7 +187,7 @@ export interface Exports {
  *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
  *     OldClass:        exports.deleted(),
  *     OldName:         exports.renamed({ renamedTo: "NewName" }),
- *     Movee:           exports.transferred({ transferTo: "target-worker" }),
+ *     Movee:           exports.transferred({ transferredTo: "target-worker" }),
  *     Incoming:        exports.expectingTransfer({ storage: "sqlite", transferFrom: "source-worker" }),
  *   },
  * });
@@ -201,10 +201,10 @@ export const exports: Exports = {
 		state: "renamed",
 		renamedTo,
 	}),
-	transferred: ({ transferTo }) => ({
+	transferred: ({ transferredTo }) => ({
 		type: "durable-object",
 		state: "transferred",
-		transferTo,
+		transferredTo,
 	}),
 	expectingTransfer: ({ storage, transferFrom }) => ({
 		type: "durable-object",
