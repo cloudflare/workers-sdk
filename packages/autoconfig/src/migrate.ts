@@ -17,6 +17,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
+import { splitRawConfig } from "@cloudflare/config";
 import { FatalError, parseJSONC } from "@cloudflare/workers-utils";
 import {
 	detectPackageManager,
@@ -27,7 +28,6 @@ import {
 	serializeCloudflareConfig,
 	serializeWranglerConfig,
 } from "./config-module/serialize";
-import { splitRawConfig } from "./config-module/split";
 import type { AutoConfigContext } from "./context";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 

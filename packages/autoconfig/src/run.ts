@@ -10,6 +10,7 @@ import {
 	installPackages,
 	installWrangler,
 } from "@cloudflare/cli-shared-helpers/packages";
+import { splitRawConfig } from "@cloudflare/config";
 import {
 	FatalError,
 	getTodaysCompatDate,
@@ -23,7 +24,6 @@ import {
 	serializeCloudflareConfig,
 	serializeWranglerConfig,
 } from "./config-module/serialize";
-import { splitRawConfig } from "./config-module/split";
 import {
 	assertNonConfigured,
 	confirmAutoConfigDetails,

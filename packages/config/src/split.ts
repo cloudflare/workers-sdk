@@ -1,6 +1,6 @@
 /**
- * Full-fidelity inverse of `@cloudflare/config`'s `convertToWranglerConfig`
- * (plus wrangler's `convertToolingConfig`).
+ * Full-fidelity inverse of {@link convertToWranglerConfig} (plus wrangler's
+ * `convertToolingConfig`).
  *
  * Takes a Wrangler `RawConfig` (snake_case — the shape of `wrangler.jsonc`)
  * and splits it into the two new-format config objects:
@@ -11,14 +11,14 @@
  *                 `wrangler.config.ts` via `defineWranglerConfig`.
  *
  * Every branch here mirrors a branch in the forward converter, reversed, so
- * that `convertToWranglerConfig(split(raw).worker)` round-trips the runtime
- * fields and `convertToolingConfig(split(raw).tooling)` round-trips the
- * tooling fields. The binding `env` entries are emitted as plain
- * type-tagged objects (e.g. `{ type: "kv", id }`), which are exactly what
- * the `bindings.*` builders produce and what the input schema accepts.
+ * that `convertToWranglerConfig(splitRawConfig(raw).worker)` round-trips the
+ * runtime fields and `convertToolingConfig(splitRawConfig(raw).tooling)`
+ * round-trips the tooling fields. The binding `env` entries are emitted as
+ * plain type-tagged objects (e.g. `{ type: "kv", id }`), which are exactly
+ * what the `bindings.*` builders produce and what the input schema accepts.
  *
  * The objects are deliberately plain ordered `Record`s (not typed
- * `UserConfig`) so the serializer can print them verbatim; the field shapes
+ * `UserConfig`) so a serializer can print them verbatim; the field shapes
  * are validated end-to-end by the round-trip tests.
  */
 import type { RawConfig } from "@cloudflare/workers-utils";

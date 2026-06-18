@@ -8,7 +8,7 @@
  * which are valid `@cloudflare/config` config — the `bindings.*` builders are
  * just sugar that produces the same shape.
  */
-import type { NewConfigSplit } from "./split";
+import type { NewConfigSplit } from "@cloudflare/config";
 
 /**
  * The module specifier the generated files import their `define*` helpers
