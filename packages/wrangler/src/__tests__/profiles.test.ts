@@ -402,16 +402,15 @@ describe("Profiles", () => {
 		});
 
 		it("lists profiles with bound directories", async ({ expect }) => {
-			const targetDir = path.resolve("/projects/client-a");
+			const targetDir = path.resolve("projects", "client-a");
 			createProfileFile("default");
 			createProfileFile("client-a");
-
-			await runWrangler(`auth activate client-a --dir ${targetDir}`);
+			activateProfileForDirectory(configDir(), "client-a", targetDir);
 
 			await runWrangler("auth list");
 			const out = normalizeString(std.out);
 			expect(out).toContain("client-a");
-			expect(out).toContain(targetDir);
+			expect(out).toContain(normalizeString(targetDir));
 			expect(out).toContain("default");
 		});
 	});
