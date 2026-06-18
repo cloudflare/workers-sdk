@@ -4,7 +4,7 @@
 
 Add experimental support for declarative Durable Object exports
 
-`wrangler deploy` and `wrangler versions upload` now accept an `exports` map in `wrangler.json` / `wrangler.toml` as a declarative alternative to the legacy `migrations` array. The new flow is gated behind the `X_DO_EXPORTS` environment variable.
+`wrangler deploy` and `wrangler versions upload` now accept an `exports` map in `wrangler.json` as a declarative alternative to the legacy `migrations` array. The new flow is gated behind the `X_DO_EXPORTS` environment variable.
 
 Each entry in `exports` is keyed by Durable Object class name. `type` carries the export _kind_ (currently always `"durable-object"`); the `state` field carries the lifecycle and defaults to `"created"` (live) when omitted:
 
