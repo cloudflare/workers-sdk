@@ -111,12 +111,28 @@ describe("maybeRedirectPagesToWorkers", () => {
 
 		expect(result).toEqual({ handled: true });
 		expect(main).toHaveBeenCalledWith(["deploy"]);
-		expect(std.warn).toContain("deployed to Cloudflare Workers");
+		expect(std.out).toContain(
+			"Redirecting user to the latest version of Cloudflare Pages on Workers"
+		);
+		expect(std.warn).toContain(
+			"Cloudflare Pages is becoming part of Cloudflare Workers"
+		);
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages redirect to workers",
 			expect.objectContaining({ command: "deploy", result: "success" }),
 			expect.anything()
 		);
+	});
+
+	it("does not redirect when --force is set", async ({ expect }) => {
+		const result = await maybeRedirectPagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			force: true,
+		});
+
+		expect(result).toEqual({ handled: false });
+		expect(main).not.toHaveBeenCalled();
 	});
 
 	it("falls back to Pages when the Workers deploy fails", async ({

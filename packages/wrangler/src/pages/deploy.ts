@@ -114,6 +114,12 @@ export const pagesDeployCommand = createCommand({
 			description:
 				"Whether to upload any server-side sourcemaps with this deployment",
 		},
+		force: {
+			type: "boolean",
+			default: false,
+			description:
+				"Deploy directly to Cloudflare Pages, bypassing the automatic redirect to Cloudflare Workers for new static projects",
+		},
 	},
 	positionalArgs: ["directory"],
 	async handler(args) {
@@ -222,6 +228,7 @@ export const pagesDeployCommand = createCommand({
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
 			existingProject: Boolean(projectName) && isExistingProject,
+			force: args.force,
 		});
 		if (redirect.handled) {
 			return;

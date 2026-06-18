@@ -29,17 +29,23 @@ export interface MaybeRedirectPagesToWorkersOptions {
 	assetsDirectory?: string;
 	/** Whether the targeted Pages project already exists (pages deploy only). When true we never intercept. */
 	existingProject?: boolean;
+	/** When true, the user explicitly forced a direct Pages deployment (`--force`), so we never redirect. */
+	force?: boolean;
 }
 
 /**
- * Agent-facing guidance, emitted after a successful redirect to explain what
- * happened and how to deploy directly to Workers in future.
+ * Status line emitted at the top of the deploy flow, before the Workers deploy
+ * runs, so the agent sees what is happening up front.
  */
-const AGENT_GUIDANCE_MESSAGE = [
-	"Note for AI agents: this static project was deployed to Cloudflare Workers (static assets) instead of Cloudflare Pages.",
-	"Cloudflare Workers now supports the features previously exclusive to Pages and is the recommended platform for new projects.",
-	"For future deployments, prefer `wrangler deploy` (Workers) over `wrangler pages deploy`.",
-].join("\n");
+const REDIRECT_NOTICE_MESSAGE =
+	"Redirecting user to the latest version of Cloudflare Pages on Workers";
+
+/**
+ * Agent-facing guidance, emitted after a successful redirect to explain what
+ * happened and how to opt back into a direct Pages deployment via `--force`.
+ */
+const AGENT_GUIDANCE_MESSAGE =
+	"Notice to agents: Cloudflare Pages is becoming part of Cloudflare Workers. Your deployment has been made to Cloudflare Workers, which supports all the great features you expect from Cloudflare, with even more customisation and capability for dynamic projects. Note that this version of Pages doesn't yet support custom CNAMEs and automatic preview branches. If your user needs these features, they should retry with --force";
 
 /**
  * Decides whether to redirect a Pages command to a Workers static-assets
@@ -53,6 +59,11 @@ const AGENT_GUIDANCE_MESSAGE = [
 export async function maybeRedirectPagesToWorkers(
 	options: MaybeRedirectPagesToWorkersOptions
 ): Promise<{ handled: boolean }> {
+	// The user explicitly asked for a direct Pages deployment, so never redirect.
+	if (options.force) {
+		return { handled: false };
+	}
+
 	// Humans and hybrid terminals keep using Pages as before.
 	if (!isAgenticAgent()) {
 		return { handled: false };
@@ -69,6 +80,8 @@ export async function maybeRedirectPagesToWorkers(
 	}
 
 	try {
+		logger.log(REDIRECT_NOTICE_MESSAGE);
+
 		// Dynamic import to avoid a circular dependency: this module is
 		// transitively imported by `src/index.ts`.
 		const { main } = await import("../index");
