@@ -134,6 +134,14 @@ describe("wrangler", () => {
 
 				expect(std.out).toContain("wrangler complete --");
 			});
+
+			test("should reject executable names with shell metacharacters", async ({
+				expect,
+			}) => {
+				await expect(
+					runWrangler(`complete powershell --executable-name "wrangler; rm -rf"`)
+				).rejects.toThrow("Invalid --executable-name value");
+			});
 		});
 
 		describe("bash", () => {

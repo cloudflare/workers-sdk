@@ -168,6 +168,13 @@ export const completionsCommand = createCommand({
 
 		const executableName = args.executableName ?? "wrangler";
 
+		if (!/^[a-zA-Z0-9 \-_./@]+$/.test(executableName)) {
+			throw new CommandLineArgsError(
+				`Invalid --executable-name value: "${executableName}". Only alphanumeric characters, spaces, hyphens, underscores, dots, slashes, and @ are allowed.`,
+				{ telemetryMessage: "cli completions invalid executable name" }
+			);
+		}
+
 		setupCompletions();
 		t.setup("wrangler", executableName, args.shell);
 	},
