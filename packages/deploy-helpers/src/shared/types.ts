@@ -32,6 +32,18 @@ export type DeployHelpersContext = {
 		text: string,
 		options?: { defaultValue?: string }
 	) => Promise<string>;
+	select: <Values extends string>(
+		text: string,
+		options: {
+			choices: {
+				title: string;
+				description?: string;
+				value: Values;
+			}[];
+			defaultOption?: number;
+			fallbackOption?: number;
+		}
+	) => Promise<Values>;
 	isNonInteractiveOrCI: () => boolean;
 };
 
