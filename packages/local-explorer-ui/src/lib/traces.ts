@@ -42,6 +42,8 @@ export interface SpanRow {
 export interface LayoutSpan extends SpanRow {
 	depth: number;
 	hasChildren: boolean;
+	/** dotted path id ("0", "0.1", "0.1.2") used for collapse/expand */
+	layoutId: string;
 }
 
 /** Run a SQL statement against a local D1 and return row objects. */
@@ -91,17 +93,81 @@ export async function hasTraceTables(databaseId: string): Promise<boolean> {
 	return rows.length >= 2;
 }
 
-/** Fetch recent traces (most recent first). */
+/** Filters for the trace list — a simpler version of the dashboard query builder. */
+export interface TraceFilters {
+	/** free-text: matches operation name, any span name, or any span attribute */
+	search?: string;
+	/** "all" | "success" | "error" */
+	status?: "all" | "success" | "error";
+	/** "all" or a span kind: http | fetch | d1 | kv | r2 | do */
+	kind?: string;
+	/** attribute/tag key to filter on (e.g. "db.query.text"); "all"/empty = no tag filter */
+	tagKey?: string;
+	/** optional value substring for the chosen tag key */
+	tagValue?: string;
+	limit?: number;
+}
+
+const esc = (s: string) => s.replace(/'/g, "''");
+
+/** Fetch recent traces (most recent first), applying simple filters. */
 export async function listTraces(
 	databaseId: string,
-	limit = 100
+	filters: TraceFilters = {}
 ): Promise<TraceRow[]> {
+	const limit = Number(filters.limit ?? 100);
+	const where: string[] = [];
+
+	if (filters.status === "success") {
+		where.push(
+			"(COALESCE(status_code, 200) < 400 AND (outcome IS NULL OR outcome = 'ok') AND error IS NULL)"
+		);
+	} else if (filters.status === "error") {
+		where.push(
+			"(COALESCE(status_code, 0) >= 400 OR (outcome IS NOT NULL AND outcome != 'ok') OR error IS NOT NULL)"
+		);
+	}
+
+	if (filters.kind && filters.kind !== "all") {
+		where.push(
+			`trace_id IN (SELECT trace_id FROM spans WHERE kind = '${esc(filters.kind)}')`
+		);
+	}
+
+	if (filters.tagKey && filters.tagKey !== "all") {
+		const v = filters.tagValue?.trim();
+		const valClause = v ? ` AND j.value LIKE '%${esc(v)}%'` : "";
+		where.push(
+			`trace_id IN (SELECT s.trace_id FROM spans s, json_each(s.attributes) j WHERE j.key = '${esc(filters.tagKey)}'${valClause})`
+		);
+	}
+
+	const q = filters.search?.trim();
+	if (q) {
+		const like = `%${esc(q)}%`;
+		// matches the trace operation, or any span name / attribute ("log") in it
+		where.push(
+			`(name LIKE '${like}' OR trace_id IN (SELECT trace_id FROM spans WHERE name LIKE '${like}' OR attributes LIKE '${like}'))`
+		);
+	}
+
+	const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 	const rows = await runSql(
 		databaseId,
 		`SELECT trace_id, root_span_id, name, duration_ms, outcome, status_code, error, span_count, created_at
-		 FROM traces ORDER BY created_at DESC, ROWID DESC LIMIT ${Number(limit)}`
+		 FROM traces ${whereSql} ORDER BY created_at DESC, ROWID DESC LIMIT ${limit}`
 	);
 	return rows as unknown as TraceRow[];
+}
+
+/** Distinct attribute/tag keys present across all spans (for the tag filter). */
+export async function getTagKeys(databaseId: string): Promise<string[]> {
+	const rows = await runSql(
+		databaseId,
+		`SELECT DISTINCT j.key AS k FROM spans s, json_each(s.attributes) j
+		 WHERE s.attributes IS NOT NULL ORDER BY k LIMIT 200`
+	);
+	return rows.map((r) => String(r.k)).filter(Boolean);
 }
 
 /** Fetch all spans for a single trace. */
@@ -148,21 +214,21 @@ export function buildSpanTree(
 	}
 
 	const out: LayoutSpan[] = [];
-	const visit = (spanId: string, depth: number) => {
+	const visit = (spanId: string, depth: number, layoutId: string) => {
 		const span = byId.get(spanId);
 		if (!span) {
 			return;
 		}
 		const children = childrenOf.get(spanId) ?? [];
-		out.push({ ...span, depth, hasChildren: children.length > 0 });
-		for (const child of children) {
-			visit(child.span_id, depth + 1);
-		}
+		out.push({ ...span, depth, hasChildren: children.length > 0, layoutId });
+		children.forEach((child, i) => {
+			visit(child.span_id, depth + 1, `${layoutId}.${i}`);
+		});
 	};
 
 	const root = byId.get(rootSpanId) ?? spans[0];
 	if (root) {
-		visit(root.span_id, 0);
+		visit(root.span_id, 0, "0");
 	}
 	return out;
 }

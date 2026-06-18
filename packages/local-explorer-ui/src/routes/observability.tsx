@@ -1,6 +1,7 @@
 import { cn } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
+	MagnifyingGlassIcon,
 	PulseIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
@@ -8,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { TraceWaterfall } from "../components/observability/TraceWaterfall";
 import {
 	findTraceDatabaseId,
+	getTagKeys,
 	getTraceSpans,
 	listTraces,
 	type SpanRow,
@@ -22,6 +24,17 @@ export const Route = createFileRoute("/observability")({
 });
 
 const rootRoute = getRouteApi("__root__");
+
+function splitDuration(ms: number): { value: string; unit: string } {
+	if (ms >= 1000) {
+		return { value: (ms / 1000).toFixed(2), unit: "s" };
+	}
+	return { value: String(Math.round(ms)), unit: "ms" };
+}
+
+function isError(t: TraceRow): boolean {
+	return (!!t.outcome && t.outcome !== "ok") || (t.status_code ?? 0) >= 400;
+}
 
 function ObservabilityView(): JSX.Element {
 	const rootData = rootRoute.useLoaderData();
@@ -42,6 +55,35 @@ function ObservabilityView(): JSX.Element {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	// filters (simpler version of the dashboard query builder)
+	const [search, setSearch] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const [status, setStatus] = useState<"all" | "success" | "error">("all");
+	const [kind, setKind] = useState("all");
+	const [tagKey, setTagKey] = useState("all");
+	const [tagValue, setTagValue] = useState("");
+	const [debouncedTagValue, setDebouncedTagValue] = useState("");
+	const [tagKeys, setTagKeys] = useState<string[]>([]);
+
+	useEffect(() => {
+		const id = setTimeout(() => setDebouncedSearch(search), 300);
+		return () => clearTimeout(id);
+	}, [search]);
+
+	useEffect(() => {
+		const id = setTimeout(() => setDebouncedTagValue(tagValue), 300);
+		return () => clearTimeout(id);
+	}, [tagValue]);
+
+	useEffect(() => {
+		if (!databaseId) {
+			return;
+		}
+		void getTagKeys(databaseId)
+			.then(setTagKeys)
+			.catch(() => setTagKeys([]));
+	}, [databaseId]);
+
 	const refresh = useCallback(async () => {
 		if (!databaseId) {
 			return;
@@ -49,13 +91,21 @@ function ObservabilityView(): JSX.Element {
 		setLoading(true);
 		setError(null);
 		try {
-			setTraces(await listTraces(databaseId));
+			setTraces(
+				await listTraces(databaseId, {
+					search: debouncedSearch,
+					status,
+					kind,
+					tagKey,
+					tagValue: debouncedTagValue,
+				})
+			);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Failed to load traces");
 		} finally {
 			setLoading(false);
 		}
-	}, [databaseId]);
+	}, [databaseId, debouncedSearch, status, kind, tagKey, debouncedTagValue]);
 
 	useEffect(() => {
 		void refresh();
@@ -93,13 +143,13 @@ function ObservabilityView(): JSX.Element {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="flex min-h-14 items-center gap-2.5 border-b px-4">
-				<PulseIcon size={18} className="text-text-secondary" />
+			<header className="border-kumo-fill flex min-h-14 items-center gap-2.5 border-b px-4">
+				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<h2 className="text-text text-sm leading-tight font-semibold">
+					<h2 className="text-kumo-default text-sm font-semibold leading-tight">
 						Traces
 					</h2>
-					<span className="text-text-secondary text-[11px] leading-tight">
+					<span className="text-kumo-subtle text-[11px] leading-tight">
 						{traces.length} trace{traces.length === 1 ? "" : "s"}
 					</span>
 				</div>
@@ -107,7 +157,7 @@ function ObservabilityView(): JSX.Element {
 				<button
 					type="button"
 					onClick={() => void refresh()}
-					className="text-text-secondary hover:bg-kumo-tint hover:text-text flex items-center gap-1.5 rounded px-2 py-1 text-xs"
+					className="text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default flex items-center gap-1.5 rounded px-2 py-1 text-xs"
 				>
 					<ArrowsCounterClockwiseIcon
 						size={13}
@@ -117,9 +167,74 @@ function ObservabilityView(): JSX.Element {
 				</button>
 			</header>
 
-			<div className="flex-1 overflow-y-auto p-4">
+			{/* filter bar — a simpler version of the dashboard query builder */}
+			<div className="border-kumo-fill flex items-center gap-2 border-b px-4 py-2">
+				<div className="border-kumo-fill bg-kumo-base flex flex-1 items-center gap-2 rounded-md border px-2.5 py-1.5">
+					<MagnifyingGlassIcon size={14} className="text-kumo-subtle shrink-0" />
+					<input
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder="Search operation, span name, or attributes (e.g. a D1 query, a URL)…"
+						className="text-kumo-default placeholder:text-kumo-subtle w-full bg-transparent text-xs outline-none"
+					/>
+					{search ? (
+						<button
+							type="button"
+							onClick={() => setSearch("")}
+							className="text-kumo-subtle hover:text-kumo-default text-xs"
+						>
+							✕
+						</button>
+					) : null}
+				</div>
+				<FilterSelect
+					value={status}
+					onChange={(v) => setStatus(v as typeof status)}
+					options={[
+						["all", "All statuses"],
+						["success", "Success"],
+						["error", "Errors"],
+					]}
+				/>
+				<FilterSelect
+					value={kind}
+					onChange={setKind}
+					options={[
+						["all", "All types"],
+						["http", "HTTP"],
+						["fetch", "Fetch"],
+						["d1", "D1"],
+						["kv", "KV"],
+						["r2", "R2"],
+						["do", "Durable Object"],
+					]}
+				/>
+				<FilterSelect
+					value={tagKey}
+					onChange={(v) => {
+						setTagKey(v);
+						if (v === "all") {
+							setTagValue("");
+						}
+					}}
+					options={[
+						["all", "All tags"],
+						...tagKeys.map((k) => [k, k] as [string, string]),
+					]}
+				/>
+				{tagKey !== "all" ? (
+					<input
+						value={tagValue}
+						onChange={(e) => setTagValue(e.target.value)}
+						placeholder={`${tagKey} value…`}
+						className="border-kumo-fill bg-kumo-base text-kumo-default placeholder:text-kumo-subtle w-40 rounded-md border px-2 py-1.5 text-xs outline-none"
+					/>
+				) : null}
+			</div>
+
+			<div className="flex-1 overflow-y-auto">
 				{error ? (
-					<div className="mb-3 rounded bg-red-500/10 px-3 py-2 text-xs text-red-500">
+					<div className="mx-4 mt-3 rounded bg-red-500/10 px-3 py-2 text-xs text-red-500">
 						{error}
 					</div>
 				) : null}
@@ -131,78 +246,100 @@ function ObservabilityView(): JSX.Element {
 						inline
 					/>
 				) : (
-					<div className="bg-kumo-elevated overflow-hidden rounded-lg border">
-						<table className="w-full text-sm">
-							<thead>
-								<tr className="text-text-secondary border-b text-left text-[11px] uppercase tracking-wide">
-									<th className="px-3 py-2 font-medium">Operation</th>
-									<th className="w-56 px-3 py-2 font-medium">Duration</th>
-									<th className="w-24 px-3 py-2 font-medium">Status</th>
-									<th className="w-20 px-3 py-2 font-medium">Spans</th>
-									<th className="w-44 px-3 py-2 font-medium">Time</th>
-								</tr>
-							</thead>
-							<tbody>
-								{traces.map((t) => {
-									const isSel = selected?.trace_id === t.trace_id;
-									const dur = t.duration_ms ?? 0;
-									return (
-										<tr
-											key={t.trace_id}
-											onClick={() => void selectTrace(t)}
-											className={cn(
-												"hover:bg-kumo-tint cursor-pointer border-b last:border-0",
-												isSel && "bg-blue-100 dark:bg-blue-900/30"
-											)}
-										>
-											<td className="text-text px-3 py-2 font-mono text-xs">
-												{t.name ?? t.trace_id.slice(0, 16)}
-											</td>
-											<td className="px-3 py-2">
-												<div className="flex items-center gap-2">
-													<span className="text-text w-14 shrink-0 text-right text-xs tabular-nums">
-														{Math.round(dur)}ms
-													</span>
-													<div className="bg-kumo-fill h-1.5 flex-1 overflow-hidden rounded-full">
-														<div
-															className="bg-indigo-500 h-full rounded-full"
-															style={{
-																width: `${Math.max((dur / maxDuration) * 100, 2)}%`,
-															}}
-														/>
-													</div>
-												</div>
-											</td>
-											<td className="px-3 py-2">
-												<StatusBadge
-													statusCode={t.status_code}
-													outcome={t.outcome}
+					<table className="w-full border-collapse text-sm">
+						<thead>
+							<tr className="text-kumo-subtle border-kumo-fill border-y text-left text-xs">
+								<th className="py-2 pl-4 pr-3 font-medium">
+									<span className="inline-flex items-center gap-1">
+										Timestamp <span className="text-blue-500">↓</span>
+									</span>
+								</th>
+								<th className="py-2 pr-3 font-medium">Operation</th>
+								<th className="w-48 py-2 pr-3 font-medium">Duration (ms)</th>
+								<th className="w-20 py-2 pr-3 font-medium">Spans</th>
+								<th className="w-24 py-2 pr-3 font-medium">Errors</th>
+							</tr>
+						</thead>
+						<tbody>
+							{traces.map((t) => {
+								const isSel = selected?.trace_id === t.trace_id;
+								const err = isError(t);
+								const dur = t.duration_ms ?? 0;
+								const { value, unit } = splitDuration(dur);
+								return (
+									<tr
+										key={t.trace_id}
+										onClick={() => void selectTrace(t)}
+										className={cn(
+											"border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5 cursor-pointer border-b",
+											isSel && "bg-blue-100 dark:bg-blue-900/30"
+										)}
+									>
+										{/* Timestamp + left accent bar */}
+										<td className="py-2.5 pl-4 pr-3">
+											<div className="flex items-center gap-2.5">
+												<span
+													className={cn(
+														"h-4 w-[3px] shrink-0 rounded-full",
+														err ? "bg-red-500" : "bg-blue-500"
+													)}
 												/>
-											</td>
-											<td className="text-text-secondary px-3 py-2 text-xs tabular-nums">
-												{t.span_count ?? "-"}
-											</td>
-											<td className="text-text-secondary px-3 py-2 text-xs">
-												{t.created_at ?? ""}
-											</td>
-										</tr>
-									);
-								})}
-							</tbody>
-						</table>
-					</div>
+												<span className="text-kumo-default decoration-kumo-line font-mono text-xs underline decoration-dotted underline-offset-2">
+													{t.created_at ?? ""}
+													<span className="text-kumo-subtle"> UTC</span>
+												</span>
+											</div>
+										</td>
+										{/* Operation */}
+										<td className="text-kumo-default py-2.5 pr-3 font-mono text-xs">
+											{t.name ?? t.trace_id.slice(0, 16)}
+										</td>
+										{/* Duration: number + faded unit, gauge below */}
+										<td className="py-2.5 pr-3">
+											<div className="flex flex-col gap-1">
+												<div className="text-sm tabular-nums">
+													<span className="text-kumo-default">{value}</span>
+													<span className="text-kumo-subtle">{unit}</span>
+												</div>
+												<div className="bg-kumo-fill h-1 w-24 overflow-hidden rounded-full">
+													<div
+														className="h-full rounded-full bg-blue-500"
+														style={{
+															width: `${Math.max((dur / maxDuration) * 100, 2)}%`,
+														}}
+													/>
+												</div>
+											</div>
+										</td>
+										{/* Spans */}
+										<td className="text-kumo-default py-2.5 pr-3 text-xs tabular-nums">
+											{t.span_count ?? "-"}
+										</td>
+										{/* Errors */}
+										<td className="py-2.5 pr-3 text-xs tabular-nums">
+											{err ? (
+												<span className="text-red-500">1</span>
+											) : (
+												<span className="text-kumo-subtle">-</span>
+											)}
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
 				)}
 
 				{selected && spans.length > 0 ? (
-					<div className="mt-6">
+					<div className="border-kumo-fill mt-2 border-t p-4">
 						<div className="mb-2 flex items-baseline gap-2">
-							<span className="text-text font-mono text-sm font-semibold">
+							<span className="text-kumo-default font-mono text-sm font-semibold">
 								{selected.name ?? selected.trace_id}
 							</span>
-							<span className="text-text-secondary font-mono text-[11px]">
+							<span className="text-kumo-subtle font-mono text-[11px]">
 								{selected.trace_id.slice(0, 16)}
 							</span>
-							<span className="text-text-secondary text-[11px]">
+							<span className="text-kumo-subtle text-[11px]">
 								· {Math.round(selected.duration_ms ?? 0)}ms ·{" "}
 								{selected.span_count ?? spans.length} spans
 							</span>
@@ -219,32 +356,27 @@ function ObservabilityView(): JSX.Element {
 	);
 }
 
-function StatusBadge({
-	statusCode,
-	outcome,
+function FilterSelect({
+	value,
+	onChange,
+	options,
 }: {
-	statusCode: number | null;
-	outcome: string | null;
+	value: string;
+	onChange: (v: string) => void;
+	options: Array<[string, string]>;
 }): JSX.Element {
-	const code = statusCode ?? 0;
-	const label = statusCode ? String(statusCode) : (outcome ?? "?");
-	let cls = "bg-gray-500/15 text-text-secondary";
-	if (code >= 500) {
-		cls = "bg-red-500/15 text-red-500";
-	} else if (code >= 400) {
-		cls = "bg-amber-500/15 text-amber-600 dark:text-amber-400";
-	} else if (code >= 200) {
-		cls = "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
-	}
 	return (
-		<span
-			className={cn(
-				"inline-block rounded px-1.5 py-0.5 text-[11px] font-medium tabular-nums",
-				cls
-			)}
+		<select
+			value={value}
+			onChange={(e) => onChange(e.target.value)}
+			className="border-kumo-fill bg-kumo-base text-kumo-default cursor-pointer rounded-md border px-2 py-1.5 text-xs outline-none"
 		>
-			{label}
-		</span>
+			{options.map(([v, label]) => (
+				<option key={v} value={v}>
+					{label}
+				</option>
+			))}
+		</select>
 	);
 }
 
@@ -264,9 +396,9 @@ function EmptyState({
 				inline ? "py-16" : "h-full"
 			)}
 		>
-			<PulseIcon size={28} className="text-text-secondary mb-2" />
-			<h3 className="text-text text-sm font-semibold">{title}</h3>
-			<p className="text-text-secondary mt-1 max-w-md text-xs">{body}</p>
+			<PulseIcon size={28} className="text-kumo-subtle mb-2" />
+			<h3 className="text-kumo-default text-sm font-semibold">{title}</h3>
+			<p className="text-kumo-subtle mt-1 max-w-md text-xs">{body}</p>
 		</div>
 	);
 }

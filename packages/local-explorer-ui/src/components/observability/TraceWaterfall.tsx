@@ -1,12 +1,17 @@
-import { cn } from "@cloudflare/kumo";
-import { useMemo, useState } from "react";
+import { Button, cn } from "@cloudflare/kumo";
+import {
+	CaretDownIcon,
+	CaretRightIcon,
+	WarningIcon,
+} from "@phosphor-icons/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	buildSpanTree,
 	parseAttributes,
-	spanKind,
+	type LayoutSpan,
 	type SpanRow,
 } from "../../lib/traces";
-import type { LayoutSpan } from "../../lib/traces";
+import { getSpanIcon } from "./icons";
 
 interface TraceWaterfallProps {
 	spans: SpanRow[];
@@ -14,51 +19,64 @@ interface TraceWaterfallProps {
 	traceDurationMs: number;
 }
 
-const NAME_WIDTH = 300;
-const ROW_H = 32; // px, matches Stratus h-8
+const LABEL_WIDTH = 256; // matches the dashboard's default name-column width
 
-// Kind → small dot color (kind is shown via the dot, like Stratus's per-kind icon).
-const KIND_DOT: Record<string, string> = {
-	http: "bg-purple-500",
-	kv: "bg-blue-500",
-	d1: "bg-cyan-500",
-	fetch: "bg-emerald-500",
-	r2: "bg-violet-500",
-	do: "bg-orange-500",
-	span: "bg-gray-400",
-};
+// "Nice" interval values for time markers (from the dashboard).
+const NICE_INTERVALS = [
+	1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000,
+	15000, 20000, 30000, 60000, 120000, 300000,
+];
 
-const KIND_LABEL: Record<string, string> = {
-	http: "HTTP",
-	kv: "KV",
-	d1: "D1",
-	fetch: "FETCH",
-	r2: "R2",
-	do: "DO",
-	span: "",
-};
-
-// Bar color encodes state (Stratus model): root = orange, error = red, else accent.
-function barColor(span: LayoutSpan): string {
-	if (span.error || (span.outcome && span.outcome !== "ok")) {
-		return "bg-red-500";
+function calculateOptimalInterval(
+	traceDurationMs: number,
+	availableWidth: number
+): number {
+	const targetGap = 40;
+	const maxMarkers = 9;
+	const estimatedMarkerCount = Math.min(
+		maxMarkers,
+		Math.max(2, Math.floor(availableWidth / targetGap))
+	);
+	const targetInterval = traceDurationMs / estimatedMarkerCount;
+	for (const interval of NICE_INTERVALS) {
+		if (interval >= targetInterval) {
+			return interval;
+		}
 	}
-	if (span.depth === 0) {
-		return "bg-orange-500";
-	}
-	return "bg-indigo-500";
+	return NICE_INTERVALS[NICE_INTERVALS.length - 1] ?? 300000;
 }
 
-function niceTicks(max: number): { ticks: number[]; step: number } {
-	const target = 6;
-	const raw = Math.max(max / target, 1);
-	const pow = Math.pow(10, Math.floor(Math.log10(raw)));
-	const step = [1, 2, 5, 10].map((c) => c * pow).find((c) => c >= raw) ?? pow * 10;
-	const ticks: number[] = [];
-	for (let t = 0; t <= max; t += step) {
-		ticks.push(t);
+function formatDuration(ms: number): string {
+	if (ms >= 1000) {
+		return `${(ms / 1000).toFixed(2)}s`;
 	}
-	return { ticks, step };
+	if (ms >= 1) {
+		return `${Math.round(ms)}ms`;
+	}
+	return `${ms.toFixed(2)}ms`;
+}
+
+function useWidthObserver() {
+	const ref = useRef<HTMLDivElement>(null);
+	const [width, setWidth] = useState(0);
+	useEffect(() => {
+		const el = ref.current;
+		if (!el) {
+			return;
+		}
+		const ro = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				setWidth(entry.contentRect.width);
+			}
+		});
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, []);
+	return { ref, width };
+}
+
+function hasErr(span: LayoutSpan): boolean {
+	return !!span.error || (!!span.outcome && span.outcome !== "ok");
 }
 
 export function TraceWaterfall({
@@ -66,162 +84,268 @@ export function TraceWaterfall({
 	rootSpanId,
 	traceDurationMs,
 }: TraceWaterfallProps): JSX.Element {
-	const ordered = useMemo(
+	const allSpans = useMemo(
 		() => buildSpanTree(spans, rootSpanId),
 		[spans, rootSpanId]
 	);
-	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const { ref, width } = useWidthObserver();
+	const [collapsed, setCollapsed] = useState<string[]>([]);
+	const [focusedId, setFocusedId] = useState<string | null>(null);
 	const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-	const total = Math.max(
-		1,
-		traceDurationMs ||
-			ordered.reduce((m, s) => Math.max(m, (s.end_ms ?? s.start_ms) || 0), 0)
-	);
-	const scale = total * 1.05; // 5% right padding
-	const { ticks } = useMemo(() => niceTicks(scale), [scale]);
+	const toggleCollapsed = useCallback((layoutId: string) => {
+		setCollapsed((prev) =>
+			prev.includes(layoutId)
+				? prev.filter((id) => id !== layoutId)
+				: [...prev, layoutId]
+		);
+	}, []);
 
-	const selected = ordered.find((s) => s.span_id === selectedId) ?? null;
+	const isVisible = useCallback(
+		(span: LayoutSpan) =>
+			!collapsed.some(
+				(id) => span.layoutId.startsWith(id + ".") && id !== span.layoutId
+			),
+		[collapsed]
+	);
+
+	const visibleSpans = useMemo(
+		() => allSpans.filter(isVisible),
+		[allSpans, isVisible]
+	);
+
+	const traceAreaWidth = Math.max(0, width - LABEL_WIDTH);
+	const paddedDuration = Math.max(1, traceDurationMs) * 1.05;
+	const pxToMS = traceAreaWidth > 0 ? traceAreaWidth / paddedDuration : 0;
+
+	const interval = calculateOptimalInterval(paddedDuration, traceAreaWidth);
+	const markers: Array<{ time: number; left: number }> = [];
+	for (let t = 0; t <= paddedDuration; t += interval) {
+		const left = t * pxToMS;
+		if (left <= traceAreaWidth) {
+			markers.push({ time: t, left });
+		}
+	}
+
+	const focused = visibleSpans.find((s) => s.span_id === focusedId) ?? null;
 
 	const rowBg = (id: string) =>
-		selectedId === id
+		focusedId === id
 			? "bg-blue-100 dark:bg-blue-900/30"
 			: hoveredId === id
-				? "bg-kumo-tint"
+				? "bg-black/5 dark:bg-white/5"
 				: "";
 
 	return (
-		<div className="bg-kumo-elevated overflow-hidden rounded-lg border">
-			<div className="flex">
-				{/* ---- name column ---- */}
-				<div
-					className="border-r shrink-0"
-					style={{ width: NAME_WIDTH }}
-				>
-					<div className="text-text-secondary flex h-9 items-center border-b px-3 text-xs font-medium">
-						Span
-					</div>
-					{ordered.map((span) => {
-						const k = spanKind(span);
-						const isErr =
-							!!span.error || (!!span.outcome && span.outcome !== "ok");
-						return (
-							<button
-								type="button"
-								key={span.span_id}
-								onClick={() =>
-									setSelectedId(selectedId === span.span_id ? null : span.span_id)
-								}
-								onMouseEnter={() => setHoveredId(span.span_id)}
-								onMouseLeave={() => setHoveredId(null)}
-								className={cn(
-									"flex w-full items-center gap-2 overflow-hidden px-3 text-left transition-colors",
-									rowBg(span.span_id)
-								)}
-								style={{ height: ROW_H, paddingLeft: 12 + span.depth * 16 }}
-							>
-								<span
+		<div className="bg-kumo-base border-kumo-fill overflow-hidden rounded-lg border">
+			<div ref={ref} className="outline-none" role="region" aria-label="Trace timeline">
+				<div className="flex">
+					{/* ---- name column ---- */}
+					<div style={{ width: LABEL_WIDTH }} className="shrink-0">
+						<div className="border-kumo-fill flex h-[41px] items-center border-b px-4 py-2.5">
+							<span className="text-kumo-default text-sm font-medium">Name</span>
+						</div>
+						{visibleSpans.map((span) => {
+							const isFocused = focusedId === span.span_id;
+							return (
+								<div
+									key={span.layoutId}
+									role="button"
+									tabIndex={0}
 									className={cn(
-										"size-2 shrink-0 rounded-full",
-										KIND_DOT[k] ?? KIND_DOT.span
+										"h-8 cursor-pointer border-l-2 border-l-transparent transition-colors duration-150",
+										rowBg(span.span_id)
 									)}
-								/>
-								<span
-									className={cn(
-										"truncate font-mono text-xs",
-										isErr ? "text-red-500" : "text-text"
-									)}
+									onClick={() => setFocusedId(isFocused ? null : span.span_id)}
+									onMouseEnter={() => setHoveredId(span.span_id)}
+									onMouseLeave={() => setHoveredId(null)}
 								>
-									{span.name ?? "span"}
-								</span>
-								{KIND_LABEL[k] ? (
-									<span className="text-text-secondary ml-auto shrink-0 text-[9px] tracking-wide">
-										{KIND_LABEL[k]}
-									</span>
-								) : null}
-							</button>
-						);
-					})}
-				</div>
+									<SpanLabel
+										span={span}
+										isCollapsed={collapsed.includes(span.layoutId)}
+										onToggleCollapsed={toggleCollapsed}
+									/>
+								</div>
+							);
+						})}
+					</div>
 
-				{/* ---- timeline column ---- */}
-				<div className="relative flex-1">
-					{/* vertical gridlines */}
-					<div className="pointer-events-none absolute inset-0">
-						{ticks.map((t, i) => (
+					{/* ---- timeline column ---- */}
+					<div className="relative flex-1" style={{ width: traceAreaWidth }}>
+						{/* axis header */}
+						<div className="border-kumo-fill relative flex h-[41px] items-center overflow-hidden border-b py-2.5">
+							{markers.map(({ time, left }) => (
+								<div
+									key={time}
+									className="text-kumo-subtle absolute text-[10px]"
+									style={{ left: `${left + 2}px` }}
+								>
+									{formatDuration(time)}
+								</div>
+							))}
+						</div>
+
+						{/* marker lines */}
+						{markers.slice(1).map(({ time, left }) => (
 							<div
-								key={i}
-								className="border-kumo-fill absolute top-0 bottom-0 border-l"
-								style={{ left: `${(t / scale) * 100}%` }}
+								key={`m-${time}`}
+								className="bg-kumo-fill pointer-events-none absolute w-px"
+								style={{ left: `${left}px`, top: "40px", height: "calc(100% - 40px)" }}
 							/>
 						))}
-					</div>
 
-					{/* axis */}
-					<div className="text-text-secondary relative h-9 border-b text-[10px]">
-						{ticks.map((t, i) => (
-							<span
-								key={i}
-								className="absolute top-1/2 -translate-y-1/2 pl-1"
-								style={{ left: `${(t / scale) * 100}%` }}
-							>
-								{t}ms
-							</span>
-						))}
-					</div>
-
-					{/* bars */}
-					{ordered.map((span) => {
-						const leftPct = (span.start_ms / scale) * 100;
-						const widthPct = (span.duration_ms / scale) * 100;
-						const wide = widthPct > 8;
-						return (
-							<button
-								type="button"
-								key={span.span_id}
-								onClick={() =>
-									setSelectedId(selectedId === span.span_id ? null : span.span_id)
-								}
-								onMouseEnter={() => setHoveredId(span.span_id)}
-								onMouseLeave={() => setHoveredId(null)}
-								className={cn(
-									"relative block w-full transition-colors",
-									rowBg(span.span_id)
-								)}
-								style={{ height: ROW_H }}
-							>
+						{/* bars */}
+						{visibleSpans.map((span) => {
+							const isFocused = focusedId === span.span_id;
+							return (
 								<div
+									key={span.layoutId}
 									className={cn(
-										"absolute top-1/2 flex h-3.5 -translate-y-1/2 items-center rounded-sm",
-										barColor(span)
+										"flex h-8 cursor-pointer items-center pl-0.5 transition-colors duration-150",
+										rowBg(span.span_id)
 									)}
-									style={{
-										left: `${leftPct}%`,
-										width: `${widthPct}%`,
-										minWidth: 3,
-									}}
+									onClick={() => setFocusedId(isFocused ? null : span.span_id)}
+									onMouseEnter={() => setHoveredId(span.span_id)}
+									onMouseLeave={() => setHoveredId(null)}
 								>
-									{wide ? (
-										<span className="truncate px-1.5 text-[10px] font-medium text-white">
-											{Math.round(span.duration_ms)}ms
-										</span>
-									) : null}
+									<NormalSpanBar
+										span={span}
+										pxToMS={pxToMS}
+										traceAreaWidth={traceAreaWidth}
+									/>
 								</div>
-								{!wide ? (
-									<span
-										className="text-text-secondary absolute top-1/2 -translate-y-1/2 pl-1 text-[10px]"
-										style={{ left: `${leftPct + widthPct}%` }}
-									>
-										{Math.round(span.duration_ms)}ms
-									</span>
-								) : null}
-							</button>
-						);
-					})}
+							);
+						})}
+					</div>
 				</div>
 			</div>
 
-			{selected ? <SpanDetail span={selected} /> : null}
+			{focused ? <SpanDetail span={focused} /> : null}
+		</div>
+	);
+}
+
+function SpanLabel({
+	span,
+	isCollapsed,
+	onToggleCollapsed,
+}: {
+	span: LayoutSpan;
+	isCollapsed: boolean;
+	onToggleCollapsed: (layoutId: string) => void;
+}): JSX.Element {
+	const error = hasErr(span);
+	const Icon = getSpanIcon(span);
+	return (
+		<div
+			className="text-ellipsis relative flex h-full w-full items-center gap-2 overflow-hidden whitespace-nowrap pl-4 font-mono text-sm"
+			style={{ paddingLeft: 4 + span.depth * 32, maxWidth: LABEL_WIDTH }}
+		>
+			{span.hasChildren ? (
+				<Button
+					shape="square"
+					variant="ghost"
+					size="xs"
+					aria-label={isCollapsed ? "Expand span" : "Collapse span"}
+					icon={isCollapsed ? CaretRightIcon : CaretDownIcon}
+					onClick={(e) => {
+						e.stopPropagation();
+						onToggleCollapsed(span.layoutId);
+					}}
+				/>
+			) : null}
+			<div
+				className={cn(
+					"relative z-10 flex min-w-0 items-center gap-2",
+					error && "text-red-500"
+				)}
+			>
+				<span className="flex shrink-0 items-center">
+					<Icon size={16} />
+				</span>
+				{error ? (
+					<span
+						title={span.error ?? "An error occurred in this span"}
+						className="flex shrink-0 items-center justify-center rounded-sm bg-red-500/15 p-1 text-red-500"
+					>
+						<WarningIcon size={12} weight="bold" />
+					</span>
+				) : null}
+				<span className="text-ellipsis min-w-0 overflow-hidden whitespace-nowrap text-sm">
+					{span.name ?? "span"}
+				</span>
+			</div>
+		</div>
+	);
+}
+
+function NormalSpanBar({
+	span,
+	pxToMS,
+	traceAreaWidth,
+}: {
+	span: LayoutSpan;
+	pxToMS: number;
+	traceAreaWidth: number;
+}): JSX.Element {
+	const error = hasErr(span);
+	const isRoot = span.depth === 0;
+	const spanDuration = span.duration_ms;
+	const spanWidth = spanDuration * pxToMS;
+	const spanLeft = Math.max(span.start_ms * pxToMS, 0);
+	const minWidth = 8;
+	const isSmall = spanWidth < 40;
+	const isLeftSide = spanLeft < traceAreaWidth / 2;
+
+	const barColor = error
+		? "bg-red-500"
+		: isRoot
+			? "bg-orange-500"
+			: "bg-neutral-600 dark:bg-neutral-400";
+
+	return (
+		<div className="flex w-full items-center" style={{ maxWidth: traceAreaWidth }}>
+			<div className="relative w-full">
+				{/* duration chip before bar (small spans on right) */}
+				{isSmall && !isLeftSide ? (
+					<div
+						className="text-kumo-subtle absolute top-0 flex h-5 items-center text-[10px] font-medium"
+						style={{ right: `${traceAreaWidth - spanLeft + 4}px` }}
+					>
+						{formatDuration(spanDuration)}
+					</div>
+				) : null}
+
+				<div
+					className={cn(
+						"relative z-10 flex h-5 items-center rounded-sm",
+						barColor
+					)}
+					style={{
+						width: `${Math.max(spanWidth, minWidth)}px`,
+						left: `${spanLeft + 2}px`,
+					}}
+				>
+					{!isSmall ? (
+						<span className="relative left-1 flex items-center px-px text-[10px] font-medium text-white">
+							{formatDuration(spanDuration)}
+						</span>
+					) : null}
+				</div>
+
+				{/* duration chip after bar (small spans on left) */}
+				{isSmall && isLeftSide ? (
+					<div
+						className={cn(
+							"text-kumo-subtle absolute top-0 flex h-5 items-center text-[10px]",
+							error && "text-red-500"
+						)}
+						style={{ left: `${spanLeft + Math.max(spanWidth, minWidth) + 4}px` }}
+					>
+						{formatDuration(spanDuration)}
+					</div>
+				) : null}
+			</div>
 		</div>
 	);
 }
@@ -229,31 +353,27 @@ export function TraceWaterfall({
 function SpanDetail({ span }: { span: LayoutSpan }): JSX.Element {
 	const attrs = parseAttributes(span);
 	const entries = Object.entries(attrs);
-	const isErr = !!span.error || (!!span.outcome && span.outcome !== "ok");
+	const error = hasErr(span);
+	const Icon = getSpanIcon(span);
 	return (
-		<div className="bg-kumo-base border-t p-4">
+		<div className="bg-kumo-elevated border-kumo-fill border-t p-4">
 			<div className="mb-3 flex items-center gap-2">
-				<span
-					className={cn(
-						"size-2 rounded-full",
-						KIND_DOT[spanKind(span)] ?? KIND_DOT.span
-					)}
-				/>
-				<span className="text-text font-mono text-sm font-semibold">
+				<Icon size={16} />
+				<span className="text-kumo-default font-mono text-sm font-semibold">
 					{span.name}
 				</span>
 				<span
 					className={cn(
 						"rounded px-1.5 py-0.5 text-[10px] font-medium",
-						isErr
+						error
 							? "bg-red-500/15 text-red-500"
 							: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
 					)}
 				>
 					{span.outcome ?? "?"}
 				</span>
-				<span className="text-text-secondary text-xs">
-					{Math.round(span.duration_ms)}ms
+				<span className="text-kumo-subtle text-xs">
+					{formatDuration(span.duration_ms)}
 				</span>
 			</div>
 			{span.error ? (
@@ -262,21 +382,15 @@ function SpanDetail({ span }: { span: LayoutSpan }): JSX.Element {
 				</div>
 			) : null}
 			{entries.length ? (
-				<div className="overflow-hidden rounded border">
+				<div className="border-kumo-fill overflow-hidden rounded border">
 					<table className="w-full text-xs">
 						<tbody>
 							{entries.map(([k, v], i) => (
-								<tr
-									key={k}
-									className={cn(
-										"align-top",
-										i % 2 ? "bg-kumo-elevated" : ""
-									)}
-								>
-									<td className="text-text-secondary w-1/3 px-3 py-1.5 font-mono whitespace-nowrap">
+								<tr key={k} className={cn("align-top", i % 2 && "bg-kumo-base")}>
+									<td className="text-kumo-subtle w-1/3 whitespace-nowrap px-3 py-1.5 font-mono">
 										{k}
 									</td>
-									<td className="text-text px-3 py-1.5 font-mono break-all">
+									<td className="text-kumo-default break-all px-3 py-1.5 font-mono">
 										{typeof v === "object" ? JSON.stringify(v) : String(v)}
 									</td>
 								</tr>
@@ -285,7 +399,7 @@ function SpanDetail({ span }: { span: LayoutSpan }): JSX.Element {
 					</table>
 				</div>
 			) : (
-				<div className="text-text-secondary text-xs italic">No attributes</div>
+				<div className="text-kumo-subtle text-xs italic">No attributes</div>
 			)}
 		</div>
 	);
