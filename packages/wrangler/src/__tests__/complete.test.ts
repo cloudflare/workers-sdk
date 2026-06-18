@@ -139,7 +139,9 @@ describe("wrangler", () => {
 				expect,
 			}) => {
 				await expect(
-					runWrangler(`complete powershell --executable-name "wrangler; rm -rf"`)
+					runWrangler(
+						`complete powershell --executable-name "wrangler; rm -rf"`
+					)
 				).rejects.toThrow("Invalid --executable-name value");
 			});
 		});
