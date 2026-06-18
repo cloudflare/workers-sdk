@@ -2,6 +2,7 @@ import assert from "node:assert";
 import url from "node:url";
 import { maybeGetFile } from "@cloudflare/workers-shared";
 import { getFreshSourceMapSupport } from "miniflare";
+import { logger } from "../../shared/context";
 import type { Options } from "@cspotcode/source-map-support";
 import type Protocol from "devtools-protocol";
 
@@ -135,7 +136,10 @@ function tryPrepareStack(
 ): string | null {
 	try {
 		return prepareStack(error, callSites);
-	} catch {
+	} catch (err) {
+		logger.debug(
+			`Source map application failed, falling back to original stack trace: ${err}`
+		);
 		return null;
 	}
 }
