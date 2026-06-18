@@ -26,6 +26,7 @@ import type {
 	ComplianceConfig,
 	Config,
 	RawConfig,
+	StartDevWorkerInput,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
@@ -696,7 +697,7 @@ async function collectPendingResources(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	bindings: Record<string, Binding>,
+	bindings: StartDevWorkerInput["bindings"],
 	requireRemote: boolean
 ): Promise<PendingResource[]> {
 	let settings: Settings | undefined;
@@ -740,7 +741,7 @@ async function collectPendingResources(
 }
 
 export async function provisionBindings(
-	bindings: Record<string, Binding>,
+	bindings: StartDevWorkerInput["bindings"],
 	accountId: string,
 	scriptName: string,
 	autoCreate: boolean,
