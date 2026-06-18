@@ -9,6 +9,11 @@
  * Unknown/missing verbs exit 2 (also the parent's version-detection
  * signal).
  *
+ * Every verb forces the experimental Build Output API on by default by
+ * setting `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT` in `main()` before Vite
+ * loads the user's config; the plugin reads it during config resolution
+ * to enable `experimental.newConfig` + `experimental.newConfig.cfBuildOutput`.
+ *
  * Spawn contract for `dev`: parent uses `stdio: "inherit"` and forwards
  * SIGINT/SIGTERM. Accepted flags mirror the sibling `cf-wrangler`
  * delegate (`--mode`, `--port`, `--host`, `--local`) so the parent can
@@ -21,11 +26,7 @@
  * `build` runs Vite's full multi-environment app build via
  * `createBuilder().buildApp()` (NOT the legacy single-environment
  * `build()` helper, which would skip the plugin's worker builds). It
- * accepts only `--mode` (the other shared flags don't apply to a build)
- * and forces the experimental Build Output API on by default by setting
- * `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT`, which the plugin reads during
- * config resolution to enable `experimental.newConfig` +
- * `experimental.newConfig.cfBuildOutput`.
+ * accepts only `--mode` (the other shared flags don't apply to a build).
  *
  * Exit codes: 0 graceful, 2 unknown verb / parse error, 130 SIGINT,
  * 143 SIGTERM.
@@ -127,6 +128,12 @@ async function main(): Promise<number> {
 	const verb = process.argv[2];
 	const userArgv = process.argv.slice(3);
 
+	// Force the experimental Build Output API on by default for every
+	// delegate verb. The plugin reads this during config resolution to
+	// enable `experimental.newConfig` + `.cfBuildOutput`. Set before Vite
+	// loads the user's `vite.config.ts`.
+	process.env[FORCE_BUILD_OUTPUT_ENV_VAR] = "true";
+
 	if (verb === "dev") {
 		return runDev(userArgv);
 	}
@@ -226,11 +233,6 @@ async function runBuild(userArgv: string[]): Promise<number> {
 		}
 		throw err;
 	}
-
-	// Force the experimental Build Output API on by default. The plugin
-	// reads this env var to enable `experimental.newConfig` and `experimental.newConfig.cfBuildOutput`.
-	// Must be set before the builder loads the user's `vite.config.ts`.
-	process.env[FORCE_BUILD_OUTPUT_ENV_VAR] = "true";
 
 	const inlineConfig: InlineConfig = {};
 	if (args.mode !== undefined) {
