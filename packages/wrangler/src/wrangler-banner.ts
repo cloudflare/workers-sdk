@@ -6,7 +6,7 @@ import supportsColor from "supports-color";
 import { version as wranglerVersion } from "../package.json";
 import { logger } from "./logger";
 import { updateCheck } from "./update-check";
-import { getActiveProfile } from "./user";
+import { getActiveProfile, getAuthFromEnv } from "./user";
 import type { NpmVersionCheckResult } from "@cloudflare/workers-utils";
 
 const MIN_NODE_VERSION = "22.0.0";
@@ -65,7 +65,7 @@ export async function printWranglerBanner(
 				: "─".repeat(text.length))
 	);
 
-	if (showActiveProfile) {
+	if (showActiveProfile && getAuthFromEnv() === undefined) {
 		const resolvedProfile = getActiveProfile();
 		if (resolvedProfile !== "default") {
 			logger.log(`Active profile: ${chalk.blue(resolvedProfile)}`);

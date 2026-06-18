@@ -162,6 +162,20 @@ describe("Profiles", () => {
 			);
 		});
 
+		it("errors without creating a profile when env credentials are set", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("auth create client-a", {
+					CLOUDFLARE_API_TOKEN: "env-token",
+				})
+			).rejects.toThrow(
+				'Cannot create auth profile "client-a" while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again.'
+			);
+
+			expect(profileExists(configDir(), "client-a")).toBe(false);
+		});
+
 		it("creates a new profile via OAuth login", async ({ expect }) => {
 			mockSuccessfulOAuth(mockOAuthServerCallback);
 
@@ -210,6 +224,25 @@ describe("Profiles", () => {
 			await expect(runWrangler("auth delete nonexistent")).rejects.toThrow(
 				/does not exist/
 			);
+		});
+
+		it("errors without deleting a profile when env credentials are set", async ({
+			expect,
+		}) => {
+			const dirA = path.resolve("/projects/client-a");
+			createProfileFile("client-a");
+			activateProfileForDirectory(configDir(), "client-a", dirA);
+
+			await expect(
+				runWrangler("auth delete client-a", {
+					CLOUDFLARE_API_TOKEN: "env-token",
+				})
+			).rejects.toThrow(
+				'Cannot delete auth profile "client-a" while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again.'
+			);
+
+			expect(profileExists(configDir(), "client-a")).toBe(true);
+			expect(getBindingsForProfile(configDir(), "client-a")).toEqual([dirA]);
 		});
 
 		it("deletes a profile and its directory bindings", async ({ expect }) => {
@@ -467,6 +500,21 @@ describe("Profiles", () => {
 			await runWrangler("auth list");
 
 			expect(normalizeString(std.out)).not.toContain("Active profile:");
+		});
+
+		it("does not show active profile when env credentials override profiles", async ({
+			expect,
+		}) => {
+			createProfileFile("my-profile");
+			await runWrangler("auth activate my-profile");
+
+			await runWrangler("whoami", {
+				CLOUDFLARE_API_TOKEN: "env-token",
+			}).catch(() => {});
+
+			expect(normalizeString(std.out)).not.toContain(
+				"Active profile: my-profile"
+			);
 		});
 
 		it("resolves profile from --config directory", async ({ expect }) => {

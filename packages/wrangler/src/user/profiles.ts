@@ -16,7 +16,34 @@ import {
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import { oauthArgs } from "./commands";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import {
+	getAuthFromEnv,
+	listScopes,
+	login,
+	logout,
+	validateScopeKeys,
+} from "./user";
+
+function assertNoEnvCredentials(action: "create" | "delete", profile: string) {
+	const envAuth = getAuthFromEnv();
+	if (envAuth === undefined) {
+		return;
+	}
+
+	const isApiToken = "apiToken" in envAuth;
+	const envVars = isApiToken
+		? "CLOUDFLARE_API_TOKEN"
+		: "CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL";
+	throw new UserError(
+		`Cannot ${action} auth profile "${profile}" while ${envVars} ${isApiToken ? "is" : "are"} set. Unset ${envVars} and try again.`,
+		{
+			telemetryMessage:
+				action === "create"
+					? "auth profile create env credentials"
+					: "auth profile delete env credentials",
+		}
+	);
+}
 
 function configDir(): string {
 	return getGlobalWranglerConfigPath();
@@ -72,6 +99,8 @@ export const authCreateCommand = createCommand({
 			}
 		}
 
+		assertNoEnvCredentials("create", args.name);
+
 		const isUpdate = profileExists(configDir(), args.name);
 
 		await login(config, {
@@ -121,6 +150,8 @@ export const authDeleteCommand = createCommand({
 				telemetryMessage: "auth profile delete not found",
 			});
 		}
+
+		assertNoEnvCredentials("delete", args.name);
 
 		const removedBindings = removeAllBindingsForProfile(configDir(), args.name);
 		if (removedBindings.length > 0) {
