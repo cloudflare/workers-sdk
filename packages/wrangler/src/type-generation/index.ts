@@ -798,6 +798,7 @@ function isEntrypointInBuildOutputDir(
 	if (rel.startsWith("..")) {
 		return false;
 	}
+
 	return rel
 		.split(sep)
 		.some(
