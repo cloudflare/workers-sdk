@@ -302,17 +302,9 @@ async function matchFiles(
 			}
 		}
 
-		// Files matching a default rule that was silently removed (because a user
-		// rule of the same type was explicitly marked `fallthrough: false`) are
-		// intentionally skipped without erroring.
-		const silentlySkipped = silentlyRemovedRules.some((rule) =>
-			rule.globs.some((glob) => globToRegExp(glob).test(filePath))
-		);
-		if (silentlySkipped) {
-			continue;
-		}
-
-		// This is just a sanity check verifying that no files match rules that were removed
+		// Check removedRules first — a file matching a rule removed due to
+		// fallthrough:true (or the default) should always error, even if its
+		// glob also appears in silentlyRemovedRules.
 		for (const rule of removedRules) {
 			for (const glob of rule.globs) {
 				const regexp = globToRegExp(glob);
@@ -325,6 +317,16 @@ async function matchFiles(
 					);
 				}
 			}
+		}
+
+		// Files matching a default rule that was silently removed (because a user
+		// rule of the same type was explicitly marked `fallthrough: false`) are
+		// intentionally skipped without erroring.
+		const silentlySkipped = silentlyRemovedRules.some((rule) =>
+			rule.globs.some((glob) => globToRegExp(glob).test(filePath))
+		);
+		if (silentlySkipped) {
+			continue;
 		}
 	}
 

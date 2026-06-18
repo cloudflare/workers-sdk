@@ -1290,6 +1290,39 @@ export default { fetch() { return new Response(mod); } };`;
 			await runWrangler("deploy");
 		});
 
+		it("should error (not silently skip) when a file matches a removedRule even if it also matches a silentlyRemovedRule", async ({
+			expect,
+		}) => {
+			// Scenario: Text rule with fallthrough:false removes default Text (**/*.html)
+			// to silentlyRemovedRules. A second Data rule with glob **/*.html is removed
+			// to removedRules (because a prior Data rule didn't set fallthrough). A file
+			// foo.html matches BOTH lists — it should throw the removedRules error, not
+			// silently skip (the old order had silentlyRemovedRules first).
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				rules: [
+					// Text rule: fallthrough:false — default **/*.html Text rule goes to silentlyRemovedRules
+					{ type: "Text", globs: ["**/*.specific.html"], fallthrough: false },
+					// Data rule 1: completing Data rule (no explicit fallthrough)
+					{ type: "Data", globs: ["**/*.bin"] },
+					// Data rule 2: same type after completing rule → goes to removedRules
+					{ type: "Data", globs: ["**/*.html"] },
+				],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("ok"); } };`
+			);
+			// foo.html: doesn't match active Text (**/*.specific.html) or Data (**/*.bin),
+			// but matches silentlyRemovedRules (**/*.html Text) AND removedRules (**/*.html Data)
+			fs.writeFileSync("foo.html", "<p>test</p>");
+			mockSubDomainRequest();
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				/matched a module rule.*but was ignored/
+			);
+		});
+
 		it("should bundle a file that matches a `fallthrough: false` rule's glob", async ({
 			expect,
 		}) => {
