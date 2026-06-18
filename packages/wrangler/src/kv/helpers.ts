@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
+import { getSettings } from "@cloudflare/deploy-helpers";
 import { type KVNamespace } from "@cloudflare/workers-types/experimental";
 import {
 	isOptionalProperty,
@@ -10,7 +11,6 @@ import {
 import { Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
-import { getSettings } from "../deployment-bundle/bindings";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
 import { getFlag } from "../experimental-flags";

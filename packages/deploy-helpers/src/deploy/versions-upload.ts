@@ -30,6 +30,7 @@ import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
+import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
 	handleMissingSecretsError,
@@ -47,10 +48,7 @@ import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
-export type VersionsUploadCallbacks = Pick<
-	DeployCallbacks,
-	"provisionBindings" | "analyseBundle"
->;
+export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
 
 export default async function versionsUpload(
 	props: VersionsUploadProps,
@@ -330,8 +328,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		assert(accountId, "Missing accountId");
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
 			logger.debug("skipping provisioning on assets-only project");
-		} else if (props.resourcesProvision && callbacks.provisionBindings) {
-			await callbacks.provisionBindings(
+		} else if (props.resourcesProvision) {
+			await provisionBindings(
 				bindings,
 				accountId,
 				scriptName,
