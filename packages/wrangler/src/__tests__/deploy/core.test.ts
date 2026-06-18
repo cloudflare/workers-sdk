@@ -100,7 +100,7 @@ describe("deploy", () => {
 	} = mockOAuthFlow();
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
-	const temporaryTermsUrl = "https://www.cloudflare.com/terms/";
+	const temporaryTermsUrl = "https://www.cloudflare.com/terms";
 	const legacyTemporaryTermsUrl = "https://www.cloudflare.com/website-terms/";
 
 	// Mocks the proof-of-work challenge minting expects. Small k/g so the

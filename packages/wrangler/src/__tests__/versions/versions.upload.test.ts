@@ -39,7 +39,7 @@ describe("versions upload", () => {
 	const assertApiRequest = makeApiRequestAsserter(std);
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
-	const temporaryTermsUrl = "https://www.cloudflare.com/terms/";
+	const temporaryTermsUrl = "https://www.cloudflare.com/terms";
 	const legacyTemporaryTermsUrl = "https://www.cloudflare.com/website-terms/";
 
 	function mockGetScript(result?: unknown) {

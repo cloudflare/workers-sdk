@@ -14,7 +14,7 @@ import type { OAuthFlowLogger } from "./context";
 import type { PowSolution } from "./pow";
 
 export const TEMPORARY_TERMS_URLS = {
-	termsOfService: "https://www.cloudflare.com/terms/",
+	termsOfService: "https://www.cloudflare.com/terms",
 	privacyPolicy: "https://www.cloudflare.com/privacypolicy/",
 } as const;
 
