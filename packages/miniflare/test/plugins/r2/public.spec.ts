@@ -138,9 +138,7 @@ test("GET honors suffix ranges with a partial 206", async ({ expect }) => {
 	expect(res.headers.get("Content-Length")).toBe("4");
 });
 
-test("HEAD honors Range with a bodyless 206", async ({
-	expect,
-}) => {
+test("HEAD honors Range with a bodyless 206", async ({ expect }) => {
 	const r2 = await ctx.mf.getR2Bucket("BUCKET");
 	await r2.put("head-range-key", "0123456789");
 
@@ -198,9 +196,7 @@ test("rejects write methods with 401", async ({ expect }) => {
 	expect(await after?.text()).toBe("untouched");
 });
 
-test("rejects malformed and multiple ranges with 400", async ({
-	expect,
-}) => {
+test("rejects malformed and multiple ranges with 400", async ({ expect }) => {
 	const r2 = await ctx.mf.getR2Bucket("BUCKET");
 	await r2.put("bad-range-key", "0123456789");
 
@@ -213,9 +209,7 @@ test("rejects malformed and multiple ranges with 400", async ({
 	}
 });
 
-test("rejects unsatisfiable ranges with 416", async ({
-	expect,
-}) => {
+test("rejects unsatisfiable ranges with 416", async ({ expect }) => {
 	const r2 = await ctx.mf.getR2Bucket("BUCKET");
 	await r2.put("unsat-range-key", "0123456789");
 
