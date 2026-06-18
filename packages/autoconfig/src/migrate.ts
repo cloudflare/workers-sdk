@@ -76,9 +76,17 @@ export async function migrateWranglerConfigToNewFormat(
 	const hasTooling = Object.keys(tooling).length > 0;
 	const writeToolingConfig = hasTooling && !isVite;
 
-	// A migrated project runs on `cf`, not `wrangler`: swap the dependency and
-	// rewrite `wrangler ...` package.json scripts to `cf ...`.
-	const pkg = readPackageJson(projectPath);
+	// A migrated project is driven by `cf`, so we always add `cf` and rewrite
+	// `wrangler ...` package.json scripts to `cf ...`.
+	//
+	// Whether `wrangler` itself is removed depends on who the build tool is:
+	// `cf dev` / `cf build` delegate to an installed dev-server impl, and for
+	// non-Vite projects that impl IS wrangler (via its `cf-wrangler`
+	// delegate). Removing it there would leave the project with no build tool.
+	// Vite projects use `@cloudflare/vite-plugin` as the impl, so `wrangler`
+	// can be dropped. Hence: keep wrangler unless this is a Vite project.
+	const removeWrangler = isVite;
+	const pkg = readPackageJson(projectPath, removeWrangler);
 
 	logger.log("");
 	logger.log("Migrating to the new Cloudflare config format:");
@@ -96,7 +104,11 @@ export async function migrateWranglerConfigToNewFormat(
 	}
 	logger.log(` 🗑️  Remove ${wranglerConfigPath}`);
 	if (pkg) {
-		logger.log(" 📦 Replace wrangler with cf (devDependency)");
+		logger.log(
+			removeWrangler
+				? " 📦 Replace wrangler with cf (devDependency)"
+				: " 📦 Add cf (devDependency; keeping wrangler as the build tool)"
+		);
 		if (Object.keys(pkg.rewrittenScripts).length > 0) {
 			logger.log(" 📝 Update package.json scripts:");
 			for (const [name, script] of Object.entries(pkg.rewrittenScripts)) {
@@ -139,11 +151,17 @@ export async function migrateWranglerConfigToNewFormat(
 }
 
 /**
- * Read the project's `package.json` and compute the cf migration: `wrangler`
- * removed from dependencies, and each `wrangler ...` script rewritten to
- * `cf ...`. Returns `undefined` if there is no `package.json`.
+ * Read the project's `package.json` and compute the cf migration: each
+ * `wrangler ...` script rewritten to `cf ...`, and (when `removeWrangler` is
+ * `true`) `wrangler` removed from dependencies. `removeWrangler` is `false`
+ * for non-Vite projects, where wrangler remains the build tool that
+ * `cf dev` / `cf build` delegate to. Returns `undefined` if there is no
+ * `package.json`.
  */
-function readPackageJson(projectPath: string):
+function readPackageJson(
+	projectPath: string,
+	removeWrangler: boolean
+):
 	| {
 			path: string;
 			updated: PackageJSON;
@@ -172,11 +190,13 @@ function readPackageJson(projectPath: string):
 	}
 
 	const updated: PackageJSON = { ...pkg, scripts };
-	for (const field of ["dependencies", "devDependencies"] as const) {
-		const deps = updated[field];
-		if (deps && "wrangler" in deps) {
-			const { wrangler: _removed, ...rest } = deps;
-			updated[field] = rest;
+	if (removeWrangler) {
+		for (const field of ["dependencies", "devDependencies"] as const) {
+			const deps = updated[field];
+			if (deps && "wrangler" in deps) {
+				const { wrangler: _removed, ...rest } = deps;
+				updated[field] = rest;
+			}
 		}
 	}
 

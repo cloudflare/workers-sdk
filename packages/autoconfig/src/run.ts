@@ -204,8 +204,14 @@ export async function runAutoConfig(
 	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
 		if (configFormat === "ts") {
 			// The new programmatic config (cloudflare.config.ts) is driven by
-			// `cf`, not `wrangler`, so install cf instead.
+			// `cf`, so install cf. For non-Vite projects, wrangler is still the
+			// build tool that `cf dev` / `cf build` delegate to, so install it
+			// too; Vite projects use `@cloudflare/vite-plugin` as the impl
+			// (installed by the framework's own configure step) instead.
 			await installCf(packageManager.type, isWorkspaceRoot);
+			if (!isVite) {
+				await installWrangler(packageManager.type, isWorkspaceRoot);
+			}
 		} else {
 			await installWrangler(packageManager.type, isWorkspaceRoot);
 		}
@@ -478,7 +484,16 @@ export async function buildOperationsSummary(
 		summary.wranglerInstall = true;
 
 		logger.log("📦 Install packages:");
-		logger.log(` - ${isTs ? "cf" : "wrangler"} (devDependency)`);
+		if (isTs) {
+			logger.log(` - cf (devDependency)`);
+			// Non-Vite projects also keep wrangler as the build tool that
+			// `cf dev` / `cf build` delegate to.
+			if (!configPreview?.isVite) {
+				logger.log(` - wrangler (devDependency)`);
+			}
+		} else {
+			logger.log(` - wrangler (devDependency)`);
+		}
 		logger.log("");
 
 		if (isTs) {
