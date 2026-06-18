@@ -1,7 +1,6 @@
 {
 	"name": "@cloudflare/autoconfig",
 	"version": "0.1.0",
-	"private": true,
 	"description": "Framework autoconfig detection and configuration for Cloudflare Workers",
 	"license": "MIT OR Apache-2.0",
 	"files": [
