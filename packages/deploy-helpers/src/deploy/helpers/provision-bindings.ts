@@ -86,6 +86,8 @@ abstract class ProvisionResourceHandler<
 		public accountId: string
 	) {}
 
+	// Does this resource already exist in the currently deployed version of the Worker?
+	// If it does, that means we can inherit from it.
 	abstract canInherit(
 		settings: Settings | undefined
 	): boolean | Promise<boolean>;
@@ -108,22 +110,34 @@ abstract class ProvisionResourceHandler<
 		this.connect(id);
 	}
 
+	// This binding is fully specified and can't/shouldn't be provisioned.
+	// This is usually when it has an id (e.g. D1 `database_id`).
 	isFullySpecified(): boolean {
 		return false;
 	}
 
+	// Does this binding need to be provisioned?
+	// Some bindings are not fully specified, but don't need provisioning
+	// (e.g. R2 binding, with a bucket_name that already exists).
 	async isConnectedToExistingResource(): Promise<boolean | string> {
 		return false;
 	}
 
+	// Should this resource be provisioned?
 	async shouldProvision(settings: Settings | undefined) {
+		// If the resource is fully specified, don't provision.
 		if (!this.isFullySpecified()) {
+			// If we can inherit, do that and don't provision.
 			if (await this.canInherit(settings)) {
 				this.inherit();
 			} else {
+				// If the resource is connected to a remote resource that _exists_
+				// (see comments on the individual functions for why this is different to isFullySpecified()).
 				const connected = await this.isConnectedToExistingResource();
 				if (connected) {
 					if (typeof connected === "string") {
+						// Basically a special case for D1: the resource is specified by name in config
+						// and exists, but needs to be specified by ID for the first deploy to work.
 						this.connect(connected);
 					}
 					return false;
@@ -169,10 +183,20 @@ class R2Handler extends ProvisionResourceHandler<
 		);
 	}
 
+	/**
+	 * Inheriting an R2 binding replaces the id property (bucket_name for R2) with the inheritance symbol.
+	 * This works when deploying (and is appropriate for all other binding types), but it means that the
+	 * bucket_name for an R2 bucket is not displayed when deploying. As such, only use the inheritance symbol
+	 * if the R2 binding has no `bucket_name`.
+	 */
 	override inherit(): void {
 		this.binding.bucket_name ??= INHERIT_SYMBOL;
 	}
 
+	/**
+	 * R2 bindings can be inherited if the binding name and jurisdiction match.
+	 * Additionally, if the user has specified a bucket_name in config, make sure that matches.
+	 */
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
 			(existing) =>
@@ -187,6 +211,7 @@ class R2Handler extends ProvisionResourceHandler<
 	async isConnectedToExistingResource(): Promise<boolean> {
 		assert(typeof this.binding.bucket_name !== "symbol");
 
+		// If the user hasn't specified a bucket_name in config, we always provision.
 		if (!this.binding.bucket_name) {
 			return false;
 		}
@@ -197,12 +222,15 @@ class R2Handler extends ProvisionResourceHandler<
 				this.binding.bucket_name,
 				this.binding.jurisdiction
 			);
+			// This bucket_name exists! We don't need to provision it.
 			return true;
 		} catch (e) {
 			if (!(e instanceof APIError && e.code === 10006)) {
+				// This is an error that is not "bucket not found", so we do want to throw.
 				throw e;
 			}
 
+			// This bucket_name doesn't exist, so let's provision.
 			return false;
 		}
 	}
@@ -397,11 +425,15 @@ class D1Handler extends ProvisionResourceHandler<
 			(existing) =>
 				existing.type === this.type && existing.name === this.bindingName
 		) as Extract<WorkerMetadataBinding, { type: "d1" }> | undefined;
+		// A D1 binding with the same binding name exists is already present on the worker...
 		if (maybeInherited) {
+			// ...and the user hasn't specified a name in their config, so we don't need to check if the database_name matches.
 			if (!this.binding.database_name) {
 				return true;
 			}
 
+			// ...and the user HAS specified a name in their config, so we need to check if the database_name they provided
+			// matches the database_name of the existing binding (which isn't present in settings, so we'll need to make an API call to check).
 			const dbFromId = await getDatabaseInfoFromIdOrName(
 				this.complianceConfig,
 				this.accountId,
@@ -416,6 +448,7 @@ class D1Handler extends ProvisionResourceHandler<
 	async isConnectedToExistingResource(): Promise<boolean | string> {
 		assert(typeof this.binding.database_name !== "symbol");
 
+		// If the user hasn't specified a database_name in config, we always provision.
 		if (!this.binding.database_name) {
 			return false;
 		}
@@ -426,12 +459,15 @@ class D1Handler extends ProvisionResourceHandler<
 				this.binding.database_name
 			);
 
+			// This database_name exists! We don't need to provision it.
 			return db.uuid;
 		} catch (e) {
 			if (!(e instanceof APIError && e.code === 7404)) {
+				// This is an error that is not "database not found", so we do want to throw.
 				throw e;
 			}
 
+			// This database_name doesn't exist, so let's provision.
 			return false;
 		}
 	}
@@ -530,6 +566,8 @@ const HANDLERS = {
 		keyDescription: "namespace name",
 		configField: "ai_search_namespaces" as const,
 		load: async (_complianceConfig: ComplianceConfig, _accountId: string) => {
+			// AI Search namespaces don't have a general list API in this context.
+			// The provisioning system will create them if they don't exist.
 			return [];
 		},
 		toConfig: (
@@ -550,6 +588,15 @@ const HANDLERS = {
 		keyDescription: "namespace name",
 		configField: "agent_memory" as const,
 		load: async (_complianceConfig: ComplianceConfig, _accountId: string) => {
+			// `load` only populates the interactive picker in `runProvisioningFlow`
+			// (the "Would you like to connect an existing X or create a new one?"
+			// prompt). For agent_memory, `namespace` is required in config — so
+			// `handler.name` is always set at provision time and `runProvisioningFlow`
+			// goes straight to the "Resource name found in config" branch without
+			// ever consulting this list. Whether or not the namespace already exists
+			// is decided by `isConnectedToExistingResource()` (which hits the GET
+			// /namespaces/:name endpoint), not by this list. Returning [] is
+			// therefore safe and avoids an unnecessary list call at deploy time.
 			return [];
 		},
 		toConfig: (
@@ -760,6 +807,9 @@ export async function provisionBindings(
 		const isUsingRedirectedConfig =
 			config.userConfigPath && config.userConfigPath !== config.configPath;
 
+		// If we're using a redirected config, then the redirected config potentially has injected
+		// bindings that weren't originally in the user config. These can be provisioned, but we
+		// should not write the IDs back to the user config file (because the bindings weren't there in the first place).
 		if (isUsingRedirectedConfig) {
 			const { rawConfig: unredirectedConfig } =
 				await experimental_readRawConfig(
@@ -781,6 +831,7 @@ export async function provisionBindings(
 				continue;
 			}
 
+			// See above for why we skip writing back some bindings to the config file.
 			if (isUsingRedirectedConfig && !existingBindingNames.has(bindingName)) {
 				continue;
 			}
@@ -794,12 +845,17 @@ export async function provisionBindings(
 			(patch[resourceType] as unknown as Array<Record<string, string>>).push(
 				Object.fromEntries(
 					Object.entries(bindingToWrite).filter(
+						// Make sure all the values are JSON serialisable.
+						// Otherwise we end up with "undefined" in the config.
 						([_, value]) => typeof value === "string"
 					)
 				)
 			);
 		}
 
+		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
+		// This is not necessary, as future deploys can use inherited resources, but it can help with
+		// portability of the config file, and adds robustness to bindings being renamed.
 		if (!isNonInteractiveOrCI()) {
 			try {
 				await experimental_patchConfig(configPath, patch, false);
@@ -807,6 +863,7 @@ export async function provisionBindings(
 					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
 				);
 			} catch (e) {
+				// no-op — if the user is using TOML config we can't update it.
 				if (!(e instanceof PatchConfigError)) {
 					throw e;
 				}
@@ -833,7 +890,9 @@ function printDivider() {
 }
 
 type NormalisedResourceInfo = {
+	/** The name of the resource */
 	title: string;
+	/** The id of the resource */
 	value: string;
 };
 
@@ -847,6 +906,7 @@ async function runProvisioningFlow(
 	const NEW_OPTION_VALUE = "__WRANGLER_INTERNAL_NEW";
 	const SEARCH_OPTION_VALUE = "__WRANGLER_INTERNAL_SEARCH";
 	const MAX_OPTIONS = 4;
+	// NB preExisting does not actually contain all resources on the account - we max out at ~30 d1 databases, ~100 kv, and ~20 r2.
 	const options = preExisting.slice(0, MAX_OPTIONS - 1);
 	if (options.length < preExisting.length) {
 		options.push({
@@ -893,6 +953,7 @@ async function runProvisioningFlow(
 			logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
 			await item.handler.provision(name);
 		} else if (action === SEARCH_OPTION_VALUE) {
+			// Search through pre-existing resources that weren't listed.
 			let foundResource: NormalisedResourceInfo | undefined;
 			while (foundResource === undefined) {
 				const input = await prompt(
@@ -918,6 +979,9 @@ async function runProvisioningFlow(
 	printDivider();
 }
 
+/**
+ * The resource name that auto-provisioning will create for a given binding.
+ */
 function autoProvisionedResourceName(
 	scriptName: string,
 	bindingName: string
@@ -925,6 +989,11 @@ function autoProvisionedResourceName(
 	return `${scriptName}-${bindingName.toLowerCase().replaceAll("_", "-")}`;
 }
 
+/**
+ * Create a new KV namespace under the given `accountId` with the given `title`.
+ *
+ * @returns the generated id of the created namespace.
+ */
 async function createKVNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -947,6 +1016,9 @@ async function createKVNamespace(
 	return response.id;
 }
 
+/**
+ * Fetch a list of all KV namespaces under the given `accountId`.
+ */
 async function listKVNamespaces(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -1062,6 +1134,9 @@ async function getDatabaseInfoFromIdOrName(
 	);
 }
 
+/**
+ * Fetch a list of all R2 buckets under the given `accountId`.
+ */
 async function listR2Buckets(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -1097,6 +1172,12 @@ async function getR2Bucket(
 	);
 }
 
+/**
+ * Create an R2 bucket with the given `bucketName` within the account given by `accountId`.
+ *
+ * A 400 is returned if the account already owns a bucket with this name.
+ * A bucket must be explicitly deleted to be replaced.
+ */
 async function createR2Bucket(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -1124,6 +1205,10 @@ async function createR2Bucket(
 	);
 }
 
+/**
+ * Get an AI Search namespace for the given account.
+ * Returns `null` if the namespace does not exist (404); other errors propagate.
+ */
 async function getAISearchNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -1143,6 +1228,10 @@ async function getAISearchNamespace(
 	}
 }
 
+/**
+ * Create an AI Search namespace for the given account.
+ * Used by the provisioning system when a namespace doesn't exist at deploy time.
+ */
 async function createAISearchNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -1159,6 +1248,14 @@ async function createAISearchNamespace(
 	);
 }
 
+/**
+ * Get an Agent Memory namespace for the given account.
+ * Returns `null` if the namespace does not exist (404); other errors propagate.
+ *
+ * Used by the provisioning system at deploy time to decide whether a
+ * configured namespace needs to be created. The caller (not this function)
+ * is responsible for provisioning when `null` is returned.
+ */
 async function getAgentMemoryNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -1177,6 +1274,10 @@ async function getAgentMemoryNamespace(
 	}
 }
 
+/**
+ * Create an Agent Memory namespace for the given account.
+ * Used by the provisioning system when a namespace doesn't exist at deploy time.
+ */
 async function createAgentMemoryNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
