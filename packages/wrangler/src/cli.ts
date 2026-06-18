@@ -21,7 +21,6 @@ import {
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
 	unstable_getMiniflareWorkerOptions,
 	unstable_getVarsForDev,
-	unstable_getWorkerNameFromProject,
 	unstable_pages,
 	unstable_readConfig,
 } from "./api";
@@ -77,7 +76,6 @@ export {
 	experimental_generateTypes,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
 	unstable_getDevCompatibilityDate,
-	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
 };
@@ -151,9 +149,5 @@ export {
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 };
 export type { StartRemoteProxySessionOptions, Binding, RemoteProxySession };
-
-export { getDetailsForAutoConfig as experimental_getDetailsForAutoConfig } from "./autoconfig/details";
-export { runAutoConfig as experimental_runAutoConfig } from "./autoconfig/run";
-export { Framework as experimental_AutoConfigFramework } from "./autoconfig/frameworks/framework-class";
 
 export { experimental_getWranglerCommands } from "./experimental-commands-api";

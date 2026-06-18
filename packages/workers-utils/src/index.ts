@@ -130,3 +130,18 @@ export {
 	getHostFromUrl,
 	getZoneFromRoute,
 } from "./route-utils";
+
+export type { PackageManager } from "./package-manager";
+export {
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+	BunPackageManager,
+} from "./package-manager";
+
+export {
+	checkWorkerNameValidity,
+	toValidWorkerName,
+	getWorkerName,
+	getWorkerNameFromProject,
+} from "./worker-name";
