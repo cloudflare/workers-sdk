@@ -5,6 +5,7 @@
 		"build": {
 			"env": [
 				"npm_config_user_agent",
+				"CREATE_CLOUDFLARE_RELAUNCHED",
 				"CREATE_CLOUDFLARE_TELEMETRY_DISABLED",
 				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
 				"SPARROW_SOURCE_KEY"

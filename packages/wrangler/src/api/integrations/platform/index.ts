@@ -77,7 +77,6 @@ function getZoneFromConfig(config: Config): string | undefined {
 	return undefined;
 }
 
-export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
 export type {
 	Config as Unstable_Config,
 	RawConfig as Unstable_RawConfig,

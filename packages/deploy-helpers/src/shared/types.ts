@@ -32,6 +32,18 @@ export type DeployHelpersContext = {
 		text: string,
 		options?: { defaultValue?: string }
 	) => Promise<string>;
+	select: <Values extends string>(
+		text: string,
+		options: {
+			choices: {
+				title: string;
+				description?: string;
+				value: Values;
+			}[];
+			defaultOption?: number;
+			fallbackOption?: number;
+		}
+	) => Promise<Values>;
 	isNonInteractiveOrCI: () => boolean;
 };
 
@@ -94,6 +106,8 @@ export type SharedDeployVersionsProps = {
 	sendMetrics: boolean;
 	/** Resolved from getFlag("RESOURCES_PROVISION"). Controls whether bindings are auto-provisioned before upload. */
 	resourcesProvision: boolean;
+	/** Controls whether provisioned resource IDs are written back to the config file. */
+	skipProvisioningConfigWriteback: boolean;
 	/** temporary hack - cf is not yet a recognised deploy source, so any deploys from cf comes back normalised to 'api'*/
 	skipLastDeployedFromApiCheck: boolean;
 };

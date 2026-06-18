@@ -1,7 +1,6 @@
 import { versionsUpload } from "@cloudflare/deploy-helpers";
 import { analyseBundle } from "../check/commands";
 import { createCommand } from "../core/create-command";
-import { provisionBindings } from "../deployment-bundle/bindings";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -77,7 +76,6 @@ export const versionsUploadCommand = createCommand({
 				versionPreviewUrl,
 				versionPreviewAliasUrl,
 			} = await versionsUpload(props, config, buildResult, {
-				provisionBindings: provisionBindings,
 				analyseBundle: analyseBundle,
 			});
 
