@@ -137,7 +137,7 @@ function tryPrepareStack(
 	try {
 		return prepareStack(error, callSites);
 	} catch (err) {
-		logger.debug(
+		logger?.debug(
 			`Source map application failed, falling back to original stack trace: ${err}`
 		);
 		return null;
