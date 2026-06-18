@@ -1971,6 +1971,55 @@ describe("deploy", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+
+			it("should strip the local-dev `dev` field from a typed service binding at deploy time", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					services: [
+						{
+							binding: "ENTITLEMENTS",
+							service: "edge-entitlements",
+							entrypoint: "EntitlementsRPCService",
+							// @ts-expect-error - cross_account_grant and dev are not in the public config types
+							cross_account_grant: "entitlements-grant",
+							dev: {
+								plugin: {
+									package: "@cloudflare/workers-toolbox-plugins",
+									name: "entitlements",
+								},
+								options: {
+									entitlements: [
+										{
+											key: "containers.enabled",
+											targets: ["account"],
+											type: "bool",
+										},
+									],
+									mapping: { "*": { "containers.enabled": true } },
+								},
+							},
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "service",
+							name: "ENTITLEMENTS",
+							service: "edge-entitlements",
+							entrypoint: "EntitlementsRPCService",
+							cross_account_grant: "entitlements-grant",
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 
 		describe("[analytics_engine_datasets]", () => {

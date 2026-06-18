@@ -29,21 +29,39 @@ API and not meant for direct end-user invocation. It is the sibling of
 `wrangler`'s `cf-wrangler` binary, and the two MUST keep a shared spawn
 contract so the parent can drive either impl interchangeably.
 
-- **Verb dispatch.** `cf-vite <verb> [flags]`. `dev` is the only verb
-  today; future verbs (`build`, `deploy`) follow the same shape.
+- **Verb dispatch.** `cf-vite <verb> [flags]`. `dev` and `build` are the
+  verbs today; future verbs (`deploy`) follow the same shape.
   Unknown/missing verbs exit `2` (this doubles as the parent's
   version-detection signal — no JSON handshake).
-- **Shared flag vocabulary.** Only `--mode`, `--port`, `--host`,
-  `--local` are accepted, mirroring `cf-wrangler` exactly. Parsed with
-  `node:util.parseArgs` strict mode → unknown flags exit `2`. Do NOT add
-  flags here unless `cf-wrangler` grows them too. (There is no `--config`
-  flag: the wrangler config is discovered by `cloudflare()` itself.)
-- **Flag wiring.** `cf-vite` boots Vite via `createServer()` against the
-  user's own `vite.config.ts` (which must include `cloudflare()`).
-  Plugin-owned flags are bridged via env vars the plugin already reads
-  (`--local` → `CLOUDFLARE_VITE_FORCE_LOCAL`); Vite-owned flags go
-  through inline config (`--port`/`--host` → `server.*`, `--mode` →
-  `mode`).
+- **Shared flag vocabulary (`dev`).** For `dev`, only `--mode`, `--port`,
+  `--host`, `--local` are accepted, mirroring `cf-wrangler` exactly.
+  Parsed with `node:util.parseArgs` strict mode → unknown flags exit `2`.
+  Do NOT add flags here unless `cf-wrangler` grows them too. (There is no
+  `--config` flag: the wrangler config is discovered by `cloudflare()`
+  itself.)
+- **`build`** `cf-vite build` runs Vite's full multi-environment
+  app build via `createBuilder().buildApp()` (NOT the legacy
+  single-environment `build()` helper, which would skip the plugin's
+  worker/build-output orchestration — mirrors Vite's own `vite build`
+  CLI). It accepts **only `--mode`** (`--port`/`--host`/`--local` don't
+  apply to a build and exit `2`). It forces the experimental Build Output
+  API on by default by setting `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT`
+  (enabling `experimental.newConfig` +
+  `experimental.newConfig.cfBuildOutput`, overriding plugin config),
+  which requires a `cloudflare.config.ts` at the project root. The env
+  var name and read logic live in `build-output-env.ts`
+  (`FORCE_BUILD_OUTPUT_ENV_VAR` / `isForcedBuildOutput()`), shared by the
+  two read sites that MUST agree: `index.ts` (selects the build-output
+  plugin at construction) and `resolvePluginConfig`. Both read directly
+  from `process.env` (NOT Vite's `loadEnv`), since `index.ts` runs before
+  Vite resolves a root/mode and this is an internal bridge, not a
+  `.env`-file knob.
+- **`dev`** `cf-vite dev` boots Vite via `createServer()`
+  against the user's own `vite.config.ts` (which must include
+  `cloudflare()`). Plugin-owned flags are bridged via env vars the plugin
+  already reads (`--local` → `CLOUDFLARE_VITE_FORCE_LOCAL`); Vite-owned
+  flags go through inline config (`--port`/`--host` → `server.*`,
+  `--mode` → `mode`).
 - **`--local`** forces remote bindings off. There is no plugin env knob
   for `remoteBindings` other than `CLOUDFLARE_VITE_FORCE_LOCAL`, which
   `resolvePluginConfig` in `plugin-config.ts` honours by overriding the

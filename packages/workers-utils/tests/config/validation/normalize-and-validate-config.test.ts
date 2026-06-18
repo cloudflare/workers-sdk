@@ -4253,6 +4253,120 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "services[8]" bindings should have a string "entrypoint" field but got {"binding":"SERVICE_BINDING_1","service":"SERVICE_BINDING_SERVICE_1","entrypoint":123}."
 				`);
 			});
+
+			it("should accept a valid `dev` local-plugin configuration", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [
+							{
+								binding: "ENTITLEMENTS",
+								service: "edge-entitlements",
+								dev: {
+									plugin: {
+										package: "@cloudflare/workers-toolbox-plugins",
+										name: "entitlements",
+									},
+									options: { entitlements: [], mapping: {} },
+								},
+							},
+							{
+								binding: "ENTITLEMENTS_NO_OPTS",
+								service: "edge-entitlements",
+								dev: {
+									plugin: {
+										package: "@cloudflare/workers-toolbox-plugins",
+										name: "entitlements",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error on a malformed service binding `dev` field", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [
+							{
+								binding: "BAD_DEV_NOT_OBJECT",
+								service: "svc",
+								dev: "nope",
+							},
+							{
+								binding: "BAD_DEV_MISSING_PLUGIN",
+								service: "svc",
+								dev: {},
+							},
+							{
+								binding: "BAD_DEV_PLUGIN_WRONG_SHAPE",
+								service: "svc",
+								dev: { plugin: { package: 1, name: 2 } },
+							},
+							{
+								binding: "BAD_DEV_OPTIONS_NOT_OBJECT",
+								service: "svc",
+								dev: {
+									plugin: { package: "p", name: "n" },
+									options: "should-be-object",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "services[0]" bindings should have an object "dev" field but got "nope".
+					  - "services[1].dev" should have an object "plugin" field but got undefined.
+					  - "services[2].dev.plugin" should have a string "package" field but got 1.
+					  - "services[2].dev.plugin" should have a string "name" field but got 2.
+					  - "services[3].dev.options" should be an object but got "should-be-object"."
+				`);
+			});
+
+			it("should warn when both `dev` and `remote: true` are set", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [
+							{
+								binding: "SERVICE",
+								service: "svc",
+								remote: true,
+								dev: {
+									plugin: { package: "p", name: "n" },
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "services[0]" binding has both "dev" and "remote" set; "remote" is ignored when "dev" is present and the binding is routed through the local Miniflare plugin."
+				`);
+			});
 		});
 
 		describe("[analytics_engine_datasets]", () => {

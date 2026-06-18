@@ -104,9 +104,11 @@ export { resolveNamedTunnel as unstable_resolveNamedTunnel } from "./tunnel/clie
 
 // Entries for the `cf-wrangler` delegate binary (see `bin/cf-wrangler.js`),
 // which calls these in-process. Not a stable public API.
+export { runCfWranglerBuild } from "./cf-wrangler/build";
 export { runCfWranglerDev } from "./cf-wrangler/dev";
 export {
 	ArgParseError,
+	parseBuildArgs as parseCfWranglerBuildArgs,
 	parseArgs as parseCfWranglerArgs,
 } from "./cf-wrangler/args";
 

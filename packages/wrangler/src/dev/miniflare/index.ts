@@ -611,7 +611,33 @@ export function buildMiniflareBindingOptions(
 	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> =
 		Object.fromEntries(fetchers.map((f) => [f.binding, f.fetcher]));
 
+	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
+
 	for (const service of services) {
+		// A `dev` plugin overrides the regular service binding and routes the binding through Miniflare's external-plugin pathway instead.
+		if (service.dev !== undefined) {
+			const {
+				binding: _binding,
+				dev: { plugin, options: devOptions },
+				remote: _remote,
+				props: _props,
+				...options
+			} = service;
+
+			logger.debug(
+				`Binding ${service.binding} is a local binding to plugin ${plugin.name} provided by package ${plugin.package}`
+			);
+
+			unsafeBindings.push({
+				name: service.binding,
+				type: "service",
+				plugin,
+				options: { ...options, ...devOptions },
+			});
+
+			continue;
+		}
+
 		if (remoteProxyConnectionString && service.remote) {
 			serviceBindings[service.binding] = {
 				name: service.service,
@@ -679,7 +705,6 @@ export function buildMiniflareBindingOptions(
 		warnOrError("flagship", flagship.remote);
 	}
 
-	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
 	const unsafeBindingsWithLocalDev = Object.entries(bindings ?? {}).filter(
 		(b) => isUnsafeServiceBindingWithDevCfg(b[1])
 	);
