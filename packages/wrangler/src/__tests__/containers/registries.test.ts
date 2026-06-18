@@ -237,14 +237,14 @@ describe("containers registries configure", () => {
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 			const storeId = "test-store-id-123";
 			mockPrompt({
-				text: "Enter AWS Secret Access Key:",
-				options: { isSecret: true },
-				result: "test-secret-access-key",
-			});
-			mockPrompt({
 				text: "Secret name:",
 				options: { isSecret: false, defaultValue: "AWS_Secret_Access_Key" },
 				result: "AWS_Secret_Access_Key",
+			});
+			mockPrompt({
+				text: "Enter AWS Secret Access Key:",
+				options: { isSecret: true },
+				result: "test-secret-access-key",
 			});
 
 			mockListSecretStores([
@@ -285,11 +285,6 @@ describe("containers registries configure", () => {
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 			const newStoreId = "new-store-id-456";
 
-			mockPrompt({
-				text: "Enter AWS Secret Access Key:",
-				options: { isSecret: true },
-				result: "test-secret-access-key",
-			});
 			mockConfirm({
 				text: "No existing Secret Stores found. Create a Secret Store to store your registry credentials?",
 				result: true,
@@ -298,6 +293,11 @@ describe("containers registries configure", () => {
 				text: "Secret name:",
 				options: { isSecret: false, defaultValue: "AWS_Secret_Access_Key" },
 				result: "AWS_Secret_Access_Key",
+			});
+			mockPrompt({
+				text: "Enter AWS Secret Access Key:",
+				options: { isSecret: true },
+				result: "test-secret-access-key",
 			});
 
 			mockListSecretStores([]);
@@ -335,14 +335,14 @@ describe("containers registries configure", () => {
 			const providedStoreId = "provided-store-id-789";
 
 			mockPrompt({
-				text: "Enter AWS Secret Access Key:",
-				options: { isSecret: true },
-				result: "test-secret-access-key",
-			});
-			mockPrompt({
 				text: "Secret name:",
 				options: { isSecret: false, defaultValue: "AWS_Secret_Access_Key" },
 				result: "AWS_Secret_Access_Key",
+			});
+			mockPrompt({
+				text: "Enter AWS Secret Access Key:",
+				options: { isSecret: true },
+				result: "test-secret-access-key",
 			});
 
 			mockListSecrets(providedStoreId, []);
@@ -371,12 +371,12 @@ describe("containers registries configure", () => {
 				│
 				│ Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
 				│
-				│ Getting AWS Secret Access Key...
-				│
 				│
 				│ Setting up integration with Secrets Store...
 				│
 				│
+				│
+				│ Getting AWS Secret Access Key...
 				│
 				│ Container-scoped secret "AWS_Secret_Access_Key" created in Secrets Store.
 				│
@@ -384,6 +384,51 @@ describe("containers registries configure", () => {
 
 				"
 			`);
+		});
+
+		it("should reuse an existing secret interactively without prompting for the credential", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+			const providedStoreId = "provided-store-id-reuse";
+			const secretName = "existing_secret";
+
+			mockConfirm({
+				text: "Do you want to reuse the existing secret? If not, then you'll be prompted to pick a new name.",
+				result: true,
+			});
+
+			mockListSecrets(providedStoreId, [
+				{
+					id: "existing-secret-id",
+					store_id: providedStoreId,
+					name: secretName,
+					comment: "",
+					scopes: ["containers"],
+					created: "2024-01-01T00:00:00Z",
+					modified: "2024-01-01T00:00:00Z",
+					status: "active",
+				},
+			]);
+			mockPutRegistry(expect, {
+				domain: awsEcrDomain,
+				is_public: false,
+				auth: {
+					public_credential: "test-access-key-id",
+					private_credential: {
+						store_id: providedStoreId,
+						secret_name: secretName,
+					},
+				},
+				kind: "ECR",
+			});
+
+			await runWrangler(
+				`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id --secret-store-id=${providedStoreId} --secret-name=${secretName}`
+			);
+
+			expect(cliStd.stdout).not.toContain("created in Secrets Store");
 		});
 
 		describe("non-interactive", () => {
@@ -426,7 +471,7 @@ describe("containers registries configure", () => {
 				);
 			});
 
-			it("should reuse existing secret with --skip-confirmation", async ({
+			it("should ignore a piped stdin value when reusing an existing secret with --skip-confirmation", async ({
 				expect,
 			}) => {
 				const storeId = "test-store-id-reuse";
@@ -474,6 +519,53 @@ describe("containers registries configure", () => {
 				// Should not contain "created" message since we reused existing secret
 				expect(cliStd.stdout).not.toContain("created in Secrets Store");
 			});
+
+			it("should reuse existing secret without requiring a value (no stdin)", async ({
+				expect,
+			}) => {
+				const storeId = "test-store-id-reuse";
+				const secretName = "existing_secret";
+
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, [
+					{
+						id: "existing-secret-id",
+						store_id: storeId,
+						name: secretName,
+						comment: "",
+						scopes: ["containers"],
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+						status: "active",
+					},
+				]);
+				mockPutRegistry(expect, {
+					domain: awsEcrDomain,
+					is_public: false,
+					auth: {
+						public_credential: "test-access-key-id",
+						private_credential: {
+							store_id: storeId,
+							secret_name: secretName,
+						},
+					},
+					kind: "ECR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --secret-name=${secretName} --skip-confirmation`
+				);
+
+				expect(cliStd.stdout).not.toContain("created in Secrets Store");
+			});
 		});
 	});
 
@@ -485,14 +577,14 @@ describe("containers registries configure", () => {
 			const dockerHubDomain = "docker.io";
 			const storeId = "test-store-id-123";
 			mockPrompt({
-				text: "Enter DockerHub PAT Token:",
-				options: { isSecret: true },
-				result: "test-pat-token",
-			});
-			mockPrompt({
 				text: "Secret name:",
 				options: { isSecret: false, defaultValue: "DockerHub_PAT_Token" },
 				result: "DockerHub_PAT_Token",
+			});
+			mockPrompt({
+				text: "Enter DockerHub PAT Token:",
+				options: { isSecret: true },
+				result: "test-pat-token",
 			});
 
 			mockListSecretStores([
@@ -564,6 +656,54 @@ describe("containers registries configure", () => {
 				await runWrangler(
 					`containers registries configure ${dockerHubDomain} --public-credential=cloudchambertest --secret-name=DockerHub_PAT_Token`
 				);
+			});
+
+			it("should reuse existing secret without requiring a value (no stdin)", async ({
+				expect,
+			}) => {
+				const storeId = "test-store-id-reuse";
+				const secretName = "existing_secret";
+
+				// No value is piped via stdin; the existing secret is reused by reference.
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, [
+					{
+						id: "existing-secret-id",
+						store_id: storeId,
+						name: secretName,
+						comment: "",
+						scopes: ["containers"],
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+						status: "active",
+					},
+				]);
+				mockPutRegistry(expect, {
+					domain: dockerHubDomain,
+					is_public: false,
+					auth: {
+						public_credential: "cloudchambertest",
+						private_credential: {
+							store_id: storeId,
+							secret_name: secretName,
+						},
+					},
+					kind: "DockerHub",
+				});
+
+				await runWrangler(
+					`containers registries configure ${dockerHubDomain} --public-credential=cloudchambertest --secret-name=${secretName} --skip-confirmation`
+				);
+
+				expect(cliStd.stdout).not.toContain("created in Secrets Store");
 			});
 		});
 	});
