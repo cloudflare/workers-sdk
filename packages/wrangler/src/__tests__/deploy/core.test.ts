@@ -2,6 +2,10 @@ import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import {
+	getInstalledPackageVersion,
+	runAutoConfig,
+} from "@cloudflare/autoconfig";
+import {
 	TEMPORARY_TERMS_NOTICE,
 	TEMPORARY_TERMS_PROMPT,
 } from "@cloudflare/workers-auth";
@@ -15,9 +19,6 @@ import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { Static } from "../../autoconfig/frameworks/static";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
-import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
@@ -55,8 +56,8 @@ import {
 	mockPublishRoutesRequest,
 	mockServiceScriptData,
 } from "./helpers";
-import type { Framework } from "../../autoconfig/frameworks";
 import type { OutputEntry } from "../../output";
+import type { Framework } from "@cloudflare/autoconfig";
 
 vi.mock("command-exists");
 vi.mock("../../check/commands", async (importOriginal) => {
@@ -79,8 +80,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -610,10 +614,7 @@ describe("deploy", () => {
 		});
 
 		const getDetailsForAutoConfigSpy = vi
-			.spyOn(
-				await import("../../autoconfig/details"),
-				"getDetailsForAutoConfig"
-			)
+			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
@@ -653,10 +654,7 @@ describe("deploy", () => {
 		});
 
 		const getDetailsForAutoConfigSpy = vi
-			.spyOn(
-				await import("../../autoconfig/details"),
-				"getDetailsForAutoConfig"
-			)
+			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
@@ -689,7 +687,7 @@ describe("deploy", () => {
 		expect,
 	}) => {
 		const getDetailsForAutoConfigSpy = vi.spyOn(
-			await import("../../autoconfig/details"),
+			await import("@cloudflare/autoconfig"),
 			"getDetailsForAutoConfig"
 		);
 
@@ -1998,11 +1996,11 @@ describe("deploy", () => {
 		const outputFile = "./output.json";
 
 		vi.spyOn(
-			await import("../../autoconfig/details"),
+			await import("@cloudflare/autoconfig"),
 			"getDetailsForAutoConfig"
 		).mockResolvedValueOnce({
 			configured: false,
-			framework: new Static({ id: "static", name: "Static" }),
+			framework: { id: "static", name: "Static" } as Framework,
 			workerName: "my-site",
 			projectPath: ".",
 			outputDir: "./public",

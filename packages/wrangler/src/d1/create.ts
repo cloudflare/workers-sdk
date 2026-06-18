@@ -20,6 +20,8 @@ import {
 import type { DatabaseCreationResult } from "./types";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
+// Keep in sync with the local provisioning copy in
+// packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
 export async function createD1Database(
 	complianceConfig: ComplianceConfig,
 	accountId: string,

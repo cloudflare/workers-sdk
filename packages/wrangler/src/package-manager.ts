@@ -3,12 +3,22 @@ import { UserError } from "@cloudflare/workers-utils";
 import { execaCommandSync } from "execa";
 import { logger } from "./logger";
 
-export interface PackageManager {
-	type: "npm" | "yarn" | "pnpm" | "bun";
-	npx: string;
-	dlx: string[];
-	lockFiles: string[];
-}
+export type { PackageManager } from "@cloudflare/workers-utils";
+
+export {
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+	BunPackageManager,
+} from "@cloudflare/workers-utils";
+
+import {
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+	BunPackageManager,
+} from "@cloudflare/workers-utils";
+import type { PackageManager } from "@cloudflare/workers-utils";
 
 export async function getPackageManager(): Promise<PackageManager> {
 	const [hasYarn, hasNpm, hasPnpm, hasBun] = await Promise.all([
@@ -64,46 +74,6 @@ export async function getPackageManager(): Promise<PackageManager> {
 export function getPackageManagerName(packageManager: PackageManager): string {
 	return packageManager.type ?? "unknown";
 }
-
-/**
- * Manage packages using npm
- */
-export const NpmPackageManager = {
-	type: "npm",
-	npx: "npx",
-	dlx: ["npx"],
-	lockFiles: ["package-lock.json"],
-} as const satisfies PackageManager;
-
-/**
- * Manage packages using pnpm
- */
-export const PnpmPackageManager = {
-	type: "pnpm",
-	npx: "pnpm",
-	lockFiles: ["pnpm-lock.yaml"],
-	dlx: ["pnpm", "dlx"],
-} as const satisfies PackageManager;
-
-/**
- * Manage packages using yarn
- */
-export const YarnPackageManager = {
-	type: "yarn",
-	npx: "yarn",
-	dlx: ["yarn", "dlx"],
-	lockFiles: ["yarn.lock"],
-} as const satisfies PackageManager;
-
-/**
- * Manage packages using bun
- */
-export const BunPackageManager = {
-	type: "bun",
-	npx: "bunx",
-	dlx: ["bunx"],
-	lockFiles: ["bun.lockb", "bun.lock"],
-} as const satisfies PackageManager;
 
 async function supports(name: string): Promise<boolean> {
 	try {

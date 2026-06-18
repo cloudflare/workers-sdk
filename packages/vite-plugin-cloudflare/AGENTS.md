@@ -44,10 +44,11 @@ contract so the parent can drive either impl interchangeably.
   single-environment `build()` helper, which would skip the plugin's
   worker/build-output orchestration — mirrors Vite's own `vite build`
   CLI). It accepts **only `--mode`** (`--port`/`--host`/`--local` don't
-  apply to a build and exit `2`). It forces the experimental Build Output
-  API on by default by setting `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT`
-  (enabling `experimental.newConfig` +
-  `experimental.newConfig.cfBuildOutput`, overriding plugin config),
+  apply to a build and exit `2`).
+- **Build Output API forced for every verb.** `main()` sets
+  `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT` unconditionally (before Vite
+  loads the user's config), enabling `experimental.newConfig` +
+  `experimental.newConfig.cfBuildOutput` (overriding plugin config),
   which requires a `cloudflare.config.ts` at the project root. The env
   var name and read logic live in `build-output-env.ts`
   (`FORCE_BUILD_OUTPUT_ENV_VAR` / `isForcedBuildOutput()`), shared by the
