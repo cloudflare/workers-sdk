@@ -144,6 +144,28 @@ describe("wrangler", () => {
 					)
 				).rejects.toThrow("Invalid --executable-name value");
 			});
+
+			test.skipIf(!shellAvailable("bash"))(
+				"bash script with multi-word executable name should be syntactically valid",
+				async ({ expect }) => {
+					await runWrangler(`complete bash --executable-name "npx wrangler"`);
+
+					expect(() => {
+						execSync("bash -n", { input: std.out });
+					}).not.toThrow();
+				}
+			);
+
+			test.skipIf(!shellAvailable("zsh"))(
+				"zsh script with multi-word executable name should be syntactically valid",
+				async ({ expect }) => {
+					await runWrangler(`complete zsh --executable-name "npx wrangler"`);
+
+					expect(() => {
+						execSync("zsh -n", { input: std.out });
+					}).not.toThrow();
+				}
+			);
 		});
 
 		describe("bash", () => {
