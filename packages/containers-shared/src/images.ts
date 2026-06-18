@@ -20,6 +20,10 @@ import type {
 export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
 	"cloudflare/proxy-everything:3cb1195@sha256:0ef6716c52430096900b150d84a3302057d6cd2319dae7987128c85d0733e3c8";
 
+export function getEgressInterceptorPlatform(): string | undefined {
+	return process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE_PLATFORM;
+}
+
 export function getEgressInterceptorImage(): string {
 	return (
 		process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE ??
@@ -31,7 +35,12 @@ export async function pullEgressInterceptorImage(
 	dockerPath: string
 ): Promise<void> {
 	const image = getEgressInterceptorImage();
-	await runDockerCmd(dockerPath, ["pull", image, "--platform", "linux/amd64"]);
+	const platform = getEgressInterceptorPlatform();
+	const args = ["pull", image];
+	if (platform !== undefined) {
+		args.push("--platform", platform);
+	}
+	await runDockerCmd(dockerPath, args);
 }
 
 export async function pullImage(
