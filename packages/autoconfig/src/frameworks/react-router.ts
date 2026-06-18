@@ -42,8 +42,15 @@ function getReactRouterConfigPath(projectPath: string): string | null {
 }
 
 /**
- * Checks whether the user's `react-router.config.ts` (or `.js`) has `v8_middleware: true`
- * set in its `future` block. This determines which code pattern to generate:
+ * Checks whether the middleware pattern should be used for the given React Router project.
+ *
+ * For React Router >= 8.0.0, middleware is enabled by default
+ * (ref: https://github.com/remix-run/react-router/pull/15078), so this always returns `true`.
+ *
+ * For earlier versions, it parses the user's `react-router.config.ts` (or `.js`) to check
+ * whether `future.v8_middleware` is explicitly set to `true`.
+ *
+ * This determines which code pattern to generate:
  * - With middleware: simplified fetch handler using `cloudflare:workers` env pattern
  * - Without middleware: traditional `AppLoadContext` pattern with `env`/`ctx` params
  *
@@ -51,10 +58,21 @@ function getReactRouterConfigPath(projectPath: string): string | null {
  * Handles both TS `satisfies`/`as` expressions and plain object exports.
  *
  * @param projectPath - Absolute path to the project root containing the React Router config file.
- * @returns `true` if `future.v8_middleware` is explicitly set to `true`, `false` otherwise
- *   (including when the config file is missing or has no `future` block).
+ * @param frameworkVersion - React Router semver version string. When provided and
+ *   >= 8.0.0, returns `true` without parsing the config file (middleware is the default in v8).
+ * @returns `true` if middleware is enabled (either by default in v8+ or via `future.v8_middleware`
+ *   in the config), `false` otherwise (including when the config file is missing or has no
+ *   `future` block).
  */
-export function hasV8MiddlewareFlag(projectPath: string): boolean {
+export function hasV8MiddlewareFlag(
+	projectPath: string,
+	frameworkVersion?: string
+): boolean {
+	// React Router >= 8.0.0 has middleware enabled by default
+	if (frameworkVersion && semiver(frameworkVersion, "8.0.0") >= 0) {
+		return true;
+	}
+
 	const filePath = getReactRouterConfigPath(projectPath);
 	if (!filePath) {
 		return false;
@@ -128,7 +146,7 @@ export function hasV8MiddlewareFlag(projectPath: string): boolean {
  */
 function transformReactRouterConfig(
 	projectPath: string,
-	viteEnvironmentKey: ReturnType<typeof configPropertyName>
+	viteEnvironmentKey: ReturnType<typeof viteEnvAPIconfigPropertyName>
 ) {
 	const filePath = getReactRouterConfigPath(projectPath);
 	if (!filePath) {
@@ -236,7 +254,7 @@ function transformReactRouterConfig(
  * @returns `"unstable_viteEnvironmentApi"` for versions before 7.10.0,
  *   or `"v8_viteEnvironmentApi"` for 7.10.0 and later.
  */
-function configPropertyName(reactRouterVersion: string) {
+function viteEnvAPIconfigPropertyName(reactRouterVersion: string) {
 	if (!reactRouterVersion) {
 		return "v8_viteEnvironmentApi";
 	}
@@ -247,6 +265,25 @@ function configPropertyName(reactRouterVersion: string) {
 	} else {
 		return "v8_viteEnvironmentApi";
 	}
+}
+
+/**
+ * Determines whether the installed React Router version still requires the explicit
+ * `future` flag in `react-router.config.ts` for enabling the vite environment API.
+ *
+ * React Router >= 8.0.0 enables these features by default
+ * (ref: https://github.com/remix-run/react-router/pull/15077), so no future flags
+ * are needed (they also can't be included as they would cause errors at build time).
+ *
+ * @param reactRouterVersion - The installed React Router semver version string (e.g. `"7.16.0"`).
+ * @returns `true` if the future flag needs to be set (versions < 8.0.0), `false` otherwise.
+ */
+function needsViteEnvAPIFutureFlag(reactRouterVersion: string): boolean {
+	if (!reactRouterVersion) {
+		return false;
+	}
+
+	return semiver(reactRouterVersion, "8.0.0") < 0;
 }
 
 /**
@@ -439,8 +476,10 @@ export class ReactRouter extends Framework {
 		isWorkspaceRoot,
 		context,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const viteEnvironmentKey = configPropertyName(this.frameworkVersion);
-		const useMiddlewarePattern = hasV8MiddlewareFlag(projectPath);
+		const useMiddlewarePattern = hasV8MiddlewareFlag(
+			projectPath,
+			this.frameworkVersion
+		);
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
@@ -466,7 +505,12 @@ export class ReactRouter extends Framework {
 				incompatibleVitePlugins: ["netlifyReactRouter"],
 			});
 
-			transformReactRouterConfig(projectPath, viteEnvironmentKey);
+			if (needsViteEnvAPIFutureFlag(this.frameworkVersion)) {
+				const viteEnvironmentKey = viteEnvAPIconfigPropertyName(
+					this.frameworkVersion
+				);
+				transformReactRouterConfig(projectPath, viteEnvironmentKey);
+			}
 		}
 
 		return {
