@@ -5,7 +5,12 @@ import {
 	Sidebar,
 	useSidebar,
 } from "@cloudflare/kumo";
-import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
+import {
+	MonitorIcon,
+	MoonIcon,
+	PulseIcon,
+	SunIcon,
+} from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
@@ -237,6 +242,21 @@ export function AppSidebar({
 						onWorkerChange={onWorkerChange}
 					/>
 				)}
+
+				<Sidebar.MenuItem>
+					<Sidebar.MenuButton
+						icon={<PulseIcon width={20} height={20} />}
+						onClick={() =>
+							router.navigate({ to: "/observability", search: workerSearch })
+						}
+						className={cn(
+							"cursor-pointer",
+							currentPath === "/observability" && "bg-kumo-tint"
+						)}
+					>
+						Observability
+					</Sidebar.MenuButton>
+				</Sidebar.MenuItem>
 
 				{sidebar.open ? (
 					<Sidebar.MenuItem className="space-y-1">
