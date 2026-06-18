@@ -321,13 +321,8 @@ async function matchFiles(
 
 		// Files matching a default rule that was silently removed (because a user
 		// rule of the same type was explicitly marked `fallthrough: false`) are
-		// intentionally skipped without erroring.
-		const silentlySkipped = silentlyRemovedRules.some((rule) =>
-			rule.globs.some((glob) => globToRegExp(glob).test(filePath))
-		);
-		if (silentlySkipped) {
-			continue;
-		}
+		// intentionally ignored here — they matched no active rule and are not in
+		// removedRules, so there is nothing more to do for them.
 	}
 
 	return modules;
