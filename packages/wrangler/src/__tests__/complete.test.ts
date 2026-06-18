@@ -101,12 +101,28 @@ describe("wrangler", () => {
 		});
 
 		describe("--executable-name", () => {
-			test("should embed the overridden executable name in the script", async ({
+			test("should embed the overridden executable name in powershell script", async ({
 				expect,
 			}) => {
 				await runWrangler(
 					`complete powershell --executable-name "npx wrangler"`
 				);
+
+				expect(std.out).toContain("npx wrangler complete");
+			});
+
+			test("should embed the overridden executable name in bash script", async ({
+				expect,
+			}) => {
+				await runWrangler(`complete bash --executable-name "npx wrangler"`);
+
+				expect(std.out).toContain("npx wrangler complete");
+			});
+
+			test("should embed the overridden executable name in zsh script", async ({
+				expect,
+			}) => {
+				await runWrangler(`complete zsh --executable-name "npx wrangler"`);
 
 				expect(std.out).toContain("npx wrangler complete");
 			});

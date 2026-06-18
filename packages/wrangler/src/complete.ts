@@ -169,6 +169,6 @@ export const completionsCommand = createCommand({
 		const executableName = args.executableName ?? "wrangler";
 
 		setupCompletions();
-		t.setup(executableName, executableName, args.shell);
+		t.setup("wrangler", executableName, args.shell);
 	},
 });
