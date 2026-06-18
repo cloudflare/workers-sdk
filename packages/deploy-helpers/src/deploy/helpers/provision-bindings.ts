@@ -8,29 +8,16 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import {
-	createAgentMemoryNamespace,
-	getAgentMemoryNamespace,
-} from "../agent-memory/provisioning";
-import { createAISearchNamespace, getAISearchNamespace } from "../ai-search";
-import { fetchResult } from "../cfetch";
-import { createD1Database } from "../d1/create";
-import { listDatabases } from "../d1/list";
-import { getDatabaseInfoFromIdOrName } from "../d1/utils";
-import { prompt, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
-import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
-import {
-	createR2Bucket,
-	getR2Bucket,
-	listR2Buckets,
-} from "../r2/helpers/bucket";
-import { printBindings } from "../utils/print-bindings";
-import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import { autoProvisionedResourceName } from "./auto-provisioned-name";
-import type { Binding, StartDevWorkerInput } from "../api/startDevWorker/types";
+	fetchResult,
+	isNonInteractiveOrCI,
+	logger,
+	prompt,
+	select,
+} from "../../shared/context";
+import { printBindings } from "./print-bindings";
+import { useServiceEnvironments } from "./use-service-environments";
 import type {
+	Binding,
 	CfAgentMemory,
 	CfAISearchNamespace,
 	CfD1Database,
@@ -39,13 +26,52 @@ import type {
 	ComplianceConfig,
 	Config,
 	RawConfig,
+	StartDevWorkerInput,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
-export { getBindings } from "@cloudflare/deploy-helpers";
-
 export type Settings = {
 	bindings: Array<WorkerMetadataBinding>;
+};
+
+type DatabaseCreationResult = {
+	uuid: string;
+	name: string;
+};
+
+type ConcreteDatabase = {
+	uuid: string;
+	name: string;
+};
+
+type DatabaseInfo = {
+	uuid: string;
+	name: string;
+};
+
+type R2BucketInfo = {
+	name: string;
+	creation_date: string;
+	location?: string;
+	storage_class?: string;
+};
+
+type AISearchNamespace = {
+	name: string;
+};
+
+type AgentMemoryNamespace = {
+	id: string;
+	name: string;
+	account_id: string;
+	created_at: string;
+	updated_at: string;
+};
+
+type KVNamespaceInfo = {
+	id: string;
+	title: string;
+	supports_url_encoding?: boolean;
 };
 
 abstract class ProvisionResourceHandler<
@@ -85,34 +111,34 @@ abstract class ProvisionResourceHandler<
 		this.connect(id);
 	}
 
-	// This binding is fully specified and can't/shouldn't be provisioned
-	// This is usually when it has an id (e.g. D1 `database_id`)
+	// This binding is fully specified and can't/shouldn't be provisioned.
+	// This is usually when it has an id (e.g. D1 `database_id`).
 	isFullySpecified(): boolean {
 		return false;
 	}
 
 	// Does this binding need to be provisioned?
 	// Some bindings are not fully specified, but don't need provisioning
-	// (e.g. R2 binding, with a bucket_name that already exists)
+	// (e.g. R2 binding, with a bucket_name that already exists).
 	async isConnectedToExistingResource(): Promise<boolean | string> {
 		return false;
 	}
 
 	// Should this resource be provisioned?
 	async shouldProvision(settings: Settings | undefined) {
-		// If the resource is fully specified, don't provision
+		// If the resource is fully specified, don't provision.
 		if (!this.isFullySpecified()) {
-			// If we can inherit, do that and don't provision
+			// If we can inherit, do that and don't provision.
 			if (await this.canInherit(settings)) {
 				this.inherit();
 			} else {
 				// If the resource is connected to a remote resource that _exists_
-				// (see comments on the individual functions for why this is different to isFullySpecified())
+				// (see comments on the individual functions for why this is different to isFullySpecified()).
 				const connected = await this.isConnectedToExistingResource();
 				if (connected) {
 					if (typeof connected === "string") {
 						// Basically a special case for D1: the resource is specified by name in config
-						// and exists, but needs to be specified by ID for the first deploy to work
+						// and exists, but needs to be specified by ID for the first deploy to work.
 						this.connect(connected);
 					}
 					return false;
@@ -170,7 +196,7 @@ class R2Handler extends ProvisionResourceHandler<
 
 	/**
 	 * R2 bindings can be inherited if the binding name and jurisdiction match.
-	 * Additionally, if the user has specified a bucket_name in config, make sure that matches
+	 * Additionally, if the user has specified a bucket_name in config, make sure that matches.
 	 */
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
@@ -186,7 +212,7 @@ class R2Handler extends ProvisionResourceHandler<
 	async isConnectedToExistingResource(): Promise<boolean> {
 		assert(typeof this.binding.bucket_name !== "symbol");
 
-		// If the user hasn't specified a bucket_name in config, we always provision
+		// If the user hasn't specified a bucket_name in config, we always provision.
 		if (!this.binding.bucket_name) {
 			return false;
 		}
@@ -197,15 +223,15 @@ class R2Handler extends ProvisionResourceHandler<
 				this.binding.bucket_name,
 				this.binding.jurisdiction
 			);
-			// This bucket_name exists! We don't need to provision it
+			// This bucket_name exists! We don't need to provision it.
 			return true;
 		} catch (e) {
 			if (!(e instanceof APIError && e.code === 10006)) {
-				// this is an error that is not "bucket not found", so we do want to throw
+				// This is an error that is not "bucket not found", so we do want to throw.
 				throw e;
 			}
 
-			// This bucket_name doesn't exist—let's provision
+			// This bucket_name doesn't exist, so let's provision.
 			return false;
 		}
 	}
@@ -402,13 +428,13 @@ class D1Handler extends ProvisionResourceHandler<
 		) as Extract<WorkerMetadataBinding, { type: "d1" }> | undefined;
 		// A D1 binding with the same binding name exists is already present on the worker...
 		if (maybeInherited) {
-			// ...and the user hasn't specified a name in their config, so we don't need to check if the database_name matches
+			// ...and the user hasn't specified a name in their config, so we don't need to check if the database_name matches.
 			if (!this.binding.database_name) {
 				return true;
 			}
 
 			// ...and the user HAS specified a name in their config, so we need to check if the database_name they provided
-			// matches the database_name of the existing binding (which isn't present in settings, so we'll need to make an API call to check)
+			// matches the database_name of the existing binding (which isn't present in settings, so we'll need to make an API call to check).
 			const dbFromId = await getDatabaseInfoFromIdOrName(
 				this.complianceConfig,
 				this.accountId,
@@ -423,7 +449,7 @@ class D1Handler extends ProvisionResourceHandler<
 	async isConnectedToExistingResource(): Promise<boolean | string> {
 		assert(typeof this.binding.database_name !== "symbol");
 
-		// If the user hasn't specified a database_name in config, we always provision
+		// If the user hasn't specified a database_name in config, we always provision.
 		if (!this.binding.database_name) {
 			return false;
 		}
@@ -434,15 +460,15 @@ class D1Handler extends ProvisionResourceHandler<
 				this.binding.database_name
 			);
 
-			// This database_name exists! We don't need to provision it
+			// This database_name exists! We don't need to provision it.
 			return db.uuid;
 		} catch (e) {
 			if (!(e instanceof APIError && e.code === 7404)) {
-				// this is an error that is not "database not found", so we do want to throw
+				// This is an error that is not "database not found", so we do want to throw.
 				throw e;
 			}
 
-			// This database_name doesn't exist—let's provision
+			// This database_name doesn't exist, so let's provision.
 			return false;
 		}
 	}
@@ -671,8 +697,7 @@ async function collectPendingResources(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	bindings: StartDevWorkerInput["bindings"],
-	requireRemote: boolean
+	bindings: StartDevWorkerInput["bindings"]
 ): Promise<PendingResource[]> {
 	let settings: Settings | undefined;
 
@@ -689,17 +714,18 @@ async function collectPendingResources(
 			continue;
 		}
 
-		if (requireRemote && !("remote" in binding && binding.remote)) {
-			continue;
-		}
+		const handler = createHandler(
+			bindingName,
+			binding,
+			complianceConfig,
+			accountId
+		);
 
-		const h = createHandler(bindingName, binding, complianceConfig, accountId);
-
-		if (await h.shouldProvision(settings)) {
+		if (await handler.shouldProvision(settings)) {
 			pendingResources.push({
 				binding: bindingName,
 				resourceType: binding.type,
-				handler: h,
+				handler,
 			});
 		}
 	}
@@ -715,15 +741,16 @@ export async function provisionBindings(
 	scriptName: string,
 	autoCreate: boolean,
 	config: Config,
-	requireRemote = false
+	options: {
+		skipConfigWriteback?: boolean;
+	}
 ): Promise<void> {
 	const configPath = config.userConfigPath ?? config.configPath;
 	const pendingResources = await collectPendingResources(
 		config,
 		accountId,
 		scriptName,
-		bindings,
-		requireRemote
+		bindings
 	);
 
 	if (pendingResources.length > 0) {
@@ -742,7 +769,10 @@ export async function provisionBindings(
 
 		printBindings(
 			Object.fromEntries(
-				pendingResources.map((r) => [r.binding, { type: r.resourceType }])
+				pendingResources.map((resource) => [
+					resource.binding,
+					{ type: resource.resourceType },
+				])
 			) as Record<string, Binding>,
 			config.tail_consumers,
 			config.streaming_tail_consumers,
@@ -776,7 +806,7 @@ export async function provisionBindings(
 
 		// If we're using a redirected config, then the redirected config potentially has injected
 		// bindings that weren't originally in the user config. These can be provisioned, but we
-		// should not write the IDs back to the user config file (because the bindings weren't there in the first place)
+		// should not write the IDs back to the user config file (because the bindings weren't there in the first place).
 		if (isUsingRedirectedConfig) {
 			const { rawConfig: unredirectedConfig } =
 				await experimental_readRawConfig(
@@ -798,7 +828,7 @@ export async function provisionBindings(
 				continue;
 			}
 
-			// See above for why we skip writing back some bindings to the config file
+			// See above for why we skip writing back some bindings to the config file.
 			if (isUsingRedirectedConfig && !existingBindingNames.has(bindingName)) {
 				continue;
 			}
@@ -813,7 +843,7 @@ export async function provisionBindings(
 				Object.fromEntries(
 					Object.entries(bindingToWrite).filter(
 						// Make sure all the values are JSON serialisable.
-						// Otherwise we end up with "undefined" in the config
+						// Otherwise we end up with "undefined" in the config.
 						([_, value]) => typeof value === "string"
 					)
 				)
@@ -823,7 +853,11 @@ export async function provisionBindings(
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
 		// This is not necessary, as future deploys can use inherited resources, but it can help with
 		// portability of the config file, and adds robustness to bindings being renamed.
-		if (!isNonInteractiveOrCI()) {
+		if (options.skipConfigWriteback) {
+			logger.log(
+				"Your Worker was deployed with provisioned resources. You may add the resource IDs to your config file if you wish, but future deploys will continue to work even without IDs."
+			);
+		} else if (!isNonInteractiveOrCI()) {
 			try {
 				await experimental_patchConfig(configPath, patch, false);
 				logger.log(
@@ -837,19 +871,7 @@ export async function provisionBindings(
 			}
 		}
 
-		const resourceCount = pendingResources.reduce(
-			(acc, resource) => {
-				acc[resource.resourceType] ??= 0;
-				acc[resource.resourceType]++;
-				return acc;
-			},
-			{} as Record<string, number>
-		);
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
-
-		metrics.sendMetricsEvent("provision resources", resourceCount, {
-			sendMetrics: config.send_metrics,
-		});
 	}
 }
 
@@ -932,14 +954,14 @@ async function runProvisioningFlow(
 			logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
 			await item.handler.provision(name);
 		} else if (action === SEARCH_OPTION_VALUE) {
-			// search through pre-existing resources that weren't listed
+			// Search through pre-existing resources that weren't listed.
 			let foundResource: NormalisedResourceInfo | undefined;
 			while (foundResource === undefined) {
 				const input = await prompt(
 					`Enter the ${HANDLERS[item.resourceType].keyDescription} for an existing ${friendlyBindingName}`
 				);
 				foundResource = preExisting.find(
-					(r) => r.title === input || r.value === input
+					(resource) => resource.title === input || resource.value === input
 				);
 				if (foundResource) {
 					item.handler.connect(foundResource.value);
@@ -956,4 +978,319 @@ async function runProvisioningFlow(
 
 	logger.log(`✨ ${item.binding} provisioned 🎉`);
 	printDivider();
+}
+
+/**
+ * The resource name that auto-provisioning will create for a given binding.
+ */
+function autoProvisionedResourceName(
+	scriptName: string,
+	bindingName: string
+): string {
+	return `${scriptName}-${bindingName.toLowerCase().replaceAll("_", "-")}`;
+}
+
+/**
+ * Create a new KV namespace under the given `accountId` with the given `title`.
+ *
+ * @returns the generated id of the created namespace.
+ */
+async function createKVNamespace(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	title: string
+): Promise<string> {
+	const response = await fetchResult<{ id: string }>(
+		complianceConfig,
+		`/accounts/${accountId}/storage/kv/namespaces`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				title,
+			}),
+		}
+	);
+
+	return response.id;
+}
+
+/**
+ * Fetch a list of all KV namespaces under the given `accountId`.
+ */
+async function listKVNamespaces(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	limitCalls = false
+): Promise<KVNamespaceInfo[]> {
+	const pageSize = 100;
+	let page = 1;
+	const results: KVNamespaceInfo[] = [];
+	while (results.length % pageSize === 0) {
+		const json = await fetchResult<KVNamespaceInfo[]>(
+			complianceConfig,
+			`/accounts/${accountId}/storage/kv/namespaces`,
+			{},
+			new URLSearchParams({
+				per_page: pageSize.toString(),
+				order: "title",
+				direction: "asc",
+				page: page.toString(),
+			})
+		);
+		page++;
+		results.push(...json);
+		if (limitCalls) {
+			break;
+		}
+		if (json.length < pageSize) {
+			break;
+		}
+	}
+	return results;
+}
+
+async function createD1Database(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	name: string
+) {
+	try {
+		return await fetchResult<DatabaseCreationResult>(
+			complianceConfig,
+			`/accounts/${accountId}/d1/database`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ name }),
+			}
+		);
+	} catch (e) {
+		const errorCode = (e as { code: number }).code;
+
+		if (errorCode === 7502) {
+			throw new UserError("A database with that name already exists", {
+				telemetryMessage: "d1 create database already exists",
+			});
+		}
+
+		if (errorCode === 7406) {
+			throw new UserError(
+				"You have reached the maximum number of D1 databases for your account. Please consider deleting unused databases, or visit the D1 documentation to learn more: https://developers.cloudflare.com/d1/",
+				{ telemetryMessage: "d1 create database limit reached" }
+			);
+		}
+
+		throw e;
+	}
+}
+
+async function listDatabases(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	limitCalls = false,
+	pageSize = 10
+): Promise<Array<ConcreteDatabase>> {
+	let page = 1;
+	const results = [];
+	while (results.length % pageSize === 0) {
+		const json: Array<ConcreteDatabase> = await fetchResult(
+			complianceConfig,
+			`/accounts/${accountId}/d1/database`,
+			{},
+			new URLSearchParams({
+				per_page: pageSize.toString(),
+				page: page.toString(),
+			})
+		);
+		page++;
+		results.push(...json);
+		if (limitCalls && page > 3) {
+			break;
+		}
+		if (json.length < pageSize) {
+			break;
+		}
+	}
+	return results;
+}
+
+async function getDatabaseInfoFromIdOrName(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	databaseIdOrName: string
+): Promise<DatabaseInfo> {
+	return await fetchResult<DatabaseInfo>(
+		complianceConfig,
+		`/accounts/${accountId}/d1/database/${databaseIdOrName}`,
+		{
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
+/**
+ * Fetch a list of all R2 buckets under the given `accountId`.
+ */
+async function listR2Buckets(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	jurisdiction?: string
+): Promise<R2BucketInfo[]> {
+	const headers: Record<string, string> = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	const results = await fetchResult<{
+		buckets: R2BucketInfo[];
+	}>(complianceConfig, `/accounts/${accountId}/r2/buckets`, { headers });
+	return results.buckets;
+}
+
+async function getR2Bucket(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<R2BucketInfo> {
+	const headers: Record<string, string> = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	return await fetchResult<R2BucketInfo>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+}
+
+/**
+ * Create an R2 bucket with the given `bucketName` within the account given by `accountId`.
+ *
+ * A 400 is returned if the account already owns a bucket with this name.
+ * A bucket must be explicitly deleted to be replaced.
+ */
+async function createR2Bucket(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	location?: string,
+	jurisdiction?: string,
+	storageClass?: string
+): Promise<void> {
+	const headers: Record<string, string> = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	return await fetchResult<void>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				name: bucketName,
+				...(storageClass !== undefined && { storageClass }),
+				...(location !== undefined && { locationHint: location }),
+			}),
+			headers,
+		}
+	);
+}
+
+/**
+ * Get an AI Search namespace for the given account.
+ * Returns `null` if the namespace does not exist (404); other errors propagate.
+ */
+async function getAISearchNamespace(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceName: string
+): Promise<AISearchNamespace | null> {
+	try {
+		return await fetchResult<AISearchNamespace>(
+			complianceConfig,
+			`/accounts/${accountId}/ai-search/namespaces/${namespaceName}`,
+			{ method: "GET" }
+		);
+	} catch (e) {
+		if (e instanceof APIError && e.status === 404) {
+			return null;
+		}
+		throw e;
+	}
+}
+
+/**
+ * Create an AI Search namespace for the given account.
+ * Used by the provisioning system when a namespace doesn't exist at deploy time.
+ */
+async function createAISearchNamespace(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceName: string
+): Promise<void> {
+	await fetchResult<void>(
+		complianceConfig,
+		`/accounts/${accountId}/ai-search/namespaces`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name: namespaceName }),
+		}
+	);
+}
+
+/**
+ * Get an Agent Memory namespace for the given account.
+ * Returns `null` if the namespace does not exist (404); other errors propagate.
+ *
+ * Used by the provisioning system at deploy time to decide whether a
+ * configured namespace needs to be created. The caller (not this function)
+ * is responsible for provisioning when `null` is returned.
+ */
+async function getAgentMemoryNamespace(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceName: string
+): Promise<AgentMemoryNamespace | null> {
+	try {
+		return await fetchResult<AgentMemoryNamespace>(
+			complianceConfig,
+			`/accounts/${accountId}/agent-memory/namespaces/${namespaceName}`
+		);
+	} catch (e) {
+		if (e instanceof APIError && e.status === 404) {
+			return null;
+		}
+		throw e;
+	}
+}
+
+/**
+ * Create an Agent Memory namespace for the given account.
+ * Used by the provisioning system when a namespace doesn't exist at deploy time.
+ */
+async function createAgentMemoryNamespace(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceName: string
+): Promise<void> {
+	await fetchResult<AgentMemoryNamespace>(
+		complianceConfig,
+		`/accounts/${accountId}/agent-memory/namespaces`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name: namespaceName }),
+		}
+	);
 }

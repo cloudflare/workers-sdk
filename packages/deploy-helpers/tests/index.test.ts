@@ -17,6 +17,7 @@ describe("context singleton", () => {
 			fetchKVGetValue: (() => {}) as never,
 			confirm: (() => {}) as never,
 			prompt: (() => {}) as never,
+			select: (() => {}) as never,
 			isNonInteractiveOrCI: () => false,
 		});
 

@@ -46,6 +46,7 @@ import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
+import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
 	handleMissingSecretsError,
@@ -74,7 +75,6 @@ import type {
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
 import type {
-	Binding,
 	CfModule,
 	CfWorkerInit,
 	ComplianceConfig,
@@ -103,16 +103,6 @@ export type DeployCallbacks = {
 				manifest: { [filePath: string]: string } | undefined;
 				namespace: string | undefined;
 		  }>)
-		| undefined;
-	provisionBindings:
-		| ((
-				bindings: Record<string, Binding>,
-				accountId: string,
-				scriptName: string,
-				autoCreate: boolean,
-				config: Config,
-				requireRemote?: boolean
-		  ) => Promise<void>)
 		| undefined;
 	getNormalizedContainerOptions:
 		| ((
@@ -630,13 +620,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
 			logger.debug("skipping provisioning on assets-only project");
-		} else if (props.resourcesProvision && callbacks.provisionBindings) {
-			await callbacks.provisionBindings(
+		} else if (props.resourcesProvision) {
+			await provisionBindings(
 				bindings ?? {},
 				accountId,
 				scriptName,
 				props.experimentalAutoCreate,
-				config
+				config,
+				{
+					skipConfigWriteback: props.skipProvisioningConfigWriteback,
+				}
 			);
 		}
 
