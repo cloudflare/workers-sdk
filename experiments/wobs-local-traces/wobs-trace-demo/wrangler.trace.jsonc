@@ -1,0 +1,34 @@
+{
+  // DEV-ONLY config for the trace-waterfall prototype.
+  // Same as wrangler.jsonc, plus: tracing on, the streaming-tail compat flags,
+  // and a streaming_tail_consumer pointing at the trace-collector worker.
+  // Run with:
+  //   npx wrangler dev -c wrangler.trace.jsonc -c ../trace-collector/wrangler.jsonc
+  // (Do NOT deploy with this config — the tail consumer is local-only.)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wobs-trace-demo",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["streaming_tail_worker", "tail_worker_user_spans"],
+
+  "observability": {
+    "enabled": true,
+    "traces": { "enabled": true }
+  },
+
+  "streaming_tail_consumers": [
+    { "service": "trace-collector" }
+  ],
+
+  "kv_namespaces": [
+    { "binding": "CACHE", "id": "337cff66760d4788bd1bf833ed2a515d" }
+  ],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wobs-demo-db",
+      "database_id": "0113f043-b122-414c-9580-6852d424515a"
+    }
+  ]
+}

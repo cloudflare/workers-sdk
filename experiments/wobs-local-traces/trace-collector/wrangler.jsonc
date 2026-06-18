@@ -1,0 +1,19 @@
+{
+  // The streaming-tail consumer that renders the waterfall AND persists traces.
+  // It has no routes — it only receives tail events from the producer worker.
+  "name": "trace-collector",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["streaming_tail_worker"],
+
+  // Local-only trace store. Spans + trace summaries are written here on each
+  // invocation's `outcome` so they persist across requests/sessions and can be
+  // queried with `wrangler d1 execute wobs-traces-db --local`.
+  "d1_databases": [
+    {
+      "binding": "TRACES",
+      "database_name": "wobs-traces-db",
+      "database_id": "00000000-0000-0000-0000-0000000000aa"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "wobs-trace-demo",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail --format pretty",
+    "tail:json": "wrangler tail --format json",
+    "db:schema:local": "wrangler d1 execute wobs-demo-db --local --file=./schema.sql",
+    "db:seed:local": "wrangler d1 execute wobs-demo-db --local --file=./seed.sql",
+    "db:schema:remote": "wrangler d1 execute wobs-demo-db --remote --file=./schema.sql",
+    "db:seed:remote": "wrangler d1 execute wobs-demo-db --remote --file=./seed.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.100.0"
+  },
+  "allowScripts": {
+    "esbuild@0.27.3": true,
+    "workerd@1.20260611.1": true,
+    "sharp@0.34.5": true
+  }
+}
