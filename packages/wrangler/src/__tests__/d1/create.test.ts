@@ -144,7 +144,7 @@ describe("create", () => {
 		`);
 	});
 
-	it("should show a user-friendly error when database limit is reached", async ({
+	it("should show an upgrade error when the database limit is reached on the Free plan", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
@@ -174,11 +174,51 @@ describe("create", () => {
 
 		await expect(runWrangler("d1 create test")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
-			[Error: You have reached the maximum number of D1 databases for your account.
-			Please consider deleting unused databases, or visit the D1 documentation to learn more: https://developers.cloudflare.com/d1/
+			[Error: You've reached the limit of 10 D1 databases on the free plan.
+
+			Need more? The Workers Paid plan ($5/month) raises this to 50,000 databases, with higher storage and query limits too. Upgrade at:
+			https://dash.cloudflare.com/1701/workers/plans
 
 			To list your existing databases, run: wrangler d1 list
-			To delete a database, run: wrangler d1 delete <database-name>]
+			To delete a database, run: wrangler d1 delete <database-name>
+
+			To learn more, visit: https://developers.cloudflare.com/d1/platform/limits/ [code: 7406]]
+		`);
+	});
+
+	it("should show a request-increase error when the database limit is reached on a paid plan", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({ name: "worker" }, "wrangler.json");
+
+		setIsTTY(false);
+		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }])
+		);
+		msw.use(
+			http.post("*/accounts/:accountId/d1/database", async () => {
+				return HttpResponse.json(
+					{
+						result: null,
+						success: false,
+						errors: [
+							{
+								code: 7406,
+								message: "System limit reached: databases per account (50000)",
+							},
+						],
+						messages: [],
+					},
+					{ status: 400 }
+				);
+			})
+		);
+
+		await expect(runWrangler("d1 create test")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: System limit reached: databases per account (50000). To request a higher limit, follow the guidance on the D1 limits page. [code: 7406]
+			To learn more about this error, visit:
+			https://developers.cloudflare.com/d1/platform/limits/]
 		`);
 	});
 });
