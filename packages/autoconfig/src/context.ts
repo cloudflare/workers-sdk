@@ -104,9 +104,4 @@ export interface AutoConfigContext {
 	 * @returns The cache folder path, or `undefined`
 	 */
 	getCacheFolder?: () => string | undefined;
-	/**
-	 * The filename used to detect cached Pages project configuration.
-	 * Defaults to `"pages.json"` if not provided.
-	 */
-	pagesConfigCacheFilename?: string;
 }

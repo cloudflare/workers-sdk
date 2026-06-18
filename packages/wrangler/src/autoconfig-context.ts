@@ -2,7 +2,6 @@ import { getCacheFolder } from "./config-cache";
 import { confirm, prompt, select } from "./dialogs";
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
-import { PAGES_CONFIG_CACHE_FILENAME } from "./pages/constants";
 import type { AutoConfigContext } from "@cloudflare/autoconfig";
 
 /**
@@ -22,6 +21,5 @@ export function createWranglerAutoConfigContext(): AutoConfigContext {
 		},
 		isNonInteractiveOrCI,
 		getCacheFolder,
-		pagesConfigCacheFilename: PAGES_CONFIG_CACHE_FILENAME,
 	};
 }

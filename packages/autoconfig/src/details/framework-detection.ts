@@ -224,9 +224,7 @@ async function isPagesProject(
 
 	const cacheFolder = context.getCacheFolder?.();
 	if (cacheFolder) {
-		const pagesConfigCacheFilename =
-			context.pagesConfigCacheFilename ?? "pages.json";
-		const pagesConfigCache = join(cacheFolder, pagesConfigCacheFilename);
+		const pagesConfigCache = join(cacheFolder, "pages.json");
 		if (existsSync(pagesConfigCache)) {
 			// If there is a cached pages.json we can safely assume that the project
 			// is a Pages one

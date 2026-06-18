@@ -29,7 +29,6 @@ export function createMockContext(
 		runCommand: vi.fn(),
 		isNonInteractiveOrCI: () => false,
 		getCacheFolder: () => undefined,
-		pagesConfigCacheFilename: "pages.json",
 		...overrides,
 	};
 }
