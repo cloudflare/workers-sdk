@@ -1099,11 +1099,12 @@ export class Miniflare {
 			const extra = this.#webSocketExtraHeaders.get(req);
 			this.#webSocketExtraHeaders.delete(req);
 			if (extra) {
-				// Preserve multiple Set-Cookie values verbatim — iterating `Headers`
-				// with `for…of` collapses them into a single comma-joined string
-				// (web-platform limitation), which corrupts cookies containing commas
-				// (e.g. `Expires=Wed, 09 Jun 2026 …`). `getSetCookie` is not part of
-				// the standard Fetch API, so guard before calling it.
+				// Use `getSetCookie()` to retrieve each Set-Cookie value as a
+				// separate string. The updated Fetch spec (and undici 7.x) does yield
+				// each Set-Cookie entry individually during `for…of` iteration, but
+				// `getSetCookie()` is the explicit, unambiguous API for this —
+				// especially important for workerd's Headers implementation. Guard
+				// before calling since it is not part of the standard Fetch API.
 				const hasGetSetCookie = typeof extra.getSetCookie === "function";
 				if (hasGetSetCookie) {
 					for (const cookie of extra.getSetCookie()) {
