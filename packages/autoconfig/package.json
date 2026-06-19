@@ -3,6 +3,11 @@
 	"version": "0.1.0",
 	"description": "Framework autoconfig detection and configuration for Cloudflare Workers",
 	"license": "MIT OR Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/autoconfig"
+	},
 	"files": [
 		"dist"
 	],
