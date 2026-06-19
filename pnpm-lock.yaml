@@ -1588,9 +1588,6 @@ importers:
       '@cloudflare/codemod':
         specifier: workspace:*
         version: link:../codemod
-      '@cloudflare/config':
-        specifier: workspace:*
-        version: link:../config
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig

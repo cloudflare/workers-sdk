@@ -1,16 +1,12 @@
 /**
- * Serialize the plain config object produced by {@link splitRawConfig} into
- * `cloudflare.config.ts` source text.
+ * Serialize the plain worker config object produced by {@link toCloudflareConfig}
+ * into `cloudflare.config.ts` source text.
  *
  * The object is emitted as a JSON literal wrapped in a `defineWorker` call.
- * Binding `env` entries are printed as plain type-tagged literals
- * (`{ type: "kv", id }`), which are valid `@cloudflare/config` config — the
- * `bindings.*` builders are just sugar that produces the same shape.
- *
  * `cloudflare.config.ts` is only emitted for Vite projects, whose build tool
  * is `@cloudflare/vite-plugin`, so `defineWorker` is imported from there.
  */
-import type { NewConfigSplit } from "@cloudflare/config";
+import type { CloudflareConfigSplit } from "./convert";
 
 /**
  * Module specifier a Vite project's `cloudflare.config.ts` imports `defineWorker`
@@ -25,7 +21,7 @@ export const CLOUDFLARE_CONFIG_IMPORT_SOURCE =
  * `defineWorker` from the Cloudflare Vite plugin.
  */
 export function serializeCloudflareConfig(
-	worker: NewConfigSplit["worker"]
+	worker: CloudflareConfigSplit["worker"]
 ): string {
 	return (
 		`import { defineWorker } from "${CLOUDFLARE_CONFIG_IMPORT_SOURCE}";\n\n` +

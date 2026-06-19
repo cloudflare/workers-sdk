@@ -29,7 +29,6 @@
 	},
 	"devDependencies": {
 		"@cloudflare/codemod": "workspace:*",
-		"@cloudflare/config": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@netlify/build-info": "^10.5.1",
 		"@types/esprima": "^4.0.3",

@@ -10,12 +10,12 @@ import {
 	installPackages,
 	installWrangler,
 } from "@cloudflare/cli-shared-helpers/packages";
-import { getUnsupportedConfigFields, splitRawConfig } from "@cloudflare/config";
 import {
 	FatalError,
 	getTodaysCompatDate,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
+import { toCloudflareConfig } from "./config-module/convert";
 import {
 	getWranglerJsonConfigPath,
 	hasViteConfig,
@@ -384,15 +384,7 @@ async function saveNewConfig(
 ): Promise<void> {
 	const { logger } = context;
 
-	const { worker, tooling } = splitRawConfig(rawConfig);
-
-	const unsupportedFields = getUnsupportedConfigFields(rawConfig);
-	if (unsupportedFields.length > 0) {
-		logger.warn(
-			`The new config format does not yet support these fields, so they ` +
-				`were not written to a config file: ${unsupportedFields.join(", ")}.`
-		);
-	}
+	const { worker, tooling } = toCloudflareConfig(rawConfig);
 
 	await writeFile(
 		resolve(projectPath, "cloudflare.config.ts"),
@@ -520,7 +512,7 @@ export async function buildOperationsSummary(
 
 	if (wranglerConfigToWrite) {
 		if (useNewConfig) {
-			const { worker } = splitRawConfig(wranglerConfigToWrite);
+			const { worker } = toCloudflareConfig(wranglerConfigToWrite);
 			logger.log("📄 Create cloudflare.config.ts:");
 			logger.log(
 				"  " + serializeCloudflareConfig(worker).replace(/\n/g, "\n  ")
