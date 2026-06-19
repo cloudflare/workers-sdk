@@ -21,6 +21,7 @@ export const aiModelsCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: true,
+		skipConfigValidationErrors: true,
 	},
 	async handler(_args, { config }) {
 		await listModels({}, config);

@@ -10,7 +10,6 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
-import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -496,11 +495,10 @@ export const r2ObjectDeleteCommand = createCommand({
 		printResourceLocation: true,
 		skipConfigValidationErrors: true,
 	},
-	async handler(args) {
+	async handler(args, { config }) {
 		const localMode = isLocal(args);
 
 		const { objectPath, jurisdiction } = args;
-		const config = readConfig(args, { skipValidationErrors: true });
 		const { bucket, key } = validateAndReturnBucketAndKey(objectPath);
 		let fullBucketName = bucket;
 		if (jurisdiction !== undefined) {

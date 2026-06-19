@@ -12,7 +12,6 @@ import {
 import chalk from "chalk";
 import { Cloudflare } from "cloudflare";
 import dedent from "ts-dedent";
-import { readConfig } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
@@ -102,8 +101,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["namespace"],
-	async handler(args, { sdk }) {
-		const config = readConfig(args, { skipValidationErrors: true });
+	async handler(args, { config, sdk }) {
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
 		const title = `${environment}${args.namespace}${preview}`;
@@ -262,8 +260,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		}
 	},
 
-	async handler(args) {
-		const config = readConfig(args, { skipValidationErrors: true });
+	async handler(args, { config }) {
 		printResourceLocation("remote");
 		const accountId = await requireAuth(config);
 
@@ -377,8 +374,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		}
 	},
 
-	async handler(args) {
-		const config = readConfig(args, { skipValidationErrors: true });
+	async handler(args, { config }) {
 		printResourceLocation("remote");
 		const accountId = await requireAuth(config);
 
@@ -514,9 +510,8 @@ export const kvKeyPutCommand = createCommand({
 		demandOneOfOption(["value", "path"], def)(args);
 	},
 
-	async handler({ key, ttl, expiration, metadata, ...args }) {
+	async handler({ key, ttl, expiration, metadata, ...args }, { config }) {
 		const localMode = isLocal(args);
-		const config = readConfig(args, { skipValidationErrors: true });
 		const { namespaceId, displayName } = await getKVNamespaceId(
 			args,
 			config,
@@ -629,10 +624,9 @@ export const kvKeyListCommand = createCommand({
 		demandOneOfOption(["binding", "namespace-id"])(args);
 	},
 
-	async handler({ prefix, ...args }) {
+	async handler({ prefix, ...args }, { config }) {
 		const localMode = isLocal(args);
 		// TODO: support for limit+cursor (pagination)
-		const config = readConfig(args, { skipValidationErrors: true });
 		const { namespaceId } = await getKVNamespaceId(args, config, localMode);
 
 		let result: NamespaceKeyInfo[];
@@ -730,9 +724,8 @@ export const kvKeyGetCommand = createCommand({
 	validateArgs(args) {
 		demandOneOfOption(["binding", "namespace-id"])(args);
 	},
-	async handler({ key, ...args }) {
+	async handler({ key, ...args }, { config }) {
 		const localMode = isLocal(args);
-		const config = readConfig(args, { skipValidationErrors: true });
 		const { namespaceId } = await getKVNamespaceId(args, config, localMode);
 
 		let bufferKVValue;
@@ -831,9 +824,8 @@ export const kvKeyDeleteCommand = createCommand({
 		...deleteCommonArgs,
 	},
 
-	async handler({ key, ...args }) {
+	async handler({ key, ...args }, { config }) {
 		const localMode = isLocal(args);
-		const config = readConfig(args, { skipValidationErrors: true });
 		const { namespaceId, displayName } = await getKVNamespaceId(
 			args,
 			config,
@@ -886,9 +878,8 @@ export const kvBulkGetCommand = createCommand({
 		...getCommonArgs,
 	},
 
-	async handler({ filename, ...args }) {
+	async handler({ filename, ...args }, { config }) {
 		const localMode = isLocal(args);
-		const config = readConfig(args, { skipValidationErrors: true });
 		const { namespaceId } = await getKVNamespaceId(args, config, localMode);
 
 		const content = parseJSON(readFileSync(filename), filename) as (
@@ -984,13 +975,12 @@ export const kvBulkPutCommand = createCommand({
 		...putCommonArgs,
 	},
 
-	async handler({ filename, ...args }) {
+	async handler({ filename, ...args }, { config }) {
 		const localMode = isLocal(args);
 		// The simplest implementation I could think of.
 		// This could be made more efficient with a streaming parser/uploader
 		// but we'll do that in the future if needed.
 
-		const config = readConfig(args, { skipValidationErrors: true });
 		const { namespaceId } = await getKVNamespaceId(args, config, localMode);
 		const content = parseJSON(readFileSync(filename), filename);
 
@@ -1116,9 +1106,8 @@ export const kvBulkDeleteCommand = createCommand({
 		...deleteCommonArgs,
 	},
 
-	async handler({ filename, ...args }) {
+	async handler({ filename, ...args }, { config }) {
 		const localMode = isLocal(args);
-		const config = readConfig(args, { skipValidationErrors: true });
 		const { namespaceId, displayName } = await getKVNamespaceId(
 			args,
 			config,
