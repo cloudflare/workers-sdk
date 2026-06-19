@@ -13,7 +13,13 @@ export const DEFAULT_MODULE_RULES: Rule[] = [
 
 export interface ParsedRules {
 	rules: Rule[];
+	// User-defined rules that can never fire because a prior rule of the same
+	// type lacked `fallthrough: true`. Files matching these always error.
 	removedRules: Rule[];
+	// Default rules shadowed by a user rule that lacks an explicit
+	// `fallthrough: false`. Files that already matched an active rule are
+	// silently kept; files that match only this are still flagged.
+	defaultRemovedRules: Rule[];
 	// Default rules removed because a user rule of the same type was explicitly
 	// marked `fallthrough: false`. Files matching only these rules are silently
 	// skipped instead of erroring, since the user intentionally opted out of the
@@ -33,6 +39,7 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 	const redundantRules: Record<string, RedundantRule[]> = {};
 	let index = 0;
 	const rulesToRemove: Rule[] = [];
+	const defaultRulesToRemove: Rule[] = [];
 	const rulesToSilentlyRemove: Rule[] = [];
 	for (const rule of rules) {
 		if (rule.type in completedRuleLocations) {
@@ -47,6 +54,10 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 			// that's likely a misconfiguration worth surfacing.
 			if (completingRuleHasExplicitNoFallthrough && isDefaultRule) {
 				rulesToSilentlyRemove.push(rule);
+			} else if (isDefaultRule) {
+				// Default rule shadowed by a user rule without explicit fallthrough:false.
+				// Track separately so matchFiles() can guard these with matchedActiveRule.
+				defaultRulesToRemove.push(rule);
 			} else {
 				if (rules[completedRuleLocations[rule.type]].fallthrough !== false) {
 					if (rule.type in redundantRules) {
@@ -91,11 +102,13 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 	}
 
 	rulesToRemove.forEach((rule) => rules.splice(rules.indexOf(rule), 1));
+	defaultRulesToRemove.forEach((rule) => rules.splice(rules.indexOf(rule), 1));
 	rulesToSilentlyRemove.forEach((rule) => rules.splice(rules.indexOf(rule), 1));
 
 	return {
 		rules,
 		removedRules: rulesToRemove,
+		defaultRemovedRules: defaultRulesToRemove,
 		silentlyRemovedRules: rulesToSilentlyRemove,
 	};
 }

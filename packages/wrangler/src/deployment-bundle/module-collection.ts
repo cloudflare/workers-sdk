@@ -373,7 +373,16 @@ export function createModuleCollector(props: {
 				// of the same type was explicitly marked `fallthrough: false`, so files
 				// matching only those rules should fall through to esbuild's default
 				// resolution rather than erroring.
-				parsedRules.removedRules.forEach((rule) => {
+				//
+				// `parsedRules.defaultRemovedRules` are registered here alongside
+				// user-defined removedRules. In practice the active-rule callbacks
+				// registered above will match first for files that already matched an
+				// active rule, so these error callbacks only fire for imports that
+				// slip through with no active rule to handle them.
+				[
+					...parsedRules.removedRules,
+					...parsedRules.defaultRemovedRules,
+				].forEach((rule) => {
 					rule.globs.forEach((glob) => {
 						build.onResolve(
 							{ filter: globToRegExp(glob) },

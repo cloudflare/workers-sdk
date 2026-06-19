@@ -169,6 +169,7 @@ export async function findAdditionalModules(
 				await matchFiles(pythonModulesFiles, pythonModulesDir, {
 					rules: vendoredRules,
 					removedRules: [],
+					defaultRemovedRules: [],
 					silentlyRemovedRules: [],
 				})
 			)
@@ -260,7 +261,7 @@ export async function findAdditionalModules(
 async function matchFiles(
 	files: AsyncGenerator<string>,
 	relativeTo: string,
-	{ rules, removedRules }: ParsedRules
+	{ rules, removedRules, defaultRemovedRules }: ParsedRules
 ) {
 	const modules: CfModule[] = [];
 
@@ -304,10 +305,31 @@ async function matchFiles(
 			}
 		}
 
+		// Always check user-defined removedRules — even if the file matched an
+		// active rule. The error warns the user that an explicitly-defined rule
+		// can never fire because a prior rule of the same type didn't set
+		// `fallthrough = true`.
+		for (const rule of removedRules) {
+			for (const glob of rule.globs) {
+				const regexp = globToRegExp(glob, { globstar: true });
+				if (regexp.test(filePath)) {
+					throw new UserError(
+						`The file ${filePath} matched a module rule in your configuration (${JSON.stringify(
+							rule
+						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`,
+						{ telemetryMessage: "module rule ignored without fallthrough" }
+					);
+				}
+			}
+		}
+
+		// For default rules shadowed by a user rule (without explicit
+		// fallthrough:false), only error when the file wasn't already picked up
+		// by an active rule. A shadowed default for a file that's already
+		// bundled is expected; a shadowed default for a file with no other
+		// match is a misconfiguration worth surfacing.
 		if (!matchedActiveRule) {
-			// Only error for files that matched no active rule. A file that matched
-			// an active rule is already included; the removed rule is irrelevant.
-			for (const rule of removedRules) {
+			for (const rule of defaultRemovedRules) {
 				for (const glob of rule.globs) {
 					const regexp = globToRegExp(glob, { globstar: true });
 					if (regexp.test(filePath)) {
@@ -324,8 +346,8 @@ async function matchFiles(
 
 		// Files matching a default rule that was silently removed (because a user
 		// rule of the same type was explicitly marked `fallthrough: false`) are
-		// intentionally ignored here — they matched no active rule and are not in
-		// removedRules, so there is nothing more to do for them.
+		// intentionally ignored here — they are not in removedRules or
+		// defaultRemovedRules, so there is nothing more to do for them.
 	}
 
 	return modules;
