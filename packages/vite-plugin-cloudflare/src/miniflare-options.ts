@@ -10,6 +10,10 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalObservabilityEnabledFromEnv,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+	OBSERVABILITY_D1_BINDING,
+	OBSERVABILITY_D1_ID,
 } from "@cloudflare/workers-utils";
 import {
 	buildPublicUrl,
@@ -460,6 +464,28 @@ export async function getDevMiniflareOptions(
 		secure: !!serverConfig.https,
 	});
 
+	// Experimental local observability: route each user worker's tail stream to
+	// the internal collector + provision the internal D1 trace store.
+	const observabilityEnabled = getLocalObservabilityEnabledFromEnv();
+	const observedUserWorkers = observabilityEnabled
+		? userWorkers.map((worker) => ({
+				...worker,
+				compatibilityFlags: [
+					...(worker.compatibilityFlags ?? []),
+					"streaming_tail_worker",
+					"tail_worker_user_spans",
+				],
+				streamingTails: [
+					...(worker.streamingTails ?? []),
+					{ name: OBSERVABILITY_COLLECTOR_SERVICE_NAME },
+				],
+				d1Databases: {
+					...(worker.d1Databases ?? {}),
+					[OBSERVABILITY_D1_BINDING]: { id: OBSERVABILITY_D1_ID },
+				},
+			}))
+		: userWorkers;
+
 	return {
 		miniflareOptions: {
 			log: logger,
@@ -471,13 +497,14 @@ export async function getDevMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			unsafeObservability: observabilityEnabled,
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
+			workers: [...assetWorkers, ...externalWorkers, ...observedUserWorkers],
 			async unsafeModuleFallbackService(request) {
 				const parsed = await parseModuleFallbackRequest(request);
 

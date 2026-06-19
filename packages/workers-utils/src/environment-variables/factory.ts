@@ -108,6 +108,8 @@ type VariableNames =
 
 	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
+	/** Enable local-dev observability trace capture (experimental, default: false). */
+	| "X_LOCAL_OBSERVABILITY"
 	/** Open the browser in headful (visible) mode when using the Browser Run API in local dev (default: false). */
 	| "X_BROWSER_HEADFUL"
 

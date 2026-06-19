@@ -8,6 +8,10 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalObservabilityEnabledFromEnv,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+	OBSERVABILITY_D1_BINDING,
+	OBSERVABILITY_D1_ID,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
@@ -638,6 +642,11 @@ export function buildMiniflareBindingOptions(
 	for (const streamingTail of config.streamingTails ?? []) {
 		streamingTails.push({ name: streamingTail.service });
 	}
+	// Experimental local observability: route this worker's tail stream to the
+	// internal collector so its traces are captured + persisted.
+	if (getLocalObservabilityEnabledFromEnv()) {
+		streamingTails.push({ name: OBSERVABILITY_COLLECTOR_SERVICE_NAME });
+	}
 
 	const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
 		config.migrations
@@ -817,9 +826,18 @@ export function buildMiniflareBindingOptions(
 		r2Buckets: Object.fromEntries(
 			r2Buckets.map((r2) => r2BucketEntry(r2, remoteProxyConnectionString))
 		),
-		d1Databases: Object.fromEntries(
-			d1Databases.map((d1) => d1DatabaseEntry(d1, remoteProxyConnectionString))
-		),
+		d1Databases: {
+			...Object.fromEntries(
+				d1Databases.map((d1) =>
+					d1DatabaseEntry(d1, remoteProxyConnectionString)
+				)
+			),
+			// Experimental local observability: internal D1 trace store the
+			// collector writes to and the explorer reads.
+			...(getLocalObservabilityEnabledFromEnv()
+				? { [OBSERVABILITY_D1_BINDING]: { id: OBSERVABILITY_D1_ID } }
+				: {}),
+		},
 		queueProducers: Object.fromEntries(
 			queues.map((queue) =>
 				queueProducerEntry(queue, remoteProxyConnectionString)
@@ -1121,6 +1139,7 @@ export async function buildMiniflareOptions(
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+		unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
@@ -1137,7 +1156,13 @@ export async function buildMiniflareOptions(
 			{
 				name: getName(config),
 				compatibilityDate: config.compatibilityDate,
-				compatibilityFlags: config.compatibilityFlags,
+				compatibilityFlags: getLocalObservabilityEnabledFromEnv()
+					? [
+							...(config.compatibilityFlags ?? []),
+							"streaming_tail_worker",
+							"tail_worker_user_spans",
+						]
+					: config.compatibilityFlags,
 
 				...sourceOptions,
 				...bindingOptions,
