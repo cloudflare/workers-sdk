@@ -57,7 +57,123 @@ describe("runAutoConfig() - new programmatic config format", () => {
 	const std = mockConsoleMethods();
 	const context = createMockContext();
 
-	test("creates cloudflare.config.ts and wrangler.config.ts for a non-Vite project", async ({
+	test("writes cloudflare.config.ts (not wrangler.jsonc) for a Vite project and warns about tooling", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({ name: "my-project" }),
+			"vite.config.ts": "export default {};",
+		});
+
+		const summary = await runAutoConfig(
+			{
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				configured: false,
+				outputDir: "dist",
+				framework: new Static({ id: "static", name: "Static" }),
+				packageJson: { name: "my-project" },
+				packageManager: NpmPackageManager,
+			},
+			{
+				context,
+				experimentalConfigFormat: "ts",
+				skipConfirmations: true,
+				runBuild: false,
+				enableWranglerInstallation: false,
+			}
+		);
+
+		// The new config is written; no legacy wrangler.jsonc is created.
+		expect(existsSync("cloudflare.config.ts")).toBe(true);
+		expect(existsSync("wrangler.jsonc")).toBe(false);
+		expect(existsSync("wrangler.config.ts")).toBe(false);
+
+		// The summary's deploy/version commands are `cf`-based, consistent with
+		// the generated `cf` scripts (not the default wrangler commands).
+		expect(summary.deployCommand).toBe("cf deploy");
+		expect(summary.versionCommand).toBe("cf versions upload");
+
+		// A Vite project's cloudflare.config.ts imports from the vite plugin,
+		// which is its build tool (not wrangler).
+		expect(await readConfig("cloudflare.config.ts")).toMatchInlineSnapshot(`
+			"import { defineWorker } from "@cloudflare/vite-plugin/experimental-config";
+
+			export default defineWorker({
+				"name": "my-worker",
+				"compatibilityDate": "<current-date>",
+				"compatibilityFlags": [
+					"nodejs_compat"
+				],
+				"observability": {
+					"enabled": true
+				}
+			});
+			"
+		`);
+
+		// Tooling fields (owned by Vite) are surfaced rather than dropped.
+		expect(std.warn).toContain("owned by Vite");
+		expect(std.warn).toContain("assetsDirectory");
+
+		// package.json scripts are driven by `cf` in the new format.
+		const pkg = JSON.parse(await readFile("package.json", "utf8"));
+		expect(pkg.scripts).toEqual({
+			deploy: "cf deploy",
+			preview: "cf dev",
+		});
+	});
+
+	test("leaves a framework-written wrangler.jsonc untouched", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({ name: "my-project" }),
+			"vite.config.ts": "export default {};",
+		});
+
+		await runAutoConfig(
+			{
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				configured: false,
+				outputDir: "dist",
+				framework: new WranglerWritingFramework({
+					id: "static",
+					name: "Static",
+				}),
+				packageJson: { name: "my-project" },
+				packageManager: NpmPackageManager,
+			},
+			{
+				context,
+				experimentalConfigFormat: "ts",
+				skipConfirmations: true,
+				runBuild: false,
+				enableWranglerInstallation: false,
+			}
+		);
+
+		// The new config is written alongside the framework's wrangler.jsonc.
+		expect(existsSync("cloudflare.config.ts")).toBe(true);
+
+		// A wrangler.jsonc written by the framework's configure() step is left
+		// exactly as-is: it may not be compatible with the new format, so
+		// autoconfig must not read, merge, or delete it.
+		expect(existsSync("wrangler.jsonc")).toBe(true);
+		const wranglerJsonc = JSON.parse(await readFile("wrangler.jsonc", "utf8"));
+		expect(wranglerJsonc).toEqual({
+			name: "framework-created",
+			kv_namespaces: [{ binding: "FROM_FRAMEWORK", id: "abc" }],
+		});
+
+		// The generated config comes from autoconfig's own config, not the
+		// untouched framework file.
+		const config = await readFile("cloudflare.config.ts", "utf8");
+		expect(config).not.toContain("FROM_FRAMEWORK");
+	});
+
+	test("falls back to wrangler.jsonc when the ts format is requested for a non-Vite project", async ({
 		expect,
 	}) => {
 		await seed({
@@ -83,127 +199,11 @@ describe("runAutoConfig() - new programmatic config format", () => {
 			}
 		);
 
-		// No legacy wrangler.jsonc is written in ts mode.
-		expect(existsSync("wrangler.jsonc")).toBe(false);
-
-		// The summary's deploy/version commands are `cf`-based, consistent with
-		// the generated `cf` scripts (not the default wrangler commands).
-		expect(summary.deployCommand).toBe("cf deploy");
-		expect(summary.versionCommand).toBe("cf versions upload");
-
-		// Runtime config (cloudflare.config.ts) is always written.
-		expect(await readConfig("cloudflare.config.ts")).toMatchInlineSnapshot(`
-			"import { defineWorker } from "wrangler/experimental-config";
-
-			export default defineWorker({
-				"name": "my-worker",
-				"compatibilityDate": "<current-date>",
-				"compatibilityFlags": [
-					"nodejs_compat"
-				],
-				"observability": {
-					"enabled": true
-				}
-			});
-			"
-		`);
-
-		// Tooling config (wrangler.config.ts) is written for non-Vite projects:
-		// the assets directory lives there, not in the runtime config.
-		expect(await readConfig("wrangler.config.ts")).toMatchInlineSnapshot(`
-			"import { defineWranglerConfig } from "wrangler/experimental-config";
-
-			export default defineWranglerConfig({
-				"assetsDirectory": "dist"
-			});
-			"
-		`);
-
-		// package.json scripts are driven by `cf` in the new format.
-		const pkg = JSON.parse(await readFile("package.json", "utf8"));
-		expect(pkg.scripts).toEqual({
-			deploy: "cf deploy",
-			preview: "cf dev",
-		});
-	});
-
-	test("creates only cloudflare.config.ts for a Vite project and warns about tooling", async ({
-		expect,
-	}) => {
-		await seed({
-			"package.json": JSON.stringify({ name: "my-project" }),
-			"vite.config.ts": "export default {};",
-		});
-
-		await runAutoConfig(
-			{
-				projectPath: process.cwd(),
-				workerName: "my-worker",
-				configured: false,
-				outputDir: "dist",
-				framework: new Static({ id: "static", name: "Static" }),
-				packageJson: { name: "my-project" },
-				packageManager: NpmPackageManager,
-			},
-			{
-				context,
-				experimentalConfigFormat: "ts",
-				skipConfirmations: true,
-				runBuild: false,
-				enableWranglerInstallation: false,
-			}
-		);
-
-		// Vite owns tooling, so only the runtime config is written.
-		expect(existsSync("cloudflare.config.ts")).toBe(true);
-		expect(existsSync("wrangler.config.ts")).toBe(false);
-		expect(existsSync("wrangler.jsonc")).toBe(false);
-
-		// A Vite project's cloudflare.config.ts imports from the vite plugin,
-		// which is its build tool (not wrangler).
-		const config = await readFile("cloudflare.config.ts", "utf8");
-		expect(config).toContain(
-			`import { defineWorker } from "@cloudflare/vite-plugin/experimental-config";`
-		);
-
-		// The tooling fields that have nowhere to go are surfaced rather than dropped.
-		expect(std.warn).toContain("owned by Vite");
-		expect(std.warn).toContain("assetsDirectory");
-	});
-
-	test("migrating: removes a pre-existing wrangler.jsonc when writing the new format", async ({
-		expect,
-	}) => {
-		await seed({
-			"package.json": JSON.stringify({ name: "my-project" }),
-			"wrangler.jsonc": JSON.stringify({
-				name: "old-worker",
-				compatibility_date: "2024-01-01",
-			}),
-		});
-
-		await runAutoConfig(
-			{
-				projectPath: process.cwd(),
-				workerName: "my-worker",
-				configured: false,
-				outputDir: "dist",
-				framework: new Static({ id: "static", name: "Static" }),
-				packageJson: { name: "my-project" },
-				packageManager: NpmPackageManager,
-			},
-			{
-				context,
-				experimentalConfigFormat: "ts",
-				skipConfirmations: true,
-				runBuild: false,
-				enableWranglerInstallation: false,
-			}
-		);
-
-		// The pre-existing wrangler.jsonc is removed as part of the migration.
-		expect(existsSync("wrangler.jsonc")).toBe(false);
-		expect(existsSync("cloudflare.config.ts")).toBe(true);
+		// Without a Vite config, the ts format is not emitted: the project gets
+		// a wrangler.jsonc and wrangler-based commands.
+		expect(existsSync("wrangler.jsonc")).toBe(true);
+		expect(existsSync("cloudflare.config.ts")).toBe(false);
+		expect(summary.deployCommand).toContain("wrangler deploy");
 	});
 
 	test("still writes wrangler.jsonc when the config format is the default (jsonc)", async ({
@@ -211,6 +211,7 @@ describe("runAutoConfig() - new programmatic config format", () => {
 	}) => {
 		await seed({
 			"package.json": JSON.stringify({ name: "my-project" }),
+			"vite.config.ts": "export default {};",
 		});
 
 		await runAutoConfig(
@@ -233,47 +234,5 @@ describe("runAutoConfig() - new programmatic config format", () => {
 
 		expect(existsSync("wrangler.jsonc")).toBe(true);
 		expect(existsSync("cloudflare.config.ts")).toBe(false);
-		expect(existsSync("wrangler.config.ts")).toBe(false);
-	});
-
-	test("removes a wrangler.jsonc created by the framework's configure() step", async ({
-		expect,
-	}) => {
-		// No pre-existing wrangler config: the framework writes one during setup.
-		await seed({
-			"package.json": JSON.stringify({ name: "my-project" }),
-		});
-
-		await runAutoConfig(
-			{
-				projectPath: process.cwd(),
-				workerName: "my-worker",
-				configured: false,
-				outputDir: "dist",
-				framework: new WranglerWritingFramework({
-					id: "static",
-					name: "Static",
-				}),
-				packageJson: { name: "my-project" },
-				packageManager: NpmPackageManager,
-			},
-			{
-				context,
-				experimentalConfigFormat: "ts",
-				skipConfirmations: true,
-				runBuild: false,
-				enableWranglerInstallation: false,
-			}
-		);
-
-		// The framework-created wrangler.jsonc must not be left behind alongside
-		// the new programmatic config.
-		expect(existsSync("wrangler.jsonc")).toBe(false);
-		expect(existsSync("cloudflare.config.ts")).toBe(true);
-
-		// Settings the framework wrote to disk must be merged into the generated
-		// config, not silently lost (mirrors the jsonc path's behaviour).
-		const config = await readFile("cloudflare.config.ts", "utf8");
-		expect(config).toContain("FROM_FRAMEWORK");
 	});
 });

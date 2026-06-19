@@ -6,8 +6,6 @@ export type {
 
 export { getDetailsForAutoConfig } from "./details";
 export { runAutoConfig, buildOperationsSummary } from "./run";
-export { migrateWranglerConfigToNewFormat } from "./migrate";
-export type { MigrateOptions } from "./migrate";
 
 export { Framework } from "./frameworks/framework-class";
 export type {

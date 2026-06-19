@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
@@ -20,11 +20,7 @@ import {
 	getWranglerJsonConfigPath,
 	hasViteConfig,
 } from "./config-module/fs-utils";
-import {
-	cloudflareConfigImportSource,
-	serializeCloudflareConfig,
-	serializeWranglerConfig,
-} from "./config-module/serialize";
+import { serializeCloudflareConfig } from "./config-module/serialize";
 import {
 	assertNonConfigured,
 	confirmAutoConfigDetails,
@@ -70,14 +66,11 @@ export async function runAutoConfig(
 		autoConfigOptions.enableWranglerInstallation ?? true;
 	const configFormat = autoConfigOptions.experimentalConfigFormat ?? "jsonc";
 
-	// Capture migration signals BEFORE any framework `configure()` runs (a
-	// framework's own CLI may write a fresh wrangler.jsonc during setup, which
-	// we must not mistake for a pre-existing user project).
-	const preexistingWranglerConfigPath = getWranglerJsonConfigPath(
-		autoConfigDetails.projectPath
-	);
-	const isMigration = preexistingWranglerConfigPath !== undefined;
+	// The new `cloudflare.config.ts` format is only emitted for Vite projects;
+	// any other project (including a non-Vite project that requested `ts`)
+	// falls back to writing `wrangler.jsonc`.
 	const isVite = hasViteConfig(autoConfigDetails.projectPath);
+	const useNewConfig = configFormat === "ts" && isVite;
 
 	assertNonConfigured(autoConfigDetails);
 
@@ -158,8 +151,6 @@ export async function runAutoConfig(
 	// the default deploy/version commands must be `cf ...` to stay consistent
 	// with the `cf`-based package.json scripts (otherwise the returned summary
 	// would advertise `wrangler deploy` while the scripts run `cf deploy`).
-	const isTs = configFormat === "ts";
-
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
 		dryRunConfigurationResults.wranglerConfig === null
@@ -174,14 +165,16 @@ export async function runAutoConfig(
 				autoConfigDetails.buildCommand,
 			deploy:
 				dryRunConfigurationResults.deployCommandOverride ??
-				(isTs ? "cf deploy" : `${npx} wrangler deploy`),
+				(useNewConfig ? "cf deploy" : `${npx} wrangler deploy`),
 			version:
 				dryRunConfigurationResults?.versionCommandOverride ??
-				(isTs ? "cf versions upload" : `${npx} wrangler versions upload`),
+				(useNewConfig
+					? "cf versions upload"
+					: `${npx} wrangler versions upload`),
 		},
 		context,
 		dryRunConfigurationResults.packageJsonScriptsOverrides,
-		{ configFormat, isMigration, isVite }
+		{ useNewConfig }
 	);
 
 	if (
@@ -209,16 +202,12 @@ export async function runAutoConfig(
 	);
 
 	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
-		if (configFormat === "ts") {
+		if (useNewConfig) {
 			// The new programmatic config (cloudflare.config.ts) is driven by
-			// `cf`, so install cf. For non-Vite projects, wrangler is still the
-			// build tool that `cf dev` / `cf build` delegate to, so install it
-			// too; Vite projects use `@cloudflare/vite-plugin` as the impl
-			// (installed by the framework's own configure step) instead.
+			// `cf`, so install cf. Vite projects use `@cloudflare/vite-plugin`
+			// as the build tool (installed by the framework's own configure
+			// step), so wrangler is not needed.
 			await installCf(packageManager.type, isWorkspaceRoot);
-			if (!isVite) {
-				await installWrangler(packageManager.type, isWorkspaceRoot);
-			}
 		} else {
 			await installWrangler(packageManager.type, isWorkspaceRoot);
 		}
@@ -264,13 +253,8 @@ export async function runAutoConfig(
 			...wranglerConfig,
 			...configurationResults.wranglerConfig,
 		});
-		if (configFormat === "ts") {
-			await saveNewConfig(autoConfigDetails.projectPath, mergedConfig, {
-				isMigration,
-				isVite,
-				preexistingWranglerConfigPath,
-				context,
-			});
+		if (useNewConfig) {
+			await saveNewConfig(autoConfigDetails.projectPath, mergedConfig, context);
 		} else {
 			await saveWranglerJsonc(autoConfigDetails.projectPath, mergedConfig);
 		}
@@ -377,50 +361,32 @@ async function saveWranglerJsonc(
 }
 
 /**
- * Experimental: write the new programmatic config format instead of
- * `wrangler.jsonc`.
+ * Experimental: write the new programmatic config format
+ * (`cloudflare.config.ts`) instead of `wrangler.jsonc`. Only used for Vite
+ * projects, whose build tool (`@cloudflare/vite-plugin`) owns tooling
+ * settings.
  *
- * - Always writes `cloudflare.config.ts` (runtime config).
- * - Writes `wrangler.config.ts` (tooling config) ONLY when migrating an
- *   existing non-Vite Wrangler project — Vite projects and fresh setups let
- *   the build tool own tooling. Tooling fields that have nowhere to go are
- *   surfaced as a warning rather than silently dropped.
- * - Removes any pre-existing `wrangler.jsonc` / `wrangler.json` (migration).
+ * The runtime config is written from the config autoconfig assembled in
+ * memory (its base config plus the framework's returned `wranglerConfig`); any
+ * `wrangler.jsonc` a framework wrote to disk is deliberately left untouched,
+ * as it may not be compatible with the new format. Tooling fields (owned by
+ * Vite) and fields the new format doesn't support are surfaced as warnings
+ * rather than silently dropped.
  *
  * @param projectPath The project's path
  * @param rawConfig The merged Wrangler `RawConfig` to convert + write
+ * @param context The autoconfig context providing the logger
  */
 async function saveNewConfig(
 	projectPath: string,
 	rawConfig: RawConfig,
-	options: {
-		isMigration: boolean;
-		isVite: boolean;
-		preexistingWranglerConfigPath: string | undefined;
-		context: AutoConfigContext;
-	}
+	context: AutoConfigContext
 ): Promise<void> {
-	const { logger } = options.context;
+	const { logger } = context;
 
-	// Merge any wrangler config currently on disk into the config we write,
-	// mirroring the jsonc path (`saveWranglerJsonc`). A framework's
-	// `configure()` step may write settings straight to a `wrangler.jsonc`
-	// (e.g. Next.js via `@opennextjs/cloudflare`, which returns an empty
-	// `wranglerConfig` and relies on the on-disk file); without this they'd be
-	// lost from the generated `cloudflare.config.ts`. The passed `rawConfig`
-	// (autoconfig base + framework return value) wins on conflicts.
-	const onDiskConfigPath = getWranglerJsonConfigPath(projectPath);
-	const onDiskConfig: RawConfig = onDiskConfigPath
-		? (parseJSONC(
-				await readFile(onDiskConfigPath, "utf8"),
-				onDiskConfigPath
-			) as RawConfig)
-		: {};
-	const mergedConfig: RawConfig = { ...onDiskConfig, ...rawConfig };
+	const { worker, tooling } = splitRawConfig(rawConfig);
 
-	const { worker, tooling } = splitRawConfig(mergedConfig);
-
-	const unsupportedFields = getUnsupportedConfigFields(mergedConfig);
+	const unsupportedFields = getUnsupportedConfigFields(rawConfig);
 	if (unsupportedFields.length > 0) {
 		logger.warn(
 			`The new config format does not yet support these fields, so they ` +
@@ -430,47 +396,19 @@ async function saveNewConfig(
 
 	await writeFile(
 		resolve(projectPath, "cloudflare.config.ts"),
-		serializeCloudflareConfig(
-			worker,
-			cloudflareConfigImportSource(options.isVite)
-		)
+		serializeCloudflareConfig(worker)
 	);
 
-	// Tooling settings (assets directory, bundling, dev server) only have a
-	// home in `wrangler.config.ts`, which belongs to non-Vite (wrangler-
-	// bundler-style) projects. Vite owns tooling for Vite projects, so those
-	// get a `cloudflare.config.ts` only and any stray tooling fields are
-	// surfaced rather than written to a file Vite won't read.
-	const hasTooling = Object.keys(tooling).length > 0;
-	if (hasTooling) {
-		if (!options.isVite) {
-			await writeFile(
-				resolve(projectPath, "wrangler.config.ts"),
-				serializeWranglerConfig(tooling)
-			);
-		} else {
-			logger.warn(
-				`These tooling settings are owned by Vite and were not written to ` +
-					`a config file: ${Object.keys(tooling).join(", ")}. ` +
-					`Configure them via the Cloudflare Vite plugin instead.`
-			);
-		}
-	}
-
-	// Remove every wrangler config we superseded: the one captured before the
-	// framework's `configure()` ran (`preexistingWranglerConfigPath`) and any
-	// that `configure()` itself wrote (`onDiskConfigPath`). They can differ
-	// (e.g. a pre-existing `wrangler.json` plus a framework-created
-	// `wrangler.jsonc`), so remove both rather than just one.
-	const wranglerConfigsToRemove = new Set(
-		[options.preexistingWranglerConfigPath, onDiskConfigPath].filter(
-			(path): path is string => path !== undefined
-		)
-	);
-	for (const path of wranglerConfigsToRemove) {
-		if (existsSync(path)) {
-			await rm(path);
-		}
+	// Tooling settings (assets directory, bundling, dev server) are owned by
+	// Vite, so they aren't written to a config file. Surface any that were
+	// present rather than dropping them silently.
+	const toolingKeys = Object.keys(tooling);
+	if (toolingKeys.length > 0) {
+		logger.warn(
+			`These tooling settings are owned by Vite and were not written to ` +
+				`a config file: ${toolingKeys.join(", ")}. ` +
+				`Configure them via the Cloudflare Vite plugin instead.`
+		);
 	}
 }
 
@@ -499,15 +437,13 @@ export async function buildOperationsSummary(
 	context: AutoConfigContext,
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides,
 	configPreview?: {
-		configFormat?: "jsonc" | "ts";
-		isMigration?: boolean;
-		isVite?: boolean;
+		useNewConfig?: boolean;
 	}
 ): Promise<AutoConfigSummary> {
 	const { logger } = context;
 	// The new config format is driven by `cf`; the legacy jsonc format by
 	// `wrangler`. This selects the CLI used for installs + package.json scripts.
-	const isTs = configPreview?.configFormat === "ts";
+	const useNewConfig = configPreview?.useNewConfig === true;
 	logger.log("");
 
 	const summary: AutoConfigSummary = {
@@ -530,19 +466,16 @@ export async function buildOperationsSummary(
 		summary.wranglerInstall = true;
 
 		logger.log("📦 Install packages:");
-		if (isTs) {
+		if (useNewConfig) {
+			// The new config (cloudflare.config.ts) is driven by `cf`; Vite is
+			// the build tool, so wrangler is not installed.
 			logger.log(` - cf (devDependency)`);
-			// Non-Vite projects also keep wrangler as the build tool that
-			// `cf dev` / `cf build` delegate to.
-			if (!configPreview?.isVite) {
-				logger.log(` - wrangler (devDependency)`);
-			}
 		} else {
 			logger.log(` - wrangler (devDependency)`);
 		}
 		logger.log("");
 
-		if (isTs) {
+		if (useNewConfig) {
 			// `cf deploy` / `cf dev` run the framework build themselves, so the
 			// scripts don't prepend the build command (unlike the wrangler path).
 			summary.scripts = {
@@ -586,24 +519,13 @@ export async function buildOperationsSummary(
 	}
 
 	if (wranglerConfigToWrite) {
-		if (configPreview?.configFormat === "ts") {
-			const { worker, tooling } = splitRawConfig(wranglerConfigToWrite);
+		if (useNewConfig) {
+			const { worker } = splitRawConfig(wranglerConfigToWrite);
 			logger.log("📄 Create cloudflare.config.ts:");
 			logger.log(
-				"  " +
-					serializeCloudflareConfig(
-						worker,
-						cloudflareConfigImportSource(configPreview.isVite === true)
-					).replace(/\n/g, "\n  ")
+				"  " + serializeCloudflareConfig(worker).replace(/\n/g, "\n  ")
 			);
 			logger.log("");
-			if (Object.keys(tooling).length > 0 && !configPreview.isVite) {
-				logger.log("📄 Create wrangler.config.ts:");
-				logger.log(
-					"  " + serializeWranglerConfig(tooling).replace(/\n/g, "\n  ")
-				);
-				logger.log("");
-			}
 		} else {
 			const wranglerConfigPath = resolve(
 				autoConfigDetails.projectPath,

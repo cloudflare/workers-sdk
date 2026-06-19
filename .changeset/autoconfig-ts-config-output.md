@@ -2,15 +2,10 @@
 "@cloudflare/autoconfig": minor
 ---
 
-Add experimental support for emitting the new programmatic config format
+Add experimental support for emitting the new programmatic config format for Vite projects
 
-`runAutoConfig` accepts a new `experimentalConfigFormat` option (`"jsonc"` | `"ts"`, defaulting to `"jsonc"`). When set to `"ts"`, autoconfig writes the new programmatic config instead of `wrangler.jsonc`:
+`runAutoConfig` accepts a new `experimentalConfigFormat` option (`"jsonc"` | `"ts"`, defaulting to `"jsonc"`). When set to `"ts"` and the project is Vite-based, autoconfig writes a `cloudflare.config.ts` (runtime config via `defineWorker`, imported from `@cloudflare/vite-plugin`) instead of `wrangler.jsonc`, and drives the project with `cf`. Tooling settings are owned by Vite, so they are surfaced as a warning rather than written to a config file. Any `wrangler.jsonc` a framework writes during setup is left untouched, since it may not be compatible with the new format.
 
-- a `cloudflare.config.ts` (runtime config via `defineWorker`), and
-- for non-Vite projects, a `wrangler.config.ts` (tooling config via `defineWranglerConfig`) — Vite projects get a `cloudflare.config.ts` only.
-
-In this mode autoconfig preserves the project's existing build tooling: non-Vite projects keep `wrangler`, while Vite projects rely on `@cloudflare/vite-plugin`.
-
-A new `migrateWranglerConfigToNewFormat` export migrates an existing `wrangler.jsonc` project to the new format with full fidelity: it converts every supported field (bindings → `env`, routes/crons/queues → `triggers`, custom domains → `domains`, Durable Object migrations → `exports`, tooling fields → `wrangler.config.ts`).
+Non-Vite projects (and the default `"jsonc"` format) continue to write `wrangler.jsonc`.
 
 This is an experimental capability intended for internal use only.
