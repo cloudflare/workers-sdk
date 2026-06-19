@@ -38,6 +38,12 @@ export interface MigrateOptions {
 	context: AutoConfigContext;
 	/** Preview the changes without touching the filesystem. */
 	dryRun?: boolean;
+	/**
+	 * Whether `projectPath` is the root of a workspace/monorepo. Controls the
+	 * package-manager flags used when installing `cf` so it lands in the right
+	 * `node_modules`. Defaults to `false`.
+	 */
+	isWorkspaceRoot?: boolean;
 }
 
 /**
@@ -52,6 +58,7 @@ export async function migrateWranglerConfigToNewFormat(
 	const { projectPath, context } = options;
 	const { logger } = context;
 	const dryRun = options.dryRun === true;
+	const isWorkspaceRoot = options.isWorkspaceRoot ?? false;
 
 	const wranglerConfigPath = getWranglerJsonConfigPath(projectPath);
 	if (wranglerConfigPath === undefined) {
@@ -140,6 +147,7 @@ export async function migrateWranglerConfigToNewFormat(
 		await writeFile(pkg.path, JSON.stringify(pkg.updated, null, 2) + "\n");
 		await installPackages(detectPackageManager(projectPath), ["cf@latest"], {
 			dev: true,
+			isWorkspaceRoot,
 			startText: "Installing cf (the Cloudflare CLI)",
 			doneText: "installed cf",
 		});
@@ -180,9 +188,14 @@ function readPackageJson(
 		if (typeof script !== "string") {
 			continue;
 		}
-		// Replace the `wrangler` command token (word-boundaried so package
-		// names like `@cloudflare/wrangler-x` aren't touched) with `cf`.
-		const rewritten = script.replace(/\bwrangler\b/g, "cf");
+		// Replace the `wrangler` command token with `cf`. Match `wrangler` only
+		// when it stands alone as a command invocation: at the start of the
+		// script or after a shell separator (whitespace, `;`, `&`, `|`), and
+		// immediately followed by whitespace or end-of-string. This avoids
+		// rewriting file references (`wrangler.jsonc`, `wrangler.toml`) and
+		// compound names (`@cloudflare/wrangler-foo`, `wrangler-pages`), where
+		// `wrangler` is adjacent to `.`, `-`, or `/`.
+		const rewritten = script.replace(/(^|[\s;&|])wrangler(?=\s|$)/g, "$1cf");
 		scripts[name] = rewritten;
 		if (rewritten !== script) {
 			rewrittenScripts[name] = rewritten;

@@ -230,4 +230,69 @@ describe("migrateWranglerConfigToNewFormat()", () => {
 		const pkg = JSON.parse(await readFile("package.json", "utf8"));
 		expect(pkg.scripts).toEqual({ deploy: "wrangler deploy" });
 	});
+
+	test("only rewrites the wrangler command token, not file references or compound names", async ({
+		expect,
+	}) => {
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "my-worker",
+				main: "./src/index.ts",
+				compatibility_date: "2025-01-01",
+			}),
+			"package.json": JSON.stringify({
+				name: "my-worker",
+				scripts: {
+					// `wrangler` as a command, including after `&&`.
+					deploy: "npm run build && wrangler deploy",
+					// `wrangler` referenced as a config file path must be left alone.
+					check: "wrangler deploy --config wrangler.jsonc",
+					// A compound binary name must not be partially rewritten.
+					custom: "npx @cloudflare/wrangler-foo build",
+				},
+				devDependencies: { wrangler: "^4.0.0" },
+			}),
+		});
+
+		await migrateWranglerConfigToNewFormat({
+			projectPath: process.cwd(),
+			context,
+		});
+
+		const pkg = JSON.parse(await readFile("package.json", "utf8"));
+		expect(pkg.scripts).toEqual({
+			deploy: "npm run build && cf deploy",
+			check: "cf deploy --config wrangler.jsonc",
+			custom: "npx @cloudflare/wrangler-foo build",
+		});
+	});
+
+	test("forwards isWorkspaceRoot to the cf install in workspace setups", async ({
+		expect,
+	}) => {
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "my-worker",
+				main: "./src/index.ts",
+				compatibility_date: "2025-01-01",
+			}),
+			"package.json": JSON.stringify({
+				name: "my-worker",
+				scripts: { deploy: "wrangler deploy" },
+				devDependencies: { wrangler: "^4.0.0" },
+			}),
+		});
+
+		await migrateWranglerConfigToNewFormat({
+			projectPath: process.cwd(),
+			context,
+			isWorkspaceRoot: true,
+		});
+
+		expect(installPackages).toHaveBeenCalledWith(
+			"npm",
+			["cf@latest"],
+			expect.objectContaining({ dev: true, isWorkspaceRoot: true })
+		);
+	});
 });

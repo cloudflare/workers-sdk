@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import {
 	getTodaysCompatDate,
 	NpmPackageManager,
@@ -10,9 +11,34 @@ import {
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
 import { describe, test } from "vitest";
+import { Framework } from "../src/frameworks/framework-class";
 import { Static } from "../src/frameworks/static";
 import { runAutoConfig } from "../src/run";
 import { createMockContext } from "./helpers/mock-context";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "../src/frameworks/framework-class";
+
+/**
+ * A framework whose real (non-dry-run) `configure()` writes its own
+ * `wrangler.jsonc`, mirroring framework CLIs that emit one during setup.
+ */
+class WranglerWritingFramework extends Framework {
+	async configure({
+		outputDir,
+		projectPath,
+		dryRun,
+	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		if (!dryRun) {
+			await writeFile(
+				resolve(projectPath, "wrangler.jsonc"),
+				JSON.stringify({ name: "framework-created" })
+			);
+		}
+		return { wranglerConfig: { assets: { directory: outputDir } } };
+	}
+}
 
 /** Read a generated config file with today's compat date stubbed for stable snapshots. */
 async function readConfig(path: string): Promise<string> {
@@ -34,7 +60,7 @@ describe("runAutoConfig() - new programmatic config format", () => {
 			"package.json": JSON.stringify({ name: "my-project" }),
 		});
 
-		await runAutoConfig(
+		const summary = await runAutoConfig(
 			{
 				projectPath: process.cwd(),
 				workerName: "my-worker",
@@ -55,6 +81,11 @@ describe("runAutoConfig() - new programmatic config format", () => {
 
 		// No legacy wrangler.jsonc is written in ts mode.
 		expect(existsSync("wrangler.jsonc")).toBe(false);
+
+		// The summary's deploy/version commands are `cf`-based, consistent with
+		// the generated `cf` scripts (not the default wrangler commands).
+		expect(summary.deployCommand).toBe("cf deploy");
+		expect(summary.versionCommand).toBe("cf versions upload");
 
 		// Runtime config (cloudflare.config.ts) is always written.
 		expect(await readConfig("cloudflare.config.ts")).toMatchInlineSnapshot(`
@@ -192,5 +223,41 @@ describe("runAutoConfig() - new programmatic config format", () => {
 		expect(existsSync("wrangler.jsonc")).toBe(true);
 		expect(existsSync("cloudflare.config.ts")).toBe(false);
 		expect(existsSync("wrangler.config.ts")).toBe(false);
+	});
+
+	test("removes a wrangler.jsonc created by the framework's configure() step", async ({
+		expect,
+	}) => {
+		// No pre-existing wrangler config: the framework writes one during setup.
+		await seed({
+			"package.json": JSON.stringify({ name: "my-project" }),
+		});
+
+		await runAutoConfig(
+			{
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				configured: false,
+				outputDir: "dist",
+				framework: new WranglerWritingFramework({
+					id: "static",
+					name: "Static",
+				}),
+				packageJson: { name: "my-project" },
+				packageManager: NpmPackageManager,
+			},
+			{
+				context,
+				experimentalConfigFormat: "ts",
+				skipConfirmations: true,
+				runBuild: false,
+				enableWranglerInstallation: false,
+			}
+		);
+
+		// The framework-created wrangler.jsonc must not be left behind alongside
+		// the new programmatic config.
+		expect(existsSync("wrangler.jsonc")).toBe(false);
+		expect(existsSync("cloudflare.config.ts")).toBe(true);
 	});
 });

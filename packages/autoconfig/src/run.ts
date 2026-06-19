@@ -153,6 +153,12 @@ export async function runAutoConfig(
 
 	const { npx } = packageManager;
 
+	// In the new programmatic config format the project is driven by `cf`, so
+	// the default deploy/version commands must be `cf ...` to stay consistent
+	// with the `cf`-based package.json scripts (otherwise the returned summary
+	// would advertise `wrangler deploy` while the scripts run `cf deploy`).
+	const isTs = configFormat === "ts";
+
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
 		dryRunConfigurationResults.wranglerConfig === null
@@ -167,10 +173,10 @@ export async function runAutoConfig(
 				autoConfigDetails.buildCommand,
 			deploy:
 				dryRunConfigurationResults.deployCommandOverride ??
-				`${npx} wrangler deploy`,
+				(isTs ? "cf deploy" : `${npx} wrangler deploy`),
 			version:
 				dryRunConfigurationResults?.versionCommandOverride ??
-				`${npx} wrangler versions upload`,
+				(isTs ? "cf versions upload" : `${npx} wrangler versions upload`),
 		},
 		context,
 		dryRunConfigurationResults.packageJsonScriptsOverrides,
@@ -423,8 +429,15 @@ async function saveNewConfig(
 	}
 
 	// Migration: remove the old wrangler config now that the new files exist.
-	if (options.preexistingWranglerConfigPath) {
-		await rm(options.preexistingWranglerConfigPath, { force: true });
+	// `preexistingWranglerConfigPath` is captured before the framework's
+	// `configure()` runs; a framework CLI may also write a fresh
+	// `wrangler.jsonc` during setup, so fall back to re-discovering the current
+	// path to ensure that is cleaned up too.
+	const wranglerConfigToRemove =
+		options.preexistingWranglerConfigPath ??
+		getWranglerJsonConfigPath(projectPath);
+	if (wranglerConfigToRemove) {
+		await rm(wranglerConfigToRemove, { force: true });
 	}
 }
 

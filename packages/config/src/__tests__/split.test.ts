@@ -111,6 +111,42 @@ describe("splitRawConfig", () => {
 		});
 	});
 
+	it("replays renames and deletes so exports reflect the current class set", ({
+		expect,
+	}) => {
+		const { worker } = splitRawConfig({
+			migrations: [
+				{
+					tag: "v1",
+					new_sqlite_classes: ["Counter", "Temp"],
+					new_classes: ["Legacy"],
+				},
+				{ tag: "v2", renamed_classes: [{ from: "Counter", to: "Tally" }] },
+				{ tag: "v3", deleted_classes: ["Temp"] },
+			],
+		} as RawConfig);
+
+		// Counter was renamed to Tally (storage preserved), Temp was deleted, and
+		// Legacy is untouched. The deleted/renamed-away names are not emitted.
+		expect(worker.exports).toEqual({
+			Tally: { type: "durable-object", storage: "sqlite" },
+			Legacy: { type: "durable-object", storage: "legacy-kv" },
+		});
+	});
+
+	it("omits exports entirely when every defined class is later deleted", ({
+		expect,
+	}) => {
+		const { worker } = splitRawConfig({
+			migrations: [
+				{ tag: "v1", new_sqlite_classes: ["Counter"] },
+				{ tag: "v2", deleted_classes: ["Counter"] },
+			],
+		} as RawConfig);
+
+		expect(worker.exports).toBeUndefined();
+	});
+
 	it("splits assets: runtime fields on worker, directory into tooling", ({
 		expect,
 	}) => {

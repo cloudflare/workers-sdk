@@ -422,9 +422,16 @@ function convertBindings(raw: RawConfig, worker: Obj, tooling: Obj): Obj {
  * `migrations` array. SQLite-backed classes (`new_sqlite_classes`) use
  * `storage: "sqlite"`; the rest (`new_classes`) use `storage: "legacy-kv"`.
  *
- * Migration *history* (tags, renames, deletes, transfers) has no
- * representation in the declarative new format; the current class set is the
- * most faithful mapping available.
+ * The migrations are replayed in order so the result is the *current* class
+ * set rather than the union of every class ever declared: `renamed_classes`
+ * move a class's entry to its new name (preserving storage) and
+ * `deleted_classes` drop it. This avoids emitting `exports` for classes that
+ * a later migration renamed away or deleted, which would otherwise produce a
+ * config that no longer matches the Worker's actual exports.
+ *
+ * The migration *history* itself (tags, the rename/delete operations) has no
+ * representation in the declarative new format; only the resulting class set
+ * is preserved.
  */
 function convertExports(raw: RawConfig, worker: Obj): void {
 	const migrations = raw.migrations;
@@ -438,6 +445,15 @@ function convertExports(raw: RawConfig, worker: Obj): void {
 		}
 		for (const className of migration.new_classes ?? []) {
 			exportsObj[className] = { type: "durable-object", storage: "legacy-kv" };
+		}
+		for (const { from, to } of migration.renamed_classes ?? []) {
+			if (from in exportsObj) {
+				exportsObj[to] = exportsObj[from];
+				delete exportsObj[from];
+			}
+		}
+		for (const className of migration.deleted_classes ?? []) {
+			delete exportsObj[className];
 		}
 	}
 	if (Object.keys(exportsObj).length > 0) {
