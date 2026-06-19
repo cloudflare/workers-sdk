@@ -97,6 +97,29 @@ const MOCK_STATS = {
 	error: 2,
 };
 
+const MOCK_JOB = {
+	id: "job-001",
+	source: "user",
+	description: "Manual reindex",
+	started_at: "2025-03-01T00:00:00Z",
+	ended_at: "2025-03-01T00:05:00Z",
+	end_reason: "completed",
+	last_seen_at: "2025-03-01T00:05:00Z",
+};
+
+const MOCK_JOB_2 = {
+	id: "job-002",
+	source: "schedule",
+	started_at: "2025-03-02T00:00:00Z",
+};
+
+const MOCK_JOB_LOG = {
+	id: 1,
+	created_at: 1700000000,
+	message: "Indexing started",
+	message_type: 0,
+};
+
 // ── Help / Namespace ──────────────────────────────────────────────────────────
 
 describe("ai-search help", () => {
@@ -117,6 +140,7 @@ describe("ai-search help", () => {
 		expect(std.out).toContain("wrangler ai-search stats");
 		expect(std.out).toContain("wrangler ai-search search");
 		expect(std.out).toContain("wrangler ai-search namespace");
+		expect(std.out).toContain("wrangler ai-search jobs");
 	});
 
 	it("should show help when an invalid argument is passed", async ({
@@ -142,6 +166,19 @@ describe("ai-search help", () => {
 		expect(std.out).toContain("wrangler ai-search namespace get");
 		expect(std.out).toContain("wrangler ai-search namespace update");
 		expect(std.out).toContain("wrangler ai-search namespace delete");
+	});
+
+	it("should show jobs subcommand help", async ({ expect }) => {
+		await runWrangler("ai-search jobs");
+		await endEventLoop();
+
+		expect(std.out).toContain("wrangler ai-search jobs");
+		expect(std.out).toContain("AI Search indexing jobs");
+		expect(std.out).toContain("wrangler ai-search jobs list");
+		expect(std.out).toContain("wrangler ai-search jobs create");
+		expect(std.out).toContain("wrangler ai-search jobs get");
+		expect(std.out).toContain("wrangler ai-search jobs cancel");
+		expect(std.out).toContain("wrangler ai-search jobs logs");
 	});
 });
 
@@ -2139,6 +2176,242 @@ describe("ai-search commands", () => {
 			});
 		});
 	});
+
+	// ── jobs ────────────────────────────────────────────────────────────────────
+
+	describe("jobs", () => {
+		describe("list", () => {
+			it("should list jobs for an instance", async ({ expect }) => {
+				mockListJobs([MOCK_JOB, MOCK_JOB_2]);
+				await runWrangler("ai-search jobs list my-instance");
+				expect(std.out).toContain(MOCK_JOB.id);
+				expect(std.out).toContain(MOCK_JOB_2.id);
+				expect(std.out).toContain("user");
+				expect(std.out).toContain("schedule");
+			});
+
+			it("should list jobs as JSON", async ({ expect }) => {
+				mockListJobs([MOCK_JOB]);
+				await runWrangler("ai-search jobs list my-instance --json");
+				const parsed = JSON.parse(std.out);
+				expect(parsed).toEqual([MOCK_JOB]);
+			});
+
+			it("should route through the instance and namespace", async ({
+				expect,
+			}) => {
+				let capturedNamespace: string | undefined;
+				let capturedName: string | undefined;
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+						({ params }) => {
+							capturedNamespace = params.namespace as string;
+							capturedName = params.name as string;
+							return HttpResponse.json(createFetchResult([], true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler("ai-search jobs list my-instance --namespace blog");
+				expect(capturedNamespace).toBe("blog");
+				expect(capturedName).toBe("my-instance");
+			});
+
+			it("should warn when no jobs exist", async ({ expect }) => {
+				mockListJobs([]);
+				await runWrangler("ai-search jobs list my-instance");
+				expect(std.warn).toContain(
+					'No indexing jobs found for AI Search instance "my-instance" in namespace "default".'
+				);
+			});
+
+			it("should pass pagination params", async ({ expect }) => {
+				let capturedUrl: URL | undefined;
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+						({ request }) => {
+							capturedUrl = new URL(request.url);
+							return HttpResponse.json(createFetchResult([], true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler(
+					"ai-search jobs list my-instance --page 2 --per-page 5"
+				);
+				expect(capturedUrl?.searchParams.get("page")).toBe("2");
+				expect(capturedUrl?.searchParams.get("per_page")).toBe("5");
+			});
+		});
+
+		describe("create", () => {
+			it("should create a job with a description", async ({ expect }) => {
+				let capturedBody: Record<string, unknown> | undefined;
+				let capturedNamespace: string | undefined;
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+						async ({ request, params }) => {
+							capturedBody = (await request.json()) as Record<string, unknown>;
+							capturedNamespace = params.namespace as string;
+							return HttpResponse.json(createFetchResult(MOCK_JOB, true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler(
+					'ai-search jobs create my-instance --description "Manual reindex"'
+				);
+				expect(capturedNamespace).toBe("default");
+				expect(capturedBody).toEqual({ description: "Manual reindex" });
+				expect(std.out).toContain(
+					'Successfully created indexing job "job-001"'
+				);
+			});
+
+			it("should create a job without a description", async ({ expect }) => {
+				let capturedBody: Record<string, unknown> | undefined;
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+						async ({ request }) => {
+							capturedBody = (await request.json()) as Record<string, unknown>;
+							return HttpResponse.json(createFetchResult(MOCK_JOB, true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler("ai-search jobs create my-instance");
+				expect(capturedBody).toEqual({});
+			});
+
+			it("should create a job as JSON", async ({ expect }) => {
+				mockCreateJob(MOCK_JOB);
+				await runWrangler("ai-search jobs create my-instance --json");
+				const parsed = JSON.parse(std.out);
+				expect(parsed.id).toBe("job-001");
+			});
+		});
+
+		describe("get", () => {
+			it("should get job details", async ({ expect }) => {
+				mockGetJob(MOCK_JOB);
+				await runWrangler("ai-search jobs get my-instance job-001");
+				expect(std.out).toContain("job-001");
+				expect(std.out).toContain("user");
+				expect(std.out).toContain("completed");
+			});
+
+			it("should get a job as JSON", async ({ expect }) => {
+				mockGetJob(MOCK_JOB);
+				await runWrangler("ai-search jobs get my-instance job-001 --json");
+				const parsed = JSON.parse(std.out);
+				expect(parsed.id).toBe("job-001");
+			});
+
+			it("should route through the job id in the URL", async ({ expect }) => {
+				let capturedJobId: string | undefined;
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId",
+						({ params }) => {
+							capturedJobId = params.jobId as string;
+							return HttpResponse.json(createFetchResult(MOCK_JOB, true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler("ai-search jobs get my-instance job-xyz");
+				expect(capturedJobId).toBe("job-xyz");
+			});
+
+			it("should error when job id is missing", async ({ expect }) => {
+				await expect(() =>
+					runWrangler("ai-search jobs get my-instance")
+				).rejects.toThrow("Not enough non-option arguments");
+			});
+		});
+
+		describe("cancel", () => {
+			it("should cancel with confirmation", async ({ expect }) => {
+				mockConfirm({
+					text: 'OK to cancel the indexing job "job-001" on AI Search instance "my-instance"?',
+					result: true,
+				});
+				const requests = mockCancelJob(MOCK_JOB);
+				await runWrangler("ai-search jobs cancel my-instance job-001");
+				expect(requests.count).toBe(1);
+				expect(std.out).toContain(
+					'Successfully cancelled indexing job "job-001"'
+				);
+			});
+
+			it("should send action=cancel in the PATCH body", async ({ expect }) => {
+				let capturedBody: Record<string, unknown> | undefined;
+				mockConfirm({
+					text: 'OK to cancel the indexing job "job-001" on AI Search instance "my-instance"?',
+					result: true,
+				});
+				msw.use(
+					http.patch(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId",
+						async ({ request }) => {
+							capturedBody = (await request.json()) as Record<string, unknown>;
+							return HttpResponse.json(createFetchResult(MOCK_JOB, true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler("ai-search jobs cancel my-instance job-001");
+				expect(capturedBody).toEqual({ action: "cancel" });
+			});
+
+			it("should abort when not confirmed", async ({ expect }) => {
+				mockConfirm({
+					text: 'OK to cancel the indexing job "job-001" on AI Search instance "my-instance"?',
+					result: false,
+				});
+				const requests = mockCancelJob(MOCK_JOB);
+				await runWrangler("ai-search jobs cancel my-instance job-001");
+				expect(std.out).toContain("Cancellation aborted.");
+				expect(requests.count).toBe(0);
+			});
+
+			it("should cancel with --force flag", async ({ expect }) => {
+				const requests = mockCancelJob(MOCK_JOB);
+				await runWrangler("ai-search jobs cancel my-instance job-001 --force");
+				expect(requests.count).toBe(1);
+				expect(std.out).toContain(
+					'Successfully cancelled indexing job "job-001"'
+				);
+			});
+		});
+
+		describe("logs", () => {
+			it("should list job logs", async ({ expect }) => {
+				mockListJobLogs([MOCK_JOB_LOG]);
+				await runWrangler("ai-search jobs logs my-instance job-001");
+				expect(std.out).toContain("Indexing started");
+			});
+
+			it("should list job logs as JSON", async ({ expect }) => {
+				mockListJobLogs([MOCK_JOB_LOG]);
+				await runWrangler("ai-search jobs logs my-instance job-001 --json");
+				const parsed = JSON.parse(std.out);
+				expect(parsed).toEqual([MOCK_JOB_LOG]);
+			});
+
+			it("should warn when no logs exist", async ({ expect }) => {
+				mockListJobLogs([]);
+				await runWrangler("ai-search jobs logs my-instance job-001");
+				expect(std.warn).toContain(
+					'No log entries found for indexing job "job-001".'
+				);
+			});
+		});
+	});
 });
 
 // ── MSW Mock Handlers ─────────────────────────────────────────────────────────
@@ -2267,6 +2540,83 @@ function mockListNamespaces(namespaces: unknown[]) {
 						per_page: 20,
 						count: namespaces.length,
 						total_count: namespaces.length,
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockListJobs(jobs: unknown[]) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(jobs, true, [], [], {
+						page: 1,
+						per_page: 20,
+						count: jobs.length,
+						total_count: jobs.length,
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockCreateJob(job: unknown) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+			() => {
+				return HttpResponse.json(createFetchResult(job, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGetJob(job: unknown) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId",
+			() => {
+				return HttpResponse.json(createFetchResult(job, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockCancelJob(job: unknown) {
+	const requests = { count: 0 };
+	msw.use(
+		http.patch(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId",
+			() => {
+				requests.count++;
+				return HttpResponse.json(createFetchResult(job, true));
+			},
+			{ once: true }
+		)
+	);
+	return requests;
+}
+
+function mockListJobLogs(logs: unknown[]) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId/logs",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(logs, true, [], [], {
+						page: 1,
+						per_page: 20,
+						count: logs.length,
+						total_count: logs.length,
 					})
 				);
 			},

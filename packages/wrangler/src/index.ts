@@ -22,6 +22,12 @@ import { aiSearchCreateCommand } from "./ai-search/create";
 import { aiSearchDeleteCommand } from "./ai-search/delete";
 import { aiSearchGetCommand } from "./ai-search/get";
 import { aiSearchNamespace } from "./ai-search/index";
+import { aiSearchJobsCancelCommand } from "./ai-search/jobs/cancel";
+import { aiSearchJobsCreateCommand } from "./ai-search/jobs/create";
+import { aiSearchJobsGetCommand } from "./ai-search/jobs/get";
+import { aiSearchJobsNamespace } from "./ai-search/jobs/index";
+import { aiSearchJobsListCommand } from "./ai-search/jobs/list";
+import { aiSearchJobsLogsCommand } from "./ai-search/jobs/logs";
 import { aiSearchListCommand } from "./ai-search/list";
 import { aiSearchNamespaceCreateCommand } from "./ai-search/namespace/create";
 import { aiSearchNamespaceDeleteCommand } from "./ai-search/namespace/delete";
@@ -1559,6 +1565,30 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler ai-search namespace delete",
 			definition: aiSearchNamespaceDeleteCommand,
+		},
+		{
+			command: "wrangler ai-search jobs",
+			definition: aiSearchJobsNamespace,
+		},
+		{
+			command: "wrangler ai-search jobs list",
+			definition: aiSearchJobsListCommand,
+		},
+		{
+			command: "wrangler ai-search jobs create",
+			definition: aiSearchJobsCreateCommand,
+		},
+		{
+			command: "wrangler ai-search jobs get",
+			definition: aiSearchJobsGetCommand,
+		},
+		{
+			command: "wrangler ai-search jobs cancel",
+			definition: aiSearchJobsCancelCommand,
+		},
+		{
+			command: "wrangler ai-search jobs logs",
+			definition: aiSearchJobsLogsCommand,
 		},
 	]);
 	registry.registerNamespace("ai-search");
