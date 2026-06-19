@@ -93,6 +93,15 @@ export async function hasTraceTables(databaseId: string): Promise<boolean> {
 	return rows.length >= 2;
 }
 
+/** A single structured clause parsed from the query bar (e.g. `dur:>100`, `db.query.text:orders`). */
+export interface QueryClause {
+	/** "duration" (numeric, on the trace) or a span attribute key */
+	field: string;
+	/** comparator; "=" means substring match for attributes */
+	op: ">" | ">=" | "<" | "<=" | "=";
+	value: string;
+}
+
 /** Filters for the trace list — a simpler version of the dashboard query builder. */
 export interface TraceFilters {
 	/** free-text: matches operation name, any span name, or any span attribute */
@@ -105,6 +114,8 @@ export interface TraceFilters {
 	tagKey?: string;
 	/** optional value substring for the chosen tag key */
 	tagValue?: string;
+	/** structured clauses parsed from the query bar */
+	clauses?: QueryClause[];
 	limit?: number;
 }
 
@@ -142,6 +153,21 @@ export async function listTraces(
 		);
 	}
 
+	// structured clauses from the query bar (e.g. `dur:>100`, `db.query.text:orders`)
+	for (const c of filters.clauses ?? []) {
+		if (c.field === "duration") {
+			const n = Number(c.value);
+			// c.op is restricted to a fixed comparator set by the parser, so it is safe to inline
+			if (!Number.isNaN(n)) {
+				where.push(`COALESCE(duration_ms, 0) ${c.op} ${n}`);
+			}
+		} else {
+			where.push(
+				`trace_id IN (SELECT s.trace_id FROM spans s, json_each(s.attributes) j WHERE j.key = '${esc(c.field)}' AND j.value LIKE '%${esc(c.value)}%')`
+			);
+		}
+	}
+
 	const q = filters.search?.trim();
 	if (q) {
 		const like = `%${esc(q)}%`;
@@ -177,6 +203,8 @@ export interface EventFilters {
 	search?: string;
 	/** "all" | debug | info | log | warn | error */
 	level?: string;
+	/** substring match on the emitting operation/route */
+	operation?: string;
 	limit?: number;
 }
 
@@ -190,6 +218,10 @@ export async function listEvents(
 
 	if (filters.level && filters.level !== "all") {
 		where.push(`level = '${esc(filters.level)}'`);
+	}
+	const op = filters.operation?.trim();
+	if (op) {
+		where.push(`operation LIKE '%${esc(op)}%'`);
 	}
 	const q = filters.search?.trim();
 	if (q) {

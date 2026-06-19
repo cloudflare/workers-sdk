@@ -9,6 +9,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { FilterSelect } from "../components/observability/FilterSelect";
 import { ObservabilityViewSwitcher } from "../components/observability/ObservabilityViewSwitcher";
 import { TraceWaterfall } from "../components/observability/TraceWaterfall";
+import { parseTraceQuery } from "../lib/query";
 import {
 	findTraceDatabaseId,
 	getTagKeys,
@@ -94,13 +95,15 @@ function ObservabilityView(): JSX.Element {
 		setLoading(true);
 		setError(null);
 		try {
+			const parsed = parseTraceQuery(debouncedSearch);
 			setTraces(
 				await listTraces(databaseId, {
-					search: debouncedSearch,
-					status,
-					kind,
+					search: parsed.text,
+					status: parsed.status ?? status,
+					kind: parsed.kind ?? kind,
 					tagKey,
 					tagValue: debouncedTagValue,
+					clauses: parsed.clauses,
 				})
 			);
 		} catch (e) {
@@ -181,7 +184,7 @@ function ObservabilityView(): JSX.Element {
 					<input
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Search operation, span name, or attributes (e.g. a D1 query, a URL)…"
+						placeholder="Search, or query e.g. status:error kind:d1 dur:>100 db.query.text:orders"
 						className="text-kumo-default placeholder:text-kumo-subtle w-full bg-transparent text-xs outline-none"
 					/>
 					{search ? (

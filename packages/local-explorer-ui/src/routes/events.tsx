@@ -9,6 +9,7 @@ import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FilterSelect } from "../components/observability/FilterSelect";
 import { ObservabilityViewSwitcher } from "../components/observability/ObservabilityViewSwitcher";
+import { parseEventQuery } from "../lib/query";
 import {
 	findTraceDatabaseId,
 	listEvents,
@@ -94,7 +95,14 @@ function EventsView(): JSX.Element {
 		setLoading(true);
 		setError(null);
 		try {
-			setEvents(await listEvents(databaseId, { search: debouncedSearch, level }));
+			const parsed = parseEventQuery(debouncedSearch);
+			setEvents(
+				await listEvents(databaseId, {
+					search: parsed.text,
+					level: parsed.level ?? level,
+					operation: parsed.operation,
+				})
+			);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Failed to load events");
 		} finally {
@@ -145,7 +153,7 @@ function EventsView(): JSX.Element {
 					<input
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Search log messages or operation…"
+						placeholder="Search, or query e.g. level:error op:/checkout timeout"
 						className="text-kumo-default placeholder:text-kumo-subtle w-full bg-transparent text-xs outline-none"
 					/>
 					{search ? (
