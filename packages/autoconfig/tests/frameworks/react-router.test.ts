@@ -56,7 +56,7 @@ function createFramework(version: string): ReactRouter {
 		{
 			name: "react-router",
 			minimumVersion: "7.0.0",
-			maximumKnownMajorVersion: "7",
+			maximumKnownMajorVersion: "8",
 		},
 		context
 	);
@@ -322,6 +322,95 @@ describe("React Router framework configure()", () => {
 			expect(content).toContain("v8_middleware: true");
 			// New flag added
 			expect(content).toContain("v8_viteEnvironmentApi: true");
+		});
+	});
+
+	describe("React Router >= 8.0.0", () => {
+		beforeEach(async () => {
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
+		});
+
+		it("does not add future flags to react-router.config.ts", async ({
+			expect,
+		}) => {
+			const original = readFileSync(resolve("react-router.config.ts"), "utf-8");
+
+			const framework = createFramework("8.0.0");
+			await framework.configure(getBaseOptions());
+
+			const content = readFileSync(resolve("react-router.config.ts"), "utf-8");
+			expect(content).not.toContain("v8_viteEnvironmentApi");
+			expect(content).not.toContain("unstable_viteEnvironmentApi");
+			expect(content).toBe(original);
+		});
+
+		it("does not add future flags for React Router 8.x", async ({ expect }) => {
+			const original = readFileSync(resolve("react-router.config.ts"), "utf-8");
+
+			const framework = createFramework("8.2.0");
+			await framework.configure(getBaseOptions());
+
+			const content = readFileSync(resolve("react-router.config.ts"), "utf-8");
+			expect(content).not.toContain("v8_viteEnvironmentApi");
+			expect(content).not.toContain("unstable_viteEnvironmentApi");
+			expect(content).toBe(original);
+		});
+
+		it("uses middleware pattern by default for workers/app.ts", async ({
+			expect,
+		}) => {
+			const framework = createFramework("8.0.0");
+			await framework.configure(getBaseOptions());
+
+			const content = readFileSync(resolve("workers/app.ts"), "utf-8");
+			expect(content).not.toContain("AppLoadContext");
+			expect(content).not.toContain("declare module");
+			expect(content).toContain("async fetch(request)");
+			expect(content).not.toContain("env, ctx");
+			expect(content).toContain("requestHandler(request)");
+		});
+
+		it("uses middleware pattern by default for entry.server.tsx", async ({
+			expect,
+		}) => {
+			const framework = createFramework("8.0.0");
+			await framework.configure(getBaseOptions());
+
+			const content = readFileSync(resolve("app/entry.server.tsx"), "utf-8");
+			expect(content).not.toContain("AppLoadContext");
+			expect(content).not.toContain("_loadContext");
+			expect(content).toContain(
+				'import type { EntryContext } from "react-router"'
+			);
+		});
+	});
+
+	describe("hasV8MiddlewareFlag with version >= 8.0.0", () => {
+		it("returns true without config file when version >= 8.0.0", ({
+			expect,
+		}) => {
+			expect(hasV8MiddlewareFlag(process.cwd(), "8.0.0")).toBe(true);
+		});
+
+		it("returns true regardless of config content when version >= 8.0.0", async ({
+			expect,
+		}) => {
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
+			expect(hasV8MiddlewareFlag(process.cwd(), "8.0.0")).toBe(true);
+		});
+
+		it("still parses config for versions < 8.0.0", async ({ expect }) => {
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
+			expect(hasV8MiddlewareFlag(process.cwd(), "7.16.0")).toBe(false);
 		});
 	});
 

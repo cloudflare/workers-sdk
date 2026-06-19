@@ -121,7 +121,7 @@ export const allKnownFrameworks = [
 			// react-router.config.ts which are required for Cloudflare Workers support
 			// See: https://remix.run/blog/react-router-v7
 			minimumVersion: "7.0.0",
-			maximumKnownMajorVersion: "7",
+			maximumKnownMajorVersion: "8",
 		},
 		supported: true,
 	},
