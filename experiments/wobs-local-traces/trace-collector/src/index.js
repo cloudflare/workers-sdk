@@ -36,6 +36,36 @@ const C = {
 const NAME_W = 30; // width of the name column
 const BAR_W = 44; // width of the gantt area
 
+// Minimum log level to show, set at init via the collector's TRACE_LOG_LEVEL var
+// (in trace-collector/wrangler.jsonc `vars`, or a .dev.vars file, or `--var`).
+// Logs below this level are dropped (not shown, not persisted). "debug" = show all.
+const LEVEL_RANK = { debug: 0, info: 1, log: 1, warn: 2, error: 3 };
+
+function resolveMinLogRank(env) {
+	const lvl = String(env?.TRACE_LOG_LEVEL ?? "debug").toLowerCase();
+	return LEVEL_RANK[lvl] ?? 0;
+}
+
+// Output format, set via the collector's TRACE_FORMAT var:
+//   "pretty" (default) — the colored gantt waterfall (human)
+//   "agent"            — one terse line per trace, repeats collapsed (token-light)
+//   "json"             — one minified JSON object per trace (NDJSON, for parsing)
+function resolveFormat(env) {
+	const f = String(env?.TRACE_FORMAT ?? "pretty").toLowerCase();
+	return f === "agent" || f === "json" ? f : "pretty";
+}
+
+let initAnnounced = false;
+function announceLevelOnce(env) {
+	if (initAnnounced) return;
+	initAnnounced = true;
+	const lvl = String(env?.TRACE_LOG_LEVEL ?? "debug").toLowerCase();
+	const fmt = resolveFormat(env);
+	console.log(
+		`${C.gray}trace-collector: format="${fmt}", logs at level "${lvl}" and above${C.reset}`,
+	);
+}
+
 export default class TraceCollector extends WorkerEntrypoint {
 	tailStream(onset) {
 		if (DEBUG) console.log("ONSET", JSON.stringify(onset, replacer, 2));
@@ -47,6 +77,9 @@ export default class TraceCollector extends WorkerEntrypoint {
 		// persistence needs env/ctx — capture from the entrypoint instance
 		const env = this.env;
 		const ctx = this.ctx;
+		const minLogRank = resolveMinLogRank(env);
+		const format = resolveFormat(env);
+		announceLevelOnce(env);
 
 		spans.set(rootId, {
 			id: rootId,
@@ -106,6 +139,8 @@ export default class TraceCollector extends WorkerEntrypoint {
 					break;
 				}
 				case "log": {
+					// drop logs below the configured minimum level
+					if ((LEVEL_RANK[ev.level] ?? 1) < minLogRank) break;
 					const s = spans.get(ctxSpanId) ?? spans.get(rootId);
 					if (s)
 						s.logs.push({
@@ -127,7 +162,13 @@ export default class TraceCollector extends WorkerEntrypoint {
 						r.end = toMs(e.timestamp);
 						r.outcome = ev.outcome;
 					}
-					render(spans, order, rootId, traceId);
+					if (format === "agent") {
+						console.log(agentLine(spans, order, rootId, traceId));
+					} else if (format === "json") {
+						console.log(agentJson(spans, order, rootId, traceId));
+					} else {
+						render(spans, order, rootId, traceId);
+					}
 					// persist the completed trace; don't block the tail callback
 					if (env?.TRACES) {
 						ctx.waitUntil(
@@ -272,6 +313,71 @@ function normalizeAttrValue(v) {
 	if (typeof v === "bigint") return v.toString();
 	if (Array.isArray(v)) return v.map((x) => (typeof x === "bigint" ? x.toString() : x));
 	return v;
+}
+
+// ---- agent output (token-optimized) -----------------------------------------
+//
+// One line per trace. The big token win is COLLAPSING repeated sibling spans:
+// an N+1 of 10 identical D1 calls becomes `d1_first×10(Σ5ms)` instead of 10
+// rows. No ANSI, long values truncated, top-6 span groups only. Full detail is
+// available on demand via trace-query.mjs (`show <traceId>`), not dumped here.
+
+function agentSummary(spans, order, rootId) {
+	const root = spans.get(rootId);
+	const t0 = root.start;
+	const total = Math.round((root.end ?? t0) - t0);
+
+	const groups = new Map(); // name -> {name, kind, count, ms}
+	const errs = [];
+	let errCount = 0;
+	for (const id of order) {
+		if (id === rootId) continue;
+		const s = spans.get(id);
+		const dur = s.end != null ? s.end - s.start : 0;
+		const g = groups.get(s.name) ?? { name: s.name, kind: s.kind, count: 0, ms: 0 };
+		g.count += 1;
+		g.ms += dur;
+		groups.set(s.name, g);
+		if (s.error) errs.push(s.error);
+		if (s.error || (s.outcome && s.outcome !== "ok")) errCount += 1;
+	}
+	if (root.error) errs.push(root.error);
+	const top = [...groups.values()].sort((a, b) => b.ms - a.ms).slice(0, 6);
+	return { root, total, top, errCount, errs };
+}
+
+function agentLine(spans, order, rootId, traceId) {
+	const { root, total, top, errCount, errs } = agentSummary(spans, order, rootId);
+	const spanStr = top
+		.map((g) =>
+			g.count > 1
+				? `${g.name}\u00d7${g.count}(\u03a3${round(g.ms)}ms)`
+				: `${g.name}(${round(g.ms)}ms)`,
+		)
+		.join(" ");
+	const status = root.statusCode != null ? ` ${root.statusCode}` : "";
+	const errPart = errs.length ? `  ERR:${truncate(errs[0], 60)}` : "";
+	const tid = (traceId ?? rootId).slice(0, 8);
+	return `[${tid}] ${root.name}${status} ${root.outcome ?? "?"} ${total}ms spans=${order.length} err=${errCount}  ${spanStr}${errPart}`;
+}
+
+function agentJson(spans, order, rootId, traceId) {
+	const { root, total, top, errCount, errs } = agentSummary(spans, order, rootId);
+	return JSON.stringify({
+		t: (traceId ?? rootId).slice(0, 8),
+		name: root.name,
+		st: root.statusCode ?? null,
+		o: root.outcome ?? null,
+		ms: total,
+		n: order.length,
+		sp: top.map((g) => ({ n: g.name, k: g.kind, c: g.count, ms: round(g.ms) })),
+		err: errCount ? errs.slice(0, 3).map((e) => truncate(e, 80)) : [],
+	});
+}
+
+function truncate(s, n) {
+	const str = String(s);
+	return str.length > n ? str.slice(0, n - 1) + "\u2026" : str;
 }
 
 // ---- rendering (unchanged) --------------------------------------------------

@@ -48,10 +48,12 @@ export default {
         case "/boom":
           return await handleBoom();
         default:
-          return new Response(
-            "wobs-trace-demo\n\nTry:\n  GET  /fast\n  POST /slow\n  GET  /chain\n  GET  /boom\n",
-            { headers: { "content-type": "text/plain" } },
-          );
+          if (url.pathname === "/") {
+            return new Response(homePage(), {
+              headers: { "content-type": "text/html; charset=utf-8" },
+            });
+          }
+          return new Response("Not found\n", { status: 404 });
       }
     } catch (err) {
       console.error(`!! ${route} failed:`, err instanceof Error ? err.message : err);
@@ -59,6 +61,78 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * A tiny click-to-fire control panel served at `/`. Each button issues a fetch
+ * to one of the demo routes so you can generate traces without typing curl —
+ * then watch them appear in the local explorer's Observability tab.
+ */
+function homePage(): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>wobs-trace-demo — control panel</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; margin: 0; padding: 2rem; max-width: 720px; }
+  h1 { font-size: 1.15rem; margin: 0 0 .25rem; }
+  p.sub { color: #888; margin: 0 0 1.5rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  button { font: inherit; padding: .7rem .9rem; border-radius: 10px; border: 1px solid #8884; background: #f4920820; cursor: pointer; text-align: left; }
+  button:hover { background: #f4920833; }
+  button b { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  button small { color: #888; }
+  .burst { grid-column: 1 / -1; background: #3992ff22; border-color: #3992ff55; }
+  #log { margin-top: 1.5rem; border-top: 1px solid #8883; padding-top: .75rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: pre-wrap; max-height: 220px; overflow:auto; }
+  .ok { color: #2a9d4a; } .err { color: #e0483d; }
+  a { color: #3992ff; }
+</style>
+</head>
+<body>
+  <h1>🌊 wobs-trace-demo</h1>
+  <p class="sub">Click a button to fire a request — each one produces a trace. Watch them in the
+  <a href="/cdn-cgi/explorer/" target="_blank">Local Explorer → Observability</a> tab (and your terminal).</p>
+
+  <div class="grid">
+    <button data-m="GET"  data-p="/fast"><b>GET /fast</b><small>1 KV read — baseline</small></button>
+    <button data-m="POST" data-p="/slow"><b>POST /slow</b><small>N+1: ~11 D1 queries</small></button>
+    <button data-m="GET"  data-p="/chain"><b>GET /chain</b><small>outbound fetch()</small></button>
+    <button data-m="GET"  data-p="/boom"><b>GET /boom</b><small>handled error → 500</small></button>
+    <button data-m="GET"  data-p="/checkout"><b>GET /checkout</b><small>KV+D1, then throws</small></button>
+    <button class="burst" id="burst"><b>⚡ Fire a burst (one of each ×3)</b><small>generate a batch of traces</small></button>
+  </div>
+
+  <div id="log"></div>
+
+<script>
+  const logEl = document.getElementById("log");
+  function log(line, cls) {
+    const t = new Date().toLocaleTimeString();
+    logEl.innerHTML = '<span class="' + (cls||'') + '">' + t + '  ' + line + '</span>\\n' + logEl.innerHTML;
+  }
+  async function fire(method, path) {
+    const start = performance.now();
+    try {
+      const res = await fetch(path, { method });
+      const ms = Math.round(performance.now() - start);
+      log(method + ' ' + path + ' → ' + res.status + ' (' + ms + 'ms)', res.ok ? 'ok' : 'err');
+    } catch (e) {
+      log(method + ' ' + path + ' → failed: ' + e.message, 'err');
+    }
+  }
+  document.querySelectorAll('button[data-p]').forEach((b) =>
+    b.addEventListener('click', () => fire(b.dataset.m, b.dataset.p))
+  );
+  document.getElementById('burst').addEventListener('click', async () => {
+    const routes = [['GET','/fast'],['POST','/slow'],['GET','/chain'],['GET','/boom'],['GET','/checkout']];
+    for (let i = 0; i < 3; i++) for (const [m, p] of routes) { await fire(m, p); }
+  });
+</script>
+</body>
+</html>`;
+}
 
 /** One KV read. Fast and boring -- the baseline "good" request. */
 async function handleFast(env: Env): Promise<Response> {
