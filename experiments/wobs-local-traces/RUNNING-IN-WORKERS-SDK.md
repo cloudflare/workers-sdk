@@ -42,13 +42,38 @@ node ../../../packages/wrangler/bin/wrangler.js dev \
   --persist-to "$STATE" --port 8799
 ```
 
-Fire some requests, then open the explorer and click **Observability**:
+Then open **two** pages:
+
+- **Control panel (the buttons UI):** `http://localhost:8799/` — the demo
+  Worker serves a click-to-fire page at its root. Click a button (or "Fire a
+  burst") to generate traces without typing curl.
+- **Local Explorer → Observability:** `http://localhost:8799/cdn-cgi/explorer/`
+  — watch the traces/logs show up (switch views with the Traces/Logs dropdown).
 
 ```bash
+open http://localhost:8799/                  # control panel (buttons)
+open http://localhost:8799/cdn-cgi/explorer/ # observability UI
+
+# ...or fire requests by hand:
 curl localhost:8799/fast
 curl -X POST localhost:8799/slow
 curl localhost:8799/boom
-open http://localhost:8799/cdn-cgi/explorer/
 ```
+
+### If you don't see any UI
+
+- **Build the monorepo packages first** (the explorer is embedded in wrangler):
+  from the repo root run `pnpm install && pnpm build`, or at minimum
+  `pnpm -F @cloudflare/local-explorer-ui build && pnpm -F miniflare build && pnpm -F wrangler build`.
+- **`npm install` inside `wobs-trace-demo`** (it's not a workspace member). On a
+  Cloudflare machine your global `~/.npmrc` likely points `@cloudflare` at an
+  internal registry — create the local `.npmrc` override shown in one-time setup
+  first, or the install fetches the wrong packages.
+- **Use the locally built wrangler** (`node ../../../packages/wrangler/bin/wrangler.js dev`),
+  not a globally installed `wrangler` — only the source build has the
+  Observability tab.
+- The **control panel is at `/`**, the **explorer is at `/cdn-cgi/explorer/`** —
+  on whatever port you passed to `--port` (8799 here; it falls back to another
+  port if that's taken, so check the dev server's startup output).
 
 See `README.md` for what each demo route exercises and how the collector works.
