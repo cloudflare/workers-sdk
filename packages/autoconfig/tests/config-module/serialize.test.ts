@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import {
 	serializeCloudflareConfig,
 	serializeWranglerConfig,
 } from "../../src/config-module/serialize";
 
 describe("serializers", () => {
-	it("emits a defineWorker module importing from wrangler/experimental-config", () => {
+	it("emits a defineWorker module importing from wrangler/experimental-config", ({
+		expect,
+	}) => {
 		const source = serializeCloudflareConfig({
 			name: "my-worker",
 			compatibilityDate: "2026-01-01",
@@ -22,14 +24,14 @@ describe("serializers", () => {
 		expect(source.trim().endsWith("});")).toBe(true);
 	});
 
-	it("quotes object keys that are not valid identifiers", () => {
+	it("quotes object keys that are not valid identifiers", ({ expect }) => {
 		const source = serializeCloudflareConfig({
 			env: { "my-binding": { type: "kv" } },
 		});
 		expect(source).toContain(`"my-binding": {`);
 	});
 
-	it("emits a defineWranglerConfig module for tooling", () => {
+	it("emits a defineWranglerConfig module for tooling", ({ expect }) => {
 		const source = serializeWranglerConfig({ assetsDirectory: "./public" });
 		expect(source).toContain(
 			`import { defineWranglerConfig } from "wrangler/experimental-config";`

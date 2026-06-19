@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { splitRawConfig } from "../split";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 describe("splitRawConfig", () => {
-	it("maps top-level runtime fields to camelCase on the worker config", () => {
+	it("maps top-level runtime fields to camelCase on the worker config", ({
+		expect,
+	}) => {
 		const { worker, tooling } = splitRawConfig({
 			name: "my-worker",
 			main: "./src/index.ts",
@@ -32,7 +34,7 @@ describe("splitRawConfig", () => {
 		expect(tooling).toEqual({});
 	});
 
-	it("converts every supported binding kind into env entries", () => {
+	it("converts every supported binding kind into env entries", ({ expect }) => {
 		const { worker } = splitRawConfig({
 			ai: { binding: "AI", remote: true },
 			browser: { binding: "BROWSER" },
@@ -67,7 +69,9 @@ describe("splitRawConfig", () => {
 		});
 	});
 
-	it("maps routes/crons/queue consumers to triggers and custom domains to domains", () => {
+	it("maps routes/crons/queue consumers to triggers and custom domains to domains", ({
+		expect,
+	}) => {
 		const { worker } = splitRawConfig({
 			routes: [
 				"example.com/*",
@@ -91,7 +95,9 @@ describe("splitRawConfig", () => {
 		expect(worker.domains).toEqual(["cd.com"]);
 	});
 
-	it("derives DO exports from migrations (sqlite vs legacy-kv)", () => {
+	it("derives DO exports from migrations (sqlite vs legacy-kv)", ({
+		expect,
+	}) => {
 		const { worker } = splitRawConfig({
 			migrations: [
 				{ tag: "v1", new_sqlite_classes: ["Counter"] },
@@ -105,7 +111,9 @@ describe("splitRawConfig", () => {
 		});
 	});
 
-	it("splits assets: runtime fields on worker, directory into tooling", () => {
+	it("splits assets: runtime fields on worker, directory into tooling", ({
+		expect,
+	}) => {
 		const { worker, tooling } = splitRawConfig({
 			assets: {
 				binding: "ASSETS",
@@ -125,7 +133,9 @@ describe("splitRawConfig", () => {
 		expect(tooling.assetsDirectory).toBe("./public");
 	});
 
-	it("maps tooling/bundling fields into the wrangler tooling config", () => {
+	it("maps tooling/bundling fields into the wrangler tooling config", ({
+		expect,
+	}) => {
 		const { worker, tooling } = splitRawConfig({
 			name: "w",
 			minify: true,
