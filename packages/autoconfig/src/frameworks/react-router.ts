@@ -254,7 +254,7 @@ function transformReactRouterConfig(
  * @returns `"unstable_viteEnvironmentApi"` for versions before 7.10.0,
  *   or `"v8_viteEnvironmentApi"` for 7.10.0 and later.
  */
-function viteEnvAPIconfigPropertyName(reactRouterVersion: string) {
+function viteEnvApiConfigPropertyName(reactRouterVersion: string) {
 	if (!reactRouterVersion) {
 		return "v8_viteEnvironmentApi";
 	}
