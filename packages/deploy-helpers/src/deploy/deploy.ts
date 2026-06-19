@@ -565,8 +565,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// * aren't a service env deploy
 	// * aren't a service Worker
 	// * we don't have DO migrations
-	// * we don't have declarative DO `exports` (the legacy PUT path is the
-	//   only path that surfaces the `exports_reconciliation` envelope today)
+	// * we don't have declarative DO `exports`. The new POST /versions +
+	//   POST /deployments path below does not yet plumb the
+	//   `exports_reconciliation` envelope from the versions response
+	//   (only the legacy PUT handler renders it), so deploys with
+	//   `exports` fall back to the legacy PUT. Trade-off: a single
+	//   `wrangler deploy` with `exports` cannot use gradual rollouts —
+	//   users who need that can still use the two-command flow
+	//   `wrangler versions upload` + `wrangler versions deploy`, which
+	//   sends `exports` via POST /versions and renders the envelope.
+	//   TODO(DEVX-2572): drop this branch once the versions response
+	//   handler surfaces the reconciliation envelope.
 	// * we aren't an fpw
 	// * not a container worker
 	const canUseNewVersionsDeploymentsApi =
