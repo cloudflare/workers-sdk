@@ -17,7 +17,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
-import { splitRawConfig } from "@cloudflare/config";
+import { getUnsupportedConfigFields, splitRawConfig } from "@cloudflare/config";
 import { FatalError, parseJSONC } from "@cloudflare/workers-utils";
 import {
 	detectPackageManager,
@@ -79,6 +79,7 @@ export async function migrateWranglerConfigToNewFormat(
 
 	const isVite = hasViteConfig(projectPath);
 	const { worker, tooling } = splitRawConfig(raw);
+	const unsupportedFields = getUnsupportedConfigFields(raw);
 	const cloudflareConfig = serializeCloudflareConfig(worker);
 	const hasTooling = Object.keys(tooling).length > 0;
 	const writeToolingConfig = hasTooling && !isVite;
@@ -110,6 +111,13 @@ export async function migrateWranglerConfigToNewFormat(
 		);
 	}
 	logger.log(` 🗑️  Remove ${wranglerConfigPath}`);
+	if (unsupportedFields.length > 0) {
+		logger.warn(
+			`The new config format does not yet support these fields, so they were not migrated: ${unsupportedFields.join(
+				", "
+			)}. They remain unsupported and will need to be configured separately.`
+		);
+	}
 	if (pkg) {
 		logger.log(
 			removeWrangler

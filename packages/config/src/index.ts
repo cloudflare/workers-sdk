@@ -17,7 +17,7 @@ export {
 } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
-export { splitRawConfig } from "./split";
+export { splitRawConfig, getUnsupportedConfigFields } from "./split";
 export type { NewConfigSplit } from "./split";
 export { loadConfig, registerConfigHooks } from "./load";
 export { resolveWorkerDefinition } from "./worker-definition";

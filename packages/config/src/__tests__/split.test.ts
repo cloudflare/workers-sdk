@@ -1,6 +1,38 @@
 import { describe, it } from "vitest";
-import { splitRawConfig } from "../split";
+import { getUnsupportedConfigFields, splitRawConfig } from "../split";
 import type { RawConfig } from "@cloudflare/workers-utils";
+
+describe("getUnsupportedConfigFields", () => {
+	it("returns nothing for a fully representable config", ({ expect }) => {
+		expect(
+			getUnsupportedConfigFields({
+				name: "my-worker",
+				main: "./src/index.ts",
+				kv_namespaces: [{ binding: "KV", id: "kv-id" }],
+			} as RawConfig)
+		).toEqual([]);
+	});
+
+	it("reports fields that splitRawConfig drops", ({ expect }) => {
+		expect(
+			getUnsupportedConfigFields({
+				name: "my-worker",
+				route: "example.com/*",
+				workflows: [{ binding: "WF", name: "wf", class_name: "MyWorkflow" }],
+				containers: [{ class_name: "MyContainer" }],
+			} as unknown as RawConfig)
+		).toEqual(["route", "workflows", "containers"]);
+	});
+
+	it("ignores empty-array binding fields", ({ expect }) => {
+		expect(
+			getUnsupportedConfigFields({
+				name: "my-worker",
+				workflows: [],
+			} as unknown as RawConfig)
+		).toEqual([]);
+	});
+});
 
 describe("splitRawConfig", () => {
 	it("maps top-level runtime fields to camelCase on the worker config", ({

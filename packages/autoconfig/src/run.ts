@@ -10,7 +10,7 @@ import {
 	installPackages,
 	installWrangler,
 } from "@cloudflare/cli-shared-helpers/packages";
-import { splitRawConfig } from "@cloudflare/config";
+import { getUnsupportedConfigFields, splitRawConfig } from "@cloudflare/config";
 import {
 	FatalError,
 	getTodaysCompatDate,
@@ -401,6 +401,14 @@ async function saveNewConfig(
 ): Promise<void> {
 	const { logger } = options.context;
 	const { worker, tooling } = splitRawConfig(rawConfig);
+
+	const unsupportedFields = getUnsupportedConfigFields(rawConfig);
+	if (unsupportedFields.length > 0) {
+		logger.warn(
+			`The new config format does not yet support these fields, so they ` +
+				`were not written to a config file: ${unsupportedFields.join(", ")}.`
+		);
+	}
 
 	await writeFile(
 		resolve(projectPath, "cloudflare.config.ts"),

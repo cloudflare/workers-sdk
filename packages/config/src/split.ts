@@ -30,6 +30,46 @@ export interface NewConfigSplit {
 	tooling: Record<string, unknown>;
 }
 
+/**
+ * Top-level `RawConfig` fields that carry real configuration but have no
+ * representation in the new programmatic config format, so {@link splitRawConfig}
+ * does not translate them (they are dropped). Callers that convert a user's
+ * existing config — most notably the autoconfig migration flow — should surface
+ * these via {@link getUnsupportedConfigFields} so the loss is visible rather
+ * than silent.
+ *
+ * Keep this in sync with {@link splitRawConfig}: when support for one of these
+ * lands in the converter, remove it from this list.
+ */
+const UNSUPPORTED_RAW_CONFIG_FIELDS = [
+	"site",
+	"route",
+	"previews",
+	"workflows",
+	"cloudchamber",
+	"containers",
+	"unsafe_hello_world",
+] as const satisfies readonly (keyof RawConfig)[];
+
+/**
+ * Return the names of fields present in `raw` that {@link splitRawConfig} does
+ * not translate to the new config format (and would therefore silently drop).
+ * Returns an empty array when the config is fully representable.
+ */
+export function getUnsupportedConfigFields(raw: RawConfig): string[] {
+	return UNSUPPORTED_RAW_CONFIG_FIELDS.filter((field) => {
+		const value = raw[field];
+		if (value === undefined) {
+			return false;
+		}
+		// An empty array binding (e.g. `workflows: []`) carries no config.
+		if (Array.isArray(value) && value.length === 0) {
+			return false;
+		}
+		return true;
+	});
+}
+
 type Obj = Record<string, unknown>;
 
 /** Assign `value` to `obj[key]` only when it is not `undefined`. */

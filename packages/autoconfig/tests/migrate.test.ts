@@ -267,6 +267,47 @@ describe("migrateWranglerConfigToNewFormat()", () => {
 		});
 	});
 
+	test("warns about fields the new config format does not support", async ({
+		expect,
+	}) => {
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "my-worker",
+				main: "./src/index.ts",
+				compatibility_date: "2025-01-01",
+				kv_namespaces: [{ binding: "KV", id: "kv-id" }],
+				// Unsupported by the new format — must be surfaced, not dropped silently.
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+				route: "example.com/*",
+			}),
+			"package.json": JSON.stringify({
+				name: "my-worker",
+				devDependencies: { wrangler: "^4.0.0" },
+			}),
+		});
+
+		await migrateWranglerConfigToNewFormat({
+			projectPath: process.cwd(),
+			context,
+		});
+
+		// The user is warned about the dropped fields.
+		expect(std.warn).toContain("workflows");
+		expect(std.warn).toContain("route");
+
+		// The supported fields are still migrated; the unsupported ones are absent.
+		const config = await readFile("cloudflare.config.ts", "utf8");
+		expect(config).toContain("KV");
+		expect(config).not.toContain("workflows");
+		expect(config).not.toContain("MyWorkflow");
+	});
+
 	test("forwards isWorkspaceRoot to the cf install in workspace setups", async ({
 		expect,
 	}) => {
