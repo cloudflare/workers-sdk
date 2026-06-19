@@ -34,7 +34,7 @@ export function ObservabilityViewSwitcher({
 					/>
 				}
 			>
-				<span>{current === "events" ? "Events" : "Traces"}</span>
+				<span>{current === "events" ? "Logs" : "Traces"}</span>
 				<CaretDownIcon className="text-kumo-subtle h-3.5 w-3.5 shrink-0" />
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content style={{ zIndex: 50 }}>
@@ -48,7 +48,7 @@ export function ObservabilityViewSwitcher({
 					icon={current === "events" ? CheckIcon : undefined}
 					onClick={() => go("events")}
 				>
-					Events
+					Logs
 				</DropdownMenu.Item>
 			</DropdownMenu.Content>
 		</DropdownMenu>

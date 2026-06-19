@@ -130,7 +130,7 @@ function EventsView(): JSX.Element {
 				<div className="flex flex-col">
 					<ObservabilityViewSwitcher current="events" worker={worker} />
 					<span className="text-kumo-subtle pl-1 text-[11px] leading-tight">
-						{events.length} event{events.length === 1 ? "" : "s"}
+						{events.length} log{events.length === 1 ? "" : "s"}
 					</span>
 				</div>
 				<div className="flex-1" />
