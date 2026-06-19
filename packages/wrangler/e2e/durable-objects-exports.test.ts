@@ -8,20 +8,21 @@ const TIMEOUT = 60_000;
 
 /**
  * End-to-end coverage of the declarative Durable Object `exports` flow against
- * staging EWC. Gated behind a separate env var (`WRANGLER_E2E_DO_EXPORTS=1`)
- * so the suite stays inert until the server-side
- * `exports_reconciliation` account entitlement is enabled on the
- * `CLOUDFLARE_ACCOUNT_ID` used for E2E.
- *
- * Once the gate is on, set both env vars to run:
- *
- *   CLOUDFLARE_ACCOUNT_ID=... \
- *     WRANGLER_E2E_DO_EXPORTS=1 \
- *     pnpm --filter wrangler test:e2e durable-objects-exports
+ * staging EWC. Runs whenever `CLOUDFLARE_ACCOUNT_ID` is set, matching the
+ * standard wrangler e2e pattern.
  *
  * Each invocation sets `X_DO_EXPORTS=true` so wrangler routes the upload
  * through the declarative `exports` flow rather than the legacy `migrations`
  * path.
+ *
+ * To run locally:
+ *
+ *   CLOUDFLARE_ACCOUNT_ID=... pnpm --filter wrangler test:e2e durable-objects-exports
+ *
+ * This flow requires the server-side `exports_reconciliation` account
+ * entitlement on the e2e account. Until that entitlement is enabled, the
+ * suite is expected to fail at the first upload — that failure is the
+ * regression signal that confirms the backend gate isn't yet live.
  *
  * The suite is partitioned into four self-contained describe blocks (each
  * owning its own helper / worker(s) and `afterAll` cleanup) so the stateful
@@ -38,14 +39,12 @@ const TIMEOUT = 60_000;
  *     source's `transferred` tombstone).
  *
  * The rename / transfer assertions encode the renderer contract in
- * `packages/wrangler/src/deploy/exports-reconciliation.ts`. The exact server
- * scenario tags surfaced under `info[]` (e.g. `stale_tombstone`,
+ * `packages/deploy-helpers/src/deploy/helpers/exports-reconciliation.ts`. The
+ * exact server scenario tags surfaced under `info[]` (e.g. `stale_tombstone`,
  * `config_export_not_in_code`) may need to be tuned once the backend is live.
  */
-const E2E_GATE_ON =
-	!!CLOUDFLARE_ACCOUNT_ID && process.env.WRANGLER_E2E_DO_EXPORTS === "1";
 
-describe.skipIf(!E2E_GATE_ON)(
+describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"durable-objects-exports",
 	{ timeout: TIMEOUT },
 	() => {
