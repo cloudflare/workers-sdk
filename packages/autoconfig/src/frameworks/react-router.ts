@@ -146,7 +146,7 @@ export function hasV8MiddlewareFlag(
  */
 function transformReactRouterConfig(
 	projectPath: string,
-	viteEnvironmentKey: ReturnType<typeof viteEnvAPIconfigPropertyName>
+	viteEnvironmentKey: ReturnType<typeof viteEnvApiConfigPropertyName>
 ) {
 	const filePath = getReactRouterConfigPath(projectPath);
 	if (!filePath) {
@@ -506,7 +506,7 @@ export class ReactRouter extends Framework {
 			});
 
 			if (needsViteEnvAPIFutureFlag(this.frameworkVersion)) {
-				const viteEnvironmentKey = viteEnvAPIconfigPropertyName(
+				const viteEnvironmentKey = viteEnvApiConfigPropertyName(
 					this.frameworkVersion
 				);
 				transformReactRouterConfig(projectPath, viteEnvironmentKey);
