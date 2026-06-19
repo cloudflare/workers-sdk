@@ -171,6 +171,7 @@ export const kvNamespaceListCommand = createCommand({
 	args: {},
 
 	behaviour: {
+		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
 		skipConfigValidationErrors: true,

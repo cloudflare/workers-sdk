@@ -1,6 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
+import {
+	getDetailsForAutoConfig,
+	getInstalledPackageVersion,
+} from "@cloudflare/autoconfig";
 import { findWranglerConfig } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -62,6 +65,7 @@ vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
 	...(await importOriginal()),
 	runAutoConfig: vi.fn(),
 	getInstalledPackageVersion: vi.fn(),
+	getDetailsForAutoConfig: vi.fn(),
 }));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
@@ -346,12 +350,10 @@ export default{
 		it("should not trigger autoconfig on `wrangler deploy <script>`", async ({
 			expect,
 		}) => {
-			vi.mock(import("@cloudflare/autoconfig"), { spy: true });
-
-			const {
-				getDetailsForAutoConfig: getDetailsForAutoConfigSpy,
-				runAutoConfig: runAutoConfigSpy,
-			} = await import("@cloudflare/autoconfig");
+			const getDetailsForAutoConfigMock = vi.mocked(getDetailsForAutoConfig);
+			const runAutoConfigMock = vi.mocked(
+				(await import("@cloudflare/autoconfig")).runAutoConfig
+			);
 
 			writeWranglerConfig();
 			writeWorkerSource({ basePath: "./src" });
@@ -360,8 +362,8 @@ export default{
 
 			await runWrangler("deploy ./src/index.js");
 
-			expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
-			expect(runAutoConfigSpy).not.toHaveBeenCalled();
+			expect(getDetailsForAutoConfigMock).not.toHaveBeenCalled();
+			expect(runAutoConfigMock).not.toHaveBeenCalled();
 		});
 
 		it("should preserve exports on a module format worker", async ({
@@ -888,12 +890,10 @@ addEventListener('fetch', event => {});`
 			it("should handle interactive `wrangler deploy <directory>` flows without triggering autoconfig", async ({
 				expect,
 			}) => {
-				vi.mock(import("@cloudflare/autoconfig"), { spy: true });
-
-				const {
-					getDetailsForAutoConfig: getDetailsForAutoConfigSpy,
-					runAutoConfig: runAutoConfigSpy,
-				} = await import("@cloudflare/autoconfig");
+				const getDetailsForAutoConfigMock = vi.mocked(getDetailsForAutoConfig);
+				const runAutoConfigMock = vi.mocked(
+					(await import("@cloudflare/autoconfig")).runAutoConfig
+				);
 
 				mockPrompt({
 					text: "What do you want to name your project?",
@@ -959,19 +959,17 @@ addEventListener('fetch', event => {});`
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
-				expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
-				expect(runAutoConfigSpy).not.toHaveBeenCalled();
+				expect(getDetailsForAutoConfigMock).not.toHaveBeenCalled();
+				expect(runAutoConfigMock).not.toHaveBeenCalled();
 			});
 
 			it("should handle `wrangler deploy --assets` without name or compat date without triggering autoconfig", async ({
 				expect,
 			}) => {
-				vi.mock(import("@cloudflare/autoconfig"), { spy: true });
-
-				const {
-					getDetailsForAutoConfig: getDetailsForAutoConfigSpy,
-					runAutoConfig: runAutoConfigSpy,
-				} = await import("@cloudflare/autoconfig");
+				const getDetailsForAutoConfigMock = vi.mocked(getDetailsForAutoConfig);
+				const runAutoConfigMock = vi.mocked(
+					(await import("@cloudflare/autoconfig")).runAutoConfig
+				);
 
 				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
 				mockPrompt({
@@ -1038,8 +1036,8 @@ addEventListener('fetch', event => {});`
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
-				expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
-				expect(runAutoConfigSpy).not.toHaveBeenCalled();
+				expect(getDetailsForAutoConfigMock).not.toHaveBeenCalled();
+				expect(runAutoConfigMock).not.toHaveBeenCalled();
 			});
 
 			it("should suggest 'my-project' if the default name from the cwd is invalid", async ({
