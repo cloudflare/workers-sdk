@@ -130,7 +130,7 @@ describe("wrangler", () => {
 			test("should default to wrangler when not provided", async ({
 				expect,
 			}) => {
-				await runWrangler("complete powershell");
+				await runWrangler("complete bash");
 
 				expect(std.out).toContain("wrangler complete --");
 			});
