@@ -1,5 +1,17 @@
 # @cloudflare/workers-utils
 
+## 0.24.0
+
+### Minor Changes
+
+- [#14295](https://github.com/cloudflare/workers-sdk/pull/14295) [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Move `unstable_getWorkerNameFromProject` from wrangler to `@cloudflare/workers-utils`
+
+  The `unstable_getWorkerNameFromProject` export has been removed from the `wrangler` package. This function is now available as `getWorkerNameFromProject` (without the `unstable_` prefix) from `@cloudflare/workers-utils`. If you were importing this function from `wrangler`, update your import to use `@cloudflare/workers-utils` instead.
+
+- [#14295](https://github.com/cloudflare/workers-sdk/pull/14295) [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add PackageManager type and constants
+
+  Added the `PackageManager` interface and package manager constants (`NpmPackageManager`, `PnpmPackageManager`, `YarnPackageManager`, `BunPackageManager`).
+
 ## 0.23.2
 
 ### Patch Changes
