@@ -11,60 +11,28 @@
 import type { NewConfigSplit } from "@cloudflare/config";
 
 /**
- * The module specifier the generated files import their `define*` helpers
- * from. `wrangler/experimental-config` re-exports `defineWorker` (from
- * `@cloudflare/config`) and `defineWranglerConfig`, so a single dependency
- * (wrangler, which autoconfig already installs) covers both files.
+ * Module specifier `wrangler.config.ts` (and a non-Vite project's
+ * `cloudflare.config.ts`) imports its `define*` helpers from.
+ * `wrangler/experimental-config` re-exports both `defineWorker` and
+ * `defineWranglerConfig`.
  */
-export const CONFIG_IMPORT_SOURCE = "wrangler/experimental-config";
-
-const VALID_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-
-/** Print an object key, quoting it when it isn't a bare identifier. */
-function printKey(key: string): string {
-	return VALID_IDENTIFIER.test(key) ? key : JSON.stringify(key);
-}
+export const WRANGLER_CONFIG_IMPORT_SOURCE = "wrangler/experimental-config";
 
 /**
- * Print a JS value as TypeScript source. `indent` is the current indentation
- * (tabs). Objects and arrays are printed multi-line; empty ones inline.
+ * Module specifier a Vite project's `cloudflare.config.ts` imports `defineWorker`
+ * from. Vite projects depend on `@cloudflare/vite-plugin` (not `wrangler`) as
+ * their build tool, so the import must resolve from there.
  */
-function printValue(value: unknown, indent: string): string {
-	if (value === null) {
-		return "null";
-	}
-	if (typeof value === "string") {
-		return JSON.stringify(value);
-	}
-	if (typeof value === "number" || typeof value === "boolean") {
-		return String(value);
-	}
-	if (Array.isArray(value)) {
-		if (value.length === 0) {
-			return "[]";
-		}
-		const inner = indent + "\t";
-		const items = value
-			.map((item) => `${inner}${printValue(item, inner)},`)
-			.join("\n");
-		return `[\n${items}\n${indent}]`;
-	}
-	if (typeof value === "object") {
-		const entries = Object.entries(value as Record<string, unknown>);
-		if (entries.length === 0) {
-			return "{}";
-		}
-		const inner = indent + "\t";
-		const lines = entries
-			.map(
-				([key, val]) => `${inner}${printKey(key)}: ${printValue(val, inner)},`
-			)
-			.join("\n");
-		return `{\n${lines}\n${indent}}`;
-	}
-	// undefined / functions / symbols shouldn't appear (splitRawConfig omits
-	// undefined); fall back to `null` rather than emitting invalid source.
-	return "null";
+export const VITE_CONFIG_IMPORT_SOURCE =
+	"@cloudflare/vite-plugin/experimental-config";
+
+/**
+ * The module specifier a project's `cloudflare.config.ts` should import its
+ * `defineWorker` helper from: the Vite plugin for Vite projects, otherwise
+ * wrangler (which owns the build tooling, and emits the `wrangler.config.ts`).
+ */
+export function cloudflareConfigImportSource(isVite: boolean): string {
+	return isVite ? VITE_CONFIG_IMPORT_SOURCE : WRANGLER_CONFIG_IMPORT_SOURCE;
 }
 
 function emitModule(
@@ -74,22 +42,29 @@ function emitModule(
 ): string {
 	return (
 		`import { ${helper} } from "${importSource}";\n\n` +
-		`export default ${helper}(${printValue(config, "")});\n`
+		`export default ${helper}(${JSON.stringify(config, null, "\t")});\n`
 	);
 }
 
-/** Serialize the runtime config to `cloudflare.config.ts` source. */
+/**
+ * Serialize the runtime config to `cloudflare.config.ts` source. The
+ * `importSource` selects where `defineWorker` is imported from — pass
+ * {@link cloudflareConfigImportSource} based on whether the project is Vite.
+ */
 export function serializeCloudflareConfig(
 	worker: NewConfigSplit["worker"],
-	importSource: string = CONFIG_IMPORT_SOURCE
+	importSource: string = WRANGLER_CONFIG_IMPORT_SOURCE
 ): string {
 	return emitModule("defineWorker", worker, importSource);
 }
 
-/** Serialize the tooling config to `wrangler.config.ts` source. */
+/**
+ * Serialize the tooling config to `wrangler.config.ts` source. Only non-Vite
+ * (wrangler-owned) projects emit this file, so it always imports from wrangler.
+ */
 export function serializeWranglerConfig(
 	tooling: NewConfigSplit["tooling"],
-	importSource: string = CONFIG_IMPORT_SOURCE
+	importSource: string = WRANGLER_CONFIG_IMPORT_SOURCE
 ): string {
 	return emitModule("defineWranglerConfig", tooling, importSource);
 }

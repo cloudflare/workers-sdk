@@ -82,40 +82,40 @@ describe("migrateWranglerConfigToNewFormat()", () => {
 				"import { defineWorker } from "wrangler/experimental-config";
 
 				export default defineWorker({
-					name: "my-worker",
-					entrypoint: "./src/index.ts",
-					compatibilityDate: "2025-01-01",
-					compatibilityFlags: [
-						"nodejs_compat",
+					"name": "my-worker",
+					"entrypoint": "./src/index.ts",
+					"compatibilityDate": "2025-01-01",
+					"compatibilityFlags": [
+						"nodejs_compat"
 					],
-					observability: {
-						enabled: true,
+					"observability": {
+						"enabled": true
 					},
-					env: {
-						KV: {
-							type: "kv",
-							id: "kv-id",
+					"env": {
+						"KV": {
+							"type": "kv",
+							"id": "kv-id"
 						},
-						ASSETS: {
-							type: "assets",
-						},
-					},
+						"ASSETS": {
+							"type": "assets"
+						}
+					}
 				});
 				"
 			`);
 
 		// Tooling config is written for non-Vite projects.
 		expect(await readFile("wrangler.config.ts", "utf8")).toMatchInlineSnapshot(`
-				"import { defineWranglerConfig } from "wrangler/experimental-config";
+			"import { defineWranglerConfig } from "wrangler/experimental-config";
 
-				export default defineWranglerConfig({
-					assetsDirectory: "./public",
-					build: {
-						command: "npm run build",
-					},
-				});
-				"
-			`);
+			export default defineWranglerConfig({
+				"assetsDirectory": "./public",
+				"build": {
+					"command": "npm run build"
+				}
+			});
+			"
+		`);
 
 		// `wrangler` scripts are rewritten to `cf`, non-wrangler scripts left alone.
 		const pkg = JSON.parse(await readFile("package.json", "utf8"));

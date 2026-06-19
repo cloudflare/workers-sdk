@@ -1,5 +1,12 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+	BunPackageManager,
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+} from "@cloudflare/workers-utils";
+import type { PackageManager } from "@cloudflare/workers-utils";
 
 /**
  * Path to the project's Wrangler JSON(C) config (`wrangler.jsonc` preferred,
@@ -26,21 +33,25 @@ export function hasViteConfig(projectPath: string): boolean {
 
 /**
  * Detect the project's package manager from its lockfile, defaulting to npm.
+ *
+ * This is a lightweight, lockfile-only probe used by the standalone migration
+ * flow. The lockfile names are taken from the shared `PackageManager`
+ * definitions rather than duplicated here.
  */
 export function detectPackageManager(
 	projectPath: string
-): "npm" | "pnpm" | "yarn" | "bun" {
-	if (existsSync(resolve(projectPath, "pnpm-lock.yaml"))) {
-		return "pnpm";
+): PackageManager["type"] {
+	for (const packageManager of [
+		PnpmPackageManager,
+		YarnPackageManager,
+		BunPackageManager,
+	]) {
+		const hasLockFile = packageManager.lockFiles.some((lockFile) =>
+			existsSync(resolve(projectPath, lockFile))
+		);
+		if (hasLockFile) {
+			return packageManager.type;
+		}
 	}
-	if (existsSync(resolve(projectPath, "yarn.lock"))) {
-		return "yarn";
-	}
-	if (
-		existsSync(resolve(projectPath, "bun.lockb")) ||
-		existsSync(resolve(projectPath, "bun.lock"))
-	) {
-		return "bun";
-	}
-	return "npm";
+	return NpmPackageManager.type;
 }

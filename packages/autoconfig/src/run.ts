@@ -21,6 +21,7 @@ import {
 	hasViteConfig,
 } from "./config-module/fs-utils";
 import {
+	cloudflareConfigImportSource,
 	serializeCloudflareConfig,
 	serializeWranglerConfig,
 } from "./config-module/serialize";
@@ -400,9 +401,26 @@ async function saveNewConfig(
 	}
 ): Promise<void> {
 	const { logger } = options.context;
-	const { worker, tooling } = splitRawConfig(rawConfig);
 
-	const unsupportedFields = getUnsupportedConfigFields(rawConfig);
+	// Merge any wrangler config currently on disk into the config we write,
+	// mirroring the jsonc path (`saveWranglerJsonc`). A framework's
+	// `configure()` step may write settings straight to a `wrangler.jsonc`
+	// (e.g. Next.js via `@opennextjs/cloudflare`, which returns an empty
+	// `wranglerConfig` and relies on the on-disk file); without this they'd be
+	// lost from the generated `cloudflare.config.ts`. The passed `rawConfig`
+	// (autoconfig base + framework return value) wins on conflicts.
+	const onDiskConfigPath = getWranglerJsonConfigPath(projectPath);
+	const onDiskConfig: RawConfig = onDiskConfigPath
+		? (parseJSONC(
+				await readFile(onDiskConfigPath, "utf8"),
+				onDiskConfigPath
+			) as RawConfig)
+		: {};
+	const mergedConfig: RawConfig = { ...onDiskConfig, ...rawConfig };
+
+	const { worker, tooling } = splitRawConfig(mergedConfig);
+
+	const unsupportedFields = getUnsupportedConfigFields(mergedConfig);
 	if (unsupportedFields.length > 0) {
 		logger.warn(
 			`The new config format does not yet support these fields, so they ` +
@@ -412,7 +430,10 @@ async function saveNewConfig(
 
 	await writeFile(
 		resolve(projectPath, "cloudflare.config.ts"),
-		serializeCloudflareConfig(worker)
+		serializeCloudflareConfig(
+			worker,
+			cloudflareConfigImportSource(options.isVite)
+		)
 	);
 
 	// Tooling settings (assets directory, bundling, dev server) only have a
@@ -436,16 +457,20 @@ async function saveNewConfig(
 		}
 	}
 
-	// Migration: remove the old wrangler config now that the new files exist.
-	// `preexistingWranglerConfigPath` is captured before the framework's
-	// `configure()` runs; a framework CLI may also write a fresh
-	// `wrangler.jsonc` during setup, so fall back to re-discovering the current
-	// path to ensure that is cleaned up too.
-	const wranglerConfigToRemove =
-		options.preexistingWranglerConfigPath ??
-		getWranglerJsonConfigPath(projectPath);
-	if (wranglerConfigToRemove) {
-		await rm(wranglerConfigToRemove, { force: true });
+	// Remove every wrangler config we superseded: the one captured before the
+	// framework's `configure()` ran (`preexistingWranglerConfigPath`) and any
+	// that `configure()` itself wrote (`onDiskConfigPath`). They can differ
+	// (e.g. a pre-existing `wrangler.json` plus a framework-created
+	// `wrangler.jsonc`), so remove both rather than just one.
+	const wranglerConfigsToRemove = new Set(
+		[options.preexistingWranglerConfigPath, onDiskConfigPath].filter(
+			(path): path is string => path !== undefined
+		)
+	);
+	for (const path of wranglerConfigsToRemove) {
+		if (existsSync(path)) {
+			await rm(path);
+		}
 	}
 }
 
@@ -565,7 +590,11 @@ export async function buildOperationsSummary(
 			const { worker, tooling } = splitRawConfig(wranglerConfigToWrite);
 			logger.log("📄 Create cloudflare.config.ts:");
 			logger.log(
-				"  " + serializeCloudflareConfig(worker).replace(/\n/g, "\n  ")
+				"  " +
+					serializeCloudflareConfig(
+						worker,
+						cloudflareConfigImportSource(configPreview.isVite === true)
+					).replace(/\n/g, "\n  ")
 			);
 			logger.log("");
 			if (Object.keys(tooling).length > 0 && !configPreview.isVite) {

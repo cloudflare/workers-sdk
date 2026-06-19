@@ -25,6 +25,7 @@ import {
 	hasViteConfig,
 } from "./config-module/fs-utils";
 import {
+	cloudflareConfigImportSource,
 	serializeCloudflareConfig,
 	serializeWranglerConfig,
 } from "./config-module/serialize";
@@ -80,7 +81,10 @@ export async function migrateWranglerConfigToNewFormat(
 	const isVite = hasViteConfig(projectPath);
 	const { worker, tooling } = splitRawConfig(raw);
 	const unsupportedFields = getUnsupportedConfigFields(raw);
-	const cloudflareConfig = serializeCloudflareConfig(worker);
+	const cloudflareConfig = serializeCloudflareConfig(
+		worker,
+		cloudflareConfigImportSource(isVite)
+	);
 	const hasTooling = Object.keys(tooling).length > 0;
 	const writeToolingConfig = hasTooling && !isVite;
 

@@ -21,22 +21,26 @@ import type {
 } from "../src/frameworks/framework-class";
 
 /**
- * A framework whose real (non-dry-run) `configure()` writes its own
- * `wrangler.jsonc`, mirroring framework CLIs that emit one during setup.
+ * A framework whose real (non-dry-run) `configure()` writes settings straight
+ * to a `wrangler.jsonc` and returns an empty `wranglerConfig`, mirroring
+ * framework CLIs like Next.js via `@opennextjs/cloudflare`.
  */
 class WranglerWritingFramework extends Framework {
 	async configure({
-		outputDir,
 		projectPath,
 		dryRun,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			await writeFile(
 				resolve(projectPath, "wrangler.jsonc"),
-				JSON.stringify({ name: "framework-created" })
+				JSON.stringify({
+					name: "framework-created",
+					kv_namespaces: [{ binding: "FROM_FRAMEWORK", id: "abc" }],
+				})
 			);
 		}
-		return { wranglerConfig: { assets: { directory: outputDir } } };
+		// Returns nothing of its own; the real config lives in the file it wrote.
+		return { wranglerConfig: {} };
 	}
 }
 
@@ -92,14 +96,14 @@ describe("runAutoConfig() - new programmatic config format", () => {
 			"import { defineWorker } from "wrangler/experimental-config";
 
 			export default defineWorker({
-				name: "my-worker",
-				compatibilityDate: "<current-date>",
-				compatibilityFlags: [
-					"nodejs_compat",
+				"name": "my-worker",
+				"compatibilityDate": "<current-date>",
+				"compatibilityFlags": [
+					"nodejs_compat"
 				],
-				observability: {
-					enabled: true,
-				},
+				"observability": {
+					"enabled": true
+				}
 			});
 			"
 		`);
@@ -110,7 +114,7 @@ describe("runAutoConfig() - new programmatic config format", () => {
 			"import { defineWranglerConfig } from "wrangler/experimental-config";
 
 			export default defineWranglerConfig({
-				assetsDirectory: "dist",
+				"assetsDirectory": "dist"
 			});
 			"
 		`);
@@ -154,6 +158,13 @@ describe("runAutoConfig() - new programmatic config format", () => {
 		expect(existsSync("cloudflare.config.ts")).toBe(true);
 		expect(existsSync("wrangler.config.ts")).toBe(false);
 		expect(existsSync("wrangler.jsonc")).toBe(false);
+
+		// A Vite project's cloudflare.config.ts imports from the vite plugin,
+		// which is its build tool (not wrangler).
+		const config = await readFile("cloudflare.config.ts", "utf8");
+		expect(config).toContain(
+			`import { defineWorker } from "@cloudflare/vite-plugin/experimental-config";`
+		);
 
 		// The tooling fields that have nowhere to go are surfaced rather than dropped.
 		expect(std.warn).toContain("owned by Vite");
@@ -259,5 +270,10 @@ describe("runAutoConfig() - new programmatic config format", () => {
 		// the new programmatic config.
 		expect(existsSync("wrangler.jsonc")).toBe(false);
 		expect(existsSync("cloudflare.config.ts")).toBe(true);
+
+		// Settings the framework wrote to disk must be merged into the generated
+		// config, not silently lost (mirrors the jsonc path's behaviour).
+		const config = await readFile("cloudflare.config.ts", "utf8");
+		expect(config).toContain("FROM_FRAMEWORK");
 	});
 });

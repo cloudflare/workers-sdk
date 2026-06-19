@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import {
+	cloudflareConfigImportSource,
 	serializeCloudflareConfig,
 	serializeWranglerConfig,
 } from "../../src/config-module/serialize";
@@ -18,17 +19,22 @@ describe("serializers", () => {
 			`import { defineWorker } from "wrangler/experimental-config";`
 		);
 		expect(source).toContain("export default defineWorker({");
-		expect(source).toContain(`name: "my-worker"`);
-		expect(source).toContain(`KV: {`);
-		expect(source).toContain(`type: "kv"`);
+		expect(source).toContain(`"name": "my-worker"`);
+		expect(source).toContain(`"KV": {`);
+		expect(source).toContain(`"type": "kv"`);
 		expect(source.trim().endsWith("});")).toBe(true);
 	});
 
-	it("quotes object keys that are not valid identifiers", ({ expect }) => {
-		const source = serializeCloudflareConfig({
-			env: { "my-binding": { type: "kv" } },
-		});
-		expect(source).toContain(`"my-binding": {`);
+	it("imports defineWorker from the vite plugin for Vite projects", ({
+		expect,
+	}) => {
+		const source = serializeCloudflareConfig(
+			{ name: "my-worker" },
+			cloudflareConfigImportSource(true)
+		);
+		expect(source).toContain(
+			`import { defineWorker } from "@cloudflare/vite-plugin/experimental-config";`
+		);
 	});
 
 	it("emits a defineWranglerConfig module for tooling", ({ expect }) => {
@@ -36,6 +42,6 @@ describe("serializers", () => {
 		expect(source).toContain(
 			`import { defineWranglerConfig } from "wrangler/experimental-config";`
 		);
-		expect(source).toContain(`assetsDirectory: "./public"`);
+		expect(source).toContain(`"assetsDirectory": "./public"`);
 	});
 });
