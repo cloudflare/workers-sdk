@@ -9,8 +9,8 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
 		"--project-name",
 		ctx.project.name,
-		"--template",
-		"07_cloudflare",
+		"--example",
+		"https://github.com/wakujs/waku-examples/tree/main/fs-router/cloudflare",
 	]);
 };
 
