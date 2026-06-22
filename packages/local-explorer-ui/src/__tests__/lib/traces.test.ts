@@ -2,6 +2,7 @@ import { beforeEach, describe, test, vi } from "vitest";
 import { d1RawDatabaseQuery } from "../../api";
 import {
 	buildSpanTree,
+	clearTraces,
 	findTraceDatabaseId,
 	isTraceStoreBinding,
 	listEvents,
@@ -245,5 +246,17 @@ describe("listEvents SQL", () => {
 	test("escapes single quotes in event search", async ({ expect }) => {
 		await listEvents("db", { search: "it's" });
 		expect(lastSql()).toContain("it''s");
+	});
+});
+
+describe("clearTraces", () => {
+	test("deletes logs, spans, and traces", async ({ expect }) => {
+		await clearTraces("db");
+		const sql = mockQuery.mock.calls.map(
+			(c) => (c[0] as { body: { sql: string } }).body.sql
+		);
+		expect(sql).toContain("DELETE FROM logs");
+		expect(sql).toContain("DELETE FROM spans");
+		expect(sql).toContain("DELETE FROM traces");
 	});
 });

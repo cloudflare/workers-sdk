@@ -3,6 +3,7 @@ import {
 	ArrowsCounterClockwiseIcon,
 	MagnifyingGlassIcon,
 	PulseIcon,
+	TrashIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
@@ -11,6 +12,7 @@ import { ObservabilityViewSwitcher } from "../components/observability/Observabi
 import { TraceWaterfall } from "../components/observability/TraceWaterfall";
 import { parseTraceQuery } from "../lib/query";
 import {
+	clearTraces,
 	findTraceDatabaseId,
 	getTagKeys,
 	getTraceSpans,
@@ -18,6 +20,8 @@ import {
 	type SpanRow,
 	type TraceRow,
 } from "../lib/traces";
+
+const SKIP_CLEAR_CONFIRM_KEY = "wobs-skip-clear-confirm";
 
 export const Route = createFileRoute("/observability")({
 	component: ObservabilityView,
@@ -70,6 +74,8 @@ function ObservabilityView(): JSX.Element {
 	);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [confirmingClear, setConfirmingClear] = useState(false);
+	const [skipClearConfirm, setSkipClearConfirm] = useState(false);
 
 	// filters (simpler version of the dashboard query builder)
 	const [search, setSearch] = useState("");
@@ -135,6 +141,38 @@ function ObservabilityView(): JSX.Element {
 		return () => clearInterval(id);
 	}, [refresh]);
 
+	useEffect(() => {
+		try {
+			setSkipClearConfirm(localStorage.getItem(SKIP_CLEAR_CONFIRM_KEY) === "1");
+		} catch {
+			// localStorage unavailable — ignore
+		}
+	}, []);
+
+	// Wipe all captured traces/spans/logs from the store, then refresh.
+	const doClear = useCallback(async () => {
+		if (!databaseId) {
+			return;
+		}
+		setExpanded(new Set());
+		setSpansByTrace({});
+		try {
+			await clearTraces(databaseId);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Failed to clear traces");
+		}
+		await refresh();
+	}, [databaseId, refresh]);
+
+	// "Clear" button: skip the dialog if the user opted out previously.
+	const requestClear = useCallback(() => {
+		if (skipClearConfirm) {
+			void doClear();
+		} else {
+			setConfirmingClear(true);
+		}
+	}, [skipClearConfirm, doClear]);
+
 	// Toggle a trace's waterfall open/closed. Multiple can be open at once and
 	// each stays open until clicked again.
 	const toggleTrace = useCallback(
@@ -199,6 +237,15 @@ function ObservabilityView(): JSX.Element {
 						className={loading ? "animate-spin" : undefined}
 					/>
 					Refresh
+				</button>
+				<button
+					type="button"
+					onClick={requestClear}
+					disabled={traces.length === 0}
+					className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-kumo-subtle hover:bg-red-500/10 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-kumo-subtle"
+				>
+					<TrashIcon size={13} />
+					Clear
 				</button>
 			</header>
 
@@ -398,6 +445,62 @@ function ObservabilityView(): JSX.Element {
 					</table>
 				)}
 			</div>
+
+			{confirmingClear ? (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+					onClick={() => setConfirmingClear(false)}
+				>
+					<div
+						className="w-[90%] max-w-md rounded-xl border border-kumo-fill bg-kumo-base p-5 shadow-lg"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<h3 className="text-sm font-semibold text-kumo-default">
+							Clear all captured requests?
+						</h3>
+						<p className="mt-2 text-xs text-kumo-subtle">
+							This permanently deletes every trace, span, and log from the local
+							observability store. This cannot be undone.
+						</p>
+						<label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-kumo-subtle select-none">
+							<input
+								type="checkbox"
+								checked={skipClearConfirm}
+								onChange={(e) => setSkipClearConfirm(e.target.checked)}
+							/>
+							Don't show this message again
+						</label>
+						<div className="mt-4 flex justify-end gap-2">
+							<button
+								type="button"
+								onClick={() => setConfirmingClear(false)}
+								className="rounded-md border border-kumo-fill px-3 py-1.5 text-xs text-kumo-default hover:bg-kumo-tint"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									try {
+										if (skipClearConfirm) {
+											localStorage.setItem(SKIP_CLEAR_CONFIRM_KEY, "1");
+										} else {
+											localStorage.removeItem(SKIP_CLEAR_CONFIRM_KEY);
+										}
+									} catch {
+										// ignore
+									}
+									setConfirmingClear(false);
+									void doClear();
+								}}
+								className="rounded-md bg-red-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600"
+							>
+								Clear everything
+							</button>
+						</div>
+					</div>
+				</div>
+			) : null}
 		</div>
 	);
 }

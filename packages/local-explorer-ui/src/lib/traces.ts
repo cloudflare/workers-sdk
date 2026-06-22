@@ -253,6 +253,20 @@ export async function listEvents(
 	return rows as unknown as LogEvent[];
 }
 
+/** Delete all captured traces, spans, and logs from the trace store. */
+export async function clearTraces(databaseId: string): Promise<void> {
+	for (const table of ["logs", "spans", "traces"]) {
+		try {
+			await d1RawDatabaseQuery({
+				body: { sql: `DELETE FROM ${table}` },
+				path: { database_id: databaseId },
+			});
+		} catch {
+			// table may not exist yet — ignore
+		}
+	}
+}
+
 /** Distinct attribute/tag keys present across all spans (for the tag filter). */
 export async function getTagKeys(databaseId: string): Promise<string[]> {
 	const rows = await runSql(
