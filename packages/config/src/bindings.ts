@@ -235,6 +235,16 @@ export interface HyperdriveBinding extends HyperdriveBindingOptions {
 interface ImagesBindingOptions {
 	/** Whether the Images binding should be remote or not in local development. */
 	remote?: boolean;
+	/**
+	 * Configures URL-based image transformations (`/cdn-cgi/image/...`) for
+	 * this Worker.
+	 */
+	url_transformations?: {
+		/** When true, miniflare intercepts `/cdn-cgi/image/...` requests
+		 * and transforms them locally
+		 */
+		enabled: boolean;
+	};
 }
 
 /**

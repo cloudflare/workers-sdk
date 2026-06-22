@@ -1915,7 +1915,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"images",
-			validateNamedSimpleBinding(envName),
+			validateImagesBinding(envName),
 			undefined
 		),
 		stream: notInheritable(
@@ -3057,6 +3057,66 @@ const validateAIBinding =
 		if (!isRemoteValid(value, field, diagnostics)) {
 			isValid = false;
 		}
+
+		return isValid;
+	};
+
+const validateImagesBinding =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+		if (!isRequiredProperty(value, "binding", "string")) {
+			diagnostics.errors.push(`binding should have a string "binding" field.`);
+			isValid = false;
+		}
+
+		if (!isRemoteValid(value, field, diagnostics)) {
+			isValid = false;
+		}
+
+		if (
+			"url_transformations" in value &&
+			value.url_transformations !== undefined
+		) {
+			const ut = value.url_transformations;
+			if (typeof ut !== "object" || ut === null || Array.isArray(ut)) {
+				diagnostics.errors.push(
+					`"${fieldPath}.url_transformations" should be an object.`
+				);
+				isValid = false;
+			} else {
+				if (!isRequiredProperty(ut, "enabled", "boolean")) {
+					diagnostics.errors.push(
+						`"${fieldPath}.url_transformations" should have a boolean "enabled" field.`
+					);
+					isValid = false;
+				}
+				validateAdditionalProperties(
+					diagnostics,
+					`${field}.url_transformations`,
+					Object.keys(ut as Record<string, unknown>),
+					["enabled"]
+				);
+			}
+		}
+
+		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"binding",
+			"remote",
+			"url_transformations",
+		]);
 
 		return isValid;
 	};

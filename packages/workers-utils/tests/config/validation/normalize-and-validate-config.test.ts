@@ -2583,6 +2583,105 @@ describe("normalizeAndValidateConfig()", () => {
 					  - The field "images" should be an object but got null."
 				`);
 			});
+
+			it("accepts binding + url_transformations together", ({ expect }) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						images: {
+							binding: "IMAGES",
+							url_transformations: { enabled: true },
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.images).toEqual({
+					binding: "IMAGES",
+					url_transformations: { enabled: true },
+				});
+			});
+
+			it("accepts url_transformations.enabled set to false", ({ expect }) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						images: {
+							binding: "IMAGES",
+							url_transformations: { enabled: false },
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.images?.url_transformations).toEqual({ enabled: false });
+			});
+
+			it("errors when url_transformations is missing 'enabled'", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						images: {
+							binding: "IMAGES",
+							url_transformations: {} as { enabled: boolean },
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"images.url_transformations" should have a boolean "enabled" field.'
+				);
+			});
+
+			it("warns on unknown fields inside url_transformations", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						images: {
+							binding: "IMAGES",
+							url_transformations: {
+								enabled: true,
+								allowed_origins: ["example.com"],
+							} as unknown as { enabled: boolean },
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain(
+					"Unexpected fields found in images.url_transformations field"
+				);
+			});
+
+			it("warns on unknown fields on the images block itself", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						images: {
+							binding: "IMAGES",
+							something_new: true,
+						} as unknown as { binding: string },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain(
+					"Unexpected fields found in images field"
+				);
+			});
 		});
 
 		// Media

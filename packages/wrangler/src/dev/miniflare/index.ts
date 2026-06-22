@@ -939,6 +939,7 @@ export function buildMiniflareBindingOptions(
 							imagesBindings[0].remote && remoteProxyConnectionString
 								? remoteProxyConnectionString
 								: undefined,
+						urlTransformations: imagesBindings[0].url_transformations,
 					}
 				: undefined,
 		media:

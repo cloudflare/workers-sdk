@@ -18,6 +18,7 @@ import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import OUTBOUND_WORKER from "worker:core/outbound";
+import SCRIPT_CDN_CGI_IMAGE from "worker:images/cdn-cgi-image";
 import { z } from "zod";
 import { fetch } from "../../http";
 import { kVoid } from "../../runtime";
@@ -26,7 +27,7 @@ import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
-import { IMAGES_PLUGIN_NAME } from "../images";
+import { CDN_CGI_IMAGE_SERVICE_NAME, IMAGES_PLUGIN_NAME } from "../images";
 import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
 import {
 	getUserBindingServiceName,
@@ -1111,9 +1112,12 @@ export function getGlobalServices({
 	const imagesBinding = allWorkerOpts
 		?.map((worker) => worker.images?.images)
 		.find(
-			(images) => images !== undefined && !images.remoteProxyConnectionString
+			(images) =>
+				images !== undefined &&
+				images.binding !== undefined &&
+				!images.remoteProxyConnectionString
 		);
-	if (imagesBinding) {
+	if (imagesBinding?.binding) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_IMAGES_DELIVERY,
 			service: {
@@ -1122,6 +1126,15 @@ export function getGlobalServices({
 					imagesBinding.binding
 				),
 			},
+		});
+	}
+	const urlTransformsEnabled = allWorkerOpts?.some(
+		(worker) => worker.images?.images?.urlTransformations?.enabled === true
+	);
+	if (urlTransformsEnabled) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_IMAGE_TRANSFORM,
+			service: { name: CDN_CGI_IMAGE_SERVICE_NAME },
 		});
 	}
 	if (sharedOptions.upstream !== undefined) {
@@ -1193,6 +1206,23 @@ export function getGlobalServices({
 
 	if (r2PublicService !== undefined) {
 		services.push(r2PublicService);
+	}
+
+	if (urlTransformsEnabled) {
+		services.push({
+			name: CDN_CGI_IMAGE_SERVICE_NAME,
+			worker: {
+				modules: [
+					{
+						name: "cdn-cgi-image.worker.js",
+						esModule: SCRIPT_CDN_CGI_IMAGE(),
+					},
+				],
+				compatibilityDate: "2025-01-01",
+				compatibilityFlags: ["nodejs_compat"],
+				bindings: [WORKER_BINDING_SERVICE_LOOPBACK],
+			},
+		});
 	}
 
 	if (sharedOptions.unsafeLocalExplorer) {

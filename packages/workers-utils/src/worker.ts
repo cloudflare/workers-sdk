@@ -138,6 +138,9 @@ export interface CfImagesBinding {
 	binding: string;
 	raw?: boolean;
 	remote?: boolean;
+	url_transformations?: {
+		enabled: boolean;
+	};
 }
 
 /**
