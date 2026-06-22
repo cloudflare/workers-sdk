@@ -2,23 +2,21 @@ import { DropdownMenu } from "@cloudflare/kumo";
 import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
 
-type ObservabilityView = "traces" | "events" | "mcp";
+type ObservabilityView = "traces" | "events";
 
 const LABELS: Record<ObservabilityView, string> = {
 	traces: "Traces",
 	events: "Logs",
-	mcp: "MCP",
 };
 
 const ROUTES: Record<ObservabilityView, string> = {
 	traces: "/observability",
 	events: "/events",
-	mcp: "/mcp",
 };
 
 /**
  * Title dropdown that switches between the Observability views
- * (Traces, Logs, and MCP), preserving the selected worker in the URL.
+ * (Traces and Logs), preserving the selected worker in the URL.
  */
 export function ObservabilityViewSwitcher({
 	current,

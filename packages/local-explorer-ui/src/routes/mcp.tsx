@@ -15,7 +15,6 @@ import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
-import { ObservabilityViewSwitcher } from "../components/observability/ObservabilityViewSwitcher";
 import {
 	LOG_LEVELS,
 	fetchMcpServerPath,
@@ -73,7 +72,6 @@ function levelDotClass(level: string): string {
 
 function McpView(): JSX.Element {
 	const rootData = rootRoute.useLoaderData();
-	const { worker } = Route.useSearch();
 
 	const [config, setConfig] = useState<McpAccessConfig>(loadMcpConfig);
 
@@ -193,7 +191,9 @@ function McpView(): JSX.Element {
 			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
 				<RobotIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<ObservabilityViewSwitcher current="mcp" worker={worker} />
+					<h2 className="text-sm leading-tight font-semibold text-kumo-default">
+						MCP
+					</h2>
 					<span className="text-[11px] leading-tight text-kumo-subtle">
 						Agent access control
 					</span>

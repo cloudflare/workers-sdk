@@ -9,6 +9,7 @@ import {
 	MonitorIcon,
 	MoonIcon,
 	PulseIcon,
+	RobotIcon,
 	SunIcon,
 } from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
@@ -262,6 +263,21 @@ export function AppSidebar({
 						)}
 					>
 						Observability
+					</Sidebar.MenuButton>
+				</Sidebar.MenuItem>
+
+				<Sidebar.MenuItem>
+					<Sidebar.MenuButton
+						icon={<RobotIcon width={20} height={20} />}
+						onClick={() =>
+							router.navigate({ to: "/mcp", search: workerSearch })
+						}
+						className={cn(
+							"cursor-pointer",
+							currentPath === "/mcp" && "bg-kumo-tint"
+						)}
+					>
+						MCP
 					</Sidebar.MenuButton>
 				</Sidebar.MenuItem>
 
