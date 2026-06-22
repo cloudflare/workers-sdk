@@ -374,8 +374,8 @@ export type ExportsReconciliationResult = {
 	updated: string[];
 	deleted: string[];
 	renamed: ExportsReconciliationRename[];
-	transferred?: ExportsReconciliationTransfer[];
-	transfer_pending?: ExportsReconciliationTransferPending[];
+	transferred: ExportsReconciliationTransfer[];
+	transfer_pending: ExportsReconciliationTransferPending[];
 	warnings: ExportsReconciliationWarning[];
 	info: ExportsReconciliationInfo[];
 	removable_entries: string[];

@@ -37,8 +37,8 @@ export function renderExportsReconciliationSuccess(
 		result.updated.length > 0 ||
 		result.deleted.length > 0 ||
 		result.renamed.length > 0 ||
-		(result.transferred?.length ?? 0) > 0 ||
-		(result.transfer_pending?.length ?? 0) > 0 ||
+		result.transferred.length > 0 ||
+		result.transfer_pending.length > 0 ||
 		result.warnings.length > 0 ||
 		result.info.length > 0 ||
 		result.removable_entries.length > 0;
@@ -65,15 +65,12 @@ export function renderExportsReconciliationSuccess(
 		const renames = result.renamed.map((r) => `${r.from} → ${r.to}`).join(", ");
 		logger.log(`  Renamed: ${renames}`);
 	}
-	if (result.transferred && result.transferred.length > 0) {
-		for (const t of result.transferred) {
-			logger.log(`  Transferred (${t.phase}): ${t.class} → ${t.to}`);
-		}
+
+	for (const t of result.transferred) {
+		logger.log(`  Transferred (${t.phase}): ${t.class} → ${t.to}`);
 	}
-	if (result.transfer_pending && result.transfer_pending.length > 0) {
-		for (const t of result.transfer_pending) {
-			logger.log(`  Transfer pending: ${t.class} ← ${t.from}`);
-		}
+	for (const t of result.transfer_pending) {
+		logger.log(`  Transfer pending: ${t.class} ← ${t.from}`);
 	}
 
 	if (result.warnings.length > 0) {
