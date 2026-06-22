@@ -301,17 +301,23 @@ async function matchFiles(
 			}
 		}
 
-		// This is just a sanity check verifying that no files match rules that were removed
-		for (const rule of removedRules) {
-			for (const glob of rule.globs) {
-				const regexp = globToRegExp(glob);
-				if (regexp.test(filePath)) {
-					throw new UserError(
-						`The file ${filePath} matched a module rule in your configuration (${JSON.stringify(
-							rule
-						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`,
-						{ telemetryMessage: "module rule ignored without fallthrough" }
-					);
+		// If a discovered file only matched a removed (shadowed) rule, skip it.
+		// Module rules assign types to imported files — they are not include/exclude filters.
+		// Since the file was not explicitly imported (it was discovered by walking the
+		// filesystem) we cannot give it an unambiguous type, so we leave it out of the
+		// bundle. The direct-import path in `module-collection.ts` still throws for
+		// imports that only match a shadowed rule, since those are real misconfigurations.
+		if (!moduleNames.has(filePath)) {
+			for (const rule of removedRules) {
+				for (const glob of rule.globs) {
+					const regexp = globToRegExp(glob);
+					if (regexp.test(filePath)) {
+						logger.debug(
+							`Skipping discovered file ${filePath} — it only matches a shadowed module rule (${JSON.stringify(
+								rule
+							)}). To include this file, add \`fallthrough = true\` to the earlier rule of the same type, or broaden your rule's globs.`
+						);
+					}
 				}
 			}
 		}
