@@ -78,6 +78,20 @@ describe("unsafeObservability", () => {
 			.all<{ level: string; message: string }>();
 		expect(logs.results.length).toBeGreaterThan(0);
 		expect(logs.results[0].message).toContain("handled request");
+
+		// the root span should carry the enriched onset/outcome attributes that the
+		// production streaming-tail worker ingests (trigger type, method, cpu/wall)
+		const root = await db
+			.prepare(
+				"SELECT attributes FROM spans WHERE trace_id = (SELECT trace_id FROM traces LIMIT 1) AND span_id = (SELECT root_span_id FROM traces LIMIT 1)"
+			)
+			.first<{ attributes: string }>();
+		const attrs = JSON.parse(root?.attributes ?? "{}");
+		expect(attrs["faas.trigger"]).toBe("http");
+		expect(attrs["http.request.method"]).toBe("GET");
+		expect(attrs["cloudflare.outcome"]).toBe("ok");
+		expect(typeof attrs["cpu_time_ms"]).toBe("number");
+		expect(typeof attrs["wall_time_ms"]).toBe("number");
 	});
 
 	test("links child spans to the root span via parent_id", async ({

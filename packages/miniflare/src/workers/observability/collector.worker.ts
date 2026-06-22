@@ -60,9 +60,9 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 			id: rootId,
 			parentId: onset.spanContext?.spanId,
 			name: describeOnset(onset.event),
-			kind: "http",
+			kind: onsetKind(onset.event.info),
 			start: toMs(onset.timestamp),
-			attrs: attrListToObj(onset.event.attributes),
+			attrs: onsetAttributes(onset.event),
 			logs: [],
 		});
 		order.push(rootId);
@@ -113,7 +113,15 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 				}
 				case "exception": {
 					const s = spans.get(ctxSpanId ?? rootId);
-					if (s) s.error = `${ev.name}: ${ev.message}`;
+					if (s) {
+						s.error = `${ev.name}: ${ev.message}`;
+						if (ev.stack) {
+							s.attrs = {
+								...(s.attrs ?? {}),
+								"exception.stacktrace": ev.stack,
+							};
+						}
+					}
 					break;
 				}
 				case "outcome": {
@@ -121,6 +129,13 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 					if (r) {
 						r.end = toMs(e.timestamp);
 						r.outcome = ev.outcome;
+						// Mirror vega: capture CPU/wall time + outcome on the root span.
+						r.attrs = {
+							...(r.attrs ?? {}),
+							"cloudflare.outcome": ev.outcome,
+							cpu_time_ms: ev.cpuTime,
+							wall_time_ms: ev.wallTime,
+						};
 					}
 					if (env.WOBS_TRACES) {
 						ctx.waitUntil(
@@ -254,18 +269,138 @@ function kindOf(name: string): string {
 	return "span";
 }
 
+/** Span kind for the root invocation, derived from the trigger type. */
+function onsetKind(info: TailStream.Onset["info"]): string {
+	switch (info.type) {
+		case "fetch":
+			return "http";
+		case "scheduled":
+		case "alarm":
+			return "scheduled";
+		case "queue":
+			return "queue";
+		case "email":
+			return "email";
+		case "trace":
+			return "trace";
+		case "hibernatableWebSocket":
+			return "websocket";
+		case "jsrpc":
+			return "jsrpc";
+		default:
+			return "worker";
+	}
+}
+
+/** Human-readable name for the root invocation span, per trigger type. */
 function describeOnset(onset: TailStream.Onset): string {
 	const info = onset.info;
-	if (info && info.type === "fetch") {
-		let path = info.url;
-		try {
-			path = new URL(info.url).pathname;
-		} catch {
-			/* keep full url */
+	switch (info.type) {
+		case "fetch": {
+			let path = info.url;
+			try {
+				path = new URL(info.url).pathname;
+			} catch {
+				/* keep full url */
+			}
+			return `${info.method} ${path}`;
 		}
-		return `${info.method} ${path}`;
+		case "scheduled":
+			return `scheduled ${info.cron}`;
+		case "alarm":
+			return "alarm";
+		case "queue":
+			return `queue ${info.queueName}`;
+		case "email":
+			return `email ${info.rcptTo}`;
+		case "trace":
+			return "trace";
+		case "hibernatableWebSocket":
+			return `websocket ${info.info.type}`;
+		case "jsrpc":
+			return "jsrpc";
+		case "custom":
+			return "custom";
+		default:
+			return onset.scriptName ?? "request";
 	}
-	return (info && info.type) || onset.scriptName || "request";
+}
+
+const toIso = (t: Date | number): string =>
+	t instanceof Date ? t.toISOString() : new Date(t).toISOString();
+
+/**
+ * Build the root-invocation span attributes, mirroring what the production
+ * streaming-tail worker (vega's cf-to-otel) ingests: worker metadata plus
+ * per-trigger info (cron, queue, email, etc.) and any explicit onset attributes.
+ */
+function onsetAttributes(onset: TailStream.Onset): Record<string, unknown> {
+	const attrs: Record<string, unknown> = {};
+
+	// Worker / invocation metadata.
+	if (onset.scriptName) attrs["cloudflare.script_name"] = onset.scriptName;
+	if (onset.entrypoint) attrs["cloudflare.entrypoint"] = onset.entrypoint;
+	if (onset.executionModel) {
+		attrs["cloudflare.execution_model"] = onset.executionModel;
+	}
+	if (onset.dispatchNamespace) {
+		attrs["cloudflare.dispatch_namespace"] = onset.dispatchNamespace;
+	}
+	if (onset.scriptVersion?.id) {
+		attrs["cloudflare.script_version.id"] = onset.scriptVersion.id;
+	}
+	if (onset.scriptVersion?.tag) {
+		attrs["cloudflare.script_version.tag"] = onset.scriptVersion.tag;
+	}
+	if (onset.scriptVersion?.message) {
+		attrs["cloudflare.script_version.message"] = onset.scriptVersion.message;
+	}
+	if (onset.scriptTags?.length) {
+		attrs["cloudflare.script_tags"] = onset.scriptTags.join(",");
+	}
+
+	// Per-trigger info.
+	const info = onset.info;
+	switch (info.type) {
+		case "fetch":
+			attrs["faas.trigger"] = "http";
+			attrs["http.request.method"] = info.method;
+			attrs["url.full"] = info.url;
+			break;
+		case "scheduled":
+			attrs["faas.trigger"] = "timer";
+			attrs["faas.cron"] = info.cron;
+			attrs["cloudflare.scheduled_time"] = toIso(info.scheduledTime);
+			break;
+		case "alarm":
+			attrs["faas.trigger"] = "timer";
+			attrs["cloudflare.scheduled_time"] = toIso(info.scheduledTime);
+			break;
+		case "queue":
+			attrs["faas.trigger"] = "pubsub";
+			attrs["cloudflare.queue.name"] = info.queueName;
+			attrs["cloudflare.queue.batch_size"] = info.batchSize;
+			break;
+		case "email":
+			attrs["faas.trigger"] = "email";
+			attrs["cloudflare.email.from"] = info.mailFrom;
+			attrs["cloudflare.email.to"] = info.rcptTo;
+			attrs["cloudflare.email.size"] = info.rawSize;
+			break;
+		case "trace":
+			attrs["faas.trigger"] = "trace";
+			attrs["cloudflare.trace.count"] = info.traces.length;
+			break;
+		case "hibernatableWebSocket":
+			attrs["faas.trigger"] = "websocket";
+			break;
+		case "jsrpc":
+			attrs["faas.trigger"] = "jsrpc";
+			break;
+	}
+
+	// Explicit onset attributes emitted by the runtime override/extend the above.
+	return { ...attrs, ...(attrListToObj(onset.attributes) ?? {}) };
 }
 
 function toMs(t: Date | number | null | undefined): number {
