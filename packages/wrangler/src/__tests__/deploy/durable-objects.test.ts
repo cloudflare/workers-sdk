@@ -832,6 +832,8 @@ describe("deploy", () => {
 					updated: [],
 					deleted: [],
 					renamed: [],
+					transferred: [],
+					transfer_pending: [],
 					warnings: [],
 					info: [
 						{

@@ -411,8 +411,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		});
 
 		describe("cross-script transfer", () => {
-			// Two-phase commit (see CfDurableObjectExport docs in
-			// `packages/workers-utils/src/worker.ts`):
+			// Two-phase commit (see DurableObjectExport docs in
+			// `packages/workers-utils/src/config/environment.ts`):
 			//   1. Target script (B) deploys an `expecting-transfer` state
 			//      entry with `transfer_from = "<sourceScript>"`; reconciliation
 			//      emits a `Transfer pending:` info entry because A hasn't

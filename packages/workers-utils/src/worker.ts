@@ -1,4 +1,9 @@
-import type { CacheOptions, Observability, Route } from "./config/environment";
+import type {
+	CacheOptions,
+	DurableObjectExport,
+	Observability,
+	Route,
+} from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
@@ -449,51 +454,10 @@ export type CfDurableObjectExportState =
 	| "expecting-transfer";
 
 /**
- * A single declarative Durable Object export entry. Discriminated union of
- * `type` (kind, always `"durable-object"` today) and `state` (lifecycle,
- * defaults to `"created"` when omitted).
- *
- *  - `created` (default, live): `storage` is required.
- *  - `deleted` (tombstone): retire a provisioned namespace whose class has
- *    been removed from code.
- *  - `renamed` (tombstone): rewrite a provisioned namespace's class name to
- *    `renamed_to`. The target must appear as a live (state `"created"`)
- *    `durable-object` entry in the same map.
- *  - `transferred` (tombstone): hand ownership of the namespace to another
- *    script in the same account (`transferred_to`). Two-phase commit; the
- *    receiving script must first deploy an `expecting-transfer` entry naming
- *    this script via `transfer_from`.
- *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
- *    both `storage` and `transfer_from` are required.
- *
- * See the spec for full semantics:
- * https://wiki.cfdata.org/spaces/WX/pages/1396640001
- */
-export type CfDurableObjectExport =
-	| {
-			type: "durable-object";
-			state?: "created";
-			storage: CfDurableObjectExportStorage;
-	  }
-	| { type: "durable-object"; state: "deleted" }
-	| { type: "durable-object"; state: "renamed"; renamed_to: string }
-	| {
-			type: "durable-object";
-			state: "transferred";
-			transferred_to: string;
-	  }
-	| {
-			type: "durable-object";
-			state: "expecting-transfer";
-			storage: CfDurableObjectExportStorage;
-			transfer_from: string;
-	  };
-
-/**
  * The declarative `exports` map keyed by class name. Mutually exclusive with
  * {@link CfDurableObjectMigrations} at the EWC upload boundary.
  */
-export type CfDurableObjectExports = Record<string, CfDurableObjectExport>;
+export type CfDurableObjectExports = Record<string, DurableObjectExport>;
 
 export type CfPlacement =
 	| { mode: "smart"; hint?: string }

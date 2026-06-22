@@ -18,6 +18,8 @@ describe("renderExportsReconciliationSuccess", () => {
 			updated: [],
 			deleted: [],
 			renamed: [],
+			transferred: [],
+			transfer_pending: [],
 			warnings: [],
 			info: [],
 			removable_entries: [],
