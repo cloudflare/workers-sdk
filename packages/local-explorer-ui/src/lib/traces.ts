@@ -298,9 +298,15 @@ export async function getInvocationRootIds(
 	traceId: string
 ): Promise<string[]> {
 	const safe = traceId.replace(/'/g, "''");
+	// Exclude the Vite dev module-runner's internal invocations
+	// (cloudflare.entrypoint = "__VITE_RUNNER_OBJECT__") so the waterfall only
+	// marks real worker handoffs, not Vite plumbing.
 	const rows = await runSql(
 		databaseId,
-		`SELECT root_span_id FROM traces WHERE trace_id='${safe}'`
+		`SELECT t.root_span_id FROM traces t
+		 JOIN spans s ON s.trace_id = t.trace_id AND s.span_id = t.root_span_id
+		 WHERE t.trace_id = '${safe}'
+		   AND (s.attributes IS NULL OR s.attributes NOT LIKE '%__VITE_RUNNER_OBJECT__%')`
 	);
 	return rows.map((r) => String(r.root_span_id)).filter(Boolean);
 }
