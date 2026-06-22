@@ -14,6 +14,7 @@ import { parseTraceQuery } from "../lib/query";
 import {
 	clearTraces,
 	findTraceDatabaseId,
+	getInvocationRootIds,
 	getTagKeys,
 	getTraceSpans,
 	listTraces,
@@ -72,6 +73,10 @@ function ObservabilityView(): JSX.Element {
 	const [spansByTrace, setSpansByTrace] = useState<Record<string, SpanRow[]>>(
 		{}
 	);
+	// Invocation root span ids per trace, used to delineate worker boundaries.
+	const [invocationRootsByTrace, setInvocationRootsByTrace] = useState<
+		Record<string, string[]>
+	>({});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [confirmingClear, setConfirmingClear] = useState(false);
@@ -193,8 +198,12 @@ function ObservabilityView(): JSX.Element {
 				return;
 			}
 			try {
-				const rows = await getTraceSpans(databaseId, trace.trace_id);
+				const [rows, roots] = await Promise.all([
+					getTraceSpans(databaseId, trace.trace_id),
+					getInvocationRootIds(databaseId, trace.trace_id),
+				]);
 				setSpansByTrace((prev) => ({ ...prev, [key]: rows }));
+				setInvocationRootsByTrace((prev) => ({ ...prev, [key]: roots }));
 			} catch (e) {
 				setError(e instanceof Error ? e.message : "Failed to load spans");
 			}
@@ -434,6 +443,7 @@ function ObservabilityView(): JSX.Element {
 														spans={spans}
 														rootSpanId={t.root_span_id}
 														traceDurationMs={t.duration_ms ?? 0}
+														invocationRootIds={invocationRootsByTrace[key]}
 													/>
 												</td>
 											</tr>

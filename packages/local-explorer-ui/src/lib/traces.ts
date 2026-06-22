@@ -287,6 +287,24 @@ export async function getTagKeys(databaseId: string): Promise<string[]> {
 	return rows.map((r) => String(r.k)).filter(Boolean);
 }
 
+/**
+ * Span ids that are the root of a worker invocation within a (possibly
+ * multi-worker) distributed trace. Each invocation persists its own trace row,
+ * so these are the `root_span_id`s sharing the trace_id. The waterfall marks
+ * these (other than the top-level root) as the start of a new invocation.
+ */
+export async function getInvocationRootIds(
+	databaseId: string,
+	traceId: string
+): Promise<string[]> {
+	const safe = traceId.replace(/'/g, "''");
+	const rows = await runSql(
+		databaseId,
+		`SELECT root_span_id FROM traces WHERE trace_id='${safe}'`
+	);
+	return rows.map((r) => String(r.root_span_id)).filter(Boolean);
+}
+
 /** Fetch all spans for a single trace. */
 export async function getTraceSpans(
 	databaseId: string,

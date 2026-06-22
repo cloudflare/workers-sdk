@@ -17,6 +17,12 @@ interface TraceWaterfallProps {
 	spans: SpanRow[];
 	rootSpanId: string;
 	traceDurationMs: number;
+	/**
+	 * Span ids that are the root of a worker invocation. Each one (other than
+	 * the trace's top-level root) marks where execution crosses into another
+	 * worker invocation, and is delineated in the waterfall.
+	 */
+	invocationRootIds?: readonly string[];
 }
 
 const LABEL_WIDTH = 256; // matches the dashboard's default name-column width
@@ -83,10 +89,23 @@ export function TraceWaterfall({
 	spans,
 	rootSpanId,
 	traceDurationMs,
+	invocationRootIds,
 }: TraceWaterfallProps): JSX.Element {
 	const allSpans = useMemo(
 		() => buildSpanTree(spans, rootSpanId),
 		[spans, rootSpanId]
+	);
+
+	// A span starts a new worker invocation if it's an invocation root other than
+	// the trace's top-level root. We delineate these in the waterfall.
+	const invocationRoots = useMemo(
+		() => new Set(invocationRootIds ?? []),
+		[invocationRootIds]
+	);
+	const isInvocationStart = useCallback(
+		(span: LayoutSpan) =>
+			span.span_id !== rootSpanId && invocationRoots.has(span.span_id),
+		[invocationRoots, rootSpanId]
 	);
 	const { ref, width } = useWidthObserver();
 	const [collapsed, setCollapsed] = useState<string[]>([]);
@@ -187,6 +206,8 @@ export function TraceWaterfall({
 									tabIndex={0}
 									className={cn(
 										"h-8 cursor-pointer border-l-2 border-l-transparent transition-colors duration-150",
+										isInvocationStart(span) &&
+											"border-t border-dashed border-kumo-line",
 										rowBg(span.span_id)
 									)}
 									onClick={() => handleRowClick(span)}
@@ -196,6 +217,7 @@ export function TraceWaterfall({
 									<SpanLabel
 										span={span}
 										isCollapsed={collapsed.includes(span.layoutId)}
+										isInvocationStart={isInvocationStart(span)}
 										onToggleCollapsed={toggleCollapsed}
 									/>
 								</div>
@@ -238,6 +260,8 @@ export function TraceWaterfall({
 									key={span.layoutId}
 									className={cn(
 										"flex h-8 cursor-pointer items-center pl-0.5 transition-colors duration-150",
+										isInvocationStart(span) &&
+											"border-t border-dashed border-kumo-line",
 										rowBg(span.span_id)
 									)}
 									onClick={() => handleRowClick(span)}
@@ -264,10 +288,12 @@ export function TraceWaterfall({
 function SpanLabel({
 	span,
 	isCollapsed,
+	isInvocationStart,
 	onToggleCollapsed,
 }: {
 	span: LayoutSpan;
 	isCollapsed: boolean;
+	isInvocationStart: boolean;
 	onToggleCollapsed: (layoutId: string) => void;
 }): JSX.Element {
 	const error = hasErr(span);
@@ -277,6 +303,14 @@ function SpanLabel({
 			className="relative flex h-full w-full items-center gap-2 overflow-hidden pl-4 font-mono text-sm text-ellipsis whitespace-nowrap"
 			style={{ paddingLeft: 4 + span.depth * 32, maxWidth: LABEL_WIDTH }}
 		>
+			{isInvocationStart ? (
+				<span
+					title="Start of a new worker invocation"
+					className="shrink-0 rounded-sm bg-purple-500/15 px-1 text-[9px] font-medium tracking-wide text-purple-500 uppercase"
+				>
+					inv
+				</span>
+			) : null}
 			{span.hasChildren ? (
 				<Button
 					shape="square"
