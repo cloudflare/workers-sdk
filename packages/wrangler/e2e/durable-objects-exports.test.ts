@@ -39,9 +39,10 @@ const TIMEOUT = 60_000;
  *     source's `transferred` tombstone).
  *
  * The rename / transfer assertions encode the renderer contract in
- * `packages/deploy-helpers/src/deploy/helpers/exports-reconciliation.ts`. The
- * exact server scenario tags surfaced under `info[]` (e.g. `stale_tombstone`,
- * `config_export_not_in_code`) may need to be tuned once the backend is live.
+ * `packages/deploy-helpers/src/deploy/helpers/exports-reconciliation.ts`.
+ * Server scenario tags (e.g. `stale_tombstone`,
+ * `config_references_nonexistent_class`) match what EWC surfaces under
+ * `info[]` and `errors[]`.
  */
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
@@ -183,7 +184,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				expect(result.stderr).toContain(
 					"Durable Object exports reconciliation failed"
 				);
-				expect(result.stderr).toContain("[config_export_not_in_code]");
+				expect(result.stderr).toContain(
+					"[config_references_nonexistent_class]"
+				);
 			});
 		});
 
@@ -276,7 +279,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				expect(result.stderr).toContain(
 					"Durable Object exports reconciliation failed"
 				);
-				expect(result.stderr).toContain("[config_export_not_in_code]");
+				expect(result.stderr).toContain(
+					"[config_references_nonexistent_class]"
+				);
 			});
 		});
 
