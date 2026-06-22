@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { getBindings } from "@cloudflare/deploy-helpers";
 import { Response } from "undici";
-import { getBindings } from "../../deployment-bundle/bindings";
 import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
 import { loadSourceMaps } from "../../deployment-bundle/source-maps";
 import { parseConfigPlacement } from "../../utils/placement";

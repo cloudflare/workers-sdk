@@ -8,6 +8,9 @@ export interface AISearchNamespace {
 /**
  * Get an AI Search namespace for the given account.
  * Throws an APIError (status 404) if the namespace does not exist.
+ *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
  */
 export async function getAISearchNamespace(
 	complianceConfig: ComplianceConfig,
@@ -33,6 +36,9 @@ export async function getAISearchNamespace(
  * Create an AI Search namespace for the given account.
  * Used by the provisioning system (R2 bucket pattern) when a namespace
  * doesn't exist at deploy time.
+ *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
  */
 export async function createAISearchNamespace(
 	complianceConfig: ComplianceConfig,

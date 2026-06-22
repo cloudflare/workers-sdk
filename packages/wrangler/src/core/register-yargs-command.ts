@@ -20,7 +20,7 @@ import {
 } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig, readNewConfig } from "../config";
-import { confirm, prompt } from "../dialogs";
+import { confirm, prompt, select } from "../dialogs";
 import { run } from "../experimental-flags";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
@@ -303,6 +303,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						fetchKVGetValue,
 						confirm,
 						prompt,
+						select,
 						isNonInteractiveOrCI,
 					});
 

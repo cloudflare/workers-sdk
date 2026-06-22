@@ -41,6 +41,8 @@ export const d1ListCommand = createCommand({
 	},
 });
 
+// Keep in sync with the local provisioning copy in
+// packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
 export const listDatabases = async (
 	complianceConfig: ComplianceConfig,
 	accountId: string,

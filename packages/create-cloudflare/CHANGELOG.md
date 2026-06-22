@@ -1,5 +1,27 @@
 # create-cloudflare
 
+## 2.70.5
+
+### Patch Changes
+
+- [#14361](https://github.com/cloudflare/workers-sdk/pull/14361) [`df43f59`](https://github.com/cloudflare/workers-sdk/commit/df43f5913342ecf1d0e54fb77678453b3318438c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix infinite loop when running C3 with pnpm 11
+
+  When invoked via `pnpm create cloudflare@latest`, C3 checks npm for a newer version and re-launches itself with the latest version if one is available. pnpm 11 enables the `minimumReleaseAge` supply-chain protection by default, so `pnpm create cloudflare@latest` will not resolve a version published in the last 24 hours. When the npm `latest` tag points at a version newer than what pnpm is willing to install, the update check stayed true and C3 re-launched itself forever.
+
+  The relaunched process is now marked so it never re-runs the auto-update check, ensuring C3 starts up after at most one relaunch regardless of the package manager's version resolution.
+
+## 2.70.4
+
+### Patch Changes
+
+- [#14347](https://github.com/cloudflare/workers-sdk/pull/14347) [`673b09e`](https://github.com/cloudflare/workers-sdk/commit/673b09e0fa26368125fb527596a8eb5d31c27302) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update undici from 7.24.8 to 7.28.0
+
+- [#14314](https://github.com/cloudflare/workers-sdk/pull/14314) [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6) Thanks [@harryzcy](https://github.com/harryzcy)! - Bump esbuild to 0.28.1
+
+  This update includes several bug fixes from esbuild versions 0.27.3 through 0.28.1. See the [esbuild changelog](https://github.com/evanw/esbuild/blob/v0.28.1/CHANGELOG.md) for details.
+
+- [#14349](https://github.com/cloudflare/workers-sdk/pull/14349) [`3eec0f7`](https://github.com/cloudflare/workers-sdk/commit/3eec0f7b8829af28634955f693af53918acf00af) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Upgrade `create-react-router` to `8.0.0` and prevent React Router template overriding v8 dependencies
+
 ## 2.70.3
 
 ### Patch Changes

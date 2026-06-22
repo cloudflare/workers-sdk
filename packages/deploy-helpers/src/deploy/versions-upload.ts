@@ -30,6 +30,7 @@ import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
+import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
 	handleMissingSecretsError,
@@ -47,10 +48,7 @@ import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
-export type VersionsUploadCallbacks = Pick<
-	DeployCallbacks,
-	"provisionBindings" | "analyseBundle"
->;
+export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
 
 export default async function versionsUpload(
 	props: VersionsUploadProps,
@@ -118,7 +116,10 @@ export default async function versionsUpload(
 						workerTag,
 					};
 				}
-			} else if (script.last_deployed_from === "api") {
+			} else if (
+				script.last_deployed_from === "api" &&
+				!props.skipLastDeployedFromApiCheck
+			) {
 				logger.warn(
 					`You are about to upload a Workers Version that was last updated via the API.\nEdits that have been made via the API will be overridden by your local code and config.`
 				);
@@ -327,13 +328,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		assert(accountId, "Missing accountId");
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
 			logger.debug("skipping provisioning on assets-only project");
-		} else if (props.resourcesProvision && callbacks.provisionBindings) {
-			await callbacks.provisionBindings(
+		} else if (props.resourcesProvision) {
+			await provisionBindings(
 				bindings,
 				accountId,
 				scriptName,
 				props.experimentalAutoCreate,
-				config
+				config,
+				{
+					skipConfigWriteback: props.skipProvisioningConfigWriteback,
+				}
 			);
 		}
 		workerBundle = createWorkerUploadForm(worker, bindings, {

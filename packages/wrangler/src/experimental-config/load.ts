@@ -14,6 +14,7 @@ import {
 } from "./schema";
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
+import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export const CLOUDFLARE_CONFIG_FILENAME = "cloudflare.config.ts";
@@ -26,6 +27,8 @@ export interface NormalizedTypes {
 export interface LoadNewConfigResult {
 	/** Merged result: `cloudflare.config.ts` runtime + `wrangler.config.ts` tooling. */
 	rawConfig: Omit<RawConfig, "env">;
+	/**  The validated `cloudflare.config.ts` shape. */
+	parsedWorkerConfig: ParsedInputWorkerConfig;
 	/** Resolved absolute path to `cloudflare.config.ts`. */
 	cloudflareConfigPath: string;
 	/** Resolved absolute path to `wrangler.config.ts`, if present. */
@@ -129,6 +132,7 @@ export async function loadNewConfig(options: {
 
 	return {
 		rawConfig,
+		parsedWorkerConfig: parsedWorkerConfig.data,
 		cloudflareConfigPath,
 		wranglerConfigPath,
 		dependencies,

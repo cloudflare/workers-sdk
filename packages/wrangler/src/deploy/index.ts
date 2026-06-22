@@ -4,7 +4,6 @@ import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { deployContainers } from "../containers/deploy";
 import { createCommand } from "../core/create-command";
-import { provisionBindings } from "../deployment-bundle/bindings";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -155,7 +154,6 @@ export const deployCommand = createCommand({
 				buildResult,
 				{
 					syncWorkersSite,
-					provisionBindings,
 					getNormalizedContainerOptions,
 					buildContainer,
 					deployContainers,
