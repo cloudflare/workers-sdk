@@ -4,8 +4,10 @@ import path from "node:path";
 import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	formatTime,
+	getDoExportsEnabledFromEnv,
 	ParseError,
 	retryOnAPIFailure,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
@@ -58,6 +60,32 @@ export default async function versionsUpload(
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
 }> {
+	// `wrangler versions upload` cannot apply Durable Object lifecycle
+	// changes. The declarative `exports` map is a DO lifecycle
+	// configuration that is only honored by the deploy path (PUT
+	// /workers/scripts/:name + exports reconciler). The versions
+	// endpoint silently drops `exports`, leaving the user with a no-op
+	// at best and a confusing legacy migrations error at worst. Fail
+	// fast with an actionable error before any API calls. This mirrors
+	// the long-standing docs constraint on `migrations`:
+	// https://developers.cloudflare.com/workers/configuration/versions-and-deployments/#durable-object-migrations
+	// A symmetric fail-fast for `migrations` + `versions upload` is the
+	// next-step UX improvement and is intentionally out of scope here —
+	// see follow-up tracked alongside DEVX-2572.
+	if (
+		getDoExportsEnabledFromEnv() &&
+		Object.keys(config.exports ?? {}).length > 0
+	) {
+		throw new UserError(
+			`Durable Object lifecycle changes declared in \`exports\` cannot be applied via \`wrangler versions upload\`.\n` +
+				`Use \`wrangler deploy\` instead — \`exports\` is a Durable Object lifecycle configuration and is applied through the deploy path only.\n` +
+				`See https://developers.cloudflare.com/workers/configuration/versions-and-deployments/#durable-object-migrations`,
+			{
+				telemetryMessage: "versions upload do exports lifecycle not supported",
+			}
+		);
+	}
+
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
 
@@ -106,7 +134,12 @@ export default async function versionsUpload(
 	// surfaces: the legacy `migrations` steps (computed against the deployed
 	// `migration_tag`) or the declarative `exports` map (sent verbatim and
 	// reconciled server-side). The `exports` flow is gated behind the
-	// `X_DO_EXPORTS` environment variable — see DEVX-2572.
+	// `X_DO_EXPORTS` environment variable — see DEVX-2572. The fail-fast
+	// guard for `exports` + `versions upload` runs earlier in this function
+	// (the `getDoExportsEnabledFromEnv() && config.exports` check near the
+	// top); `migrations` are still forwarded here for backward compatibility
+	// with the pre-existing behaviour even though they are also a
+	// lifecycle-only surface.
 	const { migrations, exports } = await resolveDoLifecyclePayload({
 		scriptName,
 		isDryRun: props.dryRun,

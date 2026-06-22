@@ -2265,6 +2265,33 @@ describe("versions upload", () => {
 
 			expect(std.out).toContain("--dry-run: exiting now.");
 		});
+
+		test("should reject declarative `exports` with an actionable error pointing at `wrangler deploy`", async ({
+			expect,
+		}) => {
+			// `wrangler versions upload` cannot apply Durable Object
+			// lifecycle changes — the declarative `exports` map is a DO
+			// lifecycle configuration (mutually exclusive with
+			// `migrations`) and is applied only through `wrangler deploy`.
+			// The client-side fail-fast turns the otherwise-silent EWC
+			// no-op into an actionable error.
+			vi.stubEnv("X_DO_EXPORTS", "true");
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				durable_objects: {
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+				},
+				exports: {
+					MyDurableObject: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+
+			await expect(runWrangler("versions upload")).rejects.toThrowError(
+				/Durable Object lifecycle changes declared in `exports` cannot be applied via `wrangler versions upload`\..*Use `wrangler deploy` instead/s
+			);
+		});
 	});
 
 	describe("CI override", () => {
