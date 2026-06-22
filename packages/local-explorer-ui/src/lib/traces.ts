@@ -71,16 +71,31 @@ async function runSql(
 }
 
 /**
+ * Binding name of the internal local-observability trace store. Kept in sync
+ * with `OBSERVABILITY_D1_BINDING` in `@cloudflare/workers-utils` (the UI can't
+ * import from that package, so the constant is mirrored here).
+ */
+export const TRACE_STORE_BINDING_NAME = "WOBS_TRACES";
+
+/** Whether a D1 binding is the internal observability trace store. */
+export function isTraceStoreBinding(binding: {
+	bindingName?: string | null;
+}): boolean {
+	return (binding.bindingName ?? "") === TRACE_STORE_BINDING_NAME;
+}
+
+/**
  * Find the D1 database that holds the trace store among a worker's bindings.
- * Matches by binding/database name containing "trace".
+ * Prefers the exact internal binding name, falling back to any name containing
+ * "trace" for resilience.
  */
 export function findTraceDatabaseId(
 	bindings: LocalExplorerWorkerBindings | undefined
 ): string | undefined {
 	const candidates = bindings?.d1 ?? [];
-	const match = candidates.find((db) =>
-		/trace/i.test(db.bindingName ?? "")
-	);
+	const match =
+		candidates.find(isTraceStoreBinding) ??
+		candidates.find((db) => /trace/i.test(db.bindingName ?? ""));
 	return match?.id;
 }
 

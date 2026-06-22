@@ -18,6 +18,7 @@ import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
+import { isTraceStoreBinding } from "../lib/traces";
 import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
 import { getNextThemeMode } from "../utils/theme-state";
 import { SidebarGroupPopup } from "./SidebarGroupPopup";
@@ -87,7 +88,12 @@ export function AppSidebar({
 	const showWorkerSelector = workers.length > 1;
 	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
 
-	const d1Databases = bindings?.d1 ?? [];
+	// Hide the internal observability trace store — it's bound to the worker so
+	// the collector can write to it and the Observability tab can read it, but
+	// it isn't one of the user's databases.
+	const d1Databases = (bindings?.d1 ?? []).filter(
+		(db) => !isTraceStoreBinding(db)
+	);
 	const doNamespaces = (bindings?.do ?? []).filter((ns) => ns.useSqlite);
 	const kvNamespaces = bindings?.kv ?? [];
 	const r2Buckets = bindings?.r2 ?? [];

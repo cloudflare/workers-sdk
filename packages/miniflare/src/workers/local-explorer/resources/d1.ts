@@ -52,21 +52,35 @@ function getD1Binding(env: Env, databaseId: string): D1Database | null {
 }
 
 /**
+ * Internal D1 database ids that back local-dev features and should not be
+ * surfaced as user-facing databases. The observability trace store is bound to
+ * the user worker (so the collector can write to it and the Observability tab
+ * can read/query it), but it isn't one of the user's databases.
+ *
+ * Keep in sync with `OBSERVABILITY_D1_ID` in `@cloudflare/workers-utils`. It
+ * stays queryable by id and discoverable via the per-worker bindings; this only
+ * removes it from the D1 list.
+ */
+const INTERNAL_D1_IDS = new Set(["miniflare-wobs-traces"]);
+
+/**
  * Get local D1 databases from the binding map.
  */
 function getLocalD1Databases(env: Env): D1DatabaseResponse[] {
 	const d1BindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
 
-	return Object.entries(d1BindingMap).map(([id, bindingName]) => {
-		const parts = bindingName.split(":");
-		const databaseName = parts.pop() || bindingName;
+	return Object.entries(d1BindingMap)
+		.filter(([id]) => !INTERNAL_D1_IDS.has(id))
+		.map(([id, bindingName]) => {
+			const parts = bindingName.split(":");
+			const databaseName = parts.pop() || bindingName;
 
-		return {
-			name: databaseName,
-			uuid: id,
-			version: "production",
-		} satisfies D1DatabaseResponse;
-	});
+			return {
+				name: databaseName,
+				uuid: id,
+				version: "production",
+			} satisfies D1DatabaseResponse;
+		});
 }
 
 async function findD1DatabaseOwner(

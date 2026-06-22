@@ -111,6 +111,37 @@ const remoteProxySessionsDataMap = new Map<
 	} | null
 >();
 
+/**
+ * Experimental local observability: route each user worker's tail stream to the
+ * internal collector and provision the internal D1 trace store, so the Local
+ * Explorer's Observability tab can read the captured traces. Returns the workers
+ * unchanged unless observability is enabled (X_LOCAL_OBSERVABILITY).
+ */
+export function applyLocalObservability(
+	userWorkers: WorkerOptions[],
+	enabled: boolean = getLocalObservabilityEnabledFromEnv()
+): WorkerOptions[] {
+	if (!enabled) {
+		return userWorkers;
+	}
+	return userWorkers.map((worker) => ({
+		...worker,
+		compatibilityFlags: [
+			...(worker.compatibilityFlags ?? []),
+			"streaming_tail_worker",
+			"tail_worker_user_spans",
+		],
+		streamingTails: [
+			...(worker.streamingTails ?? []),
+			{ name: OBSERVABILITY_COLLECTOR_SERVICE_NAME },
+		],
+		d1Databases: {
+			...(worker.d1Databases ?? {}),
+			[OBSERVABILITY_D1_BINDING]: { id: OBSERVABILITY_D1_ID },
+		},
+	}));
+}
+
 export async function getDevMiniflareOptions(
 	ctx: AssetsOnlyPluginContext | WorkersPluginContext,
 	viteDevServer: vite.ViteDevServer
@@ -464,27 +495,11 @@ export async function getDevMiniflareOptions(
 		secure: !!serverConfig.https,
 	});
 
-	// Experimental local observability: route each user worker's tail stream to
-	// the internal collector + provision the internal D1 trace store.
 	const observabilityEnabled = getLocalObservabilityEnabledFromEnv();
-	const observedUserWorkers = observabilityEnabled
-		? userWorkers.map((worker) => ({
-				...worker,
-				compatibilityFlags: [
-					...(worker.compatibilityFlags ?? []),
-					"streaming_tail_worker",
-					"tail_worker_user_spans",
-				],
-				streamingTails: [
-					...(worker.streamingTails ?? []),
-					{ name: OBSERVABILITY_COLLECTOR_SERVICE_NAME },
-				],
-				d1Databases: {
-					...(worker.d1Databases ?? {}),
-					[OBSERVABILITY_D1_BINDING]: { id: OBSERVABILITY_D1_ID },
-				},
-			}))
-		: userWorkers;
+	const observedUserWorkers = applyLocalObservability(
+		userWorkers,
+		observabilityEnabled
+	);
 
 	return {
 		miniflareOptions: {

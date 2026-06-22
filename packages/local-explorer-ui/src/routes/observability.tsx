@@ -39,13 +39,22 @@ function isError(t: TraceRow): boolean {
 	return (!!t.outcome && t.outcome !== "ok") || (t.status_code ?? 0) >= 400;
 }
 
+/**
+ * A single distributed trace can span multiple invocations (e.g. a
+ * subrequest/self-fetch) that share a trace_id but have different root spans, so
+ * a row's identity is the (trace_id, root_span_id) pair.
+ */
+function traceKey(t: Pick<TraceRow, "trace_id" | "root_span_id">): string {
+	return `${t.trace_id}:${t.root_span_id}`;
+}
+
 function ObservabilityView(): JSX.Element {
 	const rootData = rootRoute.useLoaderData();
 	const { worker } = Route.useSearch();
 
 	const databaseId = useMemo(() => {
-		for (const worker of rootData.workers) {
-			const id = findTraceDatabaseId(worker.bindings);
+		for (const w of rootData.workers) {
+			const id = findTraceDatabaseId(w.bindings);
 			if (id) {
 				return id;
 			}
@@ -54,8 +63,11 @@ function ObservabilityView(): JSX.Element {
 	}, [rootData.workers]);
 
 	const [traces, setTraces] = useState<TraceRow[]>([]);
-	const [selected, setSelected] = useState<TraceRow | null>(null);
-	const [spans, setSpans] = useState<SpanRow[]>([]);
+	// Traces can be expanded independently — multiple waterfalls open at once.
+	const [expanded, setExpanded] = useState<Set<string>>(new Set());
+	const [spansByTrace, setSpansByTrace] = useState<Record<string, SpanRow[]>>(
+		{}
+	);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -123,20 +135,33 @@ function ObservabilityView(): JSX.Element {
 		return () => clearInterval(id);
 	}, [refresh]);
 
-	const selectTrace = useCallback(
+	// Toggle a trace's waterfall open/closed. Multiple can be open at once and
+	// each stays open until clicked again.
+	const toggleTrace = useCallback(
 		async (trace: TraceRow) => {
-			setSelected(trace);
-			setSpans([]);
-			if (!databaseId) {
+			const key = traceKey(trace);
+			const isOpen = expanded.has(key);
+			setExpanded((prev) => {
+				const next = new Set(prev);
+				if (isOpen) {
+					next.delete(key);
+				} else {
+					next.add(key);
+				}
+				return next;
+			});
+			// Only fetch spans when opening, and only once per trace.
+			if (isOpen || !databaseId || spansByTrace[key]) {
 				return;
 			}
 			try {
-				setSpans(await getTraceSpans(databaseId, trace.trace_id));
+				const rows = await getTraceSpans(databaseId, trace.trace_id);
+				setSpansByTrace((prev) => ({ ...prev, [key]: rows }));
 			} catch (e) {
 				setError(e instanceof Error ? e.message : "Failed to load spans");
 			}
 		},
-		[databaseId]
+		[databaseId, expanded, spansByTrace]
 	);
 
 	const maxDuration = useMemo(
@@ -155,11 +180,11 @@ function ObservabilityView(): JSX.Element {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="border-kumo-fill flex min-h-14 items-center gap-2.5 border-b px-4">
+			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
 					<ObservabilityViewSwitcher current="traces" worker={worker} />
-					<span className="text-kumo-subtle pl-1 text-[11px] leading-tight">
+					<span className="pl-1 text-[11px] leading-tight text-kumo-subtle">
 						{traces.length} trace{traces.length === 1 ? "" : "s"}
 					</span>
 				</div>
@@ -167,7 +192,7 @@ function ObservabilityView(): JSX.Element {
 				<button
 					type="button"
 					onClick={() => void refresh()}
-					className="text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default flex items-center gap-1.5 rounded px-2 py-1 text-xs"
+					className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
 				>
 					<ArrowsCounterClockwiseIcon
 						size={13}
@@ -178,20 +203,23 @@ function ObservabilityView(): JSX.Element {
 			</header>
 
 			{/* filter bar — a simpler version of the dashboard query builder */}
-			<div className="border-kumo-fill flex items-center gap-2 border-b px-4 py-2">
-				<div className="border-kumo-fill bg-kumo-base flex flex-1 items-center gap-2 rounded-md border px-2.5 py-1.5">
-					<MagnifyingGlassIcon size={14} className="text-kumo-subtle shrink-0" />
+			<div className="flex items-center gap-2 border-b border-kumo-fill px-4 py-2">
+				<div className="flex flex-1 items-center gap-2 rounded-md border border-kumo-fill bg-kumo-base px-2.5 py-1.5">
+					<MagnifyingGlassIcon
+						size={14}
+						className="shrink-0 text-kumo-subtle"
+					/>
 					<input
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder="Search, or query e.g. status:error kind:d1 dur:>100 db.query.text:orders"
-						className="text-kumo-default placeholder:text-kumo-subtle w-full bg-transparent text-xs outline-none"
+						className="w-full bg-transparent text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
 					/>
 					{search ? (
 						<button
 							type="button"
 							onClick={() => setSearch("")}
-							className="text-kumo-subtle hover:text-kumo-default text-xs"
+							className="text-xs text-kumo-subtle hover:text-kumo-default"
 						>
 							✕
 						</button>
@@ -237,7 +265,7 @@ function ObservabilityView(): JSX.Element {
 						value={tagValue}
 						onChange={(e) => setTagValue(e.target.value)}
 						placeholder={`${tagKey} value…`}
-						className="border-kumo-fill bg-kumo-base text-kumo-default placeholder:text-kumo-subtle w-40 rounded-md border px-2 py-1.5 text-xs outline-none"
+						className="w-40 rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
 					/>
 				) : null}
 			</div>
@@ -258,8 +286,8 @@ function ObservabilityView(): JSX.Element {
 				) : (
 					<table className="w-full border-collapse text-sm">
 						<thead>
-							<tr className="text-kumo-subtle border-kumo-fill border-y text-left text-xs">
-								<th className="py-2 pl-4 pr-3 font-medium">
+							<tr className="border-y border-kumo-fill text-left text-xs text-kumo-subtle">
+								<th className="py-2 pr-3 pl-4 font-medium">
 									<span className="inline-flex items-center gap-1">
 										Timestamp <span className="text-blue-500">↓</span>
 									</span>
@@ -272,91 +300,97 @@ function ObservabilityView(): JSX.Element {
 						</thead>
 						<tbody>
 							{traces.map((t) => {
-								const isSel = selected?.trace_id === t.trace_id;
+								const key = traceKey(t);
+								const isSel = expanded.has(key);
+								const spans = spansByTrace[key] ?? [];
 								const err = isError(t);
 								const dur = t.duration_ms ?? 0;
 								const { value, unit } = splitDuration(dur);
 								return (
-									<Fragment key={t.trace_id}>
-									<tr
-										onClick={() => void selectTrace(t)}
-										className={cn(
-											"border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5 cursor-pointer border-b",
-											isSel && "bg-blue-100 dark:bg-blue-900/30"
-										)}
-									>
-										{/* Timestamp + left accent bar */}
-										<td className="py-2.5 pl-4 pr-3">
-											<div className="flex items-center gap-2.5">
-												<span
-													className={cn(
-														"h-4 w-[3px] shrink-0 rounded-full",
-														err ? "bg-red-500" : "bg-blue-500"
-													)}
-												/>
-												<span className="text-kumo-default decoration-kumo-line font-mono text-xs underline decoration-dotted underline-offset-2">
-													{t.created_at ?? ""}
-													<span className="text-kumo-subtle"> UTC</span>
-												</span>
-											</div>
-										</td>
-										{/* Operation */}
-										<td className="text-kumo-default py-2.5 pr-3 font-mono text-xs">
-											{t.name ?? t.trace_id.slice(0, 16)}
-										</td>
-										{/* Duration: number + faded unit, gauge below */}
-										<td className="py-2.5 pr-3">
-											<div className="flex flex-col gap-1">
-												<div className="text-sm tabular-nums">
-													<span className="text-kumo-default">{value}</span>
-													<span className="text-kumo-subtle">{unit}</span>
-												</div>
-												<div className="bg-kumo-fill h-1 w-24 overflow-hidden rounded-full">
-													<div
-														className="h-full rounded-full bg-blue-500"
-														style={{
-															width: `${Math.max((dur / maxDuration) * 100, 2)}%`,
-														}}
-													/>
-												</div>
-											</div>
-										</td>
-										{/* Spans */}
-										<td className="text-kumo-default py-2.5 pr-3 text-xs tabular-nums">
-											{t.span_count ?? "-"}
-										</td>
-										{/* Errors */}
-										<td className="py-2.5 pr-3 text-xs tabular-nums">
-											{err ? (
-												<span className="text-red-500">1</span>
-											) : (
-												<span className="text-kumo-subtle">-</span>
+									<Fragment key={key}>
+										<tr
+											onClick={() => void toggleTrace(t)}
+											className={cn(
+												"cursor-pointer border-b border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5",
+												isSel && "bg-blue-100 dark:bg-blue-900/30"
 											)}
-										</td>
-									</tr>
-									{isSel && spans.length > 0 ? (
-										<tr className="bg-black/[0.02] dark:bg-white/[0.02]">
-											<td colSpan={5} className="border-kumo-fill border-b p-4">
-												<div className="mb-2 flex items-baseline gap-2">
-													<span className="text-kumo-default font-mono text-sm font-semibold">
-														{t.name ?? t.trace_id}
-													</span>
-													<span className="text-kumo-subtle font-mono text-[11px]">
-														{t.trace_id.slice(0, 16)}
-													</span>
-													<span className="text-kumo-subtle text-[11px]">
-														· {Math.round(t.duration_ms ?? 0)}ms ·{" "}
-														{t.span_count ?? spans.length} spans
+										>
+											{/* Timestamp + left accent bar */}
+											<td className="py-2.5 pr-3 pl-4">
+												<div className="flex items-center gap-2.5">
+													<span
+														className={cn(
+															"h-4 w-[3px] shrink-0 rounded-full",
+															err ? "bg-red-500" : "bg-blue-500"
+														)}
+													/>
+													<span className="font-mono text-xs text-kumo-default underline decoration-kumo-line decoration-dotted underline-offset-2">
+														{t.created_at ?? ""}
+														<span className="text-kumo-subtle"> UTC</span>
 													</span>
 												</div>
-												<TraceWaterfall
-													spans={spans}
-													rootSpanId={t.root_span_id}
-													traceDurationMs={t.duration_ms ?? 0}
-												/>
+											</td>
+											{/* Operation */}
+											<td className="py-2.5 pr-3 font-mono text-xs text-kumo-default">
+												{t.name ?? t.trace_id.slice(0, 16)}
+											</td>
+											{/* Duration: number + faded unit, gauge below */}
+											<td className="py-2.5 pr-3">
+												<div className="flex flex-col gap-1">
+													<div className="text-sm tabular-nums">
+														<span className="text-kumo-default">{value}</span>
+														<span className="text-kumo-subtle">{unit}</span>
+													</div>
+													<div className="h-1 w-24 overflow-hidden rounded-full bg-kumo-fill">
+														<div
+															className="h-full rounded-full bg-blue-500"
+															style={{
+																width: `${Math.max((dur / maxDuration) * 100, 2)}%`,
+															}}
+														/>
+													</div>
+												</div>
+											</td>
+											{/* Spans */}
+											<td className="py-2.5 pr-3 text-xs text-kumo-default tabular-nums">
+												{t.span_count ?? "-"}
+											</td>
+											{/* Errors */}
+											<td className="py-2.5 pr-3 text-xs tabular-nums">
+												{err ? (
+													<span className="text-red-500">1</span>
+												) : (
+													<span className="text-kumo-subtle">-</span>
+												)}
 											</td>
 										</tr>
-									) : null}
+										{isSel && spans.length > 0 ? (
+											<tr className="bg-black/[0.02] dark:bg-white/[0.02]">
+												<td
+													colSpan={5}
+													className="border-b border-kumo-fill p-4"
+												>
+													<div className="mb-2 flex items-baseline gap-2">
+														<span className="font-mono text-sm font-semibold text-kumo-default">
+															{t.name ?? t.trace_id}
+														</span>
+														<span className="font-mono text-[11px] text-kumo-subtle">
+															{t.trace_id.slice(0, 16)}
+														</span>
+														<span className="text-[11px] text-kumo-subtle">
+															· {Math.round(t.duration_ms ?? 0)}ms ·{" "}
+															{t.span_count ?? spans.length} spans
+														</span>
+													</div>
+													<TraceWaterfall
+														key={key}
+														spans={spans}
+														rootSpanId={t.root_span_id}
+														traceDurationMs={t.duration_ms ?? 0}
+													/>
+												</td>
+											</tr>
+										) : null}
 									</Fragment>
 								);
 							})}
@@ -384,9 +418,9 @@ function EmptyState({
 				inline ? "py-16" : "h-full"
 			)}
 		>
-			<PulseIcon size={28} className="text-kumo-subtle mb-2" />
-			<h3 className="text-kumo-default text-sm font-semibold">{title}</h3>
-			<p className="text-kumo-subtle mt-1 max-w-md text-xs">{body}</p>
+			<PulseIcon size={28} className="mb-2 text-kumo-subtle" />
+			<h3 className="text-sm font-semibold text-kumo-default">{title}</h3>
+			<p className="mt-1 max-w-md text-xs text-kumo-subtle">{body}</p>
 		</div>
 	);
 }

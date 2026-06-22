@@ -1,14 +1,13 @@
 /**
  * Local observability collector (experimental).
  *
- * Injected automatically by `wrangler dev --experimental-observability`. It is
- * registered as a streaming-tail consumer for the user's worker(s): workerd
- * streams TailStream events here, and this worker persists each completed trace
- * (plus its spans and logs) to an internal local D1 database that the Local
- * Explorer's Observability tab reads.
+ * Injected automatically when local observability is enabled
+ * (`X_LOCAL_OBSERVABILITY`). It is registered as a streaming-tail consumer for
+ * the user's worker(s): workerd streams TailStream events here, and this worker
+ * persists each completed trace (plus its spans and logs) to an internal local
+ * D1 database that the Local Explorer's Observability tab reads.
  *
- * It is the productized form of the wobs-local-traces prototype collector:
- * no user config, no terminal rendering — capture + persist only. The schema is
+ * No user config, no terminal rendering — capture + persist only. The schema is
  * created lazily so there is nothing to seed.
  */
 import { WorkerEntrypoint } from "cloudflare:workers";

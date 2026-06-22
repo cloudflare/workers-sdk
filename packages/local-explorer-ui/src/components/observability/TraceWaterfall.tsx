@@ -101,6 +101,24 @@ export function TraceWaterfall({
 		);
 	}, []);
 
+	// Row click behaviour:
+	// - Parent spans: clicking toggles collapse/expand of their subtree (so
+	//   clicking an open span again closes it) and selects the span so its
+	//   detail panel reflects what you clicked. Re-clicking doesn't toggle the
+	//   detail off — collapse is the primary action for parents.
+	// - Leaf spans: clicking toggles their detail panel (nothing to collapse).
+	const handleRowClick = useCallback(
+		(span: LayoutSpan) => {
+			if (span.hasChildren) {
+				toggleCollapsed(span.layoutId);
+				setFocusedId(span.span_id);
+			} else {
+				setFocusedId((prev) => (prev === span.span_id ? null : span.span_id));
+			}
+		},
+		[toggleCollapsed]
+	);
+
 	const isVisible = useCallback(
 		(span: LayoutSpan) =>
 			!collapsed.some(
@@ -127,7 +145,9 @@ export function TraceWaterfall({
 		}
 	}
 
-	const focused = visibleSpans.find((s) => s.span_id === focusedId) ?? null;
+	// Resolve from all spans (not just visible ones) so collapsing a parent
+	// doesn't make the selected span's detail panel flicker away.
+	const focused = allSpans.find((s) => s.span_id === focusedId) ?? null;
 
 	const rowBg = (id: string) =>
 		focusedId === id
@@ -137,16 +157,22 @@ export function TraceWaterfall({
 				: "";
 
 	return (
-		<div className="bg-kumo-base border-kumo-fill overflow-hidden rounded-lg border">
-			<div ref={ref} className="outline-none" role="region" aria-label="Trace timeline">
+		<div className="overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
+			<div
+				ref={ref}
+				className="outline-none"
+				role="region"
+				aria-label="Trace timeline"
+			>
 				<div className="flex">
 					{/* ---- name column ---- */}
 					<div style={{ width: LABEL_WIDTH }} className="shrink-0">
-						<div className="border-kumo-fill flex h-[41px] items-center border-b px-4 py-2.5">
-							<span className="text-kumo-default text-sm font-medium">Name</span>
+						<div className="flex h-[41px] items-center border-b border-kumo-fill px-4 py-2.5">
+							<span className="text-sm font-medium text-kumo-default">
+								Name
+							</span>
 						</div>
 						{visibleSpans.map((span) => {
-							const isFocused = focusedId === span.span_id;
 							return (
 								<div
 									key={span.layoutId}
@@ -156,7 +182,7 @@ export function TraceWaterfall({
 										"h-8 cursor-pointer border-l-2 border-l-transparent transition-colors duration-150",
 										rowBg(span.span_id)
 									)}
-									onClick={() => setFocusedId(isFocused ? null : span.span_id)}
+									onClick={() => handleRowClick(span)}
 									onMouseEnter={() => setHoveredId(span.span_id)}
 									onMouseLeave={() => setHoveredId(null)}
 								>
@@ -173,11 +199,11 @@ export function TraceWaterfall({
 					{/* ---- timeline column ---- */}
 					<div className="relative flex-1" style={{ width: traceAreaWidth }}>
 						{/* axis header */}
-						<div className="border-kumo-fill relative flex h-[41px] items-center overflow-hidden border-b py-2.5">
+						<div className="relative flex h-[41px] items-center overflow-hidden border-b border-kumo-fill py-2.5">
 							{markers.map(({ time, left }) => (
 								<div
 									key={time}
-									className="text-kumo-subtle absolute text-[10px]"
+									className="absolute text-[10px] text-kumo-subtle"
 									style={{ left: `${left + 2}px` }}
 								>
 									{formatDuration(time)}
@@ -189,14 +215,17 @@ export function TraceWaterfall({
 						{markers.slice(1).map(({ time, left }) => (
 							<div
 								key={`m-${time}`}
-								className="bg-kumo-fill pointer-events-none absolute w-px"
-								style={{ left: `${left}px`, top: "40px", height: "calc(100% - 40px)" }}
+								className="pointer-events-none absolute w-px bg-kumo-fill"
+								style={{
+									left: `${left}px`,
+									top: "40px",
+									height: "calc(100% - 40px)",
+								}}
 							/>
 						))}
 
 						{/* bars */}
 						{visibleSpans.map((span) => {
-							const isFocused = focusedId === span.span_id;
 							return (
 								<div
 									key={span.layoutId}
@@ -204,7 +233,7 @@ export function TraceWaterfall({
 										"flex h-8 cursor-pointer items-center pl-0.5 transition-colors duration-150",
 										rowBg(span.span_id)
 									)}
-									onClick={() => setFocusedId(isFocused ? null : span.span_id)}
+									onClick={() => handleRowClick(span)}
 									onMouseEnter={() => setHoveredId(span.span_id)}
 									onMouseLeave={() => setHoveredId(null)}
 								>
@@ -238,7 +267,7 @@ function SpanLabel({
 	const Icon = getSpanIcon(span);
 	return (
 		<div
-			className="text-ellipsis relative flex h-full w-full items-center gap-2 overflow-hidden whitespace-nowrap pl-4 font-mono text-sm"
+			className="relative flex h-full w-full items-center gap-2 overflow-hidden pl-4 font-mono text-sm text-ellipsis whitespace-nowrap"
 			style={{ paddingLeft: 4 + span.depth * 32, maxWidth: LABEL_WIDTH }}
 		>
 			{span.hasChildren ? (
@@ -271,7 +300,7 @@ function SpanLabel({
 						<WarningIcon size={12} weight="bold" />
 					</span>
 				) : null}
-				<span className="text-ellipsis min-w-0 overflow-hidden whitespace-nowrap text-sm">
+				<span className="min-w-0 overflow-hidden text-sm text-ellipsis whitespace-nowrap">
 					{span.name ?? "span"}
 				</span>
 			</div>
@@ -304,12 +333,15 @@ function NormalSpanBar({
 			: "bg-neutral-600 dark:bg-neutral-400";
 
 	return (
-		<div className="flex w-full items-center" style={{ maxWidth: traceAreaWidth }}>
+		<div
+			className="flex w-full items-center"
+			style={{ maxWidth: traceAreaWidth }}
+		>
 			<div className="relative w-full">
 				{/* duration chip before bar (small spans on right) */}
 				{isSmall && !isLeftSide ? (
 					<div
-						className="text-kumo-subtle absolute top-0 flex h-5 items-center text-[10px] font-medium"
+						className="absolute top-0 flex h-5 items-center text-[10px] font-medium text-kumo-subtle"
 						style={{ right: `${traceAreaWidth - spanLeft + 4}px` }}
 					>
 						{formatDuration(spanDuration)}
@@ -337,10 +369,12 @@ function NormalSpanBar({
 				{isSmall && isLeftSide ? (
 					<div
 						className={cn(
-							"text-kumo-subtle absolute top-0 flex h-5 items-center text-[10px]",
+							"absolute top-0 flex h-5 items-center text-[10px] text-kumo-subtle",
 							error && "text-red-500"
 						)}
-						style={{ left: `${spanLeft + Math.max(spanWidth, minWidth) + 4}px` }}
+						style={{
+							left: `${spanLeft + Math.max(spanWidth, minWidth) + 4}px`,
+						}}
 					>
 						{formatDuration(spanDuration)}
 					</div>
@@ -356,10 +390,10 @@ function SpanDetail({ span }: { span: LayoutSpan }): JSX.Element {
 	const error = hasErr(span);
 	const Icon = getSpanIcon(span);
 	return (
-		<div className="bg-kumo-elevated border-kumo-fill border-t p-4">
+		<div className="border-t border-kumo-fill bg-kumo-elevated p-4">
 			<div className="mb-3 flex items-center gap-2">
 				<Icon size={16} />
-				<span className="text-kumo-default font-mono text-sm font-semibold">
+				<span className="font-mono text-sm font-semibold text-kumo-default">
 					{span.name}
 				</span>
 				<span
@@ -372,7 +406,7 @@ function SpanDetail({ span }: { span: LayoutSpan }): JSX.Element {
 				>
 					{span.outcome ?? "?"}
 				</span>
-				<span className="text-kumo-subtle text-xs">
+				<span className="text-xs text-kumo-subtle">
 					{formatDuration(span.duration_ms)}
 				</span>
 			</div>
@@ -382,15 +416,18 @@ function SpanDetail({ span }: { span: LayoutSpan }): JSX.Element {
 				</div>
 			) : null}
 			{entries.length ? (
-				<div className="border-kumo-fill overflow-hidden rounded border">
+				<div className="overflow-hidden rounded border border-kumo-fill">
 					<table className="w-full text-xs">
 						<tbody>
 							{entries.map(([k, v], i) => (
-								<tr key={k} className={cn("align-top", i % 2 && "bg-kumo-base")}>
-									<td className="text-kumo-subtle w-1/3 whitespace-nowrap px-3 py-1.5 font-mono">
+								<tr
+									key={k}
+									className={cn("align-top", i % 2 && "bg-kumo-base")}
+								>
+									<td className="w-1/3 px-3 py-1.5 font-mono whitespace-nowrap text-kumo-subtle">
 										{k}
 									</td>
-									<td className="text-kumo-default break-all px-3 py-1.5 font-mono">
+									<td className="px-3 py-1.5 font-mono break-all text-kumo-default">
 										{typeof v === "object" ? JSON.stringify(v) : String(v)}
 									</td>
 								</tr>
@@ -399,7 +436,7 @@ function SpanDetail({ span }: { span: LayoutSpan }): JSX.Element {
 					</table>
 				</div>
 			) : (
-				<div className="text-kumo-subtle text-xs italic">No attributes</div>
+				<div className="text-xs text-kumo-subtle italic">No attributes</div>
 			)}
 		</div>
 	);
