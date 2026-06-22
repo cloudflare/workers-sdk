@@ -310,7 +310,9 @@ async function matchFiles(
 		if (!moduleNames.has(filePath)) {
 			for (const rule of removedRules) {
 				for (const glob of rule.globs) {
-					const regexp = globToRegExp(glob);
+					const regexp = globToRegExp(glob, {
+						globstar: true,
+					});
 					if (regexp.test(filePath)) {
 						logger.debug(
 							`Skipping discovered file ${filePath} — it only matches a shadowed module rule (${JSON.stringify(
