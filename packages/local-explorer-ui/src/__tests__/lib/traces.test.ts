@@ -165,10 +165,15 @@ describe("buildSpanTree", () => {
 });
 
 describe("listTraces SQL", () => {
-	test("no filters -> plain ordered/limited select", async ({ expect }) => {
+	test("lists only root invocations (one row per distributed trace)", async ({
+		expect,
+	}) => {
 		await listTraces("db");
 		const sql = lastSql();
-		expect(sql).not.toContain("WHERE");
+		// always filters to the parent-less root invocation
+		expect(sql).toContain("parent_span_id IS NULL OR parent_span_id = ''");
+		// span_count / duration are computed across the whole trace_id
+		expect(sql).toContain("FROM spans WHERE spans.trace_id = traces.trace_id");
 		expect(sql).toContain("ORDER BY created_at DESC, ROWID DESC LIMIT 100");
 	});
 

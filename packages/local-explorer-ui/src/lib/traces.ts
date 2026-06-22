@@ -28,7 +28,7 @@ export interface SpanRow {
 	parent_id: string | null;
 	name: string | null;
 	kind: string | null;
-	/** offset from trace start, in ms */
+	/** absolute epoch ms as stored; buildSpanTree re-bases to trace-relative */
 	start_ms: number;
 	end_ms: number | null;
 	duration_ms: number;
@@ -142,7 +142,11 @@ export async function listTraces(
 	filters: TraceFilters = {}
 ): Promise<TraceRow[]> {
 	const limit = Number(filters.limit ?? 100);
-	const where: string[] = [];
+	// A distributed trace can span several worker invocations that share a
+	// trace_id; each invocation persists its own row. List only the root
+	// invocation (the parent-less one) so each trace shows once, matching the
+	// production model (group by trace_id, root = parent-less span).
+	const where: string[] = ["(parent_span_id IS NULL OR parent_span_id = '')"];
 
 	if (filters.status === "success") {
 		where.push(
@@ -193,9 +197,15 @@ export async function listTraces(
 	}
 
 	const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+	// span_count and duration are computed across ALL invocations sharing the
+	// trace_id (the whole distributed trace), not just the root invocation.
 	const rows = await runSql(
 		databaseId,
-		`SELECT trace_id, root_span_id, name, duration_ms, outcome, status_code, error, span_count, created_at
+		`SELECT trace_id, root_span_id, name,
+		 (SELECT ROUND(MAX(end_ms) - MIN(start_ms), 2) FROM spans WHERE spans.trace_id = traces.trace_id) AS duration_ms,
+		 outcome, status_code, error,
+		 (SELECT COUNT(*) FROM spans WHERE spans.trace_id = traces.trace_id) AS span_count,
+		 created_at
 		 FROM traces ${whereSql} ORDER BY created_at DESC, ROWID DESC LIMIT ${limit}`
 	);
 	return rows as unknown as TraceRow[];
@@ -300,10 +310,20 @@ export function buildSpanTree(
 	spans: SpanRow[],
 	rootSpanId: string
 ): LayoutSpan[] {
-	const byId = new Map(spans.map((s) => [s.span_id, s]));
+	// Span times are absolute epoch ms (so spans from different invocations of a
+	// distributed trace share a timeline). Re-base everything to the earliest
+	// span start so the waterfall renders offsets from the trace start.
+	const t0 = spans.length ? Math.min(...spans.map((s) => s.start_ms)) : 0;
+	const rebased = spans.map((s) => ({
+		...s,
+		start_ms: s.start_ms - t0,
+		end_ms: s.end_ms != null ? s.end_ms - t0 : null,
+	}));
+
+	const byId = new Map(rebased.map((s) => [s.span_id, s]));
 	const childrenOf = new Map<string, SpanRow[]>();
 
-	for (const s of spans) {
+	for (const s of rebased) {
 		if (s.span_id === rootSpanId) {
 			continue;
 		}
@@ -333,7 +353,7 @@ export function buildSpanTree(
 		});
 	};
 
-	const root = byId.get(rootSpanId) ?? spans[0];
+	const root = byId.get(rootSpanId) ?? rebased[0];
 	if (root) {
 		visit(root.span_id, 0, "0");
 	}

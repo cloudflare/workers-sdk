@@ -19,7 +19,7 @@ interface Env {
 
 const SCHEMA = [
 	`CREATE TABLE IF NOT EXISTS traces (
-		trace_id TEXT NOT NULL, root_span_id TEXT NOT NULL, name TEXT,
+		trace_id TEXT NOT NULL, root_span_id TEXT NOT NULL, parent_span_id TEXT, name TEXT,
 		start_ms REAL, end_ms REAL, duration_ms REAL, outcome TEXT,
 		status_code INTEGER, error TEXT, span_count INTEGER,
 		created_at TEXT DEFAULT (datetime('now')), PRIMARY KEY (trace_id, root_span_id))`,
@@ -155,6 +155,9 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 	}
 }
 
+/** Whether the once-per-isolate schema upgrade has been attempted. */
+let schemaMigrated = false;
+
 async function persist(
 	db: D1Database,
 	spans: Map<string, Span>,
@@ -168,19 +171,35 @@ async function persist(
 	const total = (root.end ?? t0) - t0;
 	const round = (n: number) => Math.round(n * 100) / 100;
 
+	// Best-effort, once-per-isolate upgrade for stores created before the
+	// parent_span_id column existed (CREATE TABLE IF NOT EXISTS won't add it).
+	// No-ops on fresh stores (no table yet) and on already-migrated stores.
+	if (!schemaMigrated) {
+		schemaMigrated = true;
+		await db
+			.exec("ALTER TABLE traces ADD COLUMN parent_span_id TEXT")
+			.catch(() => {});
+	}
+
 	const stmts: D1PreparedStatement[] = SCHEMA.map((s) => db.prepare(s));
 
+	// Times are stored as ABSOLUTE epoch ms (not offsets) so that spans from
+	// different worker invocations sharing a traceId can be stitched onto a
+	// single timeline. The UI re-bases to the trace's earliest span. The root
+	// span's parent (set only for sub-invocations like service-binding calls)
+	// lets the UI pick the true root invocation of a distributed trace.
 	stmts.push(
 		db
 			.prepare(
-				`INSERT OR REPLACE INTO traces (trace_id, root_span_id, name, start_ms, end_ms, duration_ms, outcome, status_code, error, span_count) VALUES (?,?,?,?,?,?,?,?,?,?)`
+				`INSERT OR REPLACE INTO traces (trace_id, root_span_id, parent_span_id, name, start_ms, end_ms, duration_ms, outcome, status_code, error, span_count) VALUES (?,?,?,?,?,?,?,?,?,?,?)`
 			)
 			.bind(
 				traceId,
 				rootId,
+				root.parentId ?? null,
 				root.name ?? null,
-				0,
-				round(total),
+				round(root.start),
+				round(root.end ?? root.start),
 				round(total),
 				root.outcome ?? null,
 				root.statusCode ?? null,
@@ -193,7 +212,7 @@ async function persist(
 	for (const id of order) {
 		const s = spans.get(id);
 		if (!s) continue;
-		const dur = s.end != null ? s.end - s.start : total - (s.start - t0);
+		const dur = s.end != null ? s.end - s.start : (root.end ?? t0) - s.start;
 		stmts.push(
 			db
 				.prepare(
@@ -205,8 +224,8 @@ async function persist(
 					s.parentId ?? null,
 					s.name ?? null,
 					s.kind ?? null,
-					round(s.start - t0),
-					s.end != null ? round(s.end - t0) : null,
+					round(s.start),
+					s.end != null ? round(s.end) : null,
 					round(dur),
 					s.outcome ?? null,
 					s.error ?? null,
@@ -223,7 +242,7 @@ async function persist(
 						traceId,
 						s.id,
 						seq,
-						round((l.ts ?? t0) - t0),
+						round(l.ts ?? root.start),
 						l.level ?? "log",
 						safeStringify(l.message),
 						root.name ?? null

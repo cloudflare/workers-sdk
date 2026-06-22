@@ -132,8 +132,15 @@ export function TraceWaterfall({
 		[allSpans, isVisible]
 	);
 
+	// Derive the visible window from the laid-out spans (re-based to the trace
+	// start) so it covers sub-invocations that run past the root invocation
+	// (e.g. service-binding calls). Falls back to the provided trace duration.
+	const spansEnd = allSpans.reduce(
+		(max, s) => Math.max(max, s.end_ms ?? s.start_ms + s.duration_ms),
+		0
+	);
 	const traceAreaWidth = Math.max(0, width - LABEL_WIDTH);
-	const paddedDuration = Math.max(1, traceDurationMs) * 1.05;
+	const paddedDuration = Math.max(1, traceDurationMs, spansEnd) * 1.05;
 	const pxToMS = traceAreaWidth > 0 ? traceAreaWidth / paddedDuration : 0;
 
 	const interval = calculateOptimalInterval(paddedDuration, traceAreaWidth);
