@@ -366,6 +366,168 @@ describe("createTestHarness", () => {
 		await expect(adminResponse.text()).resolves.toBe("2");
 	});
 
+	it("introspects Workflow instances by binding name", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "workflow-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"workflows": [
+						{
+							"binding": "MODERATOR",
+							"class_name": "ModeratorWorkflow",
+							"name": "moderator-workflow"
+						}
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				import { WorkflowEntrypoint } from "cloudflare:workers";
+
+				export class ModeratorWorkflow extends WorkflowEntrypoint {
+					async run(_event, step) {
+						await step.sleep("sleep for a while", "10 seconds");
+
+						const result = await step.do("AI content scan", async () => {
+							const violationScore = Math.floor(Math.random() * 100);
+							return { violationScore };
+						});
+
+						if (result.violationScore < 10) {
+							await step.do("auto approve content", async () => {
+								return { status: "auto_approved" };
+							});
+							return { status: "auto_approved" };
+						}
+
+						await step.do("auto reject content", async () => {
+							return { status: "auto_rejected" };
+						});
+						return { status: "auto_rejected" };
+					}
+				}
+
+					export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+
+						if (url.pathname === "/moderate-known") {
+							const id = url.searchParams.get("id");
+							const workflow = await env.MODERATOR.create({ id });
+							return Response.json({ id: workflow.id });
+						}
+
+						if (url.pathname === "/moderate") {
+							const workflow = await env.MODERATOR.create();
+							return Response.json({
+								id: workflow.id,
+								details: await workflow.status()
+							});
+						}
+
+						if (url.pathname === "/moderate-batch") {
+							const workflows = await env.MODERATOR.createBatch([
+								{},
+								{ id: "321" },
+								{}
+							]);
+							return Response.json({ ids: workflows.map((workflow) => workflow.id) });
+						}
+
+						return new Response("Not found", { status: 404 });
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker("workflow-worker");
+		const stepName = "AI content scan";
+		const mockResult = { violationScore: 0 };
+
+		const instanceId = "known-workflow-instance";
+		const instance = await worker.introspectWorkflowInstance(
+			"MODERATOR",
+			instanceId
+		);
+		onTestFinished(instance.dispose);
+
+		await instance.modify(async (modifier) => {
+			await modifier.disableSleeps();
+			await modifier.mockStepResult({ name: stepName }, mockResult);
+		});
+
+		const response = await worker.fetch(`/moderate-known?id=${instanceId}`);
+		await expect(response.json()).resolves.toEqual({ id: instanceId });
+
+		await expect(
+			instance.waitForStepResult({ name: stepName })
+		).resolves.toEqual(mockResult);
+		await expect(instance.waitForStatus("complete")).resolves.not.toThrow();
+		await expect(instance.getOutput()).resolves.toEqual({
+			status: "auto_approved",
+		});
+
+		const workflow = await worker.introspectWorkflow("MODERATOR");
+		onTestFinished(workflow.dispose);
+		await expect(worker.introspectWorkflow("MODERATOR")).rejects.toThrow(
+			`Workflow binding "MODERATOR" already has an active introspection session.`
+		);
+		await workflow.modifyAll(async (modifier) => {
+			await modifier.disableSleeps();
+			await modifier.mockStepResult({ name: stepName }, mockResult);
+		});
+
+		const unknownIdResponse = await worker.fetch("/moderate");
+		const unknownIdResult = (await unknownIdResponse.json()) as { id: string };
+		expect(unknownIdResult.id).not.toBe(instanceId);
+
+		const instances = await workflow.get();
+		expect(instances).toHaveLength(1);
+		await expect(
+			instances[0].waitForStepResult({ name: stepName })
+		).resolves.toEqual(mockResult);
+		await expect(instances[0].waitForStatus("complete")).resolves.not.toThrow();
+		await expect(instances[0].getOutput()).resolves.toEqual({
+			status: "auto_approved",
+		});
+		await workflow.dispose();
+
+		const batchWorkflow = await worker.introspectWorkflow("MODERATOR");
+		onTestFinished(batchWorkflow.dispose);
+		await batchWorkflow.modifyAll(async (modifier) => {
+			await modifier.disableSleeps();
+			await modifier.mockStepResult({ name: stepName }, mockResult);
+		});
+
+		const batchResponse = await worker.fetch("/moderate-batch");
+		await expect(batchResponse.json()).resolves.toMatchObject({
+			ids: [expect.any(String), "321", expect.any(String)],
+		});
+
+		const batchInstances = await batchWorkflow.get();
+		expect(batchInstances).toHaveLength(3);
+		for (const batchInstance of batchInstances) {
+			await expect(
+				batchInstance.waitForStepResult({ name: stepName })
+			).resolves.toEqual(mockResult);
+			await expect(
+				batchInstance.waitForStatus("complete")
+			).resolves.not.toThrow();
+			await expect(batchInstance.getOutput()).resolves.toEqual({
+				status: "auto_approved",
+			});
+		}
+	});
+
 	it("supports service bindings between workers", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.primary.jsonc": dedent`

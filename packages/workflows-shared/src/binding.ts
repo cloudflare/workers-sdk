@@ -15,12 +15,79 @@ import type {
 	EngineLogs,
 } from "./engine";
 import type { InstanceStatus as EngineInstanceStatus } from "./instance";
+import type { WorkflowIntrospectionOperation } from "./types";
 
 type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;
 	BINDING_NAME: string;
 	WORKFLOW_NAME: string;
 };
+
+type WorkflowIntrospectionSession = {
+	id: string;
+	operations: WorkflowIntrospectionOperation[];
+	instanceIds: string[];
+};
+
+// workerd may construct a fresh WorkflowBinding object for each RPC call. Store
+// sessions at module scope so start/modify/get/dispose calls, and later
+// WorkflowBinding.create() calls, all see the same active Workflow session.
+const workflowIntrospectionSessions = new Map<
+	string,
+	WorkflowIntrospectionSession
+>();
+
+async function applyWorkflowIntrospectionOperation(
+	modifier: {
+		disableSleeps(steps?: { name: string; index?: number }[]): Promise<void>;
+		disableRetryDelays(
+			steps?: { name: string; index?: number }[]
+		): Promise<void>;
+		mockStepResult(
+			step: { name: string; index?: number },
+			stepResult: unknown
+		): Promise<void>;
+		mockStepError(
+			step: { name: string; index?: number },
+			error: Error,
+			times?: number
+		): Promise<void>;
+		forceStepTimeout(
+			step: { name: string; index?: number },
+			times?: number
+		): Promise<void>;
+		mockEvent(event: { type: string; payload: unknown }): Promise<void>;
+		forceEventTimeout(step: { name: string; index?: number }): Promise<void>;
+	},
+	operation: WorkflowIntrospectionOperation
+) {
+	switch (operation.type) {
+		case "disableSleeps":
+			await modifier.disableSleeps(operation.steps);
+			break;
+		case "disableRetryDelays":
+			await modifier.disableRetryDelays(operation.steps);
+			break;
+		case "mockStepResult":
+			await modifier.mockStepResult(operation.step, operation.stepResult);
+			break;
+		case "mockStepError": {
+			const error = new Error(operation.error.message);
+			error.name = operation.error.name;
+			await modifier.mockStepError(operation.step, error, operation.times);
+			break;
+		}
+		case "forceStepTimeout":
+			await modifier.forceStepTimeout(operation.step, operation.times);
+			break;
+		case "mockEvent":
+			await modifier.mockEvent(operation.event);
+			break;
+		case "forceEventTimeout":
+			await modifier.forceEventTimeout(operation.step);
+			break;
+	}
+}
 
 // TODO(vaish): import from @cloudflare/workers-types once restart options are published
 export interface RestartFromStep {
@@ -51,6 +118,17 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
+		const introspectionSession = workflowIntrospectionSessions.get(
+			this.env.WORKFLOW_NAME
+		);
+
+		if (introspectionSession !== undefined) {
+			const modifier = stub.getInstanceModifier();
+			introspectionSession.instanceIds.push(id);
+			for (const operation of introspectionSession.operations) {
+				await applyWorkflowIntrospectionOperation(modifier, operation);
+			}
+		}
 
 		const now = new Date().toISOString();
 		const initPromise = stub
@@ -130,6 +208,46 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	public async unsafeGetBindingName(): Promise<string> {
 		// async because of rpc
 		return this.env.BINDING_NAME;
+	}
+
+	public async unsafeStartIntrospection(): Promise<string> {
+		if (workflowIntrospectionSessions.has(this.env.WORKFLOW_NAME)) {
+			throw new Error(
+				`Workflow binding ${JSON.stringify(this.env.BINDING_NAME)} already has an active introspection session.`
+			);
+		}
+
+		const sessionId = crypto.randomUUID();
+		workflowIntrospectionSessions.set(this.env.WORKFLOW_NAME, {
+			id: sessionId,
+			operations: [],
+			instanceIds: [],
+		});
+		return sessionId;
+	}
+
+	public async unsafeStopIntrospection(sessionId: string): Promise<void> {
+		const session = workflowIntrospectionSessions.get(this.env.WORKFLOW_NAME);
+		if (session?.id === sessionId) {
+			workflowIntrospectionSessions.delete(this.env.WORKFLOW_NAME);
+		}
+	}
+
+	public async unsafeSetIntrospectionOperations(
+		sessionId: string,
+		operations: WorkflowIntrospectionOperation[]
+	): Promise<void> {
+		const session = workflowIntrospectionSessions.get(this.env.WORKFLOW_NAME);
+		if (session?.id === sessionId) {
+			session.operations = operations;
+		}
+	}
+
+	public async unsafeGetIntrospectionInstances(
+		sessionId: string
+	): Promise<string[]> {
+		const session = workflowIntrospectionSessions.get(this.env.WORKFLOW_NAME);
+		return session?.id === sessionId ? session.instanceIds : [];
 	}
 
 	public async unsafeGetInstanceModifier(instanceId: string): Promise<unknown> {
