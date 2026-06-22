@@ -4,7 +4,7 @@
 
 Add experimental support for declarative Durable Object exports
 
-`wrangler deploy` and `wrangler versions upload` now accept an `exports` map in `wrangler.json` as a declarative alternative to the legacy `migrations` array. The new flow is gated behind the `X_DO_EXPORTS` environment variable.
+`wrangler deploy` now accepts an `exports` map in `wrangler.json` as a declarative alternative to the legacy `migrations` array. The new flow is gated behind the `X_DO_EXPORTS` environment variable.
 
 Each entry in `exports` is keyed by Durable Object class name. `type` carries the export _kind_ (currently always `"durable-object"`); the `state` field carries the lifecycle and defaults to `"created"` (live) when omitted:
 
@@ -49,4 +49,11 @@ The validator's "no lifecycle declared" warning is now `exports`-aware: when the
 
 This flow requires the `exports_reconciliation` account entitlement on Cloudflare's side and is hidden behind the experimental env var until that gate ships broadly. `migrations`-based deploys are unchanged.
 
-Within `wrangler deploy`, configs that declare `exports` are routed through the legacy PUT `/workers/scripts/:name` endpoint rather than the newer POST `/versions` + POST `/deployments` flow, because only the PUT response currently surfaces the reconciliation envelope. As a result, a single `wrangler deploy` invocation does not yet support gradual rollouts when `exports` is set. Users who need gradual rollouts with the declarative flow can use `wrangler versions upload` followed by `wrangler versions deploy` — the versions-upload path sends `exports` via POST `/versions`, renders the reconciliation envelope, and supports gradual rollouts. This temporary routing constraint will be lifted once the versions response handler also plumbs the envelope.
+Like the legacy `migrations` array, the declarative `exports` map is a Durable Object lifecycle configuration and can only be applied via `wrangler deploy`. `wrangler versions upload` cannot apply DO lifecycle changes — see https://developers.cloudflare.com/workers/configuration/versions-and-deployments/#durable-object-migrations. Inside `wrangler deploy`, configs that declare `exports` are routed through the legacy PUT `/workers/scripts/:name` endpoint (the same path used today when `migrations` is set), which means a single `wrangler deploy` invocation does not support gradual rollouts when `exports` is set — exactly mirroring the existing `migrations` behaviour.
+
+The two-phase cross-script transfer flow (`expecting-transfer` on the target, `transferred` on the source) is supported end-to-end. The recommended rollout is a four-deploy sequence:
+
+1. **Source** deploys `Widget` as a normal live `durable-object` export (`state: "created"`).
+2. **Target** deploys `state: "expecting-transfer"` with `transfer_from: "<source>"`. The receiving class is declared in code, but the target does **not** add a `durable_objects.bindings` entry for it yet — EWC's binding resolver does not yet route self-referential bindings through the source's namespace during phase 1. Reconciliation records a pending transfer and emits a `Transfer pending` info entry.
+3. **Source** deploys the `state: "transferred"` tombstone with `transferred_to: "<target>"`. Reconciliation commits the handoff and emits `Transferred (committed)`; the namespace now belongs to the target.
+4. **Target** redeploys with the `durable_objects.bindings` entry for the class. The binding resolves cleanly because the namespace is now on this script.

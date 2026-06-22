@@ -20,23 +20,40 @@ const TIMEOUT = 60_000;
  *   CLOUDFLARE_ACCOUNT_ID=... pnpm --filter wrangler test:e2e durable-objects-exports
  *
  * This flow requires the server-side `exports_reconciliation` account
- * entitlement on the e2e account. Until that entitlement is enabled, the
- * suite is expected to fail at the first upload — that failure is the
- * regression signal that confirms the backend gate isn't yet live.
+ * entitlement on the e2e account.
  *
- * The suite is partitioned into four self-contained describe blocks (each
+ * The suite is partitioned into three self-contained describe blocks (each
  * owning its own helper / worker(s) and `afterAll` cleanup) so the stateful
  * deploy sequences within one block can't bleed into another:
  *
  *   - `wrangler deploy` — auto-provision, no-op, delete tombstone, stale
  *     tombstone, and the multi-error envelope returned by code `100402`.
- *   - `wrangler versions upload` — same payload + reconciliation rendering as
- *     `deploy`, exercised on the POST `/versions` path.
  *   - `zero-downtime rename` — three-step rename of `Counter` → `CounterV2`
  *     using a live target + `renamed` tombstone in the same map.
- *   - `cross-script transfer` — two-phase commit handing a namespace from
- *     script A to script B (target's `expecting-transfer` entry first, then
- *     source's `transferred` tombstone).
+ *   - `cross-script transfer` — four-step end-to-end transfer of a
+ *     namespace from script A to script B:
+ *       1. source (A) provisions `Widget`,
+ *       2. target (B) deploys `state: "expecting-transfer"` — no binding
+ *          for `Widget` yet, the reconciler records the pending row and
+ *          emits a `Transfer pending` info entry,
+ *       3. source (A) deploys the `state: "transferred"` tombstone —
+ *          reconciler commits the handoff and emits
+ *          `Transferred (committed)`,
+ *       4. target (B) redeploys WITH the `Widget` binding — the binding
+ *          now resolves to the just-landed namespace on this script.
+ *     Step 2 deliberately omits the target-side
+ *     `durable_objects.bindings` for `Widget`: EWC's binding resolver
+ *     does not yet route self-referential bindings to a class that
+ *     exists only in `expecting-transfer` state ("TBD #4 lock" in the
+ *     spec). The matching EWC integration test
+ *     (`TestExportsTombstone_TransferTwoPhaseWorkflow`) follows the same
+ *     no-binding-on-phase-1 pattern.
+ *
+ * Note: there is no `wrangler versions upload` block. Like the legacy
+ * `migrations` array, the declarative `exports` map is a Durable Object
+ * lifecycle configuration and can only be applied via `wrangler deploy`.
+ * See
+ * https://developers.cloudflare.com/workers/configuration/versions-and-deployments/#durable-object-migrations.
  *
  * The rename / transfer assertions encode the renderer contract in
  * `packages/deploy-helpers/src/deploy/helpers/exports-reconciliation.ts`.
@@ -177,101 +194,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				});
 
 				const result = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
-
-				expect(result.status).not.toBe(0);
-				expect(result.stderr).toContain(
-					"Durable Object exports reconciliation failed"
-				);
-				expect(result.stderr).toContain(
-					"[config_references_nonexistent_class]"
-				);
-			});
-		});
-
-		describe("wrangler versions upload", () => {
-			const workerName = generateResourceName();
-			const helper = new WranglerE2ETestHelper();
-
-			afterAll(async () => {
-				await helper.bestEffortRun(`wrangler delete`);
-			});
-
-			it("auto-provisions a new namespace on first version upload", async ({
-				expect,
-			}) => {
-				await helper.seed({
-					"wrangler.jsonc": dedent`
-						{
-							"name": "${workerName}",
-							"main": "src/index.ts",
-							"compatibility_date": "2024-01-01",
-							"durable_objects": {
-								"bindings": [{ "name": "DO", "class_name": "MyDO" }],
-							},
-							"exports": {
-								"MyDO": { "type": "durable-object", "storage": "sqlite" },
-							},
-						}
-					`,
-					"src/index.ts": dedent`
-						import { DurableObject } from "cloudflare:workers";
-						export class MyDO extends DurableObject {}
-						export default {
-							fetch() { return new Response("hello"); },
-						};
-					`,
-					"package.json": dedent`
-						{
-							"name": "${workerName}",
-							"version": "0.0.0",
-							"private": true
-						}
-					`,
-				});
-
-				const output = await helper.run(`wrangler versions upload`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
-
-				expect(output.stdout).toContain(
-					"Durable Object exports reconciliation"
-				);
-				expect(output.stdout).toContain("Created: MyDO");
-			});
-
-			it("re-uploading the same config is a no-op", async ({ expect }) => {
-				const output = await helper.run(`wrangler versions upload`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
-
-				expect(output.stdout).not.toContain("Created: ");
-				expect(output.stdout).not.toContain("Deleted: ");
-			});
-
-			it("rejects exports declaring a class not present in code", async ({
-				expect,
-			}) => {
-				await helper.seed({
-					"wrangler.jsonc": dedent`
-						{
-							"name": "${workerName}",
-							"main": "src/index.ts",
-							"compatibility_date": "2024-01-01",
-							"exports": {
-								"Phantom": { "type": "durable-object", "storage": "sqlite" },
-							},
-						}
-					`,
-					"src/index.ts": dedent`
-						export default {
-							fetch() { return new Response("hello"); },
-						};
-					`,
-				});
-
-				const result = await helper.run(`wrangler versions upload`, {
 					env: { ...process.env, X_DO_EXPORTS: "true" },
 				});
 
@@ -476,15 +398,26 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			it("step 2: target script deploys expecting-transfer → Transfer pending", async ({
 				expect,
 			}) => {
+				// Phase 1 deliberately declares no `durable_objects.bindings`
+				// for `Widget`. EWC's reconciler creates the `pending_transfer`
+				// row from the `expecting-transfer` entry, but the binding
+				// resolver does not yet route self-referential bindings to a
+				// class that exists only in `expecting-transfer` state through
+				// the source's namespace ("TBD #4 lock" in the spec). The
+				// matching EWC integration test
+				// (`TestExportsTombstone_TransferTwoPhaseWorkflow` in
+				// `test/integration/do_exports_tombstones_test.go`) follows the
+				// same pattern: phase-1 declares the class in code + the
+				// `expecting-transfer` entry, with no binding. Bindings can be
+				// added once phase 2 commits and the namespace lands on this
+				// script. See the spec for the full design:
+				// https://wiki.cfdata.org/spaces/WX/pages/1396640001
 				await helperB.seed({
 					"wrangler.jsonc": dedent`
 						{
 							"name": "${workerB}",
 							"main": "src/index.ts",
 							"compatibility_date": "2024-01-01",
-							"durable_objects": {
-								"bindings": [{ "name": "WIDGET", "class_name": "Widget" }],
-							},
 							"exports": {
 								"Widget": {
 									"type": "durable-object",
@@ -552,6 +485,67 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				expect(output.stdout).toContain(
 					`Transferred (committed): Widget → ${workerB}`
 				);
+			});
+
+			it("step 4: target script adds its `Widget` binding now that the transfer has committed", async ({
+				expect,
+			}) => {
+				// With phase 2 committed in step 3, the Widget namespace now
+				// lives on workerB. Adding the `durable_objects.bindings` entry
+				// here mirrors the supported user-facing rollout sequence:
+				//
+				//   1. target deploys `expecting-transfer` (no binding yet,
+				//      see step 2)
+				//   2. source deploys `transferred` tombstone (commits the
+				//      handoff, see step 3)
+				//   3. target redeploys WITH the binding (this step) — the
+				//      binding now resolves to the namespace that just landed
+				//      on this script
+				//
+				// The `Widget` entry on this script is now a normal live
+				// export (`state` defaults to `"created"`), so this deploy is
+				// a no-op for reconciliation: no namespace is created, no
+				// tombstone applies, no info entries fire. Asserting the
+				// absence of those headers verifies that the post-transfer
+				// state is genuinely steady.
+				await helperB.seed({
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerB}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [{ "name": "WIDGET", "class_name": "Widget" }],
+							},
+							"exports": {
+								"Widget": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
+					`,
+					"src/index.ts": dedent`
+						import { DurableObject } from "cloudflare:workers";
+						export class Widget extends DurableObject {}
+						export default {
+							fetch() { return new Response("target with binding"); },
+						};
+					`,
+				});
+
+				const output = await helperB.run(`wrangler deploy`, {
+					env: { ...process.env, X_DO_EXPORTS: "true" },
+				});
+
+				// The binding is shown in the standard wrangler output now
+				// that the namespace lives on this script.
+				expect(output.stdout).toContain("env.WIDGET (Widget)");
+				// Reconciliation is a clean no-op: the namespace is already
+				// owned by this script (scenario 2: match), there is no
+				// rename / transfer / delete activity, and no info entries.
+				expect(output.stdout).not.toContain("Created: ");
+				expect(output.stdout).not.toContain("Transfer pending: ");
+				expect(output.stdout).not.toContain("Transferred (committed): ");
+				expect(output.stdout).not.toContain("Deleted: ");
+				expect(output.stdout).not.toContain("Renamed: ");
 			});
 		});
 	}

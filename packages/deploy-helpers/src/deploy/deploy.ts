@@ -359,18 +359,14 @@ export default async function deploy(
 	// * aren't a dispatch namespace deploy
 	// * aren't a service env deploy
 	// * aren't a service Worker
-	// * we don't have DO migrations
-	// * we don't have declarative DO `exports`. The new POST /versions +
-	//   POST /deployments path below does not yet plumb the
-	//   `exports_reconciliation` envelope from the versions response
-	//   (only the legacy PUT handler renders it), so deploys with
-	//   `exports` fall back to the legacy PUT. Trade-off: a single
-	//   `wrangler deploy` with `exports` cannot use gradual rollouts —
-	//   users who need that can still use the two-command flow
-	//   `wrangler versions upload` + `wrangler versions deploy`, which
-	//   sends `exports` via POST /versions and renders the envelope.
-	//   TODO(DEVX-2572): drop this branch once the versions response
-	//   handler surfaces the reconciliation envelope.
+	// * we don't have DO migrations OR declarative DO `exports`.
+	//   Both are Durable Object lifecycle configurations and can only
+	//   be applied via the legacy PUT /workers/scripts/:name endpoint;
+	//   `wrangler versions upload` cannot apply DO lifecycle changes
+	//   at all (the trade-off is no gradual-rollout for deploys with
+	//   DO lifecycle changes). The reconciliation envelope rendered on
+	//   success is therefore only ever produced by this PUT path. See
+	//   https://developers.cloudflare.com/workers/configuration/versions-and-deployments/#durable-object-migrations.
 	// * we aren't an fpw
 	// * not a container worker
 	const canUseNewVersionsDeploymentsApi =

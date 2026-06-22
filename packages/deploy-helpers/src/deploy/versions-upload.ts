@@ -3,11 +3,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
-	APIError,
 	formatTime,
 	ParseError,
 	retryOnAPIFailure,
-	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
@@ -22,12 +20,6 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
-import {
-	EXPORTS_RECONCILIATION_ERROR_CODE,
-	isExportsReconciliationErrorDetails,
-	renderExportsReconciliationError,
-	renderExportsReconciliationSuccess,
-} from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -50,11 +42,7 @@ import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
 import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
-import type {
-	CfWorkerInit,
-	Config,
-	ExportsReconciliationResult,
-} from "@cloudflare/workers-utils";
+import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
@@ -250,7 +238,6 @@ export default async function versionsUpload(
 						metadata: {
 							has_preview: boolean;
 						};
-						exports_reconciliation?: ExportsReconciliationResult;
 					}>(
 						config,
 						`${workerUrl}/versions`,
@@ -275,9 +262,14 @@ export default async function versionsUpload(
 				undefined,
 				{ unsafeMetadata: config.unsafe?.metadata }
 			);
-			if (result.exports_reconciliation) {
-				renderExportsReconciliationSuccess(result.exports_reconciliation);
-			}
+			// No `exports_reconciliation` handling here: like the legacy
+			// `migrations` array, the declarative `exports` map is a Durable
+			// Object lifecycle configuration and can only be applied via
+			// `wrangler deploy` (which routes through the PUT endpoint).
+			// `wrangler versions upload` therefore never receives a
+			// reconciliation envelope; the renderer lives only on the deploy
+			// path. See
+			// https://developers.cloudflare.com/workers/configuration/versions-and-deployments/#durable-object-migrations.
 			versionId = result.id;
 			hasPreview = result.metadata.has_preview;
 		} catch (err) {
@@ -288,26 +280,6 @@ export default async function versionsUpload(
 					config.streaming_tail_consumers,
 					undefined,
 					{ unsafeMetadata: config.unsafe?.metadata }
-				);
-			}
-
-			// Declarative DO exports reconciliation errors come back from EWC
-			// with a structured `meta.details[]` payload. Render the per-class
-			// detail in a familiar format before re-throwing so the user sees
-			// every blocking scenario in one round trip (matches the EWC
-			// "Multi-DO error handling" guarantee — see spec §3.2).
-			if (
-				err instanceof APIError &&
-				err.code === EXPORTS_RECONCILIATION_ERROR_CODE &&
-				isExportsReconciliationErrorDetails(err.meta?.details)
-			) {
-				err.preventReport();
-				throw new UserError(
-					renderExportsReconciliationError(err.meta.details),
-					{
-						telemetryMessage:
-							"versions upload do exports reconciliation failed",
-					}
 				);
 			}
 
