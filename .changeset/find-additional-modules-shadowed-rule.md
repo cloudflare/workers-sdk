@@ -4,8 +4,7 @@
 
 Stop erroring when `find_additional_modules` discovers a file that only matches a inactive module rule
 
-Module rules assign module _types_ to imported files — they are not include/exclude filters. Also, setting `fallthrough: false` in a rule will cause subsequent rules to become inactive.
-Previously, when `find_additional_modules` walked the filesystem and discovered a file whose only matching rule is inactive, Wrangler would throw an error and fail the build.
+Module rules assign module _types_ to imported files — they are not include/exclude filters. Also, setting `fallthrough: false` in a rule will cause subsequent rules to become inactive. Previously, when `find_additional_modules` walked the filesystem and discovered a file whose only matching rule is inactive, Wrangler would throw an error and fail the build.
 
 This meant that adding a user rule like the one below would break the build for any `.txt`, `.html`, `.sql`, `.bin` or `.wasm` file that didn't match the user-supplied globs but lived somewhere under the module root:
 
