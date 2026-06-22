@@ -325,20 +325,76 @@ export async function getTraceSpans(
 	return rows as unknown as SpanRow[];
 }
 
+const VITE_RUNNER_MARKER = "__VITE_RUNNER_OBJECT__";
+
+/**
+ * Drop the Vite dev module-runner's internal plumbing spans and re-parent their
+ * real children up. In `vite dev`, user code runs inside a runner Durable
+ * Object, so every invocation is wrapped with a `durable_object_subrequest` →
+ * `jsrpc (executeCallback on __VITE_RUNNER_OBJECT__)` chain that isn't the
+ * user's code. We hide those (and the DO-subrequest that dispatches into them)
+ * so the waterfall shows only the worker's actual spans. No-op outside Vite dev.
+ */
+export function stripDevRunnerSpans(spans: SpanRow[]): SpanRow[] {
+	const runnerIds = new Set<string>();
+	for (const s of spans) {
+		if ((s.attributes ?? "").includes(VITE_RUNNER_MARKER)) {
+			runnerIds.add(s.span_id);
+		}
+	}
+	if (runnerIds.size === 0) {
+		return spans; // not a Vite dev trace — leave untouched
+	}
+
+	// Also hide the durable_object_subrequest that dispatches into a runner span.
+	const dispatchParents = new Set<string>();
+	for (const s of spans) {
+		if (runnerIds.has(s.span_id) && s.parent_id) {
+			dispatchParents.add(s.parent_id);
+		}
+	}
+	const hidden = new Set(runnerIds);
+	for (const s of spans) {
+		if (
+			dispatchParents.has(s.span_id) &&
+			s.name === "durable_object_subrequest"
+		) {
+			hidden.add(s.span_id);
+		}
+	}
+
+	const byId = new Map(spans.map((s) => [s.span_id, s]));
+	const resolveParent = (s: SpanRow): string | null => {
+		let p = s.parent_id ?? null;
+		while (p && hidden.has(p)) {
+			p = byId.get(p)?.parent_id ?? null;
+		}
+		return p;
+	};
+	return spans
+		.filter((s) => !hidden.has(s.span_id))
+		.map((s) => ({ ...s, parent_id: resolveParent(s) }));
+}
+
 /**
  * Flatten spans into a depth-ordered list (DFS), mirroring the dashboard's
  * trace waterfall layout. Children are grouped by parent_id and sorted by
  * start offset; orphans are attached to the root.
+ *
+ * When `hideDevRunner` is set, Vite dev module-runner plumbing spans are removed
+ * (see {@link stripDevRunnerSpans}).
  */
 export function buildSpanTree(
 	spans: SpanRow[],
-	rootSpanId: string
+	rootSpanId: string,
+	hideDevRunner = false
 ): LayoutSpan[] {
+	const source = hideDevRunner ? stripDevRunnerSpans(spans) : spans;
 	// Span times are absolute epoch ms (so spans from different invocations of a
 	// distributed trace share a timeline). Re-base everything to the earliest
 	// span start so the waterfall renders offsets from the trace start.
-	const t0 = spans.length ? Math.min(...spans.map((s) => s.start_ms)) : 0;
-	const rebased = spans.map((s) => ({
+	const t0 = source.length ? Math.min(...source.map((s) => s.start_ms)) : 0;
+	const rebased = source.map((s) => ({
 		...s,
 		start_ms: s.start_ms - t0,
 		end_ms: s.end_ms != null ? s.end_ms - t0 : null,

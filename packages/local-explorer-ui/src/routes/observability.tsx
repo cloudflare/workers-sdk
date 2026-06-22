@@ -1,6 +1,7 @@
 import { cn } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
+	EyeSlashIcon,
 	MagnifyingGlassIcon,
 	PulseIcon,
 	TrashIcon,
@@ -23,6 +24,7 @@ import {
 } from "../lib/traces";
 
 const SKIP_CLEAR_CONFIRM_KEY = "wobs-skip-clear-confirm";
+const HIDE_DEV_RUNNER_KEY = "wobs-hide-dev-runner";
 
 export const Route = createFileRoute("/observability")({
 	component: ObservabilityView,
@@ -81,6 +83,25 @@ function ObservabilityView(): JSX.Element {
 	const [error, setError] = useState<string | null>(null);
 	const [confirmingClear, setConfirmingClear] = useState(false);
 	const [skipClearConfirm, setSkipClearConfirm] = useState(false);
+	// Hide Vite dev module-runner plumbing spans (default on; persisted).
+	const [hideDevRunner, setHideDevRunner] = useState(() => {
+		try {
+			return localStorage.getItem(HIDE_DEV_RUNNER_KEY) !== "false";
+		} catch {
+			return true;
+		}
+	});
+	const toggleHideDevRunner = useCallback(() => {
+		setHideDevRunner((prev) => {
+			const next = !prev;
+			try {
+				localStorage.setItem(HIDE_DEV_RUNNER_KEY, String(next));
+			} catch {
+				// ignore
+			}
+			return next;
+		});
+	}, []);
 
 	// filters (simpler version of the dashboard query builder)
 	const [search, setSearch] = useState("");
@@ -236,6 +257,20 @@ function ObservabilityView(): JSX.Element {
 					</span>
 				</div>
 				<div className="flex-1" />
+				<button
+					type="button"
+					onClick={toggleHideDevRunner}
+					title="Hide Vite dev module-runner plumbing spans (vite dev only)"
+					className={cn(
+						"flex items-center gap-1.5 rounded px-2 py-1 text-xs",
+						hideDevRunner
+							? "bg-kumo-tint text-kumo-default"
+							: "text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
+					)}
+				>
+					<EyeSlashIcon size={13} />
+					Hide runner spans
+				</button>
 				<button
 					type="button"
 					onClick={() => void refresh()}
@@ -444,6 +479,7 @@ function ObservabilityView(): JSX.Element {
 														rootSpanId={t.root_span_id}
 														traceDurationMs={t.duration_ms ?? 0}
 														invocationRootIds={invocationRootsByTrace[key]}
+														hideDevRunner={hideDevRunner}
 													/>
 												</td>
 											</tr>

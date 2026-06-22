@@ -23,6 +23,8 @@ interface TraceWaterfallProps {
 	 * worker invocation, and is delineated in the waterfall.
 	 */
 	invocationRootIds?: readonly string[];
+	/** Hide Vite dev module-runner plumbing spans. */
+	hideDevRunner?: boolean;
 }
 
 const LABEL_WIDTH = 256; // matches the dashboard's default name-column width
@@ -90,10 +92,11 @@ export function TraceWaterfall({
 	rootSpanId,
 	traceDurationMs,
 	invocationRootIds,
+	hideDevRunner = false,
 }: TraceWaterfallProps): JSX.Element {
 	const allSpans = useMemo(
-		() => buildSpanTree(spans, rootSpanId),
-		[spans, rootSpanId]
+		() => buildSpanTree(spans, rootSpanId, hideDevRunner),
+		[spans, rootSpanId, hideDevRunner]
 	);
 
 	// A span starts a new worker invocation if it's an invocation root other than

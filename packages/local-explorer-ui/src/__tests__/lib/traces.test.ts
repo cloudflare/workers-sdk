@@ -9,6 +9,7 @@ import {
 	listTraces,
 	parseAttributes,
 	spanKind,
+	stripDevRunnerSpans,
 	type SpanRow,
 } from "../../lib/traces";
 
@@ -251,6 +252,46 @@ describe("listEvents SQL", () => {
 	test("escapes single quotes in event search", async ({ expect }) => {
 		await listEvents("db", { search: "it's" });
 		expect(lastSql()).toContain("it''s");
+	});
+});
+
+describe("stripDevRunnerSpans", () => {
+	test("returns spans unchanged when there are no Vite runner spans", ({
+		expect,
+	}) => {
+		const s = [span({ span_id: "a" }), span({ span_id: "b", parent_id: "a" })];
+		expect(stripDevRunnerSpans(s)).toBe(s);
+	});
+
+	test("removes the runner span + its dispatch DO-subrequest and re-parents children", ({
+		expect,
+	}) => {
+		const spans = [
+			span({ span_id: "root" }),
+			span({
+				span_id: "disp",
+				parent_id: "root",
+				name: "durable_object_subrequest",
+				kind: "do",
+			}),
+			span({
+				span_id: "runner",
+				parent_id: "disp",
+				name: "jsrpc",
+				kind: "jsrpc",
+				attributes: '{"cloudflare.entrypoint":"__VITE_RUNNER_OBJECT__"}',
+			}),
+			span({
+				span_id: "work",
+				parent_id: "runner",
+				name: "fetch",
+				kind: "fetch",
+			}),
+		];
+		const out = stripDevRunnerSpans(spans);
+		expect(out.map((s) => s.span_id).sort()).toEqual(["root", "work"]);
+		// the real child is promoted up to the runner's grandparent (the root)
+		expect(out.find((s) => s.span_id === "work")?.parent_id).toBe("root");
 	});
 });
 
