@@ -18,6 +18,7 @@ import R2Icon from "../assets/icons/r2.svg?react";
 import { ObservabilityViewSwitcher } from "../components/observability/ObservabilityViewSwitcher";
 import {
 	LOG_LEVELS,
+	fetchMcpServerPath,
 	listMcpCalls,
 	loadMcpConfig,
 	resourceKey,
@@ -498,6 +499,25 @@ function ConnectCard(): JSX.Element {
 		} catch {
 			// ignore
 		}
+	}, []);
+
+	// Default to the absolute path the explorer reports (the bundled server),
+	// unless the user has explicitly overridden it.
+	useEffect(() => {
+		let overridden = false;
+		try {
+			overridden = localStorage.getItem(SERVER_PATH_KEY) !== null;
+		} catch {
+			// ignore
+		}
+		if (overridden) {
+			return;
+		}
+		void fetchMcpServerPath().then((p) => {
+			if (p) {
+				setServerPath(p);
+			}
+		});
 	}, []);
 
 	const snippet = connectSnippet(agent, explorerUrl, serverPath);

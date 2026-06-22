@@ -72,6 +72,7 @@ export type Env = {
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
 	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
+	[CoreBindings.JSON_LOCAL_EXPLORER_MCP_SERVER_PATH]: string;
 	[CoreBindings.DEV_REGISTRY_DEBUG_PORT]: WorkerdDebugPortConnector;
 };
 
@@ -352,6 +353,12 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 // ============================================================================
 // Local Workers / Dev Registry Endpoint
 // ============================================================================
+
+// Absolute path to the bundled stdio MCP server, so the Observability MCP page
+// can build a ready-to-use connect command without the user entering a path.
+app.get("/api/local/mcp", (c) =>
+	c.json({ server_path: c.env.LOCAL_EXPLORER_MCP_SERVER_PATH })
+);
 
 app.get("/api/local/workers", async (c) => {
 	const loopback = c.env.MINIFLARE_LOOPBACK;

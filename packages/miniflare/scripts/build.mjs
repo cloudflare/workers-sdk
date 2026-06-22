@@ -274,6 +274,19 @@ function copyLocalExplorerUi(outPath, pkgRoot) {
 		const localExplorerUiDest = path.join(outPath, "local-explorer-ui");
 		cpSync(localExplorerUiSrc, localExplorerUiDest, { recursive: true });
 		console.log("Copied local-explorer-ui dist to", localExplorerUiDest);
+
+		// Ship the stdio MCP server alongside the UI so the explorer can surface
+		// its absolute path to the MCP page (zero-setup connect command).
+		const mcpServerSrc = path.join(
+			pkgRoot,
+			"../local-explorer-ui/mcp-server/mcp-server.mjs"
+		);
+		if (existsSync(mcpServerSrc)) {
+			cpSync(mcpServerSrc, path.join(localExplorerUiDest, "mcp-server.mjs"));
+			console.log("Copied mcp-server.mjs to", localExplorerUiDest);
+		} else {
+			throw new Error("Expected mcp-server.mjs to be at " + mcpServerSrc);
+		}
 	} else {
 		throw new Error(
 			"Expected local-explorer-ui to be at " + localExplorerUiSrc

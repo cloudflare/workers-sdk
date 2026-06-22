@@ -54,7 +54,6 @@ import {
 	getExplorerServices,
 	wrapDurableObjectModules,
 } from "./explorer";
-import { getObservabilityServices } from "./observability";
 import {
 	buildStringScriptPath,
 	convertModuleDefinition,
@@ -63,6 +62,7 @@ import {
 	SourceOptionsSchema,
 	withSourceURL,
 } from "./modules";
+import { getObservabilityServices } from "./observability";
 import { PROXY_SECRET } from "./proxy";
 import {
 	CustomFetchServiceSchema,
@@ -1216,6 +1216,8 @@ export function getGlobalServices({
 		services.push(
 			...getExplorerServices({
 				localExplorerUiPath,
+				// The MCP server ships alongside the explorer UI assets.
+				mcpServerPath: path.join(localExplorerUiPath, "mcp-server.mjs"),
 				proxyBindings,
 				bindingIdMap: IDToBindingMap,
 				hasDurableObjects,

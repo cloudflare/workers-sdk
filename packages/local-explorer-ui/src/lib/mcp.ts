@@ -138,3 +138,22 @@ export async function listMcpCalls(databaseId: string): Promise<McpCallRow[]> {
 	);
 	return rows as unknown as McpCallRow[];
 }
+
+/**
+ * Absolute path to the bundled stdio MCP server, surfaced by the explorer so
+ * the connect snippets work with no manual path entry. Returns null if the
+ * explorer doesn't provide it (older builds).
+ */
+export async function fetchMcpServerPath(): Promise<string | null> {
+	try {
+		const base = import.meta.env.VITE_LOCAL_EXPLORER_API_PATH as string;
+		const res = await fetch(`${base}/local/mcp`);
+		if (!res.ok) {
+			return null;
+		}
+		const json = (await res.json()) as { server_path?: string };
+		return json.server_path ?? null;
+	} catch {
+		return null;
+	}
+}
