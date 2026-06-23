@@ -58,11 +58,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
-	...(await importOriginal()),
-	runAutoConfig: vi.fn(),
-	getInstalledPackageVersion: vi.fn(),
-}));
+vi.mock(import("@cloudflare/autoconfig"), { spy: true });
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -346,8 +342,6 @@ export default{
 		it("should not trigger autoconfig on `wrangler deploy <script>`", async ({
 			expect,
 		}) => {
-			vi.mock(import("@cloudflare/autoconfig"), { spy: true });
-
 			const {
 				getDetailsForAutoConfig: getDetailsForAutoConfigSpy,
 				runAutoConfig: runAutoConfigSpy,
@@ -888,8 +882,6 @@ addEventListener('fetch', event => {});`
 			it("should handle interactive `wrangler deploy <directory>` flows without triggering autoconfig", async ({
 				expect,
 			}) => {
-				vi.mock(import("@cloudflare/autoconfig"), { spy: true });
-
 				const {
 					getDetailsForAutoConfig: getDetailsForAutoConfigSpy,
 					runAutoConfig: runAutoConfigSpy,
@@ -966,8 +958,6 @@ addEventListener('fetch', event => {});`
 			it("should handle `wrangler deploy --assets` without name or compat date without triggering autoconfig", async ({
 				expect,
 			}) => {
-				vi.mock(import("@cloudflare/autoconfig"), { spy: true });
-
 				const {
 					getDetailsForAutoConfig: getDetailsForAutoConfigSpy,
 					runAutoConfig: runAutoConfigSpy,
