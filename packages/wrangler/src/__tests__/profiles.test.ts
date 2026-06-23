@@ -178,7 +178,7 @@ describe("Profiles", () => {
 					CLOUDFLARE_API_TOKEN: "env-token",
 				})
 			).rejects.toThrow(
-				'Cannot create auth profile "client-a" while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again.'
+				"Cannot manage auth profiles while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again."
 			);
 
 			expect(profiles().configs.exists("client-a")).toBe(false);
@@ -246,7 +246,7 @@ describe("Profiles", () => {
 					CLOUDFLARE_API_TOKEN: "env-token",
 				})
 			).rejects.toThrow(
-				'Cannot delete auth profile "client-a" while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again.'
+				"Cannot manage auth profiles while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again."
 			);
 
 			expect(profiles().configs.exists("client-a")).toBe(true);
@@ -317,6 +317,24 @@ describe("Profiles", () => {
 			);
 		});
 
+		it("errors without activating a profile when env credentials are set", async ({
+			expect,
+		}) => {
+			createProfileFile("client-a");
+
+			await expect(
+				runWrangler("auth activate client-a", {
+					CLOUDFLARE_API_TOKEN: "env-token",
+				})
+			).rejects.toThrow(
+				"Cannot manage auth profiles while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again."
+			);
+
+			expect(
+				profiles().bindings.getProfileForDirectory(process.cwd())
+			).toBeUndefined();
+		});
+
 		it("binds a profile to the current directory", async ({ expect }) => {
 			createProfileFile("client-a");
 
@@ -354,6 +372,26 @@ describe("Profiles", () => {
 		}) => {
 			await expect(runWrangler("auth deactivate")).rejects.toThrow(
 				/No profile is bound/
+			);
+		});
+
+		it("errors without deactivating a profile when env credentials are set", async ({
+			expect,
+		}) => {
+			const targetDir = process.cwd();
+			createProfileFile("client-a");
+			profiles().bindings.activate("client-a", targetDir);
+
+			await expect(
+				runWrangler("auth deactivate", {
+					CLOUDFLARE_API_TOKEN: "env-token",
+				})
+			).rejects.toThrow(
+				"Cannot manage auth profiles while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again."
+			);
+
+			expect(profiles().bindings.getProfileForDirectory(targetDir)).toBe(
+				"client-a"
 			);
 		});
 

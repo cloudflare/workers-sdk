@@ -7,23 +7,16 @@ import { oauthArgs } from "./commands";
 import { createWranglerProfileStore } from "./profile-store";
 import { getAuthFromEnv, login, logout, validateScopeKeys } from "./user";
 
-function assertNoEnvCredentials(action: "create" | "delete", profile: string) {
-	const envAuth = getAuthFromEnv();
-	if (envAuth === undefined) {
+function assertNoEnvCredentials() {
+	if (getAuthFromEnv() === undefined) {
 		return;
 	}
 
-	const isApiToken = "apiToken" in envAuth;
-	const envVars = isApiToken
-		? "CLOUDFLARE_API_TOKEN"
-		: "CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL";
 	throw new UserError(
-		`Cannot ${action} auth profile "${profile}" while ${envVars} ${isApiToken ? "is" : "are"} set. Unset ${envVars} and try again.`,
+		"Cannot manage auth profiles while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again.",
 		{
 			telemetryMessage:
-				action === "create"
-					? "auth profile create env credentials"
-					: "auth profile delete env credentials",
+				"profile mutation command used when api token provided via env var",
 		}
 	);
 }
@@ -58,6 +51,7 @@ export const authCreateCommand = createCommand({
 		...oauthArgs,
 	},
 	async handler(args, { config }) {
+		assertNoEnvCredentials();
 		const profiles = createWranglerProfileStore();
 		validateProfileName(args.name);
 
@@ -69,8 +63,6 @@ export const authCreateCommand = createCommand({
 				);
 			}
 		}
-
-		assertNoEnvCredentials("create", args.name);
 
 		const isUpdate = profiles.configs.exists(args.name);
 
@@ -114,6 +106,7 @@ export const authDeleteCommand = createCommand({
 		},
 	},
 	async handler(args) {
+		assertNoEnvCredentials();
 		const profiles = createWranglerProfileStore();
 		validateProfileName(args.name);
 
@@ -122,8 +115,6 @@ export const authDeleteCommand = createCommand({
 				telemetryMessage: "auth profile delete not found",
 			});
 		}
-
-		assertNoEnvCredentials("delete", args.name);
 
 		const removedBindings = profiles.bindings.removeAllBindingsForProfile(
 			args.name
@@ -181,6 +172,7 @@ export const authActivateCommand = createCommand({
 		},
 	},
 	async handler(args) {
+		assertNoEnvCredentials();
 		const profiles = createWranglerProfileStore();
 		validateProfileName(args.name);
 
@@ -221,13 +213,15 @@ export const authDeactivateCommand = createCommand({
 		},
 	},
 	async handler(args) {
+		assertNoEnvCredentials();
 		const profiles = createWranglerProfileStore();
 		const targetDir = args.dir ?? process.cwd();
+		const normalizedTargetDir = path.resolve(targetDir);
 		const { removedProfile, newResolution } =
 			profiles.bindings.deactivate(targetDir);
 
 		logger.log(
-			`Profile "${removedProfile}" deactivated from "${path.resolve(targetDir)}".`
+			`Profile "${removedProfile}" deactivated from "${normalizedTargetDir}".`
 		);
 		if (newResolution.profile === undefined) {
 			logger.log(
