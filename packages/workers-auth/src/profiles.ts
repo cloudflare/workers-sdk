@@ -1,21 +1,146 @@
-import {
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	readdirSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
 import path from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
 
 const RESERVED_PROFILE_NAMES = ["default", "staging"];
 
-const DIRECTORY_BINDINGS_FILE = "profiles/directory-bindings.json";
-const PROFILES_CONFIG_PATH = "config";
+export interface ProfileConfigOperations {
+	exists(profile: string): boolean;
+	list(): string[];
+	delete(profile: string): void;
+}
 
-function getProfileFilePath(configDir: string, profile: string): string {
-	return path.join(configDir, PROFILES_CONFIG_PATH, `${profile}.toml`);
+export interface DirectoryBindingsStorage {
+	read(): Record<string, string>;
+	write(bindings: Record<string, string>): void;
+}
+
+export interface DirectoryBindingOperations extends DirectoryBindingsStorage {
+	activate(profile: string, dir: string): void;
+	deactivate(dir: string): DeactivateDirectoryResult;
+	getProfileForDirectory(startDir: string): string | undefined;
+	getBindingsForProfile(profile: string): string[];
+	removeAllBindingsForProfile(profile: string): string[];
+}
+
+export interface ProfileStore {
+	configs: ProfileConfigOperations;
+	bindings: DirectoryBindingOperations;
+	resolve(args: { profile?: string; cwd: string }): string;
+}
+
+export interface DeactivateDirectoryResult {
+	removedProfile: string;
+	newResolution: { profile: string | undefined; source: string };
+}
+
+export function createProfileStore(args: {
+	configs: ProfileConfigOperations;
+	bindings: DirectoryBindingsStorage;
+}): ProfileStore {
+	const bindings: DirectoryBindingOperations = {
+		read() {
+			return args.bindings.read();
+		},
+		write(currentBindings) {
+			args.bindings.write(currentBindings);
+		},
+		activate(profile, dir) {
+			const normalizedDir = path.resolve(dir);
+			const currentBindings = args.bindings.read();
+			currentBindings[normalizedDir] = profile;
+			args.bindings.write(currentBindings);
+		},
+		deactivate(dir) {
+			const normalizedDir = path.resolve(dir);
+			const currentBindings = args.bindings.read();
+
+			const boundProfile = currentBindings[normalizedDir];
+			if (boundProfile === undefined) {
+				const parentBinding = getProfileForDirectoryFromBindings(
+					normalizedDir,
+					currentBindings
+				);
+				if (parentBinding) {
+					throw new UserError(
+						`No profile is directly bound to "${normalizedDir}". The active profile "${parentBinding.profile}" is bound at "${parentBinding.dir}". Run \`wrangler auth deactivate\` from that directory instead.`,
+						{ telemetryMessage: "auth deactivate wrong directory" }
+					);
+				}
+				throw new UserError(
+					`No profile is bound to "${normalizedDir}". Nothing to deactivate.`,
+					{ telemetryMessage: "auth deactivate no binding" }
+				);
+			}
+
+			delete currentBindings[normalizedDir];
+			args.bindings.write(currentBindings);
+
+			const fallbackProfile = getProfileForDirectoryFromBindings(
+				normalizedDir,
+				currentBindings
+			);
+			if (fallbackProfile) {
+				return {
+					removedProfile: boundProfile,
+					newResolution: {
+						profile: fallbackProfile.profile,
+						source: `inherited from ${fallbackProfile.dir}`,
+					},
+				};
+			}
+			if (args.configs.exists("default")) {
+				return {
+					removedProfile: boundProfile,
+					newResolution: { profile: "default", source: "default profile" },
+				};
+			}
+			return {
+				removedProfile: boundProfile,
+				newResolution: { profile: undefined, source: "no profile" },
+			};
+		},
+		getProfileForDirectory(startDir) {
+			return getProfileForDirectoryFromBindings(startDir, args.bindings.read())
+				?.profile;
+		},
+		getBindingsForProfile(profile) {
+			return Object.entries(args.bindings.read())
+				.filter(([, p]) => p === profile)
+				.map(([dir]) => dir);
+		},
+		removeAllBindingsForProfile(profile) {
+			const currentBindings = args.bindings.read();
+			const removed: string[] = [];
+			for (const [dir, p] of Object.entries(currentBindings)) {
+				if (p === profile) {
+					removed.push(dir);
+					delete currentBindings[dir];
+				}
+			}
+			if (removed.length > 0) {
+				args.bindings.write(currentBindings);
+			}
+			return removed;
+		},
+	};
+
+	return {
+		configs: args.configs,
+		bindings,
+		resolve(resolveArgs) {
+			if (resolveArgs.profile) {
+				validateProfileName(resolveArgs.profile);
+				return resolveArgs.profile;
+			}
+
+			const dirProfile = bindings.getProfileForDirectory(resolveArgs.cwd);
+			if (dirProfile) {
+				return dirProfile;
+			}
+
+			return "default";
+		},
+	};
 }
 
 export function validateProfileName(name: string): void {
@@ -32,119 +157,6 @@ export function validateProfileName(name: string): void {
 			{ telemetryMessage: "auth profile invalid name" }
 		);
 	}
-}
-
-export function profileExists(configDir: string, profile: string): boolean {
-	return existsSync(getProfileFilePath(configDir, profile));
-}
-
-export function listProfiles(configDir: string): string[] {
-	const profilesDir = path.join(configDir, PROFILES_CONFIG_PATH);
-	if (!existsSync(profilesDir)) {
-		return [];
-	}
-
-	return readdirSync(profilesDir)
-		.filter((f) => f.endsWith(".toml"))
-		.map((f) => f.replace(/\.toml$/, ""));
-}
-
-export function deleteProfileFile(configDir: string, profile: string): void {
-	const filePath = getProfileFilePath(configDir, profile);
-	if (existsSync(filePath)) {
-		rmSync(filePath);
-	}
-}
-
-function getDirectoryBindingsPath(configDir: string): string {
-	return path.join(configDir, DIRECTORY_BINDINGS_FILE);
-}
-
-export function readDirectoryBindings(
-	configDir: string
-): Record<string, string> {
-	try {
-		const raw = readFileSync(getDirectoryBindingsPath(configDir), "utf-8");
-		return JSON.parse(raw) as Record<string, string>;
-	} catch {
-		return {};
-	}
-}
-
-export function writeDirectoryBindings(
-	configDir: string,
-	bindings: Record<string, string>
-): void {
-	const bindingsPath = getDirectoryBindingsPath(configDir);
-	mkdirSync(path.dirname(bindingsPath), { recursive: true });
-	writeFileSync(bindingsPath, JSON.stringify(bindings, null, "\t"), "utf-8");
-}
-
-export function activateProfileForDirectory(
-	configDir: string,
-	profile: string,
-	dir: string
-): void {
-	const normalizedDir = path.resolve(dir);
-	const bindings = readDirectoryBindings(configDir);
-	bindings[normalizedDir] = profile;
-	writeDirectoryBindings(configDir, bindings);
-}
-
-export function deactivateDirectory(
-	configDir: string,
-	dir: string
-): {
-	removedProfile: string;
-	newResolution: { profile: string | undefined; source: string };
-} {
-	const normalizedDir = path.resolve(dir);
-	const bindings = readDirectoryBindings(configDir);
-
-	const boundProfile = bindings[normalizedDir];
-	if (boundProfile === undefined) {
-		const parentBinding = getProfileForDirectoryFromBindings(
-			normalizedDir,
-			bindings
-		);
-		if (parentBinding) {
-			throw new UserError(
-				`No profile is directly bound to "${normalizedDir}". The active profile "${parentBinding.profile}" is bound at "${parentBinding.dir}". Run \`wrangler auth deactivate\` from that directory instead.`,
-				{ telemetryMessage: "auth deactivate wrong directory" }
-			);
-		}
-		throw new UserError(
-			`No profile is bound to "${normalizedDir}". Nothing to deactivate.`,
-			{ telemetryMessage: "auth deactivate no binding" }
-		);
-	}
-
-	delete bindings[normalizedDir];
-	writeDirectoryBindings(configDir, bindings);
-
-	const fallbackProfile = getProfileForDirectoryFromBindings(
-		normalizedDir,
-		bindings
-	);
-	if (fallbackProfile) {
-		return {
-			removedProfile: boundProfile,
-			newResolution: {
-				profile: fallbackProfile.profile,
-				source: `inherited from ${fallbackProfile.dir}`,
-			},
-		};
-	}
-	if (profileExists(configDir, "default")) {
-		return {
-			removedProfile: boundProfile,
-			newResolution: { profile: "default", source: "default profile" },
-		};
-	}
-	return {
-		removedProfile: boundProfile,
-		newResolution: { profile: undefined, source: "no profile" },
-	};
 }
 
 /**
@@ -177,66 +189,4 @@ function getProfileForDirectoryFromBindings(
 	}
 
 	return undefined;
-}
-
-export function getProfileForDirectory(
-	configDir: string,
-	startDir: string
-): string | undefined {
-	const bindings = readDirectoryBindings(configDir);
-	return getProfileForDirectoryFromBindings(startDir, bindings)?.profile;
-}
-
-export function getBindingsForProfile(
-	configDir: string,
-	profile: string
-): string[] {
-	const bindings = readDirectoryBindings(configDir);
-	return Object.entries(bindings)
-		.filter(([, p]) => p === profile)
-		.map(([dir]) => dir);
-}
-
-export function removeAllBindingsForProfile(
-	configDir: string,
-	profile: string
-): string[] {
-	const bindings = readDirectoryBindings(configDir);
-	const removed: string[] = [];
-	for (const [dir, p] of Object.entries(bindings)) {
-		if (p === profile) {
-			removed.push(dir);
-			delete bindings[dir];
-		}
-	}
-	if (removed.length > 0) {
-		writeDirectoryBindings(configDir, bindings);
-	}
-	return removed;
-}
-
-/**
- * Resolves which profile to use.
- *
- * Priority:
- * 1. Explicit `--profile` flag
- * 2. Directory binding prefix match from `cwd`
- * 3. `"default"`
- */
-export function resolveProfile(args: {
-	configDir: string;
-	profile?: string;
-	cwd: string;
-}): string {
-	if (args.profile) {
-		validateProfileName(args.profile);
-		return args.profile;
-	}
-
-	const dirProfile = getProfileForDirectory(args.configDir, args.cwd);
-	if (dirProfile) {
-		return dirProfile;
-	}
-
-	return "default";
 }

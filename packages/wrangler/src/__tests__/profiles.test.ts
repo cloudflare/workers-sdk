@@ -1,50 +1,43 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import {
-	activateProfileForDirectory,
-	getBindingsForProfile,
-	getProfileForDirectory,
-	profileExists,
-	resolveProfile,
-	validateProfileName,
-} from "@cloudflare/workers-auth";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { validateProfileName } from "@cloudflare/workers-auth";
 import {
 	normalizeString,
 	runInTempDir,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it } from "vitest";
+import { getAuthConfigFilePath, writeAuthConfigFile } from "../user";
+import { createWranglerProfileStore } from "../user/profile-store";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 
-function configDir(): string {
-	return getGlobalWranglerConfigPath();
-}
-
 function pathArg(filePath: string): string {
 	return filePath.replace(/\\/g, "/");
 }
 
+function profiles() {
+	return createWranglerProfileStore();
+}
+
 function createProfileFile(name: string, token = `${name}-token`) {
-	const profilesDir = path.join(configDir(), "config");
-	mkdirSync(profilesDir, { recursive: true });
 	const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
-	writeFileSync(
-		path.join(profilesDir, `${name}.toml`),
-		`oauth_token = "${token}"\nrefresh_token = "test-refresh"\nexpiration_time = "${futureDate}"\n`
+	writeAuthConfigFile(
+		{
+			oauth_token: token,
+			refresh_token: "test-refresh",
+			expiration_time: futureDate,
+		},
+		name
 	);
 }
 
 function createDeprecatedProfileFile(name: string) {
-	const profilesDir = path.join(configDir(), "config");
-	mkdirSync(profilesDir, { recursive: true });
-	writeFileSync(
-		path.join(profilesDir, `${name}.toml`),
-		`api_token = "token"\n`
-	);
+	const configPath = getAuthConfigFilePath(name);
+	mkdirSync(path.dirname(configPath), { recursive: true });
+	writeFileSync(configPath, `api_token = "token"\n`);
 }
 
 function mockSuccessfulOAuth(
@@ -112,31 +105,36 @@ describe("Profiles", () => {
 		it("most specific (longest) match wins", ({ expect }) => {
 			const parentDir = path.resolve("/foo");
 			const childDir = path.resolve("/foo/bar");
-			activateProfileForDirectory(configDir(), "parent", parentDir);
-			activateProfileForDirectory(configDir(), "child", childDir);
+			profiles().bindings.activate("parent", parentDir);
+			profiles().bindings.activate("child", childDir);
 
-			expect(getProfileForDirectory(configDir(), childDir)).toBe("child");
+			expect(profiles().bindings.getProfileForDirectory(childDir)).toBe(
+				"child"
+			);
 			expect(
-				getProfileForDirectory(configDir(), path.join(childDir, "sub"))
+				profiles().bindings.getProfileForDirectory(path.join(childDir, "sub"))
 			).toBe("child");
 			expect(
-				getProfileForDirectory(configDir(), path.join(parentDir, "other"))
+				profiles().bindings.getProfileForDirectory(
+					path.join(parentDir, "other")
+				)
 			).toBe("parent");
 		});
 
 		it("does not match at non-path boundary", ({ expect }) => {
 			const dir = path.resolve("/foo/bar");
-			activateProfileForDirectory(configDir(), "client-a", dir);
-			expect(getProfileForDirectory(configDir(), dir + "baz")).toBeUndefined();
+			profiles().bindings.activate("client-a", dir);
+			expect(
+				profiles().bindings.getProfileForDirectory(dir + "baz")
+			).toBeUndefined();
 		});
 	});
 
 	describe("resolveProfile", () => {
 		it("--profile flag takes priority over directory binding", ({ expect }) => {
-			activateProfileForDirectory(configDir(), "dir-profile", process.cwd());
+			profiles().bindings.activate("dir-profile", process.cwd());
 			expect(
-				resolveProfile({
-					configDir: configDir(),
+				profiles().resolve({
 					profile: "flag-profile",
 					cwd: process.cwd(),
 				})
@@ -145,22 +143,19 @@ describe("Profiles", () => {
 
 		it("rejects invalid profile names from --profile flag", ({ expect }) => {
 			expect(() =>
-				resolveProfile({
-					configDir: configDir(),
+				profiles().resolve({
 					profile: "../../../etc/passwd",
 					cwd: process.cwd(),
 				})
 			).toThrow(/may only contain/);
 			expect(() =>
-				resolveProfile({
-					configDir: configDir(),
+				profiles().resolve({
 					profile: "my profile",
 					cwd: process.cwd(),
 				})
 			).toThrow(/may only contain/);
 			expect(() =>
-				resolveProfile({
-					configDir: configDir(),
+				profiles().resolve({
 					profile: "default",
 					cwd: process.cwd(),
 				})
@@ -186,7 +181,7 @@ describe("Profiles", () => {
 				'Cannot create auth profile "client-a" while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again.'
 			);
 
-			expect(profileExists(configDir(), "client-a")).toBe(false);
+			expect(profiles().configs.exists("client-a")).toBe(false);
 		});
 
 		it("creates a new profile via OAuth login", async ({ expect }) => {
@@ -194,7 +189,7 @@ describe("Profiles", () => {
 
 			await runWrangler("auth create client-a");
 
-			expect(profileExists(configDir(), "client-a")).toBe(true);
+			expect(profiles().configs.exists("client-a")).toBe(true);
 			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
@@ -244,7 +239,7 @@ describe("Profiles", () => {
 		}) => {
 			const dirA = path.resolve("/projects/client-a");
 			createProfileFile("client-a");
-			activateProfileForDirectory(configDir(), "client-a", dirA);
+			profiles().bindings.activate("client-a", dirA);
 
 			await expect(
 				runWrangler("auth delete client-a", {
@@ -254,21 +249,25 @@ describe("Profiles", () => {
 				'Cannot delete auth profile "client-a" while CLOUDFLARE_API_TOKEN is set. Unset CLOUDFLARE_API_TOKEN and try again.'
 			);
 
-			expect(profileExists(configDir(), "client-a")).toBe(true);
-			expect(getBindingsForProfile(configDir(), "client-a")).toEqual([dirA]);
+			expect(profiles().configs.exists("client-a")).toBe(true);
+			expect(profiles().bindings.getBindingsForProfile("client-a")).toEqual([
+				dirA,
+			]);
 		});
 
 		it("deletes a profile and its directory bindings", async ({ expect }) => {
 			const dirA = path.resolve("/projects/client-a");
 			const dirAv2 = path.resolve("/projects/client-a-v2");
 			createProfileFile("client-a");
-			activateProfileForDirectory(configDir(), "client-a", dirA);
-			activateProfileForDirectory(configDir(), "client-a", dirAv2);
+			profiles().bindings.activate("client-a", dirA);
+			profiles().bindings.activate("client-a", dirAv2);
 
 			await runWrangler("auth delete client-a");
 
-			expect(profileExists(configDir(), "client-a")).toBe(false);
-			expect(getBindingsForProfile(configDir(), "client-a")).toHaveLength(0);
+			expect(profiles().configs.exists("client-a")).toBe(false);
+			expect(
+				profiles().bindings.getBindingsForProfile("client-a")
+			).toHaveLength(0);
 			const out = normalizeString(std.out);
 			expect(out).toContain("Removed directory bindings:");
 			expect(out).toContain(normalizeString(dirA));
@@ -284,7 +283,7 @@ describe("Profiles", () => {
 
 			await runWrangler("auth delete client-a");
 
-			expect(profileExists(configDir(), "client-a")).toBe(false);
+			expect(profiles().configs.exists("client-a")).toBe(false);
 			const out = normalizeString(std.out);
 			expect(out).toContain("Not logged in, exiting...");
 			expect(out).toContain('Profile "client-a" deleted.');
@@ -299,8 +298,8 @@ describe("Profiles", () => {
 
 			createProfileFile("parent-profile");
 			createProfileFile("child-profile");
-			activateProfileForDirectory(configDir(), "parent-profile", parentDir);
-			activateProfileForDirectory(configDir(), "child-profile", childDir);
+			profiles().bindings.activate("parent-profile", parentDir);
+			profiles().bindings.activate("child-profile", childDir);
 
 			await runWrangler("auth delete child-profile");
 
@@ -323,7 +322,7 @@ describe("Profiles", () => {
 
 			await runWrangler("auth activate client-a");
 
-			expect(getProfileForDirectory(configDir(), process.cwd())).toBe(
+			expect(profiles().bindings.getProfileForDirectory(process.cwd())).toBe(
 				"client-a"
 			);
 			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
@@ -340,7 +339,9 @@ describe("Profiles", () => {
 
 			await runWrangler(`auth activate client-a ${pathArg(targetDir)}`);
 
-			expect(getProfileForDirectory(configDir(), targetDir)).toBe("client-a");
+			expect(profiles().bindings.getProfileForDirectory(targetDir)).toBe(
+				"client-a"
+			);
 			expect(normalizeString(std.out)).toContain(
 				`Profile "client-a" activated for "${normalizeString(targetDir)}".`
 			);
@@ -379,7 +380,7 @@ describe("Profiles", () => {
 			await runWrangler("auth deactivate");
 
 			expect(
-				getProfileForDirectory(configDir(), process.cwd())
+				profiles().bindings.getProfileForDirectory(process.cwd())
 			).toBeUndefined();
 			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
 				"
@@ -432,7 +433,7 @@ describe("Profiles", () => {
 			const targetDir = path.resolve("projects", "client-a");
 			createProfileFile("default");
 			createProfileFile("client-a");
-			activateProfileForDirectory(configDir(), "client-a", targetDir);
+			profiles().bindings.activate("client-a", targetDir);
 
 			await runWrangler("auth list");
 			const out = normalizeString(std.out);
@@ -471,7 +472,7 @@ describe("Profiles", () => {
 			createProfileFile("default");
 			createProfileFile("bound-profile");
 
-			activateProfileForDirectory(configDir(), "bound-profile", process.cwd());
+			profiles().bindings.activate("bound-profile", process.cwd());
 
 			await runWrangler("auth token");
 
@@ -483,7 +484,7 @@ describe("Profiles", () => {
 			createProfileFile("bound-profile");
 			createProfileFile("flag-profile");
 
-			activateProfileForDirectory(configDir(), "bound-profile", process.cwd());
+			profiles().bindings.activate("bound-profile", process.cwd());
 
 			await runWrangler("auth token --profile flag-profile");
 
@@ -553,7 +554,7 @@ describe("Profiles", () => {
 
 			// Bind a profile to that project directory
 			createProfileFile("project-profile");
-			activateProfileForDirectory(configDir(), "project-profile", projectDir);
+			profiles().bindings.activate("project-profile", projectDir);
 
 			// whoami with --config pointing to the project resolves the profile from the config's directory
 			await runWrangler(
@@ -569,7 +570,7 @@ describe("Profiles", () => {
 			mkdirSync(subDir, { recursive: true });
 
 			createProfileFile("workspace-profile");
-			activateProfileForDirectory(configDir(), "workspace-profile", subDir);
+			profiles().bindings.activate("workspace-profile", subDir);
 
 			// whoami with --cwd resolves the profile from that directory
 			await runWrangler(`whoami --cwd ${pathArg(subDir)}`).catch(() => {});
@@ -584,7 +585,7 @@ describe("Profiles", () => {
 			mkdirSync(childDir, { recursive: true });
 
 			createProfileFile("inherited-profile");
-			activateProfileForDirectory(configDir(), "inherited-profile", parentDir);
+			profiles().bindings.activate("inherited-profile", parentDir);
 
 			// whoami from a nested subdirectory inherits the parent's profile
 			await runWrangler(`whoami --cwd ${pathArg(childDir)}`).catch(() => {});

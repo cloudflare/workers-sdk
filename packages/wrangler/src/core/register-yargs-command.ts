@@ -1,11 +1,9 @@
 import path from "node:path";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
-import { resolveProfile } from "@cloudflare/workers-auth";
 import {
 	defaultWranglerConfig,
 	FatalError,
 	getCloudflareEnv,
-	getGlobalWranglerConfigPath,
 	getWranglerHideBanner,
 	experimental_readRawConfig,
 	UserError,
@@ -37,6 +35,7 @@ import {
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
 import { setProfile, setTemporaryAllowed } from "../user";
+import { createWranglerProfileStore } from "../user/profile-store";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
@@ -155,8 +154,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 			const cwd = firstConfigPath
 				? path.dirname(path.resolve(firstConfigPath))
 				: process.cwd();
-			const profile = resolveProfile({
-				configDir: getGlobalWranglerConfigPath(),
+			const profile = createWranglerProfileStore().resolve({
 				profile: args.profile,
 				cwd,
 			});

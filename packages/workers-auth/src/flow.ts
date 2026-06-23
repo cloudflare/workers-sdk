@@ -93,8 +93,8 @@ export interface OAuthFlowAPI {
 	/**
 	 * Set the active auth profile for all subsequent storage lookups.
 	 *
-	 * Called once at top of  command dispatch by the consumer (e.g. after
-	 * `resolveProfile()`).`"default"` if never called.
+	 * Called once at top of command dispatch by the consumer after resolving the
+	 * active profile. `"default"` if never called.
 	 */
 	setProfile(profile: string): void;
 
