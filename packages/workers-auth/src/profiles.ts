@@ -62,12 +62,14 @@ export function createProfileStore(args: {
 				);
 				if (parentBinding) {
 					throw new UserError(
-						`No profile is directly bound to "${normalizedDir}". The active profile "${parentBinding.profile}" is bound at "${parentBinding.dir}". Run \`wrangler auth deactivate\` from that directory instead.`,
+						`No profile is directly bound to "${formatDirectoryForUserError(normalizedDir)}". The active profile "${parentBinding.profile}" is bound at "${formatDirectoryForUserError(
+							parentBinding.dir
+						)}". Run \`wrangler auth deactivate\` from that directory instead.`,
 						{ telemetryMessage: "auth deactivate wrong directory" }
 					);
 				}
 				throw new UserError(
-					`No profile is bound to "${normalizedDir}". Nothing to deactivate.`,
+					`No profile is bound to "${formatDirectoryForUserError(normalizedDir)}". Nothing to deactivate.`,
 					{ telemetryMessage: "auth deactivate no binding" }
 				);
 			}
@@ -160,6 +162,10 @@ export function validateProfileName(name: string): void {
 			{ telemetryMessage: "auth profile invalid name" }
 		);
 	}
+}
+
+function formatDirectoryForUserError(dir: string): string {
+	return path.relative(process.cwd(), dir) || ".";
 }
 
 /**

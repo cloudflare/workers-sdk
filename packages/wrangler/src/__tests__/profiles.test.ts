@@ -402,8 +402,8 @@ describe("Profiles", () => {
 		it("errors when run from a subdirectory of a bound directory", async ({
 			expect,
 		}) => {
-			const targetDir = path.resolve("/projects/client-a");
-			const subDir = path.resolve("/projects/client-a/sub");
+			const targetDir = path.resolve("projects/client-a");
+			const subDir = path.resolve("projects/client-a/sub");
 			createProfileFile("client-a");
 			await runWrangler(`auth activate client-a ${pathArg(targetDir)}`);
 
