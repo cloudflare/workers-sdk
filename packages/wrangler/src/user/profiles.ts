@@ -30,12 +30,21 @@ export const authProfilesNamespace = createNamespace({
 	},
 });
 
+function rejectProfileFlag(args: { profile?: string }, message: string): void {
+	if (args.profile) {
+		throw new UserError(message, {
+			telemetryMessage: "profile flag used on invalid auth command",
+		});
+	}
+}
+
 export const authCreateCommand = createCommand({
 	metadata: {
 		description: "Create or re-authenticate a named auth profile",
 		owner: "Workers: Authoring and Testing",
 		status: "experimental",
 		category: "Account",
+		hideGlobalFlags: ["profile"],
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -49,6 +58,12 @@ export const authCreateCommand = createCommand({
 			demandOption: true,
 		},
 		...oauthArgs,
+	},
+	validateArgs(args) {
+		rejectProfileFlag(
+			args,
+			"The --profile flag cannot be used with `wrangler auth create`. Pass the profile name as the command argument: `wrangler auth create <name>`."
+		);
 	},
 	async handler(args, { config }) {
 		assertNoEnvCredentials();
@@ -152,6 +167,7 @@ export const authActivateCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "experimental",
 		category: "Account",
+		hideGlobalFlags: ["profile"],
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -170,6 +186,12 @@ export const authActivateCommand = createCommand({
 				"Directory to bind the profile to (defaults to current directory)",
 			type: "string",
 		},
+	},
+	validateArgs(args) {
+		rejectProfileFlag(
+			args,
+			"The --profile flag cannot be used with `wrangler auth activate`. Pass the profile name as the command argument: `wrangler auth activate <name>`."
+		);
 	},
 	async handler(args) {
 		assertNoEnvCredentials();
@@ -198,6 +220,7 @@ export const authDeactivateCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "experimental",
 		category: "Account",
+		hideGlobalFlags: ["profile"],
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -211,6 +234,12 @@ export const authDeactivateCommand = createCommand({
 				"Directory to unbind (defaults to current directory). Must be the exact directory the profile was bound to.",
 			type: "string",
 		},
+	},
+	validateArgs(args) {
+		rejectProfileFlag(
+			args,
+			"The --profile flag cannot be used with `wrangler auth deactivate`. To switch profiles, run `wrangler auth activate <name>`; to remove this directory's binding, run `wrangler auth deactivate` without --profile."
+		);
 	},
 	async handler(args) {
 		assertNoEnvCredentials();

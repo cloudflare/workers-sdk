@@ -174,6 +174,14 @@ describe("Profiles", () => {
 			);
 		});
 
+		it("rejects --profile", async ({ expect }) => {
+			await expect(
+				runWrangler("auth create client-a --profile other")
+			).rejects.toThrow(
+				"The --profile flag cannot be used with `wrangler auth create`. Pass the profile name as the command argument: `wrangler auth create <name>`."
+			);
+		});
+
 		it("errors without creating a profile when env credentials are set", async ({
 			expect,
 		}) => {
@@ -321,6 +329,14 @@ describe("Profiles", () => {
 			);
 		});
 
+		it("rejects --profile", async ({ expect }) => {
+			await expect(
+				runWrangler("auth activate client-a --profile other")
+			).rejects.toThrow(
+				"The --profile flag cannot be used with `wrangler auth activate`. Pass the profile name as the command argument: `wrangler auth activate <name>`."
+			);
+		});
+
 		it("errors without activating a profile when env credentials are set", async ({
 			expect,
 		}) => {
@@ -376,6 +392,14 @@ describe("Profiles", () => {
 		}) => {
 			await expect(runWrangler("auth deactivate")).rejects.toThrow(
 				/No profile is bound/
+			);
+		});
+
+		it("rejects --profile", async ({ expect }) => {
+			await expect(
+				runWrangler("auth deactivate --profile other")
+			).rejects.toThrow(
+				"The --profile flag cannot be used with `wrangler auth deactivate`. To switch profiles, run `wrangler auth activate <name>`; to remove this directory's binding, run `wrangler auth deactivate` without --profile."
 			);
 		});
 
