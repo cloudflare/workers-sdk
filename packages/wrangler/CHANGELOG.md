@@ -1,5 +1,77 @@
 # wrangler
 
+## 4.104.0
+
+### Minor Changes
+
+- [#14369](https://github.com/cloudflare/workers-sdk/pull/14369) [`e312dec`](https://github.com/cloudflare/workers-sdk/commit/e312decf71f8d1a435ca178f209844363f24014a) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `getEnv()` to `createTestHarness()` Worker handles
+
+  Tests can now access the full `env` object for a Worker with `await server.getWorker<Env>().getEnv()`, including vars, secrets, and bindings.
+
+### Patch Changes
+
+- [#14364](https://github.com/cloudflare/workers-sdk/pull/14364) [`a085dec`](https://github.com/cloudflare/workers-sdk/commit/a085deca12d7126c21e500b3dd4298edfd13f8cd) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260617.1 | 1.20260619.1 |
+
+- [#14383](https://github.com/cloudflare/workers-sdk/pull/14383) [`9a0de8f`](https://github.com/cloudflare/workers-sdk/commit/9a0de8f71f50bb7d1884288e376259082084a315) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260619.1 | 1.20260621.1 |
+
+- [#14397](https://github.com/cloudflare/workers-sdk/pull/14397) [`fab565f`](https://github.com/cloudflare/workers-sdk/commit/fab565fdb1a912c73232d72ccdf1963fd96f9ad5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260621.1 | 1.20260623.1 |
+
+- [#14388](https://github.com/cloudflare/workers-sdk/pull/14388) [`3f02864`](https://github.com/cloudflare/workers-sdk/commit/3f028644284236fbfe36567052200cf00e707d85) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop erroring when `find_additional_modules` discovers a file that only matches a inactive module rule
+
+  Module rules assign module _types_ to imported files — they are not include/exclude filters. Also, setting `fallthrough: false` in a rule will cause subsequent rules to become inactive. Previously, when `find_additional_modules` walked the filesystem and discovered a file whose only matching rule is inactive, Wrangler would throw an error and fail the build.
+
+  This meant that adding a user rule like the one below would break the build for any `.txt`, `.html`, `.sql`, `.bin` or `.wasm` file that didn't match the user-supplied globs but lived somewhere under the module root:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "rules": [
+      {
+        "type": "Text",
+        "globs": ["html/includeme.html"],
+        "fallthrough": false
+      }
+    ]
+  }
+  ```
+
+  Discovered files that only match an inactive rule are now silently skipped (a `debug`-level log records each skip for troubleshooting), so users can use `fallthrough: false` to narrow the set of files attached to their Worker without having to delete or move untouched files on disk.
+
+  The direct-import path is unchanged: importing a file in code that only matches an inactive rule is still a hard error, because the imported file genuinely needs a defined module type.
+
+  Fixes [#14257](https://github.com/cloudflare/workers-sdk/issues/14257).
+
+- [#14358](https://github.com/cloudflare/workers-sdk/pull/14358) [`4ef872f`](https://github.com/cloudflare/workers-sdk/commit/4ef872fe530282d26ec8f2f8c52f23b8702ae757) Thanks [@gabivlj](https://github.com/gabivlj)! - Fix container egress interception on arm64 Docker runtimes
+
+  Both `wrangler dev` and the Cloudflare Vite plugin no longer force the `proxy-everything` sidecar image to pull as `linux/amd64`, allowing Docker to select the native image from the multi-platform manifest. Set `MINIFLARE_CONTAINER_EGRESS_IMAGE_PLATFORM` to force a specific platform when needed.
+
+- [#14362](https://github.com/cloudflare/workers-sdk/pull/14362) [`2a02858`](https://github.com/cloudflare/workers-sdk/commit/2a028589543aa7692f99a053952bfc1c5eb8302f) Thanks [@sherryliu-lsy](https://github.com/sherryliu-lsy)! - Don't require the private credential when reusing an existing Secrets Store secret in `containers registries configure`
+
+  `wrangler containers registries configure` now checks whether the target Secrets Store secret already exists before resolving the private credential. When the secret already exists it is reused by reference, so the private credential no longer needs to be supplied (via stdin in non-interactive mode, or via a prompt interactively). This applies to all external registries.
+
+  The new-secret path is unchanged: the credential is still required and stored. The only visible interactive change is that the secret prompt now appears last and only when a new secret is being created.
+
+- Updated dependencies [[`a085dec`](https://github.com/cloudflare/workers-sdk/commit/a085deca12d7126c21e500b3dd4298edfd13f8cd), [`9a0de8f`](https://github.com/cloudflare/workers-sdk/commit/9a0de8f71f50bb7d1884288e376259082084a315), [`fab565f`](https://github.com/cloudflare/workers-sdk/commit/fab565fdb1a912c73232d72ccdf1963fd96f9ad5)]:
+  - miniflare@4.20260623.0
+
 ## 4.103.0
 
 ### Minor Changes
