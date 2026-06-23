@@ -33,7 +33,6 @@ jobs:
           git config --global user.name 'Wrangler automated PR updater'
 
       - name: Generate C3 changesets
-        # Keep the final param (`c3-frameworks-update`) in sync with the filter in the `.github/workflows/c3-e2e-dependabot.yml` workflow.
         run: >-
           node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts
           create-cloudflare
