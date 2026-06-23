@@ -215,6 +215,14 @@ import {
 	mTlsCertificateNamespace,
 	mTlsCertificateUploadCommand,
 } from "./mtls-certificate/cli";
+import {
+	observabilityLogsCommand,
+	observabilityNamespace,
+	observabilityQueryCommand,
+	observabilitySkillCommand,
+	observabilityTraceCommand,
+	observabilityTracesCommand,
+} from "./observability";
 import { writeOutput } from "./output";
 import {
 	pagesDeploymentNamespace,
@@ -1420,6 +1428,32 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
 	]);
 	registry.registerNamespace("d1");
+
+	// observability (experimental local-dev traces & logs)
+	registry.define([
+		{ command: "wrangler observability", definition: observabilityNamespace },
+		{
+			command: "wrangler observability logs",
+			definition: observabilityLogsCommand,
+		},
+		{
+			command: "wrangler observability traces",
+			definition: observabilityTracesCommand,
+		},
+		{
+			command: "wrangler observability trace",
+			definition: observabilityTraceCommand,
+		},
+		{
+			command: "wrangler observability query",
+			definition: observabilityQueryCommand,
+		},
+		{
+			command: "wrangler observability skill",
+			definition: observabilitySkillCommand,
+		},
+	]);
+	registry.registerNamespace("observability");
 
 	// vectorize
 	registry.define([
