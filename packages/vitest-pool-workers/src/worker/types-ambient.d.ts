@@ -67,6 +67,13 @@ declare module "cloudflare:mock-agent" {
 declare module "workerd:unsafe" {
 	function abortAllDurableObjects(): Promise<void>;
 	function deleteAllDurableObjects(): Promise<void>;
+	function evict(stub: DurableObjectStub): Promise<void>;
+	function evictAllDurableObjects(): Promise<void>;
 
-	export default { abortAllDurableObjects, deleteAllDurableObjects };
+	export default {
+		abortAllDurableObjects,
+		deleteAllDurableObjects,
+		evict,
+		evictAllDurableObjects,
+	};
 }

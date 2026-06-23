@@ -38,6 +38,28 @@ declare module "cloudflare:test" {
 		stub: DurableObjectStub
 	): Promise<boolean /* ran */>;
 	/**
+	 * Evicts the currently-running Durable Object pointed-to by `stub`, tearing
+	 * down its instance to reset in-memory state while preserving durable
+	 * storage. Hibernatable WebSockets are hibernated rather than closed, and
+	 * eviction waits for in-flight requests to drain (with a timeout).
+	 *
+	 * Useful for testing how a Durable Object behaves across evictions, e.g.
+	 * recovering state from storage or resuming hibernated WebSockets.
+	 *
+	 * Rejects if `stub` is not a Durable Object stub, if the target Durable
+	 * Object is not currently running, or if its namespace has eviction
+	 * prevented. Note this can only be used with `stub`s pointing to Durable
+	 * Objects defined in the `main` worker.
+	 *
+	 * @example
+	 * ```ts
+	 * import { evictDurableObject } from "cloudflare:test";
+	 *
+	 * await evictDurableObject(stub);
+	 * ```
+	 */
+	export function evictDurableObject(stub: DurableObjectStub): Promise<void>;
+	/**
 	 * Gets the IDs of all objects that have been created in the `namespace`.
 	 */
 	export function listDurableObjectIds<T>(
@@ -75,6 +97,28 @@ declare module "cloudflare:test" {
 	 * ```
 	 */
 	export function abortAllDurableObjects(): Promise<void>;
+
+	/**
+	 * Evicts all currently-running Durable Objects in evictable namespaces.
+	 * Unlike `abortAllDurableObjects()`, eviction is graceful: durable storage is
+	 * preserved, hibernatable WebSockets are hibernated rather than closed, and
+	 * eviction waits for in-flight requests to drain (with a timeout). In-memory
+	 * state is reset by tearing down each instance.
+	 *
+	 * Non-running/idle actors are skipped, running facets are recursively
+	 * evicted, and namespaces with eviction prevented are respected.
+	 *
+	 * @example
+	 * ```ts
+	 * import { evictAllDurableObjects } from "cloudflare:test";
+	 * import { afterEach } from "vitest";
+	 *
+	 * afterEach(async () => {
+	 *   await evictAllDurableObjects();
+	 * });
+	 * ```
+	 */
+	export function evictAllDurableObjects(): Promise<void>;
 
 	/**
 	 * Creates an instance of `ExecutionContext` for use as the 3rd argument to

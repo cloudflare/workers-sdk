@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { env, exports } from "cloudflare:workers";
+import workerdUnsafe from "workerd:unsafe";
 import { getSerializedOptions } from "./env";
 import type { __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ } from "./index";
 
@@ -161,6 +162,19 @@ export async function runDurableObjectAlarm(
 		);
 	}
 	return await runInDurableObject(stub, runAlarm);
+}
+
+// See public facing `cloudflare:test` types for docs
+// (`async` so it throws asynchronously/rejects)
+export async function evictDurableObject(
+	stub: DurableObjectStub
+): Promise<void> {
+	if (!isDurableObjectStub(stub)) {
+		throw new TypeError(
+			"Failed to execute 'evictDurableObject': parameter 1 is not of type 'DurableObjectStub'."
+		);
+	}
+	await workerdUnsafe.evict(stub);
 }
 
 /**

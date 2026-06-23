@@ -7,3 +7,8 @@ export async function reset(): Promise<void> {
 export async function abortAllDurableObjects(): Promise<void> {
 	await workerdUnsafe.abortAllDurableObjects();
 }
+
+// See public facing `cloudflare:test` types for docs
+export async function evictAllDurableObjects(): Promise<void> {
+	await workerdUnsafe.evictAllDurableObjects();
+}
