@@ -37,10 +37,17 @@ declare module "cloudflare:test" {
 	export function runDurableObjectAlarm(
 		stub: DurableObjectStub
 	): Promise<boolean /* ran */>;
+	export interface DurableObjectEvictionOptions {
+		/**
+		 * Controls what happens to hibernatable WebSockets when evicting a Durable
+		 * Object. Defaults to `"hibernate"`.
+		 */
+		webSockets?: "close" | "hibernate";
+	}
 	/**
 	 * Evicts the currently-running Durable Object pointed-to by `stub`, tearing
 	 * down its instance to reset in-memory state while preserving durable
-	 * storage. Hibernatable WebSockets are hibernated rather than closed, and
+	 * storage. By default, hibernatable WebSockets are hibernated rather than closed, and
 	 * eviction waits for in-flight requests to drain (with a timeout).
 	 *
 	 * Useful for testing how a Durable Object behaves across evictions, e.g.
@@ -56,9 +63,13 @@ declare module "cloudflare:test" {
 	 * import { evictDurableObject } from "cloudflare:test";
 	 *
 	 * await evictDurableObject(stub);
+	 * await evictDurableObject(stub, { webSockets: "close" });
 	 * ```
 	 */
-	export function evictDurableObject(stub: DurableObjectStub): Promise<void>;
+	export function evictDurableObject(
+		stub: DurableObjectStub,
+		options?: DurableObjectEvictionOptions
+	): Promise<void>;
 	/**
 	 * Gets the IDs of all objects that have been created in the `namespace`.
 	 */
@@ -101,7 +112,7 @@ declare module "cloudflare:test" {
 	/**
 	 * Evicts all currently-running Durable Objects in evictable namespaces.
 	 * Unlike `abortAllDurableObjects()`, eviction is graceful: durable storage is
-	 * preserved, hibernatable WebSockets are hibernated rather than closed, and
+	 * preserved, hibernatable WebSockets are hibernated rather than closed by default, and
 	 * eviction waits for in-flight requests to drain (with a timeout). In-memory
 	 * state is reset by tearing down each instance.
 	 *
@@ -118,7 +129,9 @@ declare module "cloudflare:test" {
 	 * });
 	 * ```
 	 */
-	export function evictAllDurableObjects(): Promise<void>;
+	export function evictAllDurableObjects(
+		options?: DurableObjectEvictionOptions
+	): Promise<void>;
 
 	/**
 	 * Creates an instance of `ExecutionContext` for use as the 3rd argument to

@@ -15,6 +15,7 @@ const stub = env.COUNTER.get(id);
 
 // Evict the Durable Object instance pointed to by a specific stub
 await evictDurableObject(stub);
+await evictDurableObject(stub, { webSockets: "close" });
 
 // Evict all currently-running Durable Objects in evictable namespaces
 await evictAllDurableObjects();

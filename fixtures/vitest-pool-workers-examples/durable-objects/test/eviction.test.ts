@@ -35,6 +35,22 @@ function waitForMessage(socket: WebSocket) {
 	});
 }
 
+function waitForClose(socket: WebSocket) {
+	return new Promise<CloseEvent>((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			reject(new Error("Timed out waiting for WebSocket close"));
+		}, 10_000);
+		socket.addEventListener("close", (event) => {
+			clearTimeout(timeout);
+			resolve(event);
+		});
+		socket.addEventListener("error", () => {
+			clearTimeout(timeout);
+			reject(new Error("WebSocket error while waiting for close"));
+		});
+	});
+}
+
 it("resets in-memory state but preserves storage on targeted eviction", async ({
 	expect,
 }) => {
@@ -50,7 +66,7 @@ it("resets in-memory state but preserves storage on targeted eviction", async ({
 		instance.count = 999;
 	});
 
-	await evictDurableObject(stub);
+	await evictDurableObject(stub, { webSockets: "hibernate" });
 
 	// After eviction the instance is torn down: the in-memory `999` is discarded
 	// and `count` is reloaded from storage (`2`), so the next increment yields `3`
@@ -88,6 +104,20 @@ it("hibernates WebSockets across eviction", async ({ expect }) => {
 	socket.send("after-eviction");
 	expect(await messagePromise).toBe("after-eviction");
 	socket.close(1000, "done");
+});
+
+it("closes WebSockets when requested during eviction", async ({ expect }) => {
+	const id = env.COUNTER.idFromName(`evict-ws-close-${crypto.randomUUID()}`);
+	const stub = env.COUNTER.get(id);
+	const response = await stub.fetch("https://example.com/websocket-order", {
+		headers: { Upgrade: "websocket" },
+	});
+	const socket = getResponseWebSocket(response);
+	socket.accept();
+
+	const closePromise = waitForClose(socket);
+	await evictDurableObject(stub, { webSockets: "close" });
+	expect(await closePromise).toBeDefined();
 });
 
 it("rejects when passed a non-Durable-Object stub", async ({ expect }) => {
