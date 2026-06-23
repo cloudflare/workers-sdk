@@ -1,5 +1,45 @@
 # create-cloudflare
 
+## 2.70.6
+
+### Patch Changes
+
+- [#14377](https://github.com/cloudflare/workers-sdk/pull/14377) [`bc08cfa`](https://github.com/cloudflare/workers-sdk/commit/bc08cfaa9c140ab6965ff8cd6d69a8f000439fba) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.651 | 0.0.654 |
+
+- [#14378](https://github.com/cloudflare/workers-sdk/pull/14378) [`2091f80`](https://github.com/cloudflare/workers-sdk/commit/2091f804396f28a700fb90420e6ecf8c46336702) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.0.1 | 22.0.3 |
+
+- [#14379](https://github.com/cloudflare/workers-sdk/pull/14379) [`914bd65`](https://github.com/cloudflare/workers-sdk/commit/914bd65d2b02d6268709c6bc225a95fe33cfdd3e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 8.0.0 | 8.0.1 |
+
+- [#14380](https://github.com/cloudflare/workers-sdk/pull/14380) [`44a4084`](https://github.com/cloudflare/workers-sdk/commit/44a4084720eefa24bf09ed388a13cfc80e409825) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.22.3 | 3.22.4 |
+
+- [#14381](https://github.com/cloudflare/workers-sdk/pull/14381) [`f927adc`](https://github.com/cloudflare/workers-sdk/commit/f927adc72b06c36237384b68d6289e5415a90e63) Thanks [@dai-shi](https://github.com/dai-shi)! - Scaffold the Cloudflare-specific Waku files in the C3 script instead of relying on an external example
+
+  The Waku template now runs the default `create-waku` generator and overlays the Cloudflare-specific files (`wrangler.jsonc`, the Workers entrypoint `src/waku.server.tsx`, the Cloudflare `waku.config.ts`, and the `public/_headers` / `public/404.html` static assets) via `copyFiles`, installing the extra build dependencies and removing the redundant trailing-slash dev middleware in `configure`. This removes the dependency on the external `wakujs/waku-examples` repository for the scaffolded project content.
+
 ## 2.70.5
 
 ### Patch Changes
