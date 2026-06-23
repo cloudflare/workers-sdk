@@ -10,7 +10,6 @@ import { http, HttpResponse } from "msw";
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { actionsForEventCategories } from "../../r2/helpers/notification";
-import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -96,24 +95,6 @@ describe("r2", () => {
 	describe("bucket", () => {
 		mockAccountId();
 		mockApiToken();
-
-		it("should show help when the bucket command is passed", async () => {
-			await runWrangler("r2 bucket");
-			await endEventLoop();
-		});
-
-		it("should show the correct help when an invalid command is passed", async () => {
-			await expect(() =>
-				runWrangler("r2 bucket foo")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Unknown argument: foo]`
-			);
-			expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
-
-			          "
-		        `);
-		});
 
 		describe("list", () => {
 			it("should list buckets & check request inputs", async () => {

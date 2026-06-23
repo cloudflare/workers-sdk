@@ -1,29 +1,11 @@
 import path from "node:path";
-import {
-	activateProfileForDirectory,
-	deactivateDirectory,
-	deleteProfileFile,
-	getProfileForDirectory,
-	listProfiles,
-	profileExists,
-	readDirectoryBindings,
-	removeAllBindingsForProfile,
-	validateProfileName,
-} from "@cloudflare/workers-auth";
-import {
-	getGlobalWranglerConfigPath,
-	UserError,
-} from "@cloudflare/workers-utils";
+import { validateProfileName } from "@cloudflare/workers-auth";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import { oauthArgs } from "./commands";
-import {
-	getAuthFromEnv,
-	listScopes,
-	login,
-	logout,
-	validateScopeKeys,
-} from "./user";
+import { createWranglerProfileStore } from "./profile-store";
+import { getAuthFromEnv, login, logout, validateScopeKeys } from "./user";
 
 function assertNoEnvCredentials(action: "create" | "delete", profile: string) {
 	const envAuth = getAuthFromEnv();
@@ -44,10 +26,6 @@ function assertNoEnvCredentials(action: "create" | "delete", profile: string) {
 					: "auth profile delete env credentials",
 		}
 	);
-}
-
-function configDir(): string {
-	return getGlobalWranglerConfigPath();
 }
 
 export const authProfilesNamespace = createNamespace({
@@ -80,21 +58,13 @@ export const authCreateCommand = createCommand({
 		...oauthArgs,
 	},
 	async handler(args, { config }) {
+		const profiles = createWranglerProfileStore();
 		validateProfileName(args.name);
 
-		if (args.scopesList) {
-			listScopes();
-			return;
-		}
-
 		if (args.scopes) {
-			if (args.scopes.length === 0) {
-				listScopes();
-				return;
-			}
 			if (!validateScopeKeys(args.scopes)) {
 				throw new UserError(
-					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler auth create ${args.name} --scopes-list" to see the valid scopes.`,
+					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login ${args.name} --scopes-list" to see the valid scopes.`,
 					{ telemetryMessage: "auth profile create invalid scope" }
 				);
 			}
@@ -102,7 +72,7 @@ export const authCreateCommand = createCommand({
 
 		assertNoEnvCredentials("create", args.name);
 
-		const isUpdate = profileExists(configDir(), args.name);
+		const isUpdate = profiles.configs.exists(args.name);
 
 		await login(config, {
 			scopes: args.scopes,
@@ -144,9 +114,10 @@ export const authDeleteCommand = createCommand({
 		},
 	},
 	async handler(args) {
+		const profiles = createWranglerProfileStore();
 		validateProfileName(args.name);
 
-		if (!profileExists(configDir(), args.name)) {
+		if (!profiles.configs.exists(args.name)) {
 			throw new UserError(`Profile "${args.name}" does not exist.`, {
 				telemetryMessage: "auth profile delete not found",
 			});
@@ -154,7 +125,9 @@ export const authDeleteCommand = createCommand({
 
 		assertNoEnvCredentials("delete", args.name);
 
-		const removedBindings = removeAllBindingsForProfile(configDir(), args.name);
+		const removedBindings = profiles.bindings.removeAllBindingsForProfile(
+			args.name
+		);
 		if (removedBindings.length > 0) {
 			logger.log("Removed directory bindings:");
 			for (const dir of removedBindings) {
@@ -163,14 +136,16 @@ export const authDeleteCommand = createCommand({
 		}
 
 		await logout(args.name);
-		deleteProfileFile(configDir(), args.name);
+		profiles.configs.delete(args.name);
 
 		logger.log(`Profile "${args.name}" deleted.`);
 
-		const currentProfile = getProfileForDirectory(configDir(), process.cwd());
+		const currentProfile = profiles.bindings.getProfileForDirectory(
+			process.cwd()
+		);
 		if (currentProfile) {
 			logger.log(`Active profile for this directory: ${currentProfile}.`);
-		} else if (profileExists(configDir(), "default")) {
+		} else if (profiles.configs.exists("default")) {
 			logger.log("This directory now uses the default profile.");
 		} else {
 			logger.log(
@@ -206,18 +181,19 @@ export const authActivateCommand = createCommand({
 		},
 	},
 	async handler(args) {
+		const profiles = createWranglerProfileStore();
 		validateProfileName(args.name);
 
 		const targetDir = args.dir ?? process.cwd();
 
-		if (!profileExists(configDir(), args.name)) {
+		if (!profiles.configs.exists(args.name)) {
 			throw new UserError(
 				`Profile "${args.name}" does not exist. Run \`wrangler auth create ${args.name}\` first.`,
 				{ telemetryMessage: "auth activate profile not found" }
 			);
 		}
 
-		activateProfileForDirectory(configDir(), args.name, targetDir);
+		profiles.bindings.activate(args.name, targetDir);
 		logger.log(
 			`Profile "${args.name}" activated for "${path.resolve(targetDir)}".`
 		);
@@ -245,11 +221,10 @@ export const authDeactivateCommand = createCommand({
 		},
 	},
 	async handler(args) {
+		const profiles = createWranglerProfileStore();
 		const targetDir = args.dir ?? process.cwd();
-		const { removedProfile, newResolution } = deactivateDirectory(
-			configDir(),
-			targetDir
-		);
+		const { removedProfile, newResolution } =
+			profiles.bindings.deactivate(targetDir);
 
 		logger.log(
 			`Profile "${removedProfile}" deactivated from "${path.resolve(targetDir)}".`
@@ -291,14 +266,15 @@ export const authListCommand = createCommand({
 		}
 	},
 	async handler() {
-		const profiles = listProfiles(configDir());
+		const profiles = createWranglerProfileStore();
+		const profileNames = profiles.configs.list();
 
-		if (profiles.length === 0) {
+		if (profileNames.length === 0) {
 			logger.log("No profiles found. Run `wrangler login` to get started.");
 			return;
 		}
 
-		const bindings = readDirectoryBindings(configDir());
+		const bindings = profiles.bindings.read();
 		const bindingsByProfile: Record<string, string[]> = {};
 		for (const [dir, profile] of Object.entries(bindings)) {
 			if (!bindingsByProfile[profile]) {
@@ -307,7 +283,7 @@ export const authListCommand = createCommand({
 			bindingsByProfile[profile].push(dir);
 		}
 
-		const data = profiles.map((name) => ({
+		const data = profileNames.map((name) => ({
 			Profile: name,
 			"Bound Directories": (bindingsByProfile[name] ?? []).join(", ") || "-",
 		}));

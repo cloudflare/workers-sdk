@@ -35,9 +35,6 @@ export const oauthArgs = {
 		type: "string",
 		requiresArg: true,
 	},
-	"scopes-list": {
-		describe: "List all the available OAuth scopes with descriptions",
-	},
 	"callback-host": {
 		describe:
 			"Use the ip or host address for the temporary login callback server.",
@@ -67,6 +64,9 @@ export const loginCommand = createCommand({
 	},
 	args: {
 		...oauthArgs,
+		"scopes-list": {
+			describe: "List all the available OAuth scopes with descriptions",
+		},
 	},
 	validateArgs(args) {
 		if (args.profile) {
