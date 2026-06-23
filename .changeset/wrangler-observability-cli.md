@@ -13,3 +13,5 @@ When you run `wrangler dev --experimental-observability`, traces, spans, and con
 - `wrangler observability skill` — print the schema and example queries as guidance for an agent (or `--install` to write it as a `SKILL.md` into detected AI agents' skills directories, reusing the same agent detection as `wrangler --install-skills`)
 
 The store is read read-only via Node's built-in SQLite, so querying does not require a running `wrangler dev` server. All commands accept `--persist-to` to match the directory used by `wrangler dev`.
+
+Under `vite dev`, `traces` and `trace` hide the Vite module-runner plumbing spans by default (so span counts reflect your worker's real spans); pass `--include-runner-spans` to show them.

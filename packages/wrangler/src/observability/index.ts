@@ -1,5 +1,6 @@
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
+import { stripDevRunnerSpans, traceDurationMs } from "./dev-runner";
 import { installObservabilitySkill, OBSERVABILITY_SKILL } from "./skill";
 import {
 	clampLimit,
@@ -9,7 +10,17 @@ import {
 	toCsv,
 	toJson,
 } from "./store";
-import type { QueryResult, TraceStore } from "./store";
+import type { QueryResult, SqlRow, TraceStore } from "./store";
+
+/** Hide Vite dev module-runner plumbing spans by default; flag to keep them. */
+const includeRunnerSpansArg = {
+	"include-runner-spans": {
+		type: "boolean",
+		description:
+			"Include Vite dev module-runner plumbing spans (hidden by default)",
+		default: false,
+	},
+} as const;
 
 const OWNER = "Workers: Workers Observability";
 
@@ -36,9 +47,22 @@ function output(result: QueryResult, json: boolean): void {
 		logger.log(toJson(result));
 		return;
 	}
-	const csv = toCsv(result);
-	logger.log(csv === "" ? "(no rows)" : csv);
+	if (result.rows.length === 0) {
+		logger.log("(no rows)");
+		return;
+	}
+	logger.log(toCsv(result));
 }
+
+const TRACE_LIST_COLUMNS = [
+	"trace_id",
+	"name",
+	"status_code",
+	"outcome",
+	"duration_ms",
+	"span_count",
+	"error",
+];
 
 export const observabilityNamespace = createNamespace({
 	metadata: {
@@ -112,22 +136,62 @@ export const observabilityTracesCommand = createCommand({
 			description: "How many traces to show",
 			default: 20,
 		},
+		...includeRunnerSpansArg,
 		...storeArgs,
 	},
 	async handler(args, { config }) {
 		const store = await openTraceStore(config, args.persistTo);
 		try {
-			const result = runReadQuery(
+			// One row per distributed trace (the parent-less root invocation).
+			const roots = runReadQuery(
 				store,
-				`SELECT trace_id, name, status_code, outcome,
-				        ROUND(duration_ms, 1) AS duration_ms, span_count, error
+				`SELECT trace_id, name, status_code, outcome, error
 				 FROM traces
 				 WHERE parent_span_id IS NULL
 				 ORDER BY start_ms DESC
 				 LIMIT ?`,
 				[clampLimit(args.last, 20)]
 			);
-			output(result, args.json);
+			if (roots.rows.length === 0) {
+				output({ columns: TRACE_LIST_COLUMNS, rows: [] }, args.json);
+				return;
+			}
+
+			// Fetch the spans for those traces so span_count/duration can exclude
+			// Vite dev-runner plumbing (computed in JS rather than via SQL).
+			const traceIds = roots.rows.map((r) => String(r.trace_id));
+			const placeholders = traceIds.map(() => "?").join(",");
+			const spans = runReadQuery(
+				store,
+				`SELECT trace_id, span_id, parent_id, name, attributes, start_ms, end_ms
+				 FROM spans WHERE trace_id IN (${placeholders})`,
+				traceIds
+			).rows;
+
+			const spansByTrace = new Map<string, SqlRow[]>();
+			for (const span of spans) {
+				const id = String(span.trace_id);
+				const list = spansByTrace.get(id) ?? [];
+				list.push(span);
+				spansByTrace.set(id, list);
+			}
+
+			const rows: SqlRow[] = roots.rows.map((r) => {
+				const all = spansByTrace.get(String(r.trace_id)) ?? [];
+				const counted = args.includeRunnerSpans
+					? all
+					: stripDevRunnerSpans(all);
+				return {
+					trace_id: r.trace_id,
+					name: r.name,
+					status_code: r.status_code,
+					outcome: r.outcome,
+					duration_ms: traceDurationMs(all),
+					span_count: counted.length,
+					error: r.error,
+				};
+			});
+			output({ columns: TRACE_LIST_COLUMNS, rows }, args.json);
 		} finally {
 			store.db.close();
 		}
@@ -148,6 +212,7 @@ export const observabilityTraceCommand = createCommand({
 			description:
 				"The trace_id to inspect (from `wrangler observability traces`)",
 		},
+		...includeRunnerSpansArg,
 		...storeArgs,
 	},
 	positionalArgs: ["trace-id"],
@@ -167,7 +232,10 @@ export const observabilityTraceCommand = createCommand({
 				logger.log(`No spans found for trace ${args.traceId}.`);
 				return;
 			}
-			output(result, args.json);
+			const rows = args.includeRunnerSpans
+				? result.rows
+				: stripDevRunnerSpans(result.rows);
+			output({ columns: result.columns, rows }, args.json);
 		} finally {
 			store.db.close();
 		}

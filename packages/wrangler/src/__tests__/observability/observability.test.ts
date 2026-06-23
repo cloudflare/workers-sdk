@@ -37,10 +37,20 @@ function seedTraceStore(persistDir: string): void {
 		CREATE TABLE logs (trace_id TEXT, span_id TEXT, seq INTEGER, ts_ms REAL, level TEXT, message TEXT, operation TEXT, created_at TEXT);
 		INSERT INTO traces VALUES ('t1','s1',NULL,'GET /ok',1000,1010,10,'ok',200,NULL,1,'');
 		INSERT INTO traces VALUES ('t2','s2',NULL,'GET /boom',2000,2100,100,'ok',500,'kaboom',2,'');
+		INSERT INTO spans VALUES ('t1','s1',NULL,'GET /ok','http',1000,1010,10,'ok',NULL,'{}');
 		INSERT INTO spans VALUES ('t2','s2',NULL,'GET /boom','http',2000,2100,100,'ok',NULL,'{"http.request.method":"GET"}');
 		INSERT INTO spans VALUES ('t2','s2b','s2','fetch','fetch',2005,2090,85,'exception','boom','{}');
 		INSERT INTO logs VALUES ('t2','s2',1,2050,'error','["request failed",{"code":500}]','GET /boom','');
 		INSERT INTO logs VALUES ('t1','s1',1,1005,'log','["hello world"]','GET /ok','');
+
+		-- A Vite dev trace: user code wrapped in the module-runner DO. The real
+		-- spans are s3 (http) and s3c (fetch); s3a (DO subrequest) and s3b (jsrpc
+		-- into __VITE_RUNNER_OBJECT__) are plumbing that should be hidden.
+		INSERT INTO traces VALUES ('t3','s3',NULL,'GET /vite',3000,3050,50,'ok',200,NULL,4,'');
+		INSERT INTO spans VALUES ('t3','s3',NULL,'GET /vite','http',3000,3050,50,'ok',NULL,'{}');
+		INSERT INTO spans VALUES ('t3','s3a','s3','durable_object_subrequest','do',3001,3049,48,'ok',NULL,'{}');
+		INSERT INTO spans VALUES ('t3','s3b','s3a','jsrpc','jsrpc',3002,3048,46,'ok',NULL,'{"cloudflare.entrypoint":"__VITE_RUNNER_OBJECT__"}');
+		INSERT INTO spans VALUES ('t3','s3c','s3b','fetch','fetch',3010,3040,30,'ok',NULL,'{}');
 	`);
 	db.close();
 }
@@ -84,6 +94,50 @@ describe.skipIf(DatabaseSyncCtor === null)("wrangler observability", () => {
 		await runWrangler("observability trace t2 --persist-to state");
 		expect(std.out).toContain("span_id,parent_id,name,kind");
 		expect(std.out).toContain("fetch");
+	});
+
+	it("trace <id>: hides Vite dev module-runner plumbing by default", async ({
+		expect,
+	}) => {
+		seedTraceStore(path.join(process.cwd(), "state"));
+		await runWrangler("observability trace t3 --persist-to state");
+		// runner plumbing (jsrpc into __VITE_RUNNER_OBJECT__ + its DO subrequest)
+		// is hidden; the real fetch span survives, re-parented to the http root.
+		expect(std.out).not.toContain("__VITE_RUNNER_OBJECT__");
+		expect(std.out).not.toContain("jsrpc");
+		expect(std.out).not.toContain("durable_object_subrequest");
+		expect(std.out).toContain("fetch");
+		expect(std.out).toContain("s3c,s3,fetch");
+	});
+
+	it("trace <id> --include-runner-spans: shows the runner plumbing", async ({
+		expect,
+	}) => {
+		seedTraceStore(path.join(process.cwd(), "state"));
+		await runWrangler(
+			"observability trace t3 --include-runner-spans --persist-to state"
+		);
+		expect(std.out).toContain("__VITE_RUNNER_OBJECT__");
+		expect(std.out).toContain("jsrpc");
+	});
+
+	it("traces: span_count excludes runner plumbing by default", async ({
+		expect,
+	}) => {
+		seedTraceStore(path.join(process.cwd(), "state"));
+		await runWrangler("observability traces --persist-to state");
+		// t3 has 4 spans, 2 of which are runner plumbing -> count 2.
+		expect(std.out).toMatch(/GET \/vite,200,ok,[\d.]+,2,/);
+	});
+
+	it("traces --include-runner-spans: span_count includes everything", async ({
+		expect,
+	}) => {
+		seedTraceStore(path.join(process.cwd(), "state"));
+		await runWrangler(
+			"observability traces --include-runner-spans --persist-to state"
+		);
+		expect(std.out).toMatch(/GET \/vite,200,ok,[\d.]+,4,/);
 	});
 
 	it("query: runs read-only SQL and outputs JSON", async ({ expect }) => {

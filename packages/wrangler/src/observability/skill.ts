@@ -28,6 +28,11 @@ whether or not \`wrangler dev\` is currently running.
 All commands accept \`--persist-to <dir>\` (use the same value you passed to
 \`wrangler dev\`) and \`--json\`.
 
+Under \`vite dev\`, user code runs inside a module-runner Durable Object, so
+\`traces\` and \`trace\` hide that runner plumbing by default (span counts reflect
+your worker's real spans). Pass \`--include-runner-spans\` to see everything. Note
+that \`query\` runs raw SQL, so it is never filtered.
+
 ## When to use \`query\`
 
 Prefer \`query\` for anything non-trivial: it is read-only SQL, so you can select
