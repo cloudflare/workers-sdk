@@ -2269,12 +2269,6 @@ describe("versions upload", () => {
 		test("should reject declarative `exports` with an actionable error pointing at `wrangler deploy`", async ({
 			expect,
 		}) => {
-			// `wrangler versions upload` cannot apply Durable Object
-			// lifecycle changes — the declarative `exports` map is a DO
-			// lifecycle configuration (mutually exclusive with
-			// `migrations`) and is applied only through `wrangler deploy`.
-			// The client-side fail-fast turns the otherwise-silent EWC
-			// no-op into an actionable error.
 			vi.stubEnv("X_DO_EXPORTS", "true");
 			writeWranglerConfig({
 				name: "test-name",

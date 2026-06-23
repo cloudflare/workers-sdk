@@ -305,16 +305,13 @@ type WorkerMetadataVersionsPost = WorkerMetadataPut & {
 export type WorkerMetadata = WorkerMetadataPut | WorkerMetadataVersionsPost;
 
 /**
- * Structured per-class entry returned by the EWC declarative exports
+ * Structured per-class entry returned by the declarative exports
  * reconciliation flow.
  *
  * The same shape is used for both successful info entries (under
  * `exports_reconciliation.info[]`) and blocking errors (under the v4 error
  * envelope's `meta.details[]`). The `scenario` tag is the stable, machine-
  * readable identifier of which reconciliation case produced the entry.
- *
- * See the spec for the full set of scenario tags:
- * https://wiki.cfdata.org/spaces/WX/pages/1396640001
  */
 export type ExportsReconciliationEntryBase = {
 	class: string;
@@ -326,12 +323,7 @@ export type ExportsReconciliationEntryBase = {
 export type ExportsReconciliationInfo = ExportsReconciliationEntryBase & {
 	/**
 	 * Workers in the account that still bind to the source class name and must
-	 * be redeployed before the tombstone is safe to remove. Populated only for
-	 * stale renamed / transferred tombstones (T1b / T1c during rollout, and
-	 * T5 / T7 after the rollout completes).
-	 *
-	 * Same shape as `ExportsReconciliationErrorDetail.referencing_scripts`;
-	 * both envelopes name the field consistently per the spec.
+	 * be redeployed before the tombstone is safe to remove.
 	 */
 	referencing_scripts?: string[];
 };
@@ -362,12 +354,8 @@ export type ExportsReconciliationTransferPending = {
 
 /**
  * The customer-visible summary of a successful exports reconciliation,
- * embedded in the upload response under `exports_reconciliation`. Mirrors the
- * server's `internal/models/exportsreconcile.Result` type.
- *
- * All slice fields are present (possibly empty) on the wire — see the server
- * struct for the explicit non-`omitempty` annotation. The wrangler-side type
- * marks them as required to match.
+ * embedded in the upload response under `exports_reconciliation`. All arrays
+ * are present, and are empty when there are no entries to report.
  */
 export type ExportsReconciliationResult = {
 	created: string[];

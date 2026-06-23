@@ -744,6 +744,19 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({ ...baseConfig, exports: {} });
 			expect("exports" in (result as object)).toBe(false);
 		});
+
+		it("throws when an export has an unknown type", ({ expect }) => {
+			const config = {
+				...baseConfig,
+				exports: {
+					FutureExport: { type: "workflow" },
+				},
+			} as unknown as Parameters<typeof convertToWranglerConfig>[0];
+
+			expect(() => convertToWranglerConfig(config)).toThrow(
+				/Unknown export types found: - FutureExport : workflow/
+			);
+		});
 	});
 
 	describe("triggers", () => {

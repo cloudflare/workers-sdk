@@ -393,10 +393,6 @@ export type DurableObjectExportState =
  *    script via `transfer_from`.
  *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
  *    `storage` and `transfer_from` are both required.
- *
- * See the full spec for semantics, validation rules, and the rollout
- * sequencing for renames and transfers:
- * https://wiki.cfdata.org/spaces/WX/pages/1396640001
  */
 export type DurableObjectExport =
 	| {
@@ -592,9 +588,6 @@ interface EnvironmentInheritable {
 	 *
 	 * Gated behind the `X_DO_EXPORTS` environment variable for `wrangler
 	 * deploy` and `wrangler versions upload`.
-	 *
-	 * See the spec for the full set of variants and validation rules:
-	 * https://wiki.cfdata.org/spaces/WX/pages/1396640001
 	 *
 	 * @default {}
 	 * @inheritable

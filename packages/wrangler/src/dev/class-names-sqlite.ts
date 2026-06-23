@@ -2,23 +2,8 @@ import { UserError } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils";
 
 /**
- * Based on the migrations and / or declarative `exports` config, infer the
- * Durable Object class names defined by this Worker and whether each uses
- * SQLite-backed storage.
- *
- * This includes both bound and unbound (i.e. `ctx.exports`) classes.
- *
- * `migrations` and `exports` are mutually exclusive at the config-validation
- * boundary, but this function tolerates both being present defensively.
- *
- * The `exports` config — when set — contributes one entry per live
- * `durable-object` export: `state: "created"` (the default) and
- * `state: "expecting-transfer"` are both treated as live for local-dev
- * purposes. Tombstone states (`deleted`, `renamed`, `transferred`) are
- * skipped because they retire the namespace from this script.
- *
- * Returns a map of class name → `true` when SQLite storage is selected,
- * `false` for legacy KV storage.
+ * Infer Durable Object class names and storage backends from migrations or
+ * live declarative `exports` entries.
  */
 export function getDurableObjectClassNameToUseSQLiteMap(
 	migrations: Config["migrations"] | undefined,
@@ -83,18 +68,11 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 		});
 	});
 
-	// Apply declarative `exports` entries. Live entries (`created` /
-	// `expecting-transfer`) declare a class + storage backend; tombstones
-	// retire a namespace and don't contribute a live class to local dev.
 	if (exports) {
 		for (const [className, entry] of Object.entries(exports)) {
 			if (entry.type !== "durable-object") {
 				continue;
 			}
-			// `state` defaults to `"created"` on the wire when omitted. Both
-			// `"created"` and `"expecting-transfer"` are live states and carry
-			// a `storage` field — narrow on `entry.state` directly so TS picks
-			// the right discriminant.
 			if (
 				entry.state === undefined ||
 				entry.state === "created" ||

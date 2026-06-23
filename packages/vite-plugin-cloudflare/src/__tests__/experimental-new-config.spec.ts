@@ -367,12 +367,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 				experimental: { newConfig: true },
 			};
 
-			// `convertExports` previously threw "Durable Object exports are not
-			// currently supported" for any DO export. After DEVX-2572 it emits
-			// the declarative `exports` field on the wrangler-shape config,
-			// keyed by class name with snake_case fields. We assert the
-			// resolution simply succeeds — the conversion shape is covered by
-			// the @cloudflare/config unit tests in `convert.test.ts`.
+			// The conversion shape is covered by the @cloudflare/config unit tests.
 			await expect(
 				resolvePluginConfig(pluginConfig, { root: tempDir }, env)
 			).resolves.toBeDefined();

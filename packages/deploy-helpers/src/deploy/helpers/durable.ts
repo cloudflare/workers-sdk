@@ -118,16 +118,8 @@ const suppressNotFoundError = (err: unknown) => {
 
 /**
  * Resolve which Durable Object lifecycle payload to send with the upload.
- * `migrations` and `exports` are mutually exclusive: only one will be set on
- * any given upload. The choice is driven by:
- *
- *  - whether the `X_DO_EXPORTS` environment variable is set; and
- *  - whether the user's config declares `exports` entries.
- *
- * When `exports` is set in config but the env var is off, the upstream
- * `assertDoExportsEnabledIfConfigured` helper throws a `UserError` so the
- * user discovers the missing opt-in locally before the payload is silently
- * downgraded to legacy `migrations`.
+ * `migrations` and `exports` are mutually exclusive, so only one is set on
+ * any given upload.
  */
 export async function resolveDoLifecyclePayload(props: {
 	scriptName: string;
@@ -149,10 +141,6 @@ export async function resolveDoLifecyclePayload(props: {
 
 	const exportsEntries = Object.keys(props.config.exports ?? {});
 	if (getDoExportsEnabledFromEnv() && exportsEntries.length > 0) {
-		// `exports` is mutually exclusive with `migrations` at the config-
-		// validation boundary (see `errorIfMigrationsAndExportsBothSet` in
-		// `@cloudflare/workers-utils/config/validation`), so we don't need to
-		// guard against both being set here.
 		return {
 			migrations: undefined,
 			exports: props.config.exports as CfDurableObjectExports,

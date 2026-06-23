@@ -1,21 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 
 interface Env {
-	// CounterA and CounterB are accessed via traditional bindings.
 	COUNTER_A: DurableObjectNamespace<CounterA>;
 	COUNTER_B: DurableObjectNamespace<CounterB>;
-	// CounterC is intentionally NOT bound here — it's reached through
-	// `ctx.exports.CounterC` (see below). The DO class is still declared
-	// via the new `exports` map in `wrangler.jsonc` so its lifecycle is
-	// managed declaratively.
 }
 
-/**
- * Base counter implementation backed by SQLite. The `ctx.storage.sql.exec`
- * call only works when the class has been provisioned with SQLite storage —
- * with the declarative `exports` config that means `storage: "sqlite"` on a
- * live (`state: "created"`) entry.
- */
 class SqlCounter extends DurableObject<Env> {
 	private readonly ready: Promise<void>;
 
@@ -49,11 +38,6 @@ class SqlCounter extends DurableObject<Env> {
 		return this.value();
 	}
 
-	/**
-	 * Returns the result of a trivial SQL query. Used by the diagnostic
-	 * endpoint to prove the class is on the SQLite-backed storage engine —
-	 * the call fails if the namespace was provisioned as legacy KV.
-	 */
 	async sqliteOk(): Promise<number> {
 		const row = this.ctx.storage.sql
 			.exec<{ ok: number }>("SELECT 1 AS ok")
@@ -64,10 +48,7 @@ class SqlCounter extends DurableObject<Env> {
 
 export class CounterA extends SqlCounter {}
 export class CounterB extends SqlCounter {}
-// CounterC is exported here but has no binding in `wrangler.jsonc`. It is
-// addressed at runtime via `ctx.exports.CounterC`, which is typed by the
-// `Cloudflare.GlobalProps.durableNamespaces` union that `wrangler types`
-// generates from the live `exports` entries.
+// CounterC has no binding in `wrangler.jsonc`; it is reached via `ctx.exports`.
 export class CounterC extends SqlCounter {}
 
 export default {
@@ -79,9 +60,6 @@ export default {
 		const url = new URL(request.url);
 		const [, scope, action] = url.pathname.split("/");
 
-		// `/a/...` and `/b/...` resolve through traditional bindings on
-		// `env`. `/c/...` resolves through `ctx.exports.CounterC` — the
-		// "unbound DO" recipe enabled by the declarative `exports` config.
 		let namespace: DurableObjectNamespace<SqlCounter> | undefined;
 		if (scope === "a") {
 			namespace = env.COUNTER_A;
@@ -97,10 +75,6 @@ export default {
 			);
 		}
 
-		// Callers can pass `?instance=...` to address a specific DO instance;
-		// tests use this to isolate state between runs. Falls back to a
-		// single `default` instance so the fixture is friendly to manual
-		// curl probing.
 		const instance = url.searchParams.get("instance") ?? "default";
 		const stub = namespace.getByName(instance);
 

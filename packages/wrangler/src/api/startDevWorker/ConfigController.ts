@@ -506,12 +506,7 @@ async function resolveConfig(
 		);
 	}
 
-	// Mirror the deploy-side check: if `exports` is configured but the
-	// user hasn't opted in via `X_DO_EXPORTS`, fail fast so the local-dev
-	// session can't drift from production. The declarative `exports` flow
-	// is gated behind the env var while the server-side
-	// `exports_reconciliation` entitlement rolls out (DEVX-2572). Fires for
-	// both local and remote dev — the contract is the same as deploy.
+	// Keep dev aligned with deploy when declarative `exports` is configured.
 	assertDoExportsEnabledIfConfigured(resolved.exports, "dev");
 
 	if (resolved.dev.remote) {

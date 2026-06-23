@@ -111,9 +111,6 @@ describe("renderExportsReconciliationSuccess", () => {
 			})
 		);
 
-		// The `Info:` sub-heading sits at the same 2-space indent as
-		// Created/Updated/etc., with each entry indented one further level
-		// so the whole block nests visually under the reconciliation header.
 		expect(std.out).toContain("  Info:");
 		expect(std.out).toContain("    [tombstone_class_still_in_code] OldName");
 		expect(std.out).toContain("    [stale_tombstone] OldRenamed");
@@ -167,9 +164,6 @@ describe("renderExportsReconciliationSuccess", () => {
 			})
 		);
 
-		// The renderer wraps the block in blank lines so it sits cleanly
-		// between the upstream "Total Upload" summary and the downstream
-		// bindings table.
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			Durable Object exports reconciliation:

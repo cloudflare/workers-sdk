@@ -1,7 +1,11 @@
+import {
+	UserError,
+	type DurableObjectExports,
+	type RawConfig,
+} from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
 import type { ParsedInputWorkerConfig } from "./schema";
 import type { Json } from "./utils";
-import type { RawConfig } from "@cloudflare/workers-utils";
 
 /**
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
@@ -656,21 +660,7 @@ function convertBindingsAndAssets(
 // EXPORTS (Durable Objects + Workflows)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Convert the new-config `exports` map (camelCase property names) into the
- * wrangler `exports` shape (snake_case property names; kebab-case enum
- * values for `type`, `state`, and `storage`, matching the EWC upload
- * metadata wire format). The wrangler-side schema is documented in
- * `@cloudflare/workers-utils/config/environment#DurableObjectExports`.
- *
- * The structural shape is identical between `@cloudflare/config`, wrangler,
- * and EWC; the only differences are the camelCase → snake_case property
- * name transforms applied here for the few fields where they differ
- * (`renamedTo`, `transferredTo`, `transferFrom`).
- *
- * Workflows are not yet supported on the export path; entries with
- * non-Durable-Object types will be added here as those land.
- */
+/** Convert the new-config `exports` map into wrangler upload metadata. */
 function convertExports(
 	config: ParsedInputWorkerConfig,
 	result: RawConfig
@@ -680,15 +670,13 @@ function convertExports(
 		return;
 	}
 
-	const converted: Record<string, unknown> = {};
+	const converted: DurableObjectExports = {};
+	const unknownExports: typeof exports = {};
 	for (const [className, value] of Object.entries(exports)) {
 		if (value.type !== "durable-object") {
-			// Reserved for future export kinds (e.g. workflows). Skip until
-			// they land.
+			unknownExports[className] = value;
 			continue;
 		}
-		// Switch on `value.state` directly so TS narrows the discriminated
-		// union to the variant that carries the right fields.
 		switch (value.state) {
 			case undefined:
 			case "created": {
@@ -732,12 +720,20 @@ function convertExports(
 			}
 		}
 	}
+	if (Object.keys(unknownExports).length > 0) {
+		throw new UserError(
+			"Unknown export types found: " +
+				Object.entries(unknownExports)
+					.map(([exportName, { type }]) => `- ${exportName} : ${type}`)
+					.join("\n"),
+			{
+				telemetryMessage: "Unknown export types found",
+			}
+		);
+	}
+
 	if (Object.keys(converted).length > 0) {
-		// `RawConfig.exports` is typed in `@cloudflare/workers-utils`. Use an
-		// index assignment so this file does not need to import the heavy
-		// wrangler config types just for the discriminated-union shape; the
-		// shape is validated end-to-end by the wrangler validator anyway.
-		(result as Record<string, unknown>).exports = converted;
+		result.exports = converted;
 	}
 }
 

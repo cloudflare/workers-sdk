@@ -434,7 +434,7 @@ export interface CfDurableObjectMigrations {
  *
  *  - `"sqlite"` selects the SQLite-backed storage (recommended; the only path
  *    for new namespaces).
- *  - `"legacy-kv"` selects the legacy KV storage. Only accepted by EWC when
+ *  - `"legacy-kv"` selects the legacy KV storage. Only accepted when
  *    the script already has a KV-backed namespace for that class; creating a
  *    new legacy-KV namespace via the declarative flow is rejected.
  */
@@ -455,7 +455,7 @@ export type CfDurableObjectExportState =
 
 /**
  * The declarative `exports` map keyed by class name. Mutually exclusive with
- * {@link CfDurableObjectMigrations} at the EWC upload boundary.
+ * {@link CfDurableObjectMigrations} at the upload boundary.
  */
 export type CfDurableObjectExports = Record<string, DurableObjectExport>;
 
@@ -500,8 +500,8 @@ export interface CfWorkerInit {
 
 	migrations: CfDurableObjectMigrations | undefined;
 	/**
-	 * Declarative Durable Object exports. When set, this is sent to EWC
-	 * instead of `migrations`. Gated behind the `X_DO_EXPORTS` environment
+	 * Declarative Durable Object exports. When set, this is sent to the upload
+	 * API instead of `migrations`. Gated behind the `X_DO_EXPORTS` environment
 	 * variable for `wrangler deploy` and `wrangler versions upload`.
 	 */
 	exports: CfDurableObjectExports | undefined;

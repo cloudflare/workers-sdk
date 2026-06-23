@@ -209,11 +209,8 @@ export default async function deploy(
 		content,
 		sourceMaps,
 	} = buildResult;
-	// Durable Object lifecycle is expressed via one of two mutually-exclusive
-	// surfaces: the legacy `migrations` steps (computed against the deployed
-	// `migration_tag`) or the declarative `exports` map (sent verbatim and
-	// reconciled server-side). The `exports` flow is gated behind the
-	// `X_DO_EXPORTS` environment variable — see DEVX-2572.
+	// Durable Object lifecycle is expressed through either legacy `migrations`
+	// or the declarative `exports` map. Only one is sent on each upload.
 	const { migrations, exports } = await resolveDoLifecyclePayload({
 		scriptName,
 		isDryRun,
@@ -360,13 +357,8 @@ export default async function deploy(
 	// * aren't a service env deploy
 	// * aren't a service Worker
 	// * we don't have DO migrations OR declarative DO `exports`.
-	//   Both are Durable Object lifecycle configurations and can only
-	//   be applied via the legacy PUT /workers/scripts/:name endpoint;
-	//   `wrangler versions upload` cannot apply DO lifecycle changes
-	//   at all (the trade-off is no gradual-rollout for deploys with
-	//   DO lifecycle changes). The reconciliation envelope rendered on
-	//   success is therefore only ever produced by this PUT path. See
-	//   https://developers.cloudflare.com/workers/configuration/versions-and-deployments/#durable-object-migrations.
+	//   Both are Durable Object lifecycle configurations, so deploys with them
+	//   use the PUT path that can apply lifecycle changes.
 	// * we aren't an fpw
 	// * not a container worker
 	const canUseNewVersionsDeploymentsApi =
@@ -647,11 +639,7 @@ export default async function deploy(
 				);
 			}
 
-			// Declarative DO exports reconciliation errors come back from EWC
-			// with a structured `meta.details[]` payload. Render the per-class
-			// detail in a familiar format before re-throwing so the user sees
-			// every blocking scenario in one round trip (matches the EWC
-			// "Multi-DO error handling" guarantee — see spec §3.2).
+			// Reconciliation errors include structured per-class details.
 			if (
 				err instanceof APIError &&
 				err.code === EXPORTS_RECONCILIATION_ERROR_CODE &&

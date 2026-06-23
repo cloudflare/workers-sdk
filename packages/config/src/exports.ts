@@ -2,8 +2,8 @@
 // EXPORTS API
 // Named types and helper factories for declaring class exports.
 //
-// The TS-facing API follows the same structural shape as the wrangler /
-// EWC wire format, with two stylistic transforms:
+// The TS-facing API follows the same structural shape as wrangler upload
+// metadata, with two stylistic transforms:
 //
 //   - property names are camelCased (`renamedTo`, `transferredTo`,
 //     `transferFrom`),
@@ -26,8 +26,7 @@ interface DurableObjectLiveExportOptions {
 }
 
 /**
- * Declares a Durable Object class defined by this Worker. This is the
- * "live" variant — `state` defaults to `"created"` when omitted on the wire.
+ * Declares a provisioned Durable Object class exported from this Worker.
  *
  * For more information about Durable Objects, see the documentation at
  * https://developers.cloudflare.com/workers/learning/using-durable-objects
@@ -43,12 +42,8 @@ export interface DurableObjectExport extends DurableObjectLiveExportOptions {
  * Tombstone: retire a provisioned Durable Object namespace whose class has
  * been removed from code.
  *
- * Preconditions (enforced by EWC during deploy):
- *  - the class must NOT be exported in the uploaded code
- *  - no other Worker may hold a `durableObject` binding to the namespace
- *
- * See the spec's "Tombstones" section:
- * https://wiki.cfdata.org/spaces/WX/pages/1396640001
+ * During deploy, the class must not be exported in the uploaded code, and no
+ * other Worker may hold a `durableObject` binding to the namespace.
  */
 export interface DurableObjectDeletedExport {
 	type: "durable-object";
@@ -96,8 +91,7 @@ interface DurableObjectExpectingTransferExportOptions extends DurableObjectLiveE
 	/**
 	 * The source script for the two-phase cross-script transfer. The source
 	 * script will follow up with a `transferred` tombstone naming this script
-	 * to commit the transfer. See the spec:
-	 * https://wiki.cfdata.org/spaces/WX/pages/1396640001
+	 * to commit the transfer.
 	 */
 	transferFrom: string;
 }

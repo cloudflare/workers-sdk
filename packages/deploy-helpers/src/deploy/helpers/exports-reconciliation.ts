@@ -6,10 +6,9 @@ import type {
 } from "@cloudflare/workers-utils";
 
 /**
- * EWC's blocking-error code for declarative DO exports reconciliation
- * failures. Defined in `internal/api/error.go` as `ErrExportsReconciliation`.
- * Used to distinguish the reconciliation error envelope from other 4xx
- * upload errors so we can render the structured per-class details.
+ * Blocking-error code for declarative DO exports reconciliation failures.
+ * Used to distinguish the reconciliation error envelope from other 4xx upload
+ * errors so we can render the structured per-class details.
  */
 export const EXPORTS_RECONCILIATION_ERROR_CODE = 100402;
 
@@ -18,16 +17,8 @@ export const EXPORTS_RECONCILIATION_ERROR_CODE = 100402;
  * Emits nothing when the result has no entries to report (so a re-deploy
  * with no DO changes doesn't add noise to the deploy output).
  *
- * Visibility hierarchy (per the spec, §Response shape):
- *   - errors    → handled separately on the throw path
- *   - warnings  → yellow, prominent (currently reserved; no server scenarios
- *                 emit one today)
- *   - info      → dim, lower visibility
- *   - removable_entries → single-line "you can delete these" hint
- *
- * Visually the block is bracketed by blank lines and uniformly indented two
- * levels under the bold header so it reads as a cohesive section sitting
- * between "Total Upload" and the bindings table.
+ * Warnings are rendered prominently; info and removable-entry hints are lower
+ * visibility.
  */
 export function renderExportsReconciliationSuccess(
 	result: ExportsReconciliationResult
@@ -47,8 +38,6 @@ export function renderExportsReconciliationSuccess(
 		return;
 	}
 
-	// Leading blank line separates the block from preceding output (e.g.
-	// the bundle reporter's "Total Upload" summary).
 	logger.log("");
 	logger.log(bold("Durable Object exports reconciliation:"));
 
@@ -102,8 +91,6 @@ export function renderExportsReconciliationSuccess(
 		);
 	}
 
-	// Trailing blank line separates the block from following output (e.g.
-	// the bindings table printed by `printBindings`).
 	logger.log("");
 }
 
@@ -136,10 +123,7 @@ export function renderExportsReconciliationError(
 
 /**
  * Type guard for `meta.details` extracted from an `APIError`'s `meta` field.
- * The shape returned by EWC for reconciliation failures is a JSON array of
- * objects keyed by class / scenario / message. We validate the array shape
- * here so the renderer can rely on the typed fields without further runtime
- * checks.
+ * Validate the array shape so the renderer can rely on the typed fields.
  */
 export function isExportsReconciliationErrorDetails(
 	value: unknown

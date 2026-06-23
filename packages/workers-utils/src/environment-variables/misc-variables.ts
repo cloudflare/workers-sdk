@@ -386,9 +386,8 @@ export const getBrowserRenderingHeadfulFromEnv =
  * X_DO_EXPORTS=true wrangler deploy
  * ```
  *
- * Depends on the server-side `exports_reconciliation` account entitlement —
- * see DEVX-2572 and the spec:
- * https://wiki.cfdata.org/spaces/WX/pages/1396640001
+ * The flow remains experimental until server-side support is available
+ * broadly.
  */
 export const getDoExportsEnabledFromEnv = getBooleanEnvironmentVariableFactory({
 	variableName: "X_DO_EXPORTS",

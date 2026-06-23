@@ -5854,15 +5854,12 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 };
 
 /**
- * Cap on the number of declarative export entries per upload. Matches the
- * server-side `maxExportsPerScript` constant in EWC's
- * `internal/api/script/reader/types.go`.
+ * Cap on the number of declarative export entries per upload.
  */
 const MAX_EXPORTS_PER_SCRIPT = 100;
 
 /**
- * Cap on the length of each class-name key. Matches the server-side
- * `maxExportClassNameLen`.
+ * Cap on the length of each class-name key.
  */
 const MAX_EXPORT_CLASS_NAME_LEN = 128;
 
@@ -5880,21 +5877,16 @@ const VALID_EXPORT_STORAGES = new Set(["sqlite", "legacy-kv"]);
 
 /**
  * Approximate JavaScript IdentifierName matcher used for tombstone `renamed_to`
- * validation. EWC defers the full ES grammar check to the runtime validator;
- * this is a best-effort client-side fence that catches the common mistakes
- * (whitespace, punctuation, leading digit). Identical to the pattern used
- * for tombstone validation server-side.
+ * validation. This catches common mistakes locally; full grammar validation
+ * still happens server-side.
  */
 const JS_IDENTIFIER_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 /**
- * Validate the `exports` configuration. The shape mirrors the server-side
- * `ExportConfig` discriminated union in EWC: `type` carries the export kind
- * (currently always `"durable-object"`) and the new `state` field carries
- * the lifecycle (`"created"` default, `"deleted"`, `"renamed"`,
- * `"transferred"`, `"expecting-transfer"`). See the spec for full
- * semantics:
- * https://wiki.cfdata.org/spaces/WX/pages/1396640001
+ * Validate the `exports` configuration. `type` carries the export kind
+ * (currently always `"durable-object"`), and `state` carries the lifecycle
+ * (`"created"` default, `"deleted"`, `"renamed"`, `"transferred"`,
+ * `"expecting-transfer"`).
  */
 const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined || value === null) {
@@ -5925,12 +5917,8 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	let valid = true;
-	// Track every class name declared as a live `durable-object` entry (i.e.
-	// effective state `"created"`) so renamed tombstones can verify their
-	// `renamed_to` target lands on a live entry in the same map. Mirrors the
-	// EWC reader's cross-entry check; per spec T4, `expecting-transfer`
-	// entries do NOT count as valid rename targets — they haven't taken
-	// ownership of a namespace on this script yet.
+	// `expecting-transfer` entries do not count as rename targets because they
+	// have not taken ownership of a namespace on this script yet.
 	const liveClassNames = new Set<string>();
 	for (const className of classNames) {
 		const entry = rawExports[className];
@@ -6012,8 +6000,6 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 			continue;
 		}
 
-		// `state` defaults to "created" when omitted. Any other value must be
-		// one of the declared states.
 		let effectiveState: string;
 		if (state === undefined || state === null) {
 			effectiveState = "created";
@@ -6419,20 +6405,8 @@ const validateCache: ValidatorFn = (diagnostics, field, value) => {
 };
 
 /**
- * Emit a warning if a DO binding's class isn't covered by either a live
- * `exports` entry or a `migrations` block, suggesting the appropriate
- * lifecycle declaration based on what the user appears to be using.
- *
- * The warning branches between three shapes:
- *
- *  1. The config already declares any `exports` entries — suggest extending
- *     the `exports` map with live `durable-object` entries for the
- *     uncovered classes.
- *  2. Neither `migrations` nor `exports` are declared, but the
- *     `X_DO_EXPORTS` environment variable is set — the user has opted into
- *     the new declarative flow, so suggest an `exports` map.
- *  3. Otherwise — the user is on the legacy `migrations` path; suggest the
- *     `migrations` block (existing behaviour).
+ * Emit a warning if a local Durable Object binding is not covered by either a
+ * live `exports` entry or a `migrations` block.
  */
 function warnIfDurableObjectsHaveNoLifecycleConfig(
 	diagnostics: Diagnostics,
@@ -6452,11 +6426,8 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 	const exportedDurableObjects = durableObjects.bindings.filter(
 		(binding) => !binding.script_name
 	);
-	// A DO binding is "covered" if its class appears as a live
-	// `durable-object` entry in `exports` — either the default
-	// `state: "created"` or `state: "expecting-transfer"`. Tombstones
-	// (`deleted`, `renamed`, `transferred`) don't satisfy the rule on
-	// their own because the class is being retired/moved.
+	// Tombstones do not cover a local binding because the class is being
+	// retired or moved.
 	const exportsCovers = (className: string) => {
 		const entry = exports?.[className];
 		if (entry === undefined || entry.type !== "durable-object") {
@@ -6487,11 +6458,6 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 		(durable) => durable.class_name
 	) as string[];
 
-	// Decide which lifecycle declaration to suggest based on user intent.
-	// If the config already has *any* `exports` entries (live or tombstone),
-	// the user is on the declarative path — extend it. If neither lifecycle
-	// is declared but `X_DO_EXPORTS` is set, they've opted in to the new
-	// flow. Otherwise, fall back to suggesting a `migrations` block.
 	const usingExports = exports !== undefined && Object.keys(exports).length > 0;
 	const preferExports = usingExports || getDoExportsEnabledFromEnv();
 
@@ -6530,9 +6496,7 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 
 /**
  * `migrations` and `exports` are mutually exclusive ways to declare Durable
- * Object lifecycle. EWC rejects an upload that has both; we enforce the same
- * rule at config-validation time so the user sees the problem before the
- * network round trip.
+ * Object lifecycle. Validate this before any upload starts.
  */
 function errorIfMigrationsAndExportsBothSet(
 	diagnostics: Diagnostics,

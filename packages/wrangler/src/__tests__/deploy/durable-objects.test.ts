@@ -870,9 +870,7 @@ describe("deploy", () => {
 			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
 			mockSubDomainRequest();
 
-			// Override the upload handler with a 400 that mirrors the EWC
-			// `ErrExportsReconciliation` envelope shape (code 100402 with
-			// structured `meta.details[]`).
+			// Override the upload handler with a structured reconciliation error.
 			msw.use(
 				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () =>
 					HttpResponse.json(
@@ -907,10 +905,6 @@ describe("deploy", () => {
 			await expect(runWrangler("deploy index.js")).rejects.toThrow(
 				/Durable Object exports reconciliation failed/
 			);
-			// The thrown UserError carries the per-class detail in its message
-			// so the deploy command surfaces every blocking scenario in one
-			// round trip (matches the spec's "Multi-DO error handling"
-			// guarantee).
 		});
 	});
 

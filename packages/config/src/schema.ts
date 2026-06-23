@@ -287,11 +287,9 @@ const EnvSchema = z
 	})
 	.optional();
 
-// `state` is the lifecycle discriminator for Durable Object exports. It
-// defaults to `"created"` (live) when omitted, mirroring the EWC wire
-// contract. Tombstones use one of `"deleted"`, `"renamed"`,
-// `"transferred"`; `"expecting-transfer"` is a live entry awaiting incoming
-// data via the two-phase cross-script transfer flow.
+// `state` defaults to `"created"` (live) when omitted. Tombstones use one of
+// `"deleted"`, `"renamed"`, `"transferred"`; `"expecting-transfer"` is a live
+// entry awaiting incoming data via the two-phase cross-script transfer flow.
 const ExportSchema = z.union([
 	z.strictObject({
 		type: z.literal("durable-object"),

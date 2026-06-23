@@ -1,10 +1,6 @@
 {
 	"name": "durable-objects-exports-app",
 	"main": "src/index.ts",
-	// 2026-01-01 is past the `enable_ctx_exports` default-on date
-	// (2025-11-17), so the unbound `CounterC` DO declared via `exports` only
-	// can be addressed at runtime through `ctx.exports.CounterC` without an
-	// explicit `enable_ctx_exports` compat flag.
 	"compatibility_date": "2026-01-01",
 	"durable_objects": {
 		"bindings": [
@@ -12,21 +8,12 @@
 			{ "name": "COUNTER_B", "class_name": "CounterB" },
 		],
 	},
-	// Declarative DO lifecycle via `exports` (the new alternative to
-	// `migrations`). All three live classes use SQLite storage; tombstones
-	// illustrate the `state` field. Mutually exclusive with `migrations`.
 	"exports": {
 		"CounterA": { "type": "durable-object", "storage": "sqlite" },
 		"CounterB": { "type": "durable-object", "storage": "sqlite" },
-		// CounterC is declared via `exports` only — no binding. The Worker
-		// addresses it through `ctx.exports.CounterC` at runtime. This is
-		// the "unbound DO" recipe: declaratively register the class
-		// lifecycle without burning a binding slot.
+		// CounterC is declared via `exports` only — no binding.
 		"CounterC": { "type": "durable-object", "storage": "sqlite" },
-		// Class was removed from code in a previous deploy.
 		"OldCounter": { "type": "durable-object", "state": "deleted" },
-		// Class was renamed to CounterB; the live `CounterB` entry above is
-		// the destination, satisfying the `renamed_to` cross-entry rule.
 		"LegacyName": {
 			"type": "durable-object",
 			"state": "renamed",

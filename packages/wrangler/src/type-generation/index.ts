@@ -485,11 +485,7 @@ async function generateTypesFromResolvedOptions(
 	options: ResolvedGenerateTypesOptions,
 	log: boolean
 ): Promise<GeneratedTypesResult> {
-	// Mirror the deploy / dev opt-in check: if `exports` is declared in
-	// config but `X_DO_EXPORTS` is unset, fail fast so the generated `.d.ts`
-	// can't drift from the deploy / dev contract. The declarative `exports`
-	// flow is gated behind the env var while the server-side
-	// `exports_reconciliation` entitlement rolls out (DEVX-2572).
+	// Keep generated types aligned with the deploy / dev opt-in contract.
 	assertDoExportsEnabledIfConfigured(options.config.exports, "types");
 
 	const entrypoint = await getTypesEntrypoint(options.config);

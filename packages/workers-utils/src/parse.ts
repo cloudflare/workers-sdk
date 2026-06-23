@@ -58,8 +58,7 @@ export class APIError extends ParseError {
 	/**
 	 * Optional structured metadata hoisted from the first `FetchError.meta`
 	 * on the v4 response envelope. Consumers can inspect this to render
-	 * endpoint-specific structured error payloads (e.g. EWC's declarative DO
-	 * exports reconciliation `meta.details[]`).
+	 * endpoint-specific structured error payloads.
 	 */
 	meta?: { details?: unknown } & Record<string, unknown>;
 

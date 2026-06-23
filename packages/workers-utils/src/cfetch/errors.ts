@@ -11,9 +11,8 @@ export interface FetchError {
 	 * endpoint; consumers are expected to validate the shape at use site
 	 * before relying on any field.
 	 *
-	 * Known usage: the EWC declarative DO exports flow returns
-	 * `meta.details` as an array of per-class reconciliation errors. See
-	 * `ExportsReconciliationErrorDetail` in `../types.ts`.
+	 * Known usage: declarative DO exports reconciliation returns `meta.details`
+	 * as an array of per-class errors.
 	 */
 	meta?: { details?: unknown } & Record<string, unknown>;
 }
