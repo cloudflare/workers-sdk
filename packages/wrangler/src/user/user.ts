@@ -88,7 +88,7 @@ const oauthFlow = createOAuthFlow({
 	clientId: getClientIdFromEnv,
 	consent: WRANGLER_CONSENT_PAGES,
 	redirectUri: OAUTH_CALLBACK_URL,
-	storage: defaultAuthConfigStorage,
+	storageFactory: defaultAuthConfigStorage,
 	allowGlobalAuthKey: true,
 	temporary: {
 		storage: createTomlFileStorage<TemporaryPreviewAccount>(

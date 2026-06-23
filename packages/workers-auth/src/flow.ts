@@ -222,7 +222,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	let activeProfile = "default";
 
 	function getStorage(profile?: string): AuthConfigStorage {
-		return ctx.storage(profile ?? activeProfile);
+		return ctx.storageFactory(profile ?? activeProfile);
 	}
 
 	const getClientId = () =>

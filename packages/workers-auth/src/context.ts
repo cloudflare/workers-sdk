@@ -112,7 +112,7 @@ export interface OAuthFlowContext {
 	 * backends (e.g. wrangler maps each profile to a separate TOML file under
 	 * the global config directory).
 	 */
-	storage: (profile?: string) => AuthConfigStorage;
+	storageFactory: (profile?: string) => AuthConfigStorage;
 
 	/**
 	 * Whether the flow's credential resolvers (`getAPIToken` / `requireApiToken`)
