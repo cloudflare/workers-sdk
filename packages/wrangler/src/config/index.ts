@@ -126,9 +126,15 @@ export async function readNewConfig(
 
 	void logWarningsWithUpgradeHint(diagnostics, options.hideWarnings);
 	if (diagnostics.hasErrors()) {
-		throw new UserError(diagnostics.renderErrors(), {
-			telemetryMessage: "new-config worker validation failed",
-		});
+		if (options?.skipValidationErrors) {
+			logger.warn(
+				`Ignoring the following configuration validation errors${loaded.cloudflareConfigPath ? ` in "${path.relative(".", loaded.cloudflareConfigPath)}"` : ""}:\n${diagnostics.renderErrors()}`
+			);
+		} else {
+			throw new UserError(diagnostics.renderErrors(), {
+				telemetryMessage: "new-config worker validation failed",
+			});
+		}
 	}
 
 	return {

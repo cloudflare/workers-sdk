@@ -225,6 +225,8 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 							? (
 									await readNewConfig(args, {
 										hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+										skipValidationErrors:
+											def.behaviour?.skipConfigValidationErrors,
 									})
 								).config
 							: readConfig(args, {
