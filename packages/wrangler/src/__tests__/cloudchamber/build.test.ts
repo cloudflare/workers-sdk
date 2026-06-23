@@ -40,7 +40,11 @@ describe("buildAndMaybePush", () => {
 			// return empty array of repo digests (i.e. image does not exist remotely)
 			.mockResolvedValueOnce("[]")
 			// return image size and number of layers
-			.mockResolvedValueOnce("53387881 2");
+			.mockResolvedValueOnce("53387881 2")
+			// return digest after pushing the namespaced image
+			.mockResolvedValueOnce(
+				'["registry.cloudflare.com/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]'
+			);
 		// we can set this to anything since there is nothing to match from docker image inspect
 		vi.mocked(runDockerCmdWithOutput).mockReturnValueOnce(
 			'{"Descriptor":{"digest":"wont-match-sha"}}'
@@ -77,7 +81,7 @@ describe("buildAndMaybePush", () => {
 			dockerfile,
 		});
 
-		// 3 calls: docker tag + docker push
+		// 2 calls: docker tag + docker push
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
 		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
 			"tag",
@@ -89,7 +93,7 @@ describe("buildAndMaybePush", () => {
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 
-		expect(dockerImageInspect).toHaveBeenCalledTimes(2);
+		expect(dockerImageInspect).toHaveBeenCalledTimes(3);
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(1, "docker", {
 			imageTag: `test-app:tag`,
 			formatString: "{{ json .RepoDigests }}",
@@ -97,6 +101,10 @@ describe("buildAndMaybePush", () => {
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(2, "docker", {
 			imageTag: `test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(3, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+			formatString: "{{ json .RepoDigests }}",
 		});
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
@@ -124,7 +132,7 @@ describe("buildAndMaybePush", () => {
 			dockerfile,
 		});
 
-		// 3 calls: docker tag + docker push
+		// 2 calls: docker tag + docker push
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
 		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
 			"tag",
@@ -135,7 +143,7 @@ describe("buildAndMaybePush", () => {
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
-		expect(dockerImageInspect).toHaveBeenCalledTimes(2);
+		expect(dockerImageInspect).toHaveBeenCalledTimes(3);
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(1, "docker", {
 			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
 			formatString: "{{ json .RepoDigests }}",
@@ -143,6 +151,10 @@ describe("buildAndMaybePush", () => {
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(2, "docker", {
 			imageTag: `${getCloudflareContainerRegistry()}/test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(3, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+			formatString: "{{ json .RepoDigests }}",
 		});
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
@@ -170,7 +182,7 @@ describe("buildAndMaybePush", () => {
 			dockerfile,
 		});
 
-		// 3 calls: docker tag + docker push
+		// 2 calls: docker tag + docker push
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
 		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
 			"tag",
@@ -181,7 +193,7 @@ describe("buildAndMaybePush", () => {
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
-		expect(dockerImageInspect).toHaveBeenCalledTimes(2);
+		expect(dockerImageInspect).toHaveBeenCalledTimes(3);
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(1, "docker", {
 			imageTag: `registry.cloudflare.com/some-account-id/test-app:tag`,
 			formatString: "{{ json .RepoDigests }}",
@@ -189,6 +201,10 @@ describe("buildAndMaybePush", () => {
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(2, "docker", {
 			imageTag: `registry.cloudflare.com/some-account-id/test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(3, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+			formatString: "{{ json .RepoDigests }}",
 		});
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
@@ -213,7 +229,7 @@ describe("buildAndMaybePush", () => {
 			],
 			dockerfile,
 		});
-		expect(dockerImageInspect).toHaveBeenCalledTimes(2);
+		expect(dockerImageInspect).toHaveBeenCalledTimes(3);
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(
 			1,
 			"/custom/docker/path",
@@ -228,6 +244,14 @@ describe("buildAndMaybePush", () => {
 			{
 				imageTag: `test-app:tag`,
 				formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+			}
+		);
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(
+			3,
+			"/custom/docker/path",
+			{
+				imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+				formatString: "{{ json .RepoDigests }}",
 			}
 		);
 		expect(runDockerCmd).toHaveBeenCalledWith("/custom/docker/path", [
@@ -261,7 +285,7 @@ describe("buildAndMaybePush", () => {
 			dockerfile,
 		});
 
-		// 3 calls: docker tag + docker push
+		// 2 calls: docker tag + docker push
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
 		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
 			"tag",
@@ -272,7 +296,7 @@ describe("buildAndMaybePush", () => {
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
-		expect(dockerImageInspect).toHaveBeenCalledTimes(2);
+		expect(dockerImageInspect).toHaveBeenCalledTimes(3);
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(1, "docker", {
 			imageTag: `test-app:tag`,
 			formatString: "{{ json .RepoDigests }}",
@@ -280,6 +304,10 @@ describe("buildAndMaybePush", () => {
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(2, "docker", {
 			imageTag: `test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(3, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+			formatString: "{{ json .RepoDigests }}",
 		});
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
@@ -294,12 +322,12 @@ describe("buildAndMaybePush", () => {
 		vi.mocked(dockerImageInspect).mockReset();
 		vi.mocked(dockerImageInspect)
 			.mockResolvedValueOnce(
-				'["registry.cloudflare.com/test-app@sha256:three"]'
+				'["registry.cloudflare.com/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]'
 			)
 			.mockResolvedValueOnce("53387881 2");
 		vi.mocked(runDockerCmdWithOutput).mockReset();
 		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
-			return '{"Descriptor":{"digest":"three}}';
+			return '{"Descriptor":{"digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}';
 		});
 
 		await runWrangler(
@@ -325,7 +353,7 @@ describe("buildAndMaybePush", () => {
 			"manifest",
 			"inspect",
 			"-v",
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:three`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`,
 		]);
 		expect(dockerImageInspect).toHaveBeenCalledTimes(2);
 		expect(dockerImageInspect).toHaveBeenNthCalledWith(1, "docker", {
@@ -336,7 +364,52 @@ describe("buildAndMaybePush", () => {
 			imageTag: `test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
+		expect(runDockerCmd).toHaveBeenCalledOnce();
+		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
+			"image",
+			"rm",
+			"test-app:tag",
+		]);
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
+	});
+
+	it("should inspect the pushed image digest if the local digest is not remote", async ({
+		expect,
+	}) => {
+		vi.mocked(dockerImageInspect).mockReset();
+		vi.mocked(dockerImageInspect)
+			.mockResolvedValueOnce(
+				'["registry.cloudflare.com/test-app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"]'
+			)
+			.mockResolvedValueOnce("53387881 2")
+			.mockResolvedValueOnce(
+				'["registry.cloudflare.com/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]'
+			);
+		vi.mocked(runDockerCmdWithOutput).mockReset();
+		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
+			return '{"Descriptor":{"digest":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}}';
+		});
+
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p"
+		);
+
+		expect(runDockerCmdWithOutput).toHaveBeenCalledOnce();
+		expect(runDockerCmd).toHaveBeenCalledTimes(2);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
+			"tag",
+			`test-app:tag`,
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(dockerImageInspect).toHaveBeenCalledTimes(3);
+		expect(dockerImageInspect).toHaveBeenNthCalledWith(3, "docker", {
+			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+			formatString: "{{ json .RepoDigests }}",
+		});
 	});
 
 	it("should match digests for images with registry ports", async ({
@@ -348,11 +421,13 @@ describe("buildAndMaybePush", () => {
 		});
 		vi.mocked(dockerImageInspect).mockReset();
 		vi.mocked(dockerImageInspect)
-			.mockResolvedValueOnce('["localhost:5000/test-app@sha256:three"]')
+			.mockResolvedValueOnce(
+				'["localhost:5000/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]'
+			)
 			.mockResolvedValueOnce("53387881 2");
 		vi.mocked(runDockerCmdWithOutput).mockReset();
 		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
-			return '{"Descriptor":{"digest":"sha256:three"}}';
+			return '{"Descriptor":{"digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}';
 		});
 
 		await runWrangler(
@@ -364,7 +439,7 @@ describe("buildAndMaybePush", () => {
 			"manifest",
 			"inspect",
 			"-v",
-			"localhost:5000/test-app@sha256:three",
+			"localhost:5000/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		]);
 		expect(runDockerCmd).toHaveBeenCalledTimes(1);
 		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
@@ -393,8 +468,37 @@ describe("buildAndMaybePush", () => {
 			],
 			dockerfile,
 		});
-		expect(dockerImageInspect).not.toHaveBeenCalledOnce();
+		expect(dockerImageInspect).not.toHaveBeenCalled();
 		expect(dockerLoginImageRegistry).not.toHaveBeenCalled();
+	});
+
+	it("should fall back to manifest inspect if pushed image digests are unavailable", async ({
+		expect,
+	}) => {
+		vi.mocked(dockerImageInspect).mockReset();
+		vi.mocked(dockerImageInspect)
+			.mockResolvedValueOnce("[]")
+			.mockResolvedValueOnce("53387881 2")
+			.mockResolvedValueOnce("[]");
+		vi.mocked(runDockerCmdWithOutput).mockReset();
+		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
+			return '{"Descriptor":{"digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}';
+		});
+
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p"
+		);
+
+		expect(dockerImageInspect).toHaveBeenCalledTimes(3);
+		expect(runDockerCmdWithOutput).toHaveBeenCalledOnce();
+		expect(runDockerCmdWithOutput).toHaveBeenCalledWith("docker", [
+			"manifest",
+			"inspect",
+			"-v",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expect(runDockerCmd).toHaveBeenCalledTimes(2);
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
 	it("should add --network=host flag if WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST is set", async ({
