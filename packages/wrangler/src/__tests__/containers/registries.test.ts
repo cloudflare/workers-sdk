@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccount } from "../cloudchamber/utils";
@@ -73,7 +75,7 @@ describe("containers registries configure", () => {
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(`
 			[Error: unsupported.domain is not a supported image registry.
-			Currently we support the following non-Cloudflare registries: AWS ECR, DockerHub.
+			Currently we support the following non-Cloudflare registries: AWS ECR, DockerHub, Google Artifact Registry.
 			To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
 		`);
 	});
@@ -140,6 +142,34 @@ describe("containers registries configure", () => {
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Arguments public-credential and dockerhub-username are mutually exclusive]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure us-central1-docker.pkg.dev --gar-email=test@example.com --aws-access-key-id=test-id`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Arguments gar-email and aws-access-key-id are mutually exclusive]`
+		);
+	});
+
+	it("should reject provider-specific credential flags used with the wrong registry", async ({
+		expect,
+	}) => {
+		await expect(
+			runWrangler(
+				`containers registries configure docker.io --gar-email=test@example.com`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: --gar-email can only be used with Google Artifact Registry.]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure us-central1-docker.pkg.dev --dockerhub-username=cloudchambertest`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: --dockerhub-username can only be used with DockerHub.]`
 		);
 	});
 
@@ -704,6 +734,386 @@ describe("containers registries configure", () => {
 				);
 
 				expect(cliStd.stdout).not.toContain("created in Secrets Store");
+			});
+		});
+	});
+
+	describe("Google Artifact Registry configuration", () => {
+		runInTempDir();
+		const garDomain = "us-central1-docker.pkg.dev";
+		const garEmail = "wrangler-test@test-project.iam.gserviceaccount.com";
+		const serviceAccountKey = JSON.stringify({
+			type: "service_account",
+			project_id: "test-project",
+			private_key_id: "test-key-id",
+			private_key: "fake-private-key",
+			client_email: garEmail,
+			client_id: "123456789",
+		});
+		const base64Key = Buffer.from(serviceAccountKey, "utf8").toString("base64");
+
+		describe("interactive", () => {
+			beforeEach(() => {
+				setIsTTY(true);
+			});
+
+			it("should configure GAR with a key file path", async ({ expect }) => {
+				const storeId = "test-store-id-gar";
+				writeFileSync("gar-key.json", serviceAccountKey);
+				// Existence-first: the secret name is resolved before the key is read.
+				mockPrompt({
+					text: "Secret name:",
+					options: {
+						isSecret: false,
+						defaultValue: "Google_Service_Account_JSON_Key",
+					},
+					result: "Google_Service_Account_JSON_Key",
+				});
+				mockPrompt({
+					text: "Enter Google Service Account JSON Key (file path or base64):",
+					options: { isSecret: true },
+					result: "gar-key.json",
+				});
+
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, []);
+				mockCreateSecret(storeId);
+				mockPutRegistry(expect, {
+					domain: garDomain,
+					is_public: false,
+					auth: {
+						public_credential: garEmail,
+						private_credential: {
+							store_id: storeId,
+							secret_name: "Google_Service_Account_JSON_Key",
+						},
+					},
+					kind: "GAR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${garDomain} --gar-email=${garEmail}`
+				);
+
+				expect(cliStd.stdout).toContain("Using existing Secret Store Default");
+			});
+
+			it("should configure GAR with base64 key contents", async ({
+				expect,
+			}) => {
+				const storeId = "test-store-id-gar";
+				mockPrompt({
+					text: "Secret name:",
+					options: {
+						isSecret: false,
+						defaultValue: "Google_Service_Account_JSON_Key",
+					},
+					result: "Google_Service_Account_JSON_Key",
+				});
+				mockPrompt({
+					text: "Enter Google Service Account JSON Key (file path or base64):",
+					options: { isSecret: true },
+					result: base64Key,
+				});
+
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, []);
+				mockCreateSecret(storeId);
+				mockPutRegistry(expect, {
+					domain: garDomain,
+					is_public: false,
+					auth: {
+						public_credential: garEmail,
+						private_credential: {
+							store_id: storeId,
+							secret_name: "Google_Service_Account_JSON_Key",
+						},
+					},
+					kind: "GAR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${garDomain} --gar-email=${garEmail}`
+				);
+
+				expect(cliStd.stdout).toContain("Using existing Secret Store Default");
+			});
+
+			it("should reuse an existing secret without prompting for the key", async ({
+				expect,
+			}) => {
+				const providedStoreId = "provided-store-id-gar-reuse";
+				const secretName = "existing_gar_secret";
+
+				mockConfirm({
+					text: "Do you want to reuse the existing secret? If not, then you'll be prompted to pick a new name.",
+					result: true,
+				});
+				mockListSecrets(providedStoreId, [
+					{
+						id: "existing-secret-id",
+						store_id: providedStoreId,
+						name: secretName,
+						comment: "",
+						scopes: ["containers"],
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+						status: "active",
+					},
+				]);
+				mockPutRegistry(expect, {
+					domain: garDomain,
+					is_public: false,
+					auth: {
+						public_credential: garEmail,
+						private_credential: {
+							store_id: providedStoreId,
+							secret_name: secretName,
+						},
+					},
+					kind: "GAR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${garDomain} --gar-email=${garEmail} --secret-store-id=${providedStoreId} --secret-name=${secretName}`
+				);
+
+				expect(cliStd.stdout).not.toContain("created in Secrets Store");
+				expect(cliStd.stdout).toContain(
+					"Wrangler cannot verify it matches --gar-email"
+				);
+			});
+		});
+
+		describe("non-interactive", () => {
+			beforeEach(() => {
+				setIsTTY(false);
+			});
+			const mockStdIn = useMockStdin({ isTTY: false });
+
+			it("should accept the key from piped stdin when --gar-email matches", async ({
+				expect,
+			}) => {
+				const storeId = "test-store-id-gar";
+				mockStdIn.send(serviceAccountKey);
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, []);
+				mockCreateSecret(storeId);
+				mockPutRegistry(expect, {
+					domain: garDomain,
+					is_public: false,
+					auth: {
+						public_credential: garEmail,
+						private_credential: {
+							store_id: storeId,
+							secret_name: "Google_Service_Account_JSON_Key",
+						},
+					},
+					kind: "GAR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${garDomain} --gar-email=${garEmail} --secret-name=Google_Service_Account_JSON_Key`
+				);
+			});
+
+			it("should reject when --gar-email does not match the key", async ({
+				expect,
+			}) => {
+				const storeId = "test-store-id-gar";
+				mockStdIn.send(serviceAccountKey);
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, []);
+
+				await expect(
+					runWrangler(
+						`containers registries configure ${garDomain} --gar-email=wrong@example.com --secret-name=Google_Service_Account_JSON_Key`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The provided --gar-email "wrong@example.com" does not match the service account email "wrangler-test@test-project.iam.gserviceaccount.com" in the key.]`
+				);
+			});
+
+			it("should reuse an existing secret without requiring the key (with warning)", async ({
+				expect,
+			}) => {
+				const storeId = "test-store-id-gar";
+				const secretName = "existing_gar_secret";
+				// No key is piped: the existing secret is reused by reference.
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, [
+					{
+						id: "existing-secret-id",
+						store_id: storeId,
+						name: secretName,
+						comment: "",
+						scopes: ["containers"],
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+						status: "active",
+					},
+				]);
+				mockPutRegistry(expect, {
+					domain: garDomain,
+					is_public: false,
+					auth: {
+						public_credential: garEmail,
+						private_credential: {
+							store_id: storeId,
+							secret_name: secretName,
+						},
+					},
+					kind: "GAR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${garDomain} --gar-email=${garEmail} --secret-name=${secretName} --skip-confirmation`
+				);
+
+				expect(cliStd.stdout).not.toContain("created in Secrets Store");
+				expect(cliStd.stdout).toContain(
+					"Wrangler cannot verify it matches --gar-email"
+				);
+			});
+
+			it("should ignore a piped key when reusing an existing secret", async ({
+				expect,
+			}) => {
+				const storeId = "test-store-id-gar";
+				const secretName = "existing_gar_secret";
+
+				mockStdIn.send(serviceAccountKey);
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, [
+					{
+						id: "existing-secret-id",
+						store_id: storeId,
+						name: secretName,
+						comment: "",
+						scopes: ["containers"],
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+						status: "active",
+					},
+				]);
+				mockPutRegistry(expect, {
+					domain: garDomain,
+					is_public: false,
+					auth: {
+						public_credential: "different@example.com",
+						private_credential: {
+							store_id: storeId,
+							secret_name: secretName,
+						},
+					},
+					kind: "GAR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${garDomain} --gar-email=different@example.com --secret-name=${secretName} --skip-confirmation`
+				);
+
+				expect(cliStd.stdout).not.toContain("created in Secrets Store");
+				expect(cliStd.stdout).toContain(
+					"Wrangler cannot verify it matches --gar-email"
+				);
+			});
+
+			it("should require --gar-email", async ({ expect }) => {
+				await expect(
+					runWrangler(`containers registries configure ${garDomain}`)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Missing required argument: gar-email]`
+				);
+			});
+		});
+
+		describe("FedRAMP compliance region", () => {
+			beforeEach(() => {
+				vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+				setIsTTY(false);
+			});
+			const mockStdIn = useMockStdin({ isTTY: false });
+
+			it("should validate and encode the key inline when --gar-email matches", async ({
+				expect,
+			}) => {
+				mockStdIn.send(serviceAccountKey);
+				mockPutRegistry(expect, {
+					domain: garDomain,
+					is_public: false,
+					auth: {
+						public_credential: garEmail,
+						private_credential: base64Key,
+					},
+					kind: "GAR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${garDomain} --gar-email=${garEmail} --disable-secrets-store`
+				);
+			});
+
+			it("should reject inline when --gar-email does not match the key", async ({
+				expect,
+			}) => {
+				mockStdIn.send(serviceAccountKey);
+
+				await expect(
+					runWrangler(
+						`containers registries configure ${garDomain} --gar-email=wrong@example.com --disable-secrets-store`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The provided --gar-email "wrong@example.com" does not match the service account email "wrangler-test@test-project.iam.gserviceaccount.com" in the key.]`
+				);
 			});
 		});
 	});
