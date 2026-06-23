@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { argv } from "node:process";
 import dedent from "ts-dedent";
@@ -23,14 +23,14 @@ if (require.main === module) {
 }
 
 type Args = {
-	// PR number
-	prNumber: string;
 	// Comma-separated package names
 	packageNames: string;
 	// Path to package.json
 	packageJSONPath: string;
 	// Changeset file prefix
 	changesetPrefix: string;
+	// Optional label for grouped dependency updates
+	changesetLabel?: string;
 };
 
 function processArgs(): Args {
@@ -41,28 +41,28 @@ function processArgs(): Args {
 	if (args[0] === __filename) {
 		args.shift();
 	}
-	if (args.length !== 4) {
+	if (args.length !== 3 && args.length !== 4) {
 		throw new Error(dedent`
 			Incorrect arguments, please provide:
-			- PR: The number of the current Dependabot PR
 			- Packages: Coma-separated names of the workers-sdk packages whose dependencies are being updated
 			- PackageJSON: The path to the package JSON being updated by Dependabot
-			- Changeset prefix: The prefix to go on the front of the filename of the generated changeset.
+			- Changeset prefix: The prefix to go on the front of generated changeset filenames.
+			- Optional changeset label: Stable label for grouped dependency updates.
 		`);
 	}
 	return {
-		prNumber: args[0],
-		packageNames: args[1],
-		packageJSONPath: args[2],
-		changesetPrefix: args[3],
+		packageNames: args[0],
+		packageJSONPath: args[1],
+		changesetPrefix: args[2],
+		changesetLabel: args[3],
 	};
 }
 
 function main({
-	prNumber,
 	packageNames,
 	packageJSONPath,
 	changesetPrefix,
+	changesetLabel,
 }: Args): void {
 	const diffLines = getPackageJsonDiff(resolve(packageJSONPath));
 	const changes = parseDiffForChanges(diffLines);
@@ -73,12 +73,21 @@ function main({
 		return;
 	}
 	const packages = packageNames.split(",").map((name: string) => name.trim());
+	const changesetFilename = getChangesetFilename(
+		changesetPrefix,
+		changes,
+		changesetLabel
+	);
+	const mergedChanges = mergeChanges(
+		readExistingChanges(changesetFilename),
+		changes
+	);
 	const changesetHeader = generateChangesetHeader(packages);
-	const commitMessage = generateCommitMessage(packages, changes);
+	const commitMessage = generateCommitMessage(packages, mergedChanges);
 	console.log(dedent`
 		INFO: Writing changeset with the following commit message
 		${commitMessage}`);
-	writeChangeSet(changesetPrefix, prNumber, changesetHeader, commitMessage);
+	writeChangeSet(changesetFilename, changesetHeader, commitMessage);
 	commitAndPush(commitMessage);
 }
 
@@ -107,6 +116,92 @@ export function parseDiffForChanges(
 		}
 	}
 	return changes;
+}
+
+export function getChangesetFilename(
+	changesetPrefix: string,
+	changes: Map<string, Change>,
+	changesetLabel?: string
+): string {
+	if (changesetLabel) {
+		return `${changesetPrefix}-${getFilenameSlug(changesetLabel)}.md`;
+	}
+	const [dependencyName, ...additionalDependencies] = [...changes.keys()];
+	if (dependencyName === undefined) {
+		throw new Error(
+			"Cannot generate changeset filename without dependency changes."
+		);
+	}
+	if (additionalDependencies.length > 0) {
+		throw new Error(
+			"Cannot generate dependency-scoped changeset filename for multiple dependency changes. Pass a stable changeset label."
+		);
+	}
+
+	return `${changesetPrefix}-${getFilenameSlug(dependencyName)}.md`;
+}
+
+export function getFilenameSlug(value: string): string {
+	return value
+		.replace(/^@/, "")
+		.replace(/[^a-zA-Z0-9]+/g, "-")
+		.replace(/^-|-$/g, "")
+		.toLowerCase();
+}
+
+export function readExistingChanges(
+	changesetFilename: string
+): Map<string, Change> {
+	const changesetPath = `.changeset/${changesetFilename}`;
+	try {
+		return parseChangesetForChanges(readFileSync(changesetPath, "utf-8"));
+	} catch (error) {
+		if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+			return new Map();
+		}
+		throw error;
+	}
+}
+
+export function parseChangesetForChanges(
+	changeset: string
+): Map<string, Change> {
+	const changes = new Map<string, Change>();
+	for (const line of changeset.split("\n")) {
+		const match = line.match(
+			/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|$/
+		);
+		if (!match) {
+			continue;
+		}
+		const [, rawName, rawFrom, rawTo] = match;
+		if (rawName === undefined || rawFrom === undefined || rawTo === undefined) {
+			continue;
+		}
+		const name = rawName.trim();
+		const from = rawFrom.trim();
+		const to = rawTo.trim();
+		if (name === "Dependency" || /^-+$/.test(name)) {
+			continue;
+		}
+		changes.set(name, { from, to });
+	}
+	return changes;
+}
+
+export function mergeChanges(
+	existingChanges: Map<string, Change>,
+	newChanges: Map<string, Change>
+): Map<string, Change> {
+	const mergedChanges = new Map(existingChanges);
+	for (const [name, change] of newChanges.entries()) {
+		const existingChange = existingChanges.get(name);
+		mergedChanges.set(name, {
+			from: existingChange?.from || change.from,
+			to: change.to,
+		});
+	}
+	return mergedChanges;
 }
 
 export function generateChangesetHeader(packages: string[]): string {
@@ -164,13 +259,12 @@ export function generateCommitMessage(
 }
 
 export function writeChangeSet(
-	changesetPrefix: string,
-	prNumber: string,
+	changesetFilename: string,
 	changesetHeader: string,
 	commitMessage: string
 ): void {
 	writeFileSync(
-		`.changeset/${changesetPrefix}-${prNumber}.md`,
+		`.changeset/${changesetFilename}`,
 		changesetHeader + "\n\n" + commitMessage + "\n"
 	);
 }
