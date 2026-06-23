@@ -6,12 +6,9 @@ import { cancel } from "@cloudflare/cli-shared-helpers";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
-	configFileName,
 	experimental_patchConfig,
-	formatConfigSnippet,
 	formatTime,
 	getDockerPath,
-	getTodaysCompatDate,
 	parseNonHyphenedUuid,
 	retryOnAPIFailure,
 	UserError,
@@ -42,7 +39,6 @@ import {
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
-import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
@@ -57,6 +53,7 @@ import {
 } from "./helpers/sourcemap";
 import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
 import { validateRoutes } from "./helpers/validate-routes";
+import { validateWorkerProps } from "./helpers/validate-worker-props";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
@@ -144,13 +141,6 @@ export default async function deploy(
 	workerTag: string | null;
 	targets?: string[];
 }> {
-	if (!props.name) {
-		throw new UserError(
-			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-			{ telemetryMessage: "deploy command missing worker name" }
-		);
-	}
-
 	const {
 		entry,
 		name,
@@ -162,9 +152,24 @@ export default async function deploy(
 
 	const assetsOptions = resolveAssetOptions(props, config);
 
-	if (!props.dryRun) {
-		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
+	await validateWorkerProps(props, config, "deploy");
+	assert(name); // already validated inside validateWorkerProps, but TS can't see that
+
+	// deploy only checks - validateWorkerProps is shared with versions upload
+	validateRoutes(props.routes, assetsOptions);
+	assert(
+		!config.site || config.site.bucket,
+		"A [site] definition requires a `bucket` field with a path to the site's assets directory."
+	);
+	if (
+		!props.isWorkersSite &&
+		Boolean(props.legacyAssetPaths) &&
+		entry.format === "service-worker"
+	) {
+		throw new UserError(
+			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/",
+			{ telemetryMessage: "deploy service worker assets unsupported" }
+		);
 	}
 
 	const deployConfirm = getDeployConfirmFunction({
@@ -177,8 +182,6 @@ export default async function deploy(
 	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 
 	let workerExists: boolean = true;
-
-	const allDeploymentRoutes = props.routes;
 
 	if (!props.dispatchNamespace && accountId) {
 		try {
@@ -209,7 +212,7 @@ export default async function deploy(
 				const configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
 					...config,
 					// We also want to include all the routes used for deployment
-					routes: allDeploymentRoutes,
+					routes: props.routes,
 				});
 
 				// If there are only additive changes (or no changes at all) there should be no problem,
@@ -296,28 +299,7 @@ export default async function deploy(
 		}
 	}
 
-	if (!compatibilityDate) {
-		const compatibilityDateStr = getTodaysCompatDate();
-
-		throw new UserError(
-			`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
-    \`\`\`
-    ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
-    \`\`\`
-    Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
-See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
-			{ telemetryMessage: "missing compatibility date when deploying" }
-		);
-	}
-
-	validateRoutes(allDeploymentRoutes, assetsOptions);
-
 	const scriptName = name;
-
-	assert(
-		!config.site || config.site.bucket,
-		"A [site] definition requires a `bucket` field with a path to the site's assets directory."
-	);
 
 	const envName = props.env ?? "production";
 
@@ -350,38 +332,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			cancel("Aborting deploy...");
 			return { versionId, workerTag };
 		}
-	}
-
-	if (
-		!props.isWorkersSite &&
-		Boolean(props.legacyAssetPaths) &&
-		format === "service-worker"
-	) {
-		throw new UserError(
-			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/",
-			{ telemetryMessage: "deploy service worker assets unsupported" }
-		);
-	}
-
-	if (config.wasm_modules && format === "modules") {
-		throw new UserError(
-			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
-			{ telemetryMessage: "deploy wasm modules with es module worker" }
-		);
-	}
-
-	if (config.text_blobs && format === "modules") {
-		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
-			{ telemetryMessage: "[text_blobs] with an ES module worker" }
-		);
-	}
-
-	if (config.data_blobs && format === "modules") {
-		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
-			{ telemetryMessage: "[data_blobs] with an ES module worker" }
-		);
 	}
 
 	const isDryRun = props.dryRun;
@@ -922,7 +872,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		crons: props.triggers,
 		useServiceEnvironments,
 		firstDeploy: !workerExists,
-		routes: allDeploymentRoutes,
+		routes: props.routes,
 	});
 
 	logger.log("Current Version ID:", versionId);
