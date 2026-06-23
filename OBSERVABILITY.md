@@ -73,7 +73,8 @@ X_LOCAL_OBSERVABILITY=true vite dev
   toggle to hide Vite dev module-runner plumbing spans.
 - **MCP tab** — connect an agent (opencode / Claude Code / Cursor) to read your
   local traces and logs via a bundled MCP server, gated by an access config
-  (which log levels / data bindings the agent may see), with an agent activity log.
+  (which log levels / data bindings the agent may see), with an agent activity
+  log and one-click install buttons that write project-local agent config files.
 
 ## How it works
 

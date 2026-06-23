@@ -99,6 +99,14 @@ export interface McpCallRow {
 	created_at: string | null;
 }
 
+export type McpInstallAgent = "opencode" | "claude" | "cursor";
+
+export interface McpInstallResult {
+	ok: boolean;
+	message: string;
+	path?: string;
+}
+
 async function runSql(
 	databaseId: string,
 	sql: string
@@ -155,5 +163,38 @@ export async function fetchMcpServerPath(): Promise<string | null> {
 		return json.server_path ?? null;
 	} catch {
 		return null;
+	}
+}
+
+/**
+ * One-click install for MCP onboarding. Writes project-local agent config files
+ * via the local explorer backend.
+ */
+export async function installMcpServer(
+	agent: McpInstallAgent
+): Promise<McpInstallResult> {
+	try {
+		const base = import.meta.env.VITE_LOCAL_EXPLORER_API_PATH as string;
+		const res = await fetch(`${base}/local/mcp/install`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ agent }),
+		});
+
+		const json = (await res
+			.json()
+			.catch(() => null)) as McpInstallResult | null;
+		if (json) {
+			return json;
+		}
+		return {
+			ok: false,
+			message: `Install failed (${res.status}).`,
+		};
+	} catch {
+		return {
+			ok: false,
+			message: "Install request failed. Is the dev server still running?",
+		};
 	}
 }

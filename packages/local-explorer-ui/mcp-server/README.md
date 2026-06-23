@@ -16,8 +16,9 @@ call into `mcp_calls` (shown in "Agent activity").
 
 ## Connect
 
-Make sure the dev server is running, then add to your agent (the explorer's MCP
-page has copy-paste snippets + an "Add to Cursor" button):
+Make sure the dev server is running, then add to your agent. The explorer's MCP
+page can one-click install project-local config for opencode / Claude / Cursor,
+and also provides copy-paste snippets + an "Add to Cursor" deep link:
 
 ```jsonc
 // opencode.json

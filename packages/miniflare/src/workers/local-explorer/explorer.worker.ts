@@ -78,6 +78,12 @@ export type Env = {
 
 export type AppBindings = { Bindings: Env };
 
+type McpInstallAgent = "opencode" | "claude" | "cursor";
+
+function isMcpInstallAgent(value: unknown): value is McpInstallAgent {
+	return value === "opencode" || value === "claude" || value === "cursor";
+}
+
 const EXPLORER_API_PATH = `${CorePaths.EXPLORER}/api`;
 
 const app = new Hono<AppBindings>().basePath(CorePaths.EXPLORER);
@@ -359,6 +365,38 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 app.get("/api/local/mcp", (c) =>
 	c.json({ server_path: c.env.LOCAL_EXPLORER_MCP_SERVER_PATH })
 );
+
+app.post("/api/local/mcp/install", async (c) => {
+	const body = await c.req.json().catch(() => null);
+	const agent =
+		body && typeof body === "object" ? (body as { agent?: unknown }).agent : null;
+	if (!isMcpInstallAgent(agent)) {
+		return errorResponse(400, 10000, "Invalid MCP install target.");
+	}
+
+	const explorerOrigin = new URL(c.req.url).origin;
+	const response = await c.env.MINIFLARE_LOOPBACK.fetch(
+		"http://localhost/core/mcp/install",
+		{
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				agent,
+				explorer_url: explorerOrigin,
+				server_path: c.env.LOCAL_EXPLORER_MCP_SERVER_PATH,
+			}),
+		}
+	);
+
+	const text = await response.text();
+	return new Response(text, {
+		status: response.status,
+		headers: {
+			"content-type":
+				response.headers.get("content-type") ?? "application/json; charset=utf-8",
+		},
+	});
+});
 
 app.get("/api/local/workers", async (c) => {
 	const loopback = c.env.MINIFLARE_LOOPBACK;

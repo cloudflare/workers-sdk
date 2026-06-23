@@ -1,4 +1,4 @@
-import { Checkbox, cn, Switch } from "@cloudflare/kumo";
+import { Checkbox, cn, Switch, useKumoToastManager } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
 	CaretDownIcon,
@@ -18,8 +18,10 @@ import R2Icon from "../assets/icons/r2.svg?react";
 import {
 	LOG_LEVELS,
 	fetchMcpServerPath,
+	installMcpServer,
 	listMcpCalls,
 	loadMcpConfig,
+	type McpInstallAgent,
 	resourceKey,
 	saveMcpConfig,
 	saveMcpConfigToDb,
@@ -488,9 +490,11 @@ function ConnectCard(): JSX.Element {
 		typeof window !== "undefined"
 			? window.location.origin
 			: "http://localhost:8799";
+	const toast = useKumoToastManager();
 	const [agent, setAgent] = useState<AgentId>("opencode");
 	const [copied, setCopied] = useState(false);
 	const [serverPath, setServerPath] = useState(loadServerPath);
+	const [installing, setInstalling] = useState<McpInstallAgent | null>(null);
 
 	const updateServerPath = useCallback((value: string) => {
 		setServerPath(value);
@@ -522,12 +526,50 @@ function ConnectCard(): JSX.Element {
 
 	const snippet = connectSnippet(agent, explorerUrl, serverPath);
 
-	const copy = useCallback(() => {
-		void navigator.clipboard.writeText(snippet).then(() => {
-			setCopied(true);
-			setTimeout(() => setCopied(false), 1500);
+	const installLabel =
+		agent === "opencode"
+			? "Install in opencode"
+			: agent === "claude"
+				? "Install in Claude"
+				: "Install in Cursor";
+
+	const install = useCallback(async () => {
+		setInstalling(agent);
+		const result = await installMcpServer(agent);
+		setInstalling(null);
+
+		if (result.ok) {
+			toast.add({
+				title: "MCP server installed",
+				description: result.path
+					? `Updated ${result.path}`
+					: "Project config updated.",
+				variant: "success",
+			});
+			return;
+		}
+
+		toast.add({
+			title: "Install failed",
+			description: result.message,
+			variant: "default",
 		});
-	}, [snippet]);
+	}, [agent, toast]);
+
+	const copy = useCallback(() => {
+		void navigator.clipboard
+			.writeText(snippet)
+			.then(() => {
+				setCopied(true);
+				setTimeout(() => setCopied(false), 1500);
+			})
+			.catch(() => {
+				toast.add({
+					title: "Failed to copy config",
+					variant: "default",
+				});
+			});
+	}, [snippet, toast]);
 
 	return (
 		<Card
@@ -553,6 +595,16 @@ function ConnectCard(): JSX.Element {
 							</button>
 						))}
 					</div>
+					<button
+						type="button"
+						onClick={() => {
+							void install();
+						}}
+						disabled={installing !== null}
+						className="inline-flex items-center gap-1.5 rounded-md border border-kumo-fill bg-kumo-elevated px-2.5 py-1.5 text-xs font-medium text-kumo-default hover:bg-kumo-tint disabled:cursor-not-allowed disabled:opacity-60"
+					>
+						{installing === agent ? "Installing..." : installLabel}
+					</button>
 					{agent === "cursor" ? (
 						<a
 							href={cursorDeeplink(explorerUrl, serverPath)}
@@ -594,10 +646,10 @@ function ConnectCard(): JSX.Element {
 
 				<p className="text-[11px] leading-relaxed text-kumo-subtle">
 					{agent === "opencode"
-						? "Add to opencode.json (project or global), then restart opencode."
+						? "One-click install writes .opencode/opencode.json. Then restart opencode."
 						: agent === "claude"
-							? "Run this in your project, then check with: claude mcp list."
-							: "Click “Add to Cursor”, or paste into .cursor/mcp.json."}{" "}
+							? "One-click install writes .mcp.json (project scope). Then run claude and approve the project MCP server."
+							: "One-click install writes .cursor/mcp.json. You can also use “Add to Cursor”."}{" "}
 					Requires this dev server to be running. Set the absolute path above to
 					your local copy of
 					packages/local-explorer-ui/mcp-server/mcp-server.mjs.
