@@ -54,6 +54,8 @@ const THEME_MODE_CONFIG = {
 interface SidebarProps {
 	bindings?: LocalExplorerWorkerBindings;
 	currentPath: string;
+	/** Whether the optional MCP server is enabled (X_LOCAL_OBSERVABILITY_MCP). */
+	mcpEnabled?: boolean;
 	onCycleTheme: () => void;
 	onWorkerChange: (workerName: string) => void;
 	selectedWorker: string;
@@ -64,6 +66,7 @@ interface SidebarProps {
 export function AppSidebar({
 	bindings,
 	currentPath,
+	mcpEnabled,
 	onCycleTheme,
 	onWorkerChange,
 	selectedWorker,
@@ -266,20 +269,22 @@ export function AppSidebar({
 					</Sidebar.MenuButton>
 				</Sidebar.MenuItem>
 
-				<Sidebar.MenuItem>
-					<Sidebar.MenuButton
-						icon={<RobotIcon width={20} height={20} />}
-						onClick={() =>
-							router.navigate({ to: "/mcp", search: workerSearch })
-						}
-						className={cn(
-							"cursor-pointer",
-							currentPath === "/mcp" && "bg-kumo-tint"
-						)}
-					>
-						MCP
-					</Sidebar.MenuButton>
-				</Sidebar.MenuItem>
+				{mcpEnabled ? (
+					<Sidebar.MenuItem>
+						<Sidebar.MenuButton
+							icon={<RobotIcon width={20} height={20} />}
+							onClick={() =>
+								router.navigate({ to: "/mcp", search: workerSearch })
+							}
+							className={cn(
+								"cursor-pointer",
+								currentPath === "/mcp" && "bg-kumo-tint"
+							)}
+						>
+							MCP
+						</Sidebar.MenuButton>
+					</Sidebar.MenuItem>
+				) : null}
 
 				{sidebar.open ? (
 					<Sidebar.MenuItem className="space-y-1">

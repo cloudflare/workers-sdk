@@ -204,10 +204,17 @@ function McpView(): JSX.Element {
 
 			<div className="mx-auto flex w-full max-w-3xl flex-col gap-5 overflow-y-auto p-5">
 				<p className="text-xs leading-relaxed text-kumo-subtle">
-					Connect an AI agent to this project over MCP to debug using real
-					traces, logs, and data. These settings control what a connected agent
-					is allowed to access — and every request it makes is logged below.
-					Access is enforced by the local MCP server.
+					<span className="font-medium text-kumo-default">Optional.</span> The
+					recommended way to let an agent inspect local traces and logs is the{" "}
+					<code className="rounded bg-kumo-tint px-1 py-0.5 font-mono text-[11px]">
+						wrangler observability
+					</code>{" "}
+					CLI — no setup, and it works whether or not the dev server is running
+					(run <code className="font-mono">wrangler observability skill</code>{" "}
+					to point an agent at it). MCP is an alternative for agents that would
+					rather connect over MCP than run CLI commands. These settings control
+					what a connected agent may access — and every request it makes is
+					logged below.
 				</p>
 
 				<ConnectCard />

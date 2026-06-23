@@ -363,13 +363,24 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 // Absolute path to the bundled stdio MCP server, so the Observability MCP page
 // can build a ready-to-use connect command without the user entering a path.
 app.get("/api/local/mcp", (c) =>
-	c.json({ server_path: c.env.LOCAL_EXPLORER_MCP_SERVER_PATH })
+	// Empty path means MCP wasn't opted into (X_LOCAL_OBSERVABILITY_MCP) — the
+	// UI uses a null server_path to hide the optional MCP tab.
+	c.json({ server_path: c.env.LOCAL_EXPLORER_MCP_SERVER_PATH || null })
 );
 
 app.post("/api/local/mcp/install", async (c) => {
+	if (!c.env.LOCAL_EXPLORER_MCP_SERVER_PATH) {
+		return errorResponse(
+			400,
+			10000,
+			"The local MCP server is not enabled. Set X_LOCAL_OBSERVABILITY_MCP=true to use it, or use the `wrangler observability` CLI instead."
+		);
+	}
 	const body = await c.req.json().catch(() => null);
 	const agent =
-		body && typeof body === "object" ? (body as { agent?: unknown }).agent : null;
+		body && typeof body === "object"
+			? (body as { agent?: unknown }).agent
+			: null;
 	if (!isMcpInstallAgent(agent)) {
 		return errorResponse(400, 10000, "Invalid MCP install target.");
 	}
@@ -393,7 +404,8 @@ app.post("/api/local/mcp/install", async (c) => {
 		status: response.status,
 		headers: {
 			"content-type":
-				response.headers.get("content-type") ?? "application/json; charset=utf-8",
+				response.headers.get("content-type") ??
+				"application/json; charset=utf-8",
 		},
 	});
 });

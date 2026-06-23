@@ -322,6 +322,10 @@ export const CoreSharedOptionsSchema = z
 		// consumer of user workers and persist traces to the internal `WOBS_TRACES`
 		// D1 store (which the local explorer reads).
 		unsafeObservability: z.boolean().optional(),
+		// Additionally expose the bundled MCP server to the local explorer so an
+		// agent can connect over MCP. Off by default — the `wrangler observability`
+		// CLI is the primary way to inspect captured data; MCP is optional.
+		unsafeObservabilityMcp: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
 
@@ -1216,8 +1220,12 @@ export function getGlobalServices({
 		services.push(
 			...getExplorerServices({
 				localExplorerUiPath,
-				// The MCP server ships alongside the explorer UI assets.
-				mcpServerPath: path.join(localExplorerUiPath, "mcp-server.mjs"),
+				// The MCP server ships alongside the explorer UI assets, but is only
+				// exposed when explicitly opted in — MCP is an optional alternative to
+				// the `wrangler observability` CLI. Empty string => MCP disabled.
+				mcpServerPath: sharedOptions.unsafeObservabilityMcp
+					? path.join(localExplorerUiPath, "mcp-server.mjs")
+					: "",
 				proxyBindings,
 				bindingIdMap: IDToBindingMap,
 				hasDurableObjects,

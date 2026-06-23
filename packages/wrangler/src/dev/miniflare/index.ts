@@ -9,6 +9,7 @@ import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
+	getLocalObservabilityMcpEnabledFromEnv,
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 	OBSERVABILITY_D1_BINDING,
 	OBSERVABILITY_D1_ID,
@@ -1165,6 +1166,7 @@ export async function buildMiniflareOptions(
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		unsafeObservability: getLocalObservabilityEnabledFromEnv(),
+		unsafeObservabilityMcp: getLocalObservabilityMcpEnabledFromEnv(),
 		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,

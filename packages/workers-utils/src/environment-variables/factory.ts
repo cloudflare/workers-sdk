@@ -110,6 +110,8 @@ type VariableNames =
 	| "X_LOCAL_EXPLORER"
 	/** Enable local-dev observability trace capture (experimental, default: false). */
 	| "X_LOCAL_OBSERVABILITY"
+	/** Additionally expose the bundled MCP server for local observability (experimental, default: false). */
+	| "X_LOCAL_OBSERVABILITY_MCP"
 	/** Open the browser in headful (visible) mode when using the Browser Run API in local dev (default: false). */
 	| "X_BROWSER_HEADFUL"
 

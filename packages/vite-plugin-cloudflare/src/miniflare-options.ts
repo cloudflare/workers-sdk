@@ -11,6 +11,7 @@ import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
+	getLocalObservabilityMcpEnabledFromEnv,
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 	OBSERVABILITY_D1_BINDING,
 	OBSERVABILITY_D1_ID,
@@ -513,6 +514,7 @@ export async function getDevMiniflareOptions(
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			unsafeObservability: observabilityEnabled,
+			unsafeObservabilityMcp: getLocalObservabilityMcpEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
@@ -792,6 +794,7 @@ export async function getPreviewMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			unsafeObservabilityMcp: getLocalObservabilityMcpEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
