@@ -154,12 +154,16 @@ describe("Profiles", () => {
 					cwd: process.cwd(),
 				})
 			).toThrow(/may only contain/);
-			expect(() =>
+		});
+
+		it("--profile default resolves to the default profile", ({ expect }) => {
+			profiles().bindings.activate("dir-profile", process.cwd());
+			expect(
 				profiles().resolve({
 					profile: "default",
 					cwd: process.cwd(),
 				})
-			).toThrow(/reserved profile name/);
+			).toBe("default");
 		});
 	});
 

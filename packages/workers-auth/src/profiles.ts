@@ -129,6 +129,9 @@ export function createProfileStore(args: {
 		bindings,
 		resolve(resolveArgs) {
 			if (resolveArgs.profile) {
+				if (resolveArgs.profile === "default") {
+					return "default";
+				}
 				validateProfileName(resolveArgs.profile);
 				return resolveArgs.profile;
 			}
