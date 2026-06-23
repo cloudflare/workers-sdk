@@ -1,6 +1,6 @@
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
-import { OBSERVABILITY_SKILL } from "./skill";
+import { installObservabilitySkill, OBSERVABILITY_SKILL } from "./skill";
 import {
 	clampLimit,
 	formatLogLine,
@@ -211,8 +211,32 @@ export const observabilitySkillCommand = createCommand({
 		owner: OWNER,
 	},
 	behaviour: noBanner,
-	args: {},
-	async handler() {
-		logger.log(OBSERVABILITY_SKILL);
+	args: {
+		install: {
+			type: "boolean",
+			description:
+				"Install this skill into detected AI agents' global skills directories (instead of printing it)",
+			default: false,
+		},
+	},
+	async handler(args) {
+		if (!args.install) {
+			logger.log(OBSERVABILITY_SKILL);
+			return;
+		}
+
+		const installed = await installObservabilitySkill();
+		if (installed.length === 0) {
+			logger.log(
+				"No supported AI coding agents detected. Run `wrangler observability skill` (without --install) to print the guidance instead."
+			);
+			return;
+		}
+		logger.log(
+			`Installed the local observability skill for: ${installed.map((i) => i.agent).join(", ")}.`
+		);
+		for (const { path } of installed) {
+			logger.log(`  ${path}`);
+		}
 	},
 });

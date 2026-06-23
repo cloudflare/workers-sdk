@@ -10,6 +10,6 @@ When you run `wrangler dev --experimental-observability`, traces, spans, and con
 - `wrangler observability traces --last N` — recent invocation summaries as CSV
 - `wrangler observability trace <trace_id>` — the spans of a single trace as CSV
 - `wrangler observability query "<SQL>"` — run a read-only SQL query against the trace store (CSV, or `--json`)
-- `wrangler observability skill` — print the schema and example queries as guidance for an agent
+- `wrangler observability skill` — print the schema and example queries as guidance for an agent (or `--install` to write it as a `SKILL.md` into detected AI agents' skills directories, reusing the same agent detection as `wrangler --install-skills`)
 
 The store is read read-only via Node's built-in SQLite, so querying does not require a running `wrangler dev` server. All commands accept `--persist-to` to match the directory used by `wrangler dev`.

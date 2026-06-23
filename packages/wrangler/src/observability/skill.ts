@@ -1,3 +1,10 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { getDetectedAgents } from "../agents-skills-install";
+
+/** Directory name used for the installed skill inside each agent's skills dir. */
+const SKILL_DIRECTORY_NAME = "cloudflare-workers-local-observability";
+
 /**
  * Guidance printed by `wrangler observability skill` — designed to be read by a
  * coding agent so it can query the captured local-dev trace store directly with
@@ -93,3 +100,49 @@ WHERE s.kind = 'fetch'
 GROUP BY t.trace_id ORDER BY fetches DESC LIMIT 20;
 \`\`\`
 `;
+
+/**
+ * The skill as an agent-installable `SKILL.md`: YAML frontmatter (so agents
+ * index it and know when to use it) followed by the guidance body above.
+ */
+function skillMarkdown(): string {
+	return `---
+name: ${SKILL_DIRECTORY_NAME}
+description: >-
+  Inspect local Cloudflare Workers dev traces, spans, and console logs captured
+  by \`wrangler dev --experimental-observability\`. Use when debugging a local
+  Worker: find recent errors, slow requests, inspect a specific trace, or run
+  read-only SQL against the trace store with the \`wrangler observability\` CLI.
+---
+
+${OBSERVABILITY_SKILL}`;
+}
+
+export interface InstalledSkill {
+	/** Display name of the agent the skill was installed for. */
+	agent: string;
+	/** Absolute path of the written SKILL.md. */
+	path: string;
+}
+
+/**
+ * Install the observability skill into every detected AI agent's global skills
+ * directory, reusing the same agent detection as `wrangler --install-skills`.
+ * Returns the agents the skill was written for (empty if none detected).
+ */
+export async function installObservabilitySkill(): Promise<InstalledSkill[]> {
+	const agents = await getDetectedAgents();
+	const markdown = skillMarkdown();
+	const installed: InstalledSkill[] = [];
+	for (const agent of agents) {
+		const file = path.join(
+			agent.rosie.globalPath,
+			SKILL_DIRECTORY_NAME,
+			"SKILL.md"
+		);
+		mkdirSync(path.dirname(file), { recursive: true });
+		writeFileSync(file, markdown);
+		installed.push({ agent: agent.name, path: file });
+	}
+	return installed;
+}
