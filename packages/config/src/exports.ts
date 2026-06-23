@@ -14,17 +14,6 @@
 // wrangler boundary.
 // ═══════════════════════════════════════════════════════════════════════════
 
-interface DurableObjectLiveExportOptions {
-	/**
-	 * Storage backend for the Durable Object.
-	 *
-	 * - `"sqlite"`: selects the SQLite-backed storage engine
-	 *   (recommended for new classes).
-	 * - `"legacy-kv"`: selects the legacy key-value storage engine.
-	 */
-	storage: "sqlite" | "legacy-kv";
-}
-
 /**
  * Declares a provisioned Durable Object class exported from this Worker.
  *
@@ -33,9 +22,17 @@ interface DurableObjectLiveExportOptions {
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
-export interface DurableObjectExport extends DurableObjectLiveExportOptions {
+export interface DurableObjectExport {
 	type: "durable-object";
 	state?: "created";
+	/**
+	 * Storage backend for the Durable Object.
+	 *
+	 * - `"sqlite"`: selects the SQLite-backed storage engine
+	 *   (recommended for new classes).
+	 * - `"legacy-kv"`: selects the legacy key-value storage engine.
+	 */
+	storage: "sqlite" | "legacy-kv";
 }
 
 /**
@@ -50,7 +47,14 @@ export interface DurableObjectDeletedExport {
 	state: "deleted";
 }
 
-interface DurableObjectRenamedExportOptions {
+/**
+ * Tombstone: rename a provisioned Durable Object namespace's class. The
+ * `renamedTo` value must also appear as a live (`state: "created"`)
+ * `durableObject` entry in the same `exports` map.
+ */
+export interface DurableObjectRenamedExport {
+	type: "durable-object";
+	state: "renamed";
 	/**
 	 * The destination class name. Must be a valid JavaScript identifier and
 	 * must appear as a live (`state: "created"`) `durableObject` entry in the
@@ -60,16 +64,13 @@ interface DurableObjectRenamedExportOptions {
 }
 
 /**
- * Tombstone: rename a provisioned Durable Object namespace's class. The
- * `renamedTo` value must also appear as a live (`state: "created"`)
- * `durableObject` entry in the same `exports` map.
+ * Tombstone: transfer ownership of a Durable Object namespace to another
+ * script in the same account. Two-phase commit: the target script must first
+ * deploy an `expectingTransfer` entry naming this script via `transferFrom`.
  */
-export interface DurableObjectRenamedExport extends DurableObjectRenamedExportOptions {
+export interface DurableObjectTransferredExport {
 	type: "durable-object";
-	state: "renamed";
-}
-
-interface DurableObjectTransferredExportOptions {
+	state: "transferred";
 	/**
 	 * The destination script. Must reference a script in the same account.
 	 * Cross-dispatch-namespace transfers are rejected.
@@ -78,16 +79,16 @@ interface DurableObjectTransferredExportOptions {
 }
 
 /**
- * Tombstone: transfer ownership of a Durable Object namespace to another
- * script in the same account. Two-phase commit: the target script must first
- * deploy an `expectingTransfer` entry naming this script via `transferFrom`.
+ * Live entry that names the receiving side of a two-phase cross-script
+ * Durable Object transfer. Both `storage` and `transferFrom` are required.
+ * Once the source script's `transferred` tombstone commits, this entry
+ * becomes a normal live `durable-object` export.
  */
-export interface DurableObjectTransferredExport extends DurableObjectTransferredExportOptions {
+export interface DurableObjectExpectingTransferExport {
 	type: "durable-object";
-	state: "transferred";
-}
-
-interface DurableObjectExpectingTransferExportOptions extends DurableObjectLiveExportOptions {
+	state: "expecting-transfer";
+	/** Storage backend for the Durable Object. */
+	storage: DurableObjectExport["storage"];
 	/**
 	 * The source script for the two-phase cross-script transfer. The source
 	 * script will follow up with a `transferred` tombstone naming this script
@@ -96,18 +97,9 @@ interface DurableObjectExpectingTransferExportOptions extends DurableObjectLiveE
 	transferFrom: string;
 }
 
-/**
- * Live entry that names the receiving side of a two-phase cross-script
- * Durable Object transfer. Both `storage` and `transferFrom` are required.
- * Once the source script's `transferred` tombstone commits, this entry
- * becomes a normal live `durable-object` export.
- */
-export interface DurableObjectExpectingTransferExport extends DurableObjectExpectingTransferExportOptions {
-	type: "durable-object";
-	state: "expecting-transfer";
-}
-
-interface WorkflowExportOptions {
+/** Declares a Workflow defined by this Worker. */
+export interface WorkflowExport {
+	type: "workflow";
 	/** The name of the Workflow. */
 	name: string;
 	/** Optional limits for the Workflow. */
@@ -119,10 +111,12 @@ interface WorkflowExportOptions {
 	schedules?: string[];
 }
 
-/** Declares a Workflow defined by this Worker. */
-export interface WorkflowExport extends WorkflowExportOptions {
-	type: "workflow";
-}
+type DurableObjectExportOptions =
+	| Omit<DurableObjectExport, "type">
+	| Omit<DurableObjectDeletedExport, "type">
+	| Omit<DurableObjectRenamedExport, "type">
+	| Omit<DurableObjectTransferredExport, "type">
+	| Omit<DurableObjectExpectingTransferExport, "type">;
 
 /**
  * Configuration for named exports declared by the Worker. Each entry's
@@ -137,36 +131,63 @@ export interface Exports {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 */
-	durableObject(options: DurableObjectLiveExportOptions): DurableObjectExport;
+	durableObject(
+		options: Omit<DurableObjectExport, "type">
+	): DurableObjectExport;
 	/**
 	 * Tombstone: retire a provisioned Durable Object namespace whose class
 	 * has been removed from code.
 	 */
-	deleted(): DurableObjectDeletedExport;
+	durableObject(
+		options: Omit<DurableObjectDeletedExport, "type">
+	): DurableObjectDeletedExport;
 	/**
 	 * Tombstone: rename a provisioned Durable Object namespace's class.
 	 */
-	renamed(
-		options: DurableObjectRenamedExportOptions
+	durableObject(
+		options: Omit<DurableObjectRenamedExport, "type">
 	): DurableObjectRenamedExport;
 	/**
 	 * Tombstone: transfer ownership of a Durable Object namespace to another
 	 * script in the same account.
 	 */
-	transferred(
-		options: DurableObjectTransferredExportOptions
+	durableObject(
+		options: Omit<DurableObjectTransferredExport, "type">
 	): DurableObjectTransferredExport;
 	/**
 	 * Receiving side of a two-phase cross-script Durable Object transfer.
 	 * The source script must follow up with a `transferred` tombstone to
 	 * commit the transfer.
 	 */
-	expectingTransfer(
-		options: DurableObjectExpectingTransferExportOptions
+	durableObject(
+		options: Omit<DurableObjectExpectingTransferExport, "type">
 	): DurableObjectExpectingTransferExport;
-	// TODO: support Workflows
-	// /** Declares a Workflow defined by this Worker. */
-	// workflow(options: WorkflowExportOptions): WorkflowExport;
+}
+
+function durableObject(
+	options: Omit<DurableObjectExport, "type">
+): DurableObjectExport;
+function durableObject(
+	options: Omit<DurableObjectDeletedExport, "type">
+): DurableObjectDeletedExport;
+function durableObject(
+	options: Omit<DurableObjectRenamedExport, "type">
+): DurableObjectRenamedExport;
+function durableObject(
+	options: Omit<DurableObjectTransferredExport, "type">
+): DurableObjectTransferredExport;
+function durableObject(
+	options: Omit<DurableObjectExpectingTransferExport, "type">
+): DurableObjectExpectingTransferExport;
+function durableObject(
+	options: DurableObjectExportOptions
+):
+	| DurableObjectExport
+	| DurableObjectDeletedExport
+	| DurableObjectRenamedExport
+	| DurableObjectTransferredExport
+	| DurableObjectExpectingTransferExport {
+	return { type: "durable-object", ...options };
 }
 
 /**
@@ -179,33 +200,14 @@ export interface Exports {
  * export default defineWorker({
  *   exports: {
  *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
- *     OldClass:        exports.deleted(),
- *     OldName:         exports.renamed({ renamedTo: "NewName" }),
- *     Movee:           exports.transferred({ transferredTo: "target-worker" }),
- *     Incoming:        exports.expectingTransfer({ storage: "sqlite", transferFrom: "source-worker" }),
+ *     OldClass:        exports.durableObject({ state: "deleted" }),
+ *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
+ *     Movee:           exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),
+ *     Incoming:        exports.durableObject({ state: "expecting-transfer", storage: "sqlite", transferFrom: "source-worker" }),
  *   },
  * });
  * ```
  */
 export const exports: Exports = {
-	durableObject: (options) => ({ type: "durable-object", ...options }),
-	deleted: () => ({ type: "durable-object", state: "deleted" }),
-	renamed: ({ renamedTo }) => ({
-		type: "durable-object",
-		state: "renamed",
-		renamedTo,
-	}),
-	transferred: ({ transferredTo }) => ({
-		type: "durable-object",
-		state: "transferred",
-		transferredTo,
-	}),
-	expectingTransfer: ({ storage, transferFrom }) => ({
-		type: "durable-object",
-		state: "expecting-transfer",
-		storage,
-		transferFrom,
-	}),
-	// TODO: support Workflows
-	// workflow: (options) => ({ type: "workflow", ...options }),
+	durableObject,
 };
