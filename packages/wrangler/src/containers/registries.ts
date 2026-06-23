@@ -159,15 +159,9 @@ async function registryConfigureCommand(
 	}
 
 	let secretStoreId = configureArgs.secretStoreId;
-	let secretName = configureArgs.secretName;
 	if (configureArgs.secretName) {
 		validateSecretName(configureArgs.secretName);
 	}
-
-	log(`Getting ${registryType.secretType}...\n`);
-	const privateCredential = await promptForRegistryPrivateCredential(
-		registryType.secretType
-	);
 
 	// Secret Store is not available in FedRAMP High
 	let private_credential: ImageRegistryAuth["private_credential"];
@@ -213,14 +207,32 @@ async function registryConfigureCommand(
 
 		log("\n");
 
-		secretName = await getOrCreateSecret({
+		const { secretName, secretExists } = await resolveSecretSelection({
 			configureArgs: configureArgs,
 			config: config,
 			accountId: accountId,
 			storeId: secretStoreId,
-			privateCredential,
 			secretType: registryType.secretType,
 		});
+
+		if (!secretExists) {
+			// New secret: read the private credential and store it.
+			log(`Getting ${registryType.secretType}...\n`);
+			const privateCredential = await promptForRegistryPrivateCredential(
+				registryType.secretType
+			);
+			await promiseSpinner(
+				createSecret(config, accountId, secretStoreId, {
+					name: secretName,
+					value: privateCredential,
+					scopes: ["containers"],
+					comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
+				})
+			);
+			log(
+				`Container-scoped secret "${secretName}" created in Secrets Store.\n`
+			);
+		}
 
 		private_credential = {
 			store_id: secretStoreId,
@@ -228,7 +240,10 @@ async function registryConfigureCommand(
 		};
 	} else {
 		// If we are not using the secret store, we will be passing in the secret directly
-		private_credential = privateCredential;
+		log(`Getting ${registryType.secretType}...\n`);
+		private_credential = await promptForRegistryPrivateCredential(
+			registryType.secretType
+		);
 	}
 
 	try {
@@ -283,18 +298,22 @@ async function promptForSecretName(secretType?: string): Promise<string> {
 	}
 }
 
-interface GetOrCreateSecretOptions {
+interface ResolveSecretSelectionOptions {
 	configureArgs: HandlerArgs<typeof registryConfigureArgs>;
 	config: Config;
 	accountId: string;
 	storeId: string;
-	privateCredential: string;
 	secretType?: string;
 }
 
-async function getOrCreateSecret(
-	options: GetOrCreateSecretOptions
-): Promise<string> {
+/**
+ * If the Secrets Store secret already exists, it is reused by reference and no
+ * private credential is read; otherwise the caller reads the private credential
+ * and creates the secret.
+ */
+async function resolveSecretSelection(
+	options: ResolveSecretSelectionOptions
+): Promise<{ secretName: string; secretExists: boolean }> {
 	let secretName =
 		options.configureArgs.secretName ??
 		(await promptForSecretName(options.secretType));
@@ -307,22 +326,9 @@ async function getOrCreateSecret(
 			secretName
 		);
 
-		// secret doesn't exist - make a new one
+		// secret doesn't exist - caller will create it
 		if (!existingSecretId) {
-			await promiseSpinner(
-				createSecret(options.config, options.accountId, options.storeId, {
-					name: secretName,
-					value: options.privateCredential,
-					scopes: ["containers"],
-					comment: `Created by Wrangler: credentials for image registry ${options.configureArgs.DOMAIN}`,
-				})
-			);
-
-			log(
-				`Container-scoped secret "${secretName}" created in Secrets Store.\n`
-			);
-
-			return secretName;
+			return { secretName, secretExists: false };
 		}
 
 		// secret exists + skipConfirmation - default to reusing the secret
@@ -330,7 +336,7 @@ async function getOrCreateSecret(
 			log(
 				`Using existing secret "${secretName}" from secret store with id: ${options.storeId}.\n`
 			);
-			return secretName;
+			return { secretName, secretExists: true };
 		}
 
 		// secret exists but not skipping confirmation - ask user if they want to reuse the secret
@@ -346,7 +352,7 @@ async function getOrCreateSecret(
 			log(
 				`Using existing secret "${secretName}" from secret store with id: ${options.storeId}.\n`
 			);
-			return secretName;
+			return { secretName, secretExists: true };
 		}
 
 		secretName = await promptForSecretName(options.secretType);
