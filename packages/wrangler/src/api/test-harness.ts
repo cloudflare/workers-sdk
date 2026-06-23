@@ -40,7 +40,8 @@ export type TestHarnessOptions = {
 	workers: WorkerInput[];
 };
 
-export type WorkerHandle = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
+export type WorkerHandle<Env = Record<string, any>> = {
 	/**
 	 * Dispatches a fetch event directly to this worker.
 	 * Relative URL inputs are resolved against the URL returned by `listen()`.
@@ -67,48 +68,18 @@ export type WorkerHandle = {
 	 */
 	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
 	/**
-	 * Returns a KV namespace binding configured on this Worker.
+	 * Returns the full environment object configured on this Worker, including
+	 * vars, secrets, and bindings.
 	 *
 	 * @example
 	 * ```ts
-	 * const store = await worker.getKVNamespace("STORE");
-	 * const value = await store.get("key");
+	 * type Env = { GREETING: string; STORE: KVNamespace };
+	 * const worker = server.getWorker<Env>();
+	 * const env = await worker.getEnv();
+	 * await env.STORE.put("key", env.GREETING);
 	 * ```
 	 */
-	getKVNamespace(bindingName: string): ReturnType<Miniflare["getKVNamespace"]>;
-	/**
-	 * Returns an R2 bucket binding configured on this Worker.
-	 *
-	 * @example
-	 * ```ts
-	 * const bucket = await worker.getR2Bucket("BUCKET");
-	 * const object = await bucket.get("key");
-	 * ```
-	 */
-	getR2Bucket(bindingName: string): ReturnType<Miniflare["getR2Bucket"]>;
-	/**
-	 * Returns a D1 database binding configured on this Worker.
-	 *
-	 * @example
-	 * ```ts
-	 * const db = await worker.getD1Database("DB");
-	 * const value = await db.prepare("SELECT value FROM entries").first("value");
-	 * ```
-	 */
-	getD1Database(bindingName: string): ReturnType<Miniflare["getD1Database"]>;
-	/**
-	 * Returns a Durable Object namespace binding configured on this Worker.
-	 *
-	 * @example
-	 * ```ts
-	 * const namespace = await worker.getDurableObjectNamespace("OBJECT");
-	 * const stub = namespace.getByName("counter");
-	 * const response = await stub.fetch("http://example.com/");
-	 * ```
-	 */
-	getDurableObjectNamespace(
-		bindingName: string
-	): ReturnType<Miniflare["getDurableObjectNamespace"]>;
+	getEnv(): Promise<Env>;
 };
 
 export type TestHarness = {
@@ -158,7 +129,8 @@ export type TestHarness = {
 	 * When no name is provided, this returns the primary Worker, which is the first
 	 * Worker in the server's `workers` options.
 	 */
-	getWorker(name?: string): WorkerHandle;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
+	getWorker<Env = Record<string, any>>(name?: string): WorkerHandle<Env>;
 	/**
 	 * Returns captured Workers runtime logs since the current server session
 	 * started or `clearLogs()` was last called.
@@ -690,7 +662,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 			return dispatchFetch(miniflare, input, init);
 		},
-		getWorker(name?: string) {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
+		getWorker<Env = Record<string, any>>(name?: string): WorkerHandle<Env> {
 			return {
 				async fetch(input, init) {
 					const session = await resolveSession();
@@ -729,33 +702,12 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 					return result as FetcherScheduledResult;
 				},
-				async getKVNamespace(bindingName) {
+				async getEnv() {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
 
-					return miniflare.getKVNamespace(bindingName, workerName);
-				},
-				async getR2Bucket(bindingName) {
-					const session = await resolveSession();
-					const miniflare = await getRuntimeMiniflare(session);
-					const workerName = resolveWorkerName(session, name);
-
-					return miniflare.getR2Bucket(bindingName, workerName);
-				},
-				async getD1Database(bindingName) {
-					const session = await resolveSession();
-					const miniflare = await getRuntimeMiniflare(session);
-					const workerName = resolveWorkerName(session, name);
-
-					return miniflare.getD1Database(bindingName, workerName);
-				},
-				async getDurableObjectNamespace(bindingName) {
-					const session = await resolveSession();
-					const miniflare = await getRuntimeMiniflare(session);
-					const workerName = resolveWorkerName(session, name);
-
-					return miniflare.getDurableObjectNamespace(bindingName, workerName);
+					return miniflare.getBindings<Env>(workerName);
 				},
 			};
 		},

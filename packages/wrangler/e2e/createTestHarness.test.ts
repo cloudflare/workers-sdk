@@ -16,6 +16,12 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
+import type {
+	D1Database,
+	DurableObjectNamespace,
+	KVNamespace,
+	R2Bucket,
+} from "@cloudflare/workers-types/experimental";
 
 const { createTestHarness } = await importWrangler();
 
@@ -208,13 +214,16 @@ describe("createTestHarness", () => {
 		);
 	});
 
-	it("exposes resource accessors scoped to each worker", async ({ expect }) => {
+	it("exposes resource bindings scoped to each worker environment", async ({
+		expect,
+	}) => {
 		await helper.seed({
 			"wrangler.api.jsonc": dedent`
 				{
 					"name": "api-worker",
 					"main": "src/api.ts",
 					"compatibility_date": "2026-05-20",
+					"vars": { "GREETING": "api" },
 					"kv_namespaces": [
 						{ "binding": "STORE", "id": "api-store" }
 					],
@@ -228,6 +237,7 @@ describe("createTestHarness", () => {
 					"name": "admin-worker",
 					"main": "src/admin.ts",
 					"compatibility_date": "2026-05-20",
+					"vars": { "GREETING": "admin" },
 					"d1_databases": [
 						{
 							"binding": "DATABASE",
@@ -294,34 +304,50 @@ describe("createTestHarness", () => {
 		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [
-				{ configPath: "./wrangler.api.jsonc" },
-				{ configPath: "./wrangler.admin.jsonc" },
+				{
+					configPath: "./wrangler.api.jsonc",
+					secrets: { SECRET: "api-secret" },
+				},
+				{
+					configPath: "./wrangler.admin.jsonc",
+					secrets: { SECRET: "admin-secret" },
+				},
 			],
 		});
 		onTestFinished(server.close);
 
 		await server.listen();
 
-		const api = server.getWorker("api-worker");
-		const admin = server.getWorker("admin-worker");
+		const api = server.getWorker<{
+			GREETING: string;
+			SECRET: string;
+			STORE: KVNamespace;
+			BUCKET: R2Bucket;
+		}>("api-worker");
+		const admin = server.getWorker<{
+			GREETING: string;
+			SECRET: string;
+			DATABASE: D1Database;
+			OBJECT: DurableObjectNamespace;
+		}>("admin-worker");
 		const apiWriteResponse = await api.fetch("/write-storage");
 		expect(await apiWriteResponse.text()).toBe("written");
 		const adminWriteResponse = await admin.fetch("/write-storage");
 		expect(await adminWriteResponse.text()).toBe("1");
 
+		const apiEnv = await api.getEnv();
+		const adminEnv = await admin.getEnv();
+
+		expect(apiEnv.GREETING).toBe("api");
+		expect(apiEnv.SECRET).toBe("api-secret");
+		expect(adminEnv.GREETING).toBe("admin");
+		expect(adminEnv.SECRET).toBe("admin-secret");
+
 		// KV Namespace
-		const STORE = await api.getKVNamespace("STORE");
-		await expect(STORE.get("key")).resolves.toBe("api");
-		await expect(admin.getKVNamespace("STORE")).rejects.toThrow(
-			`No KV namespace binding named "STORE" found in "admin-worker" worker.`
-		);
-		await expect(api.getKVNamespace("BUCKET")).rejects.toThrow(
-			`No KV namespace binding named "BUCKET" found in "api-worker" worker.`
-		);
+		await expect(apiEnv.STORE.get("key")).resolves.toBe("api");
 
 		// R2 Bucket
-		const BUCKET = await api.getR2Bucket("BUCKET");
-		const object = await BUCKET.get("key");
+		const object = await apiEnv.BUCKET.get("key");
 
 		if (object === null) {
 			expect.fail("Expected R2 object to exist");
@@ -329,36 +355,15 @@ describe("createTestHarness", () => {
 			await expect(object.text()).resolves.toBe("api");
 		}
 
-		await expect(admin.getR2Bucket("BUCKET")).rejects.toThrow(
-			`No R2 bucket binding named "BUCKET" found in "admin-worker" worker.`
-		);
-		await expect(api.getR2Bucket("STORE")).rejects.toThrow(
-			`No R2 bucket binding named "STORE" found in "api-worker" worker.`
-		);
-
 		// D1 Database
-		const DATABASE = await admin.getD1Database("DATABASE");
 		await expect(
-			DATABASE.prepare("SELECT value FROM entries").first("value")
+			adminEnv.DATABASE.prepare("SELECT value FROM entries").first("value")
 		).resolves.toBe("admin");
-		await expect(api.getD1Database("DATABASE")).rejects.toThrow(
-			`No D1 database binding named "DATABASE" found in "api-worker" worker.`
-		);
-		await expect(admin.getD1Database("OBJECT")).rejects.toThrow(
-			`No D1 database binding named "OBJECT" found in "admin-worker" worker.`
-		);
 
 		// Durable Object Namespace
-		const adminDO = await admin.getDurableObjectNamespace("OBJECT");
-		const adminStub = adminDO.getByName("shared");
+		const adminStub = adminEnv.OBJECT.get(adminEnv.OBJECT.idFromName("shared"));
 		const adminResponse = await adminStub.fetch("http://example.com/");
 		await expect(adminResponse.text()).resolves.toBe("2");
-		await expect(api.getDurableObjectNamespace("OBJECT")).rejects.toThrow(
-			`No Durable Object namespace binding named "OBJECT" found in "api-worker" worker.`
-		);
-		await expect(admin.getDurableObjectNamespace("DATABASE")).rejects.toThrow(
-			`No Durable Object namespace binding named "DATABASE" found in "admin-worker" worker.`
-		);
 	});
 
 	it("supports service bindings between workers", async ({ expect }) => {
