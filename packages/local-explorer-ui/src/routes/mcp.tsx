@@ -495,6 +495,10 @@ function ConnectCard(): JSX.Element {
 	const [copied, setCopied] = useState(false);
 	const [serverPath, setServerPath] = useState(loadServerPath);
 	const [installing, setInstalling] = useState<McpInstallAgent | null>(null);
+	const [installMsg, setInstallMsg] = useState<{
+		ok: boolean;
+		text: string;
+	} | null>(null);
 
 	const updateServerPath = useCallback((value: string) => {
 		setServerPath(value);
@@ -535,24 +539,28 @@ function ConnectCard(): JSX.Element {
 
 	const install = useCallback(async () => {
 		setInstalling(agent);
+		setInstallMsg(null);
 		const result = await installMcpServer(agent);
 		setInstalling(null);
 
-		if (result.ok) {
-			toast.add({
-				title: "MCP server installed",
-				description: result.path
-					? `Updated ${result.path}`
-					: "Project config updated.",
-				variant: "success",
-			});
-			return;
-		}
+		// Inline status is the primary feedback (the toast is best-effort).
+		setInstallMsg({
+			ok: result.ok,
+			text: result.ok
+				? result.path
+					? `Wrote ${result.path}`
+					: "Project config updated."
+				: result.message,
+		});
 
 		toast.add({
-			title: "Install failed",
-			description: result.message,
-			variant: "default",
+			title: result.ok ? "MCP server installed" : "Install failed",
+			description: result.ok
+				? result.path
+					? `Updated ${result.path}`
+					: "Project config updated."
+				: result.message,
+			variant: result.ok ? "success" : "default",
 		});
 	}, [agent, toast]);
 
@@ -583,7 +591,10 @@ function ConnectCard(): JSX.Element {
 							<button
 								key={a.id}
 								type="button"
-								onClick={() => setAgent(a.id)}
+								onClick={() => {
+									setAgent(a.id);
+									setInstallMsg(null);
+								}}
 								className={cn(
 									"cursor-pointer rounded px-2.5 py-1 text-xs transition-colors",
 									agent === a.id
@@ -615,6 +626,22 @@ function ConnectCard(): JSX.Element {
 						</a>
 					) : null}
 				</div>
+
+				{installMsg ? (
+					<p
+						className={cn(
+							"flex items-center gap-1.5 font-mono text-[11px] break-all",
+							installMsg.ok
+								? "text-green-600 dark:text-green-400"
+								: "text-red-500"
+						)}
+					>
+						{installMsg.ok ? (
+							<CheckIcon size={13} className="shrink-0" />
+						) : null}
+						{installMsg.text}
+					</p>
+				) : null}
 
 				<label className="flex flex-col gap-1 text-[11px] text-kumo-subtle">
 					Absolute path to mcp-server.mjs
