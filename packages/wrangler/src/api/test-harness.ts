@@ -965,7 +965,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
 					const entrypoint = await miniflare.getWorker(workerName);
-
 					/** Miniflare returns the same runtime stub with a different Workers type entry. */
 					return entrypoint as unknown as Service<Module["default"]>;
 				},
