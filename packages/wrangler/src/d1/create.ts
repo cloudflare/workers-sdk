@@ -79,7 +79,7 @@ export async function createD1Database(
 				? dedent`
 						You've reached the limit of ${cap.toLocaleString("en-US")} D1 databases on the free plan.
 
-						Need more? The Workers Paid plan ($5/month) raises this to ${paidLimit} databases, with higher storage and query limits too. Upgrade at:
+						Need more? The Workers Paid plan raises this to ${paidLimit} databases, with higher storage and query limits too. Upgrade at:
 						https://dash.cloudflare.com/${accountId}/workers/plans
 
 						To list your existing databases, run: wrangler d1 list

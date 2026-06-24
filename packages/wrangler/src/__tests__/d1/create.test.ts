@@ -176,7 +176,7 @@ describe("create", () => {
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: You've reached the limit of 10 D1 databases on the free plan.
 
-			Need more? The Workers Paid plan ($5/month) raises this to 50,000 databases, with higher storage and query limits too. Upgrade at:
+			Need more? The Workers Paid plan raises this to 50,000 databases, with higher storage and query limits too. Upgrade at:
 			https://dash.cloudflare.com/1701/workers/plans
 
 			To list your existing databases, run: wrangler d1 list
