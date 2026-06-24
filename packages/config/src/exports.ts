@@ -7,8 +7,6 @@
 //
 //   - property names are camelCased (`renamedTo`, `transferredTo`,
 //     `transferFrom`),
-//   - enumeration values are kebab-cased (`type: "durable-object"`,
-//     `state: "expecting-transfer"`, `storage: "legacy-kv"`).
 //
 // `convert.ts` performs the snake_case / underscore conversion at the
 // wrangler boundary.
