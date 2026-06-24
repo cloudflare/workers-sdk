@@ -30,8 +30,8 @@ import type {
 
 export interface ExplorerServicesOptions {
 	localExplorerUiPath: string;
-	/** Absolute path to the bundled stdio MCP server, surfaced to the UI's MCP page. */
-	mcpServerPath: string;
+	/** Whether to expose the hosted Codemode MCP endpoint. */
+	enableMcp: boolean;
 	proxyBindings: Worker_Binding[];
 	bindingIdMap: BindingIdMap;
 	hasDurableObjects: boolean;
@@ -51,7 +51,7 @@ export function getExplorerServices(
 ): Service[] {
 	const {
 		localExplorerUiPath,
-		mcpServerPath,
+		enableMcp,
 		proxyBindings,
 		bindingIdMap,
 		hasDurableObjects,
@@ -90,22 +90,16 @@ export function getExplorerServices(
 			json: JSON.stringify(telemetry),
 		},
 		{
-			// Absolute path to the bundled MCP server, so the Observability MCP page
-			// can show a ready-to-use connect command with no manual path entry.
-			name: CoreBindings.JSON_LOCAL_EXPLORER_MCP_SERVER_PATH,
-			json: JSON.stringify(mcpServerPath),
-		},
-		{
 			name: CoreBindings.DEV_REGISTRY_DEBUG_PORT,
 			// workerdDebugPort bindings don't have any additional configuration
 			workerdDebugPort: kVoid,
 		},
 	];
 
-	// When the MCP server is opted in (mcpServerPath is non-empty), give the
-	// explorer worker an UnsafeEval capability so its codemode MCP endpoint can
-	// execute agent-supplied snippets against the local data plane.
-	if (mcpServerPath) {
+	// When hosted Codemode MCP is opted in, give the explorer worker an
+	// UnsafeEval capability so it can execute agent-supplied snippets against the
+	// local data plane.
+	if (enableMcp) {
 		explorerBindings.push({
 			name: CoreBindings.UNSAFE_EVAL,
 			unsafeEval: kVoid,

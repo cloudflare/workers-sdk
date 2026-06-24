@@ -1220,12 +1220,7 @@ export function getGlobalServices({
 		services.push(
 			...getExplorerServices({
 				localExplorerUiPath,
-				// The MCP server ships alongside the explorer UI assets, but is only
-				// exposed when explicitly opted in — MCP is an optional alternative to
-				// the `wrangler observability` CLI. Empty string => MCP disabled.
-				mcpServerPath: sharedOptions.unsafeObservabilityMcp
-					? path.join(localExplorerUiPath, "mcp-server.mjs")
-					: "",
+				enableMcp: sharedOptions.unsafeObservabilityMcp === true,
 				proxyBindings,
 				bindingIdMap: IDToBindingMap,
 				hasDurableObjects,

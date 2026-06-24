@@ -73,17 +73,10 @@ export type Env = {
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
 	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
-	[CoreBindings.JSON_LOCAL_EXPLORER_MCP_SERVER_PATH]: string;
 	[CoreBindings.DEV_REGISTRY_DEBUG_PORT]: WorkerdDebugPortConnector;
 };
 
 export type AppBindings = { Bindings: Env };
-
-type McpInstallAgent = "opencode" | "claude" | "cursor";
-
-function isMcpInstallAgent(value: unknown): value is McpInstallAgent {
-	return value === "opencode" || value === "claude" || value === "cursor";
-}
 
 const EXPLORER_API_PATH = `${CorePaths.EXPLORER}/api`;
 
@@ -361,59 +354,9 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 // Local Workers / Dev Registry Endpoint
 // ============================================================================
 
-// Absolute path to the bundled stdio MCP server, so the Observability MCP page
-// can build a ready-to-use connect command without the user entering a path.
-app.get("/api/local/mcp", (c) =>
-	// Empty path means MCP wasn't opted into (X_LOCAL_OBSERVABILITY_MCP) — the
-	// UI uses a null server_path to hide the optional MCP tab.
-	c.json({ server_path: c.env.LOCAL_EXPLORER_MCP_SERVER_PATH || null })
-);
-
 // Codemode MCP endpoint (Streamable HTTP transport). Hosted by miniflare so an
 // agent can connect at <origin>/cdn-cgi/explorer/mcp with no separate install.
 app.post("/mcp", (c) => handleMcpRequest(c, app));
-
-app.post("/api/local/mcp/install", async (c) => {
-	if (!c.env.LOCAL_EXPLORER_MCP_SERVER_PATH) {
-		return errorResponse(
-			400,
-			10000,
-			"The local MCP server is not enabled. Set X_LOCAL_OBSERVABILITY_MCP=true to use it, or use the `wrangler observability` CLI instead."
-		);
-	}
-	const body = await c.req.json().catch(() => null);
-	const agent =
-		body && typeof body === "object"
-			? (body as { agent?: unknown }).agent
-			: null;
-	if (!isMcpInstallAgent(agent)) {
-		return errorResponse(400, 10000, "Invalid MCP install target.");
-	}
-
-	const explorerOrigin = new URL(c.req.url).origin;
-	const response = await c.env.MINIFLARE_LOOPBACK.fetch(
-		"http://localhost/core/mcp/install",
-		{
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({
-				agent,
-				explorer_url: explorerOrigin,
-				server_path: c.env.LOCAL_EXPLORER_MCP_SERVER_PATH,
-			}),
-		}
-	);
-
-	const text = await response.text();
-	return new Response(text, {
-		status: response.status,
-		headers: {
-			"content-type":
-				response.headers.get("content-type") ??
-				"application/json; charset=utf-8",
-		},
-	});
-});
 
 app.get("/api/local/workers", async (c) => {
 	const loopback = c.env.MINIFLARE_LOOPBACK;
