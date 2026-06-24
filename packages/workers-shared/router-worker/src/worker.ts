@@ -45,6 +45,11 @@ type LoopbackExecutionContext = ExecutionContext & {
 	};
 };
 
+// This now-unused Entrypoint can be used for loopback invocations if made the
+// default export, which is how cohorted deployments will be implemented.
+// For now, the latency added by loopback invocations is too much for such a
+// load-bearing Worker. When that has been addressed in the future, re-enable
+// loopback by making this the default export.
 export class RouterOuterEntrypoint extends WorkerEntrypoint<Env> {
 	override async fetch(request: Request): Promise<Response> {
 		// Router worker is typechecked both in this package and as a transitive
@@ -101,8 +106,6 @@ export class RouterOuterEntrypoint extends WorkerEntrypoint<Env> {
 		return inner.fetch(request);
 	}
 }
-
-export default RouterOuterEntrypoint;
 
 export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 	override async fetch(request: Request): Promise<Response> {
@@ -360,6 +363,8 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 		}
 	}
 }
+
+export default RouterInnerEntrypoint;
 
 /**
  * Check if the Content Type is allowed for the the `_next/image` endpoint.

@@ -3,7 +3,7 @@ import {
 	createExecutionContext,
 	env as runtimeEnv,
 } from "cloudflare:test";
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import DefaultRouterEntrypoint, {
 	RouterInnerEntrypoint,
 	RouterOuterEntrypoint,
@@ -18,12 +18,12 @@ async function fetchFromInnerEntrypoint(
 	return new RouterInnerEntrypoint(ctx, env).fetch(request);
 }
 
-describe("runtime loopback", () => {
-	it("uses the outer entrypoint as the default export", ({ expect }) => {
-		expect(DefaultRouterEntrypoint).toBe(RouterOuterEntrypoint);
+describe("entrypoints", () => {
+	it("uses the inner entrypoint as the default export", ({ expect }) => {
+		expect(DefaultRouterEntrypoint).toBe(RouterInnerEntrypoint);
 	});
 
-	it("routes through outer->inner loopback at runtime boundary", async ({
+	it("routes directly through the inner entrypoint at the runtime boundary", async ({
 		expect,
 	}) => {
 		(runtimeEnv as Env).CONFIG = {
@@ -31,7 +31,7 @@ describe("runtime loopback", () => {
 		};
 		(runtimeEnv as Env).ASSET_WORKER = {
 			async fetch(_request: Request): Promise<Response> {
-				return new Response("loopback asset worker");
+				return new Response("asset worker");
 			},
 			async unstable_canFetch(_request: Request): Promise<boolean> {
 				return true;
@@ -41,7 +41,31 @@ describe("runtime loopback", () => {
 		const response = await SELF.fetch("https://example.com");
 
 		expect(response.status).toBe(200);
-		expect(await response.text()).toBe("loopback asset worker");
+		expect(await response.text()).toBe("asset worker");
+	});
+
+	it("keeps the outer-to-inner loopback available", async ({ expect }) => {
+		const request = new Request("https://example.com");
+		const ctx = createExecutionContext();
+		const innerFetch = vi.fn(async (_request: Request) => {
+			return new Response("inner response");
+		});
+		const createInnerEntrypoint = vi.fn(() => ({ fetch: innerFetch }));
+		Object.defineProperty(ctx, "exports", {
+			value: {
+				RouterInnerEntrypoint: createInnerEntrypoint,
+			},
+		});
+
+		const response = await new RouterOuterEntrypoint(ctx, {} as Env).fetch(
+			request
+		);
+
+		expect(createInnerEntrypoint).toHaveBeenCalledOnce();
+		expect(createInnerEntrypoint).toHaveBeenCalledWith({ props: {} });
+		expect(innerFetch).toHaveBeenCalledOnce();
+		expect(innerFetch).toHaveBeenCalledWith(request);
+		expect(await response.text()).toBe("inner response");
 	});
 });
 
