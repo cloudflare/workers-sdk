@@ -4,7 +4,10 @@ import {
 	getDetailsForAutoConfig,
 	getInstalledPackageVersion,
 } from "@cloudflare/autoconfig";
-import { findWranglerConfig } from "@cloudflare/workers-utils";
+import {
+	NpmPackageManager,
+	findWranglerConfig,
+} from "@cloudflare/workers-utils";
 import {
 	normalizeString,
 	runInTempDir,
@@ -99,6 +102,12 @@ describe("deploy", () => {
 			)
 		);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
+		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
+			configured: true,
+			workerName: "test-name",
+			projectPath: "/",
+			packageManager: NpmPackageManager,
+		});
 	});
 
 	afterEach(() => {
