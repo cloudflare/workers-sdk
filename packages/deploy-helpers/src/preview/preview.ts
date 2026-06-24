@@ -111,6 +111,18 @@ export type PreviewCallbacks = Pick<
 	DeployCallbacks,
 	"getNormalizedContainerOptions"
 > & {
+	provisionPreviewBindings?: (
+		config: Config,
+		accountId: string,
+		workerName: string,
+		previewSlug: string
+	) => Promise<Config>;
+	cleanupPreviewBindings?: (
+		config: Config,
+		accountId: string,
+		workerName: string,
+		previewSlug: string
+	) => Promise<void>;
 	deployPreviewContainers:
 		| ((
 				scopedConfig: Config,
@@ -771,16 +783,25 @@ export async function preview(
 		}
 	}
 
+	const previewConfig = callbacks.provisionPreviewBindings
+		? await callbacks.provisionPreviewBindings(
+				config,
+				accountId,
+				workerName,
+				previewResource.slug
+			)
+		: config;
+
 	const { scopedContainerConfig, normalisedContainerConfig } =
 		await prepareContainersForPreview(
-			config,
+			previewConfig,
 			workerName,
 			previewResource.slug,
 			callbacks
 		);
 
 	const deploymentRequest = await assemblePreviewDeploymentSettings(
-		config,
+		previewConfig,
 		buildResult,
 		accountId,
 		workerName,
@@ -850,7 +871,7 @@ export async function preview(
 			logMissingPreviewsBindingsWarning(
 				topLevelBindings,
 				previewDefaults.env,
-				extractConfigBindings(config)
+				extractConfigBindings(previewConfig)
 			);
 		}
 	}
@@ -864,7 +885,8 @@ export async function preview(
 export async function previewDelete(
 	accountId: string,
 	args: PreviewDeleteArgs,
-	config: Config
+	config: Config,
+	callbacks?: Pick<PreviewCallbacks, "cleanupPreviewBindings">
 ): Promise<void> {
 	const workerName = resolveWorkerName(args, config);
 	let previewName = args.name;
@@ -891,6 +913,38 @@ export async function previewDelete(
 		}
 	}
 
-	await deletePreview(config, accountId, workerName, previewName);
+	let previewSlug = previewName
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+	if (callbacks?.cleanupPreviewBindings) {
+		try {
+			previewSlug = (
+				await getPreview(config, accountId, workerName, previewName)
+			).slug;
+		} catch (error) {
+			if (!(error instanceof Error && "code" in error && error.code === 10025)) {
+				throw error;
+			}
+		}
+	}
+
+	let deleteError: unknown;
+	try {
+		await deletePreview(config, accountId, workerName, previewName);
+	} catch (error) {
+		deleteError = error;
+	}
+	if (callbacks?.cleanupPreviewBindings) {
+		await callbacks.cleanupPreviewBindings(
+			config,
+			accountId,
+			workerName,
+			previewSlug
+		);
+	}
+	if (deleteError !== undefined) {
+		throw deleteError;
+	}
 	logger.log(`\n✨ Preview "${previewName}" deleted successfully.`);
 }

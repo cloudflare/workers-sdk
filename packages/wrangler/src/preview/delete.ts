@@ -1,6 +1,7 @@
 import { previewDelete } from "@cloudflare/deploy-helpers";
 import { createCommand } from "../core/create-command";
 import { requireAuth } from "../user";
+import { cleanupPreviewBindings } from "./provision";
 
 export const previewDeleteCommand = createCommand({
 	metadata: {
@@ -34,6 +35,6 @@ export const previewDeleteCommand = createCommand({
 	},
 	handler: async function previewDeleteHandler(args, { config }) {
 		const accountId = await requireAuth(config);
-		await previewDelete(accountId, args, config);
+		await previewDelete(accountId, args, config, { cleanupPreviewBindings });
 	},
 });

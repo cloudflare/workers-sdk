@@ -17,6 +17,64 @@ import type { Readable } from "node:stream";
 import type { ReadableStream } from "node:stream/web";
 import type { HeadersInit } from "undici";
 
+type R2ObjectsListResponse = {
+	result?: {
+		objects?: Array<{ key?: string; name?: string }>;
+		truncated?: boolean;
+		cursor?: string;
+	};
+	objects?: Array<{ key?: string; name?: string }>;
+	truncated?: boolean;
+	cursor?: string;
+};
+
+export async function listR2ObjectKeys(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<string[]> {
+	const keys: string[] = [];
+	let cursor: string | undefined;
+
+	do {
+		const headers: HeadersInit = {};
+		if (jurisdiction !== undefined) {
+			headers["cf-r2-jurisdiction"] = jurisdiction;
+		}
+
+		const query = new URLSearchParams();
+		if (cursor !== undefined) {
+			query.set("cursor", cursor);
+		}
+
+		const response = await fetchR2Objects(
+			complianceConfig,
+			`/accounts/${accountId}/r2/buckets/${bucketName}/objects${
+				query.size > 0 ? `?${query.toString()}` : ""
+			}`,
+			{ headers }
+		);
+
+		if (response === null) {
+			return keys;
+		}
+
+		const body = (await response.json()) as R2ObjectsListResponse;
+		const result = body.result ?? body;
+		for (const object of result.objects ?? []) {
+			const key = object.key ?? object.name;
+			if (key !== undefined) {
+				keys.push(key);
+			}
+		}
+
+		cursor = result.truncated ? result.cursor : undefined;
+	} while (cursor !== undefined);
+
+	return keys;
+}
+
 /**
  * Downloads an object
  */

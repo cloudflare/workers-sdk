@@ -9,6 +9,7 @@ import { cleanupDestination } from "../deployment-bundle/merge-config-args";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import { deployPreviewContainers, verifyContainersScope } from "./containers";
+import { provisionPreviewBindings } from "./provision";
 
 export const previewCommand = createCommand({
 	metadata: {
@@ -105,6 +106,7 @@ export const previewCommand = createCommand({
 				getNormalizedContainerOptions,
 				deployPreviewContainers,
 				verifyContainersScope,
+				provisionPreviewBindings,
 			}
 		);
 		cleanupDestination(destination);
