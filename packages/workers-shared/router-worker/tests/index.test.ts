@@ -4,7 +4,10 @@ import {
 	env as runtimeEnv,
 } from "cloudflare:test";
 import { describe, it } from "vitest";
-import { RouterInnerEntrypoint } from "../src/worker";
+import DefaultRouterEntrypoint, {
+	RouterInnerEntrypoint,
+	RouterOuterEntrypoint,
+} from "../src/worker";
 import type { Env } from "../src/worker";
 
 async function fetchFromInnerEntrypoint(
@@ -16,6 +19,10 @@ async function fetchFromInnerEntrypoint(
 }
 
 describe("runtime loopback", () => {
+	it("uses the outer entrypoint as the default export", ({ expect }) => {
+		expect(DefaultRouterEntrypoint).toBe(RouterOuterEntrypoint);
+	});
+
 	it("routes through outer->inner loopback at runtime boundary", async ({
 		expect,
 	}) => {
