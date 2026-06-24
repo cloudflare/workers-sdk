@@ -350,6 +350,12 @@ export const tailCommand = createCommand({
 
 			attempt++;
 			if (attempt > MAX_RECONNECT_ATTEMPTS) {
+				// Match every other terminal path (`cleanStop`,
+				// `shutdownHandler`, the initial-connect catch) and remove
+				// the SIGINT/SIGTERM listeners before settling `done`.
+				// Otherwise this branch leaks listeners on `process`, which
+				// matters for in-process callers like `runWrangler` in tests.
+				removeSignalHandlers();
 				rejectDone(
 					createFatalError(
 						`Unable to reconnect to the tail for ${scriptDisplayName} after ${MAX_RECONNECT_ATTEMPTS} attempts. Please re-run \`wrangler tail${args.worker ? ` ${args.worker}` : ""}\` to start a new session.`,
@@ -465,10 +471,15 @@ function startWebSocketPing(
 			// died. Stop pinging and notify the caller — never throw from here,
 			// since this callback is detached from any awaited promise and an
 			// uncaught throw would crash the process with a raw stack trace.
+			//
+			// Use `warn` (not `error`): `onDisconnect()` will normally trigger
+			// a reconnect, and the reconnect path also surfaces a user-facing
+			// `Reconnecting (attempt N of M)` warning. Logging an error here
+			// would read as a hard failure even when recovery succeeds.
 			disconnected = true;
 			clearInterval(pingInterval);
-			logger.error(
-				`Tail disconnected: The Worker did not respond to a keep-alive ping within ${PING_INTERVAL_MS}ms, so the tail connection appears to have dropped.`
+			logger.warn(
+				`Tail connection lost: the Worker did not respond to a keep-alive ping within ${PING_INTERVAL_MS}ms.`
 			);
 			onDisconnect();
 			return;

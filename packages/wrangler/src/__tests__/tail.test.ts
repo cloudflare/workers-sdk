@@ -1101,6 +1101,13 @@ describe("tail", () => {
 			// create/delete mocks need to fire more than once.
 			mockReusableWebsocketAPIs(expect);
 
+			// Snapshot signal listener counts so we can verify the give-up
+			// path removes the SIGINT/SIGTERM handlers it registered
+			// (regression guard: every other terminal path does this; the
+			// give-up branch used to leak listeners).
+			const sigintBefore = process.listenerCount("SIGINT");
+			const sigtermBefore = process.listenerCount("SIGTERM");
+
 			// Fake `setTimeout` from the very start so every timer the tail
 			// command schedules — the initial WebSocket connection delay
 			// (mock-socket's 4ms `delay()`), the per-attempt reconnect
@@ -1147,6 +1154,11 @@ describe("tail", () => {
 			expect(std.warn).toContain("Reconnecting (attempt 5 of 5)");
 
 			vi.useRealTimers();
+
+			// Give-up path must remove its SIGINT/SIGTERM listeners on the
+			// way out.
+			expect(process.listenerCount("SIGINT")).toBe(sigintBefore);
+			expect(process.listenerCount("SIGTERM")).toBe(sigtermBefore);
 		});
 
 		it("retries then gives up after the connection drops (json format)", async ({
@@ -1154,6 +1166,9 @@ describe("tail", () => {
 		}) => {
 			api = mockWebsocketAPIs(expect);
 			mockReusableWebsocketAPIs(expect);
+
+			const sigintBefore = process.listenerCount("SIGINT");
+			const sigtermBefore = process.listenerCount("SIGTERM");
 
 			vi.useFakeTimers({ toFake: ["setTimeout"] });
 
@@ -1177,6 +1192,9 @@ describe("tail", () => {
 			await assertion;
 
 			vi.useRealTimers();
+
+			expect(process.listenerCount("SIGINT")).toBe(sigintBefore);
+			expect(process.listenerCount("SIGTERM")).toBe(sigtermBefore);
 		});
 
 		it("auto-reconnects after a transient drop and continues streaming", async ({
