@@ -496,7 +496,11 @@ export async function getDevMiniflareOptions(
 		secure: !!serverConfig.https,
 	});
 
-	const observabilityEnabled = getLocalObservabilityEnabledFromEnv();
+	// Enabled by the env var OR the plugin option
+	// (`cloudflare({ experimental: { observability: true } })`).
+	const observabilityEnabled =
+		getLocalObservabilityEnabledFromEnv() ||
+		resolvedPluginConfig.experimental.observability;
 	const observedUserWorkers = applyLocalObservability(
 		userWorkers,
 		observabilityEnabled

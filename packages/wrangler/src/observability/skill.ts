@@ -15,7 +15,16 @@ export const OBSERVABILITY_SKILL = `# Querying local Cloudflare Workers dev obse
 \`wrangler dev --experimental-observability\` captures every Worker invocation
 during local development as structured traces, spans, and console logs, stored
 in a local SQLite database. Use the commands below to inspect them. These work
-whether or not \`wrangler dev\` is currently running.
+whether or not the dev server is currently running.
+
+## Enabling capture
+
+- **Wrangler:** \`wrangler dev --experimental-observability\`
+- **Vite (\`@cloudflare/vite-plugin\`):** there is no flag — enable it with the
+  env var \`X_LOCAL_OBSERVABILITY=true vite dev\`, or the plugin option
+  \`cloudflare({ experimental: { observability: true } })\`. \`wrangler\` ships as a
+  dependency of the plugin, so run these commands with the project's wrangler
+  (e.g. \`npx wrangler observability traces\` / \`pnpm exec wrangler observability\`).
 
 ## Commands
 
