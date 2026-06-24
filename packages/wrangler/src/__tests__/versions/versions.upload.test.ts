@@ -2265,11 +2265,17 @@ describe("versions upload", () => {
 
 			expect(std.out).toContain("--dry-run: exiting now.");
 		});
+	});
 
-		test("should reject declarative `exports` with an actionable error pointing at `wrangler deploy`", async ({
+	describe("durable object exports (declarative)", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("errors when `exports` is set but the `X_DO_EXPORTS` env var is off", async ({
 			expect,
 		}) => {
-			vi.stubEnv("X_DO_EXPORTS", "true");
+			mockGetScript();
 			writeWranglerConfig({
 				name: "test-name",
 				main: "./index.js",
@@ -2282,9 +2288,41 @@ describe("versions upload", () => {
 			});
 			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
 
-			await expect(runWrangler("versions upload")).rejects.toThrowError(
-				/Durable Object lifecycle changes declared in `exports` cannot be applied via `wrangler versions upload`\..*Use `wrangler deploy` instead/s
+			await expect(runWrangler("versions upload")).rejects.toThrow(
+				/`X_DO_EXPORTS` environment variable is not set/
 			);
+		});
+
+		test("sends the `exports` payload (and omits `migrations`) when `X_DO_EXPORTS=true`", async ({
+			expect,
+		}) => {
+			// The versions POST controller (EWC) accepts `exports` and
+			// persists it on the new script_version row with
+			// `SkipDeploy:true`; reconciliation runs at deploy time
+			// (`wrangler deploy` or `wrangler versions deploy <id>`).
+			vi.stubEnv("X_DO_EXPORTS", "true");
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				durable_objects: {
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+				},
+				exports: {
+					MyDurableObject: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.exports).toEqual({
+				MyDurableObject: { type: "durable-object", storage: "sqlite" },
+			});
+			expect(metadata.migrations).toBeUndefined();
 		});
 	});
 

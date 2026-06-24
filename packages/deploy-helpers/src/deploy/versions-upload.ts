@@ -4,10 +4,8 @@ import path from "node:path";
 import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	formatTime,
-	getDoExportsEnabledFromEnv,
 	ParseError,
 	retryOnAPIFailure,
-	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
@@ -60,22 +58,6 @@ export default async function versionsUpload(
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
 }> {
-	// `wrangler versions upload` cannot apply Durable Object lifecycle changes;
-	// fail fast before any API calls.
-	if (
-		getDoExportsEnabledFromEnv() &&
-		Object.keys(config.exports ?? {}).length > 0
-	) {
-		throw new UserError(
-			`Durable Object lifecycle changes declared in \`exports\` cannot be applied via \`wrangler versions upload\`.\n` +
-				`Use \`wrangler deploy\` instead — \`exports\` is a Durable Object lifecycle configuration and is applied through the deploy path only.\n` +
-				`See https://developers.cloudflare.com/workers/configuration/versions-and-deployments/#durable-object-migrations`,
-			{
-				telemetryMessage: "versions upload do exports lifecycle not supported",
-			}
-		);
-	}
-
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
 
@@ -120,8 +102,14 @@ export default async function versionsUpload(
 		};
 	}
 
-	// Keep the pre-existing migrations behavior for versions uploads, while
-	// rejecting declarative `exports` earlier in this function.
+	// Resolve which Durable Object lifecycle payload to forward — either
+	// the legacy `migrations` steps or the declarative `exports` map.
+	// `exports` is gated behind `X_DO_EXPORTS` (the gate-off error is
+	// raised inside `resolveDoLifecyclePayload`). The server's versions
+	// POST controller persists `exports` on the new script_version row
+	// with `SkipDeploy:true`, so reconciliation is deferred to the
+	// subsequent deploy (either `wrangler deploy` or
+	// `wrangler versions deploy <id>`).
 	const { migrations, exports } = await resolveDoLifecyclePayload({
 		scriptName,
 		isDryRun: props.dryRun,

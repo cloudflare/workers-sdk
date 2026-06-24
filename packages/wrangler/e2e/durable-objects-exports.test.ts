@@ -433,5 +433,147 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				expect(output.stdout).not.toContain("Renamed: ");
 			});
 		});
+
+		describe("wrangler versions upload", () => {
+			const workerName = generateResourceName();
+			const helper = new WranglerE2ETestHelper();
+			let versionId: string;
+
+			afterAll(async () => {
+				await helper.bestEffortRun(`wrangler delete`);
+			});
+
+			it("step 1: bootstrap deploys SomeClass via `exports`", async ({
+				expect,
+			}) => {
+				await helper.seed({
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [{ "name": "DO", "class_name": "SomeClass" }],
+							},
+							"exports": {
+								"SomeClass": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
+					`,
+					"src/index.ts": dedent`
+						import { DurableObject } from "cloudflare:workers";
+						export class SomeClass extends DurableObject {}
+						export default {
+							fetch() { return new Response("hello"); },
+						};
+					`,
+					"package.json": dedent`
+						{
+							"name": "${workerName}",
+							"version": "0.0.0",
+							"private": true
+						}
+					`,
+				});
+
+				const output = await helper.run(`wrangler deploy`, {
+					env: { ...process.env, X_DO_EXPORTS: "true" },
+				});
+
+				expect(output.stdout).toContain("Created: SomeClass");
+			});
+
+			// TODO: unskip once server-side `exports` support on the
+			// versions POST endpoint
+			// (POST /accounts/.../workers/scripts/.../versions) is rolled
+			// out to production. Today the server returns error 10061
+			// (legacy migrations validation) for declarative `exports` on
+			// this endpoint — the EWC controller accepts it per
+			// do_exports_version_test.go but the production route still
+			// reaches a code path that doesn't see the `exports` field.
+			// Use `wrangler deploy` to apply `exports`-based lifecycle
+			// changes in the meantime.
+			it.skip("step 2: `versions upload` stages a new class without running reconciliation", async ({
+				expect,
+			}) => {
+				// Introduce AnotherClass via a draft version. EWC's
+				// versions POST controller persists `exports` with
+				// SkipDeploy:true, so the reconciliation envelope is
+				// NOT emitted at upload time — it runs when the version
+				// is subsequently deployed (step 3).
+				await helper.seed({
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2024-01-01",
+							"durable_objects": {
+								"bindings": [
+									{ "name": "DO", "class_name": "SomeClass" },
+									{ "name": "ANOTHER", "class_name": "AnotherClass" },
+								],
+							},
+							"exports": {
+								"SomeClass": { "type": "durable-object", "storage": "sqlite" },
+								"AnotherClass": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
+					`,
+					"src/index.ts": dedent`
+						import { DurableObject } from "cloudflare:workers";
+						export class SomeClass extends DurableObject {}
+						export class AnotherClass extends DurableObject {}
+						export default {
+							fetch() { return new Response("hello"); },
+						};
+					`,
+				});
+
+				const output = await helper.run(`wrangler versions upload`, {
+					env: { ...process.env, X_DO_EXPORTS: "true" },
+				});
+
+				expect(output.stdout).toContain("Worker Version ID:");
+				expect(output.stdout).not.toContain(
+					"Durable Object exports reconciliation"
+				);
+				expect(output.stdout).not.toContain("Created: AnotherClass");
+
+				versionId = output.stdout.match(
+					/Worker Version ID:\s+([a-f\d-]+)/
+				)?.[1] as string;
+				expect(versionId).toBeTruthy();
+			});
+
+			// TODO: unskip alongside step 2 once the server-side rollout
+			// completes (see TODO above step 2). Step 3 depends on the
+			// versionId captured in step 2, so they unskip together.
+			it.skip("step 3: `versions deploy` runs the deferred reconciliation", async ({
+				expect,
+			}) => {
+				const output = await helper.run(
+					`wrangler versions deploy ${versionId}@100% --yes`,
+					{
+						env: { ...process.env, X_DO_EXPORTS: "true" },
+					}
+				);
+
+				expect(output.stdout).toContain("SUCCESS");
+			});
+
+			it("rejects `exports` when `X_DO_EXPORTS` is off on the versions path", async ({
+				expect,
+			}) => {
+				// Symmetric to the deploy-side gate-off coverage above —
+				// pin down that the same `assertDoExportsEnabledIfConfigured`
+				// validator fires on the versions-upload path.
+				const result = await helper.run(`wrangler versions upload`);
+
+				expect(result.status).not.toBe(0);
+				expect(result.stderr).toContain(
+					"X_DO_EXPORTS` environment variable is not set"
+				);
+			});
+		});
 	}
 );
