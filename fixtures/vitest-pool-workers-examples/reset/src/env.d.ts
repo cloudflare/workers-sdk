@@ -5,6 +5,7 @@ interface __BaseEnv_Env {
 	R2_BUCKET: R2Bucket;
 	DATABASE: D1Database;
 	COUNTER: DurableObjectNamespace<import("./index").Counter>;
+	RATE_LIMITER: RateLimit;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

@@ -34,4 +34,11 @@
 			"database_id": "00000000-0000-0000-0000-000000000000",
 		},
 	],
+	"ratelimits": [
+		{
+			"name": "RATE_LIMITER",
+			"namespace_id": "1",
+			"simple": { "limit": 100, "period": 60 },
+		},
+	],
 }

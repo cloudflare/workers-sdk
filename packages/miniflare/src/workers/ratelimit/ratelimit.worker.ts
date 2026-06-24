@@ -40,6 +40,12 @@ class Ratelimit {
 		this.epoch = 0;
 	}
 
+	// Resets the in-memory bucket state so tests start from a clean slate.
+	reset(): void {
+		this.buckets.clear();
+		this.epoch = 0;
+	}
+
 	// method that counts and checks against the limit in in-memory buckets
 	async limit(options: unknown): Promise<RatelimitResult> {
 		// validate options input
@@ -86,7 +92,15 @@ class Ratelimit {
 	}
 }
 
+// Module-level registry so vitest-pool-workers' reset() can clear all instances.
+const __ratelimitInstances__ = new Set<Ratelimit>();
+(
+	globalThis as { __cfRatelimitInstances__?: Set<Ratelimit> }
+).__cfRatelimitInstances__ = __ratelimitInstances__;
+
 // create a new Ratelimit
 export default function (env: RatelimitConfig) {
-	return new Ratelimit(env);
+	const instance = new Ratelimit(env);
+	__ratelimitInstances__.add(instance);
+	return instance;
 }
