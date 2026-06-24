@@ -15,7 +15,6 @@ import {
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
-import { ensureQueuesExistByConfig } from "../triggers/queue-consumers";
 import {
 	buildAssetManifest,
 	resolveAssetOptions,
@@ -147,21 +146,21 @@ export default async function deploy(
 
 	const assetsOptions = resolveAssetOptions(props, config);
 
-	// All new validation should go in validateWorkerProps()
+	// Any validation that does not require API calls should go in validateWorkerProps()
 	await validateWorkerProps({ ...props, assetsOptions }, config);
 	assert(name); // already validated inside validateWorkerProps, but TS can't see that
 
-	// TODO: warn if git/hg has uncommitted changes
-	let versionId: string | null = null;
-
+	// any validation that DOES require API calls should go in preUploadApiChecks()
 	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
 		props,
 		config
 	);
+
 	if (aborted) {
-		return { versionId, workerTag };
+		return { versionId: null, workerTag };
 	}
 
+	let versionId: string | null = null;
 	const scriptName = name;
 
 	const envName = props.env ?? "production";
@@ -463,7 +462,6 @@ export default async function deploy(
 			}
 		);
 
-		await ensureQueuesExistByConfig(config, accountId);
 		let bindingsPrinted = false;
 
 		// Upload the script so it has time to propagate.

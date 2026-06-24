@@ -7,6 +7,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { confirm, fetchResult, logger } from "../../shared/context";
+import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
@@ -23,12 +24,15 @@ import type {
 } from "@cloudflare/workers-utils";
 
 /**
- * All validation of props (merged args and config) should go here,
- * and NOT inline in deploy() or versionsUpload()
+ *
+ * Any validation of props (merged args and config) that does not require API calls
+ * should go here, and NOT inline in deploy() or versionsUpload()
+ *
  * The order should be:
  * 1. generic validation checks
  * 2. deploy or versions upload specific checks
  * 3. checks that require making an API call
+ *
  */
 export async function validateWorkerProps(
 	props:
@@ -126,11 +130,17 @@ export type PreUploadApiChecksResult = {
 	aborted: boolean;
 };
 
+/**
+ *
+ * Any validation that requires API calls should go here.
+ * This is skipped on dry runs (for now)
+ */
 export async function preUploadApiChecks(
 	props: DeployProps | VersionsUploadProps,
 	config: Config
 ): Promise<PreUploadApiChecksResult> {
 	const { accountId, name } = props;
+
 	if (props.dryRun || !accountId || !name) {
 		return {
 			workerTag: null,
@@ -144,6 +154,7 @@ export async function preUploadApiChecks(
 		strictMode: props.strict,
 	});
 
+	// TODO: warn if git/hg has uncommitted changes
 	let workerTag: string | null = null;
 	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 	let workerExists = true;
@@ -281,5 +292,6 @@ export async function preUploadApiChecks(
 		}
 	}
 
+	await ensureQueuesExistByConfig(config, accountId);
 	return { workerTag, tags, workerExists, aborted: false };
 }
