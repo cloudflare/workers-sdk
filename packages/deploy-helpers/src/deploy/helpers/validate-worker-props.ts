@@ -31,8 +31,6 @@ import type {
  * The order should be:
  * 1. generic validation checks
  * 2. deploy or versions upload specific checks
- * 3. checks that require making an API call
- *
  */
 export async function validateWorkerProps(
 	props:
@@ -40,7 +38,7 @@ export async function validateWorkerProps(
 		| VersionsUploadProps,
 	config: Config
 ): Promise<void> {
-	const { name, dryRun, accountId, compatibilityDate } = props;
+	const { name, compatibilityDate } = props;
 	const { format } = props.entry;
 	if (!name) {
 		throw new UserError(
@@ -116,11 +114,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 	}
-
-	if (!dryRun) {
-		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
-	}
 }
 
 export type PreUploadApiChecksResult = {
@@ -149,6 +142,8 @@ export async function preUploadApiChecks(
 			aborted: false,
 		};
 	}
+
+	await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
 
 	const deployConfirm = getDeployConfirmFunction({
 		strictMode: props.strict,
