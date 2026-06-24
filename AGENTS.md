@@ -76,6 +76,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 | Cloudflare API mocks for tests                 | `packages/wrangler/src/__tests__/helpers/msw/` | MSW handlers per API domain                                      |
 | CI workflows                                   | `.github/workflows/`                           | `test-and-check.yml` is the primary gate                         |
 | Build/deploy scripts                           | `tools/deployments/`                           | Validation + deployment helpers, run via `esbuild-register`      |
+| Deploy/versions-upload validation              | `packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts` | `validateWorkerProps()` for sync checks, `preUploadApiChecks()` for API checks (service metadata, config diff, secrets, workflows). All new pre-upload validation goes here. |
 | Changeset config and rules                     | `.changeset/README.md`                         | Must read before creating changesets                             |
 
 ## Development Guidelines
