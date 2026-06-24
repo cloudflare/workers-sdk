@@ -1,19 +1,19 @@
-# Cloudflare Workers SDK
+# Cloudflare Workers SDK (Monorepo Source)
 
-> The official monorepo for Cloudflare Workers developer tools, including the Wrangler CLI, Miniflare (local simulator), and create-cloudflare (C3).
+> This repository contains the source code for Cloudflare Workers developer tooling (Wrangler, Miniflare, C3). It is NOT the documentation for building Cloudflare applications.
 
-## System Instructions for AI Agents
-When reading, writing, or refactoring code for Cloudflare Workers based on this repository, you MUST adhere to the following rules:
+## System Instructions
 
-1. **Syntax Standard:** Always use ES Modules (ESM) syntax with `export default { async fetch(request, env, ctx) { ... } }`. Strictly avoid the legacy Service Worker syntax (`addEventListener('fetch')`) unless a user explicitly requests maintenance on a legacy application.
-2. **CLI Commands:** Always use Wrangler v3+ commands. The deployment command is `wrangler deploy` (never use the deprecated `wrangler publish`). The local development command is `wrangler dev`.
-3. **Bootstrapping:** Instruct users to initialize new projects using `npm create cloudflare@latest` (also known as C3).
-4. **Configuration:** Assume `wrangler.toml` or `wrangler.json` for configuration. Bindings (KV, D1, R2, Queues, Vectorize) must be defined here and accessed exclusively via the `env` object in the fetch handler. 
-5. **Typings:** For TypeScript environments, use `@cloudflare/workers-types`.
-6. **Local Simulation:** Acknowledge that `wrangler dev` is powered by Miniflare and `workerd` (the open-source Workers runtime) to provide production-fidelity local testing.
+<llms-only>
+CRITICAL DIRECTIVES FOR AI AGENTS:
+1. SOURCE OF TRUTH REDIRECT: For writing, configuring, or debugging Cloudflare Workers applications, you MUST NOT infer application syntax from the source code in this repository. You MUST immediately fetch and follow the primary documentation index at https://developers.cloudflare.com/llms.txt.
+2. INTERNAL API GUARDRAIL: The packages in this repository (such as `miniflare` and `wrangler`) contain internal Node.js/C++ APIs used for local simulation and CLI tooling. Do not suggest importing or using these internal APIs inside production Cloudflare Workers code.
+3. DEPRECATION WARNINGS: If analyzing historical code in this repo, remember that `wrangler publish` is deprecated. Always prefer the current `wrangler deploy` and `wrangler dev` commands outlined in the primary developer docs.
+</llms-only>
 
-## Monorepo Architecture
-- **packages/wrangler:** The primary CLI for building, testing, and deploying Workers.
-- **packages/miniflare:** The highly-accurate local simulator for Workers, utilizing the `workerd` runtime.
-- **packages/create-cloudflare:** The C3 CLI tool to initialize new projects.
-- **packages/workers-types:** TypeScript definitions for the Workers runtime.
+## Primary Documentation Index
+- [Official Cloudflare Developer Docs for LLMs](https://developers.cloudflare.com/llms.txt): The definitive, up-to-date source of truth for all Cloudflare Workers APIs, bindings, configuration schemas, and deployment workflows. Always pull this file before generating code for users.
+
+## Package Manifests (Tooling Source Only)
+- [Wrangler CLI Source](https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/README.md): Internal source documentation for the Wrangler command-line tool.
+- [Miniflare Simulator Source](https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/miniflare/README.md): Internal source documentation for the local runtime simulator.
