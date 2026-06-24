@@ -48,17 +48,22 @@ export type WorkerModule = {
 	[key: string]: WorkerExport | undefined;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> ExportedHandler constraint.
+export type AnyExportedHandler = ExportedHandler<any, any, any, any>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
+export type AnyEnv = Record<string, any>;
+
 export type WorkerExport =
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.
 	| (new (...args: any[]) => Rpc.WorkerEntrypointBranded)
 	| Rpc.WorkerEntrypointBranded
-	| ExportedHandler;
+	| AnyExportedHandler;
 
 export type WorkerHandle<
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
-	Env = Record<string, any>,
+	Env = AnyEnv,
 	Module extends WorkerModule = {
-		default: ExportedHandler;
+		default: AnyExportedHandler;
 	},
 > = {
 	/**
@@ -162,9 +167,8 @@ export type TestHarness = {
 	 * Worker in the server's `workers` options.
 	 */
 	getWorker<
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
-		Env = Record<string, any>,
-		Module extends WorkerModule = { default: ExportedHandler },
+		Env = AnyEnv,
+		Module extends WorkerModule = { default: AnyExportedHandler },
 	>(
 		name?: string
 	): WorkerHandle<Env, Module>;
@@ -710,9 +714,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			return dispatchFetch(miniflare, input, init);
 		},
 		getWorker<
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
-			Env = Record<string, any>,
-			Module extends WorkerModule = { default: ExportedHandler },
+			Env = AnyEnv,
+			Module extends WorkerModule = { default: AnyExportedHandler },
 		>(name?: string): WorkerHandle<Env, Module> {
 			return {
 				async fetch(input, init) {

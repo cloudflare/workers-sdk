@@ -24,6 +24,6 @@ const server = createTestHarness({
 });
 
 const mockAi = await server
-	.getWorker<Env, typeof import("./workers/mock-ai")>("mock-ai")
+	.getWorker<WebEnv, typeof import("./workers/mock-ai")>("mock-ai")
 	.getExport();
 ```
