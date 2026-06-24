@@ -109,12 +109,10 @@ type Binding =
 type Trigger = FetchTrigger | QueueConsumerTrigger | ScheduledTrigger;
 
 /**
- * Union of all export definitions accepted in `exports`. The live variant
- * is `DurableObjectExport` (`type: "durable-object"`, state defaults to
- * `"created"`); the three tombstone variants (`deleted`, `renamed`,
- * `transferred`) express explicit lifecycle operations on previously
- * provisioned namespaces. `DurableObjectExpectingTransferExport` names the
- * receiving side of a two-phase cross-script transfer.
+ * Union of all export definitions accepted in `exports`.
+ *
+ * Currently the only type of export supported is `durable-object`.
+ * Each durable object export specifies a `state`: `created`, `deleted`, `renamed` or `transferred`).
  */
 type Export =
 	| DurableObjectCreatedExport

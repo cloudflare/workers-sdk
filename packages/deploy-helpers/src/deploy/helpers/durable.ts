@@ -3,11 +3,11 @@ import {
 	assertDoExportsEnabledIfConfigured,
 	configFileName,
 	getDoExportsEnabledFromEnv,
+	getDurableObjectExports,
 } from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
-	CfDurableObjectExports,
 	CfWorkerInit,
 	Config,
 	DoExportsOptInContext,
@@ -139,12 +139,9 @@ export async function resolveDoLifecyclePayload(props: {
 		props.optInContext ?? "deploy"
 	);
 
-	const exportsEntries = Object.keys(props.config.exports ?? {});
-	if (getDoExportsEnabledFromEnv() && exportsEntries.length > 0) {
-		return {
-			migrations: undefined,
-			exports: props.config.exports as CfDurableObjectExports,
-		};
+	const exports = getDurableObjectExports(props.config.exports);
+	if (getDoExportsEnabledFromEnv() && Object.keys(exports).length > 0) {
+		return { migrations: undefined, exports };
 	}
 
 	const migrations = !props.isDryRun

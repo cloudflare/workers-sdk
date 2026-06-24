@@ -6,13 +6,6 @@ import type {
 } from "@cloudflare/workers-utils";
 
 /**
- * Blocking-error code for declarative DO exports reconciliation failures.
- * Used to distinguish the reconciliation error envelope from other 4xx upload
- * errors so we can render the structured per-class details.
- */
-export const EXPORTS_RECONCILIATION_ERROR_CODE = 100402;
-
-/**
  * Render the success-side `exports_reconciliation` envelope to the logger.
  * Emits nothing when the result has no entries to report (so a re-deploy
  * with no DO changes doesn't add noise to the deploy output).

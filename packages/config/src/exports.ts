@@ -192,7 +192,7 @@ function durableObject(
  *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
  *     OldClass:        exports.durableObject({ state: "deleted" }),
  *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
- *     Movee:           exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),
+ *     Outgoing:        exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),
  *     Incoming:        exports.durableObject({ state: "expecting-transfer", storage: "sqlite", transferFrom: "source-worker" }),
  *   },
  * });

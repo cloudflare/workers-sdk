@@ -47,6 +47,7 @@ import type {
 	ContainerApp,
 	CustomDomainRoute,
 	DispatchNamespaceOutbound,
+	DurableObjectExport,
 	Environment,
 	Observability,
 	RawEnvironment,
@@ -5853,26 +5854,6 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 	return valid;
 };
 
-/**
- * Cap on the number of declarative export entries per upload.
- */
-const MAX_EXPORTS_PER_SCRIPT = 100;
-
-/**
- * Cap on the length of each class-name key.
- */
-const MAX_EXPORT_CLASS_NAME_LEN = 128;
-
-const VALID_EXPORT_TYPES = new Set(["durable-object"]);
-
-const VALID_EXPORT_STATES = new Set([
-	"created",
-	"deleted",
-	"renamed",
-	"transferred",
-	"expecting-transfer",
-]);
-
 const VALID_EXPORT_STORAGES = new Set(["sqlite", "legacy-kv"]);
 
 /**
@@ -5882,22 +5863,177 @@ const VALID_EXPORT_STORAGES = new Set(["sqlite", "legacy-kv"]);
  */
 const JS_IDENTIFIER_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
+function validateDurableObjectExportProperties(
+	diagnostics: Diagnostics,
+	className: string,
+	durableObjectExport: DurableObjectExport,
+	allowedProperties: string[]
+): boolean {
+	let valid = true;
+	for (const key of Object.keys(durableObjectExport)) {
+		if (!allowedProperties.includes(key)) {
+			diagnostics.errors.push(
+				`"exports.${className}.${key}" is forbidden on state "${durableObjectExport.state ?? "created"}".`
+			);
+			valid = false;
+		}
+	}
+	if (!valid) {
+		diagnostics.errors.push(
+			`Allowed properties are: ${ENGLISH.format(allowedProperties)}.`
+		);
+	}
+	return valid;
+}
+
 /**
- * Validate the `exports` configuration. `type` carries the export kind
- * (currently always `"durable-object"`), and `state` carries the lifecycle
- * (`"created"` default, `"deleted"`, `"renamed"`, `"transferred"`,
- * `"expecting-transfer"`).
+ * Validate a Durable Object `exports` configuration.
+ *
+ * - `type` carries the export kind - must be `"durable-object"`
+ * - `state` carries the lifecycle: one of `"created"` (default), `"deleted"`, `"renamed"`, `"transferred"`, `"expecting-transfer"`.
+ * - depending upon `state`, certain properties are required or forbidden.
+ *
+ * Deeper validation of `renamed_to` and `transferred_to` etc is performed server-side.
  */
+function validateDurableObjectExport(
+	diagnostics: Diagnostics,
+	className: string,
+	durableObjectExport: DurableObjectExport
+): boolean {
+	let valid = true;
+
+	if (className === "") {
+		diagnostics.errors.push(`"export" keys cannot be the empty string.`);
+		valid = false;
+	}
+
+	switch (durableObjectExport.state) {
+		case undefined:
+		case "created": {
+			if (
+				typeof durableObjectExport.storage !== "string" ||
+				!VALID_EXPORT_STORAGES.has(durableObjectExport.storage)
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.storage" is required for state "created" and must be one of ${ENGLISH.format(VALID_EXPORT_STORAGES)}, but got ${JSON.stringify(durableObjectExport.storage)}`
+				);
+				valid = false;
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "storage"]
+				) && valid;
+			break;
+		}
+		case "deleted": {
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state"]
+				) && valid;
+			break;
+		}
+		case "renamed": {
+			if (
+				typeof durableObjectExport.renamed_to !== "string" ||
+				durableObjectExport.renamed_to === ""
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.renamed_to" is required for state "renamed" and must be a non-empty string.`
+				);
+				valid = false;
+			} else {
+				if (!JS_IDENTIFIER_RE.test(durableObjectExport.renamed_to)) {
+					diagnostics.errors.push(
+						`"exports.${className}.renamed_to" must be a valid JavaScript identifier (got "${durableObjectExport.renamed_to}").`
+					);
+					valid = false;
+				}
+				if (durableObjectExport.renamed_to === className) {
+					diagnostics.errors.push(
+						`"exports.${className}.renamed_to" cannot equal the source class name "${className}".`
+					);
+					valid = false;
+				}
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "renamed_to"]
+				) && valid;
+			break;
+		}
+		case "transferred": {
+			if (
+				typeof durableObjectExport.transferred_to !== "string" ||
+				durableObjectExport.transferred_to === ""
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.transferred_to" is required for state "transferred" and must be a non-empty string.`
+				);
+				valid = false;
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "transferred_to"]
+				) && valid;
+			break;
+		}
+		case "expecting-transfer": {
+			if (
+				typeof durableObjectExport.storage !== "string" ||
+				!VALID_EXPORT_STORAGES.has(durableObjectExport.storage)
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.storage" is required for state "expecting-transfer" and must be one of ${ENGLISH.format(VALID_EXPORT_STORAGES)}, but got ${JSON.stringify(durableObjectExport.storage)}`
+				);
+				valid = false;
+			}
+			if (
+				typeof durableObjectExport.transfer_from !== "string" ||
+				durableObjectExport.transfer_from === ""
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.transfer_from" is required for state "expecting-transfer" and must be a non-empty string.`
+				);
+				valid = false;
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "storage", "transfer_from"]
+				) && valid;
+			break;
+		}
+		default: {
+			// Need to cast here because we have exhausted all the possible values of `state` in the switch above.
+			const state = (durableObjectExport as { state: string }).state;
+			diagnostics.errors.push(
+				`"exports.${className}.state" must be one of "created", "deleted", "renamed", "transferred", or "expecting-transfer" but got ${JSON.stringify(state)}.`
+			);
+			valid = false;
+		}
+	}
+	return valid;
+}
+
 const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined || value === null) {
 		return true;
 	}
-
-	if (
-		typeof value !== "object" ||
-		Array.isArray(value) ||
-		value instanceof Date
-	) {
+	if (typeof value !== "object" || Array.isArray(value)) {
 		diagnostics.errors.push(
 			`The optional "${field}" field should be an object keyed by class name, but got ${JSON.stringify(
 				value
@@ -5906,285 +6042,35 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 
-	const rawExports = value as Record<string, unknown>;
-	const classNames = Object.keys(rawExports);
-
-	if (classNames.length > MAX_EXPORTS_PER_SCRIPT) {
-		diagnostics.errors.push(
-			`"${field}" has ${classNames.length} entries; the maximum allowed is ${MAX_EXPORTS_PER_SCRIPT}.`
-		);
-		return false;
-	}
-
 	let valid = true;
-	// `expecting-transfer` entries do not count as rename targets because they
-	// have not taken ownership of a namespace on this script yet.
-	const liveClassNames = new Set<string>();
-	for (const className of classNames) {
-		const entry = rawExports[className];
+	for (const [className, durableObjectExport] of Object.entries(value)) {
 		if (
-			typeof entry === "object" &&
-			entry !== null &&
-			!Array.isArray(entry) &&
-			(entry as { type?: unknown }).type === "durable-object"
+			typeof durableObjectExport !== "object" ||
+			durableObjectExport === null
 		) {
-			const rawState = (entry as { state?: unknown }).state;
-			const effectiveState =
-				rawState === undefined || rawState === null ? "created" : rawState;
-			if (effectiveState === "created") {
-				liveClassNames.add(className);
-			}
-		}
-	}
-
-	for (const className of classNames) {
-		if (className === "") {
-			diagnostics.errors.push(`"${field}" keys cannot be the empty string.`);
-			valid = false;
-			continue;
-		}
-		if (className.length > MAX_EXPORT_CLASS_NAME_LEN) {
 			diagnostics.errors.push(
-				`"${field}" class name "${className.slice(
-					0,
-					32
-				)}..." exceeds the maximum length of ${MAX_EXPORT_CLASS_NAME_LEN} characters.`
+				`"exports.${className}" should be an object but got ${JSON.stringify(
+					durableObjectExport
+				)}.`
 			);
 			valid = false;
 			continue;
 		}
-
-		const entry = rawExports[className];
-		const entryField = `${field}.${className}`;
-
-		if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
-			diagnostics.errors.push(
-				`"${entryField}" should be an object but got ${JSON.stringify(entry)}`
-			);
-			valid = false;
-			continue;
-		}
-
-		const {
-			type,
-			state,
-			storage,
-			renamed_to,
-			transferred_to,
-			transfer_from,
-			...rest
-		} = entry as {
-			type?: unknown;
-			state?: unknown;
-			storage?: unknown;
-			renamed_to?: unknown;
-			transferred_to?: unknown;
-			transfer_from?: unknown;
-		};
-
-		valid =
-			validateAdditionalProperties(
-				diagnostics,
-				entryField,
-				Object.keys(rest),
-				[]
-			) && valid;
-
-		if (typeof type !== "string" || !VALID_EXPORT_TYPES.has(type)) {
-			diagnostics.errors.push(
-				`"${entryField}.type" must be one of ${[...VALID_EXPORT_TYPES]
-					.map((t) => `"${t}"`)
-					.join(", ")}, but got ${JSON.stringify(type)}`
-			);
-			valid = false;
-			continue;
-		}
-
-		let effectiveState: string;
-		if (state === undefined || state === null) {
-			effectiveState = "created";
-		} else if (typeof state === "string" && VALID_EXPORT_STATES.has(state)) {
-			effectiveState = state;
+		if (durableObjectExport.type === "durable-object") {
+			valid =
+				validateDurableObjectExport(
+					diagnostics,
+					className,
+					durableObjectExport
+				) && valid;
 		} else {
-			diagnostics.errors.push(
-				`"${entryField}.state" must be one of ${[...VALID_EXPORT_STATES]
-					.map((s) => `"${s}"`)
-					.join(", ")}, but got ${JSON.stringify(state)}`
-			);
 			valid = false;
-			continue;
-		}
-
-		switch (effectiveState) {
-			case "created": {
-				if (
-					typeof storage !== "string" ||
-					!VALID_EXPORT_STORAGES.has(storage)
-				) {
-					diagnostics.errors.push(
-						`"${entryField}.storage" is required for state "created" and must be one of ${[
-							...VALID_EXPORT_STORAGES,
-						]
-							.map((s) => `"${s}"`)
-							.join(", ")}, but got ${JSON.stringify(storage)}`
-					);
-					valid = false;
-				}
-				if (renamed_to !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.renamed_to" is forbidden on state "created".`
-					);
-					valid = false;
-				}
-				if (transferred_to !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.transferred_to" is forbidden on state "created".`
-					);
-					valid = false;
-				}
-				if (transfer_from !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.transfer_from" is forbidden on state "created"; use state "expecting-transfer" for the receiving side of a two-phase transfer.`
-					);
-					valid = false;
-				}
-				break;
-			}
-			case "deleted": {
-				if (storage !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.storage" is forbidden on state "deleted".`
-					);
-					valid = false;
-				}
-				if (renamed_to !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.renamed_to" is forbidden on state "deleted".`
-					);
-					valid = false;
-				}
-				if (transferred_to !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.transferred_to" is forbidden on state "deleted".`
-					);
-					valid = false;
-				}
-				if (transfer_from !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.transfer_from" is forbidden on state "deleted".`
-					);
-					valid = false;
-				}
-				break;
-			}
-			case "renamed": {
-				if (typeof renamed_to !== "string" || renamed_to === "") {
-					diagnostics.errors.push(
-						`"${entryField}.renamed_to" is required for state "renamed" and must be a non-empty string.`
-					);
-					valid = false;
-				} else {
-					if (!JS_IDENTIFIER_RE.test(renamed_to)) {
-						diagnostics.errors.push(
-							`"${entryField}.renamed_to" must be a valid JavaScript identifier (got "${renamed_to}").`
-						);
-						valid = false;
-					}
-					if (renamed_to === className) {
-						diagnostics.errors.push(
-							`"${entryField}.renamed_to" cannot equal the source class name "${className}".`
-						);
-						valid = false;
-					} else if (!liveClassNames.has(renamed_to)) {
-						diagnostics.errors.push(
-							`"${entryField}.renamed_to" target "${renamed_to}" must appear as a live "durable-object" entry (state "created") in the same "${field}" map.`
-						);
-						valid = false;
-					}
-				}
-				if (storage !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.storage" is forbidden on state "renamed".`
-					);
-					valid = false;
-				}
-				if (transferred_to !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.transferred_to" is forbidden on state "renamed".`
-					);
-					valid = false;
-				}
-				if (transfer_from !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.transfer_from" is forbidden on state "renamed".`
-					);
-					valid = false;
-				}
-				break;
-			}
-			case "transferred": {
-				if (typeof transferred_to !== "string" || transferred_to === "") {
-					diagnostics.errors.push(
-						`"${entryField}.transferred_to" is required for state "transferred" and must be a non-empty string.`
-					);
-					valid = false;
-				}
-				if (storage !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.storage" is forbidden on state "transferred".`
-					);
-					valid = false;
-				}
-				if (renamed_to !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.renamed_to" is forbidden on state "transferred".`
-					);
-					valid = false;
-				}
-				if (transfer_from !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.transfer_from" is forbidden on state "transferred".`
-					);
-					valid = false;
-				}
-				break;
-			}
-			case "expecting-transfer": {
-				if (
-					typeof storage !== "string" ||
-					!VALID_EXPORT_STORAGES.has(storage)
-				) {
-					diagnostics.errors.push(
-						`"${entryField}.storage" is required for state "expecting-transfer" and must be one of ${[
-							...VALID_EXPORT_STORAGES,
-						]
-							.map((s) => `"${s}"`)
-							.join(", ")}, but got ${JSON.stringify(storage)}`
-					);
-					valid = false;
-				}
-				if (typeof transfer_from !== "string" || transfer_from === "") {
-					diagnostics.errors.push(
-						`"${entryField}.transfer_from" is required for state "expecting-transfer" and must be a non-empty string.`
-					);
-					valid = false;
-				}
-				if (renamed_to !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.renamed_to" is forbidden on state "expecting-transfer".`
-					);
-					valid = false;
-				}
-				if (transferred_to !== undefined) {
-					diagnostics.errors.push(
-						`"${entryField}.transferred_to" is forbidden on state "expecting-transfer".`
-					);
-					valid = false;
-				}
-				break;
-			}
+			diagnostics.errors.push(
+				`"exports.${className}.type" is required and must be "durable-object", but got ${JSON.stringify(durableObjectExport.type)}.`
+			);
 		}
 	}
+
 	return valid;
 };
 

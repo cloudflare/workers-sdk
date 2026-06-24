@@ -1957,60 +1957,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toContain('"exports.MyDO.storage"');
 			});
 
-			it("errors when a renamed tombstone targets a non-live entry", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						exports: {
-							OldName: {
-								type: "durable-object",
-								state: "renamed",
-								renamed_to: "NewName",
-							},
-						},
-					},
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderErrors()).toContain(
-					'must appear as a live "durable-object" entry (state "created")'
-				);
-			});
-
-			it("errors when a renamed tombstone targets an expecting-transfer entry", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						exports: {
-							OldName: {
-								type: "durable-object",
-								state: "renamed",
-								renamed_to: "Pending",
-							},
-							Pending: {
-								type: "durable-object",
-								state: "expecting-transfer",
-								storage: "sqlite",
-								transfer_from: "source-worker",
-							},
-						},
-					},
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderErrors()).toContain(
-					'must appear as a live "durable-object" entry (state "created")'
-				);
-			});
-
 			it("errors when renamed_to equals the source class name", ({
 				expect,
 			}) => {
@@ -2149,9 +2095,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderErrors()).toContain(
-					'"exports.MyDO.transfer_from" is forbidden on state "created"'
-				);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.MyDO.transfer_from" is forbidden on state "created".
+					  - Allowed properties are: type, state, and storage."
+				`);
 			});
 
 			it("errors when the type is unknown", ({ expect }) => {
@@ -2168,9 +2116,10 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderErrors()).toContain(
-					'"exports.Weird.type" must be one of'
-				);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.Weird.type" is required and must be "durable-object", but got "container"."
+				`);
 			});
 
 			it("errors when the state is unknown", ({ expect }) => {
@@ -2187,9 +2136,10 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderErrors()).toContain(
-					'"exports.Weird.state" must be one of'
-				);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.Weird.state" must be one of "created", "deleted", "renamed", "transferred", or "expecting-transfer" but got "rebooted"."
+				`);
 			});
 
 			it("errors when `migrations` and `exports` are both non-empty", ({
@@ -2208,9 +2158,10 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderErrors()).toContain(
-					"`migrations` and `exports` are mutually exclusive"
-				);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both."
+				`);
 			});
 
 			it("does not warn about missing migrations when exports covers the bound class", ({

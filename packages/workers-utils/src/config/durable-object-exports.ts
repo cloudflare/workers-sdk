@@ -1,6 +1,7 @@
 import { getDoExportsEnabledFromEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import type { Config } from "./config";
+import type { DurableObjectExport } from "./environment";
 
 /**
  * Context label for the {@link assertDoExportsEnabledIfConfigured} helper.
@@ -56,4 +57,19 @@ export function assertDoExportsEnabledIfConfigured(
 		"Your configuration declares Durable Object `exports` but the `X_DO_EXPORTS` environment variable is not set. Set `X_DO_EXPORTS=true` to enable the declarative exports flow, or remove the `exports` entries to fall back to `migrations`.",
 		{ telemetryMessage }
 	);
+}
+
+/**
+ * Returns a map of exports that are only of type "durable-object".
+ */
+export function getDurableObjectExports(
+	exports: Config["exports"]
+): Record<string, DurableObjectExport> {
+	const durableObjectExports: Record<string, DurableObjectExport> = {};
+	for (const [className, exportConfig] of Object.entries(exports)) {
+		if (exportConfig.type === "durable-object") {
+			durableObjectExports[className] = exportConfig;
+		}
+	}
+	return durableObjectExports;
 }

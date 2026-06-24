@@ -4,7 +4,7 @@ import type {
 	CustomDomainRoute,
 	ContainerApp,
 	ContainerEngine,
-	DurableObjectExports,
+	Exports,
 	DurableObjectMigration,
 	Observability,
 	Rule,
@@ -22,7 +22,7 @@ import type {
 	CfD1Database,
 	CfDispatchNamespace,
 	CfDurableObject,
-	CfDurableObjectExports,
+	CfExports,
 	CfDurableObjectMigrations,
 	CfFlagship,
 	CfHelloWorld,
@@ -273,7 +273,7 @@ type WorkerMetadataPut = {
 	compatibility_flags?: string[];
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
-	exports?: CfDurableObjectExports;
+	exports?: CfExports;
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
 	keep_bindings?: (
@@ -552,7 +552,7 @@ export interface StartDevWorkerInput {
 	 */
 	defaultBindings?: Record<string, Extract<Binding, { type: "plain_text" }>>;
 	migrations?: DurableObjectMigration[];
-	exports?: DurableObjectExports;
+	exports?: Exports;
 	containers?: ContainerApp[];
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];

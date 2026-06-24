@@ -357,20 +357,6 @@ export type DurableObjectMigration = {
 export type DurableObjectExportStorage = "sqlite" | "legacy-kv";
 
 /**
- * Lifecycle state of a Durable Object export entry. The default is
- * `"created"` (live) when the field is omitted. Tombstone states retire,
- * rename, or transfer a provisioned namespace; `"expecting-transfer"` is a
- * live state that names the receiving side of a two-phase cross-script
- * transfer.
- */
-export type DurableObjectExportState =
-	| "created"
-	| "deleted"
-	| "renamed"
-	| "transferred"
-	| "expecting-transfer";
-
-/**
  * A single declarative Durable Object export entry in the `exports` config
  * map. Discriminated union of `type` (kind) and `state` (lifecycle). `type`
  * is reserved for the export kind and is always `"durable-object"` today;
@@ -415,12 +401,14 @@ export type DurableObjectExport =
 	  };
 
 /**
- * The declarative `exports` map keyed by class name. Mutually exclusive with
- * `migrations` at the wrangler config layer. Gated behind the
- * `X_DO_EXPORTS` environment variable for `wrangler deploy` and
- * `wrangler versions upload`.
  */
-export type DurableObjectExports = Record<string, DurableObjectExport>;
+/**
+ * The declarative `exports` map keyed by class name.
+ *
+ * Currently the only export kind supported is `durable-object` (see {@link DurableObjectExport}).
+ * The value of each entry configures the exported class.
+ */
+export type Exports = Record<string, DurableObjectExport>;
 
 /**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
@@ -583,16 +571,15 @@ interface EnvironmentInheritable {
 	migrations: DurableObjectMigration[];
 
 	/**
-	 * Declarative Durable Object exports — a map of class name to export
-	 * configuration. Mutually exclusive with `migrations`.
+	 * Declarative exports configuration — a map of class name to export configuration.
 	 *
-	 * Gated behind the `X_DO_EXPORTS` environment variable for `wrangler
-	 * deploy` and `wrangler versions upload`.
+	 * The configuration of Durable Objects via `exports` is mutually exclusive with `migrations`.
+	 * Durable Object exports are gated behind the `X_DO_EXPORTS` environment variable for Wrangler commands.
 	 *
 	 * @default {}
 	 * @inheritable
 	 */
-	exports: DurableObjectExports;
+	exports: Exports;
 
 	/**
 	 * "Cron" definitions to trigger a Worker's "scheduled" function.
