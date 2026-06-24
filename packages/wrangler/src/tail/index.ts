@@ -256,13 +256,26 @@ export const tailCommand = createCommand({
 			let rejectOpenWait: ((err: Error) => void) | undefined;
 
 			tail.on("close", (code: number) => {
-				if (!hasOpened && rejectOpenWait) {
-					rejectOpenWait(
-						new Error(`Connection to ${scriptDisplayName} closed unexpectedly.`)
-					);
+				// Close fired before this connection ever opened.
+				if (!hasOpened) {
+					if (intentionalClose || isShuttingDown) {
+						// Tear-down beat us to the open event (e.g. Ctrl-C
+						// during the initial handshake). Don't reject — unblock
+						// the open-wait so `connect()` can return cleanly via
+						// its `isShuttingDown` check below. `cleanStop` /
+						// `shutdownHandler` have already settled `done`.
+						resolveOpenWait?.();
+					} else {
+						rejectOpenWait?.(
+							new Error(
+								`Connection to ${scriptDisplayName} closed unexpectedly.`
+							)
+						);
+					}
 					return;
 				}
-				if (intentionalClose || isShuttingDown || !hasOpened) {
+				// Steady-state path.
+				if (intentionalClose || isShuttingDown) {
 					return;
 				}
 				if (code === NORMAL_CLOSURE) {

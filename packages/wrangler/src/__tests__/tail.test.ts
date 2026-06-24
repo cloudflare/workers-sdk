@@ -1281,6 +1281,71 @@ describe("tail", () => {
 			// The server-side tail was deleted as part of the clean shutdown.
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
+
+		it("shuts down cleanly when Ctrl-C is hit before the WebSocket finishes connecting", async ({
+			expect,
+		}) => {
+			api = mockWebsocketAPIs(expect);
+
+			// Fake `setTimeout` so we can hold the initial WebSocket
+			// connection in its CONNECTING state — mock-socket schedules the
+			// connection "open" dispatch via a 4 ms `delay()`, which we don't
+			// advance until we've emitted SIGINT. The handler will therefore
+			// be parked at `await new Promise(...)` for the open-wait when we
+			// signal.
+			vi.useFakeTimers({ toFake: ["setTimeout"] });
+
+			const tailPromise = runWrangler(
+				"tail test-worker --format=pretty"
+			) as Promise<unknown>;
+			activeTailPromise = tailPromise;
+
+			// Wait until the handler has actually entered the open-wait
+			// promise. Polling for `currentTail` from outside isn't possible,
+			// so instead we wait for the mock WebSocket to be constructed
+			// (visible to the server) AND for the close listener to be
+			// attached on it (one of the last sync steps before the await).
+			const server = (
+				api.ws as unknown as {
+					server: { clients(): { listeners: Record<string, unknown[]> }[] };
+				}
+			).server;
+			for (let i = 0; i < 200; i++) {
+				const clients = server.clients();
+				if (clients.length > 0) {
+					// MockWebSocket attaches listeners via `addEventListener`,
+					// which pushes into `listeners["close"]`. mock-socket
+					// itself does not add a default close listener, so once
+					// this array is non-empty the handler has finished its
+					// post-`createTail` sync setup and is parked at the
+					// open-wait.
+					if (clients[0].listeners?.close?.length) {
+						break;
+					}
+				}
+				await Promise.resolve();
+			}
+
+			// Emit SIGINT while the connection is still CONNECTING.
+			// `shutdownHandler` will call `teardownCurrentConnection` →
+			// `tail.terminate()`, which dispatches a `close` on the
+			// not-yet-opened WebSocket. The close handler must recognise this
+			// as an intentional close and resolve the open-wait (rather than
+			// reject it with "Connection ... closed unexpectedly.").
+			process.emit("SIGINT");
+
+			// Advance fake timers so terminate's close dispatch (and any
+			// other pending fake timers) fire.
+			await vi.advanceTimersByTimeAsync(100);
+
+			// Must resolve cleanly — *not* reject with "closed unexpectedly".
+			await tailPromise;
+
+			expect(std.out).toContain("Stopping tail...");
+			expect(std.err).not.toContain("closed unexpectedly");
+
+			vi.useRealTimers();
+		});
 	});
 
 	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async ({
