@@ -31,123 +31,375 @@ interface UnsafeEval {
 type ExplorerContext = Context<AppBindings>;
 type ExplorerApp = Hono<AppBindings>;
 
-/** Build the `cf` client exposed to codemode snippets. */
-function makeCf(app: ExplorerApp, c: ExplorerContext) {
+const LOG_LEVELS = ["error", "warn", "info", "log", "debug"] as const;
+
+type AccessStatus = "ok" | "denied";
+
+interface AccessEvent {
+	type: string;
+	id?: string;
+	operation: string;
+	status: AccessStatus;
+	detail?: string;
+}
+
+interface McpAccessConfig {
+	logLevels?: Record<string, boolean>;
+	resources?: Record<string, boolean>;
+	allowRawFetch?: boolean;
+}
+
+const DEFAULT_ACCESS: Required<McpAccessConfig> = {
+	logLevels: { error: true, warn: true, info: true, log: true, debug: false },
+	resources: {},
+	allowRawFetch: false,
+};
+
+function resourceKey(type: string, id: string): string {
+	return `${type}:${id}`;
+}
+
+function normalizeAccess(value: unknown): Required<McpAccessConfig> {
+	const cfg = value && typeof value === "object" ? (value as McpAccessConfig) : {};
+	return {
+		logLevels: { ...DEFAULT_ACCESS.logLevels, ...(cfg.logLevels ?? {}) },
+		resources: { ...DEFAULT_ACCESS.resources, ...(cfg.resources ?? {}) },
+		allowRawFetch: cfg.allowRawFetch === true,
+	};
+}
+
+function isAllowedResource(config: Required<McpAccessConfig>, type: string, id: string) {
+	return config.resources[resourceKey(type, id)] === true;
+}
+
+function allowedLogLevels(config: Required<McpAccessConfig>) {
+	return LOG_LEVELS.filter((level) => config.logLevels[level] === true);
+}
+
+function quoteSql(value: string) {
+	return `'${value.replace(/'/g, "''")}'`;
+}
+
+function resultSummary(value: unknown): string {
+	if (Array.isArray(value)) {
+		return `${value.length} result(s)`;
+	}
+	if (value && typeof value === "object") {
+		const keys = Object.keys(value as Record<string, unknown>);
+		return keys.length ? `object: ${keys.slice(0, 6).join(", ")}` : "object";
+	}
+	return String(value).slice(0, 200);
+}
+
+async function explorerCall(
+	app: ExplorerApp,
+	c: ExplorerContext,
+	method: string,
+	path: string,
+	body?: unknown
+): Promise<unknown> {
 	const env = c.env;
 	const ctx = c.executionCtx;
-	const enc = encodeURIComponent;
-
-	async function call(
-		method: string,
-		path: string,
-		body?: unknown
-	): Promise<unknown> {
-		const init: RequestInit = { method };
-		if (body !== undefined) {
-			init.headers = { "content-type": "application/json" };
-			init.body = JSON.stringify(body);
-		}
-		const res = await app.request(`${API_BASE}${path}`, init, env, ctx);
-		const text = await res.text();
-		let data: unknown = text;
-		try {
-			data = text ? JSON.parse(text) : null;
-		} catch {
-			// non-JSON body (e.g. a raw KV/R2 value) — return as text
-		}
-		if (!res.ok) {
-			const detail = typeof data === "string" ? data : JSON.stringify(data);
-			throw new Error(`${method} ${path} -> ${res.status}: ${detail}`);
-		}
-		return data;
+	const init: RequestInit = { method };
+	if (body !== undefined) {
+		init.headers = { "content-type": "application/json" };
+		init.body = JSON.stringify(body);
 	}
-
-	function d1Rows(json: unknown): Record<string, unknown>[] {
-		const result = (json as { result?: unknown[] })?.result?.[0] as
-			| { results?: { columns?: string[]; rows?: unknown[][] } }
-			| undefined;
-		const cols = result?.results?.columns ?? [];
-		const rows = result?.results?.rows ?? [];
-		return rows.map((r) =>
-			Object.fromEntries(cols.map((col, i) => [col, r[i]]))
-		);
+	const res = await app.request(`${API_BASE}${path}`, init, env, ctx);
+	const text = await res.text();
+	let data: unknown = text;
+	try {
+		data = text ? JSON.parse(text) : null;
+	} catch {
+		// non-JSON body (e.g. a raw KV/R2 value) — return as text
 	}
-
-	async function d1Query(databaseId: string, statement: string) {
-		return d1Rows(
-			await call("POST", `/d1/database/${databaseId}/raw`, { sql: statement })
-		);
+	if (!res.ok) {
+		const detail = typeof data === "string" ? data : JSON.stringify(data);
+		throw new Error(`${method} ${path} -> ${res.status}: ${detail}`);
 	}
+	return data;
+}
 
-	let traceDbId: string | undefined;
-	async function findTraceDb(): Promise<string> {
-		if (traceDbId) {
-			return traceDbId;
-		}
-		const json = (await call("GET", "/local/workers")) as {
-			result?: { bindings?: { d1?: { id: string; bindingName?: string }[] } }[];
-		};
-		for (const worker of json?.result ?? []) {
-			for (const db of worker?.bindings?.d1 ?? []) {
-				if (/trace/i.test(db.bindingName ?? "")) {
-					traceDbId = db.id;
-					return db.id;
-				}
+function d1Rows(json: unknown): Record<string, unknown>[] {
+	const result = (json as { result?: unknown[] })?.result?.[0] as
+		| { results?: { columns?: string[]; rows?: unknown[][] } }
+		| undefined;
+	const cols = result?.results?.columns ?? [];
+	const rows = result?.results?.rows ?? [];
+	return rows.map((r) => Object.fromEntries(cols.map((col, i) => [col, r[i]])));
+}
+
+async function d1Query(
+	app: ExplorerApp,
+	c: ExplorerContext,
+	databaseId: string,
+	statement: string
+) {
+	return d1Rows(
+		await explorerCall(app, c, "POST", `/d1/database/${databaseId}/raw`, {
+			sql: statement,
+		})
+	);
+}
+
+async function findTraceDb(app: ExplorerApp, c: ExplorerContext): Promise<string> {
+	const json = (await explorerCall(app, c, "GET", "/local/workers")) as {
+		result?: { bindings?: { d1?: { id: string; bindingName?: string }[] } }[];
+	};
+	for (const worker of json?.result ?? []) {
+		for (const db of worker?.bindings?.d1 ?? []) {
+			if (/trace/i.test(db.bindingName ?? "")) {
+				return db.id;
 			}
 		}
+	}
+	throw new Error(
+		"No trace store found — run with observability enabled to capture traces."
+	);
+}
+
+async function loadAccessConfig(app: ExplorerApp, c: ExplorerContext) {
+	try {
+		const traceDb = await findTraceDb(app, c);
+		const rows = await d1Query(
+			app,
+			c,
+			traceDb,
+			"SELECT config FROM mcp_config WHERE id = 1 LIMIT 1"
+		);
+		const raw = rows[0]?.config;
+		if (typeof raw === "string") {
+			return normalizeAccess(JSON.parse(raw));
+		}
+	} catch {
+		// No trace/config store yet — fall back to least-privilege defaults.
+	}
+	return normalizeAccess({});
+}
+
+async function auditMcpCall(
+	app: ExplorerApp,
+	c: ExplorerContext,
+	tool: string,
+	args: unknown,
+	result: unknown,
+	status: "ok" | "error" | "denied"
+) {
+	try {
+		const traceDb = await findTraceDb(app, c);
+		await d1Query(
+			app,
+			c,
+			traceDb,
+			"CREATE TABLE IF NOT EXISTS mcp_calls (id INTEGER PRIMARY KEY AUTOINCREMENT, tool TEXT, args TEXT, result TEXT, status TEXT, created_at TEXT DEFAULT (datetime('now')))"
+		);
+		await d1Query(
+			app,
+			c,
+			traceDb,
+			`INSERT INTO mcp_calls (tool, args, result, status) VALUES (${quoteSql(tool)}, ${quoteSql(JSON.stringify(args ?? {}))}, ${quoteSql(serialize(result).slice(0, 20000))}, ${quoteSql(status)})`
+		);
+	} catch {
+		// Auditing is best-effort: never fail the user's MCP call because logging failed.
+	}
+}
+
+/** Build the `cf` client exposed to codemode snippets. */
+async function makeCf(app: ExplorerApp, c: ExplorerContext) {
+	const config = await loadAccessConfig(app, c);
+	const accessLog: AccessEvent[] = [];
+	const enc = encodeURIComponent;
+
+	function record(event: AccessEvent) {
+		accessLog.push(event);
+	}
+
+	function deny(type: string, id: string, operation: string) {
+		record({ type, id, operation, status: "denied" });
+		throw new Error(`Access denied: ${type}:${id} is not enabled for agents`);
+	}
+
+	function requireResource(type: string, id: string, operation: string) {
+		if (!isAllowedResource(config, type, id)) {
+			deny(type, id, operation);
+		}
+		record({ type, id, operation, status: "ok" });
+	}
+
+	async function listAllowedResources<T extends { id: string }>(
+		type: string,
+		operation: string,
+		load: () => Promise<unknown>,
+		getItems: (json: unknown) => T[]
+	): Promise<T[]> {
+		const json = await load();
+		const items = getItems(json).filter((item) => isAllowedResource(config, type, item.id));
+		record({ type, operation, status: "ok", detail: `${items.length} visible` });
+		return items;
+	}
+
+	function assertRawFetchAllowed(method: string, path: string) {
+		if (!config.allowRawFetch) {
+			record({ type: "raw", operation: `${method} ${path}`, status: "denied" });
+			throw new Error(
+				"Access denied: raw Explorer API access is disabled for agents"
+			);
+		}
+		record({ type: "raw", operation: `${method} ${path}`, status: "ok" });
+	}
+
+	function enforceTraceSql(statement: string) {
+		if (!/\blogs\b/i.test(statement)) {
+			record({ type: "traces", operation: "query", status: "ok" });
+			return;
+		}
+		const levels = allowedLogLevels(config);
+		if (levels.length === LOG_LEVELS.length) {
+			record({ type: "traces", operation: "query logs", status: "ok" });
+			return;
+		}
+		record({
+			type: "traces",
+			operation: "query logs",
+			status: "denied",
+			detail: `allowed levels: ${levels.join(", ") || "none"}`,
+		});
 		throw new Error(
-			"No trace store found — run with observability enabled to capture traces."
+			"Access denied: raw SQL over logs is disabled unless all log levels are allowed. Use cf.traces.logs() so log-level policy can be enforced."
 		);
 	}
 
 	return {
+		__accessLog: accessLog,
 		/** Escape hatch: call any explorer API route (see the OpenAPI spec). */
-		fetch: (method: string, path: string, body?: unknown) =>
-			call(method, path, body),
+		fetch: (method: string, path: string, body?: unknown) => {
+			assertRawFetchAllowed(method, path);
+			return explorerCall(app, c, method, path, body);
+		},
 		/** Workers running in this dev session, with their bindings. */
-		workers: () => call("GET", "/local/workers"),
+		workers: () => explorerCall(app, c, "GET", "/local/workers"),
 		d1: {
-			list: () => call("GET", "/d1/database"),
+			list: () =>
+				listAllowedResources(
+					"d1",
+					"list",
+					() => explorerCall(app, c, "GET", "/d1/database"),
+					(json) => ((json as { result?: { id: string }[] }).result ?? [])
+				),
 			/** Run SQL against a D1 database; returns rows as objects. */
-			query: (databaseId: string, sql: string) => d1Query(databaseId, sql),
+			query: (databaseId: string, sql: string) => {
+				requireResource("d1", databaseId, "query");
+				return d1Query(app, c, databaseId, sql);
+			},
 		},
 		kv: {
-			namespaces: () => call("GET", "/storage/kv/namespaces"),
-			keys: (namespaceId: string) =>
-				call("GET", `/storage/kv/namespaces/${namespaceId}/keys`),
-			get: (namespaceId: string, key: string) =>
-				call("GET", `/storage/kv/namespaces/${namespaceId}/values/${enc(key)}`),
+			namespaces: () =>
+				listAllowedResources(
+					"kv",
+					"list",
+					() => explorerCall(app, c, "GET", "/storage/kv/namespaces"),
+					(json) => ((json as { result?: { id: string }[] }).result ?? [])
+				),
+			keys: (namespaceId: string) => {
+				requireResource("kv", namespaceId, "keys");
+				return explorerCall(app, c, "GET", `/storage/kv/namespaces/${namespaceId}/keys`);
+			},
+			get: (namespaceId: string, key: string) => {
+				requireResource("kv", namespaceId, `get ${key}`);
+				return explorerCall(
+					app,
+					c,
+					"GET",
+					`/storage/kv/namespaces/${namespaceId}/values/${enc(key)}`
+				);
+			},
 		},
 		do: {
-			namespaces: () => call("GET", "/workers/durable_objects/namespaces"),
-			objects: (namespaceId: string) =>
-				call(
+			namespaces: () =>
+				listAllowedResources(
+					"do",
+					"list",
+					() => explorerCall(app, c, "GET", "/workers/durable_objects/namespaces"),
+					(json) => ((json as { result?: { id: string }[] }).result ?? [])
+				),
+			objects: (namespaceId: string) => {
+				requireResource("do", namespaceId, "objects");
+				return explorerCall(
+					app,
+					c,
 					"GET",
 					`/workers/durable_objects/namespaces/${namespaceId}/objects`
-				),
+				);
+			},
 			/** Run SQL against a Durable Object's SQLite storage. */
-			query: (namespaceId: string, sql: string) =>
-				call(
+			query: (namespaceId: string, sql: string) => {
+				requireResource("do", namespaceId, "query");
+				return explorerCall(
+					app,
+					c,
 					"POST",
 					`/workers/durable_objects/namespaces/${namespaceId}/query`,
 					{
 						sql,
 					}
-				),
+				);
+			},
 		},
 		r2: {
-			buckets: () => call("GET", "/r2/buckets"),
-			objects: (bucket: string) => call("GET", `/r2/buckets/${bucket}/objects`),
+			buckets: () =>
+				listAllowedResources(
+					"r2",
+					"list",
+					() => explorerCall(app, c, "GET", "/r2/buckets"),
+					(json) => ((json as { result?: { id: string }[] }).result ?? [])
+				),
+			objects: (bucket: string) => {
+				requireResource("r2", bucket, "objects");
+				return explorerCall(app, c, "GET", `/r2/buckets/${bucket}/objects`);
+			},
 		},
 		workflows: {
-			list: () => call("GET", "/workflows"),
-			get: (name: string) => call("GET", `/workflows/${enc(name)}`),
+			list: () => explorerCall(app, c, "GET", "/workflows"),
+			get: (name: string) => explorerCall(app, c, "GET", `/workflows/${enc(name)}`),
 			instances: (name: string) =>
-				call("GET", `/workflows/${enc(name)}/instances`),
+				explorerCall(app, c, "GET", `/workflows/${enc(name)}/instances`),
 		},
 		/** The local observability trace store (tables: traces, spans, logs). */
 		traces: {
-			query: async (sql: string) => d1Query(await findTraceDb(), sql),
+			query: async (sql: string) => {
+				enforceTraceSql(sql);
+				return d1Query(app, c, await findTraceDb(app, c), sql);
+			},
+			logs: async ({
+				level,
+				query,
+				limit = 50,
+			}: {
+				level?: string;
+				query?: string;
+				limit?: number;
+			} = {}) => {
+				const levels = allowedLogLevels(config);
+				if (level && !levels.includes(level as (typeof LOG_LEVELS)[number])) {
+					record({ type: "traces", operation: `logs ${level}`, status: "denied" });
+					throw new Error(`Access denied: log level ${level} is not enabled for agents`);
+				}
+				const wanted = level ? [level] : levels;
+				if (wanted.length === 0) {
+					return [];
+				}
+				let where = `level IN (${wanted.map(quoteSql).join(",")})`;
+				if (query) {
+					where += ` AND (message LIKE ${quoteSql(`%${query}%`)} OR operation LIKE ${quoteSql(`%${query}%`)})`;
+				}
+				record({ type: "traces", operation: "logs", status: "ok" });
+				return d1Query(
+					app,
+					c,
+					await findTraceDb(app, c),
+					`SELECT level, message, operation, trace_id, created_at FROM logs WHERE ${where} ORDER BY created_at DESC LIMIT ${Math.max(1, Math.min(Math.floor(limit), 200))}`
+				);
+			},
 		},
 	};
 }
@@ -167,12 +419,22 @@ get back only the data you need. The snippet is an async function BODY with a
 - cf.r2.buckets() / cf.r2.objects(bucket)
 - cf.workflows.list() / cf.workflows.get(name) / cf.workflows.instances(name)
 - cf.traces.query(sql)              -> the observability trace store (tables: traces, spans, logs)
-- cf.fetch(method, path, body)      -> any other explorer API route (escape hatch)
+- cf.traces.logs({ level, query, limit }) -> logs with log-level policy enforced
+- cf.fetch(method, path, body)      -> disabled by default; requires raw API access to be enabled
+
+## Access policy
+- Traces/spans are available by default.
+- Log queries must respect the selected log levels; prefer cf.traces.logs() for logs.
+- D1/KV/R2/Durable Object data is opt-in per binding from the Agent Access page.
+- Raw cf.fetch() is disabled by default because it can bypass typed permissions.
 
 ## Examples
 // recent errors
 return await cf.traces.query(
   "SELECT trace_id, name, status_code FROM traces WHERE parent_span_id IS NULL AND status_code >= 500 ORDER BY start_ms DESC LIMIT 10");
+
+// recent allowed error logs
+return await cf.traces.logs({ level: "error", limit: 10 });
 
 // join data: which session keys exist + how many errored requests
 const sessions = await cf.kv.keys(nsId);
@@ -240,7 +502,33 @@ async function runTool(
 			throw new Error("codemode is unavailable (UNSAFE_EVAL binding missing)");
 		}
 		const fn = unsafeEval.newAsyncFunction(code, "codemode", "cf");
-		return await fn(makeCf(app, c));
+		const cf = await makeCf(app, c);
+		try {
+			const result = await fn(cf);
+			await auditMcpCall(
+				app,
+				c,
+				"run",
+				{ code, access: cf.__accessLog },
+				{ summary: resultSummary(result), result },
+				cf.__accessLog.some((event) => event.status === "denied")
+					? "denied"
+					: "ok"
+			);
+			return result;
+		} catch (error) {
+			await auditMcpCall(
+				app,
+				c,
+				"run",
+				{ code, access: cf.__accessLog },
+				{ error: (error as Error).message },
+				cf.__accessLog.some((event) => event.status === "denied")
+					? "denied"
+					: "error"
+			);
+			throw error;
+		}
 	}
 	throw new Error(`Unknown tool: ${name}`);
 }
