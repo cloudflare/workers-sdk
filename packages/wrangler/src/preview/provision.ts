@@ -71,7 +71,7 @@ export async function provisionPreviewBindings(
 
 			const title = getPreviewResourceName(workerName, previewSlug, kv.binding);
 			const existing = (await listKVNamespaces(config, accountId)).find(
-				(namespace) => namespace.title === title
+				(kvNamespace) => kvNamespace.title === title
 			);
 			const id =
 				existing?.id ?? (await createKVNamespace(config, accountId, title));
@@ -146,15 +146,15 @@ export async function cleanupPreviewBindings(
 		}
 
 		const title = getPreviewResourceName(workerName, previewSlug, kv.binding);
-		const namespace = (await listKVNamespaces(config, accountId)).find(
+		const kvNamespace = (await listKVNamespaces(config, accountId)).find(
 			(namespace) => namespace.title === title
 		);
-		if (!namespace) {
+		if (!kvNamespace) {
 			continue;
 		}
 
 		try {
-			await deleteKVNamespace(config, accountId, namespace.id);
+			await deleteKVNamespace(config, accountId, kvNamespace.id);
 		} catch (error) {
 			if (!isNotFoundError(error)) {
 				throw error;
