@@ -14,4 +14,4 @@ wrangler ai-search jobs cancel <instance> <job-id>
 wrangler ai-search jobs logs <instance> <job-id>
 ```
 
-All commands accept `--namespace`/`-n` (defaults to `default`) and `--json` for clean machine-readable output.
+All commands accept `--namespace`/`-n` (defaults to `default`). All commands except `cancel` also accept `--json` for clean machine-readable output.
