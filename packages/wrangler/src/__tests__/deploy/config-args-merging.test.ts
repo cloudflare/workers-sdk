@@ -970,6 +970,41 @@ describe.each([
 			expect(metadata.annotations).toEqual({ "workers/alias": "my-alias" });
 		});
 
+		it("--preview-alias rejects aliases with slashes", async ({ expect }) => {
+			writeWranglerConfig({ main: "./index.js" });
+			writeWorkerSource();
+			await expect(
+				runWrangler("versions upload --preview-alias feature/my-feature")
+			).rejects.toThrow(
+				`Preview alias "feature/my-feature" is invalid. Aliases must start with a letter and contain only lowercase letters, numbers, and hyphens. Did you mean "feature-my-feature"?`
+			);
+		});
+
+		it("--preview-alias rejects aliases that are too long", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({ main: "./index.js" });
+			writeWorkerSource();
+			const longAlias = "a".repeat(64);
+			await expect(
+				runWrangler(`versions upload --preview-alias ${longAlias}`)
+			).rejects.toThrow(
+				`Preview alias "${longAlias}" is too long (64 characters). Aliases must be at most 63 characters.`
+			);
+		});
+
+		it("--preview-alias rejects aliases starting with a number", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({ main: "./index.js" });
+			writeWorkerSource();
+			await expect(
+				runWrangler("versions upload --preview-alias 123abc")
+			).rejects.toThrow(
+				`Preview alias "123abc" is invalid. Aliases must start with a letter and contain only lowercase letters, numbers, and hyphens.`
+			);
+		});
+
 		it("annotations default to undefined when no flags provided", async ({
 			expect,
 		}) => {

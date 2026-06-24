@@ -1,4 +1,9 @@
-import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
+import {
+	ALIAS_VALIDATION_REGEX,
+	MAX_PREVIEW_ALIAS_LENGTH,
+	generatePreviewAlias,
+	sanitizeBranchName,
+} from "@cloudflare/deploy-helpers";
 import {
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
@@ -182,6 +187,23 @@ export async function mergeVersionsUploadConfigArgs(
 		(getCIGeneratePreviewAlias() === "true"
 			? generatePreviewAlias(shared.name ?? "")
 			: undefined);
+
+	if (args.previewAlias !== undefined) {
+		if (args.previewAlias.length > MAX_PREVIEW_ALIAS_LENGTH) {
+			throw new UserError(
+				`Preview alias "${args.previewAlias}" is too long (${args.previewAlias.length} characters). Aliases must be at most ${MAX_PREVIEW_ALIAS_LENGTH} characters.`,
+				{ telemetryMessage: true }
+			);
+		}
+		if (!ALIAS_VALIDATION_REGEX.test(args.previewAlias)) {
+			const suggestion = sanitizeBranchName(args.previewAlias);
+			throw new UserError(
+				`Preview alias "${args.previewAlias}" is invalid. Aliases must start with a letter and contain only lowercase letters, numbers, and hyphens.` +
+					(suggestion ? ` Did you mean "${suggestion}"?` : ""),
+				{ telemetryMessage: true }
+			);
+		}
+	}
 
 	return {
 		props: {

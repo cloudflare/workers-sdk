@@ -5,7 +5,8 @@ import { logger } from "../../shared/context";
 
 const MAX_DNS_LABEL_LENGTH = 63;
 const HASH_LENGTH = 4;
-const ALIAS_VALIDATION_REGEX = /^[a-z](?:[a-z0-9-]*[a-z0-9])?$/i;
+export const ALIAS_VALIDATION_REGEX = /^[a-z](?:[a-z0-9-]*[a-z0-9])?$/i;
+export const MAX_PREVIEW_ALIAS_LENGTH = MAX_DNS_LABEL_LENGTH;
 
 /**
  * Sanitizes a branch name to create a valid DNS label alias.
