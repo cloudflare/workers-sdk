@@ -68,15 +68,9 @@ export default async function versionsUpload(
 
 	const assetsOptions = resolveAssetOptions(props, config);
 
-	await validateWorkerProps(props, config, "versions-upload");
+	// All new validation should go in validateWorkerProps()
+	await validateWorkerProps(props, config);
 	assert(name); // already validated inside validateWorkerProps, but TS can't see that
-
-	// versions upload only validation - validateWorkerProps is shared between deploy and versions upload
-	if (config.containers && config.containers.length > 0) {
-		logger.warn(
-			`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`wrangler deploy\`.`
-		);
-	}
 
 	let versionId: string | null = null;
 	let workerTag: string | null = null;

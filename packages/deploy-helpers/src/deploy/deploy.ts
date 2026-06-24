@@ -52,7 +52,6 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
 import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
-import { validateRoutes } from "./helpers/validate-routes";
 import { validateWorkerProps } from "./helpers/validate-worker-props";
 import {
 	createDeployment,
@@ -152,25 +151,9 @@ export default async function deploy(
 
 	const assetsOptions = resolveAssetOptions(props, config);
 
-	await validateWorkerProps(props, config, "deploy");
+	// All new validation should go in validateWorkerProps()
+	await validateWorkerProps({ ...props, assetsOptions }, config);
 	assert(name); // already validated inside validateWorkerProps, but TS can't see that
-
-	// deploy only checks - validateWorkerProps is shared with versions upload
-	validateRoutes(props.routes, assetsOptions);
-	assert(
-		!config.site || config.site.bucket,
-		"A [site] definition requires a `bucket` field with a path to the site's assets directory."
-	);
-	if (
-		!props.isWorkersSite &&
-		Boolean(props.legacyAssetPaths) &&
-		entry.format === "service-worker"
-	) {
-		throw new UserError(
-			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/",
-			{ telemetryMessage: "deploy service worker assets unsupported" }
-		);
-	}
 
 	const deployConfirm = getDeployConfirmFunction({
 		strictMode: props.strict,
