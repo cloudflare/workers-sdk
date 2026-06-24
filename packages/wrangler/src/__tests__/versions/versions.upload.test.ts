@@ -136,6 +136,60 @@ describe("versions upload", () => {
 		) as WorkerMetadata;
 	}
 
+	beforeEach(() => {
+		// Mock the secrets endpoint that checkRemoteSecretsOverride calls
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
+		);
+	});
+
+	/**
+	 * Mocks the 6 endpoints that downloadWorkerConfig calls when
+	 * last_deployed_from === "dash". The remote config matches a minimal
+	 * local wrangler config so the diff is non-destructive by default.
+	 * Pass `remoteBindings` to create a destructive diff.
+	 */
+	function mockRemoteWorkerConfig(remoteBindings: unknown[] = []) {
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/services/:serviceName/environments/:env/bindings",
+				() => HttpResponse.json(createFetchResult(remoteBindings))
+			),
+			http.get(
+				"*/accounts/:accountId/workers/services/:serviceName/environments/:env/routes",
+				() => HttpResponse.json(createFetchResult([]))
+			),
+			http.get("*/accounts/:accountId/workers/domains/records", () =>
+				HttpResponse.json(createFetchResult([]))
+			),
+			http.get(
+				"*/accounts/:accountId/workers/services/:serviceName/environments/:env/subdomain",
+				() =>
+					HttpResponse.json(
+						createFetchResult({ enabled: false, previews_enabled: false })
+					)
+			),
+			http.get(
+				"*/accounts/:accountId/workers/services/:serviceName/environments/:env",
+				() =>
+					HttpResponse.json(
+						createFetchResult({
+							script: {
+								compatibility_date: "2024-01-01",
+							},
+						})
+					)
+			),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:workerName/schedules",
+				() => HttpResponse.json(createFetchResult({ schedules: [] }))
+			)
+		);
+	}
+
 	describe("with --temporary", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken({ apiToken: null });
@@ -1318,11 +1372,12 @@ describe("versions upload", () => {
 			setIsTTY(true);
 		});
 
-		test("should warn when worker was last deployed from dashboard", async ({
+		test("should warn when worker was last deployed from dashboard with destructive config diff", async ({
 			expect,
 		}) => {
 			mockGetScript({
 				default_environment: {
+					environment: "production",
 					script: {
 						last_deployed_from: "dash",
 						tag: "test-tag",
@@ -1330,6 +1385,10 @@ describe("versions upload", () => {
 					},
 				},
 			});
+			// Remote config has a binding that local config does not — destructive diff
+			mockRemoteWorkerConfig([
+				{ name: "REMOTE_VAR", text: "remote-value", type: "plain_text" },
+			]);
 			mockUploadVersion(false);
 
 			writeWranglerConfig({
@@ -1346,7 +1405,7 @@ describe("versions upload", () => {
 			await runWrangler("versions upload");
 
 			expect(std.warn).toContain(
-				"You are about to upload a Worker Version that was last published via the Cloudflare Dashboard"
+				"Uploading the Worker will override the remote configuration with your local one."
 			);
 		});
 
@@ -1378,7 +1437,7 @@ describe("versions upload", () => {
 			await runWrangler("versions upload");
 
 			expect(std.warn).toContain(
-				"You are about to upload a Workers Version that was last updated via the API"
+				"You are about to upload a Worker that was last updated via the script API"
 			);
 		});
 
@@ -1387,6 +1446,7 @@ describe("versions upload", () => {
 		}) => {
 			mockGetScript({
 				default_environment: {
+					environment: "production",
 					script: {
 						last_deployed_from: "dash",
 						tag: "test-tag",
@@ -1394,6 +1454,10 @@ describe("versions upload", () => {
 					},
 				},
 			});
+			// Remote config has a binding that local config does not — destructive diff
+			mockRemoteWorkerConfig([
+				{ name: "REMOTE_VAR", text: "remote-value", type: "plain_text" },
+			]);
 
 			writeWranglerConfig({
 				name: "test-name",
@@ -1412,7 +1476,7 @@ describe("versions upload", () => {
 			expect(std.out).not.toContain("Uploaded");
 		});
 
-		test("should handle worker not found gracefully (new worker)", async ({
+		test("should error when worker not found (must deploy first)", async ({
 			expect,
 		}) => {
 			// Mock a 404 for the service lookup
@@ -1432,6 +1496,41 @@ describe("versions upload", () => {
 					{ once: true }
 				)
 			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+
+			await expect(runWrangler("versions upload")).rejects.toThrow(
+				"You cannot upload a new version of a Worker that does not yet exist. Please use `wrangler deploy` to create your Worker before using `wrangler versions upload`."
+			);
+		});
+	});
+
+	describe("non-interactive/CI behavior", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("should continue without prompting in non-interactive mode when last deployed from dashboard", async ({
+			expect,
+		}) => {
+			mockGetScript({
+				default_environment: {
+					environment: "production",
+					script: {
+						last_deployed_from: "dash",
+						tag: "test-tag",
+						tags: null,
+					},
+				},
+			});
+			// Remote config has a destructive diff to exercise the warning path
+			mockRemoteWorkerConfig([
+				{ name: "REMOTE_VAR", text: "remote-value", type: "plain_text" },
+			]);
 			mockUploadVersion(false);
 
 			writeWranglerConfig({
@@ -1442,7 +1541,167 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload");
 
+			// Should upload successfully without prompting (auto-continues in CI)
 			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		test("should continue without prompting in non-interactive mode when last deployed from API", async ({
+			expect,
+		}) => {
+			mockGetScript({
+				default_environment: {
+					script: {
+						last_deployed_from: "api",
+						tag: "test-tag",
+						tags: null,
+					},
+				},
+			});
+			mockUploadVersion(false);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			// Should upload successfully without prompting
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		test("should error when worker not found in non-interactive mode", async ({
+			expect,
+		}) => {
+			// Mock a 404 for the service lookup
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/services/:scriptName`,
+					() => {
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: 10090,
+									message: "workers.api.error.service_not_found",
+								},
+							])
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+
+			await expect(runWrangler("versions upload")).rejects.toThrow(
+				"You cannot upload a new version of a Worker that does not yet exist. Please use `wrangler deploy` to create your Worker before using `wrangler versions upload`."
+			);
+		});
+
+		test("should abort in non-interactive strict mode when last deployed from API", async ({
+			expect,
+		}) => {
+			mockGetScript({
+				default_environment: {
+					script: {
+						last_deployed_from: "api",
+						tag: "test-tag",
+						tags: null,
+					},
+				},
+			});
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload --strict");
+
+			expect(std.warn).toContain(
+				"You are about to upload a Worker that was last updated via the script API"
+			);
+			expect(std.err).toContain(
+				"Aborting the upload operation because of conflicts"
+			);
+			expect(std.out).not.toContain("Uploaded");
+			expect(process.exitCode).not.toBe(0);
+		});
+
+		test("should abort in non-interactive strict mode when dashboard config has destructive diff", async ({
+			expect,
+		}) => {
+			mockGetScript({
+				default_environment: {
+					environment: "production",
+					script: {
+						last_deployed_from: "dash",
+						tag: "test-tag",
+						tags: null,
+					},
+				},
+			});
+			// Remote config has a binding that local config does not — destructive diff
+			mockRemoteWorkerConfig([
+				{ name: "REMOTE_VAR", text: "remote-value", type: "plain_text" },
+			]);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload --strict");
+
+			expect(std.warn).toContain(
+				"Uploading the Worker will override the remote configuration with your local one."
+			);
+			expect(std.err).toContain(
+				"Aborting the upload operation because of conflicts"
+			);
+			expect(std.out).not.toContain("Uploaded");
+			expect(process.exitCode).not.toBe(0);
+		});
+
+		test("should abort in non-interactive strict mode when remote secrets would be overridden", async ({
+			expect,
+		}) => {
+			mockGetScript();
+
+			// Override default secrets mock to return a secret that conflicts with a local var
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+					() =>
+						HttpResponse.json(
+							createFetchResult([{ name: "MY_VAR", type: "secret_text" }])
+						),
+					{ once: true }
+				)
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				vars: { MY_VAR: "not-a-secret" },
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload --strict");
+
+			expect(std.warn).toContain("conflict");
+			expect(std.err).toContain(
+				"Aborting the upload operation because of conflicts"
+			);
+			expect(std.out).not.toContain("Uploaded");
+			expect(process.exitCode).not.toBe(0);
 		});
 	});
 

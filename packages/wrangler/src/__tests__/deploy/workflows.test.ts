@@ -1265,12 +1265,20 @@ describe("deploy", () => {
 
 				await runWrangler("deploy --strict");
 
-				expect(std.warn).toContain(
-					"already exist and belong to different workers"
-				);
-				expect(std.err).toContain(
-					"Aborting the deployment operation because of conflicts"
-				);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe following workflow(s) already exist and belong to different workers:[0m
+
+					    - "my-workflow" (currently belongs to "other-worker")
+
+					  Deploying will reassign these workflows to "test-name".
+
+					"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+
+					"
+				`);
 				expect(std.out).not.toContain("Uploaded");
 				expect(process.exitCode).not.toBe(0);
 			});

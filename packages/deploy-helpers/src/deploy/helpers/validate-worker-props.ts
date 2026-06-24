@@ -1,15 +1,26 @@
 import assert from "node:assert";
 import {
 	configFileName,
+	experimental_patchConfig,
 	formatConfigSnippet,
 	getTodaysCompatDate,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { logger } from "../../shared/context";
+import { confirm, fetchResult, logger } from "../../shared/context";
+import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
+import { checkWorkflowConflicts } from "./check-workflow-conflicts";
+import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
+import { getDeployConfirmFunction } from "./deploy-confirm";
+import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
 import { validateRoutes } from "./validate-routes";
+import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type { DeployProps, VersionsUploadProps } from "../../shared/types";
-import type { AssetsOptions, Config } from "@cloudflare/workers-utils";
+import type {
+	AssetsOptions,
+	Config,
+	RawConfig,
+} from "@cloudflare/workers-utils";
 
 /**
  * All validation of props (merged args and config) should go here,
@@ -97,7 +108,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	} else {
 		if (config.containers && config.containers.length > 0) {
 			logger.warn(
-				`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`wrangler deploy\`.`
+				`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`deploy\`.`
 			);
 		}
 	}
@@ -106,4 +117,169 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		assert(accountId, "Missing account ID");
 		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
 	}
+}
+
+export type PreUploadApiChecksResult = {
+	workerTag: string | null;
+	tags: string[];
+	workerExists: boolean;
+	aborted: boolean;
+};
+
+export async function preUploadApiChecks(
+	props: DeployProps | VersionsUploadProps,
+	config: Config
+): Promise<PreUploadApiChecksResult> {
+	const { accountId, name } = props;
+	if (props.dryRun || !accountId || !name) {
+		return {
+			workerTag: null,
+			tags: [],
+			workerExists: true,
+			aborted: false,
+		};
+	}
+
+	const deployConfirm = getDeployConfirmFunction({
+		strictMode: props.strict,
+	});
+
+	let workerTag: string | null = null;
+	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
+	let workerExists = true;
+
+	// Skip the service metadata fetch for dispatch namespace deploys (Workers for Platforms).
+	// Dispatch namespace scripts don't have standard service metadata.
+	const skipMetadataFetch =
+		props.command === "deploy" && !!props.dispatchNamespace;
+
+	if (!skipMetadataFetch) {
+		try {
+			const serviceMetaData = await fetchResult<{
+				default_environment: {
+					environment: string;
+					script: {
+						tag: string;
+						tags: string[] | null;
+						last_deployed_from: "dash" | "api";
+					};
+				};
+			}>(config, `/accounts/${accountId}/workers/services/${name}`);
+			const {
+				default_environment: { script },
+			} = serviceMetaData;
+			workerTag = script.tag;
+			tags = script.tags ?? tags;
+
+			if (script.last_deployed_from === "dash") {
+				const remoteWorkerConfig = await downloadWorkerConfig(
+					name,
+					serviceMetaData.default_environment.environment,
+					props.entry.file,
+					accountId
+				);
+
+				const configForDiff =
+					props.command === "deploy"
+						? {
+								...config,
+								// We also want to include all the routes used for deployment
+								routes: props.routes,
+							}
+						: config;
+
+				const configDiff = getRemoteConfigDiff(
+					remoteWorkerConfig,
+					configForDiff
+				);
+
+				// If there are only additive changes (or no changes at all) there should be no problem,
+				// just using the local config (and override the remote one) should be totally fine
+				if (!configDiff.nonDestructive) {
+					logger.warn(
+						"The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
+							`\n${configDiff.diff}\n\n` +
+							"Uploading the Worker will override the remote configuration with your local one."
+					);
+					if (!(await deployConfirm("Would you like to continue?"))) {
+						if (
+							config.userConfigPath &&
+							/\.jsonc?$/.test(config.userConfigPath)
+						) {
+							if (
+								await confirm(
+									"Would you like to update the local config file with the remote values?",
+									{
+										defaultValue: true,
+										fallbackValue: true,
+									}
+								)
+							) {
+								const patchObj: RawConfig = getConfigPatch(
+									configDiff.diff,
+									props.env
+								);
+
+								experimental_patchConfig(
+									config.userConfigPath,
+									patchObj,
+									false
+								);
+							}
+						}
+
+						return { workerTag, tags, workerExists, aborted: true };
+					}
+				}
+			} else if (
+				script.last_deployed_from === "api" &&
+				!props.skipLastDeployedFromApiCheck
+			) {
+				logger.warn(
+					`You are about to upload a Worker that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
+				);
+				if (!(await deployConfirm("Would you like to continue?"))) {
+					return { workerTag, tags, workerExists, aborted: true };
+				}
+			}
+		} catch (e) {
+			if (isWorkerNotFoundError(e)) {
+				if (props.command === "versions upload") {
+					throw new UserError(
+						"You cannot upload a new version of a Worker that does not yet exist. Please use run the `deploy` command first.",
+						{ telemetryMessage: "versions upload worker not found" }
+					);
+				}
+				workerExists = false;
+			} else {
+				throw e;
+			}
+		}
+	}
+
+	const remoteSecretsCheck = await checkRemoteSecretsOverride(
+		config,
+		accountId,
+		props.env
+	);
+
+	if (remoteSecretsCheck?.override) {
+		logger.warn(remoteSecretsCheck.deployErrorMessage);
+		if (!(await deployConfirm("Would you like to continue?"))) {
+			return { workerTag, tags, workerExists, aborted: true };
+		}
+	}
+
+	if (config.workflows?.length) {
+		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
+
+		if (workflowCheck.hasConflicts) {
+			logger.warn(workflowCheck.message);
+			if (!(await deployConfirm("Do you want to continue?"))) {
+				return { workerTag, tags, workerExists, aborted: true };
+			}
+		}
+	}
+
+	return { workerTag, tags, workerExists, aborted: false };
 }
