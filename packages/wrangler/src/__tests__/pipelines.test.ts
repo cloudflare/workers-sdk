@@ -1628,6 +1628,64 @@ describe("wrangler pipelines", () => {
 				└─┴─┴─┴─┘"
 			`);
 		});
+
+		it("should create stream using full stream JSON (from streams get --json) as schema file", async ({
+			expect,
+		}) => {
+			const schemaFile = "stream_export.json";
+			// This is the shape of the output from `wrangler pipelines streams get --json`
+			const fullStreamJson = {
+				id: "stream_456",
+				name: "existing_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_456",
+				format: { type: "json" },
+				schema: {
+					fields: [
+						{ name: "id", type: "string", required: true },
+						{
+							name: "timestamp",
+							type: "timestamp",
+							required: true,
+							unit: "millisecond",
+						},
+					],
+				},
+				http: { enabled: true, authentication: true },
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+			writeFileSync(schemaFile, JSON.stringify(fullStreamJson));
+
+			const createRequest = mockCreateStreamRequest(expect, {
+				name: "my_new_stream",
+				hasSchema: true,
+			});
+
+			await runWrangler(
+				`pipelines streams create my_new_stream --schema-file ${schemaFile}`
+			);
+
+			expect(createRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain(
+				"Successfully created stream 'my_new_stream' with id 'stream_123'"
+			);
+		});
+
+		it("should error when schema file has no fields", async ({ expect }) => {
+			const schemaFile = "bad_schema.json";
+			writeFileSync(schemaFile, JSON.stringify({ something: "else" }));
+
+			await expect(
+				runWrangler(
+					`pipelines streams create my_stream --schema-file ${schemaFile}`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Schema file must contain a 'fields' array, or be the JSON output of \`wrangler pipelines streams get --json\`]`
+			);
+		});
 	});
 
 	describe("pipelines streams list", () => {
@@ -1984,6 +2042,81 @@ describe("wrangler pipelines", () => {
 				  },
 				}
 			`);
+		});
+
+		it("should export schema with --export-schema for a structured stream", async ({
+			expect,
+		}) => {
+			const mockStream: Stream = {
+				id: "stream_123",
+				name: "my_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_123",
+				format: { type: "json" },
+				schema: {
+					fields: [
+						{ name: "id", type: "string", required: true },
+						{
+							name: "timestamp",
+							type: "timestamp",
+							required: true,
+							unit: "millisecond",
+						},
+					],
+				},
+				http: { enabled: true, authentication: true },
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockGetStreamRequest("stream_123", mockStream);
+
+			await runWrangler("pipelines streams get stream_123 --export-schema");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
+				  "fields": [
+				    {
+				      "name": "id",
+				      "required": true,
+				      "type": "string",
+				    },
+				    {
+				      "name": "timestamp",
+				      "required": true,
+				      "type": "timestamp",
+				      "unit": "millisecond",
+				    },
+				  ],
+				}
+			`);
+		});
+
+		it("should show message for --export-schema on unstructured stream", async ({
+			expect,
+		}) => {
+			const mockStream: Stream = {
+				id: "stream_123",
+				name: "my_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_123",
+				format: { type: "json", unstructured: true },
+				schema: null,
+				http: { enabled: true, authentication: true },
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockGetStreamRequest("stream_123", mockStream);
+
+			await runWrangler("pipelines streams get stream_123 --export-schema");
+
+			expect(std.out).toContain(
+				"This stream has no schema (unstructured JSON). There is no schema to export."
+			);
 		});
 	});
 
