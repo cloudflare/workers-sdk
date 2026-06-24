@@ -16,12 +16,14 @@ import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
 import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
 import type {
-	ExportedHandler,
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
+} from "@cloudflare/workers-types/experimental";
+import type {
+	ExportedHandler,
 	Rpc,
 	Service,
-} from "@cloudflare/workers-types/experimental";
+} from "@cloudflare/workers-types/latest";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type {
 	DispatchFetch,
@@ -768,7 +770,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const workerName = resolveWorkerName(session, name);
 					const entrypoint = await miniflare.getWorker(workerName);
 
-					return entrypoint as Service<Module["default"]>;
+					return entrypoint as unknown as Service<Module["default"]>;
 				},
 			};
 		},

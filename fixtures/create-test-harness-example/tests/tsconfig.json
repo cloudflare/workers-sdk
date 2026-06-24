@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"module": "esnext",
 		"noEmit": true,
-		"types": ["@cloudflare/workers-types", "node"]
+		"types": ["@cloudflare/workers-types/latest", "node"]
 	},
 	"include": [
 		"../playwright.config.ts",
