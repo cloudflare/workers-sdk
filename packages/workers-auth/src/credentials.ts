@@ -2,8 +2,8 @@ import {
 	getEnvironmentVariableFactory,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { type AuthConfigStorage } from "./auth-config-file";
 import { readStoredAuthState } from "./state";
+import type { AuthConfigStorage } from "./config-file/auth";
 import type { OAuthFlowLogger } from "./context";
 import type { ApiCredentials } from "@cloudflare/workers-utils";
 

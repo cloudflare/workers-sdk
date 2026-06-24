@@ -12,21 +12,28 @@
 
 import assert from "node:assert";
 import {
-	getAPIToken as getAPITokenShared,
 	getAuthFromEnv as getAuthFromEnvShared,
 	readStoredAuthState,
-	requireApiToken as requireApiTokenShared,
 } from "@cloudflare/workers-auth";
 import { createOAuthFlow } from "@cloudflare/workers-auth";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	getCloudflareComplianceRegion,
+	UserError,
+} from "@cloudflare/workers-utils";
 import ci from "ci-info";
+import { formatDistanceToNowStrict } from "date-fns";
+import { dedent } from "ts-dedent";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { purgeConfigCaches } from "../config-cache";
 import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import { defaultAuthConfigStorage } from "./auth-config-file";
+import {
+	createTomlFileStorage,
+	defaultAuthConfigStorage,
+} from "./auth-config-file";
 import {
 	getClientIdFromEnv,
 	getCloudflareAccountIdFromEnv,
@@ -34,10 +41,13 @@ import {
 import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
+import { getTemporaryPreviewAccountConfigPath } from "./temporary-account-path";
+import { ensureTemporaryTermsAccepted } from "./temporary-terms";
 import type { Account } from "./shared";
 import type {
 	LoginOrRefreshResult,
 	LoginProps,
+	TemporaryPreviewAccount,
 } from "@cloudflare/workers-auth";
 import type {
 	ApiCredentials,
@@ -84,9 +94,38 @@ const oauthFlow = createOAuthFlow({
 	consent: WRANGLER_CONSENT_PAGES,
 	redirectUri: OAUTH_CALLBACK_URL,
 	storage: authConfigStorage,
+	allowGlobalAuthKey: true,
+	temporary: {
+		storage: createTomlFileStorage<TemporaryPreviewAccount>(
+			getTemporaryPreviewAccountConfigPath
+		),
+		prompt: ensureTemporaryTermsAccepted,
+	},
 	generateAuthUrl,
 	generateRandomState,
 });
+
+/**
+ * Mark whether `--temporary` is permitted for the current invocation.
+ */
+export function setTemporaryAllowed(allowed: boolean): void {
+	oauthFlow.setTemporaryAllowed(allowed);
+}
+
+function logTemporaryPreviewAccount(
+	temporaryPreviewAccount: TemporaryPreviewAccount,
+	cached: boolean
+): void {
+	const claimExpiresAt = new Date(temporaryPreviewAccount.claim.expiresAt);
+	logger.log(
+		dedent`
+			Temporary account ready:
+				Account: ${temporaryPreviewAccount.account.name} (${cached ? "reused" : "created"})
+				Claim within: ${formatDistanceToNowStrict(claimExpiresAt)}
+				Claim URL: ${temporaryPreviewAccount.claim.url}
+		`
+	);
+}
 
 /**
  * Try to read API credentials from environment variables.
@@ -201,20 +240,14 @@ export function printScopes(scopes: Scope[]) {
 // ---------------------------------------------------------------------------
 
 export function getAPIToken(): ApiCredentials | undefined {
-	return getAPITokenShared({
-		warningLogger: logger,
-		storage: authConfigStorage,
-	});
+	return oauthFlow.getAPIToken();
 }
 
 /**
  * Throw an error if there is no API token available.
  */
 export function requireApiToken(): ApiCredentials {
-	return requireApiTokenShared({
-		warningLogger: logger,
-		storage: authConfigStorage,
-	});
+	return oauthFlow.requireApiToken();
 }
 
 // ---------------------------------------------------------------------------
@@ -266,6 +299,10 @@ export async function loginOrRefreshIfRequired(
 	complianceConfig: ComplianceConfig,
 	props?: WranglerLoginProps
 ): Promise<LoginOrRefreshResult> {
+	if (oauthFlow.getActiveTemporaryAccount()) {
+		return { loggedIn: true };
+	}
+
 	return oauthFlow.loginOrRefreshIfRequired(
 		withDefaultScopes(complianceConfig, props)
 	);
@@ -306,6 +343,13 @@ export { PKCE_CHARSET } from "@cloudflare/workers-auth";
 export function getActiveAccountId(config: {
 	account_id?: string;
 }): string | undefined {
+	// When operating as a temporary preview account, its id is the whole
+	// identity and takes precedence over config/env/cache.
+	const temporaryAccount = oauthFlow.getActiveTemporaryAccount();
+	if (temporaryAccount) {
+		return temporaryAccount.account.id;
+	}
+
 	if (config.account_id) {
 		return config.account_id;
 	}
@@ -405,6 +449,35 @@ export async function requireAuth(
 		account_id?: string;
 	}
 ): Promise<string> {
+	if (oauthFlow.isTemporaryAllowed()) {
+		if (getCloudflareComplianceRegion(config) !== "public") {
+			throw new UserError(
+				"Temporary accounts aren't available when the compliance region is not set to public.",
+				{
+					telemetryMessage:
+						"user temporary account unavailable in compliance region",
+				}
+			);
+		}
+
+		// `--temporary` is only for unauthenticated use. If any credentials are
+		// already available (env, global key, or a stored OAuth token), refuse
+		// rather than silently provisioning a throwaway account alongside them.
+		if (getAPIToken()) {
+			throw new UserError(
+				"You're already authenticated with Cloudflare, so `--temporary` can't be used. Temporary preview accounts are only for unauthenticated use. Either remove `--temporary` to use your existing account, or log out (and unset CLOUDFLARE_API_TOKEN) first.",
+				{
+					telemetryMessage: "user temporary account already authenticated",
+				}
+			);
+		}
+
+		const { account: temporaryPreviewAccount, cached } =
+			await oauthFlow.activateTemporaryAccount();
+		logTemporaryPreviewAccount(temporaryPreviewAccount, cached);
+		return temporaryPreviewAccount.account.id;
+	}
+
 	const result = await loginOrRefreshIfRequired(config);
 	if (!result.loggedIn) {
 		if (
@@ -422,6 +495,7 @@ export async function requireAuth(
 			});
 		}
 	}
+
 	const accountId = await getOrSelectAccountId(config);
 	if (!accountId) {
 		throw new UserError("No account id found, quitting...", {

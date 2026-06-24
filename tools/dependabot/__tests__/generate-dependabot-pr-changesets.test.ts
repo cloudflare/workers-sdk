@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import dedent from "ts-dedent";
-import { beforeEach, describe, it, vitest } from "vitest";
+import { describe, it, vitest } from "vitest";
 import {
 	commitAndPush,
 	generateChangesetHeader,
@@ -12,18 +12,16 @@ import {
 } from "../generate-dependabot-pr-changesets";
 import type { Mock } from "vitest";
 
-beforeEach(() => {
-	vitest.mock("node:child_process", async () => {
-		return {
-			spawnSync: vitest.fn(),
-		};
-	});
+vitest.mock("node:child_process", async () => {
+	return {
+		spawnSync: vitest.fn(),
+	};
+});
 
-	vitest.mock("node:fs", async () => {
-		return {
-			writeFileSync: vitest.fn(),
-		};
-	});
+vitest.mock("node:fs", async () => {
+	return {
+		writeFileSync: vitest.fn(),
+	};
 });
 
 describe("getPackageJsonDiff()", () => {

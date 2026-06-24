@@ -35,6 +35,7 @@ export const HELLO_WORLD_PLUGIN: Plugin<
 > = {
 	options: HelloWorldOptionsSchema,
 	sharedOptions: HelloWorldSharedOptionsSchema,
+	bindingTypeDescription: "Hello World",
 	async getBindings(options) {
 		if (!options.helloWorld) {
 			return [];

@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import path from "node:path";
+import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -26,6 +28,30 @@ describe("logout", () => {
 		`);
 	});
 
+	it("should clear a cached temporary preview account when not logged in via OAuth", async ({
+		expect,
+	}) => {
+		const temporaryAccountConfigPath = path.join(
+			getGlobalWranglerConfigPath(),
+			"wrangler-temporary-account.toml"
+		);
+		fs.mkdirSync(path.dirname(temporaryAccountConfigPath), { recursive: true });
+		fs.writeFileSync(
+			temporaryAccountConfigPath,
+			JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
+		);
+
+		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Cleared temporary preview account."
+		`);
+		expect(fs.existsSync(temporaryAccountConfigPath)).toBeFalsy();
+	});
+
 	it("should exit with a message stating the user logged in via API token", async ({
 		expect,
 	}) => {
@@ -43,10 +69,19 @@ describe("logout", () => {
 	it("should logout user that has been properly logged in", async ({
 		expect,
 	}) => {
+		const temporaryAccountConfigPath = path.join(
+			getGlobalWranglerConfigPath(),
+			"wrangler-temporary-account.toml"
+		);
 		writeAuthConfigFile({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",
 		});
+		fs.mkdirSync(path.dirname(temporaryAccountConfigPath), { recursive: true });
+		fs.writeFileSync(
+			temporaryAccountConfigPath,
+			JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
+		);
 		// Make sure that logout removed the config file containing the auth tokens.
 		const config = getAuthConfigFilePath();
 		let counter = 0;
@@ -63,6 +98,7 @@ describe("logout", () => {
 		);
 
 		expect(fs.existsSync(config)).toBeTruthy();
+		expect(fs.existsSync(temporaryAccountConfigPath)).toBeTruthy();
 
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
 
@@ -73,6 +109,7 @@ describe("logout", () => {
 			Successfully logged out."
 		`);
 		expect(fs.existsSync(config)).toBeFalsy();
+		expect(fs.existsSync(temporaryAccountConfigPath)).toBeFalsy();
 		expect(counter).toBe(1);
 	});
 

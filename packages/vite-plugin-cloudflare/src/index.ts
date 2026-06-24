@@ -1,8 +1,10 @@
 import { assertWranglerVersion } from "./assert-wrangler-version";
 import { DEFAULT_COMPAT_DATE } from "./build-constants";
+import { isForcedBuildOutput } from "./build-output-env";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
+import { buildOutputPlugin } from "./plugins/build-output";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
 import { devPlugin } from "./plugins/dev";
@@ -67,6 +69,14 @@ await assertWranglerVersion();
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	const ctx = new PluginContext(sharedContext);
 
+	const newConfig = pluginConfig.experimental?.newConfig;
+	const cfBuildOutput =
+		isForcedBuildOutput() ||
+		(typeof newConfig === "object" && newConfig?.cfBuildOutput === true);
+	const outputPlugin = cfBuildOutput
+		? buildOutputPlugin(ctx)
+		: outputConfigPlugin(ctx);
+
 	return [
 		{
 			name: "vite-plugin-cloudflare",
@@ -105,7 +115,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
-		outputConfigPlugin(ctx),
+		outputPlugin,
 		wasmHelperPlugin(ctx),
 		additionalModulesPlugin(ctx),
 		nodeJsAlsPlugin(ctx),

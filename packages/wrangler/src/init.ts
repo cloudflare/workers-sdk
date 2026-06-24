@@ -56,6 +56,7 @@ export const init = createCommand({
 	},
 	behaviour: {
 		provideConfig: false,
+		suggestSkillsAfterHandler: true,
 	},
 	positionalArgs: ["name"],
 	async handler(args) {

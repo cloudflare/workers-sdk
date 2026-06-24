@@ -1,5 +1,266 @@
 # wrangler
 
+## 4.104.0
+
+### Minor Changes
+
+- [#14369](https://github.com/cloudflare/workers-sdk/pull/14369) [`e312dec`](https://github.com/cloudflare/workers-sdk/commit/e312decf71f8d1a435ca178f209844363f24014a) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `getEnv()` to `createTestHarness()` Worker handles
+
+  Tests can now access the full `env` object for a Worker with `await server.getWorker<Env>().getEnv()`, including vars, secrets, and bindings.
+
+### Patch Changes
+
+- [#14364](https://github.com/cloudflare/workers-sdk/pull/14364) [`a085dec`](https://github.com/cloudflare/workers-sdk/commit/a085deca12d7126c21e500b3dd4298edfd13f8cd) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260617.1 | 1.20260619.1 |
+
+- [#14383](https://github.com/cloudflare/workers-sdk/pull/14383) [`9a0de8f`](https://github.com/cloudflare/workers-sdk/commit/9a0de8f71f50bb7d1884288e376259082084a315) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260619.1 | 1.20260621.1 |
+
+- [#14397](https://github.com/cloudflare/workers-sdk/pull/14397) [`fab565f`](https://github.com/cloudflare/workers-sdk/commit/fab565fdb1a912c73232d72ccdf1963fd96f9ad5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260621.1 | 1.20260623.1 |
+
+- [#14388](https://github.com/cloudflare/workers-sdk/pull/14388) [`3f02864`](https://github.com/cloudflare/workers-sdk/commit/3f028644284236fbfe36567052200cf00e707d85) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop erroring when `find_additional_modules` discovers a file that only matches a inactive module rule
+
+  Module rules assign module _types_ to imported files — they are not include/exclude filters. Also, setting `fallthrough: false` in a rule will cause subsequent rules to become inactive. Previously, when `find_additional_modules` walked the filesystem and discovered a file whose only matching rule is inactive, Wrangler would throw an error and fail the build.
+
+  This meant that adding a user rule like the one below would break the build for any `.txt`, `.html`, `.sql`, `.bin` or `.wasm` file that didn't match the user-supplied globs but lived somewhere under the module root:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "rules": [
+      {
+        "type": "Text",
+        "globs": ["html/includeme.html"],
+        "fallthrough": false
+      }
+    ]
+  }
+  ```
+
+  Discovered files that only match an inactive rule are now silently skipped (a `debug`-level log records each skip for troubleshooting), so users can use `fallthrough: false` to narrow the set of files attached to their Worker without having to delete or move untouched files on disk.
+
+  The direct-import path is unchanged: importing a file in code that only matches an inactive rule is still a hard error, because the imported file genuinely needs a defined module type.
+
+  Fixes [#14257](https://github.com/cloudflare/workers-sdk/issues/14257).
+
+- [#14358](https://github.com/cloudflare/workers-sdk/pull/14358) [`4ef872f`](https://github.com/cloudflare/workers-sdk/commit/4ef872fe530282d26ec8f2f8c52f23b8702ae757) Thanks [@gabivlj](https://github.com/gabivlj)! - Fix container egress interception on arm64 Docker runtimes
+
+  Both `wrangler dev` and the Cloudflare Vite plugin no longer force the `proxy-everything` sidecar image to pull as `linux/amd64`, allowing Docker to select the native image from the multi-platform manifest. Set `MINIFLARE_CONTAINER_EGRESS_IMAGE_PLATFORM` to force a specific platform when needed.
+
+- [#14362](https://github.com/cloudflare/workers-sdk/pull/14362) [`2a02858`](https://github.com/cloudflare/workers-sdk/commit/2a028589543aa7692f99a053952bfc1c5eb8302f) Thanks [@sherryliu-lsy](https://github.com/sherryliu-lsy)! - Don't require the private credential when reusing an existing Secrets Store secret in `containers registries configure`
+
+  `wrangler containers registries configure` now checks whether the target Secrets Store secret already exists before resolving the private credential. When the secret already exists it is reused by reference, so the private credential no longer needs to be supplied (via stdin in non-interactive mode, or via a prompt interactively). This applies to all external registries.
+
+  The new-secret path is unchanged: the credential is still required and stored. The only visible interactive change is that the secret prompt now appears last and only when a new secret is being created.
+
+- Updated dependencies [[`a085dec`](https://github.com/cloudflare/workers-sdk/commit/a085deca12d7126c21e500b3dd4298edfd13f8cd), [`9a0de8f`](https://github.com/cloudflare/workers-sdk/commit/9a0de8f71f50bb7d1884288e376259082084a315), [`fab565f`](https://github.com/cloudflare/workers-sdk/commit/fab565fdb1a912c73232d72ccdf1963fd96f9ad5)]:
+  - miniflare@4.20260623.0
+
+## 4.103.0
+
+### Minor Changes
+
+- [#14295](https://github.com/cloudflare/workers-sdk/pull/14295) [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Move `unstable_getWorkerNameFromProject` from wrangler to `@cloudflare/workers-utils`
+
+  The `unstable_getWorkerNameFromProject` export has been removed from the `wrangler` package. This function is now available as `getWorkerNameFromProject` (without the `unstable_` prefix) from `@cloudflare/workers-utils`. If you were importing this function from `wrangler`, update your import to use `@cloudflare/workers-utils` instead.
+
+- [#14295](https://github.com/cloudflare/workers-sdk/pull/14295) [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove experimental autoconfig exports
+
+  The experimental autoconfig exports (`experimental_getDetailsForAutoConfig`, `experimental_runAutoConfig`, `experimental_AutoConfigFramework`) have been removed. This logic has been moved to the `@cloudflare/autoconfig` package (without the `experimental_` prefixes since the package itself is pre-v1).
+
+### Patch Changes
+
+- [#14366](https://github.com/cloudflare/workers-sdk/pull/14366) [`c6579d3`](https://github.com/cloudflare/workers-sdk/commit/c6579d30bd6fd7705fe3f10c7655d74a0476df86) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Resolve relative `cf-worker` entrypoint imports relative to the importing module
+
+  When loading the experimental `cloudflare.config.ts`, a relative entrypoint imported with `import ... with { type: "cf-worker" }` (e.g. `./src/index.ts`) is now anchored to the module where the import is written, rather than being passed through verbatim and later resolved against the top-level config file. This fixes incorrect resolution when the import lives in a file other than the entry config — for example a config that re-exports from a nested file.
+
+  Bare specifiers (such as `@scope/pkg`) and virtual modules (such as `virtual:foo`) are still left unresolved so that consumers can apply their own resolution.
+
+- [#14316](https://github.com/cloudflare/workers-sdk/pull/14316) [`444b75e`](https://github.com/cloudflare/workers-sdk/commit/444b75e75492738d10e7dc89ec645f7e2fad6b97) Thanks [@matingathani](https://github.com/matingathani)! - Prevent `wrangler dev` crash when source-mapping a truncated error chunk
+
+  When a worker logs many errors in quick succession, the stderr chunks received by `wrangler dev` can be truncated mid-stack-frame, leaving a call site with an invalid column number. The source map library throws in that case, which was crashing the wrangler process entirely. The error is now caught and the original (un-source-mapped) text is returned instead.
+
+- [#14118](https://github.com/cloudflare/workers-sdk/pull/14118) [`b38823f`](https://github.com/cloudflare/workers-sdk/commit/b38823fb35a8bdcd00004e74404ab18d7b070dbf) Thanks [@aicayzer](https://github.com/aicayzer)! - Fix `Uint8Array` step outputs in local Workflows being persisted with the full backing `ArrayBuffer`
+
+  A `Uint8Array` returned from a Workflows step under `wrangler dev` was serialised together with its full underlying `ArrayBuffer`, causing a raw `SQLITE_TOOBIG` error at view sizes well below the documented 1MiB step-output limit. For example, a 200KB view sliced from an 800KB buffer (a common pattern from `crypto.getRandomValues` or `arr.slice(...)` on a larger pool) would fail. The view's bytes are now copied to a tight buffer before persistence, bringing local behaviour in line with production. Fixes #14101.
+
+- Updated dependencies [[`b38823f`](https://github.com/cloudflare/workers-sdk/commit/b38823fb35a8bdcd00004e74404ab18d7b070dbf)]:
+  - miniflare@4.20260617.1
+
+## 4.102.0
+
+### Minor Changes
+
+- [#14340](https://github.com/cloudflare/workers-sdk/pull/14340) [`f6e49dd`](https://github.com/cloudflare/workers-sdk/commit/f6e49dd59190328007331477450651e8bca2def8) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `cf-wrangler build` delegate support
+
+  The experimental `cf-wrangler` delegate binary now accepts `build` and emits the Build Output API directory through Wrangler's new-config build path. This lets parent tools invoke Wrangler's build-output implementation with `cf-wrangler build` instead of shelling out through the public Wrangler CLI.
+
+- [#14324](https://github.com/cloudflare/workers-sdk/pull/14324) [`36777db`](https://github.com/cloudflare/workers-sdk/commit/36777dbd694acdf0a2d1fc2be322a47bd409e7fe) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add experimental `--experimental-cf-build-output` flag to `wrangler build`
+
+  When used alongside `--experimental-new-config`, `wrangler build` now emits a self-contained Build Output API directory under `.cloudflare/output/v0/` instead of delegating to `wrangler deploy --dry-run`.
+
+### Patch Changes
+
+- [#14347](https://github.com/cloudflare/workers-sdk/pull/14347) [`673b09e`](https://github.com/cloudflare/workers-sdk/commit/673b09e0fa26368125fb527596a8eb5d31c27302) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update undici from 7.24.8 to 7.28.0
+
+- [#14346](https://github.com/cloudflare/workers-sdk/pull/14346) [`e930bd4`](https://github.com/cloudflare/workers-sdk/commit/e930bd4ca9880eb0b68ce6d1933c1d9ce290317d) Thanks [@haidargit](https://github.com/haidargit)! - Bump `ws` from 8.20.1 to 8.21.0 to address GHSA-96hv-2xvq-fx4p
+
+  [GHSA-96hv-2xvq-fx4p](https://github.com/advisories/GHSA-96hv-2xvq-fx4p) / [CVE-2026-48779](https://www.cve.org/CVERecord?id=CVE-2026-48779) (high severity) reports a remote memory-exhaustion DoS in `ws@<8.21.0`: a peer sending a high volume of tiny fragments and data chunks over modest network traffic can crash a `ws` server or client via OOM. The fix shipped in [ws@8.21.0](https://github.com/websockets/ws/releases/tag/8.21.0) (commit `2b2abd45`, released 2026-05-22), which also introduces the `maxBufferedChunks` and `maxFragments` options. This change bumps the workspace catalog entry so that `miniflare`, `wrangler`, and `@cloudflare/vite-plugin` all pick up the patched release.
+
+- [#14314](https://github.com/cloudflare/workers-sdk/pull/14314) [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6) Thanks [@harryzcy](https://github.com/harryzcy)! - Bump esbuild to 0.28.1
+
+  This update includes several bug fixes from esbuild versions 0.27.3 through 0.28.1. See the [esbuild changelog](https://github.com/evanw/esbuild/blob/v0.28.1/CHANGELOG.md) for details.
+
+- [#14331](https://github.com/cloudflare/workers-sdk/pull/14331) [`296ad65`](https://github.com/cloudflare/workers-sdk/commit/296ad659305ee150d61451991f04a135fe99d264) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260616.1 | 1.20260617.1 |
+
+- [#14275](https://github.com/cloudflare/workers-sdk/pull/14275) [`594544d`](https://github.com/cloudflare/workers-sdk/commit/594544da71e570f878d1dfa80c8f646ec2cf7df2) Thanks [@alsuren](https://github.com/alsuren)! - Resolve auto-provisioned D1 bindings via the API in remote subcommands
+
+  Remote D1 subcommands (`d1 execute --remote`, `d1 export --remote`, `d1 info`, `d1 insights`, `d1 delete`, `d1 migrations apply --remote`, `d1 migrations list --remote`, `d1 time-travel`) previously failed with:
+
+  > Found a database with name or binding DB but it is missing a database_id, which is needed for operations on remote resources.
+
+  when the `[[d1_databases]]` config entry only had `binding` and `database_name` (the shape `wrangler deploy` writes for automatically-provisioned bindings). They now resolve the real database UUID via `GET /accounts/:accountId/d1/database/:name?fields=uuid` and proceed as if `database_id` had been set in config.
+
+  If the config entry only has a `binding` (no `database_name`, no `database_id`), the lookup uses the same name `wrangler deploy` would create via auto provisioning (`<worker name>-<binding-lowercased-with-dashes>`).
+
+  Non-404 API failures (auth, rate-limit, server errors) now propagate verbatim instead of being masked as "database not found".
+
+- [#14315](https://github.com/cloudflare/workers-sdk/pull/14315) [`a79b899`](https://github.com/cloudflare/workers-sdk/commit/a79b899e284d46a8f0f9c4df113068ba66aaad0f) Thanks [@matingathani](https://github.com/matingathani)! - Respect `find_additional_modules = false` when `no_bundle` is set
+
+  When using `no_bundle = true`, wrangler was always scanning for and attaching additional modules even if `find_additional_modules` was explicitly set to `false` in the config. Additional modules are now only collected when `find_additional_modules` is not `false`, consistent with the bundled code path.
+
+- [#14269](https://github.com/cloudflare/workers-sdk/pull/14269) [`5dfb788`](https://github.com/cloudflare/workers-sdk/commit/5dfb788595a2104b4b0922cfce3d69a2f1d881eb) Thanks [@mattjohnsonpint](https://github.com/mattjohnsonpint)! - Support `dev.plugin` on typed services bindings
+
+  Wrangler only honored `dev.plugin` on `unsafe.bindings` entries, so users authoring a service binding via `services[]` could not wire it to a local Miniflare plugin during `wrangler dev` — they had to fall back to `unsafe.bindings` and accept a "directly supported by wrangler" warning. Typed services bindings now accept the same `dev: { plugin, options? }` shape, route the binding through Miniflare's external-plugin pathway in `wrangler dev`, and strip the field at deploy time. Validation rejects malformed `dev` shapes.
+
+- [#14328](https://github.com/cloudflare/workers-sdk/pull/14328) [`ca61558`](https://github.com/cloudflare/workers-sdk/commit/ca6155879c2027765977ff14d17b4d6ad53473e1) Thanks [@edevil](https://github.com/edevil)! - Mention temporary preview accounts in `wrangler whoami` output when unauthenticated
+
+  When you run `wrangler whoami` without being logged in, Wrangler now also tells you that you can deploy without logging in by running a command like `wrangler deploy --temporary` to use a temporary preview account.
+
+- Updated dependencies [[`673b09e`](https://github.com/cloudflare/workers-sdk/commit/673b09e0fa26368125fb527596a8eb5d31c27302), [`e930bd4`](https://github.com/cloudflare/workers-sdk/commit/e930bd4ca9880eb0b68ce6d1933c1d9ce290317d), [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6), [`296ad65`](https://github.com/cloudflare/workers-sdk/commit/296ad659305ee150d61451991f04a135fe99d264)]:
+  - miniflare@4.20260617.0
+
+## 4.101.0
+
+### Minor Changes
+
+- [#14276](https://github.com/cloudflare/workers-sdk/pull/14276) [`32f9307`](https://github.com/cloudflare/workers-sdk/commit/32f9307862ced8d25c44fd3b0161b60354559cd8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Graduate autoconfig from experimental to stable
+
+  The `--experimental-autoconfig` and `--x-autoconfig` deploy CLI flags have been replaced with `--autoconfig`.
+
+  Note that the `--autoconfig` flag defaults to `true` and that it can be used to disable Wrangler's auto-configuration logic by setting it to `false` via `--autoconfig=false` or `--no-autoconfig`
+
+- [#14287](https://github.com/cloudflare/workers-sdk/pull/14287) [`41f391f`](https://github.com/cloudflare/workers-sdk/commit/41f391fdda4112ee333782aad02d16dacaa95f8f) Thanks [@edmundhung](https://github.com/edmundhung)! - Add per-Worker resource accessors to `createTestHarness()`
+
+  `createTestHarness()` now provides methods for accessing configured KV namespaces, R2 buckets, D1 databases, and Durable Object namespaces. Use `server.getWorker(name)` to access resources scoped to that specific Worker:
+
+  ```ts
+  const worker = server.getWorker("api-worker");
+  const bucket = await worker.getR2Bucket("BUCKET");
+  const db = await worker.getD1Database("DB");
+  ```
+
+- [#14264](https://github.com/cloudflare/workers-sdk/pull/14264) [`21dbc12`](https://github.com/cloudflare/workers-sdk/commit/21dbc1242ed097ce209a24bf61a2dad6e3d46d08) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Suggest Cloudflare skills installation after commands instead of before
+
+  The automatic prompt to install Cloudflare skills for detected AI coding agents no longer runs before every Wrangler command. Instead, Wrangler now suggests installing skills, when appropriate, after some commands complete successfully. Commands that output JSON suppress the suggestion to keep their output clean. The `--install-skills` flag remains available on all commands to explicitly run the skills installation flow before the command executes, without prompting.
+
+  As before, Wrangler asks the skills installation question at most once. The skills install metadata file is now written before the confirmation prompt is shown, so even if the user interrupts the process (e.g. CTRL+C, closing the terminal) during the prompt, the question is recorded as unanswered and will not reappear on subsequent runs.
+
+- [#14042](https://github.com/cloudflare/workers-sdk/pull/14042) [`7e63948`](https://github.com/cloudflare/workers-sdk/commit/7e63948f9b31fce998b4902102395629e439a8e0) Thanks [@edevil](https://github.com/edevil)! - Add a `--temporary` flag that creates and uses a temporary Cloudflare preview account when you have no credentials, instead of starting the OAuth login flow.
+
+  It's registered only on the commands the short-lived account token can serve — Workers (`deploy`, `versions upload`, and related commands), KV, D1, Hyperdrive, Queues, and certificate commands — and is for unauthenticated use only: passing it while already authenticated (OAuth, `CLOUDFLARE_API_TOKEN`, or a global API key) errors rather than silently ignoring the flag. Before provisioning, Wrangler handles Cloudflare's Terms of Service and Privacy Policy (interactive terminals prompt for `yes`; non-interactive shells print a notice and continue). Wrangler then runs with the short-lived token and prints a claim URL so the account can be claimed before it expires. The cached account is cleared on successful login or logout.
+
+- [#14299](https://github.com/cloudflare/workers-sdk/pull/14299) [`035917f`](https://github.com/cloudflare/workers-sdk/commit/035917f617c8fa1b40d43fe78a9771c389911abf) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Send the `login user` telemetry event when `wrangler login --scopes ...` succeeds
+
+  `wrangler login` was already reporting the `login user` event when called without `--scopes`, but the scoped login path returned early before the event could be sent. Both paths now report the event, so successful scoped logins are counted alongside unscoped ones.
+
+### Patch Changes
+
+- [#14271](https://github.com/cloudflare/workers-sdk/pull/14271) [`27db82c`](https://github.com/cloudflare/workers-sdk/commit/27db82c808743f690f023f84be5cde9e223c22d1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260611.1 | 1.20260612.1 |
+
+- [#14298](https://github.com/cloudflare/workers-sdk/pull/14298) [`2a6a26b`](https://github.com/cloudflare/workers-sdk/commit/2a6a26b02f27ac18b1773a5460e1e7e37721a5cb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260612.1 | 1.20260615.1 |
+
+- [#14317](https://github.com/cloudflare/workers-sdk/pull/14317) [`9a424ed`](https://github.com/cloudflare/workers-sdk/commit/9a424ed747009c716db77463c72f8d974e048914) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260615.1 | 1.20260616.1 |
+
+- [#14282](https://github.com/cloudflare/workers-sdk/pull/14282) [`ecfdd5a`](https://github.com/cloudflare/workers-sdk/commit/ecfdd5a6c60b9c6f99c28f9294da656933c2a5fd) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix `wrangler dev` asset fallback with custom routes
+
+  `wrangler dev` now applies Workers Assets fallback behavior consistently when routes are configured, including SPA fallback and `404-page` handling.
+
+- [#13763](https://github.com/cloudflare/workers-sdk/pull/13763) [`604be26`](https://github.com/cloudflare/workers-sdk/commit/604be263afacdaf14d143b56943dff66ec26f518) Thanks [@matingathani](https://github.com/matingathani)! - Show a clear error when deploying a service-worker format Worker with Durable Object migrations or bindings instead of an opaque API error
+
+- [#14240](https://github.com/cloudflare/workers-sdk/pull/14240) [`1fb7ba5`](https://github.com/cloudflare/workers-sdk/commit/1fb7ba5f02b20260aec5314bc7eb488dce760253) Thanks [@ttoino](https://github.com/ttoino)! - Fix `wrangler email sending` commands
+
+  The `email sending` commands previously failed against the Cloudflare API. They now work as expected:
+
+  - `email sending enable <domain>` enables Email Sending for a domain
+  - `email sending disable <domain>` disables Email Sending for a domain
+  - `email sending settings <domain>` shows the Email Sending configuration for a domain
+  - `email sending dns get <domain>` shows the DNS records to set up for a domain
+  - `email sending list` previously listed zones. It now lists the domains that have Email Sending enabled — every enabled domain across your account by default, or just those under a specific domain when you pass a domain (or `--zone-id`).
+
+- [#13838](https://github.com/cloudflare/workers-sdk/pull/13838) [`208b3bb`](https://github.com/cloudflare/workers-sdk/commit/208b3bb411e41599cda0f5090fd5d2eaa5f6b9f3) Thanks [@matingathani](https://github.com/matingathani)! - Fix unhandled promise rejection when the worker entry point is deleted or moved during `wrangler dev` hot-reload — now logs a warning and skips the update instead of crashing
+
+- [#14241](https://github.com/cloudflare/workers-sdk/pull/14241) [`8b2ce41`](https://github.com/cloudflare/workers-sdk/commit/8b2ce41762b8875a2ae8247c67518a45edb6c9e7) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve error messages for CLI flags, type generation, auth scopes, dev server tunnels, and compatibility flags
+
+  Error messages across several areas now name the exact flags or values involved and suggest how to fix the problem:
+
+  - KV commands (`kv key put`, `kv key get`, `kv key delete`): error messages now include `--` prefixes and clear "Missing required option" / "Conflicting options" phrasing instead of the vague "Exactly one of the arguments ... is required".
+  - `wrangler types --include-env=false --include-runtime=false`: the error now names both flags and explains what each does.
+  - `wrangler login --scopes`: invalid scopes are individually identified instead of dumping the entire array.
+  - `wrangler dev --tunnel --remote`: the error now explains why tunnels require local mode and suggests two concrete fixes.
+  - Conflicting compatibility flags (`nodejs_compat_populate_process_env` / `nodejs_compat_do_not_populate_process_env`, `global_navigator` / `no_global_navigator`): errors now name the specific conflicting flags.
+
+- [#14228](https://github.com/cloudflare/workers-sdk/pull/14228) [`3578919`](https://github.com/cloudflare/workers-sdk/commit/3578919b85582cd1fa261554af03b4b16f9bd5be) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve Hyperdrive error messages for missing required options
+
+  Error messages thrown when creating or updating a Hyperdrive config with missing individual parameters (e.g. `--origin-host`, `--origin-port`, `--database`, `--origin-user`, `--origin-password`, `--origin-scheme`, `--access-client-id`/`--access-client-secret`) now clearly state which option is missing, provide a usage example, and suggest `--connection-string` as an alternative where applicable.
+
+- [#14304](https://github.com/cloudflare/workers-sdk/pull/14304) [`ee82c76`](https://github.com/cloudflare/workers-sdk/commit/ee82c76b07844f7ae9068b01d29a2a0adf34eed0) Thanks [@emily-shen](https://github.com/emily-shen)! - Skip resource provisioning for asset-only deployments
+
+  Previously, asset-only deployments would provision resources even when there was no user Worker script. On a subsequent deploy, we would re-attempt provisioning as the previous asset-only upload would/could not be bound to the previously provisioned resource. Provisioning would then error as the resource had already been created, blocking the deploy.
+
+- Updated dependencies [[`0e055d3`](https://github.com/cloudflare/workers-sdk/commit/0e055d39c51dda77717515adb1a33610d385a724), [`27db82c`](https://github.com/cloudflare/workers-sdk/commit/27db82c808743f690f023f84be5cde9e223c22d1), [`2a6a26b`](https://github.com/cloudflare/workers-sdk/commit/2a6a26b02f27ac18b1773a5460e1e7e37721a5cb), [`9a424ed`](https://github.com/cloudflare/workers-sdk/commit/9a424ed747009c716db77463c72f8d974e048914), [`41f391f`](https://github.com/cloudflare/workers-sdk/commit/41f391fdda4112ee333782aad02d16dacaa95f8f)]:
+  - miniflare@4.20260616.0
+
 ## 4.100.0
 
 ### Minor Changes

@@ -135,4 +135,100 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			expect(workerOptions.zone).toBeUndefined();
 		});
 	});
+
+	describe("typed services bindings with `dev.plugin`", () => {
+		it("routes a typed service binding with `dev.plugin` to miniflare's unsafe-binding plugin pathway", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					services: [
+						{
+							binding: "ENTITLEMENTS",
+							service: "edge-entitlements",
+							entrypoint: "EntitlementsRPCService",
+							// @ts-expect-error - cross_account_grant is internal-only and not in the public config types
+							cross_account_grant: "entitlements-grant",
+							dev: {
+								plugin: {
+									package: "@cloudflare/workers-toolbox-plugins",
+									name: "entitlements",
+								},
+								options: {
+									entitlements: [
+										{
+											key: "containers.enabled",
+											targets: ["account"],
+											type: "bool",
+										},
+									],
+									mapping: { "*": { "containers.enabled": true } },
+								},
+							},
+						},
+					],
+				},
+				"./wrangler.json"
+			);
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+			expect(workerOptions.serviceBindings?.ENTITLEMENTS).toBeUndefined();
+			expect(workerOptions.unsafeBindings).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						name: "ENTITLEMENTS",
+						type: "service",
+						plugin: {
+							package: "@cloudflare/workers-toolbox-plugins",
+							name: "entitlements",
+						},
+						options: expect.objectContaining({
+							service: "edge-entitlements",
+							entrypoint: "EntitlementsRPCService",
+							cross_account_grant: "entitlements-grant",
+							entitlements: [
+								{
+									key: "containers.enabled",
+									targets: ["account"],
+									type: "bool",
+								},
+							],
+							mapping: { "*": { "containers.enabled": true } },
+						}),
+					}),
+				])
+			);
+		});
+
+		it("leaves a typed service binding without `dev` on the regular service-binding pathway", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					services: [
+						{
+							binding: "MY_SERVICE",
+							service: "real-service",
+						},
+					],
+				},
+				"./wrangler.json"
+			);
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			expect(workerOptions.serviceBindings?.MY_SERVICE).toBeDefined();
+			expect(
+				(workerOptions.unsafeBindings ?? []).find(
+					(b) => "name" in b && b.name === "MY_SERVICE"
+				)
+			).toBeUndefined();
+		});
+	});
 });

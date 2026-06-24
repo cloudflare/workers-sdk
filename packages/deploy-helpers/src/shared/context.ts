@@ -26,6 +26,7 @@ export let fetchPagedListResult: FetchPagedListResultFetcher;
 export let fetchKVGetValue: FetchKVGetValueFetcher;
 export let confirm: DeployHelpersContext["confirm"];
 export let prompt: DeployHelpersContext["prompt"];
+export let select: DeployHelpersContext["select"];
 export let isNonInteractiveOrCI: () => boolean;
 
 /**
@@ -40,5 +41,6 @@ export function initDeployHelpersContext(ctx: DeployHelpersContext): void {
 	fetchKVGetValue = ctx.fetchKVGetValue;
 	confirm = ctx.confirm;
 	prompt = ctx.prompt;
+	select = ctx.select;
 	isNonInteractiveOrCI = ctx.isNonInteractiveOrCI;
 }

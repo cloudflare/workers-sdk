@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalWranglerConfigPath,
@@ -11,6 +13,7 @@ import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../config-cache";
+import * as metricsModule from "../metrics";
 import {
 	fetchAllAccounts,
 	getAccountFromCache,
@@ -95,6 +98,48 @@ describe("User", () => {
 				expiration_time: expect.any(String),
 				scopes: ["account:read"],
 			});
+		});
+
+		it("should clear the cached temporary preview account when logging in", async ({
+			expect,
+		}) => {
+			// Resolve the path inside the test so it picks up the HOME/XDG_CONFIG_HOME
+			// stubs set by runInTempDir's beforeEach, rather than the real homedir.
+			const temporaryAccountConfigPath = path.join(
+				getGlobalWranglerConfigPath(),
+				"wrangler-temporary-account.toml"
+			);
+
+			mockOAuthServerCallback("success");
+
+			fs.mkdirSync(path.dirname(temporaryAccountConfigPath), {
+				recursive: true,
+			});
+			fs.writeFileSync(
+				temporaryAccountConfigPath,
+				JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
+			);
+
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () => {
+						return HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			expect(fs.existsSync(temporaryAccountConfigPath)).toBe(true);
+
+			await runWrangler("login");
+
+			expect(fs.existsSync(temporaryAccountConfigPath)).toBe(false);
 		});
 
 		it("should login a user when `wrangler login` is run with an ip address for custom callback-host", async ({
@@ -384,6 +429,59 @@ describe("User", () => {
 				);
 			});
 		});
+
+		it("should error if --scopes contains an invalid scope", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --scopes account:read bogus_scope")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid authentication scope: "bogus_scope". Run "wrangler login --scopes-list" to see all valid scopes.]`
+			);
+		});
+
+		it("should error if --scopes contains multiple invalid scopes", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --scopes bad_one bad_two")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid authentication scopes: "bad_one", "bad_two". Run "wrangler login --scopes-list" to see all valid scopes.]`
+			);
+		});
+
+		it("should send the `login user` metric when `--scopes` is provided", async ({
+			expect,
+		}) => {
+			// Regression: the scoped login path used to early-return before
+			// `sendMetricsEvent("login user", ...)` could run, so successful
+			// logins via `wrangler login --scopes ...` were never counted.
+			const sendMetricsEventSpy = vi.spyOn(metricsModule, "sendMetricsEvent");
+			try {
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						async () =>
+							HttpResponse.json({
+								access_token: "test-access-token",
+								expires_in: 100000,
+								refresh_token: "test-refresh-token",
+								scope: "account:read",
+							}),
+						{ once: true }
+					)
+				);
+
+				await runWrangler("login --scopes account:read");
+
+				expect(sendMetricsEventSpy).toHaveBeenCalledWith("login user", {
+					sendMetrics: undefined,
+				});
+			} finally {
+				sendMetricsEventSpy.mockRestore();
+			}
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async ({
@@ -414,7 +512,7 @@ describe("User", () => {
 		});
 
 		// Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
-		await expect(requireAuth({} as Config)).rejects.toThrowError();
+		await expect(requireAuth({} as Config)).rejects.toThrow();
 		expect(std.err).toContain("");
 	});
 
@@ -728,7 +826,7 @@ describe("User", () => {
 		});
 
 		it("should error when not logged in", async ({ expect }) => {
-			await expect(runWrangler("auth token")).rejects.toThrowError(
+			await expect(runWrangler("auth token")).rejects.toThrow(
 				"Not logged in. Please run `wrangler login` to authenticate."
 			);
 		});
@@ -749,7 +847,7 @@ describe("User", () => {
 			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
 			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
 
-			await expect(runWrangler("auth token")).rejects.toThrowError(
+			await expect(runWrangler("auth token")).rejects.toThrow(
 				"Cannot output a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL"
 			);
 		});
@@ -818,7 +916,7 @@ describe("User", () => {
 
 			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
 
-			await expect(runWrangler("auth token")).rejects.toThrowError(
+			await expect(runWrangler("auth token")).rejects.toThrow(
 				"Not logged in. Please run `wrangler login` to authenticate."
 			);
 		});
@@ -1131,7 +1229,7 @@ describe("User", () => {
 		it("should throw when no accounts are found", async ({ expect }) => {
 			msw.use(...getMswSuccessMembershipHandlers([]));
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/Failed to automatically retrieve account IDs for the logged in user/
 			);
 		});
@@ -1163,7 +1261,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/Failed to automatically retrieve account IDs for the logged in user/
 			);
 		});
@@ -1231,7 +1329,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/incorrect permissions on your API token/
 			);
 		});
@@ -1291,7 +1389,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/incorrect permissions on your API token/
 			);
 		});
@@ -1321,7 +1419,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/CLOUDFLARE_API_TOKEN/
 			);
 		});
@@ -1343,7 +1441,7 @@ describe("User", () => {
 				)
 			);
 
-			await expect(fetchAllAccounts({})).rejects.toThrowError(
+			await expect(fetchAllAccounts({})).rejects.toThrow(
 				/A request to the Cloudflare API \(\/memberships\) failed/
 			);
 		});

@@ -1,11 +1,11 @@
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { INVALID_INHERIT_BINDING_CODE } from "../../utils/error-codes";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -47,8 +47,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy secrets", () => {
@@ -133,21 +136,21 @@ describe("deploy secrets", () => {
 			await runWrangler(`deploy --secrets-file ${secretsFile}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                       Resource
-			env.SECRET1 ("(hidden)")      Environment Variable
-			env.SECRET2 ("(hidden)")      Environment Variable
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                       Resource
+				env.SECRET1 ("(hidden)")      Environment Variable
+				env.SECRET2 ("(hidden)")      Environment Variable
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should upload secrets from a .env file alongside the worker", async ({
@@ -193,22 +196,22 @@ SECRET3=value3`
 			await runWrangler(`deploy --secrets-file ${secretsFile}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                       Resource
-			env.SECRET1 ("(hidden)")      Environment Variable
-			env.SECRET2 ("(hidden)")      Environment Variable
-			env.SECRET3 ("(hidden)")      Environment Variable
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                       Resource
+				env.SECRET1 ("(hidden)")      Environment Variable
+				env.SECRET2 ("(hidden)")      Environment Variable
+				env.SECRET3 ("(hidden)")      Environment Variable
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should set keepSecrets to inherit non-provided secrets when providing secrets file", async ({
@@ -243,20 +246,20 @@ SECRET3=value3`
 			await runWrangler(`deploy --secrets-file ${secretsFile}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                         Resource
-			env.MY_SECRET ("(hidden)")      Environment Variable
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                         Resource
+				env.MY_SECRET ("(hidden)")      Environment Variable
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should fail when secrets file does not exist", async ({ expect }) => {

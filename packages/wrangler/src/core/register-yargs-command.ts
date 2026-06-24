@@ -8,7 +8,10 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { maybeInstallCloudflareSkillsGlobally } from "../agents-skills-install";
+import {
+	runSkillsInstallFlow,
+	skillInstallPromptMessageAfterWranglerCommandHandler,
+} from "../agents-skills-install";
 import {
 	fetchKVGetValue,
 	fetchResult,
@@ -17,7 +20,7 @@ import {
 } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig, readNewConfig } from "../config";
-import { confirm, prompt } from "../dialogs";
+import { confirm, prompt, select } from "../dialogs";
 import { run } from "../experimental-flags";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
@@ -30,12 +33,14 @@ import {
 } from "../metrics/sanitization";
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
+import { setTemporaryAllowed } from "../user";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
+import { temporaryArgDefinition } from "./temporary-commands";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	HandlerArgs,
@@ -63,7 +68,9 @@ export function createRegisterYargsCommand(
 			(def.metadata?.hidden ? false : def.metadata?.description) as string, // Cast to satisfy TypeScript overload selection
 			(subYargs) => {
 				if (def.type === "command") {
-					const args = def.args ?? {};
+					const args: NamedArgDefinitions = def.behaviour?.supportTemporary
+						? { ...def.args, temporary: temporaryArgDefinition }
+						: (def.args ?? {});
 
 					const positionalArgs = new Set(def.positionalArgs);
 
@@ -149,8 +156,8 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await printWranglerBanner();
 			}
 
-			if (!def.behaviour?.skipSkillsPrompt || args.installSkills) {
-				await maybeInstallCloudflareSkillsGlobally(args.installSkills);
+			if (args.installSkills) {
+				await runSkillsInstallFlow({ force: true, command: sanitizedCommand });
 			}
 
 			if (!getWranglerHideBanner()) {
@@ -171,7 +178,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				}
 			}
 
-			await def.validateArgs?.(args);
+			await def.validateArgs?.(args, def);
 
 			const shouldPrintResourceLocation =
 				typeof def.behaviour?.printResourceLocation === "function"
@@ -205,6 +212,11 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
 						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
+
+			setTemporaryAllowed(
+				def.behaviour?.supportTemporary === true &&
+					Boolean((args as { temporary?: boolean }).temporary)
+			);
 
 			await run(experimentalFlags, async () => {
 				const config =
@@ -291,6 +303,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						fetchKVGetValue,
 						confirm,
 						prompt,
+						select,
 						isNonInteractiveOrCI,
 					});
 
@@ -320,6 +333,28 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						def.behaviour
 					);
 
+					const shouldSuggestSkills =
+						def.behaviour?.suggestSkillsAfterHandler ?? false;
+					const suggestSkillsEnabled =
+						shouldSuggestSkills === true ||
+						(typeof shouldSuggestSkills === "function" &&
+							shouldSuggestSkills(args) === true);
+
+					if (suggestSkillsEnabled) {
+						try {
+							await runSkillsInstallFlow({
+								force: false,
+								command: sanitizedCommand,
+								promptMessage:
+									skillInstallPromptMessageAfterWranglerCommandHandler,
+							});
+						} catch (skillsErr) {
+							logger.debug(
+								`Skills suggestion failed: ${skillsErr instanceof Error ? skillsErr.message : skillsErr}`
+							);
+						}
+					}
+
 					return result;
 				} catch (err) {
 					// If the error is already a CommandHandledError (e.g., from a nested wrangler.parse() call),
@@ -342,6 +377,18 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						},
 						def.behaviour
 					);
+
+					// For commands that support `--temporary`, nudge users towards a
+					// temporary account when they hit the non-interactive auth error.
+					if (
+						def.behaviour?.supportTemporary &&
+						err instanceof UserError &&
+						err.telemetryMessage ===
+							"user auth missing api token non interactive"
+					) {
+						err.message +=
+							"\n\nTo continue without logging in, rerun this command with `--temporary`. Wrangler will use a temporary account and print a claim URL.";
+					}
 
 					await handleError(err, args, argv);
 

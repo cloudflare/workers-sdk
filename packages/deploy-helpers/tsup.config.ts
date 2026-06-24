@@ -19,6 +19,11 @@ export default defineConfig(() => [
 		tsconfig: "tsconfig.json",
 		metafile: true,
 		sourcemap: process.env.SOURCEMAPS !== "false",
+		noExternal: [
+			"@cloudflare/config",
+			"@cloudflare/containers-shared",
+			/^@cloudflare\/workers-shared(\/.*)?$/,
+		],
 		external: [
 			/^@cloudflare\//,
 			"blake3-wasm",
@@ -30,6 +35,9 @@ export default defineConfig(() => [
 			"dotenv",
 			"command-exists",
 			"esbuild",
+			// Keep zod external so wrangler (the only consumer) bundles a single
+			// shared copy rather than inlining one here.
+			/^zod(\/.*)?$/,
 		],
 	},
 ]);

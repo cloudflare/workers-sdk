@@ -1,4 +1,7 @@
 {
 	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
-	"include": ["src"]
+	"compilerOptions": {
+		"allowImportingTsExtensions": true
+	},
+	"include": ["src", "cloudflare.config.ts"]
 }

@@ -1,4 +1,4 @@
-import type { AuthConfigStorage, UserAuthConfig } from "./auth-config-file";
+import type { AuthConfigStorage, UserAuthConfig } from "./config-file/auth";
 import type { OAuthFlowLogger } from "./context";
 
 export interface RefreshToken {

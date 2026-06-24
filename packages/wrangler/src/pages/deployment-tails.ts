@@ -144,8 +144,11 @@ export const pagesDeploymentTailCommand = createCommand({
 		const pagesConfig = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId =
-			getCloudflareAccountIdFromEnv() ?? (await requireAuth(pagesConfig));
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...pagesConfig,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 		let deploymentId = deployment;
 
 		if (!isInteractive()) {

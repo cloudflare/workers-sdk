@@ -101,6 +101,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 > = {
 	options: DurableObjectsOptionsSchema,
 	sharedOptions: DurableObjectsSharedOptionsSchema,
+	bindingTypeDescription: "Durable Object namespace",
 	getBindings(options) {
 		return Object.entries(options.durableObjects ?? {}).map<Worker_Binding>(
 			([name, klass]) => {

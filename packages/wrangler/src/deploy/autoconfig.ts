@@ -7,12 +7,13 @@ import {
 	type Config,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { getDetailsForAutoConfig } from "../autoconfig/details";
-import { runAutoConfig } from "../autoconfig/run";
 import {
+	runAutoConfigDetection,
+	runAutoConfigLogic,
 	sendAutoConfigProcessEndedMetricsEvent,
 	sendAutoConfigProcessStartedMetricsEvent,
-} from "../autoconfig/telemetry-utils";
+} from "../autoconfig";
+import { createWranglerAutoConfigContext } from "../autoconfig-context";
 import { readConfig } from "../config";
 import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -55,11 +56,11 @@ type DeployConfigFlags = {
  * The full set of CLI args consumed by the interactive deploy autoconfig flow.
  * Combines the base config/script/name args from {@link ReadConfigCommandArgs},
  * all deployment-affecting flags from {@link DeployConfigFlags}, and the
- * autoconfig-specific control flags (experimentalAutoconfig, assets, dryRun, latest).
+ * autoconfig-specific control flags (autoconfig, assets, dryRun, latest).
  */
 type AutoConfigArgs = ReadConfigCommandArgs &
 	DeployConfigFlags & {
-		experimentalAutoconfig: boolean | undefined;
+		autoconfig: boolean | undefined;
 		path: string | undefined;
 		assets: string | undefined;
 		dryRun: boolean | undefined;
@@ -77,7 +78,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	config: Config
 ): Promise<{ config: Config; aborted: boolean }> {
 	const shouldRunAutoConfig =
-		args.experimentalAutoconfig &&
+		args.autoconfig &&
 		// If there is a positional parameter, an assets directory specified via --assets, or an
 		// explicit --config path then we don't want to run autoconfig since we assume that the
 		// user knows what they are doing and that they are specifying what needs to be deployed
@@ -102,9 +103,13 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 			dryRun: !!args.dryRun,
 		});
 
+		const autoConfigContext = createWranglerAutoConfigContext();
+
 		try {
-			const details = await getDetailsForAutoConfig({
+			const details = await runAutoConfigDetection({
+				command: "wrangler deploy",
 				wranglerConfig: config,
+				context: autoConfigContext,
 			});
 
 			if (details.framework?.id === "cloudflare-pages") {
@@ -129,8 +134,10 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 					return { config, aborted: true };
 				}
 			} else if (!details.configured) {
-				// Only run auto config if the project is not already configured
-				const autoConfigSummary = await runAutoConfig(details);
+				const autoConfigSummary = await runAutoConfigLogic(details, {
+					context: autoConfigContext,
+					dryRun: !!args.dryRun,
+				});
 
 				writeOutput({
 					type: "autoconfig",

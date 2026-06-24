@@ -1,5 +1,87 @@
 # @cloudflare/vite-plugin
 
+## 1.42.2
+
+### Patch Changes
+
+- [#14358](https://github.com/cloudflare/workers-sdk/pull/14358) [`4ef872f`](https://github.com/cloudflare/workers-sdk/commit/4ef872fe530282d26ec8f2f8c52f23b8702ae757) Thanks [@gabivlj](https://github.com/gabivlj)! - Fix container egress interception on arm64 Docker runtimes
+
+  Both `wrangler dev` and the Cloudflare Vite plugin no longer force the `proxy-everything` sidecar image to pull as `linux/amd64`, allowing Docker to select the native image from the multi-platform manifest. Set `MINIFLARE_CONTAINER_EGRESS_IMAGE_PLATFORM` to force a specific platform when needed.
+
+- Updated dependencies [[`a085dec`](https://github.com/cloudflare/workers-sdk/commit/a085deca12d7126c21e500b3dd4298edfd13f8cd), [`9a0de8f`](https://github.com/cloudflare/workers-sdk/commit/9a0de8f71f50bb7d1884288e376259082084a315), [`fab565f`](https://github.com/cloudflare/workers-sdk/commit/fab565fdb1a912c73232d72ccdf1963fd96f9ad5), [`3f02864`](https://github.com/cloudflare/workers-sdk/commit/3f028644284236fbfe36567052200cf00e707d85), [`4ef872f`](https://github.com/cloudflare/workers-sdk/commit/4ef872fe530282d26ec8f2f8c52f23b8702ae757), [`2a02858`](https://github.com/cloudflare/workers-sdk/commit/2a028589543aa7692f99a053952bfc1c5eb8302f), [`e312dec`](https://github.com/cloudflare/workers-sdk/commit/e312decf71f8d1a435ca178f209844363f24014a)]:
+  - miniflare@4.20260623.0
+  - wrangler@4.104.0
+
+## 1.42.1
+
+### Patch Changes
+
+- [#14366](https://github.com/cloudflare/workers-sdk/pull/14366) [`c6579d3`](https://github.com/cloudflare/workers-sdk/commit/c6579d30bd6fd7705fe3f10c7655d74a0476df86) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Resolve relative `cf-worker` entrypoint imports relative to the importing module
+
+  When loading the experimental `cloudflare.config.ts`, a relative entrypoint imported with `import ... with { type: "cf-worker" }` (e.g. `./src/index.ts`) is now anchored to the module where the import is written, rather than being passed through verbatim and later resolved against the top-level config file. This fixes incorrect resolution when the import lives in a file other than the entry config — for example a config that re-exports from a nested file.
+
+  Bare specifiers (such as `@scope/pkg`) and virtual modules (such as `virtual:foo`) are still left unresolved so that consumers can apply their own resolution.
+
+- Updated dependencies [[`c6579d3`](https://github.com/cloudflare/workers-sdk/commit/c6579d30bd6fd7705fe3f10c7655d74a0476df86), [`444b75e`](https://github.com/cloudflare/workers-sdk/commit/444b75e75492738d10e7dc89ec645f7e2fad6b97), [`b38823f`](https://github.com/cloudflare/workers-sdk/commit/b38823fb35a8bdcd00004e74404ab18d7b070dbf), [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359), [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359)]:
+  - wrangler@4.103.0
+  - miniflare@4.20260617.1
+
+## 1.42.0
+
+### Minor Changes
+
+- [#14339](https://github.com/cloudflare/workers-sdk/pull/14339) [`aa49856`](https://github.com/cloudflare/workers-sdk/commit/aa49856d68f0fc08d2d0afdf48602a7175761684) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add a `build` command to the experimental, internal `cf-vite` delegate binary
+
+  `cf-vite build` runs Vite's full multi-environment app build (via the Builder API) and enables the experimental Build Output API by default, emitting a self-contained `.cloudflare/output/v0/` directory. It forces `experimental.newConfig` and `experimental.newConfig.cfBuildOutput` on, so a `cloudflare.config.ts` is required at the project root.
+
+### Patch Changes
+
+- [#14346](https://github.com/cloudflare/workers-sdk/pull/14346) [`e930bd4`](https://github.com/cloudflare/workers-sdk/commit/e930bd4ca9880eb0b68ce6d1933c1d9ce290317d) Thanks [@haidargit](https://github.com/haidargit)! - Bump `ws` from 8.20.1 to 8.21.0 to address GHSA-96hv-2xvq-fx4p
+
+  [GHSA-96hv-2xvq-fx4p](https://github.com/advisories/GHSA-96hv-2xvq-fx4p) / [CVE-2026-48779](https://www.cve.org/CVERecord?id=CVE-2026-48779) (high severity) reports a remote memory-exhaustion DoS in `ws@<8.21.0`: a peer sending a high volume of tiny fragments and data chunks over modest network traffic can crash a `ws` server or client via OOM. The fix shipped in [ws@8.21.0](https://github.com/websockets/ws/releases/tag/8.21.0) (commit `2b2abd45`, released 2026-05-22), which also introduces the `maxBufferedChunks` and `maxFragments` options. This change bumps the workspace catalog entry so that `miniflare`, `wrangler`, and `@cloudflare/vite-plugin` all pick up the patched release.
+
+- [#14351](https://github.com/cloudflare/workers-sdk/pull/14351) [`6c7df19`](https://github.com/cloudflare/workers-sdk/commit/6c7df19bc13e62a3ec3cdbc1f08dea30fa3f08d0) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Force the experimental new config on by default in the `cf-vite dev` delegate
+
+- [#14218](https://github.com/cloudflare/workers-sdk/pull/14218) [`4eed569`](https://github.com/cloudflare/workers-sdk/commit/4eed569ffb8e7b1dc241290ccaa76c3b76523269) Thanks [@matingathani](https://github.com/matingathani)! - Allow `resolve.external` containing only Node.js built-ins in Worker environments
+
+  Vitest 4 automatically sets `resolve.external` to the full list of Node.js built-in modules for non-standard Vite environments via its internal `runnerTransform` plugin. Previously, the Cloudflare Vite plugin rejected any non-empty `resolve.external` array, throwing an incompatibility error on startup when used alongside Vitest 4.
+
+  The validation check now allows `resolve.external` arrays that contain only Node.js built-in module names (both bare `fs` and `node:fs` forms). The error is only thrown when `resolve.external` is `true` or contains non-built-in package names that would prevent user code from being bundled into the Worker.
+
+- Updated dependencies [[`673b09e`](https://github.com/cloudflare/workers-sdk/commit/673b09e0fa26368125fb527596a8eb5d31c27302), [`e930bd4`](https://github.com/cloudflare/workers-sdk/commit/e930bd4ca9880eb0b68ce6d1933c1d9ce290317d), [`f6e49dd`](https://github.com/cloudflare/workers-sdk/commit/f6e49dd59190328007331477450651e8bca2def8), [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6), [`296ad65`](https://github.com/cloudflare/workers-sdk/commit/296ad659305ee150d61451991f04a135fe99d264), [`594544d`](https://github.com/cloudflare/workers-sdk/commit/594544da71e570f878d1dfa80c8f646ec2cf7df2), [`a79b899`](https://github.com/cloudflare/workers-sdk/commit/a79b899e284d46a8f0f9c4df113068ba66aaad0f), [`5dfb788`](https://github.com/cloudflare/workers-sdk/commit/5dfb788595a2104b4b0922cfce3d69a2f1d881eb), [`ca61558`](https://github.com/cloudflare/workers-sdk/commit/ca6155879c2027765977ff14d17b4d6ad53473e1), [`36777db`](https://github.com/cloudflare/workers-sdk/commit/36777dbd694acdf0a2d1fc2be322a47bd409e7fe)]:
+  - miniflare@4.20260617.0
+  - wrangler@4.102.0
+
+## 1.41.0
+
+### Minor Changes
+
+- [#14279](https://github.com/cloudflare/workers-sdk/pull/14279) [`e6e4b07`](https://github.com/cloudflare/workers-sdk/commit/e6e4b0760bb329f24891e04c67c0bd6ec80557ff) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `experimental.newConfig.cfBuildOutput` option to support future deployments via the `cf` CLI
+
+  ```ts
+  // vite.config.ts
+  import { defineConfig } from "vite";
+  import { cloudflare } from "@cloudflare/vite-plugin";
+
+  export default defineConfig({
+    plugins: [
+      cloudflare({
+        experimental: {
+          newConfig: {
+            cfBuildOutput: true,
+          },
+        },
+      }),
+    ],
+  });
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`0e055d3`](https://github.com/cloudflare/workers-sdk/commit/0e055d39c51dda77717515adb1a33610d385a724), [`27db82c`](https://github.com/cloudflare/workers-sdk/commit/27db82c808743f690f023f84be5cde9e223c22d1), [`2a6a26b`](https://github.com/cloudflare/workers-sdk/commit/2a6a26b02f27ac18b1773a5460e1e7e37721a5cb), [`9a424ed`](https://github.com/cloudflare/workers-sdk/commit/9a424ed747009c716db77463c72f8d974e048914), [`ecfdd5a`](https://github.com/cloudflare/workers-sdk/commit/ecfdd5a6c60b9c6f99c28f9294da656933c2a5fd), [`604be26`](https://github.com/cloudflare/workers-sdk/commit/604be263afacdaf14d143b56943dff66ec26f518), [`1fb7ba5`](https://github.com/cloudflare/workers-sdk/commit/1fb7ba5f02b20260aec5314bc7eb488dce760253), [`208b3bb`](https://github.com/cloudflare/workers-sdk/commit/208b3bb411e41599cda0f5090fd5d2eaa5f6b9f3), [`41f391f`](https://github.com/cloudflare/workers-sdk/commit/41f391fdda4112ee333782aad02d16dacaa95f8f), [`32f9307`](https://github.com/cloudflare/workers-sdk/commit/32f9307862ced8d25c44fd3b0161b60354559cd8), [`8b2ce41`](https://github.com/cloudflare/workers-sdk/commit/8b2ce41762b8875a2ae8247c67518a45edb6c9e7), [`3578919`](https://github.com/cloudflare/workers-sdk/commit/3578919b85582cd1fa261554af03b4b16f9bd5be), [`ee82c76`](https://github.com/cloudflare/workers-sdk/commit/ee82c76b07844f7ae9068b01d29a2a0adf34eed0), [`41f391f`](https://github.com/cloudflare/workers-sdk/commit/41f391fdda4112ee333782aad02d16dacaa95f8f), [`21dbc12`](https://github.com/cloudflare/workers-sdk/commit/21dbc1242ed097ce209a24bf61a2dad6e3d46d08), [`7e63948`](https://github.com/cloudflare/workers-sdk/commit/7e63948f9b31fce998b4902102395629e439a8e0), [`035917f`](https://github.com/cloudflare/workers-sdk/commit/035917f617c8fa1b40d43fe78a9771c389911abf)]:
+  - miniflare@4.20260616.0
+  - wrangler@4.101.0
+
 ## 1.40.2
 
 ### Patch Changes

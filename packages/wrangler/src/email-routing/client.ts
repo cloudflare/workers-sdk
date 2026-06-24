@@ -1,4 +1,4 @@
-import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { fetchListResult, fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import type {
 	EmailRoutingAddress,
@@ -8,7 +8,7 @@ import type {
 	EmailRoutingSettings,
 	EmailSendingDnsRecord,
 	EmailSendingSendResponse,
-	EmailSendingSettings,
+	EmailSendingSubdomain,
 } from "./index";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -275,59 +275,46 @@ export async function deleteEmailRoutingAddress(
 	);
 }
 
-export async function getEmailSendingSettings(
+export async function listEmailSendingSubdomains(
 	config: Config,
 	zoneId: string
-): Promise<EmailSendingSettings> {
+): Promise<EmailSendingSubdomain[]> {
 	await requireAuth(config);
-	return await fetchResult<EmailSendingSettings>(
+	return await fetchListResult<EmailSendingSubdomain>(
 		config,
-		`/zones/${zoneId}/email/sending`
+		`/zones/${zoneId}/email/sending/subdomains`
 	);
 }
 
-export async function enableEmailSending(
+export async function createEmailSendingSubdomain(
 	config: Config,
 	zoneId: string,
-	name?: string
-): Promise<EmailRoutingSettings> {
+	name: string
+): Promise<EmailSendingSubdomain> {
 	await requireAuth(config);
-	return await fetchResult<EmailRoutingSettings>(
+	return await fetchResult<EmailSendingSubdomain>(
 		config,
-		`/zones/${zoneId}/email/sending/enable`,
+		`/zones/${zoneId}/email/sending/subdomains`,
 		{
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(name ? { name } : {}),
+			body: JSON.stringify({ name }),
 		}
 	);
 }
 
-export async function disableEmailSending(
+export async function deleteEmailSendingSubdomain(
 	config: Config,
 	zoneId: string,
-	name?: string
-): Promise<EmailRoutingSettings> {
+	subdomainId: string
+): Promise<void> {
 	await requireAuth(config);
-	return await fetchResult<EmailRoutingSettings>(
+	await fetchResult<null>(
 		config,
-		`/zones/${zoneId}/email/sending/disable`,
+		`/zones/${zoneId}/email/sending/subdomains/${subdomainId}`,
 		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(name ? { name } : {}),
+			method: "DELETE",
 		}
-	);
-}
-
-export async function getEmailSendingDns(
-	config: Config,
-	zoneId: string
-): Promise<EmailSendingDnsRecord[]> {
-	await requireAuth(config);
-	return await fetchResult<EmailSendingDnsRecord[]>(
-		config,
-		`/zones/${zoneId}/email/sending/dns`
 	);
 }
 

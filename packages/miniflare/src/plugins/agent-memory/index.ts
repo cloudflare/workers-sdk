@@ -23,6 +23,7 @@ const AGENT_MEMORY_SCOPE = "agent-memory";
 
 export const AGENT_MEMORY_PLUGIN: Plugin<typeof AgentMemoryOptionsSchema> = {
 	options: AgentMemoryOptionsSchema,
+	bindingTypeDescription: "Agent Memory",
 	async getBindings(options) {
 		if (!options.agentMemory) {
 			return [];

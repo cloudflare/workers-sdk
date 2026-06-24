@@ -10,12 +10,11 @@ import {
 	logRaw,
 	startSection,
 } from "@cloudflare/cli-shared-helpers";
-import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { maybeAppendWranglerToGitIgnore } from "@cloudflare/cli-shared-helpers/gitignore";
 import { isInteractive } from "@cloudflare/cli-shared-helpers/interactive";
 import { cliDefinition, parseArgs, processArgument } from "helpers/args";
-import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
+import { C3_DEFAULTS, isUpdateAvailable, runLatest } from "helpers/cli";
 import { runWranglerCommand } from "helpers/command";
 import {
 	detectPackageManager,
@@ -45,8 +44,6 @@ import { validateProjectDirectory } from "./validators";
 import { addTypes } from "./workers";
 import { updateWranglerConfig } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
-
-const { npm } = detectPackageManager();
 
 export const main = async (argv: string[]) => {
 	const result = await parseArgs(argv);
@@ -79,6 +76,12 @@ export const main = async (argv: string[]) => {
 
 	if (
 		args.autoUpdate &&
+		// If this process was already spawned by `runLatest`, don't try to update
+		// again. Otherwise, package managers that resolve `cloudflare@latest` to a
+		// version older than the npm `latest` tag (e.g. pnpm 11's `minimumReleaseAge`
+		// supply-chain protection) would cause `isUpdateAvailable()` to stay true and
+		// re-spawn C3 forever.
+		!process.env.CREATE_CLOUDFLARE_RELAUNCHED &&
 		!process.env.VITEST &&
 		!process.env.CI &&
 		isInteractive() &&
@@ -94,19 +97,6 @@ export const main = async (argv: string[]) => {
 			promise: () => runCli(args),
 		});
 	}
-};
-
-// Spawn a separate process running the most recent version of c3
-export const runLatest = async () => {
-	const args = process.argv.slice(2);
-
-	// the parsing logic of `npm create` requires `--` to be supplied
-	// before any flags intended for the target command.
-	if (npm === "npm") {
-		args.unshift("--");
-	}
-
-	await runCommand([npm, "create", "cloudflare@latest", ...args]);
 };
 
 // Entrypoint to c3

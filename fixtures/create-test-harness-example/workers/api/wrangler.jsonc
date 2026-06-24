@@ -1,0 +1,7 @@
+{
+	"name": "api-worker",
+	"main": "index.ts",
+	"compatibility_date": "2026-06-01",
+	"routes": ["api.example.com/v1/*"],
+	"kv_namespaces": [{ "binding": "STORE", "id": "shared-store" }],
+}

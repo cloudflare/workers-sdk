@@ -4589,6 +4589,70 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (hasProperty(value, "dev") && value.dev !== undefined) {
+		if (
+			typeof value.dev !== "object" ||
+			value.dev === null ||
+			Array.isArray(value.dev)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should have an object "dev" field but got ${JSON.stringify(
+					value.dev
+				)}.`
+			);
+			isValid = false;
+		} else {
+			if (
+				!hasProperty(value.dev, "plugin") ||
+				typeof value.dev.plugin !== "object" ||
+				value.dev.plugin === null ||
+				Array.isArray(value.dev.plugin)
+			) {
+				diagnostics.errors.push(
+					`"${field}.dev" should have an object "plugin" field but got ${JSON.stringify(
+						(value.dev as { plugin?: unknown }).plugin
+					)}.`
+				);
+				isValid = false;
+			} else {
+				if (!isRequiredProperty(value.dev.plugin, "package", "string")) {
+					diagnostics.errors.push(
+						`"${field}.dev.plugin" should have a string "package" field but got ${JSON.stringify(
+							(value.dev.plugin as { package?: unknown }).package
+						)}.`
+					);
+					isValid = false;
+				}
+				if (!isRequiredProperty(value.dev.plugin, "name", "string")) {
+					diagnostics.errors.push(
+						`"${field}.dev.plugin" should have a string "name" field but got ${JSON.stringify(
+							(value.dev.plugin as { name?: unknown }).name
+						)}.`
+					);
+					isValid = false;
+				}
+			}
+			if (
+				hasProperty(value.dev, "options") &&
+				value.dev.options !== undefined &&
+				(typeof value.dev.options !== "object" ||
+					value.dev.options === null ||
+					Array.isArray(value.dev.options))
+			) {
+				diagnostics.errors.push(
+					`"${field}.dev.options" should be an object but got ${JSON.stringify(
+						value.dev.options
+					)}.`
+				);
+				isValid = false;
+			}
+		}
+		if ((value as { remote?: unknown }).remote === true) {
+			diagnostics.warnings.push(
+				`"${field}" binding has both "dev" and "remote" set; "remote" is ignored when "dev" is present and the binding is routed through the local Miniflare plugin.`
+			);
+		}
+	}
 	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}

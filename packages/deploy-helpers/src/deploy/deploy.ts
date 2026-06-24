@@ -6,12 +6,9 @@ import { cancel } from "@cloudflare/cli-shared-helpers";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
-	configFileName,
 	experimental_patchConfig,
-	formatConfigSnippet,
 	formatTime,
 	getDockerPath,
-	getTodaysCompatDate,
 	parseNonHyphenedUuid,
 	retryOnAPIFailure,
 	UserError,
@@ -20,7 +17,11 @@ import { Response } from "undici";
 import { confirm, fetchResult, logger } from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
 import { ensureQueuesExistByConfig } from "../triggers/queue-consumers";
-import { buildAssetManifest, syncAssets } from "./helpers/assets";
+import {
+	buildAssetManifest,
+	resolveAssetOptions,
+	syncAssets,
+} from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
 import { checkRemoteSecretsOverride } from "./helpers/check-remote-secrets-override";
@@ -38,21 +39,20 @@ import {
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
-import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
+import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
 	handleMissingSecretsError,
 } from "./helpers/secrets-validation";
-import { loadSourceMaps } from "./helpers/source-maps";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
 import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
-import { validateRoutes } from "./helpers/validate-routes";
+import { validateWorkerProps } from "./helpers/validate-worker-props";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
@@ -71,7 +71,6 @@ import type {
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
 import type {
-	Binding,
 	CfModule,
 	CfWorkerInit,
 	ComplianceConfig,
@@ -100,16 +99,6 @@ export type DeployCallbacks = {
 				manifest: { [filePath: string]: string } | undefined;
 				namespace: string | undefined;
 		  }>)
-		| undefined;
-	provisionBindings:
-		| ((
-				bindings: Record<string, Binding>,
-				accountId: string,
-				scriptName: string,
-				autoCreate: boolean,
-				config: Config,
-				requireRemote?: boolean
-		  ) => Promise<void>)
 		| undefined;
 	getNormalizedContainerOptions:
 		| ((
@@ -151,27 +140,20 @@ export default async function deploy(
 	workerTag: string | null;
 	targets?: string[];
 }> {
-	if (!props.name) {
-		throw new UserError(
-			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-			{ telemetryMessage: "deploy command missing worker name" }
-		);
-	}
-
 	const {
 		entry,
 		name,
 		compatibilityDate,
 		compatibilityFlags,
 		keepVars,
-		uploadSourceMaps,
 		accountId,
 	} = props;
 
-	if (!props.dryRun) {
-		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
-	}
+	const assetsOptions = resolveAssetOptions(props, config);
+
+	// All new validation should go in validateWorkerProps()
+	await validateWorkerProps({ ...props, assetsOptions }, config);
+	assert(name); // already validated inside validateWorkerProps, but TS can't see that
 
 	const deployConfirm = getDeployConfirmFunction({
 		strictMode: props.strict,
@@ -183,8 +165,6 @@ export default async function deploy(
 	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 
 	let workerExists: boolean = true;
-
-	const allDeploymentRoutes = props.routes;
 
 	if (!props.dispatchNamespace && accountId) {
 		try {
@@ -215,7 +195,7 @@ export default async function deploy(
 				const configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
 					...config,
 					// We also want to include all the routes used for deployment
-					routes: allDeploymentRoutes,
+					routes: props.routes,
 				});
 
 				// If there are only additive changes (or no changes at all) there should be no problem,
@@ -256,7 +236,10 @@ export default async function deploy(
 						return { versionId, workerTag };
 					}
 				}
-			} else if (script.last_deployed_from === "api") {
+			} else if (
+				script.last_deployed_from === "api" &&
+				!props.skipLastDeployedFromApiCheck
+			) {
 				logger.warn(
 					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
@@ -299,28 +282,7 @@ export default async function deploy(
 		}
 	}
 
-	if (!compatibilityDate) {
-		const compatibilityDateStr = getTodaysCompatDate();
-
-		throw new UserError(
-			`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
-    \`\`\`
-    ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
-    \`\`\`
-    Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
-See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
-			{ telemetryMessage: "missing compatibility date when deploying" }
-		);
-	}
-
-	validateRoutes(allDeploymentRoutes, props.assetsOptions);
-
 	const scriptName = name;
-
-	assert(
-		!config.site || config.site.bucket,
-		"A [site] definition requires a `bucket` field with a path to the site's assets directory."
-	);
 
 	const envName = props.env ?? "production";
 
@@ -355,38 +317,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	}
 
-	if (
-		!props.isWorkersSite &&
-		Boolean(props.legacyAssetPaths) &&
-		format === "service-worker"
-	) {
-		throw new UserError(
-			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/",
-			{ telemetryMessage: "deploy service worker assets unsupported" }
-		);
-	}
-
-	if (config.wasm_modules && format === "modules") {
-		throw new UserError(
-			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
-			{ telemetryMessage: "deploy wasm modules with es module worker" }
-		);
-	}
-
-	if (config.text_blobs && format === "modules") {
-		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
-			{ telemetryMessage: "[text_blobs] with an ES module worker" }
-		);
-	}
-
-	if (config.data_blobs && format === "modules") {
-		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
-			{ telemetryMessage: "[data_blobs] with an ES module worker" }
-		);
-	}
-
 	const isDryRun = props.dryRun;
 
 	const normalisedContainerConfig = callbacks.getNormalizedContainerOptions
@@ -398,7 +328,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		resolvedEntryPointPath,
 		bundleType,
 		content,
-		bundle,
+		sourceMaps,
 	} = buildResult;
 	// durable object migrations
 	const migrations = !isDryRun
@@ -413,19 +343,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	// Upload assets if assets is being used
 	const assetsJwt =
-		props.assetsOptions && !isDryRun
+		assetsOptions && !isDryRun
 			? await syncAssets(
 					config,
 					accountId,
-					props.assetsOptions.directory,
+					assetsOptions.directory,
 					scriptName,
 					props.dispatchNamespace
 				)
 			: undefined;
 
 	// validate asset directory
-	if (props.assetsOptions && isDryRun) {
-		await buildAssetManifest(props.assetsOptions.directory);
+	if (assetsOptions && isDryRun) {
+		await buildAssetManifest(assetsOptions.directory);
 	}
 
 	const workersSitesAssets = callbacks.syncWorkersSite
@@ -498,9 +428,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		migrations,
 		modules,
 		containers: config.containers,
-		sourceMaps: uploadSourceMaps
-			? loadSourceMaps(main, modules, bundle)
-			: undefined,
+		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
 		keepVars,
@@ -518,14 +446,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					}
 				: undefined,
 		assets:
-			props.assetsOptions && assetsJwt
+			assetsOptions && assetsJwt
 				? {
 						jwt: assetsJwt,
-						routerConfig: props.assetsOptions.routerConfig,
-						assetConfig: props.assetsOptions.assetConfig,
-						_redirects: props.assetsOptions._redirects,
-						_headers: props.assetsOptions._headers,
-						run_worker_first: props.assetsOptions.run_worker_first,
+						routerConfig: assetsOptions.routerConfig,
+						assetConfig: assetsOptions.assetConfig,
+						_redirects: assetsOptions._redirects,
+						_headers: assetsOptions._headers,
+						run_worker_first: assetsOptions.run_worker_first,
 					}
 				: undefined,
 		observability: config.observability,
@@ -623,13 +551,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	} else {
 		assert(accountId, "Missing accountId");
 
-		if (props.resourcesProvision && callbacks.provisionBindings) {
-			await callbacks.provisionBindings(
+		if (assetsOptions?.routerConfig.has_user_worker === false) {
+			logger.debug("skipping provisioning on assets-only project");
+		} else if (props.resourcesProvision) {
+			await provisionBindings(
 				bindings ?? {},
 				accountId,
 				scriptName,
 				props.experimentalAutoCreate,
-				config
+				config,
+				{
+					skipConfigWriteback: props.skipProvisioningConfigWriteback,
+				}
 			);
 		}
 
@@ -922,7 +855,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		crons: props.triggers,
 		useServiceEnvironments,
 		firstDeploy: !workerExists,
-		routes: allDeploymentRoutes,
+		routes: props.routes,
 	});
 
 	logger.log("Current Version ID:", versionId);

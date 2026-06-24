@@ -66,6 +66,103 @@ const defaultConfig: ResolvedStepConfig = {
 	timeout: "10 minutes",
 };
 
+/**
+ * Returns a copy of `value` that is safe to persist via Durable Object SQL
+ * storage without dragging unrelated bytes along with typed-array views.
+ *
+ * Background: workerd's `v8::ValueSerializer` writes the entire backing
+ * `ArrayBuffer` for typed-array views, not just `byteLength` bytes. A view
+ * sliced from a much larger buffer (`crypto.getRandomValues`, `arr.slice(...)`,
+ * fetch-stream copies) blows up the wire size by a factor of
+ * (backing-size / view-size) and can hit `SQLITE_TOOBIG` at view sizes well
+ * below the documented 1MiB step-output limit (see issue #14101). Copying the
+ * view's bytes into a tight backing buffer before persistence brings local
+ * `wrangler dev` behaviour in line with production.
+ *
+ * The walk is recursive (cycle-safe via a `WeakMap`) so views nested inside
+ * objects, arrays, Maps, and Sets are also compacted. View types are preserved
+ * (`Uint8Array` stays `Uint8Array`, `Int16Array` stays `Int16Array`, etc.) so
+ * the persisted shape matches the live shape — cached replays observe the
+ * same constructor type the step originally returned. Class instances and
+ * host objects (`Date`, `RegExp`, raw `ArrayBuffer`, streams, `Blob`, …) are
+ * passed through unchanged — recursing into them would either fail to
+ * reconstruct the original type or trigger their own structured-clone path.
+ */
+function normalizeForStorage(
+	value: unknown,
+	seen: WeakMap<object, unknown> = new WeakMap()
+): unknown {
+	// Primitives: nothing to do.
+	if (value === null || typeof value !== "object") {
+		return value;
+	}
+
+	// Already visited (cycle): return the previously-built copy so the result
+	// graph mirrors the original's cycle topology.
+	if (seen.has(value)) {
+		return seen.get(value);
+	}
+
+	// Typed-array views (TypedArray + DataView): copy bytes into a tight
+	// backing buffer, preserving the original view constructor.
+	if (ArrayBuffer.isView(value)) {
+		return buildCompactView(value);
+	}
+
+	if (Array.isArray(value)) {
+		const result: unknown[] = [];
+		seen.set(value, result);
+		for (const item of value) {
+			result.push(normalizeForStorage(item, seen));
+		}
+		return result;
+	}
+
+	if (value instanceof Map) {
+		const result = new Map();
+		seen.set(value, result);
+		for (const [k, v] of value) {
+			result.set(normalizeForStorage(k, seen), normalizeForStorage(v, seen));
+		}
+		return result;
+	}
+
+	if (value instanceof Set) {
+		const result = new Set();
+		seen.set(value, result);
+		for (const v of value) {
+			result.add(normalizeForStorage(v, seen));
+		}
+		return result;
+	}
+
+	// Plain objects (Object literals and null-prototype objects). Class
+	// instances and host objects fall through to the pass-through below.
+	const proto = Object.getPrototypeOf(value);
+	if (proto === Object.prototype || proto === null) {
+		const result: Record<string, unknown> = {};
+		seen.set(value, result);
+		for (const key of Object.keys(value)) {
+			result[key] = normalizeForStorage(
+				(value as Record<string, unknown>)[key],
+				seen
+			);
+		}
+		return result;
+	}
+
+	return value;
+}
+
+type ViewCtor = new (buffer: ArrayBufferLike) => ArrayBufferView;
+function buildCompactView(view: ArrayBufferView): ArrayBufferView {
+	const tightBuffer = view.buffer.slice(
+		view.byteOffset,
+		view.byteOffset + view.byteLength
+	);
+	return new (view.constructor as ViewCtor)(tightBuffer);
+}
+
 export interface UserErrorField {
 	isUserError?: boolean;
 }
@@ -143,16 +240,17 @@ export class Context extends RpcTarget {
 	#registerRollback(options: {
 		cacheKey: string;
 		rollbackFn: RollbackFn | undefined;
-		stepName: string;
+		stepContext: WorkflowStepContext;
 		output?: unknown;
 		rollbackConfig?: WorkflowStepConfig;
 	}): void {
-		const { cacheKey, rollbackFn, stepName, output, rollbackConfig } = options;
+		const { cacheKey, rollbackFn, stepContext, output, rollbackConfig } =
+			options;
 		if (rollbackFn && this.#rollbackStep === undefined) {
 			registerRollbackFn(this.#engine.rollbackRegistry, {
 				cacheKey,
 				fn: rollbackFn,
-				stepName,
+				stepContext,
 				...("output" in options && { output }),
 				...(rollbackConfig !== undefined && { config: rollbackConfig }),
 			});
@@ -284,6 +382,7 @@ export class Context extends RpcTarget {
 			streamMetaKey,
 			configKey,
 			errorKey,
+			stepStateKey,
 		]);
 
 		// Check cache -- streams first, then plain values
@@ -291,7 +390,11 @@ export class Context extends RpcTarget {
 			| StreamOutputMeta
 			| undefined
 			| null;
+		const cachedConfig = maybeMap.get(configKey) as
+			| ResolvedStepConfig
+			| undefined;
 		if (maybeStreamMeta?.state === StreamOutputState.Complete) {
+			const cachedState = maybeMap.get(stepStateKey) as StepState | undefined;
 			const maybeOutputError = getInvalidStoredStreamOutputError(
 				this.#state.storage,
 				cacheKey,
@@ -311,7 +414,11 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
+				stepContext: {
+					step: { name, count },
+					attempt: cachedState?.attemptedCount ?? 1,
+					config: cachedConfig ?? config,
+				},
 				output: result,
 				rollbackConfig,
 			});
@@ -326,11 +433,16 @@ export class Context extends RpcTarget {
 		const maybeResult = maybeMap.get(valueKey);
 
 		if (maybeResult) {
+			const cachedState = maybeMap.get(stepStateKey) as StepState | undefined;
 			const result = (maybeResult as { value: T }).value;
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
+				stepContext: {
+					step: { name, count },
+					attempt: cachedState?.attemptedCount ?? 1,
+					config: cachedConfig ?? config,
+				},
 				output: result,
 				rollbackConfig,
 			});
@@ -347,10 +459,10 @@ export class Context extends RpcTarget {
 		}
 
 		// Persist initial config because user can pass in dynamic config
-		if (!maybeMap.has(configKey)) {
+		if (cachedConfig === undefined) {
 			await this.#state.storage.put(configKey, config);
 		} else {
-			config = maybeMap.get(configKey) as ResolvedStepConfig;
+			config = cachedConfig;
 		}
 
 		const attemptLogs = this.#engine
@@ -410,6 +522,11 @@ export class Context extends RpcTarget {
 			)) as StepState) ?? {
 				attemptedCount: 0,
 			};
+			const forwardStepContext = (): WorkflowStepContext => ({
+				step: { name, count },
+				attempt: stepState.attemptedCount,
+				config,
+			});
 
 			// NOTE(caio): this might be a stream returning step - if so cleanup stale data from previous lifetimes
 			await cleanupPendingStreamOutput(this.#state.storage, cacheKey).catch(
@@ -546,7 +663,15 @@ export class Context extends RpcTarget {
 					activeTimeoutTask?: Promise<never>
 				): Promise<unknown> => {
 					if (!isReadableStreamLike(value)) {
-						await this.#state.storage.put(valueKey, { value });
+						// Typed-array views anywhere in the value tree are copied
+						// into a tight backing buffer so the full backing buffer
+						// does not ride along with each view (issue #14101). View
+						// types are preserved so cached replays observe the same
+						// constructor as the live execution path. The caller still
+						// receives the original `value` below — only the stored
+						// shape changes.
+						const stored = normalizeForStorage(value);
+						await this.#state.storage.put(valueKey, { value: stored });
 						abortController.abort("step finished");
 						// @ts-expect-error priorityQueue is initiated in init
 						this.#engine.priorityQueue.remove({
@@ -817,7 +942,7 @@ export class Context extends RpcTarget {
 					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepName: stepNameWithCounter,
+						stepContext: forwardStepContext(),
 						rollbackConfig,
 					});
 
@@ -919,7 +1044,7 @@ export class Context extends RpcTarget {
 					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepName: stepNameWithCounter,
+						stepContext: forwardStepContext(),
 						rollbackConfig,
 					});
 
@@ -938,7 +1063,7 @@ export class Context extends RpcTarget {
 			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepName: stepNameWithCounter,
+				stepContext: forwardStepContext(),
 				output: result,
 				rollbackConfig,
 			});

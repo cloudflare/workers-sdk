@@ -22,6 +22,7 @@ const WEBSEARCH_SCOPE = "websearch";
 
 export const WEBSEARCH_PLUGIN: Plugin<typeof WebsearchOptionsSchema> = {
 	options: WebsearchOptionsSchema,
+	bindingTypeDescription: "Web Search",
 	async getBindings(options) {
 		const bindings: {
 			name: string;

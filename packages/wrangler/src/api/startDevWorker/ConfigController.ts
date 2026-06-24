@@ -174,6 +174,7 @@ async function resolveDevConfig(
 		registry: input.dev?.registry,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		inferOriginFromRoutes: input.dev?.inferOriginFromRoutes ?? true,
+		routeRequestsByRoutes: input.dev?.routeRequestsByRoutes ?? false,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),

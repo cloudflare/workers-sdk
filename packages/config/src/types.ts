@@ -113,14 +113,14 @@ type Export = DurableObjectExport;
  * Worker configuration. This is the input shape passed to
  * [`defineWorker`](https://developers.cloudflare.com/workers/wrangler/configuration/).
  *
- * Fields are validated at runtime by `ConfigSchema` and normalised before
+ * Fields are validated at runtime by `InputWorkerSchema` and normalised before
  * being passed to downstream tooling.
  */
 export interface UserConfig {
 	/**
 	 * The name of your Worker.
 	 */
-	name?: string;
+	name: string;
 
 	/**
 	 * This is the ID of the account associated with your zone.
@@ -137,7 +137,7 @@ export interface UserConfig {
 	 *
 	 * More details at https://developers.cloudflare.com/workers/configuration/compatibility-dates
 	 */
-	compatibilityDate?: string;
+	compatibilityDate: string;
 
 	/**
 	 * A list of flags that enable features from upcoming features of

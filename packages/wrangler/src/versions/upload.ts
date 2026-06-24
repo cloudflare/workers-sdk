@@ -1,7 +1,6 @@
 import { versionsUpload } from "@cloudflare/deploy-helpers";
 import { analyseBundle } from "../check/commands";
 import { createCommand } from "../core/create-command";
-import { provisionBindings } from "../deployment-bundle/bindings";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -33,6 +32,7 @@ export const versionsUploadCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		useConfigRedirectIfAvailable: true,
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
@@ -40,19 +40,23 @@ export const versionsUploadCommand = createCommand({
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	validateArgs(args) {
 		validateDeployVersionsArgs(args, "versions upload");
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		// Merge CLI args with config (includes Sites validation and assets validation)
-		const mergedProps = await mergeVersionsUploadConfigArgs(args, config);
+		const { props, buildProps } = await mergeVersionsUploadConfigArgs(
+			args,
+			config
+		);
 
 		try {
 			metrics.sendMetricsEvent(
 				"upload worker version",
 				{
-					usesTypeScript: /\.tsx?$/.test(mergedProps.entry.file),
+					usesTypeScript: /\.tsx?$/.test(props.entry.file),
 				},
 				{
 					sendMetrics: config.send_metrics,
@@ -62,24 +66,23 @@ export const versionsUploadCommand = createCommand({
 			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 			const preMergeName = getScriptName(args, config);
 			const workerNameOverridden =
-				mergedProps.name !== undefined && mergedProps.name !== preMergeName;
+				props.name !== undefined && props.name !== preMergeName;
 
-			const buildResult = await buildWorker(mergedProps, config, {});
+			const buildResult = await buildWorker(buildProps, config);
 
 			const {
 				versionId,
 				workerTag,
 				versionPreviewUrl,
 				versionPreviewAliasUrl,
-			} = await versionsUpload(mergedProps, config, buildResult, {
-				provisionBindings: provisionBindings,
+			} = await versionsUpload(props, config, buildResult, {
 				analyseBundle: analyseBundle,
 			});
 
 			writeOutput({
 				type: "version-upload",
 				version: 1,
-				worker_name: mergedProps.name ?? null,
+				worker_name: props.name ?? null,
 				worker_tag: workerTag,
 				version_id: versionId,
 				preview_url: versionPreviewUrl,
@@ -88,7 +91,7 @@ export const versionsUploadCommand = createCommand({
 				worker_name_overridden: workerNameOverridden,
 			});
 		} finally {
-			cleanupDestination(mergedProps.destination);
+			cleanupDestination(buildProps.destination);
 		}
 	},
 });

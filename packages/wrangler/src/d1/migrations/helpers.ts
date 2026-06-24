@@ -149,6 +149,10 @@ export function normalizeRelativePath(p: string): string {
 	return normalized;
 }
 
+export function escapeIdentifier(id: string): string {
+	return `"${id.replace(/"/g, '""')}"`;
+}
+
 export async function getMigrationsPath({
 	projectPath,
 	migrationsDir,
@@ -250,6 +254,7 @@ const listAppliedMigrations = async ({
 	persistTo,
 	preview,
 }: ListAppliedMigrationsProps): Promise<Migration[]> => {
+	const escapedTableName = escapeIdentifier(migrationsTableName);
 	const response: QueryResult[] | null = await executeSql({
 		local,
 		remote,
@@ -258,7 +263,7 @@ const listAppliedMigrations = async ({
 		shouldPrompt: !isNonInteractiveOrCI(),
 		persistTo,
 		command: `SELECT *
-		FROM ${migrationsTableName}
+		FROM ${escapedTableName}
 		ORDER BY id`,
 		file: undefined,
 		json: true,
@@ -481,6 +486,7 @@ export const initMigrationsTable = async ({
 	persistTo: string | undefined;
 	preview: boolean | undefined;
 }) => {
+	const escapedTableName = escapeIdentifier(migrationsTableName);
 	return executeSql({
 		local,
 		remote,
@@ -488,7 +494,7 @@ export const initMigrationsTable = async ({
 		name,
 		shouldPrompt: !isNonInteractiveOrCI(),
 		persistTo,
-		command: `CREATE TABLE IF NOT EXISTS ${migrationsTableName}(
+		command: `CREATE TABLE IF NOT EXISTS ${escapedTableName}(
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
 		name       TEXT UNIQUE,
 		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL

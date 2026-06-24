@@ -9,7 +9,7 @@ import {
 	fetchListResult,
 	fetchPagedListResult,
 } from "../cfetch";
-import { confirm, prompt } from "../dialogs";
+import { confirm, prompt, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { msw } from "./helpers/msw";
@@ -25,6 +25,7 @@ initDeployHelpersContext({
 	fetchKVGetValue,
 	confirm,
 	prompt,
+	select,
 	isNonInteractiveOrCI,
 });
 
@@ -250,10 +251,7 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 vi.mock("../agents-skills-install", async (importOriginal) => {
 	const realModule =
 		await importOriginal<typeof import("../agents-skills-install")>();
-	vi.spyOn(
-		realModule,
-		"maybeInstallCloudflareSkillsGlobally"
-	).mockResolvedValue(undefined);
+	vi.spyOn(realModule, "runSkillsInstallFlow").mockResolvedValue(undefined);
 	vi.spyOn(realModule, "telemetryCurrentAgentSkillsInstalled").mockReturnValue(
 		Promise.resolve(null)
 	);

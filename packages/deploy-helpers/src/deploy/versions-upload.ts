@@ -3,19 +3,15 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
-	configFileName,
-	formatConfigSnippet,
 	formatTime,
-	getTodaysCompatDate,
 	ParseError,
 	retryOnAPIFailure,
-	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { confirm, fetchResult, logger } from "../shared/context";
 import { ensureQueuesExistByConfig } from "../triggers/queue-consumers";
 import { getWorkersDevSubdomain } from "../triggers/subdomain";
-import { syncAssets } from "./helpers/assets";
+import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
@@ -26,20 +22,20 @@ import {
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
-import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
+import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
 	handleMissingSecretsError,
 } from "./helpers/secrets-validation";
-import { loadSourceMaps } from "./helpers/source-maps";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
 import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
+import { validateWorkerProps } from "./helpers/validate-worker-props";
 import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
 import { isWorkerNotFoundError } from "./helpers/worker-not-found-error";
 import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
@@ -48,10 +44,7 @@ import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
-export type VersionsUploadCallbacks = Pick<
-	DeployCallbacks,
-	"provisionBindings" | "analyseBundle"
->;
+export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
 
 export default async function versionsUpload(
 	props: VersionsUploadProps,
@@ -64,31 +57,26 @@ export default async function versionsUpload(
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
 }> {
-	if (!props.name) {
-		throw new UserError(
-			'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-			{ telemetryMessage: "versions upload missing worker name" }
-		);
-	}
 	const {
 		entry,
 		name,
 		compatibilityDate,
 		compatibilityFlags,
 		keepVars,
-		uploadSourceMaps,
 		accountId,
 	} = props;
 
-	if (!props.dryRun) {
-		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
-	}
+	const assetsOptions = resolveAssetOptions(props, config);
+
+	// All new validation should go in validateWorkerProps()
+	await validateWorkerProps(props, config);
+	assert(name); // already validated inside validateWorkerProps, but TS can't see that
+
 	let versionId: string | null = null;
 	let workerTag: string | null = null;
 	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 
-	if (accountId && name) {
+	if (accountId) {
 		try {
 			const {
 				default_environment: { script },
@@ -118,7 +106,10 @@ export default async function versionsUpload(
 						workerTag,
 					};
 				}
-			} else if (script.last_deployed_from === "api") {
+			} else if (
+				script.last_deployed_from === "api" &&
+				!props.skipLastDeployedFromApiCheck
+			) {
 				logger.warn(
 					`You are about to upload a Workers Version that was last updated via the API.\nEdits that have been made via the API will be overridden by your local code and config.`
 				);
@@ -136,67 +127,13 @@ export default async function versionsUpload(
 		}
 	}
 
-	if (!compatibilityDate) {
-		const compatibilityDateStr = getTodaysCompatDate();
-
-		throw new UserError(
-			`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
-    \`\`\`
-	${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
-    \`\`\`
-    Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
-See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
-			{
-				telemetryMessage: "versions upload missing compatibility date",
-			}
-		);
-	}
-
 	const scriptName = name;
-
-	if (config.site && !config.site.bucket) {
-		throw new UserError(
-			"A [site] definition requires a `bucket` field with a path to the site's assets directory.",
-			{ telemetryMessage: "versions upload sites missing bucket" }
-		);
-	}
 
 	const start = Date.now();
 	const workerName = scriptName;
 	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	const { format } = entry;
 	const projectRoot = entry.projectRoot;
-
-	if (config.wasm_modules && format === "modules") {
-		throw new UserError(
-			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
-			{
-				telemetryMessage:
-					"versions upload wasm modules unsupported module worker",
-			}
-		);
-	}
-
-	if (config.text_blobs && format === "modules") {
-		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
-			{
-				telemetryMessage:
-					"versions upload text blobs unsupported module worker",
-			}
-		);
-	}
-
-	if (config.data_blobs && format === "modules") {
-		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
-			{
-				telemetryMessage:
-					"versions upload data blobs unsupported module worker",
-			}
-		);
-	}
 
 	let hasPreview = false;
 
@@ -206,7 +143,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		resolvedEntryPointPath,
 		bundleType,
 		content,
-		bundle,
+		sourceMaps,
 	} = buildResult;
 	const bindings = getBindings(config);
 
@@ -232,13 +169,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	// Upload assets if assets is being used
 	const assetsJwt =
-		props.assetsOptions && !props.dryRun
-			? await syncAssets(
-					config,
-					accountId,
-					props.assetsOptions.directory,
-					scriptName
-				)
+		assetsOptions && !props.dryRun
+			? await syncAssets(config, accountId, assetsOptions.directory, scriptName)
 			: undefined;
 
 	if (props.secretsFile) {
@@ -272,9 +204,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		migrations,
 		modules,
 		containers: config.containers,
-		sourceMaps: uploadSourceMaps
-			? loadSourceMaps(main, modules, bundle)
-			: undefined,
+		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
 		keepVars,
@@ -290,26 +220,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			"workers/alias": props.previewAlias,
 		},
 		assets:
-			props.assetsOptions && assetsJwt
+			assetsOptions && assetsJwt
 				? {
 						jwt: assetsJwt,
-						routerConfig: props.assetsOptions.routerConfig,
-						assetConfig: props.assetsOptions.assetConfig,
-						_redirects: props.assetsOptions._redirects,
-						_headers: props.assetsOptions._headers,
-						run_worker_first: props.assetsOptions.run_worker_first,
+						routerConfig: assetsOptions.routerConfig,
+						assetConfig: assetsOptions.assetConfig,
+						_redirects: assetsOptions._redirects,
+						_headers: assetsOptions._headers,
+						run_worker_first: assetsOptions.run_worker_first,
 					}
 				: undefined,
 		logpush: undefined, // logpush and observability are non-versioned settings
 		observability: undefined,
 		cache: config.cache, // cache is a versioned setting
 	};
-
-	if (config.containers && config.containers.length > 0) {
-		logger.warn(
-			`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`wrangler deploy\`.`
-		);
-	}
 
 	await printBundleSize(
 		{ name: path.basename(resolvedEntryPointPath), content: content },
@@ -332,13 +256,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	} else {
 		assert(accountId, "Missing accountId");
-		if (props.resourcesProvision && callbacks.provisionBindings) {
-			await callbacks.provisionBindings(
+		if (assetsOptions?.routerConfig.has_user_worker === false) {
+			logger.debug("skipping provisioning on assets-only project");
+		} else if (props.resourcesProvision) {
+			await provisionBindings(
 				bindings,
 				accountId,
 				scriptName,
 				props.experimentalAutoCreate,
-				config
+				config,
+				{
+					skipConfigWriteback: props.skipProvisioningConfigWriteback,
+				}
 			);
 		}
 		workerBundle = createWorkerUploadForm(worker, bindings, {
@@ -471,11 +400,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log(`--dry-run: exiting now.`);
 		return { versionId, workerTag };
 	}
-	if (!accountId) {
-		throw new UserError("Missing accountId", {
-			telemetryMessage: "versions upload missing account id",
-		});
-	}
+	assert(accountId);
 
 	const uploadMs = Date.now() - start;
 

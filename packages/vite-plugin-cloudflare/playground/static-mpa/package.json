@@ -3,12 +3,15 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"build:cf-build-output": "vite build --app -c vite.config.cf-build-output.ts",
 		"build:default": "vite build --app",
 		"build:with-worker-configs-warning": "vite build --app -c vite.config.with-worker-configs-warning.ts",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
+		"dev:cf-build-output": "vite dev -c vite.config.cf-build-output.ts",
 		"dev:with-worker-configs-warning": "vite dev -c vite.config.with-worker-configs-warning.ts",
 		"preview": "vite preview",
+		"preview:cf-build-output": "vite preview -c vite.config.cf-build-output.ts",
 		"preview:with-worker-configs-warning": "vite preview -c vite.config.with-worker-configs-warning.ts"
 	},
 	"devDependencies": {

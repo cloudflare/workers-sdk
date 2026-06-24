@@ -21,6 +21,7 @@ export const VECTORIZE_PLUGIN_NAME = "vectorize";
 
 export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 	options: VectorizeOptionsSchema,
+	bindingTypeDescription: "Vectorize index",
 	async getBindings(options) {
 		if (!options.vectorize) {
 			return [];

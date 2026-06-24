@@ -22,6 +22,7 @@ export const d1TimeTravelRestoreCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 	},
 	args: {

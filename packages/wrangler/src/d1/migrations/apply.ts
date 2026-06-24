@@ -5,10 +5,10 @@ import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
-import { isLocal } from "../../utils/is-local";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
+	escapeIdentifier,
 	getMigrationsPath,
 	getUnappliedMigrations,
 	initMigrationsTable,
@@ -36,6 +36,7 @@ export const d1MigrationsApplyCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	args: {
@@ -75,9 +76,7 @@ export const d1MigrationsApplyCommand = createCommand({
 			);
 		}
 
-		const databaseInfo = getDatabaseInfoFromConfig(config, database, {
-			requireDatabaseId: !isLocal({ local, remote }),
-		});
+		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 
 		if (!databaseInfo && remote) {
 			throw new UserError(
@@ -152,9 +151,12 @@ Your database may not be available to serve requests during the migration, conti
 				`${migrationsPath}/${migration.name}`,
 				"utf8"
 			);
+			const escapedTableName = escapeIdentifier(
+				migrationsConfig.migrationsTableName
+			);
 			query += `
-								INSERT INTO ${migrationsConfig.migrationsTableName} (name)
-								values ('${migration.name}');
+								INSERT INTO ${escapedTableName} (name)
+								values ('${migration.name.replace(/'/g, "''")}');
 						`;
 
 			let success = true;

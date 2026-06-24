@@ -490,7 +490,7 @@ Your database may not be available to serve requests during the migration, conti
 				.mockImplementation(async ({ command }) => {
 					if (typeof command === "string") {
 						const match = command.match(
-							/INSERT INTO d1_migrations \(name\)\s*values\s*\('([^']+)'\)/
+							/INSERT INTO "d1_migrations" \(name\)\s*values\s*\('([^']+)'\)/
 						);
 						if (match) {
 							insertedNames.push(match[1]);
@@ -823,6 +823,118 @@ Your database may not be available to serve requests during the migration, conti
 
 				When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your wrangler.jsonc file (for example, \`"migrations_dir": "migrations"\`).]
 			`);
+		});
+
+		it("should escape single quotes in migration filenames during apply", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+					},
+				],
+			});
+			fs.mkdirSync("./migrations", { recursive: true });
+			fs.writeFileSync(
+				"./migrations/0001_add_user's_settings.sql",
+				"-- settings"
+			);
+
+			const executedQueries: string[] = [];
+			const spy = vi
+				.spyOn(d1Execute, "executeSql")
+				.mockImplementation(async ({ command }) => {
+					if (typeof command === "string") {
+						executedQueries.push(command);
+						if (command.includes("SELECT *")) {
+							return [{ results: [], success: true, meta: {} as never }];
+						}
+					}
+					return [{ results: [], success: true, meta: {} as never }];
+				});
+
+			mockConfirm({
+				text: `About to apply 1 migration(s)\nYour database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			try {
+				await runWrangler("d1 migrations apply db --local");
+			} finally {
+				spy.mockRestore();
+			}
+
+			const insertQuery = executedQueries.find((q) =>
+				q.includes("INSERT INTO")
+			);
+			expect(insertQuery).toBeDefined();
+			expect(insertQuery).toContain("'0001_add_user''s_settings.sql'");
+		});
+
+		it("should escape migrationsTableName using double quotes in SQL queries", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+						migrations_table: "my-custom-table",
+					},
+				],
+			});
+			fs.mkdirSync("./migrations", { recursive: true });
+			fs.writeFileSync("./migrations/0001_init.sql", "-- init");
+
+			const executedQueries: string[] = [];
+			const spy = vi
+				.spyOn(d1Execute, "executeSql")
+				.mockImplementation(async ({ command }) => {
+					if (typeof command === "string") {
+						executedQueries.push(command);
+					}
+					return [{ results: [], success: true, meta: {} as never }];
+				});
+
+			mockConfirm({
+				text: `About to apply 1 migration(s)\nYour database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			try {
+				await runWrangler("d1 migrations apply db --local");
+			} finally {
+				spy.mockRestore();
+			}
+
+			// Verify table creation uses quoted table name
+			const createQuery = executedQueries.find((q) =>
+				q.includes("CREATE TABLE IF NOT EXISTS")
+			);
+			expect(createQuery).toBeDefined();
+			expect(createQuery).toContain(
+				'CREATE TABLE IF NOT EXISTS "my-custom-table"'
+			);
+
+			// Verify query uses quoted table name
+			const selectQuery = executedQueries.find((q) => q.includes("SELECT *"));
+			expect(selectQuery).toBeDefined();
+			expect(selectQuery).toContain('FROM "my-custom-table"');
+
+			// Verify insert uses quoted table name
+			const insertQuery = executedQueries.find((q) =>
+				q.includes("INSERT INTO")
+			);
+			expect(insertQuery).toBeDefined();
+			expect(insertQuery).toContain('INSERT INTO "my-custom-table"');
 		});
 	});
 });

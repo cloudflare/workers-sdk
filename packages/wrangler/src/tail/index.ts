@@ -90,6 +90,7 @@ export const tailCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: false,
 	},
 	async handler(args, { config }) {

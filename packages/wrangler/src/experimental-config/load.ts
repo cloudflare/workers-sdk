@@ -1,11 +1,10 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { loadConfig, resolveWorkerDefinition } from "@cloudflare/config";
 import {
-	ConfigSchema,
+	InputWorkerSchema,
 	convertToWranglerConfig,
-	loadConfig,
-	resolveWorkerDefinition,
-} from "@cloudflare/config";
+} from "@cloudflare/deploy-helpers";
 import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
 import { convertToolingConfig } from "./convert";
 import {
@@ -15,6 +14,7 @@ import {
 } from "./schema";
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
+import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export const CLOUDFLARE_CONFIG_FILENAME = "cloudflare.config.ts";
@@ -27,6 +27,8 @@ export interface NormalizedTypes {
 export interface LoadNewConfigResult {
 	/** Merged result: `cloudflare.config.ts` runtime + `wrangler.config.ts` tooling. */
 	rawConfig: Omit<RawConfig, "env">;
+	/**  The validated `cloudflare.config.ts` shape. */
+	parsedWorkerConfig: ParsedInputWorkerConfig;
 	/** Resolved absolute path to `cloudflare.config.ts`. */
 	cloudflareConfigPath: string;
 	/** Resolved absolute path to `wrangler.config.ts`, if present. */
@@ -74,7 +76,7 @@ export async function loadNewConfig(options: {
 		{ mode }
 	);
 
-	const parsedWorkerConfig = ConfigSchema.safeParse(resolvedWorkerConfig);
+	const parsedWorkerConfig = InputWorkerSchema.safeParse(resolvedWorkerConfig);
 	if (!parsedWorkerConfig.success) {
 		throw new UserError(
 			`Invalid \`${CLOUDFLARE_CONFIG_FILENAME}\`:\n${formatZodError(parsedWorkerConfig.error)}`,
@@ -130,6 +132,7 @@ export async function loadNewConfig(options: {
 
 	return {
 		rawConfig,
+		parsedWorkerConfig: parsedWorkerConfig.data,
 		cloudflareConfigPath,
 		wranglerConfigPath,
 		dependencies,
@@ -144,7 +147,7 @@ export async function loadNewConfig(options: {
  *
  * Worker fields cannot appear in tooling (rejected by `WranglerConfigSchema`).
  * Tooling fields cannot appear in worker (rejected by `@cloudflare/config`'s
- * `ConfigSchema.strictObject`). The only overlap is `assets`, where worker
+ * `InputWorkerSchema.strictObject`). The only overlap is `assets`, where worker
  * carries `binding`/`html_handling`/`not_found_handling`/`run_worker_first`
  * and tooling carries `directory` (sourced from the flat top-level
  * `assetsDirectory` field on `wrangler.config.ts`).

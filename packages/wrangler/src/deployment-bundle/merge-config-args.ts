@@ -6,7 +6,11 @@ import {
 	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
+import {
+	getAssetsOptions,
+	validateAssetsArgsAndConfig,
+	validateAssetsOptions,
+} from "../assets";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -20,11 +24,13 @@ import type { HandlerArgs } from "../core/types";
 import type { DeployArgs } from "../deploy/index";
 import type { VersionsUploadArgs } from "../versions/upload";
 import type { sharedDeployVersionsArgs } from "./deploy-args";
+import type { BuildProps } from "./maybe-build-worker";
 import type {
 	DeployProps,
 	SharedDeployVersionsProps,
 	VersionsUploadProps,
 } from "@cloudflare/deploy-helpers";
+import type { AssetsOptions } from "@cloudflare/workers-utils";
 import type { EphemeralDirectory } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -34,12 +40,12 @@ async function mergeSharedConfigArgs(
 	command: "deploy" | "versions upload",
 	args: SharedArgs,
 	config: Config
-): Promise<SharedDeployVersionsProps> {
+): Promise<{ shared: SharedDeployVersionsProps; buildProps: BuildProps }> {
 	const entry = await getEntry(args, config, command);
 
 	validateAssetsArgsAndConfig(args, config);
 
-	const assetsOptions = getAssetsOptions({ args, config });
+	const assetsDir = validateAssetsOptions({ args, config });
 
 	let name = getScriptName(args, config);
 
@@ -66,27 +72,20 @@ async function mergeSharedConfigArgs(
 	const metricsHeaders = await getMetricsUsageHeaders(config.send_metrics);
 	const sendMetrics = metricsHeaders !== undefined;
 
-	return {
+	const uploadSourceMaps = args.uploadSourceMaps ?? config.upload_source_maps;
+
+	const shared: SharedDeployVersionsProps = {
 		entry,
 		name,
 		compatibilityDate,
 		compatibilityFlags,
-		assetsOptions,
-		jsxFactory: args.jsxFactory || config.jsx_factory,
-		jsxFragment: args.jsxFragment || config.jsx_fragment,
-		tsconfig: args.tsconfig ?? config.tsconfig,
-		minify: args.minify ?? config.minify,
-		noBundle,
-		uploadSourceMaps: args.uploadSourceMaps ?? config.upload_source_maps,
+		assetsDir,
+		main: args.script ?? config.main,
 		keepVars: Boolean(args.keepVars || config.keep_vars),
 		isWorkersSite: Boolean(args.site || config.site),
-		defines: { ...config.define, ...collectKeyValues(args.define) },
-		alias: { ...config.alias, ...collectKeyValues(args.alias) },
 		useServiceEnvApiPath: useServiceEnvironmentApi(args, config),
-		destination: args.outdir ?? getWranglerTmpDir(entry.projectRoot, "deploy"),
 		dryRun,
 		env: args.env,
-		outdir: args.outdir,
 		outfile: args.outfile,
 		tag: args.tag,
 		message: args.message,
@@ -96,14 +95,41 @@ async function mergeSharedConfigArgs(
 		accountId,
 		sendMetrics,
 		resourcesProvision: getFlag("RESOURCES_PROVISION") ?? false,
+		skipProvisioningConfigWriteback: false,
+		skipLastDeployedFromApiCheck: false,
 	};
+
+	const buildProps: BuildProps = {
+		entry,
+		name,
+		compatibilityDate,
+		compatibilityFlags,
+		uploadSourceMaps,
+		jsxFactory: args.jsxFactory || config.jsx_factory,
+		jsxFragment: args.jsxFragment || config.jsx_fragment,
+		tsconfig: args.tsconfig ?? config.tsconfig,
+		minify: args.minify ?? config.minify,
+		noBundle,
+		defines: { ...config.define, ...collectKeyValues(args.define) },
+		alias: { ...config.alias, ...collectKeyValues(args.alias) },
+		destination: args.outdir ?? getWranglerTmpDir(entry.projectRoot, "deploy"),
+		outdir: args.outdir,
+		// Deploy-only; set by mergeDeployConfigArgs.
+		metafile: undefined,
+	};
+
+	return { shared, buildProps };
 }
 
 export async function mergeDeployConfigArgs(
 	args: DeployArgs,
 	config: Config
-): Promise<DeployProps> {
-	const shared = await mergeSharedConfigArgs("deploy", args, config);
+): Promise<{ props: DeployProps; buildProps: BuildProps }> {
+	const { shared, buildProps } = await mergeSharedConfigArgs(
+		"deploy",
+		args,
+		config
+	);
 
 	const domainRoutes = (args.domains || []).map((domain) => ({
 		pattern: domain,
@@ -113,29 +139,31 @@ export async function mergeDeployConfigArgs(
 		args.routes ?? config.routes ?? (config.route ? [config.route] : []);
 
 	return {
-		...shared,
-		command: "deploy",
-		legacyAssetPaths: getSiteAssetPaths(
-			config,
-			args.site,
-			args.siteInclude,
-			args.siteExclude
-		),
-		triggers: args.triggers ?? config.triggers?.crons,
-		routes: [...routes, ...domainRoutes],
-		logpush: args.logpush !== undefined ? args.logpush : config.logpush,
-		dispatchNamespace: args.dispatchNamespace,
-		strict: args.strict ?? false,
-		metafile: args.metafile,
-		oldAssetTtl: args.oldAssetTtl,
-		containersRollout: args.containersRollout,
+		props: {
+			...shared,
+			command: "deploy",
+			legacyAssetPaths: getSiteAssetPaths(
+				config,
+				args.site,
+				args.siteInclude,
+				args.siteExclude
+			),
+			triggers: args.triggers ?? config.triggers?.crons,
+			routes: [...routes, ...domainRoutes],
+			logpush: args.logpush !== undefined ? args.logpush : config.logpush,
+			dispatchNamespace: args.dispatchNamespace,
+			strict: args.strict ?? false,
+			oldAssetTtl: args.oldAssetTtl,
+			containersRollout: args.containersRollout,
+		},
+		buildProps: { ...buildProps, metafile: args.metafile },
 	};
 }
 
 export async function mergeVersionsUploadConfigArgs(
 	args: VersionsUploadArgs,
 	config: Config
-): Promise<VersionsUploadProps> {
+): Promise<{ props: VersionsUploadProps; buildProps: BuildProps }> {
 	if (args.site || config.site) {
 		throw new UserError(
 			"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
@@ -143,7 +171,11 @@ export async function mergeVersionsUploadConfigArgs(
 		);
 	}
 
-	const shared = await mergeSharedConfigArgs("versions upload", args, config);
+	const { shared, buildProps } = await mergeSharedConfigArgs(
+		"versions upload",
+		args,
+		config
+	);
 
 	const previewAlias =
 		args.previewAlias ??
@@ -152,9 +184,12 @@ export async function mergeVersionsUploadConfigArgs(
 			: undefined);
 
 	return {
-		...shared,
-		command: "versions upload",
-		previewAlias,
+		props: {
+			...shared,
+			command: "versions upload",
+			previewAlias,
+		},
+		buildProps,
 	};
 }
 
@@ -164,4 +199,46 @@ export function cleanupDestination(
 	if (typeof destination !== "string") {
 		destination.remove();
 	}
+}
+
+/**
+ * Get the inputs for the standalone
+ * `wrangler build --experimental-cf-build-output` path.
+ */
+export async function mergeBuildOutputProps(config: Config): Promise<{
+	buildProps: BuildProps | undefined;
+	assetsOptions: AssetsOptions | undefined;
+}> {
+	const assetsOptions = getAssetsOptions({
+		args: { assets: undefined },
+		config,
+	});
+	const isAssetsOnly =
+		assetsOptions !== undefined &&
+		assetsOptions.routerConfig.has_user_worker === false;
+
+	if (isAssetsOnly) {
+		return { buildProps: undefined, assetsOptions };
+	}
+
+	const entry = await getEntry({}, config, "deploy");
+	const buildProps: BuildProps = {
+		entry,
+		name: config.name,
+		compatibilityDate: config.compatibility_date,
+		compatibilityFlags: config.compatibility_flags,
+		uploadSourceMaps: config.upload_source_maps,
+		jsxFactory: config.jsx_factory,
+		jsxFragment: config.jsx_fragment,
+		tsconfig: config.tsconfig,
+		minify: config.minify,
+		noBundle: config.no_bundle ?? false,
+		defines: { ...config.define },
+		alias: { ...config.alias },
+		destination: getWranglerTmpDir(entry.projectRoot, "build"),
+		outdir: undefined,
+		metafile: undefined,
+	};
+
+	return { buildProps, assetsOptions };
 }

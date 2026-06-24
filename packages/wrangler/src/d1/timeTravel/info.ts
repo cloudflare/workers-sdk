@@ -18,6 +18,7 @@ export const d1TimeTravelInfoCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 	},
 	args: {

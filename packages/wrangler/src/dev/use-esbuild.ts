@@ -12,6 +12,7 @@ import {
 	getWrangler1xLegacyModuleReferences,
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
+import { logger } from "../logger";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type {
 	CfModule,
@@ -117,12 +118,14 @@ export function runBuild(
 	async function getAdditionalModules() {
 		return noBundle
 			? dedupeModulesByName([
-					...((await doFindAdditionalModules(
-						entry,
-						rules,
-						false,
-						pythonModulesExcludes ?? []
-					)) ?? []),
+					...(findAdditionalModules !== false
+						? ((await doFindAdditionalModules(
+								entry,
+								rules,
+								false,
+								pythonModulesExcludes ?? []
+							)) ?? [])
+						: []),
 					...additionalModules,
 				])
 			: additionalModules;
@@ -137,13 +140,23 @@ export function runBuild(
 				previousBundle,
 				"Rebuild triggered with no previous build available"
 			);
-			previousBundle.modules = dedupeModulesByName([
-				...(moduleCollector?.modules ?? []),
-				...newAdditionalModules,
-			]);
+			let entrypointSource: string;
+			try {
+				entrypointSource = readFileSync(previousBundle.path, "utf8");
+			} catch (e) {
+				// Entry point was deleted or moved between builds — skip this update.
+				logger.once.warn(
+					`Could not read entrypoint "${previousBundle.path}": ${(e as NodeJS.ErrnoException).message}`
+				);
+				return previousBundle;
+			}
 			return {
 				...previousBundle,
-				entrypointSource: readFileSync(previousBundle.path, "utf8"),
+				modules: dedupeModulesByName([
+					...(moduleCollector?.modules ?? []),
+					...newAdditionalModules,
+				]),
+				entrypointSource,
 				id: previousBundle.id + 1,
 			};
 		});

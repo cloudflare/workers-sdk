@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { afterEach, beforeEach, describe, test } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { resolvePluginConfig } from "../plugin-config";
 import type { PluginConfig, WorkersResolvedConfig } from "../plugin-config";
 
@@ -28,6 +28,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 	});
 
 	afterEach(() => {
+		vi.unstubAllEnvs();
 		removeDirSync(tempDir);
 	});
 
@@ -103,6 +104,87 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		).rejects.toThrow(/auxiliaryWorkers/);
 	});
 
+	test("throws when experimental.prerenderWorker is combined with experimental.newConfig", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'w',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+
+		const pluginConfig: PluginConfig = {
+			experimental: {
+				newConfig: true,
+				prerenderWorker: { configPath: "./prerender.wrangler.jsonc" },
+			},
+		};
+
+		await expect(
+			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
+		).rejects.toThrow(/experimental\.prerenderWorker/);
+	});
+
+	test("throws when `config` customizer is combined with experimental.newConfig", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'w',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+
+		const pluginConfig: PluginConfig = {
+			experimental: { newConfig: true },
+			config: (c) => c,
+		};
+
+		await expect(
+			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
+		).rejects.toThrow(
+			/`config` cannot be used together with `experimental\.newConfig`/
+		);
+	});
+
+	test("throws when viteEnvironment.childEnvironments is combined with experimental.newConfig.cfBuildOutput", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'w',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+
+		const pluginConfig: PluginConfig = {
+			experimental: { newConfig: { cfBuildOutput: true } },
+			viteEnvironment: { childEnvironments: ["child"] },
+		};
+
+		await expect(
+			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
+		).rejects.toThrow(
+			/Child environments are not yet supported in the Build Output API/
+		);
+	});
+
 	test("loads a cloudflare.config.ts and produces a worker resolved config", async ({
 		expect,
 	}) => {
@@ -131,6 +213,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(result.type).toBe("workers");
 		expect(result.experimental.newConfig).toEqual({
 			types: { generate: true },
+			cfBuildOutput: false,
 		});
 		const worker = result.environmentNameToWorkerMap.get(
 			"experimental_config_worker"
@@ -316,5 +399,68 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		const secondMtime = fs.statSync(dtsPath).mtimeMs;
 
 		expect(secondMtime).toBe(firstMtime);
+	});
+
+	test("CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT=true forces newConfig + cfBuildOutput on", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT", "true");
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+
+		// No `experimental.newConfig` in the plugin config — the env var
+		// (set by `cf-vite build`) forces it on.
+		const result = (await resolvePluginConfig(
+			{},
+			{ root: tempDir },
+			viteEnv
+		)) as WorkersResolvedConfig;
+
+		expect(result.type).toBe("workers");
+		expect(result.experimental.newConfig).toEqual({
+			types: { generate: true },
+			cfBuildOutput: true,
+		});
+	});
+
+	test("CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT=true overrides cfBuildOutput: false in config", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT", "true");
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+
+		const pluginConfig: PluginConfig = {
+			experimental: { newConfig: { cfBuildOutput: false } },
+		};
+
+		const result = (await resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		)) as WorkersResolvedConfig;
+
+		expect(result.experimental.newConfig).toEqual({
+			types: { generate: true },
+			cfBuildOutput: true,
+		});
 	});
 });

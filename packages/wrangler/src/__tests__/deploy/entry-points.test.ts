@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { findWranglerConfig } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -10,7 +11,6 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -58,8 +58,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock(import("@cloudflare/autoconfig"), { spy: true });
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -340,25 +339,20 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not trigger autoconfig on `wrangler deploy <script>` when called with `--x-autoconfig`", async ({
+		it("should not trigger autoconfig on `wrangler deploy <script>`", async ({
 			expect,
 		}) => {
-			vi.mock(import("../../autoconfig/details"), { spy: true });
-			vi.mock(import("../../autoconfig/run"), { spy: true });
-
-			const getDetailsForAutoConfigSpy = (
-				await import("../../autoconfig/details")
-			).getDetailsForAutoConfig;
-
-			const runAutoConfigSpy = (await import("../../autoconfig/run"))
-				.runAutoConfig;
+			const {
+				getDetailsForAutoConfig: getDetailsForAutoConfigSpy,
+				runAutoConfig: runAutoConfigSpy,
+			} = await import("@cloudflare/autoconfig");
 
 			writeWranglerConfig();
 			writeWorkerSource({ basePath: "./src" });
 			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
 			mockSubDomainRequest();
 
-			await runWrangler("deploy ./src/index.js --x-autoconfig");
+			await runWrangler("deploy ./src/index.js");
 
 			expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
 			expect(runAutoConfigSpy).not.toHaveBeenCalled();
@@ -885,8 +879,14 @@ addEventListener('fetch', event => {});`
 				vi.useRealTimers();
 			});
 
-			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
-			it("should handle `wrangler deploy <directory>`", async ({ expect }) => {
+			it("should handle interactive `wrangler deploy <directory>` flows without triggering autoconfig", async ({
+				expect,
+			}) => {
+				const {
+					getDetailsForAutoConfig: getDetailsForAutoConfigSpy,
+					runAutoConfig: runAutoConfigSpy,
+				} = await import("@cloudflare/autoconfig");
+
 				mockPrompt({
 					text: "What do you want to name your project?",
 					options: { defaultValue: "my-site" },
@@ -951,93 +951,18 @@ addEventListener('fetch', event => {});`
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
-			});
-
-			it("should handle interactive `wrangler deploy <directory>` flows without triggering autoconfig when called with `--x-autoconfig`", async ({
-				expect,
-			}) => {
-				vi.mock(import("../../autoconfig/details"), { spy: true });
-				vi.mock(import("../../autoconfig/run"), { spy: true });
-
-				const getDetailsForAutoConfigSpy = (
-					await import("../../autoconfig/details")
-				).getDetailsForAutoConfig;
-
-				const runAutoConfigSpy = (await import("../../autoconfig/run"))
-					.runAutoConfig;
-
-				mockPrompt({
-					text: "What do you want to name your project?",
-					options: { defaultValue: "my-site" },
-					result: "test-name",
-				});
-				mockConfirm({
-					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
-					result: true,
-				});
-				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-					result: true,
-				});
-
-				const bodies: AssetManifest[] = [];
-				await mockAUSRequest(bodies);
-
-				await runWrangler("deploy ./assets --x-autoconfig");
-				expect(bodies.length).toBe(1);
-				expect(bodies[0]).toEqual({
-					manifest: {
-						"/index.html": {
-							hash: "8308ce789f3d08668ce87176838d59d0",
-							size: 17,
-						},
-					},
-				});
-				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
-					.toMatchInlineSnapshot(`
-						"{
-						  "name": "test-name",
-						  "compatibility_date": "2024-01-01",
-						  "assets": {
-						    "directory": "./assets"
-						  }
-						}"
-					`);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-
-
-					Wrote
-					{
-					  "name": "test-name",
-					  "compatibility_date": "2024-01-01",
-					  "assets": {
-					    "directory": "./assets"
-					  }
-					}
-					 to <cwd>/wrangler.jsonc.
-
-					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
-
-					Proceeding with deployment...
-
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
 				expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
 				expect(runAutoConfigSpy).not.toHaveBeenCalled();
 			});
 
-			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
-			it("should handle `wrangler deploy --assets` without name or compat date", async ({
+			it("should handle `wrangler deploy --assets` without name or compat date without triggering autoconfig", async ({
 				expect,
 			}) => {
+				const {
+					getDetailsForAutoConfig: getDetailsForAutoConfigSpy,
+					runAutoConfig: runAutoConfigSpy,
+				} = await import("@cloudflare/autoconfig");
+
 				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
 				mockPrompt({
 					text: "What do you want to name your project?",
@@ -1057,167 +982,6 @@ addEventListener('fetch', event => {});`
 				await mockAUSRequest(bodies);
 
 				await runWrangler("deploy --assets ./assets");
-				expect(bodies.length).toBe(1);
-				expect(bodies[0]).toEqual({
-					manifest: {
-						"/index.html": {
-							hash: "8308ce789f3d08668ce87176838d59d0",
-							size: 17,
-						},
-					},
-				});
-				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
-					.toMatchInlineSnapshot(`
-						"{
-						  "name": "test-name",
-						  "compatibility_date": "2024-01-01",
-						  "assets": {
-						    "directory": "./assets"
-						  }
-						}"
-					`);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-
-
-					Wrote
-					{
-					  "name": "test-name",
-					  "compatibility_date": "2024-01-01",
-					  "assets": {
-					    "directory": "./assets"
-					  }
-					}
-					 to <cwd>/wrangler.jsonc.
-
-					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
-
-					Proceeding with deployment...
-
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-			});
-
-			it("should handle `wrangler deploy --assets` without name or compat date without triggering autoconfig when called with `--x-autoconfig`", async ({
-				expect,
-			}) => {
-				vi.mock(import("../../autoconfig/details"), { spy: true });
-				vi.mock(import("../../autoconfig/run"), { spy: true });
-
-				const getDetailsForAutoConfigSpy = (
-					await import("../../autoconfig/details")
-				).getDetailsForAutoConfig;
-
-				const runAutoConfigSpy = (await import("../../autoconfig/run"))
-					.runAutoConfig;
-
-				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
-				mockPrompt({
-					text: "What do you want to name your project?",
-					options: { defaultValue: "my-site" },
-					result: "test-name",
-				});
-				mockConfirm({
-					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
-					result: true,
-				});
-				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-					result: true,
-				});
-
-				const bodies: AssetManifest[] = [];
-				await mockAUSRequest(bodies);
-
-				await runWrangler("deploy --assets ./assets --x-autoconfig");
-				expect(bodies.length).toBe(1);
-				expect(bodies[0]).toEqual({
-					manifest: {
-						"/index.html": {
-							hash: "8308ce789f3d08668ce87176838d59d0",
-							size: 17,
-						},
-					},
-				});
-				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
-					.toMatchInlineSnapshot(`
-						"{
-						  "name": "test-name",
-						  "compatibility_date": "2024-01-01",
-						  "assets": {
-						    "directory": "./assets"
-						  }
-						}"
-					`);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-
-
-					Wrote
-					{
-					  "name": "test-name",
-					  "compatibility_date": "2024-01-01",
-					  "assets": {
-					    "directory": "./assets"
-					  }
-					}
-					 to <cwd>/wrangler.jsonc.
-
-					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
-
-					Proceeding with deployment...
-
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-				expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
-				expect(runAutoConfigSpy).not.toHaveBeenCalled();
-			});
-
-			it("should not trigger autoconfig on `wrangler deploy <directory>` when called with `--x-autoconfig`", async ({
-				expect,
-			}) => {
-				vi.mock(import("../../autoconfig/details"), { spy: true });
-				vi.mock(import("../../autoconfig/run"), { spy: true });
-
-				const getDetailsForAutoConfigSpy = (
-					await import("../../autoconfig/details")
-				).getDetailsForAutoConfig;
-
-				const runAutoConfigSpy = (await import("../../autoconfig/run"))
-					.runAutoConfig;
-
-				mockPrompt({
-					text: "What do you want to name your project?",
-					options: { defaultValue: "my-site" },
-					result: "test-name",
-				});
-				mockConfirm({
-					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
-					result: true,
-				});
-				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-					result: true,
-				});
-
-				const bodies: AssetManifest[] = [];
-				await mockAUSRequest(bodies);
-
-				await runWrangler("deploy ./assets --x-autoconfig");
 				expect(bodies.length).toBe(1);
 				expect(bodies[0]).toEqual({
 					manifest: {

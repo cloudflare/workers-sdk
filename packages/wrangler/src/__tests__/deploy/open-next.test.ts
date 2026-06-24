@@ -1,13 +1,15 @@
 import * as fs from "node:fs";
 import {
+	getDetailsForAutoConfig,
+	getInstalledPackageVersion,
+} from "@cloudflare/autoconfig";
+import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getDetailsForAutoConfig } from "../../autoconfig/details";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -57,9 +59,12 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/details");
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	getDetailsForAutoConfig: vi.fn(),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -172,7 +177,6 @@ describe("deploy", () => {
 				"npx",
 				"wrangler",
 				"deploy",
-				"--x-autoconfig",
 			]);
 			const runCommandSpy = (
 				await import("@cloudflare/cli-shared-helpers/command")
@@ -180,17 +184,12 @@ describe("deploy", () => {
 
 			await mockOpenNextLikeProject();
 
-			await runWrangler("deploy --x-autoconfig");
+			await runWrangler("deploy");
 
 			expect(runCommandSpy).toHaveBeenCalledOnce();
 			const call = (runCommandSpy as unknown as MockInstance).mock.calls[0];
 			const [command, options] = call;
-			expect(command).toEqual([
-				"npx",
-				"opennextjs-cloudflare",
-				"deploy",
-				"--x-autoconfig",
-			]);
+			expect(command).toEqual(["npx", "opennextjs-cloudflare", "deploy"]);
 			expect(options).toMatchObject({
 				env: {
 					// Note: we want to ensure that OPEN_NEXT_DEPLOY has been set, this is not strictly necessary but it helps us
@@ -221,7 +220,6 @@ describe("deploy", () => {
 				"wrangler",
 				"deploy",
 				"--keep-vars",
-				"--x-autoconfig",
 			]);
 			const runCommandSpy = (
 				await import("@cloudflare/cli-shared-helpers/command")
@@ -229,7 +227,7 @@ describe("deploy", () => {
 
 			await mockOpenNextLikeProject();
 
-			await runWrangler("deploy --x-autoconfig");
+			await runWrangler("deploy");
 
 			expect(runCommandSpy).toHaveBeenCalledOnce();
 			const call = (runCommandSpy as unknown as MockInstance).mock.calls[0];
@@ -241,7 +239,6 @@ describe("deploy", () => {
 				// `opennextjs-cloudflare deploy` accepts all the same arguments `wrangler deploy` does (since it then forwards them
 				// to wrangler), so we do want to make sure that arguments are indeed forwarded to `opennextjs-cloudflare deploy`
 				"--keep-vars",
-				"--x-autoconfig",
 			]);
 			expect(options).toMatchObject({
 				env: {
@@ -276,7 +273,7 @@ describe("deploy", () => {
 
 			await mockOpenNextLikeProject();
 
-			await runWrangler("deploy --x-autoconfig");
+			await runWrangler("deploy");
 
 			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 
@@ -299,7 +296,7 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not delegate to open-next deploy when --x-autoconfig=false is provided", async ({
+		it("should not delegate to open-next deploy when --no-autoconfig is provided", async ({
 			expect,
 		}) => {
 			const runCommandSpy = (
@@ -308,7 +305,7 @@ describe("deploy", () => {
 
 			await mockOpenNextLikeProject();
 
-			await runWrangler("deploy --x-autoconfig=false");
+			await runWrangler("deploy --no-autoconfig");
 
 			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 
@@ -343,7 +340,7 @@ describe("deploy", () => {
 			// Let's delete the next.config.js file
 			fs.rmSync("./next.config.js");
 
-			await runWrangler("deploy --x-autoconfig");
+			await runWrangler("deploy");
 
 			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 
@@ -378,7 +375,7 @@ describe("deploy", () => {
 			// Let's delete the open-next.config.ts file
 			fs.rmSync("./open-next.config.ts");
 
-			await runWrangler("deploy --x-autoconfig");
+			await runWrangler("deploy --autoconfig");
 
 			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 

@@ -38,7 +38,7 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -62,7 +62,7 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
@@ -112,7 +112,7 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -140,7 +140,7 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -163,7 +163,7 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
@@ -199,7 +199,7 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -222,7 +222,7 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});

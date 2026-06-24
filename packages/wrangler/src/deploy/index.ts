@@ -4,7 +4,6 @@ import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { deployContainers } from "../containers/deploy";
 import { createCommand } from "../core/create-command";
-import { provisionBindings } from "../deployment-bundle/bindings";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -91,15 +90,15 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
-		"experimental-autoconfig": {
-			alias: ["x-autoconfig"],
+		autoconfig: {
 			describe:
-				"Experimental: Enables framework detection and automatic configuration when deploying",
+				"Enables framework detection and automatic configuration when deploying",
 			type: "boolean",
 			default: true,
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		useConfigRedirectIfAvailable: true,
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
@@ -108,6 +107,7 @@ export const deployCommand = createCommand({
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		printMetricsBanner: true,
+		suggestSkillsAfterHandler: true,
 	},
 	validateArgs(args) {
 		validateDeployVersionsArgs(args, "deploy");
@@ -127,7 +127,7 @@ export const deployCommand = createCommand({
 		// As a precaution we're gating the feature under the autoconfig flag for the time being.
 		// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
 		if (
-			args.experimentalAutoconfig &&
+			args.autoconfig &&
 			!args.config &&
 			!args.dryRun &&
 			(await maybeDelegateToOpenNextDeployCommand(process.cwd()))
@@ -135,28 +135,25 @@ export const deployCommand = createCommand({
 			return;
 		}
 
-		// Merge CLI args with config into a single props object
-		const mergedProps = await mergeDeployConfigArgs(args, config);
+		// Merge CLI args with config into props for building and deploying
+		const { props, buildProps } = await mergeDeployConfigArgs(args, config);
 
 		try {
 			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 			const preMergeName = getScriptName(args, config);
 			const workerNameOverridden =
-				mergedProps.name !== undefined && mergedProps.name !== preMergeName;
+				props.name !== undefined && props.name !== preMergeName;
 
 			const beforeUpload = Date.now();
 
-			const buildResult = await buildWorker(mergedProps, config, {
-				metafile: mergedProps.metafile,
-			});
+			const buildResult = await buildWorker(buildProps, config);
 
 			const { sourceMapSize, versionId, workerTag, targets } = await deploy(
-				mergedProps,
+				props,
 				config,
 				buildResult,
 				{
 					syncWorkersSite,
-					provisionBindings,
 					getNormalizedContainerOptions,
 					buildContainer,
 					deployContainers,
@@ -167,7 +164,7 @@ export const deployCommand = createCommand({
 			writeOutput({
 				type: "deploy",
 				version: 1,
-				worker_name: mergedProps.name ?? null,
+				worker_name: props.name ?? null,
 				worker_tag: workerTag,
 				version_id: versionId,
 				targets,
@@ -178,7 +175,7 @@ export const deployCommand = createCommand({
 			metrics.sendMetricsEvent(
 				"deploy worker script",
 				{
-					usesTypeScript: /\.tsx?$/.test(mergedProps.entry.file),
+					usesTypeScript: /\.tsx?$/.test(props.entry.file),
 					durationMs: Date.now() - beforeUpload,
 					sourceMapSize,
 				},
@@ -187,7 +184,7 @@ export const deployCommand = createCommand({
 				}
 			);
 		} finally {
-			cleanupDestination(mergedProps.destination);
+			cleanupDestination(buildProps.destination);
 		}
 	},
 });

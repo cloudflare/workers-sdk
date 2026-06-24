@@ -27,7 +27,7 @@ import {
 } from "./errors";
 import { generatePKCECodes, RECOMMENDED_STATE_LENGTH } from "./pkce";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
-import type { AuthConfigStorage } from "./auth-config-file";
+import type { AuthConfigStorage } from "./config-file/auth";
 import type { OAuthFlowContext } from "./context";
 import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";

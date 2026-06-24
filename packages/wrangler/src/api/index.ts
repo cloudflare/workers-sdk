@@ -76,7 +76,6 @@ export {
 	unstable_readConfig,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
 	unstable_getDevCompatibilityDate,
-	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
 } from "./integrations";

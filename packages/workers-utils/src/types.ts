@@ -227,6 +227,17 @@ export type AssetsOptions = {
 };
 
 /**
+ * The result of validating and resolving the assets directory, before the
+ * full {@link AssetsOptions} are resolved. Produced by the validation half of
+ * `getAssetsOptions` and consumed by `resolveAssetOptions`.
+ */
+export type ValidatedAssetsOptions = {
+	directory: string;
+	binding?: string;
+	directoryExists: boolean;
+};
+
+/**
  * Information about the assets that should be uploaded
  */
 export interface LegacyAssetPaths {
@@ -562,6 +573,8 @@ export interface StartDevWorkerInput {
 		multiworkerPrimary?: boolean;
 		/** Whether to infer the local request origin from configured routes. */
 		inferOriginFromRoutes?: boolean;
+		/** Whether local requests should be matched against configured routes. */
+		routeRequestsByRoutes?: boolean;
 
 		containerBuildId?: string;
 		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */

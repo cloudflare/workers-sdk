@@ -40,7 +40,8 @@ export type TestHarnessOptions = {
 	workers: WorkerInput[];
 };
 
-export type WorkerHandle = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
+export type WorkerHandle<Env = Record<string, any>> = {
 	/**
 	 * Dispatches a fetch event directly to this worker.
 	 * Relative URL inputs are resolved against the URL returned by `listen()`.
@@ -66,6 +67,19 @@ export type WorkerHandle = {
 	 * ```
 	 */
 	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
+	/**
+	 * Returns the full environment object configured on this Worker, including
+	 * vars, secrets, and bindings.
+	 *
+	 * @example
+	 * ```ts
+	 * type Env = { GREETING: string; STORE: KVNamespace };
+	 * const worker = server.getWorker<Env>();
+	 * const env = await worker.getEnv();
+	 * await env.STORE.put("key", env.GREETING);
+	 * ```
+	 */
+	getEnv(): Promise<Env>;
 };
 
 export type TestHarness = {
@@ -115,7 +129,8 @@ export type TestHarness = {
 	 * When no name is provided, this returns the primary Worker, which is the first
 	 * Worker in the server's `workers` options.
 	 */
-	getWorker(name?: string): WorkerHandle;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
+	getWorker<Env = Record<string, any>>(name?: string): WorkerHandle<Env>;
 	/**
 	 * Returns captured Workers runtime logs since the current server session
 	 * started or `clearLogs()` was last called.
@@ -326,6 +341,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					},
 					multiworkerPrimary: isMultiworker ? isPrimaryWorker : undefined,
 					inferOriginFromRoutes: false,
+					routeRequestsByRoutes: true,
 				},
 				build: {
 					nodejsCompatMode: (config) => {
@@ -366,8 +382,11 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		};
 		try {
 			debugLog("startup - started");
-			await updateConfig(session, inputs);
-			await waitForProxyReady(session);
+			await Promise.all([
+				waitForProxyReady(session),
+				waitForReloadComplete(session),
+				updateConfig(session, inputs),
+			]);
 			debugLog("startup - completed");
 			return session;
 		} catch (error) {
@@ -562,7 +581,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	async function getRuntimeMiniflare(session: ServerSession) {
-		await session.primaryDevEnv.proxy.runtimeMessageMutex.drained();
 		const miniflare = session.primaryDevEnv.runtimes[0].mf;
 		assert(miniflare, "Worker runtime is not available.");
 		return miniflare;
@@ -591,7 +609,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 		if (typeof input === "string" && !URL.canParse(input)) {
 			const session = await resolveSession();
-			const { url } = await waitForProxyReady(session);
+			const { url } = await session.primaryDevEnv.proxy.ready.promise;
 			const baseUrl = new URL(url);
 
 			if (
@@ -628,7 +646,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	return {
 		async listen() {
 			const session = serverSession ?? (await startServerSession());
-			const ready = await waitForProxyReady(session);
+			const ready = await session.primaryDevEnv.proxy.ready.promise;
 
 			return {
 				url: ready.url,
@@ -644,7 +662,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 			return dispatchFetch(miniflare, input, init);
 		},
-		getWorker(name?: string) {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
+		getWorker<Env = Record<string, any>>(name?: string): WorkerHandle<Env> {
 			return {
 				async fetch(input, init) {
 					const session = await resolveSession();
@@ -682,6 +701,13 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const result = await response.json();
 
 					return result as FetcherScheduledResult;
+				},
+				async getEnv() {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+
+					return miniflare.getBindings<Env>(workerName);
 				},
 			};
 		},

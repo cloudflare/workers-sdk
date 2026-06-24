@@ -16,6 +16,12 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
+import type {
+	D1Database,
+	DurableObjectNamespace,
+	KVNamespace,
+	R2Bucket,
+} from "@cloudflare/workers-types/experimental";
 
 const { createTestHarness } = await importWrangler();
 
@@ -206,6 +212,158 @@ describe("createTestHarness", () => {
 		await expect(auxiliaryResponse.text()).resolves.toBe(
 			"Hello from Auxiliary Worker"
 		);
+	});
+
+	it("exposes resource bindings scoped to each worker environment", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.api.jsonc": dedent`
+				{
+					"name": "api-worker",
+					"main": "src/api.ts",
+					"compatibility_date": "2026-05-20",
+					"vars": { "GREETING": "api" },
+					"kv_namespaces": [
+						{ "binding": "STORE", "id": "api-store" }
+					],
+					"r2_buckets": [
+						{ "binding": "BUCKET", "bucket_name": "api-bucket" }
+					]
+				}
+			`,
+			"wrangler.admin.jsonc": dedent`
+				{
+					"name": "admin-worker",
+					"main": "src/admin.ts",
+					"compatibility_date": "2026-05-20",
+					"vars": { "GREETING": "admin" },
+					"d1_databases": [
+						{
+							"binding": "DATABASE",
+							"database_name": "admin-database",
+							"database_id": "00000000-0000-0000-0000-000000000002"
+						}
+					],
+					"durable_objects": {
+						"bindings": [
+							{ "name": "OBJECT", "class_name": "Counter" }
+						]
+					},
+					"migrations": [
+						{ "tag": "v1", "new_sqlite_classes": ["Counter"] }
+					]
+				}
+			`,
+			"src/api.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						if (url.pathname === "/write-storage") {
+							await env.STORE.put("key", "api");
+							await env.BUCKET.put("key", "api");
+							return new Response("written");
+						}
+
+						return new Response("ok");
+					}
+				};
+			`,
+			"src/admin.ts": dedent`
+			import { DurableObject } from "cloudflare:workers";
+
+			export class Counter extends DurableObject {
+				async fetch() {
+					const value = (await this.ctx.storage.get("value")) ?? 0;
+					const next = value + 1;
+					await this.ctx.storage.put("value", next);
+					return new Response(String(next));
+				}
+			}
+
+			export default {
+				async fetch(request, env) {
+					const url = new URL(request.url);
+					if (url.pathname === "/write-storage") {
+						await env.DATABASE.exec("CREATE TABLE entries (value TEXT);");
+						await env.DATABASE.prepare("INSERT INTO entries (value) VALUES (?);")
+							.bind("admin")
+							.run();
+
+						const id = env.OBJECT.idFromName("shared");
+						const stub = env.OBJECT.get(id);
+						return stub.fetch("http://example.com/");
+					}
+
+					return new Response("ok");
+				}
+			};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [
+				{
+					configPath: "./wrangler.api.jsonc",
+					secrets: { SECRET: "api-secret" },
+				},
+				{
+					configPath: "./wrangler.admin.jsonc",
+					secrets: { SECRET: "admin-secret" },
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const api = server.getWorker<{
+			GREETING: string;
+			SECRET: string;
+			STORE: KVNamespace;
+			BUCKET: R2Bucket;
+		}>("api-worker");
+		const admin = server.getWorker<{
+			GREETING: string;
+			SECRET: string;
+			DATABASE: D1Database;
+			OBJECT: DurableObjectNamespace;
+		}>("admin-worker");
+		const apiWriteResponse = await api.fetch("/write-storage");
+		expect(await apiWriteResponse.text()).toBe("written");
+		const adminWriteResponse = await admin.fetch("/write-storage");
+		expect(await adminWriteResponse.text()).toBe("1");
+
+		const apiEnv = await api.getEnv();
+		const adminEnv = await admin.getEnv();
+
+		expect(apiEnv.GREETING).toBe("api");
+		expect(apiEnv.SECRET).toBe("api-secret");
+		expect(adminEnv.GREETING).toBe("admin");
+		expect(adminEnv.SECRET).toBe("admin-secret");
+
+		// KV Namespace
+		await expect(apiEnv.STORE.get("key")).resolves.toBe("api");
+
+		// R2 Bucket
+		const object = await apiEnv.BUCKET.get("key");
+
+		if (object === null) {
+			expect.fail("Expected R2 object to exist");
+		} else {
+			await expect(object.text()).resolves.toBe("api");
+		}
+
+		// D1 Database
+		await expect(
+			adminEnv.DATABASE.prepare("SELECT value FROM entries").first("value")
+		).resolves.toBe("admin");
+
+		// Durable Object Namespace
+		const adminStub = adminEnv.OBJECT.get(adminEnv.OBJECT.idFromName("shared"));
+		const adminResponse = await adminStub.fetch("http://example.com/");
+		await expect(adminResponse.text()).resolves.toBe("2");
 	});
 
 	it("supports service bindings between workers", async ({ expect }) => {
