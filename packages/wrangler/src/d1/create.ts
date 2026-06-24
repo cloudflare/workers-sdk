@@ -1,5 +1,4 @@
 import {
-	APIError,
 	getD1ExtraLocationChoices,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -13,14 +12,13 @@ import {
 	sharedResourceCreationArgs,
 } from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
-import { JURISDICTION_CHOICES, LOCATION_CHOICES } from "./constants";
+import {
+	D1_DOCS_URL,
+	JURISDICTION_CHOICES,
+	LOCATION_CHOICES,
+} from "./constants";
 import type { DatabaseCreationResult } from "./types";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
-
-// D1's Workers Paid database cap. The 7406 error reports the account's current
-// cap (e.g. "...per account (10)"), so a cap below this means the account is on
-// the Free plan and can upgrade; at or above it, only a limit increase applies.
-const D1_PAID_DATABASE_LIMIT = 50_000;
 
 export async function createD1Database(
 	complianceConfig: ComplianceConfig,
@@ -55,47 +53,22 @@ export async function createD1Database(
 		}
 
 		if (errorCode === 7406) {
-			const limitMessage =
-				e instanceof APIError
-					? e.notes
-							.map((note) => note.text)
-							.join("\n")
-							.replace(/\s*\[code:\s*\d+\]/gi, "")
-							.trim()
-					: "";
+			throw new UserError(
+				dedent`
+					You have reached the maximum number of D1 databases for your account.
 
-			// The 7406 message reports the account's current cap, e.g. "...per account (10)".
-			// A cap below the paid limit means the account is on the free plan and can upgrade.
-			const cap = Number(limitMessage.match(/\((\d+)\)/)?.[1]);
-			const isFreePlan = Number.isFinite(cap) && cap < D1_PAID_DATABASE_LIMIT;
-			const paidLimit = D1_PAID_DATABASE_LIMIT.toLocaleString("en-US");
+					On the Workers Free plan? Upgrade to create more:
+					https://dash.cloudflare.com/${accountId}/workers/plans
 
-			// Free-plan accounts get an upgrade pitch plus a no-cost alternative;
-			// paid accounts have hit the increasable cap, so point them at the
-			// limit-increase guidance instead. Specific limit values (storage,
-			// queries) are intentionally left to the linked docs so this message
-			// can't go stale.
-			const message = isFreePlan
-				? dedent`
-						You've reached the limit of ${cap.toLocaleString("en-US")} D1 databases on the free plan.
+					Already on a paid plan? You can request a higher limit — learn more in the D1 docs:
+					${D1_DOCS_URL}
 
-						Need more? The Workers Paid plan raises this to ${paidLimit} databases, with higher storage and query limits too. Upgrade at:
-						https://dash.cloudflare.com/${accountId}/workers/plans
-
-						To list your existing databases, run: wrangler d1 list
-						To delete a database, run: wrangler d1 delete <database-name>
-
-						To learn more, visit: https://developers.cloudflare.com/d1/platform/limits/ [code: 7406]
-					`
-				: dedent`
-						${limitMessage ? `${limitMessage}.` : "You have reached the maximum number of D1 databases for your account."} To request a higher limit, follow the guidance on the D1 limits page. [code: 7406]
-						To learn more about this error, visit:
-						https://developers.cloudflare.com/d1/platform/limits/
-					`;
-
-			throw new UserError(message, {
-				telemetryMessage: "d1 create database limit reached",
-			});
+					Or free up space:
+					To list your existing databases, run: wrangler d1 list
+					To delete a database, run: wrangler d1 delete <database-name>
+				`,
+				{ telemetryMessage: "d1 create database limit reached" }
+			);
 		}
 
 		throw e;
