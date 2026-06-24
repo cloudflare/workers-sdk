@@ -49,7 +49,7 @@ import type {
 import type {
 	DurableObjectDeletedExport,
 	DurableObjectExpectingTransferExport,
-	DurableObjectExport,
+	DurableObjectCreatedExport,
 	DurableObjectRenamedExport,
 	DurableObjectTransferredExport,
 } from "./exports";
@@ -117,13 +117,12 @@ type Trigger = FetchTrigger | QueueConsumerTrigger | ScheduledTrigger;
  * receiving side of a two-phase cross-script transfer.
  */
 type Export =
-	| DurableObjectExport
+	| DurableObjectCreatedExport
 	| DurableObjectDeletedExport
 	| DurableObjectRenamedExport
 	| DurableObjectTransferredExport
 	| DurableObjectExpectingTransferExport;
 // TODO: support Workflows
-// type Export = DurableObjectExport | WorkflowExport;
 
 /**
  * Worker configuration. This is the input shape passed to
@@ -397,19 +396,14 @@ export interface UserConfig {
 	/**
 	 * Configuration for named exports declared by the Worker. Each entry's
 	 * key is the exported class name; the value configures the export.
-	 * Construct entries with `exports.durableObject(...)` or
-	 * `exports.workflow(...)`.
 	 *
-	 * Two export kinds are supported:
+	 * Only one export kind is currently supported:
 	 *
-	 * - `durable-object`: declares a Durable Object class defined by this
-	 *   Worker. For more information about Durable Objects, see the
-	 *   documentation at
-	 *   https://developers.cloudflare.com/workers/learning/using-durable-objects
-	 *
-	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
-	 *
-	 * - `workflow`: declares a Workflow defined by this Worker.
+	 * - Construct entries with `exports.durableObject(...)`.
+	 * - Declares Durable Object classes exported from this Worker.
+	 *   For more information about Durable Objects, see the documentation at
+	 *   https://developers.cloudflare.com/workers/learning/using-durable-objects.
+	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
 	 */
 	exports?: Record<string, Export>;
 }

@@ -22,8 +22,7 @@
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
-export interface DurableObjectExport {
-	type: "durable-object";
+export interface DurableObjectCreatedExportOptions {
 	state?: "created";
 	/**
 	 * Storage backend for the Durable Object.
@@ -42,8 +41,7 @@ export interface DurableObjectExport {
  * During deploy, the class must not be exported in the uploaded code, and no
  * other Worker may hold a `durableObject` binding to the namespace.
  */
-export interface DurableObjectDeletedExport {
-	type: "durable-object";
+export interface DurableObjectDeletedExportOptions {
 	state: "deleted";
 }
 
@@ -52,8 +50,7 @@ export interface DurableObjectDeletedExport {
  * `renamedTo` value must also appear as a live (`state: "created"`)
  * `durableObject` entry in the same `exports` map.
  */
-export interface DurableObjectRenamedExport {
-	type: "durable-object";
+export interface DurableObjectRenamedExportOptions {
 	state: "renamed";
 	/**
 	 * The destination class name. Must be a valid JavaScript identifier and
@@ -64,12 +61,10 @@ export interface DurableObjectRenamedExport {
 }
 
 /**
- * Transfer ownership of a Durable Object namespace to another
- * Worker in the same account. Two-phase commit: the target Worker must first
- * deploy an `expectingTransfer` entry naming this Worker via `transferFrom`.
+ * Transfer ownership of a Durable Object namespace to another Worker in the same account.
+ * The target Worker must first deploy an `expectingTransfer` entry naming this Worker via `transferFrom`.
  */
-export interface DurableObjectTransferredExport {
-	type: "durable-object";
+export interface DurableObjectTransferredExportOptions {
 	state: "transferred";
 	/**
 	 * The destination Worker. Must reference a Worker in the same account.
@@ -78,43 +73,48 @@ export interface DurableObjectTransferredExport {
 }
 
 /**
- * Prepare to receive cross-Worker Durable Object transfer. Both `storage` and `transferFrom` are required.
- * Once the source Worker's `transferred` tombstone commits, this entry
- * becomes a normal live `durable-object` export.
+ * Prepare to receive cross-Worker Durable Object transfer.
+ * Once the source Worker's `transferred` export is deployed, this entry becomes a normal live `durable-object` export.
  */
-export interface DurableObjectExpectingTransferExport {
-	type: "durable-object";
+export interface DurableObjectExpectingTransferExportOptions {
 	state: "expecting-transfer";
-	/** Storage backend for the Durable Object. */
-	storage: DurableObjectExport["storage"];
+	storage: "sqlite" | "legacy-kv";
 	/**
-	 * The source Worker for the two-phase cross-Worker transfer. The source
-	 * Worker will follow up with a `transferred` tombstone naming this Worker
-	 * to commit the transfer.
+	 * The source Worker for the two-phase cross-Worker transfer.
 	 */
 	transferFrom: string;
 }
 
-/** Declares a Workflow defined by this Worker. */
-export interface WorkflowExport {
-	type: "workflow";
-	/** The name of the Workflow. */
-	name: string;
-	/** Optional limits for the Workflow. */
-	limits?: {
-		/** Maximum number of steps a Workflow instance can execute. */
-		steps?: number;
-	};
-	/** Optional cron schedules for automatically triggering workflow instances. */
-	schedules?: string[];
+export interface DurableObjectCreatedExport extends DurableObjectCreatedExportOptions {
+	type: "durable-object";
+}
+export interface DurableObjectDeletedExport extends DurableObjectDeletedExportOptions {
+	type: "durable-object";
+}
+export interface DurableObjectRenamedExport extends DurableObjectRenamedExportOptions {
+	type: "durable-object";
+}
+export interface DurableObjectTransferredExport extends DurableObjectTransferredExportOptions {
+	type: "durable-object";
 }
 
-type DurableObjectExportOptions =
-	| Omit<DurableObjectExport, "type">
-	| Omit<DurableObjectDeletedExport, "type">
-	| Omit<DurableObjectRenamedExport, "type">
-	| Omit<DurableObjectTransferredExport, "type">
-	| Omit<DurableObjectExpectingTransferExport, "type">;
+export interface DurableObjectExpectingTransferExport extends DurableObjectExpectingTransferExportOptions {
+	type: "durable-object";
+}
+
+export type DurableObjectExportOptions =
+	| DurableObjectCreatedExportOptions
+	| DurableObjectDeletedExportOptions
+	| DurableObjectRenamedExportOptions
+	| DurableObjectTransferredExportOptions
+	| DurableObjectExpectingTransferExportOptions;
+
+type DurableObjectExports =
+	| DurableObjectCreatedExport
+	| DurableObjectDeletedExport
+	| DurableObjectRenamedExport
+	| DurableObjectTransferredExport
+	| DurableObjectExpectingTransferExport;
 
 /**
  * Configuration for named exports declared by the Worker. Each entry's
@@ -130,58 +130,53 @@ export interface Exports {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 */
 	durableObject(
-		options: Omit<DurableObjectExport, "type">
-	): DurableObjectExport;
+		options: DurableObjectCreatedExportOptions
+	): DurableObjectCreatedExport;
 	/**
 	 * Retire a provisioned Durable Object namespace whose class has been removed from code.
 	 */
 	durableObject(
-		options: Omit<DurableObjectDeletedExport, "type">
+		options: DurableObjectDeletedExportOptions
 	): DurableObjectDeletedExport;
 	/**
 	 * Rename a provisioned Durable Object namespace's class.
 	 */
 	durableObject(
-		options: Omit<DurableObjectRenamedExport, "type">
+		options: DurableObjectRenamedExportOptions
 	): DurableObjectRenamedExport;
 	/**
 	 * Transfer ownership of a Durable Object namespace to another Worker in the same account.
 	 */
 	durableObject(
-		options: Omit<DurableObjectTransferredExport, "type">
+		options: DurableObjectTransferredExportOptions
 	): DurableObjectTransferredExport;
 	/**
 	 * Prepare to receive cross-Worker Durable Object transfer.
-	 * The source Worker must follow up with a `transferred` tombstone to commit the transfer.
+	 * The source Worker must follow up with a deployment containing a `transferred` export to commit the transfer.
 	 */
 	durableObject(
-		options: Omit<DurableObjectExpectingTransferExport, "type">
+		options: DurableObjectExpectingTransferExportOptions
 	): DurableObjectExpectingTransferExport;
 }
 
 function durableObject(
-	options: Omit<DurableObjectExport, "type">
-): DurableObjectExport;
+	options: DurableObjectCreatedExportOptions
+): DurableObjectCreatedExport;
 function durableObject(
-	options: Omit<DurableObjectDeletedExport, "type">
+	options: DurableObjectDeletedExportOptions
 ): DurableObjectDeletedExport;
 function durableObject(
-	options: Omit<DurableObjectRenamedExport, "type">
+	options: DurableObjectRenamedExportOptions
 ): DurableObjectRenamedExport;
 function durableObject(
-	options: Omit<DurableObjectTransferredExport, "type">
+	options: DurableObjectTransferredExportOptions
 ): DurableObjectTransferredExport;
 function durableObject(
-	options: Omit<DurableObjectExpectingTransferExport, "type">
+	options: DurableObjectExpectingTransferExportOptions
 ): DurableObjectExpectingTransferExport;
 function durableObject(
 	options: DurableObjectExportOptions
-):
-	| DurableObjectExport
-	| DurableObjectDeletedExport
-	| DurableObjectRenamedExport
-	| DurableObjectTransferredExport
-	| DurableObjectExpectingTransferExport {
+): DurableObjectExports {
 	return { type: "durable-object", ...options };
 }
 

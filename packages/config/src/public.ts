@@ -60,12 +60,11 @@ export type {
 export { triggers } from "./triggers";
 export type {
 	Exports,
-	DurableObjectExport,
+	DurableObjectCreatedExport as DurableObjectExport,
 	DurableObjectDeletedExport,
 	DurableObjectRenamedExport,
 	DurableObjectTransferredExport,
 	DurableObjectExpectingTransferExport,
-	WorkflowExport,
 } from "./exports";
 export { exports } from "./exports";
 export type {
