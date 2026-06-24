@@ -13,11 +13,12 @@ import chalk from "chalk";
 import * as find from "empathic/find";
 import { getNodeCompat } from "miniflare";
 import yargs from "yargs";
-import { readConfig } from "../config";
+import { readConfig, readNewConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
+import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
 import {
@@ -29,6 +30,7 @@ import {
 	TOP_LEVEL_ENV_NAME,
 	validateEnvInterfaceNames,
 } from "./helpers";
+import { regenerateNewConfigTypes } from "./new-config";
 import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
@@ -159,6 +161,7 @@ export const typesCommand = createCommand({
 				"Check if the types at the provided path are up to date without regenerating them",
 			type: "boolean",
 		},
+		...experimentalNewConfigArg,
 	},
 	validateArgs(args) {
 		// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
@@ -204,6 +207,15 @@ export const typesCommand = createCommand({
 		}
 	},
 	async handler(args) {
+		if (args.experimentalNewConfig) {
+			const { config, types } = await readNewConfig(args);
+			await regenerateNewConfigTypes({
+				cloudflareConfigPath: config.configPath as string,
+				types,
+			});
+			return;
+		}
+
 		const resolvedOptions = await resolveGenerateTypesOptions(args, {
 			logSecondaryEntries: true,
 			validateOptions: false,
