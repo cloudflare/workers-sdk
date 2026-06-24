@@ -1270,7 +1270,11 @@ describe("versions upload", () => {
 			await expect(
 				runWrangler("versions upload index.js --latest --dry-run")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: You need to provide the name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`
+				[Error: You need to provide the name of your worker. Either pass it as a cli arg with --name <name> or in your config file as {
+				  "name": "<name>"
+				}]
+			`
 			);
 		});
 
