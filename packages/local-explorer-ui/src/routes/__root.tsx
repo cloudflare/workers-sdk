@@ -13,7 +13,7 @@ import {
 	filterVisibleWorkers,
 	getSelectedWorker,
 } from "../components/WorkerSelector";
-import { fetchMcpServerPath } from "../lib/mcp";
+import { fetchMcpEnabled } from "../lib/mcp";
 import {
 	loadSidebarOpenState,
 	saveSidebarOpenState,
@@ -30,14 +30,14 @@ export const Route = createRootRoute({
 	component: RootLayout,
 	notFoundComponent: NotFound,
 	loader: async () => {
-		const [workersResponse, mcpServerPath] = await Promise.all([
+		const [workersResponse, mcpEnabled] = await Promise.all([
 			localExplorerListWorkers(),
-			// null unless MCP was opted into (X_LOCAL_OBSERVABILITY_MCP); used to
-			// hide the optional MCP tab by default.
-			fetchMcpServerPath(),
+			// false unless hosted Codemode MCP was opted into
+			// (X_LOCAL_OBSERVABILITY_MCP); used to hide the optional MCP tab.
+			fetchMcpEnabled(),
 		]);
 		const workers = workersResponse.data?.result ?? [];
-		return { workers, mcpEnabled: mcpServerPath !== null };
+		return { workers, mcpEnabled };
 	},
 });
 

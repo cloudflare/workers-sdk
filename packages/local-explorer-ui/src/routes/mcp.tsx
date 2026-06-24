@@ -1,4 +1,4 @@
-import { Checkbox, cn, Switch, useKumoToastManager } from "@cloudflare/kumo";
+import { Checkbox, cn, Switch } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
 	CaretDownIcon,
@@ -17,11 +17,8 @@ import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import {
 	LOG_LEVELS,
-	fetchMcpServerPath,
-	installMcpServer,
 	listMcpCalls,
 	loadMcpConfig,
-	type McpInstallAgent,
 	resourceKey,
 	saveMcpConfig,
 	saveMcpConfigToDb,
@@ -97,6 +94,11 @@ function McpView(): JSX.Element {
 				...config,
 				resources: { ...config.resources, [key]: !config.resources[key] },
 			}),
+		[config, update]
+	);
+
+	const toggleRawFetch = useCallback(
+		() => update({ ...config, allowRawFetch: !config.allowRawFetch }),
 		[config, update]
 	);
 
@@ -308,6 +310,28 @@ function McpView(): JSX.Element {
 					)}
 				</Card>
 
+				<Card
+					title="Advanced access"
+					description="Raw Explorer API access lets the agent call any Local Explorer route through cf.fetch(). Keep this off unless you explicitly want to bypass the typed D1/KV/R2/DO controls above."
+				>
+					<div className="flex items-center justify-between gap-3">
+						<div>
+							<p className="text-xs font-medium text-kumo-default">
+								Allow raw Explorer API access
+							</p>
+							<p className="mt-0.5 text-[11px] text-kumo-subtle">
+								Controls the Codemode MCP <code className="font-mono">cf.fetch()</code> escape hatch.
+							</p>
+						</div>
+						<Switch
+							checked={config.allowRawFetch}
+							onCheckedChange={toggleRawFetch}
+							aria-label="Allow raw Explorer API access"
+							size="sm"
+						/>
+					</div>
+				</Card>
+
 				{/* Call history */}
 				<Card
 					title="Agent activity"
@@ -416,23 +440,6 @@ function McpView(): JSX.Element {
 	);
 }
 
-/**
- * Absolute path to the stdio MCP server on this machine. The server ships in
- * the repo at packages/local-explorer-ui/mcp-server/mcp-server.mjs; the user
- * sets the absolute path once on the Connect card (persisted in localStorage).
- */
-const DEFAULT_SERVER_PATH =
-	"/absolute/path/to/workers-sdk/packages/local-explorer-ui/mcp-server/mcp-server.mjs";
-const SERVER_PATH_KEY = "wobs-mcp-server-path";
-
-function loadServerPath(): string {
-	try {
-		return localStorage.getItem(SERVER_PATH_KEY) ?? DEFAULT_SERVER_PATH;
-	} catch {
-		return DEFAULT_SERVER_PATH;
-	}
-}
-
 type AgentId = "opencode" | "claude" | "cursor";
 
 const AGENTS: Array<{ id: AgentId; label: string }> = [
@@ -441,21 +448,15 @@ const AGENTS: Array<{ id: AgentId; label: string }> = [
 	{ id: "cursor", label: "Cursor" },
 ];
 
-function connectSnippet(
-	agent: AgentId,
-	explorerUrl: string,
-	serverPath: string
-): string {
-	const env = { WOBS_EXPLORER_URL: explorerUrl };
+function connectSnippet(agent: AgentId, mcpUrl: string): string {
 	switch (agent) {
 		case "opencode":
 			return JSON.stringify(
 				{
 					mcp: {
 						"wobs-local": {
-							type: "local",
-							command: ["node", serverPath],
-							environment: env,
+							type: "remote",
+							url: mcpUrl,
 							enabled: true,
 						},
 					},
@@ -464,15 +465,14 @@ function connectSnippet(
 				2
 			);
 		case "claude":
-			return `claude mcp add wobs-local -e WOBS_EXPLORER_URL=${explorerUrl} -- node ${serverPath}`;
+			return `claude mcp add --transport http wobs-local ${mcpUrl}`;
 		case "cursor":
 			return JSON.stringify(
 				{
 					mcpServers: {
 						"wobs-local": {
-							command: "node",
-							args: [serverPath],
-							env,
+							type: "http",
+							url: mcpUrl,
 						},
 					},
 				},
@@ -482,12 +482,8 @@ function connectSnippet(
 	}
 }
 
-function cursorDeeplink(explorerUrl: string, serverPath: string): string {
-	const config = {
-		command: "node",
-		args: [serverPath],
-		env: { WOBS_EXPLORER_URL: explorerUrl },
-	};
+function cursorDeeplink(mcpUrl: string): string {
+	const config = { type: "http", url: mcpUrl };
 	const b64 = btoa(JSON.stringify(config));
 	return `cursor://anysphere.cursor-deeplink/mcp/install?name=wobs-local&config=${b64}`;
 }
@@ -497,99 +493,23 @@ function ConnectCard(): JSX.Element {
 		typeof window !== "undefined"
 			? window.location.origin
 			: "http://localhost:8799";
-	const toast = useKumoToastManager();
+	const mcpUrl = `${explorerUrl}/cdn-cgi/explorer/mcp`;
 	const [agent, setAgent] = useState<AgentId>("opencode");
 	const [copied, setCopied] = useState(false);
-	const [serverPath, setServerPath] = useState(loadServerPath);
-	const [installing, setInstalling] = useState<McpInstallAgent | null>(null);
-	const [installMsg, setInstallMsg] = useState<{
-		ok: boolean;
-		text: string;
-	} | null>(null);
 
-	const updateServerPath = useCallback((value: string) => {
-		setServerPath(value);
-		try {
-			localStorage.setItem(SERVER_PATH_KEY, value);
-		} catch {
-			// ignore
-		}
-	}, []);
-
-	// Default to the absolute path the explorer reports (the bundled server),
-	// unless the user has explicitly overridden it.
-	useEffect(() => {
-		let overridden = false;
-		try {
-			overridden = localStorage.getItem(SERVER_PATH_KEY) !== null;
-		} catch {
-			// ignore
-		}
-		if (overridden) {
-			return;
-		}
-		void fetchMcpServerPath().then((p) => {
-			if (p) {
-				setServerPath(p);
-			}
-		});
-	}, []);
-
-	const snippet = connectSnippet(agent, explorerUrl, serverPath);
-
-	const installLabel =
-		agent === "opencode"
-			? "Install in opencode"
-			: agent === "claude"
-				? "Install in Claude"
-				: "Install in Cursor";
-
-	const install = useCallback(async () => {
-		setInstalling(agent);
-		setInstallMsg(null);
-		const result = await installMcpServer(agent);
-		setInstalling(null);
-
-		// Inline status is the primary feedback (the toast is best-effort).
-		setInstallMsg({
-			ok: result.ok,
-			text: result.ok
-				? result.path
-					? `Wrote ${result.path}`
-					: "Project config updated."
-				: result.message,
-		});
-
-		toast.add({
-			title: result.ok ? "MCP server installed" : "Install failed",
-			description: result.ok
-				? result.path
-					? `Updated ${result.path}`
-					: "Project config updated."
-				: result.message,
-			variant: result.ok ? "success" : "default",
-		});
-	}, [agent, toast]);
+	const snippet = connectSnippet(agent, mcpUrl);
 
 	const copy = useCallback(() => {
-		void navigator.clipboard
-			.writeText(snippet)
-			.then(() => {
-				setCopied(true);
-				setTimeout(() => setCopied(false), 1500);
-			})
-			.catch(() => {
-				toast.add({
-					title: "Failed to copy config",
-					variant: "default",
-				});
-			});
-	}, [snippet, toast]);
+		void navigator.clipboard.writeText(snippet).then(() => {
+			setCopied(true);
+			setTimeout(() => setCopied(false), 1500);
+		});
+	}, [snippet]);
 
 	return (
 		<Card
-			title="Connect your agent"
-			description="Add this MCP server to your coding agent, then ask it to debug. It reads traces, logs, and the data you allow below."
+			title="Hosted Codemode MCP"
+			description="Connect an agent to the Local Explorer MCP endpoint hosted by Miniflare. No separate Node server or install path required. The run tool gets a governed cf client for traces, logs, and any data bindings you allow below."
 		>
 			<div className="flex flex-col gap-3">
 				<div className="flex items-center gap-2">
@@ -598,10 +518,7 @@ function ConnectCard(): JSX.Element {
 							<button
 								key={a.id}
 								type="button"
-								onClick={() => {
-									setAgent(a.id);
-									setInstallMsg(null);
-								}}
+								onClick={() => setAgent(a.id)}
 								className={cn(
 									"cursor-pointer rounded px-2.5 py-1 text-xs transition-colors",
 									agent === a.id
@@ -613,19 +530,9 @@ function ConnectCard(): JSX.Element {
 							</button>
 						))}
 					</div>
-					<button
-						type="button"
-						onClick={() => {
-							void install();
-						}}
-						disabled={installing !== null}
-						className="inline-flex items-center gap-1.5 rounded-md border border-kumo-fill bg-kumo-elevated px-2.5 py-1.5 text-xs font-medium text-kumo-default hover:bg-kumo-tint disabled:cursor-not-allowed disabled:opacity-60"
-					>
-						{installing === agent ? "Installing..." : installLabel}
-					</button>
 					{agent === "cursor" ? (
 						<a
-							href={cursorDeeplink(explorerUrl, serverPath)}
+							href={cursorDeeplink(mcpUrl)}
 							className="inline-flex items-center gap-1.5 rounded-md bg-blue-500 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-600"
 						>
 							<PlugsConnectedIcon size={13} />
@@ -634,31 +541,14 @@ function ConnectCard(): JSX.Element {
 					) : null}
 				</div>
 
-				{installMsg ? (
-					<p
-						className={cn(
-							"flex items-center gap-1.5 font-mono text-[11px] break-all",
-							installMsg.ok
-								? "text-green-600 dark:text-green-400"
-								: "text-red-500"
-						)}
-					>
-						{installMsg.ok ? (
-							<CheckIcon size={13} className="shrink-0" />
-						) : null}
-						{installMsg.text}
-					</p>
-				) : null}
-
-				<label className="flex flex-col gap-1 text-[11px] text-kumo-subtle">
-					Absolute path to mcp-server.mjs
-					<input
-						value={serverPath}
-						onChange={(e) => updateServerPath(e.target.value)}
-						spellCheck={false}
-						className="w-full rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 font-mono text-[11px] text-kumo-default outline-none focus:ring-1 focus:ring-blue-500"
-					/>
-				</label>
+				<div className="rounded-md border border-kumo-fill bg-kumo-elevated px-3 py-2">
+					<div className="mb-1 text-[10px] font-medium tracking-wide text-kumo-subtle uppercase">
+						Endpoint
+					</div>
+					<code className="font-mono text-[11px] break-all text-kumo-default">
+						{mcpUrl}
+					</code>
+				</div>
 
 				<div className="relative">
 					<pre className="overflow-x-auto rounded-md border border-kumo-fill bg-kumo-elevated p-3 pr-10 font-mono text-[11px] leading-relaxed text-kumo-default">
@@ -680,13 +570,12 @@ function ConnectCard(): JSX.Element {
 
 				<p className="text-[11px] leading-relaxed text-kumo-subtle">
 					{agent === "opencode"
-						? "One-click install writes .opencode/opencode.json. Then restart opencode."
+						? "Paste into opencode.json (project or global), then restart opencode."
 						: agent === "claude"
-							? "One-click install writes .mcp.json (project scope). Then run claude and approve the project MCP server."
-							: "One-click install writes .cursor/mcp.json. You can also use “Add to Cursor”."}{" "}
-					Requires this dev server to be running. Set the absolute path above to
-					your local copy of
-					packages/local-explorer-ui/mcp-server/mcp-server.mjs.
+							? "Run the command above, then restart Claude Code and approve the HTTP MCP server."
+							: "Click Add to Cursor, or paste the JSON into .cursor/mcp.json."}{" "}
+					Requires this dev server to be running with Codemode MCP enabled
+					(<code className="font-mono">X_LOCAL_OBSERVABILITY_MCP=true</code>).
 				</p>
 			</div>
 		</Card>

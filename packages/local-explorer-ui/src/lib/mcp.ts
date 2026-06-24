@@ -23,6 +23,8 @@ export interface McpAccessConfig {
 	logLevels: Record<LogLevel, boolean>;
 	/** per-resource access, keyed by `${type}:${id}` (e.g. "d1:abc"). true = allowed */
 	resources: Record<string, boolean>;
+	/** allow the raw Local Explorer API escape hatch (`cf.fetch`) */
+	allowRawFetch: boolean;
 }
 
 const STORAGE_KEY = "mcp-access-config";
@@ -37,6 +39,8 @@ export function defaultConfig(): McpAccessConfig {
 		logLevels: { error: true, warn: true, info: true, log: true, debug: false },
 		// data bindings are sensitive — opt-in (least privilege)
 		resources: {},
+		// raw API access can bypass typed controls — opt-in only
+		allowRawFetch: false,
 	};
 }
 
@@ -51,6 +55,7 @@ export function loadMcpConfig(): McpAccessConfig {
 		return {
 			logLevels: { ...base.logLevels, ...(parsed.logLevels ?? {}) },
 			resources: { ...base.resources, ...(parsed.resources ?? {}) },
+			allowRawFetch: parsed.allowRawFetch ?? base.allowRawFetch,
 		};
 	} catch {
 		return base;
@@ -99,14 +104,6 @@ export interface McpCallRow {
 	created_at: string | null;
 }
 
-export type McpInstallAgent = "opencode" | "claude" | "cursor";
-
-export interface McpInstallResult {
-	ok: boolean;
-	message: string;
-	path?: string;
-}
-
 async function runSql(
 	databaseId: string,
 	sql: string
@@ -147,54 +144,17 @@ export async function listMcpCalls(databaseId: string): Promise<McpCallRow[]> {
 	return rows as unknown as McpCallRow[];
 }
 
-/**
- * Absolute path to the bundled stdio MCP server, surfaced by the explorer so
- * the connect snippets work with no manual path entry. Returns null if the
- * explorer doesn't provide it (older builds).
- */
-export async function fetchMcpServerPath(): Promise<string | null> {
+/** Whether the hosted Codemode MCP endpoint is enabled for this dev session. */
+export async function fetchMcpEnabled(): Promise<boolean> {
 	try {
 		const base = import.meta.env.VITE_LOCAL_EXPLORER_API_PATH as string;
-		const res = await fetch(`${base}/local/mcp`);
-		if (!res.ok) {
-			return null;
-		}
-		const json = (await res.json()) as { server_path?: string };
-		return json.server_path ?? null;
-	} catch {
-		return null;
-	}
-}
-
-/**
- * One-click install for MCP onboarding. Writes project-local agent config files
- * via the local explorer backend.
- */
-export async function installMcpServer(
-	agent: McpInstallAgent
-): Promise<McpInstallResult> {
-	try {
-		const base = import.meta.env.VITE_LOCAL_EXPLORER_API_PATH as string;
-		const res = await fetch(`${base}/local/mcp/install`, {
+		const res = await fetch(`${base.replace(/\/api$/, "")}/mcp`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ agent }),
+			body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" }),
 		});
-
-		const json = (await res
-			.json()
-			.catch(() => null)) as McpInstallResult | null;
-		if (json) {
-			return json;
-		}
-		return {
-			ok: false,
-			message: `Install failed (${res.status}).`,
-		};
+		return res.ok;
 	} catch {
-		return {
-			ok: false,
-			message: "Install request failed. Is the dev server still running?",
-		};
+		return false;
 	}
 }
