@@ -1275,7 +1275,7 @@ describe("deploy", () => {
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the upload operation because of conflicts. To override and upload anyway, remove the \`--strict\` flag[0m
 
 					"
 				`);

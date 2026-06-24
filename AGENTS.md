@@ -65,19 +65,19 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 ## WHERE TO LOOK
 
-| Task                                           | Location                                       | Notes                                                            |
-| ---------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
-| Add/modify a CLI command                       | `packages/wrangler/src/`                       | Commands registered in `src/index.ts` (2k+ line yargs tree)      |
-| Change local dev behavior                      | `packages/miniflare/src/`                      | `src/index.ts` is the main `Miniflare` class                     |
-| Modify Workers runtime simulation              | `packages/miniflare/src/workers/`              | ~30 embedded worker scripts, built via `worker:` virtual imports |
-| Add a test fixture                             | `fixtures/`                                    | Each fixture is a full workspace member with own `package.json`  |
-| Shared config types/validation                 | `packages/workers-utils/src/config/`           | `validation.ts` is the config normalizer (large file)            |
-| Test helpers (runInTempDir, seed, mockConsole) | `packages/workers-utils/src/test-helpers/`     | Shared across wrangler, miniflare, others                        |
-| Cloudflare API mocks for tests                 | `packages/wrangler/src/__tests__/helpers/msw/` | MSW handlers per API domain                                      |
-| CI workflows                                   | `.github/workflows/`                           | `test-and-check.yml` is the primary gate                         |
-| Build/deploy scripts                           | `tools/deployments/`                           | Validation + deployment helpers, run via `esbuild-register`      |
+| Task                                           | Location                                                              | Notes                                                                                                                                                                        |
+| ---------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add/modify a CLI command                       | `packages/wrangler/src/`                                              | Commands registered in `src/index.ts` (2k+ line yargs tree)                                                                                                                  |
+| Change local dev behavior                      | `packages/miniflare/src/`                                             | `src/index.ts` is the main `Miniflare` class                                                                                                                                 |
+| Modify Workers runtime simulation              | `packages/miniflare/src/workers/`                                     | ~30 embedded worker scripts, built via `worker:` virtual imports                                                                                                             |
+| Add a test fixture                             | `fixtures/`                                                           | Each fixture is a full workspace member with own `package.json`                                                                                                              |
+| Shared config types/validation                 | `packages/workers-utils/src/config/`                                  | `validation.ts` is the config normalizer (large file)                                                                                                                        |
+| Test helpers (runInTempDir, seed, mockConsole) | `packages/workers-utils/src/test-helpers/`                            | Shared across wrangler, miniflare, others                                                                                                                                    |
+| Cloudflare API mocks for tests                 | `packages/wrangler/src/__tests__/helpers/msw/`                        | MSW handlers per API domain                                                                                                                                                  |
+| CI workflows                                   | `.github/workflows/`                                                  | `test-and-check.yml` is the primary gate                                                                                                                                     |
+| Build/deploy scripts                           | `tools/deployments/`                                                  | Validation + deployment helpers, run via `esbuild-register`                                                                                                                  |
 | Deploy/versions-upload validation              | `packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts` | `validateWorkerProps()` for sync checks, `preUploadApiChecks()` for API checks (service metadata, config diff, secrets, workflows). All new pre-upload validation goes here. |
-| Changeset config and rules                     | `.changeset/README.md`                         | Must read before creating changesets                             |
+| Changeset config and rules                     | `.changeset/README.md`                                                | Must read before creating changesets                                                                                                                                         |
 
 ## Development Guidelines
 

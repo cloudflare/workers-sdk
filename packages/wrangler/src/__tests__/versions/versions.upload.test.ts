@@ -1504,7 +1504,7 @@ describe("versions upload", () => {
 			writeWorkerSource();
 
 			await expect(runWrangler("versions upload")).rejects.toThrow(
-				"You cannot upload a new version of a Worker that does not yet exist. Please use `wrangler deploy` to create your Worker before using `wrangler versions upload`."
+				"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first."
 			);
 		});
 	});
@@ -1512,6 +1512,7 @@ describe("versions upload", () => {
 	describe("non-interactive/CI behavior", () => {
 		beforeEach(() => {
 			setIsTTY(false);
+			vi.stubEnv("CI", "true");
 		});
 
 		test("should continue without prompting in non-interactive mode when last deployed from dashboard", async ({
@@ -1599,7 +1600,7 @@ describe("versions upload", () => {
 			writeWorkerSource();
 
 			await expect(runWrangler("versions upload")).rejects.toThrow(
-				"You cannot upload a new version of a Worker that does not yet exist. Please use `wrangler deploy` to create your Worker before using `wrangler versions upload`."
+				"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first."
 			);
 		});
 

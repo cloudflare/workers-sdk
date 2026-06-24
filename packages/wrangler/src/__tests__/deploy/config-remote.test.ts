@@ -483,11 +483,11 @@ describe("deploy", () => {
 				await runWrangler("deploy ./index --strict");
 
 				expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to upload a Worker that was last updated via the script API.[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to upload a Worker that was last updated via the script API.[0m
 
-				  Edits that have been made via the script API will be overridden by your local code and config.
+					  Edits that have been made via the script API will be overridden by your local code and config.
 
-				"
+					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the upload operation because of conflicts. To override and upload anyway, remove the \`--strict\` flag[0m

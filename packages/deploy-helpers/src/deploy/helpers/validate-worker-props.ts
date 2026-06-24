@@ -252,7 +252,7 @@ export async function preUploadApiChecks(
 			if (isWorkerNotFoundError(e)) {
 				if (props.command === "versions upload") {
 					throw new UserError(
-						"You cannot upload a new version of a Worker that does not yet exist. Please use run the `deploy` command first.",
+						"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first.",
 						{ telemetryMessage: "versions upload worker not found" }
 					);
 				}
