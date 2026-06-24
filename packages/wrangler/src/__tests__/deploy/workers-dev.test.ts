@@ -788,7 +788,7 @@ describe("deploy", () => {
 			}
 
 			expect(err?.message.replaceAll(/\d/g, "X")).toMatchInlineSnapshot(`
-				"A compatibility_date is required when publishing. Add the following to your Wrangler configuration file:
+				"A compatibility_date is required when uploading a Worker. Add the following to your Wrangler configuration file:
 				    \`\`\`
 				    {"compatibility_date":"XXXX-XX-XX"}
 				    \`\`\`
@@ -808,7 +808,7 @@ describe("deploy", () => {
 			await expect(
 				async () => await runWrangler("deploy ./index.js --name my-worker")
 			).rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: A compatibility_date is required when publishing. Add the following to your Wrangler configuration file:
+				[Error: A compatibility_date is required when uploading a Worker. Add the following to your Wrangler configuration file:
 				    \`\`\`
 				    {"compatibility_date":"2020-12-01"}
 				    \`\`\`
