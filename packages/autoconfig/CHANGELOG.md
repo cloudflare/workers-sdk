@@ -1,5 +1,11 @@
 # @cloudflare/autoconfig
 
+## 0.1.1
+
+### Patch Changes
+
+- [#14368](https://github.com/cloudflare/workers-sdk/pull/14368) [`a55b29a`](https://github.com/cloudflare/workers-sdk/commit/a55b29a4ba8a24f4d539538e2bf38e6a7e5b8e52) Thanks [@penalosa](https://github.com/penalosa)! - Add repository URL to `@cloudflare/autoconfig`
+
 ## 0.1.0
 
 ### Minor Changes

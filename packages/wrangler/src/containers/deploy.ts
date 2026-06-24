@@ -3,6 +3,7 @@
  * However this code is only used for containers interactions, not cloudchamber ones!
  */
 import assert from "node:assert";
+import { setTimeout } from "node:timers/promises";
 import {
 	endSection,
 	log,
@@ -26,6 +27,7 @@ import {
 	RolloutsService,
 } from "@cloudflare/containers-shared";
 import {
+	APIError,
 	FatalError,
 	formatConfigSnippet,
 	getDockerPath,
@@ -101,7 +103,7 @@ export async function deployContainers(
 
 		// Only bound DOs are returned in version info. For unbound DOs, we need to list all DO namespaces.
 		if (boundDOs.has(container.class_name)) {
-			maybeVersionInfo ??= await fetchVersion(
+			maybeVersionInfo ??= await fetchUploadedVersion(
 				config,
 				accountId,
 				scriptName,
@@ -162,6 +164,29 @@ export async function deployContainers(
 			);
 		}
 	}
+}
+
+async function fetchUploadedVersion(
+	config: Config,
+	accountId: string,
+	scriptName: string,
+	versionId: string
+): Promise<ApiVersion> {
+	for (let attempt = 0; attempt < 5; attempt++) {
+		try {
+			return await fetchVersion(config, accountId, scriptName, versionId);
+		} catch (error) {
+			if (
+				!(error instanceof APIError) ||
+				error.code !== 100146 ||
+				attempt === 4
+			) {
+				throw error;
+			}
+			await setTimeout(500);
+		}
+	}
+	throw new Error("Unable to fetch uploaded Worker version");
 }
 
 type DurableObjectNamespace = {
@@ -381,12 +406,9 @@ export async function apply(
 		(app) => app.name === containerConfig.name
 	);
 
-	// if there is a remote digest, it indicates that the image already exists in the managed registry
-	// so we should try and use the tag from the previous deployment if possible.
-	// however deployments that fail after push may result in no previous app but the image still existing
 	const imageRef =
 		"remoteDigest" in args.imageRef
-			? (prevApp?.configuration.image ?? args.imageRef.remoteDigest)
+			? args.imageRef.remoteDigest
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 

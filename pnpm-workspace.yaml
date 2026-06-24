@@ -117,9 +117,10 @@ catalog:
   vite: "8.0.13"
   "ws": "8.21.0"
   esbuild: "0.28.1"
+  "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^4.20260621.1"
-  workerd: "1.20260621.1"
+  "@cloudflare/workers-types": "^4.20260623.1"
+  workerd: "1.20260623.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
   msw: 2.12.4

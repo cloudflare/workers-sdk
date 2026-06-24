@@ -8,6 +8,7 @@ import { logger } from "../../logger";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
+	escapeIdentifier,
 	getMigrationsPath,
 	getUnappliedMigrations,
 	initMigrationsTable,
@@ -150,9 +151,12 @@ Your database may not be available to serve requests during the migration, conti
 				`${migrationsPath}/${migration.name}`,
 				"utf8"
 			);
+			const escapedTableName = escapeIdentifier(
+				migrationsConfig.migrationsTableName
+			);
 			query += `
-								INSERT INTO ${migrationsConfig.migrationsTableName} (name)
-								values ('${migration.name}');
+								INSERT INTO ${escapedTableName} (name)
+								values ('${migration.name.replace(/'/g, "''")}');
 						`;
 
 			let success = true;

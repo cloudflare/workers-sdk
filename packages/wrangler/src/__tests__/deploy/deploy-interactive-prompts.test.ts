@@ -132,7 +132,7 @@ describe("deploy: interactive deploy config prompts", () => {
 
 		await expect(
 			runWrangler("deploy ./index.js --name test-name")
-		).rejects.toThrow("A compatibility_date is required when publishing");
+		).rejects.toThrow("A compatibility_date is required");
 	});
 
 	it("should not show config-write prompt when config file already exists", async ({

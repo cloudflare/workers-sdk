@@ -51,8 +51,11 @@ export async function applyD1Migrations(
 		);
 	}
 
+	const escapeId = (id: string) => `"${id.replace(/"/g, '""')}"`;
+	const escapedTableName = escapeId(migrationsTableName);
+
 	// Create migrations table if it doesn't exist
-	const schema = `CREATE TABLE IF NOT EXISTS ${migrationsTableName} (
+	const schema = `CREATE TABLE IF NOT EXISTS ${escapedTableName} (
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
 		name       TEXT UNIQUE,
 		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -61,7 +64,7 @@ export async function applyD1Migrations(
 
 	// Find applied migrations
 	const appliedMigrationNamesResult = await db
-		.prepare(`SELECT name FROM ${migrationsTableName};`)
+		.prepare(`SELECT name FROM ${escapedTableName};`)
 		.all<{ name: string }>();
 	const appliedMigrationNames = appliedMigrationNamesResult.results.map(
 		({ name }) => name
@@ -69,7 +72,7 @@ export async function applyD1Migrations(
 
 	// Apply un-applied migrations
 	const insertMigrationStmt = db.prepare(
-		`INSERT INTO ${migrationsTableName} (name) VALUES (?);`
+		`INSERT INTO ${escapedTableName} (name) VALUES (?);`
 	);
 	for (const migration of migrations) {
 		if (appliedMigrationNames.includes(migration.name)) {

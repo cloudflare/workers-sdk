@@ -212,8 +212,13 @@ describe.each([
 			}) => {
 				writeWranglerConfig({ name: undefined });
 				writeWorkerSource();
-				await expect(runWrangler("deploy ./index.js")).rejects.toThrowError(
-					/You need to provide a name/
+				await expect(
+					runWrangler("deploy ./index.js")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`
+					[Error: You need to provide the name of your worker. Either pass it as a cli arg with --name <name> or in your config file as name = "<name>"
+					]
+				`
 				);
 			});
 		});
@@ -245,9 +250,11 @@ describe.each([
 			}) => {
 				writeWranglerConfig({ name: undefined, main: "./index.js" });
 				writeWorkerSource();
-				await expect(runWrangler("versions upload")).rejects.toThrowError(
-					/You need to provide a name/
-				);
+				await expect(runWrangler("versions upload")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: You need to provide the name of your worker. Either pass it as a cli arg with --name <name> or in your config file as name = "<name>"
+					]
+				`);
 			});
 		});
 	});
@@ -337,9 +344,16 @@ describe.each([
 			}) => {
 				writeWranglerConfig({ compatibility_date: undefined });
 				writeWorkerSource();
-				await expect(runWrangler("deploy ./index.js")).rejects.toThrowError(
-					/A compatibility_date is required/
-				);
+				await expect(runWrangler("deploy ./index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: A compatibility_date is required when uploading a Worker. Add the following to your wrangler.toml file:
+					    \`\`\`
+					    compatibility_date = "2026-06-24"
+
+					    \`\`\`
+					    Or you could pass it in your terminal as \`--compatibility-date 2026-06-24\`
+					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.]
+				`);
 			});
 		});
 
