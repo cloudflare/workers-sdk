@@ -1,5 +1,6 @@
 import Worker, {
 	AssetWorkerInner,
+	AssetWorkerOuter,
 } from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
@@ -41,6 +42,10 @@ describe("[Asset Worker] loopback", () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
+	});
+
+	it("uses the outer entrypoint as the default export", ({ expect }) => {
+		expect(Worker).toBe(AssetWorkerOuter);
 	});
 
 	it("uses AssetWorkerInner for fetch path resolution", async ({ expect }) => {
