@@ -360,7 +360,7 @@ async function runFetchRequest(
  * AssetWorkerOuter serves as the dispatch layer. It forwards all method
  * calls to AssetWorkerInner via ctx.exports.
  */
-export default class AssetWorkerOuter<TEnv extends Env = Env>
+export class AssetWorkerOuter<TEnv extends Env = Env>
 	extends WorkerEntrypoint<TEnv>
 	implements AssetWorkerMethods
 {
@@ -499,6 +499,8 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		return this.getInnerEntrypoint(cohort).unstable_exists(pathname, request);
 	}
 }
+
+export default AssetWorkerOuter;
 
 // ============================================================
 // SECTION 4: INNER ENTRYPOINT (AssetWorkerInner)
