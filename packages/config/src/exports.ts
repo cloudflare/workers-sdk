@@ -36,7 +36,7 @@ export interface DurableObjectExport {
 }
 
 /**
- * Tombstone: retire a provisioned Durable Object namespace whose class has
+ * Retire a provisioned Durable Object namespace whose class has
  * been removed from code.
  *
  * During deploy, the class must not be exported in the uploaded code, and no
@@ -48,7 +48,7 @@ export interface DurableObjectDeletedExport {
 }
 
 /**
- * Tombstone: rename a provisioned Durable Object namespace's class. The
+ * Rename a provisioned Durable Object namespace's class. The
  * `renamedTo` value must also appear as a live (`state: "created"`)
  * `durableObject` entry in the same `exports` map.
  */
@@ -64,24 +64,22 @@ export interface DurableObjectRenamedExport {
 }
 
 /**
- * Tombstone: transfer ownership of a Durable Object namespace to another
- * script in the same account. Two-phase commit: the target script must first
- * deploy an `expectingTransfer` entry naming this script via `transferFrom`.
+ * Transfer ownership of a Durable Object namespace to another
+ * Worker in the same account. Two-phase commit: the target Worker must first
+ * deploy an `expectingTransfer` entry naming this Worker via `transferFrom`.
  */
 export interface DurableObjectTransferredExport {
 	type: "durable-object";
 	state: "transferred";
 	/**
-	 * The destination script. Must reference a script in the same account.
-	 * Cross-dispatch-namespace transfers are rejected.
+	 * The destination Worker. Must reference a Worker in the same account.
 	 */
 	transferredTo: string;
 }
 
 /**
- * Live entry that names the receiving side of a two-phase cross-script
- * Durable Object transfer. Both `storage` and `transferFrom` are required.
- * Once the source script's `transferred` tombstone commits, this entry
+ * Prepare to receive cross-Worker Durable Object transfer. Both `storage` and `transferFrom` are required.
+ * Once the source Worker's `transferred` tombstone commits, this entry
  * becomes a normal live `durable-object` export.
  */
 export interface DurableObjectExpectingTransferExport {
@@ -90,8 +88,8 @@ export interface DurableObjectExpectingTransferExport {
 	/** Storage backend for the Durable Object. */
 	storage: DurableObjectExport["storage"];
 	/**
-	 * The source script for the two-phase cross-script transfer. The source
-	 * script will follow up with a `transferred` tombstone naming this script
+	 * The source Worker for the two-phase cross-Worker transfer. The source
+	 * Worker will follow up with a `transferred` tombstone naming this Worker
 	 * to commit the transfer.
 	 */
 	transferFrom: string;
@@ -135,29 +133,26 @@ export interface Exports {
 		options: Omit<DurableObjectExport, "type">
 	): DurableObjectExport;
 	/**
-	 * Tombstone: retire a provisioned Durable Object namespace whose class
-	 * has been removed from code.
+	 * Retire a provisioned Durable Object namespace whose class has been removed from code.
 	 */
 	durableObject(
 		options: Omit<DurableObjectDeletedExport, "type">
 	): DurableObjectDeletedExport;
 	/**
-	 * Tombstone: rename a provisioned Durable Object namespace's class.
+	 * Rename a provisioned Durable Object namespace's class.
 	 */
 	durableObject(
 		options: Omit<DurableObjectRenamedExport, "type">
 	): DurableObjectRenamedExport;
 	/**
-	 * Tombstone: transfer ownership of a Durable Object namespace to another
-	 * script in the same account.
+	 * Transfer ownership of a Durable Object namespace to another Worker in the same account.
 	 */
 	durableObject(
 		options: Omit<DurableObjectTransferredExport, "type">
 	): DurableObjectTransferredExport;
 	/**
-	 * Receiving side of a two-phase cross-script Durable Object transfer.
-	 * The source script must follow up with a `transferred` tombstone to
-	 * commit the transfer.
+	 * Prepare to receive cross-Worker Durable Object transfer.
+	 * The source Worker must follow up with a `transferred` tombstone to commit the transfer.
 	 */
 	durableObject(
 		options: Omit<DurableObjectExpectingTransferExport, "type">

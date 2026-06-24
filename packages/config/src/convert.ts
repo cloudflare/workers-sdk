@@ -660,7 +660,6 @@ function convertBindingsAndAssets(
 // EXPORTS (Durable Objects + Workflows)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Convert the new-config `exports` map into wrangler upload metadata. */
 function convertExports(
 	config: ParsedInputWorkerConfig,
 	result: RawConfig

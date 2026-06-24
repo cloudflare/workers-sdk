@@ -1,5 +1,6 @@
 ---
 "wrangler": minor
+"@cloudflare/vite-plugin": "minor"
 ---
 
 Add experimental support for declarative Durable Object exports
@@ -11,18 +12,24 @@ Each entry in `exports` is keyed by Durable Object class name. `type` carries th
 ```jsonc
 {
 	"exports": {
+		// Provision a new Durable Object class (`MyDO`)
 		"MyDO": { "type": "durable-object", "storage": "sqlite" },
+		// Delete Durable Object class (`OldGone`)
 		"OldGone": { "type": "durable-object", "state": "deleted" },
+		// Rename a Durable Object class (from `OldName` to `NewName`)
 		"OldName": {
 			"type": "durable-object",
 			"state": "renamed",
 			"renamed_to": "NewName",
 		},
-		"Movee": {
+		"NewName": { "type": "durable-object", "storage": "sqlite" },
+		// Transfer a Durable Object (`Outgoing`) to a new Worker (`target-worker`)
+		"Outgoing": {
 			"type": "durable-object",
 			"state": "transferred",
 			"transferred_to": "target-worker",
 		},
+		// Prepare to receive the transfer of a Durable Object (`Incoming`) from another Worker (`source-worker`)
 		"Incoming": {
 			"type": "durable-object",
 			"state": "expecting-transfer",
@@ -41,7 +48,7 @@ X_DO_EXPORTS=true wrangler deploy
 
 The deployment response now surfaces the server's reconciliation result — created namespaces, applied tombstones, structured per-scenario info entries, and a `removable_entries` hint for stale tombstones that are safe to delete from the config. Blocking errors return the structured per-class detail with scenario tags, suggested remediation, and any referencing-script context.
 
-Local development (`wrangler dev` and `unstable_startWorker`) reads Durable Object SQLite storage settings from the new `exports` field, so applications using the declarative flow get correct local-dev storage without needing to also declare a `migrations` block.
+Local development (`wrangler dev`, `vite dev` and `unstable_startWorker`) reads Durable Object SQLite storage settings from the new `exports` field, so applications using the declarative flow get correct local-dev storage without needing to also declare a `migrations` block.
 
 `wrangler types` is also aware of `exports`. Live entries (including `expecting-transfer`, the receiving side of a two-phase transfer) are added to `Cloudflare.GlobalProps.durableNamespaces`, which types `ctx.exports.X` for unbound Durable Objects declared only via `exports`.
 
