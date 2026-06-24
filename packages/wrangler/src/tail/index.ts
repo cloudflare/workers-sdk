@@ -369,6 +369,13 @@ export const tailCommand = createCommand({
 				// Otherwise this branch leaks listeners on `process`, which
 				// matters for in-process callers like `runWrangler` in tests.
 				removeSignalHandlers();
+				// Pair the `"begin log stream"` metric sent at handler start
+				// with an `"end log stream"` here too, so the give-up path
+				// shows up symmetrically in telemetry alongside the
+				// `cleanStop` / `shutdownHandler` exit paths.
+				metrics.sendMetricsEvent("end log stream", {
+					sendMetrics: config.send_metrics,
+				});
 				rejectDone(
 					createFatalError(
 						`Unable to reconnect to the tail for ${scriptDisplayName} after ${MAX_RECONNECT_ATTEMPTS} attempts. Please re-run \`wrangler tail${args.worker ? ` ${args.worker}` : ""}\` to start a new session.`,

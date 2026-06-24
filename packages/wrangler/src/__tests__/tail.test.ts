@@ -8,6 +8,7 @@ import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import MockWebSocketServer from "vitest-websocket-mock";
+import * as metricsModule from "../metrics";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";
@@ -1108,6 +1109,12 @@ describe("tail", () => {
 			const sigintBefore = process.listenerCount("SIGINT");
 			const sigtermBefore = process.listenerCount("SIGTERM");
 
+			// Spy on metrics so we can verify the give-up path sends the
+			// `"end log stream"` event symmetrically with `cleanStop` /
+			// `shutdownHandler` (it used to skip the metric, leaving a gap
+			// for sessions that ended via reconnect-exhaustion).
+			const sendMetricsEvent = vi.spyOn(metricsModule, "sendMetricsEvent");
+
 			// Fake `setTimeout` from the very start so every timer the tail
 			// command schedules — the initial WebSocket connection delay
 			// (mock-socket's 4ms `delay()`), the per-attempt reconnect
@@ -1159,6 +1166,13 @@ describe("tail", () => {
 			// way out.
 			expect(process.listenerCount("SIGINT")).toBe(sigintBefore);
 			expect(process.listenerCount("SIGTERM")).toBe(sigtermBefore);
+
+			// Give-up path must also emit the `"end log stream"` metric so
+			// the session is balanced with the `"begin log stream"` sent at
+			// handler start.
+			expect(sendMetricsEvent).toHaveBeenCalledWith("end log stream", {
+				sendMetrics: undefined,
+			});
 		});
 
 		it("retries then gives up after the connection drops (json format)", async ({
@@ -1603,11 +1617,19 @@ function mockWebsocketAPIs(
 		},
 		/**
 		 * Close the mock websocket and clean up the API.
+		 *
+		 * Passes `{ code: 1000 }` explicitly so the close event the
+		 * production code sees is unambiguously `NORMAL_CLOSURE` — that's
+		 * what routes through `cleanStop()` rather than `scheduleReconnect()`,
+		 * and is the path every "happy path" tail test relies on for clean
+		 * shutdown. The mock server defaults to 1000 anyway, but stating it
+		 * makes the test contract explicit and resilient to mock changes.
+		 *
 		 * The setTimeout forces a cycle to allow for closing and cleanup
 		 * @returns a Promise that resolves when the websocket is closed
 		 */
 		async closeHelper() {
-			api.ws.close();
+			api.ws.close({ code: 1000 });
 			await setTimeout(0);
 		},
 	};
