@@ -60,8 +60,21 @@ describe("tail", () => {
 	mockAccountId();
 	mockApiToken();
 	let api: MockAPI;
+	// Tracks the currently running `wrangler tail` invocation so we can wait
+	// for it to fully unwind in afterEach (the handler now returns a blocking
+	// lifecycle promise that resolves on a clean stop or rejects on give-up).
+	let activeTailPromise: Promise<unknown> | undefined;
+
 	afterEach(async () => {
 		await api?.closeHelper?.();
+		if (activeTailPromise) {
+			try {
+				await activeTailPromise;
+			} catch {
+				// Tests that expected a rejection have already asserted on it.
+			}
+			activeTailPromise = undefined;
+		}
 		mockWebSockets.forEach((ws) => ws.close());
 		mockWebSockets = [];
 		clearDialogs();
@@ -71,6 +84,77 @@ describe("tail", () => {
 	runInTempDir();
 
 	const std = mockConsoleMethods();
+
+	/**
+	 * Start a `wrangler tail` invocation and wait for it to be connected to
+	 * the mock websocket server.
+	 *
+	 * The new tail handler blocks until a clean shutdown (server close with
+	 * code 1000) or rejects after reconnect-exhaustion, so tests must NOT
+	 * await `runWrangler("tail …")` directly. Instead, use this helper to
+	 * fire off the command and wait for the connection to be established;
+	 * the returned promise can be awaited at the end of the test after
+	 * triggering a clean shutdown via `api.closeHelper()` (or relied on the
+	 * `afterEach` to clean it up).
+	 */
+	async function startTail(
+		cmd: string
+	): Promise<{ tailPromise: Promise<unknown> }> {
+		if (!api) {
+			throw new Error("api must be initialized before startTail()");
+		}
+		const tailPromise = runWrangler(cmd);
+		activeTailPromise = tailPromise;
+		await api.ws.connected;
+		// Wrap in an object so the caller's `await startTail()` doesn't
+		// implicitly chain onto the still-pending `tailPromise` (which only
+		// resolves on clean shutdown).
+		return { tailPromise };
+	}
+
+	/**
+	 * Wait for the handler to finish its post-connect setup so that the
+	 * "Connected to <worker>" log is present in `std.out` before asserting
+	 * on pretty-format snapshots.
+	 */
+	async function waitForPrettyConnected(expect: ExpectStatic): Promise<void> {
+		await vi.waitFor(() => {
+			expect(std.out).toContain("waiting for logs");
+		});
+	}
+
+	/**
+	 * Drive vitest's fake timers forward in small steps until the supplied
+	 * promise settles, or a hard iteration cap is hit.
+	 *
+	 * The reconnect chain schedules a fresh `setTimeout` (the next attempt's
+	 * back-off) inside the callback of the previous one, and vitest's
+	 * `advanceTimersByTimeAsync` only fires timers that were already on the
+	 * queue at the start of the call. Stepping the clock in small chunks
+	 * lets newly scheduled timers be picked up on the next iteration and
+	 * keeps microtasks (HTTP responses, promise rejections from the
+	 * open-wait) interleaved between firings.
+	 */
+	async function advanceFakeTimersUntilSettled(
+		promise: Promise<unknown>,
+		maxIterations: number = 500
+	): Promise<void> {
+		let settled = false;
+		void promise.then(
+			() => {
+				settled = true;
+			},
+			() => {
+				settled = true;
+			}
+		);
+		for (let i = 0; i < maxIterations && !settled; i++) {
+			// `advanceTimersToNextTimerAsync` jumps to the next pending fake
+			// timer and fires it, which lets the reconnect chain unwind one
+			// step at a time without us having to guess the right delay.
+			await vi.advanceTimersToNextTimerAsync();
+		}
+	}
 
 	/**
 	 * Interaction with the tailing API, including tail creation,
@@ -89,13 +173,13 @@ describe("tail", () => {
 			api = mockWebsocketAPIs(expect);
 			expect(api.requests.creation.length).toStrictEqual(0);
 
-			await runWrangler("tail test-worker");
+			const { tailPromise } = await startTail("tail test-worker");
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
 			await api.closeHelper();
+			await tailPromise;
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
@@ -147,13 +231,13 @@ describe("tail", () => {
 					{ once: true }
 				)
 			);
-			await runWrangler("tail example.com/*");
+			const { tailPromise } = await startTail("tail example.com/*");
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
 			await api.closeHelper();
+			await tailPromise;
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
@@ -231,13 +315,15 @@ describe("tail", () => {
 			api = mockWebsocketAPIs(expect, "some-env", false);
 			expect(api.requests.creation.length).toStrictEqual(0);
 
-			await runWrangler("tail test-worker --env some-env --legacy-env true");
+			const { tailPromise } = await startTail(
+				"tail test-worker --env some-env --legacy-env true"
+			);
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
 			await api.closeHelper();
+			await tailPromise;
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
@@ -245,13 +331,15 @@ describe("tail", () => {
 			api = mockWebsocketAPIs(expect, "some-env");
 			expect(api.requests.creation.length).toStrictEqual(0);
 
-			await runWrangler("tail test-worker --env some-env --legacy-env false");
+			const { tailPromise } = await startTail(
+				"tail test-worker --env some-env --legacy-env false"
+			);
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
 			await api.closeHelper();
+			await tailPromise;
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
@@ -259,12 +347,13 @@ describe("tail", () => {
 			expect,
 		}) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --debug");
+			const { tailPromise } = await startTail("tail test-worker --debug");
 			await expect(api.nextMessageJson()).resolves.toHaveProperty(
 				"debug",
 				true
 			);
 			await api.closeHelper();
+			await tailPromise;
 		});
 	});
 
@@ -277,17 +366,22 @@ describe("tail", () => {
 			const tooLow = runWrangler("tail test-worker --sampling-rate -5");
 			await expect(tooLow).rejects.toThrow();
 
-			await runWrangler("tail test-worker --sampling-rate 0.25");
+			const { tailPromise } = await startTail(
+				"tail test-worker --sampling-rate 0.25"
+			);
 
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ sampling_rate: 0.25 }],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends single status filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --status error");
+			const { tailPromise } = await startTail(
+				"tail test-worker --status error"
+			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [
 					{
@@ -296,11 +390,14 @@ describe("tail", () => {
 				],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends multiple status filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --status error --status canceled");
+			const { tailPromise } = await startTail(
+				"tail test-worker --status error --status canceled"
+			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [
 					{
@@ -315,86 +412,109 @@ describe("tail", () => {
 				],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends single HTTP method filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --method POST");
+			const { tailPromise } = await startTail("tail test-worker --method POST");
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ method: ["POST"] }],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends multiple HTTP method filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --method POST --method GET");
+			const { tailPromise } = await startTail(
+				"tail test-worker --method POST --method GET"
+			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ method: ["POST", "GET"] }],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends header filters without a query", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --header X-CUSTOM-HEADER");
+			const { tailPromise } = await startTail(
+				"tail test-worker --header X-CUSTOM-HEADER"
+			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ header: { key: "X-CUSTOM-HEADER" } }],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends header filters with a query", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --header X-CUSTOM-HEADER:some-value");
+			const { tailPromise } = await startTail(
+				"tail test-worker --header X-CUSTOM-HEADER:some-value"
+			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ header: { key: "X-CUSTOM-HEADER", query: "some-value" } }],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends single IP filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
 			const fakeIp = "192.0.2.1";
 
-			await runWrangler(`tail test-worker --ip ${fakeIp}`);
+			const { tailPromise } = await startTail(
+				`tail test-worker --ip ${fakeIp}`
+			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ client_ip: [fakeIp] }],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends multiple IP filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
 			const fakeIp = "192.0.2.1";
 
-			await runWrangler(`tail test-worker --ip ${fakeIp} --ip self`);
+			const { tailPromise } = await startTail(
+				`tail test-worker --ip ${fakeIp} --ip self`
+			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ client_ip: [fakeIp, "self"] }],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends search filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
 			const search = "filterMe";
 
-			await runWrangler(`tail test-worker --search ${search}`);
+			const { tailPromise } = await startTail(
+				`tail test-worker --search ${search}`
+			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ query: search }],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends version id filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
 			const versionId = "87501bef-3ef2-4464-a3d6-35e548695742";
 
-			await runWrangler(`tail test-worker --version-id ${versionId}`);
+			const { tailPromise } = await startTail(
+				`tail test-worker --version-id ${versionId}`
+			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ scriptVersion: versionId }],
 			});
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("sends everything but the kitchen sink", async ({ expect }) => {
@@ -437,9 +557,10 @@ describe("tail", () => {
 				],
 			};
 
-			await runWrangler(`tail test-worker ${cliFilters}`);
+			const { tailPromise } = await startTail(`tail test-worker ${cliFilters}`);
 			expect(api.requests.creation[0]).toEqual(expectedWebsocketMessage);
 			await api.closeHelper();
+			await tailPromise;
 		});
 	});
 
@@ -448,7 +569,7 @@ describe("tail", () => {
 
 		it("logs request messages in JSON format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format json");
+			const { tailPromise } = await startTail("tail test-worker --format json");
 
 			const event = generateMockRequestEvent();
 			const message = generateMockEventMessage({ event });
@@ -459,11 +580,12 @@ describe("tail", () => {
 				deserializeJsonMessage(serializedMessage)
 			);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs scheduled messages in JSON format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format json");
+			const { tailPromise } = await startTail("tail test-worker --format json");
 
 			const event = generateMockScheduledEvent();
 			const message = generateMockEventMessage({ event });
@@ -474,11 +596,12 @@ describe("tail", () => {
 				deserializeJsonMessage(serializedMessage)
 			);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs alarm messages in json format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format json");
+			const { tailPromise } = await startTail("tail test-worker --format json");
 
 			const event = generateMockAlarmEvent();
 			const message = generateMockEventMessage({ event });
@@ -489,11 +612,12 @@ describe("tail", () => {
 				deserializeJsonMessage(serializedMessage)
 			);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs email messages in json format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format json");
+			const { tailPromise } = await startTail("tail test-worker --format json");
 
 			const event = generateMockEmailEvent();
 			const message = generateMockEventMessage({ event });
@@ -504,11 +628,12 @@ describe("tail", () => {
 				deserializeJsonMessage(serializedMessage)
 			);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs tail messages in json format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format json");
+			const { tailPromise } = await startTail("tail test-worker --format json");
 
 			const event = generateMockTailEvent(["some-worker", "some-worker"]);
 			const message = generateMockEventMessage({ event });
@@ -519,11 +644,12 @@ describe("tail", () => {
 				deserializeJsonMessage(serializedMessage)
 			);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs queue messages in json format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format json");
+			const { tailPromise } = await startTail("tail test-worker --format json");
 
 			const event = generateMockQueueEvent();
 			const message = generateMockEventMessage({ event });
@@ -534,11 +660,15 @@ describe("tail", () => {
 				deserializeJsonMessage(serializedMessage)
 			);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs request messages in pretty format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format pretty");
+			const { tailPromise } = await startTail(
+				"tail test-worker --format pretty"
+			);
+			await waitForPrettyConnected(expect);
 
 			const event = generateMockRequestEvent();
 			const message = generateMockEventMessage({ event });
@@ -561,11 +691,15 @@ describe("tail", () => {
 				GET https://example.org/ - Ok @ [mock event timestamp]"
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs rpc messages in pretty format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format pretty");
+			const { tailPromise } = await startTail(
+				"tail test-worker --format pretty"
+			);
+			await waitForPrettyConnected(expect);
 
 			const event = generateMockRpcEvent();
 			const message = generateMockEventMessage({
@@ -591,11 +725,15 @@ describe("tail", () => {
 				MyDurableObject.foo - Ok @ [mock event timestamp]"
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs scheduled messages in pretty format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format pretty");
+			const { tailPromise } = await startTail(
+				"tail test-worker --format pretty"
+			);
+			await waitForPrettyConnected(expect);
 
 			const event = generateMockScheduledEvent();
 			const message = generateMockEventMessage({ event });
@@ -618,11 +756,15 @@ describe("tail", () => {
 				"* * * * *" @ [mock timestamp string] - Ok"
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs alarm messages in pretty format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format pretty");
+			const { tailPromise } = await startTail(
+				"tail test-worker --format pretty"
+			);
+			await waitForPrettyConnected(expect);
 
 			const event = generateMockAlarmEvent();
 			const message = generateMockEventMessage({ event });
@@ -645,11 +787,15 @@ describe("tail", () => {
 				Alarm @ [mock scheduled time] - Ok"
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs email messages in pretty format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format pretty");
+			const { tailPromise } = await startTail(
+				"tail test-worker --format pretty"
+			);
+			await waitForPrettyConnected(expect);
 
 			const event = generateMockEmailEvent();
 			const message = generateMockEventMessage({ event });
@@ -672,11 +818,15 @@ describe("tail", () => {
 				Email from:from@example.com to:to@example.com size:45416 @ [mock event timestamp] - Ok"
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs tail messages in pretty format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format pretty");
+			const { tailPromise } = await startTail(
+				"tail test-worker --format pretty"
+			);
+			await waitForPrettyConnected(expect);
 
 			const event = generateMockTailEvent(["some-worker", "other-worker", ""]);
 			const message = generateMockEventMessage({ event });
@@ -702,11 +852,15 @@ describe("tail", () => {
 				Tailing some-worker,other-worker - Ok @ [mock event timestamp]"
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs tail overload message", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format pretty");
+			const { tailPromise } = await startTail(
+				"tail test-worker --format pretty"
+			);
+			await waitForPrettyConnected(expect);
 
 			let event = generateTailInfo(true);
 			let message = generateMockEventMessage({ event });
@@ -732,11 +886,15 @@ describe("tail", () => {
 				Tail has exited sampling mode and is no longer dropping messages."
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs queue messages in pretty format", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format pretty");
+			const { tailPromise } = await startTail(
+				"tail test-worker --format pretty"
+			);
+			await waitForPrettyConnected(expect);
 
 			const event = generateMockQueueEvent();
 			const message = generateMockEventMessage({ event });
@@ -759,13 +917,17 @@ describe("tail", () => {
 				Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("should not crash when the tail message has a void event", async ({
 			expect,
 		}) => {
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker --format pretty");
+			const { tailPromise } = await startTail(
+				"tail test-worker --format pretty"
+			);
+			await waitForPrettyConnected(expect);
 
 			const message = generateMockEventMessage({ event: null });
 			const serializedMessage = serialize(message);
@@ -787,6 +949,7 @@ describe("tail", () => {
 				Unknown Event - Ok @ [mock timestamp string]"
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("defaults to logging in pretty format when the output is a TTY", async ({
@@ -794,7 +957,8 @@ describe("tail", () => {
 		}) => {
 			setIsTTY(true);
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker");
+			const { tailPromise } = await startTail("tail test-worker");
+			await waitForPrettyConnected(expect);
 
 			const event = generateMockRequestEvent();
 			const message = generateMockEventMessage({ event });
@@ -817,6 +981,7 @@ describe("tail", () => {
 				GET https://example.org/ - Ok @ [mock event timestamp]"
 			`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("defaults to logging in json format when the output is not a TTY", async ({
@@ -825,7 +990,7 @@ describe("tail", () => {
 			setIsTTY(false);
 
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker");
+			const { tailPromise } = await startTail("tail test-worker");
 
 			const event = generateMockRequestEvent();
 			const message = generateMockEventMessage({ event });
@@ -836,12 +1001,14 @@ describe("tail", () => {
 				deserializeJsonMessage(serializedMessage)
 			);
 			await api.closeHelper();
+			await tailPromise;
 		});
 
 		it("logs console messages and exceptions", async ({ expect }) => {
 			setIsTTY(true);
 			api = mockWebsocketAPIs(expect);
-			await runWrangler("tail test-worker");
+			const { tailPromise } = await startTail("tail test-worker");
+			await waitForPrettyConnected(expect);
 
 			const event = generateMockRequestEvent();
 			const message = generateMockEventMessage({
@@ -913,6 +1080,7 @@ describe("tail", () => {
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			await api.closeHelper();
+			await tailPromise;
 		});
 	});
 
@@ -925,46 +1093,175 @@ describe("tail", () => {
 			await api.closeHelper();
 		});
 
-		it("errors when the websocket stops reacting to pings (pretty format)", async ({
+		it("retries then gives up after the connection drops (pretty format)", async ({
 			expect,
 		}) => {
 			api = mockWebsocketAPIs(expect);
-			vi.useFakeTimers({
-				toFake: ["setInterval"],
-			});
-			// Block the websocket from replying to the ping
-			vi.spyOn(MockWebSocket.prototype, "ping").mockImplementation(() => {});
-			await runWrangler("tail test-worker --format=pretty");
-			await api.ws.connected;
-			// The ping is sent every 2 secs, so it should not fail until the second ping is due.
-			await vi.advanceTimersByTimeAsync(10000);
-			await expect(
-				vi.advanceTimersByTimeAsync(10000)
+			// The reconnect loop creates a fresh tail per attempt, so the
+			// create/delete mocks need to fire more than once.
+			mockReusableWebsocketAPIs(expect);
+
+			// Fake `setTimeout` from the very start so every timer the tail
+			// command schedules — the initial WebSocket connection delay
+			// (mock-socket's 4ms `delay()`), the per-attempt reconnect
+			// back-offs (1/2/4/8/16s), and every failed-connection delay on
+			// reconnect — lives in the fake queue. We can then drive the
+			// whole 30-ish seconds of back-off in microtask time without
+			// burning real wall-clock.
+			vi.useFakeTimers({ toFake: ["setTimeout"] });
+
+			const tailPromise = runWrangler(
+				"tail test-worker --format=pretty"
+			) as Promise<unknown>;
+			activeTailPromise = tailPromise;
+
+			// Set up the rejection assertion BEFORE driving any timers so the
+			// give-up FatalError doesn't become an unhandled rejection.
+			const assertion = expect(
+				tailPromise
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Tail disconnected, exiting.]`
+				`[Error: Unable to reconnect to the tail for test-worker after 5 attempts. Please re-run \`wrangler tail test-worker\` to start a new session.]`
 			);
-			await api.closeHelper();
+
+			// Let the initial connection establish (mock-socket schedules a
+			// 4ms fake setTimeout for the open event).
+			await vi.advanceTimersByTimeAsync(50);
+			await api.ws.connected;
+
+			// Simulate an abnormal disconnect by closing the server with a
+			// non-normal code. This dispatches close(code=1006) to the active
+			// WebSocket and removes the server from the network bridge so
+			// every reconnect `new WebSocket(url)` attempt fails with a
+			// close-before-open — which is exactly the "give up after N
+			// attempts" scenario we want to exercise.
+			api.ws.close({ code: 1006, reason: "abnormal", wasClean: false });
+
+			// Drive the reconnect chain forward in small steps so newly
+			// scheduled timers (each attempt's failed-connection 4ms + the
+			// next back-off sleep) are picked up by subsequent advances.
+			// Bail as soon as the give-up rejection lands.
+			await advanceFakeTimersUntilSettled(tailPromise);
+			await assertion;
+
+			expect(std.warn).toContain("Reconnecting (attempt 1 of 5)");
+			expect(std.warn).toContain("Reconnecting (attempt 5 of 5)");
+
+			vi.useRealTimers();
 		});
 
-		it("errors when the websocket stops reacting to pings (json format)", async ({
+		it("retries then gives up after the connection drops (json format)", async ({
 			expect,
 		}) => {
 			api = mockWebsocketAPIs(expect);
-			vi.useFakeTimers({
-				toFake: ["setInterval"],
-			});
-			// Block the websocket from replying to the ping
-			vi.spyOn(MockWebSocket.prototype, "ping").mockImplementation(() => {});
-			await runWrangler("tail test-worker --format=json");
-			await api.ws.connected;
-			// The ping is sent every 2 secs, so it should not fail until the second ping is due.
-			await vi.advanceTimersByTimeAsync(10000);
-			await expect(
-				vi.advanceTimersByTimeAsync(10000)
+			mockReusableWebsocketAPIs(expect);
+
+			vi.useFakeTimers({ toFake: ["setTimeout"] });
+
+			const tailPromise = runWrangler(
+				"tail test-worker --format=json"
+			) as Promise<unknown>;
+			activeTailPromise = tailPromise;
+
+			const assertion = expect(
+				tailPromise
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: "Tail disconnected, exiting."]`
+				`[Error: "Unable to reconnect to the tail for test-worker after 5 attempts. Please re-run \`wrangler tail test-worker\` to start a new session."]`
 			);
+
+			await vi.advanceTimersByTimeAsync(50);
+			await api.ws.connected;
+
+			api.ws.close({ code: 1006, reason: "abnormal", wasClean: false });
+
+			await advanceFakeTimersUntilSettled(tailPromise);
+			await assertion;
+
+			vi.useRealTimers();
+		});
+
+		it("auto-reconnects after a transient drop and continues streaming", async ({
+			expect,
+		}) => {
+			api = mockWebsocketAPIs(expect);
+			mockReusableWebsocketAPIs(expect);
+
+			const { tailPromise } = await startTail(
+				"tail test-worker --format=pretty"
+			);
+			await waitForPrettyConnected(expect);
+
+			// Simulate a transient network drop on the current WebSocket by
+			// dispatching a close event with an abnormal code directly on the
+			// client. The server-side mock is left intact so the subsequent
+			// reconnect attempt can succeed.
+			const clients = (
+				api.ws as unknown as {
+					server: { clients(): MockWebSocket[] };
+				}
+			).server.clients();
+			const firstClient = clients[clients.length - 1];
+			firstClient.dispatchEvent({
+				type: "close",
+				code: 1006,
+				reason: "transient drop",
+				wasClean: false,
+			} as unknown as Event);
+
+			// Wait for the reconnect to succeed (up to ~5s including the 1s
+			// backoff before the first reconnect attempt).
+			await vi.waitFor(
+				() => {
+					expect(std.out).toContain("Reconnected to test-worker");
+				},
+				{ timeout: 5000 }
+			);
+
+			expect(std.warn).toContain("Reconnecting (attempt 1 of 5)");
+
 			await api.closeHelper();
+			await tailPromise;
+		});
+	});
+
+	describe("shutdown", () => {
+		it("logs `Stopping tail...`, deletes the tail, and exits cleanly on Ctrl-C", async ({
+			expect,
+		}) => {
+			api = mockWebsocketAPIs(expect);
+
+			// Capture SIGINT listeners present before the command runs so we
+			// can identify (and invoke) the one the tail command registers.
+			const before = new Set(process.listeners("SIGINT"));
+
+			const { tailPromise } = await startTail(
+				"tail test-worker --format=pretty"
+			);
+			await waitForPrettyConnected(expect);
+
+			expect(api.requests.deletion.count).toStrictEqual(0);
+
+			// The tail command must register a SIGINT handler. Regression
+			// guard: a top-level `process.on("SIGINT")` elsewhere (previously
+			// in pages/index.ts) used to `process.exit()` first and prevent
+			// this handler from ever running.
+			const added = process
+				.listeners("SIGINT")
+				.filter((listener) => !before.has(listener));
+			expect(added.length).toBeGreaterThan(0);
+
+			// Emit a real SIGINT so we exercise the same dispatch path a user's
+			// Ctrl-C would. If a rogue module-level handler that calls
+			// `process.exit()` is ever re-introduced ahead of ours, this would
+			// hard-exit the worker and fail the run.
+			process.emit("SIGINT");
+
+			// The handler resolves the blocking lifecycle promise after a
+			// clean shutdown.
+			await tailPromise;
+
+			expect(std.out).toContain("Stopping tail...");
+			// The server-side tail was deleted as part of the clean shutdown.
+			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 	});
 
@@ -1248,6 +1545,24 @@ function mockWebsocketAPIs(
 	mockWebSockets.push(api.ws);
 
 	return api;
+}
+
+/**
+ * Register additional create-tail mocks beyond the initial one set up by
+ * {@link mockWebsocketAPIs}. The default MSW handler is `{ once: true }`, so
+ * the reconnect path (which calls `createTail` again for each attempt)
+ * would otherwise fail on the second tail creation.
+ *
+ * Call this in disconnect/reconnect tests so the handler can make
+ * subsequent create-tail HTTP calls successfully.
+ */
+function mockReusableWebsocketAPIs(
+	expect: ExpectStatic,
+	count: number = 5
+): void {
+	for (let i = 0; i < count; i++) {
+		mockCreateTailRequest(expect, "ws://localhost:1234");
+	}
 }
 
 /**

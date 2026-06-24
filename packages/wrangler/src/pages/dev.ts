@@ -1042,9 +1042,18 @@ export const pagesDevCommand = createCommand({
 
 		metrics.sendMetricsEvent("run pages dev");
 
+		// Note: these signal handlers used to live at the top level of
+		// `pages/index.ts`, which meant they were registered for *every*
+		// wrangler command and would `process.exit()` on the first SIGINT —
+		// clobbering the graceful shutdown of other long-running commands
+		// (e.g. `wrangler tail`). They belong here, scoped to `pages dev`.
+		const cleanupAndExit = () => {
+			CLEANUP();
+			process.exit();
+		};
 		process.on("exit", CLEANUP);
-		process.on("SIGINT", CLEANUP);
-		process.on("SIGTERM", CLEANUP);
+		process.on("SIGINT", cleanupAndExit);
+		process.on("SIGTERM", cleanupAndExit);
 
 		await events.once(devServer.devEnv, "teardown");
 
