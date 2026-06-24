@@ -358,6 +358,12 @@ async function runFetchRequest(
  *
  * AssetWorkerOuter serves as the dispatch layer. It forwards all method
  * calls to AssetWorkerInner via ctx.exports.
+ *
+ * This now-unused entrypoint can be used for loopback invocations if made the
+ * default export, which is how cohorted deployments will be implemented.
+ * For now, the latency added by loopback invocations is too high for normal
+ * traffic. When that has been addressed, re-enable loopback by making this
+ * the default export.
  */
 export class AssetWorkerOuter<TEnv extends Env = Env>
 	extends WorkerEntrypoint<TEnv>
@@ -495,18 +501,16 @@ export class AssetWorkerOuter<TEnv extends Env = Env>
 	}
 }
 
-export default AssetWorkerOuter;
-
 // ============================================================
 // SECTION 4: INNER ENTRYPOINT (AssetWorkerInner)
 // ============================================================
 
 /*
  * AssetWorkerInner contains the actual implementation logic for all asset
- * worker methods. In production, it is instantiated by AssetWorkerOuter via
- * ctx.exports. For local development, tools such as the Vite plugin can
- * subclass AssetWorkerInner directly to override methods like unstable_exists
- * and unstable_getByETag with dev-server-backed implementations.
+ * worker methods. AssetWorkerOuter can instantiate it via ctx.exports to
+ * enable cohort-based loopback. For local development, tools such as the Vite
+ * plugin can subclass AssetWorkerInner directly to override methods like
+ * unstable_exists and unstable_getByETag with dev-server-backed implementations.
  */
 export class AssetWorkerInner<TEnv extends Env = Env>
 	extends WorkerEntrypoint<TEnv>
@@ -578,3 +582,5 @@ export class AssetWorkerInner<TEnv extends Env = Env>
 		return unstableExistsImpl(this.env, pathname, request);
 	}
 }
+
+export default AssetWorkerInner;

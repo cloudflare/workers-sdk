@@ -4,8 +4,9 @@ import Worker, {
 } from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
-import { SELF } from "cloudflare:test";
+import { SELF, createExecutionContext } from "cloudflare:test";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import type { Env } from "@cloudflare/workers-shared/asset-worker";
 import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
@@ -13,7 +14,7 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 vi.mock("@cloudflare/workers-shared/asset-worker/src/utils/kv.ts");
 vi.mock("@cloudflare/workers-shared/asset-worker/src/configuration");
 
-describe("[Asset Worker] loopback", () => {
+describe("[Asset Worker] entrypoints", () => {
 	beforeEach(async () => {
 		vi.mocked(getAssetWithMetadataFromKV).mockImplementation(
 			() =>
@@ -44,14 +45,11 @@ describe("[Asset Worker] loopback", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("uses the outer entrypoint as the default export", ({ expect }) => {
-		expect(Worker).toBe(AssetWorkerOuter);
+	it("uses the inner entrypoint as the default export", ({ expect }) => {
+		expect(Worker).toBe(AssetWorkerInner);
 	});
 
-	it("uses AssetWorkerInner for fetch path resolution", async ({ expect }) => {
-		const outerExists = vi
-			.spyOn(Worker.prototype, "unstable_exists")
-			.mockResolvedValue(null);
+	it("routes directly through the inner entrypoint", async ({ expect }) => {
 		const innerExists = vi
 			.spyOn(AssetWorkerInner.prototype, "unstable_exists")
 			.mockResolvedValue("/file.bin");
@@ -60,9 +58,39 @@ describe("[Asset Worker] loopback", () => {
 		const response = await SELF.fetch(request);
 
 		expect(response.status).toBe(200);
-		expect(outerExists).not.toBeCalled();
 		expect(innerExists).toBeCalledTimes(1);
 		expect(getAssetWithMetadataFromKV).toBeCalledTimes(1);
 		expect(getAssetWithMetadataFromKV).toBeCalledWith(undefined, "/file.bin");
+	});
+
+	it("keeps the outer-to-inner loopback available", async ({ expect }) => {
+		const request = new Request("https://example.com");
+		const ctx = createExecutionContext();
+		const innerFetch = vi.fn(async (_request: Request) => {
+			return new Response("inner response");
+		});
+		const createInnerEntrypoint = vi.fn(() => ({ fetch: innerFetch }));
+		Object.defineProperty(ctx, "exports", {
+			value: {
+				AssetWorkerInner: createInnerEntrypoint,
+			},
+		});
+
+		const response = await new AssetWorkerOuter(ctx, {} as Env).fetch(request);
+
+		expect(createInnerEntrypoint).toHaveBeenCalledOnce();
+		expect(createInnerEntrypoint).toHaveBeenCalledWith({
+			props: {
+				traceContext: {
+					traceId: "test-trace",
+					spanId: "test-span",
+					parentSpanId: "test-parent-span",
+					traceFlags: 0,
+				},
+			},
+		});
+		expect(innerFetch).toHaveBeenCalledOnce();
+		expect(innerFetch).toHaveBeenCalledWith(request);
+		expect(await response.text()).toBe("inner response");
 	});
 });
