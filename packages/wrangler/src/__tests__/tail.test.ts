@@ -1090,8 +1090,17 @@ describe("tail", () => {
 			api = mockWebsocketAPIs(expect);
 			await api.closeHelper();
 
+			// Regression guard: initial-connect failure must still pair
+			// `"begin log stream"` with `"end log stream"` so failed sessions
+			// don't show up as unpaired in telemetry.
+			const sendMetricsEvent = vi.spyOn(metricsModule, "sendMetricsEvent");
+
 			await expect(runWrangler("tail test-worker")).rejects.toThrow();
 			await api.closeHelper();
+
+			expect(sendMetricsEvent).toHaveBeenCalledWith("end log stream", {
+				sendMetrics: undefined,
+			});
 		});
 
 		it("retries then gives up after the connection drops (pretty format)", async ({

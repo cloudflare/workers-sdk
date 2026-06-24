@@ -457,6 +457,16 @@ export const tailCommand = createCommand({
 			// through the normal error pipeline (preserves existing behaviour
 			// for things like "Connection … closed unexpectedly.").
 			removeSignalHandlers();
+			// Pair the `"begin log stream"` metric sent at handler start with
+			// an `"end log stream"` here so sessions that never made it past
+			// the initial handshake are balanced in telemetry alongside the
+			// `cleanStop` / `shutdownHandler` / give-up exit paths. The old
+			// busy-wait-based implementation sent this metric on its
+			// `tail.CLOSED` branch; this preserves that behaviour after the
+			// switch to an event-based open-wait.
+			metrics.sendMetricsEvent("end log stream", {
+				sendMetrics: config.send_metrics,
+			});
 			throw e;
 		}
 
