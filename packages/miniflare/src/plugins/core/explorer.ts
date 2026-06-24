@@ -102,6 +102,16 @@ export function getExplorerServices(
 		},
 	];
 
+	// When the MCP server is opted in (mcpServerPath is non-empty), give the
+	// explorer worker an UnsafeEval capability so its codemode MCP endpoint can
+	// execute agent-supplied snippets against the local data plane.
+	if (mcpServerPath) {
+		explorerBindings.push({
+			name: CoreBindings.UNSAFE_EVAL,
+			unsafeEval: kVoid,
+		});
+	}
+
 	if (hasDurableObjects) {
 		// Add Durable Object namespace bindings for the explorer
 		// Yes we are binding to 'unbound' DOs, but that has no effect
