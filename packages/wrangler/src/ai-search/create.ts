@@ -22,6 +22,20 @@ import type {
 const CREATE_NEW_BUCKET = "__create_new__";
 const CREATE_NEW_NAMESPACE = "__create_new__";
 
+// R2 jurisdictions selectable for an R2 source bucket. "default" means no
+// specific jurisdiction (standard) and is omitted from the request payload.
+const SOURCE_JURISDICTION_CHOICES = ["default", "eu", "fedramp"] as const;
+type SourceJurisdiction = (typeof SOURCE_JURISDICTION_CHOICES)[number];
+
+// Maps the user-facing jurisdiction choice to the value sent to R2 / the API.
+// "default" (and undefined) become undefined, i.e. no `cf-r2-jurisdiction`
+// header and no `r2_jurisdiction` in the request body.
+function normalizeJurisdiction(
+	jurisdiction: SourceJurisdiction | undefined
+): string | undefined {
+	return jurisdiction && jurisdiction !== "default" ? jurisdiction : undefined;
+}
+
 const CUSTOM_METADATA_DATA_TYPES = [
 	"text",
 	"number",
@@ -229,6 +243,13 @@ export const aiSearchCreateCommand = createCommand({
 			type: "string",
 			choices: ["builtin", "r2", "web-crawler"],
 			description: "The source type for the instance.",
+		},
+		"source-jurisdiction": {
+			type: "string",
+			choices: [...SOURCE_JURISDICTION_CHOICES],
+			description:
+				"The R2 jurisdiction of the source bucket (R2 sources only). " +
+				'Use "default" for no specific jurisdiction.',
 		},
 		"embedding-model": {
 			type: "string",
@@ -465,10 +486,25 @@ export const aiSearchCreateCommand = createCommand({
 			}
 		}
 
+		// --source-jurisdiction only applies to R2 source buckets.
+		if (instanceType !== "r2" && args.sourceJurisdiction !== undefined) {
+			throw new UserError(
+				`--source-jurisdiction is only supported with --type r2 (got --type ${instanceType}).`,
+				{
+					telemetryMessage:
+						"ai search create source-jurisdiction unsupported type",
+				}
+			);
+		}
+
 		// 2. Source selection — depends on the type
 		let instanceSource = args.source;
 		// Track whether the user went through the web/sitemap interactive flow
 		let webParseType: string | undefined;
+		// R2 jurisdiction of the source bucket. May be supplied via flag or
+		// chosen interactively; "default" is normalized away before use.
+		let sourceJurisdiction: SourceJurisdiction | undefined =
+			args.sourceJurisdiction as SourceJurisdiction | undefined;
 
 		if (instanceType === "r2" && !instanceSource) {
 			if (isNonInteractiveOrCI()) {
@@ -478,8 +514,24 @@ export const aiSearchCreateCommand = createCommand({
 					{ telemetryMessage: "ai search create missing r2 source" }
 				);
 			}
+			// 2.0 R2 jurisdiction: pick where the source bucket lives so we list
+			// (and optionally create) buckets in the matching jurisdiction.
+			if (sourceJurisdiction === undefined) {
+				sourceJurisdiction = await select("Select an R2 jurisdiction:", {
+					choices: SOURCE_JURISDICTION_CHOICES.map((j) => ({
+						title: j,
+						value: j,
+					})),
+					defaultOption: 0,
+				});
+			}
+			const effectiveJurisdiction = normalizeJurisdiction(sourceJurisdiction);
 			// 2.1 R2: list buckets and let user pick, with "Create new" option
-			const buckets = await listR2Buckets(config, accountId);
+			const buckets = await listR2Buckets(
+				config,
+				accountId,
+				effectiveJurisdiction
+			);
 			const bucketChoices = [
 				...buckets.map((b) => ({
 					title: b.name,
@@ -506,7 +558,13 @@ export const aiSearchCreateCommand = createCommand({
 					}
 				);
 				logger.log(`Creating R2 bucket "${newBucketName}"...`);
-				await createR2Bucket(config, accountId, newBucketName);
+				await createR2Bucket(
+					config,
+					accountId,
+					newBucketName,
+					undefined,
+					effectiveJurisdiction
+				);
 				logger.log(`Successfully created R2 bucket "${newBucketName}".`);
 				instanceSource = newBucketName;
 			} else {
@@ -686,6 +744,10 @@ export const aiSearchCreateCommand = createCommand({
 		if (args.excludeItems) {
 			sourceParams.exclude_items = args.excludeItems;
 		}
+		const sourceJurisdictionValue = normalizeJurisdiction(sourceJurisdiction);
+		if (instanceType === "r2" && sourceJurisdictionValue) {
+			sourceParams.r2_jurisdiction = sourceJurisdictionValue;
+		}
 		if (webParseType) {
 			sourceParams.web_crawler = {
 				parse_type: webParseType,
@@ -710,12 +772,20 @@ export const aiSearchCreateCommand = createCommand({
 		if (args.json) {
 			logger.log(JSON.stringify(instance, null, 2));
 		} else {
+			const jurisdiction =
+				instance.source_params?.r2_jurisdiction ?? sourceJurisdictionValue;
+			const sourceDisplay =
+				instance.source != null
+					? jurisdiction
+						? `${instance.source} (${jurisdiction})`
+						: instance.source
+					: "-";
 			let summary =
 				`Successfully created AI Search instance "${instance.id}"\n` +
 				`  Name:       ${instance.id}\n` +
 				`  Namespace:  ${instance.namespace ?? instanceNamespace}\n` +
 				`  Type:       ${instance.type ?? "builtin"}\n` +
-				`  Source:     ${instance.source ?? "-"}\n` +
+				`  Source:     ${sourceDisplay}\n` +
 				`  Model:      ${instance.ai_search_model ?? "default"}\n` +
 				`  Embedding:  ${instance.embedding_model ?? "default"}`;
 			if (instance.custom_metadata && instance.custom_metadata.length > 0) {
