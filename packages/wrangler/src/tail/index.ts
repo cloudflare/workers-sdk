@@ -266,6 +266,11 @@ export const tailCommand = createCommand({
 				);
 			}
 
+			// NOTE: The tail backend does not actively close this WebSocket
+			// when the expiration time is reached — log delivery just stops.
+			// A proactive client-side refresh based on `expiration` is tracked
+			// as a follow-up.
+
 			tail.on("message", printLog);
 
 			// Hooks used by the open-wait promise below. The close listener

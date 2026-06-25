@@ -39,7 +39,7 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
+import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type { PagesConfigCache } from "./types";
@@ -50,6 +50,16 @@ import type {
 	DurableObjectBindings,
 	EnvironmentNonInheritable,
 } from "@cloudflare/workers-utils";
+
+// Cleanup callbacks + a helper to run them, used to tear down `pages dev`
+// resources on shutdown. These are local to `pages dev` (the only command
+// that registers them); the signal handlers that invoke `CLEANUP` are set up
+// inside the command handler below.
+const CLEANUP_CALLBACKS: (() => void)[] = [];
+const CLEANUP = () => {
+	CLEANUP_CALLBACKS.forEach((callback) => callback());
+	RUNNING_BUILDERS.forEach((builder) => builder.stop?.());
+};
 
 /*
  * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
