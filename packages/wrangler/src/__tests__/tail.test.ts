@@ -1262,6 +1262,73 @@ describe("tail", () => {
 			await api.closeHelper();
 			await tailPromise;
 		});
+
+		it("treats a missed keep-alive pong as a disconnect and reconnects", async ({
+			expect,
+		}) => {
+			api = mockWebsocketAPIs(expect);
+			mockReusableWebsocketAPIs(expect);
+
+			// Suppress the pong for the very first ping only, so the first
+			// connection's keep-alive times out (exercising the
+			// `startWebSocketPing` -> `onDisconnect` path). Every later ping
+			// bounces a pong back as normal, so the reconnect stays healthy.
+			let pingsSuppressed = 0;
+			vi.spyOn(MockWebSocket.prototype, "ping").mockImplementation(function (
+				this: MockWebSocket,
+				data: Buffer
+			) {
+				if (pingsSuppressed === 0) {
+					pingsSuppressed++;
+					return;
+				}
+				// Default MockWebSocket.ping behaviour: echo the ping straight
+				// back to the registered "pong" listener.
+				(
+					this as unknown as { pongListener?: (d: Buffer) => void }
+				).pongListener?.(data);
+			});
+
+			// Fake both timers: `setInterval` drives the 10s keep-alive ping,
+			// `setTimeout` drives mock-socket's connection delay and the
+			// reconnect back-off.
+			vi.useFakeTimers({ toFake: ["setInterval", "setTimeout"] });
+
+			const tailPromise = runWrangler(
+				"tail test-worker --format=pretty"
+			) as Promise<unknown>;
+			activeTailPromise = tailPromise;
+
+			// Establish the initial connection.
+			await vi.advanceTimersByTimeAsync(50);
+			await api.ws.connected;
+
+			// Two ping cycles (PING_INTERVAL_MS = 10s each): the first sends a
+			// ping (no pong comes back), the second observes `waitingForPong`
+			// is still true and treats the connection as dropped ->
+			// `onDisconnect()` -> reconnect.
+			await vi.advanceTimersByTimeAsync(10_000);
+			await vi.advanceTimersByTimeAsync(10_000);
+
+			// Drive the back-off + reconnect handshake until streaming resumes.
+			for (let i = 0; i < 50; i++) {
+				if (std.out.includes("Reconnected to test-worker")) {
+					break;
+				}
+				await vi.advanceTimersByTimeAsync(1000);
+			}
+
+			expect(std.warn).toContain(
+				"did not respond to a keep-alive ping within 10000ms"
+			);
+			expect(std.warn).toContain("Reconnecting (attempt 1 of 5)");
+			expect(std.out).toContain("Reconnected to test-worker");
+
+			vi.useRealTimers();
+
+			await api.closeHelper();
+			await tailPromise;
+		});
 	});
 
 	describe("shutdown", () => {

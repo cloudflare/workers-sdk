@@ -231,6 +231,26 @@ export const tailCommand = createCommand({
 				useServiceEnvironments(config) ? args.env : undefined
 			);
 
+			// We may have started shutting down (Ctrl-C / SIGTERM, or a clean
+			// stop) while `createTail()` was in flight. If so, `shutdownHandler`
+			// has already run with `currentTail === undefined` and settled
+			// `done`, so adopting this socket would orphan it — it would never
+			// be terminated and its server-side tail never deleted, keeping the
+			// event loop alive. Tear the just-created connection down and bail.
+			if (isShuttingDown) {
+				try {
+					tail.terminate();
+				} catch {
+					// Ignore: the socket may already be closed/closing.
+				}
+				try {
+					await deleteTail();
+				} catch (e) {
+					logger.debug("Tail: failed to delete tail on the server:", e);
+				}
+				return;
+			}
+
 			currentTail = tail;
 			currentDeleteTail = deleteTail;
 			intentionalClose = false;
