@@ -13,8 +13,9 @@ import chalk from "chalk";
 import * as find from "empathic/find";
 import { getNodeCompat } from "miniflare";
 import yargs from "yargs";
-import { readConfig } from "../config";
+import { readConfig, readNewConfig } from "../config";
 import { createCommand } from "../core/create-command";
+import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { getEntry } from "../deployment-bundle/entry";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
@@ -30,6 +31,7 @@ import {
 	validateEnvInterfaceNames,
 } from "./helpers";
 import { fetchPipelineTypes } from "./pipeline-schema";
+import { regenerateNewConfigTypes } from "./new-config";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type {
@@ -118,6 +120,7 @@ export const typesCommand = createCommand({
 	},
 	positionalArgs: ["path"],
 	args: {
+		...experimentalNewConfigArg,
 		path: {
 			describe: "The path to the declaration file for the generated types",
 			type: "string",
@@ -204,6 +207,15 @@ export const typesCommand = createCommand({
 		}
 	},
 	async handler(args) {
+		if (args.experimentalNewConfig) {
+			const newConfig = await readNewConfig(args);
+			await regenerateNewConfigTypes({
+				cloudflareConfigPath: newConfig.config.configPath as string,
+				types: newConfig.types,
+			});
+			return;
+		}
+
 		const resolvedOptions = await resolveGenerateTypesOptions(args, {
 			logSecondaryEntries: true,
 			validateOptions: false,
