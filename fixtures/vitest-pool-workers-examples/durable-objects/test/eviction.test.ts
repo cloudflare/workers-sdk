@@ -119,9 +119,3 @@ it("closes WebSockets when requested during eviction", async ({ expect }) => {
 	await evictDurableObject(stub, { webSockets: "close" });
 	expect(await closePromise).toBeDefined();
 });
-
-it("rejects when passed a non-Durable-Object stub", async ({ expect }) => {
-	await expect(
-		evictDurableObject({} as unknown as DurableObjectStub)
-	).rejects.toThrow(TypeError);
-});

@@ -1,5 +1,5 @@
 ---
-"@cloudflare/vitest-pool-workers": minor
+"@cloudflare/vitest-pool-workers": patch
 ---
 
 Add `evictDurableObject` and `evictAllDurableObjects` test helpers to `cloudflare:test`
