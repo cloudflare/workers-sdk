@@ -281,7 +281,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`[Error: You need to provide a name for your Worker. Either pass it as a CLI arg with \`--name <name>\` or set the \`name\` field in your Wrangler configuration file (e.g. wrangler.json).]`
 			);
 		});
 	});
@@ -293,7 +293,7 @@ describe("versions deploy", () => {
 			const result = runWrangler("versions deploy --yes");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You must select at least 1 version to deploy.]`
+				`[Error: You must select at least 1 version to deploy. Provide a version using positional args (e.g. \`wrangler versions deploy <version-id>\`), --version-id, or --version-tag.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
@@ -685,7 +685,7 @@ describe("versions deploy", () => {
 				);
 
 				await expect(result).rejects.toMatchInlineSnapshot(
-					`[Error: You must select at most 2 versions to deploy.]`
+					`[Error: Too many versions selected. You can deploy at most 2 version(s) at a time. Please remove some versions and try again.]`
 				);
 
 				expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
@@ -1139,7 +1139,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (101%) must be between 0 and 100.]`
+				`[Error: The --percentage value 101% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1151,7 +1151,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+				`[Error: The --percentage value -1% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1163,7 +1163,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (101%) must be between 0 and 100.]`
+				`[Error: The --percentage value 101% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1175,7 +1175,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+				`[Error: The --percentage value -1% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1532,7 +1532,7 @@ describe("units", () => {
 			expect(() =>
 				parseTagSpecs({ versionTag: ["abc1234@101%"] })
 			).toThrowError(
-				`Percentage value (101%) parsed from --version-tag arg "abc1234@101%" must be between 0 and 100.`
+				`Percentage value 101% (from --version-tag arg "abc1234@101%") is out of range. Percentages must be between 0 and 100.`
 			);
 		});
 
@@ -1683,21 +1683,21 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (101%) must be at most 100%]`
+				`[Error: The specified traffic percentages add up to 101%, which exceeds the maximum of 100%. Reduce one or more percentages so they sum to at most 100%.]`
 			);
 		});
 		test("errors if subtotal below min", ({ expect }) => {
 			expect(() =>
 				validateTrafficSubtotal(-1, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (-1%) must be at least 0%]`
+				`[Error: The specified traffic percentages add up to -1%, which is below the minimum of 0%. Increase one or more percentages so they sum to at least 0%.]`
 			);
 		});
 		test("different error message if min === max", ({ expect }) => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 100, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (101%) must be 100%]`
+				`[Error: The specified traffic percentages add up to 101%, but must total exactly 100%. Adjust the --percentage values or version-spec percentages so they sum to 100%.]`
 			);
 		});
 		test("no error if subtotal above max but not above max + EPSILON", ({
@@ -1708,7 +1708,7 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(100.01)
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (100.01%) must be 100%]`
+				`[Error: The specified traffic percentages add up to 100.01%, but must total exactly 100%. Adjust the --percentage values or version-spec percentages so they sum to 100%.]`
 			);
 		});
 		test("no error if subtotal below min but not below min - EPSILON", ({
@@ -1719,7 +1719,7 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(99.99)
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (99.99%) must be 100%]`
+				`[Error: The specified traffic percentages add up to 99.99%, but must total exactly 100%. Adjust the --percentage values or version-spec percentages so they sum to 100%.]`
 			);
 		});
 	});
