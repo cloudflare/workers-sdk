@@ -192,7 +192,7 @@ export async function mergeVersionsUploadConfigArgs(
 		if (args.previewAlias.length > MAX_PREVIEW_ALIAS_LENGTH) {
 			throw new UserError(
 				`Preview alias "${args.previewAlias}" is too long (${args.previewAlias.length} characters). Aliases must be at most ${MAX_PREVIEW_ALIAS_LENGTH} characters.`,
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions upload preview alias too long" }
 			);
 		}
 		if (!ALIAS_VALIDATION_REGEX.test(args.previewAlias)) {
