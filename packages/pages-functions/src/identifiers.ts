@@ -1,6 +1,11 @@
-// Mirrored at `packages/pages-functions/src/identifiers.ts`. This file will be
-// removed once wrangler consumes `@cloudflare/pages-functions` directly. Keep
-// the two in sync until then.
+/**
+ * JavaScript identifier validation and normalization utilities.
+ *
+ * Mirrors `packages/wrangler/src/pages/functions/identifiers.ts`. That file
+ * still backs wrangler's own Pages build path and will be removed when
+ * wrangler is migrated to consume this package directly. Keep the two in
+ * sync until then.
+ */
 
 const RESERVED_KEYWORDS = [
 	"do",
@@ -56,7 +61,7 @@ const RESERVED_KEYWORDS = [
 	"undefined",
 ];
 
-const reservedKeywordRegex = new RegExp(`^${RESERVED_KEYWORDS.join("|")}$`);
+const reservedKeywordRegex = new RegExp(`^(${RESERVED_KEYWORDS.join("|")})$`);
 
 const identifierNameRegex =
 	/^(?:[$_\p{ID_Start}])(?:[$_\u200C\u200D\p{ID_Continue}])*$/u;
@@ -66,10 +71,17 @@ const validIdentifierRegex = new RegExp(
 	"u"
 );
 
-export const isValidIdentifier = (identifier: string) =>
+/**
+ * Check if a string is a valid JavaScript identifier.
+ */
+export const isValidIdentifier = (identifier: string): boolean =>
 	validIdentifierRegex.test(identifier);
 
-export const normalizeIdentifier = (identifier: string) =>
+/**
+ * Normalize a string to a valid JavaScript identifier by replacing
+ * invalid characters with underscores.
+ */
+export const normalizeIdentifier = (identifier: string): string =>
 	identifier.replace(
 		/(?:^[^$_\p{ID_Start}])|[^$_\u200C\u200D\p{ID_Continue}]/gu,
 		"_"

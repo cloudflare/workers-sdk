@@ -1,3 +1,10 @@
+// The codegen/runtime portions of this file are mirrored at
+// `packages/pages-functions/src/codegen.ts` and
+// `packages/pages-functions/src/runtime.ts`. The esbuild-driven bundling and
+// `assets:` plugin integration stay here. The codegen/runtime copies will be
+// removed once wrangler consumes `@cloudflare/pages-functions` directly. Keep
+// them in sync until then.
+
 import crypto from "node:crypto";
 import { access, cp, lstat } from "node:fs/promises";
 import { join, resolve } from "node:path";

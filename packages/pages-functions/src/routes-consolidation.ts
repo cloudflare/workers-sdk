@@ -1,11 +1,21 @@
-// Mirrored at `packages/pages-functions/src/routes-consolidation.ts`. This
-// file will be removed once wrangler consumes `@cloudflare/pages-functions`
-// directly. Keep the two in sync until then.
+/**
+ * Route consolidation utilities for optimizing _routes.json.
+ *
+ * Mirrors `packages/wrangler/src/pages/functions/routes-consolidation.ts` as
+ * well as the route-length/route-count constants in
+ * `packages/wrangler/src/pages/constants.ts`. Keep the two in sync until
+ * wrangler consumes this package.
+ */
 
-import { MAX_FUNCTIONS_ROUTES_RULE_LENGTH } from "../constants";
+/** Max char length of each rule in _routes.json */
+export const MAX_FUNCTIONS_ROUTES_RULE_LENGTH = 100;
+
+/** Max number of rules in _routes.json */
+export const MAX_FUNCTIONS_ROUTES_RULES = 100;
 
 /**
- * consolidateRoutes consolidates redundant routes - eg. ["/api/*"", "/api/foo"] -> ["/api/*""]
+ * Consolidates redundant routes - e.g., ["/api/*", "/api/foo"] -> ["/api/*"]
+ *
  * @param routes If this is the same order as Functions routes (with most-specific first),
  *   it will be more efficient to reverse it first. Should be in the format: /api/foo, /api/*
  * @returns Non-redundant list of routes
@@ -21,6 +31,7 @@ export function consolidateRoutes(routes: string[]): string[] {
 	for (const route of routesShortened) {
 		routesMap.set(route, true);
 	}
+
 	// Find routes that might render other routes redundant
 	for (const route of routesShortened.filter((r) => r.endsWith("/*"))) {
 		// Make sure the route still exists in the map
@@ -36,13 +47,14 @@ export function consolidateRoutes(routes: string[]): string[] {
 			}
 		}
 	}
+
 	return Array.from(routesMap.keys());
 }
 
 /**
- * Shortens a route until it's within the rule length limit defined in
- * constants.MAX_FUNCTIONS_ROUTES_RULE_LENGTH
- * Eg. /aaa/bbb -> /aaa/*
+ * Shortens a route until it's within the rule length limit.
+ * E.g., /aaa/bbb/ccc... -> /aaa/*
+ *
  * @param routeToShorten Route to shorten if needed
  * @param maxLength Max length of route to try to shorten to
  */
@@ -55,6 +67,7 @@ export function shortenRoute(
 	}
 
 	let route = routeToShorten;
+
 	// May have to try multiple times for longer segments
 	for (let i = 0; i < routeToShorten.length; i++) {
 		// Shorten to the first slash within the limit
@@ -73,5 +86,6 @@ export function shortenRoute(
 	if (route.length > maxLength) {
 		route = "/*";
 	}
+
 	return route;
 }
