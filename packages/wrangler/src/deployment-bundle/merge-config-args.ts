@@ -200,7 +200,7 @@ export async function mergeVersionsUploadConfigArgs(
 			throw new UserError(
 				`Preview alias "${args.previewAlias}" is invalid. Aliases must start with a letter and contain only lowercase letters, numbers, and hyphens.` +
 					(suggestion ? ` Did you mean "${suggestion}"?` : ""),
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions upload preview alias invalid" }
 			);
 		}
 	}
