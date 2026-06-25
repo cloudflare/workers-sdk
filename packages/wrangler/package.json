@@ -125,7 +125,7 @@
 		"@types/yargs": "^17.0.22",
 		"@vitest/ui": "catalog:default",
 		"@webcontainer/env": "^1.1.0",
-		"am-i-vibing": "^0.4.0",
+		"am-i-vibing": "^0.5.0",
 		"capnweb": "catalog:default",
 		"chalk": "catalog:default",
 		"chokidar": "^4.0.1",
