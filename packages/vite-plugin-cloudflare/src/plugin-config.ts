@@ -120,6 +120,8 @@ interface ResolvedExperimentalNewConfig {
 }
 
 interface Experimental {
+	/** Experimental support for emitting a self-hostable workerd build output. */
+	target?: "cloudflare" | "workerd";
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
 	/** Experimental support for a dedicated prerender Worker */
@@ -206,6 +208,7 @@ export interface Worker {
 }
 
 interface BaseResolvedConfig {
+	target: "cloudflare" | "workerd";
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport"> & {
@@ -407,6 +410,7 @@ export async function resolvePluginConfig(
 		pluginConfig.experimental?.newConfig
 	);
 	const shared = {
+		target: pluginConfig.experimental?.target ?? "cloudflare",
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
 		tunnel:

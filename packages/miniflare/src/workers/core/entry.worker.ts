@@ -10,9 +10,9 @@ import type { WorkerRoute } from "./routing";
 import type { Colorize } from "kleur/colors";
 
 type Env = {
-	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	[CoreBindings.SERVICE_LOOPBACK]?: Fetcher;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
-	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
+	[CoreBindings.SERVICE_LOCAL_EXPLORER]?: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
 	[CoreBindings.SERVICE_R2_PUBLIC]?: Fetcher;
@@ -22,7 +22,7 @@ type Env = {
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
-	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
+	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]?: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
 	[CoreBindings.LOG_REQUESTS]: boolean;
@@ -269,14 +269,13 @@ function maybePrettifyError(request: Request, response: Response, env: Env) {
 		return response;
 	}
 
-	return env[CoreBindings.SERVICE_LOOPBACK].fetch(
-		"http://localhost/core/error",
-		{
+	return (
+		env[CoreBindings.SERVICE_LOOPBACK]?.fetch("http://localhost/core/error", {
 			method: "POST",
 			headers: request.headers,
 			body: response.body,
 			cf: { prettyErrorOriginalUrl: request.url },
-		}
+		}) ?? response
 	);
 }
 
@@ -448,11 +447,11 @@ function maybeLogRequest(
 	const message = reset(lines.join(""));
 
 	ctx.waitUntil(
-		env[CoreBindings.SERVICE_LOOPBACK].fetch("http://localhost/core/log", {
+		env[CoreBindings.SERVICE_LOOPBACK]?.fetch("http://localhost/core/log", {
 			method: "POST",
 			headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
 			body: message,
-		})
+		}) ?? Promise.resolve()
 	);
 
 	return res;
@@ -463,6 +462,9 @@ function maybeLogRequest(
  */
 function handleProxy(request: Request, env: Env) {
 	const ns = env[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY];
+	if (ns === undefined) {
+		return new Response("Platform proxy is not available", { status: 404 });
+	}
 	// Always use the same singleton Durable Object instance, so we always have
 	// access to the same "heap"
 	const id = ns.idFromName("");
@@ -541,12 +543,13 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
-			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
+			const localExplorer = env[CoreBindings.SERVICE_LOCAL_EXPLORER];
+			if (localExplorer) {
 				if (
 					url.pathname === CorePaths.EXPLORER ||
 					url.pathname.startsWith(`${CorePaths.EXPLORER}/`)
 				) {
-					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
+					return await localExplorer.fetch(request);
 				}
 			}
 			const imagesDelivery = env[CoreBindings.SERVICE_IMAGES_DELIVERY];
@@ -558,33 +561,32 @@ export default <ExportedHandler<Env>>{
 				return await imagesDelivery.fetch(request);
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
+				const loopbackService = env[CoreBindings.SERVICE_LOOPBACK];
+
 				if (
 					url.pathname === CorePaths.SCHEDULED ||
 					/* legacy URL path */ url.pathname === CorePaths.LEGACY_SCHEDULED
 				) {
-					if (url.pathname === CorePaths.LEGACY_SCHEDULED) {
+					if (url.pathname === CorePaths.LEGACY_SCHEDULED && loopbackService) {
 						ctx.waitUntil(
-							env[CoreBindings.SERVICE_LOOPBACK].fetch(
-								"http://localhost/core/log",
-								{
-									method: "POST",
-									headers: {
-										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
-									},
-									body: `Triggering scheduled handlers via a request to \`${CorePaths.LEGACY_SCHEDULED}\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`${CorePaths.SCHEDULED}\``,
-								}
-							)
+							loopbackService.fetch("http://localhost/core/log", {
+								method: "POST",
+								headers: {
+									[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
+								},
+								body: `Triggering scheduled handlers via a request to \`${CorePaths.LEGACY_SCHEDULED}\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`${CorePaths.SCHEDULED}\``,
+							})
 						);
 					}
 					return await handleScheduled(url.searchParams, service);
 				}
 
-				if (url.pathname === CorePaths.EMAIL) {
+				if (url.pathname === CorePaths.EMAIL && loopbackService) {
 					return await handleEmail(
 						url.searchParams,
 						request,
 						service,
-						env,
+						{ [CoreBindings.SERVICE_LOOPBACK]: loopbackService },
 						ctx
 					);
 				}

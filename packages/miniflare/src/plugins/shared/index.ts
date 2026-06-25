@@ -88,6 +88,7 @@ export interface PluginServicesOptions<
 	wrappedBindingNames: WrappedBindingNames;
 	durableObjectClassNames: DurableObjectClassNames;
 	unsafeEphemeralDurableObjects: boolean;
+	unsafeWorkerdOutput: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
 	hyperdriveProxyController: HyperdriveProxyController;

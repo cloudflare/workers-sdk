@@ -24,6 +24,7 @@ import {
 	virtualModulesPlugin,
 } from "./plugins/virtual-modules";
 import { wasmHelperPlugin } from "./plugins/wasm";
+import { workerdOutputPlugin } from "./plugins/workerd-output";
 import { debuglog } from "./utils";
 import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
@@ -121,5 +122,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		nodeJsAlsPlugin(ctx),
 		nodeJsCompatPlugin(ctx),
 		nodeJsCompatWarningsPlugin(ctx),
+		workerdOutputPlugin(ctx),
 	];
 }
