@@ -11,6 +11,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -344,16 +345,15 @@ describe.each([
 			}) => {
 				writeWranglerConfig({ compatibility_date: undefined });
 				writeWorkerSource();
+				const today = getTodaysCompatDate();
 				await expect(runWrangler("deploy ./index.js")).rejects
-					.toThrowErrorMatchingInlineSnapshot(`
-					[Error: A compatibility_date is required when uploading a Worker. Add the following to your wrangler.toml file:
-					    \`\`\`
-					    compatibility_date = "2026-06-24"
+					.toThrowError(`A compatibility_date is required when uploading a Worker. Add the following to your wrangler.toml file:
+    \`\`\`
+    compatibility_date = "${today}"
 
-					    \`\`\`
-					    Or you could pass it in your terminal as \`--compatibility-date 2026-06-24\`
-					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.]
-				`);
+    \`\`\`
+    Or you could pass it in your terminal as \`--compatibility-date ${today}\`
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
 			});
 		});
 
