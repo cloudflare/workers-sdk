@@ -50,6 +50,8 @@ The deployment response now surfaces the server's reconciliation result — crea
 
 `wrangler versions upload` also forwards `exports` under the same `X_DO_EXPORTS=true` gate, but server-side support on the versions endpoint is still rolling out — today the server returns error 10061 ("Cannot create binding … configure a migration") when `exports` is sent via `wrangler versions upload`. Use `wrangler deploy` to apply `exports`-based lifecycle changes until the rollout completes.
 
+Multi-version deploys (`wrangler versions deploy A@50% B@50%`) where the selected versions disagree on declarative `exports` are rejected server-side with a clear message: deploy the version that changes `exports` at 100% first, then run the percentage-split deploy. This prevents traffic on one branch routing to code that references unprovisioned or just-deleted DO namespaces. Single-version (100%) deploys are unaffected.
+
 Local development (`wrangler dev`, `vite dev` and `unstable_startWorker`) reads Durable Object SQLite storage settings from the new `exports` field, so applications using the declarative flow get correct local-dev storage without needing to also declare a `migrations` block.
 
 `wrangler types` is also aware of `exports`. Live entries (including `expecting-transfer`, the receiving side of a two-phase transfer) are added to `Cloudflare.GlobalProps.durableNamespaces`, which types `ctx.exports.X` for unbound Durable Objects declared only via `exports`.

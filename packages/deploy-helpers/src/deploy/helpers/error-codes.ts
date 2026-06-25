@@ -11,3 +11,14 @@ export const INVALID_INHERIT_BINDING_CODE = 10057 as const;
  * errors so we can render the structured per-class details.
  */
 export const EXPORTS_RECONCILIATION_ERROR_CODE = 100402;
+
+/**
+ * Blocking-error code returned by EWC when a multi-version (percentage-split)
+ * deployment contains versions with divergent declarative DO `exports`. All
+ * versions in a percentage-split deploy must agree on the end-state, otherwise
+ * traffic on one branch could route to code referencing unprovisioned (or
+ * just-deleted) DO namespaces. Single-version (100%) deploys are unaffected.
+ * Resolution: deploy the version that changes `exports` at 100% first, then
+ * run the percentage-split deploy.
+ */
+export const INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE = 100405;

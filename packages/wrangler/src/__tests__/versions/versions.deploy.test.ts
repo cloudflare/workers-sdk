@@ -1,3 +1,4 @@
+import { INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -1392,6 +1393,114 @@ describe("versions deploy", () => {
 					  - 10000000-0000-0000-0000-000000000000
 					Deploy by Version ID directly to disambiguate.]
 				`);
+			});
+		});
+
+		describe("EWC error mapping", () => {
+			// EWC server message from
+			// edgeworker-config-service!9919 — surfaced verbatim by wrangler
+			// before the renderer appends actionable next-steps.
+			const serverMessage =
+				"All versions in a multi-version deployment must declare identical `exports`. Deploy the version that changes `exports` at 100% first, then split traffic.";
+
+			test("surfaces a friendly error when EWC rejects multi-version exports as inconsistent (code 100405)", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
+										message: serverMessage,
+									},
+								]),
+								{ status: 400 }
+							),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler(
+						"versions deploy 10000000-0000-0000-0000-000000000000@50% 20000000-0000-0000-0000-000000000000@50% --yes"
+					)
+				).rejects.toThrow(
+					// Both the server message and the suggested next-step
+					// should appear in the final user-facing error.
+					/Deploy the version that changes `exports` at 100% first[\s\S]*wrangler versions deploy <new-version-id>@100%/
+				);
+			});
+
+			test("includes a link to the gradual-deployments docs", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
+										message: serverMessage,
+									},
+								]),
+								{ status: 400 }
+							),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler(
+						"versions deploy 10000000-0000-0000-0000-000000000000@50% 20000000-0000-0000-0000-000000000000@50% --yes"
+					)
+				).rejects.toThrow(
+					/developers\.cloudflare\.com\/workers\/configuration\/versions-and-deployments\/gradual-deployments/
+				);
+			});
+
+			test("does not remap unrelated EWC errors", async ({ expect }) => {
+				writeWranglerConfig();
+
+				// A different EWC error code must pass through untransformed —
+				// the catch block falls through to `throw e`, surfacing the
+				// original APIError (and its notes) from the cfetch layer.
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 10001,
+										message: "some other API error",
+									},
+								]),
+								{ status: 500 }
+							)
+					)
+				);
+
+				// The original API error is re-thrown verbatim — its `.message`
+				// is the request-URL line. Most importantly the friendly
+				// "What to do" copy is NOT applied to unrelated codes.
+				const rejection = runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000@50% 20000000-0000-0000-0000-000000000000@50% --yes"
+				);
+				await expect(rejection).rejects.toThrow(
+					/A request to the Cloudflare API .* failed/
+				);
+				await expect(rejection).rejects.not.toThrow(
+					/Deploy the version that changes `exports` at 100% first/
+				);
 			});
 		});
 	});
