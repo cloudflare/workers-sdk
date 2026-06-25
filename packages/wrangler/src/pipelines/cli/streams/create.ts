@@ -4,9 +4,10 @@ import { createCommand } from "../../../core/create-command";
 import { confirm } from "../../../dialogs";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
+import { sharedResourceCreationArgs } from "../../../utils/add-created-resource-config";
 import { createStream } from "../../client";
 import { validateEntityName } from "../../validate";
-import { displayStreamConfiguration } from "./utils";
+import { displayStreamConfiguration, displayUsageExamples } from "./utils";
 import type { CreateStreamRequest, SchemaField } from "../../types";
 
 export const pipelinesStreamsCreateCommand = createCommand({
@@ -41,6 +42,7 @@ export const pipelinesStreamsCreateCommand = createCommand({
 			type: "string",
 			array: true,
 		},
+		...sharedResourceCreationArgs,
 	},
 	validateArgs: (args) => {
 		validateEntityName("stream", args.stream);
@@ -130,6 +132,13 @@ export const pipelinesStreamsCreateCommand = createCommand({
 
 		displayStreamConfiguration(stream, "Creation Summary", {
 			includeTimestamps: false,
+		});
+
+		await displayUsageExamples(stream, config, {
+			env: args.env,
+			binding: args.binding,
+			useRemote: args.useRemote,
+			updateConfig: args.updateConfig,
 		});
 	},
 });

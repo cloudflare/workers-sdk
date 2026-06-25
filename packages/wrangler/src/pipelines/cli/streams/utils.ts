@@ -209,25 +209,35 @@ function generateExampleData(stream: Stream): string {
 export async function displayUsageExamples(
 	stream: Stream,
 	config: Config,
-	args: { env?: string }
+	args: {
+		env?: string;
+		binding?: string;
+		useRemote?: boolean;
+		updateConfig?: boolean;
+	}
 ) {
-	const bindingName = generateStreamBindingName(stream.name);
+	const bindingName = args.binding ?? generateStreamBindingName(stream.name);
 	const exampleData = generateExampleData(stream);
 	const compactData = JSON.stringify(JSON.parse(exampleData));
 
 	await createdResourceConfig(
 		"pipelines",
 		(customBindingName) => ({
-			pipeline: stream.id,
+			stream: stream.id,
 			binding: customBindingName ?? bindingName,
 		}),
 		config.configPath,
 		args.env,
-		{ updateConfig: false }
+		{
+			binding: args.binding,
+			useRemote: args.useRemote,
+			updateConfig: args.updateConfig,
+		}
 	);
 
+	const displayBindingName = args.binding ?? bindingName;
 	logger.log("\nThen send events:\n");
-	logger.log(`  await env.${bindingName}.send([${compactData}]);\n`);
+	logger.log(`  await env.${displayBindingName}.send([${compactData}]);\n`);
 
 	if (stream.http.enabled) {
 		logger.log("Or via HTTP:\n");

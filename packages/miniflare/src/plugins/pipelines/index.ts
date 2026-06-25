@@ -108,6 +108,7 @@ function bindingEntries(
 					| string
 					| {
 							stream?: string;
+							/** @deprecated Use `stream` instead. */
 							pipeline?: string;
 							remoteProxyConnectionString?: RemoteProxyConnectionString;
 					  }

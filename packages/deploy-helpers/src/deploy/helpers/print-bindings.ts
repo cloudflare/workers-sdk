@@ -661,16 +661,14 @@ export function printBindings(
 
 	if (pipelines.length > 0) {
 		output.push(
-			...pipelines.map(
-				({ binding, stream: pipelineStream, pipeline, remote }) => ({
-					name: binding,
-					type: getBindingTypeFriendlyName("pipeline"),
-					value: pipelineStream || pipeline,
-					mode: getMode({
-						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
-					}),
-				})
-			)
+			...pipelines.map(({ binding, stream: pipelineStream, remote }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("pipeline"),
+				value: pipelineStream,
+				mode: getMode({
+					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+				}),
+			}))
 		);
 	}
 

@@ -2,6 +2,7 @@ import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	APIError,
 	parseJSON,
+	readFileSync,
 	UserError,
 	truncate,
 } from "@cloudflare/workers-utils";
@@ -19,24 +20,63 @@ interface SqlQueryResponse {
 		request_id?: string;
 		schema: { name: string; type: string }[];
 		rows: Record<string, unknown>[];
-		metrics: {
-			r2_requests_count: number;
-			files_scanned: number;
-			bytes_scanned: number;
-		};
+		metrics: SqlMetrics;
 	};
 	success: boolean;
 	errors: { code: number; message: string }[];
 	messages: string[];
 }
 
-function formatSqlResults(data: SqlQueryResponse, duration: number): void {
+interface SqlMetrics {
+	r2_requests_count: number;
+	files_scanned: number;
+	bytes_scanned: number;
+}
+
+function isExplainJsonQuery(query: string): boolean {
+	return /^\s*explain\s+format\s+json\b/i.test(query);
+}
+
+function formatExplainJsonResults(data: SqlQueryResponse): void {
+	if (!data?.result?.rows || data.result.rows.length === 0) {
+		logger.log("EXPLAIN returned no results");
+		return;
+	}
+
+	const { rows } = data.result;
+
+	if (rows.length === 1) {
+		const firstRow = rows[0];
+		const values = Object.values(firstRow);
+		if (
+			values.length === 1 &&
+			values[0] !== null &&
+			typeof values[0] === "object"
+		) {
+			logger.log(JSON.stringify(values[0], null, 2));
+			return;
+		}
+		if (values.length === 1 && typeof values[0] === "string") {
+			try {
+				const parsed = JSON.parse(values[0]);
+				logger.log(JSON.stringify(parsed, null, 2));
+				return;
+			} catch {
+				// Not valid JSON, fall through to table display
+			}
+		}
+	}
+
+	formatTableResults(data);
+}
+
+function formatTableResults(data: SqlQueryResponse): void {
 	if (!data?.result?.rows || data.result.rows.length === 0) {
 		logger.log("Query executed successfully with no results");
 		return;
 	}
 
-	const { schema, rows, metrics } = data.result;
+	const { schema, rows } = data.result;
 	const column_order = schema.map((field) => field.name);
 	logger.table(
 		rows.map((row) =>
@@ -58,9 +98,48 @@ function formatSqlResults(data: SqlQueryResponse, duration: number): void {
 		),
 		{ wordWrap: true, head: column_order }
 	);
+}
 
+function formatCsvResults(data: SqlQueryResponse): void {
+	if (!data?.result?.rows || data.result.rows.length === 0) {
+		logger.log("Query executed successfully with no results");
+		return;
+	}
+
+	const { schema, rows } = data.result;
+	const columns = schema.map((field) => field.name);
+
+	logger.log(columns.map(escapeCsvField).join(","));
+	for (const row of rows) {
+		const values = columns.map((col) => {
+			const value = row[col];
+			if (value === null || value === undefined) {
+				return "";
+			}
+			if (typeof value === "object") {
+				return escapeCsvField(JSON.stringify(value));
+			}
+			return escapeCsvField(String(value));
+		});
+		logger.log(values.join(","));
+	}
+}
+
+function escapeCsvField(field: string): string {
+	if (
+		field.includes(",") ||
+		field.includes('"') ||
+		field.includes("\n") ||
+		field.includes("\r")
+	) {
+		return `"${field.replace(/"/g, '""')}"`;
+	}
+	return field;
+}
+
+function formatMetrics(metrics: SqlMetrics, duration: number): void {
 	logger.log(
-		`Read ${prettyBytes(metrics.bytes_scanned)} across ${metrics.files_scanned} files from R2`
+		`Read ${prettyBytes(metrics.bytes_scanned)} across ${metrics.files_scanned} files (${metrics.r2_requests_count} R2 requests)`
 	);
 	if (duration > 0) {
 		const bytesPerSecond = (metrics.bytes_scanned / duration) * 1000;
@@ -92,10 +171,59 @@ export const r2SqlQueryCommand = createCommand({
 		query: {
 			describe: "The SQL query to execute",
 			type: "string",
-			demandOption: true,
+		},
+		"sql-file": {
+			describe: "A .sql file to execute",
+			type: "string",
+		},
+		json: {
+			describe: "Output results as JSON",
+			type: "boolean",
+			default: false,
+		},
+		csv: {
+			describe: "Output results as CSV",
+			type: "boolean",
+			default: false,
 		},
 	},
-	async handler({ warehouse, query }) {
+	behaviour: {
+		printBanner: (args) => !args.json && !args.csv,
+	},
+	async handler({ warehouse, query, sqlFile, json, csv }) {
+		if (sqlFile && query) {
+			throw new UserError(
+				"Cannot provide both a query argument and --sql-file flag.",
+				{ telemetryMessage: "r2 sql query conflicting query and file" }
+			);
+		}
+
+		let resolvedQuery: string;
+		if (sqlFile) {
+			try {
+				resolvedQuery = readFileSync(sqlFile);
+			} catch (error) {
+				throw new UserError(
+					`Failed to read SQL file '${sqlFile}': ${error instanceof Error ? error.message : String(error)}`,
+					{ telemetryMessage: "r2 sql query sql file read failed" }
+				);
+			}
+		} else if (query) {
+			resolvedQuery = query;
+		} else {
+			throw new UserError(
+				"Must provide a SQL query as an argument or via --sql-file.",
+				{ telemetryMessage: "r2 sql query missing query" }
+			);
+		}
+
+		if (json && csv) {
+			throw new UserError(
+				"Cannot use both --json and --csv flags at the same time.",
+				{ telemetryMessage: "r2 sql query conflicting output formats" }
+			);
+		}
+
 		let token = getWranglerR2SqlAuthToken();
 		if (!token) {
 			token = getCloudflareAPITokenFromEnv();
@@ -127,12 +255,14 @@ export const r2SqlQueryCommand = createCommand({
 		];
 
 		const s = spinner();
-		s.start("Query in progress");
+		if (!json && !csv) {
+			s.start("Query in progress");
+		}
 		const apiUrl = `https://api.sql.cloudflarestorage.com/api/v1/accounts/${accountId}/r2-sql/query/${bucketName}`;
-		let responseStatus = null;
-		let statusText = null;
-		let text = null;
-		let duration = null;
+		let responseStatus = 0;
+		let statusText = "";
+		let text = "";
+		let duration = 0;
 		try {
 			const start = Date.now();
 			const response = await fetch(apiUrl, {
@@ -143,7 +273,7 @@ export const r2SqlQueryCommand = createCommand({
 				},
 				body: JSON.stringify({
 					warehouse,
-					query,
+					query: resolvedQuery,
 				}),
 			});
 			responseStatus = response.status;
@@ -164,7 +294,7 @@ export const r2SqlQueryCommand = createCommand({
 			);
 		}
 
-		let parsed = null;
+		let parsed: SqlQueryResponse;
 		try {
 			parsed = parseJSON(text) as SqlQueryResponse;
 		} catch {
@@ -183,15 +313,34 @@ export const r2SqlQueryCommand = createCommand({
 			});
 		}
 
-		s.stop();
+		if (!json && !csv) {
+			s.stop();
+		}
+
 		if (parsed.success) {
-			formatSqlResults(parsed, duration);
-		} else {
-			let errors = "";
-			for (const { code, message } of parsed.errors) {
-				errors += `\n* ${code}: ${message}`;
+			if (json) {
+				logger.json(parsed.result?.rows ?? []);
+			} else if (csv) {
+				formatCsvResults(parsed);
+			} else if (isExplainJsonQuery(resolvedQuery)) {
+				formatExplainJsonResults(parsed);
+			} else {
+				formatTableResults(parsed);
 			}
-			logger.error(`Query failed because of the following errors:${errors}`);
+
+			if (parsed.result?.metrics && !json && !csv) {
+				formatMetrics(parsed.result.metrics, duration);
+			}
+		} else {
+			if (json) {
+				logger.json(parsed);
+			} else {
+				let errors = "";
+				for (const { code, message } of parsed.errors) {
+					errors += `\n* ${code}: ${message}`;
+				}
+				logger.error(`Query failed because of the following errors:${errors}`);
+			}
 		}
 	},
 });

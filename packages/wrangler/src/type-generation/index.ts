@@ -4109,15 +4109,12 @@ function collectPipelinesPerEnvironment(
 				});
 			}
 
-			if (pipeline.stream) {
+			// Raw config may still have the deprecated `pipeline` field
+			const streamId = pipeline.stream ?? pipeline.pipeline;
+			if (streamId) {
 				pipelines.push({
 					binding: pipeline.binding,
-					stream: pipeline.stream,
-				});
-			} else if (pipeline.pipeline) {
-				pipelines.push({
-					binding: pipeline.binding,
-					pipeline: pipeline.pipeline,
+					stream: streamId,
 				});
 			} else {
 				throwMissingBindingError({

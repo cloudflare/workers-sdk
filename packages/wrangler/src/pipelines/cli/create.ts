@@ -3,8 +3,7 @@ import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { createPipeline, getPipeline, getStream, validateSql } from "../client";
-import { displayUsageExamples } from "./streams/utils";
+import { createPipeline, validateSql } from "../client";
 import type { CreatePipelineRequest } from "../types";
 
 export const pipelinesCreateCommand = createCommand({
@@ -123,26 +122,8 @@ export const pipelinesCreateCommand = createCommand({
 			`✨ Successfully created pipeline '${pipeline.name}' with id '${pipeline.id}'.`
 		);
 
-		try {
-			const fullPipeline = await getPipeline(config, pipeline.id);
-
-			const streamTable = fullPipeline.tables?.find(
-				(table) => table.type === "stream"
-			);
-
-			if (streamTable) {
-				const stream = await getStream(config, streamTable.id);
-				await displayUsageExamples(stream, config, args);
-			} else {
-				logger.log(
-					`\nRun 'wrangler pipelines get ${pipeline.id}' to view full details.`
-				);
-			}
-		} catch {
-			logger.warn("Could not fetch pipeline details for usage examples.");
-			logger.log(
-				`\nRun 'wrangler pipelines get ${pipeline.id}' to view full details.`
-			);
-		}
+		logger.log(
+			`\nRun 'wrangler pipelines get ${pipeline.id}' to view full details.`
+		);
 	},
 });

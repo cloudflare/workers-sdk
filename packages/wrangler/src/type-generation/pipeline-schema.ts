@@ -234,7 +234,7 @@ export async function fetchPipelineTypes(
 	// Fetch all streams in parallel for better performance
 	const streams = await Promise.all(
 		pipelines.map((p) => {
-			const streamID = p.stream || p.pipeline;
+			const streamID = p.stream ?? p.pipeline;
 			if (!streamID) {
 				throw new Error(
 					`Pipeline binding ${p.binding} is missing the stream ID`

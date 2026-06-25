@@ -43,7 +43,7 @@ export const pipelinesSinksListCommand = createCommand({
 		});
 
 		if (args.json) {
-			logger.log(sinks);
+			logger.json(sinks);
 			return;
 		}
 

@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -366,54 +366,11 @@ describe("wrangler pipelines", () => {
 				name: "my_pipeline",
 				sql,
 			});
-			const getPipelineRequest = mockGetPipelineRequest("pipeline_123", {
-				id: "pipeline_123",
-				name: "my_pipeline",
-				sql,
-				status: "active",
-				created_at: "2024-01-01T00:00:00Z",
-				modified_at: "2024-01-01T00:00:00Z",
-				tables: [
-					{
-						id: "stream_456",
-						name: "test_stream",
-						type: "stream",
-						version: 1,
-						latest: 1,
-						href: "/accounts/some-account-id/pipelines/v1/streams/stream_456",
-					},
-					{
-						id: "sink_789",
-						name: "test_sink",
-						type: "sink",
-						version: 1,
-						latest: 1,
-						href: "/accounts/some-account-id/pipelines/v1/sinks/sink_789",
-					},
-				],
-			});
-			const getStreamRequest = mockGetStreamRequest("stream_456", {
-				id: "stream_456",
-				name: "test_stream",
-				version: 1,
-				endpoint: "https://pipelines.cloudflare.com/stream_456",
-				format: { type: "json", unstructured: true },
-				schema: null,
-				http: {
-					enabled: true,
-					authentication: false,
-				},
-				worker_binding: { enabled: true },
-				created_at: "2024-01-01T00:00:00Z",
-				modified_at: "2024-01-01T00:00:00Z",
-			});
 
 			await runWrangler(`pipelines create my_pipeline --sql "${sql}"`);
 
 			expect(validateRequest.count).toBe(1);
 			expect(createRequest.count).toBe(1);
-			expect(getPipelineRequest.count).toBe(1);
-			expect(getStreamRequest.count).toBe(1);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toContain("🌀 Validating SQL...");
@@ -424,8 +381,9 @@ describe("wrangler pipelines", () => {
 			expect(std.out).toContain(
 				"✨ Successfully created pipeline 'my_pipeline' with id 'pipeline_123'."
 			);
-			expect(std.out).toContain("Then send events:");
-			expect(std.out).toContain("Or via HTTP:");
+			expect(std.out).toContain(
+				"Run 'wrangler pipelines get pipeline_123' to view full details."
+			);
 		});
 
 		it("should create pipeline from SQL file", async ({ expect }) => {
@@ -438,54 +396,11 @@ describe("wrangler pipelines", () => {
 				name: "my_pipeline",
 				sql,
 			});
-			const getPipelineRequest = mockGetPipelineRequest("pipeline_123", {
-				id: "pipeline_123",
-				name: "my_pipeline",
-				sql,
-				status: "active",
-				created_at: "2024-01-01T00:00:00Z",
-				modified_at: "2024-01-01T00:00:00Z",
-				tables: [
-					{
-						id: "stream_456",
-						name: "test_stream",
-						type: "stream",
-						version: 1,
-						latest: 1,
-						href: "/accounts/some-account-id/pipelines/v1/streams/stream_456",
-					},
-					{
-						id: "sink_789",
-						name: "test_sink",
-						type: "sink",
-						version: 1,
-						latest: 1,
-						href: "/accounts/some-account-id/pipelines/v1/sinks/sink_789",
-					},
-				],
-			});
-			const getStreamRequest = mockGetStreamRequest("stream_456", {
-				id: "stream_456",
-				name: "test_stream",
-				version: 1,
-				endpoint: "https://pipelines.cloudflare.com/stream_456",
-				format: { type: "json", unstructured: true },
-				schema: null,
-				http: {
-					enabled: true,
-					authentication: false,
-				},
-				worker_binding: { enabled: true },
-				created_at: "2024-01-01T00:00:00Z",
-				modified_at: "2024-01-01T00:00:00Z",
-			});
 
 			await runWrangler(`pipelines create my_pipeline --sql-file ${sqlFile}`);
 
 			expect(validateRequest.count).toBe(1);
 			expect(createRequest.count).toBe(1);
-			expect(getPipelineRequest.count).toBe(1);
-			expect(getStreamRequest.count).toBe(1);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toContain("🌀 Validating SQL...");
@@ -1457,6 +1372,12 @@ describe("wrangler pipelines", () => {
 
 	describe("pipelines streams create", () => {
 		const { setIsTTY } = useMockIsTTY();
+		beforeEach(() => {
+			vi.useFakeTimers({ now: new Date("2026-01-01T00:00:00Z") });
+		});
+		afterEach(() => {
+			vi.useRealTimers();
+		});
 		function mockCreateStreamRequest(
 			expect: ExpectStatic,
 			expectedRequest: {
@@ -1571,7 +1492,31 @@ describe("wrangler pipelines", () => {
 				  Endpoint:        https://pipelines.cloudflare.com/my_stream
 				  CORS Origins:    None
 
-				Input Schema: Unstructured JSON (single 'value' column)"
+				Input Schema: Unstructured JSON (single 'value' column)
+				To access your new Pipeline in your Worker, add the following snippet to your configuration file:
+				{
+				  "pipelines": [
+				    {
+				      "stream": "stream_123",
+				      "binding": "MY_STREAM"
+				    }
+				  ]
+				}
+
+				Then send events:
+
+				  await env.MY_STREAM.send([{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1767225600000}]);
+
+				Or via HTTP:
+
+				  curl -X POST https://pipelines.cloudflare.com/my_stream /
+				     -H "Authorization: Bearer YOUR_API_TOKEN" /
+				     -H "Content-Type: application/json" /
+				     -d '[{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1767225600000}]'
+
+				  (Replace YOUR_API_TOKEN with your Cloudflare API token)
+				Docs: https://developers.cloudflare.com/pipelines/
+				"
 			`);
 		});
 
@@ -1625,7 +1570,31 @@ describe("wrangler pipelines", () => {
 				│ id │ string │ │ Yes │
 				├─┼─┼─┼─┤
 				│ timestamp │ timestamp │ millisecond │ Yes │
-				└─┴─┴─┴─┘"
+				└─┴─┴─┴─┘
+				To access your new Pipeline in your Worker, add the following snippet to your configuration file:
+				{
+				  "pipelines": [
+				    {
+				      "stream": "stream_123",
+				      "binding": "MY_STREAM"
+				    }
+				  ]
+				}
+
+				Then send events:
+
+				  await env.MY_STREAM.send([{"id":"sample_id","timestamp":1767225600000}]);
+
+				Or via HTTP:
+
+				  curl -X POST https://pipelines.cloudflare.com/my_stream /
+				     -H "Authorization: Bearer YOUR_API_TOKEN" /
+				     -H "Content-Type: application/json" /
+				     -d '[{"id":"sample_id","timestamp":1767225600000}]'
+
+				  (Replace YOUR_API_TOKEN with your Cloudflare API token)
+				Docs: https://developers.cloudflare.com/pipelines/
+				"
 			`);
 		});
 	});
@@ -2384,16 +2353,20 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
-				  {
-				    id: 'sink_1',
-				    name: 'sink_one',
-				    type: 'r2',
-				    format: { type: 'json' },
-				    schema: null,
-				    config: { bucket: 'bucket1' },
-				    created_at: '2024-01-01T00:00:00Z',
-				    modified_at: '2024-01-01T00:00:00Z'
-				  }
+				    {
+				        "id": "sink_1",
+				        "name": "sink_one",
+				        "type": "r2",
+				        "format": {
+				            "type": "json"
+				        },
+				        "schema": null,
+				        "config": {
+				            "bucket": "bucket1"
+				        },
+				        "created_at": "2024-01-01T00:00:00Z",
+				        "modified_at": "2024-01-01T00:00:00Z"
+				    }
 				]"
 			`);
 		});
