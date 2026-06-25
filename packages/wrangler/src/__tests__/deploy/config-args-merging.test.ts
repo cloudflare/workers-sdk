@@ -176,6 +176,13 @@ describe.each([
 			setImmediate(fn);
 		});
 		setIsTTY(false);
+		// Mock the secrets endpoint that checkRemoteSecretsOverride calls
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
+		);
 	});
 
 	afterEach(() => {
