@@ -1694,18 +1694,19 @@ function mockWebsocketAPIs(
 		/**
 		 * Close the mock websocket and clean up the API.
 		 *
-		 * Passes `{ code: 1000 }` explicitly so the close event the
-		 * production code sees is unambiguously `NORMAL_CLOSURE` — that's
-		 * what routes through `cleanStop()` rather than `scheduleReconnect()`,
-		 * and is the path every "happy path" tail test relies on for clean
-		 * shutdown. The mock server defaults to 1000 anyway, but stating it
-		 * makes the test contract explicit and resilient to mock changes.
+		 * Passes a normal-closure (`code: 1000`) close explicitly so the
+		 * close event the production code sees is unambiguously
+		 * `NORMAL_CLOSURE` — that's what routes through `cleanStop()` rather
+		 * than `scheduleReconnect()`, and is the path every "happy path" tail
+		 * test relies on for clean shutdown. The mock server defaults to 1000
+		 * anyway, but stating it makes the test contract explicit and
+		 * resilient to mock changes.
 		 *
 		 * The setTimeout forces a cycle to allow for closing and cleanup
 		 * @returns a Promise that resolves when the websocket is closed
 		 */
 		async closeHelper() {
-			api.ws.close({ code: 1000 });
+			api.ws.close({ code: 1000, reason: "", wasClean: true });
 			await setTimeout(0);
 		},
 	};
