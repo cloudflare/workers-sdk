@@ -269,7 +269,8 @@ export const tailCommand = createCommand({
 			// NOTE: The tail backend does not actively close this WebSocket
 			// when the expiration time is reached — log delivery just stops.
 			// A proactive client-side refresh based on `expiration` is tracked
-			// as a follow-up.
+			// as a follow-up in
+			// https://github.com/cloudflare/workers-sdk/issues/14427.
 
 			tail.on("message", printLog);
 
