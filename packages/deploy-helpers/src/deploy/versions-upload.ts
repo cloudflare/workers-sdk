@@ -58,20 +58,13 @@ export default async function versionsUpload(
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
 }> {
-	const {
-		entry,
-		name,
-		compatibilityDate,
-		compatibilityFlags,
-		keepVars,
-		accountId,
-	} = props;
+	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
+		props;
 
 	const assetsOptions = resolveAssetOptions(props, config);
 
 	// Any validation that does not require API calls should go in validateWorkerProps()
-	await validateWorkerProps(props, config);
-	assert(name); // already validated inside validateWorkerProps, but TS can't see that
+	const { name } = validateWorkerProps(props, config);
 
 	// any validation that DOES require API calls should go in preUploadApiChecks()
 	const { workerTag, tags, aborted } = await preUploadApiChecks(props, config);

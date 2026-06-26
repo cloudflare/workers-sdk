@@ -37,12 +37,14 @@ import type {
  * 1. generic validation checks
  * 2. deploy or versions upload specific checks
  */
-export async function validateWorkerProps(
-	props:
-		| (DeployProps & { assetsOptions?: AssetsOptions })
-		| VersionsUploadProps,
+type ValidateWorkerPropsInput =
+	| (DeployProps & { assetsOptions?: AssetsOptions })
+	| VersionsUploadProps;
+
+export function validateWorkerProps<T extends ValidateWorkerPropsInput>(
+	props: T,
 	config: Config
-): Promise<void> {
+): T & { name: string } {
 	const { name, compatibilityDate } = props;
 	const { format } = props.entry;
 	if (!name) {
@@ -119,6 +121,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 	}
+
+	return { ...props, name };
 }
 
 export type PreUploadApiChecksResult = {

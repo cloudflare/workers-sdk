@@ -135,20 +135,13 @@ export default async function deploy(
 	workerTag: string | null;
 	targets?: string[];
 }> {
-	const {
-		entry,
-		name,
-		compatibilityDate,
-		compatibilityFlags,
-		keepVars,
-		accountId,
-	} = props;
+	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
+		props;
 
 	const assetsOptions = resolveAssetOptions(props, config);
 
 	// Any validation that does not require API calls should go in validateWorkerProps()
-	await validateWorkerProps({ ...props, assetsOptions }, config);
-	assert(name); // already validated inside validateWorkerProps, but TS can't see that
+	const { name } = validateWorkerProps({ ...props, assetsOptions }, config);
 
 	// any validation that DOES require API calls should go in preUploadApiChecks()
 	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
