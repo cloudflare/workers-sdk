@@ -7,7 +7,7 @@ import {
 	type Worker_Binding,
 	type Worker_Module,
 } from "../../runtime";
-import { CoreBindings } from "../../workers";
+import { CoreBindings, SharedBindings } from "../../workers";
 import { normaliseDurableObject } from "../do";
 import {
 	namespaceEntries,
@@ -180,7 +180,10 @@ export function constructExplorerBindingMap(
 			IDToBindingName.d1[databaseId] = binding.name;
 		}
 
-		// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING", kvNamespace.name = "kv:ns:ID"
+		// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING".
+		// Local namespaces share one entry service ("kv:ns:entry") and carry their
+		// id in props; remote namespaces still encode the id in the service name
+		// ("kv:ns:ID[:remoteSuffix]").
 		if (
 			binding.name?.startsWith(
 				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
@@ -188,8 +191,18 @@ export function constructExplorerBindingMap(
 			"kvNamespace" in binding &&
 			binding.kvNamespace?.name?.startsWith("kv:ns:")
 		) {
-			// Extract ID from service name "kv:ns:ID"
-			const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
+			let namespaceId: string | undefined;
+			const propsJson = binding.kvNamespace.props?.json;
+			if (propsJson !== undefined) {
+				try {
+					namespaceId = JSON.parse(propsJson)[SharedBindings.TEXT_NAMESPACE];
+				} catch {
+					// fall through to service-name parsing
+				}
+			}
+			if (namespaceId === undefined) {
+				namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
+			}
 			IDToBindingName.kv[namespaceId] = binding.name;
 		}
 

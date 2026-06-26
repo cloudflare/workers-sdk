@@ -4,6 +4,7 @@ import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
 import {
+	buildRemoteProxyProps,
 	getUserBindingServiceName,
 	remoteProxyClientWorker,
 	ProxyNodeBinding,
@@ -43,6 +44,7 @@ export const EmailOptionsSchema = z.object({
 
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
+const EMAIL_REMOTE_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:remote`;
 // Disk service name and binding name for writing temporary files to system temp directory
 const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
 const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
@@ -112,12 +114,18 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 
 		return sendEmailBindings.map(({ name, remoteProxyConnectionString }) => ({
 			name,
-			service: {
-				entrypoint: remoteProxyConnectionString
-					? undefined
-					: "SendEmailBinding",
-				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
-			},
+			service: remoteProxyConnectionString
+				? {
+						name: EMAIL_REMOTE_SERVICE_NAME,
+						props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+					}
+				: {
+						entrypoint: "SendEmailBinding",
+						name: getUserBindingServiceName(
+							SERVICE_SEND_EMAIL_WORKER_PREFIX,
+							name
+						),
+					},
 		}));
 	},
 	getNodeBindings(options) {
@@ -179,32 +187,42 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			},
 		}));
 
+		let hasRemote = false;
 		for (const { name, remoteProxyConnectionString, ...config } of args.options
 			.email?.send_email ?? []) {
+			if (remoteProxyConnectionString) {
+				hasRemote = true;
+				continue;
+			}
 			services.push({
 				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
-				worker: remoteProxyConnectionString
-					? remoteProxyClientWorker(remoteProxyConnectionString, name)
-					: {
-							compatibilityDate: "2025-03-17",
-							modules: [
-								{
-									name: "send_email.mjs",
-									esModule: SEND_EMAIL_BINDING(),
-								},
-							],
-							bindings: [
-								...buildJsonBindings(config),
-								...diskServices.map(({ bindingName, serviceName }) => ({
-									name: bindingName,
-									service: { name: serviceName },
-								})),
-								{
-									name: "email_disk_services",
-									json: JSON.stringify(diskServices),
-								},
-							],
+				worker: {
+					compatibilityDate: "2025-03-17",
+					modules: [
+						{
+							name: "send_email.mjs",
+							esModule: SEND_EMAIL_BINDING(),
 						},
+					],
+					bindings: [
+						...buildJsonBindings(config),
+						...diskServices.map(({ bindingName, serviceName }) => ({
+							name: bindingName,
+							service: { name: serviceName },
+						})),
+						{
+							name: "email_disk_services",
+							json: JSON.stringify(diskServices),
+						},
+					],
+				},
+			});
+		}
+
+		if (hasRemote) {
+			services.push({
+				name: EMAIL_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
 			});
 		}
 
