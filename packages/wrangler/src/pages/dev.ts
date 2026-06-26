@@ -39,7 +39,7 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
+import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type { PagesConfigCache } from "./types";
@@ -50,6 +50,16 @@ import type {
 	DurableObjectBindings,
 	EnvironmentNonInheritable,
 } from "@cloudflare/workers-utils";
+
+// Cleanup callbacks + a helper to run them, used to tear down `pages dev`
+// resources on shutdown. These are local to `pages dev` (the only command
+// that registers them); the signal handlers that invoke `CLEANUP` are set up
+// inside the command handler below.
+const CLEANUP_CALLBACKS: (() => void)[] = [];
+const CLEANUP = () => {
+	CLEANUP_CALLBACKS.forEach((callback) => callback());
+	RUNNING_BUILDERS.forEach((builder) => builder.stop?.());
+};
 
 /*
  * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
@@ -1042,9 +1052,18 @@ export const pagesDevCommand = createCommand({
 
 		metrics.sendMetricsEvent("run pages dev");
 
+		// Note: these signal handlers used to live at the top level of
+		// `pages/index.ts`, which meant they were registered for *every*
+		// wrangler command and would `process.exit()` on the first SIGINT —
+		// clobbering the graceful shutdown of other long-running commands
+		// (e.g. `wrangler tail`). They belong here, scoped to `pages dev`.
+		const cleanupAndExit = () => {
+			CLEANUP();
+			process.exit();
+		};
 		process.on("exit", CLEANUP);
-		process.on("SIGINT", CLEANUP);
-		process.on("SIGTERM", CLEANUP);
+		process.on("SIGINT", cleanupAndExit);
+		process.on("SIGTERM", cleanupAndExit);
 
 		await events.once(devServer.devEnv, "teardown");
 

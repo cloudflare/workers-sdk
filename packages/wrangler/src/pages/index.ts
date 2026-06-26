@@ -1,5 +1,4 @@
 import { createNamespace } from "../core/create-command";
-import { CLEANUP } from "./utils";
 
 export const pagesNamespace = createNamespace({
 	metadata: {
@@ -45,13 +44,4 @@ export const pagesDownloadNamespace = createNamespace({
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
 	},
-});
-
-process.on("SIGINT", () => {
-	CLEANUP();
-	process.exit();
-});
-process.on("SIGTERM", () => {
-	CLEANUP();
-	process.exit();
 });
