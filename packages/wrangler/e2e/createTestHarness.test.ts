@@ -500,6 +500,12 @@ describe("createTestHarness", () => {
 			status: "auto_approved",
 		});
 		await workflow.dispose();
+		await expect(workflow.get()).rejects.toThrow(
+			`Workflow "moderator-workflow" does not have an active introspection session for this introspector.`
+		);
+		await expect(workflow.modifyAll(async () => {})).rejects.toThrow(
+			`Workflow "moderator-workflow" does not have an active introspection session for this introspector.`
+		);
 
 		const batchWorkflow = await worker.introspectWorkflow("MODERATOR");
 		onTestFinished(batchWorkflow.dispose);

@@ -40,6 +40,19 @@ const workflowIntrospectionSessions = new Map<
 	WorkflowIntrospectionSession
 >();
 
+function getWorkflowIntrospectionSession(
+	workflowName: string,
+	sessionId: string
+): WorkflowIntrospectionSession {
+	const session = workflowIntrospectionSessions.get(workflowName);
+	if (session?.id !== sessionId) {
+		throw new Error(
+			`Workflow ${JSON.stringify(workflowName)} does not have an active introspection session for this introspector.`
+		);
+	}
+	return session;
+}
+
 async function applyWorkflowIntrospectionOperation(
 	modifier: WorkflowInstanceModifier,
 	operation: WorkflowIntrospectionOperation
@@ -220,17 +233,18 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		sessionId: string,
 		operations: WorkflowIntrospectionOperation[]
 	): Promise<void> {
-		const session = workflowIntrospectionSessions.get(this.env.WORKFLOW_NAME);
-		if (session?.id === sessionId) {
-			session.operations = operations;
-		}
+		const session = getWorkflowIntrospectionSession(
+			this.env.WORKFLOW_NAME,
+			sessionId
+		);
+		session.operations = operations;
 	}
 
 	public async unsafeGetIntrospectionInstances(
 		sessionId: string
 	): Promise<string[]> {
-		const session = workflowIntrospectionSessions.get(this.env.WORKFLOW_NAME);
-		return session?.id === sessionId ? session.instanceIds : [];
+		return getWorkflowIntrospectionSession(this.env.WORKFLOW_NAME, sessionId)
+			.instanceIds;
 	}
 
 	public async unsafeGetInstanceModifier(instanceId: string): Promise<unknown> {
