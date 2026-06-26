@@ -234,6 +234,23 @@ describe("createWorkerUploadForm — bindings", () => {
 				entrypoint: "AuthHandler",
 			});
 		});
+
+		it("should include service bindings with preview IDs", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				AUTH: {
+					type: "service",
+					service: "auth-worker",
+					preview_id: "feature-preview",
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "AUTH",
+				type: "service",
+				service: "auth-worker",
+				preview_id: "feature-preview",
+			});
+		});
 	});
 
 	describe("queue bindings", () => {

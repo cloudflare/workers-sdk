@@ -504,6 +504,7 @@ export function createWorkerUploadForm(
 			binding,
 			service,
 			environment,
+			preview_id,
 			entrypoint,
 			props,
 			cross_account_grant,
@@ -514,6 +515,7 @@ export function createWorkerUploadForm(
 				service,
 				cross_account_grant,
 				...(environment && { environment }),
+				...(preview_id && { preview_id }),
 				...(entrypoint && { entrypoint }),
 				...(props && { props }),
 			});

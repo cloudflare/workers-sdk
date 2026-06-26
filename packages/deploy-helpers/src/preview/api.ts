@@ -47,6 +47,7 @@ export interface Binding {
 	staging?: boolean;
 	enable_timer?: boolean;
 	app_id?: string;
+	preview_id?: string;
 	entrypoint?: string;
 	class_name?: string;
 	script_name?: string;

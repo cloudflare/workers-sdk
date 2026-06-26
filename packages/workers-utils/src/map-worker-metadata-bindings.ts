@@ -170,6 +170,7 @@ export function mapWorkerMetadataBindings(
 									binding: binding.name,
 									service: binding.service,
 									environment: binding.environment,
+									preview_id: binding.preview_id,
 									entrypoint: binding.entrypoint,
 								},
 							];
