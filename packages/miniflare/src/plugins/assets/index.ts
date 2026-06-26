@@ -35,7 +35,6 @@ import prettyBytes from "pretty-bytes";
 import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
 import SCRIPT_ROUTER from "worker:assets/router";
-import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
 import { ProxyNodeBinding } from "../shared";
@@ -44,7 +43,6 @@ import {
 	ASSETS_PLUGIN_NAME,
 	ASSETS_SERVICE_NAME,
 	ROUTER_SERVICE_NAME,
-	RPC_PROXY_SERVICE_NAME,
 } from "./constants";
 import { AssetsOptionsSchema } from "./schema";
 import type { Service } from "../../runtime";
@@ -273,41 +271,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			},
 		};
 
-		const assetsProxyService: Service = {
-			name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
-			worker: {
-				compatibilityDate: "2024-08-01",
-				compatibilityFlags: ["service_binding_extra_handlers"],
-				modules: [
-					{
-						name: "assets-proxy-worker.mjs",
-						esModule: SCRIPT_RPC_PROXY(),
-					},
-				],
-				bindings: [
-					{
-						name: "ROUTER_WORKER",
-						service: {
-							name: `${ROUTER_SERVICE_NAME}:${id}`,
-						},
-					},
-					{
-						name: "USER_WORKER",
-						service: {
-							name: getUserServiceName(id),
-						},
-					},
-				],
-			},
-		};
-
-		return [
-			storageService,
-			namespaceService,
-			assetService,
-			routerService,
-			assetsProxyService,
-		];
+		return [storageService, namespaceService, assetService, routerService];
 	},
 };
 
