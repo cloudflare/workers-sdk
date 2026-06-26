@@ -6,7 +6,12 @@ import {
 	getTodaysCompatDate,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { confirm, fetchResult, logger } from "../../shared/context";
+import {
+	confirm,
+	fetchResult,
+	isNonInteractiveOrCI,
+	logger,
+} from "../../shared/context";
 import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
@@ -209,29 +214,25 @@ export async function preUploadApiChecks(
 					);
 					if (!(await deployConfirm("Would you like to continue?"))) {
 						if (
+							// only patch if json/jsonc
 							config.userConfigPath &&
-							/\.jsonc?$/.test(config.userConfigPath)
+							/\.jsonc?$/.test(config.userConfigPath) &&
+							// skip the patch if we're in non-interactive mode and strict
+							!(props.strict && isNonInteractiveOrCI()) &&
+							(await confirm(
+								"Would you like to update the local config file with the remote values?",
+								{
+									defaultValue: true,
+									fallbackValue: true,
+								}
+							))
 						) {
-							if (
-								await confirm(
-									"Would you like to update the local config file with the remote values?",
-									{
-										defaultValue: true,
-										fallbackValue: true,
-									}
-								)
-							) {
-								const patchObj: RawConfig = getConfigPatch(
-									configDiff.diff,
-									props.env
-								);
+							const patchObj: RawConfig = getConfigPatch(
+								configDiff.diff,
+								props.env
+							);
 
-								experimental_patchConfig(
-									config.userConfigPath,
-									patchObj,
-									false
-								);
-							}
+							experimental_patchConfig(config.userConfigPath, patchObj, false);
 						}
 
 						return { workerTag, tags, workerExists, aborted: true };
@@ -265,6 +266,7 @@ export async function preUploadApiChecks(
 
 	const remoteSecretsCheck = await checkRemoteSecretsOverride(
 		config,
+		name,
 		accountId,
 		props.env
 	);
