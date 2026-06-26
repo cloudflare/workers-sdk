@@ -1,4 +1,6 @@
+import { createFileStorage } from "./config-file/file-storage";
 import type { AuthConfigStorage, UserAuthConfig } from "./config-file/auth";
+import type { ConfigFileLocation } from "./config-file/file-storage";
 import type { OAuthFlowLogger } from "./context";
 
 export interface RefreshToken {
@@ -12,7 +14,7 @@ export interface AccessToken {
 
 /**
  * Transient state that is shared across the steps of a single OAuth login flow
- * within one Wrangler command. This state is not file-backed; it lives only for
+ * within one CLI command. This state is not file-backed; it lives only for
  * the duration of an interactive login.
  */
 export interface OAuthFlowState {
@@ -52,23 +54,45 @@ export function _resetDeprecatedV1ApiTokenWarningLatch(): void {
 
 /**
  * Read the on-disk auth state. Called on demand from every site that needs the
- * stored OAuth tokens or the deprecated v1 `api_token`, rather than being
- * cached at module scope, so that environment-based credentials loaded after
- * module import are honoured by the rest of wrangler.
+ * stored OAuth tokens or the deprecated v1 `api_token`, rather than being cached
+ * at module scope, so that environment-based credentials loaded after module
+ * import are honoured.
+ *
+ * Public entry point — configured by *location* only. Internally builds the
+ * file storage; consumers never see the storage abstraction.
  *
  * @return an empty object when no auth config file exists or the file cannot
  * be parsed — the caller treats this as "not logged in via local OAuth".
  *
+ * @param options.storage where (and in what format) the auth config file lives.
  * @param options.configOverride seed the state from an in-memory config (used by
  * the OAuth login flow before it writes to disk).
  * @param options.warningLogger if provided, a one-time warning is emitted when a
- * deprecated v1 `api_token` is found on disk. Pass the consumer's logger (e.g.
- * wrangler's logger singleton) to surface this to the user.
- * @param options.storage the persistence backend to read from, injected by the
- * consumer (e.g. wrangler's TOML-file-on-disk storage under the global Wrangler
- * config directory).
+ * deprecated v1 `api_token` is found on disk.
  */
 export function readStoredAuthState(options: {
+	storage: ConfigFileLocation;
+	configOverride?: UserAuthConfig;
+	warningLogger?: Pick<OAuthFlowLogger, "warn">;
+}): StoredAuthState {
+	return readStoredAuthStateFromStorage({
+		configOverride: options.configOverride,
+		warningLogger: options.warningLogger,
+		storage: createFileStorage<UserAuthConfig>(options.storage),
+	});
+}
+
+/**
+ * Storage-based core of {@link readStoredAuthState}. Internal: the OAuth flow
+ * and credential resolvers already hold a storage (built once from the
+ * context's location), so they read through this directly rather than rebuilding
+ * one per call.
+ *
+ * @param options.storage the storage to read from.
+ * @param options.configOverride seed the state from an in-memory config.
+ * @param options.warningLogger one-time deprecated-v1-`api_token` warning sink.
+ */
+export function readStoredAuthStateFromStorage(options: {
 	configOverride?: UserAuthConfig;
 	warningLogger?: Pick<OAuthFlowLogger, "warn">;
 	storage: AuthConfigStorage;

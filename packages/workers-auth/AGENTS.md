@@ -12,7 +12,8 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/generate-random-state.ts` — CSRF state generator
 - `src/env-vars.ts` — `WRANGLER_*` env-var getters for OAuth endpoints
 - `src/access.ts` — Cloudflare Access detection + service-token / `cloudflared` headers
-- `src/auth-config-file.ts` — the `AuthConfigStorage` / `UserAuthConfig` storage contract (interfaces only; the default TOML-on-disk implementation lives in the consumer, e.g. wrangler's `src/user/auth-config-file.ts`)
+- `src/config-file/` — config-file storage. `file-storage.ts` owns the on-disk I/O (`createFileStorage(location)`, parsing, owner-only perms) parameterised by a `ConfigFileLocation` (`{ getPath, format }`, `format` being `"toml"` or `"json"`). Consumers configure only the _location_ (path + format) — both plain values, so a CLI can drive them from env vars. The default path helper (`getAuthConfigFilePath`) lives in `@cloudflare/workers-utils`; the consumer maps profile names to locations.
+- `src/profiles.ts` — CLI-agnostic named-auth-profile store (`createProfileStore`, `validateProfileName`): profile config + directory-binding operations, parameterised by consumer-supplied storage operations.
 - `src/state.ts` — `readStoredAuthState()` + `StoredAuthState` shape
 - `src/token-exchange.ts` — auth-code → token + refresh-token rotation + `fetchAuthToken`
 - `src/callback-server.ts` — local HTTP server for the OAuth callback (listens on the host/port from the consumer's `redirectUri`)
@@ -34,13 +35,17 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `redirectUri` (required) — the registered redirect URI / local callback URL.
   The callback server's listen host/port and route path are all derived from it
   (per-call bind overrides via `LoginProps.callbackHost`/`callbackPort`)
-- `storage` (required) — the consumer's `AuthConfigStorage` token-persistence
-  backend (wrangler's TOML-on-disk default lives in `src/user/auth-config-file.ts`)
+- `storageFactory` (required) — `(profile?: string) => ConfigFileLocation`: maps an
+  auth profile name to the auth-config file location (`{ getPath, format }`).
+  workers-auth owns the file I/O; the consumer only says where/what format
+  (wrangler: `defaultAuthConfigLocation(profile)`). Because it's plain values, it
+  can be driven entirely from env vars (`CLOUDFLARE_AUTH_CONFIG_FILE`). The active
+  profile defaults to `"default"`; set it via `OAuthFlowAPI.setProfile()`
 - `purgeOnLoginOrLogout?()` — invalidate consumer-side caches after login/logout
 - `generateAuthUrl?` / `generateRandomState?` — test overrides for deterministic
   snapshot tests (defaults pull from `./generate-auth-url` / `./generate-random-state`)
 
-`clientId`, `consent`, `redirectUri`, and `storage` are consumer-specific
+`clientId`, `consent`, `redirectUri`, and `storageFactory` are consumer-specific
 (Wrangler's live in `packages/wrangler/src/user/`), so they are required rather
 than defaulted here.
 

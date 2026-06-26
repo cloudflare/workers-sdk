@@ -2,7 +2,7 @@ import {
 	getEnvironmentVariableFactory,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { readStoredAuthState } from "./state";
+import { readStoredAuthStateFromStorage } from "./state";
 import type { AuthConfigStorage } from "./config-file/auth";
 import type { OAuthFlowLogger } from "./context";
 import type { ApiCredentials } from "@cloudflare/workers-utils";
@@ -106,7 +106,7 @@ export function getAPIToken(
 		return envAuth;
 	}
 
-	const stored = readStoredAuthState({
+	const stored = readStoredAuthStateFromStorage({
 		storage: options.storage,
 		warningLogger: options.warningLogger,
 	});

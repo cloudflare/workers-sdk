@@ -1,9 +1,9 @@
 import { describe, it } from "vitest";
-import { readStoredAuthState } from "../src/state";
+import { readStoredAuthStateFromStorage } from "../src/state";
 import type {
 	AuthConfigStorage,
 	UserAuthConfig,
-} from "../src/auth-config-file";
+} from "../src/config-file/auth";
 
 function memoryStorage(initial?: UserAuthConfig): AuthConfigStorage {
 	let value = initial;
@@ -34,7 +34,7 @@ describe("readStoredAuthState storage injection", () => {
 			expiration_time: "2099-01-01T00:00:00.000Z",
 			scopes: ["account:read"],
 		});
-		expect(readStoredAuthState({ storage })).toEqual({
+		expect(readStoredAuthStateFromStorage({ storage })).toEqual({
 			accessToken: {
 				value: "oauth-xyz",
 				expiry: "2099-01-01T00:00:00.000Z",
@@ -47,6 +47,8 @@ describe("readStoredAuthState storage injection", () => {
 	it("returns an empty object when the injected storage is empty", ({
 		expect,
 	}) => {
-		expect(readStoredAuthState({ storage: memoryStorage() })).toEqual({});
+		expect(
+			readStoredAuthStateFromStorage({ storage: memoryStorage() })
+		).toEqual({});
 	});
 });
