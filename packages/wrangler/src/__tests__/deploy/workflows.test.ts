@@ -1270,7 +1270,8 @@ describe("deploy", () => {
 
 					    - "my-workflow" (currently belongs to "other-worker")
 
-					  Deploying will reassign these workflows to "test-name".
+					  Deploying will reassign these workflows to "test-name". Workflow names must be unique per account.
+					  If this reassignment is unintended, rename the workflow(s) in the Wrangler config.
 
 					"
 				`);
