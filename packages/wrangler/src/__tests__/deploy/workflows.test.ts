@@ -987,6 +987,12 @@ describe("deploy", () => {
 				expect(std.warn).toContain(
 					'Deploying will reassign these workflows to "test-name".'
 				);
+				expect(std.warn).toContain(
+					"Workflow names must be unique per account."
+				);
+				expect(std.warn).toContain(
+					"If this reassignment is unintended, rename the workflow(s) in the Wrangler config."
+				);
 			});
 
 			it("should abort deploy when user declines the workflow conflict confirmation", async ({
