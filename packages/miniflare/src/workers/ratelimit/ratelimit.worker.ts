@@ -92,15 +92,22 @@ class Ratelimit {
 	}
 }
 
-// Module-level registry so vitest-pool-workers' reset() can clear all instances.
-const __ratelimitInstances__ = new Set<Ratelimit>();
-(
-	globalThis as { __cfRatelimitInstances__?: Set<Ratelimit> }
-).__cfRatelimitInstances__ = __ratelimitInstances__;
+// Module-level set tracking all instances created during this Worker lifetime.
+// The ratelimit extension module is marked `internal: true` in workerd, making
+// direct import impossible from outside. We expose a single reset function via
+// globalThis so vitest-pool-workers' reset() can invoke it without a global
+// variable that leaks to user code (the function is set once on module load).
+const instances = new Set<Ratelimit>();
+(globalThis as { __cfRatelimitReset__?: () => void }).__cfRatelimitReset__ =
+	() => {
+		for (const instance of instances) {
+			instance.reset();
+		}
+	};
 
 // create a new Ratelimit
 export default function (env: RatelimitConfig) {
 	const instance = new Ratelimit(env);
-	__ratelimitInstances__.add(instance);
+	instances.add(instance);
 	return instance;
 }

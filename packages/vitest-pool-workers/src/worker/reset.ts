@@ -3,17 +3,13 @@ import workerdUnsafe from "workerd:unsafe";
 export async function reset(): Promise<void> {
 	await workerdUnsafe.deleteAllDurableObjects();
 
-	// Reset ratelimit binding state registered by the miniflare ratelimit module.
-	// The module sets globalThis.__cfRatelimitInstances__ when it is first loaded,
-	// so this is a no-op when no ratelimit bindings are configured.
-	const ratelimitInstances = (
-		globalThis as { __cfRatelimitInstances__?: Set<{ reset(): void }> }
-	).__cfRatelimitInstances__;
-	if (ratelimitInstances !== undefined) {
-		for (const instance of ratelimitInstances) {
-			instance.reset();
-		}
-	}
+	// Reset ratelimit binding state. The miniflare ratelimit extension module is
+	// marked `internal: true` in workerd, so it cannot be imported directly.
+	// Instead the module registers a reset function on globalThis when loaded,
+	// which is a no-op when no RATE_LIMITERS bindings are configured.
+	const resetRatelimits = (globalThis as { __cfRatelimitReset__?: () => void })
+		.__cfRatelimitReset__;
+	resetRatelimits?.();
 }
 
 export async function abortAllDurableObjects(): Promise<void> {
