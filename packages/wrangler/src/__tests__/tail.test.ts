@@ -1331,6 +1331,103 @@ describe("tail", () => {
 		});
 	});
 
+	describe("proactive expiry refresh", () => {
+		// Ensure fake timers never leak into the next test even if an assertion
+		// fails before the in-test `vi.useRealTimers()` call is reached.
+		afterEach(() => vi.useRealTimers());
+
+		it("refreshes the session before server-side expiry (pretty format)", async ({
+			expect,
+		}) => {
+			// Fake both setTimeout (for the expiry refresh timer) and Date (so
+			// Date.now() inside scheduleExpiryRefresh uses the virtual clock and
+			// the computed delay is deterministic). Pin the virtual clock to a
+			// known value so the delay = 30000 - 5000 = 25000ms (EXPIRY_REFRESH_MARGIN_MS = 5s).
+			const fakeNow = 1_000_000_000; // epoch ms — any stable value works
+			vi.useFakeTimers({ toFake: ["setTimeout", "Date"] });
+			vi.setSystemTime(fakeNow);
+
+			// Construct expiresAt relative to fake now.
+			const expiresAt = new Date(fakeNow + 30_000);
+
+			// MSW prepends handlers (LIFO), so register the refresh mock FIRST
+			// so the initial-connection mock (with the near-future expiry) ends
+			// up in front of the queue and fires for the first create-tail request.
+			mockReusableWebsocketAPIs(expect, 1);
+			api = mockWebsocketAPIs(expect, undefined, true, undefined, expiresAt);
+
+			const tailPromise = runWrangler(
+				"tail test-worker --format=pretty"
+			) as Promise<unknown>;
+			activeTailPromise = tailPromise;
+
+			// Establish the initial connection (mock-socket's ~4ms open dispatch).
+			await vi.advanceTimersByTimeAsync(50);
+			await api.ws.connected;
+
+			// Drive fake time past the expiry refresh point (25s = 30s - 5s margin).
+			// The expiry timer fires at ~fakeNow+24950ms; advance in 1s steps.
+			for (let i = 0; i < 30; i++) {
+				await vi.advanceTimersByTimeAsync(1_000);
+				if (std.out.includes("Tail session expired, refreshing...")) {
+					// The refresh chain (HTTP DELETE → POST → WebSocket open) is
+					// asynchronous. Each advanceTimersByTimeAsync call yields to
+					// the real event loop between timer firings, so pending I/O
+					// (MSW responses) completes between steps. Continue advancing
+					// in small increments until the new connection is established.
+					for (let j = 0; j < 50; j++) {
+						await vi.advanceTimersByTimeAsync(100);
+						if (
+							std.out.includes("Successfully created tail, expires at")
+						) {
+							break;
+						}
+					}
+					break;
+				}
+			}
+
+			expect(std.out).toContain("Tail session expired, refreshing...");
+			expect(std.out).toContain("Successfully created tail, expires at");
+
+			// Restore real timers and shut down cleanly via SIGINT. This avoids
+			// calling api.closeHelper() while a proactive-refresh connection may
+			// still be mid-handshake, which can cause mock-socket to dispatch a
+			// close event before hasOpened is set, triggering a reconnect loop.
+			vi.useRealTimers();
+			process.emit("SIGINT");
+			await tailPromise;
+		});
+
+		it("does not refresh after a clean shutdown (Ctrl-C cancels the timer)", async ({
+			expect,
+		}) => {
+			// Use the default far-future expiry (year 3005) so the expiry timer
+			// is never scheduled (our guard skips delays > 2^31-1 ms). We still
+			// verify that Ctrl-C shuts down cleanly and no spurious refresh fires.
+			api = mockWebsocketAPIs(expect);
+
+			const tailPromise = runWrangler(
+				"tail test-worker --format=pretty"
+			) as Promise<unknown>;
+			activeTailPromise = tailPromise;
+
+			// Wait for the initial connection to establish.
+			await api.ws.connected;
+			await vi.waitFor(() => {
+				expect(std.out).toContain("waiting for logs");
+			});
+
+			// Shut down cleanly.
+			process.emit("SIGINT");
+			await tailPromise;
+
+			// No refresh message should appear.
+			expect(std.out).not.toContain("Tail session expired, refreshing...");
+			expect(std.out).toContain("Stopping tail...");
+		});
+	});
+
 	describe("shutdown", () => {
 		it("logs `Stopping tail...`, deletes the tail, and exits cleanly on Ctrl-C", async ({
 			expect,
@@ -1554,7 +1651,8 @@ function mockCreateTailRequest(
 	useServiceEnvironments = true,
 	expectedScriptName = !useServiceEnvironments && env
 		? `test-worker-${env}`
-		: "test-worker"
+		: "test-worker",
+	expiresAt: Date = mockTailExpiration
 ): RequestInit[] {
 	const requests: RequestInit[] = [];
 	const servicesOrScripts =
@@ -1579,7 +1677,7 @@ function mockCreateTailRequest(
 					createFetchResult({
 						url: websocketURL,
 						id: "tail-id",
-						expires_at: mockTailExpiration,
+						expires_at: expiresAt,
 					})
 				);
 			},
@@ -1672,7 +1770,8 @@ function mockWebsocketAPIs(
 	expect: ExpectStatic,
 	env?: string,
 	useServiceEnvironments = true,
-	expectedScriptName?: string
+	expectedScriptName?: string,
+	expiresAt?: Date
 ): MockAPI {
 	const websocketURL = "ws://localhost:1234";
 	const api: MockAPI = {
@@ -1715,7 +1814,8 @@ function mockWebsocketAPIs(
 		websocketURL,
 		env,
 		useServiceEnvironments,
-		expectedScriptName
+		expectedScriptName,
+		expiresAt
 	);
 	api.requests.deletion = mockDeleteTailRequest(
 		expect,

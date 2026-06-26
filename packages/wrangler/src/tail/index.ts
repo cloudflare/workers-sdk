@@ -32,6 +32,13 @@ const PING_INTERVAL_MS = 10_000;
 /** Backoff delays between successive reconnect attempts (ms). */
 const RECONNECT_BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 16_000];
 
+/**
+ * How many milliseconds before the server-side expiry time to proactively
+ * refresh the tail session. Firing a few seconds early avoids a gap where
+ * the backend has stopped forwarding logs but the client hasn't reconnected.
+ */
+const EXPIRY_REFRESH_MARGIN_MS = 5_000;
+
 /** How many reconnect attempts we'll make before giving up. */
 const MAX_RECONNECT_ATTEMPTS = RECONNECT_BACKOFF_MS.length;
 
@@ -191,6 +198,7 @@ export const tailCommand = createCommand({
 		let currentTail: WebSocket | undefined;
 		let currentDeleteTail: (() => Promise<void>) | undefined;
 		let cancelPing: (() => void) | undefined;
+		let cancelExpiryRefresh: (() => void) | undefined;
 		// Set to `true` while we are intentionally tearing down the current
 		// connection — used to suppress the `close` handler so it doesn't
 		// race with reconnect/shutdown logic that already has things in hand.
@@ -266,12 +274,6 @@ export const tailCommand = createCommand({
 				);
 			}
 
-			// NOTE: The tail backend does not actively close this WebSocket
-			// when the expiration time is reached — log delivery just stops.
-			// A proactive client-side refresh based on `expiration` is tracked
-			// as a follow-up in
-			// https://github.com/cloudflare/workers-sdk/issues/14427.
-
 			tail.on("message", printLog);
 
 			// Hooks used by the open-wait promise below. The close listener
@@ -344,6 +346,7 @@ export const tailCommand = createCommand({
 			// Successful connection — reset the reconnect counter.
 			attempt = 0;
 			cancelPing = startWebSocketPing(tail, scheduleReconnect);
+			scheduleExpiryRefresh(expiration);
 		}
 
 		/**
@@ -354,6 +357,8 @@ export const tailCommand = createCommand({
 		async function teardownCurrentConnection(): Promise<void> {
 			cancelPing?.();
 			cancelPing = undefined;
+			cancelExpiryRefresh?.();
+			cancelExpiryRefresh = undefined;
 			intentionalClose = true;
 			const tail = currentTail;
 			const deleteTail = currentDeleteTail;
@@ -433,6 +438,59 @@ export const tailCommand = createCommand({
 				await connect();
 			} catch (e) {
 				logger.debug("Tail: reconnect attempt failed:", e);
+				void scheduleReconnect();
+			}
+		}
+
+		/**
+		 * Schedule a timer to fire shortly before `expiration` so we can
+		 * refresh the session before the backend silently stops forwarding logs.
+		 * Any previously scheduled timer is cancelled first (safe to call on
+		 * every successful connect to reset to the new expiry).
+		 */
+		function scheduleExpiryRefresh(expiration: Date): void {
+			cancelExpiryRefresh?.();
+			cancelExpiryRefresh = undefined;
+
+			// `expiration` is typed as Date but arrives as an ISO string after
+			// JSON deserialization — use `new Date()` to handle both.
+			const delay = new Date(expiration).getTime() - Date.now() - EXPIRY_REFRESH_MARGIN_MS;
+			// Node.js clamps setTimeout delays that exceed 2^31-1 ms to 1 ms,
+			// causing the callback to fire immediately. If the expiry is further
+			// out than that (~24 days), skip scheduling — the session is unlikely
+			// to stay alive that long, and the keep-alive ping will handle
+			// unexpected drops.
+			if (delay > 2_147_483_647) {
+				return;
+			}
+
+			const timer = setTimeout(() => {
+				cancelExpiryRefresh = undefined;
+				void proactiveRefresh();
+			}, Math.max(0, delay));
+			cancelExpiryRefresh = () => clearTimeout(timer);
+		}
+
+		/**
+		 * Proactively refresh the tail session before it reaches server-side
+		 * expiry. Unlike `scheduleReconnect` this skips the reconnect back-off
+		 * so the gap between the old and new session is minimal.
+		 */
+		async function proactiveRefresh(): Promise<void> {
+			if (isShuttingDown) {
+				return;
+			}
+			if (args.format === "pretty") {
+				logger.log("Tail session expired, refreshing...");
+			}
+			await teardownCurrentConnection();
+			if (isShuttingDown) {
+				return;
+			}
+			try {
+				await connect();
+			} catch (e) {
+				logger.debug("Tail: proactive refresh failed, falling back to reconnect:", e);
 				void scheduleReconnect();
 			}
 		}
