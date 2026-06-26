@@ -22,3 +22,17 @@ export const EXPORTS_RECONCILIATION_ERROR_CODE = 100402;
  * run the percentage-split deploy.
  */
 export const INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE = 100405;
+
+/**
+ * Blocking-error code returned by EWC when a `wrangler versions upload` payload
+ * contains an actor binding (`durable_objects.bindings`) that references a
+ * Durable Object class declared in `exports` but not yet provisioned.
+ * Declarative `exports` reconcile when the version is *deployed*, so the
+ * namespace must exist before a binding can reference it. This is the
+ * exports-aware sibling of `ErrActorBindingDependsOnMigration` (10123) that
+ * already exists for the legacy `migrations` flow.
+ * Resolution: stage the new class via `ctx.exports.<ClassName>` (no binding)
+ * on `versions upload` and add the binding at deploy time, or use
+ * `wrangler deploy` to provision and bind in one step.
+ */
+export const ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE = 100406;

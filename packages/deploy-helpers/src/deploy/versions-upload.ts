@@ -3,14 +3,17 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
+	APIError,
 	formatTime,
 	ParseError,
 	retryOnAPIFailure,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
 import { getWorkersDevSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
+import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
@@ -20,6 +23,7 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
+import { ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE } from "./helpers/error-codes";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -276,6 +280,27 @@ export default async function versionsUpload(
 					undefined,
 					{ unsafeMetadata: config.unsafe?.metadata }
 				);
+			}
+
+			// A binding references a DO class declared in `exports` but not yet
+			// provisioned. Declarative `exports` reconcile at deploy time, so
+			// the namespace can't exist when the version is merely uploaded.
+			// EWC's message already spells out the remediation, so surface it
+			// verbatim (stripping the trailing ` [code: N]` the cfetch layer
+			// appended) rather than the generic upload failure.
+			if (
+				err instanceof APIError &&
+				err.code === ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE
+			) {
+				err.preventReport();
+				const serverMessage =
+					err.notes[0]?.text
+						.replace(` [code: ${ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE}]`, "")
+						.trim() ?? "";
+				throw new UserError(renderBindingDependsOnExportError(serverMessage), {
+					telemetryMessage:
+						"versions upload binding depends on unprovisioned export",
+				});
 			}
 
 			const message = await helpIfErrorIsSizeOrScriptStartup(

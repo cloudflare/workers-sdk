@@ -483,24 +483,23 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				expect(output.stdout).toContain("Created: SomeClass");
 			});
 
-			// TODO: unskip once server-side `exports` support on the
-			// versions POST endpoint
-			// (POST /accounts/.../workers/scripts/.../versions) is rolled
-			// out to production. Today the server returns error 10061
-			// (legacy migrations validation) for declarative `exports` on
-			// this endpoint — the EWC controller accepts it per
-			// do_exports_version_test.go but the production route still
-			// reaches a code path that doesn't see the `exports` field.
-			// Use `wrangler deploy` to apply `exports`-based lifecycle
-			// changes in the meantime.
-			it.skip("step 2: `versions upload` stages a new class without running reconciliation", async ({
+			// Mirrors the realistic customer flow: stage a new class via
+			// `exports` (reached through `ctx.exports`, with NO binding to it
+			// yet) on `versions upload`, then add the binding when the version
+			// is deployed (step 3). EWC reconciles declarative `exports` at
+			// deploy time, so an upload that merely declares a new class — and
+			// doesn't bind to it — succeeds without running reconciliation.
+			// (A binding to a class declared only in `exports` is instead
+			// rejected at upload with code 100406; that path is covered by the
+			// versions.upload.test.ts unit tests.)
+			it("step 2: `versions upload` stages a new class without running reconciliation", async ({
 				expect,
 			}) => {
-				// Introduce AnotherClass via a draft version. EWC's
-				// versions POST controller persists `exports` with
-				// SkipDeploy:true, so the reconciliation envelope is
-				// NOT emitted at upload time — it runs when the version
-				// is subsequently deployed (step 3).
+				// Introduce AnotherClass via a draft version, accessed through
+				// `ctx.exports.AnotherClass` (no binding). EWC persists
+				// `exports` on the new version with reconciliation deferred to
+				// deploy, so the reconciliation envelope is NOT emitted at
+				// upload time — it runs when the version is deployed (step 3).
 				await helper.seed({
 					"wrangler.jsonc": dedent`
 						{
@@ -510,7 +509,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							"durable_objects": {
 								"bindings": [
 									{ "name": "DO", "class_name": "SomeClass" },
-									{ "name": "ANOTHER", "class_name": "AnotherClass" },
 								],
 							},
 							"exports": {
@@ -522,6 +520,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					"src/index.ts": dedent`
 						import { DurableObject } from "cloudflare:workers";
 						export class SomeClass extends DurableObject {}
+						// AnotherClass is declared in \`exports\` only (no binding).
+						// It becomes reachable via \`ctx.exports.AnotherClass\` once
+						// the version is deployed; a binding can be added then.
 						export class AnotherClass extends DurableObject {}
 						export default {
 							fetch() { return new Response("hello"); },
@@ -545,10 +546,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				expect(versionId).toBeTruthy();
 			});
 
-			// TODO: unskip alongside step 2 once the server-side rollout
-			// completes (see TODO above step 2). Step 3 depends on the
-			// versionId captured in step 2, so they unskip together.
-			it.skip("step 3: `versions deploy` runs the deferred reconciliation", async ({
+			// Step 3 depends on the versionId captured in step 2.
+			it("step 3: `versions deploy` runs the deferred reconciliation", async ({
 				expect,
 			}) => {
 				const output = await helper.run(

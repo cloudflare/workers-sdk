@@ -38,6 +38,7 @@ export * from "./deploy/helpers/download-worker-config";
 export * from "./deploy/helpers/durable";
 export * from "./deploy/helpers/exports-reconciliation";
 export * from "./deploy/helpers/inconsistent-exports";
+export * from "./deploy/helpers/binding-depends-on-export";
 export * from "./deploy/helpers/match-tag";
 export * from "./deploy/helpers/check-remote-secrets-override";
 export * from "./deploy/helpers/confirm-latest-deployment-overwrite";
