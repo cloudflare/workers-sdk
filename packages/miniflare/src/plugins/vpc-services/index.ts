@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
@@ -18,6 +18,7 @@ export const VpcServicesOptionsSchema = z.object({
 });
 
 export const VPC_SERVICES_PLUGIN_NAME = "vpc-services";
+const VPC_SERVICES_REMOTE_SERVICE_NAME = `${VPC_SERVICES_PLUGIN_NAME}:remote`;
 
 export const VPC_SERVICES_PLUGIN: Plugin<typeof VpcServicesOptionsSchema> = {
 	options: VpcServicesOptionsSchema,
@@ -28,16 +29,13 @@ export const VPC_SERVICES_PLUGIN: Plugin<typeof VpcServicesOptionsSchema> = {
 		}
 
 		return Object.entries(options.vpcServices).map(
-			([name, { service_id, remoteProxyConnectionString }]) => {
+			([name, { remoteProxyConnectionString }]) => {
 				return {
 					name,
 
 					service: {
-						name: getUserBindingServiceName(
-							VPC_SERVICES_PLUGIN_NAME,
-							service_id,
-							remoteProxyConnectionString
-						),
+						name: VPC_SERVICES_REMOTE_SERVICE_NAME,
+						props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 					},
 				};
 			}
@@ -55,21 +53,15 @@ export const VPC_SERVICES_PLUGIN: Plugin<typeof VpcServicesOptionsSchema> = {
 		);
 	},
 	async getServices({ options }) {
-		if (!options.vpcServices) {
+		if (!options.vpcServices || Object.keys(options.vpcServices).length === 0) {
 			return [];
 		}
 
-		return Object.entries(options.vpcServices).map(
-			([name, { service_id, remoteProxyConnectionString }]) => {
-				return {
-					name: getUserBindingServiceName(
-						VPC_SERVICES_PLUGIN_NAME,
-						service_id,
-						remoteProxyConnectionString
-					),
-					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
-				};
-			}
-		);
+		return [
+			{
+				name: VPC_SERVICES_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			},
+		];
 	},
 };
