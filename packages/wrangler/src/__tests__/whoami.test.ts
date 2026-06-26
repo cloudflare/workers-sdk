@@ -595,9 +595,7 @@ describe("whoami", () => {
 				)
 			)
 		);
-		await expect(
-			runWrangler(`whoami --account "account-2"`)
-		).rejects.toThrowError(
+		await expect(runWrangler(`whoami --account "account-2"`)).rejects.toThrow(
 			/A request to the Cloudflare API \(\/memberships\) failed/
 		);
 	});

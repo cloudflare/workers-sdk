@@ -94,7 +94,7 @@ vi.mock("../deploy/deploy", async (importOriginal) => ({
 
 async function runDeploy(expect: ExpectStatic, withArgs: string = "") {
 	// Expect "Bailing early in tests" to be thrown
-	await expect(runWrangler(`deploy ${withArgs}`)).rejects.toThrowError();
+	await expect(runWrangler(`deploy ${withArgs}`)).rejects.toThrow();
 }
 
 // We don't care about module/service worker detection in the autoconfig tests,

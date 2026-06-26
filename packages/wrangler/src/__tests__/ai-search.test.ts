@@ -807,7 +807,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket"
 				)
-			).rejects.toThrowError(/No AI Search API token found/);
+			).rejects.toThrow(/No AI Search API token found/);
 		});
 
 		it("should abort when user declines to create a token", async ({
@@ -822,7 +822,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket"
 				)
-			).rejects.toThrowError(/AI Search instance creation cancelled/);
+			).rejects.toThrow(/AI Search instance creation cancelled/);
 		});
 
 		it("should proceed after user creates a token on retry", async ({
@@ -1031,7 +1031,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --source my-bucket"
 				)
-			).rejects.toThrowError(/Missing required flag.*--type/);
+			).rejects.toThrow(/Missing required flag.*--type/);
 		});
 
 		it("should error in non-interactive mode when --source is missing for r2", async ({
@@ -1043,7 +1043,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2"
 				)
-			).rejects.toThrowError(/Missing required flag.*--source/);
+			).rejects.toThrow(/Missing required flag.*--source/);
 		});
 
 		it("should error in non-interactive mode when --source is missing for web-crawler", async ({
@@ -1055,7 +1055,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type web-crawler"
 				)
-			).rejects.toThrowError(/Missing required flag.*--source/);
+			).rejects.toThrow(/Missing required flag.*--source/);
 		});
 
 		it("should create a builtin instance and omit type/source from the request body", async ({
@@ -1110,7 +1110,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type builtin --source my-bucket"
 				)
-			).rejects.toThrowError(/not supported with --type builtin.*--source/);
+			).rejects.toThrow(/not supported with --type builtin.*--source/);
 		});
 
 		it("should error when source_params flags are passed with --type builtin", async ({
@@ -1121,7 +1121,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					'ai-search create my-instance --namespace default --type builtin --prefix docs/ --include-items "*.md" --exclude-items "*.tmp"'
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/not supported with --type builtin.*--prefix.*--include-items.*--exclude-items/
 			);
 		});
@@ -1226,7 +1226,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title:bogus"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/data_type must be one of text, number, boolean, datetime/
 			);
 		});
@@ -1239,7 +1239,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title"
 				)
-			).rejects.toThrowError(/Expected format: field_name:data_type/);
+			).rejects.toThrow(/Expected format: field_name:data_type/);
 		});
 
 		it("should reject --custom-metadata with a reserved field name", async ({
@@ -1250,7 +1250,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata timestamp:number"
 				)
-			).rejects.toThrowError(/reserved field name/);
+			).rejects.toThrow(/reserved field name/);
 		});
 
 		it("should interactively configure custom_metadata when the flag is omitted", async ({
@@ -1391,7 +1391,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/Expected an array of \{ field_name, data_type \} objects/
 			);
 		});
@@ -1438,7 +1438,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 
 		it("should reject --custom-metadata-schema with an unsupported shape", async ({
@@ -1453,7 +1453,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/Expected an array of \{ field_name, data_type \} objects/
 			);
 		});
@@ -1470,7 +1470,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/"data_type" must be one of text, number, boolean, datetime/
 			);
 		});
@@ -1487,7 +1487,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(/reserved field name/);
+			).rejects.toThrow(/reserved field name/);
 		});
 
 		it("should reject combining --custom-metadata and --custom-metadata-schema", async ({
@@ -1502,7 +1502,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title:text --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/custom-metadata and custom-metadata-schema are mutually exclusive/
 			);
 		});

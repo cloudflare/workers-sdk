@@ -26,7 +26,7 @@ describe("pages functions build", () => {
 	it("should throw an error if no worker script and no Functions directory was found", async ({
 		expect,
 	}) => {
-		await expect(runWrangler("pages functions build")).rejects.toThrowError();
+		await expect(runWrangler("pages functions build")).rejects.toThrow();
 		expect(std.err).toContain("Could not find anything to build.");
 	});
 

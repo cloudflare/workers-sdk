@@ -301,9 +301,7 @@ describe("createdResourceConfig()", () => {
 			  ]
 			}"
 		`);
-		await expect(readFile("wrangler.json", "utf8")).rejects.toThrowError(
-			"ENOENT"
-		);
+		await expect(readFile("wrangler.json", "utf8")).rejects.toThrow("ENOENT");
 	});
 
 	it("logs correct binding type", async ({ expect }) => {

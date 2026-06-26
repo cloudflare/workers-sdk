@@ -201,7 +201,7 @@ describe("containers instances", () => {
 		setWranglerConfig({});
 		await expect(
 			runWrangler(`containers instances ${APP_ID} --per-page 0`)
-		).rejects.toThrowError(/--per-page must be at least 1/);
+		).rejects.toThrow(/--per-page must be at least 1/);
 	});
 
 	it("should reject --per-page with negative value", async ({ expect }) => {
@@ -209,7 +209,7 @@ describe("containers instances", () => {
 		setWranglerConfig({});
 		await expect(
 			runWrangler(`containers instances ${APP_ID} --per-page -1`)
-		).rejects.toThrowError(/--per-page must be at least 1/);
+		).rejects.toThrow(/--per-page must be at least 1/);
 	});
 
 	it("should error on invalid ID format", async ({ expect }) => {

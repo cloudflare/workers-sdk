@@ -265,7 +265,7 @@ SECRET3=value3`
 		it("should fail when secrets file does not exist", async ({ expect }) => {
 			await expect(
 				runWrangler("deploy --secrets-file non-existent-file.json")
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 
 		it("should fail when secrets file contains invalid JSON", async ({
@@ -276,7 +276,7 @@ SECRET3=value3`
 
 			await expect(
 				runWrangler(`deploy --secrets-file ${secretsFile}`)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 	});
 

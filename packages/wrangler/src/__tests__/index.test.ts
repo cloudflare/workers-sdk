@@ -124,7 +124,7 @@ describe("wrangler", () => {
 
 	describe("--temporary", () => {
 		it("is rejected on commands that don't opt in", async ({ expect }) => {
-			await expect(runWrangler("whoami --temporary")).rejects.toThrowError(
+			await expect(runWrangler("whoami --temporary")).rejects.toThrow(
 				/Unknown argument: temporary/
 			);
 		});

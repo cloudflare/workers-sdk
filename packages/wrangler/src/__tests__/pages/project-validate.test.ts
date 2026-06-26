@@ -81,7 +81,7 @@ describe("pages project validate", () => {
 		// Should fail when passing a custom fileCountLimit of 5
 		await expect(() =>
 			validate({ directory: ".", fileCountLimit: 5 })
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			"Error: Pages only supports up to 5 files in a deployment for your current plan. Ensure you have specified your build output directory correctly."
 		);
 	});
