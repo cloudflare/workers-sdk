@@ -197,9 +197,14 @@ export async function mergeVersionsUploadConfigArgs(
 		}
 		if (!ALIAS_VALIDATION_REGEX.test(args.previewAlias)) {
 			const suggestion = sanitizeBranchName(args.previewAlias);
+			const validSuggestion =
+				suggestion !== args.previewAlias &&
+				ALIAS_VALIDATION_REGEX.test(suggestion)
+					? suggestion
+					: undefined;
 			throw new UserError(
 				`Preview alias "${args.previewAlias}" is invalid. Aliases must start with a letter and contain only lowercase letters, numbers, and hyphens.` +
-					(suggestion ? ` Did you mean "${suggestion}"?` : ""),
+					(validSuggestion ? ` Did you mean "${validSuggestion}"?` : ""),
 				{ telemetryMessage: "versions upload preview alias invalid" }
 			);
 		}
