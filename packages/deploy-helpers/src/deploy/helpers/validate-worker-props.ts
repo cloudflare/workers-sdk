@@ -242,10 +242,7 @@ export async function preUploadApiChecks(
 						return { workerTag, tags, workerExists, aborted: true };
 					}
 				}
-			} else if (
-				script.last_deployed_from === "api" &&
-				!props.skipLastDeployedFromApiCheck
-			) {
+			} else if (script.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to upload a Worker that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
