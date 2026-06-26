@@ -22,20 +22,6 @@ import type {
 const CREATE_NEW_BUCKET = "__create_new__";
 const CREATE_NEW_NAMESPACE = "__create_new__";
 
-// R2 jurisdictions selectable for an R2 source bucket. "default" means no
-// specific jurisdiction (standard) and is omitted from the request payload.
-const SOURCE_JURISDICTION_CHOICES = ["default", "eu", "fedramp"] as const;
-type SourceJurisdiction = (typeof SOURCE_JURISDICTION_CHOICES)[number];
-
-// Maps the user-facing jurisdiction choice to the value sent to R2 / the API.
-// "default" (and undefined) become undefined, i.e. no `cf-r2-jurisdiction`
-// header and no `r2_jurisdiction` in the request body.
-function normalizeJurisdiction(
-	jurisdiction: SourceJurisdiction | undefined
-): string | undefined {
-	return jurisdiction && jurisdiction !== "default" ? jurisdiction : undefined;
-}
-
 const CUSTOM_METADATA_DATA_TYPES = [
 	"text",
 	"number",
@@ -246,10 +232,10 @@ export const aiSearchCreateCommand = createCommand({
 		},
 		"source-jurisdiction": {
 			type: "string",
-			choices: [...SOURCE_JURISDICTION_CHOICES],
+			requiresArg: true,
 			description:
-				"The R2 jurisdiction of the source bucket (R2 sources only). " +
-				'Use "default" for no specific jurisdiction.',
+				"The R2 jurisdiction of the source bucket (e.g. eu, fedramp). " +
+				"Only valid with --type r2; omit for no specific jurisdiction.",
 		},
 		"embedding-model": {
 			type: "string",
@@ -502,9 +488,9 @@ export const aiSearchCreateCommand = createCommand({
 		// Track whether the user went through the web/sitemap interactive flow
 		let webParseType: string | undefined;
 		// R2 jurisdiction of the source bucket. May be supplied via flag or
-		// chosen interactively; "default" is normalized away before use.
-		let sourceJurisdiction: SourceJurisdiction | undefined =
-			args.sourceJurisdiction as SourceJurisdiction | undefined;
+		// entered interactively; passed through to the API as-is (server-side
+		// validated) so future jurisdictions work without a Wrangler upgrade.
+		let sourceJurisdiction = args.sourceJurisdiction;
 
 		if (instanceType === "r2" && !instanceSource) {
 			if (isNonInteractiveOrCI()) {
@@ -514,18 +500,14 @@ export const aiSearchCreateCommand = createCommand({
 					{ telemetryMessage: "ai search create missing r2 source" }
 				);
 			}
-			// 2.0 R2 jurisdiction: pick where the source bucket lives so we list
+			// 2.0 R2 jurisdiction: ask where the source bucket lives so we list
 			// (and optionally create) buckets in the matching jurisdiction.
 			if (sourceJurisdiction === undefined) {
-				sourceJurisdiction = await select("Select an R2 jurisdiction:", {
-					choices: SOURCE_JURISDICTION_CHOICES.map((j) => ({
-						title: j,
-						value: j,
-					})),
-					defaultOption: 0,
-				});
+				sourceJurisdiction = await prompt(
+					"R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):"
+				);
 			}
-			const effectiveJurisdiction = normalizeJurisdiction(sourceJurisdiction);
+			const effectiveJurisdiction = sourceJurisdiction?.trim() || undefined;
 			// 2.1 R2: list buckets and let user pick, with "Create new" option
 			const buckets = await listR2Buckets(
 				config,
@@ -744,7 +726,7 @@ export const aiSearchCreateCommand = createCommand({
 		if (args.excludeItems) {
 			sourceParams.exclude_items = args.excludeItems;
 		}
-		const sourceJurisdictionValue = normalizeJurisdiction(sourceJurisdiction);
+		const sourceJurisdictionValue = sourceJurisdiction?.trim() || undefined;
 		if (instanceType === "r2" && sourceJurisdictionValue) {
 			sourceParams.r2_jurisdiction = sourceJurisdictionValue;
 		}

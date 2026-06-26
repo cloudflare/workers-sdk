@@ -627,7 +627,7 @@ describe("ai-search commands", () => {
 			});
 		});
 
-		it("should omit r2_jurisdiction when --source-jurisdiction is 'default'", async ({
+		it("should omit r2_jurisdiction when --source-jurisdiction is not provided", async ({
 			expect,
 		}) => {
 			let capturedBody: Record<string, unknown> | undefined;
@@ -647,20 +647,36 @@ describe("ai-search commands", () => {
 				)
 			);
 			await runWrangler(
-				"ai-search create my-instance --namespace default --type r2 --source my-bucket --source-jurisdiction default"
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket"
 			);
-			// "default" is treated as no jurisdiction, so source_params is not sent.
 			expect(capturedBody?.source_params).toBeUndefined();
 		});
 
-		it("should reject an invalid --source-jurisdiction value", async ({
+		it("should forward an arbitrary --source-jurisdiction value (server-side validated)", async ({
 			expect,
 		}) => {
-			await expect(
-				runWrangler(
-					"ai-search create my-instance --namespace default --type r2 --source my-bucket --source-jurisdiction mars"
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
 				)
-			).rejects.toThrowError(/Choices: "default", "eu", "fedramp"/);
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --source-jurisdiction apac"
+			);
+			expect(capturedBody).toMatchObject({
+				source_params: { r2_jurisdiction: "apac" },
+			});
 		});
 
 		it("should error when --source-jurisdiction is used with --type builtin", async ({
@@ -696,7 +712,10 @@ describe("ai-search commands", () => {
 			let capturedBody: Record<string, unknown> | undefined;
 			mockListTokens([MOCK_TOKEN]);
 			mockSelect({ text: "Select the source type:", result: "r2" });
-			mockSelect({ text: "Select an R2 jurisdiction:", result: "eu" });
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "eu",
+			});
 			msw.use(
 				http.get(
 					"*/accounts/:accountId/r2/buckets",
@@ -743,7 +762,10 @@ describe("ai-search commands", () => {
 			let createJurisdiction: string | null = null;
 			mockListTokens([MOCK_TOKEN]);
 			mockSelect({ text: "Select the source type:", result: "r2" });
-			mockSelect({ text: "Select an R2 jurisdiction:", result: "eu" });
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "eu",
+			});
 			msw.use(
 				http.get(
 					"*/accounts/:accountId/r2/buckets",
@@ -838,10 +860,10 @@ describe("ai-search commands", () => {
 				text: "Select the source type:",
 				result: "r2",
 			});
-			// 2. Select the R2 jurisdiction (default = no jurisdiction)
-			mockSelect({
-				text: "Select an R2 jurisdiction:",
-				result: "default",
+			// 2. Enter the R2 jurisdiction (blank = no jurisdiction)
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "",
 			});
 			// 3. Select an existing R2 bucket from the list
 			msw.use(
@@ -877,9 +899,9 @@ describe("ai-search commands", () => {
 		}) => {
 			mockListTokens([MOCK_TOKEN]);
 			mockSelect({ text: "Select the source type:", result: "r2" });
-			mockSelect({
-				text: "Select an R2 jurisdiction:",
-				result: "default",
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "",
 			});
 			msw.use(
 				http.get(
