@@ -108,8 +108,6 @@ export type SharedDeployVersionsProps = {
 	resourcesProvision: boolean;
 	/** Controls whether provisioned resource IDs are written back to the config file. */
 	skipProvisioningConfigWriteback: boolean;
-	/** temporary hack - cf is not yet a recognised deploy source, so any deploys from cf comes back normalised to 'api'*/
-	skipLastDeployedFromApiCheck: boolean;
 	/** From --strict arg. In strict mode, conflicting pre-upload checks abort instead of auto-continuing. */
 	strict: boolean;
 };

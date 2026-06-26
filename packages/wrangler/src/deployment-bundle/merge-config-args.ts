@@ -96,7 +96,6 @@ async function mergeSharedConfigArgs(
 		sendMetrics,
 		resourcesProvision: getFlag("RESOURCES_PROVISION") ?? false,
 		skipProvisioningConfigWriteback: false,
-		skipLastDeployedFromApiCheck: false,
 		strict: args.strict ?? false,
 	};
 
