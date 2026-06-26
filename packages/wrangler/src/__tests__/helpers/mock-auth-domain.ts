@@ -1,6 +1,6 @@
 import { afterEach, beforeEach } from "vitest";
 
-const ORIGINAL_WRANGLER_AUTH_DOMAIN = process.env.WRANGLER_AUTH_DOMAIN;
+const ORIGINAL_CLOUDFLARE_AUTH_DOMAIN = process.env.CLOUDFLARE_AUTH_DOMAIN;
 
 /**
  * Mock the Auth URL domain so that we can control where we attempt to login.
@@ -11,12 +11,12 @@ const ORIGINAL_WRANGLER_AUTH_DOMAIN = process.env.WRANGLER_AUTH_DOMAIN;
 export function mockAuthDomain({ domain }: { domain: string | null }) {
 	beforeEach(() => {
 		if (domain === null) {
-			delete process.env.WRANGLER_AUTH_DOMAIN;
+			delete process.env.CLOUDFLARE_AUTH_DOMAIN;
 		} else {
-			process.env.WRANGLER_AUTH_DOMAIN = domain;
+			process.env.CLOUDFLARE_AUTH_DOMAIN = domain;
 		}
 	});
 	afterEach(() => {
-		process.env.WRANGLER_AUTH_DOMAIN = ORIGINAL_WRANGLER_AUTH_DOMAIN;
+		process.env.CLOUDFLARE_AUTH_DOMAIN = ORIGINAL_CLOUDFLARE_AUTH_DOMAIN;
 	});
 }

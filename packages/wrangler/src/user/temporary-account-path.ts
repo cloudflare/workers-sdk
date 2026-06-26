@@ -14,7 +14,7 @@ function getTemporaryAccountConfigFile(): string {
 /**
  * Absolute path to wrangler's temporary-preview-account cache file, under the
  * global Wrangler config directory and scoped to the current
- * `WRANGLER_API_ENVIRONMENT`. Paired with `createTomlFileStorage` to build the
+ * `WRANGLER_API_ENVIRONMENT`. Paired with a `ConfigFileLocation` to build the
  * `TemporaryAccountStorage` injected into the OAuth flow.
  */
 export function getTemporaryPreviewAccountConfigPath(): string {

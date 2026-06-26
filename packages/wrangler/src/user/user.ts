@@ -27,10 +27,7 @@ import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import {
-	createTomlFileStorage,
-	defaultAuthConfigStorage,
-} from "./auth-config-file";
+import { defaultAuthConfigLocation } from "./auth-config-file";
 import {
 	getClientIdFromEnv,
 	getCloudflareAccountIdFromEnv,
@@ -88,12 +85,13 @@ const oauthFlow = createOAuthFlow({
 	clientId: getClientIdFromEnv,
 	consent: WRANGLER_CONSENT_PAGES,
 	redirectUri: OAUTH_CALLBACK_URL,
-	storageFactory: defaultAuthConfigStorage,
+	storageFactory: defaultAuthConfigLocation,
 	allowGlobalAuthKey: true,
 	temporary: {
-		storage: createTomlFileStorage<TemporaryPreviewAccount>(
-			getTemporaryPreviewAccountConfigPath
-		),
+		storage: {
+			getPath: getTemporaryPreviewAccountConfigPath,
+			format: "toml",
+		},
 		prompt: ensureTemporaryTermsAccepted,
 	},
 	generateAuthUrl,

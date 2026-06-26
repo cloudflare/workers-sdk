@@ -3,12 +3,15 @@ import {
 	mkdirSync,
 	readFileSync,
 	readdirSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
 import { createProfileStore } from "@cloudflare/workers-auth";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
-import { defaultAuthConfigStorage } from "./auth-config-file";
+import {
+	getAuthConfigFilePath,
+	getGlobalWranglerConfigPath,
+} from "@cloudflare/workers-utils";
 import type {
 	DirectoryBindingsStorage,
 	ProfileConfigOperations,
@@ -19,13 +22,13 @@ const DIRECTORY_BINDINGS_FILE = "profiles/directory-bindings.json";
 const PROFILE_CONFIG_EXTENSION = ".toml";
 
 function getProfileConfigDirectory(): string {
-	return path.dirname(defaultAuthConfigStorage("default").path());
+	return path.dirname(getAuthConfigFilePath("default"));
 }
 
 function createWranglerProfileConfigOperations(): ProfileConfigOperations {
 	return {
 		exists(profile) {
-			return existsSync(defaultAuthConfigStorage(profile).path());
+			return existsSync(getAuthConfigFilePath(profile));
 		},
 		list() {
 			const profilesDir = getProfileConfigDirectory();
@@ -38,7 +41,7 @@ function createWranglerProfileConfigOperations(): ProfileConfigOperations {
 				.map((file) => file.slice(0, -PROFILE_CONFIG_EXTENSION.length));
 		},
 		delete(profile) {
-			defaultAuthConfigStorage(profile).clear();
+			rmSync(getAuthConfigFilePath(profile), { force: true });
 		},
 	};
 }
