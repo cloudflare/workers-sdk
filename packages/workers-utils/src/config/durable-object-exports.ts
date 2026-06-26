@@ -12,7 +12,8 @@ export type DoExportsOptInContext =
 	| "deploy"
 	| "versions upload"
 	| "dev"
-	| "types";
+	| "types"
+	| "vitest-pool-workers";
 
 /**
  * If the user's config declares Durable Object `exports` entries but the
@@ -22,8 +23,9 @@ export type DoExportsOptInContext =
  * Called from the deploy / versions-upload payload resolution (so the
  * declarative payload doesn't get silently downgraded to legacy
  * `migrations` on the wire), from the `wrangler dev` config-resolution path
- * (so a local-dev session can't drift from production semantics), and from
- * the `wrangler types` flow (so the generated `.d.ts` surface can't drift
+ * (so a local-dev session can't drift from production semantics), from the
+ * `wrangler types` flow (so the generated `.d.ts` surface can't drift
+ * either), and from `@cloudflare/vitest-pool-workers` (so tests can't drift
  * either).
  */
 export function assertDoExportsEnabledIfConfigured(
@@ -50,6 +52,9 @@ export function assertDoExportsEnabledIfConfigured(
 			break;
 		case "types":
 			telemetryMessage = "types do exports flag missing";
+			break;
+		case "vitest-pool-workers":
+			telemetryMessage = "vitest-pool-workers do exports flag missing";
 			break;
 	}
 

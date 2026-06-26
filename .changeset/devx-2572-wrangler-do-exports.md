@@ -1,6 +1,7 @@
 ---
 "wrangler": minor
 "@cloudflare/vite-plugin": "minor"
+"@cloudflare/vitest-pool-workers": minor
 ---
 
 Add experimental support for declarative Durable Object exports
@@ -53,6 +54,8 @@ The deployment response now surfaces the server's reconciliation result — crea
 Multi-version deploys (`wrangler versions deploy A@50% B@50%`) where the selected versions disagree on declarative `exports` are rejected server-side with a clear message: deploy the version that changes `exports` at 100% first, then run the percentage-split deploy. This prevents traffic on one branch routing to code that references unprovisioned or just-deleted DO namespaces. Single-version (100%) deploys are unaffected.
 
 Local development (`wrangler dev`, `vite dev` and `unstable_startWorker`) reads Durable Object SQLite storage settings from the new `exports` field, so applications using the declarative flow get correct local-dev storage without needing to also declare a `migrations` block.
+
+`@cloudflare/vitest-pool-workers` also picks up Durable Object configuration from `exports`, so tests against an `exports`-only Worker run with the correct local SQLite storage and can reach unbound Durable Object classes via `ctx.exports.X`. The `X_DO_EXPORTS` opt-in gate is enforced here too — set `X_DO_EXPORTS=true` (e.g. via `process.env.X_DO_EXPORTS = "true"` at the top of `vitest.config.ts`, before the `cloudflareTest` plugin runs) until the feature stabilises.
 
 `wrangler types` is also aware of `exports`. Live entries (including `expecting-transfer`, the receiving side of a two-phase transfer) are added to `Cloudflare.GlobalProps.durableNamespaces`, which types `ctx.exports.X` for unbound Durable Objects declared only via `exports`.
 
