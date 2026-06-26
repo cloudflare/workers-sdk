@@ -511,7 +511,11 @@ export default <ExportedHandler<Env>>{
 
 		// The magic proxy client (used by getPlatformProxy)
 		if (requestUrl.pathname === CorePaths.PLATFORM_PROXY) {
-			if (request.headers.get(CoreHeaders.OP) !== null) {
+			if (
+				request.headers.get(CoreHeaders.OP) !== null ||
+				request.headers.get("Upgrade")?.toLowerCase() === "websocket" ||
+				requestUrl.searchParams.has(CoreHeaders.OP_SECRET)
+			) {
 				return handleProxy(request, env);
 			}
 

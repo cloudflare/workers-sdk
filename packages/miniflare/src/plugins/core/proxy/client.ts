@@ -3,6 +3,7 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import { ReadableStream, TransformStream } from "node:stream/web";
 import util from "node:util";
+import { newWebSocketRpcSession } from "capnweb";
 import { stringify } from "devalue";
 import { Headers } from "undici";
 import { Request } from "../../../http";
@@ -92,6 +93,54 @@ const revivers: ReducersRevivers = {
 
 export const PROXY_SECRET = crypto.randomBytes(16);
 const PROXY_SECRET_HEX = PROXY_SECRET.toString("hex");
+
+type CapnwebProxyServer = {
+	getEnvBinding(name: string): Promise<unknown>;
+	getGlobalProperty(name: string): Promise<unknown>;
+	[Symbol.dispose]?: () => void;
+};
+
+export class CapnwebProxyClient {
+	#root?: CapnwebProxyServer;
+
+	constructor(private runtimeEntryURL: URL) {}
+
+	#url() {
+		const url = new URL(CorePaths.PLATFORM_PROXY, this.runtimeEntryURL);
+		url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+		url.searchParams.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
+		return url;
+	}
+
+	#ensureRoot() {
+		return (this.#root ??= newWebSocketRpcSession<CapnwebProxyServer>(
+			this.#url().href
+		));
+	}
+
+	getEnvBinding(name: string) {
+		return this.#ensureRoot().getEnvBinding(name);
+	}
+
+	getGlobalProperty(name: string) {
+		return this.#ensureRoot().getGlobalProperty(name);
+	}
+
+	poisonProxies(): void {
+		this.#root?.[Symbol.dispose]?.();
+		this.#root = undefined;
+	}
+
+	setRuntimeEntryURL(runtimeEntryURL: URL) {
+		this.runtimeEntryURL = runtimeEntryURL;
+		this.poisonProxies();
+	}
+
+	dispose(): Promise<void> {
+		this.poisonProxies();
+		return Promise.resolve();
+	}
+}
 
 function isClientError(status: number) {
 	return 400 <= status && status < 500;
