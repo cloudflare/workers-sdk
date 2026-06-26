@@ -456,22 +456,18 @@ export const tailCommand = createCommand({
 			// JSON deserialization — use `new Date()` to handle both.
 			const delay =
 				new Date(expiration).getTime() - Date.now() - EXPIRY_REFRESH_MARGIN_MS;
-			// Node.js clamps setTimeout delays that exceed 2^31-1 ms to 1 ms,
-			// causing the callback to fire immediately. If the expiry is further
-			// out than that (~24 days), skip scheduling — the session is unlikely
-			// to stay alive that long, and the keep-alive ping will handle
-			// unexpected drops.
-			if (delay > 2_147_483_647) {
+			// Skip scheduling if the expiry is already past or so far in the
+			// future that Node.js's 32-bit setTimeout clamp would fire it
+			// immediately (~24 days). In both cases let the server close the
+			// WebSocket naturally and rely on scheduleReconnect to recover.
+			if (delay <= 0 || delay > 2_147_483_647) {
 				return;
 			}
 
-			const timer = setTimeout(
-				() => {
-					cancelExpiryRefresh = undefined;
-					void proactiveRefresh();
-				},
-				Math.max(0, delay)
-			);
+			const timer = setTimeout(() => {
+				cancelExpiryRefresh = undefined;
+				void proactiveRefresh();
+			}, delay);
 			cancelExpiryRefresh = () => clearTimeout(timer);
 		}
 
