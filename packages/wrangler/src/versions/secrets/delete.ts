@@ -1,13 +1,11 @@
 import { configFileName, UserError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
-import { copyWorkerVersionWithNewSecrets } from "./index";
-import type { VersionDetails, WorkerVersion } from "./index";
+import { patchLatestWorkerVersionWithSecrets } from "./index";
 
 export const versionsSecretDeleteCommand = createCommand({
 	metadata: {
@@ -77,50 +75,16 @@ export const versionsSecretDeleteCommand = createCommand({
 				}`
 			);
 
-			// Grab the latest version
-			const versions = (
-				await fetchResult<{ items: WorkerVersion[] }>(
-					config,
-					`/accounts/${accountId}/workers/scripts/${scriptName}/versions`
-				)
-			).items;
-			if (versions.length === 0) {
-				throw new UserError(
-					"There are currently no uploaded versions of this Worker - please upload a version before uploading a secret.",
-					{
-						telemetryMessage: "versions secrets delete no uploaded versions",
-					}
-				);
-			}
-			const latestVersion = versions[0];
-
-			const versionInfo = await fetchResult<VersionDetails>(
-				config,
-				`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${latestVersion.id}`
-			);
-
-			// Go through all
-			const newSecrets = versionInfo.resources.bindings
-				.filter(
-					(binding) =>
-						binding.type === "secret_text" && binding.name !== args.key
-				)
-				.map((binding) => ({
-					name: binding.name,
-					value: "",
-					inherit: true,
-				}));
-
-			const newVersion = await copyWorkerVersionWithNewSecrets({
+			const newVersion = await patchLatestWorkerVersionWithSecrets({
 				config,
 				accountId,
 				scriptName,
-				versionId: latestVersion.id,
-				secrets: newSecrets,
+				secrets: { [args.key]: null },
 				versionMessage: args.message ?? `Deleted secret "${args.key}"`,
 				versionTag: args.tag,
 				sendMetrics: config.send_metrics,
-				overrideAllSecrets: true,
+				noVersionsTelemetryMessage:
+					"versions secrets delete no uploaded versions",
 			});
 
 			logger.log(
