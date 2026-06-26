@@ -1652,7 +1652,7 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to upload a Worker that was last updated via the script API.[0m
 
 			  Edits that have been made via the script API will be overridden by your local code and config.
 

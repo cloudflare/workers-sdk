@@ -6,7 +6,6 @@ import { cancel } from "@cloudflare/cli-shared-helpers";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
-	experimental_patchConfig,
 	formatTime,
 	getDockerPath,
 	parseNonHyphenedUuid,
@@ -14,9 +13,8 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import { confirm, fetchResult, logger } from "../shared/context";
+import { fetchResult, logger } from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
-import { ensureQueuesExistByConfig } from "../triggers/queue-consumers";
 import {
 	buildAssetManifest,
 	resolveAssetOptions,
@@ -24,14 +22,9 @@ import {
 } from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
-import { checkRemoteSecretsOverride } from "./helpers/check-remote-secrets-override";
-import { checkWorkflowConflicts } from "./helpers/check-workflow-conflicts";
-import { getConfigPatch, getRemoteConfigDiff } from "./helpers/config-diffs";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
-import { getDeployConfirmFunction } from "./helpers/deploy-confirm";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
-import { downloadWorkerConfig } from "./helpers/download-worker-config";
 import { getMigrationsToUpload } from "./helpers/durable";
 import {
 	applyServiceAndEnvironmentTags,
@@ -52,12 +45,14 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
 import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
-import { validateWorkerProps } from "./helpers/validate-worker-props";
+import {
+	preUploadApiChecks,
+	validateWorkerProps,
+} from "./helpers/validate-worker-props";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
 } from "./helpers/versions-api";
-import { isWorkerNotFoundError } from "./helpers/worker-not-found-error";
 import { addWorkersSitesBindings } from "./helpers/workers-sites-bindings";
 import type { DeployProps, WorkerBuildResult } from "../shared/types";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
@@ -76,7 +71,6 @@ import type {
 	ComplianceConfig,
 	Config,
 	LegacyAssetPaths,
-	RawConfig,
 } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
@@ -141,148 +135,25 @@ export default async function deploy(
 	workerTag: string | null;
 	targets?: string[];
 }> {
-	const {
-		entry,
-		name,
-		compatibilityDate,
-		compatibilityFlags,
-		keepVars,
-		accountId,
-	} = props;
+	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
+		props;
 
 	const assetsOptions = resolveAssetOptions(props, config);
 
-	// All new validation should go in validateWorkerProps()
-	await validateWorkerProps({ ...props, assetsOptions }, config);
-	assert(name); // already validated inside validateWorkerProps, but TS can't see that
+	// Any validation that does not require API calls should go in validateWorkerProps()
+	const { name } = validateWorkerProps({ ...props, assetsOptions }, config);
 
-	const deployConfirm = getDeployConfirmFunction({
-		strictMode: props.strict,
-	});
+	// any validation that DOES require API calls should go in preUploadApiChecks()
+	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
+		props,
+		config
+	);
 
-	// TODO: warn if git/hg has uncommitted changes
-	let workerTag: string | null = null;
+	if (aborted) {
+		return { versionId: null, workerTag };
+	}
+
 	let versionId: string | null = null;
-	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
-
-	let workerExists: boolean = true;
-
-	if (!props.dispatchNamespace && accountId) {
-		try {
-			const serviceMetaData = await fetchResult<{
-				default_environment: {
-					environment: string;
-					script: {
-						tag: string;
-						tags: string[] | null;
-						last_deployed_from: "dash" | "wrangler" | "api";
-					};
-				};
-			}>(config, `/accounts/${accountId}/workers/services/${name}`);
-			const {
-				default_environment: { script },
-			} = serviceMetaData;
-			workerTag = script.tag;
-			tags = script.tags ?? tags;
-
-			if (script.last_deployed_from === "dash") {
-				const remoteWorkerConfig = await downloadWorkerConfig(
-					name,
-					serviceMetaData.default_environment.environment,
-					entry.file,
-					accountId
-				);
-
-				const configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
-					...config,
-					// We also want to include all the routes used for deployment
-					routes: props.routes,
-				});
-
-				// If there are only additive changes (or no changes at all) there should be no problem,
-				// just using the local config (and override the remote one) should be totally fine
-				if (!configDiff.nonDestructive) {
-					logger.warn(
-						"The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
-							`\n${configDiff.diff}\n\n` +
-							"Deploying the Worker will override the remote configuration with your local one."
-					);
-					if (!(await deployConfirm("Would you like to continue?"))) {
-						if (
-							config.userConfigPath &&
-							/\.jsonc?$/.test(config.userConfigPath)
-						) {
-							if (
-								await confirm(
-									"Would you like to update the local config file with the remote values?",
-									{
-										defaultValue: true,
-										fallbackValue: true,
-									}
-								)
-							) {
-								const patchObj: RawConfig = getConfigPatch(
-									configDiff.diff,
-									props.env
-								);
-
-								experimental_patchConfig(
-									config.userConfigPath,
-									patchObj,
-									false
-								);
-							}
-						}
-
-						return { versionId, workerTag };
-					}
-				}
-			} else if (
-				script.last_deployed_from === "api" &&
-				!props.skipLastDeployedFromApiCheck
-			) {
-				logger.warn(
-					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
-				);
-				if (!(await deployConfirm("Would you like to continue?"))) {
-					return { versionId, workerTag };
-				}
-			}
-		} catch (e) {
-			if (isWorkerNotFoundError(e)) {
-				workerExists = false;
-			} else {
-				throw e;
-			}
-		}
-	}
-
-	if (accountId) {
-		const remoteSecretsCheck = await checkRemoteSecretsOverride(
-			config,
-			accountId,
-			props.env
-		);
-
-		if (remoteSecretsCheck?.override) {
-			logger.warn(remoteSecretsCheck.deployErrorMessage);
-			if (!(await deployConfirm("Would you like to continue?"))) {
-				return { versionId, workerTag };
-			}
-		}
-	}
-
-	if (accountId && config.workflows?.length) {
-		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
-
-		if (workflowCheck.hasConflicts) {
-			logger.warn(workflowCheck.message);
-			if (!(await deployConfirm("Do you want to continue?"))) {
-				return { versionId, workerTag };
-			}
-		}
-	}
-
 	const scriptName = name;
 
 	const envName = props.env ?? "production";
@@ -584,7 +455,6 @@ export default async function deploy(
 			}
 		);
 
-		await ensureQueuesExistByConfig(config, accountId);
 		let bindingsPrinted = false;
 
 		// Upload the script so it has time to propagate.
