@@ -1,7 +1,10 @@
 import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import {
+	getGlobalConfigPath,
+	getGlobalWranglerConfigPath,
+} from "../global-wrangler-config-path";
 import {
 	getBooleanEnvironmentVariableFactory,
 	getEnvironmentVariableFactory,
@@ -58,15 +61,45 @@ export const getWranglerSendErrorReportsFromEnv =
 	});
 
 /**
- * Set `WRANGLER_API_ENVIRONMENT` environment variable to "staging" to tell Wrangler to hit the staging APIs rather than production.
+ * Set to "staging" to hit the staging APIs (flips both the API base URL and the
+ * OAuth auth domain). Prefers `CLOUDFLARE_API_ENVIRONMENT`, falling back to the
+ * legacy `WRANGLER_API_ENVIRONMENT`.
  */
 export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
 	{
-		variableName: "WRANGLER_API_ENVIRONMENT",
+		variableName: "CLOUDFLARE_API_ENVIRONMENT",
+		deprecatedName: "WRANGLER_API_ENVIRONMENT",
 		defaultValue: () => "production" as const,
 		choices: ["production", "staging"] as const,
 	}
 );
+
+/**
+ * Absolute path to an auth-config TOML file, under the global config directory
+ * (which honours `CLOUDFLARE_CONFIG_DIR`).
+ *
+ * The default profile is named `default.toml` in production, or
+ * `<environment>.toml` for other API environments. A named profile is stored as
+ * `<profile>.toml`.
+ */
+export function getAuthConfigFilePath(profile?: string): string {
+	if (profile && !/^[a-zA-Z0-9_-]+$/.test(profile)) {
+		throw new UserError(
+			`Invalid profile name "${profile}". Profile names may only contain alphanumeric characters, hyphens, and underscores.`,
+			{ telemetryMessage: "auth profile invalid name" }
+		);
+	}
+	const resolved = profile ?? "default";
+	let fileName: string;
+	if (resolved === "default") {
+		const environment = getCloudflareApiEnvironmentFromEnv();
+		fileName =
+			environment === "production" ? "default.toml" : `${environment}.toml`;
+	} else {
+		fileName = `${resolved}.toml`;
+	}
+	return path.join(getGlobalConfigPath(), "config", fileName);
+}
 
 /**
  * The compliance region to use for the API requests.
