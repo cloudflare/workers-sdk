@@ -1,8 +1,4 @@
-import {
-	UserError,
-	type DurableObjectExports,
-	type RawConfig,
-} from "@cloudflare/workers-utils";
+import { UserError, type RawConfig } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
 import type { ParsedInputWorkerConfig } from "./schema";
 import type { Json } from "./utils";
@@ -657,7 +653,7 @@ function convertBindingsAndAssets(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EXPORTS (Durable Objects + Workflows)
+// EXPORTS (Durable Objects)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertExports(
@@ -669,8 +665,8 @@ function convertExports(
 		return;
 	}
 
-	const converted: DurableObjectExports = {};
-	const unknownExports: typeof exports = {};
+	const converted: RawConfig["exports"] = {};
+	const unknownExports: ParsedInputWorkerConfig["exports"] = {};
 	for (const [className, value] of Object.entries(exports)) {
 		if (value.type !== "durable-object") {
 			unknownExports[className] = value;
