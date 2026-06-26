@@ -598,6 +598,206 @@ describe("ai-search commands", () => {
 			});
 		});
 
+		it("should send source_params.r2_jurisdiction for an R2 source", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --source-jurisdiction eu"
+			);
+			expect(capturedBody).toMatchObject({
+				source: "my-bucket",
+				type: "r2",
+				source_params: { r2_jurisdiction: "eu" },
+			});
+		});
+
+		it("should omit r2_jurisdiction when --source-jurisdiction is not provided", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket"
+			);
+			expect(capturedBody?.source_params).toBeUndefined();
+		});
+
+		it("should forward an arbitrary --source-jurisdiction value (server-side validated)", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --source-jurisdiction apac"
+			);
+			expect(capturedBody).toMatchObject({
+				source_params: { r2_jurisdiction: "apac" },
+			});
+		});
+
+		it("should error when --source-jurisdiction is used with --type builtin", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type builtin --source-jurisdiction eu"
+				)
+			).rejects.toThrowError(
+				/--source-jurisdiction is only supported with --type r2/
+			);
+		});
+
+		it("should error when --source-jurisdiction is used with --type web-crawler", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type web-crawler --source https://example.com --source-jurisdiction eu"
+				)
+			).rejects.toThrowError(
+				/--source-jurisdiction is only supported with --type r2/
+			);
+		});
+
+		it("should list buckets in the chosen jurisdiction and forward r2_jurisdiction (interactive)", async ({
+			expect,
+		}) => {
+			let listJurisdiction: string | null = null;
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockSelect({ text: "Select the source type:", result: "r2" });
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "eu",
+			});
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/r2/buckets",
+					({ request }) => {
+						listJurisdiction = request.headers.get("cf-r2-jurisdiction");
+						return HttpResponse.json(
+							createFetchResult({
+								buckets: [{ name: "eu-bucket", creation_date: "01-01-2001" }],
+							})
+						);
+					},
+					{ once: true }
+				)
+			);
+			mockSelect({ text: "Select an R2 bucket:", result: "eu-bucket" });
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult({ ...MOCK_INSTANCE, source: "eu-bucket" }, true)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler("ai-search create my-instance --namespace default");
+			expect(listJurisdiction).toBe("eu");
+			expect(capturedBody).toMatchObject({
+				source: "eu-bucket",
+				type: "r2",
+				source_params: { r2_jurisdiction: "eu" },
+			});
+		});
+
+		it("should create a new bucket in the chosen jurisdiction (interactive)", async ({
+			expect,
+		}) => {
+			let createJurisdiction: string | null = null;
+			mockListTokens([MOCK_TOKEN]);
+			mockSelect({ text: "Select the source type:", result: "r2" });
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "eu",
+			});
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/r2/buckets",
+					() => HttpResponse.json(createFetchResult({ buckets: [] })),
+					{ once: true }
+				)
+			);
+			mockSelect({ text: "Select an R2 bucket:", result: "__create_new__" });
+			mockPrompt({
+				text: "Enter a name for the new R2 bucket:",
+				result: "eu-bucket",
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/r2/buckets",
+					({ request }) => {
+						createJurisdiction = request.headers.get("cf-r2-jurisdiction");
+						return HttpResponse.json(createFetchResult({}));
+					},
+					{ once: true }
+				)
+			);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			mockCreateInstance({ ...MOCK_INSTANCE, source: "eu-bucket" });
+			await runWrangler("ai-search create my-instance --namespace default");
+			expect(createJurisdiction).toBe("eu");
+			expect(std.out).toContain('Creating R2 bucket "eu-bucket"...');
+		});
+
 		it("should error in non-interactive mode when no tokens exist", async ({
 			expect,
 		}) => {
@@ -660,7 +860,12 @@ describe("ai-search commands", () => {
 				text: "Select the source type:",
 				result: "r2",
 			});
-			// 2. Select an existing R2 bucket from the list
+			// 2. Enter the R2 jurisdiction (blank = no jurisdiction)
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "",
+			});
+			// 3. Select an existing R2 bucket from the list
 			msw.use(
 				http.get(
 					"*/accounts/:accountId/r2/buckets",
@@ -694,6 +899,10 @@ describe("ai-search commands", () => {
 		}) => {
 			mockListTokens([MOCK_TOKEN]);
 			mockSelect({ text: "Select the source type:", result: "r2" });
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "",
+			});
 			msw.use(
 				http.get(
 					"*/accounts/:accountId/r2/buckets",

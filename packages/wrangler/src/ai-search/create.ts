@@ -230,6 +230,13 @@ export const aiSearchCreateCommand = createCommand({
 			choices: ["builtin", "r2", "web-crawler"],
 			description: "The source type for the instance.",
 		},
+		"source-jurisdiction": {
+			type: "string",
+			requiresArg: true,
+			description:
+				"The R2 jurisdiction of the source bucket (e.g. eu, fedramp). " +
+				"Only valid with --type r2; omit for no specific jurisdiction.",
+		},
 		"embedding-model": {
 			type: "string",
 			description: "Embedding model to use.",
@@ -465,10 +472,25 @@ export const aiSearchCreateCommand = createCommand({
 			}
 		}
 
+		// --source-jurisdiction only applies to R2 source buckets.
+		if (instanceType !== "r2" && args.sourceJurisdiction !== undefined) {
+			throw new UserError(
+				`--source-jurisdiction is only supported with --type r2 (got --type ${instanceType}).`,
+				{
+					telemetryMessage:
+						"ai search create source-jurisdiction unsupported type",
+				}
+			);
+		}
+
 		// 2. Source selection — depends on the type
 		let instanceSource = args.source;
 		// Track whether the user went through the web/sitemap interactive flow
 		let webParseType: string | undefined;
+		// R2 jurisdiction of the source bucket. May be supplied via flag or
+		// entered interactively; passed through to the API as-is (server-side
+		// validated) so future jurisdictions work without a Wrangler upgrade.
+		let sourceJurisdiction = args.sourceJurisdiction;
 
 		if (instanceType === "r2" && !instanceSource) {
 			if (isNonInteractiveOrCI()) {
@@ -478,8 +500,20 @@ export const aiSearchCreateCommand = createCommand({
 					{ telemetryMessage: "ai search create missing r2 source" }
 				);
 			}
+			// 2.0 R2 jurisdiction: ask where the source bucket lives so we list
+			// (and optionally create) buckets in the matching jurisdiction.
+			if (sourceJurisdiction === undefined) {
+				sourceJurisdiction = await prompt(
+					"R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):"
+				);
+			}
+			const effectiveJurisdiction = sourceJurisdiction?.trim() || undefined;
 			// 2.1 R2: list buckets and let user pick, with "Create new" option
-			const buckets = await listR2Buckets(config, accountId);
+			const buckets = await listR2Buckets(
+				config,
+				accountId,
+				effectiveJurisdiction
+			);
 			const bucketChoices = [
 				...buckets.map((b) => ({
 					title: b.name,
@@ -506,7 +540,13 @@ export const aiSearchCreateCommand = createCommand({
 					}
 				);
 				logger.log(`Creating R2 bucket "${newBucketName}"...`);
-				await createR2Bucket(config, accountId, newBucketName);
+				await createR2Bucket(
+					config,
+					accountId,
+					newBucketName,
+					undefined,
+					effectiveJurisdiction
+				);
 				logger.log(`Successfully created R2 bucket "${newBucketName}".`);
 				instanceSource = newBucketName;
 			} else {
@@ -686,6 +726,10 @@ export const aiSearchCreateCommand = createCommand({
 		if (args.excludeItems) {
 			sourceParams.exclude_items = args.excludeItems;
 		}
+		const sourceJurisdictionValue = sourceJurisdiction?.trim() || undefined;
+		if (instanceType === "r2" && sourceJurisdictionValue) {
+			sourceParams.r2_jurisdiction = sourceJurisdictionValue;
+		}
 		if (webParseType) {
 			sourceParams.web_crawler = {
 				parse_type: webParseType,
@@ -710,12 +754,20 @@ export const aiSearchCreateCommand = createCommand({
 		if (args.json) {
 			logger.log(JSON.stringify(instance, null, 2));
 		} else {
+			const jurisdiction =
+				instance.source_params?.r2_jurisdiction ?? sourceJurisdictionValue;
+			const sourceDisplay =
+				instance.source != null
+					? jurisdiction
+						? `${instance.source} (${jurisdiction})`
+						: instance.source
+					: "-";
 			let summary =
 				`Successfully created AI Search instance "${instance.id}"\n` +
 				`  Name:       ${instance.id}\n` +
 				`  Namespace:  ${instance.namespace ?? instanceNamespace}\n` +
 				`  Type:       ${instance.type ?? "builtin"}\n` +
-				`  Source:     ${instance.source ?? "-"}\n` +
+				`  Source:     ${sourceDisplay}\n` +
 				`  Model:      ${instance.ai_search_model ?? "default"}\n` +
 				`  Embedding:  ${instance.embedding_model ?? "default"}`;
 			if (instance.custom_metadata && instance.custom_metadata.length > 0) {
