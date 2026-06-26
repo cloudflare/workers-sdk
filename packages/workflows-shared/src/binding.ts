@@ -18,6 +18,7 @@ import type { InstanceStatus as EngineInstanceStatus } from "./instance";
 import type {
 	WorkflowInstanceModifier,
 	WorkflowIntrospectionOperation,
+	WorkflowIntrospectionStreamResult,
 } from "./types";
 
 type Env = {
@@ -53,6 +54,32 @@ function getWorkflowIntrospectionSession(
 	return session;
 }
 
+function isWorkflowIntrospectionStreamResult(
+	value: unknown
+): value is WorkflowIntrospectionStreamResult {
+	return (
+		value !== null &&
+		typeof value === "object" &&
+		"__workflowIntrospectionStreamResult" in value &&
+		"chunks" in value &&
+		value.__workflowIntrospectionStreamResult === true &&
+		Array.isArray(value.chunks)
+	);
+}
+
+function createWorkflowIntrospectionReadableStream(
+	result: WorkflowIntrospectionStreamResult
+): ReadableStream<Uint8Array> {
+	return new ReadableStream<Uint8Array>({
+		start(controller) {
+			for (const chunk of result.chunks) {
+				controller.enqueue(chunk.slice());
+			}
+			controller.close();
+		},
+	});
+}
+
 async function applyWorkflowIntrospectionOperation(
 	modifier: WorkflowInstanceModifier,
 	operation: WorkflowIntrospectionOperation
@@ -65,7 +92,12 @@ async function applyWorkflowIntrospectionOperation(
 			await modifier.disableRetryDelays(operation.steps);
 			break;
 		case "mockStepResult":
-			await modifier.mockStepResult(operation.step, operation.stepResult);
+			await modifier.mockStepResult(
+				operation.step,
+				isWorkflowIntrospectionStreamResult(operation.stepResult)
+					? createWorkflowIntrospectionReadableStream(operation.stepResult)
+					: operation.stepResult
+			);
 			break;
 		case "mockStepError": {
 			const error = new Error(operation.error.message);

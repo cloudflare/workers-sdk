@@ -20,6 +20,11 @@ export type WorkflowInstanceModifier = {
 	forceEventTimeout(step: WorkflowStepSelector): Promise<void>;
 };
 
+export type WorkflowIntrospectionStreamResult = {
+	__workflowIntrospectionStreamResult: true;
+	chunks: Uint8Array[];
+};
+
 export type WorkflowIntrospectionOperation =
 	| { type: "disableSleeps"; steps?: WorkflowStepSelector[] }
 	| { type: "disableRetryDelays"; steps?: WorkflowStepSelector[] }

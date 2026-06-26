@@ -386,7 +386,19 @@ describe("createTestHarness", () => {
 				import { WorkflowEntrypoint } from "cloudflare:workers";
 
 				export class ModeratorWorkflow extends WorkflowEntrypoint {
-					async run(_event, step) {
+					async run(event, step) {
+						if (event.payload?.streamTest) {
+							const stream = await step.do("stream result", async () => {
+								return new ReadableStream({
+									start(controller) {
+										controller.enqueue(new TextEncoder().encode("real stream"));
+										controller.close();
+									}
+								});
+							});
+							return { streamResult: await new Response(stream).text() };
+						}
+
 						await step.sleep("sleep for a while", "10 seconds");
 
 						const result = await step.do("AI content scan", async () => {
@@ -433,6 +445,11 @@ describe("createTestHarness", () => {
 								{}
 							]);
 							return Response.json({ ids: workflows.map((workflow) => workflow.id) });
+						}
+
+						if (url.pathname === "/moderate-stream") {
+							const workflow = await env.MODERATOR.create({ params: { streamTest: true } });
+							return Response.json({ id: workflow.id });
 						}
 
 						return new Response("Not found", { status: 404 });
@@ -532,6 +549,31 @@ describe("createTestHarness", () => {
 				status: "auto_approved",
 			});
 		}
+
+		await batchWorkflow.dispose();
+
+		const streamWorkflow = await worker.introspectWorkflow("MODERATOR");
+		onTestFinished(streamWorkflow.dispose);
+		await streamWorkflow.modifyAll(async (modifier) => {
+			await modifier.mockStepResult(
+				{ name: "stream result" },
+				new ReadableStream({
+					start(controller) {
+						controller.enqueue(new TextEncoder().encode("mock stream"));
+						controller.close();
+					},
+				})
+			);
+		});
+
+		await worker.fetch("/moderate-stream");
+		const [streamInstance] = await streamWorkflow.get();
+		await expect(
+			streamInstance.waitForStatus("complete")
+		).resolves.not.toThrow();
+		await expect(streamInstance.getOutput()).resolves.toEqual({
+			streamResult: "mock stream",
+		});
 	});
 
 	it("supports service bindings between workers", async ({ expect }) => {

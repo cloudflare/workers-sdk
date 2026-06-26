@@ -4,9 +4,75 @@ import type {
 	WorkflowInstanceIntrospector,
 	WorkflowInstanceModifier,
 	WorkflowIntrospectionOperation,
+	WorkflowIntrospectionStreamResult,
 	WorkflowIntrospector,
 	WorkflowStepSelector,
 } from "./types";
+
+function isReadableStream(value: unknown): value is ReadableStream<unknown> {
+	return (
+		typeof ReadableStream !== "undefined" && value instanceof ReadableStream
+	);
+}
+
+function normalizeStreamMockChunk(value: unknown): Uint8Array {
+	if (value instanceof Uint8Array) {
+		return value;
+	}
+
+	if (value instanceof ArrayBuffer) {
+		return new Uint8Array(value);
+	}
+
+	if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+		return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+	}
+
+	throw new TypeError(
+		"Workflow mockStepResult() ReadableStream chunks must be ArrayBuffer or TypedArray values."
+	);
+}
+
+async function readStreamMockChunks(
+	stream: ReadableStream<unknown>
+): Promise<Uint8Array[]> {
+	if (stream.locked) {
+		throw new TypeError(
+			"Workflow mockStepResult() received a locked or unreadable ReadableStream."
+		);
+	}
+
+	const chunks: Uint8Array[] = [];
+	const reader = stream.getReader();
+	let fullyRead = false;
+	try {
+		while (true) {
+			const result = await reader.read();
+			if (result.done) {
+				fullyRead = true;
+				return chunks;
+			}
+
+			const chunk = normalizeStreamMockChunk(result.value);
+			if (chunk.byteLength === 0) {
+				continue;
+			}
+
+			chunks.push(chunk.slice());
+		}
+	} finally {
+		if (!fullyRead) {
+			await reader
+				.cancel("stream mock consumption stopped before completion")
+				.catch(() => {});
+		}
+		try {
+			reader.releaseLock();
+		} catch {
+			/** Reader may still be processing cancel(). */
+		}
+	}
+}
 
 export class WorkflowInstanceModificationRecorder implements WorkflowInstanceModifier {
 	constructor(private readonly operations: WorkflowIntrospectionOperation[]) {}
@@ -23,6 +89,19 @@ export class WorkflowInstanceModificationRecorder implements WorkflowInstanceMod
 		step: WorkflowStepSelector,
 		stepResult: unknown
 	): Promise<void> {
+		if (isReadableStream(stepResult)) {
+			const streamResult: WorkflowIntrospectionStreamResult = {
+				__workflowIntrospectionStreamResult: true,
+				chunks: await readStreamMockChunks(stepResult),
+			};
+			this.operations.push({
+				type: "mockStepResult",
+				step,
+				stepResult: streamResult,
+			});
+			return;
+		}
+
 		this.operations.push({ type: "mockStepResult", step, stepResult });
 	}
 
