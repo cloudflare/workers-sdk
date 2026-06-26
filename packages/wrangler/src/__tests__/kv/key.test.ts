@@ -693,7 +693,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key put --remote key value --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
+					`[Error: No KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -705,7 +705,7 @@ describe("kv", () => {
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.[0m
 
 					"
 				`);
@@ -724,7 +724,7 @@ describe("kv", () => {
 						"kv key put --remote my-key my-value --binding someBinding"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: someBinding has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.]`
+					`[Error: The binding "someBinding" has both an "id" and a "preview_id" configured. Pass \`--preview\` to target the preview namespace, or \`--preview false\` to target the production namespace.]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -735,7 +735,7 @@ describe("kv", () => {
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1msomeBinding has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe binding "someBinding" has both an "id" and a "preview_id" configured. Pass \`--preview\` to target the preview namespace, or \`--preview false\` to target the production namespace.[0m
 
 					"
 				`);
@@ -915,10 +915,10 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key list --remote --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
+					`[Error: No KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.]`
 				);
 				expect(std.err).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.[0m
 
 					"
 				`);
@@ -1219,11 +1219,11 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv key get --remote key --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
+					`[Error: No KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.[0m
 
 					"
 				`);
@@ -1412,11 +1412,11 @@ describe("kv", () => {
 				await expect(
 					runWrangler(`kv key delete --remote --binding otherBinding someKey`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
+					`[Error: No KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.]`
 				);
 
 				expect(std.err).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.[0m
 
 					"
 				`);
