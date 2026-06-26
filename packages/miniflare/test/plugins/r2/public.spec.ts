@@ -50,6 +50,20 @@ test("a plain GET returns the full object as 200, not 206", async ({
 	expect(res.headers.get("Accept-Ranges")).toBe("bytes");
 });
 
+test("defaults Content-Type to application/octet-stream when unset", async ({
+	expect,
+}) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("no-type-key", "0123456789");
+
+	const res = await fetch(bucketUrl("/no-type-key", ctx.url));
+
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("0123456789");
+	expect(res.headers.get("Content-Type")).toBe("application/octet-stream");
+	expect(res.headers.get("Content-Length")).toBe("10");
+});
+
 test("forwards all stored HTTP metadata as response headers", async ({
 	expect,
 }) => {

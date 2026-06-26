@@ -34,6 +34,9 @@ function parseRangeHeader(header: string): ParsedRangeHeader {
 function objectHeaders(object: R2Object): Headers {
 	const headers = new Headers();
 	object.writeHttpMetadata(headers);
+	if (!headers.has("Content-Type")) {
+		headers.set("Content-Type", "application/octet-stream");
+	}
 	headers.set("ETag", object.httpEtag);
 	headers.set("Last-Modified", object.uploaded.toUTCString());
 	headers.set("Accept-Ranges", "bytes");
