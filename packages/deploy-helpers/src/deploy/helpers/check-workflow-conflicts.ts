@@ -85,7 +85,7 @@ export async function checkWorkflowConflicts(
 
 	const message =
 		`The following workflow(s) already exist and belong to different workers:\n${conflictList}\n\n` +
-		`Deploying will reassign these workflows to "${scriptName}".`;
+		`Deploying will reassign these workflows to "${scriptName}". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in the Wrangler config.`;
 
 	return { hasConflicts: true, conflicts, message };
 }
