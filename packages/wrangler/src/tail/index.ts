@@ -460,7 +460,7 @@ export const tailCommand = createCommand({
 			// future that Node.js's 32-bit setTimeout clamp would fire it
 			// immediately (~24 days). In both cases let the server close the
 			// WebSocket naturally and rely on scheduleReconnect to recover.
-			if (delay <= 0 || delay > 2_147_483_647) {
+			if (!Number.isFinite(delay) || delay <= 0 || delay > 2_147_483_647) {
 				return;
 			}
 
