@@ -537,6 +537,119 @@ export async function getDevMiniflareOptions(
 	};
 }
 
+/**
+ * Synthetic name for the inline wrapper module injected by `withBufferedEntry`.
+ * Follows the `__VITE_*` convention so it can't collide with a real bundle module.
+ */
+const BUFFER_PREVIEW_ENTRY_NAME = "__VITE_PREVIEW_BUFFER_ENTRY__.mjs";
+
+/**
+ * Source of the inline wrapper module that buffers the entry Worker's response
+ * body. `__ENTRY__` is replaced with the relative import specifier of the
+ * original entry module.
+ *
+ * Buffering forces a streaming body to be read to completion in-worker. If the
+ * body stream errors mid-flight (e.g. a component throws while a page is being
+ * rendered during prerendering), `arrayBuffer()` rejects here. The wrapper
+ * catches it (along with any synchronous handler error) and returns a `500`
+ * carrying the `x-vite-cloudflare-worker-error` marker header, so the host can
+ * detect the failure — instead of the HTTP layer committing a `200` and
+ * silently truncating the body. The marker distinguishes a thrown error from a
+ * response the Worker intentionally returned with a non-2xx status.
+ */
+const BUFFER_PREVIEW_ENTRY_SOURCE = `
+export * from "__ENTRY__";
+import __entry from "__ENTRY__";
+
+const NULL_BODY_STATUS = new Set([101, 204, 205, 304]);
+
+export default {
+	...__entry,
+	async fetch(request, env, ctx) {
+		if (typeof __entry?.fetch !== "function") {
+			throw new TypeError(
+				"The entry Worker's default export does not define a \`fetch()\` handler."
+			);
+		}
+		try {
+			const response = await __entry.fetch(request, env, ctx);
+			// WebSocket upgrades and null-body statuses have no buffer-able body
+			// and would throw when reconstructed, so pass them through untouched.
+			if (
+				response.webSocket ||
+				response.body === null ||
+				NULL_BODY_STATUS.has(response.status)
+			) {
+				return response;
+			}
+			const buffer = await response.arrayBuffer();
+			return new Response(buffer, response);
+		} catch (error) {
+			const message =
+				error instanceof Error ? (error.stack ?? error.message) : String(error);
+			return new Response(message, {
+				status: 500,
+				headers: { "x-vite-cloudflare-worker-error": "1" },
+			});
+		}
+	},
+};
+`;
+
+/** A preview Worker module list (an explicit module array, never `true`). */
+type PreviewEntryModules = {
+	rootPath?: string;
+	modules: Exclude<NonNullable<WorkerOptions["modules"]>, boolean>;
+};
+
+/** The shapes the preview module resolution can produce. */
+type PreviewModuleConfig =
+	| PreviewEntryModules
+	| { modules: true; script: string };
+
+/**
+ * When `enabled`, wraps a preview Worker's module list so its entry buffers the
+ * response body.
+ *
+ * Prepends an inline wrapper module as the entry (Miniflare uses the first
+ * module as the entry) and keeps the original entry in the list so the wrapper
+ * can import it by its existing relative path. The `{ modules: true, script }`
+ * fallback has no entry module to wrap and is returned unchanged.
+ */
+function maybeBufferPreviewEntry(
+	enabled: boolean,
+	modulesAndRoot: PreviewModuleConfig
+): PreviewModuleConfig {
+	if (!enabled || !Array.isArray(modulesAndRoot.modules)) {
+		return modulesAndRoot;
+	}
+	// Guarded above: `modules` is an explicit array, so this is the entry shape.
+	const { rootPath, modules } = modulesAndRoot as PreviewEntryModules;
+	const [entry, ...rest] = modules;
+	assert(entry?.path, "Expected the preview entry module to have a `path`");
+
+	// Normalize to a POSIX relative specifier so the wrapper's import resolves
+	// against `rootPath` on all platforms.
+	const importSpecifier = `./${entry.path.split(path.sep).join("/")}`;
+
+	return {
+		rootPath,
+		modules: [
+			{
+				type: "ESModule" as const,
+				path: BUFFER_PREVIEW_ENTRY_NAME,
+				contents: BUFFER_PREVIEW_ENTRY_SOURCE.replaceAll(
+					"__ENTRY__",
+					importSpecifier
+				),
+			},
+			// Keep the original entry in the list so the wrapper's import resolves.
+			entry,
+			...rest,
+		],
+	};
+}
+
 function getPreviewModules(
 	main: string,
 	modulesRules: SourcelessWorkerOptions["modulesRules"]
@@ -642,11 +755,13 @@ export async function getPreviewMiniflareOptions(
 		vitePreviewServer
 	);
 	const { resolvedPluginConfig, resolvedViteConfig } = ctx;
+	const bufferPreviewResponses =
+		resolvedPluginConfig.experimental.bufferPreviewResponses ?? false;
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			resolvedPluginConfig.workers.map(async (previewWorker) => {
+			resolvedPluginConfig.workers.map(async (previewWorker, index) => {
 				const workerConfig = previewWorker.config;
 				const bindings =
 					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
@@ -713,16 +828,27 @@ export async function getPreviewMiniflareOptions(
 				// extension-glob-based discovery in `getPreviewModules`. This
 				// preserves the exact module list (with its declared types)
 				// rather than rediscovering it by walking the filesystem.
+				const modulesAndRoot =
+					previewWorker.source === "build-output" && previewWorker.bundle
+						? getModulesFromManifest(previewWorker.bundle)
+						: miniflareWorkerOptions.main
+							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
+							: { modules: true as const, script: "" };
+
 				return [
 					{
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inputInspectorPort !== false,
-						...(previewWorker.source === "build-output" && previewWorker.bundle
-							? getModulesFromManifest(previewWorker.bundle)
-							: miniflareWorkerOptions.main
-								? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
-								: { modules: true, script: "" }),
+						// When enabled, wrap the entry Worker so its response body is
+						// buffered in-worker and streaming errors surface as a real 500
+						// rather than a silently-truncated 200. Only the entry Worker
+						// (the request dispatch target, i.e. the first Worker) is wrapped;
+						// auxiliary/service-bound Workers keep their streaming behaviour.
+						...maybeBufferPreviewEntry(
+							bufferPreviewResponses && index === 0,
+							modulesAndRoot
+						),
 					},
 					...externalWorkers,
 				] satisfies Array<WorkerOptions>;

@@ -122,6 +122,14 @@ interface ResolvedExperimentalNewConfig {
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
+	/**
+	 * Experimental: in `vite preview`, fully buffer the entry Worker's response
+	 * body in-worker so that errors thrown while streaming the body (e.g. a
+	 * component that throws mid-render during prerendering) are surfaced as a
+	 * real HTTP 500 instead of a silently-truncated 200. Off by default because
+	 * buffering breaks legitimate streaming responses in a normal preview.
+	 */
+	bufferPreviewResponses?: boolean;
 	/** Experimental support for a dedicated prerender Worker */
 	prerenderWorker?: PrerenderWorkerConfig;
 	/**
@@ -208,7 +216,10 @@ export interface Worker {
 interface BaseResolvedConfig {
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
-	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport"> & {
+	experimental: Pick<
+		Experimental,
+		"headersAndRedirectsDevModeSupport" | "bufferPreviewResponses"
+	> & {
 		newConfig?: ResolvedExperimentalNewConfig;
 	};
 	remoteBindings: boolean;
@@ -419,6 +430,7 @@ export async function resolvePluginConfig(
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
+			bufferPreviewResponses: pluginConfig.experimental?.bufferPreviewResponses,
 			newConfig: resolvedNewConfig,
 		},
 	};
