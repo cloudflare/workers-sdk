@@ -9,12 +9,6 @@ import type {
 	WorkflowStepSelector,
 } from "./types";
 
-function isReadableStream(value: unknown): value is ReadableStream<unknown> {
-	return (
-		typeof ReadableStream !== "undefined" && value instanceof ReadableStream
-	);
-}
-
 function normalizeStreamMockChunk(value: unknown): Uint8Array {
 	if (value instanceof Uint8Array) {
 		return value;
@@ -89,7 +83,7 @@ export class WorkflowInstanceModificationRecorder implements WorkflowInstanceMod
 		step: WorkflowStepSelector,
 		stepResult: unknown
 	): Promise<void> {
-		if (isReadableStream(stepResult)) {
+		if (stepResult instanceof ReadableStream) {
 			const streamResult: WorkflowIntrospectionStreamResult = {
 				__workflowIntrospectionStreamResult: true,
 				chunks: await readStreamMockChunks(stepResult),
@@ -183,6 +177,26 @@ export class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 		}
 	}
 
+	private async stopIntrospectionSession(sessionId: string): Promise<void> {
+		try {
+			await this.syncInstanceIntrospectors(sessionId);
+		} finally {
+			await this.workflow.unsafeStopIntrospection(sessionId);
+		}
+	}
+
+	private async disposeInstanceIntrospectors(): Promise<void> {
+		try {
+			await Promise.all(
+				Array.from(this.#instanceIntrospectors.values(), (introspector) =>
+					introspector.dispose()
+				)
+			);
+		} finally {
+			this.#instanceIntrospectors.clear();
+		}
+	}
+
 	/** Keep this bound; explicit resource management may call the disposer unbound. */
 	dispose = async (): Promise<void> => {
 		if (this.#disposed) {
@@ -191,16 +205,13 @@ export class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 		this.#disposed = true;
 		const sessionId = this.#sessionId;
 
-		if (sessionId !== undefined) {
-			await this.syncInstanceIntrospectors(sessionId);
-			await this.workflow.unsafeStopIntrospection(sessionId);
+		try {
+			if (sessionId !== undefined) {
+				await this.stopIntrospectionSession(sessionId);
+			}
+		} finally {
+			await this.disposeInstanceIntrospectors();
 		}
-		await Promise.all(
-			Array.from(this.#instanceIntrospectors.values(), (introspector) =>
-				introspector.dispose()
-			)
-		);
-		this.#instanceIntrospectors.clear();
 	};
 
 	async [Symbol.asyncDispose](): Promise<void> {
