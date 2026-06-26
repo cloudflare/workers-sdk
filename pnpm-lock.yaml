@@ -2632,6 +2632,9 @@ importers:
 
   packages/vite-plugin-cloudflare:
     dependencies:
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
