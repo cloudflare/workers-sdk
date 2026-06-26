@@ -21,7 +21,10 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 		dockerLoginImageRegistry: vi.fn(),
 		runDockerCmd: vi.fn(),
 		runDockerCmdWithOutput: vi.fn(),
-		dockerBuild: vi.fn(() => ({ abort: () => {}, ready: Promise.resolve() })),
+		dockerBuild: vi.fn(async () => ({
+			abort: () => {},
+			ready: Promise.resolve(),
+		})),
 		dockerImageInspect: vi.fn(),
 	});
 });
@@ -559,7 +562,7 @@ describe("buildAndMaybePush", () => {
 
 	it("should throw UserError when docker build fails", async ({ expect }) => {
 		const errorMessage = "Docker build failed";
-		vi.mocked(dockerBuild).mockReturnValue({
+		vi.mocked(dockerBuild).mockResolvedValue({
 			abort: () => {},
 			ready: Promise.reject(new Error(errorMessage)),
 		});
