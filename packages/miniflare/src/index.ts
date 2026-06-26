@@ -2943,7 +2943,7 @@ export class Miniflare {
 		return this.#capnwebProxyClient;
 	}
 	#useCapnwebProxy(): boolean {
-		return this.#sharedOpts.core.unsafeCapnwebRpcProxy === true;
+		return this.#sharedOpts.core.unsafeCapnwebRpcProxy;
 	}
 	#isCapnwebProxyBinding(
 		pluginName: string,

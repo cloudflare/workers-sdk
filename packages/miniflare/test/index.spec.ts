@@ -1019,7 +1019,7 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 
 	const bindings = await mf.getBindings<{ RPC_SERVICE: any }>();
 	const rpcTarget = await bindings.RPC_SERVICE.getRpcTarget();
-	expect(rpcTarget.id).toEqual("test-id");
+	expect(await rpcTarget.id).toEqual("test-id");
 });
 
 test("Miniflare: experimental capnweb service binding supports callbacks and RpcTarget stubs", async ({
