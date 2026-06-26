@@ -29,6 +29,7 @@ interface PagesDeploymentConfig extends DeploymentConfig {
 		{
 			service: string;
 			environment?: string;
+			preview_id?: string;
 		}
 	>;
 	queue_producers: Record<
@@ -161,7 +162,7 @@ async function toEnvironment(
 		});
 	}
 
-	for (const [name, { service, environment }] of Object.entries(
+	for (const [name, { service, environment, preview_id }] of Object.entries(
 		deploymentConfig.services ?? {}
 	)) {
 		configObj.services ??= [];
@@ -169,6 +170,7 @@ async function toEnvironment(
 			binding: name,
 			service,
 			environment,
+			preview_id,
 		});
 	}
 

@@ -145,6 +145,7 @@ export type WorkerMetadataBinding =
 			name: string;
 			service: string;
 			environment?: string;
+			preview_id?: string;
 			entrypoint?: string;
 			cross_account_grant?: string;
 	  }

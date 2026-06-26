@@ -513,43 +513,49 @@ export function printBindings(
 
 	if (services.length > 0) {
 		output.push(
-			...services.map(({ binding, service, entrypoint, remote, dev }) => {
-				let value = service;
-				let mode = undefined;
+			...services.map(
+				({ binding, service, preview_id, entrypoint, remote, dev }) => {
+					let value = service;
+					let mode = undefined;
 
-				if (entrypoint) {
-					value += `#${entrypoint}`;
-				}
+					if (preview_id) {
+						value += `@${preview_id}`;
+					}
 
-				if (dev !== undefined && context.local) {
-					mode = getMode({ isSimulatedLocally: true });
-				} else if (remote) {
-					mode = getMode({ isSimulatedLocally: false });
-				} else if (context.local && context.registry !== null) {
-					const isSelfBinding = service === context.name;
+					if (entrypoint) {
+						value += `#${entrypoint}`;
+					}
 
-					if (isSelfBinding) {
-						hasConnectionStatus = true;
-						mode = getMode({ isSimulatedLocally: true, connected: true });
-					} else {
-						const registryDefinition = context.registry?.[service];
-						hasConnectionStatus = true;
+					if (dev !== undefined && context.local) {
+						mode = getMode({ isSimulatedLocally: true });
+					} else if (remote) {
+						mode = getMode({ isSimulatedLocally: false });
+					} else if (context.local && context.registry !== null) {
+						const isSelfBinding = service === context.name;
 
-						if (registryDefinition && registryDefinition.debugPortAddress) {
+						if (isSelfBinding) {
+							hasConnectionStatus = true;
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
-							mode = getMode({ isSimulatedLocally: true, connected: false });
+							const registryDefinition = context.registry?.[service];
+							hasConnectionStatus = true;
+
+							if (registryDefinition && registryDefinition.debugPortAddress) {
+								mode = getMode({ isSimulatedLocally: true, connected: true });
+							} else {
+								mode = getMode({ isSimulatedLocally: true, connected: false });
+							}
 						}
 					}
-				}
 
-				return {
-					name: binding,
-					type: getBindingTypeFriendlyName("service"),
-					value,
-					mode,
-				};
-			})
+					return {
+						name: binding,
+						type: getBindingTypeFriendlyName("service"),
+						value,
+						mode,
+					};
+				}
+			)
 		);
 	}
 

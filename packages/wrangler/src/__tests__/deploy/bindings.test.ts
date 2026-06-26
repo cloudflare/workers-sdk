@@ -1886,6 +1886,51 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should support service bindings to Worker Previews", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					services: [
+						{
+							binding: "FOO",
+							service: "foo-service",
+							preview_id: "feature-preview",
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "service",
+							name: "FOO",
+							service: "foo-service",
+							preview_id: "feature-preview",
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                                    Resource
+					env.FOO (foo-service@feature-preview)      Worker
+
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
 			it("should support service bindings with props", async ({ expect }) => {
 				writeWranglerConfig({
 					services: [

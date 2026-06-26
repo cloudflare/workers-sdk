@@ -260,6 +260,26 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should pass preview_id on service bindings", ({ expect }) => {
+			const config = configWithPreviews({
+				services: [
+					{
+						binding: "API",
+						service: "api-worker",
+						preview_id: "feature-preview",
+					},
+				],
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				API: {
+					type: "service",
+					service: "api-worker",
+					preview_id: "feature-preview",
+				},
+			});
+		});
+
 		test("should fold unsafe.bindings into the previews env", ({ expect }) => {
 			const config = configWithPreviews({
 				unsafe: {
