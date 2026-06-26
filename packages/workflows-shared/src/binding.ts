@@ -15,7 +15,10 @@ import type {
 	EngineLogs,
 } from "./engine";
 import type { InstanceStatus as EngineInstanceStatus } from "./instance";
-import type { WorkflowIntrospectionOperation } from "./types";
+import type {
+	WorkflowInstanceModifier,
+	WorkflowIntrospectionOperation,
+} from "./types";
 
 type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;
@@ -38,27 +41,7 @@ const workflowIntrospectionSessions = new Map<
 >();
 
 async function applyWorkflowIntrospectionOperation(
-	modifier: {
-		disableSleeps(steps?: { name: string; index?: number }[]): Promise<void>;
-		disableRetryDelays(
-			steps?: { name: string; index?: number }[]
-		): Promise<void>;
-		mockStepResult(
-			step: { name: string; index?: number },
-			stepResult: unknown
-		): Promise<void>;
-		mockStepError(
-			step: { name: string; index?: number },
-			error: Error,
-			times?: number
-		): Promise<void>;
-		forceStepTimeout(
-			step: { name: string; index?: number },
-			times?: number
-		): Promise<void>;
-		mockEvent(event: { type: string; payload: unknown }): Promise<void>;
-		forceEventTimeout(step: { name: string; index?: number }): Promise<void>;
-	},
+	modifier: WorkflowInstanceModifier,
 	operation: WorkflowIntrospectionOperation
 ) {
 	switch (operation.type) {
@@ -213,7 +196,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	public async unsafeStartIntrospection(): Promise<string> {
 		if (workflowIntrospectionSessions.has(this.env.WORKFLOW_NAME)) {
 			throw new Error(
-				`Workflow binding ${JSON.stringify(this.env.BINDING_NAME)} already has an active introspection session.`
+				`Workflow ${JSON.stringify(this.env.WORKFLOW_NAME)} already has an active introspection session for binding ${JSON.stringify(this.env.BINDING_NAME)}.`
 			);
 		}
 

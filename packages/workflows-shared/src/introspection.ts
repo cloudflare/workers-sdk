@@ -85,6 +85,12 @@ export class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 
 	async get(): Promise<WorkflowInstanceIntrospector[]> {
 		const sessionId = this.getSessionId();
+		await this.syncInstanceIntrospectors(sessionId);
+
+		return Array.from(this.#instanceIntrospectors.values());
+	}
+
+	private async syncInstanceIntrospectors(sessionId: string): Promise<void> {
 		const instanceIds =
 			await this.workflow.unsafeGetIntrospectionInstances(sessionId);
 
@@ -96,8 +102,6 @@ export class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 				);
 			}
 		}
-
-		return Array.from(this.#instanceIntrospectors.values());
 	}
 
 	/** Keep this bound; explicit resource management may call the disposer unbound. */
@@ -109,6 +113,7 @@ export class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 		const sessionId = this.#sessionId;
 
 		if (sessionId !== undefined) {
+			await this.syncInstanceIntrospectors(sessionId);
 			await this.workflow.unsafeStopIntrospection(sessionId);
 		}
 		await Promise.all(
@@ -139,6 +144,9 @@ export class WorkflowInstanceIntrospectorHandle implements WorkflowInstanceIntro
 				this.#instanceModifierPromise = undefined;
 				return this.#instanceModifier;
 			});
+
+		// To avoid an unhandled rejection when the handle is used without modify()
+		void this.#instanceModifierPromise.catch(() => {});
 	}
 
 	async modify(fn: ModifierCallback): Promise<WorkflowInstanceIntrospector> {
