@@ -425,7 +425,7 @@ async function getIdFromSettings(
 	);
 	if (!existingKV || !("namespace_id" in existingKV)) {
 		throw new UserError(
-			`No KV namespace ID found for binding "${binding}" in the deployed Worker settings for "${config.name}". Add an "id" to the "${binding}" entry in your config's "kv_namespaces" array, or use \`--namespace-id\` instead.`,
+			`No KV namespace ID found for binding "${binding}" in the deployed Worker settings for "${config.name}". Deploy the Worker so the binding is provisioned, or use \`--namespace-id\` instead.`,
 			{
 				telemetryMessage:
 					"kv namespace id missing from deployed worker binding",
