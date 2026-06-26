@@ -454,7 +454,8 @@ export const tailCommand = createCommand({
 
 			// `expiration` is typed as Date but arrives as an ISO string after
 			// JSON deserialization — use `new Date()` to handle both.
-			const delay = new Date(expiration).getTime() - Date.now() - EXPIRY_REFRESH_MARGIN_MS;
+			const delay =
+				new Date(expiration).getTime() - Date.now() - EXPIRY_REFRESH_MARGIN_MS;
 			// Node.js clamps setTimeout delays that exceed 2^31-1 ms to 1 ms,
 			// causing the callback to fire immediately. If the expiry is further
 			// out than that (~24 days), skip scheduling — the session is unlikely
@@ -464,10 +465,13 @@ export const tailCommand = createCommand({
 				return;
 			}
 
-			const timer = setTimeout(() => {
-				cancelExpiryRefresh = undefined;
-				void proactiveRefresh();
-			}, Math.max(0, delay));
+			const timer = setTimeout(
+				() => {
+					cancelExpiryRefresh = undefined;
+					void proactiveRefresh();
+				},
+				Math.max(0, delay)
+			);
 			cancelExpiryRefresh = () => clearTimeout(timer);
 		}
 
@@ -490,7 +494,10 @@ export const tailCommand = createCommand({
 			try {
 				await connect();
 			} catch (e) {
-				logger.debug("Tail: proactive refresh failed, falling back to reconnect:", e);
+				logger.debug(
+					"Tail: proactive refresh failed, falling back to reconnect:",
+					e
+				);
 				void scheduleReconnect();
 			}
 		}

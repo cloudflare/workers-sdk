@@ -1377,9 +1377,7 @@ describe("tail", () => {
 					// in small increments until the new connection is established.
 					for (let j = 0; j < 50; j++) {
 						await vi.advanceTimersByTimeAsync(100);
-						if (
-							std.out.includes("Successfully created tail, expires at")
-						) {
+						if (std.out.includes("Successfully created tail, expires at")) {
 							break;
 						}
 					}
