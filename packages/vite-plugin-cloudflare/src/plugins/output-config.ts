@@ -47,8 +47,41 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					this.environment.name ===
 						ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
 
+				const sourceConfigDirectory = path.dirname(
+					inputWorkerConfig.configPath ?? ctx.resolvedViteConfig.root
+				);
+				const outputDirectory = path.resolve(
+					ctx.resolvedViteConfig.root,
+					this.environment.config.build.outDir
+				);
+
 				outputConfig = {
 					...inputWorkerConfig,
+					d1_databases: inputWorkerConfig.d1_databases.map((database) => {
+						const sourceMigrationsDir = database.migrations_dir ?? "migrations";
+						const sourceMigrationsPath = path.resolve(
+							sourceConfigDirectory,
+							sourceMigrationsDir
+						);
+
+						if (!fs.existsSync(sourceMigrationsPath)) {
+							return database;
+						}
+
+						const outputMigrationsDir = vite.normalizePath(
+							path.relative(outputDirectory, sourceMigrationsPath) || "."
+						);
+
+						return {
+							...database,
+							migrations_dir: outputMigrationsDir,
+							migrations_pattern: rewriteMigrationsPattern(
+								database.migrations_pattern,
+								sourceMigrationsDir,
+								outputMigrationsDir
+							),
+						};
+					}),
 					main: entryChunk.fileName,
 					no_bundle: true,
 					rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
@@ -152,6 +185,33 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 		},
 	};
 });
+
+function rewriteMigrationsPattern(
+	migrationsPattern: string | undefined,
+	fromMigrationsDir: string,
+	toMigrationsDir: string
+): string | undefined {
+	if (migrationsPattern === undefined) {
+		return undefined;
+	}
+
+	const normalizedDir = path.posix.normalize(
+		vite.normalizePath(fromMigrationsDir)
+	);
+	const normalizedPattern = path.posix.normalize(
+		vite.normalizePath(migrationsPattern)
+	);
+	const suffix =
+		normalizedDir === "."
+			? normalizedPattern
+			: path.posix.relative(normalizedDir, normalizedPattern);
+
+	return vite.normalizePath(
+		path.posix.normalize(
+			toMigrationsDir === "." ? suffix : `${toMigrationsDir}/${suffix}`
+		)
+	);
+}
 
 function readAssetsIgnoreFile(assetsIgnorePath: string): string {
 	const content = fs.existsSync(assetsIgnorePath)
