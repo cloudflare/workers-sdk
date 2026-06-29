@@ -209,14 +209,16 @@ export const pagesDeployCommand = createCommand({
 			}
 		}
 
-		// Experiment: when run by an AI agent, redirect brand-new static Pages
-		// deploys to a Workers static-assets deploy. Falls back to Pages on failure.
+		// When run by an AI agent, redirect brand-new static Pages deploys to a
+		// Workers static-assets deploy. Existing projects, projects using
+		// unsupported Pages features, and `--force` are never redirected.
 		const redirect = await maybeRedirectPagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
 			existingProject: Boolean(projectName) && isExistingProject,
 			force: args.force,
+			projectName,
 		});
 		if (redirect.handled) {
 			return;
