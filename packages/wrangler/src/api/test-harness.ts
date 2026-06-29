@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
@@ -11,6 +12,16 @@ import {
 	WorkflowIntrospectorHandle,
 } from "@cloudflare/workflows-shared/src/introspection";
 import { Headers, Request } from "miniflare";
+import {
+	buildMigrationQuery,
+	getCreateMigrationsTableQuery,
+	getListAppliedMigrationsQuery,
+	getMigrationNames,
+	getUnappliedMigrationNames,
+	resolveMigrationsConfig,
+} from "../d1/migrations/helpers";
+import { splitSqlQuery } from "../d1/splitter";
+import { getDatabaseInfoFromConfig } from "../d1/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
@@ -23,7 +34,7 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { Workflow } from "@cloudflare/workers-types/latest";
+import type { D1Database, Workflow } from "@cloudflare/workers-types/latest";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type {
 	WorkflowBinding,
@@ -99,6 +110,17 @@ export type WorkerHandle<Env = Record<string, any>> = {
 	 * ```
 	 */
 	getEnv(): Promise<Env>;
+	/**
+	 * Applies D1 migration files that have not already run to a D1 binding on this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * beforeEach(async () => {
+	 *   await worker.applyD1Migrations("DATABASE");
+	 * });
+	 * ```
+	 */
+	applyD1Migrations(bindingName: BindingName<Env, D1Database>): Promise<void>;
 	/**
 	 * Creates an introspector for a specific Workflow instance.
 	 */
@@ -774,6 +796,106 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const result = await response.json();
 
 					return result as FetcherScheduledResult;
+				},
+				async applyD1Migrations(bindingName) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const workerConfig = session.devEnvs.find(
+						(devEnv) => devEnv.config.latestConfig?.name === workerName
+					)?.config.latestWranglerConfig;
+
+					assert(
+						workerConfig,
+						`Worker ${JSON.stringify(workerName)} config is not available.`
+					);
+					assert(
+						workerConfig.configPath,
+						`Worker ${JSON.stringify(workerName)} config path is not available.`
+					);
+
+					const database = await miniflare.getD1Database(
+						bindingName,
+						workerName
+					);
+					const migrationConfig = resolveMigrationsConfig({
+						databaseInfo: getDatabaseInfoFromConfig(workerConfig, bindingName),
+						configPath: workerConfig.configPath,
+					});
+					const resolvedMigrationsPath = path.resolve(
+						migrationConfig.projectPath,
+						migrationConfig.migrationsDir
+					);
+
+					debugLog(`d1 migrations - ${bindingName} - started`, workerName);
+
+					try {
+						if (!fs.existsSync(resolvedMigrationsPath)) {
+							throw new UserError(
+								`No migrations present at ${resolvedMigrationsPath}.`,
+								{
+									telemetryMessage:
+										"d1 migrations missing migrations directory",
+								}
+							);
+						}
+
+						await database
+							.prepare(
+								getCreateMigrationsTableQuery(
+									migrationConfig.migrationsTableName
+								)
+							)
+							.run();
+						const appliedMigrationNamesResult = await database
+							.prepare(
+								getListAppliedMigrationsQuery(
+									migrationConfig.migrationsTableName
+								)
+							)
+							.all<{ name: string }>();
+						const migrationNames = getMigrationNames(migrationConfig, {
+							logHint: true,
+						});
+						const unappliedMigrationNames = getUnappliedMigrationNames(
+							migrationNames,
+							appliedMigrationNamesResult.results.map((item) => item.name)
+						);
+						for (const migrationName of unappliedMigrationNames) {
+							const query = buildMigrationQuery({
+								migrationName,
+								migrationsPath: resolvedMigrationsPath,
+								migrationsTableName: migrationConfig.migrationsTableName,
+							});
+							await database.batch(
+								splitSqlQuery(query).map((part) => database.prepare(part))
+							);
+							debugLog(
+								`d1 migrations - ${bindingName} - applied ${migrationName}`,
+								workerName
+							);
+						}
+
+						if (migrationNames.length === 0) {
+							debugLog(
+								`d1 migrations - ${bindingName} - completed (no migrations found)`,
+								workerName
+							);
+						} else if (unappliedMigrationNames.length === 0) {
+							debugLog(
+								`d1 migrations - ${bindingName} - completed (no migrations to apply)`,
+								workerName
+							);
+						} else {
+							debugLog(
+								`d1 migrations - ${bindingName} - completed (${unappliedMigrationNames.length} applied)`,
+								workerName
+							);
+						}
+					} catch (error) {
+						debugLog(`d1 migrations - ${bindingName} - failed`, workerName);
+						throw error;
+					}
 				},
 				async getEnv() {
 					const session = await resolveSession();

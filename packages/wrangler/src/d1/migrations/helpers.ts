@@ -153,6 +153,22 @@ export function escapeIdentifier(id: string): string {
 	return `"${id.replace(/"/g, '""')}"`;
 }
 
+export function getCreateMigrationsTableQuery(migrationsTableName: string) {
+	const escapedTableName = escapeIdentifier(migrationsTableName);
+	return `CREATE TABLE IF NOT EXISTS ${escapedTableName}(
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		name       TEXT UNIQUE,
+		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);`;
+}
+
+export function getListAppliedMigrationsQuery(migrationsTableName: string) {
+	const escapedTableName = escapeIdentifier(migrationsTableName);
+	return `SELECT *
+		FROM ${escapedTableName}
+		ORDER BY id`;
+}
+
 export async function getMigrationsPath({
 	projectPath,
 	migrationsDir,
@@ -219,14 +235,23 @@ export async function getUnappliedMigrations({
 	).map((migration) => {
 		return migration.name;
 	});
-	const projectMigrations = getMigrationNames(migrationsConfig);
-	if (projectMigrations.length === 0) {
-		maybeLogHint(migrationsConfig);
-	}
 
+	const migrations = getMigrationNames(migrationsConfig, { logHint: true });
+	const unappliedMigrations = getUnappliedMigrationNames(
+		migrations,
+		appliedMigrations
+	);
+
+	return unappliedMigrations;
+}
+
+export function getUnappliedMigrationNames(
+	migrations: string[],
+	appliedMigrations: string[]
+): string[] {
 	const unappliedMigrations: Array<string> = [];
 
-	for (const migration of projectMigrations) {
+	for (const migration of migrations) {
 		if (!appliedMigrations.includes(migration)) {
 			unappliedMigrations.push(migration);
 		}
@@ -254,7 +279,6 @@ const listAppliedMigrations = async ({
 	persistTo,
 	preview,
 }: ListAppliedMigrationsProps): Promise<Migration[]> => {
-	const escapedTableName = escapeIdentifier(migrationsTableName);
 	const response: QueryResult[] | null = await executeSql({
 		local,
 		remote,
@@ -262,9 +286,7 @@ const listAppliedMigrations = async ({
 		name,
 		shouldPrompt: !isNonInteractiveOrCI(),
 		persistTo,
-		command: `SELECT *
-		FROM ${escapedTableName}
-		ORDER BY id`,
+		command: getListAppliedMigrationsQuery(migrationsTableName),
 		file: undefined,
 		json: true,
 		preview,
@@ -392,24 +414,54 @@ function leadingMigrationNumber(relativePath: string): number {
  * If no files match but `*\/migration.sql` (drizzle's layout) matches files
  * on disk, logs a hint to stderr suggesting that pattern.
  */
-export function getMigrationNames({
-	projectPath,
-	migrationsDir,
-	migrationsPattern,
-}: MigrationsConfig): Array<string> {
-	const walkRoot = path.resolve(projectPath, migrationsDir);
+export function getMigrationNames(
+	migrationsConfig: MigrationsConfig,
+	options: {
+		logHint?: boolean;
+	} = {}
+): Array<string> {
+	const walkRoot = path.resolve(
+		migrationsConfig.projectPath,
+		migrationsConfig.migrationsDir
+	);
 
 	// `listFilesRelative` returns paths relative to `walkRoot`, so the
 	// matcher must also be `migrationsDir`-relative. The MigrationsConfig
 	// invariant guarantees the pattern is under migrationsDir, so this never
 	// throws.
-	const dirRelativePattern = stripDirPrefix(migrationsPattern, migrationsDir);
+	const dirRelativePattern = stripDirPrefix(
+		migrationsConfig.migrationsPattern,
+		migrationsConfig.migrationsDir
+	);
 	const matches = listFilesRelative(
 		walkRoot,
 		new Minimatch(dirRelativePattern, { dot: false })
 	);
 
+	if (options.logHint && matches.length === 0) {
+		maybeLogHint(migrationsConfig);
+	}
+
 	return matches;
+}
+
+export function buildMigrationQuery({
+	migrationsPath,
+	migrationName,
+	migrationsTableName,
+}: {
+	migrationsPath: string;
+	migrationName: string;
+	migrationsTableName: string;
+}) {
+	const migration = fs.readFileSync(
+		path.join(migrationsPath, migrationName),
+		"utf8"
+	);
+	const escapedTableName = escapeIdentifier(migrationsTableName);
+	return `${migration}
+INSERT INTO ${escapedTableName} (name)
+values ('${migrationName.replace(/'/g, "''")}');`;
 }
 
 /**
@@ -486,7 +538,6 @@ export const initMigrationsTable = async ({
 	persistTo: string | undefined;
 	preview: boolean | undefined;
 }) => {
-	const escapedTableName = escapeIdentifier(migrationsTableName);
 	return executeSql({
 		local,
 		remote,
@@ -494,11 +545,7 @@ export const initMigrationsTable = async ({
 		name,
 		shouldPrompt: !isNonInteractiveOrCI(),
 		persistTo,
-		command: `CREATE TABLE IF NOT EXISTS ${escapedTableName}(
-		id         INTEGER PRIMARY KEY AUTOINCREMENT,
-		name       TEXT UNIQUE,
-		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-);`,
+		command: getCreateMigrationsTableQuery(migrationsTableName),
 		file: undefined,
 		json: true,
 		preview,
