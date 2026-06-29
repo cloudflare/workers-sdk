@@ -1,31 +1,52 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { Writable } from "node:stream";
+import { setTimeout as sleep } from "node:timers/promises";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { execaCommand } from "execa";
+import treeKill from "tree-kill";
 import dedent from "ts-dedent";
 import { logger } from "../logger";
 import type { Config } from "@cloudflare/workers-utils";
+import type { ExecaChildProcess } from "execa";
 
 export type WranglerCommand = "dev" | "deploy" | "versions upload" | "types";
+
+type RunCommandOptions = {
+	wranglerCommand?: WranglerCommand;
+	signal?: AbortSignal;
+};
+
+const FORCE_KILL_AFTER_MS = 5_000;
+const PROCESS_EXIT_POLL_INTERVAL_MS = 50;
 
 export async function runCommand(
 	command: string,
 	cwd: string | undefined,
 	prefix = "[custom build]",
-	wranglerCommand?: WranglerCommand
+	options?: WranglerCommand | RunCommandOptions,
+	signal?: AbortSignal
 ) {
+	const runOptions =
+		typeof options === "string"
+			? { wranglerCommand: options, signal }
+			: options;
 	logger.log(chalk.blue(prefix), "Running:", command);
+	let abortHandler: ReturnType<typeof terminateProcessOnAbort> | undefined;
 	try {
 		const res = execaCommand(command, {
 			shell: true,
 			cwd,
+			detached: runOptions?.signal ? process.platform !== "win32" : false,
 			env: {
 				...process.env,
-				...(wranglerCommand ? { WRANGLER_COMMAND: wranglerCommand } : {}),
+				...(runOptions?.wranglerCommand
+					? { WRANGLER_COMMAND: runOptions.wranglerCommand }
+					: {}),
 			},
 		});
+		abortHandler = terminateProcessOnAbort(runOptions?.signal, res);
 		res.stdout?.pipe(
 			new Writable({
 				write(chunk: Buffer, _, callback) {
@@ -49,7 +70,14 @@ export async function runCommand(
 			})
 		);
 		await res;
+		if (runOptions?.signal?.aborted) {
+			await abortHandler?.waitForExit();
+		}
 	} catch (e) {
+		if (runOptions?.signal?.aborted) {
+			await abortHandler?.waitForExit();
+			throw e;
+		}
 		logger.error(e);
 		throw new UserError(
 			`Running custom build \`${command}\` failed. There are likely more logs from your build command above.`,
@@ -58,6 +86,8 @@ export async function runCommand(
 				cause: e,
 			}
 		);
+	} finally {
+		abortHandler?.cleanup();
 	}
 }
 /**
@@ -71,15 +101,15 @@ export async function runCustomBuild(
 	expectedEntryRelative: string,
 	build: Pick<Config["build"], "command" | "cwd">,
 	configPath: string | undefined,
-	wranglerCommand?: WranglerCommand
+	options?: WranglerCommand | RunCommandOptions,
+	signal?: AbortSignal
 ) {
+	const runOptions =
+		typeof options === "string"
+			? { wranglerCommand: options, signal }
+			: options;
 	if (build.command) {
-		await runCommand(
-			build.command,
-			build.cwd,
-			"[custom build]",
-			wranglerCommand
-		);
+		await runCommand(build.command, build.cwd, "[custom build]", runOptions);
 
 		assertEntryPointExists(
 			expectedEntryAbsolute,
@@ -112,6 +142,92 @@ function assertEntryPointExists(
 			{ telemetryMessage: "missing entrypoint after custom build" }
 		);
 	}
+}
+
+function terminateProcessOnAbort(
+	signal: AbortSignal | undefined,
+	subprocess: ExecaChildProcess
+) {
+	let processExitPromise: Promise<void> | undefined;
+	const terminate = () => {
+		signal?.removeEventListener("abort", terminate);
+		if (subprocess.pid !== undefined) {
+			processExitPromise ??= terminateProcessTree(subprocess.pid);
+		}
+	};
+	if (signal?.aborted) {
+		terminate();
+	} else {
+		signal?.addEventListener("abort", terminate);
+	}
+
+	return {
+		cleanup() {
+			signal?.removeEventListener("abort", terminate);
+		},
+		waitForExit() {
+			return processExitPromise ?? Promise.resolve();
+		},
+	};
+}
+
+async function terminateProcessTree(pid: number) {
+	if (process.platform === "win32") {
+		await new Promise<void>((resolve) => {
+			treeKill(pid, (error) => {
+				if (error) {
+					logger.debug("Failed to kill custom build process tree", error);
+				}
+				resolve();
+			});
+		});
+		return;
+	}
+
+	killProcessGroup(pid, "SIGTERM");
+	if (await waitForProcessGroupToExit(pid, FORCE_KILL_AFTER_MS)) {
+		return;
+	}
+	killProcessGroup(pid, "SIGKILL");
+	await waitForProcessGroupToExit(pid, 1_000);
+}
+
+function killProcessGroup(pid: number, signal: NodeJS.Signals) {
+	try {
+		process.kill(-pid, signal);
+	} catch (error) {
+		if (!isMissingProcessError(error)) {
+			logger.debug("Failed to kill custom build process group", error);
+		}
+	}
+}
+
+async function waitForProcessGroupToExit(pid: number, timeoutMs: number) {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		if (!processGroupExists(pid)) {
+			return true;
+		}
+		await sleep(PROCESS_EXIT_POLL_INTERVAL_MS);
+	}
+	return !processGroupExists(pid);
+}
+
+function processGroupExists(pid: number) {
+	try {
+		process.kill(-pid, 0);
+		return true;
+	} catch (error) {
+		if (isMissingProcessError(error)) {
+			return false;
+		}
+		logger.debug("Failed to check custom build process group", error);
+		return false;
+	}
+}
+
+function isMissingProcessError(error: unknown): error is NodeJS.ErrnoException {
+	return error instanceof Error && "code" in error && error.code === "ESRCH";
 }
 
 /**

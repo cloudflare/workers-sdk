@@ -17,6 +17,7 @@ import { runBuild } from "../../dev/use-esbuild";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
 import { debounce } from "../../utils/debounce";
+import { isAbortError } from "../../utils/isAbortError";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import type { BundleResult } from "../../deployment-bundle/bundle";
@@ -32,6 +33,16 @@ export class BundlerController extends Controller {
 
 	// Handle aborting in-flight custom builds as new ones come in from the filesystem watcher
 	#customBuildAborter = new AbortController();
+	#activeCustomBuilds = new Set<Promise<void>>();
+
+	#startCustomBuildRun(config: StartDevWorkerOptions, filePath: string) {
+		const buildPromise = this.#runCustomBuild(config, filePath);
+		this.#activeCustomBuilds.add(buildPromise);
+		void buildPromise
+			.finally(() => this.#activeCustomBuilds.delete(buildPromise))
+			.catch(() => {});
+		return buildPromise;
+	}
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
 		// If a new custom build comes in, we need to cancel in-flight builds
@@ -53,7 +64,7 @@ export class BundlerController extends Controller {
 					command: config.build?.custom?.command,
 				},
 				config.config,
-				"dev"
+				{ wranglerCommand: "dev", signal: buildAborter.signal }
 			);
 			if (buildAborter.signal.aborted) {
 				return;
@@ -173,6 +184,9 @@ export class BundlerController extends Controller {
 				entrypointSource: readFileSync(entrypointPath, "utf8"),
 			});
 		} catch (err) {
+			if (buildAborter.signal.aborted || isAbortError(err)) {
+				return;
+			}
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Custom build failed",
@@ -198,7 +212,7 @@ export class BundlerController extends Controller {
 		assert(pathsToWatch, "config.build.custom.watch");
 
 		if (config.dev.watch === false) {
-			await this.#runCustomBuild(config, String(pathsToWatch));
+			await this.#startCustomBuildRun(config, String(pathsToWatch));
 			return;
 		}
 
@@ -208,12 +222,12 @@ export class BundlerController extends Controller {
 			ignoreInitial: true,
 		});
 		this.#customBuildWatcher.on("ready", () => {
-			void this.#runCustomBuild(config, String(pathsToWatch));
+			void this.#startCustomBuildRun(config, String(pathsToWatch));
 		});
 
 		this.#customBuildWatcher.on(
 			"all",
-			(_event, filePath) => void this.#runCustomBuild(config, filePath)
+			(_event, filePath) => void this.#startCustomBuildRun(config, filePath)
 		);
 	}
 
@@ -408,6 +422,9 @@ export class BundlerController extends Controller {
 		logger.debug("BundlerController teardown beginning...");
 		await super.teardown();
 		this.#customBuildAborter?.abort();
+		const activeCustomBuilds = Array.from(this.#activeCustomBuilds, (build) =>
+			build.catch(() => {})
+		);
 		// Abort any in-flight esbuild build so that a finishing build doesn't
 		// emit `bundleComplete`/`bundleStart` into a torn-down event bus.
 		// `Controller.#tearingDown` already suppresses error events, but not
@@ -420,6 +437,7 @@ export class BundlerController extends Controller {
 			// ...middleware-loader.entry.ts" during teardown.
 			this.#bundlerCleanup?.(),
 			this.#customBuildWatcher?.close(),
+			...activeCustomBuilds,
 			this.#assetsWatcher?.close(),
 		]);
 		// Defence-in-depth: `bundle.ts`'s `stop()` normally removes the tmp

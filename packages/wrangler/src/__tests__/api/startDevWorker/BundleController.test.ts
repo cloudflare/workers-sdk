@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import {
 	normalizeString,
@@ -256,6 +257,63 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				},
 				{ timeout: 5_000, interval: 500 }
 			);
+		});
+
+		test("teardown aborts an in-flight watched custom build", async ({
+			expect,
+		}) => {
+			await seed({
+				"build.js": dedent /* javascript */ `
+					const fs = require("node:fs");
+					fs.writeFileSync("out.ts", "export default { fetch() { return new Response('done') } };");
+					console.log("custom build started");
+					process.on("SIGTERM", () => {
+						fs.writeFileSync("aborted.txt", "yes");
+						process.exit(0);
+					});
+					setTimeout(() => {
+						fs.writeFileSync("completed.txt", "yes");
+						process.exit(0);
+					}, 10_000);
+					setInterval(() => {}, 1000);
+				`,
+				"custom_build_dir/index.ts": dedent /* javascript */ `
+					export default {
+						fetch() {
+							return new Response("initial")
+						}
+					}
+				`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: path.resolve("."),
+				build: {
+					custom: {
+						command: "node build.js",
+						watch: "custom_build_dir",
+					},
+					moduleRoot: path.resolve("."),
+				},
+			});
+
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			await vi.waitFor(() => {
+				const buildStartedEvents = bus.events.filter(
+					(event) => event.type === "bundleStart"
+				);
+				expect(buildStartedEvents).toHaveLength(1);
+			});
+
+			await controller.teardown();
+			expect(existsSync("aborted.txt")).toBe(true);
+			expect(existsSync("completed.txt")).toBe(false);
+			expect(
+				bus.events.some(
+					(event) =>
+						event.type === "error" && event.source === "BundlerController"
+				)
+			).toBe(false);
 		});
 	});
 
