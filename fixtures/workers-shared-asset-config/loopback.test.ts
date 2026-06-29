@@ -55,7 +55,7 @@ describe("[Asset Worker] loopback", () => {
 		const response = await SELF.fetch(request);
 
 		expect(response.status).toBe(200);
-		expect(outerExists).not.toBeCalled();
+		expect(outerExists).not.toHaveBeenCalled();
 		expect(innerExists).toHaveBeenCalledTimes(1);
 		expect(getAssetWithMetadataFromKV).toHaveBeenCalledTimes(1);
 		expect(getAssetWithMetadataFromKV).toHaveBeenCalledWith(

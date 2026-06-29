@@ -609,7 +609,7 @@ describe("runTelemetryCommand", () => {
 
 		runTelemetryCommand("enable");
 
-		expect(writeMetricsConfig).not.toBeCalled();
+		expect(writeMetricsConfig).not.toHaveBeenCalled();
 		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 			"Status: Enabled
 
@@ -656,7 +656,7 @@ describe("runTelemetryCommand", () => {
 
 		runTelemetryCommand("disable");
 
-		expect(writeMetricsConfig).not.toBeCalled();
+		expect(writeMetricsConfig).not.toHaveBeenCalled();
 		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 			"Status: Disabled
 

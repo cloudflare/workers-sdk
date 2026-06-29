@@ -92,7 +92,7 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 					// can't check intermediate 307 directly:
 					expect(response.redirected).toBe(requestPath !== finalPath);
 				} else {
-					expect(getAssetWithMetadataFromKV).not.toBeCalled();
+					expect(getAssetWithMetadataFromKV).not.toHaveBeenCalled();
 					expect(response.status).toBe(404);
 				}
 			}
