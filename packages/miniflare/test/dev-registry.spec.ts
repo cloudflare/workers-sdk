@@ -1,4 +1,4 @@
-import { Miniflare } from "miniflare";
+import { getWorkerRegistry, Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { useDispose, useTmp } from "./test-shared";
 import type { MiniflareOptions, WorkerRegistry } from "miniflare";
@@ -1734,6 +1734,53 @@ describe.sequential("DevRegistry", () => {
 				const latestInvocation = secondCallbackInvocations.at(-1);
 				// Registry should not contain remote-worker
 				expect(latestInvocation?.registry["remote-worker"]).toBeUndefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
+	test("prunes a stale advertisement when its source is removed on reload", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const sharedOptions = {
+			name: "consumer-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+		} satisfies Partial<MiniflareOptions>;
+
+		const mf = new Miniflare({
+			...sharedOptions,
+			// A locally-consumed queue is advertised under `queues:queue:<id>` so
+			// producers in other processes can resolve this process's broker.
+			queueConsumers: ["my-queue"],
+			script: `export default { async queue() {} }`,
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["queues:queue:my-queue"]).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Remove the consumer on reload: its advertisement must be pruned, not
+		// left lingering (kept "fresh" by its heartbeat) to misdirect producers.
+		await mf.setOptions({
+			...sharedOptions,
+			script: `export default { async fetch() { return new Response("ok"); } }`,
+		});
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["queues:queue:my-queue"]).toBeUndefined();
+				// The worker's own entry is still advertised.
+				expect(registry["consumer-worker"]).toBeDefined();
 			},
 			{ timeout: 10_000, interval: 100 }
 		);

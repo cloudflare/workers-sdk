@@ -108,7 +108,7 @@ export class DevRegistry {
 			}
 
 			if (this.registryPath) {
-				unlinkSync(path.join(this.registryPath, name));
+				unlinkSync(path.join(this.registryPath, registryFileName(name)));
 			}
 		} catch (e) {
 			this.log?.debug(`Failed to unregister worker "${name}": ${e}`);
@@ -156,14 +156,33 @@ export class DevRegistry {
 		// Make sure the registry path exists
 		mkdirSync(this.registryPath, { recursive: true });
 
+		// `register` receives the full set of workers this instance owns, so prune
+		// anything it previously advertised that is now absent (e.g. a queue
+		// consumer or a worker removed on a config reload). Without this the stale
+		// file lingers (its heartbeat keeps refreshing the mtime, so it never ages
+		// out) and other processes keep routing to a service that no longer
+		// exists, silently dropping whatever they send to it.
+		const nextNames = new Set(Object.keys(workers));
+		const staleNames = [...this.registeredWorkers].filter(
+			(name) => !nextNames.has(name)
+		);
+		for (const name of staleNames) {
+			this.unregister(name);
+			this.registeredWorkers.delete(name);
+		}
+
 		for (const [name, definition] of Object.entries(workers)) {
-			const definitionPath = path.join(this.registryPath, name);
+			const fileName = registryFileName(name);
+			const definitionPath = path.join(this.registryPath, fileName);
 			const existingHeartbeat = this.heartbeats.get(name);
 			if (existingHeartbeat) {
 				clearInterval(existingHeartbeat);
 			}
 
-			writeFileSync(definitionPath, JSON.stringify(definition, null, 2));
+			// Record the canonical key only when it can't be recovered from the
+			// (sanitized) filename, so normal worker entries are unchanged on disk.
+			const toWrite = fileName === name ? definition : { ...definition, name };
+			writeFileSync(definitionPath, JSON.stringify(toWrite, null, 2));
 			this.registeredWorkers.add(name);
 			this.heartbeats.set(
 				name,
@@ -204,6 +223,16 @@ export class DevRegistry {
 }
 
 /**
+ * Map a registry key to a filename safe across platforms. Worker names are
+ * already filename-safe, but synthetic keys may contain `:` (invalid on
+ * Windows), so we sanitize it. The canonical key is preserved in the file's
+ * `name` field for recovery in {@link getWorkerRegistry}.
+ */
+function registryFileName(name: string): string {
+	return name.replace(/:/g, "__");
+}
+
+/**
  * Read the worker registry from the specified path.
  *
  * Skips stale workers that haven't sent a heartbeat in over 5 minutes,
@@ -233,7 +262,10 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 				encoding: "utf8",
 				flag: "r",
 			});
-			registry[workerName] = JSON.parse(file);
+			const definition: WorkerDefinition = JSON.parse(file);
+			// Recover the canonical key for synthetic entries whose filename was
+			// sanitized (e.g. `queues:queue:<id>`); normal entries key by filename.
+			registry[definition.name ?? workerName] = definition;
 		} catch {
 			// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel process
 		}
