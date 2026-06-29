@@ -11,19 +11,20 @@ const server = createTestHarness({
 	workers: [
 		{
 			configPath: "./workers/app/wrangler.jsonc",
-			bindingOverrides: { AI: "mock-ai" },
+			bindingOverrides: { BROWSER: "mock-browser" },
 		},
 		{
-			config: {
-				name: "mock-ai",
-				main: "./workers/mock-ai.ts",
-				compatibility_date: "2026-06-18",
-			},
+			// A mock Worker implementing the Browser Rendering binding named "mock-browser".
+			configPath: "./workers/mock-browser/wrangler.jsonc",
 		},
 	],
 });
 
-const mockAi = await server
-	.getWorker<WebEnv, typeof import("./workers/mock-ai")>("mock-ai")
+const mockBrowser = await server
+	.getWorker<WebEnv, typeof import("./workers/mock-browser")>("mock-browser")
 	.getExport();
+await mockBrowser.setScreenshot(stubPng);
+
+const response = await server.fetch("/reports/2026-05-29.png");
+expect(await response.bytes()).toEqual(stubPng);
 ```
