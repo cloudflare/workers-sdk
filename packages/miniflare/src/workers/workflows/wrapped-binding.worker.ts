@@ -93,7 +93,8 @@ class InstanceImpl implements WorkflowInstance {
 	) {}
 
 	private async getInstance(): Promise<WorkflowInstance & Disposable> {
-		return (await this.binding.get(this.id)) as WorkflowInstance & Disposable;
+		return (await this.binding.get(this.id)) as unknown as WorkflowInstance &
+			Disposable;
 	}
 
 	public async pause(): Promise<void> {
@@ -111,7 +112,7 @@ class InstanceImpl implements WorkflowInstance {
 	): Promise<void> {
 		using instance = await this.getInstance();
 		// TODO(vaish): remove cast once @cloudflare/workers-types ships terminate options
-		await (instance as WorkflowHandle).terminate(options);
+		await (instance as unknown as WorkflowHandle).terminate(options);
 	}
 
 	public async restart(
