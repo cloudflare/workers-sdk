@@ -47,9 +47,9 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					this.environment.name ===
 						ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
 
-				const sourceConfigDirectory = path.dirname(
-					inputWorkerConfig.configPath ?? ctx.resolvedViteConfig.root
-				);
+				const sourceConfigDirectory = inputWorkerConfig.configPath
+					? path.dirname(inputWorkerConfig.configPath)
+					: ctx.resolvedViteConfig.root;
 				const outputDirectory = path.resolve(
 					ctx.resolvedViteConfig.root,
 					this.environment.config.build.outDir
