@@ -2,6 +2,6 @@
 "wrangler": patch
 ---
 
-Fix drawBox crash on empty content array
+Fix a potential crash when displaying certain CLI output
 
-Previously, `drawBox([])` would crash with `RangeError: Invalid count value: -Infinity` because `Math.max()` on an empty array returns `-Infinity`, which caused `String.prototype.repeat()` to throw.
+Previously, some CLI output with no content lines could cause a crash. This is now handled correctly.

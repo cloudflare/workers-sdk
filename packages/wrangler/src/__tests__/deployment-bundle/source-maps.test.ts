@@ -1,7 +1,7 @@
 import path from "node:path";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { describe, it, expect } from "vitest";
+import { describe, it } from "vitest";
 import {
 	loadSourceMaps,
 	tryAttachSourcemapToModule,
@@ -25,7 +25,7 @@ function makeModule(
 const validSourceMap = JSON.stringify({ version: 3, sources: [], mappings: "AAAA" });
 
 describe("loadSourceMaps", () => {
-	it("loads source maps from bundled metadata", () => {
+	it("loads source maps from bundled metadata", ({ expect }) => {
 		const dir = createTempDir();
 		mkdirSync(path.join(dir, "src"), { recursive: true });
 		writeFileSync(path.join(dir, "src/index.ts"), "const x = 1;\n");
@@ -43,7 +43,7 @@ describe("loadSourceMaps", () => {
 		expect(result[0].name).toBe("src/index.ts.map");
 	});
 
-	it("throws when bundled source map file is missing", () => {
+	it("throws when bundled source map file is missing", ({ expect }) => {
 		const dir = createTempDir();
 		const main = makeModule("index.js", path.join(dir, "index.js"), "const x = 1;\n");
 		const bundle: SourceMapBundle = {
@@ -54,7 +54,7 @@ describe("loadSourceMaps", () => {
 		expect(() => loadSourceMaps(main, [], bundle)).toThrow();
 	});
 
-	it("scans modules for sourceMappingURL when bundle has no metadata", () => {
+	it("scans modules for sourceMappingURL when bundle has no metadata", ({ expect }) => {
 		const dir = createTempDir();
 		writeFileSync(path.join(dir, "index.js.map"), validSourceMap);
 
@@ -71,7 +71,7 @@ describe("loadSourceMaps", () => {
 		expect(result[0].name).toBe("index.js.map");
 	});
 
-	it("handles multiple modules with source maps in scan mode", () => {
+	it("handles multiple modules with source maps in scan mode", ({ expect }) => {
 		const dir = createTempDir();
 		writeFileSync(path.join(dir, "a.js.map"), validSourceMap);
 		writeFileSync(path.join(dir, "b.js.map"), validSourceMap);
@@ -87,7 +87,7 @@ describe("loadSourceMaps", () => {
 });
 
 describe("tryAttachSourcemapToModule", () => {
-	it("attaches source map when module has file path and sourceMappingURL", () => {
+	it("attaches source map when module has file path and sourceMappingURL", ({ expect }) => {
 		const dir = createTempDir();
 		writeFileSync(path.join(dir, "index.js.map"), validSourceMap);
 
@@ -103,7 +103,7 @@ describe("tryAttachSourcemapToModule", () => {
 		expect(module.sourceMap?.name).toBe("index.js.map");
 	});
 
-	it("does nothing for non-js module types", () => {
+	it("does nothing for non-js module types", ({ expect }) => {
 		const module = makeModule("data.wasm", "/tmp/data.wasm", "fake wasm content", "compiled-wasm");
 
 		tryAttachSourcemapToModule(module);
@@ -111,7 +111,7 @@ describe("tryAttachSourcemapToModule", () => {
 		expect(module.sourceMap).toBeUndefined();
 	});
 
-	it("does nothing for virtual modules without filePath", () => {
+	it("does nothing for virtual modules without filePath", ({ expect }) => {
 		const module = makeModule("virtual.js", undefined, `console.log("hello");`);
 
 		tryAttachSourcemapToModule(module);
@@ -119,7 +119,7 @@ describe("tryAttachSourcemapToModule", () => {
 		expect(module.sourceMap).toBeUndefined();
 	});
 
-	it("does nothing when module has no sourceMappingURL comment", () => {
+	it("does nothing when module has no sourceMappingURL comment", ({ expect }) => {
 		const module = makeModule("index.js", "/tmp/index.js", `console.log("hello");`);
 
 		tryAttachSourcemapToModule(module);
@@ -127,7 +127,7 @@ describe("tryAttachSourcemapToModule", () => {
 		expect(module.sourceMap).toBeUndefined();
 	});
 
-	it("throws when sourceMappingURL points to missing file", () => {
+	it("throws when sourceMappingURL points to missing file", ({ expect }) => {
 		const module = makeModule(
 			"index.js",
 			"/tmp/index.js",

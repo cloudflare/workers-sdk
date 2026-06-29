@@ -1,80 +1,80 @@
-import { describe, it, expect } from "vitest";
+import { describe, it } from "vitest";
 import { quote, parse } from "../../utils/shell-quote";
 
 describe("quote", () => {
-	it("returns unquoted string for safe arguments", () => {
+	it("returns unquoted string for safe arguments", ({ expect }) => {
 		expect(quote(["hello"])).toBe("hello");
 	});
 
-	it("wraps strings with spaces in quotes", () => {
+	it("wraps strings with spaces in quotes", ({ expect }) => {
 		expect(quote(["hello world"])).toBe("'hello world'");
 	});
 
-	it("escapes special characters", () => {
+	it("escapes special characters", ({ expect }) => {
 		expect(quote(["a$b"])).toBe("a\\$b");
 	});
 
-	it("handles single quotes by wrapping in double quotes", () => {
+	it("handles single quotes by wrapping in double quotes", ({ expect }) => {
 		expect(quote(["a'b"])).toBe('"a\'b"');
 	});
 
-	it("handles empty array", () => {
+	it("handles empty array", ({ expect }) => {
 		expect(quote([])).toBe("");
 	});
 
-	it("handles multiple arguments", () => {
+	it("handles multiple arguments", ({ expect }) => {
 		expect(quote(["a", "b c"])).toBe("a 'b c'");
 	});
 });
 
 describe("parse", () => {
-	it("parses simple arguments", () => {
+	it("parses simple arguments", ({ expect }) => {
 		expect(parse("foo bar")).toEqual(["foo", "bar"]);
 	});
 
-	it("parses single-quoted strings", () => {
+	it("parses single-quoted strings", ({ expect }) => {
 		expect(parse("'hello world'")).toEqual(["hello world"]);
 	});
 
-	it("parses double-quoted strings", () => {
+	it("parses double-quoted strings", ({ expect }) => {
 		expect(parse('"hello world"')).toEqual(["hello world"]);
 	});
 
-	it("handles escaped characters", () => {
+	it("handles escaped characters", ({ expect }) => {
 		expect(parse("a\\ b")).toEqual(["a b"]);
 	});
 
-	it("handles environment variables when env is provided", () => {
+	it("handles environment variables when env is provided", ({ expect }) => {
 		expect(parse("$HOME", { HOME: "/root" })).toEqual(["/root"]);
 	});
 
-	it("returns empty string for unresolved env variable", () => {
+	it("returns empty string for unresolved env variable", ({ expect }) => {
 		expect(parse("$HOME")).toEqual([""]);
 	});
 
-	it("handles glob patterns", () => {
+	it("handles glob patterns", ({ expect }) => {
 		expect(parse("*.ts")).toEqual(["*.ts"]);
 	});
 
-	it("handles comments", () => {
+	it("handles comments", ({ expect }) => {
 		expect(parse("foo # bar")).toEqual(["foo"]);
 	});
 
-	it("throws for control operators", () => {
+	it("throws for control operators", ({ expect }) => {
 		expect(() => parse("a && b")).toThrow(
 			'Only simple commands are supported'
 		);
 	});
 
-	it("handles empty input", () => {
+	it("handles empty input", ({ expect }) => {
 		expect(parse("")).toEqual([]);
 	});
 
-	it("handles Windows-style backslash paths", () => {
+	it("handles Windows-style backslash paths", ({ expect }) => {
 		expect(parse("C:\\\\foo\\\\bar")).toEqual(["C:\\foo\\bar"]);
 	});
 
-	it("handles nested quotes", () => {
+	it("handles nested quotes", ({ expect }) => {
 		expect(parse('"foo\'bar\'"')).toEqual(["foo'bar'"]);
 	});
 });
