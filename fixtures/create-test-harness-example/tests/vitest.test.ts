@@ -1,6 +1,13 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, test } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	test,
+} from "vitest";
 import { createTestHarness } from "wrangler";
 
 // Point each worker to the Wrangler config you want to test.
@@ -23,6 +30,10 @@ describe("createTestHarness: Vitest setup", () => {
 	beforeAll(async () => {
 		network.listen({ onUnhandledRequest: "error" });
 		await server.listen();
+	});
+
+	beforeEach(async () => {
+		await apiWorker.applyD1Migrations("DATABASE");
 	});
 
 	afterAll(async () => {

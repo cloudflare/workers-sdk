@@ -51,6 +51,8 @@ const test = base.extend<TestFixtures, WorkerFixtures>({
 
 	reset: [
 		async ({ network, server }, use, testInfo) => {
+			await server.getWorker("api-worker").applyD1Migrations("DATABASE");
+
 			await use();
 
 			if (testInfo.status !== testInfo.expectedStatus) {
