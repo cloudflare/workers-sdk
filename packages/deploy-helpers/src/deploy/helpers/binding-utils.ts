@@ -108,7 +108,11 @@ export function convertConfigToBindings(
 				break;
 			}
 			case "durable_objects": {
-				for (const { name, ...x } of info.bindings ?? []) {
+				for (const {
+					name,
+					namespace: _namespace,
+					...x
+				} of info.bindings ?? []) {
 					output[name] = { type: "durable_object_namespace", ...x };
 				}
 				break;

@@ -144,6 +144,11 @@ import {
 	dispatchNamespaceNamespace,
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
+import {
+	durableObjectNamespace,
+	durableObjectNamespaceCreateCommand,
+	durableObjectNamespaceNamespace,
+} from "./durable-object-namespace";
 import { docs } from "./docs";
 import { emailRoutingAddressesCreateCommand } from "./email-routing/addresses/create";
 import { emailRoutingAddressesDeleteCommand } from "./email-routing/addresses/delete";
@@ -1911,6 +1916,22 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("dispatch-namespace");
+
+	registry.define([
+		{
+			command: "wrangler durable-object",
+			definition: durableObjectNamespace,
+		},
+		{
+			command: "wrangler durable-object namespace",
+			definition: durableObjectNamespaceNamespace,
+		},
+		{
+			command: "wrangler durable-object namespace create",
+			definition: durableObjectNamespaceCreateCommand,
+		},
+	]);
+	registry.registerNamespace("durable-object");
 
 	// ai
 	registry.define([

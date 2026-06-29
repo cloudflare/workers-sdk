@@ -1656,6 +1656,13 @@ describe("normalizeAndValidateConfig()", () => {
 									class_name: 1883,
 									environment: 2112,
 								},
+								{
+									name: "NAMESPACE_ENV",
+									class_name: "SomeClass",
+									script_name: "other-worker",
+									environment: "staging",
+									namespace: { default_region: "dog" },
+								},
 							],
 						},
 					} as unknown as RawConfig,
@@ -1699,7 +1706,11 @@ describe("normalizeAndValidateConfig()", () => {
 					    - binding should have a string "name" field.
 					    - binding should have a string "class_name" field.
 					    - the field "environment", when present, should be a string.
-					    - binding should have a "script_name" field if "environment" is present."
+					    - binding should have a "script_name" field if "environment" is present.
+
+					  - "durable_objects.bindings[7]": {"name":"NAMESPACE_ENV","class_name":"SomeClass","script_name":"other-worker","environment":"staging","namespace":{"default_region":"dog"}}
+					    - binding should not have a "namespace" field if "script_name" is present.
+					    - binding should not have a "namespace" field if "environment" is present."
 				`);
 			});
 		});

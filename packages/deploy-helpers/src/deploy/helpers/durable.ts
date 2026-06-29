@@ -1,8 +1,220 @@
 import assert from "node:assert";
-import { configFileName } from "@cloudflare/workers-utils";
-import { fetchResult, logger } from "../../shared/context";
+import { URLSearchParams } from "node:url";
+import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
+import {
+	fetchPagedListResult,
+	fetchResult,
+	logger,
+} from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerInit,
+	Config,
+	DurableObjectNamespace,
+} from "@cloudflare/workers-utils";
+
+type DurableObjectNamespaceRequest = {
+	className: string;
+	defaultRegion: "dog" | "vet";
+	namespaceName: string;
+};
+
+export class DurableObjectNamespaceMissingScriptOrClassError extends Error {
+	constructor(cause: unknown) {
+		super("Worker or Durable Object class is missing for namespace creation.", {
+			cause,
+		});
+	}
+}
+
+export async function ensureDurableObjectNamespaces(
+	scriptName: string,
+	props: {
+		accountId: string | undefined;
+		config: Config;
+		dispatchNamespace: string | undefined;
+	}
+) {
+	const requests = getDurableObjectNamespaceRequests(props.config, scriptName);
+	if (requests.length === 0) {
+		return;
+	}
+
+	assert(props.accountId, "Missing accountId");
+	if (props.dispatchNamespace) {
+		throw new UserError(
+			"Durable Object namespaces cannot be created in internal regions " +
+				"for dispatch namespace deploys.",
+			{
+				telemetryMessage:
+					"durable object namespace internal region dispatch namespace",
+			}
+		);
+	}
+
+	validateNoMigrationConflicts(props.config, requests);
+
+	const existingNamespaces = await listDurableObjectNamespaces(
+		props.config,
+		props.accountId
+	);
+	for (const request of requests) {
+		const existingNamespace = existingNamespaces.find(
+			(namespace) =>
+				namespace.script === scriptName && namespace.class === request.className
+		);
+		if (existingNamespace) {
+			const existingRegion =
+				existingNamespace.default_region ?? existingNamespace.defaultRegion;
+			if (existingRegion && existingRegion !== request.defaultRegion) {
+				throw new UserError(
+					`Durable Object namespace "${existingNamespace.name}" for class ` +
+						`"${request.className}" already exists in region ` +
+						`"${existingRegion}", but the config requests ` +
+						`"${request.defaultRegion}".`,
+					{
+						telemetryMessage:
+							"durable object namespace internal region mismatch",
+					}
+				);
+			}
+			continue;
+		}
+
+		let namespace: DurableObjectNamespace;
+		try {
+			namespace = await createDurableObjectNamespace(
+				props.config,
+				props.accountId,
+				{
+					name: request.namespaceName,
+					script: scriptName,
+					class: request.className,
+					default_region: request.defaultRegion,
+					use_sqlite: true,
+				}
+			);
+		} catch (err) {
+			if (isMissingScriptOrClassError(err)) {
+				throw new DurableObjectNamespaceMissingScriptOrClassError(err);
+			}
+			throw err;
+		}
+		const namespaceId = namespace.id ?? namespace.namespace_id;
+		const idText = namespaceId ? ` with ID "${namespaceId}"` : "";
+		logger.log(
+			`Created Durable Object namespace "${namespace.name}"${idText} ` +
+				`in region "${request.defaultRegion}"`
+		);
+	}
+}
+
+function getDurableObjectNamespaceRequests(
+	config: Config,
+	scriptName: string
+): DurableObjectNamespaceRequest[] {
+	const requests = new Map<string, DurableObjectNamespaceRequest>();
+
+	for (const binding of config.durable_objects.bindings) {
+		const namespaceConfig = binding.namespace;
+		if (namespaceConfig === undefined) {
+			continue;
+		}
+		const request = {
+			className: binding.class_name,
+			defaultRegion: namespaceConfig.default_region,
+			namespaceName:
+				namespaceConfig.name ?? `${scriptName}_${binding.class_name}`,
+		};
+		const existingRequest = requests.get(request.className);
+		if (
+			existingRequest &&
+			(existingRequest.defaultRegion !== request.defaultRegion ||
+				existingRequest.namespaceName !== request.namespaceName)
+		) {
+			throw new UserError(
+				`Class "${request.className}" has multiple Durable Object ` +
+					"namespace configurations.",
+				{
+					telemetryMessage: "durable object namespace duplicate config",
+				}
+			);
+		}
+		requests.set(request.className, request);
+	}
+
+	return Array.from(requests.values());
+}
+
+function validateNoMigrationConflicts(
+	config: Config,
+	requests: DurableObjectNamespaceRequest[]
+) {
+	const classes = new Set(requests.map((request) => request.className));
+	for (const migration of config.migrations) {
+		for (const className of [
+			...(migration.new_classes ?? []),
+			...(migration.new_sqlite_classes ?? []),
+			...(migration.renamed_classes ?? []).flatMap((rename) => [
+				rename.from,
+				rename.to,
+			]),
+			...(migration.deleted_classes ?? []),
+		]) {
+			if (classes.has(className)) {
+				throw new UserError(
+					`Class "${className}" uses ` +
+						"durable_objects.bindings.namespace.default_region, but it is " +
+						"also listed in a Durable Object migration. Remove the " +
+						"migration for this class so " +
+						"Wrangler can create the namespace in the requested region.",
+					{
+						telemetryMessage:
+							"durable object namespace internal region migration conflict",
+					}
+				);
+			}
+		}
+	}
+}
+
+async function listDurableObjectNamespaces(
+	config: Config,
+	accountId: string
+): Promise<DurableObjectNamespace[]> {
+	return await fetchPagedListResult<DurableObjectNamespace>(
+		config,
+		`/accounts/${accountId}/workers/durable_objects/namespaces`,
+		{},
+		new URLSearchParams({ per_page: "1000" })
+	);
+}
+
+async function createDurableObjectNamespace(
+	config: Config,
+	accountId: string,
+	body: {
+		name: string;
+		script: string;
+		class: string;
+		default_region: "dog" | "vet";
+		use_sqlite: true;
+	}
+): Promise<DurableObjectNamespace> {
+	return await fetchResult<DurableObjectNamespace>(
+		config,
+		`/accounts/${accountId}/workers/durable_objects/namespaces`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		}
+	);
+}
+
+function isMissingScriptOrClassError(err: unknown): boolean {
+	return err instanceof APIError && (err.code === 10007 || err.code === 10070);
+}
 
 /**
  * For a given Worker + migrations config, figure out which migrations

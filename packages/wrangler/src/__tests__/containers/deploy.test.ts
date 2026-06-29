@@ -31,6 +31,7 @@ import {
 } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
 import { runWrangler } from "../helpers/run-wrangler";
+import { toString } from "../helpers/serialize-form-data-entry";
 import type {
 	AccountRegistryToken,
 	Application,
@@ -335,6 +336,215 @@ describe("wrangler deploy with containers", () => {
 
 			"
 		`);
+	});
+
+	it("should create an internal-region Durable Object namespace before deploying", async ({
+		expect,
+	}) => {
+		mockGetVersion("Galaxy-Class", [
+			{ ...defaultDOBinding, namespace_id: "dog-namespace-id" },
+		]);
+		writeWranglerConfig({
+			durable_objects: {
+				bindings: [
+					{
+						...DEFAULT_DURABLE_OBJECTS.durable_objects.bindings[0],
+						namespace: {
+							name: "dog-namespace",
+							default_region: "dog",
+						},
+					},
+				],
+			},
+			secrets: { required: ["API_KEY"] },
+			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+		});
+		fs.writeFileSync(
+			"secrets.json",
+			JSON.stringify({ API_KEY: "secret-value" })
+		);
+
+		mockListDurableObjects([]);
+		mockCreateDurableObjectNamespaceAfterSeed(expect, {
+			name: "dog-namespace",
+			script: "test-name",
+			class: "ExampleDurableObject",
+			default_region: "dog",
+			use_sqlite: true,
+		});
+		const uploadCount = mockSeedAndFinalUploadWorkerRequest(expect);
+		mockGetApplications([]);
+		mockCreateApplication(expect, {
+			name: "my-container",
+			durable_objects: { namespace_id: "dog-namespace-id" },
+		});
+
+		await runWrangler("deploy index.js --secrets-file secrets.json");
+
+		expect(uploadCount()).toBe(2);
+		expect(std.out).toContain(
+			'Created Durable Object namespace "dog-namespace" with ID "dog-namespace-id" in region "dog"'
+		);
+		expect(std.err).toBe("");
+		expect(std.warn).toBe("");
+	});
+
+	it("should find an internal-region Durable Object namespace on later pages", async ({
+		expect,
+	}) => {
+		mockGetVersion("Galaxy-Class", [
+			{ ...defaultDOBinding, namespace_id: "dog-namespace-id" },
+		]);
+		writeWranglerConfig({
+			durable_objects: {
+				bindings: [
+					{
+						...DEFAULT_DURABLE_OBJECTS.durable_objects.bindings[0],
+						namespace: {
+							name: "dog-namespace",
+							default_region: "dog",
+						},
+					},
+				],
+			},
+			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+		});
+
+		const requestedPages: string[] = [];
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/durable_objects/namespaces",
+				({ request }) => {
+					const url = new URL(request.url);
+					const page = url.searchParams.get("page");
+					requestedPages.push(page ?? "");
+
+					if (page === "1") {
+						return HttpResponse.json(
+							createFetchResult(
+								[
+									{
+										id: "other-namespace-id",
+										name: "other-namespace",
+										script: "other-worker",
+										class: "ExampleDurableObject",
+									},
+								],
+								true,
+								[],
+								[],
+								{
+									page: 1,
+									per_page: 1000,
+									count: 1000,
+									total_count: 1001,
+								}
+							)
+						);
+					}
+
+					return HttpResponse.json(
+						createFetchResult(
+							[
+								{
+									id: "dog-namespace-id",
+									name: "dog-namespace",
+									script: "test-name",
+									class: "ExampleDurableObject",
+									default_region: "dog",
+								},
+							],
+							true,
+							[],
+							[],
+							{
+								page: 2,
+								per_page: 1000,
+								count: 1,
+								total_count: 1001,
+							}
+						)
+					);
+				}
+			)
+		);
+		mockGetApplications([]);
+		mockCreateApplication(expect, {
+			name: "my-container",
+			durable_objects: { namespace_id: "dog-namespace-id" },
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(requestedPages).toEqual(["1", "2"]);
+		expect(std.out).not.toContain("Created Durable Object namespace");
+		expect(std.err).toBe("");
+		expect(std.warn).toBe("");
+	});
+
+	it("should error when internal-region namespace creation conflicts with migrations", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			durable_objects: {
+				bindings: [
+					{
+						...DEFAULT_DURABLE_OBJECTS.durable_objects.bindings[0],
+						namespace: { default_region: "dog" },
+					},
+				],
+			},
+			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+		});
+
+		await expect(runWrangler("deploy index.js")).rejects.toThrow(
+			'Class "ExampleDurableObject" uses ' +
+				"durable_objects.bindings.namespace.default_region, but it is " +
+				"also listed in a Durable Object migration. Remove the " +
+				"migration for this class so " +
+				"Wrangler can create the namespace in the requested region."
+		);
+	});
+
+	it("should error when internal-region namespace creation conflicts with renamed migrations", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			durable_objects: {
+				bindings: [
+					{
+						...DEFAULT_DURABLE_OBJECTS.durable_objects.bindings[0],
+						namespace: { default_region: "dog" },
+					},
+				],
+			},
+			migrations: [
+				{
+					tag: "v1",
+					new_sqlite_classes: ["OldDurableObject"],
+				},
+				{
+					tag: "v2",
+					renamed_classes: [
+						{
+							from: "OldDurableObject",
+							to: "ExampleDurableObject",
+						},
+					],
+				},
+			],
+			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+		});
+
+		await expect(runWrangler("deploy index.js")).rejects.toThrow(
+			'Class "ExampleDurableObject" uses ' +
+				"durable_objects.bindings.namespace.default_region, but it is " +
+				"also listed in a Durable Object migration. Remove the " +
+				"migration for this class so " +
+				"Wrangler can create the namespace in the requested region."
+		);
 	});
 
 	it("should be able to deploy a new container with custom instance limits", async ({
@@ -3244,6 +3454,100 @@ function mockListDurableObjects(
 			}
 		)
 	);
+}
+
+function mockCreateDurableObjectNamespaceAfterSeed(
+	expect: ExpectStatic,
+	expectedBody: Record<string, unknown>
+) {
+	let requestCount = 0;
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/workers/durable_objects/namespaces",
+			async ({ request }) => {
+				requestCount++;
+				if (requestCount === 1) {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: 10007,
+								message: "This Worker does not exist on your account.",
+							},
+						]),
+						{ status: 404 }
+					);
+				}
+				expect(await request.json()).toEqual(expectedBody);
+				return HttpResponse.json(
+					createFetchResult({
+						id: "dog-namespace-id",
+						name: "dog-namespace",
+						script: "test-name",
+						class: "ExampleDurableObject",
+					})
+				);
+			}
+		)
+	);
+}
+
+function mockSeedAndFinalUploadWorkerRequest(expect: ExpectStatic) {
+	let uploadCount = 0;
+	msw.use(
+		http.put(
+			"*/accounts/:accountId/workers/scripts/:scriptName",
+			async ({ request }) => {
+				uploadCount++;
+				const metadata = JSON.parse(
+					await toString((await request.formData()).get("metadata"))
+				);
+				if (uploadCount === 1) {
+					expect(metadata.bindings).toHaveLength(1);
+					expect(metadata.bindings).toEqual(
+						expect.arrayContaining([
+							{
+								name: "API_KEY",
+								type: "secret_text",
+								text: "secret-value",
+							},
+						])
+					);
+					expect(metadata.containers).toBeUndefined();
+				} else {
+					expect(metadata.bindings).toHaveLength(2);
+					expect(metadata.bindings).toEqual(
+						expect.arrayContaining([
+							{
+								class_name: "ExampleDurableObject",
+								name: "EXAMPLE_DO_BINDING",
+								type: "durable_object_namespace",
+							},
+							{
+								name: "API_KEY",
+								type: "secret_text",
+								text: "secret-value",
+							},
+						])
+					);
+					expect(metadata.containers).toEqual([
+						{ class_name: "ExampleDurableObject" },
+					]);
+				}
+				return HttpResponse.json(
+					createFetchResult({
+						id: "abc12345",
+						etag: "etag98765",
+						pipeline_hash: "hash9999",
+						mutable_pipeline_id: "mutableId",
+						tag: "sample-tag",
+						deployment_id: "Galaxy-Class",
+						startup_time_ms: 100,
+					})
+				);
+			}
+		)
+	);
+	return () => uploadCount;
 }
 
 function mockDockerInfo(expect: ExpectStatic) {

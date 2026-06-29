@@ -25,7 +25,11 @@ import { printBundleSize } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
-import { getMigrationsToUpload } from "./helpers/durable";
+import {
+	DurableObjectNamespaceMissingScriptOrClassError,
+	ensureDurableObjectNamespaces,
+	getMigrationsToUpload,
+} from "./helpers/durable";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
@@ -70,6 +74,7 @@ import type {
 	CfWorkerInit,
 	ComplianceConfig,
 	Config,
+	Binding,
 	LegacyAssetPaths,
 } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
@@ -202,6 +207,58 @@ export default async function deploy(
 		content,
 		sourceMaps,
 	} = buildResult;
+
+	const placement = parseConfigPlacement(config);
+	const entryPointName = path.basename(resolvedEntryPointPath);
+	const main: CfModule = {
+		name: entryPointName,
+		filePath: resolvedEntryPointPath,
+		content: content,
+		type: bundleType,
+	};
+
+	if (!isDryRun) {
+		try {
+			await ensureDurableObjectNamespaces(scriptName, {
+				accountId,
+				config,
+				dispatchNamespace: props.dispatchNamespace,
+			});
+		} catch (err) {
+			if (!(err instanceof DurableObjectNamespaceMissingScriptOrClassError)) {
+				throw err;
+			}
+			await uploadSeedWorkerForDurableObjectNamespaces({
+				accountId,
+				compatibilityDate,
+				compatibilityFlags,
+				config,
+				main,
+				modules,
+				placement,
+				props,
+				scriptName,
+				sourceMaps,
+				workerExists,
+				workerUrl,
+			});
+			try {
+				await ensureDurableObjectNamespaces(scriptName, {
+					accountId,
+					config,
+					dispatchNamespace: props.dispatchNamespace,
+				});
+			} catch (retryErr) {
+				if (
+					retryErr instanceof DurableObjectNamespaceMissingScriptOrClassError
+				) {
+					throw retryErr.cause ?? retryErr;
+				}
+				throw retryErr;
+			}
+		}
+	}
+
 	// durable object migrations
 	const migrations = !isDryRun
 		? await getMigrationsToUpload(scriptName, {
@@ -257,19 +314,7 @@ export default async function deploy(
 		};
 	}
 
-	if (props.secretsFile) {
-		const secretsResult = await parseBulkInputToObject(props.secretsFile);
-		if (secretsResult) {
-			for (const [secretName, secretValue] of Object.entries(
-				secretsResult.content
-			)) {
-				bindings[secretName] = {
-					type: "secret_text",
-					value: secretValue,
-				};
-			}
-		}
-	}
+	await addSecretsFileBindings(props.secretsFile, bindings);
 
 	addRequiredSecretsInheritBindings(config, bindings, {
 		type: "deploy",
@@ -285,15 +330,6 @@ export default async function deploy(
 		});
 	}
 
-	const placement = parseConfigPlacement(config);
-
-	const entryPointName = path.basename(resolvedEntryPointPath);
-	const main: CfModule = {
-		name: entryPointName,
-		filePath: resolvedEntryPointPath,
-		content: content,
-		type: bundleType,
-	};
 	const worker: CfWorkerInit = {
 		name: scriptName,
 		main,
@@ -741,4 +777,117 @@ export default async function deploy(
 		workerTag,
 		targets: targets ?? [],
 	};
+}
+
+async function uploadSeedWorkerForDurableObjectNamespaces(args: {
+	accountId: string | undefined;
+	compatibilityDate: string | undefined;
+	compatibilityFlags: string[] | undefined;
+	config: Config;
+	main: CfModule;
+	modules: CfWorkerInit["modules"];
+	placement: CfWorkerInit["placement"];
+	props: DeployProps;
+	scriptName: string;
+	sourceMaps: CfWorkerInit["sourceMaps"];
+	workerExists: boolean;
+	workerUrl: string;
+}) {
+	assert(args.accountId, "Missing accountId");
+
+	logger.log(
+		"Uploading Worker before creating Durable Object namespaces in internal regions"
+	);
+
+	const seedBindings = getBindings(args.config);
+	for (const binding of args.config.durable_objects.bindings) {
+		if (binding.namespace !== undefined) {
+			delete seedBindings[binding.name];
+		}
+	}
+	for (const [bindingName, value] of Object.entries(args.props.cliVars)) {
+		seedBindings[bindingName] = {
+			type: "plain_text",
+			value,
+			hidden: true,
+		};
+	}
+	await addSecretsFileBindings(args.props.secretsFile, seedBindings);
+	addRequiredSecretsInheritBindings(args.config, seedBindings, {
+		type: "deploy",
+		workerExists: args.workerExists,
+	});
+
+	const seedWorker: CfWorkerInit = {
+		name: args.scriptName,
+		main: args.main,
+		migrations: undefined,
+		modules: args.modules,
+		containers: undefined,
+		sourceMaps: args.sourceMaps,
+		compatibility_date: args.compatibilityDate,
+		compatibility_flags: args.compatibilityFlags,
+		keepVars: args.props.keepVars,
+		keepSecrets: true,
+		logpush: args.props.logpush,
+		placement: args.placement,
+		tail_consumers: args.config.tail_consumers,
+		streaming_tail_consumers: args.config.streaming_tail_consumers,
+		limits: args.config.limits,
+		annotations:
+			args.props.tag || args.props.message
+				? {
+						"workers/message": args.props.message,
+						"workers/tag": args.props.tag,
+					}
+				: undefined,
+		assets: undefined,
+		observability: args.config.observability,
+		cache: args.config.cache,
+	};
+
+	const seedWorkerBundle = createWorkerUploadForm(seedWorker, seedBindings, {
+		unsafe: args.config.unsafe,
+	});
+
+	await retryOnAPIFailure(
+		async () =>
+			fetchResult(
+				args.config,
+				args.workerUrl,
+				{
+					method: "PUT",
+					body: seedWorkerBundle,
+					headers: args.props.sendMetrics
+						? { metricsEnabled: "true" }
+						: undefined,
+				},
+				new URLSearchParams({
+					excludeScript: "true",
+					bindings_inherit: "strict",
+				})
+			),
+		logger
+	);
+}
+
+async function addSecretsFileBindings(
+	secretsFile: string | undefined,
+	bindings: Record<string, Binding>
+) {
+	if (secretsFile === undefined) {
+		return;
+	}
+	const secretsResult = await parseBulkInputToObject(secretsFile);
+	if (secretsResult === undefined) {
+		return;
+	}
+	for (const [secretName, secretValue] of Object.entries(
+		secretsResult.content
+	)) {
+		bindings[secretName] = {
+			type: "secret_text",
+			value: secretValue,
+		};
+	}
 }

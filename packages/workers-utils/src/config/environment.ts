@@ -714,6 +714,14 @@ export type DurableObjectBindings = {
 	name: string;
 	/** The exported class name of the Durable Object */
 	class_name: string;
+	/**
+	 * Creates the Durable Object namespace in a Cloudflare-internal region before deploy.
+	 * @hidden
+	 */
+	namespace?: {
+		name?: string;
+		default_region: "dog" | "vet";
+	};
 	/** The script where the Durable Object is defined (if it's external to this Worker) */
 	script_name?: string;
 	/** The service environment of the script_name to bind to */

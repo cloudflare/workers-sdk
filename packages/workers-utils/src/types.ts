@@ -301,6 +301,16 @@ type WorkerMetadataVersionsPost = WorkerMetadataPut & {
 
 export type WorkerMetadata = WorkerMetadataPut | WorkerMetadataVersionsPost;
 
+export type DurableObjectNamespace = {
+	id?: string;
+	namespace_id?: string;
+	class: string;
+	name: string;
+	script: string;
+	default_region?: string;
+	defaultRegion?: string;
+};
+
 export type ServiceMetadataRes = {
 	id: string;
 	default_environment: {

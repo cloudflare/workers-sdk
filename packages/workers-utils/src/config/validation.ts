@@ -2672,6 +2672,65 @@ const validateDurableObjectBinding: ValidatorFn = (
 		isValid = false;
 	}
 
+	if ("namespace" in value) {
+		const namespaceConfig = value.namespace;
+		if (
+			namespaceConfig === undefined ||
+			namespaceConfig === null ||
+			typeof namespaceConfig !== "object" ||
+			Array.isArray(namespaceConfig)
+		) {
+			diagnostics.errors.push(
+				'"durable_objects.bindings.namespace" should be an object but got ' +
+					`${JSON.stringify(namespaceConfig)}.`
+			);
+			isValid = false;
+		} else {
+			const namespaceConfigObject = namespaceConfig as Record<string, unknown>;
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.namespace`,
+				Object.keys(namespaceConfigObject),
+				["name", "default_region"]
+			);
+			if (!isOptionalProperty(namespaceConfigObject, "name", "string")) {
+				diagnostics.errors.push(
+					`the field "namespace.name", when present, should be a string.`
+				);
+				isValid = false;
+			}
+			if (typeof namespaceConfigObject.default_region === "string") {
+				namespaceConfigObject.default_region =
+					namespaceConfigObject.default_region.toLowerCase();
+			}
+			if (
+				!isRequiredProperty(namespaceConfigObject, "default_region", "string", [
+					"dog",
+					"vet",
+				])
+			) {
+				diagnostics.errors.push(
+					'binding namespace should have a "default_region" field of ' +
+						'"dog" or "vet".'
+				);
+				isValid = false;
+			}
+		}
+	}
+
+	if ("namespace" in value && "script_name" in value) {
+		diagnostics.errors.push(
+			`binding should not have a "namespace" field if "script_name" is present.`
+		);
+		isValid = false;
+	}
+	if ("namespace" in value && "environment" in value) {
+		diagnostics.errors.push(
+			`binding should not have a "namespace" field if "environment" is present.`
+		);
+		isValid = false;
+	}
+
 	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}
@@ -2680,6 +2739,7 @@ const validateDurableObjectBinding: ValidatorFn = (
 		"class_name",
 		"environment",
 		"name",
+		"namespace",
 		"script_name",
 	]);
 
@@ -6063,7 +6123,7 @@ function warnIfDurableObjectsHaveNoMigrations(
 	) {
 		// intrinsic [durable_objects] implies [migrations]
 		const exportedDurableObjects = (durableObjects.bindings || []).filter(
-			(binding) => !binding.script_name
+			(binding) => !binding.script_name && binding.namespace === undefined
 		);
 		if (exportedDurableObjects.length > 0 && migrations.length === 0) {
 			if (
