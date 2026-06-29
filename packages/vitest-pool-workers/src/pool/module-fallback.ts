@@ -300,6 +300,8 @@ async function viteResolve(
 	return trimViteVersionHash(resolved.id);
 }
 
+const wasmModuleSuffix = ".wasm?module";
+
 type ResolveMethod = "import" | "require";
 async function resolve(
 	vite: Vite.ViteDevServer,
@@ -311,6 +313,12 @@ async function resolve(
 	const referrerDir = posixPath.dirname(referrer);
 
 	const isRequire = method === "require";
+	// The ?module suffix must be stripped to resolve to the actual wasm file.
+	// Only CommonJS `require()` needs to handle these imports dynamically.
+	if (isRequire && target.endsWith(wasmModuleSuffix)) {
+		target = trimSuffix("?module", target);
+	}
+
 	let filePath = maybeGetTargetFilePath(target, isRequire);
 	if (filePath !== undefined) {
 		return filePath;
@@ -416,6 +424,20 @@ async function load(
 	specifier: string,
 	filePath: string
 ): Promise<Response> {
+	// Expose wasm?module imports with a thin CommonJS wrapper that exports
+	// the wasm file as the default export. This matches the expected structure
+	// of wasm?module imports. Only CommonJS `require()` needs to handle these
+	// imports dynamically.
+	if (
+		method === "require" &&
+		target.endsWith(wasmModuleSuffix) &&
+		filePath.endsWith(".wasm")
+	) {
+		const wrapper = `module.exports = { default: require(${JSON.stringify(filePath)}) };`;
+		debuglog(logBase, "wasm-module-wrapper:", filePath);
+		return buildModuleResponse(target, { commonJsModule: wrapper });
+	}
+
 	if (target !== filePath) {
 		// We might `import` and `require` the same CommonJS package. In this case,
 		// we want to respond with an ES module shim for the `import`, and the
