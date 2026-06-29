@@ -306,7 +306,14 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			});
 
 			await controller.teardown();
-			expect(existsSync("aborted.txt")).toBe(true);
+			// On POSIX the build process is sent SIGTERM and can run its handler to
+			// shut down gracefully. Windows has no graceful signal for console
+			// processes, so `tree-kill` force-terminates the tree (`taskkill /F`) and
+			// the SIGTERM handler never runs. Either way the build must be aborted
+			// before it completes, which is what `completed.txt` verifies below.
+			if (process.platform !== "win32") {
+				expect(existsSync("aborted.txt")).toBe(true);
+			}
 			expect(existsSync("completed.txt")).toBe(false);
 			expect(
 				bus.events.some(
