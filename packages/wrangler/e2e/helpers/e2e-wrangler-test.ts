@@ -21,10 +21,20 @@ import {
 	WranglerLongLivedCommand,
 } from "./wrangler";
 import type { WranglerCommandOptions } from "./wrangler";
+import type Cloudflare from "cloudflare";
 import type { Response as CloudflareResponse } from "cloudflare/core";
 import type { Awaitable } from "miniflare";
 
+type CloudflareClient = InstanceType<typeof Cloudflare>;
+type TunnelCreateOptions = Parameters<
+	CloudflareClient["zeroTrust"]["tunnels"]["cloudflared"]["create"]
+>[1];
 type TunnelCreateResponse = CloudflareResponse;
+type TunnelDiagnosticResponse = {
+	status: number;
+	statusText: string;
+	headers: { get(name: string): string | null };
+};
 type ErrorDiagnostics =
 	| {
 			value: string;
@@ -486,6 +496,19 @@ export class WranglerE2ETestHelper {
 			apiToken,
 		});
 		await this.createTunnelWithWranglerForDiagnostics(name);
+		await this.createTunnelWithUndiciForDiagnostics(
+			name,
+			accountId,
+			apiToken,
+			client
+		);
+		await this.createTunnelWithSdkForDiagnostics(
+			name,
+			accountId,
+			client,
+			"sdk-default-identity",
+			{ headers: { "Accept-Encoding": "identity" } }
+		);
 
 		const createTunnel = client.zeroTrust.tunnels.cloudflared.create({
 			account_id: accountId,
@@ -497,17 +520,17 @@ export class WranglerE2ETestHelper {
 		try {
 			resp = await createTunnel.asResponse();
 		} catch (error) {
-			logTunnelCreateDiagnostics(name, error);
+			logTunnelCreateDiagnostics(name, "sdk-default-main", error);
 			throw error;
 		}
 
-		logTunnelCreateDiagnostics(name, undefined, resp);
+		logTunnelCreateDiagnostics(name, "sdk-default-main", undefined, resp);
 
 		let tunnel: unknown;
 		try {
 			tunnel = await resp.json();
 		} catch (error) {
-			logTunnelCreateDiagnostics(name, error, resp);
+			logTunnelCreateDiagnostics(name, "sdk-default-main", error, resp);
 			throw error;
 		}
 
@@ -573,6 +596,107 @@ export class WranglerE2ETestHelper {
 			);
 		}
 	}
+
+	private async createTunnelWithUndiciForDiagnostics(
+		baseName: string,
+		accountId: string,
+		apiToken: string,
+		client: CloudflareClient
+	) {
+		const name = `${baseName}-undici`;
+		let tunnelId: string | undefined;
+		try {
+			const resp = await fetch(
+				`https://api.cloudflare.com/client/v4/accounts/${accountId}/cfd_tunnel`,
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${apiToken}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						name,
+						config_src: "cloudflare",
+					}),
+				}
+			);
+			logTunnelCreateDiagnostics(name, "undici", undefined, resp);
+			const tunnel = await resp.json();
+			tunnelId = getTunnelId(tunnel);
+			if (!resp.ok || !tunnelId) {
+				throw new Error(
+					`Failed to create tunnel ${name}: ${JSON.stringify(tunnel)}`
+				);
+			}
+		} catch (error) {
+			logTunnelCreateDiagnostics(name, "undici", error);
+		} finally {
+			if (tunnelId) {
+				await this.deleteTunnelForDiagnostics(client, accountId, tunnelId);
+			}
+		}
+	}
+
+	private async createTunnelWithSdkForDiagnostics(
+		baseName: string,
+		accountId: string,
+		client: CloudflareClient,
+		variant: string,
+		options?: TunnelCreateOptions
+	) {
+		const name = `${baseName}-${variant}`;
+		let tunnelId: string | undefined;
+		try {
+			const createTunnel = client.zeroTrust.tunnels.cloudflared.create(
+				{
+					account_id: accountId,
+					name,
+					config_src: "cloudflare",
+				},
+				options
+			);
+			const resp = await createTunnel.asResponse();
+			logTunnelCreateDiagnostics(name, variant, undefined, resp);
+			const tunnel = await resp.json();
+			tunnelId = getTunnelId(tunnel);
+			if (!resp.ok || !tunnelId) {
+				throw new Error(
+					`Failed to create tunnel ${name}: ${JSON.stringify(tunnel)}`
+				);
+			}
+		} catch (error) {
+			logTunnelCreateDiagnostics(name, variant, error);
+		} finally {
+			if (tunnelId) {
+				await this.deleteTunnelForDiagnostics(client, accountId, tunnelId);
+			}
+		}
+	}
+
+	private async deleteTunnelForDiagnostics(
+		client: CloudflareClient,
+		accountId: string,
+		tunnelId: string
+	) {
+		try {
+			await client.zeroTrust.tunnels.cloudflared.delete(tunnelId, {
+				account_id: accountId,
+			});
+		} catch (error) {
+			console.warn(
+				"Tunnel delete diagnostics:",
+				JSON.stringify({
+					tunnelId,
+					timestamp: new Date().toISOString(),
+					ciOs: process.env.CI_OS,
+					e2eShard: process.env.E2E_SHARD,
+					e2eShardCount: process.env.E2E_SHARD_COUNT,
+					node: process.version,
+					error: getErrorDiagnostics(error),
+				})
+			);
+		}
+	}
 }
 
 function getTunnelId(tunnel: unknown): string | undefined {
@@ -590,13 +714,15 @@ function getTunnelId(tunnel: unknown): string | undefined {
 
 function logTunnelCreateDiagnostics(
 	name: string,
+	variant: string,
 	error?: unknown,
-	response?: TunnelCreateResponse
+	response?: TunnelDiagnosticResponse
 ) {
 	console.warn(
 		"Tunnel create diagnostics:",
 		JSON.stringify({
 			name,
+			variant,
 			timestamp: new Date().toISOString(),
 			ciOs: process.env.CI_OS,
 			e2eShard: process.env.E2E_SHARD,
