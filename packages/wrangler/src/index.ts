@@ -433,6 +433,7 @@ import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
 import {
+	authKeyringCommand,
 	authNamespace,
 	authTokenCommand,
 	loginCommand,
@@ -2330,6 +2331,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler auth token",
 			definition: authTokenCommand,
+		},
+		{
+			command: "wrangler auth keyring",
+			definition: authKeyringCommand,
 		},
 		{
 			command: "wrangler auth create",

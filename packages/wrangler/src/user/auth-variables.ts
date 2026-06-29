@@ -36,6 +36,12 @@ export const getWranglerR2SqlAuthToken = getEnvironmentVariableFactory({
 // `@cloudflare/workers-auth` alongside the shared env→credential resolver, so
 // every Cloudflare CLI shares one implementation. Re-exported here so existing
 // `from "./auth-variables"` import paths keep working.
+//
+// OAuth-flow-related env-var getters (`WRANGLER_CLIENT_ID`, `WRANGLER_AUTH_DOMAIN`,
+// `WRANGLER_AUTH_URL`, `WRANGLER_TOKEN_URL`, `WRANGLER_REVOKE_URL`,
+// `WRANGLER_CF_AUTHORIZATION_TOKEN`, `CLOUDFLARE_ACCESS_CLIENT_ID`,
+// `CLOUDFLARE_ACCESS_CLIENT_SECRET`, `CLOUDFLARE_AUTH_USE_KEYRING`) also
+// live in `@cloudflare/workers-auth` alongside the OAuth flow itself.
 export {
 	getCloudflareAPITokenFromEnv,
 	getCloudflareGlobalAuthEmailFromEnv,

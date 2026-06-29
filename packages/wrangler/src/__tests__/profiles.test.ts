@@ -1,13 +1,23 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { validateProfileName } from "@cloudflare/workers-auth";
+import {
+	getEncryptedAuthConfigFilePath,
+	resetCredentialStorageState,
+	setKeyProviderFactoryForTesting,
+	validateProfileName,
+} from "@cloudflare/workers-auth";
 import {
 	normalizeString,
 	runInTempDir,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, it } from "vitest";
-import { getAuthConfigFilePath, writeAuthConfigFile } from "../user";
+import { afterEach, beforeEach, describe, it } from "vitest";
+import {
+	getAuthConfigFilePath,
+	WRANGLER_KEYRING_SERVICE_NAME,
+	writeAuthConfigFile,
+} from "../user";
+import { updateUserPreferences } from "../user/preferences";
 import { createWranglerProfileStore } from "../user/profile-store";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
@@ -657,6 +667,140 @@ describe("Profiles", () => {
 			await runWrangler(`whoami --cwd ${pathArg(childDir)}`).catch(() => {});
 
 			expect(std.out).toContain("Active profile: inherited-profile");
+		});
+	});
+
+	describe("keyring-encrypted named profiles", () => {
+		// In-memory keyring shared across resolver calls within a test, keyed
+		// by service + profile so each profile gets its own encryption key —
+		// mirroring the real per-profile keyring account name. The factory
+		// receives the profile because `resolveKeyProvider`/the resolver are
+		// profile-aware.
+		let keyringStore: Map<string, Uint8Array>;
+
+		function keyringKey(profile: string): string {
+			return `${WRANGLER_KEYRING_SERVICE_NAME}::${profile}`;
+		}
+
+		beforeEach(() => {
+			keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName, profile) => {
+				const account = `${serviceName}::${profile ?? "default"}`;
+				return {
+					getKey: () => keyringStore.get(account),
+					setKey: (key) => {
+						keyringStore.set(account, key);
+					},
+					deleteKey: () => {
+						keyringStore.delete(account);
+					},
+					describe: () => `in-memory test keyring (${account})`,
+				};
+			});
+			// Opt into keyring storage globally; named profiles inherit it.
+			updateUserPreferences({ keyring_enabled: true });
+		});
+
+		afterEach(() => {
+			setKeyProviderFactoryForTesting(undefined);
+			resetCredentialStorageState();
+		});
+
+		it("`auth create` stores a named profile encrypted, not as plaintext", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+
+			await runWrangler("auth create client-a");
+
+			// Encrypted file present; plaintext TOML absent; keyring holds the
+			// per-profile key.
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-a"))).toBe(true);
+			expect(existsSync(getAuthConfigFilePath("client-a"))).toBe(false);
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(true);
+			// The on-disk ciphertext must not contain the cleartext token.
+			expect(
+				readFileSync(getEncryptedAuthConfigFilePath("client-a"), "utf8")
+			).not.toContain("test-access-token");
+		});
+
+		it("an encrypted named profile is visible to `exists()` and `auth list`", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+
+			expect(profiles().configs.exists("client-a")).toBe(true);
+			expect(profiles().configs.list()).toContain("client-a");
+		});
+
+		it("`auth activate` works for an encrypted named profile", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+
+			// Regression: `activate` previously only checked for a plaintext
+			// `.toml`, so an encrypted profile failed with "does not exist".
+			await runWrangler("auth activate client-a");
+
+			expect(std.out).toContain('Profile "client-a" activated');
+		});
+
+		it("`auth delete` removes the encrypted file and the profile's keyring entry", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(true);
+
+			await runWrangler("auth delete client-a");
+
+			expect(profiles().configs.exists("client-a")).toBe(false);
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-a"))).toBe(
+				false
+			);
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(false);
+		});
+
+		it("deleting one encrypted profile leaves another profile's keyring entry intact", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-b");
+
+			await runWrangler("auth delete client-a");
+
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(false);
+			expect(keyringStore.has(keyringKey("client-b"))).toBe(true);
+			expect(profiles().configs.exists("client-b")).toBe(true);
+		});
+
+		it("`auth keyring disable` scrubs encrypted named profiles globally", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-b");
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-a"))).toBe(true);
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-b"))).toBe(true);
+
+			await runWrangler("auth keyring disable");
+
+			// Disabling keyring storage is global: every named profile's
+			// encrypted file and keyring entry must be scrubbed so nothing is
+			// orphaned.
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-a"))).toBe(
+				false
+			);
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-b"))).toBe(
+				false
+			);
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(false);
+			expect(keyringStore.has(keyringKey("client-b"))).toBe(false);
 		});
 	});
 });
