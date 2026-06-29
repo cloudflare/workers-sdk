@@ -809,6 +809,10 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						workerConfig,
 						`Worker ${JSON.stringify(workerName)} config is not available.`
 					);
+					assert(
+						workerConfig.configPath,
+						`Worker ${JSON.stringify(workerName)} config path is not available.`
+					);
 
 					const database = await miniflare.getD1Database(
 						bindingName,
@@ -816,8 +820,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					);
 					const migrationConfig = resolveMigrationsConfig({
 						databaseInfo: getDatabaseInfoFromConfig(workerConfig, bindingName),
-						configPath:
-							workerConfig.configPath ?? currentOptions?.root ?? process.cwd(),
+						configPath: workerConfig.configPath,
 					});
 					const resolvedMigrationsPath = path.resolve(
 						migrationConfig.projectPath,
