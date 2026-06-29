@@ -1,6 +1,5 @@
 import type {
 	WorkflowBinding,
-	WorkflowHandle,
 	WorkflowInstanceRestartOptions,
 	WorkflowInstanceTerminateOptions,
 } from "@cloudflare/workflows-shared/src/binding";
@@ -93,8 +92,7 @@ class InstanceImpl implements WorkflowInstance {
 	) {}
 
 	private async getInstance(): Promise<WorkflowInstance & Disposable> {
-		return (await this.binding.get(this.id)) as unknown as WorkflowInstance &
-			Disposable;
+		return (await this.binding.get(this.id)) as WorkflowInstance & Disposable;
 	}
 
 	public async pause(): Promise<void> {
@@ -112,7 +110,11 @@ class InstanceImpl implements WorkflowInstance {
 	): Promise<void> {
 		using instance = await this.getInstance();
 		// TODO(vaish): remove cast once @cloudflare/workers-types ships terminate options
-		await (instance as unknown as WorkflowHandle).terminate(options);
+		await (
+			instance.terminate as (
+				options?: WorkflowInstanceTerminateOptions
+			) => Promise<void>
+		)(options);
 	}
 
 	public async restart(

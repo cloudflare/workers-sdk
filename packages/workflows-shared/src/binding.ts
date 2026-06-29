@@ -205,7 +205,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		};
 	}
 
-	public async get(id: string): Promise<WorkflowHandle> {
+	public async get(id: string): Promise<WorkflowInstance> {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
