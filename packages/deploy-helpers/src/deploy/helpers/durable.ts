@@ -118,8 +118,8 @@ const suppressNotFoundError = (err: unknown) => {
 
 /**
  * Resolve which Durable Object lifecycle payload to send with the upload.
- * `migrations` and `exports` are mutually exclusive, so only one is set on
- * any given upload.
+ * Durable Object exports replace `migrations`. Worker exports can upload with
+ * either path.
  */
 export async function resolveDoLifecyclePayload(props: {
 	scriptName: string;
@@ -139,9 +139,13 @@ export async function resolveDoLifecyclePayload(props: {
 		props.optInContext ?? "deploy"
 	);
 
-	const exports = getDurableObjectExports(props.config.exports);
-	if (getDoExportsEnabledFromEnv() && Object.keys(exports).length > 0) {
-		return { migrations: undefined, exports };
+	const durableObjectExports = getDurableObjectExports(props.config.exports);
+	const hasDurableObjectExports = Object.keys(durableObjectExports).length > 0;
+	if (getDoExportsEnabledFromEnv() && hasDurableObjectExports) {
+		return {
+			migrations: undefined,
+			exports: props.config.exports,
+		};
 	}
 
 	const migrations = !props.isDryRun
@@ -153,6 +157,16 @@ export async function resolveDoLifecyclePayload(props: {
 				dispatchNamespace: props.dispatchNamespace,
 			})
 		: undefined;
+	// Worker exports are version metadata. They can upload alongside legacy
+	// Durable Object migrations, unlike Durable Object exports.
+	const exports = props.config.exports;
+	let exportsToUpload: Config["exports"] | undefined;
+	if (exports !== undefined && Object.keys(exports).length > 0) {
+		exportsToUpload = exports;
+	}
 
-	return { migrations, exports: undefined };
+	return {
+		migrations,
+		exports: exportsToUpload,
+	};
 }

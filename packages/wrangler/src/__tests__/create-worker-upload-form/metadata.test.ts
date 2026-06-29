@@ -194,6 +194,20 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 			expected: { enabled: true },
 		},
 		{
+			label: "exports",
+			overrides: {
+				exports: {
+					default: { type: "worker", cache: { enabled: false } },
+					Admin: { type: "worker", cache: { enabled: true } },
+				},
+			},
+			key: "exports",
+			expected: {
+				default: { type: "worker", cache: { enabled: false } },
+				Admin: { type: "worker", cache: { enabled: true } },
+			},
+		},
+		{
 			label: "annotations",
 			overrides: {
 				annotations: {

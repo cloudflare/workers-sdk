@@ -316,6 +316,10 @@ const ExportSchema = z.union([
 		storage: z.enum(["sqlite", "legacy-kv"]),
 		transferFrom: z.string(),
 	}),
+	z.strictObject({
+		type: z.literal("worker"),
+		cache: z.strictObject({ enabled: z.boolean() }).optional(),
+	}),
 	// TODO: support Workflows
 	// z.strictObject({
 	// 	type: z.literal("workflow"),

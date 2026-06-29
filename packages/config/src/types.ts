@@ -52,6 +52,7 @@ import type {
 	DurableObjectCreatedExport,
 	DurableObjectRenamedExport,
 	DurableObjectTransferredExport,
+	WorkerEntrypointExport,
 } from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
@@ -109,17 +110,17 @@ type Binding =
 type Trigger = FetchTrigger | QueueConsumerTrigger | ScheduledTrigger;
 
 /**
- * Union of all export definitions accepted in `exports`.
- *
- * Currently the only type of export supported is `durable-object`.
- * Each durable object export specifies a `state`: `created`, `deleted`, `renamed` or `transferred`).
+ * Union of all export definitions accepted in `exports`. Worker entries
+ * configure WorkerEntrypoint exports. Durable Object entries configure live
+ * classes and tombstone lifecycle operations.
  */
 type Export =
 	| DurableObjectCreatedExport
 	| DurableObjectDeletedExport
 	| DurableObjectRenamedExport
 	| DurableObjectTransferredExport
-	| DurableObjectExpectingTransferExport;
+	| DurableObjectExpectingTransferExport
+	| WorkerEntrypointExport;
 // TODO: support Workflows
 
 /**

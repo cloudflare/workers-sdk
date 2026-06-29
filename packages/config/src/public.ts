@@ -65,6 +65,8 @@ export type {
 	DurableObjectRenamedExport,
 	DurableObjectTransferredExport,
 	DurableObjectExpectingTransferExport,
+	WorkerEntrypointCacheOptions,
+	WorkerEntrypointExport,
 } from "./exports";
 export { exports } from "./exports";
 export type {

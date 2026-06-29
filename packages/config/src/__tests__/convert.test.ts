@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import { convertToWranglerConfig } from "../convert";
+import { exports as exportConfig } from "../exports";
 
 const baseConfig = { name: "worker", compatibilityDate: "2026-06-01" } as const;
 
@@ -737,6 +738,21 @@ describe("convertToWranglerConfig", () => {
 					storage: "sqlite",
 					transfer_from: "source-worker",
 				},
+			});
+		});
+
+		it("passes worker export cache config through", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					default: exportConfig.worker({ cache: { enabled: false } }),
+					Admin: exportConfig.worker({ cache: { enabled: true } }),
+				},
+			});
+
+			expect((result as { exports?: unknown }).exports).toEqual({
+				default: { type: "worker", cache: { enabled: false } },
+				Admin: { type: "worker", cache: { enabled: true } },
 			});
 		});
 

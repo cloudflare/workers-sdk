@@ -477,9 +477,8 @@ export interface CfWorkerInit {
 
 	migrations: CfDurableObjectMigrations | undefined;
 	/**
-	 * Declarative exports configuration.
-	 * When this is used to configure Durable Objects, no `migrations` are sent to API.
-	 * Durable Object configuration is gated behind the `X_DO_EXPORTS` environment variable for Wrangler commands.
+	 * Declarative exports configuration. Durable Object entries are sent instead
+	 * of `migrations` and require the `X_DO_EXPORTS` environment variable.
 	 */
 	exports: CfExports | undefined;
 	compatibility_date: string | undefined;

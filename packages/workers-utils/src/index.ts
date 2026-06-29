@@ -10,6 +10,7 @@ export * from "./config/environment";
 export {
 	assertDoExportsEnabledIfConfigured,
 	getDurableObjectExports,
+	hasDurableObjectExports,
 	type DoExportsOptInContext,
 } from "./config/durable-object-exports";
 export {
