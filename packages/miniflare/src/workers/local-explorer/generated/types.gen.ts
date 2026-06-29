@@ -1747,6 +1747,10 @@ export type WorkflowsChangeInstanceStatusData = {
 			 */
 			type?: "do" | "sleep" | "waitForEvent";
 		};
+		/**
+		 * Run rollback before terminating. Only valid when action is terminate.
+		 */
+		rollback?: boolean;
 	};
 	path: {
 		workflow_name: WorkflowsWorkflowName;

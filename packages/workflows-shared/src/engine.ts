@@ -38,7 +38,10 @@ import {
 } from "./lib/streams";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
 import { MODIFIER_KEYS, WorkflowInstanceModifier } from "./modifier";
-import type { RestartFromStep } from "./binding";
+import type {
+	RestartFromStep,
+	WorkflowInstanceTerminateOptions,
+} from "./binding";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
 import type { RollbackRegistryEntry } from "./lib/rollback";
@@ -804,8 +807,9 @@ export class Engine extends DurableObject<Env> {
 
 	async changeInstanceStatus(
 		newStatus: "resume" | "pause" | "terminate" | "restart",
-		from?: RestartFromStep
-	) {
+		from?: RestartFromStep,
+		terminateOptions?: WorkflowInstanceTerminateOptions
+	): Promise<void> {
 		const metadata =
 			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
 
@@ -849,7 +853,7 @@ export class Engine extends DurableObject<Env> {
 						"instance.cannot_terminate"
 					);
 				}
-				await this.userTriggeredTerminate();
+				await this.userTriggeredTerminate(terminateOptions);
 				break;
 			}
 			case "restart":
@@ -864,7 +868,7 @@ export class Engine extends DurableObject<Env> {
 		}
 	}
 
-	async userTriggeredTerminate() {
+	async userTriggeredTerminate(options?: WorkflowInstanceTerminateOptions) {
 		const metadata =
 			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
 
@@ -873,6 +877,16 @@ export class Engine extends DurableObject<Env> {
 				"Instance does not exist",
 				"instance.not_found"
 			);
+		}
+
+		if (options?.rollback === true && this.rollbackRegistry.size > 0) {
+			const error = new Error("Instance terminated during rollback");
+			error.name = "Terminated";
+			try {
+				await executeRollbacks(this, error);
+			} catch (rollbackErr) {
+				console.error("Rollback execution failed:", rollbackErr);
+			}
 		}
 
 		this.writeLog(InstanceEvent.WORKFLOW_TERMINATED, null, null, {

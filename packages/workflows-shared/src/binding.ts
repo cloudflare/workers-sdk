@@ -124,6 +124,13 @@ export interface RestartFromStep {
 	type?: "do" | "sleep" | "waitForEvent";
 }
 
+export interface WorkflowInstanceTerminateOptions {
+	/**
+	 * If true, run registered rollback handlers before terminating the instance.
+	 */
+	rollback?: boolean;
+}
+
 export interface WorkflowInstanceRestartOptions {
 	from?: RestartFromStep;
 }
@@ -198,7 +205,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		};
 	}
 
-	public async get(id: string): Promise<WorkflowInstance> {
+	public async get(id: string): Promise<WorkflowHandle> {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
@@ -357,9 +364,11 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		await this.stub.changeInstanceStatus("resume");
 	}
 
-	public async terminate(): Promise<void> {
+	public async terminate(
+		options?: WorkflowInstanceTerminateOptions
+	): Promise<void> {
 		try {
-			await this.stub.changeInstanceStatus("terminate");
+			await this.stub.changeInstanceStatus("terminate", undefined, options);
 		} catch (e) {
 			// terminate causes instance abortion
 			if (!isUserTriggeredTerminate(e)) {

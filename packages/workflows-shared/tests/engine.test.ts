@@ -1673,6 +1673,52 @@ describe("Rollback", () => {
 		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(0);
 	});
 
+	it("runs rollback when terminate requests it", async ({ expect }) => {
+		const instanceId = "RB-TERMINATE";
+		const engineStub = await runWorkflow(instanceId, async (_e, step) => {
+			await doWithRollback(
+				step,
+				"setup-resource",
+				async () => "resource-id",
+				rollbackOptions()
+			);
+			await step.sleep("wait-forever", "1 hour");
+		});
+
+		await readLogsAfter(engineStub, (logs) =>
+			logs.logs.some(
+				(log) =>
+					log.event === InstanceEvent.STEP_SUCCESS &&
+					log.target === "setup-resource-1"
+			)
+		);
+
+		try {
+			await runInDurableObject(engineStub, async (engine) => {
+				await engine.changeInstanceStatus("terminate", undefined, {
+					rollback: true,
+				});
+			});
+		} catch (error) {
+			if (
+				!(error instanceof Error) ||
+				!error.message.startsWith("Aborting engine:")
+			) {
+				throw error;
+			}
+		}
+
+		const logs = await readLogsAfter(
+			env.ENGINE.get(env.ENGINE.idFromName(instanceId)),
+			(logs) =>
+				logs.logs.some((log) => log.event === InstanceEvent.WORKFLOW_TERMINATED)
+		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"setup-resource-1",
+		]);
+		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(1);
+	});
+
 	it("does not run rollback when workflow succeeds", async ({ expect }) => {
 		const stub = await runWorkflowAndAwait("RB-NOOP", async (_e, step) => {
 			await doWithRollback(step, "a", async () => "ok", rollbackOptions());

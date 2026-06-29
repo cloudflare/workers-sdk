@@ -1169,6 +1169,11 @@ const config = {
 												},
 											},
 										},
+										rollback: {
+											type: "boolean",
+											description:
+												"Run rollback before terminating. Only valid when action is terminate.",
+										},
 									},
 								},
 							},
