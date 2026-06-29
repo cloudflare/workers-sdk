@@ -1,7 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { Writable } from "node:stream";
-import { setTimeout as sleep } from "node:timers/promises";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { execaCommand } from "execa";
@@ -19,7 +18,6 @@ type RunCommandOptions = {
 };
 
 const FORCE_KILL_AFTER_MS = 5_000;
-const PROCESS_EXIT_POLL_INTERVAL_MS = 50;
 
 export async function runCommand(
 	command: string,
@@ -38,7 +36,6 @@ export async function runCommand(
 		const res = execaCommand(command, {
 			shell: true,
 			cwd,
-			detached: runOptions?.signal ? process.platform !== "win32" : false,
 			env: {
 				...process.env,
 				...(runOptions?.wranglerCommand
@@ -144,16 +141,48 @@ function assertEntryPointExists(
 	}
 }
 
+/**
+ * Terminate a spawned custom build command (and any processes it spawned) when
+ * the given `signal` aborts.
+ *
+ * `tree-kill` sends the signal to the process and all of its descendants on both
+ * POSIX and Windows. This matters because custom build commands are run through
+ * a shell and typically spawn their own child processes (e.g. `npm run build`).
+ * Killing the whole tree both terminates those children and closes the stdio
+ * pipes they inherited — without the latter, the `execa` promise would hang
+ * waiting for the pipes to reach EOF.
+ */
 function terminateProcessOnAbort(
 	signal: AbortSignal | undefined,
 	subprocess: ExecaChildProcess
 ) {
 	let processExitPromise: Promise<void> | undefined;
+	let forceKillTimer: NodeJS.Timeout | undefined;
 	const terminate = () => {
 		signal?.removeEventListener("abort", terminate);
-		if (subprocess.pid !== undefined) {
-			processExitPromise ??= terminateProcessTree(subprocess.pid);
+		const pid = subprocess.pid;
+		if (pid === undefined) {
+			return;
 		}
+		processExitPromise ??= new Promise<void>((resolve) => {
+			treeKill(pid, "SIGTERM", (error) => {
+				if (error) {
+					logger.debug("Failed to kill custom build process tree", error);
+				}
+				resolve();
+			});
+		});
+		// If the process tree ignores SIGTERM (and keeps stdio pipes open, which
+		// would otherwise hang the `execa` promise), escalate to SIGKILL after a
+		// grace period. The timer is cleared in `cleanup()` once the command has
+		// settled, so SIGKILL is only sent to a process tree that refused to exit.
+		forceKillTimer ??= setTimeout(() => {
+			treeKill(pid, "SIGKILL", (error) => {
+				if (error) {
+					logger.debug("Failed to force kill custom build process tree", error);
+				}
+			});
+		}, FORCE_KILL_AFTER_MS);
 	};
 	if (signal?.aborted) {
 		terminate();
@@ -164,70 +193,15 @@ function terminateProcessOnAbort(
 	return {
 		cleanup() {
 			signal?.removeEventListener("abort", terminate);
+			if (forceKillTimer !== undefined) {
+				clearTimeout(forceKillTimer);
+				forceKillTimer = undefined;
+			}
 		},
 		waitForExit() {
 			return processExitPromise ?? Promise.resolve();
 		},
 	};
-}
-
-async function terminateProcessTree(pid: number) {
-	if (process.platform === "win32") {
-		await new Promise<void>((resolve) => {
-			treeKill(pid, (error) => {
-				if (error) {
-					logger.debug("Failed to kill custom build process tree", error);
-				}
-				resolve();
-			});
-		});
-		return;
-	}
-
-	killProcessGroup(pid, "SIGTERM");
-	if (await waitForProcessGroupToExit(pid, FORCE_KILL_AFTER_MS)) {
-		return;
-	}
-	killProcessGroup(pid, "SIGKILL");
-	await waitForProcessGroupToExit(pid, 1_000);
-}
-
-function killProcessGroup(pid: number, signal: NodeJS.Signals) {
-	try {
-		process.kill(-pid, signal);
-	} catch (error) {
-		if (!isMissingProcessError(error)) {
-			logger.debug("Failed to kill custom build process group", error);
-		}
-	}
-}
-
-async function waitForProcessGroupToExit(pid: number, timeoutMs: number) {
-	const deadline = Date.now() + timeoutMs;
-	while (Date.now() < deadline) {
-		if (!processGroupExists(pid)) {
-			return true;
-		}
-		await sleep(PROCESS_EXIT_POLL_INTERVAL_MS);
-	}
-	return !processGroupExists(pid);
-}
-
-function processGroupExists(pid: number) {
-	try {
-		process.kill(-pid, 0);
-		return true;
-	} catch (error) {
-		if (isMissingProcessError(error)) {
-			return false;
-		}
-		logger.debug("Failed to check custom build process group", error);
-		return false;
-	}
-}
-
-function isMissingProcessError(error: unknown): error is NodeJS.ErrnoException {
-	return error instanceof Error && "code" in error && error.code === "ESRCH";
 }
 
 /**
