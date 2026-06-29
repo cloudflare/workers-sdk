@@ -67,6 +67,15 @@ export const syncAssets = async (
 	// 1. generate asset manifest
 	logger.info("🌀 Building list of assets...");
 	const manifest = await buildAssetManifest(assetDirectory);
+	const uploadSessionManifest: AssetManifest = {};
+	for (const [assetPath, assetMetadata] of Object.entries(manifest)) {
+		uploadSessionManifest[
+			assetPath
+				.split("/")
+				.map((segment) => encodeURIComponent(segment))
+				.join("/")
+		] = assetMetadata;
+	}
 
 	const url = dispatchNamespace
 		? `/accounts/${accountId}/workers/dispatch/namespaces/${dispatchNamespace}/scripts/${scriptName}/assets-upload-session`
@@ -78,7 +87,7 @@ export const syncAssets = async (
 		await fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
 			headers: { "Content-Type": "application/json" },
 			method: "POST",
-			body: JSON.stringify({ manifest: manifest }),
+			body: JSON.stringify({ manifest: uploadSessionManifest }),
 		});
 
 	// In the past we've seen the endpoint return that incorrectly doesn't contain

@@ -478,6 +478,7 @@ describe("deploy", () => {
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file#1.txt", content: "Content of file-2" },
 				{ filePath: "béëp/boo^p.txt", content: "Content of file-3" },
+				{ filePath: "space [file].txt", content: "Content of file-4" },
 			];
 			writeAssets(assets);
 			writeWranglerConfig({
@@ -490,6 +491,7 @@ describe("deploy", () => {
 					"ff5016e92f039aa743a4ff7abb3180fa",
 					"7574a8cd3094a050388ac9663af1c1d6",
 					"0de3dd5df907418e9730fd2bd747bd5e",
+					"361741650531ac969c8ca70a5438e7c1",
 				],
 			];
 			await mockAUSRequest(manifestBodies, mockBuckets, "<<aus-token>>");
@@ -514,16 +516,20 @@ describe("deploy", () => {
 			expect(manifestBodies.length).toBe(1);
 			expect(manifestBodies[0]).toEqual({
 				manifest: {
-					"/béëp/boo^p.txt": {
+					"/b%C3%A9%C3%ABp/boo%5Ep.txt": {
 						hash: "ff5016e92f039aa743a4ff7abb3180fa",
 						size: 17,
 					},
-					"/boop/file#1.txt": {
+					"/boop/file%231.txt": {
 						hash: "7574a8cd3094a050388ac9663af1c1d6",
 						size: 17,
 					},
 					"/file-1.txt": {
 						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+					"/space%20%5Bfile%5D.txt": {
+						hash: "361741650531ac969c8ca70a5438e7c1",
 						size: 17,
 					},
 				},
@@ -550,6 +556,13 @@ describe("deploy", () => {
 			).toBeAFileWhichMatches({
 				fileBits: ["Q29udGVudCBvZiBmaWxlLTE="],
 				name: "0de3dd5df907418e9730fd2bd747bd5e",
+				type: "text/plain",
+			});
+			await expect(
+				flatBodies["361741650531ac969c8ca70a5438e7c1"]
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTQ="],
+				name: "361741650531ac969c8ca70a5438e7c1",
 				type: "text/plain",
 			});
 		});
