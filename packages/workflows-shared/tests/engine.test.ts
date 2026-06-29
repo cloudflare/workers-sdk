@@ -1685,8 +1685,8 @@ describe("Rollback", () => {
 			await step.sleep("wait-forever", "1 hour");
 		});
 
-		await readLogsAfter(engineStub, (logs) =>
-			logs.logs.some(
+		await readLogsAfter(engineStub, (currentLogs) =>
+			currentLogs.logs.some(
 				(log) =>
 					log.event === InstanceEvent.STEP_SUCCESS &&
 					log.target === "setup-resource-1"
@@ -1710,8 +1710,10 @@ describe("Rollback", () => {
 
 		const logs = await readLogsAfter(
 			env.ENGINE.get(env.ENGINE.idFromName(instanceId)),
-			(logs) =>
-				logs.logs.some((log) => log.event === InstanceEvent.WORKFLOW_TERMINATED)
+			(currentLogs) =>
+				currentLogs.logs.some(
+					(log) => log.event === InstanceEvent.WORKFLOW_TERMINATED
+				)
 		);
 		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
 			"setup-resource-1",
