@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { pathToFileURL } from "node:url";
 import * as vm from "node:vm";
 import defines from "__VITEST_POOL_WORKERS_DEFINES";
 import {
@@ -253,6 +254,60 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 						"[vitest-pool-workers] Could not patch module runner transport. " +
 							"Dynamic import() inside entrypoint/DO handlers may fail."
 					);
+				}
+
+				// Make V8 coverage (`@vitest/coverage-v8`) work for user source files.
+				//
+				// Vitest compiles each inlined module with `filename: module.id`, and that
+				// filename becomes the script URL reported by V8's profiler. In this pool,
+				// user module ids are bare absolute paths (e.g. "/abs/src/index.ts"), but
+				// `@vitest/coverage-v8` only keeps coverage entries whose url starts with
+				// "file://" (matching Node, where these ids are file:// URLs). Without this,
+				// user code is silently filtered out and reported as 0% covered.
+				//
+				// We wrap the evaluator so inlined absolute-path ids are presented to it as
+				// file:// URLs. We only rewrite the copy handed to the evaluator (used for
+				// the compiled filename); the module runner's own bookkeeping keeps the
+				// original id, so the module graph is unaffected.
+				const evaluator = runner.evaluator as
+					| {
+							runInlinedModule?: (
+								context: unknown,
+								code: string,
+								module: { id: string; file?: string }
+							) => unknown;
+							options?: { moduleExecutionInfo?: Map<string, unknown> };
+					  }
+					| undefined;
+				if (evaluator && typeof evaluator.runInlinedModule === "function") {
+					const originalRunInlinedModule =
+						evaluator.runInlinedModule.bind(evaluator);
+					evaluator.runInlinedModule = async (context, code, module) => {
+						const id = module?.id;
+						if (
+							typeof id !== "string" ||
+							!id.startsWith("/") ||
+							id.includes("\0")
+						) {
+							return originalRunInlinedModule(context, code, module);
+						}
+						const fileUrl = pathToFileURL(id).href;
+						const result = await originalRunInlinedModule(context, code, {
+							...module,
+							id: fileUrl,
+						});
+						// Vitest records the module's wrapper `startOffset` in
+						// `moduleExecutionInfo`, keyed by the compiled filename (now the
+						// file:// URL). `@vitest/coverage-v8` looks that offset up by the
+						// plain file path (fileURLToPath(url)). Without a matching entry the
+						// offset defaults to 0 and coverage maps to the wrong source lines,
+						// so we alias the entry under the path key too.
+						const info = evaluator.options?.moduleExecutionInfo;
+						if (info && info.has(fileUrl) && !info.has(id)) {
+							info.set(id, info.get(fileUrl));
+						}
+						return result;
+					};
 				}
 			},
 		});
