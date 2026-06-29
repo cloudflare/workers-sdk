@@ -42,7 +42,7 @@ it("produces queue message with mocked send", async ({ expect }) => {
 	expect(await response.text()).toBe("Accepted");
 
 	// Check `QUEUE_PRODUCER.send()` was called
-	expect(sendSpy).toBeCalledTimes(1);
+	expect(sendSpy).toHaveBeenCalledTimes(1);
 	expect(sendSpy).toHaveBeenCalledWith({ key: "/key", value: "value" });
 });
 
@@ -69,7 +69,7 @@ it("produces queue message with mocked consumer", async ({ expect }) => {
 
 	// Wait for consumer to be called
 	await vi.waitUntil(() => consumerSpy.mock.calls.length > 0);
-	expect(consumerSpy).toBeCalledTimes(1);
+	expect(consumerSpy).toHaveBeenCalledTimes(1);
 	const batch = consumerSpy.mock.lastCall?.[0];
 	assert(batch);
 	expect(batch.messages[0].body).toStrictEqual({

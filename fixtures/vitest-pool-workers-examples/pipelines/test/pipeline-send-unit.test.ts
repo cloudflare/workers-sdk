@@ -38,7 +38,7 @@ it("produces message to pipeline", async ({ expect }) => {
 	expect(await response.text()).toBe("Accepted");
 
 	// Check `PIPELINE.send()` was called
-	expect(mockPipeline.send).toBeCalledTimes(1);
+	expect(mockPipeline.send).toHaveBeenCalledTimes(1);
 	expect(mockPipeline.send).toHaveBeenCalledWith([
 		{ method: "POST", url: "https://example.com/ingest" },
 	]);
