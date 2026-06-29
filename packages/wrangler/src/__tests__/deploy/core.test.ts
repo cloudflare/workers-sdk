@@ -599,7 +599,7 @@ describe("deploy", () => {
 			pages_build_output_dir: "public",
 			name: "test-name",
 		});
-		await expect(runWrangler("deploy")).rejects.toThrowError();
+		await expect(runWrangler("deploy")).rejects.toThrow();
 		expect(std.warn).toContain(
 			"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead."
 		);
@@ -883,9 +883,7 @@ describe("deploy", () => {
 				})
 			);
 
-			await expect(
-				runWrangler("deploy index.js --temporary")
-			).rejects.toThrowError(
+			await expect(runWrangler("deploy index.js --temporary")).rejects.toThrow(
 				/You must accept Cloudflare's Terms of Service .* to use --temporary\./
 			);
 
@@ -999,9 +997,7 @@ describe("deploy", () => {
 				})
 			);
 
-			await expect(
-				runWrangler("deploy index.js --temporary")
-			).rejects.toThrowError(
+			await expect(runWrangler("deploy index.js --temporary")).rejects.toThrow(
 				/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
 			);
 
@@ -1145,7 +1141,7 @@ describe("deploy", () => {
 
 				await expect(
 					runWrangler("deploy index.js --temporary")
-				).rejects.toThrowError(
+				).rejects.toThrow(
 					/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
 				);
 
@@ -1538,7 +1534,7 @@ describe("deploy", () => {
 					])
 				);
 
-				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrow();
 
 				expect(std.err).toContain(
 					"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable"
@@ -1621,7 +1617,7 @@ describe("deploy", () => {
 				mockOAuthServerCallback();
 				msw.use(...getMswSuccessMembershipHandlers([]));
 
-				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrow();
 
 				expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to automatically retrieve account IDs for the logged in user.[0m

@@ -354,7 +354,7 @@ describe.each([
 				writeWorkerSource();
 				const today = getTodaysCompatDate();
 				await expect(runWrangler("deploy ./index.js")).rejects
-					.toThrowError(`A compatibility_date is required when uploading a Worker. Add the following to your wrangler.toml file:
+					.toThrow(`A compatibility_date is required when uploading a Worker. Add the following to your wrangler.toml file:
     \`\`\`
     compatibility_date = "${today}"
 
@@ -449,7 +449,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				// On main, versions upload calls requireAuth() before validating compat date,
 				// so we need the service metadata mock to avoid an unrelated API error
 				mockGetScript();
-				await expect(runWrangler("versions upload")).rejects.toThrowError(
+				await expect(runWrangler("versions upload")).rejects.toThrow(
 					/A compatibility_date is required/
 				);
 			});

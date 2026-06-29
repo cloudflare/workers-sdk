@@ -475,7 +475,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 				await expect(
 					details.getDetailsForAutoConfig({ context: ciContext })
-				).rejects.toThrowError(
+				).rejects.toThrow(
 					/Cloudflare's tooling was unable to automatically configure your project, since multiple frameworks were found/
 				);
 			});

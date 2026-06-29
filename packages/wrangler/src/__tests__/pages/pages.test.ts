@@ -292,7 +292,7 @@ describe("pages", () => {
 		});
 
 		it("should display for pages:functions:build", async ({ expect }) => {
-			await expect(runWrangler("pages functions build")).rejects.toThrowError();
+			await expect(runWrangler("pages functions build")).rejects.toThrow();
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -309,7 +309,7 @@ describe("pages", () => {
 				runWrangler(
 					'pages functions optimize-routes --routes-path="/build/_routes.json" --output-routes-path="/build/_optimized-routes.json"'
 				)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"

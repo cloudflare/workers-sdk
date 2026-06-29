@@ -236,9 +236,9 @@ describe("wrangler browser", () => {
 		it("should throw error when no targets found", async () => {
 			mockGetSessionTargets("invalid-session", []);
 
-			await expect(
-				runWrangler("browser view invalid-session")
-			).rejects.toThrowError('No targets found for session "invalid-session"');
+			await expect(runWrangler("browser view invalid-session")).rejects.toThrow(
+				'No targets found for session "invalid-session"'
+			);
 		});
 
 		it("should prefer page targets over other types", async () => {
@@ -522,7 +522,7 @@ describe("wrangler browser", () => {
 
 				await expect(
 					runWrangler("browser view session-nomatch --target bing")
-				).rejects.toThrowError(
+				).rejects.toThrow(
 					'No target found matching "bing". Available targets:'
 				);
 			});
@@ -552,7 +552,7 @@ describe("wrangler browser", () => {
 
 				await expect(
 					runWrangler("browser view session-ambig --target google")
-				).rejects.toThrowError(
+				).rejects.toThrow(
 					'Multiple targets match "google". Please be more specific:'
 				);
 			});
@@ -562,7 +562,7 @@ describe("wrangler browser", () => {
 			it("should error when no sessions exist", async () => {
 				mockListSessions([]);
 
-				await expect(runWrangler("browser view")).rejects.toThrowError(
+				await expect(runWrangler("browser view")).rejects.toThrow(
 					"No active Browser Run sessions found. Use `wrangler browser create` to create one."
 				);
 			});
@@ -891,7 +891,7 @@ describe("wrangler browser", () => {
 			};
 			mockAcquireSession(response);
 
-			await expect(runWrangler("browser create")).rejects.toThrowError(
+			await expect(runWrangler("browser create")).rejects.toThrow(
 				"Session created (empty-session) but no targets found"
 			);
 		});
@@ -1003,9 +1003,9 @@ describe("wrangler browser", () => {
 				)
 			);
 
-			await expect(
-				runWrangler("browser close nonexistent")
-			).rejects.toThrowError("Browser Run API error: Session not found");
+			await expect(runWrangler("browser close nonexistent")).rejects.toThrow(
+				"Browser Run API error: Session not found"
+			);
 		});
 	});
 });

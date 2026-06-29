@@ -1523,15 +1523,13 @@ describe("units", () => {
 		});
 
 		test("throws on empty tag", ({ expect }) => {
-			expect(() => parseTagSpecs({ versionTag: ["@100%"] })).toThrowError(
+			expect(() => parseTagSpecs({ versionTag: ["@100%"] })).toThrow(
 				`Could not parse a tag from --version-tag arg "@100%".`
 			);
 		});
 
 		test("throws on out-of-range percentage", ({ expect }) => {
-			expect(() =>
-				parseTagSpecs({ versionTag: ["abc1234@101%"] })
-			).toThrowError(
+			expect(() => parseTagSpecs({ versionTag: ["abc1234@101%"] })).toThrow(
 				`Percentage value 101% (from --version-tag arg "abc1234@101%") is out of range. Percentages must be between 0 and 100.`
 			);
 		});

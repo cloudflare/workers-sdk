@@ -32,7 +32,7 @@ describe("execute", () => {
 
 		await expect(
 			runWrangler("d1 execute db --command 'select 1;' --remote")
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.
 
 To continue without logging in, rerun this command with \`--temporary\`. Wrangler will use a temporary account and print a claim URL.`
@@ -47,7 +47,7 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 			],
 		});
 
-		await expect(runWrangler("d1 execute db")).rejects.toThrowError(
+		await expect(runWrangler("d1 execute db")).rejects.toThrow(
 			`Missing required option --command or --file. Provide a SQL command inline with --command="<SQL>", or a path to a SQL file with --file=<path>.`
 		);
 	});
@@ -82,9 +82,7 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 
 		await expect(
 			runWrangler(`d1 execute db --command "select;" --local --remote`)
-		).rejects.toThrowError(
-			`Error: can't use --local and --remote at the same time`
-		);
+		).rejects.toThrow(`Error: can't use --local and --remote at the same time`);
 	});
 
 	it("should reject the use of --preview with --local", async ({ expect }) => {
@@ -97,7 +95,7 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 
 		await expect(
 			runWrangler(`d1 execute db --command "select;" --local --preview`)
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			`Cannot use --preview without --remote. The --preview flag targets a preview D1 database, which requires the --remote flag. Remove --preview or add --remote.`
 		);
 	});
@@ -114,7 +112,7 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 
 		await expect(
 			runWrangler(`d1 execute db --command "select;" --local --preview --json`)
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			JSON.stringify(
 				{
 					error: {
@@ -139,7 +137,7 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 
 		await expect(
 			runWrangler(`d1 execute db --file db.sqlite3 --local --json`)
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			JSON.stringify(
 				{
 					error: {
