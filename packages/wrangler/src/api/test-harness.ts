@@ -6,6 +6,10 @@ import {
 	normalizeAndValidateConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	WorkflowInstanceIntrospectorHandle,
+	WorkflowIntrospectorHandle,
+} from "@cloudflare/workflows-shared/src/introspection";
 import { Headers, Request } from "miniflare";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { requireApiToken, requireAuth } from "../user";
@@ -19,7 +23,13 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
+import type { Workflow } from "@cloudflare/workers-types/latest";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type {
+	WorkflowBinding,
+	WorkflowInstanceIntrospector,
+	WorkflowIntrospector,
+} from "@cloudflare/workflows-shared/src/types";
 import type {
 	DispatchFetch,
 	Json,
@@ -39,6 +49,15 @@ export type TestHarnessOptions = {
 	 */
 	workers: WorkerInput[];
 };
+
+export type BindingName<Env, Type> = string extends keyof Env
+	? string
+	: Extract<
+			{
+				[K in keyof Env]-?: NonNullable<Env[K]> extends Type ? K : never;
+			}[keyof Env],
+			string
+		>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
 export type WorkerHandle<Env = Record<string, any>> = {
@@ -80,6 +99,19 @@ export type WorkerHandle<Env = Record<string, any>> = {
 	 * ```
 	 */
 	getEnv(): Promise<Env>;
+	/**
+	 * Creates an introspector for a specific Workflow instance.
+	 */
+	introspectWorkflowInstance(
+		bindingName: BindingName<Env, Workflow>,
+		instanceId: string
+	): Promise<WorkflowInstanceIntrospector>;
+	/**
+	 * Creates an introspector for Workflow instances created after this method is called.
+	 */
+	introspectWorkflow(
+		bindingName: BindingName<Env, Workflow>
+	): Promise<WorkflowIntrospector>;
 };
 
 export type TestHarness = {
@@ -664,7 +696,48 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
 		getWorker<Env = Record<string, any>>(name?: string): WorkerHandle<Env> {
+			async function getWorkflowBinding(bindingName: string) {
+				const session = await resolveSession();
+				const miniflare = await getRuntimeMiniflare(session);
+				const workerName = resolveWorkerName(session, name);
+				const devEnv = session.devEnvs.find(
+					(d) => d.config.latestConfig?.name === workerName
+				);
+				const bindingConfig =
+					devEnv?.config.latestConfig?.bindings?.[bindingName];
+
+				if (bindingConfig?.type !== "workflow") {
+					throw new TypeError(
+						`No Workflow binding named ${JSON.stringify(bindingName)} found in ${JSON.stringify(workerName)} worker.`
+					);
+				}
+
+				const bindings =
+					await miniflare.getBindings<Record<string, unknown>>(workerName);
+				const workflow = bindings[bindingName] as WorkflowBinding | undefined;
+
+				if (!workflow) {
+					throw new TypeError(
+						`Workflow binding ${JSON.stringify(bindingName)} is not available in ${JSON.stringify(workerName)} worker.`
+					);
+				}
+
+				return workflow;
+			}
+
 			return {
+				async introspectWorkflow(bindingName) {
+					const workflow = await getWorkflowBinding(bindingName);
+
+					const introspector = new WorkflowIntrospectorHandle(workflow);
+					await introspector.start();
+					return introspector;
+				},
+				async introspectWorkflowInstance(bindingName, instanceId) {
+					const workflow = await getWorkflowBinding(bindingName);
+
+					return new WorkflowInstanceIntrospectorHandle(workflow, instanceId);
+				},
 				async fetch(input, init) {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
