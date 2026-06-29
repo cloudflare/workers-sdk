@@ -3481,7 +3481,9 @@ describe("wrangler preview", () => {
 				),
 				http.get(`*/accounts/:accountId/r2/buckets/:bucketName/objects`, () =>
 					HttpResponse.json({
-						result: { objects: [{ key: "a.txt" }, { key: "b.txt" }] },
+						success: true,
+						result: [{ key: "a.txt" }, { key: "b.txt" }],
+						result_info: { is_truncated: false },
 					})
 				),
 				http.delete(
@@ -3508,6 +3510,116 @@ describe("wrangler preview", () => {
 			expect(deletedR2Objects).toEqual(["a.txt", "b.txt"]);
 			expect(deletedR2Buckets).toEqual([
 				"test-worker-feature-branch-one-owned-bucket",
+			]);
+		});
+
+		test("should page through R2 objects and retry bucket deletion if the bucket is not empty", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						r2_buckets: [{ binding: "OWNED_BUCKET" }],
+					},
+				})
+			);
+
+			const deletedR2Objects: string[] = [];
+			const deletedR2Buckets: string[] = [];
+			let objectListCalls = 0;
+			let bucketDeleteCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-123",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => HttpResponse.json({ success: true, result: null })
+				),
+				http.get(`*/accounts/:accountId/r2/buckets/:bucketName`, ({ params }) =>
+					HttpResponse.json({
+						success: true,
+						result: { name: params.bucketName, creation_date: "2025-01-01" },
+					})
+				),
+				http.get(
+					`*/accounts/:accountId/r2/buckets/:bucketName/objects`,
+					({ request }) => {
+						objectListCalls++;
+						const cursor = new URL(request.url).searchParams.get("cursor");
+						if (objectListCalls === 1) {
+							expect(cursor).toBeNull();
+							return HttpResponse.json({
+								success: true,
+								result: [{ key: "a.txt" }],
+								result_info: { is_truncated: true, cursor: "next-page" },
+							});
+						}
+						if (objectListCalls === 2) {
+							expect(cursor).toBe("next-page");
+							return HttpResponse.json({
+								success: true,
+								result: [{ key: "b.txt" }],
+								result_info: { is_truncated: false },
+							});
+						}
+						return HttpResponse.json({
+							success: true,
+							result: [{ key: "late.txt" }],
+							result_info: { is_truncated: false },
+						});
+					}
+				),
+				http.delete(
+					`*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName`,
+					({ params }) => {
+						deletedR2Objects.push(String(params.objectName));
+						return HttpResponse.json({ success: true, result: null });
+					}
+				),
+				http.delete(
+					`*/accounts/:accountId/r2/buckets/:bucketName`,
+					({ params }) => {
+						bucketDeleteCalls++;
+						if (bucketDeleteCalls === 1) {
+							return HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10008, message: "bucket is not empty" }],
+								},
+								{ status: 400 }
+							);
+						}
+						deletedR2Buckets.push(String(params.bucketName));
+						return HttpResponse.json({ success: true, result: null });
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview delete --name test-preview --skip-confirmation --worker-name test-worker"
+			);
+
+			expect(deletedR2Objects).toEqual(["a.txt", "b.txt", "late.txt"]);
+			expect(deletedR2Buckets).toEqual([
+				"test-worker-test-preview-owned-bucket",
 			]);
 		});
 

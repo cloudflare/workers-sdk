@@ -18,11 +18,12 @@ import type { ReadableStream } from "node:stream/web";
 import type { HeadersInit } from "undici";
 
 type R2ObjectsListResponse = {
-	result?: {
-		objects?: Array<{ key?: string; name?: string }>;
-		truncated?: boolean;
+	result?: Array<{ key?: string; name?: string }>;
+	result_info?: {
+		is_truncated?: boolean;
 		cursor?: string;
 	};
+	// Keep this permissive for older tests/mocks and any API envelope changes.
 	objects?: Array<{ key?: string; name?: string }>;
 	truncated?: boolean;
 	cursor?: string;
@@ -44,6 +45,7 @@ export async function listR2ObjectKeys(
 		}
 
 		const query = new URLSearchParams();
+		query.set("per_page", "1000");
 		if (cursor !== undefined) {
 			query.set("cursor", cursor);
 		}
@@ -61,15 +63,20 @@ export async function listR2ObjectKeys(
 		}
 
 		const body = (await response.json()) as R2ObjectsListResponse;
-		const result = body.result ?? body;
-		for (const object of result.objects ?? []) {
+		const objects = Array.isArray(body.result)
+			? body.result
+			: (body.objects ?? []);
+		for (const object of objects) {
 			const key = object.key ?? object.name;
 			if (key !== undefined) {
 				keys.push(key);
 			}
 		}
 
-		cursor = result.truncated ? result.cursor : undefined;
+		const isTruncated = body.result_info?.is_truncated ?? body.truncated;
+		cursor = isTruncated
+			? (body.result_info?.cursor ?? body.cursor)
+			: undefined;
 	} while (cursor !== undefined);
 
 	return keys;
