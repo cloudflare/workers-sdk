@@ -136,6 +136,8 @@ export async function createEmailRoutingRule(
 		name?: string;
 		enabled?: boolean;
 		priority?: number;
+		source?: string;
+		owner_worker_tag?: string;
 	}
 ): Promise<EmailRoutingRule> {
 	await requireAuth(config);
@@ -160,6 +162,8 @@ export async function updateEmailRoutingRule(
 		name?: string;
 		enabled?: boolean;
 		priority?: number;
+		source?: string;
+		owner_worker_tag?: string;
 	}
 ): Promise<EmailRoutingRule> {
 	await requireAuth(config);
@@ -208,6 +212,8 @@ export async function updateEmailRoutingCatchAll(
 		matchers: { type: string }[];
 		enabled?: boolean;
 		name?: string;
+		source?: string;
+		owner_worker_tag?: string;
 	}
 ): Promise<EmailRoutingCatchAllRule> {
 	await requireAuth(config);
