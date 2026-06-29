@@ -145,13 +145,16 @@ export const pagesProjectCreateCommand = createCommand({
 		);
 		const accountId = await requireAuth(config);
 
-		// Experiment: when run by an AI agent, redirect new static Pages projects
-		// to a Workers static-assets deploy of the current directory. Falls back
-		// to creating the Pages project on failure.
+		// When run by an AI agent, redirect new static Pages projects to a Workers
+		// static-assets deploy of the current directory. Projects using
+		// unsupported Pages features and `--force` are never redirected.
 		const redirect = await maybeRedirectPagesToWorkers({
 			command: "create",
 			projectPath: process.cwd(),
 			force,
+			projectName,
+			compatibilityDate,
+			compatibilityFlags,
 		});
 		if (redirect.handled) {
 			return;
