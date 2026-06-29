@@ -23,13 +23,8 @@ export async function runCommand(
 	command: string,
 	cwd: string | undefined,
 	prefix = "[custom build]",
-	options?: WranglerCommand | RunCommandOptions,
-	signal?: AbortSignal
+	runOptions?: RunCommandOptions
 ) {
-	const runOptions =
-		typeof options === "string"
-			? { wranglerCommand: options, signal }
-			: options;
 	logger.log(chalk.blue(prefix), "Running:", command);
 	let abortHandler: ReturnType<typeof terminateProcessOnAbort> | undefined;
 	try {
@@ -98,13 +93,8 @@ export async function runCustomBuild(
 	expectedEntryRelative: string,
 	build: Pick<Config["build"], "command" | "cwd">,
 	configPath: string | undefined,
-	options?: WranglerCommand | RunCommandOptions,
-	signal?: AbortSignal
+	runOptions?: RunCommandOptions
 ) {
-	const runOptions =
-		typeof options === "string"
-			? { wranglerCommand: options, signal }
-			: options;
 	if (build.command) {
 		await runCommand(build.command, build.cwd, "[custom build]", runOptions);
 
