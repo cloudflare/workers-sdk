@@ -164,7 +164,8 @@ export function getCreateMigrationsTableQuery(migrationsTableName: string) {
 
 export function getListAppliedMigrationsQuery(migrationsTableName: string) {
 	const escapedTableName = escapeIdentifier(migrationsTableName);
-	return `SELECT name FROM ${escapedTableName}
+	return `SELECT *
+		FROM ${escapedTableName}
 		ORDER BY id`;
 }
 
