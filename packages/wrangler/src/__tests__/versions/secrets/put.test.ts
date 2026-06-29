@@ -193,9 +193,9 @@ describe("versions secret put", () => {
 			expect(
 				(patch.annotations as Record<string, string>)["workers/message"]
 			).toBe("Deploy a new secret");
-			expect(
-				(patch.annotations as Record<string, string>)["workers/tag"]
-			).toBe("v1");
+			expect((patch.annotations as Record<string, string>)["workers/tag"]).toBe(
+				"v1"
+			);
 		});
 		await runWrangler(
 			"versions secret put NEW_SECRET --name script-name --message 'Deploy a new secret' --tag v1"
