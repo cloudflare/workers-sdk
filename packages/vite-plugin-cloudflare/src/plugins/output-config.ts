@@ -7,6 +7,7 @@ import { assertIsNotPreview } from "../context";
 import { writeDeployConfig } from "../deploy-config";
 import { getLocalDevVarsForPreview } from "../dev-vars";
 import { createPlugin } from "../utils";
+import type { ResolvedWorkerConfig } from "../plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
 
 /**
@@ -47,55 +48,13 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					this.environment.name ===
 						ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
 
-				const sourceConfigDirectory = inputWorkerConfig.configPath
-					? path.dirname(inputWorkerConfig.configPath)
-					: ctx.resolvedViteConfig.root;
-				const outputDirectory = path.resolve(
-					ctx.resolvedViteConfig.root,
-					this.environment.config.build.outDir
-				);
-
-				outputConfig = {
-					...inputWorkerConfig,
-					d1_databases: inputWorkerConfig.d1_databases.map((database) => {
-						const sourceMigrationsDir = database.migrations_dir ?? "migrations";
-						const sourceMigrationsPath = path.resolve(
-							sourceConfigDirectory,
-							sourceMigrationsDir
-						);
-
-						if (!fs.existsSync(sourceMigrationsPath)) {
-							return database;
-						}
-
-						const outputMigrationsDir = vite.normalizePath(
-							path.relative(outputDirectory, sourceMigrationsPath) || "."
-						);
-
-						return {
-							...database,
-							migrations_dir: outputMigrationsDir,
-							migrations_pattern: rewriteMigrationsPattern(
-								database.migrations_pattern,
-								sourceMigrationsDir,
-								outputMigrationsDir
-							),
-						};
-					}),
-					main: entryChunk.fileName,
-					no_bundle: true,
-					rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
-					assets:
-						isEntryWorker || isPrerenderWorker
-							? {
-									...inputWorkerConfig.assets,
-									directory: getAssetsDirectory(
-										this.environment.config.build.outDir,
-										ctx.resolvedViteConfig
-									),
-								}
-							: undefined,
-				};
+				outputConfig = getOutputConfig({
+					inputWorkerConfig,
+					workerOutputDirectory: this.environment.config.build.outDir,
+					resolvedViteConfig: ctx.resolvedViteConfig,
+					entryFileName: entryChunk.fileName,
+					includeAssets: isEntryWorker || isPrerenderWorker,
+				});
 
 				// Infer `upload_source_maps` from Vite's `build.sourcemap` if not explicitly set
 				if (
@@ -185,6 +144,65 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 		},
 	};
 });
+
+export function getOutputConfig({
+	inputWorkerConfig,
+	workerOutputDirectory,
+	resolvedViteConfig,
+	entryFileName,
+	includeAssets,
+}: {
+	inputWorkerConfig: ResolvedWorkerConfig;
+	workerOutputDirectory: string;
+	resolvedViteConfig: vite.ResolvedConfig;
+	entryFileName: string;
+	includeAssets: boolean;
+}): Unstable_RawConfig {
+	const sourceConfigDirectory = inputWorkerConfig.configPath
+		? path.dirname(inputWorkerConfig.configPath)
+		: resolvedViteConfig.root;
+	const outputDirectory = path.resolve(
+		resolvedViteConfig.root,
+		workerOutputDirectory
+	);
+
+	return {
+		...inputWorkerConfig,
+		main: entryFileName,
+		no_bundle: true,
+		rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
+		assets: includeAssets
+			? {
+					...inputWorkerConfig.assets,
+					directory: getAssetsDirectory(
+						workerOutputDirectory,
+						resolvedViteConfig
+					),
+				}
+			: undefined,
+		d1_databases: inputWorkerConfig.d1_databases.map((database) => {
+			const sourceMigrationsDir = database.migrations_dir ?? "migrations";
+			const sourceMigrationsPath = path.resolve(
+				sourceConfigDirectory,
+				sourceMigrationsDir
+			);
+
+			const outputMigrationsDir = vite.normalizePath(
+				path.relative(outputDirectory, sourceMigrationsPath) || "."
+			);
+
+			return {
+				...database,
+				migrations_dir: outputMigrationsDir,
+				migrations_pattern: rewriteMigrationsPattern(
+					database.migrations_pattern,
+					sourceMigrationsDir,
+					outputMigrationsDir
+				),
+			};
+		}),
+	};
+}
 
 function rewriteMigrationsPattern(
 	migrationsPattern: string | undefined,
