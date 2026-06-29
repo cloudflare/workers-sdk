@@ -85,10 +85,11 @@ describe("createTestHarness: Vitest setup", () => {
 		expect,
 	}) => {
 		const apiEnv = await apiWorker.getEnv();
-		await apiEnv.STORE.put(
-			"daily-report/2026-05-29",
-			JSON.stringify(["123", "456"])
-		);
+		await apiEnv.DATABASE.prepare(
+			"INSERT INTO daily_reports (date, user_ids) VALUES (?, ?)"
+		)
+			.bind("2026-05-29", JSON.stringify(["123", "456"]))
+			.run();
 
 		const stubPng = Uint8Array.from([
 			137, 80, 78, 71, 13, 10, 26, 10, 109, 111, 99, 107,
