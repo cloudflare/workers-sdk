@@ -1,8 +1,5 @@
-import {
-	SELF,
-	createExecutionContext,
-	env as runtimeEnv,
-} from "cloudflare:test";
+import { createExecutionContext } from "cloudflare:test";
+import { exports, env as runtimeEnv } from "cloudflare:workers";
 import { describe, it } from "vitest";
 import { RouterInnerEntrypoint } from "../src/worker";
 import type { Env } from "../src/worker";
@@ -31,7 +28,9 @@ describe("runtime loopback", () => {
 			},
 		} as Env["ASSET_WORKER"];
 
-		const response = await SELF.fetch("https://example.com");
+		const response = await (exports as { default: Fetcher }).default.fetch(
+			"https://example.com"
+		);
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe("loopback asset worker");
