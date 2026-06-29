@@ -485,6 +485,7 @@ export class WranglerE2ETestHelper {
 		const client = new Cloudflare({
 			apiToken,
 		});
+		await this.createTunnelWithWranglerForDiagnostics(name);
 
 		const createTunnel = client.zeroTrust.tunnels.cloudflared.create({
 			account_id: accountId,
@@ -536,6 +537,41 @@ export class WranglerE2ETestHelper {
 		});
 
 		return tunnelId;
+	}
+
+	private async createTunnelWithWranglerForDiagnostics(baseName: string) {
+		const name = `${baseName}-cli`;
+		try {
+			const output = await this.run(`wrangler tunnel create ${name}`);
+			console.warn(
+				"Tunnel create CLI diagnostics:",
+				JSON.stringify({
+					name,
+					timestamp: new Date().toISOString(),
+					ciOs: process.env.CI_OS,
+					e2eShard: process.env.E2E_SHARD,
+					e2eShardCount: process.env.E2E_SHARD_COUNT,
+					node: process.version,
+					stdout: output.stdout,
+					stderr: output.stderr,
+				})
+			);
+
+			await this.bestEffortRun(`wrangler tunnel delete ${name}`);
+		} catch (error) {
+			console.warn(
+				"Tunnel create CLI diagnostics:",
+				JSON.stringify({
+					name,
+					timestamp: new Date().toISOString(),
+					ciOs: process.env.CI_OS,
+					e2eShard: process.env.E2E_SHARD,
+					e2eShardCount: process.env.E2E_SHARD_COUNT,
+					node: process.version,
+					error: getErrorDiagnostics(error),
+				})
+			);
+		}
 	}
 }
 
