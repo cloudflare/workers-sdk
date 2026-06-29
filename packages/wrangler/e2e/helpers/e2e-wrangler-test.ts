@@ -2,6 +2,7 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
+import { VERSION as CLOUDFLARE_SDK_VERSION } from "cloudflare/version";
 import { fetch } from "undici";
 import { onTestFinished } from "vitest";
 import { E2E_ACCOUNT_WORKERS_DEV_DOMAIN } from "./account-id";
@@ -20,7 +21,23 @@ import {
 	WranglerLongLivedCommand,
 } from "./wrangler";
 import type { WranglerCommandOptions } from "./wrangler";
+import type { Response as CloudflareResponse } from "cloudflare/core";
 import type { Awaitable } from "miniflare";
+
+type TunnelCreateResponse = CloudflareResponse;
+type ErrorDiagnostics =
+	| {
+			value: string;
+	  }
+	| {
+			name: string | undefined;
+			message: string | undefined;
+			constructor: string;
+			code: unknown;
+			errno: unknown;
+			type: unknown;
+			cause: ErrorDiagnostics | undefined;
+	  };
 
 export function importWrangler(): Promise<typeof import("../../src/cli")> {
 	return import(WRANGLER_IMPORT.href);
@@ -459,24 +476,53 @@ export class WranglerE2ETestHelper {
 		if (!accountId) {
 			throw new Error("CLOUDFLARE_ACCOUNT_ID environment variable is required");
 		}
+		const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+		if (!apiToken) {
+			throw new Error("CLOUDFLARE_API_TOKEN environment variable is required");
+		}
 
 		// Create Cloudflare client directly
 		const client = new Cloudflare({
-			apiToken: process.env.CLOUDFLARE_API_TOKEN,
+			apiToken,
 		});
 
-		// Create tunnel via Cloudflare SDK
-		const tunnel = await client.zeroTrust.tunnels.cloudflared.create({
+		const createTunnel = client.zeroTrust.tunnels.cloudflared.create({
 			account_id: accountId,
 			name,
 			config_src: "cloudflare",
 		});
 
-		if (!tunnel.id) {
-			throw new Error("Failed to create tunnel: tunnel ID is undefined");
+		let resp: TunnelCreateResponse;
+		try {
+			resp = await createTunnel.asResponse();
+		} catch (error) {
+			logTunnelCreateDiagnostics(name, error);
+			throw error;
 		}
 
-		const tunnelId = tunnel.id;
+		logTunnelCreateDiagnostics(name, undefined, resp);
+
+		let tunnel: unknown;
+		try {
+			tunnel = await resp.json();
+		} catch (error) {
+			logTunnelCreateDiagnostics(name, error, resp);
+			throw error;
+		}
+
+		if (!resp.ok) {
+			throw new Error(
+				`Failed to create tunnel ${name}: ${JSON.stringify(tunnel)}`
+			);
+		}
+
+		const tunnelId = getTunnelId(tunnel);
+
+		if (!tunnelId) {
+			throw new Error(
+				`Failed to create tunnel ${name}: tunnel ID is undefined in ${JSON.stringify(tunnel)}`
+			);
+		}
 
 		this.onTeardown(async () => {
 			try {
@@ -491,4 +537,84 @@ export class WranglerE2ETestHelper {
 
 		return tunnelId;
 	}
+}
+
+function getTunnelId(tunnel: unknown): string | undefined {
+	if (typeof tunnel !== "object" || tunnel === null) {
+		return undefined;
+	}
+
+	const result = "result" in tunnel ? tunnel.result : tunnel;
+	if (typeof result !== "object" || result === null || !("id" in result)) {
+		return undefined;
+	}
+
+	return typeof result.id === "string" ? result.id : undefined;
+}
+
+function logTunnelCreateDiagnostics(
+	name: string,
+	error?: unknown,
+	response?: TunnelCreateResponse
+) {
+	console.warn(
+		"Tunnel create diagnostics:",
+		JSON.stringify({
+			name,
+			timestamp: new Date().toISOString(),
+			ciOs: process.env.CI_OS,
+			e2eShard: process.env.E2E_SHARD,
+			e2eShardCount: process.env.E2E_SHARD_COUNT,
+			node: process.version,
+			cloudflareSdkVersion: CLOUDFLARE_SDK_VERSION,
+			request: {
+				method: "POST",
+				path: "/client/v4/accounts/<redacted>/cfd_tunnel",
+			},
+			response: response
+				? {
+						status: response.status,
+						statusText: response.statusText,
+						headers: getTunnelDiagnosticHeaders(response.headers),
+					}
+				: undefined,
+			error: getErrorDiagnostics(error),
+		})
+	);
+}
+
+function getTunnelDiagnosticHeaders(headers: {
+	get(name: string): string | null;
+}) {
+	return Object.fromEntries(
+		[
+			"cf-ray",
+			"date",
+			"content-type",
+			"content-encoding",
+			"content-length",
+			"transfer-encoding",
+			"server",
+		].map((header) => [header, headers.get(header)])
+	);
+}
+
+function getErrorDiagnostics(error: unknown): ErrorDiagnostics | undefined {
+	if (error === undefined) {
+		return undefined;
+	}
+
+	if (typeof error !== "object" || error === null) {
+		return { value: String(error) };
+	}
+
+	return {
+		name: error instanceof Error ? error.name : undefined,
+		message: error instanceof Error ? error.message : undefined,
+		constructor: error.constructor.name,
+		code: "code" in error ? error.code : undefined,
+		errno: "errno" in error ? error.errno : undefined,
+		type: "type" in error ? error.type : undefined,
+		cause: "cause" in error ? getErrorDiagnostics(error.cause) : undefined,
+	};
 }
