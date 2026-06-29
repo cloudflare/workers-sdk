@@ -83,7 +83,7 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 				let response = await SELF.fetch(request);
 				if (matchedFile && finalPath) {
 					expect(getAssetWithMetadataFromKV).toBeCalledTimes(1);
-					expect(getAssetWithMetadataFromKV).toBeCalledWith(
+					expect(getAssetWithMetadataFromKV).toHaveBeenCalledWith(
 						undefined,
 						matchedFile
 					);

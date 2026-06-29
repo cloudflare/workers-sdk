@@ -43,7 +43,7 @@ it("produces queue message with mocked send", async ({ expect }) => {
 
 	// Check `QUEUE_PRODUCER.send()` was called
 	expect(sendSpy).toBeCalledTimes(1);
-	expect(sendSpy).toBeCalledWith({ key: "/key", value: "value" });
+	expect(sendSpy).toHaveBeenCalledWith({ key: "/key", value: "value" });
 });
 
 it("produces queue message with mocked consumer", async ({ expect }) => {

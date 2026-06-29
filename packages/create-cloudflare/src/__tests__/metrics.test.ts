@@ -58,7 +58,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -85,7 +85,7 @@ describe("createReporter", () => {
 
 		await expect(operation).resolves.toBe("test result");
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session completed",
 				deviceId,
@@ -125,7 +125,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -152,7 +152,7 @@ describe("createReporter", () => {
 
 		await expect(operation).resolves.toBe("test result");
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session completed",
 				deviceId,
@@ -274,7 +274,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -300,7 +300,7 @@ describe("createReporter", () => {
 
 		await expect(operation).rejects.toThrow(CancelError);
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session cancelled",
 				deviceId,
@@ -336,7 +336,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -362,7 +362,7 @@ describe("createReporter", () => {
 
 		await expect(process).rejects.toThrow(Error);
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session errored",
 				deviceId,
@@ -406,7 +406,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -432,7 +432,7 @@ describe("createReporter", () => {
 
 		await expect(run).rejects.toThrow(CancelError);
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session cancelled",
 				deviceId,
@@ -471,7 +471,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -497,7 +497,7 @@ describe("createReporter", () => {
 
 		await expect(run).rejects.toThrow(CancelError);
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session cancelled",
 				deviceId,
@@ -583,7 +583,7 @@ describe("runTelemetryCommand", () => {
 
 		runTelemetryCommand("enable");
 
-		expect(writeMetricsConfig).toBeCalledWith({
+		expect(writeMetricsConfig).toHaveBeenCalledWith({
 			c3permission: {
 				enabled: true,
 				date: new Date(),
@@ -630,7 +630,7 @@ describe("runTelemetryCommand", () => {
 
 		runTelemetryCommand("disable");
 
-		expect(writeMetricsConfig).toBeCalledWith({
+		expect(writeMetricsConfig).toHaveBeenCalledWith({
 			c3permission: {
 				enabled: false,
 				date: new Date(),

@@ -39,7 +39,7 @@ it("produces message to pipeline", async ({ expect }) => {
 
 	// Check `PIPELINE.send()` was called
 	expect(mockPipeline.send).toBeCalledTimes(1);
-	expect(mockPipeline.send).toBeCalledWith([
+	expect(mockPipeline.send).toHaveBeenCalledWith([
 		{ method: "POST", url: "https://example.com/ingest" },
 	]);
 });

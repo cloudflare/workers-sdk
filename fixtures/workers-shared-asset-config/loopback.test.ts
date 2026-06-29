@@ -58,6 +58,9 @@ describe("[Asset Worker] loopback", () => {
 		expect(outerExists).not.toBeCalled();
 		expect(innerExists).toBeCalledTimes(1);
 		expect(getAssetWithMetadataFromKV).toBeCalledTimes(1);
-		expect(getAssetWithMetadataFromKV).toBeCalledWith(undefined, "/file.bin");
+		expect(getAssetWithMetadataFromKV).toHaveBeenCalledWith(
+			undefined,
+			"/file.bin"
+		);
 	});
 });
