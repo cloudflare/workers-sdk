@@ -142,6 +142,96 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
+	it("interactive: replaces an existing binding with the same name", async ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "worker",
+				kv_namespaces: [
+					{ binding: "OTHER_KV", id: "other-id" },
+					{
+						binding: "KV",
+						id: "<your-kv-namespace-id>",
+						preview_id: "preview-id",
+						remote: true,
+					},
+				],
+			},
+			"wrangler.json"
+		);
+
+		setIsTTY(true);
+		mockConfirm({
+			text: "Would you like Wrangler to add it on your behalf?",
+			result: true,
+		});
+		mockPrompt({
+			text: "What binding name would you like to use?",
+			result: "KV",
+		});
+		mockConfirm({
+			text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
+			result: false,
+		});
+
+		await createdResourceConfig(
+			"kv_namespaces",
+			(name) => ({ binding: name ?? "KV", id: "random-id" }),
+			"wrangler.json",
+			undefined
+		);
+
+		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(`
+			"{
+				"compatibility_date": "2022-01-12",
+				"name": "worker",
+				"kv_namespaces": [
+					{
+						"binding": "OTHER_KV",
+						"id": "other-id"
+					},
+					{
+						"binding": "KV",
+						"id": "random-id",
+						"preview_id": "preview-id"
+					}
+				]
+			}"
+		`);
+	});
+
+	it("non interactive: replaces an existing binding with the same name", async ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "worker",
+				kv_namespaces: [
+					{
+						binding: "KV",
+						id: "<your-kv-namespace-id>",
+						remote: true,
+					},
+				],
+			},
+			"wrangler.json"
+		);
+
+		await createdResourceConfig(
+			"kv_namespaces",
+			(name) => ({ binding: name ?? "KV", id: "random-id" }),
+			"wrangler.json",
+			undefined,
+			{ binding: "KV", updateConfig: true }
+		);
+
+		expect(await readFile("wrangler.json", "utf8")).toContain(
+			'"id": "random-id"'
+		);
+		expect(await readFile("wrangler.json", "utf8")).not.toContain('"remote"');
+	});
+
 	it("interactive: file update in env after answering yes", async ({
 		expect,
 	}) => {
