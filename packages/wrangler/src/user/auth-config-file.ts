@@ -114,9 +114,9 @@ export function writeAuthConfigFile(
 }
 
 /**
+/**
  * Read a profile's plaintext-TOML auth config from disk. Returns `undefined`
- * when the file does not exist (per the `ConfigStorage<T>` contract); parse
- * errors on an existing file still propagate.
+ * when the file does not exist or cannot be parsed as valid TOML.
  *
  * Profile-explicit plaintext counterpart to `readAuthCredentials`.
  */
