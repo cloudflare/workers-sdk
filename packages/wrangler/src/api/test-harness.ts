@@ -34,7 +34,7 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { Workflow } from "@cloudflare/workers-types/latest";
+import type { D1Database, Workflow } from "@cloudflare/workers-types/latest";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type {
 	WorkflowBinding,
@@ -98,17 +98,6 @@ export type WorkerHandle<Env = Record<string, any>> = {
 	 */
 	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
 	/**
-	 * Applies D1 migration files that have not already run to a D1 binding on this Worker.
-	 *
-	 * @example
-	 * ```ts
-	 * beforeEach(async () => {
-	 *   await worker.applyD1Migrations("DATABASE");
-	 * });
-	 * ```
-	 */
-	applyD1Migrations(bindingName: keyof Env & string): Promise<void>;
-	/**
 	 * Returns the full environment object configured on this Worker, including
 	 * vars, secrets, and bindings.
 	 *
@@ -121,6 +110,17 @@ export type WorkerHandle<Env = Record<string, any>> = {
 	 * ```
 	 */
 	getEnv(): Promise<Env>;
+	/**
+	 * Applies D1 migration files that have not already run to a D1 binding on this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * beforeEach(async () => {
+	 *   await worker.applyD1Migrations("DATABASE");
+	 * });
+	 * ```
+	 */
+	applyD1Migrations(bindingName: BindingName<Env, D1Database>): Promise<void>;
 	/**
 	 * Creates an introspector for a specific Workflow instance.
 	 */
