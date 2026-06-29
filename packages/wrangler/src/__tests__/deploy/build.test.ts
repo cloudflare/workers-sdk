@@ -1077,7 +1077,7 @@ export default { fetch() { return new Response(foo); } }`
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toThrowError();
+			await expect(runWrangler("deploy")).rejects.toThrow();
 			expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",

@@ -54,7 +54,7 @@ describe("inner entrypoint unit tests", () => {
 
 		await expect(
 			async () => await fetchFromInnerEntrypoint(request, env, ctx)
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			"Fetch for user worker without having a user worker binding"
 		);
 	});

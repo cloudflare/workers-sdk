@@ -571,6 +571,7 @@ function getDevCompatibilityDate(
 
 export class ConfigController extends Controller {
 	latestInput?: StartDevWorkerInput;
+	latestWranglerConfig?: Config;
 	latestConfig?: StartDevWorkerOptions;
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
 
@@ -718,6 +719,7 @@ export class ConfigController extends Controller {
 			if (signal.aborted) {
 				return;
 			}
+			this.latestWranglerConfig = fileConfig;
 			this.latestConfig = resolvedConfig;
 			this.#printCurrentBindings = printCurrentBindings;
 			this.emitConfigUpdateEvent(resolvedConfig);

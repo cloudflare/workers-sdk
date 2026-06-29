@@ -847,7 +847,7 @@ describe("queues subscription", () => {
 				runWrangler(
 					`queues subscription update test-queue --id ${subscriptionId}`
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				"No fields specified for update. Provide at least one of --name, --events, or --enabled to update the subscription."
 			);
 		});

@@ -3214,7 +3214,7 @@ describe("r2", () => {
 						runWrangler(
 							`r2 bucket cors set my-bucket --file ${filePath} --force`
 						)
-					).rejects.toThrowError(
+					).rejects.toThrow(
 						/Wrangler detected an AWS S3 CORS configuration format/
 					);
 				});
@@ -3236,7 +3236,7 @@ describe("r2", () => {
 						runWrangler(
 							`r2 bucket cors set my-bucket --file ${filePath} --force`
 						)
-					).rejects.toThrowError(/Wrangler detected AWS S3 style keys/);
+					).rejects.toThrow(/Wrangler detected AWS S3 style keys/);
 				});
 
 				it("should set CORS configuration from a JSON file", async () => {

@@ -66,17 +66,17 @@ describe("containers list", () => {
 	it("should reject --per-page 0", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		await expect(
-			runWrangler("containers list --per-page 0")
-		).rejects.toThrowError(/--per-page must be at least 1/);
+		await expect(runWrangler("containers list --per-page 0")).rejects.toThrow(
+			/--per-page must be at least 1/
+		);
 	});
 
 	it("should reject --per-page with negative value", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		await expect(
-			runWrangler("containers list --per-page -1")
-		).rejects.toThrowError(/--per-page must be at least 1/);
+		await expect(runWrangler("containers list --per-page -1")).rejects.toThrow(
+			/--per-page must be at least 1/
+		);
 	});
 
 	it("should show the correct authentication error", async ({ expect }) => {
@@ -113,7 +113,7 @@ describe("containers list", () => {
 				{ once: true }
 			)
 		);
-		await expect(runWrangler("containers list")).rejects.toThrowError(
+		await expect(runWrangler("containers list")).rejects.toThrow(
 			/There has been an error listing containers/
 		);
 	});
@@ -138,7 +138,7 @@ describe("containers list", () => {
 				{ once: true }
 			)
 		);
-		await expect(runWrangler("containers list")).rejects.toThrowError(
+		await expect(runWrangler("containers list")).rejects.toThrow(
 			/unknown error listing containers/
 		);
 	});
@@ -463,7 +463,7 @@ describe("containers list", () => {
 					{ once: true }
 				)
 			);
-			await expect(runWrangler("containers list --json")).rejects.toThrowError(
+			await expect(runWrangler("containers list --json")).rejects.toThrow(
 				/unknown error listing containers/
 			);
 		});
@@ -491,7 +491,7 @@ describe("containers list", () => {
 					{ once: true }
 				)
 			);
-			await expect(runWrangler("containers list --json")).rejects.toThrowError(
+			await expect(runWrangler("containers list --json")).rejects.toThrow(
 				/There has been an error listing containers/
 			);
 		});

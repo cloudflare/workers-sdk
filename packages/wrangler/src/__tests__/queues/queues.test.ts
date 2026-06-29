@@ -1054,7 +1054,7 @@ describe("wrangler", () => {
 
 					await expect(
 						runWrangler(`queues consumer add ${queueName} testScript`)
-					).rejects.toThrowError();
+					).rejects.toThrow();
 					expect(std.out).toMatchInlineSnapshot(`
 				"Adding consumer to queue testQueue.
 				Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
