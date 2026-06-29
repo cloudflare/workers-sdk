@@ -114,6 +114,7 @@ describe("normalizeAndValidateConfig()", () => {
 			minify: undefined,
 			first_party_worker: undefined,
 			keep_vars: undefined,
+			addresses: undefined,
 			logpush: undefined,
 			upload_source_maps: undefined,
 			placement: undefined,
@@ -10274,3 +10275,67 @@ function normalizePath(text: string): string {
 		.replace("src\\index.ts", "src/index.ts")
 		.replace("path\\to\\tsconfig", "path/to/tsconfig");
 }
+
+describe("normalizeAndValidateConfig() - addresses (Email Routing)", () => {
+	function validate(rawConfig: RawConfig) {
+		return normalizeAndValidateConfig(rawConfig, undefined, undefined, {
+			env: undefined,
+		});
+	}
+
+	it("defaults to undefined when not present", ({ expect }) => {
+		const { config, diagnostics } = validate({});
+		expect(config.addresses).toBeUndefined();
+		expect(diagnostics.hasErrors()).toBe(false);
+	});
+
+	it("accepts an array of literal and catch-all addresses", ({ expect }) => {
+		const { config, diagnostics } = validate({
+			addresses: ["support@example.com", "*@example.com"],
+		});
+		expect(diagnostics.hasErrors()).toBe(false);
+		expect(config.addresses).toEqual(["support@example.com", "*@example.com"]);
+	});
+
+	it("errors when addresses is not an array", ({ expect }) => {
+		// @ts-expect-error intentionally invalid type
+		const { diagnostics } = validate({ addresses: "support@example.com" });
+		expect(diagnostics.hasErrors()).toBe(true);
+		expect(diagnostics.errors).toContain(
+			`Expected "addresses" to be an array of strings but got "support@example.com"`
+		);
+	});
+
+	it("errors on a non-string entry", ({ expect }) => {
+		// @ts-expect-error intentionally invalid entry type
+		const { diagnostics } = validate({ addresses: ["ok@example.com", 123] });
+		expect(diagnostics.hasErrors()).toBe(true);
+		expect(diagnostics.errors).toContain(
+			`Expected "addresses.[1]" to be of type string but got 123.`
+		);
+	});
+
+	it("warns and ignores addresses set under an active env.* (top-level only)", ({
+		expect,
+	}) => {
+		const { config, diagnostics } = normalizeAndValidateConfig(
+			{
+				env: {
+					staging: {
+						// @ts-expect-error addresses is top-level only, not a per-env field
+						addresses: ["support@example.com"],
+					},
+				},
+			},
+			undefined,
+			undefined,
+			{ env: "staging" }
+		);
+		expect(diagnostics.hasWarnings()).toBe(true);
+		expect(diagnostics.renderWarnings()).toContain(
+			`Unexpected fields found in env.staging field: "addresses"`
+		);
+		// Like other top-level-only fields, it is ignored rather than promoted.
+		expect(config.addresses).toBeUndefined();
+	});
+});

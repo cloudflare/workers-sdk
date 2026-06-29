@@ -312,6 +312,13 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
+	validateOptionalTypedArray(
+		diagnostics,
+		"addresses",
+		rawConfig.addresses,
+		"string"
+	);
+
 	validateOptionalProperty(
 		diagnostics,
 		"",
@@ -499,6 +506,7 @@ export function normalizeAndValidateConfig(
 		legacy_env: !useServiceEnvironments,
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
+		addresses: rawConfig.addresses,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
 		site: normalizeAndValidateSite(
