@@ -32,6 +32,10 @@ function isNotFoundError(error: unknown): boolean {
 	);
 }
 
+function isR2BucketNotEmptyError(error: unknown): boolean {
+	return error instanceof APIError && error.code === 10008;
+}
+
 export function getFallbackPreviewSlug(previewName: string): string {
 	return previewName
 		.toLowerCase()
@@ -182,26 +186,34 @@ export async function cleanupPreviewBindings(
 			throw error;
 		}
 
-		for (const key of await listR2ObjectKeys(
-			config,
-			accountId,
-			bucketName,
-			r2.jurisdiction
-		)) {
-			await deleteR2Object(
+		for (let attempt = 0; attempt < 3; attempt++) {
+			const keys = await listR2ObjectKeys(
 				config,
 				accountId,
 				bucketName,
-				key,
-				true,
 				r2.jurisdiction
 			);
-		}
+			for (const key of keys) {
+				await deleteR2Object(
+					config,
+					accountId,
+					bucketName,
+					key,
+					true,
+					r2.jurisdiction
+				);
+			}
 
-		try {
-			await deleteR2Bucket(config, accountId, bucketName, r2.jurisdiction);
-		} catch (error) {
-			if (!isNotFoundError(error)) {
+			try {
+				await deleteR2Bucket(config, accountId, bucketName, r2.jurisdiction);
+				break;
+			} catch (error) {
+				if (isNotFoundError(error)) {
+					break;
+				}
+				if (isR2BucketNotEmptyError(error) && attempt < 2) {
+					continue;
+				}
 				throw error;
 			}
 		}
