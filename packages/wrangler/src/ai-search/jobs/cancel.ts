@@ -9,6 +9,9 @@ export const aiSearchJobsCancelCommand = createCommand({
 		status: "open beta",
 		owner: "Product: AI Search",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	args: {
 		name: {
 			type: "string",
@@ -32,21 +35,37 @@ export const aiSearchJobsCancelCommand = createCommand({
 			default: false,
 			description: "Skip confirmation",
 		},
+		json: {
+			type: "boolean",
+			default: false,
+			description: "Return output as JSON",
+		},
 	},
 	positionalArgs: ["name", "job-id"],
-	async handler({ name, jobId, namespace, force }, { config }) {
+	async handler({ name, jobId, namespace, force, json }, { config }) {
 		if (!force) {
 			const confirmedCancellation = await confirm(
 				`OK to cancel the indexing job "${jobId}" on AI Search instance "${name}"?`
 			);
 			if (!confirmedCancellation) {
-				logger.log("Cancellation aborted.");
+				if (!json) {
+					logger.log("Cancellation aborted.");
+				}
 				return;
 			}
 		}
 
-		logger.log(`Cancelling indexing job "${jobId}"...`);
-		await cancelJob(config, namespace, name, jobId);
+		if (!json) {
+			logger.log(`Cancelling indexing job "${jobId}"...`);
+		}
+
+		const job = await cancelJob(config, namespace, name, jobId);
+
+		if (json) {
+			logger.log(JSON.stringify(job, null, 2));
+			return;
+		}
+
 		logger.log(`Successfully cancelled indexing job "${jobId}"`);
 	},
 });

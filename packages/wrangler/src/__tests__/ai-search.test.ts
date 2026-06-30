@@ -2387,6 +2387,20 @@ describe("ai-search commands", () => {
 					'Successfully cancelled indexing job "job-001"'
 				);
 			});
+
+			it("should cancel and output JSON when --json is passed", async ({
+				expect,
+			}) => {
+				const requests = mockCancelJob(MOCK_JOB);
+				await runWrangler(
+					"ai-search jobs cancel my-instance job-001 --force --json"
+				);
+				expect(requests.count).toBe(1);
+				const parsed = JSON.parse(std.out);
+				expect(parsed.id).toBe("job-001");
+				expect(std.out).not.toContain("Cancelling indexing job");
+				expect(std.out).not.toContain("Successfully cancelled");
+			});
 		});
 
 		describe("logs", () => {
