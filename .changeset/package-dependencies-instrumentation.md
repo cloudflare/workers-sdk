@@ -1,6 +1,5 @@
 ---
 "wrangler": minor
-"@cloudflare/workers-utils": patch
 ---
 
 Send npm package dependency metadata with worker uploads

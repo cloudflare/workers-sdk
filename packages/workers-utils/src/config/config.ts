@@ -78,6 +78,10 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 *
 	 * When set to `false`, Wrangler will not include `package_dependencies` in
 	 * the upload payload. Defaults to `true` (enabled) when not specified.
+	 *
+	 * Note: This is considered build metadata, so managed separately from the
+	 *       telemetry one and not disabled when
+	 *       `send_metrics`/`WRANGLER_SEND_METRICS` is set to `false`
 	 */
 	dependencies_instrumentation: boolean | undefined;
 

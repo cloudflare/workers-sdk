@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
-import { collectPackageDependencies } from "../../deploy/deployment-metadata";
+import { collectPackageDependencies } from "../src/deploy/helpers/package-dependencies";
 
 describe("collectPackageDependencies", () => {
 	runInTempDir();
@@ -311,7 +311,7 @@ describe("collectPackageDependencies", () => {
 		expect(result).toHaveLength(200);
 	});
 
-	it("should use dependencies version when duplicate exists in devDependencies", ({
+	it("should use devDependencies version when duplicate exists in dependencies", ({
 		expect,
 	}) => {
 		const nodeModulesPath = path.join(process.cwd(), "node_modules");

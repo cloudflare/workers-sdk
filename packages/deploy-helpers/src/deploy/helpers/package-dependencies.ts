@@ -1,8 +1,12 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
-import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
-import { logger } from "../logger";
+import {
+	getInstalledPackageVersion,
+	getPackagePath,
+	parsePackageJSON,
+	readFileSync,
+} from "@cloudflare/workers-utils";
+import { logger } from "../../shared/context";
 
 /**
  * A single npm package dependency entry, matching the EWC API schema.
@@ -137,12 +141,13 @@ function toStringRecord(
  */
 function isPackagePrivate(packageName: string, projectPath: string): boolean {
 	try {
-		const packageEntryPath = require.resolve(packageName, {
-			paths: [projectPath],
-		});
+		const packagePath = getPackagePath(packageName, projectPath);
+		if (!packagePath) {
+			return false;
+		}
 
-		// Walk up from the resolved entry point to find the package's package.json
-		let currentDir = path.dirname(packageEntryPath);
+		// Walk up from the resolved path to find the package's package.json
+		let currentDir = packagePath;
 		const root = path.parse(currentDir).root;
 
 		while (currentDir !== root) {

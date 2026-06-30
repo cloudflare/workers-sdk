@@ -25,6 +25,7 @@ import {
 import { ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE } from "./helpers/error-codes";
 import { resolveExportsUploadPayload } from "./helpers/exports";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
@@ -192,7 +193,10 @@ export default async function versionsUpload(
 		logpush: undefined, // logpush and observability are non-versioned settings
 		observability: undefined,
 		cache: config.cache, // cache is a versioned setting
-		package_dependencies: props.packageDependencies,
+		package_dependencies:
+			config.dependencies_instrumentation !== false && projectRoot
+				? collectPackageDependencies(projectRoot)
+				: undefined,
 	};
 
 	await printBundleSize(
