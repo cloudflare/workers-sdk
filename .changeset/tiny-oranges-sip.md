@@ -4,7 +4,7 @@
 
 Add `bindingOverrides` and `getExport()` to `createTestHarness()`
 
-Test harness workers loaded from Wrangler config files can now replace a configured binding with a Worker in the same harness. This is useful for replacing platform bindings with test Workers while keeping the source Worker config production-like. Worker handles also expose `getExport()` for calling JSRPC methods on the default Worker export, including mock Workers used as override targets.
+Test harness workers loaded from Wrangler config files can now replace a configured binding with a Worker in the same harness. This is useful for replacing platform bindings with test Workers while keeping the source Worker config production-like. You can also call `getExport()` on a Worker returned by `server.getWorker(name)` to access JSRPC methods on the default Worker export, including mock Workers used as override targets.
 
 ```ts
 const server = createTestHarness({
