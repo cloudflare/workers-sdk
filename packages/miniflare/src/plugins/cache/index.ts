@@ -58,6 +58,7 @@ export const CACHE_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
+		isolateLocalStorage,
 	}) {
 		const cache = options.cache ?? true;
 		const cacheWarnUsage = options.cacheWarnUsage ?? false;
@@ -101,10 +102,17 @@ export const CACHE_PLUGIN: Plugin<
 			const uniqueKey = `miniflare-${CACHE_OBJECT_CLASS_NAME}`;
 
 			const persist = sharedOptions.cachePersist;
+			// With the shared storage owner enabled, cache stays local to each
+			// instance: ignore the shared `defaultPersistRoot` (unless the user set
+			// an explicit `cachePersist`) so each process uses its own per-instance
+			// `tmpPath` cache and never contends cross-process.
+			const cacheDefaultPersistRoot = isolateLocalStorage
+				? undefined
+				: defaultPersistRoot;
 			const persistPath = getPersistPath(
 				CACHE_PLUGIN_NAME,
 				tmpPath,
-				defaultPersistRoot,
+				cacheDefaultPersistRoot,
 				persist
 			);
 			await fs.mkdir(persistPath, { recursive: true });

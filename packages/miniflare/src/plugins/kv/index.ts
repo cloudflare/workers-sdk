@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PathSchema } from "../../shared";
 import { SharedBindings } from "../../workers";
 import {
+	buildObjectEntryProps,
 	buildRemoteProxyProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
@@ -60,7 +61,7 @@ export const KVSharedOptionsSchema = z.object({
 const SERVICE_NAMESPACE_PREFIX = `${KV_PLUGIN_NAME}:ns`;
 // A single entry service shared by every *local* namespace. Each namespace's id
 // is supplied per-binding via `ctx.props`, so one service serves all of them.
-const KV_LOCAL_ENTRY_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:entry`;
+export const KV_LOCAL_ENTRY_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:entry`;
 // One shared remote-proxy service for all remote namespaces (config via props).
 const KV_REMOTE_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:remote`;
 const KV_STORAGE_SERVICE_NAME = `${KV_PLUGIN_NAME}:storage`;
@@ -106,11 +107,7 @@ export const KV_PLUGIN: Plugin<
 				name,
 				kvNamespace: {
 					name: KV_LOCAL_ENTRY_SERVICE_NAME,
-					props: {
-						json: JSON.stringify({
-							[SharedBindings.TEXT_NAMESPACE]: namespace.id,
-						}),
-					},
+					props: buildObjectEntryProps(namespace.id),
 				},
 			};
 		});
@@ -142,16 +139,23 @@ export const KV_PLUGIN: Plugin<
 		defaultPersistRoot,
 		log,
 		unsafeStickyBlobs,
+		storageOwnerRoutePlugins,
 	}) {
 		const persist = sharedOptions.kvPersist;
 		const namespaces = namespaceEntries(options.kvNamespaces);
 
 		const services: Service[] = [];
 
+		// When routing local KV to a shared storage owner, this instance must not
+		// stand up its own KV storage (disk/DO/migrations) — its bindings are
+		// repointed at the owner proxy by `Miniflare`. Sites are still served
+		// locally as they aren't routed.
+		const routeToOwner = storageOwnerRoutePlugins.has(KV_PLUGIN_NAME);
+
 		// One shared entry service for all local namespaces (id supplied via props).
-		const hasLocalNamespace = namespaces.some(
-			([, ns]) => !ns.remoteProxyConnectionString
-		);
+		const hasLocalNamespace =
+			!routeToOwner &&
+			namespaces.some(([, ns]) => !ns.remoteProxyConnectionString);
 		if (hasLocalNamespace) {
 			services.push({
 				name: KV_LOCAL_ENTRY_SERVICE_NAME,

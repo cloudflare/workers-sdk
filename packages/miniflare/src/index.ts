@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -15,6 +16,7 @@ import { $ as colors$, bold, dim, green, yellow } from "kleur/colors";
 import stoppable from "stoppable";
 import { getGlobalDispatcher, Pool } from "undici";
 import SCRIPT_DEV_REGISTRY_PROXY from "worker:core/dev-registry-proxy";
+import SCRIPT_STORAGE_OWNER_SERVER from "worker:core/storage-owner-server";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
@@ -41,25 +43,36 @@ import {
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
+	IMAGES_NS_DATA_SERVICE_NAME,
 	IMAGES_PLUGIN_NAME,
+	KV_LOCAL_ENTRY_SERVICE_NAME,
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	loadExternalPlugins,
+	namespaceEntries,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
+	buildRemoteProxyProps,
+	D1_LOCAL_ENTRY_SERVICE_NAME,
 	ProxyClient,
 	ProxyNodeBinding,
 	QUEUES_PLUGIN_NAME,
 	QueuesError,
+	R2_LOCAL_ENTRY_SERVICE_NAME,
 	R2_PLUGIN_NAME,
+	getUserBindingServiceName,
+	remoteProxyClientWorker,
 	SECRET_STORE_PLUGIN_NAME,
+	SECRET_STORE_SECRET_ENTRYPOINT,
+	STREAM_BINDING_ENTRYPOINT,
+	STREAM_BINDING_SERVICE_NAME,
+	STREAM_PLUGIN_NAME,
 	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_ENTRY,
 	SOCKET_DEBUG_PORT,
 	SOCKET_DEV_REGISTRY,
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
-	STREAM_PLUGIN_NAME,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -89,11 +102,21 @@ import {
 } from "./runtime";
 import {
 	_isCyclic,
+	clearStorageOwner,
+	countLiveStorageClients,
+	heartbeatStorageClient,
+	heartbeatStorageOwner,
 	isFileNotFoundError,
 	MiniflareCoreError,
 	NoOpLog,
+	OWNER_HEARTBEAT_MS,
 	parseWithRootPath,
+	readStorageOwner,
+	registerStorageClient,
 	stripAnsi,
+	tryAcquireOwnerSpawnLock,
+	unregisterStorageClient,
+	writeStorageOwner,
 } from "./shared";
 import { DevRegistry, getWorkerRegistry } from "./shared/dev-registry";
 import {
@@ -108,6 +131,7 @@ import {
 	CorePaths,
 	LogLevel,
 	Mutex,
+	SharedBindings,
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
@@ -123,6 +147,7 @@ import type {
 	PluginWorkerOptions,
 	QueueConsumers,
 	QueueProducers,
+	RemoteProxyConnectionString,
 	ReplaceWorkersTypes,
 	SharedOptions,
 	WorkerOptions,
@@ -165,6 +190,104 @@ import type { Duplex, Transform, Writable } from "node:stream";
 import type { Dispatcher, Response as UndiciResponse } from "undici";
 
 const DEFAULT_HOST = "127.0.0.1";
+// Client-side service that proxies routed storage bindings to the owner over
+// HTTP. This reuses the remote-bindings ("mixed-mode") client worker: each
+// routed binding carries the owner's address + resource key via props.
+const SERVICE_STORAGE_OWNER_PROXY = "storage-owner-proxy";
+// Owner-side service + socket exposing the owner's local storage entry services
+// over HTTP (the remote-bindings proxy-server protocol).
+const SERVICE_STORAGE_OWNER_SERVER = "storage-owner-server";
+const SOCKET_STORAGE_OWNER = "storage-owner";
+
+// Detached storage-owner process bootstrap. The owner runs the same built
+// miniflare module (its path handed over via env), so we avoid a second build
+// entry point. Kept as a constant string with no interpolation so it satisfies
+// the no-unsafe-command-execution lint rule.
+const STORAGE_OWNER_BOOTSTRAP =
+	"require(process.env.MINIFLARE_STORAGE_OWNER_MAIN).runStorageOwnerProcess()";
+const ENV_STORAGE_OWNER_MAIN = "MINIFLARE_STORAGE_OWNER_MAIN";
+const ENV_STORAGE_OWNER_CONFIG = "MINIFLARE_STORAGE_OWNER_CONFIG";
+// How long a client waits for a freshly spawned owner to publish itself.
+const STORAGE_OWNER_SPAWN_TIMEOUT_MS = 30_000;
+const STORAGE_OWNER_POLL_MS = 50;
+// Owner self-teardown tuning: a startup grace period before the owner is
+// eligible to exit, and a debounce so a transient client gap (e.g. a reload)
+// doesn't tear storage down. Overridable via env (read by the spawned owner
+// process, which inherits the spawner's environment) primarily for tests.
+const STORAGE_OWNER_STARTUP_GRACE_MS =
+	Number(process.env.MINIFLARE_STORAGE_OWNER_GRACE_MS) || 10_000;
+const STORAGE_OWNER_IDLE_CHECK_MS =
+	Number(process.env.MINIFLARE_STORAGE_OWNER_IDLE_CHECK_MS) || 1_000;
+const STORAGE_OWNER_IDLE_DEBOUNCE = 3;
+
+const PERSIST_ROOT_STARTUP_LOCK = ".miniflare-startup.lock";
+const PERSIST_ROOT_STARTUP_LOCK_STALE_MS = 30_000;
+const PERSIST_ROOT_STARTUP_LOCK_RETRY_MS = 50;
+
+async function wait(ms: number): Promise<void> {
+	await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withPersistRootStartupLock<T>(
+	persistRoot: string | undefined,
+	signal: AbortSignal,
+	callback: () => Promise<T>
+): Promise<T> {
+	if (persistRoot === undefined || signal.aborted) {
+		return callback();
+	}
+
+	await mkdir(persistRoot, { recursive: true });
+	const lockPath = path.join(persistRoot, PERSIST_ROOT_STARTUP_LOCK);
+	let lock: fs.promises.FileHandle | undefined;
+	let heartbeat: NodeJS.Timeout | undefined;
+
+	while (lock === undefined && !signal.aborted) {
+		try {
+			lock = await fs.promises.open(lockPath, "wx");
+			await lock.writeFile(`${process.pid}\n${Date.now()}\n`);
+			heartbeat = setInterval(() => {
+				fs.promises.utimes(lockPath, new Date(), new Date()).catch(() => {});
+			}, 1_000);
+			break;
+		} catch (e) {
+			if ((e as NodeJS.ErrnoException).code !== "EEXIST") {
+				throw e;
+			}
+
+			try {
+				const stats = await fs.promises.stat(lockPath);
+				if (
+					stats.mtime.getTime() <
+					Date.now() - PERSIST_ROOT_STARTUP_LOCK_STALE_MS
+				) {
+					await fs.promises.rm(lockPath, { force: true });
+					continue;
+				}
+			} catch (statError) {
+				if ((statError as NodeJS.ErrnoException).code !== "ENOENT") {
+					throw statError;
+				}
+			}
+
+			await wait(PERSIST_ROOT_STARTUP_LOCK_RETRY_MS);
+		}
+	}
+	if (lock === undefined) {
+		return callback();
+	}
+
+	try {
+		return await callback();
+	} finally {
+		if (heartbeat !== undefined) {
+			clearInterval(heartbeat);
+		}
+		await lock?.close();
+		await fs.promises.rm(lockPath, { force: true });
+	}
+}
+
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
 }
@@ -651,6 +774,212 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	return externalServices;
 }
 
+/**
+ * Extracts the resource id carried in an object-entry binding's `props.json`
+ * (written by `buildObjectEntryProps`), or `undefined` if the props don't carry
+ * one (e.g. remote/mixed-mode bindings).
+ */
+function extractObjectEntryId(
+	propsJson: string | undefined
+): string | undefined {
+	if (propsJson === undefined) {
+		return undefined;
+	}
+	try {
+		const parsed = JSON.parse(propsJson) as Record<string, unknown>;
+		const id = parsed[SharedBindings.TEXT_NAMESPACE];
+		return typeof id === "string" ? id : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+// Resource keys advertised to the owner via `MF-Binding` (see
+// `storage-owner-server.worker.ts`). Type-prefixed so KV/R2/D1 ids can never
+// collide in the owner's binding namespace.
+function storageOwnerResourceKey(type: "kv" | "r2" | "d1", id: string): string {
+	return `${type}:${id}`;
+}
+
+/**
+ * Builds a binding designator routing a storage op through the client-side
+ * remote-proxy worker to the owner. The owner address + resource key travel via
+ * props (read by `remote-proxy-client.worker.ts`).
+ */
+function storageOwnerProxyDesignator(
+	conn: RemoteProxyConnectionString,
+	resourceKey: string
+) {
+	return {
+		name: SERVICE_STORAGE_OWNER_PROXY,
+		props: buildRemoteProxyProps(conn, resourceKey),
+	};
+}
+
+/**
+ * If `binding` is a *local* storage binding pointing at a shared object-entry
+ * service with a resource id in props, rewrite it to route through the
+ * client-side storage-owner proxy (so the owner process performs the storage
+ * I/O). Remote (mixed-mode) bindings — which carry no object-entry id — are
+ * returned unchanged.
+ */
+function rewriteStorageOwnerBinding(
+	binding: Worker_Binding,
+	conn: RemoteProxyConnectionString,
+	pluginKey: string
+): Worker_Binding {
+	// Streams: a single per-instance store accessed over RPC. Repoint the whole
+	// binding at the owner proxy (the remote-proxy client carries the RPC); the
+	// owner hosts the stream entrypoint + store.
+	if (
+		pluginKey === STREAM_PLUGIN_NAME &&
+		"service" in binding &&
+		binding.service?.name !== undefined
+	) {
+		return {
+			name: binding.name,
+			service: storageOwnerProxyDesignator(conn, "stream"),
+		};
+	}
+	// Secrets Store: per-secret RPC service. Repoint at the owner proxy, keyed by
+	// "secrets:<store_id>:<secret_name>" (extracted from the local service name).
+	if (
+		pluginKey === SECRET_STORE_PLUGIN_NAME &&
+		"service" in binding &&
+		binding.service?.name !== undefined
+	) {
+		const resource = binding.service.name.slice(
+			`${SECRET_STORE_PLUGIN_NAME}:`.length
+		);
+		return {
+			name: binding.name,
+			service: storageOwnerProxyDesignator(conn, `secrets:${resource}`),
+		};
+	}
+	// KV namespace bindings.
+	if ("kvNamespace" in binding && binding.kvNamespace?.name !== undefined) {
+		const id = extractObjectEntryId(binding.kvNamespace.props?.json);
+		if (id !== undefined) {
+			return {
+				name: binding.name,
+				kvNamespace: storageOwnerProxyDesignator(
+					conn,
+					storageOwnerResourceKey("kv", id)
+				),
+			};
+		}
+	}
+	// R2 bucket bindings.
+	if ("r2Bucket" in binding && binding.r2Bucket?.name !== undefined) {
+		const id = extractObjectEntryId(binding.r2Bucket.props?.json);
+		if (id !== undefined) {
+			return {
+				name: binding.name,
+				r2Bucket: storageOwnerProxyDesignator(
+					conn,
+					storageOwnerResourceKey("r2", id)
+				),
+			};
+		}
+	}
+	// D1 (pre-Wrangler-3.3 `__D1_BETA__`) service binding.
+	if ("service" in binding && binding.service?.name !== undefined) {
+		const id = extractObjectEntryId(binding.service.props?.json);
+		if (id !== undefined) {
+			return {
+				name: binding.name,
+				service: storageOwnerProxyDesignator(
+					conn,
+					storageOwnerResourceKey("d1", id)
+				),
+			};
+		}
+	}
+	// D1 (post-3.3) wrapped binding: rewrite the inner fetcher service designator.
+	if ("wrapped" in binding && binding.wrapped?.innerBindings !== undefined) {
+		let rewrote = false;
+		const innerBindings = binding.wrapped.innerBindings.map((inner) => {
+			if ("service" in inner && inner.service?.name !== undefined) {
+				const id = extractObjectEntryId(inner.service.props?.json);
+				if (id !== undefined) {
+					rewrote = true;
+					return {
+						...inner,
+						service: storageOwnerProxyDesignator(
+							conn,
+							storageOwnerResourceKey("d1", id)
+						),
+					};
+				}
+			}
+			return inner;
+		});
+		if (rewrote) {
+			return {
+				...binding,
+				wrapped: { ...binding.wrapped, innerBindings },
+			};
+		}
+	}
+	return binding;
+}
+
+/**
+ * Collects the union of *local* (non-remote) KV/R2/D1 resource ids declared
+ * across the given workers. Used both to tell a spawned owner which storage to
+ * stand up and to bind those resources on the owner's HTTP storage server. The
+ * entry services route by `idFromName`, so the owner additionally serves ids
+ * declared only by other clients.
+ */
+function collectLocalStorageIds(workerOpts: PluginWorkerOptions[]): {
+	kv: Set<string>;
+	r2: Set<string>;
+	d1: Set<string>;
+	stream: boolean;
+	images: boolean;
+	secrets: Map<string, { store_id: string; secret_name: string }>;
+} {
+	const kv = new Set<string>();
+	const r2 = new Set<string>();
+	const d1 = new Set<string>();
+	let stream = false;
+	let images = false;
+	const secrets = new Map<string, { store_id: string; secret_name: string }>();
+	for (const opts of workerOpts) {
+		for (const [, ns] of namespaceEntries(opts.kv.kvNamespaces)) {
+			if (!ns.remoteProxyConnectionString) {
+				kv.add(ns.id);
+			}
+		}
+		for (const [, bucket] of namespaceEntries(opts.r2.r2Buckets)) {
+			if (!bucket.remoteProxyConnectionString) {
+				r2.add(bucket.id);
+			}
+		}
+		for (const [, db] of namespaceEntries(opts.d1.d1Databases)) {
+			if (!db.remoteProxyConnectionString) {
+				d1.add(db.id);
+			}
+		}
+		if (opts.stream.stream && !opts.stream.stream.remoteProxyConnectionString) {
+			stream = true;
+		}
+		if (opts.images.images && !opts.images.images.remoteProxyConnectionString) {
+			images = true;
+		}
+		const secretsStoreSecrets =
+			opts[SECRET_STORE_PLUGIN_NAME]?.secretsStoreSecrets;
+		if (secretsStoreSecrets) {
+			for (const { store_id, secret_name } of Object.values(
+				secretsStoreSecrets
+			)) {
+				secrets.set(`${store_id}:${secret_name}`, { store_id, secret_name });
+			}
+		}
+	}
+	return { kv, r2, d1, stream, images, secrets };
+}
+
 function invalidWrappedAsBound(name: string, bindingType: string): never {
 	const stringName = JSON.stringify(name);
 	throw new MiniflareCoreError(
@@ -1016,6 +1345,13 @@ export class Miniflare {
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
 	readonly #devRegistry: DevRegistry;
 
+	// Shared-storage-owner state (experimental `unsafeSharedStorageOwner`).
+	// `#storageOwnerHeartbeat` keeps the owner definition / client presence file
+	// fresh; `#storageClientPath` is this instance's client-presence file (client
+	// role only) so it can be removed on dispose.
+	#storageOwnerHeartbeat?: NodeJS.Timeout;
+	#storageClientPath?: string;
+
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
 
@@ -1145,6 +1481,8 @@ export class Miniflare {
 			// The .catch() will never run since the event loop won't tick again,
 			// but the synchronous portion still executes.
 			this.#devRegistry.dispose();
+			// Best-effort sync removal of our shared-storage presence files.
+			this.#disposeStorageOwnerPresence();
 		});
 
 		this.#disposeController = new AbortController();
@@ -1960,6 +2298,50 @@ export class Miniflare {
 			? getExternalServiceEntrypoints(allWorkerOpts)
 			: null;
 
+		// As a client, ensure an owner exists (spawning a detached one if needed)
+		// before we resolve routing below.
+		await this.#ensureStorageOwner();
+
+		// When acting as a shared-storage *client*, resolve the owner so local
+		// storage bindings can be routed to it (and local storage services
+		// skipped). `undefined` => behave normally (owner role, feature off, or
+		// no owner currently published).
+		const storageOwnerRouting = this.#getStorageOwnerRouting();
+		// Only route a storage type to the owner when this instance hasn't pinned
+		// it to an explicit persist path. An explicit `*Persist` overrides
+		// `defaultPersistRoot` (the owner's basis), so such storage must stay
+		// local rather than being shared through the owner.
+		const storageOwnerRoutePlugins = new Set<string>();
+		if (storageOwnerRouting !== undefined) {
+			if (sharedOpts.kv.kvPersist === undefined) {
+				storageOwnerRoutePlugins.add(KV_PLUGIN_NAME);
+			}
+			if (sharedOpts.r2.r2Persist === undefined) {
+				storageOwnerRoutePlugins.add(R2_PLUGIN_NAME);
+			}
+			if (sharedOpts.d1.d1Persist === undefined) {
+				storageOwnerRoutePlugins.add(D1_PLUGIN_NAME);
+			}
+			if (sharedOpts.stream.streamPersist === undefined) {
+				storageOwnerRoutePlugins.add(STREAM_PLUGIN_NAME);
+			}
+			if (
+				sharedOpts[SECRET_STORE_PLUGIN_NAME].secretsStorePersist === undefined
+			) {
+				storageOwnerRoutePlugins.add(SECRET_STORE_PLUGIN_NAME);
+			}
+			if (sharedOpts.images.imagesPersist === undefined) {
+				storageOwnerRoutePlugins.add(IMAGES_PLUGIN_NAME);
+			}
+		}
+		// Connection string clients use to reach the owner's HTTP storage server.
+		const storageOwnerConn =
+			storageOwnerRouting !== undefined
+				? (new URL(
+						`http://${storageOwnerRouting.ownerAddress}`
+					) as RemoteProxyConnectionString)
+				: undefined;
+
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
 			allWorkerOpts,
@@ -2054,7 +2436,18 @@ export class Miniflare {
 					i
 				);
 				if (pluginBindings !== undefined) {
-					for (const binding of pluginBindings) {
+					for (const originalBinding of pluginBindings) {
+						// When routing this plugin's storage to a shared owner, repoint
+						// local storage bindings at the storage-owner proxy.
+						const binding =
+							storageOwnerRoutePlugins.has(key) &&
+							storageOwnerConn !== undefined
+								? rewriteStorageOwnerBinding(
+										originalBinding,
+										storageOwnerConn,
+										key
+									)
+								: originalBinding;
 						// If this is the Workers Sites manifest, we need to add it as a
 						// module for modules workers. For all other bindings, and in
 						// service workers, just add to worker bindings.
@@ -2149,6 +2542,14 @@ export class Miniflare {
 				queueProducers,
 				queueConsumers,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
+				storageOwnerRoutePlugins,
+				storageOwnerConn,
+				// Plugins not routed to the owner but still disk-backed (Cache,
+				// Durable Objects, Workflows) keep their storage per-instance when
+				// the feature is enabled, so separate processes don't contend on one
+				// database under the shared `defaultPersistRoot`. Applies to every
+				// role (client, fallback-to-local client, and owner).
+				isolateLocalStorage: this.#storageOwnerPersistRoot() !== undefined,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const workerOptions = this.#getWorkerOptsForPlugin(key, workerOpts);
@@ -2318,6 +2719,99 @@ export class Miniflare {
 			});
 		}
 
+		// Client-side storage-owner proxy: forwards repointed storage bindings to
+		// the owner over HTTP, reusing the remote-bindings ("mixed-mode") client
+		// worker. The owner address + resource key travel via each routed
+		// binding's props (see `rewriteStorageOwnerBinding`).
+		if (storageOwnerRouting !== undefined) {
+			services.set(SERVICE_STORAGE_OWNER_PROXY, {
+				name: SERVICE_STORAGE_OWNER_PROXY,
+				worker: remoteProxyClientWorker(),
+			});
+		}
+
+		// Owner-side storage server: exposes this instance's local storage entry
+		// services over a dedicated HTTP socket using the remote-bindings
+		// proxy-server protocol. Clients reach it via the address published in the
+		// owner definition. Each resource id is bound under a type-prefixed key
+		// pointing at the shared object-entry service with that id in props, so
+		// the entry worker attaches the correct `cf.miniflare.name` locally.
+		if (sharedOpts.core.unsafeStorageOwnerRole === "owner") {
+			// Bind one generic entry service per storage type the owner stood up.
+			// The resource id travels per-request (via header), so these serve any
+			// id — including ones only declared by clients that join later.
+			const ids = collectLocalStorageIds(allWorkerOpts);
+			const ownerBindings: Worker_Binding[] = [];
+			if (ids.kv.size > 0) {
+				ownerBindings.push({
+					name: "kv",
+					service: { name: KV_LOCAL_ENTRY_SERVICE_NAME },
+				});
+			}
+			if (ids.r2.size > 0) {
+				ownerBindings.push({
+					name: "r2",
+					service: { name: R2_LOCAL_ENTRY_SERVICE_NAME },
+				});
+			}
+			if (ids.d1.size > 0) {
+				ownerBindings.push({
+					name: "d1",
+					service: { name: D1_LOCAL_ENTRY_SERVICE_NAME },
+				});
+			}
+			// Images: single fixed store, served via the fetch path like KV.
+			if (ids.images) {
+				ownerBindings.push({
+					name: "images",
+					service: { name: IMAGES_NS_DATA_SERVICE_NAME },
+				});
+			}
+			// Streams: single RPC entrypoint (one store per owner), exposed under
+			// the "stream" key and dispatched via the JSRPC branch of the server.
+			if (ids.stream) {
+				ownerBindings.push({
+					name: "stream",
+					service: {
+						name: STREAM_BINDING_SERVICE_NAME,
+						entrypoint: STREAM_BINDING_ENTRYPOINT,
+					},
+				});
+			}
+			// Secrets Store: one RPC entrypoint per secret, exposed under
+			// "secrets:<store_id>:<secret_name>".
+			for (const { store_id, secret_name } of ids.secrets.values()) {
+				const resource = `${store_id}:${secret_name}`;
+				ownerBindings.push({
+					name: `secrets:${resource}`,
+					service: {
+						name: getUserBindingServiceName(SECRET_STORE_PLUGIN_NAME, resource),
+						entrypoint: SECRET_STORE_SECRET_ENTRYPOINT,
+					},
+				});
+			}
+			services.set(SERVICE_STORAGE_OWNER_SERVER, {
+				name: SERVICE_STORAGE_OWNER_SERVER,
+				worker: {
+					compatibilityDate: "2025-01-01",
+					compatibilityFlags: ["nodejs_compat", "experimental"],
+					modules: [
+						{
+							name: "storage-owner-server.worker.js",
+							esModule: SCRIPT_STORAGE_OWNER_SERVER(),
+						},
+					],
+					bindings: ownerBindings,
+				},
+			});
+			sockets.push({
+				name: SOCKET_STORAGE_OWNER,
+				address: "127.0.0.1:0",
+				service: { name: SERVICE_STORAGE_OWNER_SERVER },
+				http: {},
+			});
+		}
+
 		// Collect workflow options from all workers for the explorer binding map
 		const workflowOptions = new Map<
 			string,
@@ -2359,6 +2853,7 @@ export class Miniflare {
 			durableObjectClassNames,
 			workflowOptions: workflowOptions.size > 0 ? workflowOptions : undefined,
 			allWorkerOpts,
+			storageOwnerRoutePlugins,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2407,6 +2902,7 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
+		const runtime = this.#runtime;
 		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
 		// For internal loopback communication with workerd, always use 127.0.0.1
 		// when localhost is configured. This prevents IPv6/IPv4 mismatch issues
@@ -2487,11 +2983,16 @@ export class Miniflare {
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
 			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
-		const maybeSocketPorts = await this.#runtime.updateConfig(
-			configBuffer,
-			runtimeOpts,
-			this.#workerOpts.flatMap((w) => w.core.name ?? []),
-			this.#disposeController.signal
+		const maybeSocketPorts = await withPersistRootStartupLock(
+			this.#sharedOpts.core.defaultPersistRoot,
+			this.#disposeController.signal,
+			() =>
+				runtime.updateConfig(
+					configBuffer,
+					runtimeOpts,
+					this.#workerOpts.flatMap((w) => w.core.name ?? []),
+					this.#disposeController.signal
+				)
 		);
 		if (this.#disposeController.signal.aborted) return;
 		if (maybeSocketPorts === undefined) {
@@ -2588,6 +3089,8 @@ export class Miniflare {
 
 		await this.#registerWorkers();
 
+		this.#updateStorageOwnerPresence();
+
 		// Catch any registry updates that occurred while workerd was booting.
 		if (this.#devRegistry.isEnabled()) {
 			await this.#pushRegistryUpdate();
@@ -2668,6 +3171,218 @@ export class Miniflare {
 		assert(this.#runtimeEntryURL !== undefined);
 		// Return a copy so external mutations don't propagate to `#runtimeEntryURL`
 		return new URL(this.#runtimeEntryURL.toString());
+	}
+
+	/**
+	 * The persist root this instance participates in as a shared storage
+	 * owner/client, or `undefined` if the feature is off or there is nothing to
+	 * share (pure in-memory storage).
+	 */
+	#storageOwnerPersistRoot(): string | undefined {
+		const core = this.#sharedOpts.core;
+		if (!core.unsafeSharedStorageOwner) {
+			return undefined;
+		}
+		return core.defaultPersistRoot;
+	}
+
+	/**
+	 * Resolves the storage owner this instance (as a *client*) should route to,
+	 * or `undefined` to behave normally (owner role, feature off, no persist
+	 * root, or no owner currently published).
+	 */
+	#getStorageOwnerRouting(): { ownerAddress: string } | undefined {
+		const core = this.#sharedOpts.core;
+		const persistRoot = this.#storageOwnerPersistRoot();
+		if (persistRoot === undefined || core.unsafeStorageOwnerRole === "owner") {
+			return undefined;
+		}
+		const owner = readStorageOwner(persistRoot);
+		if (owner === undefined) {
+			this.#log.warn(
+				"Shared storage owner enabled but no owner is currently published — " +
+					"using local storage for this instance"
+			);
+			return undefined;
+		}
+		return { ownerAddress: owner.httpAddress };
+	}
+
+	/**
+	 * As a client, make sure a storage owner exists for our persist root before
+	 * we assemble (and therefore route to it). If none is published, elect a
+	 * single spawner via the owner spawn-lock, spawn a detached owner process,
+	 * and wait for it to publish itself. Other clients just wait.
+	 *
+	 * Best-effort: on any failure we log and fall back to local storage (the
+	 * client simply won't route), so the feature degrades rather than crashes.
+	 */
+	async #ensureStorageOwner(): Promise<void> {
+		const core = this.#sharedOpts.core;
+		const persistRoot = this.#storageOwnerPersistRoot();
+		if (persistRoot === undefined || core.unsafeStorageOwnerRole === "owner") {
+			return;
+		}
+		if (readStorageOwner(persistRoot) !== undefined) {
+			return;
+		}
+
+		let lock: ReturnType<typeof tryAcquireOwnerSpawnLock>;
+		try {
+			lock = tryAcquireOwnerSpawnLock(persistRoot);
+			// Re-check under the lock: another client may have just published one.
+			if (readStorageOwner(persistRoot) !== undefined) {
+				return;
+			}
+			if (lock !== undefined) {
+				this.#spawnStorageOwner(persistRoot);
+			}
+			// Wait for the owner (ours or another client's) to publish itself.
+			const deadline = Date.now() + STORAGE_OWNER_SPAWN_TIMEOUT_MS;
+			while (
+				readStorageOwner(persistRoot) === undefined &&
+				Date.now() < deadline &&
+				!this.#disposeController.signal.aborted
+			) {
+				await new Promise((resolve) =>
+					setTimeout(resolve, STORAGE_OWNER_POLL_MS)
+				);
+			}
+			if (readStorageOwner(persistRoot) === undefined) {
+				this.#log.warn(
+					"Timed out waiting for the shared storage owner to start — " +
+						"using local storage for this instance"
+				);
+			}
+		} catch (e) {
+			this.#log.warn(`Failed to ensure a shared storage owner: ${String(e)}`);
+		} finally {
+			lock?.release();
+		}
+	}
+
+	/**
+	 * Spawns a detached owner process for the persist root, hosting the storage
+	 * resources this instance uses. The owner runs the same built miniflare
+	 * module and self-terminates once no clients remain (see
+	 * {@link runStorageOwnerProcess}).
+	 */
+	#spawnStorageOwner(persistRoot: string): void {
+		// Union of local (non-remote) storage resource ids across all workers, so
+		// the owner stands up the corresponding storage services. The services are
+		// generic (keyed by `idFromName`), so they additionally serve ids declared
+		// only by other clients.
+		const ids = collectLocalStorageIds(this.#workerOpts);
+
+		const ownerOptions = {
+			defaultPersistRoot: persistRoot,
+			unsafeDevRegistryPath: this.#sharedOpts.core.unsafeDevRegistryPath,
+			modules: true,
+			script:
+				"export default { async fetch() { return new Response('miniflare storage owner', { status: 404 }); } }",
+			kvNamespaces: [...ids.kv],
+			r2Buckets: [...ids.r2],
+			d1Databases: [...ids.d1],
+			// One stream store per owner; the binding name is irrelevant (the
+			// owner exposes it under the canonical "stream" key).
+			...(ids.stream ? { stream: { binding: "stream" } } : {}),
+			// One images store per owner (binding name irrelevant).
+			...(ids.images ? { images: { binding: "images" } } : {}),
+			// Secrets Store: recreate each secret resource so the owner stands up
+			// the matching per-secret service (binding names are irrelevant).
+			...(ids.secrets.size > 0
+				? {
+						secretsStoreSecrets: Object.fromEntries(
+							[...ids.secrets.entries()].map(([resource, secret]) => [
+								`owner:${resource}`,
+								secret,
+							])
+						),
+					}
+				: {}),
+		};
+
+		const configPath = path.join(
+			persistRoot,
+			`.miniflare-owner-config-${process.pid}.json`
+		);
+		fs.writeFileSync(configPath, JSON.stringify(ownerOptions));
+
+		const child = spawn(process.execPath, ["-e", STORAGE_OWNER_BOOTSTRAP], {
+			detached: true,
+			stdio: "ignore",
+			env: {
+				...process.env,
+				[ENV_STORAGE_OWNER_MAIN]: __filename,
+				[ENV_STORAGE_OWNER_CONFIG]: configPath,
+			},
+		});
+		child.unref();
+	}
+
+	/**
+	 * Publishes this instance's role in the shared-storage topology once the
+	 * runtime (and therefore the debug port) is available:
+	 * - owner: writes the owner definition so clients can discover and route to
+	 *   its debug port, and heartbeats it.
+	 * - client: registers a presence file (and heartbeats it) so the owner can
+	 *   tell when no clients remain and tear itself down.
+	 */
+	#updateStorageOwnerPresence(): void {
+		const persistRoot = this.#storageOwnerPersistRoot();
+		if (persistRoot === undefined) {
+			return;
+		}
+		if (this.#storageOwnerHeartbeat !== undefined) {
+			clearInterval(this.#storageOwnerHeartbeat);
+			this.#storageOwnerHeartbeat = undefined;
+		}
+
+		const isOwner = this.#sharedOpts.core.unsafeStorageOwnerRole === "owner";
+		if (isOwner) {
+			const ownerPort = this.#socketPorts?.get(SOCKET_STORAGE_OWNER);
+			if (ownerPort === undefined) {
+				this.#log.warn(
+					"Shared storage owner enabled but its HTTP storage socket is " +
+						"unavailable — storage will not be shared"
+				);
+				return;
+			}
+			writeStorageOwner(persistRoot, {
+				pid: process.pid,
+				httpAddress: `127.0.0.1:${ownerPort}`,
+				updatedAt: Date.now(),
+			});
+			this.#storageOwnerHeartbeat = setInterval(() => {
+				heartbeatStorageOwner(persistRoot);
+			}, OWNER_HEARTBEAT_MS);
+		} else {
+			this.#storageClientPath = registerStorageClient(persistRoot);
+			const clientPath = this.#storageClientPath;
+			this.#storageOwnerHeartbeat = setInterval(() => {
+				heartbeatStorageClient(clientPath);
+			}, OWNER_HEARTBEAT_MS);
+		}
+		// Don't keep the event loop alive solely for the heartbeat.
+		this.#storageOwnerHeartbeat?.unref?.();
+	}
+
+	/** Tears down this instance's shared-storage presence on dispose. */
+	#disposeStorageOwnerPresence(): void {
+		if (this.#storageOwnerHeartbeat !== undefined) {
+			clearInterval(this.#storageOwnerHeartbeat);
+			this.#storageOwnerHeartbeat = undefined;
+		}
+		const persistRoot = this.#storageOwnerPersistRoot();
+		if (persistRoot === undefined) {
+			return;
+		}
+		if (this.#sharedOpts.core.unsafeStorageOwnerRole === "owner") {
+			clearStorageOwner(persistRoot, process.pid);
+		} else if (this.#storageClientPath !== undefined) {
+			unregisterStorageClient(this.#storageClientPath);
+			this.#storageClientPath = undefined;
+		}
 	}
 
 	async #registerWorkers(): Promise<void> {
@@ -3225,6 +3940,9 @@ export class Miniflare {
 			// Unregister workers from dev registry and stop the file watcher
 			await this.#devRegistry.dispose();
 
+			// Remove our shared-storage owner/client presence files
+			this.#disposeStorageOwnerPresence();
+
 			// shutdown hyperdrive proxies if any exist
 			await this.#hyperdriveProxyController.dispose();
 
@@ -3233,6 +3951,76 @@ export class Miniflare {
 			maybeInstanceRegistry?.delete(this);
 		}
 	}
+}
+
+/**
+ * Entry point for the detached storage-owner process spawned by a client (see
+ * `Miniflare.#spawnStorageOwner`). Reads its config from a temp file named in
+ * the environment, starts a headless owner-role Miniflare, and self-terminates
+ * once no clients have been present for a debounce window (after a startup
+ * grace period), so storage processes don't linger.
+ */
+export async function runStorageOwnerProcess(): Promise<void> {
+	const configPath = process.env[ENV_STORAGE_OWNER_CONFIG];
+	assert(configPath !== undefined, `${ENV_STORAGE_OWNER_CONFIG} must be set`);
+	const options = JSON.parse(
+		fs.readFileSync(configPath, "utf8")
+	) as MiniflareOptions;
+	// The config file has served its purpose; remove it.
+	fs.rmSync(configPath, { force: true });
+
+	const persistRoot = (options as { defaultPersistRoot?: string })
+		.defaultPersistRoot;
+	assert(
+		persistRoot !== undefined,
+		"storage owner config must set `defaultPersistRoot`"
+	);
+
+	const mf = new Miniflare({
+		...options,
+		unsafeSharedStorageOwner: true,
+		unsafeStorageOwnerRole: "owner",
+	});
+
+	let disposing = false;
+	// Holder so `shutdown` (defined before the interval is created) can clear it.
+	const timers: { idle?: NodeJS.Timeout } = {};
+	const shutdown = async () => {
+		if (disposing) {
+			return;
+		}
+		disposing = true;
+		if (timers.idle !== undefined) {
+			clearInterval(timers.idle);
+		}
+		try {
+			await mf.dispose();
+		} finally {
+			process.exit(0);
+		}
+	};
+	process.on("SIGTERM", () => void shutdown());
+	process.on("SIGINT", () => void shutdown());
+
+	await mf.ready;
+
+	// Self-teardown: once past the startup grace, exit after a debounced run of
+	// checks observing zero live clients.
+	const startedAt = Date.now();
+	let idleChecks = 0;
+	timers.idle = setInterval(() => {
+		if (Date.now() - startedAt < STORAGE_OWNER_STARTUP_GRACE_MS) {
+			return;
+		}
+		if (countLiveStorageClients(persistRoot) === 0) {
+			idleChecks++;
+			if (idleChecks >= STORAGE_OWNER_IDLE_DEBOUNCE) {
+				void shutdown();
+			}
+		} else {
+			idleChecks = 0;
+		}
+	}, STORAGE_OWNER_IDLE_CHECK_MS);
 }
 
 export type { WorkerdStructuredLog } from "./plugins/core";

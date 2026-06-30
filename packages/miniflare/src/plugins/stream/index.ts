@@ -36,6 +36,10 @@ const STREAM_REMOTE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:remote`;
 const STREAM_STORAGE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:storage`;
 const STREAM_OBJECT_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:object`;
 export const STREAM_OBJECT_CLASS_NAME = "StreamObject";
+// The RPC entrypoint service exposing the stream store. Referenced by the
+// shared storage owner so it can route a client's Stream binding here.
+export const STREAM_BINDING_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:service`;
+export const STREAM_BINDING_ENTRYPOINT = "StreamBinding";
 
 export const STREAM_COMPAT_DATE = "2026-03-23";
 
@@ -83,8 +87,16 @@ export const STREAM_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
+		storageOwnerRoutePlugins,
 	}) {
 		if (!options.stream) {
+			return [];
+		}
+
+		// Routed to the shared storage owner: the owner stands up the stream
+		// store and entrypoint; this instance's binding is repointed at the owner
+		// proxy by `Miniflare`, so skip standing up local storage here.
+		if (storageOwnerRoutePlugins.has(STREAM_PLUGIN_NAME)) {
 			return [];
 		}
 

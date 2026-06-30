@@ -32,6 +32,9 @@ export const SecretsStoreSecretsSharedOptionsSchema = z.object({
 });
 
 export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
+// RPC entrypoint exposing a single secret. Referenced by the shared storage
+// owner so it can route a client's Secrets Store binding here.
+export const SECRET_STORE_SECRET_ENTRYPOINT = "SecretsStoreSecret";
 
 export const SECRET_STORE_PLUGIN: Plugin<
 	typeof SecretsStoreSecretsOptionsSchema,
@@ -78,12 +81,19 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
+		storageOwnerRoutePlugins,
 	}) {
 		const configs = options.secretsStoreSecrets
 			? Object.values(options.secretsStoreSecrets)
 			: [];
 
 		if (configs.length === 0) {
+			return [];
+		}
+
+		// Routed to the shared storage owner: the owner stands up the secret
+		// services; this instance's bindings are repointed at the owner proxy.
+		if (storageOwnerRoutePlugins.has(SECRET_STORE_PLUGIN_NAME)) {
 			return [];
 		}
 

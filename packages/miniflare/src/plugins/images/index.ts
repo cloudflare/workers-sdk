@@ -36,6 +36,11 @@ export const ImagesSharedOptionsSchema = z.object({
 
 export const IMAGES_PLUGIN_NAME = "images";
 const IMAGES_REMOTE_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:remote`;
+// Fixed namespace backing the Images store (one per instance/owner).
+const IMAGES_DATA_NAMESPACE = "images-data";
+// The object-entry service exposing the Images store. Referenced by the shared
+// storage owner so it can serve a routed client's Images KV operations.
+export const IMAGES_NS_DATA_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:ns:data`;
 
 export const IMAGES_PLUGIN: Plugin<
 	typeof ImagesOptionsSchema,
@@ -91,9 +96,51 @@ export const IMAGES_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
+		storageOwnerRoutePlugins,
+		storageOwnerConn,
 	}) {
 		if (!options.images) {
 			return [];
+		}
+
+		// Routed to the shared storage owner: keep the transform worker local but
+		// repoint its backing KV store (`IMAGES_STORE`) at the owner, and skip the
+		// local storage/object services (the owner stands them up).
+		if (
+			storageOwnerRoutePlugins.has(IMAGES_PLUGIN_NAME) &&
+			storageOwnerConn !== undefined
+		) {
+			return [
+				{
+					name: IMAGES_REMOTE_SERVICE_NAME,
+					worker: remoteProxyClientWorker(),
+				},
+				{
+					name: getUserBindingServiceName(
+						IMAGES_PLUGIN_NAME,
+						options.images.binding
+					),
+					worker: {
+						compatibilityDate: "2025-04-01",
+						modules: [
+							{ name: "images.worker.js", esModule: SCRIPT_IMAGES_SERVICE() },
+						],
+						bindings: [
+							{
+								name: "IMAGES_STORE",
+								kvNamespace: {
+									name: IMAGES_REMOTE_SERVICE_NAME,
+									props: buildRemoteProxyProps(
+										storageOwnerConn,
+										`images:${IMAGES_DATA_NAMESPACE}`
+									),
+								},
+							},
+							WORKER_BINDING_SERVICE_LOOPBACK,
+						],
+					},
+				},
+			];
 		}
 
 		if (options.images.remoteProxyConnectionString) {
@@ -157,13 +204,13 @@ export const IMAGES_PLUGIN: Plugin<
 		} satisfies Service;
 
 		const kvNamespaceService = {
-			name: `${IMAGES_PLUGIN_NAME}:ns:data`,
+			name: IMAGES_NS_DATA_SERVICE_NAME,
 			worker: objectEntryWorker(
 				{
 					serviceName: objectService.name,
 					className: KV_NAMESPACE_OBJECT_CLASS_NAME,
 				},
-				"images-data"
+				IMAGES_DATA_NAMESPACE
 			),
 		} satisfies Service;
 

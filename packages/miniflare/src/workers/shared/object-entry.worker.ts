@@ -1,4 +1,4 @@
-import { SharedBindings } from "./constants";
+import { SharedBindings, SharedHeaders } from "./constants";
 import type { MiniflareDurableObjectCf } from "./object.worker";
 
 interface Props {
@@ -13,11 +13,15 @@ interface Env {
 
 export default <ExportedHandler<Env, unknown, unknown, Props>>{
 	async fetch(request, env, ctx) {
-		// Prefer the namespace passed at runtime via `ctx.props` (props-based
-		// model: one entry service serves many namespaces). Fall back to the
-		// static binding for callers that still bake the namespace in.
+		// Resolve the namespace, in priority order:
+		//  1. `ctx.props` — props-based model: one entry service serves many
+		//     namespaces (local bindings).
+		//  2. The storage-owner header — the shared storage owner serves any
+		//     resource id supplied per-request (it can't bake props per id).
+		//  3. The static binding — legacy per-resource model.
 		const name =
 			ctx.props[SharedBindings.TEXT_NAMESPACE] ??
+			request.headers.get(SharedHeaders.STORAGE_OWNER_NAMESPACE) ??
 			env[SharedBindings.TEXT_NAMESPACE];
 		if (name === undefined) {
 			throw new Error(
