@@ -2,6 +2,8 @@ import os from "node:os";
 import path from "node:path";
 
 /**
+ * @module
+ *
  * A small, pure-ESM, dependency-free reimplementation of the subset of
  * [`xdg-app-paths`](https://www.npmjs.com/package/xdg-app-paths) that this
  * repository relies on.
@@ -17,6 +19,33 @@ import path from "node:path";
  * `xdg-portable@10` → `os-paths@7` exactly so that the resolved config/cache
  * directories (which hold, amongst other things, Wrangler's auth credentials)
  * do not change for existing users.
+ *
+ * ---
+ *
+ * This implementation is adapted from `xdg-app-paths`, `xdg-portable` and
+ * `os-paths` (https://github.com/rivy/js.xdg-app-paths), published under the
+ * MIT License:
+ *
+ *   Copyright (c) Roy Ivy III <rivy.dev@gmail.com>
+ *   Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining a
+ *   copy of this software and associated documentation files (the "Software"),
+ *   to deal in the Software without restriction, including without limitation
+ *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ *   and/or sell copies of the Software, and to permit persons to whom the
+ *   Software is furnished to do so, subject to the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be included in
+ *   all copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ *   DEALINGS IN THE SOFTWARE.
  */
 
 function isWindows(): boolean {
