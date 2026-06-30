@@ -54,7 +54,6 @@ const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 
 const MAX_DIFF_LINES = 100;
-const MAX_MANIFEST_PATH_CANDIDATES = 20;
 
 export const syncAssets = async (
 	complianceConfig: ComplianceConfig,
@@ -362,17 +361,12 @@ function logPotentialUriEncodingPaths(e: unknown, manifest: AssetManifest) {
 	}
 
 	const displayedPaths = candidatePaths
-		.slice(0, MAX_MANIFEST_PATH_CANDIDATES)
 		.map((assetPath) => `  - ${assetPath}`)
 		.join("\n");
-	const remainingCount = candidatePaths.length - MAX_MANIFEST_PATH_CANDIDATES;
-	const remainingMessage =
-		remainingCount > 0 ? `\n  ...and ${remainingCount} more` : "";
 	logger.warn(
 		"The Assets API rejected the upload manifest because one or more paths must be URI encoded. " +
 			"The following asset paths contain URI-sensitive characters and may help identify the file that triggered the API error:\n" +
-			displayedPaths +
-			remainingMessage
+			displayedPaths
 	);
 }
 
