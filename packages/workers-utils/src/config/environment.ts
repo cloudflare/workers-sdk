@@ -1163,6 +1163,8 @@ export interface EnvironmentNonInheritable {
 				 * The environment of the service (e.g. production, staging, etc).
 				 */
 				environment?: string;
+				/** Optionally, the preview tag, slug, or display name of the service to bind to. */
+				preview_id?: string;
 				/** Optionally, the entrypoint (named export) of the service to bind to. */
 				entrypoint?: string;
 				/** Optional properties that will be made available to the service via ctx.props. */

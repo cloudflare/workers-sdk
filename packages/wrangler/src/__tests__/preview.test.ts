@@ -260,6 +260,26 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should pass preview_id on service bindings", ({ expect }) => {
+			const config = configWithPreviews({
+				services: [
+					{
+						binding: "API",
+						service: "api-worker",
+						preview_id: "feature-preview",
+					},
+				],
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				API: {
+					type: "service",
+					service: "api-worker",
+					preview_id: "feature-preview",
+				},
+			});
+		});
+
 		test("should fold unsafe.bindings into the previews env", ({ expect }) => {
 			const config = configWithPreviews({
 				unsafe: {
@@ -412,6 +432,310 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("DEFAULT_VAR");
 			expect(std.out).toContain('"from-defaults"');
 			expect(std.out).toContain("◆ from wrangler.json");
+		});
+
+		test("should auto-provision missing preview KV and R2 bindings", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						kv_namespaces: [{ binding: "MY_KV" }],
+						r2_buckets: [{ binding: "MY_BUCKET" }],
+					},
+				})
+			);
+
+			let kvCreateBody: unknown;
+			let r2CreateBody: unknown;
+			let deploymentBody: { env?: Record<string, unknown> } | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-123",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.get(`*/accounts/:accountId/storage/kv/namespaces`, () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post(
+					`*/accounts/:accountId/storage/kv/namespaces`,
+					async ({ request }) => {
+						kvCreateBody = await request.json();
+						return HttpResponse.json({
+							success: true,
+							result: { id: "auto-kv-id" },
+						});
+					}
+				),
+				http.get(`*/accounts/:accountId/r2/buckets/:bucketName`, () =>
+					HttpResponse.json(
+						{
+							success: false,
+							result: null,
+							errors: [{ code: 10006, message: "bucket not found" }],
+						},
+						{ status: 404 }
+					)
+				),
+				http.post(`*/accounts/:accountId/r2/buckets`, async ({ request }) => {
+					r2CreateBody = await request.json();
+					return HttpResponse.json({ success: true, result: null });
+				}),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentBody = (await request.json()) as typeof deploymentBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-123",
+								preview_id: "preview-id-123",
+								preview_name: "test-preview",
+								urls: ["https://abc12345.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentBody?.env,
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(kvCreateBody).toEqual({ title: "test-worker-test-preview-my-kv" });
+			expect(r2CreateBody).toEqual({
+				name: "test-worker-test-preview-my-bucket",
+			});
+			expect(deploymentBody?.env).toMatchObject({
+				MY_KV: { type: "kv_namespace", namespace_id: "auto-kv-id" },
+				MY_BUCKET: {
+					type: "r2_bucket",
+					bucket_name: "test-worker-test-preview-my-bucket",
+				},
+			});
+		});
+
+		test("should reuse deterministic preview resources and respect explicit bindings", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						kv_namespaces: [
+							{ binding: "OWNED_KV" },
+							{ binding: "USER_KV", id: "user-kv-id" },
+						],
+						r2_buckets: [
+							{ binding: "OWNED_BUCKET" },
+							{ binding: "USER_BUCKET", bucket_name: "user-bucket" },
+						],
+					},
+				})
+			);
+
+			let kvCreateCalled = false;
+			let r2CreateCalled = false;
+			let deploymentBody: { env?: Record<string, unknown> } | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-123",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.get(`*/accounts/:accountId/storage/kv/namespaces`, () =>
+					HttpResponse.json({
+						success: true,
+						result: [
+							{
+								id: "existing-owned-kv-id",
+								title: "test-worker-test-preview-owned-kv",
+							},
+						],
+					})
+				),
+				http.post(`*/accounts/:accountId/storage/kv/namespaces`, () => {
+					kvCreateCalled = true;
+					return HttpResponse.json({ success: true, result: { id: "new-id" } });
+				}),
+				http.get(
+					`*/accounts/:accountId/r2/buckets/:bucketName`,
+					({ params }) => {
+						expect(params.bucketName).toBe(
+							"test-worker-test-preview-owned-bucket"
+						);
+						return HttpResponse.json({
+							success: true,
+							result: { name: params.bucketName, creation_date: "2025-01-01" },
+						});
+					}
+				),
+				http.post(`*/accounts/:accountId/r2/buckets`, () => {
+					r2CreateCalled = true;
+					return HttpResponse.json({ success: true, result: null });
+				}),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentBody = (await request.json()) as typeof deploymentBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-123",
+								preview_id: "preview-id-123",
+								preview_name: "test-preview",
+								urls: ["https://abc12345.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentBody?.env,
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(kvCreateCalled).toBe(false);
+			expect(r2CreateCalled).toBe(false);
+			expect(deploymentBody?.env).toMatchObject({
+				OWNED_KV: {
+					type: "kv_namespace",
+					namespace_id: "existing-owned-kv-id",
+				},
+				USER_KV: { type: "kv_namespace", namespace_id: "user-kv-id" },
+				OWNED_BUCKET: {
+					type: "r2_bucket",
+					bucket_name: "test-worker-test-preview-owned-bucket",
+				},
+				USER_BUCKET: { type: "r2_bucket", bucket_name: "user-bucket" },
+			});
+		});
+
+		test("should not use preview_id or preview_bucket_name as preview resource identifiers", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						kv_namespaces: [{ binding: "MY_KV", preview_id: "local-kv-id" }],
+						r2_buckets: [
+							{ binding: "MY_BUCKET", preview_bucket_name: "local-bucket" },
+						],
+					},
+				})
+			);
+
+			let deploymentBody: { env?: Record<string, unknown> } | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-123",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.get(`*/accounts/:accountId/storage/kv/namespaces`, () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post(`*/accounts/:accountId/storage/kv/namespaces`, () =>
+					HttpResponse.json({ success: true, result: { id: "auto-kv-id" } })
+				),
+				http.get(`*/accounts/:accountId/r2/buckets/:bucketName`, () =>
+					HttpResponse.json(
+						{
+							success: false,
+							result: null,
+							errors: [{ code: 10006, message: "bucket not found" }],
+						},
+						{ status: 404 }
+					)
+				),
+				http.post(`*/accounts/:accountId/r2/buckets`, () =>
+					HttpResponse.json({ success: true, result: null })
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentBody = (await request.json()) as typeof deploymentBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-123",
+								preview_id: "preview-id-123",
+								preview_name: "test-preview",
+								urls: ["https://abc12345.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentBody?.env,
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentBody?.env).toMatchObject({
+				MY_KV: { type: "kv_namespace", namespace_id: "auto-kv-id" },
+				MY_BUCKET: {
+					type: "r2_bucket",
+					bucket_name: "test-worker-test-preview-my-bucket",
+				},
+			});
 		});
 
 		test("should warn about top-level bindings missing from preview settings", async ({
@@ -3080,6 +3404,223 @@ describe("wrangler preview", () => {
 			);
 			expect(deleteUrl).toContain("/previews/my-feature");
 			expect(std.out).toContain('Preview "my-feature" deleted successfully');
+		});
+
+		test("should delete only auto-provisioned preview KV and R2 resources", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						kv_namespaces: [
+							{ binding: "OWNED_KV" },
+							{ binding: "USER_KV", id: "user-kv-id" },
+						],
+						r2_buckets: [
+							{ binding: "OWNED_BUCKET" },
+							{ binding: "USER_BUCKET", bucket_name: "user-bucket" },
+						],
+					},
+				})
+			);
+
+			const deletedKVNamespaces: string[] = [];
+			const deletedR2Objects: string[] = [];
+			const deletedR2Buckets: string[] = [];
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-123",
+								name: "Feature Branch/One",
+								slug: "feature-branch-one",
+								urls: ["https://feature-branch-one.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => HttpResponse.json({ success: true, result: null })
+				),
+				http.get(`*/accounts/:accountId/storage/kv/namespaces`, () =>
+					HttpResponse.json({
+						success: true,
+						result: [
+							{
+								id: "owned-kv-id",
+								title: "test-worker-feature-branch-one-owned-kv",
+							},
+							{ id: "user-kv-id", title: "user-kv" },
+						],
+					})
+				),
+				http.delete(
+					`*/accounts/:accountId/storage/kv/namespaces/:namespaceId`,
+					({ params }) => {
+						deletedKVNamespaces.push(String(params.namespaceId));
+						return HttpResponse.json({
+							success: true,
+							result: { id: params.namespaceId },
+						});
+					}
+				),
+				http.get(`*/accounts/:accountId/r2/buckets/:bucketName`, ({ params }) =>
+					HttpResponse.json({
+						success: true,
+						result: { name: params.bucketName, creation_date: "2025-01-01" },
+					})
+				),
+				http.get(`*/accounts/:accountId/r2/buckets/:bucketName/objects`, () =>
+					HttpResponse.json({
+						success: true,
+						result: [{ key: "a.txt" }, { key: "b.txt" }],
+						result_info: { is_truncated: false },
+					})
+				),
+				http.delete(
+					`*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName`,
+					({ params }) => {
+						deletedR2Objects.push(String(params.objectName));
+						return HttpResponse.json({ success: true, result: null });
+					}
+				),
+				http.delete(
+					`*/accounts/:accountId/r2/buckets/:bucketName`,
+					({ params }) => {
+						deletedR2Buckets.push(String(params.bucketName));
+						return HttpResponse.json({ success: true, result: null });
+					}
+				)
+			);
+
+			await runWrangler(
+				'preview delete --name "Feature Branch/One" --skip-confirmation --worker-name test-worker'
+			);
+
+			expect(deletedKVNamespaces).toEqual(["owned-kv-id"]);
+			expect(deletedR2Objects).toEqual(["a.txt", "b.txt"]);
+			expect(deletedR2Buckets).toEqual([
+				"test-worker-feature-branch-one-owned-bucket",
+			]);
+		});
+
+		test("should page through R2 objects and retry bucket deletion if the bucket is not empty", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						r2_buckets: [{ binding: "OWNED_BUCKET" }],
+					},
+				})
+			);
+
+			const deletedR2Objects: string[] = [];
+			const deletedR2Buckets: string[] = [];
+			let objectListCalls = 0;
+			let bucketDeleteCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-123",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => HttpResponse.json({ success: true, result: null })
+				),
+				http.get(`*/accounts/:accountId/r2/buckets/:bucketName`, ({ params }) =>
+					HttpResponse.json({
+						success: true,
+						result: { name: params.bucketName, creation_date: "2025-01-01" },
+					})
+				),
+				http.get(
+					`*/accounts/:accountId/r2/buckets/:bucketName/objects`,
+					({ request }) => {
+						objectListCalls++;
+						const cursor = new URL(request.url).searchParams.get("cursor");
+						if (objectListCalls === 1) {
+							expect(cursor).toBeNull();
+							return HttpResponse.json({
+								success: true,
+								result: [{ key: "a.txt" }],
+								result_info: { is_truncated: true, cursor: "next-page" },
+							});
+						}
+						if (objectListCalls === 2) {
+							expect(cursor).toBe("next-page");
+							return HttpResponse.json({
+								success: true,
+								result: [{ key: "b.txt" }],
+								result_info: { is_truncated: false },
+							});
+						}
+						return HttpResponse.json({
+							success: true,
+							result: [{ key: "late.txt" }],
+							result_info: { is_truncated: false },
+						});
+					}
+				),
+				http.delete(
+					`*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName`,
+					({ params }) => {
+						deletedR2Objects.push(String(params.objectName));
+						return HttpResponse.json({ success: true, result: null });
+					}
+				),
+				http.delete(
+					`*/accounts/:accountId/r2/buckets/:bucketName`,
+					({ params }) => {
+						bucketDeleteCalls++;
+						if (bucketDeleteCalls === 1) {
+							return HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10008, message: "bucket is not empty" }],
+								},
+								{ status: 400 }
+							);
+						}
+						deletedR2Buckets.push(String(params.bucketName));
+						return HttpResponse.json({ success: true, result: null });
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview delete --name test-preview --skip-confirmation --worker-name test-worker"
+			);
+
+			expect(deletedR2Objects).toEqual(["a.txt", "b.txt", "late.txt"]);
+			expect(deletedR2Buckets).toEqual([
+				"test-worker-test-preview-owned-bucket",
+			]);
 		});
 
 		test("should proceed with deletion in non-interactive mode (CI fallback)", async ({

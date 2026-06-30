@@ -43,6 +43,12 @@ import {
 	getWorkerPreviewDefaults,
 } from "./api";
 import {
+	cleanupPreviewBindings,
+	getFallbackPreviewSlug,
+	hasPreviewBindingsToProvision,
+	provisionPreviewBindings,
+} from "./provision";
+import {
 	assemblePreviewScriptSettings,
 	extractConfigBindings,
 	getBindingValue,
@@ -853,8 +859,15 @@ export async function handlePreviewCommand(
 		}
 	}
 
-	const deploymentRequest = await assemblePreviewDeploymentSettings(
+	const previewConfig = await provisionPreviewBindings(
 		config,
+		accountId,
+		workerName,
+		preview.slug
+	);
+
+	const deploymentRequest = await assemblePreviewDeploymentSettings(
+		previewConfig,
 		args.script,
 		accountId,
 		workerName,
@@ -887,8 +900,8 @@ export async function handlePreviewCommand(
 		return;
 	}
 
-	const scriptLevel = buildMergedScriptLevel(config, preview);
-	const versionLevel = buildMergedVersionLevel(config, deployment);
+	const scriptLevel = buildMergedScriptLevel(previewConfig, preview);
+	const versionLevel = buildMergedVersionLevel(previewConfig, deployment);
 	const configName = configFileName(config.configPath);
 	logger.log(
 		formatPreviewResource(preview, scriptLevel, isNewPreview, configName)
@@ -905,7 +918,7 @@ export async function handlePreviewCommand(
 		logMissingPreviewsBindingsWarning(
 			topLevelBindings,
 			previewDefaults.env,
-			extractConfigBindings(config)
+			extractConfigBindings(previewConfig)
 		);
 	}
 }
@@ -945,6 +958,38 @@ export async function handlePreviewDeleteCommand(
 	}
 
 	const accountId = await requireAuth(config);
-	await deletePreview(config, accountId, workerName, previewName);
+	if (hasPreviewBindingsToProvision(config)) {
+		let previewSlug = getFallbackPreviewSlug(previewName);
+		try {
+			const preview = await getPreview(
+				config,
+				accountId,
+				workerName,
+				previewName
+			);
+			previewSlug = preview.slug;
+		} catch (error) {
+			if (
+				!(error instanceof Error && "code" in error && error.code === 10025)
+			) {
+				throw error;
+			}
+		}
+
+		let deleteError: unknown;
+		try {
+			await deletePreview(config, accountId, workerName, previewName);
+		} catch (error) {
+			deleteError = error;
+		}
+
+		await cleanupPreviewBindings(config, accountId, workerName, previewSlug);
+
+		if (deleteError !== undefined) {
+			throw deleteError;
+		}
+	} else {
+		await deletePreview(config, accountId, workerName, previewName);
+	}
 	logger.log(`\n✨ Preview "${previewName}" deleted successfully.`);
 }
