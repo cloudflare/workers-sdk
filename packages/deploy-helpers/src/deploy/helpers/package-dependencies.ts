@@ -1,8 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
-import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
-import { logger } from "../logger";
+import {
+	getInstalledPackageVersion,
+	parsePackageJSON,
+	readFileSync,
+} from "@cloudflare/workers-utils";
+import { logger } from "../../shared/context";
 
 /**
  * A single npm package dependency entry, matching the EWC API schema.

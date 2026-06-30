@@ -11,7 +11,6 @@ import {
 	validateAssetsArgsAndConfig,
 	validateAssetsOptions,
 } from "../assets";
-import { collectPackageDependencies } from "../deploy/deployment-metadata";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -99,10 +98,6 @@ async function mergeSharedConfigArgs(
 		skipProvisioningConfigWriteback: false,
 		strict: args.strict ?? false,
 		skipLastDeployedFromApiCheck: false,
-		packageDependencies:
-			config.dependencies_instrumentation !== false && entry.projectRoot
-				? collectPackageDependencies(entry.projectRoot)
-				: undefined,
 	};
 
 	const buildProps: BuildProps = {

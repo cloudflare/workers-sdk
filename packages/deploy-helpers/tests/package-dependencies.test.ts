@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
-import { collectPackageDependencies } from "../../deploy/deployment-metadata";
+import { collectPackageDependencies } from "../src/deploy/helpers/package-dependencies";
 
 describe("collectPackageDependencies", () => {
 	runInTempDir();

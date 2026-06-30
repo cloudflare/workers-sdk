@@ -32,6 +32,7 @@ import {
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
@@ -330,7 +331,10 @@ export default async function deploy(
 				: undefined,
 		observability: config.observability,
 		cache: config.cache,
-		package_dependencies: props.packageDependencies,
+		package_dependencies:
+			config.dependencies_instrumentation !== false && projectRoot
+				? collectPackageDependencies(projectRoot)
+				: undefined,
 	};
 
 	const sourceMapSize = worker.sourceMaps?.reduce(
