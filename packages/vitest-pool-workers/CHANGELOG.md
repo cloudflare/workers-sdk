@@ -1,39 +1,5 @@
 # @cloudflare/vitest-pool-workers
 
-## 0.17.0
-
-### Minor Changes
-
-- [#14438](https://github.com/cloudflare/workers-sdk/pull/14438) [`6b14c5b`](https://github.com/cloudflare/workers-sdk/commit/6b14c5bc9b6914c7c9bbcc91a741374441b9070d) Thanks [@edmundhung](https://github.com/edmundhung)! - Make Workflow introspector `get()` async
-
-  The `introspectWorkflow(...).get()` method now returns a promise, so callers must await it:
-
-  ```ts
-  const introspector = await introspectWorkflow(env.MY_WORKFLOW);
-
-  // Before
-  const instances = introspector.get();
-
-  // After
-  const instances = await introspector.get();
-  ```
-
-  This aligns Workflow introspection with the shared implementation used by `createTestHarness()`.
-
-### Patch Changes
-
-- [#14189](https://github.com/cloudflare/workers-sdk/pull/14189) [`f7ce796`](https://github.com/cloudflare/workers-sdk/commit/f7ce796a4768d7f84d228216858b66008f1cbd54) Thanks [@tahmid-23](https://github.com/tahmid-23)! - Support `require("./x.wasm?module")` in CommonJS dependencies
-
-  Previously, only literal `await import("./x.wasm?module")` specifiers were rewritten through the static analysis path added in #11094. CommonJS dependencies that use `require("./x.wasm?module")` reach the module-fallback service at runtime, where the `?module` suffix went unhandled. The fallback either failed with `No such module "<abs>/x.wasm?module"` or, when a `CompiledWasm` rule was configured, attempted to evaluate the WebAssembly bytes as JavaScript.
-
-  However, these `require()`s work in deployed workers because esbuild's bundler statically rewrites these `require()` calls into ES dynamic imports. vitest-pool-workers' Vite-based pipeline doesn't do that rewrite and instead defers to the module-fallback at runtime.
-
-  The module-fallback now strips `?module` from the resolved target and synthesizes a CommonJS wrapper that re-`require`s the underlying `.wasm` by absolute path, exposing it on `default` to match what workerd produces for `CompiledWasm` modules.
-
-- Updated dependencies [[`c4e4681`](https://github.com/cloudflare/workers-sdk/commit/c4e4681d9d5c80ba0c0ed78aae8fbbb8593a33dd), [`674fd30`](https://github.com/cloudflare/workers-sdk/commit/674fd30359d175c0a2d18ea3d0ba772a7f823c13), [`1cea129`](https://github.com/cloudflare/workers-sdk/commit/1cea1299432fdf8e15a8e91816d8fe5e3b53e520), [`61c1ae0`](https://github.com/cloudflare/workers-sdk/commit/61c1ae04190eca832d8f304318ba75a46390ba05), [`fac643b`](https://github.com/cloudflare/workers-sdk/commit/fac643b3d660493246050ebe3358efa22c5622e7), [`524363f`](https://github.com/cloudflare/workers-sdk/commit/524363f59396bead58d8881f474d946ceba47598), [`8344c21`](https://github.com/cloudflare/workers-sdk/commit/8344c211e525de53b8caf969bf7582d941e85877), [`614ce10`](https://github.com/cloudflare/workers-sdk/commit/614ce105753899f4d62724ec0dfdb18a9fd484cf), [`c1bcc34`](https://github.com/cloudflare/workers-sdk/commit/c1bcc34472cd5429960fabfa52684580810c43f4), [`5315f5c`](https://github.com/cloudflare/workers-sdk/commit/5315f5cbe5ecf28c57c6c2e9467489799bb93f6f), [`b9dcdd8`](https://github.com/cloudflare/workers-sdk/commit/b9dcdd8f6abf4d7e07bd2daebb83b99228a9dea4), [`61c1ae0`](https://github.com/cloudflare/workers-sdk/commit/61c1ae04190eca832d8f304318ba75a46390ba05), [`6b14c5b`](https://github.com/cloudflare/workers-sdk/commit/6b14c5bc9b6914c7c9bbcc91a741374441b9070d), [`f4919d0`](https://github.com/cloudflare/workers-sdk/commit/f4919d071e832bf2ae69a67cf0f8bf9052bc974c), [`6091d81`](https://github.com/cloudflare/workers-sdk/commit/6091d810da3775c483e06c742929e2ca2a58eefa), [`cb7ad11`](https://github.com/cloudflare/workers-sdk/commit/cb7ad1177a4ba0b06054268229ed39ae111d7c4f), [`19b35c3`](https://github.com/cloudflare/workers-sdk/commit/19b35c379141e5db87a15aeca3076c3a575dd1f7), [`6908d7c`](https://github.com/cloudflare/workers-sdk/commit/6908d7c81b26f6105ee218d24ad5f25a71760781)]:
-  - wrangler@4.106.0
-  - miniflare@4.20260629.0
-
 ## 0.16.20
 
 ### Patch Changes
