@@ -1026,7 +1026,6 @@ test("Miniflare: experimental capnweb service binding supports callbacks and Rpc
 	expect,
 }) => {
 	const mf = new Miniflare({
-		unsafeCapnwebRpcProxy: true,
 		workers: [
 			{
 				name: "a",

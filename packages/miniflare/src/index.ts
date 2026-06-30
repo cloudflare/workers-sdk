@@ -2994,7 +2994,7 @@ export class Miniflare {
 				if (prop === "fetch" || prop === util.inspect.custom) {
 					return Reflect.get(Object(fetchProxy), prop, receiver);
 				}
-				return Reflect.get(Object(rpcProxy), prop);
+				return Reflect.get(Object(rpcProxy), prop, receiver);
 			},
 		});
 	}
@@ -3034,7 +3034,10 @@ export class Miniflare {
 					const proxyBindingName = getProxyBindingName(key, workerName, name);
 					const fetchProxy = proxyClient.env[proxyBindingName];
 					let proxy: unknown = fetchProxy;
-					if (this.#isCapnwebProxyBinding(key, name, workerOpts)) {
+					if (
+						fetchProxy !== undefined &&
+						this.#isCapnwebProxyBinding(key, name, workerOpts)
+					) {
 						proxy = await this.#getHybridJsRpcBinding(
 							fetchProxy,
 							proxyBindingName
@@ -3099,7 +3102,9 @@ export class Miniflare {
 			resolvedWorkerName,
 			bindingName
 		);
+		const fetchProxy = proxyClient.env[proxyBindingName];
 		const useCapnwebProxy =
+			fetchProxy !== undefined &&
 			pluginName === CORE_PLUGIN_NAME &&
 			this.#isCapnwebProxyBinding(
 				pluginName,
@@ -3110,7 +3115,7 @@ export class Miniflare {
 			? await (
 					await this.#getCapnwebProxyClient()
 				).getEnvBinding(proxyBindingName)
-			: proxyClient.env[proxyBindingName];
+			: fetchProxy;
 		if (proxy === undefined) {
 			// If the user specified an invalid binding/worker name, throw
 			const friendlyWorkerName = resolvedWorkerName
