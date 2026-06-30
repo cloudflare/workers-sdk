@@ -22,6 +22,7 @@ const ORIGIN = "https://origin.example";
 describe("cf.image local transforms", () => {
 	let mf: Miniflare;
 	let sourcePng: Buffer;
+	let sourceAvif: Buffer;
 	let seenVia: (string | null)[] = [];
 
 	beforeAll(async () => {
@@ -37,6 +38,19 @@ describe("cf.image local transforms", () => {
 			.png()
 			.toBuffer();
 
+		// A 200x100 blue AVIF to exercise the HEIF-container input path
+		// (libvips reports AVIF as `heif`).
+		sourceAvif = await sharp({
+			create: {
+				width: 200,
+				height: 100,
+				channels: 3,
+				background: { r: 0, g: 0, b: 255 },
+			},
+		})
+			.avif()
+			.toBuffer();
+
 		mf = new Miniflare({
 			modules: true,
 			script: WORKER_SCRIPT,
@@ -49,6 +63,11 @@ describe("cf.image local transforms", () => {
 				if (url.pathname === "/not-an-image") {
 					return new Response("this is definitely not an image", {
 						headers: { "content-type": "image/png" },
+					});
+				}
+				if (url.pathname === "/img.avif") {
+					return new Response(sourceAvif, {
+						headers: { "content-type": "image/avif" },
 					});
 				}
 				return new Response(sourcePng, {
@@ -132,6 +151,28 @@ describe("cf.image local transforms", () => {
 				format: "image/png",
 			},
 		});
+	});
+
+	test("keeps the AVIF content-type when no output format is requested", async ({
+		expect,
+	}) => {
+		// libvips reports AVIF inputs under the `heif` container, so the
+		// passthrough content-type must still be image/avif (not image/jpeg).
+		const { res, body } = await transform({ width: 50 }, "/img.avif");
+		expect(res.headers.get("content-type")).toBe("image/avif");
+		const meta = await sharp(body).metadata();
+		expect(meta.format).toBe("heif");
+	});
+
+	test("format:json reports image/avif for AVIF originals", async ({
+		expect,
+	}) => {
+		const { res, body } = await transform(
+			{ width: 50, height: 50, format: "json" },
+			"/img.avif"
+		);
+		expect(res.headers.get("content-type")).toContain("application/json");
+		expect(JSON.parse(body.toString()).original.format).toBe("image/avif");
 	});
 
 	test("stamps Via: image-resizing on the origin subrequest", async ({

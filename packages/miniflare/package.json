@@ -50,7 +50,7 @@
 	},
 	"dependencies": {
 		"@cspotcode/source-map-support": "0.8.1",
-		"sharp": "0.34.5",
+		"sharp": "0.35.2",
 		"undici": "catalog:default",
 		"workerd": "1.20260701.1",
 		"ws": "catalog:default",
