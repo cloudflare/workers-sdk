@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Response } from "miniflare";
@@ -60,35 +59,14 @@ export async function listDurableObjectIds(
 	if (request.method !== "GET") {
 		return new Response(null, { status: 405 });
 	}
-	const persistPaths = mf.unsafeGetPersistPaths();
-	const durableObjectPersistPath = persistPaths.get("do");
-	assert(
-		durableObjectPersistPath !== undefined,
-		"Expected Durable Object persist path"
-	);
 
-	const uniqueKey = url.searchParams.get("unique_key");
-	if (uniqueKey === null) {
+	const bindingName = url.searchParams.get("binding_name");
+	if (bindingName === null) {
 		return new Response(null, { status: 400 });
 	}
-	const namespacePath = path.join(durableObjectPersistPath, uniqueKey);
 
-	const ids: string[] = [];
-	try {
-		const names = await fs.readdir(namespacePath);
-		for (const name of names) {
-			// Exclude metadata.sqlite, added by newer workerd versions for
-			// per-namespace metadata. Only include files whose stem is a
-			// valid 64-hex-digit Durable Object ID.
-			if (name.endsWith(".sqlite") && name !== "metadata.sqlite") {
-				ids.push(name.substring(0, name.length - 7 /* ".sqlite".length */));
-			}
-		}
-	} catch (e) {
-		if (!isFileNotFoundError(e)) {
-			throw e;
-		}
-	}
+	const workerName = url.searchParams.get("worker_name") ?? undefined;
+	const ids = await mf.listDurableObjectIds(bindingName, workerName);
 	return Response.json(ids);
 }
 

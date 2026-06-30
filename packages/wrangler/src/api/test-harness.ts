@@ -31,6 +31,7 @@ import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
 import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
 import type {
+	DurableObjectNamespace,
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
@@ -110,6 +111,12 @@ export type WorkerHandle<Env = Record<string, any>> = {
 	 * ```
 	 */
 	getEnv(): Promise<Env>;
+	/**
+	 * Lists the string IDs of Durable Object instances with persisted storage for a binding.
+	 */
+	listDurableObjectIds(
+		bindingName: BindingName<Env, DurableObjectNamespace>
+	): Promise<string[]>;
 	/**
 	 * Applies D1 migration files that have not already run to a D1 binding on this Worker.
 	 *
@@ -640,6 +647,19 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return miniflare;
 	}
 
+	function getWorkerDevEnv(session: ServerSession, workerName: string) {
+		const devEnv = session.devEnvs.find(
+			(d) => d.config.latestConfig?.name === workerName
+		);
+
+		assert(
+			devEnv,
+			`Worker ${JSON.stringify(workerName)} config is not available.`
+		);
+
+		return devEnv;
+	}
+
 	function getInputUrl(input: RequestInfo) {
 		if (typeof input === "string") {
 			return input;
@@ -722,11 +742,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				const session = await resolveSession();
 				const miniflare = await getRuntimeMiniflare(session);
 				const workerName = resolveWorkerName(session, name);
-				const devEnv = session.devEnvs.find(
-					(d) => d.config.latestConfig?.name === workerName
-				);
-				const bindingConfig =
-					devEnv?.config.latestConfig?.bindings?.[bindingName];
+				const bindingConfig = getWorkerDevEnv(session, workerName).config
+					.latestConfig?.bindings?.[bindingName];
 
 				if (bindingConfig?.type !== "workflow") {
 					throw new TypeError(
@@ -797,13 +814,37 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 					return result as FetcherScheduledResult;
 				},
+				async listDurableObjectIds(bindingName) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+
+					debugLog(`durable object ids - ${bindingName} - started`, workerName);
+
+					try {
+						const ids = await miniflare.listDurableObjectIds(
+							bindingName,
+							workerName
+						);
+						debugLog(
+							`durable object ids - ${bindingName} - completed (${ids.length} found)`,
+							workerName
+						);
+						return ids;
+					} catch (error) {
+						debugLog(
+							`durable object ids - ${bindingName} - failed`,
+							workerName
+						);
+						throw error;
+					}
+				},
 				async applyD1Migrations(bindingName) {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
-					const workerConfig = session.devEnvs.find(
-						(devEnv) => devEnv.config.latestConfig?.name === workerName
-					)?.config.latestWranglerConfig;
+					const workerConfig = getWorkerDevEnv(session, workerName).config
+						.latestWranglerConfig;
 
 					assert(
 						workerConfig,
