@@ -166,6 +166,25 @@ describe("wrangler", () => {
 					}).not.toThrow();
 				}
 			);
+
+			test("should register bash completion for the overridden executable name", async ({
+				expect,
+			}) => {
+				await runWrangler(`complete bash --executable-name "npx wrangler"`);
+
+				// Completion must be registered for the command the user types,
+				// not the hardcoded "wrangler" identifier.
+				expect(std.out).toContain("complete -F __npx_wrangler_complete npx_wrangler");
+			});
+
+			test("should register zsh completion for the overridden executable name", async ({
+				expect,
+			}) => {
+				await runWrangler(`complete zsh --executable-name "npx wrangler"`);
+
+				expect(std.out).toContain("#compdef npx_wrangler");
+				expect(std.out).toContain("compdef _npx_wrangler npx_wrangler");
+			});
 		});
 
 		describe("bash", () => {

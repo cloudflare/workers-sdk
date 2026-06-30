@@ -176,6 +176,10 @@ export const completionsCommand = createCommand({
 		}
 
 		setupCompletions();
-		t.setup("wrangler", executableName, args.shell);
+		// Use executableName as the registration target too so shells register
+		// completion for the actual command the user types. Replace non-identifier
+		// characters with underscores for the shell function name identifier.
+		const identifierName = executableName.replace(/[^a-zA-Z0-9]/g, "_");
+		t.setup(identifierName, executableName, args.shell);
 	},
 });
