@@ -90,6 +90,7 @@ export * from "./environment-variables/misc-variables";
 
 export {
 	getGlobalConfigPath,
+	getGlobalWranglerCachePath,
 	getGlobalWranglerConfigPath,
 } from "./global-wrangler-config-path";
 export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";

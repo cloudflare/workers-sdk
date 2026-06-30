@@ -10,8 +10,8 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
-import { getGlobalWranglerConfigPath } from "./wrangler";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 export type { WorkerDefinition, WorkerRegistry };
 import type { Log } from "./log";
@@ -249,6 +249,6 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 export function getDefaultDevRegistryPath() {
 	return (
 		process.env.MINIFLARE_REGISTRY_PATH ??
-		path.join(getGlobalWranglerConfigPath(), "registry")
+		path.join(getGlobalConfigPath(), "registry")
 	);
 }

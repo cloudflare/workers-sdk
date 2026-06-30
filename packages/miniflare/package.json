@@ -104,7 +104,6 @@
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"which": "^2.0.2",
-		"xdg-app-paths": "^8.3.0",
 		"zod": "^3.25.76"
 	},
 	"engines": {
