@@ -141,7 +141,7 @@ describe("verifyDockerInstalled", () => {
 				operation: "running dev",
 				imageNoun: "the configured image",
 			})
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			/The Docker CLI is needed to build the configured image before running dev but could not be launched/
 		);
 	});
@@ -156,7 +156,7 @@ describe("verifyDockerInstalled", () => {
 				dockerPath: "docker",
 				imageNoun: "the image",
 			})
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			/The Docker CLI is needed to build the image but could not be launched/
 		);
 	});
@@ -173,7 +173,7 @@ describe("verifyDockerInstalled", () => {
 				imageNoun: "the configured images",
 				hint: "Set enable_containers to false.",
 			})
-		).rejects.toThrowError(/Set enable_containers to false\./);
+		).rejects.toThrow(/Set enable_containers to false\./);
 	});
 
 	it("omits the hint paragraph when no hint is provided", async ({
@@ -215,7 +215,7 @@ describe("verifyDockerInstalled", () => {
 				operation: "deploying (even in dry-run mode)",
 				imageNoun: "the configured images",
 			})
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			/The Docker CLI is needed to build the configured images before deploying \(even in dry-run mode\) but could not be launched/
 		);
 	});
