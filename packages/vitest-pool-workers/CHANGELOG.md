@@ -1,5 +1,41 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.16.20
+
+### Patch Changes
+
+- [#14398](https://github.com/cloudflare/workers-sdk/pull/14398) [`c5014cc`](https://github.com/cloudflare/workers-sdk/commit/c5014ccc363f70d2a48eb1ba6113e3e62784e09f) Thanks [@apeacock1991](https://github.com/apeacock1991)! - Add `evictDurableObject` and `evictAllDurableObjects` test helpers to `cloudflare:test`
+
+  These helpers let you exercise how a Durable Object behaves across evictions in your tests. Eviction is graceful: durable storage is preserved, in-memory state is reset by tearing down the instance, hibernatable WebSockets are hibernated rather than closed, and eviction waits for in-flight requests to drain.
+
+  ```ts
+  import { evictDurableObject, evictAllDurableObjects } from "cloudflare:test";
+  import { env } from "cloudflare:workers";
+
+  const id = env.COUNTER.idFromName("my-counter");
+  const stub = env.COUNTER.get(id);
+
+  // Evict the Durable Object instance pointed to by a specific stub
+  await evictDurableObject(stub);
+  await evictDurableObject(stub, { webSockets: "close" });
+
+  // Evict all currently-running Durable Objects in evictable namespaces
+  await evictAllDurableObjects();
+  ```
+
+- [#14394](https://github.com/cloudflare/workers-sdk/pull/14394) [`8a5cf8c`](https://github.com/cloudflare/workers-sdk/commit/8a5cf8c2e61bf3c01a836aad260fa3a5f29e1e7c) Thanks [@Partha-Shankar](https://github.com/Partha-Shankar)! - fix(d1): escape `migrationsTableName` and filenames in SQLite queries
+
+  D1 migration commands in both `wrangler` and `@cloudflare/vitest-pool-workers` interpolated the `migrationsTableName` config value and migration filenames directly into SQL strings without any escaping. This meant:
+
+  - A table name such as `my"table` would produce invalid SQL in `CREATE TABLE`, `SELECT`, and `INSERT` statements, and
+  - A migration filename containing an apostrophe (e.g. `what's-new.sql`) would break the `INSERT INTO ... VALUES ('...')` statement appended after each migration in `wrangler`.
+
+  Both identifiers are now properly escaped before interpolation: `migrationsTableName` is wrapped in double-quotes with internal double-quotes doubled (SQL-standard identifier quoting), and migration filenames used as string literals have their single-quotes doubled before insertion.
+
+- Updated dependencies [[`5f40dd5`](https://github.com/cloudflare/workers-sdk/commit/5f40dd5d2897c4c8a1fb30f29af038baefcf67a4), [`34e0cef`](https://github.com/cloudflare/workers-sdk/commit/34e0cefcd54130be4ca3f9cf4de1e9867252ead0), [`3b743c1`](https://github.com/cloudflare/workers-sdk/commit/3b743c1b86ad80c40fd9d2d678cd5a8cb66e86fa), [`daa5389`](https://github.com/cloudflare/workers-sdk/commit/daa5389863bd20ab655cf68a5f7cd63afeb30904), [`8a5cf8c`](https://github.com/cloudflare/workers-sdk/commit/8a5cf8c2e61bf3c01a836aad260fa3a5f29e1e7c)]:
+  - wrangler@4.105.0
+  - miniflare@4.20260625.0
+
 ## 0.16.19
 
 ### Patch Changes

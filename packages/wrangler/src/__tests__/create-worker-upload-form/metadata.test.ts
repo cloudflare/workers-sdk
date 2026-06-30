@@ -100,9 +100,7 @@ describe("createWorkerUploadForm — basic structure", () => {
 				}),
 				{}
 			)
-		).toThrowError(
-			"More than one module can only be specified when type = 'esm'"
-		);
+		).toThrow("More than one module can only be specified when type = 'esm'");
 	});
 });
 

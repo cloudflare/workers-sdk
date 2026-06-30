@@ -3,6 +3,7 @@ import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { getActiveProfile } from "./user";
 import {
 	DefaultScopeKeys,
 	getAuthFromEnv,
@@ -22,47 +23,70 @@ export type AuthTokenInfo =
 	| { type: "api_token"; token: string }
 	| { type: "api_key"; key: string; email: string };
 
+export const oauthArgs = {
+	browser: {
+		default: true,
+		type: "boolean",
+		describe: "Automatically open the OAuth link in a browser",
+	},
+	scopes: {
+		describe: "Pick the set of applicable OAuth scopes when logging in",
+		array: true,
+		type: "string",
+		requiresArg: true,
+	},
+	"callback-host": {
+		describe:
+			"Use the ip or host address for the temporary login callback server.",
+		type: "string",
+		requiresArg: false,
+		default: "localhost",
+	},
+	"callback-port": {
+		describe: "Use the port for the temporary login callback server.",
+		type: "number",
+		requiresArg: false,
+		default: 8976,
+	},
+} as const;
+
 export const loginCommand = createCommand({
 	metadata: {
 		description: "🔓 Login to Cloudflare",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Account",
+		hideGlobalFlags: ["profile"],
 	},
 	behaviour: {
 		printConfigWarnings: false,
 		suggestSkillsAfterHandler: true,
 	},
 	args: {
+		...oauthArgs,
 		"scopes-list": {
 			describe: "List all the available OAuth scopes with descriptions",
 		},
-		browser: {
-			default: true,
-			type: "boolean",
-			describe: "Automatically open the OAuth link in a browser",
-		},
-		scopes: {
-			describe: "Pick the set of applicable OAuth scopes when logging in",
-			array: true,
-			type: "string",
-			requiresArg: true,
-		},
-		"callback-host": {
-			describe:
-				"Use the ip or host address for the temporary login callback server.",
-			type: "string",
-			requiresArg: false,
-			default: "localhost",
-		},
-		"callback-port": {
-			describe: "Use the port for the temporary login callback server.",
-			type: "number",
-			requiresArg: false,
-			default: 8976,
-		},
+	},
+	validateArgs(args) {
+		if (args.profile) {
+			throw new CommandLineArgsError(
+				"--profile cannot be used with the login command, as `wrangler login` is reserved for default, global auth. If you want to create or activate a named profile, run `wrangler auth create` or `wrangler auth activate`.",
+				{
+					telemetryMessage: "profile flag with login",
+				}
+			);
+		}
 	},
 	async handler(args, { config }) {
+		const activeProfile = getActiveProfile();
+		if (activeProfile !== "default") {
+			logger.warn(
+				`This directory has profile "${activeProfile}" active. \`wrangler login\` updates the default profile, not "${activeProfile}".\n` +
+					`To re-authenticate "${activeProfile}", run \`wrangler auth create ${activeProfile}\`.`
+			);
+		}
+
 		if (args.scopesList) {
 			listScopes();
 			return;
@@ -92,14 +116,11 @@ export const loginCommand = createCommand({
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
+			profile: "default",
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
 		});
-
-		// TODO: would be nice if it optionally saved login
-		// credentials inside node_modules/.cache or something
-		// this way you could have multiple users on a single machine
 	},
 });
 
@@ -109,14 +130,33 @@ export const logoutCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Account",
+		hideGlobalFlags: ["profile"],
 	},
 	behaviour: {
 		printConfigWarnings: false,
 		provideConfig: false,
 		suggestSkillsAfterHandler: true,
 	},
+	validateArgs(args) {
+		if (args.profile) {
+			throw new CommandLineArgsError(
+				"--profile cannot be used with the logout command, as `wrangler logout` is reserved for default, global auth. If you want to delete or deactivate a named profile, run `wrangler auth delete` or `wrangler auth deactivate`.",
+				{
+					telemetryMessage: "profile flag with logout",
+				}
+			);
+		}
+	},
 	async handler() {
-		await logout();
+		const activeProfile = getActiveProfile();
+		if (activeProfile !== "default") {
+			logger.warn(
+				`This directory has profile "${activeProfile}" active. \`wrangler logout\` removes the default profile's token, not "${activeProfile}".\n` +
+					`To delete "${activeProfile}", run \`wrangler auth delete ${activeProfile}\`.`
+			);
+		}
+
+		await logout("default");
 		try {
 			// If the config file is invalid then we default to not sending metrics.
 			// TODO: Clean this up as part of a general config refactor.
@@ -137,11 +177,22 @@ export const whoamiCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Account",
+		hideGlobalFlags: ["profile"],
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
 		printConfigWarnings: false,
 		suggestSkillsAfterHandler: (args) => !args.json,
+	},
+	validateArgs(args) {
+		if (args.profile) {
+			throw new CommandLineArgsError(
+				"--profile cannot be used with the whoami command as it only works on the currently active profile.",
+				{
+					telemetryMessage: "profile flag with whoami",
+				}
+			);
+		}
 	},
 	args: {
 		account: {
@@ -183,6 +234,7 @@ export const authTokenCommand = createCommand({
 		printBanner: (args) => !args.json,
 		printConfigWarnings: false,
 		suggestSkillsAfterHandler: (args) => !args.json,
+		printActiveProfile: false,
 	},
 	args: {
 		json: {

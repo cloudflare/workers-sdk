@@ -136,9 +136,7 @@ describe("detectFramework() / multiple frameworks detected", () => {
 				"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
 			});
 
-			await expect(
-				detectFramework(process.cwd(), ciContext)
-			).rejects.toThrowError(
+			await expect(detectFramework(process.cwd(), ciContext)).rejects.toThrow(
 				/Cloudflare's tooling was unable to automatically configure your project, since multiple frameworks were found/
 			);
 		});

@@ -84,12 +84,6 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. If set to none, the Worker will be deployed without building or updating any Containers.",
 			choices: ["immediate", "gradual", "none"] as const,
 		},
-		strict: {
-			describe:
-				"Enables strict mode for the deploy command, this prevents deployments to occur when there are even small potential risks.",
-			type: "boolean",
-			default: false,
-		},
 		autoconfig: {
 			describe:
 				"Enables framework detection and automatic configuration when deploying",

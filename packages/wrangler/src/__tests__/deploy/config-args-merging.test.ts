@@ -11,6 +11,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -175,6 +176,13 @@ describe.each([
 			setImmediate(fn);
 		});
 		setIsTTY(false);
+		// Mock the secrets endpoint that checkRemoteSecretsOverride calls
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
+		);
 	});
 
 	afterEach(() => {
@@ -212,8 +220,13 @@ describe.each([
 			}) => {
 				writeWranglerConfig({ name: undefined });
 				writeWorkerSource();
-				await expect(runWrangler("deploy ./index.js")).rejects.toThrowError(
-					/You need to provide a name/
+				await expect(
+					runWrangler("deploy ./index.js")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`
+					[Error: You need to provide the name of your worker. Either pass it as a cli arg with --name <name> or in your config file as name = "<name>"
+					]
+				`
 				);
 			});
 		});
@@ -245,9 +258,11 @@ describe.each([
 			}) => {
 				writeWranglerConfig({ name: undefined, main: "./index.js" });
 				writeWorkerSource();
-				await expect(runWrangler("versions upload")).rejects.toThrowError(
-					/You need to provide a name/
-				);
+				await expect(runWrangler("versions upload")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: You need to provide the name of your worker. Either pass it as a cli arg with --name <name> or in your config file as name = "<name>"
+					]
+				`);
 			});
 		});
 	});
@@ -337,9 +352,15 @@ describe.each([
 			}) => {
 				writeWranglerConfig({ compatibility_date: undefined });
 				writeWorkerSource();
-				await expect(runWrangler("deploy ./index.js")).rejects.toThrowError(
-					/A compatibility_date is required/
-				);
+				const today = getTodaysCompatDate();
+				await expect(runWrangler("deploy ./index.js")).rejects
+					.toThrow(`A compatibility_date is required when uploading a Worker. Add the following to your wrangler.toml file:
+    \`\`\`
+    compatibility_date = "${today}"
+
+    \`\`\`
+    Or you could pass it in your terminal as \`--compatibility-date ${today}\`
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
 			});
 		});
 
@@ -428,7 +449,7 @@ describe.each([
 				// On main, versions upload calls requireAuth() before validating compat date,
 				// so we need the service metadata mock to avoid an unrelated API error
 				mockGetScript();
-				await expect(runWrangler("versions upload")).rejects.toThrowError(
+				await expect(runWrangler("versions upload")).rejects.toThrow(
 					/A compatibility_date is required/
 				);
 			});

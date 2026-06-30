@@ -22,6 +22,12 @@ import { aiSearchCreateCommand } from "./ai-search/create";
 import { aiSearchDeleteCommand } from "./ai-search/delete";
 import { aiSearchGetCommand } from "./ai-search/get";
 import { aiSearchNamespace } from "./ai-search/index";
+import { aiSearchJobsCancelCommand } from "./ai-search/jobs/cancel";
+import { aiSearchJobsCreateCommand } from "./ai-search/jobs/create";
+import { aiSearchJobsGetCommand } from "./ai-search/jobs/get";
+import { aiSearchJobsNamespace } from "./ai-search/jobs/index";
+import { aiSearchJobsListCommand } from "./ai-search/jobs/list";
+import { aiSearchJobsLogsCommand } from "./ai-search/jobs/logs";
 import { aiSearchListCommand } from "./ai-search/list";
 import { aiSearchNamespaceCreateCommand } from "./ai-search/namespace/create";
 import { aiSearchNamespaceDeleteCommand } from "./ai-search/namespace/delete";
@@ -433,6 +439,13 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
+import {
+	authActivateCommand,
+	authCreateCommand,
+	authDeactivateCommand,
+	authDeleteCommand,
+	authListCommand,
+} from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
@@ -553,6 +566,11 @@ export function createCLIParser(argv: string[]) {
 			type: "boolean",
 			default: false,
 		},
+		profile: {
+			describe: "Use a specific auth profile",
+			type: "string",
+			requiresArg: true,
+		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -629,7 +647,16 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "env-file", "help", "install-skills", "version"],
+		[
+			"config",
+			"cwd",
+			"env",
+			"env-file",
+			"help",
+			"install-skills",
+			"profile",
+			"version",
+		],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 
@@ -1560,6 +1587,30 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler ai-search namespace delete",
 			definition: aiSearchNamespaceDeleteCommand,
 		},
+		{
+			command: "wrangler ai-search jobs",
+			definition: aiSearchJobsNamespace,
+		},
+		{
+			command: "wrangler ai-search jobs list",
+			definition: aiSearchJobsListCommand,
+		},
+		{
+			command: "wrangler ai-search jobs create",
+			definition: aiSearchJobsCreateCommand,
+		},
+		{
+			command: "wrangler ai-search jobs get",
+			definition: aiSearchJobsGetCommand,
+		},
+		{
+			command: "wrangler ai-search jobs cancel",
+			definition: aiSearchJobsCancelCommand,
+		},
+		{
+			command: "wrangler ai-search jobs logs",
+			definition: aiSearchJobsLogsCommand,
+		},
 	]);
 	registry.registerNamespace("ai-search");
 
@@ -2279,6 +2330,26 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler auth token",
 			definition: authTokenCommand,
+		},
+		{
+			command: "wrangler auth create",
+			definition: authCreateCommand,
+		},
+		{
+			command: "wrangler auth delete",
+			definition: authDeleteCommand,
+		},
+		{
+			command: "wrangler auth activate",
+			definition: authActivateCommand,
+		},
+		{
+			command: "wrangler auth deactivate",
+			definition: authDeactivateCommand,
+		},
+		{
+			command: "wrangler auth list",
+			definition: authListCommand,
 		},
 	]);
 	registry.registerNamespace("auth");

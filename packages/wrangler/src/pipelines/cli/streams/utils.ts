@@ -218,7 +218,7 @@ export async function displayUsageExamples(
 	await createdResourceConfig(
 		"pipelines",
 		(customBindingName) => ({
-			pipeline: stream.id,
+			stream: stream.id,
 			binding: customBindingName ?? bindingName,
 		}),
 		config.configPath,

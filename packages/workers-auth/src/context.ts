@@ -104,9 +104,15 @@ export interface OAuthFlowContext {
 	redirectUri: string;
 
 	/**
-	 * Persistence backend for the stored auth config.
+	 * Factory that returns a persistence backend for the given auth profile.
+	 *
+	 * Called with the active profile name (e.g. `"default"`) on every storage
+	 * access so the flow always reads/writes the correct backing store.
+	 * The consumer is responsible for mapping profile names to concrete storage
+	 * backends (e.g. wrangler maps each profile to a separate TOML file under
+	 * the global config directory).
 	 */
-	storage: AuthConfigStorage;
+	storageFactory: (profile?: string) => AuthConfigStorage;
 
 	/**
 	 * Whether the flow's credential resolvers (`getAPIToken` / `requireApiToken`)

@@ -51,6 +51,9 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
+          # Pin until `node-version: 22` resolves to 22.23.1 or later. Node 22.23.0
+          # regressed node-fetch@2 chunked/gzip responses with ERR_STREAM_PREMATURE_CLOSE.
+          node-version: 22.23.1
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}

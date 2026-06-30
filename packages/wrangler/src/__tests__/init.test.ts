@@ -943,7 +943,7 @@ describe("init", () => {
 				runWrangler(
 					"init isolinear-optical-chip --from-dash i-dont-exist --no-delegate-c3"
 				)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 
 			expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mwrangler couldn't find a Worker with that name in your account.[0m
@@ -1267,7 +1267,7 @@ describe("init", () => {
 
 			await expect(
 				runWrangler("init --from-dash isolinear-optical-chip --no-delegate-c3")
-			).rejects.toThrowError();
+			).rejects.toThrow();
 
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError Occurred: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.[0m
