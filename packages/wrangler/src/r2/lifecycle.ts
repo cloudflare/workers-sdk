@@ -165,9 +165,12 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		}
 
 		if (!name) {
-			throw new UserError("Must specify a rule name.", {
-				telemetryMessage: "r2 lifecycle add missing rule name",
-			});
+			throw new UserError(
+				"Missing required rule name. Provide a name with --name <rule-name> or as a positional argument:\n  wrangler r2 bucket lifecycle add <bucket> <name>",
+				{
+					telemetryMessage: "r2 lifecycle add missing rule name",
+				}
+			);
 		}
 
 		const newRule: LifecycleRule = {
@@ -212,9 +215,12 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		}
 
 		if (selectedActions.length === 0) {
-			throw new UserError("Must specify at least one action.", {
-				telemetryMessage: "r2 lifecycle add missing action",
-			});
+			throw new UserError(
+				"No lifecycle action specified. Use at least one of --expire-days, --expire-date, --ia-transition-days, --ia-transition-date, or --abort-multipart-days.",
+				{
+					telemetryMessage: "r2 lifecycle add missing action",
+				}
+			);
 		}
 
 		for (const action of selectedActions) {
@@ -222,17 +228,22 @@ export const r2BucketLifecycleAddCommand = createCommand({
 			let conditionValue: number | string;
 
 			if (action === "abort-multipart") {
+				let conditionValueFrom: "args" | "prompt" = "args";
 				if (abortMultipartDays !== undefined) {
 					conditionValue = abortMultipartDays;
 				} else {
 					conditionValue = await prompt(
 						`Enter the number of days after which to ${formatActionDescription(action)}`
 					);
+					conditionValueFrom = "prompt";
 				}
 				if (!isNonNegativeNumber(String(conditionValue))) {
-					throw new UserError("Must be a positive number.", {
-						telemetryMessage: "r2 lifecycle add invalid abort multipart days",
-					});
+					throw new UserError(
+						`The number of days ${conditionValueFrom === "args" ? "passed to --abort-multipart-days" : "for aborting incomplete multipart uploads"} must be a positive number (e.g. 7), but received '${String(conditionValue)}'.`,
+						{
+							telemetryMessage: "r2 lifecycle add invalid abort multipart days",
+						}
+					);
 				}
 
 				conditionType = "Age";
@@ -266,7 +277,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 						!isValidDate(String(conditionValue))
 					) {
 						throw new UserError(
-							"Must be a positive number or a valid date in the YYYY-MM-DD format.",
+							`Invalid value '${String(conditionValue)}' for ${action === "expire" ? "expiration" : "transition"} condition. Provide a positive number of days or a date in YYYY-MM-DD format (e.g. 30 or 2025-12-31).`,
 							{
 								telemetryMessage: "r2 lifecycle add invalid action condition",
 							}
@@ -282,9 +293,12 @@ export const r2BucketLifecycleAddCommand = createCommand({
 					const date = new Date(`${conditionValue}T00:00:00.000Z`);
 					conditionValue = date.toISOString();
 				} else {
-					throw new UserError("Invalid condition input.", {
-						telemetryMessage: "r2 lifecycle add invalid condition input",
-					});
+					throw new UserError(
+						`Invalid value '${String(conditionValue)}' for ${action === "expire" ? "expiration" : "transition"} condition. Expected a positive number of days or a date in YYYY-MM-DD format (e.g. --expire-days 30 or --expire-date 2025-12-31).`,
+						{
+							telemetryMessage: "r2 lifecycle add invalid condition input",
+						}
+					);
 				}
 
 				if (action === "expire") {
