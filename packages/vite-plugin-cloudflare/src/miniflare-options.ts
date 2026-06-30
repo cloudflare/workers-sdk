@@ -10,6 +10,7 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalObservabilityEnabledFromEnv,
 } from "@cloudflare/workers-utils";
 import {
 	buildPublicUrl,
@@ -471,6 +472,9 @@ export async function getDevMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			// Experimental local observability — the single switch (env var) that
+			// makes Miniflare core attach the trace collector to each user worker.
+			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
@@ -750,6 +754,9 @@ export async function getPreviewMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			// Experimental local observability — the single switch (env var) that
+			// makes Miniflare core attach the trace collector to each user worker.
+			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
