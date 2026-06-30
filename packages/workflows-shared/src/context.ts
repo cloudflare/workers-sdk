@@ -17,7 +17,6 @@ import {
 import { calcRetryDuration } from "./lib/retries";
 import {
 	parseRollbackOptions,
-	registerRollbackFn,
 	ROLLBACK_CACHE_KEY_PREFIX,
 } from "./lib/rollback";
 import {
@@ -247,7 +246,7 @@ export class Context extends RpcTarget {
 		const { cacheKey, rollbackFn, stepContext, output, rollbackConfig } =
 			options;
 		if (rollbackFn && this.#rollbackStep === undefined) {
-			registerRollbackFn(this.#engine.rollbackRegistry, {
+			this.#engine.registerRollbackFn({
 				cacheKey,
 				fn: rollbackFn,
 				stepContext,
@@ -297,6 +296,12 @@ export class Context extends RpcTarget {
 		const { rollback: rollbackFn, rollbackConfig } = rollbackOptions ?? {};
 
 		const isRollback = this.#rollbackStep !== undefined;
+		if (this.#engine.rollbackPhase === "rollback" && !isRollback) {
+			throw new WorkflowFatalError(
+				"Cannot execute steps during rollback phase"
+			);
+		}
+
 		const events = isRollback
 			? {
 					start: InstanceEvent.ROLLBACK_STEP_START,
@@ -937,7 +942,7 @@ export class Context extends RpcTarget {
 						events.failure,
 						cacheKey,
 						stepNameWithCounter,
-						{}
+						!isRollback && rollbackFn ? { hasRollback: true } : {}
 					);
 					this.#registerRollback({
 						cacheKey,
@@ -1039,7 +1044,7 @@ export class Context extends RpcTarget {
 						events.failure,
 						cacheKey,
 						stepNameWithCounter,
-						{}
+						!isRollback && rollbackFn ? { hasRollback: true } : {}
 					);
 					this.#registerRollback({
 						cacheKey,
@@ -1059,6 +1064,7 @@ export class Context extends RpcTarget {
 				...(lastStreamMeta && {
 					streamOutput: { cacheKey, meta: lastStreamMeta },
 				}),
+				...(!isRollback && rollbackFn ? { hasRollback: true } : {}),
 			});
 			this.#registerRollback({
 				cacheKey,
@@ -1073,13 +1079,21 @@ export class Context extends RpcTarget {
 
 		const result = await doWrapper(closure);
 
-		// Check if a pause was requested while this step was running
-		await this.#checkForPendingPause();
+		// Check if a pause was requested while this step was running.
+		// Rollback steps may run while the instance is paused; don't let stale pause
+		// state abort rollback cleanup after the rollback step itself succeeds.
+		if (!isRollback) {
+			await this.#checkForPendingPause();
+		}
 
 		return result;
 	}
 
 	async sleep(name: string, duration: WorkflowSleepDuration): Promise<void> {
+		if (this.#engine.rollbackPhase === "replay") {
+			return;
+		}
+
 		if (typeof duration == "string") {
 			duration = ms(duration);
 		}
@@ -1201,6 +1215,10 @@ export class Context extends RpcTarget {
 	}
 
 	async sleepUntil(name: string, timestamp: Date | number): Promise<void> {
+		if (this.#engine.rollbackPhase === "replay") {
+			return;
+		}
+
 		if (timestamp instanceof Date) {
 			timestamp = timestamp.valueOf();
 		}
@@ -1223,6 +1241,12 @@ export class Context extends RpcTarget {
 			timeout?: string | number;
 		}
 	): Promise<WorkflowStepEvent<T>> {
+		if (this.#engine.rollbackPhase === "rollback") {
+			throw new WorkflowFatalError(
+				"Cannot execute steps during rollback phase"
+			);
+		}
+
 		if (!options.timeout) {
 			options.timeout = "24 hours";
 		}
@@ -1241,6 +1265,10 @@ export class Context extends RpcTarget {
 		) as Error & UserErrorField;
 
 		const maybeResult = await this.#state.storage.get<Event>(waitForEventKey);
+
+		if (this.#engine.rollbackPhase === "replay") {
+			return maybeResult as WorkflowStepEvent<T>;
+		}
 
 		if (maybeResult) {
 			const shouldWriteLog =

@@ -29,7 +29,13 @@ import {
 	storeRestartFromStep,
 	wipeRestartState,
 } from "./lib/restart";
-import { clearRollbackRegistry, executeRollbacks } from "./lib/rollback";
+import {
+	clearRollbackRegistry,
+	disposeRollbackStub,
+	executeRollbacks,
+	registerRollbackFn,
+	ROLLBACK_CACHE_KEY_PREFIX,
+} from "./lib/rollback";
 import {
 	createReplayReadableStream,
 	getInvalidStoredStreamOutputError,
@@ -44,7 +50,10 @@ import type {
 } from "./binding";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
-import type { RollbackRegistryEntry } from "./lib/rollback";
+import type {
+	RollbackRegistration,
+	RollbackRegistryEntry,
+} from "./lib/rollback";
 import type { StreamOutputMeta } from "./lib/streams";
 import type {
 	WorkflowEntrypoint,
@@ -148,6 +157,8 @@ export class Engine extends DurableObject<Env> {
 	stepLimit: number;
 	engineAbortController: AbortController = new AbortController();
 	pauseController: AbortController = new AbortController();
+	rollbackPhase: "replay" | "rollback" | undefined = undefined;
+	rollbackEligibleCacheKeys: Set<string> | undefined = undefined;
 
 	waiters: Map<
 		string,
@@ -238,6 +249,91 @@ export class Engine extends DurableObject<Env> {
 			),
 		];
 		return rows.map(({ groupKey }) => groupKey);
+	}
+
+	private getEligibleRollbackSteps(limit?: number): string[] {
+		const rollbackTerminalGroups = new Set<string>();
+		const rollbackEligibleGroups = new Set<string>();
+		const startedRows = [
+			...this.ctx.storage.sql.exec<{ groupKey: string }>(
+				"SELECT groupKey FROM states WHERE event = ? AND groupKey IS NOT NULL ORDER BY id DESC",
+				InstanceEvent.STEP_START
+			),
+		];
+		const completedRows = [
+			...this.ctx.storage.sql.exec<{
+				event: InstanceEvent;
+				groupKey: string | null;
+				metadata: string;
+			}>(
+				"SELECT event, groupKey, metadata FROM states WHERE groupKey IS NOT NULL"
+			),
+		];
+
+		for (const row of completedRows) {
+			if (
+				row.groupKey !== null &&
+				(row.event === InstanceEvent.ROLLBACK_STEP_SUCCESS ||
+					row.event === InstanceEvent.ROLLBACK_STEP_FAILURE)
+			) {
+				rollbackTerminalGroups.add(
+					row.groupKey.startsWith(ROLLBACK_CACHE_KEY_PREFIX)
+						? row.groupKey.slice(ROLLBACK_CACHE_KEY_PREFIX.length)
+						: row.groupKey
+				);
+			}
+		}
+
+		for (const row of completedRows) {
+			if (
+				row.groupKey === null ||
+				rollbackTerminalGroups.has(row.groupKey) ||
+				(row.event !== InstanceEvent.STEP_SUCCESS &&
+					row.event !== InstanceEvent.STEP_FAILURE)
+			) {
+				continue;
+			}
+
+			try {
+				if (
+					(JSON.parse(row.metadata) as { hasRollback?: boolean })
+						.hasRollback === true
+				) {
+					rollbackEligibleGroups.add(row.groupKey);
+				}
+			} catch {
+				// Ignore malformed metadata in local persisted logs.
+			}
+		}
+
+		const eligible: string[] = [];
+		for (const { groupKey } of startedRows) {
+			if (rollbackEligibleGroups.has(groupKey)) {
+				eligible.push(groupKey);
+				if (limit !== undefined && eligible.length >= limit) {
+					break;
+				}
+			}
+		}
+
+		return eligible;
+	}
+
+	registerRollbackFn(registration: RollbackRegistration): void {
+		if (
+			this.rollbackPhase === "replay" &&
+			this.rollbackEligibleCacheKeys !== undefined &&
+			!this.rollbackEligibleCacheKeys.has(registration.cacheKey)
+		) {
+			disposeRollbackStub(registration.fn);
+			return;
+		}
+
+		registerRollbackFn(this.rollbackRegistry, registration);
+	}
+
+	setRollbackPhase(phase: "replay" | "rollback" | undefined): void {
+		this.rollbackPhase = phase;
 	}
 
 	// Lives here for access to the protected DurableObject `ctx`.
@@ -868,6 +964,35 @@ export class Engine extends DurableObject<Env> {
 		}
 	}
 
+	private async replayRollbackRegistry(
+		metadata: InstanceMetadata
+	): Promise<void> {
+		if (this.rollbackRegistry.size > 0) {
+			return;
+		}
+
+		const eligible = this.getEligibleRollbackSteps();
+		if (eligible.length === 0) {
+			return;
+		}
+
+		this.rollbackEligibleCacheKeys = new Set(eligible);
+		const stubStep = this.createRollbackContext();
+		this.setRollbackPhase("replay");
+		try {
+			await this.env.USER_WORKFLOW.run(
+				metadata.event,
+				stubStep as unknown as WorkflowStep
+			);
+		} catch {
+			// Match the production engine: replay may stop on normal workflow control
+			// flow; rollback execution uses whatever handlers replay registered.
+		} finally {
+			this.setRollbackPhase(undefined);
+			this.rollbackEligibleCacheKeys = undefined;
+		}
+	}
+
 	async userTriggeredTerminate(options?: WorkflowInstanceTerminateOptions) {
 		const metadata =
 			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
@@ -879,13 +1004,18 @@ export class Engine extends DurableObject<Env> {
 			);
 		}
 
-		if (options?.rollback === true && this.rollbackRegistry.size > 0) {
+		if (options?.rollback === true) {
+			await this.replayRollbackRegistry(metadata);
+
 			const error = new Error("Instance terminated during rollback");
 			error.name = "Terminated";
+			this.setRollbackPhase("rollback");
 			try {
 				await executeRollbacks(this, error);
 			} catch (rollbackErr) {
 				console.error("Rollback execution failed:", rollbackErr);
+			} finally {
+				this.setRollbackPhase(undefined);
 			}
 		}
 
