@@ -1100,19 +1100,16 @@ export class Miniflare {
 			this.#webSocketExtraHeaders.delete(req);
 			if (extra) {
 				// Use `getSetCookie()` to retrieve each Set-Cookie value as a
-				// separate string. The updated Fetch spec (and undici 7.x) does yield
-				// each Set-Cookie entry individually during `for…of` iteration, but
-				// `getSetCookie()` is the explicit, unambiguous API for this —
-				// especially important for workerd's Headers implementation. Guard
-				// before calling since it is not part of the standard Fetch API.
-				const hasGetSetCookie = typeof extra.getSetCookie === "function";
-				if (hasGetSetCookie) {
-					for (const cookie of extra.getSetCookie()) {
-						headers.push(`Set-Cookie: ${cookie}`);
-					}
+				// separate string — it is the explicit API for this, especially
+				// important for workerd's Headers where `for…of` may collapse
+				// multiple Set-Cookie values into one.
+				for (const cookie of extra.getSetCookie()) {
+					headers.push(`Set-Cookie: ${cookie}`);
 				}
 				for (const [key, value] of extra) {
-					if (hasGetSetCookie && key.toLowerCase() === "set-cookie") continue;
+					if (key.toLowerCase() === "set-cookie") {
+						continue;
+					}
 					if (!restrictedWebSocketUpgradeHeaders.includes(key.toLowerCase())) {
 						headers.push(`${key}: ${value}`);
 					}
