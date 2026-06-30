@@ -920,6 +920,7 @@ export async function changeWorkflowInstanceStatus(
 				break;
 			}
 			case "terminate":
+				// TODO(vaish): remove cast once @cloudflare/workers-types ships terminate options
 				await (handle as unknown as WorkflowHandle).terminate(
 					body.rollback === true ? { rollback: true } : undefined
 				);

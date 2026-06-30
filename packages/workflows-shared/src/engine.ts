@@ -120,6 +120,8 @@ export const DEFAULT_STEP_LIMIT = 10_000;
 
 const PAUSE_DATETIME = "PAUSE_DATETIME";
 
+export type RollbackPhase = "replay" | "rollback";
+
 /**
  * JSON.stringify replacer that converts TypedArrays and ArrayBuffers to a
  * human-readable description. Without this, JSON.stringify(Uint8Array) encodes
@@ -157,7 +159,7 @@ export class Engine extends DurableObject<Env> {
 	stepLimit: number;
 	engineAbortController: AbortController = new AbortController();
 	pauseController: AbortController = new AbortController();
-	rollbackPhase: "replay" | "rollback" | undefined = undefined;
+	rollbackPhase: RollbackPhase | undefined = undefined;
 	rollbackEligibleCacheKeys: Set<string> | undefined = undefined;
 
 	waiters: Map<
@@ -254,42 +256,38 @@ export class Engine extends DurableObject<Env> {
 	private getEligibleRollbackSteps(limit?: number): string[] {
 		const rollbackTerminalGroups = new Set<string>();
 		const rollbackEligibleGroups = new Set<string>();
-		const startedRows = [
-			...this.ctx.storage.sql.exec<{ groupKey: string }>(
-				"SELECT groupKey FROM states WHERE event = ? AND groupKey IS NOT NULL ORDER BY id DESC",
-				InstanceEvent.STEP_START
-			),
-		];
-		const completedRows = [
+		const stepStartGroupKeysDesc: string[] = [];
+		const rows = [
 			...this.ctx.storage.sql.exec<{
 				event: InstanceEvent;
-				groupKey: string | null;
+				groupKey: string;
 				metadata: string;
 			}>(
-				"SELECT event, groupKey, metadata FROM states WHERE groupKey IS NOT NULL"
+				"SELECT event, groupKey, metadata FROM states WHERE groupKey IS NOT NULL ORDER BY id DESC"
 			),
 		];
 
-		for (const row of completedRows) {
+		for (const row of rows) {
+			if (row.event === InstanceEvent.STEP_START) {
+				stepStartGroupKeysDesc.push(row.groupKey);
+				continue;
+			}
+
 			if (
-				row.groupKey !== null &&
-				(row.event === InstanceEvent.ROLLBACK_STEP_SUCCESS ||
-					row.event === InstanceEvent.ROLLBACK_STEP_FAILURE)
+				row.event === InstanceEvent.ROLLBACK_STEP_SUCCESS ||
+				row.event === InstanceEvent.ROLLBACK_STEP_FAILURE
 			) {
 				rollbackTerminalGroups.add(
 					row.groupKey.startsWith(ROLLBACK_CACHE_KEY_PREFIX)
 						? row.groupKey.slice(ROLLBACK_CACHE_KEY_PREFIX.length)
 						: row.groupKey
 				);
+				continue;
 			}
-		}
 
-		for (const row of completedRows) {
 			if (
-				row.groupKey === null ||
-				rollbackTerminalGroups.has(row.groupKey) ||
-				(row.event !== InstanceEvent.STEP_SUCCESS &&
-					row.event !== InstanceEvent.STEP_FAILURE)
+				row.event !== InstanceEvent.STEP_SUCCESS &&
+				row.event !== InstanceEvent.STEP_FAILURE
 			) {
 				continue;
 			}
@@ -307,8 +305,11 @@ export class Engine extends DurableObject<Env> {
 		}
 
 		const eligible: string[] = [];
-		for (const { groupKey } of startedRows) {
-			if (rollbackEligibleGroups.has(groupKey)) {
+		for (const groupKey of stepStartGroupKeysDesc) {
+			if (
+				rollbackEligibleGroups.has(groupKey) &&
+				!rollbackTerminalGroups.has(groupKey)
+			) {
 				eligible.push(groupKey);
 				if (limit !== undefined && eligible.length >= limit) {
 					break;
@@ -332,7 +333,7 @@ export class Engine extends DurableObject<Env> {
 		registerRollbackFn(this.rollbackRegistry, registration);
 	}
 
-	setRollbackPhase(phase: "replay" | "rollback" | undefined): void {
+	setRollbackPhase(phase: RollbackPhase | undefined): void {
 		this.rollbackPhase = phase;
 	}
 
