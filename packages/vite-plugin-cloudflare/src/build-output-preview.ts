@@ -1,13 +1,15 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
 import {
-	getWorkersDir,
+	convertToWranglerConfig,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
+	getWorkersDir,
+	OutputWorkerSchema,
 	WORKER_CONFIG_FILENAME,
-} from "./build-output";
+} from "@cloudflare/config";
+import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
 import type { ModuleType } from "@cloudflare/config";
 import type { Unstable_Config } from "wrangler";
 
@@ -46,9 +48,6 @@ export async function readBuildOutputWorkers(
 			`Build Output API tree at ${workersDir} contains no Worker directories.`
 		);
 	}
-
-	const { OutputWorkerSchema, convertToWranglerConfig } =
-		await import("@cloudflare/config");
 
 	return workerNames.map((workerName) => {
 		const configPath = getWorkerConfigPath(root, workerName);

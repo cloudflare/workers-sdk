@@ -33,14 +33,14 @@ describe("migrate", () => {
 
 			await expect(
 				runWrangler("d1 migrations create test some-message --local DATABASE")
-			).rejects.toThrowError(`Unknown argument: local`);
+			).rejects.toThrow(`Unknown argument: local`);
 		});
 
 		it("should error when no config file is present", async ({ expect }) => {
 			setIsTTY(false);
 			await expect(
 				runWrangler("d1 migrations create DATABASE test-migration")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
 			);
 		});
@@ -137,9 +137,9 @@ describe("migrate", () => {
 			// runs first we never reach the prompt, and the dir is still
 			// absent after the throw.
 
-			await expect(
-				runWrangler("d1 migrations create db test")
-			).rejects.toThrowError(/does not match the configured/);
+			await expect(runWrangler("d1 migrations create db test")).rejects.toThrow(
+				/does not match the configured/
+			);
 
 			expect(fs.existsSync("./migrations")).toBe(false);
 		});
@@ -241,9 +241,9 @@ describe("migrate", () => {
 				],
 			});
 			// If we get to the point where we are checking for migrations then we have not been asked to log in.
-			await expect(
-				runWrangler("d1 migrations apply DATABASE")
-			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+			await expect(runWrangler("d1 migrations apply DATABASE")).rejects.toThrow(
+				`No migrations present at <cwd>/migrations.`
+			);
 		});
 
 		it("should try to read D1 config from wrangler.toml", async ({
@@ -253,7 +253,7 @@ describe("migrate", () => {
 			writeWranglerConfig();
 			await expect(
 				runWrangler("d1 migrations apply DATABASE --remote")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				"Couldn't find a D1 DB with the name or binding 'DATABASE' in your wrangler.toml file."
 			);
 		});
@@ -264,16 +264,14 @@ describe("migrate", () => {
 			setIsTTY(false);
 			writeWranglerConfig();
 			// If we get to the point where we are checking for migrations then we have not checked wrangler.toml.
-			await expect(
-				runWrangler("d1 migrations apply DATABASE")
-			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+			await expect(runWrangler("d1 migrations apply DATABASE")).rejects.toThrow(
+				`No migrations present at <cwd>/migrations.`
+			);
 		});
 
 		it("should error when no config file is present", async ({ expect }) => {
 			setIsTTY(false);
-			await expect(
-				runWrangler("d1 migrations apply DATABASE")
-			).rejects.toThrowError(
+			await expect(runWrangler("d1 migrations apply DATABASE")).rejects.toThrow(
 				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
 			);
 		});
@@ -291,7 +289,7 @@ describe("migrate", () => {
 
 			await expect(
 				runWrangler("d1 migrations apply --local db --preview")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				`Cannot use --preview without --remote. The --preview flag targets a preview D1 database, which requires the --remote flag. Remove --preview or add --remote.`
 			);
 		});
@@ -331,7 +329,7 @@ Your database may not be available to serve requests during the migration, conti
 			});
 			await expect(
 				runWrangler("d1 migrations apply db --remote")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				`More than one account available but unable to select one in non-interactive mode.`
 			);
 		});
@@ -441,7 +439,7 @@ Your database may not be available to serve requests during the migration, conti
 
 			await expect(
 				runWrangler("d1 migrations apply db --local")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				`Migration "0001_test.sql" was not applied — execution was cancelled.`
 			);
 		});
@@ -490,7 +488,7 @@ Your database may not be available to serve requests during the migration, conti
 				.mockImplementation(async ({ command }) => {
 					if (typeof command === "string") {
 						const match = command.match(
-							/INSERT INTO d1_migrations \(name\)\s*values\s*\('([^']+)'\)/
+							/INSERT INTO "d1_migrations" \(name\)\s*values\s*\('([^']+)'\)/
 						);
 						if (match) {
 							insertedNames.push(match[1]);
@@ -537,14 +535,12 @@ Your database may not be available to serve requests during the migration, conti
 			// If we get to the point where we are checking for migrations then we have not been asked to log in.
 			await expect(
 				runWrangler("d1 migrations list --local DATABASE")
-			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+			).rejects.toThrow(`No migrations present at <cwd>/migrations.`);
 		});
 
 		it("should error when no config file is present", async ({ expect }) => {
 			setIsTTY(false);
-			await expect(
-				runWrangler("d1 migrations list DATABASE")
-			).rejects.toThrowError(
+			await expect(runWrangler("d1 migrations list DATABASE")).rejects.toThrow(
 				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
 			);
 		});
@@ -565,7 +561,7 @@ Your database may not be available to serve requests during the migration, conti
 			});
 			await expect(
 				runWrangler("d1 migrations list --local DATABASE")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				`No migrations present at <cwd>/my-migrations-go-here.`
 			);
 		});
@@ -584,7 +580,7 @@ Your database may not be available to serve requests during the migration, conti
 			);
 			await expect(
 				runWrangler("d1 migrations list --local DATABASE")
-			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+			).rejects.toThrow(`No migrations present at <cwd>/migrations.`);
 			expect(mockStd.warn).toContain(
 				"Set `migrations_dir` in your wrangler.jsonc file to choose a different path."
 			);
@@ -613,7 +609,7 @@ Your database may not be available to serve requests during the migration, conti
 			);
 			await expect(
 				runWrangler("d1 migrations list --local DATABASE")
-			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+			).rejects.toThrow(`No migrations present at <cwd>/migrations.`);
 			expect(mockStd.warn).toContain("No migrations folder found.");
 			expect(mockStd.warn).not.toContain("Set `migrations_dir`");
 		});
@@ -626,7 +622,7 @@ Your database may not be available to serve requests during the migration, conti
 			writeWranglerConfig();
 			await expect(
 				runWrangler("d1 migrations list DATABASE --remote")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				"Couldn't find a D1 DB with the name or binding 'DATABASE' in your wrangler.toml file."
 			);
 		});
@@ -638,7 +634,7 @@ Your database may not be available to serve requests during the migration, conti
 
 			await expect(
 				runWrangler("d1 migrations list DATABASE --remote")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work"
 			);
 		});
@@ -649,9 +645,9 @@ Your database may not be available to serve requests during the migration, conti
 			setIsTTY(false);
 			writeWranglerConfig();
 			// If we get to the point where we are checking for migrations then we have not checked wrangler.toml.
-			await expect(
-				runWrangler("d1 migrations list DATABASE")
-			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+			await expect(runWrangler("d1 migrations list DATABASE")).rejects.toThrow(
+				`No migrations present at <cwd>/migrations.`
+			);
 		});
 
 		it("`list` only shows migrations matching migrations_pattern (nested layout)", async ({
@@ -823,6 +819,118 @@ Your database may not be available to serve requests during the migration, conti
 
 				When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your wrangler.jsonc file (for example, \`"migrations_dir": "migrations"\`).]
 			`);
+		});
+
+		it("should escape single quotes in migration filenames during apply", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+					},
+				],
+			});
+			fs.mkdirSync("./migrations", { recursive: true });
+			fs.writeFileSync(
+				"./migrations/0001_add_user's_settings.sql",
+				"-- settings"
+			);
+
+			const executedQueries: string[] = [];
+			const spy = vi
+				.spyOn(d1Execute, "executeSql")
+				.mockImplementation(async ({ command }) => {
+					if (typeof command === "string") {
+						executedQueries.push(command);
+						if (command.includes("SELECT *")) {
+							return [{ results: [], success: true, meta: {} as never }];
+						}
+					}
+					return [{ results: [], success: true, meta: {} as never }];
+				});
+
+			mockConfirm({
+				text: `About to apply 1 migration(s)\nYour database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			try {
+				await runWrangler("d1 migrations apply db --local");
+			} finally {
+				spy.mockRestore();
+			}
+
+			const insertQuery = executedQueries.find((q) =>
+				q.includes("INSERT INTO")
+			);
+			expect(insertQuery).toBeDefined();
+			expect(insertQuery).toContain("'0001_add_user''s_settings.sql'");
+		});
+
+		it("should escape migrationsTableName using double quotes in SQL queries", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+						migrations_table: "my-custom-table",
+					},
+				],
+			});
+			fs.mkdirSync("./migrations", { recursive: true });
+			fs.writeFileSync("./migrations/0001_init.sql", "-- init");
+
+			const executedQueries: string[] = [];
+			const spy = vi
+				.spyOn(d1Execute, "executeSql")
+				.mockImplementation(async ({ command }) => {
+					if (typeof command === "string") {
+						executedQueries.push(command);
+					}
+					return [{ results: [], success: true, meta: {} as never }];
+				});
+
+			mockConfirm({
+				text: `About to apply 1 migration(s)\nYour database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			try {
+				await runWrangler("d1 migrations apply db --local");
+			} finally {
+				spy.mockRestore();
+			}
+
+			// Verify table creation uses quoted table name
+			const createQuery = executedQueries.find((q) =>
+				q.includes("CREATE TABLE IF NOT EXISTS")
+			);
+			expect(createQuery).toBeDefined();
+			expect(createQuery).toContain(
+				'CREATE TABLE IF NOT EXISTS "my-custom-table"'
+			);
+
+			// Verify query uses quoted table name
+			const selectQuery = executedQueries.find((q) => q.includes("SELECT *"));
+			expect(selectQuery).toBeDefined();
+			expect(selectQuery).toContain('FROM "my-custom-table"');
+
+			// Verify insert uses quoted table name
+			const insertQuery = executedQueries.find((q) =>
+				q.includes("INSERT INTO")
+			);
+			expect(insertQuery).toBeDefined();
+			expect(insertQuery).toContain('INSERT INTO "my-custom-table"');
 		});
 	});
 });

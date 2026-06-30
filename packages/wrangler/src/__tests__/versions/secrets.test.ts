@@ -236,7 +236,7 @@ SECRET3=value3`
 				runWrangler(
 					`versions upload --name ${workerName} --secrets-file non-existent-file.json`
 				)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 
 		it("should fail when secrets file is neither valid JSON nor .env format", async ({
@@ -249,7 +249,7 @@ SECRET3=value3`
 				runWrangler(
 					`versions upload --name ${workerName} --secrets-file ${secretsFile}`
 				)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 	});
 

@@ -516,6 +516,69 @@ describe("User", () => {
 		expect(std.err).toContain("");
 	});
 
+	it("refreshes the profile passed to loginOrRefreshIfRequired", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		const pastDate = new Date(Date.now() - 100_000 * 1000).toISOString();
+		writeAuthConfigFile(
+			{
+				oauth_token: "default-expired-access",
+				refresh_token: "default-refresh-token",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			},
+			"default"
+		);
+		writeAuthConfigFile(
+			{
+				oauth_token: "client-expired-access",
+				refresh_token: "client-refresh-token",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			},
+			"client-a"
+		);
+
+		let refreshToken: string | null = null;
+		msw.use(
+			http.post("*/oauth2/token", async ({ request }) => {
+				const body = new URLSearchParams(await request.text());
+				refreshToken = body.get("refresh_token");
+
+				return HttpResponse.json({
+					access_token: "client-fresh-access",
+					expires_in: 3600,
+					refresh_token: "client-next-refresh-token",
+					scope: "account:read",
+					token_type: "bearer",
+				});
+			})
+		);
+
+		await expect(
+			loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+				profile: "client-a",
+			})
+		).resolves.toEqual({ loggedIn: true });
+
+		expect(refreshToken).toBe("client-refresh-token");
+		expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+			api_token: undefined,
+			oauth_token: "default-expired-access",
+			refresh_token: "default-refresh-token",
+			expiration_time: pastDate,
+			scopes: ["account:read"],
+		});
+		expect(readAuthConfigFile("client-a")).toEqual<UserAuthConfig>({
+			api_token: undefined,
+			oauth_token: "client-fresh-access",
+			refresh_token: "client-next-refresh-token",
+			expiration_time: expect.any(String),
+			scopes: ["account:read"],
+		});
+	});
+
 	it("should revert to non-interactive mode if in CI", async ({ expect }) => {
 		vi.mocked(ci).isCI = true;
 		await expect(

@@ -145,6 +145,8 @@ export const getDatabaseByNameOrBinding = async (
 	};
 };
 
+// Keep in sync with the local provisioning copy in
+// packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
 export const getDatabaseInfoFromIdOrName = async (
 	complianceConfig: ComplianceConfig,
 	accountId: string,

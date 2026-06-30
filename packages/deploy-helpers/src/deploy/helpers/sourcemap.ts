@@ -2,6 +2,7 @@ import assert from "node:assert";
 import url from "node:url";
 import { maybeGetFile } from "@cloudflare/workers-shared";
 import { getFreshSourceMapSupport } from "miniflare";
+import { logger } from "../../shared/context";
 import type { Options } from "@cspotcode/source-map-support";
 import type Protocol from "devtools-protocol";
 
@@ -122,6 +123,27 @@ function callFrameToCallSite(frame: Protocol.Runtime.CallFrame): CallSite {
 	});
 }
 
+/**
+ * Calls `prepareStack` and returns `null` if it throws (e.g. when a truncated
+ * stderr chunk produces an invalid column number). Returning `null` lets
+ * `getSourceMappedString` fall back to the original string without executing
+ * the replacement loop against a partially-computed result.
+ */
+function tryPrepareStack(
+	prepareStack: ReturnType<typeof getSourceMappingPrepareStackTrace>,
+	error: Error,
+	callSites: NodeJS.CallSite[]
+): string | null {
+	try {
+		return prepareStack(error, callSites);
+	} catch (err) {
+		logger?.debug(
+			`Source map application failed, falling back to original stack trace: ${err}`
+		);
+		return null;
+	}
+}
+
 const placeholderError = new Error();
 export function getSourceMappedString(
 	value: string,
@@ -138,16 +160,20 @@ export function getSourceMappedString(
 	const callSiteLines = Array.from(value.matchAll(CALL_SITE_REGEXP));
 	const callSites = callSiteLines.map(lineMatchToCallSite);
 	const prepareStack = getSourceMappingPrepareStackTrace(retrieveSourceMap);
-	const sourceMappedStackTrace: string = prepareStack(
+	const sourceMappedStackTrace = tryPrepareStack(
+		prepareStack,
 		placeholderError,
 		callSites
 	);
+	if (sourceMappedStackTrace === null) {
+		return value;
+	}
 	const sourceMappedCallSiteLines = sourceMappedStackTrace.split("\n").slice(1);
 
 	for (let i = 0; i < callSiteLines.length; i++) {
 		// If a call site doesn't have a file name, it's likely invalid, so don't
 		// apply source mapping (see cloudflare/workers-sdk#4668)
-		if (callSites[i].getFileName() === undefined) {
+		if (callSites[i].getFileName() === null) {
 			continue;
 		}
 

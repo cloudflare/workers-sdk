@@ -357,11 +357,7 @@ export const secretListCommand = createCommand({
 		let secrets: Awaited<ReturnType<typeof fetchSecrets>>;
 
 		try {
-			secrets = await fetchSecrets(
-				{ ...config, name: scriptName },
-				accountId,
-				args.env
-			);
+			secrets = await fetchSecrets(config, scriptName, accountId, args.env);
 		} catch (e) {
 			if (isWorkerNotFoundError(e)) {
 				throw new UserError(

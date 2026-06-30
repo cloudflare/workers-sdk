@@ -513,7 +513,7 @@ export function printBindings(
 
 	if (services.length > 0) {
 		output.push(
-			...services.map(({ binding, service, entrypoint, remote }) => {
+			...services.map(({ binding, service, entrypoint, remote, dev }) => {
 				let value = service;
 				let mode = undefined;
 
@@ -521,7 +521,9 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (remote) {
+				if (dev !== undefined && context.local) {
+					mode = getMode({ isSimulatedLocally: true });
+				} else if (remote) {
 					mode = getMode({ isSimulatedLocally: false });
 				} else if (context.local && context.registry !== null) {
 					const isSelfBinding = service === context.name;

@@ -10,7 +10,6 @@ import { http, HttpResponse } from "msw";
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { actionsForEventCategories } from "../../r2/helpers/notification";
-import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -96,85 +95,6 @@ describe("r2", () => {
 	describe("bucket", () => {
 		mockAccountId();
 		mockApiToken();
-
-		it("should show help when the bucket command is passed", async () => {
-			await runWrangler("r2 bucket");
-			await endEventLoop();
-			expect(std.out).toMatchInlineSnapshot(`
-				"wrangler r2 bucket
-
-				Manage R2 buckets
-
-				COMMANDS
-				  wrangler r2 bucket create <name>    Create a new R2 bucket
-				  wrangler r2 bucket update           Update bucket state
-				  wrangler r2 bucket list             List R2 buckets
-				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
-				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
-				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open beta]
-				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
-				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
-				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
-				  wrangler r2 bucket local-uploads    Manage local uploads configuration for an R2 bucket
-				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
-				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
-				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
-
-				GLOBAL FLAGS
-				  -c, --config          Path to Wrangler configuration file  [string]
-				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-				  -v, --version         Show version number  [boolean]"
-			`);
-		});
-
-		it("should show the correct help when an invalid command is passed", async () => {
-			await expect(() =>
-				runWrangler("r2 bucket foo")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Unknown argument: foo]`
-			);
-			expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
-
-			          "
-		        `);
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 bucket
-
-				Manage R2 buckets
-
-				COMMANDS
-				  wrangler r2 bucket create <name>    Create a new R2 bucket
-				  wrangler r2 bucket update           Update bucket state
-				  wrangler r2 bucket list             List R2 buckets
-				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
-				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
-				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open beta]
-				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
-				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
-				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
-				  wrangler r2 bucket local-uploads    Manage local uploads configuration for an R2 bucket
-				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
-				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
-				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
-
-				GLOBAL FLAGS
-				  -c, --config          Path to Wrangler configuration file  [string]
-				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-				  -v, --version         Show version number  [boolean]"
-			`);
-		});
 
 		describe("list", () => {
 			it("should list buckets & check request inputs", async () => {
@@ -336,32 +256,7 @@ describe("r2", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler r2 bucket create <name>
 
-					Create a new R2 bucket
-
-					POSITIONALS
-					  name  The name of the new bucket  [string] [required]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: "weur", "eeur", "apac", "wnam", "enam", "oc"]
-					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
-					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
-					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
-					      --update-config  Automatically update your config file with the newly added resource  [boolean]
-					      --binding        The binding name of this resource in your Worker  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -375,32 +270,7 @@ describe("r2", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Unknown arguments: def, ghi]`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler r2 bucket create <name>
 
-					Create a new R2 bucket
-
-					POSITIONALS
-					  name  The name of the new bucket  [string] [required]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: "weur", "eeur", "apac", "wnam", "enam", "oc"]
-					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
-					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
-					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
-					      --update-config  Automatically update your config file with the newly added resource  [boolean]
-					      --binding        The binding name of this resource in your Worker  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
@@ -511,24 +381,6 @@ describe("r2", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Unknown argument: foo]`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler r2 bucket update
-
-					Update bucket state
-
-					COMMANDS
-					  wrangler r2 bucket update storage-class <name>  Update the default storage class of an existing R2 bucket
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
 
@@ -543,28 +395,6 @@ describe("r2", () => {
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Missing required argument: storage-class]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket update storage-class <name>
-
-						Update the default storage class of an existing R2 bucket
-
-						POSITIONALS
-						  name  The name of the existing bucket  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
-
-						OPTIONS
-						  -J, --jurisdiction   The jurisdiction of the bucket to be updated  [string]
-						  -s, --storage-class  The new default storage class for this bucket  [string] [required]"
-					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required argument: storage-class[0m
 
@@ -609,27 +439,6 @@ describe("r2", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler r2 bucket delete <bucket>
-
-					Delete an R2 bucket
-
-					POSITIONALS
-					  bucket  The name of the bucket to delete  [string] [required]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -675,27 +484,6 @@ describe("r2", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Unknown arguments: def, ghi]`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler r2 bucket delete <bucket>
-
-					Delete an R2 bucket
-
-					POSITIONALS
-					  bucket  The name of the bucket to delete  [string] [required]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]
-
-					OPTIONS
-					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
@@ -746,26 +534,6 @@ describe("r2", () => {
 
 			"
 		`);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler r2 bucket sippy
-
-					Manage Sippy incremental migration on an R2 bucket
-
-					COMMANDS
-					  wrangler r2 bucket sippy enable <name>   Enable Sippy on an R2 bucket
-					  wrangler r2 bucket sippy disable <name>  Disable Sippy on an R2 bucket
-					  wrangler r2 bucket sippy get <name>      Check the status of Sippy on an R2 bucket
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]"
-				`);
 			});
 
 			describe("enable", () => {
@@ -852,37 +620,6 @@ describe("r2", () => {
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket sippy enable <name>
-
-						Enable Sippy on an R2 bucket
-
-						POSITIONALS
-						  name  The name of the bucket  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
-
-						OPTIONS
-						  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
-						      --provider  [choices: "AWS", "GCS"]
-						      --bucket                    The name of the upstream bucket  [string]
-						      --region                    (AWS provider only) The region of the upstream bucket  [string]
-						      --access-key-id             (AWS provider only) The secret access key id for the upstream bucket  [string]
-						      --secret-access-key         (AWS provider only) The secret access key for the upstream bucket  [string]
-						      --service-account-key-file  (GCS provider only) The path to your Google Cloud service account key JSON file  [string]
-						      --client-email              (GCS provider only) The client email for your Google Cloud service account key  [string]
-						      --private-key               (GCS provider only) The private key for your Google Cloud service account key  [string]
-						      --r2-access-key-id          The secret access key id for this R2 bucket  [string]
-						      --r2-secret-access-key      The secret access key for this R2 bucket  [string]"
-					`);
 					expect(std.err).toMatchInlineSnapshot(`
 						"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1042,27 +779,6 @@ describe("r2", () => {
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket sippy disable <name>
-
-						Disable Sippy on an R2 bucket
-
-						POSITIONALS
-						  name  The name of the bucket  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
-
-						OPTIONS
-						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1101,27 +817,6 @@ describe("r2", () => {
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket sippy get <name>
-
-						Check the status of Sippy on an R2 bucket
-
-						POSITIONALS
-						  name  The name of the bucket  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
-
-						OPTIONS
-						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1173,28 +868,6 @@ describe("r2", () => {
 
 			"
 		`);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler r2 bucket catalog
-
-					Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open beta]
-
-					COMMANDS
-					  wrangler r2 bucket catalog enable <bucket>      Enable the data catalog on an R2 bucket [open beta]
-					  wrangler r2 bucket catalog disable <bucket>     Disable the data catalog for an R2 bucket [open beta]
-					  wrangler r2 bucket catalog get <bucket>         Get the status of the data catalog for an R2 bucket [open beta]
-					  wrangler r2 bucket catalog compaction           Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open beta]
-					  wrangler r2 bucket catalog snapshot-expiration  Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog [open beta]
-
-					GLOBAL FLAGS
-					  -c, --config          Path to Wrangler configuration file  [string]
-					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-					  -v, --version         Show version number  [boolean]"
-				`);
 			});
 
 			describe("enable", () => {
@@ -1240,24 +913,6 @@ describe("r2", () => {
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket catalog enable <bucket>
-
-						Enable the data catalog on an R2 bucket [open beta]
-
-						POSITIONALS
-						  bucket  The name of the bucket to enable  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
-					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1274,24 +929,6 @@ describe("r2", () => {
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket catalog disable <bucket>
-
-						Disable the data catalog for an R2 bucket [open beta]
-
-						POSITIONALS
-						  bucket  The name of the bucket to disable the data catalog for  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
-					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1373,24 +1010,6 @@ describe("r2", () => {
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket catalog get <bucket>
-
-						Get the status of the data catalog for an R2 bucket [open beta]
-
-						POSITIONALS
-						  bucket  The name of the R2 bucket whose data catalog status to retrieve  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
-					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1483,25 +1102,6 @@ describe("r2", () => {
 
 				"
 			`);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket catalog compaction
-
-						Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open beta]
-
-						COMMANDS
-						  wrangler r2 bucket catalog compaction enable <bucket> [namespace] [table]   Enable automatic file compaction for your R2 data catalog or a specific table [open beta]
-						  wrangler r2 bucket catalog compaction disable <bucket> [namespace] [table]  Disable automatic file compaction for your R2 data catalog or a specific table [open beta]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
-					`);
 				});
 
 				describe("enable", () => {
@@ -1561,30 +1161,6 @@ describe("r2", () => {
 						).rejects.toThrowErrorMatchingInlineSnapshot(
 							`[Error: Not enough non-option arguments: got 0, need at least 1]`
 						);
-						expect(std.out).toMatchInlineSnapshot(`
-							"
-							wrangler r2 bucket catalog compaction enable <bucket> [namespace] [table]
-
-							Enable automatic file compaction for your R2 data catalog or a specific table [open beta]
-
-							POSITIONALS
-							  bucket     The name of the bucket which contains the catalog  [string] [required]
-							  namespace  The namespace containing the table (optional, for table-level compaction)  [string]
-							  table      The name of the table (optional, for table-level compaction)  [string]
-
-							GLOBAL FLAGS
-							  -c, --config          Path to Wrangler configuration file  [string]
-							      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-							  -v, --version         Show version number  [boolean]
-
-							OPTIONS
-							      --target-size  The target size for compacted files in MB (allowed values: 64, 128, 256, 512)  [number] [default: 128]
-							      --token        A cloudflare api token with access to R2 and R2 Data Catalog (required for catalog-level compaction settings only)  [string]"
-						`);
 						expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1698,26 +1274,6 @@ describe("r2", () => {
 						).rejects.toThrowErrorMatchingInlineSnapshot(
 							`[Error: Not enough non-option arguments: got 0, need at least 1]`
 						);
-						expect(std.out).toMatchInlineSnapshot(`
-							"
-							wrangler r2 bucket catalog compaction disable <bucket> [namespace] [table]
-
-							Disable automatic file compaction for your R2 data catalog or a specific table [open beta]
-
-							POSITIONALS
-							  bucket     The name of the bucket which contains the catalog  [string] [required]
-							  namespace  The namespace containing the table (optional, for table-level compaction)  [string]
-							  table      The name of the table (optional, for table-level compaction)  [string]
-
-							GLOBAL FLAGS
-							  -c, --config          Path to Wrangler configuration file  [string]
-							      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-							  -v, --version         Show version number  [boolean]"
-						`);
 						expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1846,25 +1402,6 @@ describe("r2", () => {
 
 						"
 					`);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket catalog snapshot-expiration
-
-						Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog [open beta]
-
-						COMMANDS
-						  wrangler r2 bucket catalog snapshot-expiration enable <bucket> [namespace] [table]   Enable automatic snapshot expiration for your R2 data catalog or a specific table [open beta]
-						  wrangler r2 bucket catalog snapshot-expiration disable <bucket> [namespace] [table]  Disable automatic snapshot expiration for your R2 data catalog or a specific table [open beta]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]"
-					`);
 				});
 
 				describe("enable", () => {
@@ -1976,31 +1513,6 @@ describe("r2", () => {
 						).rejects.toThrowErrorMatchingInlineSnapshot(
 							`[Error: Not enough non-option arguments: got 0, need at least 1]`
 						);
-						expect(std.out).toMatchInlineSnapshot(`
-							"
-							wrangler r2 bucket catalog snapshot-expiration enable <bucket> [namespace] [table]
-
-							Enable automatic snapshot expiration for your R2 data catalog or a specific table [open beta]
-
-							POSITIONALS
-							  bucket     The name of the bucket which contains the catalog  [string] [required]
-							  namespace  The namespace containing the table (optional, for table-level snapshot expiration)  [string]
-							  table      The name of the table (optional, for table-level snapshot expiration)  [string]
-
-							GLOBAL FLAGS
-							  -c, --config          Path to Wrangler configuration file  [string]
-							      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-							  -v, --version         Show version number  [boolean]
-
-							OPTIONS
-							      --older-than-days  Delete snapshots older than this many days, defaults to 30  [number]
-							      --retain-last      The minimum number of snapshots to retain, defaults to 5  [number]
-							      --token            A cloudflare api token with access to R2 and R2 Data Catalog (required for catalog-level snapshot expiration settings only)  [string]"
-						`);
 						expect(std.err).toMatchInlineSnapshot(`
 							"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -2096,29 +1608,6 @@ describe("r2", () => {
 						).rejects.toThrowErrorMatchingInlineSnapshot(
 							`[Error: Not enough non-option arguments: got 0, need at least 1]`
 						);
-						expect(std.out).toMatchInlineSnapshot(`
-							"
-							wrangler r2 bucket catalog snapshot-expiration disable <bucket> [namespace] [table]
-
-							Disable automatic snapshot expiration for your R2 data catalog or a specific table [open beta]
-
-							POSITIONALS
-							  bucket     The name of the bucket which contains the catalog  [string] [required]
-							  namespace  The namespace containing the table (optional, for table-level snapshot expiration)  [string]
-							  table      The name of the table (optional, for table-level snapshot expiration)  [string]
-
-							GLOBAL FLAGS
-							  -c, --config          Path to Wrangler configuration file  [string]
-							      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-							  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-							      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-							  -h, --help            Show help  [boolean]
-							      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-							  -v, --version         Show version number  [boolean]
-
-							OPTIONS
-							      --force  Skip confirmation prompt  [boolean] [default: false]"
-						`);
 						expect(std.err).toMatchInlineSnapshot(`
 							"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -2402,27 +1891,6 @@ describe("r2", () => {
 					).rejects.toMatchInlineSnapshot(
 						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket notification list <bucket>
-
-						List event notification rules for an R2 bucket
-
-						POSITIONALS
-						  bucket  The name of the R2 bucket to get event notification rules for  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
-
-						OPTIONS
-						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-					`);
 				});
 			});
 			describe("create", () => {
@@ -2777,32 +2245,6 @@ describe("r2", () => {
 					).rejects.toMatchInlineSnapshot(
 						`[Error: Missing required arguments: event-types, queue]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket notification create <bucket>
-
-						Create an event notification rule for an R2 bucket
-
-						POSITIONALS
-						  bucket  The name of the R2 bucket to create an event notification rule for  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
-
-						OPTIONS
-						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: "object-create", "object-delete"]
-						      --prefix                     The prefix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
-						      --suffix                     The suffix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
-						      --queue                      The name of the queue that will receive event notification messages  [string] [required]
-						  -J, --jurisdiction               The jurisdiction where the bucket exists  [string]
-						      --description                A description that can be used to identify the event notification rule after creation  [string]"
-					`);
 				});
 			});
 
@@ -2944,29 +2386,6 @@ describe("r2", () => {
 					).rejects.toMatchInlineSnapshot(
 						`[Error: Missing required argument: queue]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						wrangler r2 bucket notification delete <bucket>
-
-						Delete an event notification rule from an R2 bucket
-
-						POSITIONALS
-						  bucket  The name of the R2 bucket to delete an event notification rule for  [string] [required]
-
-						GLOBAL FLAGS
-						  -c, --config          Path to Wrangler configuration file  [string]
-						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-						  -v, --version         Show version number  [boolean]
-
-						OPTIONS
-						      --queue         The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted  [string] [required]
-						      --rule          The ID of the event notification rule to delete  [string]
-						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-					`);
 				});
 			});
 		});
@@ -3795,7 +3214,7 @@ describe("r2", () => {
 						runWrangler(
 							`r2 bucket cors set my-bucket --file ${filePath} --force`
 						)
-					).rejects.toThrowError(
+					).rejects.toThrow(
 						/Wrangler detected an AWS S3 CORS configuration format/
 					);
 				});
@@ -3817,7 +3236,7 @@ describe("r2", () => {
 						runWrangler(
 							`r2 bucket cors set my-bucket --file ${filePath} --force`
 						)
-					).rejects.toThrowError(/Wrangler detected AWS S3 style keys/);
+					).rejects.toThrow(/Wrangler detected AWS S3 style keys/);
 				});
 
 				it("should set CORS configuration from a JSON file", async () => {

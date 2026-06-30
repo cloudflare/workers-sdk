@@ -80,10 +80,11 @@ describe("queues subscription", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
 				OPTIONS
-				      --source         The event source type  [string] [required] [choices: "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
+				      --source         The event source type  [string] [required] [choices: "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
 				      --events         Comma-separated list of event types to subscribe to  [string] [required]
 				      --name           Name for the subscription (auto-generated if not provided)  [string]
 				      --enabled        Whether the subscription should be active  [boolean] [default: true]
@@ -138,6 +139,51 @@ describe("queues subscription", () => {
 				──────────────────
 				Creating event subscription for queue 'testQueue'...
 				✨ Successfully created event subscription 'testQueue workersBuilds.worker' with id 'sub-123'."
+			`);
+		});
+
+		it("should create a subscription for images source", async ({ expect }) => {
+			const queueNameResolveRequest = mockGetQueueByNameRequest(
+				expectedQueueName,
+				{
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					producers: [],
+					consumers: [],
+					producers_total_count: 0,
+					consumers_total_count: 0,
+					modified_on: "",
+				}
+			);
+
+			const expectedRequest: Partial<CreateEventSubscriptionRequest> = {
+				name: "testQueue images",
+				enabled: true,
+				source: {
+					type: EventSourceType.IMAGES,
+				},
+				events: ["image.uploaded"],
+			};
+
+			const createRequest = mockCreateSubscriptionRequest(
+				expectedRequest,
+				expectedQueueId
+			);
+
+			await runWrangler(
+				"queues subscription create testQueue --source images --events image.uploaded"
+			);
+
+			expect(queueNameResolveRequest.count).toEqual(1);
+			expect(createRequest.count).toEqual(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Creating event subscription for queue 'testQueue'...
+				✨ Successfully created event subscription 'testQueue images' with id 'sub-123'."
 			`);
 		});
 
@@ -208,7 +254,7 @@ describe("queues subscription", () => {
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid values:
-				  Argument: source, Given: "invalid", Choices: "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
+				  Argument: source, Given: "invalid", Choices: "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
 			`);
 		});
 
@@ -259,6 +305,7 @@ describe("queues subscription", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
 				OPTIONS
@@ -436,6 +483,7 @@ describe("queues subscription", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
 				OPTIONS
@@ -557,6 +605,7 @@ describe("queues subscription", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
 				OPTIONS
@@ -798,7 +847,7 @@ describe("queues subscription", () => {
 				runWrangler(
 					`queues subscription update test-queue --id ${subscriptionId}`
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				"No fields specified for update. Provide at least one of --name, --events, or --enabled to update the subscription."
 			);
 		});

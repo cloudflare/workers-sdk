@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { ParseError } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -10,7 +11,6 @@ import {
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, test, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { printBundleSize } from "../../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../../output";
 import { diagnoseScriptSizeError } from "../../utils/friendly-validator-errors";
@@ -52,8 +52,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -1074,7 +1077,7 @@ export default { fetch() { return new Response(foo); } }`
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toThrowError();
+			await expect(runWrangler("deploy")).rejects.toThrow();
 			expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",
@@ -1222,6 +1225,49 @@ export default { fetch() { return new Response(mod); } };`;
 			fs.writeFileSync("mod.wasm", "");
 			await runWrangler("deploy index.js --no-bundle --dry-run --outdir dist");
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
+		});
+
+		it("should collect additional modules when find_additional_modules is not set", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				rules: [{ type: "CompiledWasm", globs: ["**/*.wasm"] }],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync("hello.wasm", "");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"hello.wasm": expect.any(String),
+				},
+			});
+			await runWrangler("deploy");
+		});
+
+		it("should not collect additional modules when find_additional_modules is false", async () => {
+			writeWranglerConfig({
+				no_bundle: true,
+				find_additional_modules: false,
+				main: "index.js",
+				rules: [{ type: "CompiledWasm", globs: ["**/*.wasm"] }],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync("hello.wasm", "");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				excludedModules: ["hello.wasm"],
+			});
+			await runWrangler("deploy");
 		});
 	});
 	describe("--no-bundle --minify", () => {

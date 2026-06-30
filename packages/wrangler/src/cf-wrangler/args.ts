@@ -1,7 +1,6 @@
 /**
- * Strict argv parser for `cf-wrangler dev`. Only four flags are accepted;
- * unknown flags throw. The config file comes from wrangler's standard
- * discovery, not a flag.
+ * Strict argv parsers for `cf-wrangler` delegate verbs. The config file comes
+ * from wrangler's standard discovery, not a flag.
  */
 import { parseArgs as nodeParseArgs } from "node:util";
 
@@ -12,6 +11,10 @@ export interface DevArgs {
 	local?: boolean; // force local even if a resource sets `remote = true`
 }
 
+export interface BuildArgs {
+	mode?: string; // maps to wrangler's `env` (named environment)
+}
+
 export class ArgParseError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -20,6 +23,10 @@ export class ArgParseError extends Error {
 }
 
 export function parseArgs(argv: string[]): DevArgs {
+	return parseDevArgs(argv);
+}
+
+export function parseDevArgs(argv: string[]): DevArgs {
 	let parsed;
 	try {
 		parsed = nodeParseArgs({
@@ -60,6 +67,29 @@ export function parseArgs(argv: string[]): DevArgs {
 	}
 	if (parsed.values.local !== undefined) {
 		out.local = parsed.values.local;
+	}
+
+	return out;
+}
+
+export function parseBuildArgs(argv: string[]): BuildArgs {
+	let parsed;
+	try {
+		parsed = nodeParseArgs({
+			args: argv,
+			options: {
+				mode: { type: "string" },
+			},
+			strict: true,
+			allowPositionals: false,
+		});
+	} catch (err) {
+		throw new ArgParseError(err instanceof Error ? err.message : String(err));
+	}
+
+	const out: BuildArgs = {};
+	if (parsed.values.mode !== undefined) {
+		out.mode = parsed.values.mode;
 	}
 
 	return out;

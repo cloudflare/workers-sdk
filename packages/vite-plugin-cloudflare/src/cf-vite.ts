@@ -4,9 +4,15 @@
  * EXPERIMENTAL / internal: spawned by Cloudflare's "cf-dev" parent
  * process, not invoked directly by end users. Contract may change.
  *
- * Usage: `<pkgRoot>/bin/cf-vite <verb> [flags...]`. `dev` is the only
- * verb today; future verbs follow the same shape. Unknown/missing verbs
- * exit 2 (also the parent's version-detection signal).
+ * Usage: `<pkgRoot>/bin/cf-vite <verb> [flags...]`. `dev` and `build`
+ * are the verbs today; future verbs follow the same shape.
+ * Unknown/missing verbs exit 2 (also the parent's version-detection
+ * signal).
+ *
+ * Every verb forces the experimental Build Output API on by default by
+ * setting `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT` in `main()` before Vite
+ * loads the user's config; the plugin reads it during config resolution
+ * to enable `experimental.newConfig` + `experimental.newConfig.cfBuildOutput`.
  *
  * Spawn contract for `dev`: parent uses `stdio: "inherit"` and forwards
  * SIGINT/SIGTERM. Accepted flags mirror the sibling `cf-wrangler`
@@ -17,12 +23,18 @@
  * Vite via `createServer()` against the user's own config (expected to
  * include `cloudflare()`); flags are bridged to it as documented inline.
  *
+ * `build` runs Vite's full multi-environment app build via
+ * `createBuilder().buildApp()` (NOT the legacy single-environment
+ * `build()` helper, which would skip the plugin's worker builds). It
+ * accepts only `--mode` (the other shared flags don't apply to a build).
+ *
  * Exit codes: 0 graceful, 2 unknown verb / parse error, 130 SIGINT,
  * 143 SIGTERM.
  */
 
 import { parseArgs as nodeParseArgs } from "node:util";
-import { createServer } from "vite";
+import { createBuilder, createServer } from "vite";
+import { FORCE_BUILD_OUTPUT_ENV_VAR } from "./build-output-env";
 import type { InlineConfig, ServerOptions } from "vite";
 
 interface DevArgs {
@@ -40,7 +52,7 @@ class ArgParseError extends Error {
 }
 
 /** Strict argv parser; mirrors `cf-wrangler`'s flags (unknown → throw). */
-function parseArgs(argv: string[]): DevArgs {
+function parseDevArgs(argv: string[]): DevArgs {
 	let parsed;
 	try {
 		parsed = nodeParseArgs({
@@ -84,23 +96,64 @@ function parseArgs(argv: string[]): DevArgs {
 	return out;
 }
 
+interface BuildArgs {
+	mode?: string;
+}
+
+function parseBuildArgs(argv: string[]): BuildArgs {
+	let parsed;
+	try {
+		parsed = nodeParseArgs({
+			args: argv,
+			options: {
+				mode: { type: "string" },
+			},
+			strict: true,
+			allowPositionals: false,
+		});
+	} catch (err) {
+		throw new ArgParseError(err instanceof Error ? err.message : String(err));
+	}
+
+	const out: BuildArgs = {};
+	if (parsed.values.mode !== undefined) {
+		out.mode = parsed.values.mode;
+	}
+
+	return out;
+}
+
 async function main(): Promise<number> {
 	// argv: [0] node [1] cf-vite.mjs [2] verb [3+] forwarded flags.
 	const verb = process.argv[2];
 	const userArgv = process.argv.slice(3);
 
-	if (verb !== "dev") {
-		// Format mirrors `cf-wrangler`.
-		process.stderr.write(
-			`Error: unknown subcommand "${verb ?? ""}".\n` +
-				`Usage: cf-vite dev [args]\n`
-		);
-		return 2;
+	// Force the experimental Build Output API on by default for every
+	// delegate verb. The plugin reads this during config resolution to
+	// enable `experimental.newConfig` + `.cfBuildOutput`. Set before Vite
+	// loads the user's `vite.config.ts`.
+	process.env[FORCE_BUILD_OUTPUT_ENV_VAR] = "true";
+
+	if (verb === "dev") {
+		return runDev(userArgv);
 	}
 
+	if (verb === "build") {
+		return runBuild(userArgv);
+	}
+
+	// Format mirrors `cf-wrangler`.
+	process.stderr.write(
+		`Error: unknown subcommand "${verb ?? ""}".\n` +
+			`Usage: cf-vite <dev|build> [args]\n`
+	);
+	return 2;
+}
+
+async function runDev(userArgv: string[]): Promise<number> {
 	let args: DevArgs;
 	try {
-		args = parseArgs(userArgv);
+		args = parseDevArgs(userArgv);
 	} catch (err) {
 		if (err instanceof ArgParseError) {
 			process.stderr.write(`Error: ${err.message}\n`);
@@ -167,6 +220,28 @@ async function main(): Promise<number> {
 	// Keep the event loop alive until a signal handler exits; Vite's own
 	// handles (HTTP listener, watchers, workerd) hold the process open.
 	return new Promise<number>(() => {});
+}
+
+async function runBuild(userArgv: string[]): Promise<number> {
+	let args: BuildArgs;
+	try {
+		args = parseBuildArgs(userArgv);
+	} catch (err) {
+		if (err instanceof ArgParseError) {
+			process.stderr.write(`Error: ${err.message}\n`);
+			return 2;
+		}
+		throw err;
+	}
+
+	const inlineConfig: InlineConfig = {};
+	if (args.mode !== undefined) {
+		inlineConfig.mode = args.mode;
+	}
+	const builder = await createBuilder(inlineConfig);
+	await builder.buildApp();
+
+	return 0;
 }
 
 // Let unhandled rejections propagate — Node prints the stack and exits

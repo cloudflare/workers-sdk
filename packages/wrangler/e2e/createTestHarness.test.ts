@@ -16,6 +16,12 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
+import type {
+	D1Database,
+	DurableObjectNamespace,
+	KVNamespace,
+	R2Bucket,
+} from "@cloudflare/workers-types/experimental";
 
 const { createTestHarness } = await importWrangler();
 
@@ -208,13 +214,16 @@ describe("createTestHarness", () => {
 		);
 	});
 
-	it("exposes resource accessors scoped to each worker", async ({ expect }) => {
+	it("exposes resource bindings scoped to each worker environment", async ({
+		expect,
+	}) => {
 		await helper.seed({
 			"wrangler.api.jsonc": dedent`
 				{
 					"name": "api-worker",
 					"main": "src/api.ts",
 					"compatibility_date": "2026-05-20",
+					"vars": { "GREETING": "api" },
 					"kv_namespaces": [
 						{ "binding": "STORE", "id": "api-store" }
 					],
@@ -228,6 +237,7 @@ describe("createTestHarness", () => {
 					"name": "admin-worker",
 					"main": "src/admin.ts",
 					"compatibility_date": "2026-05-20",
+					"vars": { "GREETING": "admin" },
 					"d1_databases": [
 						{
 							"binding": "DATABASE",
@@ -294,34 +304,50 @@ describe("createTestHarness", () => {
 		const server = createTestHarness({
 			root: helper.tmpPath,
 			workers: [
-				{ configPath: "./wrangler.api.jsonc" },
-				{ configPath: "./wrangler.admin.jsonc" },
+				{
+					configPath: "./wrangler.api.jsonc",
+					secrets: { SECRET: "api-secret" },
+				},
+				{
+					configPath: "./wrangler.admin.jsonc",
+					secrets: { SECRET: "admin-secret" },
+				},
 			],
 		});
 		onTestFinished(server.close);
 
 		await server.listen();
 
-		const api = server.getWorker("api-worker");
-		const admin = server.getWorker("admin-worker");
+		const api = server.getWorker<{
+			GREETING: string;
+			SECRET: string;
+			STORE: KVNamespace;
+			BUCKET: R2Bucket;
+		}>("api-worker");
+		const admin = server.getWorker<{
+			GREETING: string;
+			SECRET: string;
+			DATABASE: D1Database;
+			OBJECT: DurableObjectNamespace;
+		}>("admin-worker");
 		const apiWriteResponse = await api.fetch("/write-storage");
 		expect(await apiWriteResponse.text()).toBe("written");
 		const adminWriteResponse = await admin.fetch("/write-storage");
 		expect(await adminWriteResponse.text()).toBe("1");
 
+		const apiEnv = await api.getEnv();
+		const adminEnv = await admin.getEnv();
+
+		expect(apiEnv.GREETING).toBe("api");
+		expect(apiEnv.SECRET).toBe("api-secret");
+		expect(adminEnv.GREETING).toBe("admin");
+		expect(adminEnv.SECRET).toBe("admin-secret");
+
 		// KV Namespace
-		const STORE = await api.getKVNamespace("STORE");
-		await expect(STORE.get("key")).resolves.toBe("api");
-		await expect(admin.getKVNamespace("STORE")).rejects.toThrow(
-			`No KV namespace binding named "STORE" found in "admin-worker" worker.`
-		);
-		await expect(api.getKVNamespace("BUCKET")).rejects.toThrow(
-			`No KV namespace binding named "BUCKET" found in "api-worker" worker.`
-		);
+		await expect(apiEnv.STORE.get("key")).resolves.toBe("api");
 
 		// R2 Bucket
-		const BUCKET = await api.getR2Bucket("BUCKET");
-		const object = await BUCKET.get("key");
+		const object = await apiEnv.BUCKET.get("key");
 
 		if (object === null) {
 			expect.fail("Expected R2 object to exist");
@@ -329,35 +355,304 @@ describe("createTestHarness", () => {
 			await expect(object.text()).resolves.toBe("api");
 		}
 
-		await expect(admin.getR2Bucket("BUCKET")).rejects.toThrow(
-			`No R2 bucket binding named "BUCKET" found in "admin-worker" worker.`
-		);
-		await expect(api.getR2Bucket("STORE")).rejects.toThrow(
-			`No R2 bucket binding named "STORE" found in "api-worker" worker.`
-		);
-
 		// D1 Database
-		const DATABASE = await admin.getD1Database("DATABASE");
 		await expect(
-			DATABASE.prepare("SELECT value FROM entries").first("value")
+			adminEnv.DATABASE.prepare("SELECT value FROM entries").first("value")
 		).resolves.toBe("admin");
-		await expect(api.getD1Database("DATABASE")).rejects.toThrow(
-			`No D1 database binding named "DATABASE" found in "api-worker" worker.`
-		);
-		await expect(admin.getD1Database("OBJECT")).rejects.toThrow(
-			`No D1 database binding named "OBJECT" found in "admin-worker" worker.`
-		);
 
 		// Durable Object Namespace
-		const adminDO = await admin.getDurableObjectNamespace("OBJECT");
-		const adminStub = adminDO.getByName("shared");
+		const adminStub = adminEnv.OBJECT.get(adminEnv.OBJECT.idFromName("shared"));
 		const adminResponse = await adminStub.fetch("http://example.com/");
 		await expect(adminResponse.text()).resolves.toBe("2");
-		await expect(api.getDurableObjectNamespace("OBJECT")).rejects.toThrow(
-			`No Durable Object namespace binding named "OBJECT" found in "api-worker" worker.`
+	});
+
+	it("introspects Workflow instances by binding name", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "workflow-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"workflows": [
+						{
+							"binding": "MODERATOR",
+							"class_name": "ModeratorWorkflow",
+							"name": "moderator-workflow"
+						}
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				import { WorkflowEntrypoint } from "cloudflare:workers";
+
+				export class ModeratorWorkflow extends WorkflowEntrypoint {
+					async run(event, step) {
+						if (event.payload?.streamTest) {
+							const stream = await step.do("stream result", async () => {
+								return new ReadableStream({
+									start(controller) {
+										controller.enqueue(new TextEncoder().encode("real stream"));
+										controller.close();
+									}
+								});
+							});
+							return { streamResult: await new Response(stream).text() };
+						}
+
+						await step.sleep("sleep for a while", "10 seconds");
+
+						const result = await step.do("AI content scan", async () => {
+							const violationScore = Math.floor(Math.random() * 100);
+							return { violationScore };
+						});
+
+						if (result.violationScore < 10) {
+							await step.do("auto approve content", async () => {
+								return { status: "auto_approved" };
+							});
+							return { status: "auto_approved" };
+						}
+
+						await step.do("auto reject content", async () => {
+							return { status: "auto_rejected" };
+						});
+						return { status: "auto_rejected" };
+					}
+				}
+
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+
+						if (url.pathname === "/moderate-known") {
+							const id = url.searchParams.get("id");
+							const workflow = await env.MODERATOR.create({ id });
+							return Response.json({ id: workflow.id });
+						}
+
+						if (url.pathname === "/moderate") {
+							const workflow = await env.MODERATOR.create();
+							return Response.json({
+								id: workflow.id,
+								details: await workflow.status()
+							});
+						}
+
+						if (url.pathname === "/moderate-batch") {
+							const workflows = await env.MODERATOR.createBatch([
+								{},
+								{ id: "321" },
+								{}
+							]);
+							return Response.json({ ids: workflows.map((workflow) => workflow.id) });
+						}
+
+						if (url.pathname === "/moderate-stream") {
+							const workflow = await env.MODERATOR.create({ params: { streamTest: true } });
+							return Response.json({ id: workflow.id });
+						}
+
+						return new Response("Not found", { status: 404 });
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker("workflow-worker");
+		const stepName = "AI content scan";
+		const mockResult = { violationScore: 0 };
+
+		const instanceId = "known-workflow-instance";
+		const instance = await worker.introspectWorkflowInstance(
+			"MODERATOR",
+			instanceId
 		);
-		await expect(admin.getDurableObjectNamespace("DATABASE")).rejects.toThrow(
-			`No Durable Object namespace binding named "DATABASE" found in "admin-worker" worker.`
+		onTestFinished(instance.dispose);
+
+		await instance.modify(async (modifier) => {
+			await modifier.disableSleeps();
+			await modifier.mockStepResult({ name: stepName }, mockResult);
+		});
+
+		const response = await worker.fetch(`/moderate-known?id=${instanceId}`);
+		await expect(response.json()).resolves.toEqual({ id: instanceId });
+
+		await expect(
+			instance.waitForStepResult({ name: stepName })
+		).resolves.toEqual(mockResult);
+		await expect(instance.waitForStatus("complete")).resolves.not.toThrow();
+		await expect(instance.getOutput()).resolves.toEqual({
+			status: "auto_approved",
+		});
+
+		const workflow = await worker.introspectWorkflow("MODERATOR");
+		onTestFinished(workflow.dispose);
+		await expect(worker.introspectWorkflow("MODERATOR")).rejects.toThrow(
+			`Workflow "moderator-workflow" already has an active introspection session for binding "MODERATOR".`
+		);
+		await workflow.modifyAll(async (modifier) => {
+			await modifier.disableSleeps();
+			await modifier.mockStepResult({ name: stepName }, mockResult);
+		});
+
+		const unknownIdResponse = await worker.fetch("/moderate");
+		const unknownIdResult = (await unknownIdResponse.json()) as { id: string };
+		expect(unknownIdResult.id).not.toBe(instanceId);
+
+		const instances = await workflow.get();
+		expect(instances).toHaveLength(1);
+		await expect(
+			instances[0].waitForStepResult({ name: stepName })
+		).resolves.toEqual(mockResult);
+		await expect(instances[0].waitForStatus("complete")).resolves.not.toThrow();
+		await expect(instances[0].getOutput()).resolves.toEqual({
+			status: "auto_approved",
+		});
+		await workflow.dispose();
+		await expect(workflow.get()).rejects.toThrow(
+			`Workflow "moderator-workflow" does not have an active introspection session for this introspector.`
+		);
+		await expect(workflow.modifyAll(async () => {})).rejects.toThrow(
+			`Workflow "moderator-workflow" does not have an active introspection session for this introspector.`
+		);
+
+		const batchWorkflow = await worker.introspectWorkflow("MODERATOR");
+		onTestFinished(batchWorkflow.dispose);
+		await batchWorkflow.modifyAll(async (modifier) => {
+			await modifier.disableSleeps();
+			await modifier.mockStepResult({ name: stepName }, mockResult);
+		});
+
+		const batchResponse = await worker.fetch("/moderate-batch");
+		await expect(batchResponse.json()).resolves.toMatchObject({
+			ids: [expect.any(String), "321", expect.any(String)],
+		});
+
+		const batchInstances = await batchWorkflow.get();
+		expect(batchInstances).toHaveLength(3);
+		for (const batchInstance of batchInstances) {
+			await expect(
+				batchInstance.waitForStepResult({ name: stepName })
+			).resolves.toEqual(mockResult);
+			await expect(
+				batchInstance.waitForStatus("complete")
+			).resolves.not.toThrow();
+			await expect(batchInstance.getOutput()).resolves.toEqual({
+				status: "auto_approved",
+			});
+		}
+
+		await batchWorkflow.dispose();
+
+		const streamWorkflow = await worker.introspectWorkflow("MODERATOR");
+		onTestFinished(streamWorkflow.dispose);
+		await streamWorkflow.modifyAll(async (modifier) => {
+			await modifier.mockStepResult(
+				{ name: "stream result" },
+				new ReadableStream({
+					start(controller) {
+						controller.enqueue(new TextEncoder().encode("mock stream"));
+						controller.close();
+					},
+				})
+			);
+		});
+
+		await worker.fetch("/moderate-stream");
+		const [streamInstance] = await streamWorkflow.get();
+		await expect(
+			streamInstance.waitForStatus("complete")
+		).resolves.not.toThrow();
+		await expect(streamInstance.getOutput()).resolves.toEqual({
+			streamResult: "mock stream",
+		});
+	});
+
+	it("applies D1 migrations to a worker binding", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "d1-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"d1_databases": [
+						{
+							"binding": "DATABASE",
+							"database_name": "test-database",
+							"database_id": "00000000-0000-0000-0000-000000000001",
+							"migrations_dir": "migrations",
+							"migrations_pattern": "migrations/*/migration.sql",
+							"migrations_table": "custom_migrations"
+						}
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						const key = new URL(request.url).pathname.slice(1);
+						const row = await env.DATABASE.prepare("SELECT value FROM settings WHERE key = ?")
+							.bind(key)
+							.first();
+
+						if (row === null) {
+							return new Response("missing", { status: 404 });
+						}
+
+						return new Response(row.value);
+					}
+				};
+			`,
+			"migrations/0001_settings/migration.sql": dedent`
+				CREATE TABLE settings (
+					key TEXT PRIMARY KEY,
+					value TEXT NOT NULL
+				);
+			`,
+			"migrations/0002_seed/migration.sql": dedent`
+				INSERT INTO settings (key, value) VALUES ('greeting', 'Hello D1');
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<{ DATABASE: D1Database }>();
+		await worker.applyD1Migrations("DATABASE");
+
+		const response = await worker.fetch("/greeting");
+		await expect(response.text()).resolves.toBe("Hello D1");
+
+		await worker.applyD1Migrations("DATABASE");
+		const secondResponse = await worker.fetch("/greeting");
+		await expect(secondResponse.text()).resolves.toBe("Hello D1");
+
+		server.debug();
+		const debugOutput = normalizeDebugOutput(logs.getAndClearOut());
+		expect(debugOutput).toContain(
+			"[server] [d1-worker] d1 migrations - DATABASE - applied 0001_settings/migration.sql"
+		);
+		expect(debugOutput).toContain(
+			"[server] [d1-worker] d1 migrations - DATABASE - applied 0002_seed/migration.sql"
+		);
+		expect(debugOutput).toContain(
+			"[server] [d1-worker] d1 migrations - DATABASE - completed (2 applied)"
+		);
+		expect(debugOutput).toContain(
+			"[server] [d1-worker] d1 migrations - DATABASE - completed (no migrations to apply)"
 		);
 	});
 

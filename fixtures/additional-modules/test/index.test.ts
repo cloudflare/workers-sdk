@@ -87,7 +87,7 @@ describe("find_additional_modules dev", () => {
 		await fs.rm(path.join(srcDir, "lang", "en.js"));
 
 		await vi.waitFor(async () => {
-			await expect(get(worker, "/lang/en")).rejects.toThrowError(
+			await expect(get(worker, "/lang/en")).rejects.toThrow(
 				'No such module "lang/en.js".'
 			);
 		});

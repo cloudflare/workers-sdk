@@ -365,7 +365,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-type DevArguments = Omit<(typeof dev)["args"], "installSkills">;
+type DevArguments = Omit<(typeof dev)["args"], "installSkills" | "profile">;
 
 export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.

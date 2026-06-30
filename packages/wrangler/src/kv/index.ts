@@ -240,14 +240,14 @@ export const kvNamespaceDeleteCommand = createCommand({
 
 		if (providedOptions.length === 0) {
 			throw new CommandLineArgsError(
-				"Must specify one of: namespace name (as positional argument), --binding, or --namespace-id",
+				"No KV namespace specified. Provide a namespace name as a positional argument, or use `--binding` or `--namespace-id`.",
 				{ telemetryMessage: "kv namespace delete missing namespace selector" }
 			);
 		}
 
 		if (providedOptions.length > 1) {
 			throw new CommandLineArgsError(
-				"Cannot specify multiple of: namespace name (as positional argument), --binding, or --namespace-id. Use only one.",
+				"Only one namespace selector is allowed. Provide exactly one of: a positional namespace name, `--binding`, or `--namespace-id`.",
 				{
 					telemetryMessage:
 						"kv namespace delete conflicting namespace selectors",
@@ -343,7 +343,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		// Check if both name and namespace-id are provided
 		if (args.oldName && args.namespaceId) {
 			throw new CommandLineArgsError(
-				"Cannot specify both old-name and --namespace-id. Use either old-name (as first argument) or --namespace-id flag, not both.",
+				"Cannot specify both a positional namespace name and `--namespace-id`. Use one or the other to identify the namespace to rename.",
 				{
 					telemetryMessage:
 						"kv namespace rename conflicting namespace selectors",
@@ -354,7 +354,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		// Require either old-name or namespace-id
 		if (!args.namespaceId && !args.oldName) {
 			throw new CommandLineArgsError(
-				"Either old-name (as first argument) or --namespace-id must be specified",
+				"No KV namespace specified. Provide the current namespace name as a positional argument, or use `--namespace-id` to identify the namespace to rename.",
 				{ telemetryMessage: "kv namespace rename missing namespace selector" }
 			);
 		}
@@ -362,7 +362,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		// Validate new-name length (API limit is 512 characters)
 		if (args.newName && args.newName.length > 512) {
 			throw new CommandLineArgsError(
-				`new-name must be 512 characters or less (current: ${args.newName.length})`,
+				`The new namespace name exceeds the 512-character limit (got ${args.newName.length} characters). Provide a shorter name with \`--new-name\`.`,
 				{ telemetryMessage: "kv namespace rename new name too long" }
 			);
 		}
@@ -382,8 +382,7 @@ export const kvNamespaceRenameCommand = createCommand({
 
 			if (!namespace) {
 				throw new UserError(
-					`No namespace found with the name "${args.oldName}". ` +
-						`Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".`,
+					`No KV namespace named "${args.oldName}" was found in your account. Use \`--namespace-id\` to identify the namespace by ID, or run \`wrangler kv namespace list\` to see all available namespaces.`,
 					{ telemetryMessage: "kv namespace rename namespace not found" }
 				);
 			}

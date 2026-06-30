@@ -16,6 +16,7 @@ import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { updateCheck } from "../update-check";
 import type { NormalizedTypes } from "../experimental-config/load";
+import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 import type {
 	Config,
 	ConfigBindingOptions,
@@ -70,6 +71,7 @@ async function logWarningsWithUpgradeHint(
  */
 export interface NewConfig {
 	config: Config;
+	parsedWorkerConfig: ParsedInputWorkerConfig;
 	dependencies: Set<string>;
 	types: NormalizedTypes;
 }
@@ -125,6 +127,7 @@ export async function readNewConfig(
 
 	return {
 		config,
+		parsedWorkerConfig: loaded.parsedWorkerConfig,
 		dependencies: loaded.dependencies,
 		types: loaded.types,
 	};
