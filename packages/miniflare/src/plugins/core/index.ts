@@ -14,7 +14,12 @@ import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
-import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
+import {
+	getTodaysCompatDate,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+	OBSERVABILITY_COMPAT_FLAGS,
+	removeDirSync,
+} from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
@@ -67,6 +72,7 @@ import {
 	SourceOptionsSchema,
 	withSourceURL,
 } from "./modules";
+import { getObservabilityServices } from "./observability";
 import { PROXY_SECRET } from "./proxy";
 import {
 	CustomFetchServiceSchema,
@@ -322,6 +328,9 @@ export const CoreSharedOptionsSchema = z
 		unsafeRuntimeEnv: z.record(z.string()).optional(),
 		// Enable the local explorer at /cdn-cgi/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
+		// Enable local-dev observability (experimental): inject the trace collector
+		// as a streaming-tail consumer of the user's worker(s).
+		unsafeObservability: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
 
@@ -837,6 +846,23 @@ export const CORE_PLUGIN: Plugin<
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
 
+		// Local observability (experimental): when enabled, Miniflare wires the
+		// internal collector onto every user worker as a streaming-tail consumer,
+		// plus the compat flags workerd needs to emit that tail. Centralised here
+		// so wrangler and the Vite plugin don't each duplicate it. Wrapped bindings
+		// aren't real workers (and reject compat flags), so they're excluded.
+		const observabilityEnabled =
+			sharedOptions.unsafeObservability === true && !isWrappedBinding;
+		const streamingTails = observabilityEnabled
+			? [
+					...(options.streamingTails ?? []),
+					{ name: OBSERVABILITY_COLLECTOR_SERVICE_NAME },
+				]
+			: options.streamingTails;
+		const compatibilityFlags = observabilityEnabled
+			? [...(options.compatibilityFlags ?? []), ...OBSERVABILITY_COMPAT_FLAGS]
+			: options.compatibilityFlags;
+
 		if (isWrappedBinding) {
 			const stringName = JSON.stringify(name);
 			function invalidWrapped(reason: string): never {
@@ -895,7 +921,7 @@ export const CORE_PLUGIN: Plugin<
 				worker: {
 					...workerScript,
 					compatibilityDate,
-					compatibilityFlags: options.compatibilityFlags,
+					compatibilityFlags,
 					bindings: workerBindings,
 					durableObjectNamespaces:
 						classNamesEntries.map<Worker_DurableObjectNamespace>(
@@ -954,18 +980,16 @@ export const CORE_PLUGIN: Plugin<
 							options.hasAssetsAndIsVitest
 						);
 					}),
-					streamingTails: options.streamingTails?.map<ServiceDesignator>(
-						(service) => {
-							return getCustomServiceDesignator(
-								/* referrer */ options.name,
-								workerIndex,
-								CustomServiceKind.UNKNOWN,
-								name,
-								service,
-								options.hasAssetsAndIsVitest
-							);
-						}
-					),
+					streamingTails: streamingTails?.map<ServiceDesignator>((service) => {
+						return getCustomServiceDesignator(
+							/* referrer */ options.name,
+							workerIndex,
+							CustomServiceKind.UNKNOWN,
+							name,
+							service,
+							options.hasAssetsAndIsVitest
+						);
+					}),
 					containerEngine: getContainerEngine(options.containerEngine),
 				},
 			});
@@ -994,7 +1018,7 @@ export const CORE_PLUGIN: Plugin<
 			if (maybeService !== undefined) services.push(maybeService);
 		}
 
-		for (const service of options.streamingTails ?? []) {
+		for (const service of streamingTails ?? []) {
 			const maybeService = maybeGetCustomServiceService(
 				workerIndex,
 				CustomServiceKind.UNKNOWN,
@@ -1278,6 +1302,12 @@ export function getGlobalServices({
 				telemetry: sharedOptions.telemetry,
 			})
 		);
+	}
+
+	// Local observability (experimental): register the internal trace collector
+	// service. Core attaches it to each user worker's streaming tail above.
+	if (sharedOptions.unsafeObservability) {
+		services.push(...getObservabilityServices());
 	}
 
 	return services;

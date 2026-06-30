@@ -8,6 +8,7 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalObservabilityEnabledFromEnv,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
@@ -1157,6 +1158,9 @@ export async function buildMiniflareOptions(
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+		// Experimental local observability — the single switch (env var) that makes
+		// Miniflare core attach the trace collector to each user worker.
+		unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,

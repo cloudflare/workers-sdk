@@ -354,6 +354,41 @@ export const getLocalExplorerEnabledFromEnv =
 	});
 
 /**
+ * `X_LOCAL_OBSERVABILITY` (experimental) enables local-dev observability. It is
+ * the single switch — there is no CLI flag or Vite plugin option. Both
+ * `wrangler dev` and the Vite plugin read this env var and surface it as the one
+ * `unsafeObservability` Miniflare option; Miniflare core then auto-injects the
+ * trace collector as a streaming-tail consumer of the user's worker(s).
+ *
+ * Defaults to `false` (off) while the feature is experimental. Once the full
+ * stack has landed, this default flips to `true` so capture is on by default in
+ * local dev (the env var is then only needed to opt out).
+ */
+export const getLocalObservabilityEnabledFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "X_LOCAL_OBSERVABILITY",
+		defaultValue: false,
+	});
+
+/**
+ * Service name the local observability collector is registered under in
+ * Miniflare, shared so user workers' `streamingTails` can point at it.
+ */
+export const OBSERVABILITY_COLLECTOR_SERVICE_NAME =
+	"miniflare-observability-collector";
+
+/**
+ * Compatibility flags a user worker needs so workerd streams a tail (including
+ * user spans) to the observability collector. Applied to each user worker by
+ * Miniflare core when `unsafeObservability` is enabled — a single source of
+ * truth shared with the collector worker.
+ */
+export const OBSERVABILITY_COMPAT_FLAGS = [
+	"streaming_tail_worker",
+	"tail_worker_user_spans",
+] as const;
+
+/**
  * `X_BROWSER_HEADFUL` opens the browser in headful (visible) mode when using the
  * Browser Run API in local development.
  *
