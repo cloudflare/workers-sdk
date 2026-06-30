@@ -2945,6 +2945,13 @@ export class Miniflare {
 	#useCapnwebProxy(): boolean {
 		return this.#sharedOpts.core.unsafeCapnwebRpcProxy;
 	}
+	#canUseCapnwebProxy(workerOpts: PluginWorkerOptions): boolean {
+		return (
+			this.#useCapnwebProxy() &&
+			workerOpts.core.outboundService === undefined &&
+			workerOpts.core.fetchMock === undefined
+		);
+	}
 	#isCapnwebProxyBinding(
 		pluginName: string,
 		bindingName: string,
@@ -2952,7 +2959,7 @@ export class Miniflare {
 	): boolean {
 		const service = workerOpts.core.serviceBindings?.[bindingName];
 		return (
-			this.#useCapnwebProxy() &&
+			this.#canUseCapnwebProxy(workerOpts) &&
 			pluginName === CORE_PLUGIN_NAME &&
 			(service === kCurrentWorker ||
 				typeof service === "string" ||
@@ -3073,7 +3080,7 @@ export class Miniflare {
 
 		const fetchProxy = proxyClient.env[bindingName];
 		const fetcher =
-			fetchProxy !== undefined && this.#useCapnwebProxy()
+			fetchProxy !== undefined && this.#canUseCapnwebProxy(workerOpts)
 				? await this.#getHybridJsRpcBinding(fetchProxy, bindingName)
 				: fetchProxy;
 		if (fetcher === undefined) {

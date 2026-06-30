@@ -168,6 +168,7 @@ async function resolveDevConfig(
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
 		outboundService: input.dev?.outboundService,
+		unsafeCapnwebRpcProxy: input.dev?.unsafeCapnwebRpcProxy,
 		structuredLogsHandler: input.dev?.structuredLogsHandler,
 		// absolute resolved path
 		persist: localPersistencePath,

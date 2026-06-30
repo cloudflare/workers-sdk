@@ -197,6 +197,7 @@ export async function convertToConfigBundle(
 		routes: event.config.dev.routeRequestsByRoutes ? routes : undefined,
 		queueConsumers,
 		outboundService: event.config.dev.outboundService,
+		unsafeCapnwebRpcProxy: event.config.dev.unsafeCapnwebRpcProxy,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
 		httpsCertPath: event.config.dev?.server?.httpsCertPath,
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
