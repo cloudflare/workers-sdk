@@ -34,6 +34,12 @@ initDeployHelpersContext({
 // eslint-disable-next-line turbo/no-undeclared-env-vars -- Test-only env var to prevent flaky config file watching
 process.env.WRANGLER_CI_DISABLE_CONFIG_WATCHING = "true";
 
+// TODO(@nurodev): I don't think this is really needed
+// Force the standard ("human") --help output by default so existing help
+// snapshots stay deterministic regardless of whether the suite runs inside an
+// AI coding agent shell. Agent-help tests opt in via vi.stubEnv / vi.mock.
+process.env.WRANGLER_HELP_FORMAT = "human";
+
 /**
  * The relative path between the bundled code and the Wrangler package.
  * This is used as a reliable way to compute paths relative to the Wrangler package
