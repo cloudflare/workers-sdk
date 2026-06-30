@@ -1599,6 +1599,76 @@ describe("createTestHarness", () => {
 		`);
 	});
 
+	it("lists Durable Object ids", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "durable-object-list-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"durable_objects": {
+						"bindings": [
+							{ "name": "COUNTER", "class_name": "Counter" }
+						]
+					},
+					"migrations": [
+						{ "tag": "v1", "new_sqlite_classes": ["Counter"] }
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				export class Counter {
+					constructor(ctx) {
+						this.ctx = ctx;
+					}
+
+					async fetch() {
+						await this.ctx.storage.put("count", 1);
+						return new Response("stored");
+					}
+				}
+
+				export default {
+					fetch(request, env) {
+						const name = new URL(request.url).searchParams.get("name") ?? "default";
+						const id = env.COUNTER.idFromName(name);
+						return env.COUNTER.get(id).fetch("https://counter.example");
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<{
+			COUNTER: DurableObjectNamespace;
+		}>();
+		const env = await worker.getEnv();
+		const firstId = env.COUNTER.idFromName("first").toString();
+		const secondId = env.COUNTER.idFromName("second").toString();
+
+		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual([]);
+
+		await expect(server.fetch("/?name=first")).resolves.toHaveProperty(
+			"status",
+			200
+		);
+		await expect(server.fetch("/?name=second")).resolves.toHaveProperty(
+			"status",
+			200
+		);
+
+		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual(
+			[firstId, secondId].sort()
+		);
+	});
+
 	it("does not reload on source changes by default", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`
