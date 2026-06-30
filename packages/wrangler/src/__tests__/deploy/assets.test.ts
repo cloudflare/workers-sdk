@@ -516,11 +516,11 @@ describe("deploy", () => {
 			expect(manifestBodies.length).toBe(1);
 			expect(manifestBodies[0]).toEqual({
 				manifest: {
-					"/b%C3%A9%C3%ABp/boo%5Ep.txt": {
+					"/béëp/boo^p.txt": {
 						hash: "ff5016e92f039aa743a4ff7abb3180fa",
 						size: 17,
 					},
-					"/boop/file%231.txt": {
+					"/boop/file#1.txt": {
 						hash: "7574a8cd3094a050388ac9663af1c1d6",
 						size: 17,
 					},
@@ -528,7 +528,7 @@ describe("deploy", () => {
 						hash: "0de3dd5df907418e9730fd2bd747bd5e",
 						size: 17,
 					},
-					"/space%20%5Bfile%5D.txt": {
+					"/space [file].txt": {
 						hash: "361741650531ac969c8ca70a5438e7c1",
 						size: 17,
 					},
@@ -565,6 +565,46 @@ describe("deploy", () => {
 				name: "361741650531ac969c8ca70a5438e7c1",
 				type: "text/plain",
 			});
+		});
+
+		it("should log possible paths when the assets upload session rejects manifest URI encoding", async ({
+			expect,
+		}) => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "space [file].txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+
+			msw.use(
+				http.post(
+					"*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session",
+					() => {
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: 10304,
+									message:
+										"Invalid manifest: Manifest path must be URI encoded.",
+								},
+							]),
+							{ status: 400 }
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("deploy")).rejects.toMatchObject({
+				code: 10304,
+			});
+			expect(std.warn).toContain(
+				"The following asset paths contain URI-sensitive characters"
+			);
+			expect(std.warn).toContain("  - /space [file].txt");
+			expect(std.warn).not.toContain("  - /file-1.txt");
 		});
 
 		it("should resolve assets directory relative to wrangler.toml if using config", async ({

@@ -2,6 +2,6 @@
 "wrangler": patch
 ---
 
-Fix Workers Assets deploys failing for filenames that require URI encoding
+Improve Workers Assets manifest validation diagnostics
 
-Wrangler now URI-encodes asset manifest paths before starting an assets upload session. This prevents the Cloudflare API from rejecting deployments containing filenames with spaces, non-ASCII characters, or reserved URL characters.
+When the Cloudflare API rejects an assets upload session because a manifest path must be URI encoded, Wrangler now logs candidate asset paths containing URI-sensitive characters. This helps identify the file that triggered the API error without changing the manifest paths sent to the API.

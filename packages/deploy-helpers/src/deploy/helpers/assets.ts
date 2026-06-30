@@ -54,6 +54,7 @@ const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 
 const MAX_DIFF_LINES = 100;
+const MAX_MANIFEST_PATH_CANDIDATES = 20;
 
 export const syncAssets = async (
 	complianceConfig: ComplianceConfig,
@@ -67,15 +68,6 @@ export const syncAssets = async (
 	// 1. generate asset manifest
 	logger.info("🌀 Building list of assets...");
 	const manifest = await buildAssetManifest(assetDirectory);
-	const uploadSessionManifest: AssetManifest = {};
-	for (const [assetPath, assetMetadata] of Object.entries(manifest)) {
-		uploadSessionManifest[
-			assetPath
-				.split("/")
-				.map((segment) => encodeURIComponent(segment))
-				.join("/")
-		] = assetMetadata;
-	}
 
 	const url = dispatchNamespace
 		? `/accounts/${accountId}/workers/dispatch/namespaces/${dispatchNamespace}/scripts/${scriptName}/assets-upload-session`
@@ -83,12 +75,21 @@ export const syncAssets = async (
 
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
-	const initializeAssetsResponse =
-		await fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
-			headers: { "Content-Type": "application/json" },
-			method: "POST",
-			body: JSON.stringify({ manifest: uploadSessionManifest }),
-		});
+	let initializeAssetsResponse: InitializeAssetsResponse | null;
+	try {
+		initializeAssetsResponse = await fetchResult<InitializeAssetsResponse | null>(
+			complianceConfig,
+			url,
+			{
+				headers: { "Content-Type": "application/json" },
+				method: "POST",
+				body: JSON.stringify({ manifest: manifest }),
+			}
+		);
+	} catch (e) {
+		logPotentialUriEncodingPaths(e, manifest);
+		throw e;
+	}
 
 	// In the past we've seen the endpoint return that incorrectly doesn't contain
 	// a null response (see: https://github.com/cloudflare/workers-sdk/issues/9465).
@@ -338,6 +339,42 @@ export const buildAssetManifest = async (dir: string) => {
 	);
 	return manifest;
 };
+
+function logPotentialUriEncodingPaths(e: unknown, manifest: AssetManifest) {
+	if (
+		!(e instanceof APIError) ||
+		e.code !== 10304 ||
+		!e.notes.some((note) => note.text.includes("Manifest path must be URI encoded"))
+	) {
+		return;
+	}
+
+	const candidatePaths = Object.keys(manifest).filter((assetPath) =>
+		assetPath
+			.split("/")
+			.some((segment) => encodeURIComponent(segment) !== segment)
+	);
+	if (candidatePaths.length === 0) {
+		logger.warn(
+			"The Assets API rejected the upload manifest because one or more paths must be URI encoded, but Wrangler could not identify any asset paths with URI-sensitive characters."
+		);
+		return;
+	}
+
+	const displayedPaths = candidatePaths
+		.slice(0, MAX_MANIFEST_PATH_CANDIDATES)
+		.map((assetPath) => `  - ${assetPath}`)
+		.join("\n");
+	const remainingCount = candidatePaths.length - MAX_MANIFEST_PATH_CANDIDATES;
+	const remainingMessage =
+		remainingCount > 0 ? `\n  ...and ${remainingCount} more` : "";
+	logger.warn(
+		"The Assets API rejected the upload manifest because one or more paths must be URI encoded. " +
+			"The following asset paths contain URI-sensitive characters and may help identify the file that triggered the API error:\n" +
+			displayedPaths +
+			remainingMessage
+	);
+}
 
 function logAssetUpload(line: string, diffCount: number) {
 	const level = logger.loggerLevel ?? "log";
