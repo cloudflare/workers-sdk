@@ -9,6 +9,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { confirm, fetchResult, logger } from "../../shared/context";
 import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
+import { getWorkersDevSubdomain } from "../../triggers/subdomain";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
@@ -301,5 +302,18 @@ export async function preUploadApiChecks(
 	}
 
 	await ensureQueuesExistByConfig(config, accountId);
+
+	// A brand-new account/worker has no workers.dev subdomain, and the worker
+	// upload API rejects the first script upload with error 10063 until one
+	// exists. Proactively fetch (and offer to register) the subdomain before
+	// uploading a new Worker so the user gets a clear prompt instead of a
+	// cryptic API failure. Existing Workers (and dispatch namespace deploys,
+	// which skip the metadata fetch) already have a subdomain, so we skip it.
+	if (!workerExists) {
+		await getWorkersDevSubdomain(config, accountId, {
+			configPath: config.configPath,
+		});
+	}
+
 	return { workerTag, tags, workerExists, aborted: false };
 }
