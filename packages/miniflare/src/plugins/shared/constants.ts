@@ -84,6 +84,17 @@ export function objectEntryWorker(
 	};
 }
 
+// Builds the `props` for a binding that points at a shared object-entry service
+// (KV namespace / R2 bucket / D1 database). The resource id travels via props so
+// that a single entry service can route to any number of resources; it is read
+// back in `object-entry.worker.ts` via `ctx.props` and used as the Durable
+// Object name (`idFromName`).
+export function buildObjectEntryProps(id: string): { json: string } {
+	return {
+		json: JSON.stringify({ [SharedBindings.TEXT_NAMESPACE]: id }),
+	};
+}
+
 // A single remote-proxy client service can serve any number of remote bindings:
 // the per-binding data (connection string, binding name, trace id) is supplied
 // at runtime via `ctx.props` (see `buildRemoteProxyProps`), rather than baked

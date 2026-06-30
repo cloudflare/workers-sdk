@@ -97,11 +97,19 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		];
 	},
 
-	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
+	async getServices({
+		options,
+		sharedOptions,
+		tmpPath,
+		defaultPersistRoot,
+		isolateLocalStorage,
+	}) {
+		// Workflows aren't routed to the shared storage owner; keep their storage
+		// per-instance when the feature is on so separate processes don't contend.
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
+			isolateLocalStorage ? undefined : defaultPersistRoot,
 			sharedOptions.workflowsPersist
 		);
 		await fs.mkdir(persistPath, { recursive: true });
