@@ -1,5 +1,69 @@
 # create-cloudflare
 
+## 2.70.7
+
+### Patch Changes
+
+- [#14453](https://github.com/cloudflare/workers-sdk/pull/14453) [`fdf679e`](https://github.com/cloudflare/workers-sdk/commit/fdf679ec6889f93664aaea51db450d69a5a25967) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.654 | 0.0.660 |
+
+- [#14454](https://github.com/cloudflare/workers-sdk/pull/14454) [`1c888de`](https://github.com/cloudflare/workers-sdk/commit/1c888de64c8929ae28d410136623f93f4de9f917) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.35.2 | 3.36.1 |
+
+- [#14455](https://github.com/cloudflare/workers-sdk/pull/14455) [`3081fea`](https://github.com/cloudflare/workers-sdk/commit/3081fea6544c603ed8bd4a65fb74d9b6c2a04974) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 9.0.7 | 9.1.0 |
+
+- [#14456](https://github.com/cloudflare/workers-sdk/pull/14456) [`c76f3a7`](https://github.com/cloudflare/workers-sdk/commit/c76f3a727ebdf397985e4e3171d0bac3cf5abbb1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.69.3 | 0.69.5 |
+
+- [#14457](https://github.com/cloudflare/workers-sdk/pull/14457) [`0100880`](https://github.com/cloudflare/workers-sdk/commit/01008808bca18029ebdd278ba23cec587d65a26a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.0.3 | 22.0.4 |
+
+- [#14458](https://github.com/cloudflare/workers-sdk/pull/14458) [`2b9797b`](https://github.com/cloudflare/workers-sdk/commit/2b9797bc729a6cd263c11bcb12ea43cdb7829316) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.0.6 | 5.2.0 |
+
+- [#14459](https://github.com/cloudflare/workers-sdk/pull/14459) [`96090d2`](https://github.com/cloudflare/workers-sdk/commit/96090d22a99b0630607280274183243a1e2f38d4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.6.1 | 2.6.2 |
+
+- [#14425](https://github.com/cloudflare/workers-sdk/pull/14425) [`ab1ac83`](https://github.com/cloudflare/workers-sdk/commit/ab1ac83f2f0e66d9eb1d8fbf824e4d8c8711b693) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix npm installs for Analog projects
+
+  Analog's generated Vite overrides can cause npm to fail with `Unable to resolve reference $vite` when dependency resolution changes. `create-cloudflare` now opts npm-generated Analog projects out of those overrides so project creation can complete successfully.
+
 ## 2.70.6
 
 ### Patch Changes

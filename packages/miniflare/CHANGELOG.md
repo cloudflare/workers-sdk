@@ -1,5 +1,40 @@
 # miniflare
 
+## 4.20260629.0
+
+### Patch Changes
+
+- [#14464](https://github.com/cloudflare/workers-sdk/pull/14464) [`fac643b`](https://github.com/cloudflare/workers-sdk/commit/fac643b3d660493246050ebe3358efa22c5622e7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260625.1 | 1.20260629.1 |
+
+- [#14323](https://github.com/cloudflare/workers-sdk/pull/14323) [`b9dcdd8`](https://github.com/cloudflare/workers-sdk/commit/b9dcdd8f6abf4d7e07bd2daebb83b99228a9dea4) Thanks [@tahmid-23](https://github.com/tahmid-23)! - Fix edge cases on the local R2 public bucket endpoint (`/cdn-cgi/local/r2/public`) to match r2.dev: write methods are rejected with 401, malformed/multiple/inverted ranges with 400 and unsatisfiable ranges (including `bytes=-0`) with 416, `Range` is honored on HEAD requests with a bodyless 206, `Content-Range` is correct for suffix ranges, object keys are percent-decoded exactly once (keys containing a literal `%` no longer fail), and objects stored without a content type are served as `application/octet-stream` instead of omitting the `Content-Type` header. Unread object bodies are also cancelled (on HEAD and unsatisfiable-range responses) instead of leaking a read stream until garbage collection.
+
+- [#14438](https://github.com/cloudflare/workers-sdk/pull/14438) [`6b14c5b`](https://github.com/cloudflare/workers-sdk/commit/6b14c5bc9b6914c7c9bbcc91a741374441b9070d) Thanks [@edmundhung](https://github.com/edmundhung)! - Add Workflow introspection to `createTestHarness()`
+
+  Worker handles can now introspect Workflow bindings by name, allowing tests to disable sleeps, mock step results, and wait for Workflow outcomes. Tests can introspect a known Workflow instance by ID or track instances created after introspection starts.
+
+  ```ts
+  const harness = createTestHarness({
+  	workers: [{ configPath: "./wrangler.json" }],
+  });
+
+  const worker = harness.getWorker();
+  await using workflow = await worker.introspectWorkflow("MY_WORKFLOW");
+
+  await workflow.modifyAll((modifier) =>
+  	modifier.disableSleeps([{ name: "wait-for-approval" }])
+  );
+
+  const response = await worker.fetch("/start-workflow");
+  const [instance] = await workflow.get();
+  await instance.waitForStatus("complete");
+  ```
+
 ## 4.20260625.0
 
 ### Patch Changes
