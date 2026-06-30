@@ -841,11 +841,15 @@ function normalizeAndValidateSite(
 		validateRequiredProperty(diagnostics, "site", "bucket", bucket, "string");
 		validateTypedArray(diagnostics, "sites.include", include, "string");
 		validateTypedArray(diagnostics, "sites.exclude", exclude, "string");
+
+		// eslint-disable-next-line typescript-eslint/no-deprecated -- this code handles the deprecated site.entry-point field
+		const legacySiteEntryPoint = rawConfig.site["entry-point"];
+
 		validateOptionalProperty(
 			diagnostics,
 			"site",
 			"entry-point",
-			rawConfig.site["entry-point"],
+			legacySiteEntryPoint,
 			"string"
 		);
 
@@ -856,8 +860,8 @@ function normalizeAndValidateSite(
 			`Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:\n` +
 				`\`\`\`\n` +
 				`main = "${path.join(
-					String(rawConfig.site["entry-point"]) || "workers-site",
-					path.extname(String(rawConfig.site["entry-point"]) || "workers-site")
+					String(legacySiteEntryPoint) || "workers-site",
+					path.extname(String(legacySiteEntryPoint) || "workers-site")
 						? ""
 						: "index.js"
 				)}"\n` +
@@ -867,7 +871,7 @@ function normalizeAndValidateSite(
 			"warning"
 		);
 
-		let siteEntryPoint = rawConfig.site["entry-point"];
+		let siteEntryPoint = legacySiteEntryPoint;
 
 		if (!mainEntryPoint && !siteEntryPoint) {
 			// this means that we're defaulting to "workers-site"
@@ -4458,6 +4462,7 @@ const validateBindingsHaveUniqueNames = (
 ): boolean => {
 	let hasDuplicates = false;
 
+	// eslint-disable-next-line typescript-eslint/no-deprecated -- intentional use of friendlyBindingNames to iterate over the various binding types
 	const bindingNamesArray = Object.entries(friendlyBindingNames) as [
 		ConfigBindingFieldName,
 		string,
