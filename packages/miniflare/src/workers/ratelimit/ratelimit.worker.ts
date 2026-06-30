@@ -92,13 +92,16 @@ class Ratelimit {
 	}
 }
 
-// Module-level set tracking all instances created during this Worker lifetime.
-// The ratelimit extension module is marked `internal: true` in workerd, making
-// direct import impossible from outside. We expose a single reset function via
-// globalThis so vitest-pool-workers' reset() can invoke it without a global
-// variable that leaks to user code (the function is set once on module load).
+// Module-level set tracking all live instances.
+//
+// Internal extension modules (internal: true) run inside the *calling*
+// worker's V8 isolate, so this module and reset.ts share the same globalThis.
+// We use a well-known Symbol — collision-safe by construction — to expose a
+// reset hook so reset() can clear bucket state without importing this module
+// directly (which is forbidden by the internal: true flag).
+const RATELIMIT_RESET_SYMBOL = Symbol.for("cloudflare:miniflare:ratelimit:reset");
 const instances = new Set<Ratelimit>();
-(globalThis as { __cfRatelimitReset__?: () => void }).__cfRatelimitReset__ =
+(globalThis as Record<symbol, (() => void) | undefined>)[RATELIMIT_RESET_SYMBOL] =
 	() => {
 		for (const instance of instances) {
 			instance.reset();

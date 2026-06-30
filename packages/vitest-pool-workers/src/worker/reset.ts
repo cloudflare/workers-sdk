@@ -8,12 +8,17 @@ const DEFAULT_EVICTION_OPTIONS: DurableObjectEvictionOptions = {
 export async function reset(): Promise<void> {
 	await workerdUnsafe.deleteAllDurableObjects();
 
-	// Reset ratelimit binding state. The miniflare ratelimit extension module is
-	// marked `internal: true` in workerd, so it cannot be imported directly.
-	// Instead the module registers a reset function on globalThis when loaded,
-	// which is a no-op when no RATE_LIMITERS bindings are configured.
-	const resetRatelimits = (globalThis as { __cfRatelimitReset__?: () => void })
-		.__cfRatelimitReset__;
+	// Reset ratelimit binding state. The miniflare ratelimit extension module
+	// runs in the same isolate as this worker (internal modules run inside the
+	// caller's isolate), so globalThis is shared. The module registers a reset
+	// hook under a well-known Symbol on load; calling it here is a no-op when
+	// no ratelimit bindings are configured.
+	const RATELIMIT_RESET_SYMBOL = Symbol.for(
+		"cloudflare:miniflare:ratelimit:reset"
+	);
+	const resetRatelimits = (
+		globalThis as Record<symbol, (() => void) | undefined>
+	)[RATELIMIT_RESET_SYMBOL];
 	resetRatelimits?.();
 }
 
