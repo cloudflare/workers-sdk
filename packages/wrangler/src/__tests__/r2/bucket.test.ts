@@ -1249,7 +1249,8 @@ describe("r2", () => {
 								"r2 bucket catalog compaction enable testBucket testNamespace"
 							)
 						).rejects.toThrowErrorMatchingInlineSnapshot(
-							`[Error: Table name is required when namespace is specified]`
+							`[Error: Both namespace and table must be provided together. You specified namespace without table. Retry by running:
+  wrangler r2 bucket catalog compaction enable testBucket <namespace> <table>]`
 						);
 					});
 
@@ -1260,7 +1261,8 @@ describe("r2", () => {
 								'r2 bucket catalog compaction enable testBucket "" testTable'
 							)
 						).rejects.toThrowErrorMatchingInlineSnapshot(
-							`[Error: Namespace is required when table is specified]`
+							`[Error: Both namespace and table must be provided together. You specified table without namespace. Retry by running:
+  wrangler r2 bucket catalog compaction enable testBucket <namespace> <table>]`
 						);
 					});
 				});
@@ -3520,7 +3522,7 @@ describe("r2", () => {
 							`r2 bucket lock add ${bucketName} --name rule-age --prefix prefix-age --retention-days one`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`[Error: Days must be a number.]`
+						`[Error: The value for --retention-days must be a number. Retry with a numeric value (e.g. --retention-days 30).]`
 					);
 				});
 				it("it should fail an age lock rule using command-line arguments with invalid negative age", async () => {
@@ -3544,7 +3546,7 @@ describe("r2", () => {
 							`r2 bucket lock add ${bucketName} --name rule-age --prefix prefix-age --retention-days -10`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`[Error: Days must be a positive number: -10]`
+						`[Error: The value for --retention-days must be a positive number, but received '-10'.]`
 					);
 				});
 				it("it should add a date lock rule using command-line arguments", async () => {
@@ -3585,7 +3587,7 @@ describe("r2", () => {
 							`r2 bucket lock add ${bucketName} --name "rule-date" --prefix "prefix-date" --retention-date "January 30, 2025"`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`[Error: Date must be a valid date in the YYYY-MM-DD format: January 30, 2025]`
+						`[Error: The value for --retention-date must be in YYYY-MM-DD format (e.g. 2025-12-31), but received 'January 30, 2025'.]`
 					);
 				});
 				it("it should add an indefinite lock rule using command-line arguments", async () => {
@@ -3669,7 +3671,7 @@ describe("r2", () => {
 							`r2 bucket lock add ${bucketName} --name rule-indefinite --prefix prefix-indefinite --retention-indefinite false`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`[Error: Retention must be specified.]`
+						`[Error: No retention specified. Use one of --retention-days <number>, --retention-date <YYYY-MM-DD>, or --retention-indefinite to set a retention.]`
 					);
 				});
 				it("it should fail a lock rule without any command-line arguments", async () => {
@@ -3681,7 +3683,8 @@ describe("r2", () => {
 					await expect(() =>
 						runWrangler(`r2 bucket lock add ${bucketName}`)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`[Error: Must specify a rule name.]`
+						`[Error: Missing required rule name. Provide a name with --name <rule-name> or as a positional argument:
+  wrangler r2 bucket lock add <bucket> <name>]`
 					);
 				});
 			});
