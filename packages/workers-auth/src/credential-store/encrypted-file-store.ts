@@ -164,8 +164,12 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		try {
 			this.keyProvider.deleteKey();
 		} catch {
-			// `deleteKey()` is documented as idempotent; some backends
-			// surface NoEntry on a missing key, which is fine here.
+			// Best-effort: `deleteKey()` is documented as idempotent and some
+			// backends surface NoEntry on a missing key, which is fine here.
+			// We also swallow genuine failures (locked keyring, D-Bus down,
+			// permission denied) — the `.enc` ciphertext is already removed
+			// above, so a lingering bare key is useless without it. `clear()`
+			// still reports whether the credential *files* existed.
 		}
 		return existed;
 	}

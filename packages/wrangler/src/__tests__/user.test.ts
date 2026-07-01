@@ -982,6 +982,41 @@ describe("User", () => {
 			expect(std.out).toContain("Keyring storage disabled");
 		});
 
+		it("`auth keyring disable` scrubs encrypted credentials created via the env var even when the preference was never persisted", async ({
+			expect,
+		}) => {
+			// Regression (Devin 3505085725): a user who only ever opted in via
+			// `CLOUDFLARE_AUTH_USE_KEYRING=true` never persists `keyring_enabled`.
+			// Disabling must still scrub the encrypted credentials rather than
+			// gating the scrub on the persisted preference, otherwise the `.enc`
+			// file + keyring entry are orphaned on disk.
+			const { getEncryptedAuthConfigFilePath } =
+				await import("../user/auth-config-file");
+			const { readUserPreferences } = await import("../user/preferences");
+			const keyringStore = stubInMemoryKeyring();
+
+			// Opt in via the env var only — write encrypted credentials without
+			// ever persisting `keyring_enabled`.
+			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "true");
+			writeAuthCredentials({
+				oauth_token: "enc-token",
+				refresh_token: "enc-refresh",
+			});
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+			expect(readUserPreferences().keyring_enabled).toBeUndefined();
+
+			// Opt out with the env var no longer forcing keyring on. The scrub
+			// must run even though `keyring_enabled` was never persisted as
+			// `true` (the old `previouslyEnabled` gate skipped it, orphaning the
+			// `.enc` file + keyring entry).
+			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "false");
+			await runWrangler("auth keyring disable");
+
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+			expect(keyringStore.size).toBe(0);
+		});
+
 		it("`auth keyring` with no action reports the current setting without changing it", async ({
 			expect,
 		}) => {

@@ -342,10 +342,16 @@ Or disable keyring storage: \`${cliName} login --no-use-keyring\`.`;
  */
 export interface ScrubEncryptedCredentialsResult {
 	/**
-	 * Whether the keyring backend was reachable. When `true`, the encrypted
-	 * store's `clear()` removed both the `.enc` file and the keyring key (and
-	 * any plaintext `.toml`). When `false`, only the `.enc` file was
-	 * removed best-effort and a keyring entry (if one exists) was left behind.
+	 * Whether the keyring backend was *reachable* — i.e. a `KeyProvider`
+	 * resolved for this platform. When `true`, the encrypted store's `clear()`
+	 * removed the `.enc` file (and any plaintext `.toml`) and attempted to
+	 * delete the keyring key. When `false`, only the `.enc` file was removed
+	 * best-effort and a keyring entry (if one exists) was left behind.
+	 *
+	 * Note this reflects reachability, not that every operation succeeded: the
+	 * key deletion is best-effort (see `EncryptedFileCredentialStore.clear()`),
+	 * so in the rare case a reachable keyring fails mid-delete the `.enc`
+	 * ciphertext is still gone and only a bare, unusable key could linger.
 	 */
 	backendAvailable: boolean;
 	/** Whether an encrypted `.enc` file existed before the scrub. */

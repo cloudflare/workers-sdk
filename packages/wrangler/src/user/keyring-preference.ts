@@ -151,7 +151,16 @@ export function setKeyringPreference(
 		);
 	}
 
-	if (!enabled && previouslyEnabled) {
+	// Scrub on any disable, not just when the persisted preference was on:
+	// a user who only ever opted in via `CLOUDFLARE_AUTH_USE_KEYRING=true`
+	// (never persisting `keyring_enabled`) would otherwise leave orphaned
+	// `.enc` files behind. `scrubAllEncryptedProfiles` is a no-op when no
+	// encrypted profiles exist, so this is safe to run unconditionally.
+	// Skipped only when the env var is *forcing keyring on for this session*
+	// (`envOverride === true`): the subsequent login would re-create the
+	// encrypted credentials we just scrubbed, so scrubbing would be churn —
+	// the conflict warning above already told the user the env var wins.
+	if (!enabled && envOverride !== true) {
 		scrubAllEncryptedProfiles();
 	}
 
