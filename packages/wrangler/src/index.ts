@@ -2490,7 +2490,20 @@ export async function main(argv: string[]): Promise<void> {
 			if (dispatcher) {
 				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
 			}
-			await handleError(e, configArgs, argv);
+			try {
+				await handleError(e, configArgs, argv);
+			} catch (handleErrorErr) {
+				// handleError itself threw before it could log the error.
+				// Fall back to raw stderr so the user always sees something.
+				const message = e instanceof Error ? (e.stack ?? e.message) : String(e);
+				const handlerMessage =
+					handleErrorErr instanceof Error
+						? (handleErrorErr.stack ?? handleErrorErr.message)
+						: String(handleErrorErr);
+				process.stderr.write(
+					`\n${message}${handlerMessage ? `\n\n(error handler also failed: ${handlerMessage})` : ""}\n`
+				);
+			}
 			throw e;
 		}
 	} finally {

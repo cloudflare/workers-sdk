@@ -211,7 +211,6 @@
 				"packages/miniflare/**",
 				"packages/vite-plugin-cloudflare/**",
 				"packages/vitest-pool-workers/**",
-				"packages/workers-utils/**",
 				"packages/workflows-shared/**",
 				"packages/wrangler/**",
 			],
