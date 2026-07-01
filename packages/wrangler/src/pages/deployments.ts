@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	UserError,
@@ -6,7 +7,7 @@ import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
-import { confirm } from "../dialogs";
+import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -16,6 +17,57 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import type { PagesConfigCache } from "./types";
 import type { Deployment } from "@cloudflare/types";
+
+function generateDeleteConfirmationCode() {
+	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	return Array.from(
+		randomBytes(6),
+		(byte) => letters[byte % letters.length]
+	).join("");
+}
+
+async function confirmDeleteDeployments({
+	deploymentIds,
+	projectName,
+	force,
+}: {
+	deploymentIds: string[];
+	projectName: string;
+	force: boolean;
+}) {
+	if (force) {
+		return true;
+	}
+
+	if (deploymentIds.length === 1) {
+		return confirm(
+			`Are you sure you want to delete deployment "${deploymentIds[0]}" in project "${projectName}"? This action cannot be undone.`,
+			{ fallbackValue: false }
+		);
+	}
+
+	if (isNonInteractiveOrCI()) {
+		throw new UserError(
+			"The --force flag is required to delete multiple Pages deployments in non-interactive mode.",
+			{
+				telemetryMessage:
+					"pages deployments bulk delete non-interactive force required",
+			}
+		);
+	}
+
+	const confirmationCode = generateDeleteConfirmationCode();
+	const enteredCode = await prompt(
+		`You are about to delete ${deploymentIds.length} deployments in project "${projectName}": ${deploymentIds.join(", ")}. Type "${confirmationCode}" to confirm.`
+	);
+
+	if (enteredCode === confirmationCode) {
+		return true;
+	}
+
+	logger.log("Confirmation code did not match. Skipping delete.");
+	return false;
+}
 
 export const pagesDeploymentListCommand = createCommand({
 	metadata: {
@@ -122,7 +174,8 @@ export const pagesDeploymentListCommand = createCommand({
 
 export const pagesDeploymentDeleteCommand = createCommand({
 	metadata: {
-		description: "Delete a deployment in your Cloudflare Pages project",
+		description:
+			"Delete one or more deployments in your Cloudflare Pages project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
@@ -133,7 +186,9 @@ export const pagesDeploymentDeleteCommand = createCommand({
 	args: {
 		"deployment-id": {
 			type: "string",
-			description: "The ID of the deployment to delete",
+			array: true,
+			description:
+				"The ID of the deployment to delete. Specify multiple IDs to delete them in bulk",
 			demandOption: true,
 		},
 		"project-name": {
@@ -143,12 +198,16 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		force: {
 			type: "boolean",
 			alias: "f",
-			description: "Delete even if the deployment has an active alias",
+			description:
+				"Delete even if the deployment has an active alias and skip confirmation",
 			default: false,
 		},
 	},
 	positionalArgs: ["deployment-id"],
 	async handler({ deploymentId, projectName, force }) {
+		const deploymentIds = Array.isArray(deploymentId)
+			? deploymentId
+			: [deploymentId];
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
@@ -174,32 +233,42 @@ export const pagesDeploymentDeleteCommand = createCommand({
 			);
 		}
 
-		const confirmed =
-			force ||
-			(await confirm(
-				`Are you sure you want to delete deployment "${deploymentId}" in project "${projectName}"? This action cannot be undone.`,
-				{ fallbackValue: false }
-			));
+		const confirmed = await confirmDeleteDeployments({
+			deploymentIds,
+			projectName,
+			force,
+		});
 
 		if (!confirmed) {
 			return;
 		}
 
-		logger.log(`Deleting deployment ${deploymentId}...`);
-
-		await fetchResult(
-			COMPLIANCE_REGION_CONFIG_PUBLIC,
-			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}`,
-			{ method: "DELETE" },
-			new URLSearchParams({ force: force.toString() })
+		const deploymentCount = deploymentIds.length;
+		logger.log(
+			deploymentCount === 1
+				? `Deleting deployment ${deploymentIds[0]}...`
+				: `Deleting ${deploymentCount} deployments...`
 		);
+
+		for (const currentDeploymentId of deploymentIds) {
+			await fetchResult(
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
+				`/accounts/${accountId}/pages/projects/${projectName}/deployments/${currentDeploymentId}`,
+				{ method: "DELETE" },
+				new URLSearchParams({ force: force.toString() })
+			);
+		}
 
 		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
 			account_id: accountId,
 			project_name: projectName,
 		});
 
-		logger.log(`Successfully deleted deployment ${deploymentId}`);
+		logger.log(
+			deploymentCount === 1
+				? `Successfully deleted deployment ${deploymentIds[0]}`
+				: `Successfully deleted ${deploymentCount} deployments`
+		);
 		metrics.sendMetricsEvent("delete pages deployment");
 	},
 });
