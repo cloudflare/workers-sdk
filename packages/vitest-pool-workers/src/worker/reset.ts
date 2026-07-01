@@ -1,3 +1,4 @@
+import ratelimitBindingNames from "__VITEST_POOL_WORKERS_RATELIMIT_BINDING_NAMES";
 import { env } from "cloudflare:workers";
 import workerdUnsafe from "workerd:unsafe";
 import type { DurableObjectEvictionOptions } from "workerd:unsafe";
@@ -6,18 +7,17 @@ const DEFAULT_EVICTION_OPTIONS: DurableObjectEvictionOptions = {
 	webSockets: "hibernate",
 };
 
-// Matches RATELIMIT_CONTROL_BINDING_NAME in miniflare's ratelimit plugin.
-const RATELIMIT_CONTROL_BINDING_NAME = "__MINIFLARE_RATELIMIT_CONTROL__";
-
 export async function reset(): Promise<void> {
 	await workerdUnsafe.deleteAllDurableObjects();
 
-	// Only present when the worker has at least one ratelimit binding
-	// configured (see miniflare's ratelimit plugin `getBindings()`).
-	const ratelimitControl = env[RATELIMIT_CONTROL_BINDING_NAME] as unknown as
-		| { resetAll?: () => void }
-		| undefined;
-	ratelimitControl?.resetAll?.();
+	// Ratelimit bindings expose a `reset()` method directly (see
+	// `ratelimit.worker.ts`). Binding names come from the parsed wrangler
+	// config (see `pool/index.ts`), so we never need to guess or enumerate
+	// unrelated bindings in `env`.
+	for (const name of ratelimitBindingNames) {
+		const binding = env[name] as unknown as { reset?: () => void };
+		binding.reset?.();
+	}
 }
 
 export async function abortAllDurableObjects(): Promise<void> {

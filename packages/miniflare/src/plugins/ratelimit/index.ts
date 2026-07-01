@@ -25,11 +25,6 @@ export const RATELIMIT_PLUGIN_NAME = "ratelimit";
 const SERVICE_RATELIMIT_PREFIX = `${RATELIMIT_PLUGIN_NAME}`;
 const SERVICE_RATELIMIT_MODULE = `cloudflare-internal:${SERVICE_RATELIMIT_PREFIX}:module`;
 
-// Reserved binding name exposing a `resetAll()` hook for all ratelimit
-// bindings in this worker. Used by vitest-pool-workers' `reset()`; not part
-// of the public API.
-export const RATELIMIT_CONTROL_BINDING_NAME = "__MINIFLARE_RATELIMIT_CONTROL__";
-
 function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
 		name,
@@ -57,13 +52,6 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 				},
 			})
 		);
-		bindings.push({
-			name: RATELIMIT_CONTROL_BINDING_NAME,
-			wrapped: {
-				moduleName: SERVICE_RATELIMIT_MODULE,
-				innerBindings: buildJsonBindings({ control: true }),
-			},
-		});
 		return bindings;
 	},
 	getNodeBindings(options: z.infer<typeof RatelimitOptionsSchema>) {

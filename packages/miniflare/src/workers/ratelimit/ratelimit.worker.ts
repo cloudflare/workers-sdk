@@ -92,33 +92,7 @@ class Ratelimit {
 	}
 }
 
-// Module-level set tracking all live instances, so a dedicated "control"
-// wrapped binding (see plugins/ratelimit/index.ts) can reset all of them.
-const instances = new Set<Ratelimit>();
-
-interface RatelimitControlConfig {
-	control: true;
-}
-
-function isControlConfig(
-	config: RatelimitConfig | RatelimitControlConfig
-): config is RatelimitControlConfig {
-	return "control" in config;
-}
-
-// create a new Ratelimit, or the control binding used internally to reset all
-// live instances (see vitest-pool-workers' reset())
-export default function (env: RatelimitConfig | RatelimitControlConfig) {
-	if (isControlConfig(env)) {
-		return {
-			resetAll(): void {
-				for (const instance of instances) {
-					instance.reset();
-				}
-			},
-		};
-	}
-	const instance = new Ratelimit(env);
-	instances.add(instance);
-	return instance;
+// create a new Ratelimit
+export default function (env: RatelimitConfig) {
+	return new Ratelimit(env);
 }
