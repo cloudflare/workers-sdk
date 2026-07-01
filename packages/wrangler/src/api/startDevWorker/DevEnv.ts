@@ -13,7 +13,7 @@ import {
 	isBuildFailure,
 	isBuildFailureFromCause,
 } from "../../deployment-bundle/build-failures";
-import { confirm, prompt } from "../../dialogs";
+import { confirm, prompt, select } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logBuildFailure, logger, runWithLogLevel } from "../../logger";
 import { BundlerController } from "./BundlerController";
@@ -47,6 +47,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			fetchKVGetValue,
 			confirm,
 			prompt,
+			select,
 			isNonInteractiveOrCI,
 		});
 

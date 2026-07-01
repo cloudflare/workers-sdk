@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
+import { getSettings } from "@cloudflare/deploy-helpers";
 import { type KVNamespace } from "@cloudflare/workers-types/experimental";
 import {
 	isOptionalProperty,
@@ -10,7 +11,6 @@ import {
 import { Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
-import { getSettings } from "../deployment-bundle/bindings";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
 import { getFlag } from "../experimental-flags";
@@ -37,6 +37,9 @@ type KvArgs = {
 
 /**
  * Create a new namespace under the given `accountId` with the given `title`.
+ *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
  *
  * @returns the generated id of the created namespace.
  */
@@ -73,6 +76,9 @@ export interface KVNamespaceInfo {
 
 /**
  * Fetch a list of all the namespaces under the given `accountId`.
+ *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
  */
 export async function listKVNamespaces(
 	complianceConfig: ComplianceConfig,
@@ -406,9 +412,12 @@ async function getIdFromSettings(
 	}
 	const accountId = await requireAuth(config);
 	if (!config.name) {
-		throw new UserError("No Worker name found in config", {
-			telemetryMessage: "kv binding resolution missing worker name",
-		});
+		throw new UserError(
+			'Cannot resolve KV binding: no Worker name is configured. Add a "name" field to your wrangler config file, or use `--namespace-id` instead.',
+			{
+				telemetryMessage: "kv binding resolution missing worker name",
+			}
+		);
 	}
 	const settings = await getSettings(config, accountId, config.name);
 	const existingKV = settings?.bindings.find(
@@ -416,7 +425,7 @@ async function getIdFromSettings(
 	);
 	if (!existingKV || !("namespace_id" in existingKV)) {
 		throw new UserError(
-			`No namespace ID found for binding "${binding}". Add one to your wrangler config file or pass it via \`--namespace-id\`.`,
+			`No KV namespace ID found for binding "${binding}" in the deployed Worker settings for "${config.name}". Deploy the Worker so the binding is provisioned, or use \`--namespace-id\` instead.`,
 			{
 				telemetryMessage:
 					"kv namespace id missing from deployed worker binding",
@@ -451,8 +460,7 @@ export async function getKVNamespaceId(
 
 		if (!found) {
 			throw new UserError(
-				`No namespace found with the name "${namespace}". ` +
-					`Use --namespace-id or --binding instead, or check available namespaces with "wrangler kv namespace list".`,
+				`No KV namespace named "${namespace}" was found in your account. Use \`--namespace-id\` or \`--binding\` instead, or run \`wrangler kv namespace list\` to see all available namespaces.`,
 				{ telemetryMessage: "kv namespace name not found" }
 			);
 		}
@@ -466,16 +474,18 @@ export async function getKVNamespaceId(
 
 	// `--binding` is only valid if there's a wrangler configuration.
 	if (binding && !config) {
-		throw new UserError("--binding specified, but no config file was found.", {
-			telemetryMessage: "kv namespace resolution binding requires config",
-		});
+		throw new UserError(
+			'Cannot resolve `--binding` without a wrangler config file. Create a wrangler.json with a "kv_namespaces" section, or use `--namespace-id` instead.',
+			{
+				telemetryMessage: "kv namespace resolution binding requires config",
+			}
+		);
 	}
 
 	// there's no config. abort here
 	if (!config) {
 		throw new UserError(
-			"Failed to find a config file.\n" +
-				"Either use --namespace-id to upload directly or create a configuration file with a binding.",
+			'No wrangler config file found. Use `--namespace-id` to specify the KV namespace directly, or create a wrangler.json with a "kv_namespaces" section.',
 			{ telemetryMessage: "kv namespace resolution missing config file" }
 		);
 	}
@@ -483,7 +493,7 @@ export async function getKVNamespaceId(
 	// there's no KV namespaces
 	if (!config.kv_namespaces || config.kv_namespaces.length === 0) {
 		throw new UserError(
-			"No KV Namespaces configured! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file.",
+			'No KV namespaces are configured in your wrangler config file. Use `--namespace-id` to specify the namespace directly, or add a "kv_namespaces" entry to your config.',
 			{ telemetryMessage: "kv namespaces not configured" }
 		);
 	}
@@ -495,7 +505,7 @@ export async function getKVNamespaceId(
 	// we couldn't find a namespace with that binding
 	if (!configNamespace) {
 		throw new UserError(
-			`A namespace with binding name "${binding}" was not found in the configured "kv_namespaces".`,
+			`No KV namespace with binding "${binding}" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.`,
 			{ telemetryMessage: "kv namespace binding not found in config" }
 		);
 	}
@@ -513,7 +523,7 @@ export async function getKVNamespaceId(
 		return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 	} else if (preview) {
 		throw new UserError(
-			`No preview ID found for ${binding}. Add one to your wrangler config file to use a separate namespace for previewing your worker.`,
+			`No preview namespace ID is configured for binding "${binding}". Add a "preview_id" to the "${binding}" entry in your config's "kv_namespaces" section, or use \`--namespace-id\` to specify a preview namespace directly.`,
 			{ telemetryMessage: "kv namespace preview id missing" }
 		);
 	}
@@ -534,7 +544,7 @@ export async function getKVNamespaceId(
 			return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 		}
 		throw new UserError(
-			`No namespace ID found for ${binding}. Add one to your wrangler config file or pass it via \`--namespace-id\`.`,
+			`No namespace ID is configured for binding "${binding}". Add an "id" to the "${binding}" entry in your config's "kv_namespaces" section, or use \`--namespace-id\` instead.`,
 			{ telemetryMessage: "kv namespace id missing" }
 		);
 	}
@@ -557,7 +567,7 @@ export async function getKVNamespaceId(
 		return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 	} else {
 		throw new UserError(
-			`${binding} has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.`,
+			`The binding "${binding}" has both an "id" and a "preview_id" configured. Pass \`--preview\` to target the preview namespace, or \`--preview false\` to target the production namespace.`,
 			{ telemetryMessage: "kv namespace requires preview selection" }
 		);
 	}

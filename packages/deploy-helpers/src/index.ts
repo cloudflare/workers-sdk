@@ -43,3 +43,4 @@ export * from "./deploy/helpers/print-bindings";
 export * from "./deploy/helpers/assets";
 export * from "./deploy/helpers/hash";
 export * from "./deploy/helpers/jwt";
+export * from "./deploy/helpers/provision-bindings";

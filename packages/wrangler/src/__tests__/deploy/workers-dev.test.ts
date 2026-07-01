@@ -1,3 +1,4 @@
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { getSubdomainValues } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
@@ -9,7 +10,6 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -56,8 +56,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -785,7 +788,7 @@ describe("deploy", () => {
 			}
 
 			expect(err?.message.replaceAll(/\d/g, "X")).toMatchInlineSnapshot(`
-				"A compatibility_date is required when publishing. Add the following to your Wrangler configuration file:
+				"A compatibility_date is required when uploading a Worker. Add the following to your Wrangler configuration file:
 				    \`\`\`
 				    {"compatibility_date":"XXXX-XX-XX"}
 				    \`\`\`
@@ -805,7 +808,7 @@ describe("deploy", () => {
 			await expect(
 				async () => await runWrangler("deploy ./index.js --name my-worker")
 			).rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: A compatibility_date is required when publishing. Add the following to your Wrangler configuration file:
+				[Error: A compatibility_date is required when uploading a Worker. Add the following to your Wrangler configuration file:
 				    \`\`\`
 				    {"compatibility_date":"2020-12-01"}
 				    \`\`\`

@@ -7,12 +7,13 @@ import {
 	type Config,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { getDetailsForAutoConfig } from "../autoconfig/details";
-import { runAutoConfig } from "../autoconfig/run";
 import {
+	runAutoConfigDetection,
+	runAutoConfigLogic,
 	sendAutoConfigProcessEndedMetricsEvent,
 	sendAutoConfigProcessStartedMetricsEvent,
-} from "../autoconfig/telemetry-utils";
+} from "../autoconfig";
+import { createWranglerAutoConfigContext } from "../autoconfig-context";
 import { readConfig } from "../config";
 import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -102,9 +103,13 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 			dryRun: !!args.dryRun,
 		});
 
+		const autoConfigContext = createWranglerAutoConfigContext();
+
 		try {
-			const details = await getDetailsForAutoConfig({
+			const details = await runAutoConfigDetection({
+				command: "wrangler deploy",
 				wranglerConfig: config,
+				context: autoConfigContext,
 			});
 
 			if (details.framework?.id === "cloudflare-pages") {
@@ -129,8 +134,10 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 					return { config, aborted: true };
 				}
 			} else if (!details.configured) {
-				// Only run auto config if the project is not already configured
-				const autoConfigSummary = await runAutoConfig(details);
+				const autoConfigSummary = await runAutoConfigLogic(details, {
+					context: autoConfigContext,
+					dryRun: !!args.dryRun,
+				});
 
 				writeOutput({
 					type: "autoconfig",

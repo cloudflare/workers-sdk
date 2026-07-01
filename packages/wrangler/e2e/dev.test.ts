@@ -1448,7 +1448,7 @@ describe("custom builds", () => {
 		// regression: https://github.com/cloudflare/workers-sdk/issues/6876
 		await expect(
 			worker.readUntil(/\[custom build\] Running/, 5_000)
-		).rejects.toThrowError();
+		).rejects.toThrow();
 
 		// now check assets are still fetchable, even after updates
 
@@ -2085,7 +2085,7 @@ describe("watch mode", () => {
 				await worker.waitForReload();
 
 				// The three changes should be debounced, so only one reload should occur
-				await expect(worker.waitForReload(5_000)).rejects.toThrowError();
+				await expect(worker.waitForReload(5_000)).rejects.toThrow();
 
 				// now check assets are still fetchable
 				await expect(fetchText(url)).resolves.toBe("Hello from Assets");

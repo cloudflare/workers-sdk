@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { ParseError } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -10,7 +11,6 @@ import {
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, test, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { printBundleSize } from "../../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../../output";
 import { diagnoseScriptSizeError } from "../../utils/friendly-validator-errors";
@@ -52,8 +52,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -1074,7 +1077,7 @@ export default { fetch() { return new Response(foo); } }`
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toThrowError();
+			await expect(runWrangler("deploy")).rejects.toThrow();
 			expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",

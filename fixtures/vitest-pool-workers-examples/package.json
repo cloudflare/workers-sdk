@@ -41,6 +41,7 @@
 		"@types/node": "catalog:default",
 		"@types/nunjucks": "^3.2.6",
 		"better-auth": "^1.4.6",
+		"cjs-wasm-module-dep": "file:./module-resolution/vendor/cjs-wasm-module-dep",
 		"discord-api-types": "0.37.98",
 		"esm-dep": "file:./module-resolution/vendor/esm-dep",
 		"ext-dep": "file:./module-resolution/vendor/ext-dep",

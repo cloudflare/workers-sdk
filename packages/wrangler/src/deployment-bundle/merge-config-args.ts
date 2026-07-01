@@ -95,7 +95,8 @@ async function mergeSharedConfigArgs(
 		accountId,
 		sendMetrics,
 		resourcesProvision: getFlag("RESOURCES_PROVISION") ?? false,
-		skipLastDeployedFromApiCheck: false,
+		skipProvisioningConfigWriteback: false,
+		strict: args.strict ?? false,
 	};
 
 	const buildProps: BuildProps = {
@@ -151,7 +152,6 @@ export async function mergeDeployConfigArgs(
 			routes: [...routes, ...domainRoutes],
 			logpush: args.logpush !== undefined ? args.logpush : config.logpush,
 			dispatchNamespace: args.dispatchNamespace,
-			strict: args.strict ?? false,
 			oldAssetTtl: args.oldAssetTtl,
 			containersRollout: args.containersRollout,
 		},

@@ -163,3 +163,26 @@ export interface AiSearchNamespace {
 	created_at: string;
 	description?: string;
 }
+
+/**
+ * Represents an AI Search indexing job.
+ */
+export interface AiSearchJob {
+	id: string;
+	source: "user" | "schedule";
+	description?: string;
+	end_reason?: string;
+	ended_at?: string;
+	last_seen_at?: string;
+	started_at?: string;
+}
+
+/**
+ * A log entry for an AI Search indexing job.
+ */
+export interface AiSearchJobLog {
+	id: number;
+	created_at: number;
+	message: string;
+	message_type: number;
+}

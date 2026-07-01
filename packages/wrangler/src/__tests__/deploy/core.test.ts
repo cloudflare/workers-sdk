@@ -2,6 +2,10 @@ import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import {
+	getInstalledPackageVersion,
+	runAutoConfig,
+} from "@cloudflare/autoconfig";
+import {
 	TEMPORARY_TERMS_NOTICE,
 	TEMPORARY_TERMS_PROMPT,
 } from "@cloudflare/workers-auth";
@@ -15,9 +19,6 @@ import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { Static } from "../../autoconfig/frameworks/static";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
-import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
@@ -55,8 +56,8 @@ import {
 	mockPublishRoutesRequest,
 	mockServiceScriptData,
 } from "./helpers";
-import type { Framework } from "../../autoconfig/frameworks";
 import type { OutputEntry } from "../../output";
+import type { Framework } from "@cloudflare/autoconfig";
 
 vi.mock("command-exists");
 vi.mock("../../check/commands", async (importOriginal) => {
@@ -79,8 +80,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -595,7 +599,7 @@ describe("deploy", () => {
 			pages_build_output_dir: "public",
 			name: "test-name",
 		});
-		await expect(runWrangler("deploy")).rejects.toThrowError();
+		await expect(runWrangler("deploy")).rejects.toThrow();
 		expect(std.warn).toContain(
 			"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead."
 		);
@@ -610,10 +614,7 @@ describe("deploy", () => {
 		});
 
 		const getDetailsForAutoConfigSpy = vi
-			.spyOn(
-				await import("../../autoconfig/details"),
-				"getDetailsForAutoConfig"
-			)
+			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
@@ -653,10 +654,7 @@ describe("deploy", () => {
 		});
 
 		const getDetailsForAutoConfigSpy = vi
-			.spyOn(
-				await import("../../autoconfig/details"),
-				"getDetailsForAutoConfig"
-			)
+			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
@@ -689,7 +687,7 @@ describe("deploy", () => {
 		expect,
 	}) => {
 		const getDetailsForAutoConfigSpy = vi.spyOn(
-			await import("../../autoconfig/details"),
+			await import("@cloudflare/autoconfig"),
 			"getDetailsForAutoConfig"
 		);
 
@@ -885,9 +883,7 @@ describe("deploy", () => {
 				})
 			);
 
-			await expect(
-				runWrangler("deploy index.js --temporary")
-			).rejects.toThrowError(
+			await expect(runWrangler("deploy index.js --temporary")).rejects.toThrow(
 				/You must accept Cloudflare's Terms of Service .* to use --temporary\./
 			);
 
@@ -1001,9 +997,7 @@ describe("deploy", () => {
 				})
 			);
 
-			await expect(
-				runWrangler("deploy index.js --temporary")
-			).rejects.toThrowError(
+			await expect(runWrangler("deploy index.js --temporary")).rejects.toThrow(
 				/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
 			);
 
@@ -1147,7 +1141,7 @@ describe("deploy", () => {
 
 				await expect(
 					runWrangler("deploy index.js --temporary")
-				).rejects.toThrowError(
+				).rejects.toThrow(
 					/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
 				);
 
@@ -1540,7 +1534,7 @@ describe("deploy", () => {
 					])
 				);
 
-				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrow();
 
 				expect(std.err).toContain(
 					"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable"
@@ -1623,7 +1617,7 @@ describe("deploy", () => {
 				mockOAuthServerCallback();
 				msw.use(...getMswSuccessMembershipHandlers([]));
 
-				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrow();
 
 				expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to automatically retrieve account IDs for the logged in user.[0m
@@ -1654,7 +1648,7 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to upload a Worker that was last updated via the script API.[0m
 
 			  Edits that have been made via the script API will be overridden by your local code and config.
 
@@ -1998,11 +1992,11 @@ describe("deploy", () => {
 		const outputFile = "./output.json";
 
 		vi.spyOn(
-			await import("../../autoconfig/details"),
+			await import("@cloudflare/autoconfig"),
 			"getDetailsForAutoConfig"
 		).mockResolvedValueOnce({
 			configured: false,
-			framework: new Static({ id: "static", name: "Static" }),
+			framework: { id: "static", name: "Static" } as Framework,
 			workerName: "my-site",
 			projectPath: ".",
 			outputDir: "./public",

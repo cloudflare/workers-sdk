@@ -73,6 +73,7 @@ describe("kv", () => {
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
 					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -112,6 +113,7 @@ describe("kv", () => {
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
 					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -414,12 +416,13 @@ describe("kv", () => {
 				await expect(runWrangler("kv namespace delete --binding otherBinding"))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Not able to delete namespace.
-					A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]
+					No KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.]
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.[0m
 
-					  A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".
+					  No KV namespace with binding "otherBinding" was found in the "kv_namespaces" section of your
+					  wrangler config. Check the binding name is correct, or use \`--namespace-id\` instead.
 
 					"
 				`);
@@ -526,7 +529,7 @@ describe("kv", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`
 					[Error: Not able to delete namespace.
-					No namespace found with the name "nonexistent-namespace". Use --namespace-id or --binding instead, or check available namespaces with "wrangler kv namespace list".]
+					No KV namespace named "nonexistent-namespace" was found in your account. Use \`--namespace-id\` or \`--binding\` instead, or run \`wrangler kv namespace list\` to see all available namespaces.]
 				`
 				);
 			});
@@ -537,7 +540,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv namespace delete my-namespace --namespace-id some-id")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Cannot specify multiple of: namespace name (as positional argument), --binding, or --namespace-id. Use only one.]`
+					`[Error: Only one namespace selector is allowed. Provide exactly one of: a positional namespace name, \`--binding\`, or \`--namespace-id\`.]`
 				);
 			});
 
@@ -548,7 +551,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv namespace delete my-namespace --binding someBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Cannot specify multiple of: namespace name (as positional argument), --binding, or --namespace-id. Use only one.]`
+					`[Error: Only one namespace selector is allowed. Provide exactly one of: a positional namespace name, \`--binding\`, or \`--namespace-id\`.]`
 				);
 			});
 
@@ -572,7 +575,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv namespace delete")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Must specify one of: namespace name (as positional argument), --binding, or --namespace-id]`
+					`[Error: No KV namespace specified. Provide a namespace name as a positional argument, or use \`--binding\` or \`--namespace-id\`.]`
 				);
 			});
 		});
@@ -657,6 +660,7 @@ describe("kv", () => {
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
 					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -671,7 +675,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv namespace rename --new-name new-name")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Either old-name (as first argument) or --namespace-id must be specified]`
+					`[Error: No KV namespace specified. Provide the current namespace name as a positional argument, or use \`--namespace-id\` to identify the namespace to rename.]`
 				);
 			});
 
@@ -744,7 +748,7 @@ describe("kv", () => {
 						"kv namespace rename nonexistent-name --new-name new-name"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: No namespace found with the name "nonexistent-name". Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".]`
+					`[Error: No KV namespace named "nonexistent-name" was found in your account. Use \`--namespace-id\` to identify the namespace by ID, or run \`wrangler kv namespace list\` to see all available namespaces.]`
 				);
 			});
 

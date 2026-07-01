@@ -32,6 +32,18 @@ export type DeployHelpersContext = {
 		text: string,
 		options?: { defaultValue?: string }
 	) => Promise<string>;
+	select: <Values extends string>(
+		text: string,
+		options: {
+			choices: {
+				title: string;
+				description?: string;
+				value: Values;
+			}[];
+			defaultOption?: number;
+			fallbackOption?: number;
+		}
+	) => Promise<Values>;
 	isNonInteractiveOrCI: () => boolean;
 };
 
@@ -94,8 +106,10 @@ export type SharedDeployVersionsProps = {
 	sendMetrics: boolean;
 	/** Resolved from getFlag("RESOURCES_PROVISION"). Controls whether bindings are auto-provisioned before upload. */
 	resourcesProvision: boolean;
-	/** temporary hack - cf is not yet a recognised deploy source, so any deploys from cf comes back normalised to 'api'*/
-	skipLastDeployedFromApiCheck: boolean;
+	/** Controls whether provisioned resource IDs are written back to the config file. */
+	skipProvisioningConfigWriteback: boolean;
+	/** From --strict arg. In strict mode, conflicting pre-upload checks abort instead of auto-continuing. */
+	strict: boolean;
 };
 
 export type DeployProps = SharedDeployVersionsProps & {
@@ -111,8 +125,6 @@ export type DeployProps = SharedDeployVersionsProps & {
 	logpush: boolean | undefined;
 	/** From --dispatch-namespace arg. Deploy-only (Workers for Platforms). */
 	dispatchNamespace: string | undefined;
-	/** From --strict arg. Deploy-only. */
-	strict: boolean;
 	/** From --old-asset-ttl arg. Deploy-only. */
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */

@@ -6,7 +6,7 @@ import {
 	getOutputFilePathFromEnv,
 } from "@cloudflare/workers-utils";
 import { ensureDirectoryExistsSync } from "./utils/filesystem";
-import type { AutoConfigSummary } from "./autoconfig/types";
+import type { AutoConfigSummary } from "@cloudflare/autoconfig";
 
 /**
  * Write an entry to the output file.

@@ -300,6 +300,8 @@ async function viteResolve(
 	return trimViteVersionHash(resolved.id);
 }
 
+const wasmModuleSuffix = ".wasm?module";
+
 type ResolveMethod = "import" | "require";
 async function resolve(
 	vite: Vite.ViteDevServer,
@@ -311,6 +313,12 @@ async function resolve(
 	const referrerDir = posixPath.dirname(referrer);
 
 	const isRequire = method === "require";
+	// The ?module suffix must be stripped to resolve to the actual wasm file.
+	// Only CommonJS `require()` needs to handle these imports dynamically.
+	if (isRequire && target.endsWith(wasmModuleSuffix)) {
+		target = trimSuffix("?module", target);
+	}
+
 	let filePath = maybeGetTargetFilePath(target, isRequire);
 	if (filePath !== undefined) {
 		return filePath;
@@ -341,15 +349,20 @@ async function resolve(
 	return viteResolve(vite, specifier, referrer, method === "require");
 }
 
+// `workerd` resolves a non-prefixed specifier by joining it to the referrer's
+// parent directory via `kj::Path::eval`, which only anchors to the root when
+// the path starts with `/`. On Windows, a platform path like `C:/a/b/c` would
+// otherwise be appended to the referrer dir; prepending `/` produces
+// `/C:/a/b/c`, which workerd resolves as intended.
+function ensureRootedPath(filePath: string) {
+	return isWindows && filePath[0] !== "/" ? `/${filePath}` : filePath;
+}
+
 function buildRedirectResponse(filePath: string) {
-	// `workerd` expects an absolute POSIX-style path (starting with a slash) for
-	// redirects. `filePath` is a platform absolute path with forward slashes.
-	// On Windows, this won't start with a `/`, so we add one to produce paths
-	// like `/C:/a/b/c`.
-	if (isWindows && filePath[0] !== "/") {
-		filePath = `/${filePath}`;
-	}
-	return new Response(null, { status: 301, headers: { Location: filePath } });
+	return new Response(null, {
+		status: 301,
+		headers: { Location: ensureRootedPath(filePath) },
+	});
 }
 
 // `Omit<Worker_Module, "name">` gives type `{}` which isn't very helpful, so
@@ -416,6 +429,20 @@ async function load(
 	specifier: string,
 	filePath: string
 ): Promise<Response> {
+	// Expose wasm?module imports with a thin CommonJS wrapper that exports
+	// the wasm file as the default export. This matches the expected structure
+	// of wasm?module imports. Only CommonJS `require()` needs to handle these
+	// imports dynamically.
+	if (
+		method === "require" &&
+		target.endsWith(wasmModuleSuffix) &&
+		filePath.endsWith(".wasm")
+	) {
+		const wrapper = `module.exports = { default: require(${JSON.stringify(ensureRootedPath(filePath))}) };`;
+		debuglog(logBase, "wasm-module-wrapper:", filePath);
+		return buildModuleResponse(target, { commonJsModule: wrapper });
+	}
+
 	if (target !== filePath) {
 		// We might `import` and `require` the same CommonJS package. In this case,
 		// we want to respond with an ES module shim for the `import`, and the
