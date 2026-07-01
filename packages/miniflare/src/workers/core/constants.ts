@@ -23,6 +23,8 @@ export const CorePaths = {
 	IMAGE_DELIVERY: "/cdn-cgi/mf/imagedelivery",
 	/** Public R2 bucket object serving endpoint */
 	R2_PUBLIC: "/cdn-cgi/local/r2/public",
+	/** S3-compatible API endpoint for local R2 buckets */
+	R2_S3: "/cdn-cgi/local/r2/s3",
 } as const;
 
 export const CoreHeaders = {
@@ -87,6 +89,7 @@ export const CoreBindings = {
 	SERVICE_STREAM: "MINIFLARE_STREAM",
 	SERVICE_IMAGES_DELIVERY: "MINIFLARE_IMAGES_DELIVERY",
 	SERVICE_R2_PUBLIC: "MINIFLARE_R2_PUBLIC",
+	SERVICE_R2_S3: "MINIFLARE_R2_S3",
 } as const;
 
 export const ProxyOps = {
