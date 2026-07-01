@@ -74,6 +74,17 @@ describe("Package Managers", () => {
 			expect(pm.npx).toBe("yarn");
 			expect(pm.dlx).toEqual(["yarn"]);
 		});
+
+		test("nub", ({ expect }) => {
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "nub",
+				version: "0.2.9",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("nub");
+			expect(pm.npx).toBe("nubx");
+			expect(pm.dlx).toEqual(["nubx"]);
+		});
 	});
 
 	describe("detectPmMismatch", async () => {

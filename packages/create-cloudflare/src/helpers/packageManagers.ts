@@ -74,6 +74,15 @@ export const detectPackageManager = () => {
 				dlx: ["bunx"],
 			} as const;
 
+		case "nub":
+			return {
+				name,
+				version,
+				npm: "nub",
+				npx: "nubx",
+				dlx: ["nubx"],
+			} as const;
+
 		case "npm":
 		default:
 			return {
