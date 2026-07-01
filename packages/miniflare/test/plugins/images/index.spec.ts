@@ -263,6 +263,130 @@ describe("Images hosted CRUD", () => {
 		expect(list.images[0].id).toBe("img2");
 	});
 
+	test("list images filtered by metadata (implicit eq)", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "active",
+			metadata: { status: "active" },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "archived",
+			metadata: { status: "archived" },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: { metadataFilters: { status: "active" } },
+		});
+		expect(list.images).toHaveLength(1);
+		expect(list.images[0].id).toBe("active");
+	});
+
+	test("list images filtered by metadata (in)", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "a",
+			metadata: { region: "us-east" },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "b",
+			metadata: { region: "eu-west" },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "c",
+			metadata: { region: "ap-south" },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: {
+				metadataFilters: { region: { in: ["us-east", "eu-west"] } },
+			},
+		});
+		expect(list.images.map((i) => i.id).sort()).toEqual(["a", "b"]);
+	});
+
+	test("list images filtered by metadata range (gte/lte)", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, { id: "p1", metadata: { priority: 1 } });
+		await upload(mf, TEST_IMAGE_BYTES, { id: "p3", metadata: { priority: 3 } });
+		await upload(mf, TEST_IMAGE_BYTES, { id: "p5", metadata: { priority: 5 } });
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: { metadataFilters: { priority: { gte: 2, lte: 4 } } },
+		});
+		expect(list.images).toHaveLength(1);
+		expect(list.images[0].id).toBe("p3");
+	});
+
+	test("list images filtered by nested metadata", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "eu",
+			metadata: { config: { region: "eu-west" } },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "us",
+			metadata: { config: { region: "us-east" } },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: { metadataFilters: { "config.region": "eu-west" } },
+		});
+		expect(list.images).toHaveLength(1);
+		expect(list.images[0].id).toBe("eu");
+	});
+
+	test("list images with multiple metadata filters (AND)", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "match",
+			metadata: { status: "active", priority: 5 },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "wrong-priority",
+			metadata: { status: "active", priority: 1 },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: {
+				metadataFilters: { status: "active", priority: { gte: 5 } },
+			},
+		});
+		expect(list.images).toHaveLength(1);
+		expect(list.images[0].id).toBe("match");
+	});
+
+	test("metadata filter with no matches returns empty list", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "only",
+			metadata: { status: "active" },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: { metadataFilters: { status: "missing" } },
+		});
+		expect(list.images).toHaveLength(0);
+		expect(list.listComplete).toBe(true);
+	});
+
 	test("list images with cursor pagination", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);

@@ -55,6 +55,92 @@ async function base64DecodeStream(
 	return base64DecodeArrayBuffer(buffer);
 }
 
+// Local definitions until `@cloudflare/workers-types` ships the new field.
+// These mirror workerd's ImageMetadataFilter types.
+type ImageMetadataFilterOperators = {
+	eq?: string | number | boolean;
+	in?: Array<string | number | boolean>;
+	gt?: number;
+	gte?: number;
+	lt?: number;
+	lte?: number;
+};
+
+type ImageMetadataFilterValue =
+	| string
+	| number
+	| boolean
+	| ImageMetadataFilterOperators;
+
+interface ImageListOptionsWithFilters extends ImageListOptions {
+	metadataFilters?: Record<string, ImageMetadataFilterValue>;
+}
+
+// Resolve a dot-notation path (e.g. "config.region") against an object.
+function resolveMetaPath(
+	meta: Record<string, unknown> | undefined,
+	path: string
+): unknown {
+	return path.split(".").reduce<unknown>((acc, key) => {
+		if (acc && typeof acc === "object") {
+			return (acc as Record<string, unknown>)[key];
+		}
+		return undefined;
+	}, meta);
+}
+
+// Evaluate a single field condition against a resolved metadata value. A bare
+// value is treated as eq. Mirrors images-core filter semantics.
+function matchesCondition(
+	actual: unknown,
+	condition: ImageMetadataFilterValue
+): boolean {
+	if (typeof condition !== "object" || condition === null) {
+		return actual === condition;
+	}
+	if (condition.eq !== undefined && actual !== condition.eq) {
+		return false;
+	}
+	if (condition.in !== undefined && !condition.in.some((v) => v === actual)) {
+		return false;
+	}
+	if (
+		condition.gt !== undefined &&
+		!(typeof actual === "number" && actual > condition.gt)
+	) {
+		return false;
+	}
+	if (
+		condition.gte !== undefined &&
+		!(typeof actual === "number" && actual >= condition.gte)
+	) {
+		return false;
+	}
+	if (
+		condition.lt !== undefined &&
+		!(typeof actual === "number" && actual < condition.lt)
+	) {
+		return false;
+	}
+	if (
+		condition.lte !== undefined &&
+		!(typeof actual === "number" && actual <= condition.lte)
+	) {
+		return false;
+	}
+	return true;
+}
+
+// Apply metadata filters (AND across fields) to an image's metadata.
+function matchesMetadataFilters(
+	image: ImageMetadata,
+	filters: Record<string, ImageMetadataFilterValue>
+): boolean {
+	return Object.entries(filters).every(([field, condition]) =>
+		matchesCondition(resolveMetaPath(image.meta, field), condition)
+	);
+}
+
 class ImageHandleImpl extends RpcTarget {
 	readonly #imageId: string;
 	readonly #env: Env;
@@ -160,7 +246,7 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		return withResolvedVariants(metadata, this.env);
 	}
 
-	async list(options?: ImageListOptions): Promise<ImageList> {
+	async list(options?: ImageListOptionsWithFilters): Promise<ImageList> {
 		const limit = options?.limit ?? 50;
 
 		// Fetch all keys so we can filter and sort accurately
@@ -183,6 +269,16 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 				0,
 				allImages.length,
 				...allImages.filter((i) => i.creator === options.creator)
+			);
+		}
+
+		// Metadata filters are combined with AND logic, mirroring core.
+		if (options?.metadataFilters) {
+			const filters = options.metadataFilters;
+			allImages.splice(
+				0,
+				allImages.length,
+				...allImages.filter((image) => matchesMetadataFilters(image, filters))
 			);
 		}
 
