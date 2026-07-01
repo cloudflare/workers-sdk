@@ -69,9 +69,7 @@ describe("MetricsRegistry", () => {
 		it("throws on negative values", ({ expect }) => {
 			const registry = new MetricsRegistry();
 			const counter = registry.createCounter("test_total", "A test counter");
-			expect(() => counter.add(-1)).toThrowError(
-				"Counter value cannot decrease"
-			);
+			expect(() => counter.add(-1)).toThrow("Counter value cannot decrease");
 		});
 
 		it("can be combined with inc", ({ expect }) => {

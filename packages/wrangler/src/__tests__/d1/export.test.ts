@@ -22,7 +22,7 @@ describe("export", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	it("should throw if output is missing", async ({ expect }) => {
-		await expect(runWrangler("d1 export db")).rejects.toThrowError(
+		await expect(runWrangler("d1 export db")).rejects.toThrow(
 			`Missing required argument: output`
 		);
 	});
@@ -30,9 +30,7 @@ describe("export", () => {
 	it("should throw if output is a directory", async ({ expect }) => {
 		fs.mkdirSync("test-dir");
 
-		await expect(
-			runWrangler("d1 export db --output test-dir")
-		).rejects.toThrowError(
+		await expect(runWrangler("d1 export db --output test-dir")).rejects.toThrow(
 			`Please specify a file path for --output, not a directory.`
 		);
 	});
@@ -40,7 +38,7 @@ describe("export", () => {
 	it("should throw if local and remote are both set", async ({ expect }) => {
 		await expect(
 			runWrangler("d1 export db --local --remote --output test-local.sql")
-		).rejects.toThrowError("Arguments local and remote are mutually exclusive");
+		).rejects.toThrow("Arguments local and remote are mutually exclusive");
 	});
 
 	it("should handle local", async ({ expect }) => {
@@ -249,7 +247,7 @@ describe("export", () => {
 
 		await expect(
 			runWrangler("d1 export db --remote --output test-remote.sql")
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			/There was an error while downloading from the presigned URL with status code: 403/
 		);
 	});

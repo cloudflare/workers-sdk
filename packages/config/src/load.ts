@@ -65,10 +65,12 @@ let deregister: (() => void) | undefined;
  * repeated calls return the same deregister function.
  *
  *  - Handles `with { type: "cf-worker" }` import attributes by synthesising an
- *    ES module whose default export is the raw specifier as written by the
- *    user — relative paths, bare specifiers, and virtual-module specifiers
- *    all pass through unchanged. The referenced module is NOT resolved, is
- *    NOT executed, and is NOT added to the dependencies set.
+ *    ES module whose default export is the entrypoint specifier. Relative
+ *    specifiers (`./`, `../`) are anchored to the importing module and emitted
+ *    as absolute paths; bare specifiers and virtual-module specifiers pass
+ *    through unchanged so consumers can apply their own resolution semantics.
+ *    The referenced module is NOT loaded, is NOT executed, and is NOT added to
+ *    the dependencies set.
  *  - Handles `with { cf: "no-cache" }` import attributes (set internally by
  *    `loadConfig`) by tagging the resolved URL with a unique UUID query
  *    string so Node treats each import as a fresh module. The UUID is
@@ -100,13 +102,25 @@ export function registerConfigHooks(): () => void {
 			const importAttributes = context.importAttributes ?? {};
 
 			if (importAttributes.type === CF_WORKER_TYPE) {
-				// Path-only reference. The entrypoint is never resolved or
-				// loaded, so we don't add it to dependencies (changes to the
-				// entrypoint's source should not trigger a config reload). The
-				// raw specifier is preserved verbatim so consumers can apply
-				// their own resolution semantics.
+				// Path-only reference. The entrypoint is never loaded or
+				// executed, so we don't add it to dependencies (changes to the
+				// entrypoint's source should not trigger a config reload).
+				//
+				// Relative specifiers (`./`, `../`) are anchored to the
+				// importing module via `parentURL`, producing an absolute path.
+				// This keeps resolution correct even when the import is written
+				// in a file other than the top-level config (e.g. a re-exported
+				// nested config), where resolving relative to the config file
+				// downstream would be wrong.
+				const isRelative =
+					specifier.startsWith("./") || specifier.startsWith("../");
+				const entrypoint =
+					isRelative && context.parentURL
+						? fileURLToPath(new URL(specifier, context.parentURL))
+						: specifier;
+
 				return {
-					url: `${CF_WORKER_SCHEME}${encodeURIComponent(specifier)}`,
+					url: `${CF_WORKER_SCHEME}${encodeURIComponent(entrypoint)}`,
 					format: "module",
 					shortCircuit: true,
 				};

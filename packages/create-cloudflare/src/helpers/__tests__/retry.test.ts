@@ -44,7 +44,7 @@ describe("retry", () => {
 			await retry({ times: 3 }, async () => {
 				throw Error("testing");
 			});
-		}).rejects.toThrowError("testing");
+		}).rejects.toThrow("testing");
 	});
 
 	test("exit condition encountered", async ({ expect }) => {
@@ -65,6 +65,6 @@ describe("retry", () => {
 					throw Error("special condition");
 				}
 			);
-		}).rejects.toThrowError("special condition");
+		}).rejects.toThrow("special condition");
 	});
 });

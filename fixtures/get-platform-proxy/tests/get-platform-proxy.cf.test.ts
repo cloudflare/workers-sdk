@@ -22,14 +22,14 @@ describe("getPlatformProxy - cf", () => {
 
 			expect(() => {
 				cf.city = "test city";
-			}).toThrowError(
+			}).toThrow(
 				"Cannot assign to read only property 'city' of object '#<Object>'"
 			);
 			expect(cf.city).not.toBe("test city");
 
 			expect(() => {
 				cf.newField = "test new field";
-			}).toThrowError("Cannot add property newField, object is not extensible");
+			}).toThrow("Cannot add property newField, object is not extensible");
 			expect("newField" in cf).toBe(false);
 
 			expect(cf.botManagement).toMatchObject({

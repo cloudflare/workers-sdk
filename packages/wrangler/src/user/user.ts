@@ -11,10 +11,7 @@
 //     wrangler's commands
 
 import assert from "node:assert";
-import {
-	getAuthFromEnv as getAuthFromEnvShared,
-	readStoredAuthState,
-} from "@cloudflare/workers-auth";
+import { getAuthFromEnv as getAuthFromEnvShared } from "@cloudflare/workers-auth";
 import { createOAuthFlow } from "@cloudflare/workers-auth";
 import {
 	configFileName,
@@ -82,8 +79,6 @@ const WRANGLER_CONSENT_PAGES = {
 	},
 };
 
-const authConfigStorage = defaultAuthConfigStorage();
-
 const oauthFlow = createOAuthFlow({
 	logger,
 	isNonInteractiveOrCI,
@@ -93,7 +88,7 @@ const oauthFlow = createOAuthFlow({
 	clientId: getClientIdFromEnv,
 	consent: WRANGLER_CONSENT_PAGES,
 	redirectUri: OAUTH_CALLBACK_URL,
-	storage: authConfigStorage,
+	storageFactory: defaultAuthConfigStorage,
 	allowGlobalAuthKey: true,
 	temporary: {
 		storage: createTomlFileStorage<TemporaryPreviewAccount>(
@@ -104,6 +99,20 @@ const oauthFlow = createOAuthFlow({
 	generateAuthUrl,
 	generateRandomState,
 });
+
+/**
+ * Set the active auth profile for all subsequent credential lookups.
+ */
+export function setProfile(profile: string): void {
+	oauthFlow.setProfile(profile);
+}
+
+/**
+ * Return the active auth profile name.
+ */
+export function getActiveProfile(): string {
+	return oauthFlow.getActiveProfile();
+}
 
 /**
  * Mark whether `--temporary` is permitted for the current invocation.
@@ -220,10 +229,7 @@ export function listScopes(message = "💁 Available scopes:"): void {
  * the user is not logged in via OAuth (e.g. env-based auth).
  */
 export function getScopes(): Scope[] | undefined {
-	return readStoredAuthState({
-		warningLogger: logger,
-		storage: authConfigStorage,
-	}).scopes as Scope[] | undefined;
+	return oauthFlow.getScopes() as Scope[] | undefined;
 }
 
 export function printScopes(scopes: Scope[]) {
@@ -260,6 +266,7 @@ type WranglerLoginProps = {
 	browser?: boolean;
 	callbackHost?: string;
 	callbackPort?: number;
+	profile?: string;
 };
 
 function withDefaultScopes(
@@ -272,6 +279,7 @@ function withDefaultScopes(
 		browser: props?.browser ?? true,
 		callbackHost: props?.callbackHost,
 		callbackPort: props?.callbackPort,
+		profile: props?.profile,
 	};
 }
 
@@ -282,8 +290,8 @@ export async function login(
 	return oauthFlow.login(withDefaultScopes(complianceConfig, props));
 }
 
-export async function logout(): Promise<void> {
-	return oauthFlow.logout();
+export async function logout(profile?: string): Promise<void> {
+	return oauthFlow.logout(profile);
 }
 
 /**
@@ -506,20 +514,34 @@ export async function requireAuth(
 	return accountId;
 }
 
+function getAccountCacheFileName(): string {
+	const profile = oauthFlow.getActiveProfile();
+	if (profile === "default") {
+		return "wrangler-account.json";
+	}
+	return `wrangler-account-${profile}.json`;
+}
+
 /**
  * Saves the given account details to the filesystem cache.
+ * Cache is scoped to the resolved profile so different profiles
+ * in the same directory don't clobber each other.
  *
  * @param account The account to save
  */
 function saveAccountToCache(account: Account): void {
-	saveToConfigCache<{ account: Account }>("wrangler-account.json", { account });
+	saveToConfigCache<{ account: Account }>(getAccountCacheFileName(), {
+		account,
+	});
 }
 
 /**
  * Retrieves the account details from the filesystem cache.
+ * Cache is scoped to the resolved profile.
  *
  * @returns The cached account if present, `undefined` otherwise
  */
 export function getAccountFromCache(): undefined | Account {
-	return getConfigCache<{ account: Account }>("wrangler-account.json").account;
+	return getConfigCache<{ account: Account }>(getAccountCacheFileName())
+		.account;
 }

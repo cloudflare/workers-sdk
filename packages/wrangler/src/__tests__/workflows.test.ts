@@ -166,6 +166,7 @@ describe("wrangler workflows", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`
 			);
@@ -202,6 +203,7 @@ describe("wrangler workflows", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});

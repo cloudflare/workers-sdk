@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.102.0",
+	"version": "4.106.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -84,7 +84,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260617.1"
+		"workerd": "1.20260630.1"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -125,7 +125,7 @@
 		"@types/yargs": "^17.0.22",
 		"@vitest/ui": "catalog:default",
 		"@webcontainer/env": "^1.1.0",
-		"am-i-vibing": "^0.4.0",
+		"am-i-vibing": "^0.5.0",
 		"capnweb": "catalog:default",
 		"chalk": "catalog:default",
 		"chokidar": "^4.0.1",

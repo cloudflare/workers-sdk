@@ -11,6 +11,7 @@ import {
 	getGlobalWranglerConfigPath,
 	parseTOML,
 	readFileSync,
+	UserError,
 } from "@cloudflare/workers-utils";
 import TOML from "smol-toml";
 import type {
@@ -61,8 +62,10 @@ export function createTomlFileStorage<T extends object>(
  * Injected into `@cloudflare/workers-auth` (the OAuth flow, `getAPIToken`, and
  * `readStoredAuthState`), which no longer ships a default of its own.
  */
-export function defaultAuthConfigStorage(): AuthConfigStorage {
-	return createTomlFileStorage<UserAuthConfig>(getAuthConfigFilePath);
+export function defaultAuthConfigStorage(profile?: string): AuthConfigStorage {
+	return createTomlFileStorage<UserAuthConfig>(() =>
+		getAuthConfigFilePath(profile)
+	);
 }
 
 /**
@@ -78,10 +81,27 @@ const USER_AUTH_CONFIG_PATH = "config";
  * `default.toml` in production, or `<environment>.toml` for the staging /
  * other Cloudflare API environments.
  */
-export function getAuthConfigFilePath(): string {
-	const environment = getCloudflareApiEnvironmentFromEnv();
-	const filePath = `${USER_AUTH_CONFIG_PATH}/${environment === "production" ? "default.toml" : `${environment}.toml`}`;
-	return path.join(getGlobalWranglerConfigPath(), filePath);
+export function getAuthConfigFilePath(profile?: string): string {
+	if (profile && !/^[a-zA-Z0-9_-]+$/.test(profile)) {
+		throw new UserError(
+			`Invalid profile name "${profile}". Profile names may only contain alphanumeric characters, hyphens, and underscores.`,
+			{ telemetryMessage: "auth profile invalid name" }
+		);
+	}
+	const resolved = profile ?? "default";
+	let fileName: string;
+	if (resolved === "default") {
+		const environment = getCloudflareApiEnvironmentFromEnv();
+		fileName =
+			environment === "production" ? "default.toml" : `${environment}.toml`;
+	} else {
+		fileName = `${resolved}.toml`;
+	}
+	return path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_PATH,
+		fileName
+	);
 }
 
 /**
@@ -91,8 +111,13 @@ export function getAuthConfigFilePath(): string {
  * site that needs it. Callers are responsible for any consumer-side cache
  * purging (e.g. via the `OAuthFlowContext.purgeOnLoginOrLogout` hook).
  */
-export function writeAuthConfigFile(config: UserAuthConfig): void {
-	createTomlFileStorage<UserAuthConfig>(getAuthConfigFilePath).write(config);
+export function writeAuthConfigFile(
+	config: UserAuthConfig,
+	profile?: string
+): void {
+	createTomlFileStorage<UserAuthConfig>(() =>
+		getAuthConfigFilePath(profile)
+	).write(config);
 }
 
 /**
@@ -101,6 +126,8 @@ export function writeAuthConfigFile(config: UserAuthConfig): void {
  * @throws if the file does not exist or cannot be parsed as TOML. Callers
  * typically catch this and treat the failure as "not logged in via local OAuth".
  */
-export function readAuthConfigFile(): UserAuthConfig {
-	return createTomlFileStorage<UserAuthConfig>(getAuthConfigFilePath).read();
+export function readAuthConfigFile(profile?: string): UserAuthConfig {
+	return createTomlFileStorage<UserAuthConfig>(() =>
+		getAuthConfigFilePath(profile)
+	).read();
 }

@@ -19,13 +19,13 @@ describe("create", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	it("should throw if local flag is provided", async ({ expect }) => {
-		await expect(runWrangler("d1 create test --local")).rejects.toThrowError(
+		await expect(runWrangler("d1 create test --local")).rejects.toThrow(
 			`Unknown argument: local`
 		);
 	});
 
 	it("should throw if remote flag is provided", async ({ expect }) => {
-		await expect(runWrangler("d1 create test --remote")).rejects.toThrowError(
+		await expect(runWrangler("d1 create test --remote")).rejects.toThrow(
 			`Unknown argument: remote`
 		);
 	});

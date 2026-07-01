@@ -943,7 +943,6 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "react-router",
-			quarantine: true,
 			unsupportedOSs: ["win32"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
