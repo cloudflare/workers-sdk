@@ -4,64 +4,55 @@ import {
 } from "@cloudflare/workers-utils";
 
 /**
- * `WRANGLER_AUTH_DOMAIN` is the URL base domain that is used
- * to access OAuth URLs for the Cloudflare APIs.
- *
- * Normally you should not need to set this explicitly.
- * If you want to switch to the staging environment set the
- * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
+ * The OAuth client ID identifying the CLI to the Cloudflare OAuth server.
+ * Defaults to the first-party app for the active API environment, so a
+ * delegated tool can refresh a token minted by that app. A CLI that registers
+ * its own OAuth app should set this.
  */
+export const getClientIdFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_OAUTH_CLIENT_ID",
+	deprecatedName: "WRANGLER_CLIENT_ID",
+	defaultValue: () =>
+		getCloudflareApiEnvironmentFromEnv() === "staging"
+			? "4b2ea6cc-9421-4761-874b-ce550e0e3def"
+			: "54d11594-84e4-41aa-b438-e81b8fa78ee7",
+});
+
+/** The OAuth URL base domain. Usually auto-configured from the API environment. */
 export const getAuthDomainFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_AUTH_DOMAIN",
+	variableName: "CLOUDFLARE_AUTH_DOMAIN",
+	deprecatedName: "WRANGLER_AUTH_DOMAIN",
 	defaultValue: () =>
 		getCloudflareApiEnvironmentFromEnv() === "staging"
 			? "dash.staging.cloudflare.com"
 			: "dash.cloudflare.com",
 });
 
-/**
- * `WRANGLER_AUTH_URL` is the path that is used to access OAuth
- * for the Cloudflare APIs.
- *
- * Normally you should not need to set this explicitly.
- * If you want to switch to the staging environment set the
- * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
- */
+/** The OAuth authorize URL. */
 export const getAuthUrlFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_AUTH_URL",
+	variableName: "CLOUDFLARE_AUTH_URL",
+	deprecatedName: "WRANGLER_AUTH_URL",
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/auth`,
 });
 
-/**
- * `WRANGLER_TOKEN_URL` is the path that is used to exchange an OAuth
- * token for an API token.
- *
- * Normally you should not need to set this explicitly.
- * If you want to switch to the staging environment set the
- * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
- */
+/** The OAuth token-exchange URL. */
 export const getTokenUrlFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_TOKEN_URL",
+	variableName: "CLOUDFLARE_TOKEN_URL",
+	deprecatedName: "WRANGLER_TOKEN_URL",
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/token`,
 });
 
-/**
- * `WRANGLER_REVOKE_URL` is the path that is used to exchange an OAuth
- * refresh token for a new OAuth token.
- *
- * Normally you should not need to set this explicitly.
- * If you want to switch to the staging environment set the
- * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
- */
+/** The OAuth token-revocation URL. */
 export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_REVOKE_URL",
+	variableName: "CLOUDFLARE_REVOKE_URL",
+	deprecatedName: "WRANGLER_REVOKE_URL",
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
 });
 
 /**
- * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID of a Cloudflare Access Service Token.
- * Used together with `CLOUDFLARE_ACCESS_CLIENT_SECRET` to authenticate with
- * Access-protected domains in non-interactive environments (e.g. CI).
+ * Cloudflare Access Service Token client ID, used with
+ * {@link getAccessClientSecretFromEnv} to authenticate with Access-protected
+ * domains in non-interactive environments (e.g. CI).
  *
  * @see https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/
  */
@@ -70,22 +61,19 @@ export const getAccessClientIdFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `CLOUDFLARE_ACCESS_CLIENT_SECRET` is the Client Secret of a Cloudflare Access Service Token.
- * Used together with `CLOUDFLARE_ACCESS_CLIENT_ID` to authenticate with
- * Access-protected domains in non-interactive environments (e.g. CI).
- *
- * @see https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/
+ * Cloudflare Access Service Token client secret, paired with
+ * {@link getAccessClientIdFromEnv}.
  */
 export const getAccessClientSecretFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_ACCESS_CLIENT_SECRET",
 });
 
 /**
- * `WRANGLER_CF_AUTHORIZATION_TOKEN` is an explicit `CF_Authorization` cookie value
- * used to authenticate against the OAuth auth domain when it is Access-protected
- * (typically staging). When set, the OAuth flow skips Access detection and uses
- * this token directly.
+ * An explicit `CF_Authorization` cookie value used to authenticate against the
+ * OAuth auth domain when it is Access-protected (typically staging). When set,
+ * the OAuth flow skips Access detection and uses this token directly.
  */
 export const getCfAuthorizationTokenFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_CF_AUTHORIZATION_TOKEN",
+	variableName: "CLOUDFLARE_CF_AUTHORIZATION_TOKEN",
+	deprecatedName: "WRANGLER_CF_AUTHORIZATION_TOKEN",
 });

@@ -1,5 +1,4 @@
-import type { AuthConfigStorage } from "./config-file/auth";
-import type { TemporaryAccountStorage } from "./config-file/temporary";
+import type { ConfigFileLocation } from "./config-file/file-storage";
 import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 
@@ -8,8 +7,10 @@ import type { generateRandomState as defaultGenerateRandomState } from "./genera
  * preview account"
  */
 export interface OAuthFlowTemporaryContext {
-	/** Persistence backend for the cached temporary preview account. */
-	storage: TemporaryAccountStorage;
+	/**
+	 * Where the cached temporary preview account is stored (path + format).
+	 */
+	storage: ConfigFileLocation;
 	/**
 	 * Hook to customise the terms-acceptance interactive prompt
 	 *  - question: the question to ask a user in interactive mode.
@@ -104,15 +105,17 @@ export interface OAuthFlowContext {
 	redirectUri: string;
 
 	/**
-	 * Factory that returns a persistence backend for the given auth profile.
+	 * Factory that returns the auth-config file *location* (path + format) for
+	 * the given auth profile. workers-auth owns the on-disk I/O and builds the
+	 * storage from this location, so the consumer only maps profile names to
+	 * locations (e.g. wrangler maps each profile to a separate TOML file under
+	 * the global config directory) and can drive it entirely from environment
+	 * variables.
 	 *
 	 * Called with the active profile name (e.g. `"default"`) on every storage
 	 * access so the flow always reads/writes the correct backing store.
-	 * The consumer is responsible for mapping profile names to concrete storage
-	 * backends (e.g. wrangler maps each profile to a separate TOML file under
-	 * the global config directory).
 	 */
-	storageFactory: (profile?: string) => AuthConfigStorage;
+	storageFactory: (profile?: string) => ConfigFileLocation;
 
 	/**
 	 * Whether the flow's credential resolvers (`getAPIToken` / `requireApiToken`)

@@ -19,14 +19,15 @@ import {
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { getOauthToken } from "./callback-server";
+import { createFileStorage } from "./config-file/file-storage";
 import { getAPIToken, requireApiToken } from "./credentials";
 import { getRevokeUrlFromEnv } from "./env-vars";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
-import { readStoredAuthState, type OAuthFlowState } from "./state";
+import { readStoredAuthStateFromStorage, type OAuthFlowState } from "./state";
 import { getOrCreateTemporaryPreviewAccount } from "./temporary";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
-import type { AuthConfigStorage } from "./config-file/auth";
+import type { AuthConfigStorage, UserAuthConfig } from "./config-file/auth";
 import type { TemporaryPreviewAccount } from "./config-file/temporary";
 import type { OAuthFlowContext } from "./context";
 import type {
@@ -221,8 +222,12 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 	let activeProfile = "default";
 
+	// workers-auth owns the on-disk I/O: build the file storage from the
+	// location the consumer maps the (active) profile to.
 	function getStorage(profile?: string): AuthConfigStorage {
-		return ctx.storageFactory(profile ?? activeProfile);
+		return createFileStorage<UserAuthConfig>(
+			ctx.storageFactory(profile ?? activeProfile)
+		);
 	}
 
 	const getClientId = () =>
@@ -302,7 +307,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		if (ctx.hasEnvCredentials()) {
 			return false;
 		}
-		const { accessToken } = readStoredAuthState({
+		const { accessToken } = readStoredAuthStateFromStorage({
 			warningLogger: ctx.logger,
 			storage: getStorage(profile),
 		});
@@ -356,7 +361,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			return { loggedIn: true };
 		}
 		// TODO: ask permission before opening browser
-		const stored = readStoredAuthState({
+		const stored = readStoredAuthStateFromStorage({
 			warningLogger: ctx.logger,
 			storage: getStorage(props.profile),
 		});
@@ -410,7 +415,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			return;
 		}
 
-		const storedRefreshToken = readStoredAuthState({
+		const storedRefreshToken = readStoredAuthStateFromStorage({
 			warningLogger: ctx.logger,
 			storage: getStorage(profile),
 		}).refreshToken;
@@ -443,7 +448,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 	async function getOAuthTokenFromLocalState(): Promise<string | undefined> {
 		// Check if we have an OAuth token
-		let stored = readStoredAuthState({
+		let stored = readStoredAuthStateFromStorage({
 			warningLogger: ctx.logger,
 			storage: getStorage(),
 		});
@@ -464,7 +469,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				return undefined;
 			}
 			// Re-read after the refresh has persisted the new token to disk.
-			stored = readStoredAuthState({
+			stored = readStoredAuthStateFromStorage({
 				warningLogger: ctx.logger,
 				storage: getStorage(),
 			});
@@ -522,7 +527,10 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 
 		const result = await getOrCreateTemporaryPreviewAccount({
-			...ctx.temporary,
+			prompt: ctx.temporary.prompt,
+			storage: createFileStorage<TemporaryPreviewAccount>(
+				ctx.temporary.storage
+			),
 			logger: ctx.logger,
 		});
 		activeTemporaryAccount = result.account;
@@ -531,7 +539,11 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 	function clearTemporaryAccount(): boolean {
 		activeTemporaryAccount = undefined;
-		return ctx.temporary?.storage.clear() ?? false;
+		return ctx.temporary
+			? createFileStorage<TemporaryPreviewAccount>(
+					ctx.temporary.storage
+				).clear()
+			: false;
 	}
 
 	function setProfile(profile: string): void {
@@ -543,7 +555,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	}
 
 	function getScopes(): string[] | undefined {
-		return readStoredAuthState({
+		return readStoredAuthStateFromStorage({
 			warningLogger: ctx.logger,
 			storage: getStorage(),
 		}).scopes;

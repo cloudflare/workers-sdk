@@ -26,7 +26,7 @@ import {
 	toErrorClass,
 } from "./errors";
 import { generatePKCECodes, RECOMMENDED_STATE_LENGTH } from "./pkce";
-import { readStoredAuthState, type OAuthFlowState } from "./state";
+import { readStoredAuthStateFromStorage, type OAuthFlowState } from "./state";
 import type { AuthConfigStorage } from "./config-file/auth";
 import type { OAuthFlowContext } from "./context";
 import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
@@ -139,7 +139,7 @@ export async function exchangeRefreshTokenForAccessToken(
 ): Promise<AccessContext> {
 	// Read the refresh token fresh from disk on every call so we always pick up
 	// the latest rotation written by a sibling Wrangler process.
-	const storedRefreshToken = readStoredAuthState({
+	const storedRefreshToken = readStoredAuthStateFromStorage({
 		warningLogger: logger,
 		storage,
 	}).refreshToken;

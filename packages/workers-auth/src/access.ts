@@ -175,10 +175,9 @@ export async function getAccessHeaders(
 
 /**
  * Get headers needed to authenticate with the Cloudflare OAuth auth domain
- * (the OAuth `WRANGLER_AUTH_DOMAIN`, which is `dash.cloudflare.com` by default
- * and `dash.staging.cloudflare.com` in staging).
+ * (`dash.cloudflare.com` by default, `dash.staging.cloudflare.com` in staging).
  *
- * Checks `WRANGLER_CF_AUTHORIZATION_TOKEN` first, then falls back to
+ * Checks `CLOUDFLARE_CF_AUTHORIZATION_TOKEN` first, then falls back to
  * {@link getAccessHeaders} against the configured auth domain.
  */
 export async function getCloudflareAccessHeaders(options: {
@@ -192,7 +191,7 @@ export async function getCloudflareAccessHeaders(options: {
 		// Don't include the token value in the log — if debug logging is enabled
 		// and logs are persisted, the raw token would leak as a credential.
 		options.logger.debug(
-			"Using WRANGLER_CF_AUTHORIZATION_TOKEN from environment"
+			"Using CLOUDFLARE_CF_AUTHORIZATION_TOKEN from environment"
 		);
 		return { Cookie: `CF_Authorization=${cfAuthToken}` };
 	}
