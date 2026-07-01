@@ -163,7 +163,7 @@ describe("pages deploy", () => {
 
 			If you are targeting an existing Pages project, verify that the project name is correct and that it exists in your account (the account in use has id some-account-id).
 
-			Otherwise, if you are trying to create a new Pages project, start by running: \`wrangler pages project create non-existent-project --production-branch <branch>\` (though we strongly recommend using Workers instead).]
+			Otherwise, if you are trying to create a new Pages project, start by running: \`wrangler pages project create\` (though we strongly recommend using Workers instead).]
 		`
 		);
 	});
@@ -211,7 +211,7 @@ describe("pages deploy", () => {
 
 			If you are targeting an existing Pages project, verify that the project name is correct and that it exists in your account (the account in use is "My Test Account" with id some-account-id).
 
-			Otherwise, if you are trying to create a new Pages project, start by running: \`wrangler pages project create non-existent-project --production-branch <branch>\` (though we strongly recommend using Workers instead).]
+			Otherwise, if you are trying to create a new Pages project, start by running: \`wrangler pages project create\` (though we strongly recommend using Workers instead).]
 		`
 		);
 	});

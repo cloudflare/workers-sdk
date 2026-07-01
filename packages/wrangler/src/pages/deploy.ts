@@ -363,7 +363,7 @@ export const pagesDeployCommand = createCommand({
 				? `the account in use is "${accountName}" with id ${accountId}`
 				: `the account in use has id ${accountId}`;
 			message += `\n\nIf you are targeting an existing Pages project, verify that the project name is correct and that it exists in your account (${accountDescription}).`;
-			message += `\n\nOtherwise, if you are trying to create a new Pages project, start by running: \`wrangler pages project create ${projectName} --production-branch <branch>\``;
+			message += `\n\nOtherwise, if you are trying to create a new Pages project, start by running: \`wrangler pages project create\``;
 			message += ` (though we strongly recommend using Workers instead).`;
 
 			throw new UserError(message, {
