@@ -131,7 +131,7 @@ function resolveActiveCredentialStore(
 		return new FileCredentialStore(profile);
 	}
 
-	const forced = envOverride === true;
+	const forcedByEnvVar = envOverride === true;
 	const wantsKeyring = envOverride ?? config.isKeyringEnabled() ?? false;
 
 	if (!wantsKeyring) {
@@ -149,10 +149,10 @@ function resolveActiveCredentialStore(
 			);
 
 		case "needs-install":
-			return handleNeedsInstall(resolution, forced, config, profile);
+			return handleNeedsInstall(resolution, forcedByEnvVar, config, profile);
 
 		case "unsupported":
-			return handleUnsupported(forced, config, profile);
+			return handleUnsupported(forcedByEnvVar, config, profile);
 	}
 }
 
@@ -179,14 +179,14 @@ function handleNeedsInstall(
 		ReturnType<typeof resolveKeyProvider>,
 		{ kind: "needs-install" }
 	>,
-	forced: boolean,
+	forcedByEnvVar: boolean,
 	config: ResolvedConfig,
 	profile?: string
 ): CredentialStore {
 	const flags = getResolverSessionFlags();
 
 	if (flags.installFailedThisSession) {
-		if (forced) {
+		if (forcedByEnvVar) {
 			throw new UserError(
 				`CLOUDFLARE_AUTH_USE_KEYRING is set but the keyring backend could not be installed earlier this session.`,
 				{ telemetryMessage: "workers-auth keyring install previously failed" }
@@ -210,7 +210,7 @@ function handleNeedsInstall(
 		resolution.install();
 	} catch (e) {
 		flags.installFailedThisSession = true;
-		if (forced) {
+		if (forcedByEnvVar) {
 			throw e instanceof UserError
 				? e
 				: new UserError(
@@ -233,7 +233,7 @@ function handleNeedsInstall(
 }
 
 function handleUnsupported(
-	forced: boolean,
+	forcedByEnvVar: boolean,
 	config: ResolvedConfig,
 	profile?: string
 ): CredentialStore {
@@ -247,7 +247,7 @@ function handleUnsupported(
 		? secretToolMissingMessage(config.cliName)
 		: `OS keyring storage is not supported on \`${platform}\`; falling back to the plaintext credentials file.`;
 
-	if (forced) {
+	if (forcedByEnvVar) {
 		throw new UserError(
 			linuxMissingTool
 				? `CLOUDFLARE_AUTH_USE_KEYRING is set but ${message}`
