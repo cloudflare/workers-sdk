@@ -95,7 +95,6 @@ export interface ConfigBundle {
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	outboundService: ServiceFetch | undefined;
-	unsafeCapnwebRpcProxy: boolean | undefined;
 	tails: Config["tail_consumers"] | undefined;
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
@@ -1145,7 +1144,6 @@ export async function buildMiniflareOptions(
 		unsafeDevRegistryPath: config.devRegistry,
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
-		unsafeCapnwebRpcProxy: config.unsafeCapnwebRpcProxy,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),

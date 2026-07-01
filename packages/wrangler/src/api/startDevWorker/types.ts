@@ -36,8 +36,6 @@ export type WranglerStartDevWorkerInput = Omit<StartDevWorkerInput, "dev"> & {
 		structuredLogsHandler?: (log: WorkerdStructuredLog) => void;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
 		mockFetch?: undici.MockAgent;
-		/** Disables Miniflare's capnweb-backed RPC proxy when outbound requests are intentionally routed through global fetch. */
-		unsafeCapnwebRpcProxy?: boolean;
 	};
 };
 
@@ -84,8 +82,6 @@ export type StartDevWorkerOptions = Omit<
 		structuredLogsHandler?: (log: WorkerdStructuredLog) => void;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
 		mockFetch?: undici.MockAgent;
-		/** Disables Miniflare's capnweb-backed RPC proxy when outbound requests are intentionally routed through global fetch. */
-		unsafeCapnwebRpcProxy?: boolean;
 	};
 	entrypoint: string;
 	assets?: AssetsOptions;

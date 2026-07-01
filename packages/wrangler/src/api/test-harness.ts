@@ -447,7 +447,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						 */
 						return globalThis.fetch(request.url, request);
 					},
-					unsafeCapnwebRpcProxy: false,
 					multiworkerPrimary: isMultiworker ? isPrimaryWorker : undefined,
 					inferOriginFromRoutes: false,
 					routeRequestsByRoutes: true,
