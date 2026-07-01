@@ -2343,23 +2343,28 @@ describe("versions upload", () => {
 			mockGetScript();
 			const requests = mockUploadVersion(false, 0);
 
-			writeWranglerConfig({
-				name: "test-name",
-				main: "./index.js",
-				durable_objects: {
-					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					durable_objects: {
+						bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+					},
+					exports: {
+						MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
 				},
-				exports: {
-					MyDurableObject: { type: "durable-object", storage: "sqlite" },
-				},
-			});
+				"./wrangler.json"
+			);
 			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
 
-			await runWrangler("versions upload");
+			await runWrangler("versions upload --config ./wrangler.json");
 
 			const metadata = await getMetadata(requests[requests.length - 1]);
 			expect(metadata.exports).toEqual({
 				MyDurableObject: { type: "durable-object", storage: "sqlite" },
+				Admin: { type: "worker", cache: { enabled: true } },
 			});
 			expect(metadata.migrations).toBeUndefined();
 		});

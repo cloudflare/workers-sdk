@@ -397,14 +397,12 @@ export type DurableObjectExport =
 			transfer_from: string;
 	  };
 
-export interface WorkerEntrypointCacheOptions {
-	/** Whether cache is enabled for this entrypoint. */
-	enabled: boolean;
-}
-
 export interface WorkerEntrypointExport {
 	type: "worker";
-	cache?: WorkerEntrypointCacheOptions;
+	cache?: {
+		/** Whether cache is enabled for this entrypoint. */
+		enabled: boolean;
+	};
 }
 
 export type ConfiguredExport = DurableObjectExport | WorkerEntrypointExport;

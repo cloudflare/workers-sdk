@@ -1,5 +1,6 @@
 import { getDoExportsEnabledFromEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { partitionExports } from "./exports";
 import type { Config } from "./config";
 import type { DurableObjectExport } from "./environment";
 
@@ -69,15 +70,7 @@ export function assertDoExportsEnabledIfConfigured(
 export function getDurableObjectExports(
 	exports: Config["exports"] | undefined
 ): Record<string, DurableObjectExport> {
-	if (exports === undefined) {
-		return {};
-	}
-
-	return Object.fromEntries(
-		Object.entries(exports).filter(
-			([, entry]) => entry.type === "durable-object"
-		)
-	) as Record<string, DurableObjectExport>;
+	return partitionExports(exports)["durable-object"];
 }
 
 export function hasDurableObjectExports(

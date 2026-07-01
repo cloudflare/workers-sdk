@@ -2,8 +2,8 @@ import assert from "node:assert";
 import {
 	assertDoExportsEnabledIfConfigured,
 	configFileName,
-	getDoExportsEnabledFromEnv,
 	getDurableObjectExports,
+	getDoExportsEnabledFromEnv,
 } from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
@@ -144,7 +144,7 @@ export async function resolveDoLifecyclePayload(props: {
 	if (getDoExportsEnabledFromEnv() && hasDurableObjectExports) {
 		return {
 			migrations: undefined,
-			exports: props.config.exports,
+			exports: durableObjectExports,
 		};
 	}
 
@@ -157,16 +157,9 @@ export async function resolveDoLifecyclePayload(props: {
 				dispatchNamespace: props.dispatchNamespace,
 			})
 		: undefined;
-	// Worker exports are version metadata. They can upload alongside legacy
-	// Durable Object migrations, unlike Durable Object exports.
-	const exports = props.config.exports;
-	let exportsToUpload: Config["exports"] | undefined;
-	if (exports !== undefined && Object.keys(exports).length > 0) {
-		exportsToUpload = exports;
-	}
 
 	return {
 		migrations,
-		exports: exportsToUpload,
+		exports: undefined,
 	};
 }

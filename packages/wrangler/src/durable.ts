@@ -1,6 +1,6 @@
 import {
 	getMigrationsToUpload as getMigrationsToUploadBase,
-	resolveDoLifecyclePayload as resolveDoLifecyclePayloadBase,
+	resolveExportsUploadPayload as resolveExportsUploadPayloadBase,
 } from "@cloudflare/deploy-helpers";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 
@@ -17,7 +17,7 @@ export async function getMigrationsToUpload(
 	return getMigrationsToUploadBase(scriptName, props);
 }
 
-export async function resolveDoLifecyclePayload(props: {
+export async function resolveExportsUploadPayload(props: {
 	scriptName: string;
 	isDryRun: boolean | undefined;
 	accountId: string | undefined;
@@ -29,5 +29,5 @@ export async function resolveDoLifecyclePayload(props: {
 	migrations: CfWorkerInit["migrations"];
 	exports: CfWorkerInit["exports"];
 }> {
-	return resolveDoLifecyclePayloadBase(props);
+	return resolveExportsUploadPayloadBase(props);
 }

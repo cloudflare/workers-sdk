@@ -17,13 +17,13 @@ import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
-import { resolveDoLifecyclePayload } from "./helpers/durable";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
 import { ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE } from "./helpers/error-codes";
+import { resolveExportsUploadPayload } from "./helpers/exports";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -109,12 +109,12 @@ export default async function versionsUpload(
 	// Resolve which Durable Object lifecycle payload to forward — either
 	// the legacy `migrations` steps or the declarative `exports` map.
 	// `exports` is gated behind `X_DO_EXPORTS` (the gate-off error is
-	// raised inside `resolveDoLifecyclePayload`). The server's versions
+	// raised inside `resolveExportsUploadPayload`). The server's versions
 	// POST controller persists `exports` on the new script_version row
 	// with `SkipDeploy:true`, so reconciliation is deferred to the
 	// subsequent deploy (either `wrangler deploy` or
 	// `wrangler versions deploy <id>`).
-	const { migrations, exports } = await resolveDoLifecyclePayload({
+	const { migrations, exports } = await resolveExportsUploadPayload({
 		scriptName,
 		isDryRun: props.dryRun,
 		accountId,

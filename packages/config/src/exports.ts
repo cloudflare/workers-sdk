@@ -114,14 +114,15 @@ type DurableObjectExports =
 	| DurableObjectTransferredExport
 	| DurableObjectExpectingTransferExport;
 
-export interface WorkerEntrypointCacheOptions {
-	/** Whether cache is enabled for this entrypoint. */
-	enabled: boolean;
+export interface WorkerEntrypointExportOptions {
+	cache?: {
+		/** Whether cache is enabled for this entrypoint. */
+		enabled: boolean;
+	};
 }
 
-export interface WorkerEntrypointExport {
+export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
 	type: "worker";
-	cache?: WorkerEntrypointCacheOptions;
 }
 
 /**
@@ -167,9 +168,7 @@ export interface Exports {
 	): DurableObjectExpectingTransferExport;
 
 	/** Declares a WorkerEntrypoint export defined by this Worker. */
-	worker(
-		options?: Omit<WorkerEntrypointExport, "type">
-	): WorkerEntrypointExport;
+	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
 }
 
 function durableObject(
@@ -194,7 +193,7 @@ function durableObject(
 }
 
 function worker(
-	options: Omit<WorkerEntrypointExport, "type"> = {}
+	options: WorkerEntrypointExportOptions = {}
 ): WorkerEntrypointExport {
 	return { type: "worker", ...options };
 }
