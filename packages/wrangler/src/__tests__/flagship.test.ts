@@ -1436,6 +1436,34 @@ describe("flagship", () => {
 			});
 		});
 
+		it("renumbers rules after deleting a middle priority", async ({
+			expect,
+		}) => {
+			mockGet("apps/app-1/flags/new-ui", {
+				key: "new-ui",
+				enabled: true,
+				default_variation: "off",
+				variations: { on: true, off: false, beta: true },
+				rules: [
+					{ priority: 1, serve_variation: "on", conditions: [] },
+					{ priority: 2, serve_variation: "off", conditions: [] },
+					{ priority: 3, serve_variation: "beta", conditions: [] },
+				],
+			});
+			const body = captureBody("put", "apps/app-1/flags/new-ui", {
+				key: "new-ui",
+			});
+			await runWrangler(
+				"flagship flags rules delete app-1 new-ui --priority 2"
+			);
+			await expect(body).resolves.toMatchObject({
+				rules: [
+					{ priority: 1, serve_variation: "on" },
+					{ priority: 2, serve_variation: "beta" },
+				],
+			});
+		});
+
 		it("reorders rules by existing priority", async ({ expect }) => {
 			mockGet("apps/app-1/flags/new-ui", {
 				key: "new-ui",

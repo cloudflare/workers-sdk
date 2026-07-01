@@ -15,7 +15,9 @@ export function findRule(rules: Rule[], priority: number): Rule {
 
 export function withoutRule(rules: Rule[], priority: number): Rule[] {
 	findRule(rules, priority);
-	return rules.filter((rule) => rule.priority !== priority);
+	return sortedRules(rules)
+		.filter((rule) => rule.priority !== priority)
+		.map((rule, index) => ({ ...rule, priority: index + 1 }));
 }
 
 export function sortedRules(rules: Rule[]): Rule[] {
