@@ -573,6 +573,7 @@ describe("deploy", () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "space [file].txt", content: "Content of file-2" },
+				{ filePath: "broken%zz.txt", content: "Content of file-3" },
 			];
 			writeAssets(assets);
 			writeWranglerConfig({
@@ -601,10 +602,11 @@ describe("deploy", () => {
 				code: 10304,
 			});
 			expect(std.warn).toContain(
-				"The following asset paths contain URI-sensitive characters"
+				"The following asset paths fail URI decoding"
 			);
-			expect(std.warn).toContain("  - /space [file].txt");
+			expect(std.warn).toContain("  - /broken%zz.txt");
 			expect(std.warn).not.toContain("  - /file-1.txt");
+			expect(std.warn).not.toContain("  - /space [file].txt");
 		});
 
 		it("should resolve assets directory relative to wrangler.toml if using config", async ({

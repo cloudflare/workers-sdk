@@ -348,14 +348,10 @@ function logPotentialUriEncodingPaths(e: unknown, manifest: AssetManifest) {
 		return;
 	}
 
-	const candidatePaths = Object.keys(manifest).filter((assetPath) =>
-		assetPath
-			.split("/")
-			.some((segment) => encodeURIComponent(segment) !== segment)
-	);
+	const candidatePaths = Object.keys(manifest).filter(isUriEncodingErrorCandidate);
 	if (candidatePaths.length === 0) {
 		logger.warn(
-			"The Assets API rejected the upload manifest because one or more paths must be URI encoded, but Wrangler could not identify any asset paths with URI-sensitive characters."
+			"The Assets API rejected the upload manifest because one or more paths must be URI encoded, but Wrangler could not identify any asset paths that fail URI decoding."
 		);
 		return;
 	}
@@ -365,9 +361,18 @@ function logPotentialUriEncodingPaths(e: unknown, manifest: AssetManifest) {
 		.join("\n");
 	logger.warn(
 		"The Assets API rejected the upload manifest because one or more paths must be URI encoded. " +
-			"The following asset paths contain URI-sensitive characters and may help identify the file that triggered the API error:\n" +
+			"The following asset paths fail URI decoding and may help identify the file that triggered the API error:\n" +
 			displayedPaths
 	);
+}
+
+function isUriEncodingErrorCandidate(assetPath: string) {
+	try {
+		decodeURIComponent(assetPath);
+		return false;
+	} catch {
+		return true;
+	}
 }
 
 function logAssetUpload(line: string, diffCount: number) {
