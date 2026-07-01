@@ -92,24 +92,32 @@ class Ratelimit {
 	}
 }
 
-// Module-level set tracking all live instances.
-//
-// Internal extension modules (internal: true) run inside the *calling*
-// worker's V8 isolate, so this module and reset.ts share the same globalThis.
-// We use a well-known Symbol — collision-safe by construction — to expose a
-// reset hook so reset() can clear bucket state without importing this module
-// directly (which is forbidden by the internal: true flag).
-const RATELIMIT_RESET_SYMBOL = Symbol.for("cloudflare:miniflare:ratelimit:reset");
+// Module-level set tracking all live instances, so a dedicated "control"
+// wrapped binding (see plugins/ratelimit/index.ts) can reset all of them.
 const instances = new Set<Ratelimit>();
-(globalThis as Record<symbol, (() => void) | undefined>)[RATELIMIT_RESET_SYMBOL] =
-	() => {
-		for (const instance of instances) {
-			instance.reset();
-		}
-	};
 
-// create a new Ratelimit
-export default function (env: RatelimitConfig) {
+interface RatelimitControlConfig {
+	control: true;
+}
+
+function isControlConfig(
+	config: RatelimitConfig | RatelimitControlConfig
+): config is RatelimitControlConfig {
+	return "control" in config;
+}
+
+// create a new Ratelimit, or the control binding used internally to reset all
+// live instances (see vitest-pool-workers' reset())
+export default function (env: RatelimitConfig | RatelimitControlConfig) {
+	if (isControlConfig(env)) {
+		return {
+			resetAll(): void {
+				for (const instance of instances) {
+					instance.reset();
+				}
+			},
+		};
+	}
 	const instance = new Ratelimit(env);
 	instances.add(instance);
 	return instance;
