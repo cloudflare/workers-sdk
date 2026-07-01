@@ -8,8 +8,7 @@ import {
 	retryOnAPIFailure,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import { confirm, fetchResult, logger } from "../shared/context";
-import { ensureQueuesExistByConfig } from "../triggers/queue-consumers";
+import { fetchResult, logger } from "../shared/context";
 import { getWorkersDevSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
@@ -35,9 +34,11 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
 import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
-import { validateWorkerProps } from "./helpers/validate-worker-props";
+import {
+	preUploadApiChecks,
+	validateWorkerProps,
+} from "./helpers/validate-worker-props";
 import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
-import { isWorkerNotFoundError } from "./helpers/worker-not-found-error";
 import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
@@ -57,76 +58,21 @@ export default async function versionsUpload(
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
 }> {
-	const {
-		entry,
-		name,
-		compatibilityDate,
-		compatibilityFlags,
-		keepVars,
-		accountId,
-	} = props;
+	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
+		props;
 
 	const assetsOptions = resolveAssetOptions(props, config);
 
-	// All new validation should go in validateWorkerProps()
-	await validateWorkerProps(props, config);
-	assert(name); // already validated inside validateWorkerProps, but TS can't see that
+	// Any validation that does not require API calls should go in validateWorkerProps()
+	const { name } = validateWorkerProps(props, config);
 
-	let versionId: string | null = null;
-	let workerTag: string | null = null;
-	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
-
-	if (accountId) {
-		try {
-			const {
-				default_environment: { script },
-			} = await fetchResult<{
-				default_environment: {
-					script: {
-						tag: string;
-						tags: string[] | null;
-						last_deployed_from: "dash" | "wrangler" | "api";
-					};
-				};
-			}>(
-				config,
-				`/accounts/${accountId}/workers/services/${name}` // TODO(consider): should this be a /versions endpoint?
-			);
-
-			workerTag = script.tag;
-			tags = script.tags ?? tags;
-
-			if (script.last_deployed_from === "dash") {
-				logger.warn(
-					`You are about to upload a Worker Version that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
-				);
-				if (!(await confirm("Would you like to continue?"))) {
-					return {
-						versionId,
-						workerTag,
-					};
-				}
-			} else if (
-				script.last_deployed_from === "api" &&
-				!props.skipLastDeployedFromApiCheck
-			) {
-				logger.warn(
-					`You are about to upload a Workers Version that was last updated via the API.\nEdits that have been made via the API will be overridden by your local code and config.`
-				);
-				if (!(await confirm("Would you like to continue?"))) {
-					return {
-						versionId,
-						workerTag,
-					};
-				}
-			}
-		} catch (e) {
-			if (!isWorkerNotFoundError(e)) {
-				throw e;
-			}
-		}
+	// any validation that DOES require API calls should go in preUploadApiChecks()
+	const { workerTag, tags, aborted } = await preUploadApiChecks(props, config);
+	if (aborted) {
+		return { versionId: null, workerTag };
 	}
 
+	let versionId: string | null = null;
 	const scriptName = name;
 
 	const start = Date.now();
@@ -274,7 +220,6 @@ export default async function versionsUpload(
 			unsafe: config.unsafe,
 		});
 
-		await ensureQueuesExistByConfig(config, accountId);
 		let bindingsPrinted = false;
 
 		// Upload the version.

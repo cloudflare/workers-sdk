@@ -82,6 +82,7 @@ export function readStoredAuthState(options: {
 		return {};
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- api_token is a deprecated property, but still needs to be supported for backwards compatibility so we need to handle appropriately here
 	const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
 		parsed;
 

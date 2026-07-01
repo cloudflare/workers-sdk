@@ -452,7 +452,7 @@ describe("deploy", () => {
 				},
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
-			await expect(runWrangler("deploy index.js")).rejects.toThrowError(
+			await expect(runWrangler("deploy index.js")).rejects.toThrow(
 				/Only "worker" consumers can be configured in your Wrangler configuration/
 			);
 		});

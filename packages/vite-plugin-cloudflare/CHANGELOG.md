@@ -1,5 +1,17 @@
 # @cloudflare/vite-plugin
 
+## 1.42.4
+
+### Patch Changes
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve D1 migration paths in generated Worker configs
+
+  When a Worker config with a D1 binding is built by the Vite plugin, the generated `wrangler.json` now points `migrations_dir` back to the source migration directory. This lets tools that read the generated config, such as `createTestHarness()`, find the same D1 migrations as the source Worker config.
+
+- Updated dependencies [[`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`f10d4ad`](https://github.com/cloudflare/workers-sdk/commit/f10d4ad99a3e67e04c16425fe25b6c61ec0c54db), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`d292046`](https://github.com/cloudflare/workers-sdk/commit/d2920467490d53eacde2a1e31013699bd212ee88), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`e0cc2cb`](https://github.com/cloudflare/workers-sdk/commit/e0cc2cb864da208fe6ce1ff98eda67c6dcfb9bf7), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a)]:
+  - wrangler@4.106.0
+  - miniflare@4.20260630.0
+
 ## 1.42.3
 
 ### Patch Changes

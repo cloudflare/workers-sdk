@@ -95,7 +95,8 @@ export async function deployContainers(
 				container,
 				versionId,
 				false, // dry runs will have already exited by this point
-				pathToDocker
+				pathToDocker,
+				false
 			);
 		} else {
 			imageRef = { newTag: container.image_uri };

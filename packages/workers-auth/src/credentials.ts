@@ -110,9 +110,11 @@ export function getAPIToken(
 		storage: options.storage,
 		warningLogger: options.warningLogger,
 	});
+	/* eslint-disable @typescript-eslint/no-deprecated -- deprecatedApiToken is a deprecated property, but still needs to be supported for backwards compatibility so we need to handle appropriately here */
 	if (stored.deprecatedApiToken) {
 		return { apiToken: stored.deprecatedApiToken };
 	}
+	/* eslint-enable @typescript-eslint/no-deprecated */
 	if (stored.accessToken?.value) {
 		return { apiToken: stored.accessToken.value };
 	}

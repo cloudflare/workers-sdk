@@ -5,12 +5,11 @@ import type { Config } from "@cloudflare/workers-utils";
 
 export async function fetchSecrets(
 	config: Config,
+	scriptName: string,
 	accountId: string,
 	environment: string | undefined
 ): Promise<{ name: string; type: string }[]> {
 	const isServiceEnv = environment && useServiceEnvironments(config);
-
-	const scriptName = config.name;
 
 	const url = isServiceEnv
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${environment}/secrets`
@@ -21,6 +20,7 @@ export async function fetchSecrets(
 
 export async function checkRemoteSecretsOverride(
 	config: Config,
+	scriptName: string,
 	accountId: string,
 	targetEnv: string | undefined
 ): Promise<
@@ -39,7 +39,12 @@ export async function checkRemoteSecretsOverride(
 		const secretNames = new Set<string>();
 
 		try {
-			const secrets = await fetchSecrets(config, accountId, targetEnv);
+			const secrets = await fetchSecrets(
+				config,
+				scriptName,
+				accountId,
+				targetEnv
+			);
 
 			for (const secret of secrets) {
 				secretNames.add(secret.name);

@@ -55,9 +55,12 @@ describe("[Asset Worker] loopback", () => {
 		const response = await SELF.fetch(request);
 
 		expect(response.status).toBe(200);
-		expect(outerExists).not.toBeCalled();
-		expect(innerExists).toBeCalledTimes(1);
-		expect(getAssetWithMetadataFromKV).toBeCalledTimes(1);
-		expect(getAssetWithMetadataFromKV).toBeCalledWith(undefined, "/file.bin");
+		expect(outerExists).not.toHaveBeenCalled();
+		expect(innerExists).toHaveBeenCalledTimes(1);
+		expect(getAssetWithMetadataFromKV).toHaveBeenCalledTimes(1);
+		expect(getAssetWithMetadataFromKV).toHaveBeenCalledWith(
+			undefined,
+			"/file.bin"
+		);
 	});
 });

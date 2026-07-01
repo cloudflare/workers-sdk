@@ -79,7 +79,9 @@ export default defineConfig((options) => [
 		entry: ["src/cli.ts"],
 		platform: "node",
 		format: "cjs",
-		dts: true,
+		dts: {
+			resolve: ["@cloudflare/workflows-shared/src/types"],
+		},
 		outDir: "wrangler-dist",
 		tsconfig: "tsconfig.json",
 		metafile: true,

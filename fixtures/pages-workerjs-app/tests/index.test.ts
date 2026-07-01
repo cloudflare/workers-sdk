@@ -15,7 +15,7 @@ describe("Pages _worker.js", () => {
 				cwd: path.resolve(__dirname, ".."),
 				stdio: "ignore",
 			})
-		).toThrowError();
+		).toThrow();
 	});
 
 	it("should throw an error when the _worker.js file imports something and --no-bundle is true", ({
@@ -26,7 +26,7 @@ describe("Pages _worker.js", () => {
 				cwd: path.resolve(__dirname, ".."),
 				stdio: "ignore",
 			})
-		).toThrowError();
+		).toThrow();
 	});
 
 	it("should not throw an error when the _worker.js file imports something if --no-bundle is false", async ({

@@ -101,7 +101,7 @@ export async function getEntry(
 		paths.relativePath,
 		config.build,
 		config.configPath,
-		command
+		{ wranglerCommand: command }
 	);
 
 	const projectRoot = paths.projectRoot ?? process.cwd();
