@@ -114,9 +114,6 @@ export type ConfigBindingFieldName =
 	| "vpc_services"
 	| "vpc_networks";
 
-/**
- * @deprecated new code should use getBindingTypeFriendlyName() instead
- */
 export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	data_blobs: "Data Blob",
 	durable_objects: "Durable Object",
@@ -4462,7 +4459,6 @@ const validateBindingsHaveUniqueNames = (
 ): boolean => {
 	let hasDuplicates = false;
 
-	// eslint-disable-next-line typescript-eslint/no-deprecated -- intentional use of friendlyBindingNames to iterate over the various binding types
 	const bindingNamesArray = Object.entries(friendlyBindingNames) as [
 		ConfigBindingFieldName,
 		string,

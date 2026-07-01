@@ -51,8 +51,14 @@ export {
 	isValidR2BucketName,
 	bucketFormatMessage,
 } from "./config/validation";
-// eslint-disable-next-line typescript-eslint/no-deprecated -- re-exporting deprecated symbol for backward compatibility
-export { friendlyBindingNames } from "./config/validation";
+
+import * as validation from "./config/validation";
+
+/**
+ * @deprecated new code should use getBindingTypeFriendlyName() instead
+ */
+export const friendlyBindingNames = validation.friendlyBindingNames;
+
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
