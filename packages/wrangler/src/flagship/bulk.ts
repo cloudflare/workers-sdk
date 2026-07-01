@@ -1,0 +1,44 @@
+import { UserError } from "@cloudflare/workers-utils";
+import { logger } from "../logger";
+
+export function splitAppIdAndKeys(targets: string[]): {
+	appId: string;
+	keys: string[];
+} {
+	if (targets.length < 2) {
+		throw new UserError("An app ID and at least one flag key are required.", {
+			telemetryMessage: "flagship flag key required",
+		});
+	}
+	return { appId: targets[0], keys: targets.slice(1) };
+}
+
+export async function runBulk<T>(
+	targets: string[],
+	action: (target: string) => Promise<T>,
+	output: { json: boolean; onSuccess: (value: T, target: string) => void }
+): Promise<void> {
+	const results: T[] = [];
+	const failures: string[] = [];
+	for (const target of targets) {
+		try {
+			const value = await action(target);
+			results.push(value);
+			if (!output.json) {
+				output.onSuccess(value, target);
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			failures.push(`  - ${target}: ${message}`);
+		}
+	}
+	if (output.json && results.length > 0) {
+		logger.json(targets.length === 1 ? results[0] : results);
+	}
+	if (failures.length > 0) {
+		throw new UserError(
+			`Failed to process ${failures.length} of the requested items:\n${failures.join("\n")}`,
+			{ telemetryMessage: "flagship bulk operation partial failure" }
+		);
+	}
+}
