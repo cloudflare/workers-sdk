@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { watch } from "chokidar";
-import { getGlobalWranglerConfigPath } from "./wrangler";
+import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 export type { WorkerDefinition, WorkerRegistry };
 import type { Log } from "./log";

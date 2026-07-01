@@ -3,6 +3,8 @@ import path from "node:path";
 import xdgAppPaths from "xdg-app-paths";
 import { isDirectory } from "./fs-helpers";
 
+const WRANGLER_APP_NAME = "wrangler";
+
 export interface GetGlobalConfigPathOptions {
 	/**
 	 * The application namespace. Defaults to `"wrangler"`.
@@ -55,4 +57,8 @@ export function getGlobalConfigPath({
  */
 export function getGlobalWranglerConfigPath() {
 	return getGlobalConfigPath();
+}
+
+export function getGlobalWranglerCachePath() {
+	return xdgAppPaths(`.${WRANGLER_APP_NAME}`).cache();
 }

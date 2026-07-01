@@ -14,7 +14,7 @@ import {
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
-import { getGlobalWranglerCachePath } from "../../shared/wrangler";
+import { getGlobalWranglerCachePath } from "@cloudflare/workers-utils";
 import {
 	getUserBindingServiceName,
 	ProxyNodeBinding,
