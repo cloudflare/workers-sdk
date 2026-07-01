@@ -534,7 +534,10 @@ describe("flagship", () => {
 			await expect(
 				runWrangler("flagship flags delete app-1 new-ui --json")
 			).rejects.toThrowError(/Pass --force/);
-			expect(std.out).toBe("");
+			expect(JSON.parse(std.out)).toEqual({
+				error:
+					"Pass --force to skip the confirmation prompt when using --json.",
+			});
 		});
 
 		it("continues deleting after a failure and reports it", async ({
@@ -565,6 +568,37 @@ describe("flagship", () => {
 			expect(deleted).toEqual(["alpha", "gamma"]);
 			expect(std.out).toContain("Deleted flag 'alpha'");
 			expect(std.out).toContain("Deleted flag 'gamma'");
+		});
+
+		it("reports bulk failures as JSON when using --json", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.delete(
+					"*/accounts/:accountId/flagship/apps/app-1/flags/:flagKey",
+					({ params }) => {
+						const key = String(params.flagKey);
+						if (key === "beta") {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 1000, message: "flag is locked" },
+								]),
+								{ status: 500 }
+							);
+						}
+						return HttpResponse.json(createFetchResult({ key }, true));
+					}
+				)
+			);
+			await expect(
+				runWrangler(
+					"flagship flags delete app-1 alpha beta gamma --force --json"
+				)
+			).rejects.toThrowError(/Failed to process 1 of the requested items/);
+			expect(JSON.parse(std.out)).toMatchObject({
+				results: [{ key: "alpha" }, { key: "gamma" }],
+				failures: [{ target: "beta" }],
+			});
 		});
 
 		it("shows the flag changelog", async ({ expect }) => {

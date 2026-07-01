@@ -1,4 +1,4 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import type { Condition, FlagType, Operator, Rule } from "./client";
 
 const OPERATORS: Operator[] = [
@@ -17,6 +17,15 @@ const OPERATORS: Operator[] = [
 
 function invalid(message: string, telemetryMessage: string): never {
 	throw new UserError(message, { telemetryMessage });
+}
+
+export function jsonFriendlyError(
+	message: string,
+	telemetryMessage: string
+): JsonFriendlyFatalError {
+	return new JsonFriendlyFatalError(JSON.stringify({ error: message }), {
+		telemetryMessage,
+	});
 }
 
 export function coerceVariationValue(raw: string, type?: FlagType): unknown {
@@ -339,7 +348,7 @@ export async function confirmRuleReplacement(
 		return true;
 	}
 	if (options.json && !options.force) {
-		invalid(
+		throw jsonFriendlyError(
 			`This flag has existing targeting rule(s) with conditions that will be replaced by this ${options.action}. Pass --force to confirm.`,
 			"flagship rule replacement requires force"
 		);

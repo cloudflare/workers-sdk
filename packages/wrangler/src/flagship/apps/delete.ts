@@ -1,8 +1,8 @@
-import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { runBulk } from "../bulk";
 import { deleteApp } from "../client";
+import { jsonFriendlyError } from "../shared";
 
 export const flagshipAppsDeleteCommand = createCommand({
 	metadata: {
@@ -35,9 +35,9 @@ export const flagshipAppsDeleteCommand = createCommand({
 	positionalArgs: ["app-id"],
 	async handler({ appId: appIds, force, json }, { config, confirm }) {
 		if (json && !force) {
-			throw new UserError(
+			throw jsonFriendlyError(
 				"Pass --force to skip the confirmation prompt when using --json.",
-				{ telemetryMessage: "flagship delete json requires force" }
+				"flagship delete json requires force"
 			);
 		}
 		if (!force) {
