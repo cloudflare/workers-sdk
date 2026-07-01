@@ -360,6 +360,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			warningLogger: ctx.logger,
 			storage: getStorage(props.profile),
 		});
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecatedApiToken is a deprecated property, but still needs to be supported for backwards compatibility so we need to handle appropriately here */
 		if (!stored.accessToken && !stored.deprecatedApiToken) {
 			// Not logged in.
 			// If we are not interactive, we cannot ask the user to login

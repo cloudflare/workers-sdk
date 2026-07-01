@@ -17,6 +17,7 @@ import {
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
 import type {
+	CloudflareWorkersModule,
 	D1Database,
 	DurableObjectNamespace,
 	KVNamespace,
@@ -728,6 +729,168 @@ describe("createTestHarness", () => {
 		await expect(primaryResponse.text()).resolves.toBe(
 			"primary:/from-auxiliary"
 		);
+	});
+
+	it("supports binding overrides for first-party bindings", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.app.jsonc": dedent`
+				{
+					"name": "app-worker",
+					"main": "src/app.ts",
+					"compatibility_date": "2026-05-20",
+					"ai": { "binding": "AI" }
+				}
+			`,
+			"src/app.ts": dedent`
+				export default {
+					async fetch(_request, env) {
+						return Response.json(await env.AI.run("@cf/test/model", {
+							prompt: "What should the test return?"
+						}));
+					}
+				};
+			`,
+			"src/mock-ai.ts": dedent`
+				import { WorkerEntrypoint } from "cloudflare:workers";
+
+				let calls = 0;
+				export default class MockAi extends WorkerEntrypoint {
+					run(model, options) {
+						calls += 1;
+						return {
+							model,
+							response: "mock-ai:" + calls,
+							prompt: options.prompt,
+						};
+					}
+				}
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [
+				{
+					configPath: "./wrangler.app.jsonc",
+					bindingOverrides: {
+						AI: "mock-ai",
+					},
+				},
+				{
+					config: {
+						name: "mock-ai",
+						main: "src/mock-ai.ts",
+						compatibility_date: "2026-05-20",
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const appResponse = await server.getWorker("app-worker").fetch("/");
+		await expect(appResponse.json()).resolves.toEqual({
+			model: "@cf/test/model",
+			prompt: "What should the test return?",
+			response: "mock-ai:1",
+		});
+
+		const secondAppResponse = await server.getWorker("app-worker").fetch("/");
+		await expect(secondAppResponse.json()).resolves.toEqual({
+			model: "@cf/test/model",
+			prompt: "What should the test return?",
+			response: "mock-ai:2",
+		});
+
+		await server.reset();
+
+		const resetAppResponse = await server.getWorker("app-worker").fetch("/");
+		await expect(resetAppResponse.json()).resolves.toEqual({
+			model: "@cf/test/model",
+			prompt: "What should the test return?",
+			response: "mock-ai:1",
+		});
+	});
+
+	it("returns the default worker export", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "rpc-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"src/index.ts": dedent`
+				import { WorkerEntrypoint } from "cloudflare:workers";
+
+				export default class RpcWorker extends WorkerEntrypoint {
+					getMessage(name) {
+						return "Hello " + name;
+					}
+				}
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		interface RpcWorker extends CloudflareWorkersModule.WorkerEntrypoint {
+			getMessage(name: string): string;
+		}
+		type RpcWorkerConstructor = new (
+			...args: ConstructorParameters<
+				typeof CloudflareWorkersModule.WorkerEntrypoint
+			>
+		) => RpcWorker;
+		type RpcWorkerModule = { default: RpcWorkerConstructor };
+		const rpcWorker = server.getWorker<unknown, RpcWorkerModule>("rpc-worker");
+		const rpcExport = await rpcWorker.getExport();
+
+		expect(await rpcExport.getMessage("World")).toBe("Hello World");
+	});
+
+	it("uses runtime errors for missing binding override targets", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "app-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"ai": { "binding": "AI" }
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(_request, env) {
+						return Response.json(await env.AI.run("@cf/test/model", {}));
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [
+				{
+					configPath: "./wrangler.jsonc",
+					bindingOverrides: { AI: "missing-ai" },
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await expect(server.listen()).rejects.toThrow("core:user:missing-ai");
 	});
 
 	it("routes fetches based on worker routes", async ({ expect }) => {
