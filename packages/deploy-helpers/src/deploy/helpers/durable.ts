@@ -2,8 +2,8 @@ import assert from "node:assert";
 import {
 	assertDoExportsEnabledIfConfigured,
 	configFileName,
-	getDurableObjectExports,
 	getDoExportsEnabledFromEnv,
+	getDurableObjectExports,
 } from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
