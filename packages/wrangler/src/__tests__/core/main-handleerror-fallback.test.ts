@@ -1,11 +1,4 @@
 import { afterEach, describe, it, vi } from "vitest";
-
-vi.mock("../../core/handle-errors", async (importOriginal) => {
-	const mod =
-		await importOriginal<typeof import("../../core/handle-errors")>();
-	return { ...mod, handleError: vi.fn() };
-});
-
 import * as handleErrorsModule from "../../core/handle-errors";
 import { main } from "../../index";
 
@@ -22,7 +15,7 @@ describe("main() handleError fallback", () => {
 			stderrWrites.push(String(chunk));
 			return true;
 		});
-		vi.mocked(handleErrorsModule.handleError).mockRejectedValue(
+		vi.spyOn(handleErrorsModule, "handleError").mockRejectedValue(
 			new Error("logger unavailable")
 		);
 
