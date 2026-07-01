@@ -43,7 +43,6 @@ export {
 	parseByteSize,
 } from "./parse";
 export {
-	friendlyBindingNames,
 	getBindingTypeFriendlyName,
 	isPagesConfig,
 	normalizeAndValidateConfig,
@@ -52,6 +51,14 @@ export {
 	isValidR2BucketName,
 	bucketFormatMessage,
 } from "./config/validation";
+
+import * as validation from "./config/validation";
+
+/**
+ * @deprecated new code should use getBindingTypeFriendlyName() instead
+ */
+export const friendlyBindingNames = validation.friendlyBindingNames;
+
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
@@ -88,10 +95,9 @@ export {
 
 export * from "./environment-variables/misc-variables";
 
-export {
-	getGlobalConfigPath,
-	getGlobalWranglerConfigPath,
-} from "./global-wrangler-config-path";
+export { getGlobalConfigPath } from "./global-wrangler-config-path";
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- re-exporting deprecated symbol for backward compatibility
+export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";
 
 export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
