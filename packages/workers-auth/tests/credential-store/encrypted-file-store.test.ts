@@ -214,17 +214,17 @@ describe("EncryptedFileCredentialStore", () => {
 		expect(getEncryptedAuthConfigFilePath()).toMatch(/staging\.enc$/);
 	});
 
-	describe("legacy migration", () => {
+	describe("plaintext migration", () => {
 		it("migrates plaintext TOML into the encrypted file on first read", ({
 			expect,
 		}) => {
-			const legacyPath = getAuthConfigFilePath();
-			mkdirSync(path.dirname(legacyPath), { recursive: true });
+			const plaintextPath = getAuthConfigFilePath();
+			mkdirSync(path.dirname(plaintextPath), { recursive: true });
 			writeFileSync(
-				legacyPath,
+				plaintextPath,
 				[
-					'oauth_token = "legacy-token"',
-					'refresh_token = "legacy-refresh"',
+					'oauth_token = "plaintext-token"',
+					'refresh_token = "plaintext-refresh"',
 					'expiration_time = "2099-01-01T00:00:00.000Z"',
 					'scopes = ["account:read"]',
 				].join("\n")
@@ -237,13 +237,13 @@ describe("EncryptedFileCredentialStore", () => {
 			});
 
 			expect(store.read()).toEqual({
-				oauth_token: "legacy-token",
-				refresh_token: "legacy-refresh",
+				oauth_token: "plaintext-token",
+				refresh_token: "plaintext-refresh",
 				expiration_time: "2099-01-01T00:00:00.000Z",
 				scopes: ["account:read"],
 			});
 
-			expect(existsSync(legacyPath)).toBe(false);
+			expect(existsSync(plaintextPath)).toBe(false);
 			expect(existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
 			expect(keyProvider.getKey()).toBeDefined();
 			expect(migrationCalled).toBe(true);
@@ -256,7 +256,7 @@ describe("EncryptedFileCredentialStore", () => {
 			const store = new EncryptedFileCredentialStore(keyProvider);
 			store.write({ oauth_token: "encrypted-already" });
 
-			// Now write a legacy file with different content; the read should
+			// Now write a plaintext file with different content; the read should
 			// prefer the encrypted file.
 			writeFileSync(getAuthConfigFilePath(), 'oauth_token = "stale-plaintext"');
 
@@ -264,42 +264,42 @@ describe("EncryptedFileCredentialStore", () => {
 		});
 
 		it("write scrubs any pre-existing plaintext TOML file", ({ expect }) => {
-			const legacyPath = getAuthConfigFilePath();
-			mkdirSync(path.dirname(legacyPath), { recursive: true });
-			writeFileSync(legacyPath, 'oauth_token = "stale"');
+			const plaintextPath = getAuthConfigFilePath();
+			mkdirSync(path.dirname(plaintextPath), { recursive: true });
+			writeFileSync(plaintextPath, 'oauth_token = "stale"');
 
 			new EncryptedFileCredentialStore(new InMemoryKeyProvider()).write(
 				SAMPLE_CONFIG
 			);
-			expect(existsSync(legacyPath)).toBe(false);
+			expect(existsSync(plaintextPath)).toBe(false);
 		});
 
-		it("read returns undefined when the legacy file is unparseable", ({
+		it("read returns undefined when the plaintext file is unparseable", ({
 			expect,
 		}) => {
-			const legacyPath = getAuthConfigFilePath();
-			mkdirSync(path.dirname(legacyPath), { recursive: true });
-			writeFileSync(legacyPath, "garbage = = =");
+			const plaintextPath = getAuthConfigFilePath();
+			mkdirSync(path.dirname(plaintextPath), { recursive: true });
+			writeFileSync(plaintextPath, "garbage = = =");
 			const store = new EncryptedFileCredentialStore(new InMemoryKeyProvider());
 			// Consistent with the other corruption-shaped paths on the
-			// encrypted store: an unparseable legacy file collapses to
+			// encrypted store: an unparseable plaintext file collapses to
 			// "no usable data" (the next login regenerates the key and
 			// re-encrypts cleanly). The unparseable file is left on
 			// disk so the user can inspect it — we don't silently
 			// delete data we couldn't read.
 			expect(store.read()).toBeUndefined();
-			expect(existsSync(legacyPath)).toBe(true);
+			expect(existsSync(plaintextPath)).toBe(true);
 		});
 
-		it("read throws when the legacy file raises a genuine filesystem error", ({
+		it("read throws when the plaintext file raises a genuine filesystem error", ({
 			expect,
 		}) => {
-			// A directory at the legacy path is present (so `read()`
+			// A directory at the plaintext path is present (so `read()`
 			// attempts a migration) but unreadable as a file, so
 			// `readFileSync` raises `EISDIR`. That genuine fs error must
 			// propagate rather than be swallowed as "not logged in".
-			const legacyPath = getAuthConfigFilePath();
-			mkdirSync(legacyPath, { recursive: true });
+			const plaintextPath = getAuthConfigFilePath();
+			mkdirSync(plaintextPath, { recursive: true });
 			const store = new EncryptedFileCredentialStore(new InMemoryKeyProvider());
 			expect(() => store.read()).toThrow();
 		});

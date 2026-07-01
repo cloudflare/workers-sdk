@@ -76,7 +76,7 @@ export function createTomlFileStorage<T extends object>(
 
 // `getAuthConfigFilePath` is owned by `@cloudflare/workers-auth` (it's the
 // authority for the plaintext-TOML store's path layout, which the encrypted-
-// file store also needs for legacy migration). It accepts an optional auth
+// file store also needs for plaintext migration). It accepts an optional auth
 // profile name and resolves to that profile's TOML file. Wrangler re-exports
 // it from `./user` for back-compat with the historical wrangler-side import
 // path.

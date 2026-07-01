@@ -49,7 +49,7 @@ function createWranglerProfileConfigOperations(): ProfileConfigOperations {
 
 			// Collect profile names from both plaintext (`.toml`) and
 			// keyring-encrypted (`.enc`) files, deduped — a profile can
-			// briefly have both during the legacy→encrypted migration.
+			// briefly have both during the plaintext→encrypted migration.
 			const names = new Set<string>();
 			for (const file of readdirSync(profilesDir)) {
 				if (file.endsWith(PROFILE_CONFIG_EXTENSION)) {
@@ -73,7 +73,7 @@ function createWranglerProfileConfigOperations(): ProfileConfigOperations {
 				});
 			// Also clear any plaintext TOML: covers non-keyring profiles and
 			// the case where the keyring backend was unreachable (so the scrub
-			// above couldn't remove a lingering legacy file).
+			// above couldn't remove a lingering plaintext file).
 			defaultAuthConfigStorage(profile).clear();
 			if (encryptedFileExisted && !backendAvailable) {
 				logger.warn(

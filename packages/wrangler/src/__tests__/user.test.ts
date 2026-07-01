@@ -538,7 +538,7 @@ describe("User", () => {
 
 			await runWrangler("login --use-keyring");
 
-			// Legacy plaintext TOML must not be created on a fresh
+			// Plaintext TOML must not be created on a fresh
 			// `--use-keyring` login.
 			expect(fs.existsSync(getAuthConfigFilePath())).toBe(false);
 			// Encrypted file should be present, and the keyring should hold

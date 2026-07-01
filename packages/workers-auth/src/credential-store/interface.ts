@@ -4,7 +4,7 @@ import type { AuthConfigStorage, UserAuthConfig } from "../config-file/auth";
  * Pluggable backend for the persisted OAuth credentials.
  *
  * Concrete implementations:
- * - {@link FileCredentialStore} — the historical plaintext TOML file at
+ * - {@link FileCredentialStore} — the plaintext TOML file at
  *   `<globalWranglerConfigPath>/config/<env>.toml`. Used by default and as
  *   a fallback when keyring storage is unavailable.
  * - {@link EncryptedFileCredentialStore} — an AES-256-GCM-encrypted file at

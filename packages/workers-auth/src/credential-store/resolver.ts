@@ -11,7 +11,7 @@ import { PINNED_KEYRING_VERSION } from "./key-providers/lazy-installer";
 import { getResolverSessionFlags } from "./state";
 import type { AuthConfigStorage } from "../config-file/auth";
 import type { OAuthFlowLogger } from "../context";
-import type { LegacyMigrationResult } from "./encrypted-file-store";
+import type { PlaintextMigrationResult } from "./encrypted-file-store";
 import type { CredentialStore } from "./interface";
 
 /**
@@ -157,19 +157,19 @@ function resolveActiveCredentialStore(
 }
 
 /**
- * Build the legacy-migration callback wired into a new
+ * Build the plaintext-migration callback wired into a new
  * {@link EncryptedFileCredentialStore}. Surfaces the plaintext→encrypted
  * migration at `warn` level (rather than `log`) because the migration
- * deletes the legacy plaintext credentials file on disk, which is a
+ * deletes the plaintext credentials file on disk, which is a
  * stateful change the user benefits from seeing distinctly in their
  * terminal output.
  */
 function buildMigrationLogger(
 	config: ResolvedConfig
-): (result: LegacyMigrationResult) => void {
+): (result: PlaintextMigrationResult) => void {
 	return (result) => {
 		config.logger.warn(
-			`Migrated credentials from ${result.legacyPath} into ${result.encryptedPath} (key in ${result.keyProviderDescription}). The plaintext file has been deleted.`
+			`Migrated credentials from ${result.plaintextPath} into ${result.encryptedPath} (key in ${result.keyProviderDescription}). The plaintext file has been deleted.`
 		);
 	};
 }
@@ -323,7 +323,7 @@ export interface ScrubEncryptedCredentialsResult {
 	/**
 	 * Whether the keyring backend was reachable. When `true`, the encrypted
 	 * store's `clear()` removed both the `.enc` file and the keyring key (and
-	 * any legacy plaintext `.toml`). When `false`, only the `.enc` file was
+	 * any plaintext `.toml`). When `false`, only the `.enc` file was
 	 * removed best-effort and a keyring entry (if one exists) was left behind.
 	 */
 	backendAvailable: boolean;
@@ -342,7 +342,7 @@ export interface ScrubEncryptedCredentialsResult {
  * storage is currently disabled).
  *
  * When the keyring backend is reachable, the encrypted store's `clear()`
- * removes the `.enc` file *and* the keyring key (and any legacy plaintext
+ * removes the `.enc` file *and* the keyring key (and any plaintext
  * `.toml`). When it isn't (Linux without `secret-tool`, Windows without the
  * binding, an unsupported platform), the `.enc` file is removed best-effort
  * and `backendAvailable` is `false` so the caller can warn that the keyring

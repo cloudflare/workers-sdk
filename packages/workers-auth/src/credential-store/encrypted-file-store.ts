@@ -29,7 +29,7 @@ import type { KeyProvider } from "./key-providers/interface";
  * Absolute path to the encrypted credentials file for the given auth profile
  * (defaulting to the active Cloudflare API environment's default profile).
  *
- * Sibling of the legacy plaintext `<profile>.toml` so the migration code can
+ * Sibling of the plaintext `<profile>.toml` so the migration code can
  * non-destructively read the old file before writing the new one.
  */
 export function getEncryptedAuthConfigFilePath(profile?: string): string {
@@ -41,25 +41,25 @@ export function getEncryptedAuthConfigFilePath(profile?: string): string {
 }
 
 /**
- * Result of a successful migration from a legacy plaintext TOML file
+ * Result of a successful migration from a plaintext TOML file
  * into an encrypted file backed by a `KeyProvider`. Surfaced so the
  * resolver can log a one-line summary when migration runs.
  */
-export interface LegacyMigrationResult {
-	legacyPath: string;
+export interface PlaintextMigrationResult {
+	plaintextPath: string;
 	encryptedPath: string;
 	keyProviderDescription: string;
 }
 
 /**
  * Optional callback invoked by {@link EncryptedFileCredentialStore.read}
- * when it transparently migrates a legacy plaintext TOML file into the
+ * when it transparently migrates a plaintext TOML file into the
  * encrypted file on first read.
  *
  * The resolver wires this to its logger; left undefined when the store
  * is constructed standalone (e.g. by tests).
  */
-export type OnLegacyMigration = (result: LegacyMigrationResult) => void;
+export type OnPlaintextMigration = (result: PlaintextMigrationResult) => void;
 
 /**
  * Credentials store backed by an AES-256-GCM-encrypted file on disk and a
@@ -85,7 +85,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 
 	constructor(
 		private readonly keyProvider: KeyProvider,
-		private readonly onLegacyMigration?: OnLegacyMigration,
+		private readonly onPlaintextMigration?: OnPlaintextMigration,
 		private readonly profile?: string
 	) {}
 
@@ -96,18 +96,18 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		// "ciphertext tampered/corrupted", and "decrypted plaintext is
 		// not valid TOML" into one consumer-visible state ("not logged
 		// in"). Genuine errors (filesystem permission failures, etc.)
-		// still propagate via `readEncryptedFile` / the legacy parser.
+		// still propagate via `readEncryptedFile` / the plaintext parser.
 		const encryptedPath = getEncryptedAuthConfigFilePath(this.profile);
 		if (existsSync(encryptedPath)) {
 			return this.readEncryptedFile(encryptedPath);
 		}
-		// No encrypted file yet — see if there's a legacy plaintext file we
+		// No encrypted file yet — see if there's a plaintext file we
 		// should migrate into the encrypted layout. This makes opt-in
 		// transparent: the next `read()` after the user runs
 		// `wrangler login --use-keyring` returns the migrated credentials.
-		const legacyPath = getAuthConfigFilePath(this.profile);
-		if (existsSync(legacyPath)) {
-			return this.migrateFromLegacy(legacyPath, encryptedPath);
+		const plaintextPath = getAuthConfigFilePath(this.profile);
+		if (existsSync(plaintextPath)) {
+			return this.migrateFromPlaintext(plaintextPath, encryptedPath);
 		}
 		return undefined;
 	}
@@ -123,28 +123,28 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			mode: 0o600,
 		});
 		chmodSync(encryptedPath, 0o600);
-		// Defensively scrub any legacy plaintext file once we've written
+		// Defensively scrub any plaintext file once we've written
 		// the encrypted version. Skipping this would leave plaintext
 		// credentials on disk indefinitely after the very first
 		// `--use-keyring` login.
-		const legacyPath = getAuthConfigFilePath(this.profile);
-		if (existsSync(legacyPath)) {
-			rmSync(legacyPath);
+		const plaintextPath = getAuthConfigFilePath(this.profile);
+		if (existsSync(plaintextPath)) {
+			rmSync(plaintextPath);
 		}
 	}
 
 	clear(): boolean {
 		const encryptedPath = getEncryptedAuthConfigFilePath(this.profile);
-		const legacyPath = getAuthConfigFilePath(this.profile);
+		const plaintextPath = getAuthConfigFilePath(this.profile);
 		let existed = false;
 		if (existsSync(encryptedPath)) {
 			rmSync(encryptedPath);
 			existed = true;
 		}
-		// Also scrub any legacy plaintext file, in case the user toggled
-		// backends in a previous session and the legacy file lingered.
-		if (existsSync(legacyPath)) {
-			rmSync(legacyPath);
+		// Also scrub any plaintext file, in case the user toggled
+		// backends in a previous session and the plaintext file lingered.
+		if (existsSync(plaintextPath)) {
+			rmSync(plaintextPath);
 			existed = true;
 		}
 		try {
@@ -173,7 +173,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		if (key === undefined) {
 			// File present but key missing — treat as "not logged in" so
 			// the next login regenerates the key and re-encrypts. Matches
-			// the historical "no file → not logged in" semantics.
+			// the plaintext store's "no file → not logged in" semantics.
 			return undefined;
 		}
 		// Read the file *outside* the try/catch so genuine filesystem
@@ -211,8 +211,8 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		}
 	}
 
-	private migrateFromLegacy(
-		legacyPath: string,
+	private migrateFromPlaintext(
+		plaintextPath: string,
 		encryptedPath: string
 	): UserAuthConfig | undefined {
 		// Read outside the try/catch so genuine filesystem errors
@@ -220,23 +220,23 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		// contract; `read()` already confirmed the file exists, so only
 		// real IO failures reach here. A successfully-read-but-corrupt
 		// TOML body still collapses to "not logged in" below.
-		const raw = readFileSync(legacyPath);
-		let legacy: UserAuthConfig;
+		const raw = readFileSync(plaintextPath);
+		let plaintext: UserAuthConfig;
 		try {
-			legacy = TOML.parse(raw) as unknown as UserAuthConfig;
+			plaintext = TOML.parse(raw) as unknown as UserAuthConfig;
 		} catch {
-			// Legacy file parsed unsuccessfully — bail out rather than
+			// Plaintext file parsed unsuccessfully — bail out rather than
 			// partially migrate. The caller treats this as "not logged
 			// in" and the user will need to re-login.
 			return undefined;
 		}
-		this.write(legacy);
-		this.onLegacyMigration?.({
-			legacyPath,
+		this.write(plaintext);
+		this.onPlaintextMigration?.({
+			plaintextPath,
 			encryptedPath,
 			keyProviderDescription: this.keyProvider.describe(),
 		});
-		return legacy;
+		return plaintext;
 	}
 
 	/**

@@ -31,7 +31,7 @@ const USER_AUTH_CONFIG_PATH = "config";
  * (`getKeyringAccountName`) so all three stay in lock-step for a given
  * profile.
  *
- * - The default profile (`undefined` or `"default"`) follows the legacy
+ * - The default profile (`undefined` or `"default"`) follows the
  *   environment-based layout: `default` in production, or the environment
  *   name (`staging`, etc.) otherwise, so production and staging credentials
  *   coexist.
@@ -69,7 +69,7 @@ export function getAuthConfigFilePath(profile?: string): string {
 }
 
 /**
- * The historical plaintext-TOML credentials store.
+ * The plaintext-TOML credentials store.
  *
  * Used as the default backend when the user hasn't opted into keyring
  * storage, and as the soft-fallback when keyring storage is requested

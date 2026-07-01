@@ -26,7 +26,7 @@ CLIs. Internal-only — published as `prerelease: true`.
 ### Credential storage (`src/credential-store/`)
 
 Pluggable credential persistence layer that consumers can wire into the
-OAuth flow via `ctx.storageFactory`. Default backend is the legacy plaintext
+OAuth flow via `ctx.storageFactory`. Default backend is the plaintext
 TOML file (`FileCredentialStore`); an opt-in `EncryptedFileCredentialStore`
 writes AES-256-GCM-encrypted credentials to a sibling `.enc` file using a
 key held in the OS keyring. Every store is profile-aware: the file path,
@@ -37,7 +37,7 @@ files and its own encryption key.
 
 - `interface.ts` — `CredentialStore` interface (extends `AuthConfigStorage` with `kind` and `describe()`)
 - `file-store.ts` — `FileCredentialStore` (plaintext TOML, default)
-- `encrypted-file-store.ts` — `EncryptedFileCredentialStore` + legacy-TOML migration
+- `encrypted-file-store.ts` — `EncryptedFileCredentialStore` + plaintext-TOML migration
 - `crypto.ts` — AES-256-GCM `encryptString` / `decryptString` helpers
 - `resolver.ts` — `createCredentialStorageContext({...})` factory; returns `{ storageFactory, getActiveStore }` (both take an optional `profile`) for the consumer to plug into `createOAuthFlow` (as `ctx.storageFactory`) and `whoami`-style reporting respectively
 - `state.ts` — module-level per-session resolver flags (one-time warnings, the Windows install-failed latch)

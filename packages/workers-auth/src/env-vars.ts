@@ -98,7 +98,7 @@ export const getCfAuthorizationTokenFromEnv = getEnvironmentVariableFactory({
  *             cannot be reached, the resolver throws rather than silently
  *             falling back, so security-sensitive callers know their
  *             explicit opt-in did not take effect.
- * - `false` — force-store credentials in the legacy plaintext TOML file,
+ * - `false` — force-store credentials in the plaintext TOML file,
  *             even if the consumer's persistent `keyring_enabled` preference
  *             is set.
  * - unset   — fall back to the consumer's persistent preference (e.g. the

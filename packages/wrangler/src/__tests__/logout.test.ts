@@ -238,7 +238,7 @@ describe("logout", () => {
 		expect(fs.existsSync(config)).toBeFalsy();
 	});
 
-	it("should clear the keyring entry, the encrypted file, and any legacy TOML when keyring storage is active", async ({
+	it("should clear the keyring entry, the encrypted file, and any plaintext TOML when keyring storage is active", async ({
 		expect,
 	}) => {
 		const { getEncryptedAuthConfigFilePath } =
@@ -265,16 +265,16 @@ describe("logout", () => {
 			refresh_token: "kr-refresh",
 		});
 
-		// And pre-populate the legacy plaintext file (as a previous wrangler
+		// And pre-populate the plaintext file (as a previous wrangler
 		// install would have). Write directly to disk so we can prove
 		// `logout()` removes it defensively.
-		const legacyPath = getAuthConfigFilePath();
-		fs.mkdirSync(path.dirname(legacyPath), { recursive: true });
-		fs.writeFileSync(legacyPath, 'oauth_token = "stale-leftover"');
+		const plaintextPath = getAuthConfigFilePath();
+		fs.mkdirSync(path.dirname(plaintextPath), { recursive: true });
+		fs.writeFileSync(plaintextPath, 'oauth_token = "stale-leftover"');
 
 		expect(keyringStore.size).toBe(1);
 		expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
-		expect(fs.existsSync(legacyPath)).toBe(true);
+		expect(fs.existsSync(plaintextPath)).toBe(true);
 
 		msw.use(
 			http.post(
@@ -294,6 +294,6 @@ describe("logout", () => {
 		`);
 		expect(keyringStore.size).toBe(0);
 		expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
-		expect(fs.existsSync(legacyPath)).toBe(false);
+		expect(fs.existsSync(plaintextPath)).toBe(false);
 	});
 });
