@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import fs from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, test } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -109,6 +110,14 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toContain("npx wrangler complete");
+				// Shells can only register completions against the first word
+				// actually typed ("npx"), not the full multi-word invocation.
+				expect(std.out).toContain(
+					"Register-ArgumentCompleter -CommandName 'npx'"
+				);
+				expect(std.out).not.toContain(
+					"Register-ArgumentCompleter -CommandName 'npx_wrangler'"
+				);
 			});
 
 			test("should embed the overridden executable name in bash script", async ({
@@ -167,23 +176,251 @@ describe("wrangler", () => {
 				}
 			);
 
-			test("should register bash completion for the overridden executable name", async ({
+			test("should register bash completion against the first word the user types", async ({
 				expect,
 			}) => {
 				await runWrangler(`complete bash --executable-name "npx wrangler"`);
 
-				// Completion must be registered for the command the user types,
-				// not the hardcoded "wrangler" identifier.
-				expect(std.out).toContain("complete -F __npx_wrangler_complete npx_wrangler");
+				// Shells can only register completions against the first word
+				// actually typed ("npx"), not the full multi-word invocation.
+				expect(std.out).toContain("complete -F __npx_wrangler_complete npx");
+				expect(std.out).not.toContain(
+					"complete -F __npx_wrangler_complete npx_wrangler"
+				);
 			});
 
-			test("should register zsh completion for the overridden executable name", async ({
+			test("should register zsh completion against the first word the user types", async ({
 				expect,
 			}) => {
 				await runWrangler(`complete zsh --executable-name "npx wrangler"`);
 
-				expect(std.out).toContain("#compdef npx_wrangler");
-				expect(std.out).toContain("compdef _npx_wrangler npx_wrangler");
+				expect(std.out).toContain("#compdef npx");
+				expect(std.out).toContain("compdef _npx_wrangler npx");
+				expect(std.out).not.toContain("#compdef npx_wrangler");
+				expect(std.out).not.toContain("compdef _npx_wrangler npx_wrangler");
+			});
+
+			// The tests above only check the generated script's *text*. The
+			// following actually exercise completion for `npx wrangler <TAB>`,
+			// which is the real-world workflow issue #13591 is about: they run
+			// the generated function/script in a real shell and assert on what
+			// command it dispatches to, so a regression that (for example)
+			// duplicates the "wrangler" word or never fires for "npx" would be
+			// caught here, not just a string-contains check.
+			//
+			// The completion scripts capture the fake "npx" invocation's stdout
+			// via `$(...)`/backticks internally (to parse completion results),
+			// so a side-channel file - not stdout - is used to observe what was
+			// actually invoked.
+			describe("actually completing `npx wrangler <TAB>`", () => {
+				const capturedArgsFile = "captured-args.txt";
+
+				function readCapturedArgs(): string[] | undefined {
+					if (!fs.existsSync(capturedArgsFile)) {
+						return undefined;
+					}
+					return fs
+						.readFileSync(capturedArgsFile, "utf8")
+						.split("\n")
+						.filter((line) => line.length > 0);
+				}
+
+				test.skipIf(!shellAvailable("bash"))(
+					"bash: dispatches to `wrangler complete -- <args>` without duplicating a word",
+					async ({ expect }) => {
+						await runWrangler(`complete bash --executable-name "npx wrangler"`);
+						const script = std.out;
+
+						const wrapper = `
+_get_comp_words_by_ref() {
+    shift 2
+    local name
+    for name in "$@"; do
+        case "$name" in
+            cur) cur="\${COMP_WORDS[COMP_CWORD]}" ;;
+            prev) prev="\${COMP_WORDS[COMP_CWORD-1]}" ;;
+            words) words=("\${COMP_WORDS[@]}") ;;
+            cword) cword=$COMP_CWORD ;;
+        esac
+    done
+}
+compopt() { :; }
+npx() { printf '%s\\n' "$@" > "${capturedArgsFile}"; }
+
+${script}
+
+COMP_WORDS=(npx wrangler dev --p)
+COMP_CWORD=3
+__npx_wrangler_complete || true
+`;
+						execSync("bash", { input: wrapper });
+
+						expect(readCapturedArgs()).toEqual([
+							"wrangler",
+							"complete",
+							"--",
+							"dev",
+							"--p",
+						]);
+					}
+				);
+
+				test.skipIf(!shellAvailable("bash"))(
+					"bash: does not dispatch when the second word doesn't match",
+					async ({ expect }) => {
+						await runWrangler(`complete bash --executable-name "npx wrangler"`);
+						const script = std.out;
+
+						const wrapper = `
+_get_comp_words_by_ref() {
+    shift 2
+    local name
+    for name in "$@"; do
+        case "$name" in
+            cur) cur="\${COMP_WORDS[COMP_CWORD]}" ;;
+            prev) prev="\${COMP_WORDS[COMP_CWORD-1]}" ;;
+            words) words=("\${COMP_WORDS[@]}") ;;
+            cword) cword=$COMP_CWORD ;;
+        esac
+    done
+}
+compopt() { :; }
+npx() { printf '%s\\n' "$@" > "${capturedArgsFile}"; }
+
+${script}
+
+COMP_WORDS=(npx someothertool dev --p)
+COMP_CWORD=3
+__npx_wrangler_complete || true
+`;
+						execSync("bash", { input: wrapper });
+
+						expect(readCapturedArgs()).toBeUndefined();
+					}
+				);
+
+				test.skipIf(!shellAvailable("zsh"))(
+					"zsh: dispatches to `wrangler complete -- <args>` without duplicating a word",
+					async ({ expect }) => {
+						await runWrangler(`complete zsh --executable-name "npx wrangler"`);
+						const script = std.out;
+
+						const wrapper = `
+npx() { printf '%s\\n' "$@" > "${capturedArgsFile}"; }
+
+${script}
+
+words=(npx wrangler dev --p)
+CURRENT=4
+_npx_wrangler || true
+`;
+						execSync("zsh", {
+							input: wrapper,
+							stdio: ["pipe", "pipe", "ignore"],
+						});
+
+						expect(readCapturedArgs()).toEqual([
+							"wrangler",
+							"complete",
+							"--",
+							"dev --p",
+						]);
+					}
+				);
+
+				test.skipIf(!shellAvailable("zsh"))(
+					"zsh: does not dispatch when the second word doesn't match",
+					async ({ expect }) => {
+						await runWrangler(`complete zsh --executable-name "npx wrangler"`);
+						const script = std.out;
+
+						const wrapper = `
+npx() { printf '%s\\n' "$@" > "${capturedArgsFile}"; }
+
+${script}
+
+words=(npx someothertool dev --p)
+CURRENT=4
+_npx_wrangler || true
+`;
+						execSync("zsh", {
+							input: wrapper,
+							stdio: ["pipe", "pipe", "ignore"],
+						});
+
+						expect(readCapturedArgs()).toBeUndefined();
+					}
+				);
+
+				test.skipIf(!shellAvailable("fish"))(
+					"fish: dispatches to `wrangler complete -- <args>` without duplicating a word",
+					async ({ expect }) => {
+						await runWrangler(`complete fish --executable-name "npx wrangler"`);
+						const script = std.out;
+
+						const wrapper = `
+function npx
+    printf '%s\\n' $argv > ${capturedArgsFile}
+end
+function commandline
+    if test "$argv[1]" = "-opc"
+        echo npx
+        echo wrangler
+        echo dev
+        echo --p
+    else if test "$argv[1]" = "-ct"
+        echo --p
+    end
+end
+
+${script}
+
+__npx_wrangler_perform_completion > /dev/null
+true
+`;
+						execSync("fish", { input: wrapper });
+
+						expect(readCapturedArgs()).toEqual([
+							"wrangler",
+							"complete",
+							"--",
+							"dev --p",
+							"--p",
+						]);
+					}
+				);
+
+				test.skipIf(!shellAvailable("fish"))(
+					"fish: does not dispatch when the second word doesn't match",
+					async ({ expect }) => {
+						await runWrangler(`complete fish --executable-name "npx wrangler"`);
+						const script = std.out;
+
+						const wrapper = `
+function npx
+    printf '%s\\n' $argv > ${capturedArgsFile}
+end
+function commandline
+    if test "$argv[1]" = "-opc"
+        echo npx
+        echo someothertool
+        echo dev
+        echo --p
+    else if test "$argv[1]" = "-ct"
+        echo --p
+    end
+end
+
+${script}
+
+__npx_wrangler_perform_completion > /dev/null
+true
+`;
+						execSync("fish", { input: wrapper });
+
+						expect(readCapturedArgs()).toBeUndefined();
+					}
+				);
 			});
 		});
 

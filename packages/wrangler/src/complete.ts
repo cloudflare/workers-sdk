@@ -105,6 +105,184 @@ function setupCompletions(): void {
 	addCommandsFromTree(registry);
 }
 
+/**
+ * `@bomb.sh/tab`'s `t.setup()` always writes the generated completion script
+ * via `console.log()`. Capture that output instead of letting it print
+ * directly, so it can be patched for the multi-word `--executable-name` case.
+ */
+function captureCompletionScript(
+	identifier: string,
+	invocation: string,
+	shell: string
+): string {
+	// eslint-disable-next-line no-console -- capturing @bomb.sh/tab's own console.log call, not logging
+	const originalLog = console.log;
+	const lines: string[] = [];
+	// eslint-disable-next-line no-console -- see above
+	console.log = (message?: unknown) => {
+		lines.push(String(message));
+	};
+	try {
+		t.setup(identifier, invocation, shell);
+	} finally {
+		// eslint-disable-next-line no-console -- see above
+		console.log = originalLog;
+	}
+	return lines.join("\n");
+}
+
+const UNSUPPORTED_SCRIPT_FORMAT_MESSAGE =
+	"Unable to generate a completion script for this --executable-name: the generated script did not have the expected format. This can happen if the @bomb.sh/tab dependency changed its generated script format.";
+
+function replaceExactlyOnce(
+	script: string,
+	needle: string,
+	replacement: string
+): string {
+	const occurrences = script.split(needle).length - 1;
+	if (occurrences !== 1) {
+		throw new CommandLineArgsError(UNSUPPORTED_SCRIPT_FORMAT_MESSAGE, {
+			telemetryMessage:
+				"cli completions multi-word executable name unsupported",
+		});
+	}
+	return script.replace(needle, replacement);
+}
+
+function replaceAllExpected(
+	script: string,
+	needle: string,
+	replacement: string,
+	expectedCount: number
+): string {
+	const occurrences = script.split(needle).length - 1;
+	if (occurrences !== expectedCount) {
+		throw new CommandLineArgsError(UNSUPPORTED_SCRIPT_FORMAT_MESSAGE, {
+			telemetryMessage:
+				"cli completions multi-word executable name unsupported",
+		});
+	}
+	return script.split(needle).join(replacement);
+}
+
+/**
+ * Shells can only ever register a completion handler against the first word
+ * a user types (`complete -F fn npx`, `compdef _fn npx`, etc.) - none of them
+ * support registering against a literal multi-word command like "npx wrangler".
+ *
+ * So when `--executable-name` is more than one word, this registers against
+ * the first word (e.g. "npx") and patches the generated script to bail out
+ * unless the following word(s) match the rest of the invocation (e.g.
+ * "wrangler"), stripping those matched word(s) out of the shell's captured
+ * word list before the rest of the (unmodified) generated logic runs - that
+ * logic always assumes exactly one leading word to skip.
+ *
+ * This also fixes registering against a mismatched, sanitized identifier for
+ * *single*-word executable names containing characters (e.g. "-") that get
+ * replaced when deriving internal function/variable names.
+ */
+function patchExecutableTarget(
+	script: string,
+	shell: string,
+	identifierName: string,
+	outerCommand: string,
+	remainingWords: string[]
+): string {
+	const remaining = remainingWords.join(" ");
+	const n = remainingWords.length;
+
+	switch (shell) {
+		case "bash": {
+			if (n > 0) {
+				const anchor = `_get_comp_words_by_ref -n "=:" cur prev words cword`;
+				script = replaceExactlyOnce(
+					script,
+					anchor,
+					`${anchor}\n\n    if [[ "\${COMP_WORDS[*]:1:${n}}" != "${remaining}" ]]; then\n        return\n    fi\n    words=("\${words[0]}" "\${words[@]:${n + 1}}")\n    cword=$((cword - ${n}))`
+				);
+			}
+			script = replaceExactlyOnce(
+				script,
+				`complete -F __${identifierName}_complete ${identifierName}`,
+				`complete -F __${identifierName}_complete ${outerCommand}`
+			);
+			break;
+		}
+		case "zsh": {
+			if (n > 0) {
+				const anchor = `words=( "\${=words[1,CURRENT]}" )`;
+				script = replaceExactlyOnce(
+					script,
+					anchor,
+					`${anchor}\n\n    if [[ "\${words[2,${n + 1}]}" != "${remaining}" ]]; then\n        return\n    fi\n    words=("\${words[1]}" "\${words[${n + 2},-1]}")\n    CURRENT=$((CURRENT - ${n}))`
+				);
+			}
+			script = replaceExactlyOnce(
+				script,
+				`#compdef ${identifierName}`,
+				`#compdef ${outerCommand}`
+			);
+			script = replaceExactlyOnce(
+				script,
+				`compdef _${identifierName} ${identifierName}`,
+				`compdef _${identifierName} ${outerCommand}`
+			);
+			break;
+		}
+		case "fish": {
+			if (n > 0) {
+				const anchor = `set -l args (commandline -opc)`;
+				const sliceEnd = n + 1;
+				script = replaceExactlyOnce(
+					script,
+					anchor,
+					`${anchor}\n\n    if test (string join ' ' -- $args[2..${sliceEnd}]) != "${remaining}"\n        return 1\n    end\n    set -e args[2..${sliceEnd}]`
+				);
+			}
+			script = replaceAllExpected(
+				script,
+				`complete -c ${identifierName}`,
+				`complete -c ${outerCommand}`,
+				3
+			);
+			script = replaceExactlyOnce(
+				script,
+				`complete -k -c ${identifierName}`,
+				`complete -k -c ${outerCommand}`
+			);
+			script = replaceExactlyOnce(
+				script,
+				`type -q "${identifierName}"`,
+				`type -q "${outerCommand}"`
+			);
+			script = replaceExactlyOnce(
+				script,
+				`complete --do-complete "${identifierName} "`,
+				`complete --do-complete "${outerCommand} "`
+			);
+			break;
+		}
+		case "powershell": {
+			if (n > 0) {
+				const anchor = `$Program, $Arguments = $Command.Split(" ", 2)`;
+				let guard = "";
+				for (const word of remainingWords) {
+					guard += `\n    if ($Arguments -notlike "${word} *" -and $Arguments -ne "${word}") { return }\n    $Arguments = $Arguments.Substring(${word.length}).TrimStart()`;
+				}
+				script = replaceExactlyOnce(script, anchor, `${anchor}${guard}`);
+			}
+			script = replaceExactlyOnce(
+				script,
+				`Register-ArgumentCompleter -CommandName '${identifierName}'`,
+				`Register-ArgumentCompleter -CommandName '${outerCommand}'`
+			);
+			break;
+		}
+	}
+
+	return script;
+}
+
 export const completionsCommand = createCommand({
 	metadata: {
 		description: "⌨️ Generate and handle shell completions",
@@ -176,10 +354,35 @@ export const completionsCommand = createCommand({
 		}
 
 		setupCompletions();
-		// Use executableName as the registration target too so shells register
-		// completion for the actual command the user types. Replace non-identifier
-		// characters with underscores for the shell function name identifier.
+
+		// Leave the common default path untouched: no capturing/patching, just
+		// print directly, to avoid any risk of regressing it.
+		if (executableName === "wrangler") {
+			t.setup("wrangler", "wrangler", args.shell);
+			return;
+		}
+
+		const words = executableName.trim().split(/\s+/);
+		const outerCommand = words[0];
+		const remainingWords = words.slice(1);
+		// Internal function/variable names must be valid identifiers; the
+		// registration target (below) uses the literal words instead.
 		const identifierName = executableName.replace(/[^a-zA-Z0-9]/g, "_");
-		t.setup(identifierName, executableName, args.shell);
+
+		const script = captureCompletionScript(
+			identifierName,
+			executableName,
+			args.shell
+		);
+		// eslint-disable-next-line no-console -- matches @bomb.sh/tab's own console.log for this raw script output
+		console.log(
+			patchExecutableTarget(
+				script,
+				args.shell,
+				identifierName,
+				outerCommand,
+				remainingWords
+			)
+		);
 	},
 });
