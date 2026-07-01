@@ -65,6 +65,16 @@ export type AutoConfigOptions = {
 	 * Whether to install Wrangler during autoconfig
 	 */
 	enableWranglerInstallation?: boolean;
+	/**
+	 * Experimental: which config format to emit (default: `"jsonc"`).
+	 *
+	 * - `"jsonc"` — write a `wrangler.jsonc` (the established behaviour).
+	 * - `"ts"` — write the new programmatic format: a `cloudflare.config.ts`
+	 *   (runtime config via `defineWorker`) and, when migrating an existing
+	 *   non-Vite Wrangler project, a `wrangler.config.ts` (tooling config via
+	 *   `defineWranglerConfig`). Any pre-existing `wrangler.jsonc` is removed.
+	 */
+	experimentalConfigFormat?: "jsonc" | "ts";
 };
 
 export type AutoConfigSummary = {
