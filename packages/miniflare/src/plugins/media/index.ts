@@ -21,6 +21,7 @@ export const MediaOptionsSchema = z.object({
 
 export const MEDIA_PLUGIN: Plugin<typeof MediaOptionsSchema> = {
 	options: MediaOptionsSchema,
+	bindingTypeDescription: "Media",
 	async getBindings(options) {
 		if (!options.media) {
 			return [];

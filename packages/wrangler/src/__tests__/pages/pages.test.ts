@@ -38,7 +38,8 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -62,7 +63,8 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
@@ -112,7 +114,8 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -140,7 +143,8 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -163,7 +167,8 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
@@ -199,7 +204,8 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -222,7 +228,8 @@ describe("pages", () => {
 			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -285,7 +292,7 @@ describe("pages", () => {
 		});
 
 		it("should display for pages:functions:build", async ({ expect }) => {
-			await expect(runWrangler("pages functions build")).rejects.toThrowError();
+			await expect(runWrangler("pages functions build")).rejects.toThrow();
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -302,7 +309,7 @@ describe("pages", () => {
 				runWrangler(
 					'pages functions optimize-routes --routes-path="/build/_routes.json" --output-routes-path="/build/_optimized-routes.json"'
 				)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"

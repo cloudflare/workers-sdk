@@ -39,6 +39,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 > = {
 	options: SecretsStoreSecretsOptionsSchema,
 	sharedOptions: SecretsStoreSecretsSharedOptionsSchema,
+	bindingTypeDescription: "Secrets Store secret",
 	async getBindings(options) {
 		if (!options.secretsStoreSecrets) {
 			return [];

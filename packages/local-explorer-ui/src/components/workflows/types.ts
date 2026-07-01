@@ -32,6 +32,41 @@ export interface InstanceDetails {
 
 export type Action = "pause" | "resume" | "restart" | "terminate";
 
+export interface RestartFromStepParam {
+	name: string;
+	count?: number;
+	type?: "do" | "sleep" | "waitForEvent";
+}
+
+/**
+ * Convert a step row's data into the `from` payload accepted by the
+ * change-instance-status API when restarting from a specific step.
+ *
+ * The runtime stores step names as `name-N`, where `N` is a 1-based counter
+ * disambiguating multiple steps that share the same logical name. The API
+ * expects the logical name + the counter as separate fields.
+ */
+export function getRestartFromStepParam(step: StepData): RestartFromStepParam {
+	const rawName = step.name ?? "";
+	const suffixMatch = rawName.match(/-(\d+)$/);
+	const name = suffixMatch ? rawName.slice(0, -suffixMatch[0].length) : rawName;
+	const count = suffixMatch ? Number(suffixMatch[1]) : undefined;
+
+	// Local step types use "step" while the API expects "do" for the same concept.
+	let type: RestartFromStepParam["type"] | undefined;
+	if (step.type === "step") {
+		type = "do";
+	} else if (step.type === "sleep" || step.type === "waitForEvent") {
+		type = step.type;
+	}
+
+	return {
+		name,
+		...(count !== undefined ? { count } : {}),
+		...(type !== undefined ? { type } : {}),
+	};
+}
+
 const TERMINAL_STATUSES = new Set(["complete", "errored", "terminated"]);
 
 export function getAvailableActions(status: string): Action[] {

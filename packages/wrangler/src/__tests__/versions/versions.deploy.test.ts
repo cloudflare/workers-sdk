@@ -7,6 +7,7 @@ import { beforeEach, describe, it, test, vi } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,
+	parseTagSpecs,
 	parseVersionSpecs,
 	summariseVersionTraffic,
 	validateTrafficSubtotal,
@@ -71,6 +72,93 @@ const mswGetVersion30000000 = http.get(
 						limits: { cpu_ms: 50 },
 					},
 				},
+			})
+		)
+);
+
+// MSW handler for the deployable-versions endpoint (GET /versions?deployable=true)
+// returning versions that carry `workers/tag` annotations, used to test
+// `versions deploy --version-tag <version-tag>`.
+const mswListVersionsWithTags = http.get(
+	"*/accounts/:accountId/workers/scripts/:workerName/versions",
+	() =>
+		HttpResponse.json(
+			createFetchResult({
+				items: [
+					{
+						id: "10000000-0000-0000-0000-000000000000",
+						number: "1",
+						annotations: {
+							"workers/triggered_by": "upload",
+							"workers/tag": "abc1234",
+						},
+						metadata: {
+							author_id: "Picard-Gamma-6-0-7-3",
+							author_email: "Jean-Luc-Picard@federation.org",
+							source: "wrangler",
+							created_on: "2021-01-01T00:00:00.000000Z",
+							modified_on: "2021-01-01T00:00:00.000000Z",
+						},
+					},
+					{
+						id: "20000000-0000-0000-0000-000000000000",
+						number: "2",
+						annotations: {
+							"workers/triggered_by": "upload",
+							"workers/tag": "def5678",
+						},
+						metadata: {
+							author_id: "Picard-Gamma-6-0-7-3",
+							author_email: "Jean-Luc-Picard@federation.org",
+							source: "wrangler",
+							created_on: "2021-01-02T00:00:00.000000Z",
+							modified_on: "2021-01-02T00:00:00.000000Z",
+						},
+					},
+				],
+			})
+		)
+);
+
+// MSW handler where two deployable versions share the same `workers/tag`,
+// used to test the ambiguity error.
+const mswListVersionsWithDuplicateTags = http.get(
+	"*/accounts/:accountId/workers/scripts/:workerName/versions",
+	() =>
+		HttpResponse.json(
+			createFetchResult({
+				items: [
+					{
+						id: "10000000-0000-0000-0000-000000000000",
+						number: "1",
+						annotations: {
+							"workers/triggered_by": "upload",
+							"workers/tag": "dupe",
+						},
+						metadata: {
+							author_id: "Picard-Gamma-6-0-7-3",
+							author_email: "Jean-Luc-Picard@federation.org",
+							source: "wrangler",
+							created_on: "2021-01-01T00:00:00.000000Z",
+							modified_on: "2021-01-01T00:00:00.000000Z",
+						},
+					},
+					{
+						id: "20000000-0000-0000-0000-000000000000",
+						number: "2",
+						annotations: {
+							"workers/triggered_by": "upload",
+							"workers/tag": "dupe",
+						},
+						metadata: {
+							author_id: "Picard-Gamma-6-0-7-3",
+							author_email: "Jean-Luc-Picard@federation.org",
+							source: "wrangler",
+							created_on: "2021-01-02T00:00:00.000000Z",
+							modified_on: "2021-01-02T00:00:00.000000Z",
+						},
+					},
+				],
 			})
 		)
 );
@@ -193,7 +281,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`[Error: You need to provide a name for your Worker. Either pass it as a CLI arg with \`--name <name>\` or set the \`name\` field in your Wrangler configuration file (e.g. wrangler.json).]`
 			);
 		});
 	});
@@ -205,7 +293,7 @@ describe("versions deploy", () => {
 			const result = runWrangler("versions deploy --yes");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You must select at least 1 version to deploy.]`
+				`[Error: You must select at least 1 version to deploy. Provide a version using positional args (e.g. \`wrangler versions deploy <version-id>\`), --version-id, or --version-tag.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
@@ -597,7 +685,7 @@ describe("versions deploy", () => {
 				);
 
 				await expect(result).rejects.toMatchInlineSnapshot(
-					`[Error: You must select at most 2 versions to deploy.]`
+					`[Error: Too many versions selected. You can deploy at most 2 version(s) at a time. Please remove some versions and try again.]`
 				);
 
 				expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
@@ -1051,7 +1139,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (101%) must be between 0 and 100.]`
+				`[Error: The --percentage value 101% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1063,7 +1151,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+				`[Error: The --percentage value -1% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1075,7 +1163,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (101%) must be between 0 and 100.]`
+				`[Error: The --percentage value 101% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1087,7 +1175,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+				`[Error: The --percentage value -1% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1180,6 +1268,132 @@ describe("versions deploy", () => {
 				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
+
+		describe("deploy by tag", () => {
+			type DeployedVersion = { version_id: string; percentage: number };
+
+			// Captures the versions sent to the create-deployment endpoint so we can
+			// assert that the tag was resolved to the correct Version ID.
+			function captureDeployment() {
+				const captured: { versions?: DeployedVersion[] } = {};
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:workerName/deployments",
+						async ({ request }) => {
+							const body = (await request.json()) as {
+								versions: DeployedVersion[];
+							};
+							captured.versions = body.versions;
+							return HttpResponse.json(
+								createFetchResult({ id: "mock-new-deployment-id" })
+							);
+						}
+					)
+				);
+				return captured;
+			}
+
+			test("resolves a single tag to its Version ID and deploys it", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				msw.use(mswListVersionsWithTags);
+				const captured = captureDeployment();
+
+				await expect(
+					runWrangler("versions deploy --version-tag def5678@100% --yes")
+				).resolves.toBeUndefined();
+
+				expect(captured.versions).toEqual([
+					{
+						version_id: "20000000-0000-0000-0000-000000000000",
+						percentage: 100,
+					},
+				]);
+
+				const output = normalizeOutput(cliStd.out);
+				expect(output).toContain("Resolving tags to versions");
+				expect(output).toContain("SUCCESS  Deployed test-name version");
+			});
+
+			test("splits traffic between multiple tags using shorthand percentages", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				msw.use(mswListVersionsWithTags);
+				const captured = captureDeployment();
+
+				await expect(
+					runWrangler(
+						"versions deploy --version-tag abc1234@40% --version-tag def5678@60% --yes"
+					)
+				).resolves.toBeUndefined();
+
+				expect(captured.versions).toEqual([
+					{
+						version_id: "10000000-0000-0000-0000-000000000000",
+						percentage: 40,
+					},
+					{
+						version_id: "20000000-0000-0000-0000-000000000000",
+						percentage: 60,
+					},
+				]);
+			});
+
+			test("can be combined with a Version ID", async ({ expect }) => {
+				writeWranglerConfig();
+				msw.use(mswListVersionsWithTags);
+				const captured = captureDeployment();
+
+				await expect(
+					runWrangler(
+						"versions deploy 10000000-0000-0000-0000-000000000000@30% --version-tag def5678@70% --yes"
+					)
+				).resolves.toBeUndefined();
+
+				expect(captured.versions).toEqual([
+					{
+						version_id: "10000000-0000-0000-0000-000000000000",
+						percentage: 30,
+					},
+					{
+						version_id: "20000000-0000-0000-0000-000000000000",
+						percentage: 70,
+					},
+				]);
+			});
+
+			test("errors when no deployable version matches the tag", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				msw.use(mswListVersionsWithTags);
+
+				await expect(
+					runWrangler("versions deploy --version-tag nope@100% --yes")
+				).rejects.toMatchInlineSnapshot(`
+					[Error: No deployable version found with tag "nope".
+					Tags can only be resolved against recent (deployable) versions. Run \`wrangler versions list\` to see available versions, or deploy by Version ID directly.]
+				`);
+			});
+
+			test("errors when a tag matches multiple versions", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				msw.use(mswListVersionsWithDuplicateTags);
+
+				await expect(
+					runWrangler("versions deploy --version-tag dupe@100% --yes")
+				).rejects.toMatchInlineSnapshot(`
+					[Error: Tag "dupe" matches multiple versions:
+					  - 20000000-0000-0000-0000-000000000000
+					  - 10000000-0000-0000-0000-000000000000
+					Deploy by Version ID directly to disambiguate.]
+				`);
+			});
+		});
 	});
 });
 
@@ -1250,6 +1464,81 @@ describe("units", () => {
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,
 				"20000000-0000-0000-0000-000000000000": null,
+			});
+		});
+	});
+
+	describe("parseTagSpecs", () => {
+		test("no args", ({ expect }) => {
+			const result = parseTagSpecs({});
+
+			expect(result).toMatchObject(new Map());
+		});
+
+		test("tag without percentage", ({ expect }) => {
+			const result = parseTagSpecs({ versionTag: ["abc1234"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({ abc1234: null });
+		});
+
+		test("tag with percentage shorthand", ({ expect }) => {
+			const result = parseTagSpecs({ versionTag: ["abc1234@100%"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({ abc1234: 100 });
+		});
+
+		test("multiple tags with percentages", ({ expect }) => {
+			const result = parseTagSpecs({
+				versionTag: ["abc1234@40%", "def5678@60%"],
+			});
+
+			expect(Object.fromEntries(result)).toMatchObject({
+				abc1234: 40,
+				def5678: 60,
+			});
+		});
+
+		test("tag containing @ with a percentage splits on the last @", ({
+			expect,
+		}) => {
+			const result = parseTagSpecs({ versionTag: ["v1.0@beta@100%"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({ "v1.0@beta": 100 });
+		});
+
+		test("tag containing @ without a percentage is kept whole", ({
+			expect,
+		}) => {
+			const result = parseTagSpecs({ versionTag: ["v1.0@beta"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({ "v1.0@beta": null });
+		});
+
+		test("trailing @ keeps a percentage-like tag whole with no percentage", ({
+			expect,
+		}) => {
+			const result = parseTagSpecs({ versionTag: ["build@2@"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({ "build@2": null });
+		});
+
+		test("throws on empty tag", ({ expect }) => {
+			expect(() => parseTagSpecs({ versionTag: ["@100%"] })).toThrow(
+				`Could not parse a tag from --version-tag arg "@100%".`
+			);
+		});
+
+		test("throws on out-of-range percentage", ({ expect }) => {
+			expect(() => parseTagSpecs({ versionTag: ["abc1234@101%"] })).toThrow(
+				`Percentage value 101% (from --version-tag arg "abc1234@101%") is out of range. Percentages must be between 0 and 100.`
+			);
+		});
+
+		test("treats a non-numeric @ suffix as part of the tag", ({ expect }) => {
+			const result = parseTagSpecs({ versionTag: ["abc1234@oops"] });
+
+			expect(Object.fromEntries(result)).toMatchObject({
+				"abc1234@oops": null,
 			});
 		});
 	});
@@ -1392,21 +1681,21 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (101%) must be at most 100%]`
+				`[Error: The specified traffic percentages add up to 101%, which exceeds the maximum of 100%. Reduce one or more percentages so they sum to at most 100%.]`
 			);
 		});
 		test("errors if subtotal below min", ({ expect }) => {
 			expect(() =>
 				validateTrafficSubtotal(-1, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (-1%) must be at least 0%]`
+				`[Error: The specified traffic percentages add up to -1%, which is below the minimum of 0%. Increase one or more percentages so they sum to at least 0%.]`
 			);
 		});
 		test("different error message if min === max", ({ expect }) => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 100, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (101%) must be 100%]`
+				`[Error: The specified traffic percentages add up to 101%, but must total exactly 100%. Adjust the --percentage values or version-spec percentages so they sum to 100%.]`
 			);
 		});
 		test("no error if subtotal above max but not above max + EPSILON", ({
@@ -1417,7 +1706,7 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(100.01)
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (100.01%) must be 100%]`
+				`[Error: The specified traffic percentages add up to 100.01%, but must total exactly 100%. Adjust the --percentage values or version-spec percentages so they sum to 100%.]`
 			);
 		});
 		test("no error if subtotal below min but not below min - EPSILON", ({
@@ -1428,7 +1717,7 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(99.99)
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (99.99%) must be 100%]`
+				`[Error: The specified traffic percentages add up to 99.99%, but must total exactly 100%. Adjust the --percentage values or version-spec percentages so they sum to 100%.]`
 			);
 		});
 	});

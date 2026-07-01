@@ -220,6 +220,7 @@ export interface CfD1Database {
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;
+	migrations_pattern?: string;
 	remote?: boolean;
 	raw?: boolean;
 }
@@ -296,6 +297,26 @@ export interface CfHyperdrive {
 	localConnectionString?: string;
 }
 
+export interface CfDevPluginCfg {
+	plugin: {
+		/**
+		 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a named `plugins` export.
+		 * @example "@cloudflare/my-external-miniflare-plugin"
+		 */
+		package: string;
+		/**
+		 * Plugin is the name of the plugin exposed by the package.
+		 * @example "my-unsafe-plugin"
+		 */
+		name: string;
+	};
+
+	/**
+	 * dev-only options to pass to the plugin.
+	 */
+	options?: Record<string, unknown>;
+}
+
 export interface CfService {
 	binding: string;
 	service: string;
@@ -304,6 +325,7 @@ export interface CfService {
 	props?: Record<string, unknown>;
 	remote?: boolean;
 	cross_account_grant?: string;
+	dev?: CfDevPluginCfg;
 }
 
 export interface CfVpcService {
@@ -365,25 +387,7 @@ export interface CfUnsafeBinding {
 	name: string;
 	type: string;
 
-	dev?: {
-		plugin: {
-			/**
-			 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a named `plugins` export.
-			 * @example "@cloudflare/my-external-miniflare-plugin"
-			 */
-			package: string;
-			/**
-			 * Plugin is the name of the plugin exposed by the package.
-			 * @example "my-unsafe-plugin"
-			 */
-			name: string;
-		};
-
-		/**
-		 * dev-only options to pass to the plugin.
-		 */
-		options?: Record<string, unknown>;
-	};
+	dev?: CfDevPluginCfg;
 }
 
 type CfUnsafeMetadata = Record<string, unknown>;

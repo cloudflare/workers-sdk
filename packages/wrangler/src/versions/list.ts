@@ -8,6 +8,7 @@ import { fetchDeployableVersions } from "./api";
 import type { ApiVersion, VersionCache } from "./types";
 
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
+const VERSION_LIST_LIMIT = 10;
 
 export const versionsListCommand = createCommand({
 	metadata: {
@@ -16,7 +17,9 @@ export const versionsListCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
+		suggestSkillsAfterHandler: (args) => !args.json,
 	},
 	args: {
 		name: {
@@ -50,11 +53,15 @@ export const versionsListCommand = createCommand({
 		}
 
 		const versionCache: VersionCache = new Map();
+
+		// The versions API ignores pagination when `deployable=true`, so cap the command output client-side.
 		const versions = (
 			await fetchDeployableVersions(config, accountId, workerName, versionCache)
-		).sort((a, b) =>
-			a.metadata.created_on.localeCompare(b.metadata.created_on)
-		);
+		)
+			.sort((a, b) =>
+				a.metadata.created_on.localeCompare(b.metadata.created_on)
+			)
+			.slice(-VERSION_LIST_LIMIT);
 
 		if (args.json) {
 			logRaw(JSON.stringify(versions, null, 2));

@@ -18,7 +18,6 @@ namespace Cloudflare {
 		__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;
 	}
 	interface GlobalProps {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof import() in ambient declarations requires inline import
 		mainModule: typeof import("./index");
 		durableNamespaces: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__";
 	}
@@ -66,8 +65,24 @@ declare module "cloudflare:mock-agent" {
 }
 
 declare module "workerd:unsafe" {
+	export interface DurableObjectEvictionOptions {
+		webSockets?: "close" | "hibernate";
+	}
+
 	function abortAllDurableObjects(): Promise<void>;
 	function deleteAllDurableObjects(): Promise<void>;
+	function evict(
+		stub: DurableObjectStub,
+		options?: DurableObjectEvictionOptions
+	): Promise<void>;
+	function evictAllDurableObjects(
+		options?: DurableObjectEvictionOptions
+	): Promise<void>;
 
-	export default { abortAllDurableObjects, deleteAllDurableObjects };
+	export default {
+		abortAllDurableObjects,
+		deleteAllDurableObjects,
+		evict,
+		evictAllDurableObjects,
+	};
 }

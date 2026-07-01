@@ -2,15 +2,15 @@ import assert from "node:assert";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
+	extractBindingsOfType,
+	isUnsafeBindingType,
+} from "@cloudflare/deploy-helpers";
+import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
-import {
-	extractBindingsOfType,
-	isUnsafeBindingType,
-} from "../../api/startDevWorker/utils";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
 import { withSourceURLs } from "../../deployment-bundle/source-url";
 import { logger } from "../../logger";
@@ -37,6 +37,7 @@ import type {
 	Config,
 	ContainerEngine,
 	LegacyAssetPaths,
+	ServiceFetch,
 } from "@cloudflare/workers-utils";
 import type {
 	DOContainerOptions,
@@ -85,6 +86,7 @@ export interface ConfigBundle {
 	localPersistencePath: string | false;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
+	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
 	httpsKeyPath: string | undefined;
@@ -92,6 +94,7 @@ export interface ConfigBundle {
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
+	outboundService: ServiceFetch | undefined;
 	tails: Config["tail_consumers"] | undefined;
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
@@ -105,6 +108,7 @@ export interface ConfigBundle {
 	// The stable, externally-reachable URL of the proxy server in front of
 	// this Miniflare instance (e.g. Wrangler's ProxyWorker URL).
 	publicUrl: string | undefined;
+	structuredLogsHandler: ((log: WorkerdStructuredLog) => void) | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -423,7 +427,7 @@ type WorkerOptionsBindings = Pick<
 	| "ai"
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
-	| "webSearch"
+	| "websearch"
 	| "agentMemory"
 	| "textBlobBindings"
 	| "dataBlobBindings"
@@ -545,7 +549,7 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
-	const webSearchBindings = extractBindingsOfType("web_search", bindings);
+	const websearchBindings = extractBindingsOfType("websearch", bindings);
 	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
@@ -607,7 +611,33 @@ export function buildMiniflareBindingOptions(
 	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> =
 		Object.fromEntries(fetchers.map((f) => [f.binding, f.fetcher]));
 
+	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
+
 	for (const service of services) {
+		// A `dev` plugin overrides the regular service binding and routes the binding through Miniflare's external-plugin pathway instead.
+		if (service.dev !== undefined) {
+			const {
+				binding: _binding,
+				dev: { plugin, options: devOptions },
+				remote: _remote,
+				props: _props,
+				...options
+			} = service;
+
+			logger.debug(
+				`Binding ${service.binding} is a local binding to plugin ${plugin.name} provided by package ${plugin.package}`
+			);
+
+			unsafeBindings.push({
+				name: service.binding,
+				type: "service",
+				plugin,
+				options: { ...options, ...devOptions },
+			});
+
+			continue;
+		}
+
 		if (remoteProxyConnectionString && service.remote) {
 			serviceBindings[service.binding] = {
 				name: service.service,
@@ -655,8 +685,8 @@ export function buildMiniflareBindingOptions(
 		warnOrError("ai_search", inst.remote);
 	}
 
-	for (const ws of webSearchBindings) {
-		warnOrError("web_search", ws.remote);
+	for (const ws of websearchBindings) {
+		warnOrError("websearch", ws.remote);
 	}
 
 	for (const memory of agentMemoryBindings) {
@@ -675,7 +705,6 @@ export function buildMiniflareBindingOptions(
 		warnOrError("flagship", flagship.remote);
 	}
 
-	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
 	const unsafeBindingsWithLocalDev = Object.entries(bindings ?? {}).filter(
 		(b) => isUnsafeServiceBindingWithDevCfg(b[1])
 	);
@@ -785,8 +814,8 @@ export function buildMiniflareBindingOptions(
 			])
 		),
 
-		webSearch: Object.fromEntries(
-			webSearchBindings.map((ws) => [
+		websearch: Object.fromEntries(
+			websearchBindings.map((ws) => [
 				ws.binding,
 				{
 					remoteProxyConnectionString,
@@ -1127,7 +1156,7 @@ export async function buildMiniflareOptions(
 		logRequests: false,
 		log,
 		verbose: logger.loggerLevel === "debug",
-		handleStructuredLogs,
+		handleStructuredLogs: config.structuredLogsHandler ?? handleStructuredLogs,
 		defaultPersistRoot,
 		workers: [
 			{
@@ -1139,6 +1168,8 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				routes: config.routes,
+				outboundService: config.outboundService,
 				containerEngine: config.containerEngine,
 				zone: config.zone,
 			},

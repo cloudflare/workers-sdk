@@ -7,15 +7,15 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { type ApiVersion, printVersions } from "@cloudflare/deploy-helpers";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
-import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
 	fetchDeployableVersions,
@@ -24,13 +24,7 @@ import {
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
-import type {
-	ApiDeployment,
-	ApiVersion,
-	Percentage,
-	VersionCache,
-	VersionId,
-} from "./types";
+import type { Percentage, VersionCache, VersionId } from "./types";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
@@ -47,11 +41,14 @@ export const versionsDeployCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
+		supportTemporary: true,
 		useConfigRedirectIfAvailable: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 
 	args: {
+		...experimentalNewConfigArg,
 		name: {
 			describe: "Name of the worker",
 			type: "string",
@@ -75,6 +72,13 @@ export const versionsDeployCommand = createCommand({
 				"Shorthand notation to deploy Worker Version(s) [<version-id>@<percentage>..]. Omitted percentages share the remaining traffic.",
 			type: "string",
 			array: true,
+		},
+		"version-tag": {
+			describe:
+				"Worker Version tag(s) to deploy, resolved to a Version ID against the deployable versions. Supports the shorthand notation [<version-tag>@<percentage>..].",
+			type: "string",
+			array: true,
+			requiresArg: true,
 		},
 		message: {
 			describe: "Description of this deployment (optional)",
@@ -110,14 +114,16 @@ export const versionsDeployCommand = createCommand({
 
 		if (workerName === undefined) {
 			throw new UserError(
-				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+				"You need to provide a name for your Worker. Either pass it as a CLI arg with `--name <name>` or set the `name` field in your Wrangler configuration file (e.g. wrangler.json).",
 				{ telemetryMessage: "versions deploy missing worker name" }
 			);
 		}
 
 		const versionCache: VersionCache = new Map();
 		const optionalVersionTraffic = parseVersionSpecs(args);
-		const acceptPromptDefaults = args.yes || optionalVersionTraffic.size > 0;
+		const tagTraffic = parseTagSpecs(args);
+		const acceptPromptDefaults =
+			args.yes || optionalVersionTraffic.size + tagTraffic.size > 0;
 
 		cli.startSection(
 			"Deploy Worker Versions",
@@ -126,6 +132,21 @@ export const versionsDeployCommand = createCommand({
 		);
 
 		await printLatestDeployment(config, accountId, workerName, versionCache);
+
+		// Resolve any --version-tag args to their Version IDs against the
+		// deployable versions, then merge them into the version traffic to deploy.
+		if (tagTraffic.size > 0) {
+			const resolvedTagTraffic = await resolveTagsToVersions(
+				config,
+				accountId,
+				workerName,
+				tagTraffic,
+				versionCache
+			);
+			for (const [versionId, percentage] of resolvedTagTraffic) {
+				optionalVersionTraffic.set(versionId, percentage);
+			}
+		}
 
 		// prompt to confirm or change the versionIds from the args
 		const confirmedVersionsToDeploy = await promptVersionsToDeploy(
@@ -139,15 +160,18 @@ export const versionsDeployCommand = createCommand({
 
 		// validate we have at least 1 version
 		if (confirmedVersionsToDeploy.length === 0) {
-			throw new UserError("You must select at least 1 version to deploy.", {
-				telemetryMessage: "versions deploy missing selected versions",
-			});
+			throw new UserError(
+				"You must select at least 1 version to deploy. Provide a version using positional args (e.g. `wrangler versions deploy <version-id>`), --version-id, or --version-tag.",
+				{
+					telemetryMessage: "versions deploy missing selected versions",
+				}
+			);
 		}
 
 		// validate we have at most experimentalMaxVersions (default: 2)
 		if (confirmedVersionsToDeploy.length > args.maxVersions) {
 			throw new UserError(
-				`You must select at most ${args.maxVersions} versions to deploy.`,
+				`Too many versions selected. You can deploy at most ${args.maxVersions} version(s) at a time. Please remove some versions and try again.`,
 				{ telemetryMessage: "versions deploy too many selected versions" }
 			);
 		}
@@ -227,50 +251,10 @@ export const versionsDeployCommand = createCommand({
 	},
 });
 
-/**
- * Prompts the user for confirmation when overwriting the latest deployment, given that it's split.
- */
-export async function confirmLatestDeploymentOverwrite(
-	config: Config,
-	accountId: string,
-	scriptName: string
-) {
-	try {
-		const latest = await fetchLatestDeployment(config, accountId, scriptName);
-		if (latest && latest.versions.length >= 2) {
-			const versionCache: VersionCache = new Map();
-
-			// Print message and confirmation.
-
-			cli.warn(
-				`Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.`,
-				{ shape: cli.shapes.corners.tl, newlineBefore: false }
-			);
-			cli.newline();
-			await printDeployment(
-				config,
-				accountId,
-				scriptName,
-				latest,
-				"last",
-				versionCache
-			);
-
-			return inputPrompt<boolean>({
-				type: "confirm",
-				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
-				label: "",
-				defaultValue: isNonInteractiveOrCI(), // defaults to true in CI for back-compat
-				acceptDefault: isNonInteractiveOrCI(),
-			});
-		}
-	} catch (e) {
-		if (!isWorkerNotFoundError(e)) {
-			throw e;
-		}
-	}
-	return true;
-}
+export {
+	confirmLatestDeploymentOverwrite,
+	printVersions,
+} from "@cloudflare/deploy-helpers";
 
 export async function printLatestDeployment(
 	config: Config,
@@ -284,60 +268,17 @@ export async function printLatestDeployment(
 			return fetchLatestDeployment(config, accountId, workerName);
 		},
 	});
-	await printDeployment(
-		config,
-		accountId,
-		workerName,
-		latestDeployment,
-		"current",
-		versionCache
-	);
-}
-
-async function printDeployment(
-	config: Config,
-	accountId: string,
-	workerName: string,
-	deployment: ApiDeployment | undefined,
-	adjective: "current" | "last",
-	versionCache: VersionCache
-) {
 	const [versions, traffic] = await fetchDeploymentVersions(
 		config,
 		accountId,
 		workerName,
-		deployment,
+		latestDeployment,
 		versionCache
 	);
 	cli.logRaw(
-		`${leftT} Your ${adjective} deployment has ${versions.length} version(s):`
+		`${leftT} Your current deployment has ${versions.length} version(s):`
 	);
 	printVersions(versions, traffic);
-}
-
-export function printVersions(
-	versions: ApiVersion[],
-	traffic: Map<VersionId, Percentage>
-) {
-	cli.newline();
-	cli.log(formatVersions(versions, traffic));
-	cli.newline();
-}
-
-function formatVersions(
-	versions: ApiVersion[],
-	traffic: Map<VersionId, Percentage>
-) {
-	return versions
-		.map((version) => {
-			const trafficString = brandColor(`(${traffic.get(version.id)}%)`);
-			const versionIdString = white(version.id);
-			return gray(`${trafficString} ${versionIdString}
-      Created:  ${version.metadata.created_on}
-          Tag:  ${version.annotations?.["workers/tag"] ?? BLANK_INPUT}
-      Message:  ${version.annotations?.["workers/message"] ?? BLANK_INPUT}`);
-		})
-		.join("\n\n");
 }
 
 /**
@@ -418,7 +359,7 @@ ${ZERO_WIDTH_SPACE}       Message:  ${
 		acceptDefault,
 		validate(versionIds) {
 			if (versionIds === undefined) {
-				return `You must select at least 1 version to deploy.`;
+				return "You must select at least 1 version to deploy. Provide a version using positional args (e.g. `wrangler versions deploy <version-id>`), --version-id, or --version-tag.";
 			}
 		},
 		renderers: {
@@ -635,6 +576,46 @@ async function maybePatchSettings(
 // ***********
 //    UNITS
 // ***********
+/**
+ * Parses an optional `@<percentage>` suffix from a shorthand spec (e.g.
+ * `<version-id>@<percentage>` or `<tag>@<percentage>`), validating that the
+ * percentage (if present) is a number between 0 and 100.
+ *
+ * @param percentageString The raw percentage portion (after the `@`), if any.
+ * @param spec The full spec string, used for error messages.
+ * @param specLabel A label describing the arg the spec came from, used for error messages.
+ * @returns The parsed percentage, or `null` if none was specified.
+ */
+function parseOptionalPercentage(
+	percentageString: string | undefined,
+	spec: string,
+	specLabel: string
+): OptionalPercentage {
+	if (percentageString === undefined || percentageString === "") {
+		return null;
+	}
+
+	const percentage = parseFloat(percentageString);
+
+	if (isNaN(percentage)) {
+		throw new UserError(
+			`Could not parse percentage value from ${specLabel} "${spec}". Expected format: <version-id>@<percentage> (e.g. \`<version-id>@50%\`).`,
+			{ telemetryMessage: "versions deploy percentage parse failed" }
+		);
+	}
+
+	if (percentage < 0 || percentage > 100) {
+		throw new UserError(
+			`Percentage value ${percentage}% (from ${specLabel} "${spec}") is out of range. Percentages must be between 0 and 100.`,
+			{
+				telemetryMessage: "versions deploy positional percentage out of range",
+			}
+		);
+	}
+
+	return percentage;
+}
+
 export type ParseVersionSpecsArgs = {
 	percentage?: number[];
 	versionId?: string[];
@@ -649,29 +630,11 @@ export function parseVersionSpecs(
 	for (const spec of args.versionSpecs ?? []) {
 		const [versionId, percentageString] = spec.split("@");
 
-		const percentage =
-			percentageString === undefined || percentageString === ""
-				? null
-				: parseFloat(percentageString);
-
-		if (percentage !== null) {
-			if (isNaN(percentage)) {
-				throw new UserError(
-					`Could not parse percentage value from version-spec positional arg "${spec}"`,
-					{ telemetryMessage: "versions deploy percentage parse failed" }
-				);
-			}
-
-			if (percentage < 0 || percentage > 100) {
-				throw new UserError(
-					`Percentage value (${percentage}%) parsed from version-spec positional arg "${spec}" must be between 0 and 100.`,
-					{
-						telemetryMessage:
-							"versions deploy positional percentage out of range",
-					}
-				);
-			}
-		}
+		const percentage = parseOptionalPercentage(
+			percentageString,
+			spec,
+			"version-spec positional arg"
+		);
 
 		versionIds.push(versionId);
 		percentages.push(percentage);
@@ -684,9 +647,12 @@ export function parseVersionSpecs(
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 	for (const versionId of args.versionId ?? []) {
 		if (!UUID_REGEX.test(versionId)) {
-			throw new UserError(`Version ID must be a valid UUID (${versionId}).`, {
-				telemetryMessage: "versions deploy invalid version id",
-			});
+			throw new UserError(
+				`"${versionId}" is not a valid Version ID. Version IDs must be UUIDs (e.g. \`12345678-1234-1234-1234-123456789abc\`). Run \`wrangler versions list\` to see available versions.`,
+				{
+					telemetryMessage: "versions deploy invalid version id",
+				}
+			);
 		}
 
 		versionIds.push(versionId);
@@ -695,7 +661,7 @@ export function parseVersionSpecs(
 	for (const percentage of args.percentage ?? []) {
 		if (percentage < 0 || percentage > 100) {
 			throw new UserError(
-				`Percentage value (${percentage}%) must be between 0 and 100.`,
+				`The --percentage value ${percentage}% is out of range. Percentages must be between 0 and 100.`,
 				{ telemetryMessage: "versions deploy percentage out of range" }
 			);
 		}
@@ -708,6 +674,156 @@ export function parseVersionSpecs(
 	);
 
 	return optionalVersionTraffic;
+}
+
+type ParseTagSpecsArgs = {
+	versionTag?: string[];
+};
+
+// A percentage suffix in a `<version-tag>@<percentage>` spec, e.g. "100", "100%"
+// or "50.5%". An out-of-range value like "101%" still matches (and is reported
+// later by parseOptionalPercentage); a non-numeric suffix does not.
+const PERCENTAGE_SUFFIX_REGEX = /^-?\d+(\.\d+)?%?$/;
+
+/**
+ * Splits a `<version-tag>@<percentage>` spec into its tag and percentage parts.
+ *
+ * Tags can contain `@` (the upload `--tag` flag accepts arbitrary strings), so
+ * we split on the *last* `@` and only treat the suffix as a percentage when it
+ * actually looks like one. That way `v1.0@beta@100%` parses as tag `v1.0@beta`
+ * at 100%, while `v1.0@beta` (no percentage) is kept whole as the tag rather
+ * than misreading `beta` as a percentage.
+ */
+function splitTagSpec(spec: string): {
+	tag: string;
+	percentageString: string | undefined;
+} {
+	const atIndex = spec.lastIndexOf("@");
+	if (atIndex === -1) {
+		return { tag: spec, percentageString: undefined };
+	}
+
+	const suffix = spec.substring(atIndex + 1);
+
+	// A trailing `@` (empty suffix) is an explicit "no percentage" separator,
+	// letting you keep a tag that ends in something percentage-like whole.
+	if (suffix === "") {
+		return { tag: spec.substring(0, atIndex), percentageString: undefined };
+	}
+
+	if (PERCENTAGE_SUFFIX_REGEX.test(suffix)) {
+		return { tag: spec.substring(0, atIndex), percentageString: suffix };
+	}
+
+	return { tag: spec, percentageString: undefined };
+}
+
+/**
+ * Parses the `--version-tag` args into a map of tag to optional percentage,
+ * supporting the `<version-tag>@<percentage>` shorthand. Tags are resolved to
+ * Version IDs later by {@link resolveTagsToVersions}.
+ */
+export function parseTagSpecs(
+	args: ParseTagSpecsArgs
+): Map<string, OptionalPercentage> {
+	const tagTraffic = new Map<string, OptionalPercentage>();
+
+	for (const spec of args.versionTag ?? []) {
+		const { tag, percentageString } = splitTagSpec(spec);
+
+		if (!tag) {
+			throw new UserError(
+				`Could not parse a tag from --version-tag arg "${spec}".`,
+				{ telemetryMessage: "versions deploy tag parse failed" }
+			);
+		}
+
+		const percentage = parseOptionalPercentage(
+			percentageString,
+			spec,
+			"--version-tag arg"
+		);
+
+		tagTraffic.set(tag, percentage);
+	}
+
+	return tagTraffic;
+}
+
+/**
+ * Resolves tags (e.g. commit SHAs supplied via `--version-tag`) to Version IDs by
+ * matching against the `workers/tag` annotation on the worker's deployable
+ * versions.
+ *
+ * Tags are not guaranteed to be unique, so this errors if a tag matches more
+ * than one version, prompting the user to disambiguate with a Version ID. It
+ * also errors if a tag matches no deployable version (e.g. the version has aged
+ * out of the deployable window).
+ *
+ * The fetched versions populate `versionCache`, so a subsequent
+ * `promptVersionsToDeploy` call can reuse them without re-fetching.
+ */
+async function resolveTagsToVersions(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	workerName: string,
+	tagTraffic: Map<string, OptionalPercentage>,
+	versionCache: VersionCache
+): Promise<Map<VersionId, OptionalPercentage>> {
+	const versions = await spinnerWhile({
+		startMessage: "Resolving tags to versions",
+		promise() {
+			return fetchDeployableVersions(
+				complianceConfig,
+				accountId,
+				workerName,
+				versionCache
+			);
+		},
+	});
+
+	// A tag may be present on more than one version (e.g. a re-deploy of the same
+	// commit, or a secret change inheriting the tag), so collect all matches.
+	const versionsByTag = new Map<string, ApiVersion[]>();
+	for (const version of versions) {
+		const tag = version.annotations?.["workers/tag"];
+		if (tag === undefined) {
+			continue;
+		}
+
+		const matches = versionsByTag.get(tag) ?? [];
+		matches.push(version);
+		versionsByTag.set(tag, matches);
+	}
+
+	const resolvedVersionTraffic = new Map<VersionId, OptionalPercentage>();
+	for (const [tag, percentage] of tagTraffic) {
+		const matches = versionsByTag.get(tag) ?? [];
+
+		if (matches.length === 0) {
+			throw new UserError(
+				`No deployable version found with tag "${tag}".\nTags can only be resolved against recent (deployable) versions. Run \`wrangler versions list\` to see available versions, or deploy by Version ID directly.`,
+				{ telemetryMessage: "versions deploy tag not found" }
+			);
+		}
+
+		if (matches.length > 1) {
+			const ids = matches
+				.sort((a, b) =>
+					b.metadata.created_on.localeCompare(a.metadata.created_on)
+				)
+				.map((version) => `  - ${version.id}`)
+				.join("\n");
+			throw new UserError(
+				`Tag "${tag}" matches multiple versions:\n${ids}\nDeploy by Version ID directly to disambiguate.`,
+				{ telemetryMessage: "versions deploy tag ambiguous" }
+			);
+		}
+
+		resolvedVersionTraffic.set(matches[0].id, percentage);
+	}
+
+	return resolvedVersionTraffic;
 }
 
 export function assignAndDistributePercentages(
@@ -764,13 +880,13 @@ export function validateTrafficSubtotal(
 
 	if (max === min && (isAbove || isBelow)) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be ${max}%`,
+			`The specified traffic percentages add up to ${subtotal}%, but must total exactly ${max}%. Adjust the --percentage values or version-spec percentages so they sum to ${max}%.`,
 			{ telemetryMessage: "versions deploy traffic subtotal mismatch" }
 		);
 	}
 	if (isAbove) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be at most ${max}%`,
+			`The specified traffic percentages add up to ${subtotal}%, which exceeds the maximum of ${max}%. Reduce one or more percentages so they sum to at most ${max}%.`,
 			{
 				telemetryMessage: "versions deploy traffic subtotal above maximum",
 			}
@@ -778,7 +894,7 @@ export function validateTrafficSubtotal(
 	}
 	if (isBelow) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be at least ${min}%`,
+			`The specified traffic percentages add up to ${subtotal}%, which is below the minimum of ${min}%. Increase one or more percentages so they sum to at least ${min}%.`,
 			{
 				telemetryMessage: "versions deploy traffic subtotal below minimum",
 			}

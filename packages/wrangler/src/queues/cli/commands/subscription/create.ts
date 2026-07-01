@@ -20,6 +20,9 @@ function parseSourceArgument(
 	}
 ): EventSource {
 	switch (source as EventSourceType) {
+		case EventSourceType.IMAGES:
+			return { type: EventSourceType.IMAGES };
+
 		case EventSourceType.KV:
 			return { type: EventSourceType.KV };
 
@@ -85,6 +88,7 @@ export const queuesSubscriptionCreateCommand = createCommand({
 		owner: "Product: Queues",
 		status: "stable",
 	},
+	behaviour: { supportTemporary: true },
 	positionalArgs: ["queue"],
 	args: {
 		queue: {

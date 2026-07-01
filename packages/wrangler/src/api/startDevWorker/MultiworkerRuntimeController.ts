@@ -57,7 +57,16 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 	// ******************
 
 	#log = MF.buildLog();
-	#currentBundleId = 0;
+	// Per-worker bundle ID counters — keyed by worker name so that bundles
+	// from different workers don't invalidate each other. Only a newer
+	// bundle for the *same* worker should cause a stale bail-out.
+	#currentBundleIds = new Map<string, number>();
+	// Global counter that increments for every onBundleComplete, regardless
+	// of which worker it belongs to. Used to guard setOptions/reloadComplete
+	// so that we only apply the merged Miniflare config once all pending
+	// bundles have been processed — prevents intermediate setOptions calls
+	// with a mix of stale and fresh worker configs.
+	#globalBundleId = 0;
 
 	// This is given as a shared secret to the Proxy and User workers
 	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
@@ -69,6 +78,10 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 	// wrap updates in a mutex, so they're always applied in invocation order.
 	#mutex = new Mutex();
 	#mf?: Miniflare;
+
+	override get mf(): Miniflare | undefined {
+		return this.#mf;
+	}
 
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
@@ -112,8 +125,23 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		};
 	}
 
-	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
+	#isStaleBundleFor(workerName: string, id: number): boolean {
+		return id !== this.#currentBundleIds.get(workerName);
+	}
+
+	async #onBundleComplete(
+		data: BundleCompleteEvent,
+		id: number,
+		globalId: number
+	) {
+		const workerName = data.config.name;
 		try {
+			// A newer bundle for this worker has already been queued — skip
+			// this stale one before doing any expensive work.
+			if (this.#isStaleBundleFor(workerName, id)) {
+				return;
+			}
+
 			const configBundle = await convertToConfigBundle(data);
 
 			if (data.config.dev?.remote !== false) {
@@ -133,6 +161,12 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					data.config.name,
 					remoteProxySession ?? null
 				);
+			}
+
+			// Bail out if a newer bundle for this worker arrived while we
+			// were setting up the remote proxy session.
+			if (this.#isStaleBundleFor(workerName, id)) {
+				return;
 			}
 
 			if (
@@ -178,6 +212,12 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				logger.log(chalk.dim("⎔ Container image(s) ready"));
 			}
 
+			// Bail out if a newer bundle for this worker arrived while we
+			// were building container images.
+			if (this.#isStaleBundleFor(workerName, id)) {
+				return;
+			}
+
 			const options = await MF.buildMiniflareOptions(
 				this.#log,
 				await convertToConfigBundle(data),
@@ -197,7 +237,26 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				primary: Boolean(data.config.dev.multiworkerPrimary),
 			});
 
+			// Bail out if a newer bundle for this worker arrived while we
+			// were building miniflare options — avoid a redundant local
+			// server reload.
+			if (this.#isStaleBundleFor(workerName, id)) {
+				return;
+			}
+
 			if (this.#canStartMiniflare()) {
+				// Use the global bundle counter to decide whether to apply the
+				// merged config. When multiple workers fire onBundleComplete in
+				// quick succession (e.g. container rebuild hotkey), each is
+				// queued in the mutex. Only the *last* queued handler should
+				// call setOptions, because it will have all workers' updated
+				// options in #options. Earlier handlers would merge stale
+				// options from workers that haven't processed yet, causing
+				// Miniflare to start with an incorrect intermediate config.
+				if (globalId !== this.#globalBundleId) {
+					return;
+				}
+
 				const mergedMfOptions = ensureMatchingSql(this.#mergedMfOptions());
 
 				if (this.#mf === undefined) {
@@ -216,10 +275,14 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
 				// so only one update can happen at a time.
 				const userWorkerUrl = await this.#mf.ready;
-				const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
-				// If we received a new `bundleComplete` event before we were able to
-				// dispatch a `reloadComplete` for this bundle, ignore this bundle.
-				if (id !== this.#currentBundleId) {
+				const userWorkerInspectorUrl =
+					data.config.dev.inspector !== false
+						? await this.#mf.getInspectorURL()
+						: null;
+				// If we received a new `bundleComplete` event for *any* worker
+				// before we were able to dispatch a `reloadComplete`, ignore
+				// this bundle — the later handler will apply the full config.
+				if (globalId !== this.#globalBundleId) {
 					return;
 				}
 
@@ -233,12 +296,14 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 							hostname: userWorkerUrl.hostname,
 							port: userWorkerUrl.port,
 						},
-						userWorkerInspectorUrl: {
-							protocol: userWorkerInspectorUrl.protocol,
-							hostname: userWorkerInspectorUrl.hostname,
-							port: userWorkerInspectorUrl.port,
-							pathname: `/core:user:${data.config.name}`,
-						},
+						userWorkerInspectorUrl: userWorkerInspectorUrl
+							? {
+									protocol: userWorkerInspectorUrl.protocol,
+									hostname: userWorkerInspectorUrl.hostname,
+									port: userWorkerInspectorUrl.port,
+									pathname: `/core:user:${data.config.name}`,
+								}
+							: undefined,
 						userWorkerInnerUrlOverrides: getUserWorkerInnerUrlOverrides(
 							data.config
 						),
@@ -275,7 +340,10 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		}
 	}
 	onBundleComplete(data: BundleCompleteEvent) {
-		const id = ++this.#currentBundleId;
+		const prev = this.#currentBundleIds.get(data.config.name) ?? 0;
+		const id = prev + 1;
+		this.#currentBundleIds.set(data.config.name, id);
+		const globalId = ++this.#globalBundleId;
 
 		if (data.config.dev?.remote) {
 			this.emitErrorEvent({
@@ -296,7 +364,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			bundle: data.bundle,
 		});
 
-		void this.#mutex.runWith(() => this.#onBundleComplete(data, id));
+		void this.#mutex.runWith(() => this.#onBundleComplete(data, id, globalId));
 	}
 
 	#teardown = async (): Promise<void> => {

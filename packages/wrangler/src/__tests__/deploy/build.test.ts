@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { ParseError } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -10,10 +11,8 @@ import {
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, test, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { printBundleSize } from "../../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../../output";
-import { fetchSecrets } from "../../utils/fetch-secrets";
 import { diagnoseScriptSizeError } from "../../utils/friendly-validator-errors";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -42,8 +41,6 @@ vi.mock("../../check/commands", async (importOriginal) => {
 	};
 });
 
-vi.mock("../../utils/fetch-secrets");
-
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
 	sniffUserAgent: () => "npm",
@@ -55,8 +52,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -82,9 +82,12 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
@@ -1074,7 +1077,7 @@ export default { fetch() { return new Response(foo); } }`
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toThrowError();
+			await expect(runWrangler("deploy")).rejects.toThrow();
 			expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",
@@ -1223,6 +1226,49 @@ export default { fetch() { return new Response(mod); } };`;
 			await runWrangler("deploy index.js --no-bundle --dry-run --outdir dist");
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
+
+		it("should collect additional modules when find_additional_modules is not set", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				rules: [{ type: "CompiledWasm", globs: ["**/*.wasm"] }],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync("hello.wasm", "");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"hello.wasm": expect.any(String),
+				},
+			});
+			await runWrangler("deploy");
+		});
+
+		it("should not collect additional modules when find_additional_modules is false", async () => {
+			writeWranglerConfig({
+				no_bundle: true,
+				find_additional_modules: false,
+				main: "index.js",
+				rules: [{ type: "CompiledWasm", globs: ["**/*.wasm"] }],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync("hello.wasm", "");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				excludedModules: ["hello.wasm"],
+			});
+			await runWrangler("deploy");
+		});
 	});
 	describe("--no-bundle --minify", () => {
 		it("should warn that no-bundle and minify can't be used together", async ({
@@ -1317,6 +1363,49 @@ export default { fetch() { return new Response(mod); } };`;
 				"index.js",
 				`export default { fetch() { return new Response("Hello World"); } }\n` +
 					"//# sourceMappingURL=index.js.map"
+			);
+			fs.writeFileSync(
+				"index.js.map",
+				JSON.stringify({
+					version: 3,
+					sources: ["index.ts"],
+					sourceRoot: "",
+					file: "index.js",
+				})
+			);
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": expect.stringMatching(
+						/"sources":\["index.ts"\],"sourceRoot":"".*"file":"index.js"/
+					),
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should include source maps when a //# debugId= comment follows the //# sourceMappingURL= comment", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				upload_source_maps: true,
+				build: {
+					command: `echo "custom build script"`,
+				},
+			});
+			// Mirrors the output of `sentry-cli sourcemaps inject`, which appends
+			// a `//# debugId=` comment on a new line after `//# sourceMappingURL=`.
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=index.js.map\n" +
+					"\n" +
+					"//# debugId=7f1ca8ac-1725-5ca5-b961-279f0ab7279a\n"
 			);
 			fs.writeFileSync(
 				"index.js.map",

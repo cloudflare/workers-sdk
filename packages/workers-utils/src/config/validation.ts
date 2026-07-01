@@ -42,6 +42,7 @@ import type {
 	Assets,
 	CacheOptions,
 	ContainerApp,
+	CustomDomainRoute,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -82,7 +83,7 @@ export type ConfigBindingFieldName =
 	| "vectorize"
 	| "ai_search_namespaces"
 	| "ai_search"
-	| "web_search"
+	| "websearch"
 	| "agent_memory"
 	| "hyperdrive"
 	| "r2_buckets"
@@ -126,7 +127,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespaces: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	web_search: "Web Search",
+	websearch: "Web Search",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
@@ -185,7 +186,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespace: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	web_search: "Web Search",
+	websearch: "Web Search",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
@@ -1134,9 +1135,10 @@ function normalizeAndValidateRoute(
 function validateRoutes(
 	diagnostics: Diagnostics,
 	topLevelEnv: Environment | undefined,
-	rawEnv: RawEnvironment
+	rawEnv: RawEnvironment,
+	envName?: string
 ): Config["routes"] {
-	return inheritable(
+	const result = inheritable(
 		diagnostics,
 		topLevelEnv,
 		rawEnv,
@@ -1144,6 +1146,25 @@ function validateRoutes(
 		all(isRouteArray, isMutuallyExclusiveWith(rawEnv, "route")),
 		undefined
 	);
+
+	if (
+		topLevelEnv !== undefined &&
+		envName !== undefined &&
+		rawEnv.routes === undefined
+	) {
+		const customDomainRoutes = topLevelEnv.routes?.filter(
+			(r): r is CustomDomainRoute =>
+				typeof r === "object" && r !== null && r.custom_domain === true
+		);
+		if (customDomainRoutes && customDomainRoutes.length > 0) {
+			const customDomains = customDomainRoutes.map((r) => r.pattern).join(", ");
+			diagnostics.warnings.push(
+				`The "env.${envName}" environment inherits the top-level \`routes\` configuration, which includes the custom domain(s): ${customDomains}. Deploying this environment will reassign these custom domains away from the top-level Worker. Add \`"routes": []\` to "env.${envName}" to prevent inheritance, or copy the route configuration from the top level to hide this warning.`
+			);
+		}
+	}
+
+	return result;
 }
 
 function normalizeAndValidatePlacement(
@@ -1456,7 +1477,12 @@ function normalizeAndValidateEnvironment(
 		undefined
 	);
 
-	const routes = validateRoutes(diagnostics, topLevelEnv, rawEnv);
+	const routes = validateRoutes(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		topLevelEnv === undefined ? undefined : envName
+	);
 
 	const workers_dev = inheritable(
 		diagnostics,
@@ -1762,13 +1788,13 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateAISearchBinding),
 			[]
 		),
-		web_search: notInheritable(
+		websearch: notInheritable(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
 			envName,
-			"web_search",
+			"websearch",
 			validateNamedSimpleBinding(envName),
 			undefined
 		),
@@ -3090,7 +3116,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
-			"web_search",
+			"websearch",
 			"agent_memory",
 			"kv_namespace",
 			"durable_object_namespace",
@@ -4117,12 +4143,22 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isOptionalProperty(value, "migrations_pattern", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "migrations_pattern" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"database_id",
 		"database_internal_env",
 		"database_name",
 		"migrations_dir",
+		"migrations_pattern",
 		"migrations_table",
 		"preview_database_id",
 		"remote",
@@ -4552,6 +4588,70 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 			)}.`
 		);
 		isValid = false;
+	}
+	if (hasProperty(value, "dev") && value.dev !== undefined) {
+		if (
+			typeof value.dev !== "object" ||
+			value.dev === null ||
+			Array.isArray(value.dev)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should have an object "dev" field but got ${JSON.stringify(
+					value.dev
+				)}.`
+			);
+			isValid = false;
+		} else {
+			if (
+				!hasProperty(value.dev, "plugin") ||
+				typeof value.dev.plugin !== "object" ||
+				value.dev.plugin === null ||
+				Array.isArray(value.dev.plugin)
+			) {
+				diagnostics.errors.push(
+					`"${field}.dev" should have an object "plugin" field but got ${JSON.stringify(
+						(value.dev as { plugin?: unknown }).plugin
+					)}.`
+				);
+				isValid = false;
+			} else {
+				if (!isRequiredProperty(value.dev.plugin, "package", "string")) {
+					diagnostics.errors.push(
+						`"${field}.dev.plugin" should have a string "package" field but got ${JSON.stringify(
+							(value.dev.plugin as { package?: unknown }).package
+						)}.`
+					);
+					isValid = false;
+				}
+				if (!isRequiredProperty(value.dev.plugin, "name", "string")) {
+					diagnostics.errors.push(
+						`"${field}.dev.plugin" should have a string "name" field but got ${JSON.stringify(
+							(value.dev.plugin as { name?: unknown }).name
+						)}.`
+					);
+					isValid = false;
+				}
+			}
+			if (
+				hasProperty(value.dev, "options") &&
+				value.dev.options !== undefined &&
+				(typeof value.dev.options !== "object" ||
+					value.dev.options === null ||
+					Array.isArray(value.dev.options))
+			) {
+				diagnostics.errors.push(
+					`"${field}.dev.options" should be an object but got ${JSON.stringify(
+						value.dev.options
+					)}.`
+				);
+				isValid = false;
+			}
+		}
+		if ((value as { remote?: unknown }).remote === true) {
+			diagnostics.warnings.push(
+				`"${field}" binding has both "dev" and "remote" set; "remote" is ignored when "dev" is present and the binding is routed through the local Miniflare plugin.`
+			);
+		}
 	}
 	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;

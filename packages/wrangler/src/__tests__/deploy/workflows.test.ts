@@ -1,14 +1,13 @@
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { WORKFLOW_NOT_FOUND_CODE } from "../../deploy/check-workflow-conflicts";
 import { clearOutputFilePath } from "../../output";
-import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -36,8 +35,6 @@ vi.mock("../../check/commands", async (importOriginal) => {
 	};
 });
 
-vi.mock("../../utils/fetch-secrets");
-
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
 	sniffUserAgent: () => "npm",
@@ -49,8 +46,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -76,9 +76,12 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
@@ -318,7 +321,7 @@ describe("deploy", () => {
 					expect(body).toEqual({
 						script_name: "test-name",
 						class_name: "MyWorkflow",
-						schedules: "0 * * * *",
+						schedules: [{ cron: "0 * * * *" }],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -375,7 +378,7 @@ describe("deploy", () => {
 					expect(body).toEqual({
 						script_name: "test-name",
 						class_name: "MyWorkflow",
-						schedules: ["0 * * * *", "0 9 * * 1"],
+						schedules: [{ cron: "0 * * * *" }, { cron: "0 9 * * 1" }],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -434,7 +437,7 @@ describe("deploy", () => {
 						script_name: "test-name",
 						class_name: "MyWorkflow",
 						limits: { steps: 5000 },
-						schedules: "*/15 * * * *",
+						schedules: [{ cron: "*/15 * * * *" }],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -818,7 +821,7 @@ describe("deploy", () => {
 						expect(body).toEqual({
 							script_name: "my-app-staging",
 							class_name: "MyWorkflow",
-							schedules: "0 * * * *",
+							schedules: [{ cron: "0 * * * *" }],
 						});
 						return HttpResponse.json(
 							createFetchResult({ id: "mock-new-workflow-id" })
@@ -983,6 +986,12 @@ describe("deploy", () => {
 				);
 				expect(std.warn).toContain(
 					'Deploying will reassign these workflows to "test-name".'
+				);
+				expect(std.warn).toContain(
+					"Workflow names must be unique per account."
+				);
+				expect(std.warn).toContain(
+					"If this reassignment is unintended, rename the workflow(s) in the Wrangler config."
 				);
 			});
 
@@ -1256,12 +1265,21 @@ describe("deploy", () => {
 
 				await runWrangler("deploy --strict");
 
-				expect(std.warn).toContain(
-					"already exist and belong to different workers"
-				);
-				expect(std.err).toContain(
-					"Aborting the deployment operation because of conflicts"
-				);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe following workflow(s) already exist and belong to different workers:[0m
+
+					    - "my-workflow" (currently belongs to "other-worker")
+
+					  Deploying will reassign these workflows to "test-name". Workflow names must be unique per account.
+					  If this reassignment is unintended, rename the workflow(s) in the Wrangler config.
+
+					"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the upload operation because of conflicts. To override and upload anyway, remove the \`--strict\` flag[0m
+
+					"
+				`);
 				expect(std.out).not.toContain("Uploaded");
 				expect(process.exitCode).not.toBe(0);
 			});

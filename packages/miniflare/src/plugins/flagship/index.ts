@@ -22,6 +22,7 @@ export const FLAGSHIP_PLUGIN_NAME = "flagship";
 
 export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 	options: FlagshipOptionsSchema,
+	bindingTypeDescription: "Flagship",
 	async getBindings(options) {
 		if (!options.flagship) {
 			return [];

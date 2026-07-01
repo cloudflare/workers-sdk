@@ -51,7 +51,8 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -100,7 +101,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -250,7 +252,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -492,7 +495,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -661,7 +665,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]"
 				`);
 			});
@@ -736,7 +741,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]"
 				`);
 			});
@@ -787,7 +793,8 @@ describe("wrangler", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+						      --profile         Use a specific auth profile  [string]
 						  -v, --version         Show version number  [boolean]
 
 						OPTIONS
@@ -839,12 +846,12 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(1);
 
 					expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Adding consumer to queue testQueue.
-					Added consumer to queue testQueue."
-				`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding consumer to queue testQueue.
+						Added consumer to queue testQueue."
+					`);
 				});
 
 				it("should add a consumer using custom values", async ({ expect }) => {
@@ -1047,7 +1054,7 @@ describe("wrangler", () => {
 
 					await expect(
 						runWrangler(`queues consumer add ${queueName} testScript`)
-					).rejects.toThrowError();
+					).rejects.toThrow();
 					expect(std.out).toMatchInlineSnapshot(`
 				"Adding consumer to queue testQueue.
 				Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
@@ -1152,7 +1159,8 @@ describe("wrangler", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+						      --profile         Use a specific auth profile  [string]
 						  -v, --version         Show version number  [boolean]"
 					`);
 				});
@@ -1215,12 +1223,12 @@ describe("wrangler", () => {
 						expect(queueNameResolveRequest.count).toEqual(1);
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
-						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
-						Removing consumer from queue testQueue.
-						Removed consumer from queue testQueue."
-					`);
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Removing consumer from queue testQueue.
+							Removed consumer from queue testQueue."
+						`);
 					});
 
 					it("should show error when deleting a non-existing consumer", async ({
@@ -1299,12 +1307,12 @@ describe("wrangler", () => {
 						expect(queueNameResolveRequest.count).toEqual(1);
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
-						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
-						Removing consumer from queue testQueue.
-						Removed consumer from queue testQueue."
-					`);
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Removing consumer from queue testQueue.
+							Removed consumer from queue testQueue."
+						`);
 					});
 
 					it("should show error when deleting a non-matching environment", async ({
@@ -1584,7 +1592,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]"
 				`);
 			});
@@ -1634,7 +1643,8 @@ describe("wrangler", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+						      --profile         Use a specific auth profile  [string]
 						  -v, --version         Show version number  [boolean]
 
 						OPTIONS
@@ -1681,12 +1691,12 @@ describe("wrangler", () => {
 					expect(queueNameResolveRequest.count).toEqual(1);
 					expect(postRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Adding consumer to queue testQueue.
-					Added consumer to queue testQueue."
-				`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding consumer to queue testQueue.
+						Added consumer to queue testQueue."
+					`);
 				});
 
 				it("should add a consumer using custom values", async ({ expect }) => {
@@ -1785,7 +1795,8 @@ describe("wrangler", () => {
 						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 						  -h, --help            Show help  [boolean]
-						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+						      --profile         Use a specific auth profile  [string]
 						  -v, --version         Show version number  [boolean]"
 					`);
 				});
@@ -1875,7 +1886,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -1971,7 +1983,7 @@ describe("wrangler", () => {
 					├─┼─┼─┼─┼─┼─┤
 					│ 1002 │ my-dlq │ 5 │ 2 │ 10000 │ 15 │
 					└─┴─┴─┴─┴─┴─┘"
-			`);
+				`);
 			});
 
 			it("should show empty message when queue has no consumers", async ({
@@ -2106,7 +2118,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -2271,7 +2284,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
@@ -2302,7 +2316,7 @@ describe("wrangler", () => {
 					├─┼─┼─┼─┼─┼─┤
 					│ 1002 │ my-dlq │ 5 │ 2 │ 10000 │ 15 │
 					└─┴─┴─┴─┴─┴─┘"
-			`);
+				`);
 			});
 
 			it("should show empty message when queue has no http consumers", async ({
@@ -2456,7 +2470,8 @@ describe("wrangler", () => {
 					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help            Show help  [boolean]
-					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
 					  -v, --version         Show version number  [boolean]"
 				`);
 			});
@@ -2636,7 +2651,8 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -2753,7 +2769,8 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -2862,7 +2879,8 @@ describe("wrangler", () => {
 				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
-				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
 				OPTIONS

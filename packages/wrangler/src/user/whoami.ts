@@ -10,8 +10,11 @@ import { formatMessage } from "../utils/format-message";
 import { fetchAllAccounts } from "./fetch-accounts";
 import { fetchMembershipRoles } from "./membership";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
-import type { ApiCredentials, Scope } from ".";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Scope } from ".";
+import type {
+	ComplianceConfig,
+	ApiCredentials,
+} from "@cloudflare/workers-utils";
 
 /**
  * Represents the JSON output of `wrangler whoami --json`.
@@ -64,6 +67,9 @@ export async function whoami(
 	const user = await getUserInfo(complianceConfig);
 	if (!user) {
 		logger.log("You are not authenticated. Please run `wrangler login`.");
+		logger.log(
+			"To deploy without logging in, run a command like `wrangler deploy --temporary` to use a temporary preview account."
+		);
 		return;
 	}
 	printUserEmail(user);
@@ -170,7 +176,7 @@ function printTokenPermissions(user: UserInfo) {
 		user.tokenPermissions?.map((scope) => scope.split(":")) ?? [];
 	if (user.authType !== "OAuth Token") {
 		return void logger.log(
-			`🔓 To see token permissions visit https://dash.cloudflare.com/${user.authType === "User API Token" ? "profile" : user.accounts[0].id}/api-tokens.`
+			`🔓 To see token permissions visit https://dash.cloudflare.com/${user.authType === "User API Token" ? "profile" : user.accounts[0].id}/api-tokens`
 		);
 	}
 	logger.log(`🔓 Token Permissions:`);

@@ -1,5 +1,8 @@
+import {
+	mswAccessHandlers,
+	mswSuccessOauthHandlers,
+} from "@cloudflare/workers-auth/test-helpers";
 import { setupServer } from "msw/node";
-import { default as mswAccessHandlers } from "./handlers/access";
 import {
 	mswSuccessDeploymentDetails,
 	mswSuccessDeployments,
@@ -7,7 +10,6 @@ import {
 	mswSuccessDeploymentScriptMetadata,
 } from "./handlers/deployments";
 import { mswSuccessNamespacesHandlers } from "./handlers/namespaces";
-import { mswSuccessOauthHandlers } from "./handlers/oauth";
 import { mswR2handlers } from "./handlers/r2";
 import { default as mswSucessScriptHandlers } from "./handlers/script";
 import {

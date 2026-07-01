@@ -21,6 +21,7 @@ export const ARTIFACTS_PLUGIN_NAME = "artifacts";
 
 export const ARTIFACTS_PLUGIN: Plugin<typeof ArtifactsOptionsSchema> = {
 	options: ArtifactsOptionsSchema,
+	bindingTypeDescription: "Artifacts",
 	async getBindings(options) {
 		if (!options.artifacts) {
 			return [];

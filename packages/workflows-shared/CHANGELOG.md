@@ -1,5 +1,37 @@
 # @cloudflare/workflows-shared
 
+## 0.11.2
+
+### Patch Changes
+
+- [#14318](https://github.com/cloudflare/workers-sdk/pull/14318) [`f32e9c1`](https://github.com/cloudflare/workers-sdk/commit/f32e9c1fdbf8ab7c0e68afa613ec61e367be04cb) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add step context to Workflows rollback handlers
+
+  Rollback handlers now receive the original step context under `ctx`, making `ctx.step.name`, `ctx.step.count`, `ctx.attempt`, and the resolved step `config` available during rollback. The legacy `stepName` field remains available and is equivalent to `${ctx.step.name}-${ctx.step.count}`.
+
+  `rollbackConfig` is now limited to retry and timeout settings, matching the behavior supported by rollback handlers.
+
+- [#14314](https://github.com/cloudflare/workers-sdk/pull/14314) [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6) Thanks [@harryzcy](https://github.com/harryzcy)! - Bump esbuild to 0.28.1
+
+  This update includes several bug fixes from esbuild versions 0.27.3 through 0.28.1. See the [esbuild changelog](https://github.com/evanw/esbuild/blob/v0.28.1/CHANGELOG.md) for details.
+
+## 0.11.1
+
+### Patch Changes
+
+- [#14134](https://github.com/cloudflare/workers-sdk/pull/14134) [`262dfc2`](https://github.com/cloudflare/workers-sdk/commit/262dfc2b32531165f94ba87c70ce75fcb1490b61) Thanks [@matingathani](https://github.com/matingathani)! - Fix `wrangler dev` Workflows crashing with `SQLITE_TOOBIG` when a step returns a large `Uint8Array`
+
+  `JSON.stringify` encodes each byte of a `Uint8Array` as a separate numeric key
+  (`{"0":1,"1":2,...}`), producing a string ~10× larger than the array's byte
+  length. A 200 KB `Uint8Array` became a ~2 MB JSON string that exceeded SQLite's
+  blob limit, crashing the Workflow step. The same bytes returned as an
+  `ArrayBuffer` succeeded because `JSON.stringify(ArrayBuffer)` → `{}`.
+
+  The step log metadata (used by the local Workflows explorer) now stores a
+  human-readable description for `TypedArray` and `ArrayBuffer` outputs
+  (`[Uint8Array(200000 bytes)]`) instead of attempting to JSON-serialise the raw
+  bytes. The actual step value is unaffected — it is preserved in Durable Object
+  key-value storage via structured clone for replay by subsequent steps.
+
 ## 0.11.0
 
 ### Minor Changes

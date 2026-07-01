@@ -25,6 +25,7 @@ export const docs = createCommand({
 	},
 	behaviour: {
 		printMetricsBanner: true,
+		suggestSkillsAfterHandler: true,
 	},
 	positionalArgs: ["search"],
 	async handler(args, { config }) {

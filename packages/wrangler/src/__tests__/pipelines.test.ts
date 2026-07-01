@@ -34,10 +34,19 @@ describe("wrangler pipelines", () => {
 					expect(body.sql).toBe(sql);
 
 					if (!isValid) {
-						const error = {
-							notes: [{ text: "Invalid SQL syntax near 'INVALID'" }],
-						};
-						throw error;
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [
+									{
+										message: "Invalid SQL syntax near 'INVALID'",
+									},
+								],
+								messages: [],
+								result: null,
+							},
+							{ status: 400 }
+						);
 					}
 
 					return HttpResponse.json({
@@ -572,13 +581,57 @@ describe("wrangler pipelines", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				┌─┬─┬─┬─┐
-				│ Name │ ID │ Created │ Modified │
-				├─┼─┼─┼─┤
-				│ pipeline_one │ pipeline_1 │ 1/1/2024 │ 1/1/2024 │
-				├─┼─┼─┼─┤
-				│ pipeline_two │ pipeline_2 │ 1/2/2024 │ 1/2/2024 │
-				└─┴─┴─┴─┘"
+				┌─┬─┬─┬─┬─┐
+				│ Name │ ID │ Created │ Modified │ Status │
+				├─┼─┼─┼─┼─┤
+				│ pipeline_one │ pipeline_1 │ 1/1/2024 │ 1/1/2024 │ active │
+				├─┼─┼─┼─┼─┤
+				│ pipeline_two │ pipeline_2 │ 1/2/2024 │ 1/2/2024 │ active │
+				└─┴─┴─┴─┴─┘"
+			`);
+		});
+
+		it("should surface failed pipelines in the list", async ({ expect }) => {
+			const mockPipelines: Pipeline[] = [
+				{
+					id: "pipeline_1",
+					name: "healthy_pipeline",
+					sql: "INSERT INTO sink1 SELECT * FROM stream1;",
+					status: "running",
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+				{
+					id: "pipeline_2",
+					name: "broken_pipeline",
+					sql: "INSERT INTO sink2 SELECT * FROM stream2;",
+					status: "failed",
+					failure_reason: "Sink bucket 'my-bucket' does not exist",
+					created_at: "2024-01-02T00:00:00Z",
+					modified_at: "2024-01-02T00:00:00Z",
+				},
+			];
+
+			mockListPipelinesRequest(expect, mockPipelines);
+
+			await runWrangler("pipelines list");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				┌─┬─┬─┬─┬─┐
+				│ Name │ ID │ Created │ Modified │ Status │
+				├─┼─┼─┼─┼─┤
+				│ healthy_pipeline │ pipeline_1 │ 1/1/2024 │ 1/1/2024 │ running │
+				├─┼─┼─┼─┼─┤
+				│ broken_pipeline │ pipeline_2 │ 1/2/2024 │ 1/2/2024 │ failed │
+				└─┴─┴─┴─┴─┘
+
+				1 pipeline is in a failed state. Run 'wrangler pipelines get <pipeline>' for details:
+				  X broken_pipeline: Sink bucket 'my-bucket' does not exist
+				"
 			`);
 		});
 
@@ -671,13 +724,13 @@ describe("wrangler pipelines", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				┌─┬─┬─┬─┬─┐
-				│ Name │ ID │ Created │ Modified │ Type │
-				├─┼─┼─┼─┼─┤
-				│ new_pipeline │ pipeline_1 │ 1/1/2024 │ 1/1/2024 │ │
-				├─┼─┼─┼─┼─┤
-				│ legacy_pipeline │ legacy_123 │ N/A │ N/A │ Legacy │
-				└─┴─┴─┴─┴─┘"
+				┌─┬─┬─┬─┬─┬─┐
+				│ Name │ ID │ Created │ Modified │ Status │ Type │
+				├─┼─┼─┼─┼─┼─┤
+				│ new_pipeline │ pipeline_1 │ 1/1/2024 │ 1/1/2024 │ active │ │
+				├─┼─┼─┼─┼─┼─┤
+				│ legacy_pipeline │ legacy_123 │ N/A │ N/A │ N/A │ Legacy │
+				└─┴─┴─┴─┴─┴─┘"
 			`);
 		});
 
@@ -779,6 +832,7 @@ describe("wrangler pipelines", () => {
 				General:
 				  ID:           pipeline_123
 				  Name:         my_pipeline
+				  Status:       active
 				  Created At:   1/1/2024, 12:00:00 AM
 				  Modified At:  1/1/2024, 12:00:00 AM
 
@@ -798,6 +852,48 @@ describe("wrangler pipelines", () => {
 				├─┼─┤
 				│ test_sink │ sink_789 │
 				└─┴─┘"
+			`);
+		});
+
+		it("highlights failure reason for a failed pipeline", async ({
+			expect,
+		}) => {
+			const mockPipeline: Pipeline = {
+				id: "pipeline_123",
+				name: "my_pipeline",
+				sql: "INSERT INTO test_sink SELECT * FROM test_stream;",
+				status: "failed",
+				failure_reason:
+					"Schema validation failed: column 'id' expected int64 but got string",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			const getRequest = mockGetPipelineRequest("pipeline_123", mockPipeline);
+
+			await runWrangler("pipelines get pipeline_123");
+
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				General:
+				  ID:           pipeline_123
+				  Name:         my_pipeline
+				  Status:       failed
+				  Created At:   1/1/2024, 12:00:00 AM
+				  Modified At:  1/1/2024, 12:00:00 AM
+
+				X This pipeline is in a failed state.
+				  Reason: Schema validation failed: column 'id' expected int64 but got string
+
+				Pipeline SQL:
+				INSERT INTO test_sink SELECT * FROM test_stream;
+
+				Connected Streams: None
+				Connected Sinks: None"
 			`);
 		});
 

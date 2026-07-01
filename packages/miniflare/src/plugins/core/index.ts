@@ -17,7 +17,7 @@ import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containe
 import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
-import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
+import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
 import { fetch } from "../../http";
 import { kVoid } from "../../runtime";
@@ -27,6 +27,7 @@ import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import { IMAGES_PLUGIN_NAME } from "../images";
+import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
 import {
 	getUserBindingServiceName,
 	kUnsafeEphemeralUniqueKey,
@@ -549,8 +550,8 @@ export function maybeWrappedModuleToWorkerName(
 	}
 }
 
-function getStripCfConnectingIpName(workerIndex: number) {
-	return `strip-cf-connecting-ip:${workerIndex}`;
+function getOutboundInterceptorName(workerIndex: number) {
+	return `outbound:${workerIndex}`;
 }
 
 function getGlobalOutbound(
@@ -892,9 +893,7 @@ export const CORE_PLUGIN: Plugin<
 							: options.unsafeEphemeralDurableObjects
 								? { inMemory: kVoid }
 								: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
-					globalOutbound: options.stripCfConnectingIp
-						? { name: getStripCfConnectingIpName(workerIndex) }
-						: getGlobalOutbound(workerIndex, options),
+					globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&
@@ -971,17 +970,17 @@ export const CORE_PLUGIN: Plugin<
 			if (maybeService !== undefined) services.push(maybeService);
 		}
 
-		if (options.stripCfConnectingIp) {
+		{
 			// Use the zone option if provided, otherwise default to `${worker-name}.example.com`
 			const workerName = options.name ?? "worker";
 			const cfWorkerValue = options.zone ?? `${workerName}.example.com`;
 			services.push({
-				name: getStripCfConnectingIpName(workerIndex),
+				name: getOutboundInterceptorName(workerIndex),
 				worker: {
 					modules: [
 						{
 							name: "index.js",
-							esModule: STRIP_CF_CONNECTING_IP(),
+							esModule: OUTBOUND_WORKER(),
 						},
 					],
 					compatibilityDate: "2025-01-01",
@@ -991,6 +990,11 @@ export const CORE_PLUGIN: Plugin<
 							name: "CF_WORKER_ZONE",
 							text: cfWorkerValue,
 						},
+						{
+							name: "STRIP_CF_CONNECTING_IP",
+							json: JSON.stringify(options.stripCfConnectingIp ?? true),
+						},
+						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					globalOutbound: getGlobalOutbound(workerIndex, options),
 				},
@@ -1097,6 +1101,13 @@ export function getGlobalServices({
 			},
 		});
 	}
+	const r2PublicService = getR2PublicService(allWorkerOpts ?? []);
+	if (r2PublicService !== undefined) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_R2_PUBLIC,
+			service: { name: R2_PUBLIC_SERVICE_NAME },
+		});
+	}
 	const imagesBinding = allWorkerOpts
 		?.map((worker) => worker.images?.images)
 		.find(
@@ -1179,6 +1190,10 @@ export function getGlobalServices({
 			},
 		},
 	];
+
+	if (r2PublicService !== undefined) {
+		services.push(r2PublicService);
+	}
 
 	if (sharedOptions.unsafeLocalExplorer) {
 		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);

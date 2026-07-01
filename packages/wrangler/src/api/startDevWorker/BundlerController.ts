@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
@@ -16,9 +17,9 @@ import { runBuild } from "../../dev/use-esbuild";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
 import { debounce } from "../../utils/debounce";
+import { isAbortError } from "../../utils/isAbortError";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import { extractBindingsOfType } from "./utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigUpdateEvent } from "./events";
@@ -32,6 +33,16 @@ export class BundlerController extends Controller {
 
 	// Handle aborting in-flight custom builds as new ones come in from the filesystem watcher
 	#customBuildAborter = new AbortController();
+	#activeCustomBuilds = new Set<Promise<void>>();
+
+	#startCustomBuildRun(config: StartDevWorkerOptions, filePath: string) {
+		const buildPromise = this.#runCustomBuild(config, filePath);
+		this.#activeCustomBuilds.add(buildPromise);
+		void buildPromise
+			.finally(() => this.#activeCustomBuilds.delete(buildPromise))
+			.catch(() => {});
+		return buildPromise;
+	}
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
 		// If a new custom build comes in, we need to cancel in-flight builds
@@ -53,7 +64,7 @@ export class BundlerController extends Controller {
 					command: config.build?.custom?.command,
 				},
 				config.config,
-				"dev"
+				{ wranglerCommand: "dev", signal: buildAborter.signal }
 			);
 			if (buildAborter.signal.aborted) {
 				return;
@@ -103,7 +114,8 @@ export class BundlerController extends Controller {
 						entry,
 						config.build.moduleRules,
 						this.#tmpDir.path,
-						config.pythonModules?.exclude ?? []
+						config.pythonModules?.exclude ?? [],
+						config.build.findAdditionalModules !== false
 					)
 				: await bundleWorker(entry, this.#tmpDir.path, {
 						bundle: true,
@@ -172,6 +184,9 @@ export class BundlerController extends Controller {
 				entrypointSource: readFileSync(entrypointPath, "utf8"),
 			});
 		} catch (err) {
+			if (buildAborter.signal.aborted || isAbortError(err)) {
+				return;
+			}
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Custom build failed",
@@ -184,6 +199,7 @@ export class BundlerController extends Controller {
 
 	async #startCustomBuild(config: StartDevWorkerOptions) {
 		await this.#customBuildWatcher?.close();
+		this.#customBuildWatcher = undefined;
 		this.#customBuildAborter?.abort();
 
 		if (!config.build?.custom?.command) {
@@ -195,18 +211,23 @@ export class BundlerController extends Controller {
 		// This is always present if a custom command is provided, defaulting to `./src`
 		assert(pathsToWatch, "config.build.custom.watch");
 
+		if (config.dev.watch === false) {
+			await this.#startCustomBuildRun(config, String(pathsToWatch));
+			return;
+		}
+
 		this.#customBuildWatcher = watch(pathsToWatch, {
 			persistent: true,
 			// The initial custom build is always done in getEntry()
 			ignoreInitial: true,
 		});
 		this.#customBuildWatcher.on("ready", () => {
-			void this.#runCustomBuild(config, String(pathsToWatch));
+			void this.#startCustomBuildRun(config, String(pathsToWatch));
 		});
 
 		this.#customBuildWatcher.on(
 			"all",
-			(_event, filePath) => void this.#runCustomBuild(config, filePath)
+			(_event, filePath) => void this.#startCustomBuildRun(config, filePath)
 		);
 	}
 
@@ -277,6 +298,7 @@ export class BundlerController extends Controller {
 					config.compatibilityDate,
 					config.compatibilityFlags
 				),
+				watch: config.dev.watch ?? true,
 				defineNavigatorUserAgent: isNavigatorDefined(
 					config.compatibilityDate,
 					config.compatibilityFlags
@@ -307,6 +329,7 @@ export class BundlerController extends Controller {
 	#assetsWatcher?: ReturnType<typeof watch>;
 	async #ensureWatchingAssets(config: StartDevWorkerOptions) {
 		await this.#assetsWatcher?.close();
+		this.#assetsWatcher = undefined;
 
 		const debouncedRefreshBundle = debounce(() => {
 			if (this.#currentBundle) {
@@ -314,15 +337,39 @@ export class BundlerController extends Controller {
 			}
 		});
 
-		if (config.assets?.directory) {
-			this.#assetsWatcher = watch(config.assets.directory, {
+		if (config.dev.watch !== false && config.assets?.directory) {
+			const assetsDir = config.assets.directory;
+			const watcher = watch(assetsDir, {
 				persistent: true,
 				ignoreInitial: true,
-			}).on("all", async (eventName, filePath) => {
-				const message = getAssetChangeMessage(eventName, filePath);
-				logger.debug(`🌀 ${message}...`);
-				debouncedRefreshBundle();
-			});
+			})
+				.on("all", async (eventName, filePath) => {
+					const message = getAssetChangeMessage(eventName, filePath);
+					logger.debug(`🌀 ${message}...`);
+					debouncedRefreshBundle();
+				})
+				.on("error", (err) => {
+					const errnoError = err as NodeJS.ErrnoException;
+					if (errnoError.code === "EMFILE") {
+						logger.warn(
+							`Assets directory watcher hit a platform limit and has been disabled.\n` +
+								`Hot-reloading will not reflect changes to files in ${assetsDir}.\n` +
+								`This can occur when watching very large assets directory trees.\n` +
+								`To work around this, reduce the number of subdirectories under ${assetsDir} by flattening or restructuring the assets directory.`
+						);
+					} else {
+						logger.warn(
+							`Assets directory watcher encountered an error and has been disabled.\n` +
+								`Hot-reloading will not reflect changes to files in ${assetsDir}.\n` +
+								`Watcher error: ${err.message}`
+						);
+					}
+					void watcher.close();
+					if (this.#assetsWatcher === watcher) {
+						this.#assetsWatcher = undefined;
+					}
+				});
+			this.#assetsWatcher = watcher;
 		}
 	}
 
@@ -375,6 +422,9 @@ export class BundlerController extends Controller {
 		logger.debug("BundlerController teardown beginning...");
 		await super.teardown();
 		this.#customBuildAborter?.abort();
+		const activeCustomBuilds = Array.from(this.#activeCustomBuilds, (build) =>
+			build.catch(() => {})
+		);
 		// Abort any in-flight esbuild build so that a finishing build doesn't
 		// emit `bundleComplete`/`bundleStart` into a torn-down event bus.
 		// `Controller.#tearingDown` already suppresses error events, but not
@@ -387,6 +437,7 @@ export class BundlerController extends Controller {
 			// ...middleware-loader.entry.ts" during teardown.
 			this.#bundlerCleanup?.(),
 			this.#customBuildWatcher?.close(),
+			...activeCustomBuilds,
 			this.#assetsWatcher?.close(),
 		]);
 		// Defence-in-depth: `bundle.ts`'s `stop()` normally removes the tmp

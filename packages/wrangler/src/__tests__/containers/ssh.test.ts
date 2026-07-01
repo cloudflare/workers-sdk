@@ -79,7 +79,8 @@ describe("containers ssh", () => {
 			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
@@ -87,13 +88,27 @@ describe("containers ssh", () => {
 		`);
 	});
 
-	it("should reject invalid container ID format", async ({ expect }) => {
+	it("should let the API validate invalid container ID format", async ({
+		expect,
+	}) => {
 		setWranglerConfig({});
+		const sshRequest = vi.fn();
+		msw.use(
+			http.get(`*/instances/:instanceId/ssh`, async ({ params }) => {
+				sshRequest(params.instanceId);
+				return HttpResponse.json(
+					{ error: "INVALID_INSTANCE_ID" },
+					{ status: 400 }
+				);
+			})
+		);
+
 		await expect(
 			runWrangler("containers ssh invalid-id")
-		).rejects.toMatchInlineSnapshot(
-			`[Error: Expected an instance ID but got invalid-id]`
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Error verifying SSH access: INVALID_INSTANCE_ID]`
 		);
+		expect(sshRequest).toHaveBeenCalledWith("invalid-id");
 	});
 
 	it("should handle 500s when getting ssh jwt", async ({ expect }) => {

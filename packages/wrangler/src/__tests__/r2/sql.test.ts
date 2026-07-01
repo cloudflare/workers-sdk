@@ -70,7 +70,7 @@ describe("r2 sql", () => {
 		it("should validate warehouse name format", async ({ expect }) => {
 			await expect(
 				runWrangler(`r2 sql query invalidwarehouse "${mockQuery}"`)
-			).rejects.toThrow("Warehouse name has invalid format");
+			).rejects.toThrow("Invalid warehouse name format");
 		});
 
 		it("should execute a successful query and display results", async ({

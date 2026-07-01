@@ -22,6 +22,7 @@ describe("findPackageNames()", () => {
 	}) => {
 		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
+				"@cloudflare/autoconfig",
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli-shared-helpers",
 				"@cloudflare/codemod",
@@ -40,12 +41,12 @@ describe("findPackageNames()", () => {
 				"@cloudflare/unenv-preset",
 				"@cloudflare/vite-plugin",
 				"@cloudflare/vitest-pool-workers",
+				"@cloudflare/workers-auth",
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-playground",
 				"@cloudflare/workers-shared",
 				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
-				"@cloudflare/wrangler-bundler",
 				"create-cloudflare",
 				"miniflare",
 				"solarflare-theme",

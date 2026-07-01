@@ -1,7 +1,12 @@
+import type { ApiCredentials } from "./cfetch";
 import type { Config } from "./config";
 import type {
 	CustomDomainRoute,
+	ContainerApp,
+	ContainerEngine,
+	DurableObjectMigration,
 	Observability,
+	Rule,
 	TailConsumer,
 	ZoneIdRoute,
 	ZoneNameRoute,
@@ -25,6 +30,7 @@ import type {
 	CfLogfwdrBinding,
 	CfMediaBinding,
 	CfMTlsCertificate,
+	CfModule,
 	CfPipeline,
 	CfPlacement,
 	CfQueue,
@@ -45,8 +51,10 @@ import type {
 	CfWorkerLoader,
 	CfWorkflow,
 	CfScriptFormat,
+	CfUnsafe,
 } from "./worker";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type { MockAgent } from "undici";
 
 export type Json =
 	| string
@@ -76,7 +84,7 @@ export type WorkerMetadataBinding =
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "ai_search_namespace"; name: string; namespace: string }
 	| { type: "ai_search"; name: string; instance_name: string }
-	| { type: "web_search"; name: string }
+	| { type: "websearch"; name: string }
 	| { type: "agent_memory"; name: string; namespace: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
@@ -216,6 +224,17 @@ export type AssetsOptions = {
 	_redirects?: string;
 	_headers?: string;
 	run_worker_first?: boolean | string[];
+};
+
+/**
+ * The result of validating and resolving the assets directory, before the
+ * full {@link AssetsOptions} are resolved. Produced by the validation half of
+ * `getAssetsOptions` and consumed by `resolveAssetOptions`.
+ */
+export type ValidatedAssetsOptions = {
+	directory: string;
+	binding?: string;
+	directoryExists: boolean;
 };
 
 /**
@@ -373,7 +392,7 @@ export type Binding =
 	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
 	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
 	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
-	| ({ type: "web_search" } & BindingOmit<CfWebSearch>)
+	| ({ type: "websearch" } & BindingOmit<CfWebSearch>)
 	| ({ type: "agent_memory" } & BindingOmit<CfAgentMemory>)
 	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
 	| ({ type: "service" } & BindingOmit<CfService>)
@@ -395,6 +414,205 @@ export type Binding =
 	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
 	| { type: "assets" }
 	| { type: "inherit" };
+
+export interface CfAccount {
+	/**
+	 * An API token.
+	 *
+	 * @link https://api.cloudflare.com/#user-api-tokens-properties
+	 */
+	apiToken: ApiCredentials;
+	/**
+	 * An account ID.
+	 */
+	accountId: string;
+}
+
+export type HookValues = string | number | boolean | object | undefined | null;
+export type Hook<T extends HookValues, Args extends unknown[] = []> =
+	| T
+	| ((...args: Args) => T);
+export type AsyncHook<T extends HookValues, Args extends unknown[] = []> =
+	| Hook<T, Args>
+	| Hook<Promise<T>, Args>;
+
+export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
+
+// Duplicate of Miniflare's NodeJSCompatMode to keep workers-utils from depending on Miniflare.
+export type NodeJSCompatMode = "als" | "v1" | "v2" | null;
+
+export interface StartDevWorkerInput {
+	/** The name of the worker. */
+	name?: string;
+	/**
+	 * The javascript or typescript entry-point of the worker.
+	 * This is the `main` property of a Wrangler configuration file.
+	 */
+	entrypoint?: string;
+	/** The configuration path of the worker, or a normalized configuration object. */
+	config?: string | Config;
+
+	/** The compatibility date for the workerd runtime. */
+	compatibilityDate?: string;
+	/** The compatibility flags for the workerd runtime. */
+	compatibilityFlags?: string[];
+
+	/** Specify the compliance region mode of the Worker. */
+	complianceRegion?: Config["compliance_region"];
+
+	/** Configuration for Python modules. */
+	pythonModules?: {
+		/** A list of glob patterns to exclude files from the python_modules directory when bundling. */
+		exclude?: string[];
+	};
+
+	env?: string;
+
+	/**
+	 * An array of paths to the .env files to load for this worker, relative to the project directory.
+	 *
+	 * If not specified, defaults to the standard `.env` files as given from Wrangler.
+	 * The project directory is where the Wrangler configuration file is located or the current working directory otherwise.
+	 */
+	envFiles?: string[];
+
+	/** The bindings available to the worker. The specified binding type will be exposed to the worker on the `env` object under the same key. */
+	bindings?: Record<string, Binding>;
+	/**
+	 * Default bindings that can be overridden by config bindings.
+	 * Useful for injecting environment-specific defaults like CF_PAGES variables.
+	 */
+	defaultBindings?: Record<string, Extract<Binding, { type: "plain_text" }>>;
+	migrations?: DurableObjectMigration[];
+	containers?: ContainerApp[];
+	/** The triggers which will cause the worker's exported default handlers to be called. */
+	triggers?: Trigger[];
+
+	tailConsumers?: CfTailConsumer[];
+	streamingTailConsumers?: CfTailConsumer[];
+
+	/**
+	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
+	 *
+	 * When defined this will override any user settings.
+	 * Otherwise, Wrangler will use the user's preference.
+	 */
+	sendMetrics?: boolean;
+
+	/** Options applying to the worker's build step. Applies to deploy and dev. */
+	build?: {
+		/** Whether the worker and its dependencies are bundled. Defaults to true. */
+		bundle?: boolean;
+
+		additionalModules?: CfModule[];
+
+		findAdditionalModules?: boolean;
+		processEntrypoint?: boolean;
+		/** Specifies types of modules matched by globs. */
+		moduleRules?: Rule[];
+		/** Replace global identifiers with constant expressions, e.g. { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
+		define?: Record<string, string>;
+		/** Alias modules */
+		alias?: Record<string, string>;
+		/** Whether the bundled worker is minified. Only takes effect if bundle: true. */
+		minify?: boolean;
+		/** Whether to keep function names after JavaScript transpilations. */
+		keepNames?: boolean;
+		/** Options controlling a custom build step. */
+		custom?: {
+			/** Custom shell command to run before bundling. Runs even if bundle. */
+			command?: string;
+			/** The cwd to run the command in. */
+			workingDirectory?: string;
+			/** Filepath(s) to watch for changes. Upon changes, the command will be rerun. */
+			watch?: string | string[];
+		};
+		jsxFactory?: string;
+		jsxFragment?: string;
+		tsconfig?: string;
+		nodejsCompatMode?: Hook<NodeJSCompatMode, [Config]>;
+
+		moduleRoot?: string;
+	};
+
+	/** Options applying to the worker's development preview environment. */
+	dev?: {
+		/** Options applying to the worker's inspector server. False disables the inspector server. */
+		inspector?: { hostname?: string; port?: number; secure?: boolean } | false;
+		/** Whether the worker runs on the edge or locally. */
+		remote?: boolean | "minimal";
+		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
+		auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>;
+		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. Set to `false` to disable persistence. */
+		persist?: string | false;
+		/** Controls which logs are logged. */
+		logLevel?: LogLevel;
+		/** Whether the worker server restarts upon source/config file changes. */
+		watch?: boolean;
+		/** Whether a script tag is inserted on text/html responses which will reload the page upon file changes. Defaults to false. */
+		liveReload?: boolean;
+
+		/** The local address to reach your worker. Applies to remote: true (remote mode) and remote: false (local mode). */
+		server?: {
+			hostname?: string;
+			port?: number;
+			secure?: boolean;
+			httpsKeyPath?: string;
+			httpsCertPath?: string;
+		};
+		/** Controls what request.url looks like inside the worker. */
+		origin?: { hostname?: string; secure?: boolean };
+		/** A hook for outbound fetch calls from within the worker. */
+		outboundService?: ServiceFetch;
+		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
+		mockFetch?: MockAgent;
+
+		testScheduled?: boolean;
+
+		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
+		multiworkerPrimary?: boolean;
+		/** Whether to infer the local request origin from configured routes. */
+		inferOriginFromRoutes?: boolean;
+		/** Whether local requests should be matched against configured routes. */
+		routeRequestsByRoutes?: boolean;
+
+		containerBuildId?: string;
+		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
+		enableContainers?: boolean;
+
+		/** Path to the dev registry directory */
+		registry?: string;
+
+		/** Path to the docker executable. Defaults to 'docker' */
+		dockerPath?: string;
+
+		/** Options for the container engine */
+		containerEngine?: ContainerEngine;
+
+		/** Re-generate your worker types when your Wrangler configuration file changes */
+		generateTypes?: boolean;
+
+		/**
+		 * Experimental: Use `cloudflare.config.ts` + optional `wrangler.config.ts`
+		 * instead of `wrangler.json[c]` / `wrangler.toml`.
+		 */
+		experimentalNewConfig?: boolean;
+
+		/** Tunnel configuration for this dev session. */
+		tunnel?: {
+			enabled: boolean;
+			name?: string;
+		};
+	};
+	legacy?: {
+		site?: Hook<Config["site"], [Config]>;
+		useServiceEnvironments?: boolean;
+	};
+	unsafe?: Omit<CfUnsafe, "bindings">;
+	assets?: string;
+
+	experimental?: Record<string, never>;
+}
 
 /**
  * An entry point for the Worker.

@@ -1,8 +1,12 @@
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	parseJSON,
+	UserError,
+	truncate,
+} from "@cloudflare/workers-utils";
 import prettyBytes from "pretty-bytes";
 import { fetch } from "undici";
-import { truncate } from "../cfetch/internal";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import {
@@ -113,9 +117,12 @@ export const r2SqlQueryCommand = createCommand({
 
 		const splitIndex = warehouse.indexOf("_");
 		if (splitIndex === -1) {
-			throw new UserError("Warehouse name has invalid format", {
-				telemetryMessage: "r2 sql query invalid warehouse format",
-			});
+			throw new UserError(
+				`Invalid warehouse name format '${warehouse}'. Expected the format '<account-id>_<bucket-name>' (e.g. 'abc123_my-bucket'). You can find the warehouse name by running: wrangler r2 bucket catalog get <bucket>`,
+				{
+					telemetryMessage: "r2 sql query invalid warehouse format",
+				}
+			);
 		}
 		const [accountId, bucketName] = [
 			warehouse.slice(0, splitIndex),

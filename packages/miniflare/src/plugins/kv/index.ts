@@ -77,6 +77,7 @@ export const KV_PLUGIN: Plugin<
 > = {
 	options: KVOptionsSchema,
 	sharedOptions: KVSharedOptionsSchema,
+	bindingTypeDescription: "KV namespace",
 	async getBindings(options) {
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const bindings = namespaces.map<Worker_Binding>(([name, namespace]) => ({

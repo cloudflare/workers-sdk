@@ -103,6 +103,7 @@ export interface PluginBase<
 	SharedOptions extends z.ZodType | undefined,
 > {
 	options: Options;
+	bindingTypeDescription?: string;
 	getBindings(
 		options: z.infer<Options>,
 		workerIndex: number

@@ -34,8 +34,7 @@ export function mapWorkerMetadataBindings(
 						{
 							configObj.vars = {
 								...(configObj.vars ?? {}),
-								name: binding.name,
-								json: binding.json,
+								[binding.name]: binding.json,
 							};
 						}
 						break;
@@ -299,9 +298,9 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
-					case "web_search":
+					case "websearch":
 						{
-							configObj.web_search = {
+							configObj.websearch = {
 								binding: binding.name,
 							};
 						}

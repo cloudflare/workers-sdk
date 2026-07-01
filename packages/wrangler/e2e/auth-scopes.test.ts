@@ -1,10 +1,11 @@
+import { getAuthUrlFromEnv } from "@cloudflare/workers-auth";
 import { fetch } from "undici";
 import { describe, it } from "vitest";
+import { getClientIdFromEnv } from "../src/user/auth-variables";
 import {
-	getAuthUrlFromEnv,
-	getClientIdFromEnv,
-} from "../src/user/auth-variables";
-import { generateAuthUrl } from "../src/user/generate-auth-url";
+	generateAuthUrl,
+	OAUTH_CALLBACK_URL,
+} from "../src/user/generate-auth-url";
 import { DefaultScopeKeys } from "../src/user/user";
 
 describe("auth scopes", () => {
@@ -17,6 +18,7 @@ describe("auth scopes", () => {
 			scopes: DefaultScopeKeys,
 			stateQueryParam: "test-state",
 			codeChallenge: "test-code-challenge",
+			redirectUri: OAUTH_CALLBACK_URL,
 		});
 
 		const response = await fetch(url, { redirect: "manual" });

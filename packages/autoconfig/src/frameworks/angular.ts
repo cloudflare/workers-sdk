@@ -1,0 +1,155 @@
+import assert from "node:assert";
+import { readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
+import { parseJSONC } from "@cloudflare/workers-utils";
+import semiver from "semiver";
+import dedent from "ts-dedent";
+import { Framework } from "./framework-class";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
+import type { PackageManager } from "@cloudflare/workers-utils";
+
+export class Angular extends Framework {
+	async configure({
+		workerName,
+		outputDir,
+		dryRun,
+		packageManager,
+		isWorkspaceRoot,
+	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		const angularJson = parseJSONC(
+			await readFile(resolve("angular.json"), "utf8")
+		) as AngularJson;
+
+		if (hasSsr(angularJson, workerName)) {
+			this.configurationDescription = "Configuring project for Angular";
+			if (!dryRun) {
+				await updateAngularJson(workerName, angularJson, this.frameworkVersion);
+				await overrideServerFile();
+				await installAdditionalDependencies(packageManager, isWorkspaceRoot);
+			}
+			return {
+				wranglerConfig: {
+					main: "./dist/server/server.mjs",
+					assets: {
+						binding: "ASSETS",
+						directory: `${outputDir}browser`,
+					},
+				},
+			};
+		} else {
+			this.configurationDescription =
+				"Configuring Angular SPA project (assets only)";
+			return {
+				wranglerConfig: {
+					assets: {
+						directory: outputDir,
+					},
+				},
+			};
+		}
+	}
+}
+
+/**
+ * Checks whether the given Angular project has SSR configured.
+ * SSR is considered enabled when `architect.build.options.ssr` exists and is truthy.
+ */
+function hasSsr(angularJson: AngularJson, projectName: string): boolean {
+	const ssr = angularJson.projects[projectName]?.architect?.build?.options?.ssr;
+	return !!ssr;
+}
+
+async function updateAngularJson(
+	projectName: string,
+	angularJson: AngularJson,
+	frameworkVersion: string
+) {
+	const s = spinner();
+	s.start(`Updating angular.json config`);
+
+	// Update builder
+	const architectSection = angularJson.projects[projectName].architect;
+	architectSection.build.options.outputPath = "dist";
+	architectSection.build.options.outputMode = "server";
+	// ssr is guaranteed to be truthy here (checked by hasSsr before calling this).
+	// `ssr: true` is a valid Angular shorthand for SSR with defaults — normalise it
+	// to an object before setting properties on it.
+	assert(architectSection.build.options.ssr);
+	if (typeof architectSection.build.options.ssr === "boolean") {
+		architectSection.build.options.ssr = {};
+	}
+	const platformKey =
+		semiver(frameworkVersion, "22.0.0") >= 0
+			? "platform"
+			: "experimentalPlatform";
+	architectSection.build.options.ssr[platformKey] = "neutral";
+
+	await writeFile(
+		resolve("angular.json"),
+		JSON.stringify(angularJson, null, 2)
+	);
+
+	s.stop(`${brandColor(`updated`)} ${dim(`\`angular.json\``)}`);
+}
+
+async function overrideServerFile() {
+	await writeFile(
+		resolve("src/server.ts"),
+		dedent`
+		import { AngularAppEngine, createRequestHandler } from '@angular/ssr';
+
+		const angularApp = new AngularAppEngine({
+			// It is safe to set allow \`localhost\`, so that SSR can run in local development,
+			// as, in production, Cloudflare will ensure that \`localhost\` is not the host.
+			allowedHosts: ['localhost'],
+		});
+
+		/**
+		 * This is a request handler used by the Angular CLI (dev-server and during build).
+		 */
+		export const reqHandler = createRequestHandler(async (req) => {
+			const res = await angularApp.handle(req);
+
+			return res ?? new Response('Page not found.', { status: 404 });
+		});
+
+		export default { fetch: reqHandler };
+		`
+	);
+}
+
+async function installAdditionalDependencies(
+	packageManager: PackageManager,
+	isWorkspaceRoot: boolean
+) {
+	await installPackages(packageManager.type, ["xhr2"], {
+		dev: true,
+		startText: "Installing additional dependencies",
+		doneText: `${brandColor("installed")}`,
+		isWorkspaceRoot,
+	});
+}
+
+type AngularJson = {
+	projects: Record<
+		string,
+		{
+			architect: {
+				build: {
+					options: {
+						outputPath: string;
+						outputMode: string;
+						ssr?: Record<string, unknown> | boolean | null;
+						assets: string[];
+					};
+				};
+			};
+		}
+	>;
+};

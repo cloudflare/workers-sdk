@@ -55,6 +55,7 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 
 export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 	options: EmailOptionsSchema,
+	bindingTypeDescription: "Email",
 	getBindings(options): Worker_Binding[] {
 		if (!options.email?.send_email) {
 			return [];

@@ -1,5 +1,5 @@
-import { Loader } from "@cloudflare/kumo";
-import { CheckIcon, PlusIcon } from "@phosphor-icons/react";
+import { Loader, Tooltip } from "@cloudflare/kumo";
+import { ArrowClockwiseIcon, CheckIcon, PlusIcon } from "@phosphor-icons/react";
 import { memo } from "react";
 import { CopyButton } from "./CopyButton";
 import { formatDuration, formatJson } from "./helpers";
@@ -72,10 +72,12 @@ export const StepRow = memo(function StepRow({
 	step,
 	isExpanded,
 	onToggleExpanded,
+	onRestartFromStep,
 }: {
 	step: StepData;
 	isExpanded: boolean;
 	onToggleExpanded: () => void;
+	onRestartFromStep?: (step: StepData) => void;
 }): JSX.Element {
 	const hasDetails =
 		step.type === "step" ||
@@ -86,7 +88,7 @@ export const StepRow = memo(function StepRow({
 		<div className="border-b border-kumo-fill p-1 last:border-b-0">
 			{/* Collapsed row */}
 			<div
-				className={`grid h-10 grid-cols-[20px_1fr_160px_160px_80px_24px] items-center gap-3 rounded-lg px-2 transition-colors ${hasDetails ? "cursor-pointer hover:bg-kumo-fill" : ""}`}
+				className={`grid h-10 grid-cols-[20px_1fr_160px_160px_80px_28px_24px] items-center gap-3 rounded-lg px-2 transition-colors ${hasDetails ? "cursor-pointer hover:bg-kumo-fill" : ""}`}
 				onClick={hasDetails ? onToggleExpanded : undefined}
 			>
 				<StepStatusIcon
@@ -113,6 +115,24 @@ export const StepRow = memo(function StepRow({
 				<span className="text-sm text-kumo-subtle">
 					{formatDuration(step.start, step.end)}
 				</span>
+
+				<div className="flex items-center justify-center">
+					{onRestartFromStep && (
+						<Tooltip content="Restart from this step" asChild>
+							<button
+								aria-label="Restart from this step"
+								className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-default transition-colors hover:bg-kumo-fill disabled:cursor-not-allowed disabled:opacity-40"
+								onClick={(event) => {
+									event.stopPropagation();
+									onRestartFromStep(step);
+								}}
+								type="button"
+							>
+								<ArrowClockwiseIcon size={14} />
+							</button>
+						</Tooltip>
+					)}
+				</div>
 
 				<div className="flex items-center justify-center">
 					{hasDetails ? (

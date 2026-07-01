@@ -1,0 +1,524 @@
+import assert from "node:assert";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
+import { parseFile, transformFile } from "@cloudflare/codemod";
+import * as recast from "recast";
+import semiver from "semiver";
+import dedent from "ts-dedent";
+import { Framework } from "./framework-class";
+import { transformViteConfig } from "./utils/vite-config";
+import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import type { AutoConfigContext } from "../context";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
+import type { Program } from "esprima";
+
+const b = recast.types.builders;
+
+/**
+ * Resolves the path to the React Router config file (`react-router.config.ts` or `.js`)
+ * in the given project directory.
+ *
+ * @param projectPath - Absolute path to the project root.
+ * @returns The resolved config file path, or `null` if neither `.ts` nor `.js` variant exists.
+ */
+function getReactRouterConfigPath(projectPath: string): string | null {
+	const filePathTS = path.join(projectPath, "react-router.config.ts");
+	const filePathJS = path.join(projectPath, "react-router.config.js");
+
+	if (existsSync(filePathTS)) {
+		return filePathTS;
+	}
+
+	if (existsSync(filePathJS)) {
+		return filePathJS;
+	}
+
+	return null;
+}
+
+/**
+ * Checks whether the middleware pattern should be used for the given React Router project.
+ *
+ * For React Router >= 8.0.0, middleware is enabled by default
+ * (ref: https://github.com/remix-run/react-router/pull/15078), so this always returns `true`.
+ *
+ * For earlier versions, it parses the user's `react-router.config.ts` (or `.js`) to check
+ * whether `future.v8_middleware` is explicitly set to `true`.
+ *
+ * This determines which code pattern to generate:
+ * - With middleware: simplified fetch handler using `cloudflare:workers` env pattern
+ * - Without middleware: traditional `AppLoadContext` pattern with `env`/`ctx` params
+ *
+ * Parses the config file read-only (via `parseFile`) without writing anything to disk.
+ * Handles both TS `satisfies`/`as` expressions and plain object exports.
+ *
+ * @param projectPath - Absolute path to the project root containing the React Router config file.
+ * @param frameworkVersion - React Router semver version string. When provided and
+ *   >= 8.0.0, returns `true` without parsing the config file (middleware is the default in v8).
+ * @returns `true` if middleware is enabled (either by default in v8+ or via `future.v8_middleware`
+ *   in the config), `false` otherwise (including when the config file is missing or has no
+ *   `future` block).
+ */
+export function hasV8MiddlewareFlag(
+	projectPath: string,
+	frameworkVersion?: string
+): boolean {
+	// React Router >= 8.0.0 has middleware enabled by default
+	if (frameworkVersion && semiver(frameworkVersion, "8.0.0") >= 0) {
+		return true;
+	}
+
+	const filePath = getReactRouterConfigPath(projectPath);
+	if (!filePath) {
+		return false;
+	}
+
+	let ast: Program | null = null;
+	try {
+		ast = parseFile(filePath);
+	} catch {}
+
+	if (!ast) {
+		return false;
+	}
+
+	let found = false;
+	recast.visit(ast, {
+		visitExportDefaultDeclaration(n) {
+			let node: recast.types.namedTypes.ObjectExpression | null = null;
+			if (
+				(n.node.declaration.type === "TSAsExpression" ||
+					n.node.declaration.type === "TSSatisfiesExpression") &&
+				n.node.declaration.expression.type === "ObjectExpression"
+			) {
+				node = n.node.declaration.expression;
+			} else if (n.node.declaration.type === "ObjectExpression") {
+				node = n.node.declaration;
+			}
+
+			if (node) {
+				const futureProp = node.properties.find(
+					(p) =>
+						p.type === "ObjectProperty" &&
+						p.key.type === "Identifier" &&
+						p.key.name === "future" &&
+						p.value.type === "ObjectExpression"
+				);
+				if (
+					futureProp?.type === "ObjectProperty" &&
+					futureProp.value.type === "ObjectExpression"
+				) {
+					found = futureProp.value.properties.some(
+						(p) =>
+							p.type === "ObjectProperty" &&
+							p.key.type === "Identifier" &&
+							p.key.name === "v8_middleware" &&
+							p.value.type === "BooleanLiteral" &&
+							p.value.value === true
+					);
+				}
+			}
+			return false;
+		},
+	});
+
+	return found;
+}
+
+/**
+ * Transforms the user's `react-router.config.ts` (or `.js`) to ensure the
+ * `future.unstable_viteEnvironmentApi` or `future.v8_viteEnvironmentApi` flag
+ * is set to `true`. If a `future` block already exists, the flag is added or
+ * updated in place; otherwise a new `future` block is created.
+ *
+ * Supports TS `as` and `satisfies` expressions wrapping the default export object.
+ *
+ * @param projectPath - Absolute path to the project root containing the React Router config file.
+ * @param viteEnvironmentKey - The config property name to set, either
+ *   `"unstable_viteEnvironmentApi"` (React Router < 7.10.0) or `"v8_viteEnvironmentApi"`.
+ * @throws {Error} If no `react-router.config.ts` or `.js` file exists in the project.
+ * @throws {Error} If the default export cannot be parsed as an object expression.
+ */
+function transformReactRouterConfig(
+	projectPath: string,
+	viteEnvironmentKey: ReturnType<typeof viteEnvApiConfigPropertyName>
+) {
+	const filePath = getReactRouterConfigPath(projectPath);
+	if (!filePath) {
+		throw new Error("Could not find React Router config file to modify");
+	}
+
+	transformFile(filePath, {
+		/**
+		 * Visit an export default declaration of the form:
+		 *
+		 *   export default {
+		 *     ...
+		 *   }
+		 *
+		 * and add or modify the `future` property to look like:
+		 *
+		 *   future: {
+		 *     unstable_viteEnvironmentApi: true // v8_viteEnvironment depending on the React Router version
+		 *   }
+		 *
+		 * For some extra complexity, this also supports TS `as` and `satisfies` expressions
+		 */
+		visitExportDefaultDeclaration(n) {
+			let node: recast.types.namedTypes.ObjectExpression;
+			if (
+				(n.node.declaration.type === "TSAsExpression" ||
+					n.node.declaration.type === "TSSatisfiesExpression") &&
+				n.node.declaration.expression.type === "ObjectExpression"
+			) {
+				node = n.node.declaration.expression;
+			} else if (n.node.declaration.type === "ObjectExpression") {
+				node = n.node.declaration;
+			} else {
+				throw new Error(
+					`Could not parse React Router config file. Please add the following snippet manually:\n  future: {\n    ${viteEnvironmentKey}: true,\n  }`
+				);
+			}
+
+			assert(node.type === "ObjectExpression");
+
+			// Is there an existing `future` key? If there is, we should modify it rather than creating a new one
+			const futureKey = node.properties.findIndex(
+				(p) =>
+					p.type === "ObjectProperty" &&
+					p.key.type === "Identifier" &&
+					p.key.name === "future" &&
+					p.value.type === "ObjectExpression"
+			);
+			if (futureKey !== -1) {
+				const future = node.properties[futureKey];
+				assert(
+					future.type === "ObjectProperty" &&
+						future.value.type === "ObjectExpression"
+				);
+
+				// Does the `future` key already have a property called `unstable_viteEnvironmentApi`?
+				const viteEnvironment = future.value.properties.findIndex(
+					(p) =>
+						p.type === "ObjectProperty" &&
+						p.key.type === "Identifier" &&
+						p.key.name === viteEnvironmentKey &&
+						p.value.type === "BooleanLiteral"
+				);
+
+				// If there's already a unstable_viteEnvironmentApi key, set the value to true
+				if (viteEnvironment !== -1) {
+					const prop = future.value.properties[viteEnvironment];
+					assert(
+						prop.type === "ObjectProperty" &&
+							prop.value.type === "BooleanLiteral"
+					);
+					prop.value.value = true;
+				} else {
+					const prop = b.objectProperty(
+						b.identifier(viteEnvironmentKey),
+						b.booleanLiteral(true)
+					);
+					future.value.properties.push(prop);
+				}
+			} else {
+				node.properties.push(
+					b.objectProperty(
+						b.identifier("future"),
+						b.objectExpression([
+							b.objectProperty(
+								b.identifier(viteEnvironmentKey),
+								b.booleanLiteral(true)
+							),
+						])
+					)
+				);
+			}
+
+			return false;
+		},
+	});
+}
+
+/**
+ * Returns the correct future flag property name for enabling the Vite Environment API
+ * based on the installed React Router version.
+ *
+ * @param reactRouterVersion - The installed React Router semver version string (e.g. `"7.16.0"`).
+ *   When empty, defaults to the stable `"v8_viteEnvironmentApi"` name.
+ * @returns `"unstable_viteEnvironmentApi"` for versions before 7.10.0,
+ *   or `"v8_viteEnvironmentApi"` for 7.10.0 and later.
+ */
+function viteEnvApiConfigPropertyName(reactRouterVersion: string) {
+	if (!reactRouterVersion) {
+		return "v8_viteEnvironmentApi";
+	}
+
+	// version less than 7.10.0
+	if (semiver(reactRouterVersion, "7.10.0") === -1) {
+		return "unstable_viteEnvironmentApi";
+	} else {
+		return "v8_viteEnvironmentApi";
+	}
+}
+
+/**
+ * Determines whether the installed React Router version still requires the explicit
+ * `future` flag in `react-router.config.ts` for enabling the vite environment API.
+ *
+ * React Router >= 8.0.0 enables these features by default
+ * (ref: https://github.com/remix-run/react-router/pull/15077), so no future flags
+ * are needed (they also can't be included as they would cause errors at build time).
+ *
+ * @param reactRouterVersion - The installed React Router semver version string (e.g. `"7.16.0"`).
+ * @returns `true` if the future flag needs to be set (versions < 8.0.0), `false` otherwise.
+ */
+function needsViteEnvAPIFutureFlag(reactRouterVersion: string): boolean {
+	if (!reactRouterVersion) {
+		return false;
+	}
+
+	return semiver(reactRouterVersion, "8.0.0") < 0;
+}
+
+/**
+ * Writes the `workers/app.ts` Worker entry point. When `v8_middleware` is enabled,
+ * generates a simplified fetch handler that delegates directly to the request handler.
+ * Otherwise generates the traditional pattern with `AppLoadContext` module augmentation
+ * and explicit `env`/`ctx` forwarding.
+ *
+ * @param useMiddlewarePattern - Whether `v8_middleware` is enabled in the user's config.
+ */
+function writeAppTs(useMiddlewarePattern: boolean) {
+	if (useMiddlewarePattern) {
+		writeFileSync(
+			"workers/app.ts",
+			dedent /* javascript */ `
+				import { createRequestHandler } from "react-router";
+
+				const requestHandler = createRequestHandler(
+					() => import("virtual:react-router/server-build"),
+					import.meta.env.MODE,
+				);
+
+				export default {
+					async fetch(request) {
+						return requestHandler(request);
+					},
+				} satisfies ExportedHandler<Env>;
+			`
+		);
+		return;
+	}
+
+	writeFileSync(
+		"workers/app.ts",
+		dedent /* javascript */ `
+				import { createRequestHandler } from "react-router";
+
+				declare module "react-router" {
+					export interface AppLoadContext {
+						cloudflare: {
+							env: Env;
+							ctx: ExecutionContext;
+						};
+					}
+				}
+
+				const requestHandler = createRequestHandler(
+					() => import("virtual:react-router/server-build"),
+					import.meta.env.MODE
+				);
+
+				export default {
+					async fetch(request, env, ctx) {
+						return requestHandler(request, {
+							cloudflare: { env, ctx },
+						});
+					},
+				} satisfies ExportedHandler<Env>;
+			`
+	);
+}
+
+/**
+ * Writes `app/entry.server.tsx` if it does not already exist. When `v8_middleware`
+ * is enabled, the generated file omits the `AppLoadContext` import and `_loadContext`
+ * parameter. Otherwise uses the traditional signature that includes both.
+ *
+ * If the file already exists on disk it is left untouched and a warning is logged.
+ *
+ * @param useMiddlewarePattern - Whether `v8_middleware` is enabled in the user's config.
+ * @param context - The autoconfig context providing logger and other dependencies.
+ */
+function writeEntryServerTsx(
+	useMiddlewarePattern: boolean,
+	context: AutoConfigContext
+) {
+	if (existsSync("app/entry.server.tsx")) {
+		context.logger.warn(
+			"The file `app/entry.server.tsx` already exists on disk, and so we're not modifying it. This may lead to deployment failures if `app/entry.server.tsx` is not set up correctly."
+		);
+		return;
+	}
+
+	if (useMiddlewarePattern) {
+		writeFileSync(
+			`app/entry.server.tsx`,
+			dedent /* javascript */ `
+			import type { EntryContext } from "react-router";
+			import { ServerRouter } from "react-router";
+			import { isbot } from "isbot";
+			import { renderToReadableStream } from "react-dom/server";
+
+			export default async function handleRequest(
+				request: Request,
+				responseStatusCode: number,
+				responseHeaders: Headers,
+				routerContext: EntryContext,
+			) {
+				let shellRendered = false;
+				const userAgent = request.headers.get("user-agent");
+
+				const body = await renderToReadableStream(
+					<ServerRouter context={routerContext} url={request.url} />,
+					{
+						onError(error: unknown) {
+							responseStatusCode = 500;
+							// Log streaming rendering errors from inside the shell.  Don't log
+							// errors encountered during initial shell rendering since they'll
+							// reject and get logged in handleDocumentRequest.
+							if (shellRendered) {
+								console.error(error);
+							}
+						},
+					},
+				);
+				shellRendered = true;
+
+				// Ensure requests from bots and SPA Mode renders wait for all content to load before responding
+				// https://react.dev/reference/react-dom/server/renderToPipeableStream#waiting-for-all-content-to-load-for-crawlers-and-static-generation
+				if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
+					await body.allReady;
+				}
+
+				responseHeaders.set("Content-Type", "text/html");
+				return new Response(body, {
+					headers: responseHeaders,
+					status: responseStatusCode,
+				});
+			}
+		`
+		);
+		return;
+	}
+
+	writeFileSync(
+		`app/entry.server.tsx`,
+		dedent /* javascript */ `
+			import type { AppLoadContext, EntryContext } from "react-router";
+			import { ServerRouter } from "react-router";
+			import { isbot } from "isbot";
+			import { renderToReadableStream } from "react-dom/server";
+
+			export default async function handleRequest(
+				request: Request,
+				responseStatusCode: number,
+				responseHeaders: Headers,
+				routerContext: EntryContext,
+				_loadContext: AppLoadContext
+			) {
+				let shellRendered = false;
+				const userAgent = request.headers.get("user-agent");
+
+				const body = await renderToReadableStream(
+					<ServerRouter context={routerContext} url={request.url} />,
+					{
+						onError(error: unknown) {
+							responseStatusCode = 500;
+							// Log streaming rendering errors from inside the shell.  Don't log
+							// errors encountered during initial shell rendering since they'll
+							// reject and get logged in handleDocumentRequest.
+							if (shellRendered) {
+								console.error(error);
+							}
+						},
+					}
+				);
+				shellRendered = true;
+
+				// Ensure requests from bots and SPA Mode renders wait for all content to load before responding
+				// https://react.dev/reference/react-dom/server/renderToPipeableStream#waiting-for-all-content-to-load-for-crawlers-and-static-generation
+				if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
+					await body.allReady;
+				}
+
+				responseHeaders.set("Content-Type", "text/html");
+				return new Response(body, {
+					headers: responseHeaders,
+					status: responseStatusCode,
+				});
+			}
+		`
+	);
+}
+
+export class ReactRouter extends Framework {
+	async configure({
+		dryRun,
+		projectPath,
+		packageManager,
+		isWorkspaceRoot,
+		context,
+	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		const useMiddlewarePattern = hasV8MiddlewareFlag(
+			projectPath,
+			this.frameworkVersion
+		);
+		if (!dryRun) {
+			await installCloudflareVitePlugin({
+				packageManager: packageManager.type,
+				projectPath,
+				isWorkspaceRoot,
+			});
+
+			mkdirSync("workers");
+
+			writeAppTs(useMiddlewarePattern);
+
+			await installPackages(packageManager.type, ["isbot"], {
+				dev: true,
+				startText: "Installing the isbot package",
+				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
+				isWorkspaceRoot,
+			});
+
+			writeEntryServerTsx(useMiddlewarePattern, context);
+
+			transformViteConfig(projectPath, {
+				viteEnvironmentName: "ssr",
+				incompatibleVitePlugins: ["netlifyReactRouter"],
+			});
+
+			if (needsViteEnvAPIFutureFlag(this.frameworkVersion)) {
+				const viteEnvironmentKey = viteEnvApiConfigPropertyName(
+					this.frameworkVersion
+				);
+				transformReactRouterConfig(projectPath, viteEnvironmentKey);
+			}
+		}
+
+		return {
+			wranglerConfig: {
+				main: "./workers/app.ts",
+			},
+		};
+	}
+
+	configurationDescription = "Configuring project for React Router";
+}

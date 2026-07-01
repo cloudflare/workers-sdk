@@ -88,7 +88,11 @@ export {
 
 export * from "./environment-variables/misc-variables";
 
-export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+export {
+	getGlobalConfigPath,
+	getGlobalWranglerConfigPath,
+} from "./global-wrangler-config-path";
+export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";
 
 export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
@@ -111,5 +115,33 @@ export type { Tunnel, TunnelOptions } from "./tunnel";
 export { startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
+export * from "./cfetch";
+
 export { fetchLatestNpmVersion } from "./update-check";
 export type { NpmVersionCheckResult } from "./update-check";
+
+export { LOGGER_LEVELS } from "./logger";
+export type { Logger, LoggerLevel } from "./logger";
+
+export { retryOnAPIFailure } from "./retry";
+export { formatTime } from "./format-time";
+export {
+	getHostFromRoute,
+	getHostFromUrl,
+	getZoneFromRoute,
+} from "./route-utils";
+
+export type { PackageManager } from "./package-manager";
+export {
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+	BunPackageManager,
+} from "./package-manager";
+
+export {
+	checkWorkerNameValidity,
+	toValidWorkerName,
+	getWorkerName,
+	getWorkerNameFromProject,
+} from "./worker-name";

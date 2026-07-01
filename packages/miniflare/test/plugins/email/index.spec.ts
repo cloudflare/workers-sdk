@@ -629,7 +629,7 @@ test("reply validation: >100 References", async ({ expect }) => {
 	expect((await res.text()).includes("Original email is not replyable"));
 	expect(log.logs[1][0]).toBe(LogLevel.ERROR);
 	expect(log.logs[1][1].split("\n")[0]).toBe(
-		'The incoming email\'s "References" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/.'
+		'The incoming email\'s "References" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/'
 	);
 });
 

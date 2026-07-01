@@ -39,6 +39,7 @@ const SERVICE_PIPELINE_PREFIX = `${PIPELINES_PLUGIN_NAME}:pipeline`;
 
 export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 	options: PipelineOptionsSchema,
+	bindingTypeDescription: "Pipeline",
 	getBindings(options) {
 		const pipelines = bindingEntries(options.pipelines);
 		return pipelines.map<Service>(([name, { id }]) => ({

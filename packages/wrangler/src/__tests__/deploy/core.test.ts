@@ -2,6 +2,15 @@ import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import {
+	getInstalledPackageVersion,
+	runAutoConfig,
+} from "@cloudflare/autoconfig";
+import {
+	TEMPORARY_TERMS_NOTICE,
+	TEMPORARY_TERMS_PROMPT,
+} from "@cloudflare/workers-auth";
+import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
@@ -10,13 +19,9 @@ import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { Static } from "../../autoconfig/frameworks/static";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
-import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
-import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -51,8 +56,8 @@ import {
 	mockPublishRoutesRequest,
 	mockServiceScriptData,
 } from "./helpers";
-import type { Framework } from "../../autoconfig/frameworks";
 import type { OutputEntry } from "../../output";
+import type { Framework } from "@cloudflare/autoconfig";
 
 vi.mock("command-exists");
 vi.mock("../../check/commands", async (importOriginal) => {
@@ -63,8 +68,6 @@ vi.mock("../../check/commands", async (importOriginal) => {
 		},
 	};
 });
-
-vi.mock("../../utils/fetch-secrets");
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -77,8 +80,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -92,6 +98,32 @@ describe("deploy", () => {
 		mockGrantAccessToken,
 		mockDomainUsesAccess,
 	} = mockOAuthFlow();
+	const temporaryPreviewAccountUrl =
+		"https://api.cloudflare.com/client/v4/provisioning/previews";
+
+	// Mocks the proof-of-work challenge minting expects. Small k/g so the
+	// solve is instant.
+	function mockTemporaryPreviewChallenge(
+		url = `${temporaryPreviewAccountUrl}/challenge`
+	) {
+		msw.use(
+			http.post(url, () =>
+				HttpResponse.json({
+					success: true,
+					result: {
+						challengeToken: "challenge-token",
+						seed: Buffer.alloc(32, 1).toString("base64url"),
+						k: 2,
+						g: 2,
+						s: 16,
+						expiresAt: 9999999999,
+					},
+					errors: [],
+					messages: [],
+				})
+			)
+		);
+	}
 
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {
@@ -109,9 +141,12 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
@@ -529,13 +564,13 @@ describe("deploy", () => {
 			├─┼─┤
 			│ Account Three │ account-3 │
 			└─┴─┘
-			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.",
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens",
 			  "warn": "",
 			}
 		`);
 	});
 
-	it("should error helpfully if pages_build_output_dir is set in wrangler.toml when --x-autoconfig=false", async ({
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml when --no-autoconfig", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -543,7 +578,7 @@ describe("deploy", () => {
 			name: "test-name",
 		});
 		await expect(
-			runWrangler("deploy --x-autoconfig=false")
+			runWrangler("deploy --no-autoconfig")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`
 			[Error: It looks like you've run a Workers-specific command in a Pages project.
@@ -552,7 +587,7 @@ describe("deploy", () => {
 		);
 	});
 
-	it("should error helpfully if pages_build_output_dir is set in wrangler.toml and --x-autoconfig is provided", async ({
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async ({
 		expect,
 	}) => {
 		mockConfirm({
@@ -564,13 +599,13 @@ describe("deploy", () => {
 			pages_build_output_dir: "public",
 			name: "test-name",
 		});
-		await expect(runWrangler("deploy --x-autoconfig")).rejects.toThrowError();
+		await expect(runWrangler("deploy")).rejects.toThrow();
 		expect(std.warn).toContain(
 			"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead."
 		);
 	});
 
-	it("should attempt to run the autoconfig flow when pages_build_output_dir and (--x-autoconfig is used)", async ({
+	it("should attempt to run the autoconfig flow when pages_build_output_dir", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -579,10 +614,7 @@ describe("deploy", () => {
 		});
 
 		const getDetailsForAutoConfigSpy = vi
-			.spyOn(
-				await import("../../autoconfig/details"),
-				"getDetailsForAutoConfig"
-			)
+			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
@@ -603,7 +635,7 @@ describe("deploy", () => {
 			result: false,
 		});
 
-		await runWrangler("deploy --x-autoconfig");
+		await runWrangler("deploy");
 
 		expect(getDetailsForAutoConfigSpy).toHaveBeenCalled();
 
@@ -612,7 +644,7 @@ describe("deploy", () => {
 		);
 	});
 
-	it("in non-interactive mode, attempts to deploy a Pages project when --x-autoconfig is used", async ({
+	it("in non-interactive mode, attempts to deploy a Pages project using autoconfig", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
@@ -622,10 +654,7 @@ describe("deploy", () => {
 		});
 
 		const getDetailsForAutoConfigSpy = vi
-			.spyOn(
-				await import("../../autoconfig/details"),
-				"getDetailsForAutoConfig"
-			)
+			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
@@ -642,7 +671,7 @@ describe("deploy", () => {
 
 		// The command will fail later due to missing entry-point, but we can still verify
 		// that the deployment of the (Pages) project was attempted
-		await expect(runWrangler("deploy --x-autoconfig")).rejects.toThrow();
+		await expect(runWrangler("deploy")).rejects.toThrow();
 
 		expect(getDetailsForAutoConfigSpy).toHaveBeenCalled();
 
@@ -658,7 +687,7 @@ describe("deploy", () => {
 		expect,
 	}) => {
 		const getDetailsForAutoConfigSpy = vi.spyOn(
-			await import("../../autoconfig/details"),
+			await import("@cloudflare/autoconfig"),
 			"getDetailsForAutoConfig"
 		);
 
@@ -774,6 +803,93 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("creates a temporary preview account in interactive mode when --temporary is passed", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+			mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest({
+				expectedAccountId: "preview-account-id",
+			});
+
+			let previewAccountRequests = 0;
+			let contentTypeHeader: string | null = null;
+			mockTemporaryPreviewChallenge();
+			msw.use(
+				http.get(
+					"*/accounts/preview-account-id/workers/services/:scriptName",
+					() => {
+						return HttpResponse.json(
+							createFetchResult({
+								default_environment: {
+									script: { last_deployed_from: "wrangler" },
+								},
+							})
+						);
+					}
+				),
+				http.post(temporaryPreviewAccountUrl, async ({ request }) => {
+					previewAccountRequests += 1;
+					contentTypeHeader = request.headers.get("Content-Type");
+					return HttpResponse.json({
+						success: true,
+						result: {
+							account: {
+								id: "preview-account-id",
+								name: "Preview Account Alpha",
+								type: "standard",
+								apiToken: "preview-account-token",
+								tokenId: "preview-token-id",
+								expiresAt: "2027-01-01T00:00:00.000Z",
+							},
+							claim: {
+								token: "claim-token",
+								url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+								expiresAt: "2027-01-02T00:00:00.000Z",
+							},
+						},
+						errors: [],
+						messages: [],
+					});
+				})
+			);
+
+			await expect(
+				runWrangler("deploy index.js --temporary")
+			).resolves.toBeUndefined();
+
+			expect(previewAccountRequests).toBe(1);
+			expect(contentTypeHeader).toBe("application/json");
+			expect(std.out).not.toContain("Attempting to login via OAuth...");
+			expect(std.out).toContain("Temporary account ready:");
+		});
+
+		it("aborts in interactive mode when the terms are not accepted", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+			mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "no" });
+			writeWranglerConfig();
+			writeWorkerSource();
+
+			let previewAccountRequests = 0;
+			msw.use(
+				http.post(temporaryPreviewAccountUrl, async () => {
+					previewAccountRequests += 1;
+					return HttpResponse.json({});
+				})
+			);
+
+			await expect(runWrangler("deploy index.js --temporary")).rejects.toThrow(
+				/You must accept Cloudflare's Terms of Service .* to use --temporary\./
+			);
+
+			expect(previewAccountRequests).toBe(0);
+		});
+
 		describe("with an alternative auth domain", () => {
 			mockAuthDomain({ domain: "dash.staging.cloudflare.com" });
 
@@ -863,7 +979,422 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		describe("non-TTY", () => {
+		it("throws when the user is already authenticated and requests a temporary account", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeAuthConfigFile({ api_token: "cached-api-token" });
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			let previewAccountRequests = 0;
+			msw.use(
+				http.post(temporaryPreviewAccountUrl, async () => {
+					previewAccountRequests += 1;
+					return HttpResponse.json({});
+				})
+			);
+
+			await expect(runWrangler("deploy index.js --temporary")).rejects.toThrow(
+				/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
+			);
+
+			expect(previewAccountRequests).toBe(0);
+			expect(std.out).not.toContain("Temporary account ready:");
+		});
+
+		describe("with temporary preview accounts", () => {
+			it("creates a temporary preview account in non-interactive mode after printing terms notice", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedAccountId: "preview-account-id",
+				});
+
+				let previewRequestBody: unknown;
+				let previewContentType: string | null = null;
+				mockTemporaryPreviewChallenge();
+				msw.use(
+					http.get(
+						"*/accounts/preview-account-id/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({
+									default_environment: {
+										script: { last_deployed_from: "wrangler" },
+									},
+								})
+							);
+						}
+					),
+					http.post(temporaryPreviewAccountUrl, async ({ request }) => {
+						previewContentType = request.headers.get("Content-Type");
+						previewRequestBody = await request.json();
+						return HttpResponse.json({
+							success: true,
+							result: {
+								account: {
+									id: "preview-account-id",
+									name: "Preview Account Alpha",
+									type: "standard",
+									apiToken: "preview-account-token",
+									tokenId: "preview-token-id",
+									expiresAt: "2027-01-01T00:00:00.000Z",
+								},
+								claim: {
+									token: "claim-token",
+									url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+									expiresAt: "2027-01-02T00:00:00.000Z",
+								},
+							},
+							errors: [],
+							messages: [],
+						});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).resolves.toBeUndefined();
+
+				const globalTemporaryAccountPath = path.join(
+					getGlobalWranglerConfigPath(),
+					"wrangler-temporary-account.toml"
+				);
+				const localTemporaryAccountPath = path.join(
+					process.cwd(),
+					".wrangler",
+					"cache",
+					"wrangler-temporary-account.toml"
+				);
+
+				expect(previewContentType).toBe("application/json");
+				expect(previewRequestBody).toEqual({
+					termsOfService: "https://www.cloudflare.com/terms/",
+					privacyPolicy: "https://www.cloudflare.com/privacypolicy/",
+					acceptTermsOfService: "yes",
+					challengeToken: "challenge-token",
+					solution: { checkpoints: expect.any(String) },
+				});
+				const { solution } = previewRequestBody as {
+					solution: { checkpoints: string };
+				};
+				// k+1 checkpoints of 32 bytes each (challenge mock uses k=2).
+				expect(Buffer.from(solution.checkpoints, "base64").length).toBe(
+					(2 + 1) * 32
+				);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).not.toContain("Attempting to login via OAuth...");
+				expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
+				expect(std.out).toContain("Temporary account ready:");
+				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(std.out).toContain("Claim within:");
+				expect(fs.existsSync(globalTemporaryAccountPath)).toBe(true);
+				expect(fs.existsSync(localTemporaryAccountPath)).toBe(false);
+				if (process.platform !== "win32") {
+					expect(fs.statSync(globalTemporaryAccountPath).mode & 0o777).toBe(
+						0o600
+					);
+				}
+				expect(
+					TOML.parse(fs.readFileSync(globalTemporaryAccountPath, "utf-8"))
+				).toMatchObject({
+					account: {
+						id: "preview-account-id",
+						apiToken: "preview-account-token",
+					},
+					claim: {
+						url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+					},
+				});
+			});
+
+			it("throws when an OAuth token is on disk, even if it is expired and cannot refresh", async ({
+				expect,
+			}) => {
+				setIsTTY(true);
+				// A stored OAuth token counts as being authenticated even when
+				// expired — it would be refreshed on the next deploy — so
+				// `--temporary` must refuse rather than provision a throwaway
+				// account alongside it.
+				writeAuthConfigFile({
+					oauth_token: "expired-token",
+					refresh_token: "expired-refresh-token",
+					expiration_time: new Date(Date.now() - 1000).toISOString(),
+				});
+				writeWranglerConfig();
+				writeWorkerSource();
+
+				let previewAccountRequests = 0;
+				msw.use(
+					http.post(temporaryPreviewAccountUrl, async () => {
+						previewAccountRequests += 1;
+						return HttpResponse.json({});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).rejects.toThrow(
+					/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
+				);
+
+				expect(previewAccountRequests).toBe(0);
+				expect(std.out).not.toContain("Temporary account ready:");
+			});
+
+			it("provisions the preview account against the staging API and caches it per-environment", async ({
+				expect,
+			}) => {
+				vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedAccountId: "preview-account-id",
+					expectedBaseUrl: "api.staging.cloudflare.com",
+				});
+
+				let stagingPreviewRequests = 0;
+				mockTemporaryPreviewChallenge(
+					"https://api.staging.cloudflare.com/client/v4/provisioning/previews/challenge"
+				);
+				msw.use(
+					http.get(
+						"*/accounts/preview-account-id/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({
+									default_environment: {
+										script: { last_deployed_from: "wrangler" },
+									},
+								})
+							);
+						}
+					),
+					http.post(
+						"https://api.staging.cloudflare.com/client/v4/provisioning/previews",
+						async () => {
+							stagingPreviewRequests++;
+							return HttpResponse.json({
+								success: true,
+								result: {
+									account: {
+										id: "preview-account-id",
+										name: "Preview Account Alpha",
+										type: "standard",
+										apiToken: "preview-account-token",
+										tokenId: "preview-token-id",
+										expiresAt: "2027-01-01T00:00:00.000Z",
+									},
+									claim: {
+										token: "claim-token",
+										url: "https://dash.staging.cloudflare.com/claim-preview?claimToken=claim-token",
+										expiresAt: "2027-01-02T00:00:00.000Z",
+									},
+								},
+								errors: [],
+								messages: [],
+							});
+						}
+					)
+				);
+
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).resolves.toBeUndefined();
+
+				const stagingTemporaryAccountPath = path.join(
+					getGlobalWranglerConfigPath(),
+					"wrangler-temporary-account.staging.toml"
+				);
+				const productionTemporaryAccountPath = path.join(
+					getGlobalWranglerConfigPath(),
+					"wrangler-temporary-account.toml"
+				);
+
+				expect(stagingPreviewRequests).toBe(1);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toContain("Temporary account ready:");
+				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(fs.existsSync(stagingTemporaryAccountPath)).toBe(true);
+				expect(fs.existsSync(productionTemporaryAccountPath)).toBe(false);
+			});
+
+			it("reuses a cached temporary preview account for later temporary deploys", async ({
+				expect,
+			}) => {
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedAccountId: "preview-account-id",
+				});
+
+				let previewAccountRequests = 0;
+				mockTemporaryPreviewChallenge();
+				msw.use(
+					http.get(
+						"*/accounts/preview-account-id/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({
+									default_environment: {
+										script: { last_deployed_from: "wrangler" },
+									},
+								})
+							);
+						}
+					),
+					http.get(
+						"*/accounts/preview-account-id/workers/scripts/:scriptName/subdomain",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({ enabled: true, previews_enabled: true })
+							);
+						}
+					),
+					http.post(
+						"*/accounts/preview-account-id/workers/scripts/:scriptName/subdomain",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({ enabled: true, previews_enabled: true })
+							);
+						}
+					),
+					http.get(
+						"*/accounts/preview-account-id/workers/scripts/:scriptName/deployments",
+						() => {
+							return HttpResponse.json(createFetchResult({ deployments: [] }));
+						}
+					),
+					http.post(temporaryPreviewAccountUrl, async () => {
+						previewAccountRequests += 1;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								account: {
+									id: "preview-account-id",
+									name: "Preview Account Alpha",
+									type: "standard",
+									apiToken: "preview-account-token",
+									tokenId: "preview-token-id",
+									expiresAt: "2027-01-01T00:00:00.000Z",
+								},
+								claim: {
+									token: "claim-token",
+									url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+									expiresAt: "2027-01-02T00:00:00.000Z",
+								},
+							},
+							errors: [],
+							messages: [],
+						});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).resolves.toBeUndefined();
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).resolves.toBeUndefined();
+
+				expect(previewAccountRequests).toBe(1);
+				expect(std.out).toContain("Temporary account ready:");
+				expect(std.out).toContain("Account: Preview Account Alpha (reused)");
+			});
+
+			it("treats a malformed temporary preview account cache as a miss and refetches", async ({
+				expect,
+			}) => {
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedAccountId: "preview-account-id",
+				});
+
+				// Plant a cache file that satisfies the top-level shape check but
+				// is missing the nested `account` and `claim` objects. Prior to
+				// the optional-chaining fix this crashed with a TypeError when
+				// reading `.account.expiresAt`.
+				const cachePath = path.join(
+					getGlobalWranglerConfigPath(),
+					"wrangler-temporary-account.toml"
+				);
+				fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+				fs.writeFileSync(
+					cachePath,
+					TOML.stringify({ temporaryPreviewAccount: {} })
+				);
+
+				let previewAccountRequests = 0;
+				mockTemporaryPreviewChallenge();
+				msw.use(
+					http.get(
+						"*/accounts/preview-account-id/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({
+									default_environment: {
+										script: { last_deployed_from: "wrangler" },
+									},
+								})
+							);
+						}
+					),
+					http.post(temporaryPreviewAccountUrl, async () => {
+						previewAccountRequests += 1;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								account: {
+									id: "preview-account-id",
+									name: "Preview Account Alpha",
+									type: "standard",
+									apiToken: "preview-account-token",
+									tokenId: "preview-token-id",
+									expiresAt: "2027-01-01T00:00:00.000Z",
+								},
+								claim: {
+									token: "claim-token",
+									url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+									expiresAt: "2027-01-02T00:00:00.000Z",
+								},
+							},
+							errors: [],
+							messages: [],
+						});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).resolves.toBeUndefined();
+
+				expect(previewAccountRequests).toBe(1);
+				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(TOML.parse(fs.readFileSync(cachePath, "utf-8"))).toMatchObject({
+					account: { id: "preview-account-id" },
+					claim: {
+						url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+					},
+				});
+			});
+
 			it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async ({
 				expect,
 			}) => {
@@ -1003,14 +1534,74 @@ describe("deploy", () => {
 					])
 				);
 
-				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrow();
 
-				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mIn a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.[0m
-
-			          "
-		        `);
+				expect(std.err).toContain(
+					"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable"
+				);
+				expect(std.err).toContain(
+					"To continue without logging in, rerun this command with"
+				);
+				expect(std.err).toContain("--temporary");
 			});
+
+			it("should fail clearly if the temporary preview account request fails", async ({
+				expect,
+			}) => {
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+				writeWranglerConfig();
+				writeWorkerSource();
+
+				mockTemporaryPreviewChallenge();
+				msw.use(
+					http.post(temporaryPreviewAccountUrl, async () => {
+						return new HttpResponse(null, {
+							status: 500,
+							statusText: "Internal Server Error",
+						});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Failed to create a temporary preview account (500 Internal Server Error).]`
+				);
+			});
+
+			it("fails the deploy when the proof-of-work challenge can't be obtained", async ({
+				expect,
+			}) => {
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+				writeWranglerConfig();
+				writeWorkerSource();
+
+				let previewRequests = 0;
+				msw.use(
+					http.post(
+						`${temporaryPreviewAccountUrl}/challenge`,
+						() =>
+							new HttpResponse(null, {
+								status: 500,
+								statusText: "Internal Server Error",
+							})
+					),
+					http.post(temporaryPreviewAccountUrl, async () => {
+						previewRequests += 1;
+						return HttpResponse.json({});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Failed to request a proof-of-work challenge (500 Internal Server Error).]`
+				);
+				expect(previewRequests).toBe(0);
+			});
+
 			it("should throw error with no account ID provided and no members retrieved", async ({
 				expect,
 			}) => {
@@ -1026,13 +1617,14 @@ describe("deploy", () => {
 				mockOAuthServerCallback();
 				msw.use(...getMswSuccessMembershipHandlers([]));
 
-				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrow();
 
 				expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to automatically retrieve account IDs for the logged in user.[0m
 
 					  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning
 					  its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your Wrangler configuration file.
+					  Alternatively, try running \`wrangler login\` to re-authenticate.
 
 					"
 				`);
@@ -1056,7 +1648,7 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to upload a Worker that was last updated via the script API.[0m
 
 			  Edits that have been made via the script API will be overridden by your local code and config.
 
@@ -1400,11 +1992,11 @@ describe("deploy", () => {
 		const outputFile = "./output.json";
 
 		vi.spyOn(
-			await import("../../autoconfig/details"),
+			await import("@cloudflare/autoconfig"),
 			"getDetailsForAutoConfig"
 		).mockResolvedValueOnce({
 			configured: false,
-			framework: new Static({ id: "static", name: "Static" }),
+			framework: { id: "static", name: "Static" } as Framework,
 			workerName: "my-site",
 			projectPath: ".",
 			outputDir: "./public",
@@ -1432,7 +2024,7 @@ describe("deploy", () => {
 			};
 		});
 
-		await runWrangler("deploy --x-autoconfig --dry-run", {
+		await runWrangler("deploy --dry-run", {
 			...process.env,
 			WRANGLER_OUTPUT_FILE_PATH: outputFile,
 		});
@@ -1465,376 +2057,5 @@ describe("deploy", () => {
 			  "wranglerInstall": true,
 			}
 		`);
-	});
-
-	describe("interactive compatibility date prompt", () => {
-		it("should prompt and use today's date when user confirms", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			writeWranglerConfig(
-				{ compatibility_date: undefined as unknown as string },
-				"./wrangler.toml"
-			);
-			mockConfirm({
-				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-				result: true,
-			});
-
-			await runWrangler("deploy ./index.js --name test-name --dry-run");
-			expect(std.out).toContain("--dry-run: exiting now.");
-		});
-
-		it("should error when user declines the prompt", async ({ expect }) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			writeWranglerConfig(
-				{ compatibility_date: undefined as unknown as string },
-				"./wrangler.toml"
-			);
-			mockConfirm({
-				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-				result: false,
-			});
-
-			await expect(
-				runWrangler("deploy ./index.js --name test-name --dry-run")
-			).rejects.toThrow("A compatibility_date is required when publishing");
-		});
-
-		it("should error in non-interactive mode when no compatibility_date is provided", async ({
-			expect,
-		}) => {
-			setIsTTY(false);
-			writeWorkerSource();
-			writeWranglerConfig(
-				{ compatibility_date: undefined as unknown as string },
-				"./wrangler.toml"
-			);
-
-			await expect(
-				runWrangler("deploy ./index.js --name test-name")
-			).rejects.toThrow("A compatibility_date is required when publishing");
-		});
-
-		it("should not show config-write prompt when config file already exists", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			writeWranglerConfig(
-				{ compatibility_date: undefined as unknown as string },
-				"./wrangler.toml"
-			);
-			mockConfirm({
-				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-				result: true,
-			});
-
-			await runWrangler("deploy ./index.js --name test-name --dry-run");
-			expect(std.out).toContain("--dry-run: exiting now.");
-			// Should NOT be asked to write a config file since one already exists
-			expect(std.out).not.toContain(
-				"Do you want Wrangler to write a wrangler.json config file"
-			);
-			expect(std.out).not.toContain("Proceeding with deployment...");
-		});
-
-		it("should skip the compat date prompt when --latest is passed", async ({
-			expect,
-		}) => {
-			setIsTTY(true);
-			writeWorkerSource();
-			writeWranglerConfig(
-				{ compatibility_date: undefined as unknown as string },
-				"./wrangler.toml"
-			);
-
-			await runWrangler(
-				"deploy ./index.js --name test-name --latest --dry-run"
-			);
-			expect(std.out).toContain("--dry-run: exiting now.");
-			// No compat date prompt should have been shown
-			expect(std.out).not.toContain("No compatibility date is set");
-		});
-
-		it("should prompt for name, compat date, and offer to write config when no config file exists", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			// No writeWranglerConfig call — no config file exists
-			mockPrompt({
-				text: "What do you want to name your project?",
-				result: "test-worker",
-			});
-			mockConfirm({
-				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-				result: true,
-			});
-			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-				result: true,
-			});
-
-			await runWrangler("deploy ./index.js --dry-run");
-			expect(std.out).toContain("--dry-run: exiting now.");
-			// Config file should be written with main but without an assets key
-			const writtenConfig = JSON.parse(
-				fs.readFileSync("wrangler.jsonc", "utf-8")
-			);
-			expect(writtenConfig).toEqual({
-				name: "test-worker",
-				compatibility_date: "2024-06-15",
-				main: "./index.js",
-			});
-			expect(writtenConfig).not.toHaveProperty("assets");
-			expect(std.out).toContain(
-				"Simply run `wrangler deploy` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc."
-			);
-			expect(std.out).toContain("Proceeding with deployment...");
-		});
-
-		it("should show suggested CLI flags when user declines config file write", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			// No writeWranglerConfig call — no config file exists
-			mockPrompt({
-				text: "What do you want to name your project?",
-				result: "test-worker",
-			});
-			mockConfirm({
-				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-				result: true,
-			});
-			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-				result: false,
-			});
-
-			await runWrangler("deploy ./index.js --dry-run");
-			expect(std.out).toContain("--dry-run: exiting now.");
-			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-			expect(std.out).toContain(
-				"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15"
-			);
-			// Should not include --assets since no assets were used
-			expect(std.out).not.toContain("--assets");
-			expect(std.out).toContain("Proceeding with deployment...");
-		});
-
-		it("should write config with today's compat date when --latest is used and no config file exists", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			// No writeWranglerConfig call — no config file exists
-			mockPrompt({
-				text: "What do you want to name your project?",
-				result: "test-worker",
-			});
-			// No compat date prompt — --latest skips it
-			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-				result: true,
-			});
-
-			await runWrangler("deploy ./index.js --latest --dry-run");
-			expect(std.out).toContain("--dry-run: exiting now.");
-			// Config file should include today's date even though --latest was used
-			const writtenConfig = JSON.parse(
-				fs.readFileSync("wrangler.jsonc", "utf-8")
-			);
-			expect(writtenConfig).toEqual({
-				name: "test-worker",
-				compatibility_date: "2024-06-15",
-				main: "./index.js",
-			});
-			expect(std.out).not.toContain("No compatibility date is set");
-			expect(std.out).toContain("Proceeding with deployment...");
-		});
-
-		it("should include compat date in suggested CLI command when --latest is used and config write declined", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			// No writeWranglerConfig call — no config file exists
-			mockPrompt({
-				text: "What do you want to name your project?",
-				result: "test-worker",
-			});
-			// No compat date prompt — --latest skips it
-			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-				result: false,
-			});
-
-			await runWrangler("deploy ./index.js --latest --dry-run");
-			expect(std.out).toContain("--dry-run: exiting now.");
-			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-			// Suggested command should include the resolved compat date
-			expect(std.out).toContain(
-				"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15"
-			);
-			expect(std.out).not.toContain("No compatibility date is set");
-			expect(std.out).toContain("Proceeding with deployment...");
-		});
-
-		it("should prompt for name when config file exists but has no name", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			writeWranglerConfig({ name: undefined as unknown as string });
-			mockPrompt({
-				text: "What do you want to name your project?",
-				result: "prompted-name",
-			});
-
-			await runWrangler("deploy ./index.js --dry-run");
-			expect(std.out).toContain("--dry-run: exiting now.");
-			// Should NOT be asked to write a config file since one already exists
-			expect(std.out).not.toContain(
-				"Do you want Wrangler to write a wrangler.json config file"
-			);
-			expect(std.out).not.toContain("Proceeding with deployment...");
-		});
-
-		it("should not prompt for name when config file provides one", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			writeWranglerConfig({
-				name: "config-provided-name",
-				compatibility_date: undefined as unknown as string,
-			});
-			mockConfirm({
-				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-				result: true,
-			});
-
-			await runWrangler("deploy ./index.js --dry-run");
-			expect(std.out).toContain("--dry-run: exiting now.");
-			// Should NOT have been asked for a name
-			expect(std.out).not.toContain("What do you want to name your project?");
-		});
-
-		it("should include compatibility_flags in generated wrangler.jsonc when --compatibility-flags is passed", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			// No writeWranglerConfig call — no config file exists
-			mockPrompt({
-				text: "What do you want to name your project?",
-				result: "test-worker",
-			});
-			mockConfirm({
-				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-				result: true,
-			});
-			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-				result: true,
-			});
-
-			await runWrangler(
-				"deploy ./index.js --compatibility-flags=nodejs_compat --dry-run"
-			);
-			expect(std.out).toContain("--dry-run: exiting now.");
-			const writtenConfig = JSON.parse(
-				fs.readFileSync("wrangler.jsonc", "utf-8")
-			);
-			expect(writtenConfig).toEqual({
-				name: "test-worker",
-				compatibility_date: "2024-06-15",
-				main: "./index.js",
-				compatibility_flags: ["nodejs_compat"],
-			});
-			expect(std.out).toContain("Proceeding with deployment...");
-		});
-
-		it("should include --compatibility-flags in suggested CLI command when user declines config file write", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			// No writeWranglerConfig call — no config file exists
-			mockPrompt({
-				text: "What do you want to name your project?",
-				result: "test-worker",
-			});
-			mockConfirm({
-				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-				result: true,
-			});
-			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-				result: false,
-			});
-
-			await runWrangler(
-				"deploy ./index.js --compatibility-flags=nodejs_compat --compatibility-flags=disable_navigator_language --dry-run"
-			);
-			expect(std.out).toContain("--dry-run: exiting now.");
-			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-			// Suggested command should include the compat flags
-			expect(std.out).toContain(
-				"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15 --compatibility-flags nodejs_compat disable_navigator_language"
-			);
-			expect(std.out).toContain("Proceeding with deployment...");
-		});
-
-		it("should include multiple --compatibility-flags in suggested CLI command and config file", async ({
-			expect,
-		}) => {
-			vi.setSystemTime(new Date(2024, 5, 15));
-			setIsTTY(true);
-			writeWorkerSource();
-			// No writeWranglerConfig call — no config file exists
-			mockPrompt({
-				text: "What do you want to name your project?",
-				result: "test-worker",
-			});
-			mockConfirm({
-				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-				result: true,
-			});
-			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-				result: true,
-			});
-
-			await runWrangler(
-				"deploy ./index.js --compatibility-flags=nodejs_compat --compatibility-flags=url_standard --dry-run"
-			);
-			expect(std.out).toContain("--dry-run: exiting now.");
-			const writtenConfig = JSON.parse(
-				fs.readFileSync("wrangler.jsonc", "utf-8")
-			);
-			expect(writtenConfig).toEqual({
-				name: "test-worker",
-				compatibility_date: "2024-06-15",
-				main: "./index.js",
-				compatibility_flags: ["nodejs_compat", "url_standard"],
-			});
-			expect(std.out).toContain("Proceeding with deployment...");
-		});
 	});
 });

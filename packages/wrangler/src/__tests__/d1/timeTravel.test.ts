@@ -34,8 +34,8 @@ describe("time-travel", () => {
 				runWrangler(
 					"d1 time-travel restore db --timestamp=1234 --bookmark=5678"
 				)
-			).rejects.toThrowError(
-				`Provide either a timestamp, or a bookmark - not both.`
+			).rejects.toThrow(
+				`Cannot use --timestamp and --bookmark together. Provide only one: --timestamp to restore to a point in time, or --bookmark to restore to a specific bookmark.`
 			);
 		});
 	});
@@ -77,7 +77,7 @@ describe("time-travel", () => {
 					"1701",
 					"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				"Time travel is not available for alpha D1 databases. You will need to migrate to a new database for access to this feature."
 			);
 		});

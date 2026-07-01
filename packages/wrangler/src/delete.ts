@@ -65,6 +65,10 @@ export const deleteCommand = createCommand({
 		status: "stable",
 		category: "Compute & AI",
 	},
+	behaviour: {
+		supportTemporary: true,
+		suggestSkillsAfterHandler: true,
+	},
 	args: {
 		script: {
 			describe: "The path to an entry point for your worker",

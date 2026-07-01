@@ -1,3 +1,4 @@
+import { getZoneForRoute } from "@cloudflare/deploy-helpers";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 /* eslint-disable-next-line no-restricted-imports --
@@ -5,7 +6,7 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { describe, expect, it, test } from "vitest";
-import { getHostFromUrl, getZoneForRoute, getZoneFromRoute } from "../zones";
+import { getHostFromUrl, getZoneFromRoute } from "../zones";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
 
