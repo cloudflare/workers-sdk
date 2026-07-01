@@ -28,4 +28,5 @@ export type Teams =
 	| "Product: Email Service"
 	| "Product: Browser Run"
 	| "Product: Artifacts"
-	| "Product: Flagship";
+	| "Product: Flagship"
+	| "Product: Turnstile";
