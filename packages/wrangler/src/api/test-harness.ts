@@ -34,7 +34,13 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { D1Database, Workflow } from "@cloudflare/workers-types/latest";
+import type {
+	D1Database,
+	ExportedHandler,
+	Rpc,
+	Service,
+	Workflow,
+} from "@cloudflare/workers-types/latest";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type {
 	WorkflowBinding,
@@ -70,8 +76,29 @@ export type BindingName<Env, Type> = string extends keyof Env
 			string
 		>;
 
+export type WorkerModule = {
+	default: WorkerExport;
+	[key: string]: WorkerExport | undefined;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> ExportedHandler constraint.
+export type AnyExportedHandler = ExportedHandler<any, any, any, any>;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
-export type WorkerHandle<Env = Record<string, any>> = {
+export type AnyEnv = Record<string, any>;
+
+export type WorkerExport =
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.
+	| (new (...args: any[]) => Rpc.WorkerEntrypointBranded)
+	| Rpc.WorkerEntrypointBranded
+	| AnyExportedHandler;
+
+export type WorkerHandle<
+	Env = AnyEnv,
+	Module extends WorkerModule = {
+		default: AnyExportedHandler;
+	},
+> = {
 	/**
 	 * Dispatches a fetch event directly to this worker.
 	 * Relative URL inputs are resolved against the URL returned by `listen()`.
@@ -134,6 +161,19 @@ export type WorkerHandle<Env = Record<string, any>> = {
 	introspectWorkflow(
 		bindingName: BindingName<Env, Workflow>
 	): Promise<WorkflowIntrospector>;
+	/**
+	 * Returns the default Worker export, including JSRPC methods.
+	 *
+	 * @example
+	 * ```ts
+	 * type ApiWorkerModule = typeof import("../src/api-worker");
+	 *
+	 * const worker = server.getWorker<Cloudflare.Env, ApiWorkerModule>("api-worker");
+	 * const api = await worker.getExport();
+	 * api.getMessage();
+	 * ```
+	 */
+	getExport(): Promise<Service<Module["default"]>>;
 };
 
 export type TestHarness = {
@@ -183,8 +223,12 @@ export type TestHarness = {
 	 * When no name is provided, this returns the primary Worker, which is the first
 	 * Worker in the server's `workers` options.
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
-	getWorker<Env = Record<string, any>>(name?: string): WorkerHandle<Env>;
+	getWorker<
+		Env = AnyEnv,
+		Module extends WorkerModule = { default: AnyExportedHandler },
+	>(
+		name?: string
+	): WorkerHandle<Env, Module>;
 	/**
 	 * Returns captured Workers runtime logs since the current server session
 	 * started or `clearLogs()` was last called.
@@ -245,6 +289,11 @@ type WorkerInput =
 			 * Test-only secrets that override values loaded from `.dev.vars` and `.env` files.
 			 */
 			secrets?: Record<string, string>;
+			/**
+			 * Test-only service binding overrides. Keys are binding names in this
+			 * Worker's environment, and values are Worker names in this test harness.
+			 */
+			bindingOverrides?: Record<string, string>;
 	  }
 	| {
 			/**
@@ -359,6 +408,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return serverOptions.workers.map((input, index, list) => {
 			const isPrimaryWorker = index === 0;
 			const isMultiworker = list.length > 1;
+			const workerBindingOverrides =
+				"configPath" in input ? input.bindingOverrides : undefined;
 			const bindings = convertConfigToBindings(
 				{ vars: "vars" in input ? input.vars : undefined },
 				{ usePreviewIds: true }
@@ -366,6 +417,9 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			const secrets = "secrets" in input ? input.secrets : undefined;
 			for (const [key, value] of Object.entries(secrets ?? {})) {
 				bindings[key] = { type: "secret_text", value };
+			}
+			for (const [key, value] of Object.entries(workerBindingOverrides ?? {})) {
+				bindings[key] = { type: "service", service: value };
 			}
 
 			return {
@@ -716,8 +770,10 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 			return dispatchFetch(miniflare, input, init);
 		},
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
-		getWorker<Env = Record<string, any>>(name?: string): WorkerHandle<Env> {
+		getWorker<
+			Env = AnyEnv,
+			Module extends WorkerModule = { default: AnyExportedHandler },
+		>(name?: string): WorkerHandle<Env, Module> {
 			async function getWorkflowBinding(bindingName: string) {
 				const session = await resolveSession();
 				const miniflare = await getRuntimeMiniflare(session);
@@ -903,6 +959,14 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const workerName = resolveWorkerName(session, name);
 
 					return miniflare.getBindings<Env>(workerName);
+				},
+				async getExport() {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const entrypoint = await miniflare.getWorker(workerName);
+					/** Miniflare returns the same runtime stub with a different Workers type entry. */
+					return entrypoint as unknown as Service<Module["default"]>;
 				},
 			};
 		},
