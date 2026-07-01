@@ -90,13 +90,6 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 	) {}
 
 	read(): UserAuthConfig | undefined {
-		// `read()` returns `undefined` for every "no usable data" shape —
-		// see the `ConfigStorage<T>` interface docs. That collapses
-		// "no encrypted file", "encrypted file but key missing",
-		// "ciphertext tampered/corrupted", and "decrypted plaintext is
-		// not valid TOML" into one consumer-visible state ("not logged
-		// in"). Genuine errors (filesystem permission failures, etc.)
-		// still propagate via `readEncryptedFile` / the plaintext parser.
 		const encryptedPath = getEncryptedAuthConfigFilePath(this.profile);
 		if (existsSync(encryptedPath)) {
 			return this.readEncryptedFile(encryptedPath);
@@ -176,13 +169,13 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			// the plaintext store's "no file → not logged in" semantics.
 			return undefined;
 		}
-		// Read the file *outside* the try/catch so genuine filesystem
-		// errors (`EACCES`, `EISDIR`, disk full, ...) propagate per the
-		// `ConfigStorage<T>` contract instead of being misreported as
-		// "not logged in" — which would let the next login silently
-		// overwrite an unreadable-but-present file and lose its key.
-		// `existsSync` was already checked by `read()`, so the only
-		// failures reaching here are real IO errors.
+		// Read the file *outside* the try/catch so genuine filesystem errors
+		// (`EACCES`, `EISDIR`, disk full, ...) propagate instead of being
+		// misreported as "not logged in" — which would let the next login
+		// silently overwrite an unreadable-but-present file and lose its key.
+		//
+		// `existsSync` was already checked by `read()`, so the only failures
+		// reaching here are real IO errors.
 		const raw = readFileSync(encryptedPath);
 		let envelope;
 		try {
@@ -215,9 +208,8 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		plaintextPath: string,
 		encryptedPath: string
 	): UserAuthConfig | undefined {
-		// Read outside the try/catch so genuine filesystem errors
-		// (`EACCES`, `EISDIR`, ...) propagate per the `ConfigStorage<T>`
-		// contract; `read()` already confirmed the file exists, so only
+		// Genuine filesystem errors (`EACCES`, `EISDIR`, ...) propagate;
+		// `read()` already confirmed the file exists, so only
 		// real IO failures reach here. A successfully-read-but-corrupt
 		// TOML body still collapses to "not logged in" below.
 		const raw = readFileSync(plaintextPath);
