@@ -839,7 +839,7 @@ function normalizeAndValidateSite(
 		validateTypedArray(diagnostics, "sites.include", include, "string");
 		validateTypedArray(diagnostics, "sites.exclude", exclude, "string");
 
-		// eslint-disable-next-line typescript-eslint/no-deprecated -- this code handles the deprecated site.entry-point field
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- this code handles the deprecated site.entry-point field
 		const legacySiteEntryPoint = rawConfig.site["entry-point"];
 
 		validateOptionalProperty(
