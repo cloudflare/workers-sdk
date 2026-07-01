@@ -717,12 +717,14 @@ export const mockAssetUploadRequest = async (
 	numberOfBuckets: number,
 	bodies: FormData[],
 	uploadContentTypeHeaders: (string | null)[],
-	uploadAuthHeaders: (string | null)[]
+	uploadAuthHeaders: (string | null)[],
+	uploadUrls?: string[]
 ) => {
 	msw.use(
 		http.post(
 			"*/accounts/some-account-id/workers/assets/upload",
 			async ({ request }) => {
+				uploadUrls?.push(request.url);
 				uploadContentTypeHeaders.push(request.headers.get("Content-Type"));
 				uploadAuthHeaders.push(request.headers.get("Authorization"));
 				const formData = await request.formData();

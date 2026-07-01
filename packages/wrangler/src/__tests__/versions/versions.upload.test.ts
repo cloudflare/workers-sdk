@@ -16,6 +16,7 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { beforeEach, describe, expect, it, test, vi } from "vitest";
+import * as metrics from "../../metrics";
 import { dedent } from "../../utils/dedent";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
@@ -2103,9 +2104,12 @@ describe("versions upload", () => {
 			setIsTTY(false);
 		});
 
-		test("should upload assets and include jwt in metadata", async ({
+		test("should upload assets and include stats in upload metrics", async ({
 			expect,
 		}) => {
+			const sendMetricsEventSpy = vi
+				.spyOn(metrics, "sendMetricsEvent")
+				.mockImplementation(() => {});
 			mockGetScript();
 			const requests = mockUploadVersion(false, 0);
 
@@ -2113,13 +2117,34 @@ describe("versions upload", () => {
 			msw.use(
 				http.post(
 					`*/accounts/:accountId/workers/scripts/:scriptName/assets-upload-session`,
-					() => {
+					async ({ request }) => {
+						const { manifest } = (await request.json()) as {
+							manifest: Record<string, { hash: string; size: number }>;
+						};
 						return HttpResponse.json(
 							{
 								success: true,
 								errors: [],
 								messages: [],
-								result: { jwt: "test-assets-jwt", buckets: [[]] },
+								result: {
+									jwt: "test-assets-jwt",
+									buckets: [Object.values(manifest).map(({ hash }) => hash)],
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/assets/upload`,
+					async ({ request }) => {
+						expect(new URL(request.url).search).toBe("?base64=true");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "test-assets-completion-jwt" },
 							},
 							{ status: 201 }
 						);
@@ -2140,7 +2165,18 @@ describe("versions upload", () => {
 
 			const metadata = await getMetadata(requests[requests.length - 1]);
 			expect(metadata.assets).toBeDefined();
-			expect(metadata.assets?.jwt).toEqual("test-assets-jwt");
+			expect(metadata.assets?.jwt).toEqual("test-assets-completion-jwt");
+			expect(sendMetricsEventSpy).toHaveBeenCalledWith(
+				"upload worker version",
+				expect.objectContaining({
+					assetUploadDurationMs: expect.any(Number),
+					assetUploadIsBulk: true,
+					assetUploadFileCount: 1,
+					assetUploadTotalBytes: 14,
+				}),
+				expect.any(Object)
+			);
+			sendMetricsEventSpy.mockRestore();
 		});
 
 		test("should upload assets via --assets CLI flag", async ({ expect }) => {
