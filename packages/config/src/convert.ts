@@ -88,7 +88,13 @@ function convertTopLevel(
 		result.observability = convertObservability(config.observability);
 	}
 	if (config.cache !== undefined) {
-		result.cache = { enabled: config.cache.enabled };
+		const cache: NonNullable<RawConfig["cache"]> = {
+			enabled: config.cache.enabled,
+		};
+		if (config.cache.crossVersionCache !== undefined) {
+			cache.cross_version_cache = config.cache.crossVersionCache;
+		}
+		result.cache = cache;
 	}
 	if (config.unsafe !== undefined) {
 		result.unsafe = convertUnsafeTopLevel(config.unsafe);

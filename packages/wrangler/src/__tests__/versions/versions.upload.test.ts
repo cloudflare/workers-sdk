@@ -1768,7 +1768,7 @@ describe("versions upload", () => {
 				compatibility_flags: ["nodejs_compat"],
 				placement: { mode: "smart" },
 				limits: { cpu_ms: 100 },
-				cache: { enabled: true },
+				cache: { enabled: true, cross_version_cache: true },
 				exports: {
 					default: { type: "worker", cache: { enabled: false } },
 					Admin: { type: "worker", cache: { enabled: true } },
@@ -1787,6 +1787,7 @@ describe("versions upload", () => {
 			// cache is serialized as cache_options in the upload form metadata
 			expect((metadata as Record<string, unknown>).cache_options).toEqual({
 				enabled: true,
+				cross_version_cache: true,
 			});
 			expect((metadata as Record<string, unknown>).exports).toEqual({
 				default: { type: "worker", cache: { enabled: false } },

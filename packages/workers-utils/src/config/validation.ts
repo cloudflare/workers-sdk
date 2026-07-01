@@ -6343,8 +6343,18 @@ const validateCache: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"cross_version_cache",
+			val.cross_version_cache,
+			"boolean"
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
+			"cross_version_cache",
 		]) && isValid;
 
 	return isValid;

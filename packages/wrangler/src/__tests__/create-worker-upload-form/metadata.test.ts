@@ -194,6 +194,12 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 			expected: { enabled: true },
 		},
 		{
+			label: "cache with cross version cache",
+			overrides: { cache: { enabled: false, cross_version_cache: true } },
+			key: "cache_options",
+			expected: { enabled: false, cross_version_cache: true },
+		},
+		{
 			label: "exports",
 			overrides: {
 				exports: {

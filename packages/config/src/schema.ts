@@ -242,6 +242,7 @@ export function isParsedUnsafeBinding(
 
 const CacheSchema = z.strictObject({
 	enabled: z.boolean(),
+	crossVersionCache: z.boolean().optional(),
 });
 
 /**

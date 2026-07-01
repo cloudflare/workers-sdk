@@ -112,6 +112,15 @@ describe("convertToWranglerConfig", () => {
 			).toEqual({ enabled: true });
 		});
 
+		it("maps cross version cache to wrangler config", ({ expect }) => {
+			expect(
+				convertToWranglerConfig({
+					...baseConfig,
+					cache: { enabled: false, crossVersionCache: true },
+				}).cache
+			).toEqual({ enabled: false, cross_version_cache: true });
+		});
+
 		it("maps unsafe.metadata directly", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,

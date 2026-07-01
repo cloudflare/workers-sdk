@@ -1780,6 +1780,8 @@ export interface Observability {
 export interface CacheOptions {
 	/** If cache is enabled for this Worker */
 	enabled: boolean;
+	/** Whether cached assets may be reused across Worker versions. */
+	cross_version_cache?: boolean;
 }
 
 export type DockerConfiguration = {

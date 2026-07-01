@@ -10179,6 +10179,52 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.cache).toEqual({ enabled: false });
 			});
 
+			it("should not error when cross_version_cache is true and cache is disabled", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: false,
+							cross_version_cache: true,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({
+					enabled: false,
+					cross_version_cache: true,
+				});
+			});
+
+			it("should error when cache.cross_version_cache is not a boolean", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+							cross_version_cache: "true",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "cache.cross_version_cache" to be of type boolean but got "true"."
+				`);
+			});
+
 			it("should warn on unexpected fields in cache config", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{

@@ -240,6 +240,8 @@ export interface UserConfig {
 	cache?: {
 		/** If cache is enabled for this Worker. */
 		enabled: boolean;
+		/** Whether cached assets may be reused across Worker versions. */
+		crossVersionCache?: boolean;
 	};
 
 	/**
