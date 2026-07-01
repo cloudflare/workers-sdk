@@ -4,9 +4,10 @@ import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	buildObjectEntryProps,
+	buildRemoteProxyProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
-	getUserBindingServiceName,
 	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
@@ -48,6 +49,11 @@ export const D1SharedOptionsSchema = z.object({
 export const D1_PLUGIN_NAME = "d1";
 const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
 const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
+// A single entry service shared by every *local* database. Each database's id is
+// supplied per-binding via `ctx.props`, so one service serves all of them.
+export const D1_LOCAL_ENTRY_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:entry`;
+// One shared remote-proxy service for all remote D1 databases (config via props).
+const D1_REMOTE_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:remote`;
 const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
 const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: D1_DATABASE_SERVICE_PREFIX,
@@ -70,18 +76,22 @@ export const D1_PLUGIN: Plugin<
 					"Alpha D1 Databases cannot run remotely"
 				);
 
-				const serviceName = getUserBindingServiceName(
-					D1_DATABASE_SERVICE_PREFIX,
-					id,
-					remoteProxyConnectionString
-				);
+				// Remote databases share one proxy service (config via props); local
+				// databases share one entry service with the id supplied via props.
+				const serviceDesignator = remoteProxyConnectionString
+					? {
+							name: D1_REMOTE_SERVICE_NAME,
+							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+						}
+					: {
+							name: D1_LOCAL_ENTRY_SERVICE_NAME,
+							props: buildObjectEntryProps(id),
+						};
 
 				const binding = name.startsWith("__D1_BETA__")
 					? // Used before Wrangler 3.3
 						{
-							service: {
-								name: serviceName,
-							},
+							service: serviceDesignator,
 						}
 					: // Used after Wrangler 3.3
 						{
@@ -90,9 +100,7 @@ export const D1_PLUGIN: Plugin<
 								innerBindings: [
 									{
 										name: "fetcher",
-										service: {
-											name: serviceName,
-										},
+										service: serviceDesignator,
 									},
 								],
 							},
@@ -115,23 +123,41 @@ export const D1_PLUGIN: Plugin<
 		defaultPersistRoot,
 		log,
 		unsafeStickyBlobs,
+		storageOwnerRoutePlugins,
 	}) {
 		const persist = sharedOptions.d1Persist;
 		const databases = namespaceEntries(options.d1Databases);
-		const services = databases.map<Service>(
-			([name, { id, remoteProxyConnectionString }]) => ({
-				name: getUserBindingServiceName(
-					D1_DATABASE_SERVICE_PREFIX,
-					id,
-					remoteProxyConnectionString
-				),
-				worker: remoteProxyConnectionString
-					? remoteProxyClientWorker(remoteProxyConnectionString, name)
-					: objectEntryWorker(D1_DATABASE_OBJECT, id),
-			})
-		);
 
-		if (databases.length > 0) {
+		const services: Service[] = [];
+
+		// When routing local D1 to a shared storage owner, this instance must not
+		// stand up its own D1 storage — its bindings are repointed at the owner
+		// proxy by `Miniflare`.
+		const routeToOwner = storageOwnerRoutePlugins.has(D1_PLUGIN_NAME);
+
+		// One shared entry service for all local databases (id supplied via props).
+		const hasLocal =
+			!routeToOwner &&
+			databases.some(([, db]) => !db.remoteProxyConnectionString);
+		if (hasLocal) {
+			services.push({
+				name: D1_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(D1_DATABASE_OBJECT),
+			});
+		}
+
+		// One shared proxy service for all remote (mixed-mode) databases.
+		const hasRemote = databases.some(
+			([, db]) => db.remoteProxyConnectionString
+		);
+		if (hasRemote) {
+			services.push({
+				name: D1_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			});
+		}
+
+		if (hasLocal) {
 			const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(
 				D1_PLUGIN_NAME,
@@ -180,8 +206,11 @@ export const D1_PLUGIN: Plugin<
 			};
 			services.push(storageService, objectService);
 
-			for (const database of databases) {
-				await migrateDatabase(log, uniqueKey, persistPath, database[1].id);
+			for (const [, database] of databases) {
+				if (database.remoteProxyConnectionString) {
+					continue;
+				}
+				await migrateDatabase(log, uniqueKey, persistPath, database.id);
 			}
 		}
 

@@ -125,6 +125,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		defaultPersistRoot,
 		durableObjectClassNames,
 		unsafeEphemeralDurableObjects,
+		isolateLocalStorage,
 	}) {
 		// Check if we even have any Durable Object bindings, if we don't, we can
 		// skip creating the storage directory
@@ -142,10 +143,13 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		// don't need to create the storage service at all.
 		if (unsafeEphemeralDurableObjects) return;
 
+		// Durable Objects aren't routed to the shared storage owner (a DO is
+		// single-owner compute, not just storage). When the owner feature is on,
+		// keep DO storage per-instance so separate processes don't contend.
 		const storagePath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
+			isolateLocalStorage ? undefined : defaultPersistRoot,
 			sharedOptions.durableObjectsPersist
 		);
 		// `workerd` requires the `disk.path` to exist. Setting `recursive: true`

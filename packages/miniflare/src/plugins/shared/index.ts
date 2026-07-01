@@ -91,6 +91,21 @@ export interface PluginServicesOptions<
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
 	hyperdriveProxyController: HyperdriveProxyController;
+	// Plugin names (e.g. "kv") whose *local* storage is being routed to a shared
+	// storage owner process. Plugins listed here should skip standing up their
+	// local storage services (disk/DO/migrations); their bindings are rewritten
+	// to the storage-owner proxy by `Miniflare`.
+	storageOwnerRoutePlugins: Set<string>;
+	// Connection string for the shared storage owner's proxy, when a plugin needs
+	// to repoint an internal storage binding at the owner itself (e.g. the Images
+	// transform worker's backing KV store). `undefined` when not routing.
+	storageOwnerConn: RemoteProxyConnectionString | undefined;
+	// When the shared storage owner feature is enabled, plugins that aren't
+	// routed to the owner but still persist to `defaultPersistRoot` (Cache,
+	// Durable Objects, Workflows) keep their storage per-instance (under
+	// `tmpPath`) instead of the shared root, so separate processes don't contend
+	// on one database. Honoured unless the user set an explicit `*Persist`.
+	isolateLocalStorage: boolean;
 }
 
 export interface ServicesExtensions {
