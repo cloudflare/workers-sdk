@@ -8,13 +8,15 @@ import {
 import path from "node:path";
 import {
 	createProfileStore,
-	getAuthConfigFilePath,
-	getEncryptedAuthConfigFilePath,
 	scrubEncryptedCredentials,
 } from "@cloudflare/workers-auth";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
-import { defaultAuthConfigStorage } from "./auth-config-file";
+import {
+	defaultAuthConfigStorage,
+	getAuthConfigFilePath,
+	getEncryptedAuthConfigFilePath,
+} from "./auth-config-file";
 import { WRANGLER_KEYRING_SERVICE_NAME } from "./user";
 import type {
 	DirectoryBindingsStorage,
@@ -69,6 +71,7 @@ function createWranglerProfileConfigOperations(): ProfileConfigOperations {
 			const { backendAvailable, encryptedFileExisted } =
 				scrubEncryptedCredentials({
 					serviceName: WRANGLER_KEYRING_SERVICE_NAME,
+					configPath: getGlobalConfigPath(),
 					profile,
 				});
 			// Also clear any plaintext TOML: covers non-keyring profiles and
@@ -85,7 +88,7 @@ function createWranglerProfileConfigOperations(): ProfileConfigOperations {
 }
 
 function getDirectoryBindingsPath(): string {
-	return path.join(getGlobalWranglerConfigPath(), DIRECTORY_BINDINGS_FILE);
+	return path.join(getGlobalConfigPath(), DIRECTORY_BINDINGS_FILE);
 }
 
 function createWranglerDirectoryBindingsStorage(): DirectoryBindingsStorage {

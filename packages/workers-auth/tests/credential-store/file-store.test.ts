@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import {
@@ -14,13 +15,17 @@ const SAMPLE_CONFIG: UserAuthConfig = {
 	scopes: ["account:read"],
 };
 
+// The consumer provides the global config dir; resolved fresh per call so the
+// runInTempDir HOME stub applies. Wrangler passes `getGlobalConfigPath()`.
+const configDir = () => getGlobalConfigPath();
+
 describe("FileCredentialStore", () => {
 	runInTempDir();
 
 	it("round-trips a UserAuthConfig through the plaintext TOML file", ({
 		expect,
 	}) => {
-		const store = new FileCredentialStore();
+		const store = new FileCredentialStore(configDir());
 		store.write(SAMPLE_CONFIG);
 		expect(store.read()).toEqual(SAMPLE_CONFIG);
 	});
@@ -28,9 +33,9 @@ describe("FileCredentialStore", () => {
 	it("write persists to the path returned by getAuthConfigFilePath()", ({
 		expect,
 	}) => {
-		new FileCredentialStore().write(SAMPLE_CONFIG);
-		expect(existsSync(getAuthConfigFilePath())).toBe(true);
-		const raw = readFileSync(getAuthConfigFilePath(), "utf8");
+		new FileCredentialStore(configDir()).write(SAMPLE_CONFIG);
+		expect(existsSync(getAuthConfigFilePath(configDir()))).toBe(true);
+		const raw = readFileSync(getAuthConfigFilePath(configDir()), "utf8");
 		expect(raw).toContain('oauth_token = "test-oauth-token"');
 	});
 
@@ -38,49 +43,53 @@ describe("FileCredentialStore", () => {
 		// Per the `ConfigStorage<T>.read()` contract, "nothing stored
 		// yet" is the empty state and surfaces as `undefined` — not a
 		// thrown exception.
-		expect(new FileCredentialStore().read()).toBeUndefined();
+		expect(new FileCredentialStore(configDir()).read()).toBeUndefined();
 	});
 
 	it("read throws when the file is corrupted", ({ expect }) => {
-		const store = new FileCredentialStore();
+		const store = new FileCredentialStore(configDir());
 		store.write(SAMPLE_CONFIG);
 		// A file that exists but is unparseable is a genuine error
 		// (the user benefits from seeing the corruption rather than
 		// silently being treated as "not logged in"), so `read()`
 		// throws — distinct from the missing-file path above.
-		writeFileSync(getAuthConfigFilePath(), "this is not toml = = =");
+		writeFileSync(getAuthConfigFilePath(configDir()), "this is not toml = = =");
 		expect(() => store.read()).toThrow();
 	});
 
 	it("clear is a no-op when no file exists", ({ expect }) => {
-		const store = new FileCredentialStore();
+		const store = new FileCredentialStore(configDir());
 		expect(store.clear()).toBe(false);
 	});
 
 	it("clear removes the TOML file and returns whether it existed", ({
 		expect,
 	}) => {
-		const store = new FileCredentialStore();
+		const store = new FileCredentialStore(configDir());
 		store.write(SAMPLE_CONFIG);
-		expect(existsSync(getAuthConfigFilePath())).toBe(true);
+		expect(existsSync(getAuthConfigFilePath(configDir()))).toBe(true);
 		expect(store.clear()).toBe(true);
-		expect(existsSync(getAuthConfigFilePath())).toBe(false);
+		expect(existsSync(getAuthConfigFilePath(configDir()))).toBe(false);
 	});
 
 	it("path() returns the TOML file path", ({ expect }) => {
-		expect(new FileCredentialStore().path()).toBe(getAuthConfigFilePath());
+		expect(new FileCredentialStore(configDir()).path()).toBe(
+			getAuthConfigFilePath(configDir())
+		);
 	});
 
 	it("describe() returns the TOML file path", ({ expect }) => {
-		expect(new FileCredentialStore().describe()).toBe(getAuthConfigFilePath());
+		expect(new FileCredentialStore(configDir()).describe()).toBe(
+			getAuthConfigFilePath(configDir())
+		);
 	});
 
 	it("kind is 'file'", ({ expect }) => {
-		expect(new FileCredentialStore().kind).toBe("file");
+		expect(new FileCredentialStore(configDir()).kind).toBe("file");
 	});
 
 	it("WRANGLER_API_ENVIRONMENT changes the filename", ({ expect }) => {
 		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
-		expect(getAuthConfigFilePath()).toMatch(/staging\.toml$/);
+		expect(getAuthConfigFilePath(configDir())).toMatch(/staging\.toml$/);
 	});
 });

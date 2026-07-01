@@ -1,11 +1,12 @@
 import { existsSync } from "node:fs";
 import {
 	getCloudflareAuthUseKeyringFromEnv,
-	getEncryptedAuthConfigFilePath,
 	scrubEncryptedCredentials,
 	validateProfileName,
 } from "@cloudflare/workers-auth";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
+import { getEncryptedAuthConfigFilePath } from "./auth-config-file";
 import { readUserPreferences, updateUserPreferences } from "./preferences";
 import { createWranglerProfileStore } from "./profile-store";
 import { getCredentialStore, WRANGLER_KEYRING_SERVICE_NAME } from "./user";
@@ -80,6 +81,7 @@ function scrubAllEncryptedProfiles(): void {
 		try {
 			const { backendAvailable } = scrubEncryptedCredentials({
 				serviceName: WRANGLER_KEYRING_SERVICE_NAME,
+				configPath: getGlobalConfigPath(),
 				profile,
 			});
 			cleared.push(describeProfile(profile));

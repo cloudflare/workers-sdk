@@ -1,5 +1,6 @@
 import {
 	findKeyringBinding,
+	getKeyringInstallDir,
 	installKeyringBindingSync,
 } from "./lazy-installer";
 import {
@@ -57,10 +58,15 @@ export function setKeyProviderFactoryForTesting(
  * installs anything, and never logs. The "needs-install" arm returns
  * thunks the caller can invoke once it has decided how to handle the
  * missing-binding case (interactive install vs. hard-error).
+ *
+ * `configPath` is the consumer's global config directory; on Windows it locates
+ * the lazy-installed `@napi-rs/keyring` binding under the CLI's own config dir.
+ * The macOS / Linux backends don't use it.
  */
 export function resolveKeyProvider(
 	serviceName: string,
-	profile?: string
+	profile: string | undefined,
+	configPath: string
 ): KeyProviderResolution {
 	if (testProviderFactory !== undefined) {
 		return {
@@ -93,18 +99,25 @@ export function resolveKeyProvider(
 			// surfaces install hints instead.
 			return { kind: "unsupported" };
 
-		case "win32":
-			if (findKeyringBinding() !== null) {
+		case "win32": {
+			const installDir = getKeyringInstallDir(configPath);
+			if (findKeyringBinding(installDir) !== null) {
 				return {
 					kind: "available",
-					provider: new NapiKeyringKeyProvider(serviceName, profile),
+					provider: new NapiKeyringKeyProvider(
+						serviceName,
+						installDir,
+						profile
+					),
 				};
 			}
 			return {
 				kind: "needs-install",
-				install: installKeyringBindingSync,
-				afterInstall: () => new NapiKeyringKeyProvider(serviceName, profile),
+				install: () => installKeyringBindingSync(installDir),
+				afterInstall: () =>
+					new NapiKeyringKeyProvider(serviceName, installDir, profile),
 			};
+		}
 
 		default:
 			return { kind: "unsupported" };

@@ -6,10 +6,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import {
-	getGlobalWranglerConfigPath,
-	readFileSync,
-} from "@cloudflare/workers-utils";
+import { readFileSync } from "@cloudflare/workers-utils";
 import TOML from "smol-toml";
 import {
 	decryptString,
@@ -29,12 +26,17 @@ import type { KeyProvider } from "./key-providers/interface";
  * Absolute path to the encrypted credentials file for the given auth profile
  * (defaulting to the active Cloudflare API environment's default profile).
  *
- * Sibling of the plaintext `<profile>.toml` so the migration code can
- * non-destructively read the old file before writing the new one.
+ * `configPath` is the consumer's global config directory (see
+ * {@link getAuthConfigFilePath}). Sibling of the plaintext `<profile>.toml` so
+ * the migration code can non-destructively read the old file before writing the
+ * new one.
  */
-export function getEncryptedAuthConfigFilePath(profile?: string): string {
+export function getEncryptedAuthConfigFilePath(
+	configPath: string,
+	profile?: string
+): string {
 	return path.join(
-		getGlobalWranglerConfigPath(),
+		configPath,
 		"config",
 		`${resolveAuthProfileBaseName(profile)}.enc`
 	);
@@ -83,14 +85,27 @@ export type OnPlaintextMigration = (result: PlaintextMigrationResult) => void;
 export class EncryptedFileCredentialStore implements CredentialStore {
 	readonly kind = "encrypted-file" as const;
 
+	/**
+	 * @param configPath consumer-provided global config directory (the CLI
+	 * owns where its config lives, so workers-auth never resolves it itself).
+	 * @param keyProvider the OS-keyring backend holding the encryption key.
+	 * @param onPlaintextMigration optional callback invoked when a plaintext
+	 * TOML file is migrated into the encrypted layout on first read.
+	 * @param profile the auth profile (defaults to the active environment's
+	 * default profile).
+	 */
 	constructor(
+		private readonly configPath: string,
 		private readonly keyProvider: KeyProvider,
 		private readonly onPlaintextMigration?: OnPlaintextMigration,
 		private readonly profile?: string
 	) {}
 
 	read(): UserAuthConfig | undefined {
-		const encryptedPath = getEncryptedAuthConfigFilePath(this.profile);
+		const encryptedPath = getEncryptedAuthConfigFilePath(
+			this.configPath,
+			this.profile
+		);
 		if (existsSync(encryptedPath)) {
 			return this.readEncryptedFile(encryptedPath);
 		}
@@ -98,7 +113,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		// should migrate into the encrypted layout. This makes opt-in
 		// transparent: the next `read()` after the user runs
 		// `wrangler login --use-keyring` returns the migrated credentials.
-		const plaintextPath = getAuthConfigFilePath(this.profile);
+		const plaintextPath = getAuthConfigFilePath(this.configPath, this.profile);
 		if (existsSync(plaintextPath)) {
 			return this.migrateFromPlaintext(plaintextPath, encryptedPath);
 		}
@@ -109,7 +124,10 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		const key = this.ensureKey();
 		const plaintext = TOML.stringify(config);
 		const envelope = encryptString(plaintext, key);
-		const encryptedPath = getEncryptedAuthConfigFilePath(this.profile);
+		const encryptedPath = getEncryptedAuthConfigFilePath(
+			this.configPath,
+			this.profile
+		);
 		mkdirSync(path.dirname(encryptedPath), { recursive: true });
 		writeFileSync(encryptedPath, JSON.stringify(envelope, null, "\t"), {
 			encoding: "utf-8",
@@ -120,15 +138,18 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		// the encrypted version. Skipping this would leave plaintext
 		// credentials on disk indefinitely after the very first
 		// `--use-keyring` login.
-		const plaintextPath = getAuthConfigFilePath(this.profile);
+		const plaintextPath = getAuthConfigFilePath(this.configPath, this.profile);
 		if (existsSync(plaintextPath)) {
 			rmSync(plaintextPath);
 		}
 	}
 
 	clear(): boolean {
-		const encryptedPath = getEncryptedAuthConfigFilePath(this.profile);
-		const plaintextPath = getAuthConfigFilePath(this.profile);
+		const encryptedPath = getEncryptedAuthConfigFilePath(
+			this.configPath,
+			this.profile
+		);
+		const plaintextPath = getAuthConfigFilePath(this.configPath, this.profile);
 		let existed = false;
 		if (existsSync(encryptedPath)) {
 			rmSync(encryptedPath);
@@ -150,11 +171,11 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 	}
 
 	path(): string {
-		return getEncryptedAuthConfigFilePath(this.profile);
+		return getEncryptedAuthConfigFilePath(this.configPath, this.profile);
 	}
 
 	describe(): string {
-		return `Encrypted file (${getEncryptedAuthConfigFilePath(this.profile)}) with key in ${this.keyProvider.describe()}`;
+		return `Encrypted file (${getEncryptedAuthConfigFilePath(this.configPath, this.profile)}) with key in ${this.keyProvider.describe()}`;
 	}
 
 	/* ------------------------------------------------------------------ */

@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import {
@@ -39,6 +40,10 @@ const SAMPLE_CONFIG: UserAuthConfig = {
 	scopes: ["account:read"],
 };
 
+// The consumer provides the global config dir; resolved fresh per call so the
+// runInTempDir HOME stub applies. Wrangler passes `getGlobalConfigPath()`.
+const configDir = () => getGlobalConfigPath();
+
 describe("EncryptedFileCredentialStore", () => {
 	runInTempDir();
 
@@ -50,7 +55,7 @@ describe("EncryptedFileCredentialStore", () => {
 		expect,
 	}) => {
 		const keyProvider = new InMemoryKeyProvider();
-		const store = new EncryptedFileCredentialStore(keyProvider);
+		const store = new EncryptedFileCredentialStore(configDir(), keyProvider);
 		store.write(SAMPLE_CONFIG);
 		expect(store.read()).toEqual(SAMPLE_CONFIG);
 	});
@@ -59,15 +64,19 @@ describe("EncryptedFileCredentialStore", () => {
 		expect,
 	}) => {
 		const keyProvider = new InMemoryKeyProvider();
-		new EncryptedFileCredentialStore(keyProvider).write(SAMPLE_CONFIG);
-		expect(existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+		new EncryptedFileCredentialStore(configDir(), keyProvider).write(
+			SAMPLE_CONFIG
+		);
+		expect(existsSync(getEncryptedAuthConfigFilePath(configDir()))).toBe(true);
 	});
 
 	it("file on disk is JSON envelope with v=1 and AES-256-GCM", ({ expect }) => {
 		const keyProvider = new InMemoryKeyProvider();
-		new EncryptedFileCredentialStore(keyProvider).write(SAMPLE_CONFIG);
+		new EncryptedFileCredentialStore(configDir(), keyProvider).write(
+			SAMPLE_CONFIG
+		);
 		const raw = JSON.parse(
-			readFileSync(getEncryptedAuthConfigFilePath(), "utf8")
+			readFileSync(getEncryptedAuthConfigFilePath(configDir()), "utf8")
 		);
 		expect(raw).toMatchObject({
 			v: 1,
@@ -79,7 +88,7 @@ describe("EncryptedFileCredentialStore", () => {
 		// And critically: the on-disk file should not contain the cleartext
 		// token anywhere.
 		expect(
-			readFileSync(getEncryptedAuthConfigFilePath(), "utf8")
+			readFileSync(getEncryptedAuthConfigFilePath(configDir()), "utf8")
 		).not.toContain("test-oauth-token");
 	});
 
@@ -88,7 +97,9 @@ describe("EncryptedFileCredentialStore", () => {
 	}) => {
 		const keyProvider = new InMemoryKeyProvider();
 		expect(keyProvider.getKey()).toBeUndefined();
-		new EncryptedFileCredentialStore(keyProvider).write(SAMPLE_CONFIG);
+		new EncryptedFileCredentialStore(configDir(), keyProvider).write(
+			SAMPLE_CONFIG
+		);
 		const key = keyProvider.getKey();
 		expect(key).toBeDefined();
 		expect(key?.length).toBe(32);
@@ -96,7 +107,7 @@ describe("EncryptedFileCredentialStore", () => {
 
 	it("subsequent writes reuse the existing key", ({ expect }) => {
 		const keyProvider = new InMemoryKeyProvider();
-		const store = new EncryptedFileCredentialStore(keyProvider);
+		const store = new EncryptedFileCredentialStore(configDir(), keyProvider);
 		store.write(SAMPLE_CONFIG);
 		const firstKey = keyProvider.getKey();
 		store.write({ ...SAMPLE_CONFIG, oauth_token: "new" });
@@ -109,7 +120,10 @@ describe("EncryptedFileCredentialStore", () => {
 	// envelope. The consumer treats `undefined` as "not logged in" and
 	// the next login regenerates the key and re-encrypts cleanly.
 	it("read returns undefined when neither file nor key exist", ({ expect }) => {
-		const store = new EncryptedFileCredentialStore(new InMemoryKeyProvider());
+		const store = new EncryptedFileCredentialStore(
+			configDir(),
+			new InMemoryKeyProvider()
+		);
 		expect(store.read()).toBeUndefined();
 	});
 
@@ -117,7 +131,7 @@ describe("EncryptedFileCredentialStore", () => {
 		expect,
 	}) => {
 		const keyProvider = new InMemoryKeyProvider();
-		const store = new EncryptedFileCredentialStore(keyProvider);
+		const store = new EncryptedFileCredentialStore(configDir(), keyProvider);
 		store.write(SAMPLE_CONFIG);
 		keyProvider.deleteKey();
 		expect(store.read()).toBeUndefined();
@@ -125,11 +139,11 @@ describe("EncryptedFileCredentialStore", () => {
 
 	it("read returns undefined when the file is tampered with", ({ expect }) => {
 		const keyProvider = new InMemoryKeyProvider();
-		const store = new EncryptedFileCredentialStore(keyProvider);
+		const store = new EncryptedFileCredentialStore(configDir(), keyProvider);
 		store.write(SAMPLE_CONFIG);
 
 		// Flip a byte in the ciphertext.
-		const filePath = getEncryptedAuthConfigFilePath();
+		const filePath = getEncryptedAuthConfigFilePath(configDir());
 		const envelope = JSON.parse(readFileSync(filePath, "utf8"));
 		const cipherBytes = Buffer.from(envelope.ciphertext, "base64");
 		cipherBytes[0] ^= 0x01;
@@ -143,9 +157,9 @@ describe("EncryptedFileCredentialStore", () => {
 		expect,
 	}) => {
 		const keyProvider = new InMemoryKeyProvider();
-		const store = new EncryptedFileCredentialStore(keyProvider);
+		const store = new EncryptedFileCredentialStore(configDir(), keyProvider);
 		store.write(SAMPLE_CONFIG);
-		writeFileSync(getEncryptedAuthConfigFilePath(), "not json");
+		writeFileSync(getEncryptedAuthConfigFilePath(configDir()), "not json");
 		expect(store.read()).toBeUndefined();
 	});
 
@@ -160,8 +174,8 @@ describe("EncryptedFileCredentialStore", () => {
 	}) => {
 		const keyProvider = new InMemoryKeyProvider();
 		keyProvider.setKey(new Uint8Array(32));
-		const store = new EncryptedFileCredentialStore(keyProvider);
-		mkdirSync(getEncryptedAuthConfigFilePath(), { recursive: true });
+		const store = new EncryptedFileCredentialStore(configDir(), keyProvider);
+		mkdirSync(getEncryptedAuthConfigFilePath(configDir()), { recursive: true });
 		expect(() => store.read()).toThrow();
 	});
 
@@ -169,32 +183,39 @@ describe("EncryptedFileCredentialStore", () => {
 		expect,
 	}) => {
 		const keyProvider = new InMemoryKeyProvider();
-		const store = new EncryptedFileCredentialStore(keyProvider);
+		const store = new EncryptedFileCredentialStore(configDir(), keyProvider);
 		store.write(SAMPLE_CONFIG);
-		expect(existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+		expect(existsSync(getEncryptedAuthConfigFilePath(configDir()))).toBe(true);
 		expect(keyProvider.getKey()).toBeDefined();
 
 		expect(store.clear()).toBe(true);
-		expect(existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+		expect(existsSync(getEncryptedAuthConfigFilePath(configDir()))).toBe(false);
 		expect(keyProvider.getKey()).toBeUndefined();
 	});
 
 	it("clear is idempotent and returns false when nothing existed", ({
 		expect,
 	}) => {
-		const store = new EncryptedFileCredentialStore(new InMemoryKeyProvider());
+		const store = new EncryptedFileCredentialStore(
+			configDir(),
+			new InMemoryKeyProvider()
+		);
 		expect(store.clear()).toBe(false);
 	});
 
 	it("path() returns the encrypted file path", ({ expect }) => {
-		const store = new EncryptedFileCredentialStore(new InMemoryKeyProvider());
-		expect(store.path()).toBe(getEncryptedAuthConfigFilePath());
+		const store = new EncryptedFileCredentialStore(
+			configDir(),
+			new InMemoryKeyProvider()
+		);
+		expect(store.path()).toBe(getEncryptedAuthConfigFilePath(configDir()));
 	});
 
 	it("describe() identifies the encrypted file path and key location", ({
 		expect,
 	}) => {
 		const store = new EncryptedFileCredentialStore(
+			configDir(),
 			new InMemoryKeyProvider("test keyring")
 		);
 		expect(store.describe()).toContain("Encrypted file");
@@ -203,7 +224,8 @@ describe("EncryptedFileCredentialStore", () => {
 
 	it("kind is 'encrypted-file'", ({ expect }) => {
 		expect(
-			new EncryptedFileCredentialStore(new InMemoryKeyProvider()).kind
+			new EncryptedFileCredentialStore(configDir(), new InMemoryKeyProvider())
+				.kind
 		).toBe("encrypted-file");
 	});
 
@@ -211,14 +233,16 @@ describe("EncryptedFileCredentialStore", () => {
 		expect,
 	}) => {
 		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
-		expect(getEncryptedAuthConfigFilePath()).toMatch(/staging\.enc$/);
+		expect(getEncryptedAuthConfigFilePath(configDir())).toMatch(
+			/staging\.enc$/
+		);
 	});
 
 	describe("plaintext migration", () => {
 		it("migrates plaintext TOML into the encrypted file on first read", ({
 			expect,
 		}) => {
-			const plaintextPath = getAuthConfigFilePath();
+			const plaintextPath = getAuthConfigFilePath(configDir());
 			mkdirSync(path.dirname(plaintextPath), { recursive: true });
 			writeFileSync(
 				plaintextPath,
@@ -232,9 +256,13 @@ describe("EncryptedFileCredentialStore", () => {
 
 			const keyProvider = new InMemoryKeyProvider();
 			let migrationCalled = false;
-			const store = new EncryptedFileCredentialStore(keyProvider, () => {
-				migrationCalled = true;
-			});
+			const store = new EncryptedFileCredentialStore(
+				configDir(),
+				keyProvider,
+				() => {
+					migrationCalled = true;
+				}
+			);
 
 			expect(store.read()).toEqual({
 				oauth_token: "plaintext-token",
@@ -244,7 +272,9 @@ describe("EncryptedFileCredentialStore", () => {
 			});
 
 			expect(existsSync(plaintextPath)).toBe(false);
-			expect(existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(existsSync(getEncryptedAuthConfigFilePath(configDir()))).toBe(
+				true
+			);
 			expect(keyProvider.getKey()).toBeDefined();
 			expect(migrationCalled).toBe(true);
 		});
@@ -253,34 +283,41 @@ describe("EncryptedFileCredentialStore", () => {
 			expect,
 		}) => {
 			const keyProvider = new InMemoryKeyProvider();
-			const store = new EncryptedFileCredentialStore(keyProvider);
+			const store = new EncryptedFileCredentialStore(configDir(), keyProvider);
 			store.write({ oauth_token: "encrypted-already" });
 
 			// Now write a plaintext file with different content; the read should
 			// prefer the encrypted file.
-			writeFileSync(getAuthConfigFilePath(), 'oauth_token = "stale-plaintext"');
+			writeFileSync(
+				getAuthConfigFilePath(configDir()),
+				'oauth_token = "stale-plaintext"'
+			);
 
 			expect(store.read()).toEqual({ oauth_token: "encrypted-already" });
 		});
 
 		it("write scrubs any pre-existing plaintext TOML file", ({ expect }) => {
-			const plaintextPath = getAuthConfigFilePath();
+			const plaintextPath = getAuthConfigFilePath(configDir());
 			mkdirSync(path.dirname(plaintextPath), { recursive: true });
 			writeFileSync(plaintextPath, 'oauth_token = "stale"');
 
-			new EncryptedFileCredentialStore(new InMemoryKeyProvider()).write(
-				SAMPLE_CONFIG
-			);
+			new EncryptedFileCredentialStore(
+				configDir(),
+				new InMemoryKeyProvider()
+			).write(SAMPLE_CONFIG);
 			expect(existsSync(plaintextPath)).toBe(false);
 		});
 
 		it("read returns undefined when the plaintext file is unparseable", ({
 			expect,
 		}) => {
-			const plaintextPath = getAuthConfigFilePath();
+			const plaintextPath = getAuthConfigFilePath(configDir());
 			mkdirSync(path.dirname(plaintextPath), { recursive: true });
 			writeFileSync(plaintextPath, "garbage = = =");
-			const store = new EncryptedFileCredentialStore(new InMemoryKeyProvider());
+			const store = new EncryptedFileCredentialStore(
+				configDir(),
+				new InMemoryKeyProvider()
+			);
 			// Consistent with the other corruption-shaped paths on the
 			// encrypted store: an unparseable plaintext file collapses to
 			// "no usable data" (the next login regenerates the key and
@@ -298,9 +335,12 @@ describe("EncryptedFileCredentialStore", () => {
 			// attempts a migration) but unreadable as a file, so
 			// `readFileSync` raises `EISDIR`. That genuine fs error must
 			// propagate rather than be swallowed as "not logged in".
-			const plaintextPath = getAuthConfigFilePath();
+			const plaintextPath = getAuthConfigFilePath(configDir());
 			mkdirSync(plaintextPath, { recursive: true });
-			const store = new EncryptedFileCredentialStore(new InMemoryKeyProvider());
+			const store = new EncryptedFileCredentialStore(
+				configDir(),
+				new InMemoryKeyProvider()
+			);
 			expect(() => store.read()).toThrow();
 		});
 	});

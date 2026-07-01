@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-	getEncryptedAuthConfigFilePath,
 	resetCredentialStorageState,
 	setKeyProviderFactoryForTesting,
 	validateProfileName,
@@ -14,6 +13,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import {
 	getAuthConfigFilePath,
+	getEncryptedAuthConfigFilePath,
 	WRANGLER_KEYRING_SERVICE_NAME,
 	writeAuthConfigFile,
 } from "../user";

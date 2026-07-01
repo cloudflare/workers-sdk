@@ -32,6 +32,20 @@ export interface CredentialStorageContext {
 	serviceName: string;
 
 	/**
+	 * The consumer's global config directory (e.g. wrangler's
+	 * `~/.wrangler`), resolved lazily on every credential operation.
+	 *
+	 * The client owns where its config lives — `cf` uses a different global
+	 * config path than wrangler — so `@cloudflare/workers-auth` never resolves
+	 * it itself. A getter (rather than a captured string) is required because
+	 * consumers create this context once at module load while tests re-stub
+	 * `HOME` / `XDG_CONFIG_HOME` per case, so the path must be re-read on each
+	 * call. The credential files (`.toml` / `.enc`) and the Windows keyring
+	 * binding all live under this directory.
+	 */
+	getConfigPath: () => string;
+
+	/**
 	 * Whether the user has opted into keyring storage. Consulted on every
 	 * credential read/write so runtime preference changes (e.g. a user
 	 * toggling the option mid-session) take effect.
@@ -126,23 +140,29 @@ function resolveActiveCredentialStore(
 	profile?: string
 ): CredentialStore {
 	const envOverride = getCloudflareAuthUseKeyringFromEnv();
+	const configPath = config.getConfigPath();
 
 	if (envOverride === false) {
-		return new FileCredentialStore(profile);
+		return new FileCredentialStore(configPath, profile);
 	}
 
 	const forcedByEnvVar = envOverride === true;
 	const wantsKeyring = envOverride ?? config.isKeyringEnabled() ?? false;
 
 	if (!wantsKeyring) {
-		return new FileCredentialStore(profile);
+		return new FileCredentialStore(configPath, profile);
 	}
 
-	const resolution = resolveKeyProvider(config.serviceName, profile);
+	const resolution = resolveKeyProvider(
+		config.serviceName,
+		profile,
+		configPath
+	);
 
 	switch (resolution.kind) {
 		case "available":
 			return new EncryptedFileCredentialStore(
+				configPath,
 				resolution.provider,
 				buildMigrationLogger(config),
 				profile
@@ -226,6 +246,7 @@ function handleNeedsInstall(
 	}
 
 	return new EncryptedFileCredentialStore(
+		config.getConfigPath(),
 		resolution.afterInstall(),
 		buildMigrationLogger(config),
 		profile
@@ -274,7 +295,7 @@ function handleUnsupported(
 				`${message}\n\nFalling back to the plaintext credentials file for this session.`
 			);
 		}
-		return new FileCredentialStore(profile);
+		return new FileCredentialStore(config.getConfigPath(), profile);
 	}
 
 	return fallbackToFileWithWarning(message, config, profile);
@@ -290,7 +311,7 @@ function fallbackToFileWithWarning(
 		flags.hasWarnedAboutKeyringFallback = true;
 		config.logger.warn(message);
 	}
-	return new FileCredentialStore(profile);
+	return new FileCredentialStore(config.getConfigPath(), profile);
 }
 
 function secretToolMissingMessage(cliName: string): string {
@@ -351,14 +372,23 @@ export interface ScrubEncryptedCredentialsResult {
  */
 export function scrubEncryptedCredentials(options: {
 	serviceName: string;
+	configPath: string;
 	profile?: string;
 }): ScrubEncryptedCredentialsResult {
-	const encryptedPath = getEncryptedAuthConfigFilePath(options.profile);
+	const encryptedPath = getEncryptedAuthConfigFilePath(
+		options.configPath,
+		options.profile
+	);
 	const encryptedFileExisted = existsSync(encryptedPath);
 
-	const resolution = resolveKeyProvider(options.serviceName, options.profile);
+	const resolution = resolveKeyProvider(
+		options.serviceName,
+		options.profile,
+		options.configPath
+	);
 	if (resolution.kind === "available") {
 		new EncryptedFileCredentialStore(
+			options.configPath,
 			resolution.provider,
 			undefined,
 			options.profile

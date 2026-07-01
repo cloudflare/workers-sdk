@@ -2,10 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import {
-	getGlobalWranglerConfigPath,
-	UserError,
-} from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
 import type { SpawnSyncReturns } from "node:child_process";
 
 // This module is deliberately synchronous (`spawnSync`, `existsSync`,
@@ -50,7 +47,7 @@ function defaultNpmRunner(args: string[]): SpawnSyncReturns<string> {
 	// `shell: true` does pass arguments through `cmd.exe`, which in
 	// principle interprets `&|<>^` etc. as metacharacters. The only
 	// path-shaped argument we pass is the `--prefix` value derived from
-	// `getGlobalWranglerConfigPath()`, which is built from `HOME` /
+	// the consumer-provided config path, which is built from `HOME` /
 	// `APPDATA` (i.e. the user's own env vars — not attacker-controlled
 	// input). Node's array-form arg handling for shell launches on
 	// Windows also applies the upstream CVE-2024-27980 escaping fix.
@@ -69,17 +66,19 @@ function defaultNpmRunner(args: string[]): SpawnSyncReturns<string> {
 let npmRunner: NpmRunner = defaultNpmRunner;
 
 /**
- * Cached {@link findKeyringBinding} result. The resolver re-runs the
- * resolution on every credential read/write, so without memoization
- * we would spawn `npm root -g` on every operation when the binding
- * is not present locally. `undefined` means "not yet probed";
- * `null` is a real "no binding found" cache entry.
+ * Cached {@link findKeyringBinding} results, keyed by install dir. The
+ * resolver re-runs the resolution on every credential read/write, so without
+ * memoization we would spawn `npm root -g` on every operation when the binding
+ * is not present locally. A missing key means "not yet probed"; a `null` value
+ * is a real "no binding found" cache entry.
  *
- * Invalidated by {@link installKeyringBindingSync} (so a fresh install
- * is picked up immediately) and by {@link setNpmRunner} (so tests can
- * swap the runner and re-probe).
+ * Keyed by install dir so consumers with different config paths (e.g. wrangler
+ * vs. a future `cf` CLI) don't share a stale probe result. Invalidated by
+ * {@link installKeyringBindingSync} (so a fresh install is picked up
+ * immediately) and by {@link setNpmRunner} (so tests can swap the runner and
+ * re-probe).
  */
-let cachedBindingPath: string | null | undefined = undefined;
+const cachedBindingPathByDir = new Map<string, string | null>();
 
 /**
  * Override the `npm` invoker for tests. Pass `undefined` to restore the
@@ -89,33 +88,27 @@ let cachedBindingPath: string | null | undefined = undefined;
  */
 export function setNpmRunner(fn: NpmRunner | undefined): void {
 	npmRunner = fn ?? defaultNpmRunner;
-	cachedBindingPath = undefined;
+	cachedBindingPathByDir.clear();
 }
 
 /**
- * Directory used to host the lazy-installed `@napi-rs/keyring` binding.
- * A sibling of the credentials dir so `runInTempDir()` test fixtures
- * (which redirect `HOME` / `XDG_CONFIG_HOME`) isolate the install dir
- * alongside everything else stored under the global config path.
+ * Directory used to host the lazy-installed `@napi-rs/keyring` binding, under
+ * the consumer-provided global config directory (`configPath`). A sibling of
+ * the credentials dir so `runInTempDir()` test fixtures (which redirect `HOME`
+ * / `XDG_CONFIG_HOME`) isolate the install dir alongside everything else stored
+ * under the config path.
  *
- * The path uses `getGlobalWranglerConfigPath()` even though this code
- * lives in `@cloudflare/workers-auth` because that helper resolves to a
- * Cloudflare-wide config location, not strictly wrangler-specific. Future
- * consumers will share the same install dir, which is fine — only one
- * binding ever lives there.
+ * `configPath` is supplied by the client (wrangler, or a future `cf` CLI) — the
+ * same value used for the credential files — so each CLI's native binding lives
+ * under its own config directory rather than a hard-coded wrangler location.
  */
-export function getKeyringInstallDir(): string {
-	return path.join(getGlobalWranglerConfigPath(), "native", "keyring");
+export function getKeyringInstallDir(configPath: string): string {
+	return path.join(configPath, "native", "keyring");
 }
 
 /** Absolute path to the `index.js` of the lazy-installed binding. */
-function getInstalledBindingPath(): string {
-	return path.join(
-		getKeyringInstallDir(),
-		"node_modules",
-		"@napi-rs",
-		"keyring"
-	);
+function getInstalledBindingPath(installDir: string): string {
+	return path.join(installDir, "node_modules", "@napi-rs", "keyring");
 }
 
 /**
@@ -130,19 +123,20 @@ function getInstalledBindingPath(): string {
  * Returns `null` when no binding is available; callers handle the missing
  * binding case explicitly so they can surface remediation instructions.
  *
- * The result is memoized per-process. The resolver calls this on every
- * credential operation, so without caching we would spawn `npm root -g`
- * each time the binding is not in the lazy dir. The cache is invalidated
- * by {@link installKeyringBindingSync} on a successful install and by
- * {@link setNpmRunner} for test isolation.
+ * The result is memoized per-process, keyed by `installDir`. The resolver
+ * calls this on every credential operation, so without caching we would spawn
+ * `npm root -g` each time the binding is not in the lazy dir. The cache is
+ * invalidated by {@link installKeyringBindingSync} on a successful install and
+ * by {@link setNpmRunner} for test isolation.
  */
-export function findKeyringBinding(): string | null {
-	if (cachedBindingPath !== undefined) {
-		return cachedBindingPath;
+export function findKeyringBinding(installDir: string): string | null {
+	const cached = cachedBindingPathByDir.get(installDir);
+	if (cached !== undefined) {
+		return cached;
 	}
-	const lazy = getInstalledBindingPath();
+	const lazy = getInstalledBindingPath(installDir);
 	if (existsSync(path.join(lazy, "index.js"))) {
-		cachedBindingPath = lazy;
+		cachedBindingPathByDir.set(installDir, lazy);
 		return lazy;
 	}
 	try {
@@ -150,7 +144,7 @@ export function findKeyringBinding(): string | null {
 		if (r.status === 0) {
 			const global = path.join(r.stdout.trim(), "@napi-rs", "keyring");
 			if (existsSync(path.join(global, "index.js"))) {
-				cachedBindingPath = global;
+				cachedBindingPathByDir.set(installDir, global);
 				return global;
 			}
 		}
@@ -158,7 +152,7 @@ export function findKeyringBinding(): string | null {
 		// `npm root -g` is best-effort: if `npm` is not on PATH we silently
 		// move on and report "not installed" to the resolver.
 	}
-	cachedBindingPath = null;
+	cachedBindingPathByDir.set(installDir, null);
 	return null;
 }
 
@@ -170,8 +164,8 @@ export function findKeyringBinding(): string | null {
  * non-zero exit code, so callers can surface actionable remediation hints
  * rather than a raw stack trace.
  */
-export function installKeyringBindingSync(): void {
-	const dir = getKeyringInstallDir();
+export function installKeyringBindingSync(installDir: string): void {
+	const dir = installDir;
 	mkdirSync(dir, { recursive: true });
 	const hostPkgJson = path.join(dir, "package.json");
 	if (!existsSync(hostPkgJson)) {
@@ -220,9 +214,9 @@ export function installKeyringBindingSync(): void {
 		);
 	}
 	// Fresh install landed on disk — invalidate the cached "not found"
-	// result so the next `findKeyringBinding()` call picks the new path
-	// up immediately instead of returning the stale `null`.
-	cachedBindingPath = undefined;
+	// result for this install dir so the next `findKeyringBinding()` call
+	// picks the new path up immediately instead of returning the stale `null`.
+	cachedBindingPathByDir.delete(installDir);
 }
 
 /**
@@ -273,13 +267,15 @@ const dynamicRequire = createRequire(__filename);
 
 /**
  * Resolve the active keyring entry factory, loading the lazy-installed
- * binding from disk when no test override is registered.
+ * binding from `installDir` when no test override is registered.
  */
-export function resolveKeyringEntryFactory(): KeyringEntryFactory {
+export function resolveKeyringEntryFactory(
+	installDir: string
+): KeyringEntryFactory {
 	if (entryFactoryOverride !== undefined) {
 		return entryFactoryOverride;
 	}
-	const bindingPath = findKeyringBinding();
+	const bindingPath = findKeyringBinding(installDir);
 	if (bindingPath === null) {
 		throw new Error(
 			"`@napi-rs/keyring` binding not found. Call `installKeyringBindingSync()` first."

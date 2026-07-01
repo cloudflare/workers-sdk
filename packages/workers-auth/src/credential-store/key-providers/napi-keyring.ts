@@ -20,8 +20,15 @@ import type { KeyringEntry } from "./lazy-installer";
  * the lazy load so no real keychain is touched.
  */
 export class NapiKeyringKeyProvider implements KeyProvider {
+	/**
+	 * @param serviceName keyring service identifier (e.g. `"wrangler"`).
+	 * @param installDir directory hosting the lazy-installed `@napi-rs/keyring`
+	 * binding, derived from the consumer's config path.
+	 * @param profile the auth profile (selects the keyring account name).
+	 */
 	constructor(
 		private readonly serviceName: string,
+		private readonly installDir: string,
 		private readonly profile?: string
 	) {}
 
@@ -33,7 +40,7 @@ export class NapiKeyringKeyProvider implements KeyProvider {
 	// Caching on the instance would pin a stale/absent factory. The
 	// account-name lookup is a cheap env read, so recomputing is free.
 	private entry(): KeyringEntry {
-		return resolveKeyringEntryFactory()(
+		return resolveKeyringEntryFactory(this.installDir)(
 			this.serviceName,
 			getKeyringAccountName(this.profile)
 		);

@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { setKeyProviderFactoryForTesting } from "../../src/credential-store/key-providers/factory";
@@ -83,6 +84,7 @@ interface StateOptions {
 function resolveStore(opts: StateOptions = {}): CredentialStore {
 	const { getActiveStore } = createCredentialStorageContext({
 		serviceName: "wrangler",
+		getConfigPath: () => getGlobalConfigPath(),
 		isKeyringEnabled: () => opts.isKeyringEnabled ?? true,
 		logger: silentLogger,
 		isNonInteractiveOrCI: () => opts.isNonInteractiveOrCI ?? false,
@@ -235,6 +237,7 @@ describe("createCredentialStorageContext — resolver", () => {
 
 			const { getActiveStore } = createCredentialStorageContext({
 				serviceName: "wrangler",
+				getConfigPath: () => getGlobalConfigPath(),
 				isKeyringEnabled: () => true,
 				logger: silentLogger,
 				isNonInteractiveOrCI: () => false,
@@ -257,7 +260,7 @@ describe("createCredentialStorageContext — resolver", () => {
 			stubPlatform("win32");
 			// Seed the lazy install dir so findKeyringBinding() picks it up.
 			const bindingDir = path.join(
-				getKeyringInstallDir(),
+				getKeyringInstallDir(getGlobalConfigPath()),
 				"node_modules",
 				"@napi-rs",
 				"keyring"
@@ -305,7 +308,7 @@ describe("createCredentialStorageContext — resolver", () => {
 					installCalls += 1;
 					// Seed the install dir as if npm had just run successfully.
 					const bindingDir = path.join(
-						getKeyringInstallDir(),
+						getKeyringInstallDir(getGlobalConfigPath()),
 						"node_modules",
 						"@napi-rs",
 						"keyring"
@@ -347,6 +350,7 @@ describe("createCredentialStorageContext — resolver", () => {
 
 			const { getActiveStore } = createCredentialStorageContext({
 				serviceName: "wrangler",
+				getConfigPath: () => getGlobalConfigPath(),
 				isKeyringEnabled: () => true,
 				logger: silentLogger,
 				isNonInteractiveOrCI: () => false,

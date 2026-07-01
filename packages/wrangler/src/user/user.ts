@@ -21,6 +21,7 @@ import {
 import {
 	configFileName,
 	getCloudflareComplianceRegion,
+	getGlobalConfigPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import ci from "ci-info";
@@ -99,6 +100,10 @@ const WRANGLER_CONSENT_PAGES = {
  */
 const credentialStorage = createCredentialStorageContext({
 	serviceName: WRANGLER_KEYRING_SERVICE_NAME,
+	// wrangler owns where its global config lives; `@cloudflare/workers-auth`
+	// never resolves it itself. Resolved lazily per call so tests that re-stub
+	// HOME / XDG_CONFIG_HOME see the right directory.
+	getConfigPath: () => getGlobalConfigPath(),
 	isKeyringEnabled: () => readUserPreferences().keyring_enabled === true,
 	logger,
 	isNonInteractiveOrCI,
@@ -376,6 +381,7 @@ export async function getOAuthTokenFromLocalState(): Promise<
 
 export {
 	getAuthConfigFilePath,
+	getEncryptedAuthConfigFilePath,
 	readAuthConfigFile,
 	writeAuthConfigFile,
 } from "./auth-config-file";

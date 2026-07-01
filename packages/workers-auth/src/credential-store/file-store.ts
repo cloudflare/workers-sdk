@@ -8,7 +8,6 @@ import {
 import path from "node:path";
 import {
 	getCloudflareApiEnvironmentFromEnv,
-	getGlobalWranglerConfigPath,
 	parseTOML,
 	readFileSync,
 } from "@cloudflare/workers-utils";
@@ -53,16 +52,21 @@ export function resolveAuthProfileBaseName(profile?: string): string {
  * profile (defaulting to the active Cloudflare API environment's default
  * profile).
  *
- * The environment is appended to the default-profile filename so callers
- * running with `WRANGLER_API_ENVIRONMENT=staging` get a separate file from
- * production; named profiles get `<profile>.toml`. The path stays exposed so
- * the migration code, defensive scrubs on logout, and tests that assert
- * against it can all point at the same location as the
- * {@link FileCredentialStore}.
+ * `configPath` is the consumer's global config directory — the client (e.g.
+ * wrangler, or a future `cf` CLI) owns where its config lives, so it is passed
+ * in rather than resolved here. The environment is appended to the
+ * default-profile filename so callers running with
+ * `WRANGLER_API_ENVIRONMENT=staging` get a separate file from production; named
+ * profiles get `<profile>.toml`. The path stays exposed so the migration code,
+ * defensive scrubs on logout, and tests that assert against it can all point at
+ * the same location as the {@link FileCredentialStore}.
  */
-export function getAuthConfigFilePath(profile?: string): string {
+export function getAuthConfigFilePath(
+	configPath: string,
+	profile?: string
+): string {
 	return path.join(
-		getGlobalWranglerConfigPath(),
+		configPath,
 		USER_AUTH_CONFIG_PATH,
 		`${resolveAuthProfileBaseName(profile)}.toml`
 	);
@@ -78,10 +82,19 @@ export function getAuthConfigFilePath(profile?: string): string {
 export class FileCredentialStore implements CredentialStore {
 	readonly kind = "file" as const;
 
-	constructor(private readonly profile?: string) {}
+	/**
+	 * @param configPath consumer-provided global config directory (the CLI
+	 * owns where its config lives, so workers-auth never resolves it itself).
+	 * @param profile the auth profile (defaults to the active environment's
+	 * default profile).
+	 */
+	constructor(
+		private readonly configPath: string,
+		private readonly profile?: string
+	) {}
 
 	read(): UserAuthConfig | undefined {
-		const filePath = getAuthConfigFilePath(this.profile);
+		const filePath = getAuthConfigFilePath(this.configPath, this.profile);
 		if (!existsSync(filePath)) {
 			return undefined;
 		}
@@ -91,7 +104,7 @@ export class FileCredentialStore implements CredentialStore {
 	}
 
 	write(config: UserAuthConfig): void {
-		const filePath = getAuthConfigFilePath(this.profile);
+		const filePath = getAuthConfigFilePath(this.configPath, this.profile);
 		mkdirSync(path.dirname(filePath), { recursive: true });
 		// Mode `0o600` only applies on file creation, so we also re-chmod
 		// every write to tighten any pre-existing file left behind by an
@@ -104,7 +117,7 @@ export class FileCredentialStore implements CredentialStore {
 	}
 
 	clear(): boolean {
-		const filePath = getAuthConfigFilePath(this.profile);
+		const filePath = getAuthConfigFilePath(this.configPath, this.profile);
 		const existed = existsSync(filePath);
 		if (existed) {
 			rmSync(filePath);
@@ -113,10 +126,10 @@ export class FileCredentialStore implements CredentialStore {
 	}
 
 	path(): string {
-		return getAuthConfigFilePath(this.profile);
+		return getAuthConfigFilePath(this.configPath, this.profile);
 	}
 
 	describe(): string {
-		return getAuthConfigFilePath(this.profile);
+		return getAuthConfigFilePath(this.configPath, this.profile);
 	}
 }

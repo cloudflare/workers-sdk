@@ -6,7 +6,7 @@ import {
 } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	getGlobalWranglerConfigPath,
+	getGlobalConfigPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import {
@@ -123,7 +123,7 @@ describe("User", () => {
 			// Resolve the path inside the test so it picks up the HOME/XDG_CONFIG_HOME
 			// stubs set by runInTempDir's beforeEach, rather than the real homedir.
 			const temporaryAccountConfigPath = path.join(
-				getGlobalWranglerConfigPath(),
+				getGlobalConfigPath(),
 				"wrangler-temporary-account.toml"
 			);
 
@@ -332,7 +332,7 @@ describe("User", () => {
 			`);
 
 			expect(normalizeString(getAuthConfigFilePath())).toBe(
-				normalizeString(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
+				normalizeString(`${getGlobalConfigPath()}/config/staging.toml`)
 			);
 			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
 				api_token: undefined,
@@ -508,7 +508,7 @@ describe("User", () => {
 			// encrypted credential blob lives in a `.enc` file on disk.
 			// (Cleanup of the seam runs in the describe-level `afterEach`.)
 			const { getEncryptedAuthConfigFilePath } =
-				await import("@cloudflare/workers-auth");
+				await import("../user/auth-config-file");
 			const keyringStore = new Map<string, Uint8Array>();
 			setKeyProviderFactoryForTesting((serviceName) => ({
 				getKey: () => keyringStore.get(`${serviceName}::default`),
@@ -563,7 +563,7 @@ describe("User", () => {
 			expect,
 		}) => {
 			const { getEncryptedAuthConfigFilePath } =
-				await import("@cloudflare/workers-auth");
+				await import("../user/auth-config-file");
 			const { updateUserPreferences } = await import("../user/preferences");
 			const keyringStore = new Map<string, Uint8Array>();
 			setKeyProviderFactoryForTesting((serviceName) => ({
@@ -646,7 +646,7 @@ describe("User", () => {
 			// and a later session has CLOUDFLARE_AUTH_USE_KEYRING=false in
 			// the shell when running `wrangler login --no-use-keyring`.
 			const { getEncryptedAuthConfigFilePath } =
-				await import("@cloudflare/workers-auth");
+				await import("../user/auth-config-file");
 			const { updateUserPreferences } = await import("../user/preferences");
 			const keyringStore = new Map<string, Uint8Array>();
 			setKeyProviderFactoryForTesting((serviceName) => ({
@@ -835,7 +835,7 @@ describe("User", () => {
 			// must not appear, and this command's credentials must still
 			// land in the plaintext file (env-var precedence is unchanged).
 			const { getEncryptedAuthConfigFilePath } =
-				await import("@cloudflare/workers-auth");
+				await import("../user/auth-config-file");
 			const { readUserPreferences } = await import("../user/preferences");
 
 			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "false");
@@ -960,7 +960,7 @@ describe("User", () => {
 			expect,
 		}) => {
 			const { getEncryptedAuthConfigFilePath } =
-				await import("@cloudflare/workers-auth");
+				await import("../user/auth-config-file");
 			const { readUserPreferences, updateUserPreferences } =
 				await import("../user/preferences");
 			const keyringStore = stubInMemoryKeyring();
@@ -1224,7 +1224,7 @@ describe("User", () => {
 		});
 
 		expect(normalizeString(getAuthConfigFilePath())).toBe(
-			normalizeString(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
+			normalizeString(`${getGlobalConfigPath()}/config/staging.toml`)
 		);
 	});
 

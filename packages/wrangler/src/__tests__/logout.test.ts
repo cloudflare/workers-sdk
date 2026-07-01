@@ -4,7 +4,7 @@ import {
 	resetCredentialStorageState,
 	setKeyProviderFactoryForTesting,
 } from "@cloudflare/workers-auth";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -45,7 +45,7 @@ describe("logout", () => {
 		expect,
 	}) => {
 		const temporaryAccountConfigPath = path.join(
-			getGlobalWranglerConfigPath(),
+			getGlobalConfigPath(),
 			"wrangler-temporary-account.toml"
 		);
 		fs.mkdirSync(path.dirname(temporaryAccountConfigPath), { recursive: true });
@@ -83,7 +83,7 @@ describe("logout", () => {
 		expect,
 	}) => {
 		const temporaryAccountConfigPath = path.join(
-			getGlobalWranglerConfigPath(),
+			getGlobalConfigPath(),
 			"wrangler-temporary-account.toml"
 		);
 		writeAuthCredentials({
@@ -242,7 +242,7 @@ describe("logout", () => {
 		expect,
 	}) => {
 		const { getEncryptedAuthConfigFilePath } =
-			await import("@cloudflare/workers-auth");
+			await import("../user/auth-config-file");
 		const { updateUserPreferences } = await import("../user/preferences");
 
 		const keyringStore = new Map<string, Uint8Array>();

@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 
 /**
  * Persistent, user-level preferences for the authentication subsystem.
@@ -24,7 +24,7 @@ export interface UserPreferences {
  * isolate preferences alongside the auth TOML.
  */
 function getUserPreferencesPath(): string {
-	return path.resolve(getGlobalWranglerConfigPath(), "preferences.json");
+	return path.resolve(getGlobalConfigPath(), "preferences.json");
 }
 
 /**

@@ -6,8 +6,15 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { getAuthConfigFilePath } from "@cloudflare/workers-auth";
-import { parseTOML, readFileSync } from "@cloudflare/workers-utils";
+import {
+	getAuthConfigFilePath as getAuthConfigFilePathForConfig,
+	getEncryptedAuthConfigFilePath as getEncryptedAuthConfigFilePathForConfig,
+} from "@cloudflare/workers-auth";
+import {
+	getGlobalConfigPath,
+	parseTOML,
+	readFileSync,
+} from "@cloudflare/workers-utils";
 import TOML from "smol-toml";
 import type {
 	AuthConfigStorage,
@@ -74,13 +81,24 @@ export function createTomlFileStorage<T extends object>(
 	};
 }
 
-// `getAuthConfigFilePath` is owned by `@cloudflare/workers-auth` (it's the
-// authority for the plaintext-TOML store's path layout, which the encrypted-
-// file store also needs for plaintext migration). It accepts an optional auth
-// profile name and resolves to that profile's TOML file. Wrangler re-exports
-// it from `./user` for back-compat with the historical wrangler-side import
-// path.
-export { getAuthConfigFilePath };
+// `@cloudflare/workers-auth` owns the auth profile → on-disk path layout (the
+// `.toml` plaintext file and its sibling `.enc` encrypted file), but takes the
+// global config directory as an argument rather than resolving it: the client
+// (wrangler here, a future `cf` CLI elsewhere) owns where its config lives.
+// Wrangler binds both helpers to its own `getGlobalConfigPath()` and exposes
+// the `(profile)` form so callers and tests keep the ergonomic signature. The
+// dir is re-resolved on each call so tests that re-stub HOME / XDG_CONFIG_HOME
+// point at the right place.
+export function getAuthConfigFilePath(profile?: string): string {
+	return getAuthConfigFilePathForConfig(getGlobalConfigPath(), profile);
+}
+
+export function getEncryptedAuthConfigFilePath(profile?: string): string {
+	return getEncryptedAuthConfigFilePathForConfig(
+		getGlobalConfigPath(),
+		profile
+	);
+}
 
 /**
  * A plaintext-TOML `AuthConfigStorage` for a specific auth profile, located

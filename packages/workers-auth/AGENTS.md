@@ -115,12 +115,21 @@ storage location.
   envelope (`{v, key, created}`). It's well under the macOS Keychain ~2.5 KB
   per-item limit no matter how the credential schema grows.
 - `@napi-rs/keyring` (the Windows backend's native binding) is installed
-  lazily on first opt-in via `npm install` into
-  `<globalWranglerConfigPath>/native/keyring/`. Pinned to
-  `PINNED_KEYRING_VERSION` so CI users running `npm install -g @napi-rs/keyring`
-  by hand get the same version as the lazy-install path.
-- The consumer's `createCredentialStorageContext` call captures
-  `serviceName`, `isKeyringEnabled`, `logger`, `isNonInteractiveOrCI`, and
+  lazily on first opt-in via `npm install` into `<configPath>/native/keyring/`,
+  where `configPath` is the consumer-provided global config directory (see
+  `getConfigPath` below) — so each CLI's binding lives under its own config dir.
+  Pinned to `PINNED_KEYRING_VERSION` so CI users running
+  `npm install -g @napi-rs/keyring` by hand get the same version as the
+  lazy-install path.
+- The credential files (`.toml` / `.enc`) and the keyring install dir are all
+  rooted at the consumer's config directory. `@cloudflare/workers-auth` never
+  resolves that path itself (wrangler and a future `cf` CLI use different global
+  config paths); instead the consumer passes `getConfigPath: () => string` into
+  `createCredentialStorageContext`, and the path helpers
+  (`getAuthConfigFilePath` / `getEncryptedAuthConfigFilePath` /
+  `getKeyringInstallDir`) and store constructors all take it explicitly.
+- The consumer's `createCredentialStorageContext` call captures `serviceName`,
+  `getConfigPath`, `isKeyringEnabled`, `logger`, `isNonInteractiveOrCI`, and
   `cliName` in a closure. The returned `storageFactory(profile)` re-resolves
   the active store on every call so the active profile, `--use-keyring` /
   `--no-use-keyring`, and the `CLOUDFLARE_AUTH_USE_KEYRING` env var all take
