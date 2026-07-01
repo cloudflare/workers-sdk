@@ -43,6 +43,7 @@ import type {
 	CacheOptions,
 	ContainerApp,
 	CustomDomainRoute,
+	ContainerObservability,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -3452,6 +3453,12 @@ function validateContainerApp(
 				containerAppOptional.image_vars,
 				"object"
 			);
+			validateContainerObservability(
+				diagnostics,
+				`${field}.observability`,
+				containerAppOptional.observability,
+				config
+			);
 			validateOptionalProperty(
 				diagnostics,
 				field,
@@ -3504,6 +3511,7 @@ function validateContainerApp(
 					"image",
 					"image_build_context",
 					"image_vars",
+					"observability",
 					"class_name",
 					"scheduling_policy",
 					"instance_type",
@@ -5833,6 +5841,176 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 			) && valid;
 	}
 	return valid;
+};
+
+const CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MIN = 1;
+const CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MAX = 99;
+const CONTAINER_OBSERVABILITY_TARGET_INSTANCE_COUNT_MIN = 1;
+
+function isContainerObservabilityEnabled(
+	observability: ContainerObservability | undefined
+): boolean {
+	return (
+		observability?.logs?.enabled === true || observability?.enabled === true
+	);
+}
+
+function hasConflictingContainerObservabilityEnabledValues(
+	observability: ContainerObservability
+): boolean {
+	return (
+		typeof observability.enabled === "boolean" &&
+		typeof observability.logs?.enabled === "boolean" &&
+		observability.enabled !== observability.logs.enabled
+	);
+}
+
+const validateContainerObservability: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const val = value as ContainerObservability;
+	let isValid = true;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"enabled",
+			val.enabled,
+			"boolean"
+		) && isValid;
+
+	if (val.logs !== undefined) {
+		if (
+			typeof val.logs !== "object" ||
+			val.logs === null ||
+			Array.isArray(val.logs)
+		) {
+			diagnostics.errors.push(
+				`Expected "${field}.logs" to be of type object but got ${JSON.stringify(
+					val.logs
+				)}.`
+			);
+			isValid = false;
+		} else {
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"logs.enabled",
+					val.logs.enabled,
+					"boolean"
+				) && isValid;
+
+			isValid =
+				validateAdditionalProperties(
+					diagnostics,
+					`${field}.logs`,
+					Object.keys(val.logs),
+					["enabled"]
+				) && isValid;
+		}
+	}
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"target_instance_percentage",
+			val.target_instance_percentage,
+			"number"
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"target_instance_count",
+			val.target_instance_count,
+			"number"
+		) && isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"enabled",
+			"logs",
+			"target_instance_percentage",
+			"target_instance_count",
+		]) && isValid;
+
+	if (hasConflictingContainerObservabilityEnabledValues(val)) {
+		diagnostics.errors.push(
+			`"${field}.enabled" and "${field}.logs.enabled" cannot be set to different values.`
+		);
+		isValid = false;
+	}
+
+	if (
+		val.target_instance_percentage !== undefined &&
+		val.target_instance_count !== undefined
+	) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_percentage" and "${field}.target_instance_count" cannot both be set.`
+		);
+		isValid = false;
+	}
+
+	if (
+		typeof val.target_instance_percentage === "number" &&
+		(!Number.isInteger(val.target_instance_percentage) ||
+			val.target_instance_percentage <
+				CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MIN ||
+			val.target_instance_percentage >
+				CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MAX)
+	) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_percentage" must be an integer between ${CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MIN} and ${CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MAX} inclusive.`
+		);
+		isValid = false;
+	}
+
+	if (
+		typeof val.target_instance_count === "number" &&
+		(!Number.isInteger(val.target_instance_count) ||
+			val.target_instance_count <
+				CONTAINER_OBSERVABILITY_TARGET_INSTANCE_COUNT_MIN)
+	) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_count" must be a positive integer.`
+		);
+		isValid = false;
+	}
+
+	const observabilityEnabled = isContainerObservabilityEnabled(val);
+
+	if (val.target_instance_percentage !== undefined && !observabilityEnabled) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_percentage" cannot be set unless observability is enabled.`
+		);
+		isValid = false;
+	}
+
+	if (val.target_instance_count !== undefined && !observabilityEnabled) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_count" cannot be set unless observability is enabled.`
+		);
+		isValid = false;
+	}
+
+	return isValid;
 };
 
 const validateObservability: ValidatorFn = (diagnostics, field, value) => {

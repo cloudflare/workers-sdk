@@ -16,7 +16,48 @@ import type {
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
 import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
-import type { Config, ContainerApp } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	ContainerApp,
+	ContainerObservability,
+	Observability,
+} from "@cloudflare/workers-utils";
+
+function hasConflictingObservabilityEnabledValues(
+	observability: ContainerObservability | Observability | undefined
+): boolean {
+	return (
+		typeof observability?.enabled === "boolean" &&
+		typeof observability.logs?.enabled === "boolean" &&
+		observability.enabled !== observability.logs.enabled
+	);
+}
+
+function isObservabilityEnabled(
+	observability: ContainerObservability | Observability | undefined
+): boolean {
+	return (
+		observability?.logs?.enabled === true || observability?.enabled === true
+	);
+}
+
+function assertNoConflictingObservabilityEnabledValues(
+	containerName: string,
+	fieldPath: "observability" | "containers.observability",
+	observability: ContainerObservability | Observability | undefined
+) {
+	if (!hasConflictingObservabilityEnabledValues(observability)) {
+		return;
+	}
+
+	throw new UserError(
+		`"${fieldPath}.enabled" and "${fieldPath}.logs.enabled" cannot be set to different values for container "${containerName}".`,
+		{
+			telemetryMessage:
+				"containers config observability enabled values conflict",
+		}
+	);
+}
 
 /**
  * Perform type conversion of affinities so that they can be fed to the API.
@@ -104,6 +145,19 @@ export const getNormalizedContainerOptions = async (
 			tiers = [1, 2];
 		}
 
+		const selectedObservability =
+			container.observability ?? config.observability;
+		const selectedObservabilityFieldPath =
+			container.observability !== undefined
+				? "containers.observability"
+				: "observability";
+
+		assertNoConflictingObservabilityEnabledValues(
+			container.name,
+			selectedObservabilityFieldPath,
+			selectedObservability
+		);
+
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: container.class_name,
@@ -132,9 +186,19 @@ export const getNormalizedContainerOptions = async (
 					: (container.rollout_kind ?? "full_auto"),
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {
-				logs_enabled:
-					config.observability?.logs?.enabled ??
-					config.observability?.enabled === true,
+				logs_enabled: isObservabilityEnabled(selectedObservability),
+				...(container.observability?.target_instance_percentage !== undefined
+					? {
+							target_instance_percentage:
+								container.observability.target_instance_percentage,
+						}
+					: {}),
+				...(container.observability?.target_instance_count !== undefined
+					? {
+							target_instance_count:
+								container.observability.target_instance_count,
+						}
+					: {}),
 			},
 			wrangler_ssh: container.ssh ?? container.wrangler_ssh,
 			authorized_keys: container.authorized_keys,

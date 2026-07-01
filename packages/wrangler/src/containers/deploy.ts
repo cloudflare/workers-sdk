@@ -52,12 +52,13 @@ import type { ImageRef } from "../cloudchamber/build";
 import type { ApiVersion } from "../versions/types";
 import type {
 	Application,
+	ApplicationObservability as ApplicationObservabilityConfiguration,
 	ApplicationID,
 	ApplicationName,
 	ContainerNormalizedConfig,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
-	Observability as ObservabilityConfiguration,
+	Observability as DeploymentObservabilityConfiguration,
 	RolloutStepRequest,
 } from "@cloudflare/containers-shared";
 import type {
@@ -72,6 +73,8 @@ type DeployContainersArgs = {
 	accountId: string;
 	scriptName: string;
 };
+
+type ObservabilityWriteTarget = "top-level" | "configuration";
 
 export async function deployContainers(
 	config: Config,
@@ -245,6 +248,7 @@ function createApplicationToModifyApplication(
 ): ModifyApplicationRequestBody {
 	return {
 		configuration: req.configuration,
+		observability: req.observability,
 		max_instances: req.max_instances,
 		constraints: req.constraints,
 		affinities: req.affinities,
@@ -253,53 +257,165 @@ function createApplicationToModifyApplication(
 	};
 }
 
-/**
- * Resolves current configuration based on previous deployment.
- */
-function observabilityToConfiguration(
-	/** Taken from current wrangler config */
-	observabilityFromConfig: boolean,
-	/** From previous deployment */
-	existingObservabilityConfig: ObservabilityConfiguration | undefined
-): ObservabilityConfiguration | undefined {
-	// Let's use logs for the sake of simplicity of explanation.
-	//
-	// The first column specifies if logs are enabled in the current Wrangler config.
-	// The second column specifies if logs are currently enabled for the application.
-	// The third column specifies what the expected function result should be so that
-	// diff is minimal.
-	//
-	// | Wrangler  | Existing  | Result    |
-	// | --------- | --------- | --------- |
-	// | undefined | undefined | undefined |
-	// | undefined | false     | false     |
-	// | undefined | true      | false     |
-	// | false     | undefined | undefined |
-	// | false     | false     | false     |
-	// | false     | true      | false     |
-	// | true      | undefined | true      |
-	// | true      | false     | true      |
-	// | true      | true      | true      |
-	//
-	// Because the result is the same for Wrangler undefined and false, the table may be
-	// compressed as follows:
+function isLegacyObservabilityEnabled(
+	observability: DeploymentObservabilityConfiguration | undefined
+): boolean {
+	return observability?.logs?.enabled === true;
+}
 
-	//
-	// | Wrangler          | Existing                 | Result    |
-	// | ----------------- | ------------------------ | --------- |
-	// | false / undefined | undefined                | undefined |
-	// | false / undefined | false / true             | false     |
-	// | true              | undefined / false / true | true      |
+function usesTopLevelObservability(app: Application | undefined): boolean {
+	return app?.observability !== undefined;
+}
 
-	const logsAlreadyEnabled = existingObservabilityConfig?.logs?.enabled;
+function hasTopLevelOnlyObservabilityFields(
+	observability: ContainerNormalizedConfig["observability"]
+): boolean {
+	return (
+		observability.target_instance_percentage !== undefined ||
+		observability.target_instance_count !== undefined
+	);
+}
 
-	if (observabilityFromConfig) {
-		return { logs: { enabled: true } };
-	} else if (logsAlreadyEnabled === undefined) {
-		return undefined;
-	} else {
-		return { logs: { enabled: false } };
+function selectObservabilityWriteTarget(
+	prevApp: Application | undefined
+): ObservabilityWriteTarget {
+	if (prevApp === undefined) {
+		return "top-level";
 	}
+
+	if (usesTopLevelObservability(prevApp)) {
+		return "top-level";
+	}
+
+	if (isLegacyObservabilityEnabled(prevApp.configuration.observability)) {
+		return "configuration";
+	}
+
+	return "top-level";
+}
+
+function buildTopLevelObservability(
+	observability: ContainerNormalizedConfig["observability"]
+): ApplicationObservabilityConfiguration {
+	return stripUndefined({
+		logs: { enabled: observability.logs_enabled },
+		target_instance_percentage: observability.target_instance_percentage,
+		target_instance_count: observability.target_instance_count,
+	});
+}
+
+function buildConfigurationObservability(
+	observability: ContainerNormalizedConfig["observability"]
+): DeploymentObservabilityConfiguration {
+	return {
+		logs: {
+			enabled: observability.logs_enabled,
+		},
+	};
+}
+
+function isSameApplicationObservability(
+	left: ApplicationObservabilityConfiguration | undefined,
+	right: ApplicationObservabilityConfiguration | undefined
+): boolean {
+	return (
+		left?.logs?.enabled === right?.logs?.enabled &&
+		left?.target_instance_percentage === right?.target_instance_percentage &&
+		left?.target_instance_count === right?.target_instance_count
+	);
+}
+
+function buildApplicationObservabilityPatch(
+	observability: ContainerNormalizedConfig["observability"],
+	writeTarget: ObservabilityWriteTarget,
+	prevApp: Application | undefined
+): {
+	observability?: ApplicationObservabilityConfiguration;
+	configurationObservability?: DeploymentObservabilityConfiguration;
+} {
+	if (writeTarget === "configuration") {
+		if (observability.logs_enabled) {
+			return isLegacyObservabilityEnabled(prevApp?.configuration.observability)
+				? {}
+				: {
+						configurationObservability:
+							buildConfigurationObservability(observability),
+					};
+		}
+
+		return isLegacyObservabilityEnabled(prevApp?.configuration.observability)
+			? {
+					configurationObservability:
+						buildConfigurationObservability(observability),
+				}
+			: {};
+	}
+
+	const shouldWriteDisabledTopLevelObservability =
+		prevApp?.observability !== undefined &&
+		(prevApp.observability.logs?.enabled === true ||
+			prevApp.observability.target_instance_percentage !== undefined ||
+			prevApp.observability.target_instance_count !== undefined);
+
+	if (
+		!observability.logs_enabled &&
+		!hasTopLevelOnlyObservabilityFields(observability)
+	) {
+		return shouldWriteDisabledTopLevelObservability
+			? {
+					observability: buildTopLevelObservability(observability),
+				}
+			: {};
+	}
+
+	const nextObservability = buildTopLevelObservability(observability);
+	return isSameApplicationObservability(
+		nextObservability,
+		prevApp?.observability
+	)
+		? {}
+		: { observability: nextObservability };
+}
+
+function assertCanUseApplicationObservabilityTargeting(
+	prevApp: Application,
+	containerConfig: ContainerNormalizedConfig
+) {
+	if (!hasTopLevelOnlyObservabilityFields(containerConfig.observability)) {
+		return;
+	}
+
+	if (
+		!isLegacyObservabilityEnabled(prevApp.configuration.observability) &&
+		!isLegacyObservabilityEnabled(
+			prevApp.scheduling_hint?.target.configuration.observability
+		)
+	) {
+		return;
+	}
+
+	throw new UserError(
+		`Application-level observability targeting cannot be enabled for container ${containerConfig.name} until legacy configuration.observability is disabled with a rollout first.`,
+		{
+			telemetryMessage: "containers deploy observability migration blocked",
+		}
+	);
+}
+
+function hasRolloutDiff(
+	prevApp: ModifyApplicationRequestBody,
+	nextApp: ModifyApplicationRequestBody
+): boolean {
+	const normalizedPrevApp = stripUndefined({ ...prevApp });
+	const normalizedNextApp = stripUndefined({ ...nextApp });
+
+	delete normalizedPrevApp.observability;
+	delete normalizedNextApp.observability;
+
+	return (
+		JSON.stringify(sortObjectRecursive(normalizedPrevApp)) !==
+		JSON.stringify(sortObjectRecursive(normalizedNextApp))
+	);
 }
 
 /**
@@ -314,11 +430,20 @@ function containerConfigToCreateRequest(
 	containerApp: ContainerNormalizedConfig,
 	imageRef: string,
 	durableObjectNamespaceId: string,
+	observabilityWriteTarget: ObservabilityWriteTarget,
 	prevApp?: Application
 ): CreateApplicationRequest {
+	const { observability, configurationObservability } =
+		buildApplicationObservabilityPatch(
+			containerApp.observability,
+			observabilityWriteTarget,
+			prevApp
+		);
+
 	return {
 		name: containerApp.name,
 		scheduling_policy: containerApp.scheduling_policy,
+		...(observability !== undefined ? { observability } : {}),
 		configuration: {
 			// De-sugar image name
 			image: resolveImageName(accountId, imageRef),
@@ -330,10 +455,9 @@ function containerConfigToCreateRequest(
 						memory_mib: containerApp.memory_mib,
 						vcpu: containerApp.vcpu,
 					}),
-			observability: observabilityToConfiguration(
-				containerApp.observability.logs_enabled,
-				prevApp?.configuration.observability
-			),
+			...(configurationObservability !== undefined
+				? { observability: configurationObservability }
+				: {}),
 			wrangler_ssh: containerApp.wrangler_ssh,
 			authorized_keys: containerApp.authorized_keys,
 			trusted_user_ca_keys: containerApp.trusted_user_ca_keys,
@@ -414,19 +538,27 @@ export async function apply(
 	log(dim("Container application changes\n"));
 
 	const accountId = await getOrSelectAccountId(config);
+	const observabilityWriteTarget = selectObservabilityWriteTarget(prevApp);
+
+	if (prevApp !== undefined) {
+		assertCanUseApplicationObservabilityTargeting(prevApp, containerConfig);
+	}
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody
-	const appConfig = mergeIfUnsafe(
-		config,
-		containerConfigToCreateRequest(
-			accountId,
-			containerConfig,
-			imageRef,
-			args.durable_object_namespace_id,
-			prevApp
-		),
-		containerConfig.name
+	const appConfig = stripUndefined(
+		mergeIfUnsafe(
+			config,
+			containerConfigToCreateRequest(
+				accountId,
+				containerConfig,
+				imageRef,
+				args.durable_object_namespace_id,
+				observabilityWriteTarget,
+				prevApp
+			),
+			containerConfig.name
+		)
 	);
 
 	if (prevApp !== undefined && prevApp !== null) {
@@ -453,21 +585,28 @@ export async function apply(
 		// we need to sort the objects (by key) because the diff algorithm works with lines
 		const normalisedPrevApp = sortObjectRecursive<ModifyApplicationRequestBody>(
 			stripUndefined(
-				cleanApplicationFromAPI(prevApp, containerConfig, accountId)
+				cleanApplicationFromAPI(
+					prevApp,
+					containerConfig,
+					accountId,
+					observabilityWriteTarget
+				)
 			)
 		);
 
 		// this will have removed the unsafe fields, so we need to add them back in after
-		const modifyReq = mergeIfUnsafe(
-			config,
-			createApplicationToModifyApplication(appConfig),
-			appConfig.name
+		const modifyReq = stripUndefined(
+			mergeIfUnsafe(
+				config,
+				createApplicationToModifyApplication(appConfig),
+				appConfig.name
+			)
 		);
+		const normalizedModifyReq =
+			sortObjectRecursive<ModifyApplicationRequestBody>(modifyReq);
 		/** only used for diffing */
-		const nowContainer = mergeDeep(
-			normalisedPrevApp,
-			sortObjectRecursive<ModifyApplicationRequestBody>(modifyReq)
-		);
+		const nowContainer = mergeDeep(normalisedPrevApp, normalizedModifyReq);
+		const shouldCreateRollout = hasRolloutDiff(normalisedPrevApp, nowContainer);
 
 		const prev = formatContainerSnippetForDisplay(
 			normalisedPrevApp,
@@ -498,11 +637,15 @@ export async function apply(
 				application: modifyReq,
 				id: prevApp.id,
 				name: prevApp.name,
-				rollout_step_percentage: containerConfig.rollout_step_percentage,
-				rollout_kind:
-					containerConfig.rollout_kind == "full_manual"
-						? CreateApplicationRolloutRequest.kind.FULL_MANUAL
-						: CreateApplicationRolloutRequest.kind.FULL_AUTO,
+				...(shouldCreateRollout
+					? {
+							rollout_step_percentage: containerConfig.rollout_step_percentage,
+							rollout_kind:
+								containerConfig.rollout_kind == "full_manual"
+									? CreateApplicationRolloutRequest.kind.FULL_MANUAL
+									: CreateApplicationRolloutRequest.kind.FULL_AUTO,
+						}
+					: {}),
 			});
 		} else {
 			log("Skipping application rollout");
@@ -589,8 +732,8 @@ const doAction = async (
 				application: ModifyApplicationRequestBody;
 				id: ApplicationID;
 				name: ApplicationName;
-				rollout_step_percentage: number | number[];
-				rollout_kind: CreateApplicationRolloutRequest.kind;
+				rollout_step_percentage?: number | number[];
+				rollout_kind?: CreateApplicationRolloutRequest.kind;
 		  }
 ) => {
 	if (action.action === "create") {
@@ -663,42 +806,47 @@ const doAction = async (
 			);
 		}
 
-		try {
-			await promiseSpinner(
-				RolloutsService.createApplicationRollout(action.id, {
-					description: "Progressive update",
-					strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
-					target_configuration: action.application.configuration ?? {},
-					...configRolloutStepsToAPI(action.rollout_step_percentage),
-					kind: action.rollout_kind,
-				}),
-				{
-					message: `rolling out container version ${action.name}`,
+		if (
+			action.rollout_step_percentage !== undefined &&
+			action.rollout_kind !== undefined
+		) {
+			try {
+				await promiseSpinner(
+					RolloutsService.createApplicationRollout(action.id, {
+						description: "Progressive update",
+						strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
+						target_configuration: action.application.configuration ?? {},
+						...configRolloutStepsToAPI(action.rollout_step_percentage),
+						kind: action.rollout_kind,
+					}),
+					{
+						message: `rolling out container version ${action.name}`,
+					}
+				);
+			} catch (err) {
+				if (!(err instanceof Error)) {
+					throw err;
 				}
-			);
-		} catch (err) {
-			if (!(err instanceof Error)) {
-				throw err;
-			}
 
-			if (!(err instanceof ApiError)) {
+				if (!(err instanceof ApiError)) {
+					throw new UserError(
+						`Unexpected error rolling out application "${action.name}":\n${err.message}`,
+						{ telemetryMessage: "containers deploy rollout unexpected error" }
+					);
+				}
+
+				if (err.status === 400) {
+					throw new UserError(
+						`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`,
+						{ telemetryMessage: "containers deploy rollout misconfiguration" }
+					);
+				}
+
 				throw new UserError(
-					`Unexpected error rolling out application "${action.name}":\n${err.message}`,
-					{ telemetryMessage: "containers deploy rollout unexpected error" }
+					`Error rolling out application "${action.name}":\n${formatError(err)}`,
+					{ telemetryMessage: "containers deploy rollout request failed" }
 				);
 			}
-
-			if (err.status === 400) {
-				throw new UserError(
-					`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`,
-					{ telemetryMessage: "containers deploy rollout misconfiguration" }
-				);
-			}
-
-			throw new UserError(
-				`Error rolling out application "${action.name}":\n${formatError(err)}`,
-				{ telemetryMessage: "containers deploy rollout request failed" }
-			);
 		}
 
 		success(
@@ -716,14 +864,21 @@ const doAction = async (
 export function cleanApplicationFromAPI(
 	prev: Application,
 	currentConfig: ContainerNormalizedConfig,
-	accountId: string
+	accountId: string,
+	observabilityWriteTarget: ObservabilityWriteTarget
 ): Partial<ModifyApplicationRequestBody> & Pick<Application, "configuration"> {
+	const configuration = {
+		...prev.configuration,
+		image: resolveImageName(accountId, prev.configuration.image),
+	};
+
+	if (observabilityWriteTarget === "top-level") {
+		delete configuration.observability;
+	}
+
 	const cleanedPreviousApp: Partial<ModifyApplicationRequestBody> &
 		Pick<Application, "configuration"> = {
-		configuration: {
-			...prev.configuration,
-			image: resolveImageName(accountId, prev.configuration.image),
-		},
+		configuration,
 		constraints: prev.constraints,
 		max_instances: prev.max_instances,
 		name: prev.name,
@@ -735,16 +890,29 @@ export function cleanApplicationFromAPI(
 	if ("instance_type" in currentConfig) {
 		// returns undefined if we can't infer it.
 		const instance_type = inferInstanceType(cleanedPreviousApp.configuration);
-		if (!instance_type) {
-			// just leave as is if we can't infer the instance type
-			return prev;
-		}
-		cleanedPreviousApp.configuration.instance_type = instance_type;
+		if (instance_type) {
+			cleanedPreviousApp.configuration.instance_type = instance_type;
 
-		delete cleanedPreviousApp.configuration.disk;
-		delete cleanedPreviousApp.configuration.memory;
-		delete cleanedPreviousApp.configuration.memory_mib;
-		delete cleanedPreviousApp.configuration.vcpu;
+			delete cleanedPreviousApp.configuration.disk;
+			delete cleanedPreviousApp.configuration.memory;
+			delete cleanedPreviousApp.configuration.memory_mib;
+			delete cleanedPreviousApp.configuration.vcpu;
+		}
+	}
+
+	if (
+		observabilityWriteTarget === "configuration" &&
+		prev.configuration.observability !== undefined
+	) {
+		cleanedPreviousApp.configuration.observability =
+			prev.configuration.observability;
+	}
+
+	if (
+		observabilityWriteTarget === "top-level" &&
+		prev.observability !== undefined
+	) {
+		cleanedPreviousApp.observability = prev.observability;
 	}
 
 	return cleanedPreviousApp;

@@ -3030,6 +3030,286 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should allow shorthand container observability", ({ expect }) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers?.[0]?.observability).toEqual({
+					enabled: true,
+				});
+			});
+
+			it("should allow nested container observability logs and targeting", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									logs: {
+										enabled: true,
+									},
+									target_instance_count: 2,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers?.[0]?.observability).toEqual({
+					logs: { enabled: true },
+					target_instance_count: 2,
+				});
+			});
+
+			it("should preserve container observability as a full override of root observability", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						observability: {
+							enabled: true,
+						},
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: false,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.observability).toEqual({ enabled: true });
+				expect(config.containers?.[0]?.observability).toEqual({
+					enabled: false,
+				});
+			});
+
+			it("should error when container observability is not an object", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: "enabled",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \"containers.observability\" should be an object but got \"enabled\"."
+				`);
+			});
+
+			it("should error on invalid nested container observability values", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: "true",
+									logs: "enabled",
+									target_instance_percentage: "10",
+									target_instance_count: 0.5,
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \"containers.observability.enabled\" to be of type boolean but got \"true\".
+					  - Expected \"containers.observability.logs\" to be of type object but got \"enabled\".
+					  - Expected \"containers.observability.target_instance_percentage\" to be of type number but got \"10\".
+					  - \"containers.observability.target_instance_percentage\" and \"containers.observability.target_instance_count\" cannot both be set.
+					  - \"containers.observability.target_instance_count\" must be a positive integer.
+					  - \"containers.observability.target_instance_percentage\" cannot be set unless observability is enabled.
+					  - \"containers.observability.target_instance_count\" cannot be set unless observability is enabled."
+				`);
+			});
+
+			it("should error when container observability enabled values conflict", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+									logs: {
+										enabled: false,
+									},
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \"containers.observability.enabled\" and \"containers.observability.logs.enabled\" cannot be set to different values."
+				`);
+			});
+
+			it("should error when container observability logs is an array", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									logs: [],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \"containers.observability.logs\" to be of type object but got []."
+				`);
+			});
+
+			it("should error when both container observability targeting fields are set", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+									target_instance_percentage: 10,
+									target_instance_count: 2,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \"containers.observability.target_instance_percentage\" and \"containers.observability.target_instance_count\" cannot both be set."
+				`);
+			});
+
+			it("should warn on unsupported extra container observability keys", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+									invalid_key: "nope",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in containers.observability field: \"invalid_key\""
+				`);
+			});
+
 			it("should error if rollout_active_grace_period and rollout_step_percentage are out of range", ({
 				expect,
 			}) => {

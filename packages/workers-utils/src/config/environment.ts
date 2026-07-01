@@ -94,6 +94,24 @@ type UnsafeBinding = {
 /**
  * Configuration for a container application
  */
+export type ContainerObservability = {
+	/** If observability is enabled for this container application */
+	enabled?: boolean;
+	logs?: {
+		enabled?: boolean;
+	};
+	/**
+	 * Percentage of instances to target with application-level observability hot reloads.
+	 * Mutually exclusive with `target_instance_count`.
+	 */
+	target_instance_percentage?: number;
+	/**
+	 * Number of instances to target with application-level observability hot reloads.
+	 * Mutually exclusive with `target_instance_percentage`.
+	 */
+	target_instance_count?: number;
+};
+
 export type ContainerApp = {
 	// TODO: fill out the entire type
 
@@ -139,6 +157,13 @@ export type ContainerApp = {
 	 * The class name of the Durable Object the container is connected to.
 	 */
 	class_name: string;
+
+	/**
+	 * Specify the observability behavior of this container application.
+	 *
+	 * When set, this overrides the root `observability` config for this container.
+	 */
+	observability?: ContainerObservability;
 
 	/**
 	 * The scheduling policy of the application

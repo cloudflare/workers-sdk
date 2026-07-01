@@ -1264,7 +1264,73 @@ describe("wrangler deploy with containers", () => {
 				namespace_id: "1",
 			},
 		};
-		it("should be able to enable observability logs (top level)", async ({
+
+		it("uses top-level observability for a new application from container config", async ({
+			expect,
+		}) => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						observability: { enabled: true },
+					},
+				],
+			});
+
+			mockGetApplications([]);
+			const rolloutSpy = mockTrackApplicationRollout();
+
+			mockCreateApplication(expect, {
+				observability: {
+					logs: { enabled: true },
+				},
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/hello:world",
+				},
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(rolloutSpy).not.toHaveBeenCalled();
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ NEW my-container
+				│
+				│   [[containers]]
+				│   name = "my-container"
+				│   scheduling_policy = "default"
+				│   instances = 0
+				│   max_instances = 10
+				│   rollout_active_grace_period = 0
+				│
+				│   [containers.observability.logs]
+				│   enabled = true
+				│
+				│   [containers.configuration]
+				│   image = "registry.cloudflare.com/some-account-id/hello:world"
+				│   instance_type = "lite"
+				│
+				│   [containers.constraints]
+				│   tiers = [ 1, 2 ]
+				│
+				│   [containers.durable_objects]
+				│   namespace_id = "1"
+				│
+				│
+				│  SUCCESS  Created application my-container (Application ID: undefined)
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+
+		it("uses top-level observability for a new application from root fallback", async ({
 			expect,
 		}) => {
 			mockGetVersion("Galaxy-Class");
@@ -1274,15 +1340,13 @@ describe("wrangler deploy with containers", () => {
 				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
 			});
 
-			mockGetApplications([sharedGetApplicationResult]);
+			mockGetApplications([]);
 
-			mockModifyApplication(expect, {
-				configuration: {
-					image: "registry.cloudflare.com/some-account-id/hello:world",
-					observability: { logs: { enabled: true } },
+			mockCreateApplication(expect, {
+				observability: {
+					logs: { enabled: true },
 				},
 			});
-			mockCreateApplicationRollout(expect);
 
 			await runWrangler("deploy index.js");
 
@@ -1291,17 +1355,30 @@ describe("wrangler deploy with containers", () => {
 				│
 				│ Container application changes
 				│
-				├ EDIT my-container
+				├ NEW my-container
 				│
+				│   [[containers]]
+				│   name = "my-container"
+				│   scheduling_policy = "default"
+				│   instances = 0
+				│   max_instances = 10
+				│   rollout_active_grace_period = 0
+				│
+				│   [containers.observability.logs]
+				│   enabled = true
+				│
+				│   [containers.configuration]
 				│   image = "registry.cloudflare.com/some-account-id/hello:world"
 				│   instance_type = "lite"
-				│ + [containers.configuration.observability.logs]
-				│ + enabled = true
+				│
 				│   [containers.constraints]
 				│   tiers = [ 1, 2 ]
 				│
+				│   [containers.durable_objects]
+				│   namespace_id = "1"
 				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
+				│
+				│  SUCCESS  Created application my-container (Application ID: undefined)
 				│
 				╰ Applied changes
 
@@ -1309,221 +1386,9 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
-		it("should be able to enable observability logs (logs field)", async ({
+		it("keeps legacy configuration observability enabled for the root enabled shorthand", async ({
 			expect,
 		}) => {
-			mockGetVersion("Galaxy-Class");
-			writeWranglerConfig({
-				...DEFAULT_DURABLE_OBJECTS,
-				observability: { logs: { enabled: true } },
-				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
-			});
-
-			mockGetApplications([sharedGetApplicationResult]);
-
-			mockModifyApplication(expect, {
-				configuration: {
-					image: "registry.cloudflare.com/some-account-id/hello:world",
-					observability: { logs: { enabled: true } },
-				},
-			});
-
-			mockCreateApplicationRollout(expect);
-
-			await runWrangler("deploy index.js");
-			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
-				│
-				│ Container application changes
-				│
-				├ EDIT my-container
-				│
-				│   image = "registry.cloudflare.com/some-account-id/hello:world"
-				│   instance_type = "lite"
-				│ + [containers.configuration.observability.logs]
-				│ + enabled = true
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
-
-				"
-			`);
-		});
-
-		it("should be able to disable observability logs (top level)", async ({
-			expect,
-		}) => {
-			mockGetVersion("Galaxy-Class");
-			writeWranglerConfig({
-				...DEFAULT_DURABLE_OBJECTS,
-				observability: { enabled: false },
-				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
-			});
-
-			mockGetApplications([
-				{
-					...sharedGetApplicationResult,
-					configuration: {
-						...sharedGetApplicationResult.configuration,
-						observability: {
-							logs: {
-								enabled: true,
-							},
-						},
-					},
-				},
-			]);
-
-			mockModifyApplication(expect, {
-				configuration: {
-					image: "registry.cloudflare.com/some-account-id/hello:world",
-					observability: { logs: { enabled: false } },
-				},
-			});
-
-			mockCreateApplicationRollout(expect);
-
-			await runWrangler("deploy index.js");
-
-			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
-				│
-				│ Container application changes
-				│
-				├ EDIT my-container
-				│
-				│   instance_type = "lite"
-				│   [containers.configuration.observability.logs]
-				│ - enabled = true
-				│ + enabled = false
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
-
-				"
-			`);
-		});
-
-		it("should be able to disable observability logs (logs field)", async ({
-			expect,
-		}) => {
-			mockGetVersion("Galaxy-Class");
-			writeWranglerConfig({
-				...DEFAULT_DURABLE_OBJECTS,
-				observability: { logs: { enabled: false } },
-				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
-			});
-
-			mockGetApplications([
-				{
-					...sharedGetApplicationResult,
-					configuration: {
-						...sharedGetApplicationResult.configuration,
-						observability: {
-							logs: {
-								enabled: true,
-							},
-						},
-					},
-				},
-			]);
-
-			mockModifyApplication(expect, {
-				configuration: {
-					image: "registry.cloudflare.com/some-account-id/hello:world",
-					observability: { logs: { enabled: false } },
-				},
-			});
-
-			mockCreateApplicationRollout(expect);
-
-			await runWrangler("deploy index.js");
-
-			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
-				│
-				│ Container application changes
-				│
-				├ EDIT my-container
-				│
-				│   instance_type = "lite"
-				│   [containers.configuration.observability.logs]
-				│ - enabled = true
-				│ + enabled = false
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
-
-				"
-			`);
-		});
-		it("should be able to disable observability logs (absent field)", async ({
-			expect,
-		}) => {
-			mockGetVersion("Galaxy-Class");
-			writeWranglerConfig({
-				...DEFAULT_DURABLE_OBJECTS,
-				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
-			});
-
-			mockGetApplications([
-				{
-					...sharedGetApplicationResult,
-					configuration: {
-						...sharedGetApplicationResult.configuration,
-						observability: {
-							logs: {
-								enabled: true,
-							},
-						},
-					},
-				},
-			]);
-
-			mockModifyApplication(expect, {
-				configuration: {
-					image: "registry.cloudflare.com/some-account-id/hello:world",
-					observability: { logs: { enabled: false } },
-				},
-			});
-
-			mockCreateApplicationRollout(expect);
-			await runWrangler("deploy index.js");
-			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
-				│
-				│ Container application changes
-				│
-				├ EDIT my-container
-				│
-				│   instance_type = "lite"
-				│   [containers.configuration.observability.logs]
-				│ - enabled = true
-				│ + enabled = false
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
-
-				"
-			`);
-		});
-		it("should keep observability logs enabled", async ({ expect }) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1544,17 +1409,13 @@ describe("wrangler deploy with containers", () => {
 					},
 				},
 			]);
-
-			mockModifyApplication(expect, {
-				configuration: {
-					image: "registry.cloudflare.com/some-account-id/hello:world",
-					observability: { logs: { enabled: true } },
-				},
-			});
-
-			mockCreateApplicationRollout(expect);
+			const modifySpy = mockTrackApplicationModification();
+			const rolloutSpy = mockTrackApplicationRollout();
 
 			await runWrangler("deploy index.js");
+
+			expect(modifySpy).not.toHaveBeenCalled();
+			expect(rolloutSpy).not.toHaveBeenCalled();
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
 				"╭ Deploy a container application deploy changes to your application
 				│
@@ -1568,7 +1429,206 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
-		it("should keep obserability logs disabled if api returns false and undefined in config", async ({
+		it("keeps legacy configuration observability enabled for the root logs shorthand", async ({
+			expect,
+		}) => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				observability: { logs: { enabled: true } },
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					configuration: {
+						...sharedGetApplicationResult.configuration,
+						observability: {
+							logs: {
+								enabled: true,
+							},
+						},
+					},
+				},
+			]);
+			const modifySpy = mockTrackApplicationModification();
+			const rolloutSpy = mockTrackApplicationRollout();
+
+			await runWrangler("deploy index.js");
+
+			expect(modifySpy).not.toHaveBeenCalled();
+			expect(rolloutSpy).not.toHaveBeenCalled();
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ no changes my-container
+				│
+				╰ No changes to be made
+
+				"
+			`);
+		});
+
+		it("keeps using legacy configuration observability for legacy-enabled apps", async ({
+			expect,
+		}) => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					configuration: {
+						...sharedGetApplicationResult.configuration,
+						observability: {
+							logs: {
+								enabled: true,
+							},
+						},
+					},
+				},
+			]);
+
+			mockModifyApplication(expect, {
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/hello:world",
+					observability: { logs: { enabled: false } },
+				},
+			});
+
+			mockCreateApplicationRollout(expect);
+
+			await runWrangler("deploy index.js");
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│
+				│   instance_type = "lite"
+				│   [containers.configuration.observability.logs]
+				│ - enabled = true
+				│ + enabled = false
+				│   [containers.constraints]
+				│   tiers = [ 1, 2 ]
+				│
+				│
+				│  SUCCESS  Modified application my-container (Application ID: abc)
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+
+		it("keeps using top-level observability and skips rollout for top-level-only changes", async ({
+			expect,
+		}) => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						observability: { enabled: true },
+					},
+				],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					observability: {
+						logs: {
+							enabled: false,
+						},
+					},
+				},
+			]);
+			const rolloutSpy = mockTrackApplicationRollout();
+
+			mockModifyApplication(expect, {
+				observability: {
+					logs: { enabled: true },
+				},
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/hello:world",
+				},
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(rolloutSpy).not.toHaveBeenCalled();
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│
+				│   tiers = [ 1, 2 ]
+				│   [containers.observability.logs]
+				│ - enabled = false
+				│ + enabled = true
+				│
+				│
+				│  SUCCESS  Modified application my-container (Application ID: abc)
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+
+		it("detects no changes when top-level observability already matches", async ({
+			expect,
+		}) => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				observability: { enabled: true },
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					observability: {
+						logs: {
+							enabled: true,
+						},
+					},
+				},
+			]);
+			const modifySpy = mockTrackApplicationModification();
+			const rolloutSpy = mockTrackApplicationRollout();
+
+			await runWrangler("deploy index.js");
+
+			expect(modifySpy).not.toHaveBeenCalled();
+			expect(rolloutSpy).not.toHaveBeenCalled();
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ no changes my-container
+				│
+				╰ No changes to be made
+
+				"
+			`);
+		});
+
+		it("avoids no-op migration churn when legacy observability is already disabled", async ({
 			expect,
 		}) => {
 			mockGetVersion("Galaxy-Class");
@@ -1590,9 +1650,13 @@ describe("wrangler deploy with containers", () => {
 					},
 				},
 			]);
+			const modifySpy = mockTrackApplicationModification();
+			const rolloutSpy = mockTrackApplicationRollout();
 
 			await runWrangler("deploy index.js");
 
+			expect(modifySpy).not.toHaveBeenCalled();
+			expect(rolloutSpy).not.toHaveBeenCalled();
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
 				"╭ Deploy a container application deploy changes to your application
 				│
@@ -1601,6 +1665,160 @@ describe("wrangler deploy with containers", () => {
 				├ no changes my-container
 				│
 				╰ No changes to be made
+
+				"
+			`);
+		});
+
+		it("throws a local error when application-level targeting is added before disabling legacy observability", async ({
+			expect,
+		}) => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						observability: {
+							enabled: true,
+							target_instance_percentage: 10,
+						},
+					},
+				],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					configuration: {
+						...sharedGetApplicationResult.configuration,
+						observability: {
+							logs: {
+								enabled: true,
+							},
+						},
+					},
+				},
+			]);
+
+			await expect(runWrangler("deploy index.js")).rejects.toThrow(
+				"Application-level observability targeting cannot be enabled for container my-container until legacy configuration.observability is disabled with a rollout first."
+			);
+		});
+
+		it("throws a local error when an active rollout still targets legacy observability", async ({
+			expect,
+		}) => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						observability: {
+							enabled: true,
+							target_instance_count: 2,
+						},
+					},
+				],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					scheduling_hint: {
+						current: {
+							instances: 0,
+							configuration: {
+								image: "registry.cloudflare.com/hello:world",
+							},
+							version: 1,
+						},
+						target: {
+							instances: 0,
+							configuration: {
+								image: "registry.cloudflare.com/hello:world",
+								observability: {
+									logs: {
+										enabled: true,
+									},
+								},
+							},
+							version: 2,
+						},
+					},
+				},
+			]);
+
+			await expect(runWrangler("deploy index.js")).rejects.toThrow(
+				"Application-level observability targeting cannot be enabled for container my-container until legacy configuration.observability is disabled with a rollout first."
+			);
+		});
+
+		it("still creates a rollout when top-level observability changes alongside deployment config", async ({
+			expect,
+		}) => {
+			mockGetVersion("Galaxy-Class");
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						image: "registry.cloudflare.com/hello:moon",
+						observability: { enabled: true },
+					},
+				],
+			});
+
+			mockGetApplications([
+				{
+					...sharedGetApplicationResult,
+					observability: {
+						logs: {
+							enabled: false,
+						},
+					},
+				},
+			]);
+
+			mockModifyApplication(expect, {
+				observability: {
+					logs: { enabled: true },
+				},
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/hello:moon",
+				},
+			});
+			mockCreateApplicationRollout(expect, {
+				target_configuration: {
+					image: "registry.cloudflare.com/some-account-id/hello:moon",
+				},
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│
+				│   scheduling_policy = "default"
+				│   [containers.configuration]
+				│ - image = "registry.cloudflare.com/some-account-id/hello:world"
+				│ + image = "registry.cloudflare.com/some-account-id/hello:moon"
+				│   instance_type = "lite"
+				│   [containers.constraints]
+				│   tiers = [ 1, 2 ]
+				│   [containers.observability.logs]
+				│ - enabled = false
+				│ + enabled = true
+				│
+				│
+				│  SUCCESS  Modified application my-container (Application ID: abc)
+				│
+				╰ Applied changes
 
 				"
 			`);
@@ -2209,21 +2427,18 @@ describe("wrangler deploy with containers", () => {
 			│
 			├ EDIT my-container
 			│
+			│   max_instances = 10
 			│   name = "my-container"
 			│   scheduling_policy = "default"
-			│   version = 1
 			│ + rollout_active_grace_period = 0
 			│   [containers.configuration]
-			│ - image = "registry.cloudflare.com/hello:world"
-			│ + image = "registry.cloudflare.com/some-account-id/hello:world"
+			│   image = "registry.cloudflare.com/some-account-id/hello:world"
 			│ + instance_type = "lite"
 			│ + [[containers.configuration.authorized_keys]]
 			│ + name = "jeff"
 			│ + public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm"
 			│ + [containers.configuration.ssh]
 			│ + enabled = true
-			│   [containers.durable_objects]
-			│   namespace_id = "1"
 			│ + [containers.constraints]
 			│ + tiers = [ 1, 2 ]
 			│
@@ -3175,6 +3390,23 @@ function mockModifyApplication(
 	);
 }
 
+function mockTrackApplicationModification() {
+	const modifySpy = vi.fn();
+	msw.use(
+		http.patch("*/applications/:id", async ({ request }) => {
+			modifySpy(await request.json());
+			return HttpResponse.json({
+				success: true,
+				result: {
+					id: "abc",
+					name: "my-container",
+				},
+			});
+		})
+	);
+	return modifySpy;
+}
+
 function mockCreateApplicationRollout(
 	expect: ExpectStatic,
 	expected?: Record<string, unknown>
@@ -3195,6 +3427,23 @@ function mockCreateApplicationRollout(
 			});
 		})
 	);
+}
+
+function mockTrackApplicationRollout() {
+	const rolloutSpy = vi.fn();
+	msw.use(
+		http.post("*/applications/:id/rollouts", async ({ request }) => {
+			rolloutSpy(await request.json());
+			return HttpResponse.json({
+				success: true,
+				result: {
+					id: "rollout-123",
+					status: "pending",
+				},
+			});
+		})
+	);
+	return rolloutSpy;
 }
 
 function mockGenerateImageRegistryCredentials(expect: ExpectStatic) {
