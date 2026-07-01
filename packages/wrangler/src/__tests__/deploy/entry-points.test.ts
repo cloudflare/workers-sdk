@@ -351,7 +351,7 @@ export default{
 				autoconfig,
 				"getDetailsForAutoConfig"
 			);
-			const runAutoConfigMock = vi.mocked(autoconfig.runAutoConfig);
+			const runAutoConfigMock = vi.spyOn(autoconfig, "runAutoConfig");
 
 			writeWranglerConfig();
 			writeWorkerSource({ basePath: "./src" });
