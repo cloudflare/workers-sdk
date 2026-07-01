@@ -1,10 +1,14 @@
 // Emulated Ratelimit Binding
+//
+// Thin client: keeps option validation local (so error messages surface
+// synchronously in the caller's isolate), forwards each `.limit()` call to
+// the `RateLimiterObject` Durable Object, which owns the bucket/epoch state.
 
 // ENV configuration
 interface RatelimitConfig {
-	namespaceId: number;
 	limit: number;
 	period: number;
+	fetcher: Fetcher;
 }
 
 // options for Ratelimit
@@ -25,28 +29,18 @@ function validate(test: boolean, message: string): asserts test {
 }
 
 class Ratelimit {
-	namespaceId: number;
+	fetcher: Fetcher;
 	limitVal: number;
 	period: number;
-	buckets: Map<string, number>;
-	epoch: number;
 
 	constructor(config: RatelimitConfig) {
-		this.namespaceId = config.namespaceId;
+		this.fetcher = config.fetcher;
 		this.limitVal = config.limit;
 		this.period = config.period;
-
-		this.buckets = new Map<string, number>();
-		this.epoch = 0;
 	}
 
-	// Resets the in-memory bucket state so tests start from a clean slate.
-	reset(): void {
-		this.buckets.clear();
-		this.epoch = 0;
-	}
-
-	// method that counts and checks against the limit in in-memory buckets
+	// method that counts and checks against the limit, delegating the actual
+	// bucket/epoch bookkeeping to the `RateLimiterObject` Durable Object
 	async limit(options: unknown): Promise<RatelimitResult> {
 		// validate options input
 		validate(
@@ -73,22 +67,11 @@ class Ratelimit {
 			`unsupported period: ${period}`
 		);
 
-		const epoch = Math.floor(Date.now() / (period * 1000));
-		if (epoch != this.epoch) {
-			// clear counters
-			this.epoch = epoch;
-			this.buckets.clear();
-		}
-		const val = this.buckets.get(key) || 0;
-		if (val >= limit) {
-			return {
-				success: false,
-			};
-		}
-		this.buckets.set(key, val + 1);
-		return {
-			success: true,
-		};
+		const res = await this.fetcher.fetch("http://ratelimit/limit", {
+			method: "POST",
+			body: JSON.stringify({ key, limit, period }),
+		});
+		return await res.json<RatelimitResult>();
 	}
 }
 

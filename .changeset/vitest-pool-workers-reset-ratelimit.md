@@ -1,5 +1,4 @@
 ---
-"@cloudflare/vitest-pool-workers": patch
 "miniflare": patch
 ---
 

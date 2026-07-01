@@ -411,10 +411,6 @@ async function buildProjectWorkerOptions(
 	runnerWorker.durableObjects ??= {};
 	const durableObjectClassNames = getDurableObjectClasses(runnerWorker);
 
-	// Ratelimit binding names, so reset() can call `.reset()` on each of them
-	// directly without needing to know their names ahead of time itself.
-	const ratelimitBindingNames = Object.keys(runnerWorker.ratelimits ?? {});
-
 	const workflowClassNames = getWorkflowClasses(
 		runnerWorker,
 		relativeWranglerConfigPath
@@ -540,14 +536,6 @@ async function buildProjectWorkerOptions(
 			type: "ESModule",
 			path: path.join(modulesRoot, "__VITEST_POOL_WORKERS_DEFINES"),
 			contents: defines,
-		},
-		{
-			type: "ESModule",
-			path: path.join(
-				modulesRoot,
-				"__VITEST_POOL_WORKERS_RATELIMIT_BINDING_NAMES"
-			),
-			contents: `export default ${JSON.stringify(ratelimitBindingNames)};`,
 		},
 		// The native workerd provided nodejs modules don't always support everything Vitest needs.
 		// As a short-term fix, inject polyfills into the worker bundle that override the native modules.

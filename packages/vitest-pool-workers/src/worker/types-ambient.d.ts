@@ -44,10 +44,6 @@ declare module "__VITEST_POOL_WORKERS_DEFINES" {
 	const defines: Record<string, unknown>;
 	export default defines;
 }
-declare module "__VITEST_POOL_WORKERS_RATELIMIT_BINDING_NAMES" {
-	const names: string[];
-	export default names;
-}
 
 declare module "node:vm" {
 	export function _setUnsafeEval(newUnsafeEval: UnsafeEval): void;

@@ -9,15 +9,6 @@ import * as cjsModuleLexer from "cjs-module-lexer";
 import { ModuleRuleTypeSchema, Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
-
-// Root-registered virtual modules injected via `runnerWorker.modules` that
-// may be imported from files other than the root worker entrypoint (e.g.
-// `reset.ts`, compiled into `test-internal.mjs`, not the root `index.mjs`).
-// Like `node:*`/`cloudflare:*` builtins, these only exist at the root, so a
-// non-root referrer's bare import needs redirecting there too.
-const poolInternalModules = new Set([
-	"__VITEST_POOL_WORKERS_RATELIMIT_BINDING_NAMES",
-]);
 import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
 import type { Vite } from "vitest/node";
 
@@ -341,10 +332,7 @@ async function resolve(
 	// *import*ing `node:*`/`cloudflare:*` modules, but not when *require()*ing
 	// them. For the sake of consistency (and a nice return type on this function)
 	// we return a redirect for `import`s too.
-	if (
-		referrerDir !== "/" &&
-		(workerdBuiltinModules.has(specifier) || poolInternalModules.has(specifier))
-	) {
+	if (referrerDir !== "/" && workerdBuiltinModules.has(specifier)) {
 		return `/${specifier}`;
 	}
 
