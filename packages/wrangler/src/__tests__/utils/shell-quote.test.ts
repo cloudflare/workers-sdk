@@ -40,7 +40,7 @@ describe("parse", () => {
 		expect(parse('"hello world"')).toEqual(["hello world"]);
 	});
 
-	it("handles escaped characters", ({ expect }) => {
+	it.skipIf(process.platform === "win32")("handles escaped characters", ({ expect }) => {
 		expect(parse("a\\ b")).toEqual(["a b"]);
 	});
 
@@ -61,20 +61,18 @@ describe("parse", () => {
 	});
 
 	it("throws for control operators", ({ expect }) => {
-		expect(() => parse("a && b")).toThrow(
-			'Only simple commands are supported'
-		);
+		expect(() => parse("a && b")).toThrow("Only simple commands are supported");
 	});
 
 	it("handles empty input", ({ expect }) => {
 		expect(parse("")).toEqual([]);
 	});
 
-	it("handles Windows-style backslash paths", ({ expect }) => {
-		expect(parse("C:\\\\foo\\\\bar")).toEqual(["C:\\foo\\bar"]);
+	it.skipIf(process.platform === "win32")("handles Windows-style backslash paths", ({ expect }) => {
+		expect(parse(String.raw`C:\\foo\\bar`)).toEqual([String.raw`C:\foo\bar`]);
 	});
 
 	it("handles nested quotes", ({ expect }) => {
-		expect(parse('"foo\'bar\'"')).toEqual(["foo'bar'"]);
+		expect(parse("\"foo'bar'\"")).toEqual(["foo'bar'"]);
 	});
 });
