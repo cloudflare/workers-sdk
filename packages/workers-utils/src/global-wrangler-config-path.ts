@@ -1,7 +1,7 @@
 import os from "node:os";
 import path from "node:path";
-import xdgAppPaths from "xdg-app-paths";
 import { isDirectory } from "./fs-helpers";
+import { xdgAppPaths } from "./xdg-app-paths";
 
 export interface GetGlobalConfigPathOptions {
 	/**
@@ -51,8 +51,11 @@ export function getGlobalConfigPath({
 }
 
 /**
- * @deprecated Use {@link getGlobalConfigPath} instead.
+ * Resolve the XDG-compliant global cache directory for wrangler (`.wrangler`).
+ *
+ * Unlike {@link getGlobalConfigPath}, this never falls back to a legacy
+ * `~/.wrangler` directory.
  */
-export function getGlobalWranglerConfigPath() {
-	return getGlobalConfigPath();
+export function getGlobalWranglerCachePath() {
+	return xdgAppPaths(".wrangler").cache();
 }
