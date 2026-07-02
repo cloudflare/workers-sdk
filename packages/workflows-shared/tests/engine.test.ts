@@ -1856,6 +1856,71 @@ describe("Rollback", () => {
 		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(1);
 	});
 
+	it("fails terminate rollback when replay cannot rebuild an eligible handler", async ({
+		expect,
+	}) => {
+		const instanceId = `RB-TERMINATE-MISSING-REPLAY-${crypto.randomUUID()}`;
+		const engineId = env.ENGINE.idFromName(instanceId);
+		const engineStub = await runWorkflow(instanceId, async (_e, step) => {
+			await doWithRollback(
+				step,
+				"branchy-setup",
+				async () => "resource-id",
+				rollbackOptions()
+			);
+			await step.sleep("wait-forever", "1 hour");
+		});
+
+		await readLogsAfter(engineStub, (currentLogs) =>
+			currentLogs.logs.some(
+				(log) =>
+					log.event === InstanceEvent.STEP_SUCCESS &&
+					log.target === "branchy-setup-1"
+			)
+		);
+
+		try {
+			await runInDurableObject(engineStub, async (engine) => {
+				await engine.abort("test restart before replay branch changes");
+			});
+		} catch (error) {
+			if (
+				!(error instanceof Error) ||
+				error.message !== "test restart before replay branch changes"
+			) {
+				throw error;
+			}
+		}
+
+		setTestWorkflowCallback(async () => {
+			// Simulate nondeterministic replay control flow that no longer reaches
+			// the persisted eligible step. Production treats this as rollback failure.
+		});
+
+		try {
+			await runInDurableObject(env.ENGINE.get(engineId), async (engine) => {
+				await engine.changeInstanceStatus("terminate", undefined, {
+					rollback: true,
+				});
+			});
+		} catch (error) {
+			if (!isAbortError(error)) {
+				throw error;
+			}
+		}
+
+		const logs = await readLogsAfter(env.ENGINE.get(engineId), (currentLogs) =>
+			currentLogs.logs.some(
+				(log) => log.event === InstanceEvent.WORKFLOW_TERMINATED
+			)
+		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_FAILURE)).toEqual([
+			"branchy-setup-1",
+		]);
+		expect(countOf(logs, InstanceEvent.ROLLBACK_FAILED)).toBe(1);
+		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(0);
+	});
+
 	it("replays cached failed steps before terminate rollback when registry is empty", async ({
 		expect,
 	}) => {

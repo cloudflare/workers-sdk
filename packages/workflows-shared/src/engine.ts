@@ -243,33 +243,27 @@ export class Engine extends DurableObject<Env> {
 		}
 	}
 
-	readStepStartGroupKeysDesc(): string[] {
-		const rows = [
-			...this.ctx.storage.sql.exec<{ groupKey: string }>(
-				"SELECT groupKey FROM states WHERE event = ? AND groupKey IS NOT NULL ORDER BY id DESC",
-				InstanceEvent.STEP_START
-			),
-		];
-		return rows.map(({ groupKey }) => groupKey);
-	}
-
-	private getEligibleRollbackSteps(limit?: number): string[] {
+	readEligibleRollbackStepsDesc(
+		limit?: number
+	): Array<{ cacheKey: string; target: string }> {
 		const rollbackTerminalGroups = new Set<string>();
 		const rollbackEligibleGroups = new Set<string>();
-		const stepStartGroupKeysDesc: string[] = [];
+		const stepStartsDesc: Array<{ groupKey: string; target: string | null }> =
+			[];
 		const rows = [
 			...this.ctx.storage.sql.exec<{
 				event: InstanceEvent;
 				groupKey: string;
+				target: string | null;
 				metadata: string;
 			}>(
-				"SELECT event, groupKey, metadata FROM states WHERE groupKey IS NOT NULL ORDER BY id DESC"
+				"SELECT event, groupKey, target, metadata FROM states WHERE groupKey IS NOT NULL ORDER BY id DESC"
 			),
 		];
 
 		for (const row of rows) {
 			if (row.event === InstanceEvent.STEP_START) {
-				stepStartGroupKeysDesc.push(row.groupKey);
+				stepStartsDesc.push({ groupKey: row.groupKey, target: row.target });
 			}
 
 			if (
@@ -304,13 +298,13 @@ export class Engine extends DurableObject<Env> {
 			}
 		}
 
-		const eligible: string[] = [];
-		for (const groupKey of stepStartGroupKeysDesc) {
+		const eligible: Array<{ cacheKey: string; target: string }> = [];
+		for (const { groupKey, target } of stepStartsDesc) {
 			if (
 				rollbackEligibleGroups.has(groupKey) &&
 				!rollbackTerminalGroups.has(groupKey)
 			) {
-				eligible.push(groupKey);
+				eligible.push({ cacheKey: groupKey, target: target ?? groupKey });
 				if (limit !== undefined && eligible.length >= limit) {
 					break;
 				}
@@ -318,6 +312,12 @@ export class Engine extends DurableObject<Env> {
 		}
 
 		return eligible;
+	}
+
+	private getEligibleRollbackSteps(limit?: number): string[] {
+		return this.readEligibleRollbackStepsDesc(limit).map(
+			({ cacheKey }) => cacheKey
+		);
 	}
 
 	registerRollbackFn(registration: RollbackRegistration): void {
