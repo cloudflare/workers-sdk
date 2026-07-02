@@ -83,6 +83,8 @@ describe("loadSourceMaps", () => {
 		const result = loadSourceMaps(main, [extra], bundle);
 
 		expect(result).toHaveLength(2);
+		expect(result[0].name).toBe("a.js.map");
+		expect(result[1].name).toBe("b.js.map");
 	});
 });
 
