@@ -147,5 +147,26 @@ describe("Package Managers", () => {
 				);
 			});
 		});
+
+		describe("nub", () => {
+			beforeEach(() => {
+				mockPackageManager("nub");
+			});
+
+			test.for([
+				["yarn.lock", false],
+				["pnpm-lock.yaml", false],
+				["bun.lock", false],
+				["bun.lockb", false],
+				["package-lock.json", false],
+			] as const)("with %s", ([file, isMismatch], { expect }) => {
+				vi.mocked(existsSync).mockImplementationOnce(
+					(path) => !!(path as string).includes(file)
+				);
+				expect(detectPmMismatch({ project: { path: "" } } as C3Context)).toBe(
+					isMismatch
+				);
+			});
+		});
 	});
 });

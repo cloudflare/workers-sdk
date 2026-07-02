@@ -160,5 +160,10 @@ export const detectPmMismatch = (ctx: C3Context) => {
 				!existsSync(nodePath.join(projectPath, "bun.lockb")) &&
 				!existsSync(nodePath.join(projectPath, "bun.lock"))
 			);
+		case "nub":
+			// nub is lockfile-compatible with whichever of npm/pnpm/bun already
+			// exists in the project (yarn is read-only), so there's no single
+			// nub-specific lockfile name to check for — never a mismatch.
+			return false;
 	}
 };
