@@ -3720,8 +3720,6 @@ describe("generate types - CLI", () => {
 		it("populates `durableNamespaces` from live `exports` entries (including unbound + `expecting-transfer`) and excludes tombstones", async ({
 			expect,
 		}) => {
-			vi.stubEnv("X_DO_EXPORTS", "true");
-
 			// `UnboundDO` and `IncomingDO` are reachable only through `ctx.exports`.
 			fs.writeFileSync(
 				"./index.ts",
@@ -3787,36 +3785,6 @@ export default { async fetch() { return new Response("ok"); } };`
 				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
-		});
-
-		it("rejects when `exports` is configured but `X_DO_EXPORTS` is unset", async ({
-			expect,
-		}) => {
-			fs.writeFileSync(
-				"./index.ts",
-				`import { DurableObject } from "cloudflare:workers";
-export class MyDO extends DurableObject {}
-export default { async fetch() { return new Response("ok"); } };`
-			);
-			fs.writeFileSync(
-				"./wrangler.jsonc",
-				JSON.stringify({
-					compatibility_date: "2026-01-01",
-					name: "test-exports-types-gate",
-					main: "./index.ts",
-					durable_objects: {
-						bindings: [{ name: "MY_DO", class_name: "MyDO" }],
-					},
-					exports: {
-						MyDO: { type: "durable-object", storage: "sqlite" },
-					},
-				}),
-				"utf-8"
-			);
-
-			await expect(
-				runWrangler("types --include-runtime=false")
-			).rejects.toThrow(/`X_DO_EXPORTS` environment variable is not set/);
 		});
 	});
 });

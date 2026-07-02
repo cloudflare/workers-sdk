@@ -1,5 +1,4 @@
 import path from "node:path";
-import { assertDoExportsEnabledIfConfigured } from "@cloudflare/workers-utils";
 import {
 	formatZodError,
 	getRootPath,
@@ -255,18 +254,13 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
-		// Parse the wrangler config once so we can both enforce the
-		// `X_DO_EXPORTS` opt-in gate (before any side effects fire) and pass
-		// the parsed config straight into `unstable_getMiniflareWorkerOptions`
-		// without re-parsing it.
+		// Parse the wrangler config once so we can pass the parsed config
+		// straight into `unstable_getMiniflareWorkerOptions` without
+		// re-parsing it.
 		const wranglerConfig = wrangler.unstable_readConfig({
 			config: configPath,
 			env: options.wrangler.environment,
 		});
-		assertDoExportsEnabledIfConfigured(
-			wranglerConfig.exports,
-			"vitest-pool-workers"
-		);
 
 		const preExistingRemoteProxySessionData = options.wrangler?.configPath
 			? remoteProxySessionsDataMap.get(options.wrangler.configPath)

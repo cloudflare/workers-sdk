@@ -107,12 +107,10 @@ export default async function versionsUpload(
 	}
 
 	// Resolve which Durable Object lifecycle payload to forward — either
-	// the legacy `migrations` steps or the declarative `exports` map.
-	// `exports` is gated behind `X_DO_EXPORTS` (the gate-off error is
-	// raised inside `resolveExportsUploadPayload`). The server's versions
-	// POST controller persists `exports` on the new script_version row
-	// with `SkipDeploy:true`, so reconciliation is deferred to the
-	// subsequent deploy (either `wrangler deploy` or
+	// the legacy `migrations` steps or the declarative `exports` map. The
+	// server's versions POST controller persists `exports` on the new
+	// script_version row with `SkipDeploy:true`, so reconciliation is
+	// deferred to the subsequent deploy (either `wrangler deploy` or
 	// `wrangler versions deploy <id>`).
 	const { migrations, exports } = await resolveExportsUploadPayload({
 		scriptName,
@@ -122,7 +120,6 @@ export default async function versionsUpload(
 		useServiceEnvironments: useServiceEnvironmentsConfig(config),
 		env: props.env,
 		dispatchNamespace: undefined,
-		optInContext: "versions upload",
 	});
 
 	// Upload assets if assets is being used

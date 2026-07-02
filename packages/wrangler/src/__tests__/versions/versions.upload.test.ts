@@ -2311,35 +2311,13 @@ describe("versions upload", () => {
 			setIsTTY(false);
 		});
 
-		test("errors when `exports` is set but the `X_DO_EXPORTS` env var is off", async ({
-			expect,
-		}) => {
-			mockGetScript();
-			writeWranglerConfig({
-				name: "test-name",
-				main: "./index.js",
-				durable_objects: {
-					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
-				},
-				exports: {
-					MyDurableObject: { type: "durable-object", storage: "sqlite" },
-				},
-			});
-			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
-
-			await expect(runWrangler("versions upload")).rejects.toThrow(
-				/`X_DO_EXPORTS` environment variable is not set/
-			);
-		});
-
-		test("sends the `exports` payload (and omits `migrations`) when `X_DO_EXPORTS=true`", async ({
+		test("sends the `exports` payload (and omits `migrations`)", async ({
 			expect,
 		}) => {
 			// The versions POST controller (EWC) accepts `exports` and
 			// persists it on the new script_version row with
 			// `SkipDeploy:true`; reconciliation runs at deploy time
 			// (`wrangler deploy` or `wrangler versions deploy <id>`).
-			vi.stubEnv("X_DO_EXPORTS", "true");
 			mockGetScript();
 			const requests = mockUploadVersion(false, 0);
 
@@ -2377,7 +2355,6 @@ describe("versions upload", () => {
 			// `exports` but not yet provisioned — reconciliation defers to
 			// deploy, so the namespace can't exist at upload time. The message
 			// is already actionable, so wrangler surfaces it verbatim.
-			vi.stubEnv("X_DO_EXPORTS", "true");
 			mockGetScript();
 
 			const serverMessage =
@@ -2431,7 +2408,6 @@ describe("versions upload", () => {
 		}) => {
 			// A different EWC error code must pass through untransformed — the
 			// 100406 branch falls through and the original APIError surfaces.
-			vi.stubEnv("X_DO_EXPORTS", "true");
 			mockGetScript();
 
 			msw.use(
