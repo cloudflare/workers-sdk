@@ -3,7 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
-import { getCloudflareEnv } from "../environment-variables/misc-variables";
+import {
+	getCloudflareEnv,
+	getDoExportsEnabledFromEnv,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
@@ -44,6 +47,7 @@ import type {
 	ContainerApp,
 	CustomDomainRoute,
 	DispatchNamespaceOutbound,
+	DurableObjectExport,
 	Environment,
 	Observability,
 	RawEnvironment,
@@ -114,9 +118,6 @@ export type ConfigBindingFieldName =
 	| "vpc_services"
 	| "vpc_networks";
 
-/**
- * @deprecated new code should use getBindingTypeFriendlyName() instead
- */
 export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	data_blobs: "Data Blob",
 	durable_objects: "Durable Object",
@@ -841,11 +842,15 @@ function normalizeAndValidateSite(
 		validateRequiredProperty(diagnostics, "site", "bucket", bucket, "string");
 		validateTypedArray(diagnostics, "sites.include", include, "string");
 		validateTypedArray(diagnostics, "sites.exclude", exclude, "string");
+
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- this code handles the deprecated site.entry-point field
+		const legacySiteEntryPoint = rawConfig.site["entry-point"];
+
 		validateOptionalProperty(
 			diagnostics,
 			"site",
 			"entry-point",
-			rawConfig.site["entry-point"],
+			legacySiteEntryPoint,
 			"string"
 		);
 
@@ -856,8 +861,8 @@ function normalizeAndValidateSite(
 			`Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:\n` +
 				`\`\`\`\n` +
 				`main = "${path.join(
-					String(rawConfig.site["entry-point"]) || "workers-site",
-					path.extname(String(rawConfig.site["entry-point"]) || "workers-site")
+					String(legacySiteEntryPoint) || "workers-site",
+					path.extname(String(legacySiteEntryPoint) || "workers-site")
 						? ""
 						: "index.js"
 				)}"\n` +
@@ -867,7 +872,7 @@ function normalizeAndValidateSite(
 			"warning"
 		);
 
-		let siteEntryPoint = rawConfig.site["entry-point"];
+		let siteEntryPoint = legacySiteEntryPoint;
 
 		if (!mainEntryPoint && !siteEntryPoint) {
 			// this means that we're defaulting to "workers-site"
@@ -1688,6 +1693,14 @@ function normalizeAndValidateEnvironment(
 			validateMigrations,
 			[]
 		),
+		exports: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"exports",
+			validateExports,
+			{}
+		),
 		kv_namespaces: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2138,11 +2151,18 @@ function normalizeAndValidateEnvironment(
 		),
 	};
 
-	warnIfDurableObjectsHaveNoMigrations(
+	warnIfDurableObjectsHaveNoLifecycleConfig(
 		diagnostics,
 		environment.durable_objects,
 		environment.migrations,
+		environment.exports,
 		configPath
+	);
+
+	errorIfMigrationsAndExportsBothSet(
+		diagnostics,
+		environment.migrations,
+		environment.exports
 	);
 
 	// top level 'rawEnv' includes inheritable keys and is validated elsewhere
@@ -5835,6 +5855,285 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 	return valid;
 };
 
+const VALID_EXPORT_STORAGES = new Set(["sqlite", "legacy-kv"]);
+
+/**
+ * Approximate JavaScript IdentifierName matcher used for tombstone `renamed_to`
+ * validation. This catches common mistakes locally; full grammar validation
+ * still happens server-side.
+ */
+const JS_IDENTIFIER_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+function validateDurableObjectExportProperties(
+	diagnostics: Diagnostics,
+	className: string,
+	durableObjectExport: DurableObjectExport,
+	allowedProperties: string[]
+): boolean {
+	let valid = true;
+	for (const key of Object.keys(durableObjectExport)) {
+		if (!allowedProperties.includes(key)) {
+			diagnostics.errors.push(
+				`"exports.${className}.${key}" is forbidden on state "${durableObjectExport.state ?? "created"}".`
+			);
+			valid = false;
+		}
+	}
+	if (!valid) {
+		diagnostics.errors.push(
+			`Allowed properties are: ${ENGLISH.format(allowedProperties)}.`
+		);
+	}
+	return valid;
+}
+
+/**
+ * Validate a Durable Object `exports` configuration.
+ *
+ * - `type` carries the export kind and must be `"durable-object"`.
+ * - `state` carries the lifecycle: `"created"`, `"deleted"`, `"renamed"`,
+ *   `"transferred"`, or `"expecting-transfer"`.
+ * - Depending on `state`, some properties are required or forbidden.
+ *
+ * Deeper validation of `renamed_to` and `transferred_to` happens in the API.
+ */
+function validateDurableObjectExport(
+	diagnostics: Diagnostics,
+	className: string,
+	durableObjectExport: DurableObjectExport
+): boolean {
+	let valid = true;
+
+	if (className === "") {
+		diagnostics.errors.push(`"export" keys cannot be the empty string.`);
+		valid = false;
+	}
+
+	switch (durableObjectExport.state) {
+		case undefined:
+		case "created": {
+			if (
+				typeof durableObjectExport.storage !== "string" ||
+				!VALID_EXPORT_STORAGES.has(durableObjectExport.storage)
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.storage" is required for state "created" and must be one of ${ENGLISH.format(VALID_EXPORT_STORAGES)}, but got ${JSON.stringify(durableObjectExport.storage)}`
+				);
+				valid = false;
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "storage"]
+				) && valid;
+			break;
+		}
+		case "deleted": {
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state"]
+				) && valid;
+			break;
+		}
+		case "renamed": {
+			if (
+				typeof durableObjectExport.renamed_to !== "string" ||
+				durableObjectExport.renamed_to === ""
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.renamed_to" is required for state "renamed" and must be a non-empty string.`
+				);
+				valid = false;
+			} else {
+				if (!JS_IDENTIFIER_RE.test(durableObjectExport.renamed_to)) {
+					diagnostics.errors.push(
+						`"exports.${className}.renamed_to" must be a valid JavaScript identifier (got "${durableObjectExport.renamed_to}").`
+					);
+					valid = false;
+				}
+				if (durableObjectExport.renamed_to === className) {
+					diagnostics.errors.push(
+						`"exports.${className}.renamed_to" cannot equal the source class name "${className}".`
+					);
+					valid = false;
+				}
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "renamed_to"]
+				) && valid;
+			break;
+		}
+		case "transferred": {
+			if (
+				typeof durableObjectExport.transferred_to !== "string" ||
+				durableObjectExport.transferred_to === ""
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.transferred_to" is required for state "transferred" and must be a non-empty string.`
+				);
+				valid = false;
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "transferred_to"]
+				) && valid;
+			break;
+		}
+		case "expecting-transfer": {
+			if (
+				typeof durableObjectExport.storage !== "string" ||
+				!VALID_EXPORT_STORAGES.has(durableObjectExport.storage)
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.storage" is required for state "expecting-transfer" and must be one of ${ENGLISH.format(VALID_EXPORT_STORAGES)}, but got ${JSON.stringify(durableObjectExport.storage)}`
+				);
+				valid = false;
+			}
+			if (
+				typeof durableObjectExport.transfer_from !== "string" ||
+				durableObjectExport.transfer_from === ""
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.transfer_from" is required for state "expecting-transfer" and must be a non-empty string.`
+				);
+				valid = false;
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "storage", "transfer_from"]
+				) && valid;
+			break;
+		}
+		default: {
+			// Need to cast here because we have exhausted all the possible values of `state` in the switch above.
+			const state = (durableObjectExport as { state: string }).state;
+			diagnostics.errors.push(
+				`"exports.${className}.state" must be one of "created", "deleted", "renamed", "transferred", or "expecting-transfer" but got ${JSON.stringify(state)}.`
+			);
+			valid = false;
+		}
+	}
+	return valid;
+}
+
+function validateWorkerExport(
+	diagnostics: Diagnostics,
+	exportName: string,
+	workerExport: { cache?: unknown } & Record<string, unknown>
+): boolean {
+	let valid = true;
+
+	valid =
+		validateAdditionalProperties(
+			diagnostics,
+			`exports.${exportName}`,
+			Object.keys(workerExport),
+			["type", "cache"]
+		) && valid;
+
+	valid =
+		validateWorkerExportCache(
+			diagnostics,
+			`exports.${exportName}.cache`,
+			workerExport.cache
+		) && valid;
+
+	return valid;
+}
+
+function validateWorkerExportCache(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): boolean {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const cache = value as Record<string, unknown>;
+	let valid = true;
+
+	valid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"enabled",
+			cache.enabled,
+			"boolean"
+		) && valid;
+
+	valid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(cache), [
+			"enabled",
+		]) && valid;
+
+	return valid;
+}
+
+const validateExports: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined || value === null) {
+		return true;
+	}
+	if (typeof value !== "object" || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`The optional "${field}" field should be an object keyed by class name, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+
+	let valid = true;
+	for (const [exportName, exportConfig] of Object.entries(value)) {
+		if (typeof exportConfig !== "object" || exportConfig === null) {
+			diagnostics.errors.push(
+				`"exports.${exportName}" should be an object but got ${JSON.stringify(
+					exportConfig
+				)}.`
+			);
+			valid = false;
+			continue;
+		}
+		if (exportConfig.type === "durable-object") {
+			valid =
+				validateDurableObjectExport(diagnostics, exportName, exportConfig) &&
+				valid;
+		} else if (exportConfig.type === "worker") {
+			valid =
+				validateWorkerExport(diagnostics, exportName, exportConfig) && valid;
+		} else {
+			valid = false;
+			diagnostics.errors.push(
+				`"exports.${exportName}.type" must be "durable-object" or "worker", but got ${JSON.stringify(exportConfig.type)}.`
+			);
+		}
+	}
+
+	return valid;
+};
+
 const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined) {
 		return true;
@@ -6044,55 +6343,130 @@ const validateCache: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"cross_version_cache",
+			val.cross_version_cache,
+			"boolean"
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
+			"cross_version_cache",
 		]) && isValid;
 
 	return isValid;
 };
 
-function warnIfDurableObjectsHaveNoMigrations(
+/**
+ * Emit a warning if a local Durable Object binding is not covered by either a
+ * live `exports` entry or a `migrations` block.
+ */
+function warnIfDurableObjectsHaveNoLifecycleConfig(
 	diagnostics: Diagnostics,
 	durableObjects: Config["durable_objects"],
 	migrations: Config["migrations"],
+	exports: Config["exports"],
 	configPath: string | undefined
 ) {
 	if (
-		Array.isArray(durableObjects.bindings) &&
-		durableObjects.bindings.length > 0
+		!Array.isArray(durableObjects.bindings) ||
+		durableObjects.bindings.length === 0
 	) {
-		// intrinsic [durable_objects] implies [migrations]
-		const exportedDurableObjects = (durableObjects.bindings || []).filter(
-			(binding) => !binding.script_name
-		);
-		if (exportedDurableObjects.length > 0 && migrations.length === 0) {
-			if (
-				!exportedDurableObjects.some(
-					(exportedDurableObject) =>
-						typeof exportedDurableObject.class_name !== "string"
-				)
-			) {
-				const durableObjectClassnames = exportedDurableObjects.map(
-					(durable) => durable.class_name
-				);
+		return;
+	}
 
-				diagnostics.warnings.push(dedent`
-				In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your ${configFileName(configPath)} file. Add the following configuration:
-
-				\`\`\`
-				${formatConfigSnippet(
-					{
-						migrations: [
-							{ tag: "v1", new_sqlite_classes: durableObjectClassnames },
-						],
-					},
-					configPath
-				)}
-				\`\`\`
-
-				Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
-			}
+	// intrinsic [durable_objects] implies [migrations] (or `exports`)
+	const exportedDurableObjects = durableObjects.bindings.filter(
+		(binding) => !binding.script_name
+	);
+	// Tombstones do not cover a local binding because the class is being
+	// retired or moved.
+	const exportsCovers = (className: string) => {
+		const entry = exports?.[className];
+		if (entry === undefined || entry.type !== "durable-object") {
+			return false;
 		}
+		const state = entry.state ?? "created";
+		return state === "created" || state === "expecting-transfer";
+	};
+	const uncoveredByExports = exportedDurableObjects.filter(
+		(binding) =>
+			typeof binding.class_name !== "string" ||
+			!exportsCovers(binding.class_name)
+	);
+
+	if (uncoveredByExports.length === 0 || migrations.length > 0) {
+		return;
+	}
+	if (
+		uncoveredByExports.some(
+			(exportedDurableObject) =>
+				typeof exportedDurableObject.class_name !== "string"
+		)
+	) {
+		return;
+	}
+
+	const durableObjectClassnames = uncoveredByExports.map(
+		(durable) => durable.class_name
+	) as string[];
+
+	const usingExports = exports !== undefined && Object.keys(exports).length > 0;
+	const preferExports = usingExports || getDoExportsEnabledFromEnv();
+
+	if (preferExports) {
+		const suggestedExports: NonNullable<RawConfig["exports"]> = {};
+		for (const className of durableObjectClassnames) {
+			suggestedExports[className] = {
+				type: "durable-object",
+				storage: "sqlite",
+			};
+		}
+
+		diagnostics.warnings.push(dedent`
+		In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
+
+		\`\`\`
+		${formatConfigSnippet({ exports: suggestedExports }, configPath)}
+		\`\`\``);
+		return;
+	}
+
+	diagnostics.warnings.push(dedent`
+	In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your ${configFileName(configPath)} file. Add the following configuration:
+
+	\`\`\`
+	${formatConfigSnippet(
+		{
+			migrations: [{ tag: "v1", new_sqlite_classes: durableObjectClassnames }],
+		},
+		configPath
+	)}
+	\`\`\`
+
+	Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
+}
+
+/**
+ * `migrations` and `exports` are mutually exclusive ways to declare Durable
+ * Object lifecycle. Validate this before any upload starts.
+ */
+function errorIfMigrationsAndExportsBothSet(
+	diagnostics: Diagnostics,
+	migrations: Config["migrations"],
+	exports: Config["exports"]
+) {
+	if (
+		migrations.length > 0 &&
+		exports !== undefined &&
+		Object.values(exports).some((entry) => entry.type === "durable-object")
+	) {
+		diagnostics.errors.push(
+			`\`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both.`
+		);
 	}
 }
 

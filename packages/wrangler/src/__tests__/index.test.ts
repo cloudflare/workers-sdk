@@ -65,6 +65,7 @@ describe("wrangler", () => {
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
+				  wrangler flagship               🚩 Manage Flagship apps and feature flags [open beta]
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
@@ -165,6 +166,7 @@ describe("wrangler", () => {
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
+				  wrangler flagship               🚩 Manage Flagship apps and feature flags [open beta]
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]

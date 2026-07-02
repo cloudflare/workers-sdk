@@ -3,6 +3,7 @@ import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
+	assertDoExportsEnabledIfConfigured,
 	configFileName,
 	formatConfigSnippet,
 	getTodaysCompatDate,
@@ -401,6 +402,7 @@ async function resolveConfig(
 		projectRoot: entry.projectRoot,
 		bindings,
 		migrations: input.migrations ?? config.migrations,
+		exports: input.exports ?? config.exports,
 		sendMetrics: input.sendMetrics ?? config.send_metrics,
 		triggers: await resolveTriggers(config, input),
 		env: input.env,
@@ -504,6 +506,9 @@ async function resolveConfig(
 		);
 	}
 
+	// Keep dev aligned with deploy when declarative `exports` is configured.
+	assertDoExportsEnabledIfConfigured(resolved.exports, "dev");
+
 	if (resolved.dev.remote) {
 		// We're in remote mode (`--remote`)
 
@@ -519,7 +524,8 @@ async function resolveConfig(
 
 		// TODO(do) support remote wrangler dev
 		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
-			resolved.migrations
+			resolved.migrations,
+			resolved.exports
 		);
 		if (
 			resolved.dev.remote &&
