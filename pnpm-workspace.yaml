@@ -57,6 +57,10 @@ minimumReleaseAgeExclude:
 allowBuilds:
   esbuild: true
   workerd: true
+  # miniflare's direct `sharp` (0.35+) has no install script, but the
+  # catalog-pinned published @cloudflare/vitest-pool-workers still pulls in
+  # sharp@0.34.x transitively (via published miniflare), which does. Remove
+  # once that pin uses a published miniflare built on sharp 0.35+.
   sharp: true
   playwright-chromium: true
   prisma: true
