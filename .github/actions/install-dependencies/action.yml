@@ -2,9 +2,13 @@ name: "Install Dependencies"
 description: "Install dependencies, fetching from cache when possible"
 inputs:
   # We run all jobs on Node.js 22 by default, as this is the most stable and supported version right now.
+  #
+  # Pinned to 22.23.1 (rather than floating `22`) until it's safe to float back:
+  # Node 22.23.0 regressed node-fetch@2 keep-alive responses with
+  # ERR_STREAM_PREMATURE_CLOSE (nodejs/node#63989, fixed in 22.23.1).
   node-version:
     description: the version of Node.js to install
-    default: 22
+    default: 22.23.1
   turbo-api:
     description: the api URL for connecting to the turbo remote cache
   turbo-team:
