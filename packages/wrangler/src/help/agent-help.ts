@@ -61,8 +61,10 @@ export function shouldUseAgentHelp(): boolean {
 	}
 
 	try {
-		// TODO(@nurodev): Remove `detectAgenticEnvironment` use as it's deprecated
-		const { type } = detectAgenticEnvironment(process.env, []);
+		const { type } = detectAgenticEnvironment({
+			env: process.env,
+			processAncestry: [],
+		});
 		return type === "agent" || type === "hybrid";
 	} catch {
 		// Silent failure: default to the standard human output.
