@@ -2591,7 +2591,7 @@ export async function main(argv: string[]): Promise<void> {
 	const { wrangler, registry, globalFlags, showHelpWithCategories } =
 		createCLIParser(argv);
 
-	// When an AI coding agent is detected (or forced via WRANGLER_HELP_FORMAT),
+	// When an AI coding agent is detected (or forced via `WRANGLER_HELP_FORMAT`),
 	// render help as Markdown by walking the command registry directly.
 	// This short-circuits before yargs parsing so it covers both the root and
 	// any subcommand/namespace help request.
@@ -2600,10 +2600,10 @@ export async function main(argv: string[]): Promise<void> {
 		const command = resolveCommandNode(root, nonFlagArgs);
 		logger.log(
 			renderAgentHelp({
-				root,
 				command,
 				globalFlags,
 				orderedCategories: registry.orderedCategories,
+				root,
 			})
 		);
 		return;
