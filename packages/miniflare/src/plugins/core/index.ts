@@ -315,6 +315,8 @@ export const CoreSharedOptionsSchema = z
 		// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
 		// (for example, to test timezone-dependent behaviour).
 		unsafeRuntimeEnv: z.record(z.string()).optional(),
+		// Use capnweb for Worker service binding JS RPC calls from Node.
+		unsafeCapnwebRpcProxy: z.boolean().default(true),
 		// Enable the local explorer at /cdn-cgi/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
 		// Enable logging requests

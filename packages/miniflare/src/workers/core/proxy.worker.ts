@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
+import { newWorkersRpcResponse, RpcTarget } from "capnweb";
 import { parse } from "devalue";
 import { readPrefix, reduceError } from "miniflare:shared";
 import {
@@ -109,6 +110,20 @@ type Env = Record<string, unknown> & {
 	[CoreBindings.DATA_PROXY_SECRET]: ArrayBuffer;
 };
 
+class CapnwebProxyServer extends RpcTarget {
+	constructor(readonly env: Env) {
+		super();
+	}
+
+	getEnvBinding(name: string) {
+		return this.env[name];
+	}
+
+	getGlobalProperty(name: string) {
+		return (globalThis as Record<string, unknown>)[name];
+	}
+}
+
 // TODO(someday): extract `ProxyServer` into component that could be used by
 //  other (user) Durable Objects
 export class ProxyServer implements DurableObject {
@@ -194,7 +209,10 @@ export class ProxyServer implements DurableObject {
 		}
 
 		// Validate secret header to prevent unauthorised access to proxy
-		const secretHex = request.headers.get(CoreHeaders.OP_SECRET);
+		const requestUrl = new URL(request.url);
+		const secretHex =
+			request.headers.get(CoreHeaders.OP_SECRET) ??
+			requestUrl.searchParams.get(CoreHeaders.OP_SECRET);
 		if (secretHex == null) return new Response(null, { status: 401 });
 		const expectedSecret = this.env[CoreBindings.DATA_PROXY_SECRET];
 		const secretBuffer = Buffer.from(secretHex, "hex");
@@ -206,6 +224,9 @@ export class ProxyServer implements DurableObject {
 		}
 
 		const opHeader = request.headers.get(CoreHeaders.OP);
+		if (opHeader === null) {
+			return newWorkersRpcResponse(request, new CapnwebProxyServer(this.env));
+		}
 		const targetHeader = request.headers.get(CoreHeaders.OP_TARGET);
 		const keyHeader = request.headers.get(CoreHeaders.OP_KEY);
 		const allowAsync = request.headers.get(CoreHeaders.OP_SYNC) === null;

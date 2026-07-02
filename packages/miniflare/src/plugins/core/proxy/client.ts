@@ -3,6 +3,8 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import { ReadableStream, TransformStream } from "node:stream/web";
 import util from "node:util";
+import { Worker } from "node:worker_threads";
+import { newWebSocketRpcSession } from "capnweb";
 import { stringify } from "devalue";
 import { Headers } from "undici";
 import { Request } from "../../../http";
@@ -92,6 +94,162 @@ const revivers: ReducersRevivers = {
 
 export const PROXY_SECRET = crypto.randomBytes(16);
 const PROXY_SECRET_HEX = PROXY_SECRET.toString("hex");
+
+type CapnwebProxyServer = {
+	getEnvBinding(name: string): Promise<unknown>;
+	getGlobalProperty(name: string): Promise<unknown>;
+	[Symbol.dispose]?: () => void;
+};
+
+type WebSocketWorkerMessage =
+	| { type: "open" }
+	| { type: "message"; data: string }
+	| { type: "close"; code: number; reason: string }
+	| { type: "error" };
+
+type WebSocketListener = (event: Record<string, unknown>) => void;
+
+const WEBSOCKET_WORKER_SCRIPT = /* javascript */ `
+const { createRequire } = require("module");
+const { parentPort, workerData } = require("worker_threads");
+
+const actualRequire = createRequire(workerData.filename);
+const WebSocket = actualRequire("ws");
+
+const ws = new WebSocket(workerData.url, {
+  headers: workerData.headers,
+});
+
+ws.on("open", () => parentPort.postMessage({ type: "open" }));
+ws.on("message", (data) => {
+  parentPort.postMessage({
+    type: "message",
+    data: typeof data === "string" ? data : data.toString(),
+  });
+});
+ws.on("close", (code, reason) => {
+  parentPort.postMessage({ type: "close", code, reason: reason.toString() });
+  process.exit(0);
+});
+ws.on("error", () => {
+  parentPort.postMessage({ type: "error" });
+});
+
+parentPort.on("message", (message) => {
+  if (message.type === "send") {
+    ws.send(message.data);
+  } else if (message.type === "close") {
+    ws.close();
+  }
+});
+`;
+
+class WorkerBackedWebSocket {
+	readyState = WebSocket.CONNECTING;
+	readonly #worker: Worker;
+	readonly #listeners = new Map<string, Set<WebSocketListener>>();
+
+	constructor(url: URL) {
+		this.#worker = new Worker(WEBSOCKET_WORKER_SCRIPT, {
+			eval: true,
+			execArgv: [],
+			workerData: {
+				filename: __filename,
+				url: url.href,
+				headers: { [CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX },
+			},
+		});
+		this.#worker.unref();
+		this.#worker.on("message", (message: WebSocketWorkerMessage) => {
+			if (message.type === "open") {
+				this.readyState = WebSocket.OPEN;
+				this.#dispatch("open", {});
+			} else if (message.type === "message") {
+				this.#dispatch("message", { data: message.data });
+			} else if (message.type === "close") {
+				this.readyState = WebSocket.CLOSED;
+				this.#dispatch("close", {
+					code: message.code,
+					reason: message.reason,
+				});
+			} else if (message.type === "error") {
+				this.#dispatch("error", {});
+			}
+		});
+	}
+
+	addEventListener(type: string, listener: WebSocketListener) {
+		let listeners = this.#listeners.get(type);
+		if (listeners === undefined) {
+			listeners = new Set();
+			this.#listeners.set(type, listeners);
+		}
+		listeners.add(listener);
+	}
+
+	removeEventListener(type: string, listener: WebSocketListener) {
+		this.#listeners.get(type)?.delete(listener);
+	}
+
+	send(data: string) {
+		this.#worker.postMessage({ type: "send", data });
+	}
+
+	close() {
+		this.readyState = WebSocket.CLOSING;
+		this.#worker.postMessage({ type: "close" });
+	}
+
+	#dispatch(type: string, event: Record<string, unknown>) {
+		for (const listener of this.#listeners.get(type) ?? []) {
+			listener(event);
+		}
+	}
+}
+
+export class CapnwebProxyClient {
+	#root?: CapnwebProxyServer;
+
+	constructor(private runtimeEntryURL: URL) {}
+
+	#url() {
+		const url = new URL(CorePaths.PLATFORM_PROXY, this.runtimeEntryURL);
+		return url;
+	}
+
+	async #ensureRoot() {
+		if (this.#root === undefined) {
+			const webSocket = new WorkerBackedWebSocket(this.#url());
+			this.#root = newWebSocketRpcSession<CapnwebProxyServer>(
+				webSocket as unknown as globalThis.WebSocket
+			);
+		}
+		return this.#root;
+	}
+
+	async getEnvBinding(name: string) {
+		return (await this.#ensureRoot()).getEnvBinding(name);
+	}
+
+	async getGlobalProperty(name: string) {
+		return (await this.#ensureRoot()).getGlobalProperty(name);
+	}
+
+	poisonProxies(): void {
+		this.#root?.[Symbol.dispose]?.();
+		this.#root = undefined;
+	}
+
+	setRuntimeEntryURL(runtimeEntryURL: URL) {
+		this.runtimeEntryURL = runtimeEntryURL;
+		this.poisonProxies();
+	}
+
+	dispose(): Promise<void> {
+		this.poisonProxies();
+		return Promise.resolve();
+	}
+}
 
 function isClientError(status: number) {
 	return 400 <= status && status < 500;
