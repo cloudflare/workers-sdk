@@ -1,4 +1,8 @@
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import {
+	readWranglerConfig,
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -115,6 +119,7 @@ describe("flagship", () => {
 			expect(std.out).toContain("Created Flagship app");
 			expect(std.out).toContain("checkout");
 			expect(std.out).toContain("app-1");
+			expect(std.out).toContain("To access your new Flagship");
 		});
 
 		it("sends a JSON content-type so the API parses the body", async ({
@@ -126,6 +131,42 @@ describe("flagship", () => {
 			});
 			await runWrangler("flagship apps create checkout");
 			await expect(contentType).resolves.toContain("application/json");
+		});
+
+		it("adds a created app to wrangler.jsonc when given a binding", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({}, "./wrangler.jsonc");
+			const body = captureBody("post", "apps", {
+				id: "app-1",
+				name: "checkout",
+				created_at: "2026-01-01",
+				updated_at: "2026-01-02",
+				updated_by: "dev@cloudflare.com",
+			});
+			await runWrangler("flagship apps create checkout --binding FLAGS");
+			await expect(body).resolves.toEqual({ name: "checkout" });
+			expect(readWranglerConfig("./wrangler.jsonc")).toMatchObject({
+				flagship: [{ binding: "FLAGS", app_id: "app-1" }],
+			});
+		});
+
+		it("does not update config when creating an app with --json", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({}, "./wrangler.jsonc");
+			msw.use(
+				http.post("*/accounts/:accountId/flagship/apps", () =>
+					HttpResponse.json(
+						createFetchResult({ id: "app-1", name: "checkout" }, true)
+					)
+				)
+			);
+			await runWrangler("flagship apps create checkout --binding FLAGS --json");
+			expect(JSON.parse(std.out)).toEqual({ id: "app-1", name: "checkout" });
+			expect(readWranglerConfig("./wrangler.jsonc")).not.toHaveProperty(
+				"flagship"
+			);
 		});
 
 		it("lists apps", async ({ expect }) => {

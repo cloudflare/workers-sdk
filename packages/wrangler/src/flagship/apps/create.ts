@@ -1,6 +1,10 @@
-import { dim } from "@cloudflare/cli-shared-helpers/colors";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
+import {
+	createdResourceConfig,
+	sharedResourceCreationArgs,
+} from "../../utils/add-created-resource-config";
+import { getValidBindingName } from "../../utils/getValidBindingName";
 import { createApp } from "../client";
 import { renderApp } from "../render";
 
@@ -24,9 +28,11 @@ export const flagshipAppsCreateCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["name"],
-	async handler({ name, json }, { config }) {
+	async handler(args, { config }) {
+		const { name, json } = args;
 		const app = await createApp(config, name);
 		if (json) {
 			logger.json(app);
@@ -34,15 +40,16 @@ export const flagshipAppsCreateCommand = createCommand({
 		}
 		logger.log(`✅ Created Flagship app\n`);
 		logger.log(renderApp(app));
-		logger.log(
-			`\n${dim("Bind this app to a Worker by adding to your Wrangler configuration:")}`
-		);
-		logger.log(
-			JSON.stringify(
-				{ flagship: [{ binding: "FLAGS", app_id: app.id }] },
-				null,
-				2
-			)
+
+		await createdResourceConfig(
+			"flagship",
+			(bindingName) => ({
+				binding: getValidBindingName(bindingName ?? app.name, "FLAGS"),
+				app_id: app.id,
+			}),
+			config.configPath,
+			args.env,
+			args
 		);
 	},
 });
