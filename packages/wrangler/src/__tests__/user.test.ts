@@ -1,8 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+	resetCredentialStorageState,
+	setKeyProviderFactoryForTesting,
+} from "@cloudflare/workers-auth";
+import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalConfigPath,
+	UserError,
 } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -11,7 +16,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../config-cache";
 import * as metricsModule from "../metrics";
 import {
@@ -24,8 +29,10 @@ import {
 	getOrSelectAccountId,
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
+	readAuthCredentials,
 	requireAuth,
 	writeAuthConfigFile,
+	writeAuthCredentials,
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockSelect } from "./helpers/mock-dialogs";
@@ -57,6 +64,16 @@ describe("User", () => {
 	});
 
 	describe("login", () => {
+		// Tear down the keyring test seam after every test in this block so
+		// a failing assertion mid-test does not leak the stubbed
+		// `KeyProvider` factory or the session-level resolver warning
+		// latches into the next test. Cheap to run; no-op when the seam was
+		// never installed.
+		afterEach(() => {
+			setKeyProviderFactoryForTesting(undefined);
+			resetCredentialStorageState();
+		});
+
 		it("should login a user when `wrangler login` is run", async ({
 			expect,
 		}) => {
@@ -91,7 +108,7 @@ describe("User", () => {
 				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
-			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
 				api_token: undefined,
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
@@ -179,7 +196,7 @@ describe("User", () => {
 				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
-			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
 				api_token: undefined,
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
@@ -225,7 +242,7 @@ describe("User", () => {
 				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
-			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
 				api_token: undefined,
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
@@ -271,7 +288,7 @@ describe("User", () => {
 				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
-			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
 				api_token: undefined,
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
@@ -317,7 +334,7 @@ describe("User", () => {
 			expect(normalizeString(getAuthConfigFilePath())).toBe(
 				normalizeString(`${getGlobalConfigPath()}/config/staging.toml`)
 			);
-			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
 				api_token: undefined,
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
@@ -482,13 +499,550 @@ describe("User", () => {
 				sendMetricsEventSpy.mockRestore();
 			}
 		});
+
+		it("--use-keyring stores credentials in an encrypted file with a key in the OS keyring", async ({
+			expect,
+		}) => {
+			// Install an in-memory KeyProvider so the test never touches the
+			// real keychain. The KeyProvider holds the encryption key; the
+			// encrypted credential blob lives in a `.enc` file on disk.
+			// (Cleanup of the seam runs in the describe-level `afterEach`.)
+			const { getEncryptedAuthConfigFilePath } =
+				await import("../user/auth-config-file");
+			const keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName) => ({
+				getKey: () => keyringStore.get(`${serviceName}::default`),
+				setKey: (key) => {
+					keyringStore.set(`${serviceName}::default`, key);
+				},
+				deleteKey: () => {
+					keyringStore.delete(`${serviceName}::default`);
+				},
+				describe: () => "in-memory test keyring",
+			}));
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --use-keyring");
+
+			// Plaintext TOML must not be created on a fresh
+			// `--use-keyring` login.
+			expect(fs.existsSync(getAuthConfigFilePath())).toBe(false);
+			// Encrypted file should be present, and the keyring should hold
+			// the encryption key.
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+			// `readAuthCredentials()` routes through the active store, which
+			// decrypts the encrypted file using the keyring-held key.
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+			// The on-disk ciphertext must not contain the cleartext token.
+			expect(
+				fs.readFileSync(getEncryptedAuthConfigFilePath(), "utf8")
+			).not.toContain("test-access-token");
+		});
+
+		it("--no-use-keyring scrubs encrypted credentials without writing them to plaintext, then the fresh login uses the file store", async ({
+			expect,
+		}) => {
+			const { getEncryptedAuthConfigFilePath } =
+				await import("../user/auth-config-file");
+			const { updateUserPreferences } = await import("../user/preferences");
+			const keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName) => ({
+				getKey: () => keyringStore.get(`${serviceName}::default`),
+				setKey: (key) => {
+					keyringStore.set(`${serviceName}::default`, key);
+				},
+				deleteKey: () => {
+					keyringStore.delete(`${serviceName}::default`);
+				},
+				describe: () => "in-memory test keyring",
+			}));
+			// Seed the persistent opt-in so the --no-use-keyring flag has
+			// something to override, and pre-populate the encrypted store
+			// with stale credentials so we can prove opt-out scrubs them
+			// (rather than decrypting them onto disk in plaintext).
+			updateUserPreferences({ keyring_enabled: true });
+			writeAuthCredentials({
+				oauth_token: "stale-encrypted-token",
+				refresh_token: "stale-encrypted-refresh",
+			});
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "new-plaintext-token",
+							expires_in: 100000,
+							refresh_token: "new-plaintext-refresh",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --no-use-keyring");
+
+			// Encrypted file and keyring entry must both be scrubbed —
+			// opt-out should NOT decrypt the credentials onto disk in
+			// plaintext, because that would defeat the at-rest protection
+			// the user is choosing to disable.
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+			expect(keyringStore.size).toBe(0);
+
+			// The fresh login that follows opt-out writes the *new* tokens
+			// into the plaintext TOML file via the file store.
+			expect(fs.existsSync(getAuthConfigFilePath())).toBe(true);
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
+				oauth_token: "new-plaintext-token",
+				refresh_token: "new-plaintext-refresh",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+			// Critically, the old encrypted-store credentials must not
+			// appear on disk anywhere.
+			expect(fs.readFileSync(getAuthConfigFilePath(), "utf8")).not.toContain(
+				"stale-encrypted-token"
+			);
+		});
+
+		it("--no-use-keyring still scrubs the encrypted credentials and keyring entry when CLOUDFLARE_AUTH_USE_KEYRING=false is set (the env var must not defeat the opt-out scrub)", async ({
+			expect,
+		}) => {
+			// Regression test: with CLOUDFLARE_AUTH_USE_KEYRING=false set,
+			// the credential-store resolver short-circuits to
+			// FileCredentialStore (resolver.ts lines 32-34). Going through
+			// `getCredentialStore()` for the opt-out scrub would therefore
+			// delete only the plaintext `.toml` and leave the `.enc` file
+			// and the keyring entry intact. The opt-out path must resolve
+			// the encrypted store directly to guarantee the scrub targets
+			// the backend the user is opting out of regardless of the
+			// env-var state.
+			//
+			// Models the realistic user scenario: a prior session opted
+			// into keyring storage (no env var, or env var allowed it),
+			// and a later session has CLOUDFLARE_AUTH_USE_KEYRING=false in
+			// the shell when running `wrangler login --no-use-keyring`.
+			const { getEncryptedAuthConfigFilePath } =
+				await import("../user/auth-config-file");
+			const { updateUserPreferences } = await import("../user/preferences");
+			const keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName) => ({
+				getKey: () => keyringStore.get(`${serviceName}::default`),
+				setKey: (key) => {
+					keyringStore.set(`${serviceName}::default`, key);
+				},
+				deleteKey: () => {
+					keyringStore.delete(`${serviceName}::default`);
+				},
+				describe: () => "in-memory test keyring",
+			}));
+			// Seed the persistent opt-in and pre-populate the encrypted
+			// store with stale credentials so we can prove the scrub runs
+			// against the encrypted backend even with the env var set.
+			// The seed runs *before* stubbing the env var so the resolver
+			// still picks the encrypted store for the seed write.
+			updateUserPreferences({ keyring_enabled: true });
+			writeAuthCredentials({
+				oauth_token: "stale-encrypted-token",
+				refresh_token: "stale-encrypted-refresh",
+			});
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+
+			// Now stub the env var to model the later session. From this
+			// point on the resolver short-circuits to FileCredentialStore.
+			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "false");
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "new-plaintext-token",
+							expires_in: 100000,
+							refresh_token: "new-plaintext-refresh",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --no-use-keyring");
+
+			// Without the fix, the resolver would short-circuit to the
+			// file store on the env var and neither of these would hold:
+			// the `.enc` file and the keyring entry would still be on
+			// disk after opt-out.
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+			expect(keyringStore.size).toBe(0);
+
+			// The fresh login that follows opt-out writes the *new*
+			// tokens into the plaintext TOML file via the file store.
+			expect(fs.existsSync(getAuthConfigFilePath())).toBe(true);
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
+				oauth_token: "new-plaintext-token",
+				refresh_token: "new-plaintext-refresh",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+			// The old encrypted-store credentials must not leak into
+			// plaintext anywhere on disk.
+			expect(fs.readFileSync(getAuthConfigFilePath(), "utf8")).not.toContain(
+				"stale-encrypted-token"
+			);
+		});
+
+		it("--use-keyring rolls the keyring_enabled preference back when eager credential-store validation throws", async ({
+			expect,
+		}) => {
+			// Regression: persisting `keyring_enabled: true` *before* the
+			// eager validation call leaves a stale `true` on disk when the
+			// validation throws. Subsequent invocations would then soft-
+			// fall-back to the file store with a one-time warning on every
+			// command until the user explicitly ran `--no-use-keyring`.
+			// The opt-in path must roll back the persisted preference when
+			// the eager validation surfaces a failure.
+			const { readUserPreferences } = await import("../user/preferences");
+
+			// Force the eager validation to throw by giving the test seam
+			// a factory that itself throws when `resolveKeyProvider` calls
+			// it. The throw propagates through `getActiveStore()` and out
+			// of `getCredentialStore()`, which is exactly the platform-
+			// install / non-interactive-CI failure shape we care about.
+			setKeyProviderFactoryForTesting(() => {
+				throw new UserError("Simulated eager-validation failure", {
+					telemetryMessage: "test eager validation failure",
+				});
+			});
+
+			// Starting state: no preference persisted yet.
+			expect(readUserPreferences().keyring_enabled).toBeUndefined();
+
+			await expect(runWrangler("login --use-keyring")).rejects.toThrow(
+				"Simulated eager-validation failure"
+			);
+
+			// The preference must not be left at `true` on disk — either
+			// rolled back to `false` (its previous boolean value) or
+			// unset. Anything but `true` is acceptable; subsequent
+			// invocations must not see the opt-in as live.
+			expect(readUserPreferences().keyring_enabled).not.toBe(true);
+		});
+
+		it("--use-keyring rolls the keyring_enabled preference back when the resolver soft-falls-back to the file store", async ({
+			expect,
+		}) => {
+			// Regression for the *soft-fallback* arm of the eager
+			// validation: when the resolver returns `FileCredentialStore`
+			// without throwing (e.g. interactive Linux without
+			// `secret-tool`, unsupported platform without env-var force,
+			// Windows install failure not forced), the try/catch around
+			// `getCredentialStore()` doesn't fire. Without an explicit
+			// `.kind` check the preference stays persisted as
+			// `keyring_enabled: true`, so every future command re-resolves,
+			// soft-falls-back again, and re-emits the one-time warning
+			// latch until the user runs `--no-use-keyring`. The opt-in
+			// path must detect "got a file store back" and roll back too.
+			const { readUserPreferences } = await import("../user/preferences");
+
+			// Force the resolver onto the `unsupported` arm by stubbing
+			// the platform. Unsupported-without-force returns a
+			// `FileCredentialStore` with a one-time warning; no throw.
+			// `setKeyProviderFactoryForTesting(undefined)` (the default
+			// after `afterEach`) ensures the real resolver runs.
+			const ORIGINAL_PLATFORM = process.platform;
+			Object.defineProperty(process, "platform", {
+				value: "freebsd",
+				configurable: true,
+			});
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			expect(readUserPreferences().keyring_enabled).toBeUndefined();
+
+			try {
+				await runWrangler("login --use-keyring");
+			} finally {
+				Object.defineProperty(process, "platform", {
+					value: ORIGINAL_PLATFORM,
+					configurable: true,
+				});
+			}
+
+			// The soft-fallback must not leave `keyring_enabled: true` on
+			// disk — otherwise every subsequent command re-warns.
+			expect(readUserPreferences().keyring_enabled).not.toBe(true);
+			// And the user must have been told why the opt-in did not
+			// stick, so they're not surprised when subsequent commands
+			// don't behave as if keyring is enabled.
+			expect(std.warn).toContain("it was not enabled");
+		});
+
+		it("--use-keyring persists the preference and skips the misleading rollback when CLOUDFLARE_AUTH_USE_KEYRING=false overrides for this command", async ({
+			expect,
+		}) => {
+			// Regression: the eager validation in `commands.ts` resolves the
+			// active credential store via `getCredentialStore()`. When
+			// `CLOUDFLARE_AUTH_USE_KEYRING=false` is set, the resolver
+			// short-circuits to `FileCredentialStore` *unconditionally*
+			// (resolver.ts: the env-var check runs before any keyring
+			// probe), so `store.kind !== "encrypted-file"` would always
+			// fire. That rolled back the user's persisted preference and
+			// emitted a misleading "not available on this host" warning,
+			// even though the env var only governs *this* command and the
+			// keyring backend may be perfectly reachable.
+			//
+			// The fix skips the eager validation when the env var
+			// explicitly forces the file store. The persisted preference
+			// must survive for future commands, the misleading warnings
+			// must not appear, and this command's credentials must still
+			// land in the plaintext file (env-var precedence is unchanged).
+			const { getEncryptedAuthConfigFilePath } =
+				await import("../user/auth-config-file");
+			const { readUserPreferences } = await import("../user/preferences");
+
+			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "false");
+
+			expect(readUserPreferences().keyring_enabled).toBeUndefined();
+
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --use-keyring");
+
+			// The persistent preference must be written, so a later
+			// command run *without* the env var picks up the user's opt-in.
+			expect(readUserPreferences().keyring_enabled).toBe(true);
+
+			// The user must have been told that the env var overrides
+			// the flag for this command. That warning is the contract
+			// the rest of the behavior depends on.
+			expect(std.warn).toContain(
+				"CLOUDFLARE_AUTH_USE_KEYRING=false overrides enabling keyring storage for this command"
+			);
+
+			// The misleading rollback warnings must NOT appear: the env
+			// var, not the host's keyring availability, is the reason
+			// we're using the file store right now.
+			expect(std.warn).not.toContain("Keyring storage isn't available");
+			expect(std.warn).not.toContain("it was not enabled");
+
+			// Env-var precedence is unchanged: this command's credentials
+			// land in the plaintext file, and the encrypted file is not
+			// created.
+			expect(fs.existsSync(getAuthConfigFilePath())).toBe(true);
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+		});
+	});
+
+	describe("auth keyring", () => {
+		afterEach(() => {
+			setKeyProviderFactoryForTesting(undefined);
+			resetCredentialStorageState();
+		});
+
+		// In-memory keyring keyed by service + profile so each profile gets
+		// its own key (mirrors the real per-profile keyring account name).
+		function stubInMemoryKeyring(): Map<string, Uint8Array> {
+			const keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName, profile) => {
+				const account = `${serviceName}::${profile ?? "default"}`;
+				return {
+					getKey: () => keyringStore.get(account),
+					setKey: (key) => {
+						keyringStore.set(account, key);
+					},
+					deleteKey: () => {
+						keyringStore.delete(account);
+					},
+					describe: () => `in-memory test keyring (${account})`,
+				};
+			});
+			return keyringStore;
+		}
+
+		it("`auth keyring enable` persists the preference without requiring a login", async ({
+			expect,
+		}) => {
+			const { readUserPreferences } = await import("../user/preferences");
+			stubInMemoryKeyring();
+
+			// No OAuth handler is registered for this test: enabling keyring
+			// storage must NOT trigger a login (this is the whole point —
+			// profile-only users opt in without `wrangler login`).
+			await runWrangler("auth keyring enable");
+
+			expect(readUserPreferences().keyring_enabled).toBe(true);
+			expect(std.out).toContain("Keyring storage enabled");
+			// No credentials were written.
+			expect(fs.existsSync(getAuthConfigFilePath())).toBe(false);
+		});
+
+		it("`auth keyring enable` rolls the preference back when the keyring backend is unavailable", async ({
+			expect,
+		}) => {
+			const { readUserPreferences } = await import("../user/preferences");
+			// No stub → real resolver; force the unsupported arm.
+			const ORIGINAL_PLATFORM = process.platform;
+			Object.defineProperty(process, "platform", {
+				value: "freebsd",
+				configurable: true,
+			});
+			try {
+				await runWrangler("auth keyring enable");
+			} finally {
+				Object.defineProperty(process, "platform", {
+					value: ORIGINAL_PLATFORM,
+					configurable: true,
+				});
+			}
+
+			expect(readUserPreferences().keyring_enabled).not.toBe(true);
+			expect(std.warn).toContain("it was not enabled");
+		});
+
+		it("`auth keyring disable` scrubs the default profile's encrypted credentials", async ({
+			expect,
+		}) => {
+			const { getEncryptedAuthConfigFilePath } =
+				await import("../user/auth-config-file");
+			const { readUserPreferences, updateUserPreferences } =
+				await import("../user/preferences");
+			const keyringStore = stubInMemoryKeyring();
+
+			// Seed an encrypted default profile.
+			updateUserPreferences({ keyring_enabled: true });
+			writeAuthCredentials({
+				oauth_token: "enc-token",
+				refresh_token: "enc-refresh",
+			});
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+
+			await runWrangler("auth keyring disable");
+
+			expect(readUserPreferences().keyring_enabled).toBe(false);
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+			expect(keyringStore.size).toBe(0);
+			expect(std.out).toContain("Keyring storage disabled");
+		});
+
+		it("`auth keyring disable` scrubs encrypted credentials created via the env var even when the preference was never persisted", async ({
+			expect,
+		}) => {
+			// Regression (Devin 3505085725): a user who only ever opted in via
+			// `CLOUDFLARE_AUTH_USE_KEYRING=true` never persists `keyring_enabled`.
+			// Disabling must still scrub the encrypted credentials rather than
+			// gating the scrub on the persisted preference, otherwise the `.enc`
+			// file + keyring entry are orphaned on disk.
+			const { getEncryptedAuthConfigFilePath } =
+				await import("../user/auth-config-file");
+			const { readUserPreferences } = await import("../user/preferences");
+			const keyringStore = stubInMemoryKeyring();
+
+			// Opt in via the env var only — write encrypted credentials without
+			// ever persisting `keyring_enabled`.
+			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "true");
+			writeAuthCredentials({
+				oauth_token: "enc-token",
+				refresh_token: "enc-refresh",
+			});
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+			expect(readUserPreferences().keyring_enabled).toBeUndefined();
+
+			// Opt out with the env var no longer forcing keyring on. The scrub
+			// must run even though `keyring_enabled` was never persisted as
+			// `true` (the old `previouslyEnabled` gate skipped it, orphaning the
+			// `.enc` file + keyring entry).
+			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "false");
+			await runWrangler("auth keyring disable");
+
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+			expect(keyringStore.size).toBe(0);
+		});
+
+		it("`auth keyring` with no action reports the current setting without changing it", async ({
+			expect,
+		}) => {
+			const { readUserPreferences } = await import("../user/preferences");
+
+			await runWrangler("auth keyring");
+
+			expect(std.out).toContain("Keyring storage is disabled");
+			// Status is read-only.
+			expect(readUserPreferences().keyring_enabled).toBeUndefined();
+		});
+
+		it("`auth keyring` rejects the --profile flag", async ({ expect }) => {
+			await expect(
+				runWrangler("auth keyring enable --profile foo")
+			).rejects.toThrow(
+				/--profile cannot be used with `wrangler auth keyring`/
+			);
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
-		writeAuthConfigFile({
+		writeAuthCredentials({
 			oauth_token: "hunter2",
 			refresh_token: "Order 66",
 		});
@@ -506,7 +1060,7 @@ describe("User", () => {
 		expect,
 	}) => {
 		setIsTTY(false);
-		writeAuthConfigFile({
+		writeAuthCredentials({
 			oauth_token: "hunter2",
 			refresh_token: "Order 66",
 		});
@@ -619,7 +1173,7 @@ describe("User", () => {
 		it("getAPIToken returns the env token even when a stored OAuth token also exists", ({
 			expect,
 		}) => {
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "stale-oauth",
 				refresh_token: "stale-refresh",
 				expiration_time: new Date(Date.now() + 100_000 * 1000).toISOString(),
@@ -637,7 +1191,7 @@ describe("User", () => {
 			// refresh it (and fail), aborting the command even though env auth is
 			// valid and available.
 			const pastDate = new Date(Date.now() - 100_000 * 1000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "expired-oauth",
 				refresh_token: "stale-refresh",
 				expiration_time: pastDate,
@@ -666,7 +1220,7 @@ describe("User", () => {
 			// would fail with "Failed to fetch auth token: 400 Bad Request" /
 			// "Not logged in." Now it should succeed using the env token.
 			const pastDate = new Date(Date.now() - 100_000 * 1000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "expired-oauth",
 				refresh_token: "stale-refresh",
 				expiration_time: pastDate,
@@ -699,7 +1253,7 @@ describe("User", () => {
 		setIsTTY(false);
 		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 
-		writeAuthConfigFile({
+		writeAuthCredentials({
 			oauth_token: "hunter2",
 			refresh_token: "Order 66",
 		});
@@ -748,7 +1302,7 @@ describe("User", () => {
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+		expect(readAuthCredentials()).toEqual<UserAuthConfig>({
 			api_token: undefined,
 			oauth_token: "test-access-token",
 			refresh_token: "test-refresh-token",
@@ -763,7 +1317,7 @@ describe("User", () => {
 		}) => {
 			// Set up a valid, non-expired token
 			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: futureDate,
@@ -780,7 +1334,7 @@ describe("User", () => {
 		}) => {
 			// Set up an expired token
 			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "expired-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: pastDate,
@@ -810,7 +1364,7 @@ describe("User", () => {
 			// This simulates: our process started up with RT_A, time passes, the
 			// sibling rotates, then our process tries to refresh.
 			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "expired-access",
 				refresh_token: "RT_B",
 				expiration_time: pastDate,
@@ -857,7 +1411,7 @@ describe("User", () => {
 			// user is effectively logged out.
 			setIsTTY(false);
 			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "expired-access",
 				refresh_token: "RT_A",
 				expiration_time: pastDate,
@@ -879,7 +1433,7 @@ describe("User", () => {
 			await runWrangler("auth token");
 
 			expect(std.out).toContain("fresh-access-token");
-			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
 				api_token: undefined,
 				oauth_token: "fresh-access-token",
 				refresh_token: "RT_A",
@@ -935,7 +1489,7 @@ describe("User", () => {
 			expect,
 		}) => {
 			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: futureDate,
@@ -970,7 +1524,7 @@ describe("User", () => {
 		}) => {
 			// Set up an expired token with a refresh token that will fail
 			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "expired-token",
 				refresh_token: "invalid-refresh-token",
 				expiration_time: pastDate,
@@ -995,7 +1549,7 @@ describe("User", () => {
 			expect,
 		}) => {
 			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "test-oauth-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: futureDate,
@@ -1010,7 +1564,7 @@ describe("User", () => {
 			expect,
 		}) => {
 			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "expired-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: pastDate,
@@ -1028,7 +1582,7 @@ describe("User", () => {
 			expect,
 		}) => {
 			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				oauth_token: "expired-token",
 				refresh_token: "invalid-refresh-token",
 				expiration_time: pastDate,

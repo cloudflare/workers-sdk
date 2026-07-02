@@ -3715,6 +3715,110 @@ describe("generate types - CLI", () => {
 			"
 		`);
 	});
+
+	describe("declarative Durable Object `exports`", () => {
+		it("populates `durableNamespaces` from live `exports` entries (including unbound + `expecting-transfer`) and excludes tombstones", async ({
+			expect,
+		}) => {
+			vi.stubEnv("X_DO_EXPORTS", "true");
+
+			// `UnboundDO` and `IncomingDO` are reachable only through `ctx.exports`.
+			fs.writeFileSync(
+				"./index.ts",
+				`import { DurableObject } from "cloudflare:workers";
+export class BoundDO extends DurableObject {}
+export class UnboundDO extends DurableObject {}
+export class IncomingDO extends DurableObject {}
+export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-exports-types",
+					main: "./index.ts",
+					durable_objects: {
+						bindings: [{ name: "BOUND_DO", class_name: "BoundDO" }],
+					},
+					exports: {
+						BoundDO: { type: "durable-object", storage: "sqlite" },
+						UnboundDO: { type: "durable-object", storage: "sqlite" },
+						IncomingDO: {
+							type: "durable-object",
+							state: "expecting-transfer",
+							storage: "sqlite",
+							transfer_from: "source-worker",
+						},
+						// Tombstones must not appear in `durableNamespaces`.
+						OldGone: { type: "durable-object", state: "deleted" },
+						LegacyName: {
+							type: "durable-object",
+							state: "renamed",
+							renamed_to: "BoundDO",
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				interface __BaseEnv_Env {
+					BOUND_DO: DurableObjectNamespace<import("./index").BoundDO>;
+				}
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						mainModule: typeof import("./index");
+						durableNamespaces: "BoundDO" | "UnboundDO" | "IncomingDO";
+					}
+					interface Env extends __BaseEnv_Env {}
+				}
+				interface Env extends __BaseEnv_Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("rejects when `exports` is configured but `X_DO_EXPORTS` is unset", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"./index.ts",
+				`import { DurableObject } from "cloudflare:workers";
+export class MyDO extends DurableObject {}
+export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-exports-types-gate",
+					main: "./index.ts",
+					durable_objects: {
+						bindings: [{ name: "MY_DO", class_name: "MyDO" }],
+					},
+					exports: {
+						MyDO: { type: "durable-object", storage: "sqlite" },
+					},
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --include-runtime=false")
+			).rejects.toThrow(/`X_DO_EXPORTS` environment variable is not set/);
+		});
+	});
 });
 
 describe("generate types - API", () => {

@@ -64,6 +64,7 @@ async function createDraftWorker({
 					},
 					modules: [],
 					migrations: undefined,
+					exports: undefined,
 					compatibility_date: undefined,
 					compatibility_flags: undefined,
 					keepVars: false, // this doesn't matter since it's a new script anyway
