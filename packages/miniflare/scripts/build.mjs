@@ -274,6 +274,7 @@ function copyLocalExplorerUi(outPath, pkgRoot) {
 		const localExplorerUiDest = path.join(outPath, "local-explorer-ui");
 		cpSync(localExplorerUiSrc, localExplorerUiDest, { recursive: true });
 		console.log("Copied local-explorer-ui dist to", localExplorerUiDest);
+
 	} else {
 		throw new Error(
 			"Expected local-explorer-ui to be at " + localExplorerUiSrc

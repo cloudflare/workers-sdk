@@ -132,6 +132,13 @@ interface Experimental {
 	 * Pass `true` for defaults, or an object to customize behaviour.
 	 */
 	newConfig?: boolean | ExperimentalNewConfig;
+	/**
+	 * Experimental local-dev observability: capture traces, spans, and console
+	 * logs for your Worker(s) and view them in the Local Explorer's
+	 * Observability tab / query them with `wrangler observability`. Equivalent
+	 * to setting `X_LOCAL_OBSERVABILITY=true`. Off by default.
+	 */
+	observability?: boolean;
 }
 
 function normalizeNewConfig(
@@ -210,6 +217,7 @@ interface BaseResolvedConfig {
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport"> & {
 		newConfig?: ResolvedExperimentalNewConfig;
+		observability: boolean;
 	};
 	remoteBindings: boolean;
 	tunnel: TunnelConfig;
@@ -420,6 +428,7 @@ export async function resolvePluginConfig(
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
 			newConfig: resolvedNewConfig,
+			observability: pluginConfig.experimental?.observability ?? false,
 		},
 	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();

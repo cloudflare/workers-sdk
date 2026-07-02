@@ -20,6 +20,7 @@ import {
 	zWorkflowsChangeInstanceStatusData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
+import { handleMcpRequest } from "./mcp";
 import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
@@ -352,6 +353,10 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 // ============================================================================
 // Local Workers / Dev Registry Endpoint
 // ============================================================================
+
+// Codemode MCP endpoint (Streamable HTTP transport). Hosted by miniflare so an
+// agent can connect at <origin>/cdn-cgi/explorer/mcp with no separate install.
+app.post("/mcp", (c) => handleMcpRequest(c, app));
 
 app.get("/api/local/workers", async (c) => {
 	const loopback = c.env.MINIFLARE_LOOPBACK;

@@ -255,7 +255,7 @@ const SKILLS_INSTALL_RETRY_HINT =
 /**
  * Describes a detected AI coding agent.
  */
-type AgentInfo = {
+export type AgentInfo = {
 	/** Human-readable display name of the agent (e.g. "Claude Code"). */
 	name: string;
 	/** Rosie agent metadata. */
@@ -812,7 +812,7 @@ export function telemetryCurrentAgentSkillsInstalled(): Promise<AgentSkillsInsta
  *
  * @returns Array of detected agents with their display names, rosie IDs, and skills paths.
  */
-async function getDetectedAgents(): Promise<AgentInfo[]> {
+export async function getDetectedAgents(): Promise<AgentInfo[]> {
 	const allAgents = await rosieAgents();
 	return allAgents
 		.filter(

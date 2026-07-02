@@ -271,6 +271,11 @@ export const dev = createCommand({
 				"Use an existing named Cloudflare Tunnel when `--tunnel` is enabled.",
 			type: "string",
 		},
+		"experimental-observability": {
+			describe:
+				"Experimental: capture traces, spans, and logs locally and view them in the Local Explorer's Observability tab",
+			type: "boolean",
+		},
 	},
 	async validateArgs(args) {
 		if (args.nodeCompat) {
@@ -304,6 +309,13 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
+		// `--experimental-observability` is the user-facing opt-in for local
+		// observability capture. It drives the same gate as the internal
+		// X_LOCAL_OBSERVABILITY env var, so surface it through that env var which
+		// the miniflare dev wiring already reads.
+		if (args.experimentalObservability) {
+			process.env.X_LOCAL_OBSERVABILITY = "true";
+		}
 		const devInstance = await startDev(args);
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");

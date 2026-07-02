@@ -354,6 +354,47 @@ export const getLocalExplorerEnabledFromEnv =
 	});
 
 /**
+ * `X_LOCAL_OBSERVABILITY` (experimental) enables local-dev observability:
+ * `wrangler dev` / the Vite plugin auto-inject the trace collector as a
+ * streaming-tail consumer of the user's worker(s) and persist traces to an
+ * internal D1 store that the Local Explorer's Observability tab reads.
+ */
+export const getLocalObservabilityEnabledFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "X_LOCAL_OBSERVABILITY",
+		defaultValue: false,
+	});
+
+/**
+ * `X_LOCAL_OBSERVABILITY_MCP` (experimental) additionally exposes the bundled
+ * MCP server so a coding agent can read captured traces/logs over MCP.
+ *
+ * Off by default and intentionally so: the `wrangler observability` CLI is the
+ * primary, recommended way to inspect captured data (it needs no setup and
+ * works whether or not `wrangler dev` is running). MCP is an optional second
+ * option for agents that would rather connect over MCP than run CLI commands.
+ */
+export const getLocalObservabilityMcpEnabledFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "X_LOCAL_OBSERVABILITY_MCP",
+		defaultValue: false,
+	});
+
+/**
+ * Service name the local observability collector is registered under in
+ * Miniflare. Shared so the dev layer (wrangler/Vite) can point user workers'
+ * `streamingTails` at it.
+ */
+export const OBSERVABILITY_COLLECTOR_SERVICE_NAME =
+	"miniflare-observability-collector";
+
+/** Binding name of the internal D1 trace store the collector writes to. */
+export const OBSERVABILITY_D1_BINDING = "WOBS_TRACES";
+
+/** Database id of the internal D1 trace store (used to derive its service name). */
+export const OBSERVABILITY_D1_ID = "miniflare-wobs-traces";
+
+/**
  * `X_BROWSER_HEADFUL` opens the browser in headful (visible) mode when using the
  * Browser Run API in local development.
  *

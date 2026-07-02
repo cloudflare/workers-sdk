@@ -975,6 +975,7 @@ export const pagesDevCommand = createCommand({
 					$0: "",
 					remote: false,
 					local: true,
+					experimentalObservability: false,
 					d1Databases: d1_databases,
 					testScheduled: false,
 					enablePagesAssetsServiceBinding: {

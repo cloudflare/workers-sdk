@@ -30,6 +30,8 @@ import type {
 
 export interface ExplorerServicesOptions {
 	localExplorerUiPath: string;
+	/** Whether to expose the hosted Codemode MCP endpoint. */
+	enableMcp: boolean;
 	proxyBindings: Worker_Binding[];
 	bindingIdMap: BindingIdMap;
 	hasDurableObjects: boolean;
@@ -49,6 +51,7 @@ export function getExplorerServices(
 ): Service[] {
 	const {
 		localExplorerUiPath,
+		enableMcp,
 		proxyBindings,
 		bindingIdMap,
 		hasDurableObjects,
@@ -92,6 +95,16 @@ export function getExplorerServices(
 			workerdDebugPort: kVoid,
 		},
 	];
+
+	// When hosted Codemode MCP is opted in, give the explorer worker an
+	// UnsafeEval capability so it can execute agent-supplied snippets against the
+	// local data plane.
+	if (enableMcp) {
+		explorerBindings.push({
+			name: CoreBindings.UNSAFE_EVAL,
+			unsafeEval: kVoid,
+		});
+	}
 
 	if (hasDurableObjects) {
 		// Add Durable Object namespace bindings for the explorer

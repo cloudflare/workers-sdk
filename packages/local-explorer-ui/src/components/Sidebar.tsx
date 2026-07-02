@@ -5,7 +5,13 @@ import {
 	Sidebar,
 	useSidebar,
 } from "@cloudflare/kumo";
-import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
+import {
+	MonitorIcon,
+	MoonIcon,
+	PulseIcon,
+	RobotIcon,
+	SunIcon,
+} from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
@@ -13,6 +19,7 @@ import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
+import { isTraceStoreBinding } from "../lib/traces";
 import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
 import { getNextThemeMode } from "../utils/theme-state";
 import { SidebarGroupPopup } from "./SidebarGroupPopup";
@@ -47,6 +54,8 @@ const THEME_MODE_CONFIG = {
 interface SidebarProps {
 	bindings?: LocalExplorerWorkerBindings;
 	currentPath: string;
+	/** Whether the optional MCP server is enabled (X_LOCAL_OBSERVABILITY_MCP). */
+	mcpEnabled?: boolean;
 	onCycleTheme: () => void;
 	onWorkerChange: (workerName: string) => void;
 	selectedWorker: string;
@@ -57,6 +66,7 @@ interface SidebarProps {
 export function AppSidebar({
 	bindings,
 	currentPath,
+	mcpEnabled,
 	onCycleTheme,
 	onWorkerChange,
 	selectedWorker,
@@ -82,7 +92,12 @@ export function AppSidebar({
 	const showWorkerSelector = workers.length > 1;
 	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
 
-	const d1Databases = bindings?.d1 ?? [];
+	// Hide the internal observability trace store — it's bound to the worker so
+	// the collector can write to it and the Observability tab can read it, but
+	// it isn't one of the user's databases.
+	const d1Databases = (bindings?.d1 ?? []).filter(
+		(db) => !isTraceStoreBinding(db)
+	);
 	const doNamespaces = (bindings?.do ?? []).filter((ns) => ns.useSqlite);
 	const kvNamespaces = bindings?.kv ?? [];
 	const r2Buckets = bindings?.r2 ?? [];
@@ -237,6 +252,39 @@ export function AppSidebar({
 						onWorkerChange={onWorkerChange}
 					/>
 				)}
+
+				<Sidebar.MenuItem>
+					<Sidebar.MenuButton
+						icon={<PulseIcon width={20} height={20} />}
+						onClick={() =>
+							router.navigate({ to: "/observability", search: workerSearch })
+						}
+						className={cn(
+							"cursor-pointer",
+							(currentPath === "/observability" || currentPath === "/events") &&
+								"bg-kumo-tint"
+						)}
+					>
+						Observability
+					</Sidebar.MenuButton>
+				</Sidebar.MenuItem>
+
+				{mcpEnabled ? (
+					<Sidebar.MenuItem>
+						<Sidebar.MenuButton
+							icon={<RobotIcon width={20} height={20} />}
+							onClick={() =>
+								router.navigate({ to: "/mcp", search: workerSearch })
+							}
+							className={cn(
+								"cursor-pointer",
+								currentPath === "/mcp" && "bg-kumo-tint"
+							)}
+						>
+							MCP
+						</Sidebar.MenuButton>
+					</Sidebar.MenuItem>
+				) : null}
 
 				{sidebar.open ? (
 					<Sidebar.MenuItem className="space-y-1">

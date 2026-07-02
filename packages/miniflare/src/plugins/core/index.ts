@@ -62,6 +62,7 @@ import {
 	SourceOptionsSchema,
 	withSourceURL,
 } from "./modules";
+import { getObservabilityServices } from "./observability";
 import { PROXY_SECRET } from "./proxy";
 import {
 	CustomFetchServiceSchema,
@@ -317,6 +318,14 @@ export const CoreSharedOptionsSchema = z
 		unsafeRuntimeEnv: z.record(z.string()).optional(),
 		// Enable the local explorer at /cdn-cgi/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
+		// Enable local observability: inject the trace collector as a streaming-tail
+		// consumer of user workers and persist traces to the internal `WOBS_TRACES`
+		// D1 store (which the local explorer reads).
+		unsafeObservability: z.boolean().optional(),
+		// Additionally expose the bundled MCP server to the local explorer so an
+		// agent can connect over MCP. Off by default — the `wrangler observability`
+		// CLI is the primary way to inspect captured data; MCP is optional.
+		unsafeObservabilityMcp: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
 
@@ -1211,6 +1220,7 @@ export function getGlobalServices({
 		services.push(
 			...getExplorerServices({
 				localExplorerUiPath,
+				enableMcp: sharedOptions.unsafeObservabilityMcp === true,
 				proxyBindings,
 				bindingIdMap: IDToBindingMap,
 				hasDurableObjects,
@@ -1219,6 +1229,10 @@ export function getGlobalServices({
 				telemetry: sharedOptions.telemetry,
 			})
 		);
+	}
+
+	if (sharedOptions.unsafeObservability) {
+		services.push(...getObservabilityServices());
 	}
 
 	return services;
