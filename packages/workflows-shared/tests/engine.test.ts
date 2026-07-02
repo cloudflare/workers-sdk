@@ -1775,6 +1775,87 @@ describe("Rollback", () => {
 		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(1);
 	});
 
+	it("replays started unfinished steps before terminate rollback when registry is empty", async ({
+		expect,
+	}) => {
+		const instanceId = `RB-TERMINATE-STARTED-REPLAY-${crypto.randomUUID()}`;
+		const engineId = env.ENGINE.idFromName(instanceId);
+		const engineStub = await runWorkflow(instanceId, async (_e, step) => {
+			await doWithRollback(
+				step,
+				"started-setup",
+				async () => {
+					await scheduler.wait(30_000);
+					return "late-resource-id";
+				},
+				rollbackOptions()
+			);
+		});
+
+		await readLogsAfter(engineStub, (currentLogs) =>
+			currentLogs.logs.some(
+				(log) =>
+					log.event === InstanceEvent.ATTEMPT_START &&
+					log.target === "started-setup-1"
+			)
+		);
+
+		try {
+			await runInDurableObject(engineStub, async (engine) => {
+				await engine.abort("test restart before step completion");
+			});
+		} catch (error) {
+			if (
+				!(error instanceof Error) ||
+				error.message !== "test restart before step completion"
+			) {
+				throw error;
+			}
+		}
+
+		const restartedStub = env.ENGINE.get(engineId);
+		await runInDurableObject(restartedStub, async (engine) => {
+			engine.rollbackRegistry.clear();
+		});
+
+		try {
+			await runInDurableObject(restartedStub, async (engine) => {
+				await engine.changeInstanceStatus("terminate", undefined, {
+					rollback: true,
+				});
+			});
+		} catch (error) {
+			if (!isAbortError(error)) {
+				throw error;
+			}
+		}
+
+		let logs: EngineLogs | undefined;
+		await vi.waitUntil(
+			async () => {
+				try {
+					logs = (await env.ENGINE.get(engineId).readLogs()) as EngineLogs;
+					return logs.logs.some(
+						(log) => log.event === InstanceEvent.WORKFLOW_TERMINATED
+					);
+				} catch (error) {
+					if (isAbortError(error)) {
+						return false;
+					}
+					throw error;
+				}
+			},
+			{ timeout: 5000 }
+		);
+		if (logs === undefined) {
+			throw new Error("Expected workflow logs after terminate");
+		}
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"started-setup-1",
+		]);
+		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(1);
+	});
+
 	it("replays cached failed steps before terminate rollback when registry is empty", async ({
 		expect,
 	}) => {

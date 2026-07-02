@@ -1007,6 +1007,7 @@ export class Engine extends DurableObject<Env> {
 		}
 
 		if (options?.rollback === true) {
+			this.priorityQueue ??= new TimePriorityQueue(this.ctx, metadata);
 			await this.replayRollbackRegistry(metadata);
 
 			const error = new Error("Instance terminated during rollback");
