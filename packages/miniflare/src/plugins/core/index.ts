@@ -419,6 +419,8 @@ function getCustomServiceDesignator(
 			if (service.name === kCurrentWorker) {
 				// TODO when fetch on WorkerEntrypoints with assets is fixed in dev: point this Router Worker if assets are present.
 				serviceName = getUserServiceName(refererName);
+			} else if (service.entrypoint === undefined) {
+				serviceName = `${RPC_PROXY_SERVICE_NAME}:${service.name}`;
 			} else {
 				serviceName = getUserServiceName(service.name);
 			}
@@ -438,7 +440,7 @@ function getCustomServiceDesignator(
 			: getUserServiceName(refererName);
 	} else {
 		// Regular user worker
-		serviceName = getUserServiceName(service);
+		serviceName = `${RPC_PROXY_SERVICE_NAME}:${service}`;
 	}
 	return { name: serviceName, entrypoint, props };
 }
@@ -1019,7 +1021,7 @@ export interface GlobalServicesOptions {
 	/** Pass Workflow configuration for the explorer worker */
 	workflowOptions?: Map<string, WorkflowOption>;
 	/** All worker options for building per-worker resource bindings */
-	allWorkerOpts?: PluginWorkerOptions[];
+	allWorkerOpts: PluginWorkerOptions[];
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -1052,9 +1054,13 @@ export function getGlobalServices({
 		{ name: CoreBindings.JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
 		{
-			name: CoreBindings.SERVICE_USER_FALLBACK,
+			name: CoreBindings.SERVICE_DEFAULT_ENTRYPOINT_FALLBACK,
 			service: { name: fallbackWorkerName },
 		},
+		...workerNames.map((name) => ({
+			name: CoreBindings.SERVICE_DEFAULT_ENTRYPOINT_PREFIX + name,
+			service: { name: `${RPC_PROXY_SERVICE_NAME}:${name}` },
+		})),
 		...workerNames.map((name) => ({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
 			service: { name: getUserServiceName(name) },
