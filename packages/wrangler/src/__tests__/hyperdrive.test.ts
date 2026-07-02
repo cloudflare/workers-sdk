@@ -85,7 +85,11 @@ describe("hyperdrive help", () => {
 			  -h, --help            Show help  [boolean]
 			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
 			      --profile         Use a specific auth profile  [string]
-			  -v, --version         Show version number  [boolean]"
+			  -v, --version         Show version number  [boolean]
+
+			☝️ Tip: Run \`wrangler list-commands\` to see all available commands and subcommands.
+
+			"
 		`);
 	});
 });

@@ -137,6 +137,42 @@ describe("getAllowedArgs", () => {
 });
 
 describe("COMMAND_ARG_ALLOW_LIST", () => {
+	it("should pass list-commands arg values through the full sanitisation pipeline", ({
+		expect,
+	}) => {
+		// Simulate: wrangler list-commands --json --include-aliases --all --base "d1 migrations"
+		const args = {
+			json: true,
+			"include-aliases": true,
+			includeAliases: true,
+			all: true,
+			base: "d1 migrations",
+			$0: "wrangler",
+			_: [],
+		};
+		const argv = [
+			"node",
+			"wrangler",
+			"list-commands",
+			"--json",
+			"--include-aliases",
+			"--all",
+			"--base",
+			"d1 migrations",
+		];
+
+		const argsWithSanitizedKeys = sanitizeArgKeys(args, argv);
+		const allowedArgs = getAllowedArgs(COMMAND_ARG_ALLOW_LIST, "list-commands");
+		const sanitizedArgs = sanitizeArgValues(argsWithSanitizedKeys, allowedArgs);
+
+		expect(sanitizedArgs).toEqual({
+			json: true,
+			includeAliases: true,
+			all: true,
+			base: "d1 migrations",
+		});
+	});
+
 	it("should pass boolean flag values through the full sanitisation pipeline for any command", ({
 		expect,
 	}) => {

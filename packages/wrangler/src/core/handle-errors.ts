@@ -20,6 +20,7 @@ import {
 } from "../deployment-bundle/build-failures";
 import { logBuildFailure, logger } from "../logger";
 import { captureGlobalException } from "../sentry";
+import { logUnknownCommandTip } from "../unknown-command-tip";
 import { getAuthFromEnv } from "../user";
 import { whoami } from "../user/whoami";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
@@ -505,6 +506,16 @@ export async function handleError(
 
 		const isRootLevelError = isUnknownArgOrCommand && isUnknownCommand;
 
+		// Check if the error is an unknown subcommand under a valid namespace
+		// (e.g., `wrangler d1 foobar`). This is true when the unknown arg matches
+		// a non-flag arg that isn't the first one (the first is the valid parent).
+		const isSubcommandError =
+			!isRootLevelError &&
+			isUnknownArgOrCommand &&
+			unknownArgs.some(
+				(arg) => nonFlagArgs.includes(arg) && !arg.startsWith("-")
+			);
+
 		const { wrangler, showHelpWithCategories } = createCLIParser([
 			...(isRootLevelError ? [] : nonFlagArgs),
 			"--help",
@@ -512,10 +523,15 @@ export async function handleError(
 
 		if (isRootLevelError) {
 			await showHelpWithCategories();
+			logUnknownCommandTip();
 			return;
 		}
 
 		await wrangler.parse();
+
+		if (isSubcommandError) {
+			logUnknownCommandTip();
+		}
 	} else if (isAuthenticationError(e) || isContainersAuthenticationError(e)) {
 		mayReport = false;
 		if (e.cause instanceof ApiError) {
