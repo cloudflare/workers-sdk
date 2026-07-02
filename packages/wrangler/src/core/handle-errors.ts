@@ -22,6 +22,7 @@ import { logBuildFailure, logger } from "../logger";
 import { captureGlobalException } from "../sentry";
 import { getAuthFromEnv } from "../user";
 import { whoami } from "../user/whoami";
+import { logDidYouMean } from "../utils/did-you-mean";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import type { ReadConfigCommandArgs } from "../config";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
@@ -314,7 +315,8 @@ export function getErrorType(e: unknown): string | undefined {
 export async function handleError(
 	e: unknown,
 	args: ReadConfigCommandArgs,
-	subCommandParts: string[]
+	subCommandParts: string[],
+	commandResolver?: (path: string[]) => Set<string> | undefined
 ): Promise<void> {
 	let mayReport = true;
 	let loggableException = e;
@@ -511,8 +513,31 @@ export async function handleError(
 		]);
 
 		if (isRootLevelError) {
+			if (commandResolver && unknownArgs.length > 0) {
+				const knownCommands = commandResolver([]);
+				if (knownCommands) {
+					logDidYouMean(unknownArgs[0], knownCommands, "wrangler");
+				}
+			}
 			await showHelpWithCategories();
 			return;
+		}
+
+		// For non-root-level errors, check if the unknown arg is a subcommand typo.
+		// e.g. "wrangler kv namespase" -> unknownArgs=["namespase"], nonFlagArgs=["kv","namespase"]
+		// The parent path is the valid command segments before the typo.
+		if (isUnknownArgOrCommand && commandResolver && unknownArgs.length > 0) {
+			const unknownArg = unknownArgs[0];
+			const typoIndex = nonFlagArgs.indexOf(unknownArg);
+			if (typoIndex > 0) {
+				const parentPath = nonFlagArgs.slice(0, typoIndex);
+				const trailingArgs = nonFlagArgs.slice(typoIndex + 1);
+				const knownSubcommands = commandResolver(parentPath);
+				if (knownSubcommands) {
+					const prefix = ["wrangler", ...parentPath].join(" ");
+					logDidYouMean(unknownArg, knownSubcommands, prefix, trailingArgs);
+				}
+			}
 		}
 
 		await wrangler.parse();
