@@ -67,7 +67,6 @@ export const HeadersSchema = z
 	.optional();
 
 export const AssetConfigSchema = z.object({
-	compatibility_date: z.string().optional(),
 	compatibility_flags: z.array(z.string()).optional(),
 	html_handling: z
 		.enum([
