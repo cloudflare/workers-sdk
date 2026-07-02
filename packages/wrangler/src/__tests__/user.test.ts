@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	getGlobalWranglerConfigPath,
+	getGlobalConfigPath,
 } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -106,7 +106,7 @@ describe("User", () => {
 			// Resolve the path inside the test so it picks up the HOME/XDG_CONFIG_HOME
 			// stubs set by runInTempDir's beforeEach, rather than the real homedir.
 			const temporaryAccountConfigPath = path.join(
-				getGlobalWranglerConfigPath(),
+				getGlobalConfigPath(),
 				"wrangler-temporary-account.toml"
 			);
 
@@ -315,7 +315,7 @@ describe("User", () => {
 			`);
 
 			expect(normalizeString(getAuthConfigFilePath())).toBe(
-				normalizeString(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
+				normalizeString(`${getGlobalConfigPath()}/config/staging.toml`)
 			);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
 				api_token: undefined,
@@ -705,7 +705,7 @@ describe("User", () => {
 		});
 
 		expect(normalizeString(getAuthConfigFilePath())).toBe(
-			normalizeString(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
+			normalizeString(`${getGlobalConfigPath()}/config/staging.toml`)
 		);
 	});
 

@@ -8,7 +8,7 @@ import {
 import path from "node:path";
 import {
 	getCloudflareApiEnvironmentFromEnv,
-	getGlobalWranglerConfigPath,
+	getGlobalConfigPath,
 	parseTOML,
 	readFileSync,
 	UserError,
@@ -97,11 +97,7 @@ export function getAuthConfigFilePath(profile?: string): string {
 	} else {
 		fileName = `${resolved}.toml`;
 	}
-	return path.join(
-		getGlobalWranglerConfigPath(),
-		USER_AUTH_CONFIG_PATH,
-		fileName
-	);
+	return path.join(getGlobalConfigPath(), USER_AUTH_CONFIG_PATH, fileName);
 }
 
 /**

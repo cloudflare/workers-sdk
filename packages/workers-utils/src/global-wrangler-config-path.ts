@@ -51,13 +51,6 @@ export function getGlobalConfigPath({
 }
 
 /**
- * @deprecated Use {@link getGlobalConfigPath} instead.
- */
-export function getGlobalWranglerConfigPath() {
-	return getGlobalConfigPath();
-}
-
-/**
  * Resolve the XDG-compliant global cache directory for wrangler (`.wrangler`).
  *
  * Unlike {@link getGlobalConfigPath}, this never falls back to a legacy

@@ -99,8 +99,6 @@ export {
 	getGlobalConfigPath,
 	getGlobalWranglerCachePath,
 } from "./global-wrangler-config-path";
-// eslint-disable-next-line @typescript-eslint/no-deprecated -- re-exporting deprecated symbol for backward compatibility
-export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";
 
 export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";

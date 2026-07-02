@@ -88,7 +88,10 @@ describe("xdgAppPaths", () => {
 
 		it("falls back to the macOS Library directories", ({ expect }) => {
 			stubPlatform("darwin");
-			vi.stubEnv("HOME", "/Users/test");
+			// Mock `os.homedir()` directly rather than relying on `$HOME`: Node
+			// only consults `$HOME` on POSIX, so on Windows CI runners the real
+			// home directory would leak in.
+			vi.spyOn(os, "homedir").mockReturnValue("/Users/test");
 
 			expect(xdgAppPaths(".wrangler").config()).toBe(
 				path.join("/Users/test", "Library", "Preferences", ".wrangler")
@@ -100,7 +103,7 @@ describe("xdgAppPaths", () => {
 
 		it("falls back to the Linux dotfile directories", ({ expect }) => {
 			stubPlatform("linux");
-			vi.stubEnv("HOME", "/home/test");
+			vi.spyOn(os, "homedir").mockReturnValue("/home/test");
 
 			expect(xdgAppPaths(".wrangler").config()).toBe(
 				path.join("/home/test", ".config", ".wrangler")
@@ -289,5 +292,30 @@ describe("xdgAppPaths", () => {
 				expectParity(expect, name);
 			}
 		});
+
+		// Windows derives a home directory from HOMEDRIVE/HOMEPATH when neither
+		// os.homedir(), USERPROFILE nor HOME are available. `os-paths@7` joins
+		// these with `||` (not `&&`), so a *partial* pair still yields a home.
+		// These cases mock os.homedir() to "" so the branch is actually reached,
+		// and — because the real package resolves the platform at load time —
+		// they are compared against the real implementation on Windows CI.
+		const homePathScenarios: Record<string, string>[] = [
+			{ HOMEDRIVE: "C:", HOMEPATH: "\\Users\\test" },
+			{ HOMEDRIVE: "C:" }, // HOMEDRIVE only
+			{ HOMEPATH: "\\Users\\test" }, // HOMEPATH only
+		];
+		for (const scenario of homePathScenarios) {
+			it(`matches HOMEDRIVE/HOMEPATH fallback for ${JSON.stringify(
+				scenario
+			)}`, ({ expect }) => {
+				vi.spyOn(os, "homedir").mockReturnValue("");
+				for (const [key, value] of Object.entries(scenario)) {
+					vi.stubEnv(key, value);
+				}
+				for (const name of NAMES) {
+					expectParity(expect, name);
+				}
+			});
+		}
 	});
 });

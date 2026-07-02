@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -32,7 +32,7 @@ describe("logout", () => {
 		expect,
 	}) => {
 		const temporaryAccountConfigPath = path.join(
-			getGlobalWranglerConfigPath(),
+			getGlobalConfigPath(),
 			"wrangler-temporary-account.toml"
 		);
 		fs.mkdirSync(path.dirname(temporaryAccountConfigPath), { recursive: true });
@@ -70,7 +70,7 @@ describe("logout", () => {
 		expect,
 	}) => {
 		const temporaryAccountConfigPath = path.join(
-			getGlobalWranglerConfigPath(),
+			getGlobalConfigPath(),
 			"wrangler-temporary-account.toml"
 		);
 		writeAuthConfigFile({

@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { createProfileStore } from "@cloudflare/workers-auth";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { defaultAuthConfigStorage } from "./auth-config-file";
 import type {
 	DirectoryBindingsStorage,
@@ -44,7 +44,7 @@ function createWranglerProfileConfigOperations(): ProfileConfigOperations {
 }
 
 function getDirectoryBindingsPath(): string {
-	return path.join(getGlobalWranglerConfigPath(), DIRECTORY_BINDINGS_FILE);
+	return path.join(getGlobalConfigPath(), DIRECTORY_BINDINGS_FILE);
 }
 
 function createWranglerDirectoryBindingsStorage(): DirectoryBindingsStorage {

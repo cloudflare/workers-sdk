@@ -82,6 +82,10 @@ function homeDir(): string | undefined {
 			os.homedir(),
 			getEnv("USERPROFILE"),
 			getEnv("HOME"),
+			// NOTE: `os-paths@7` uses `||` here (not `&&`), so a home directory is
+			// derived even when only one of HOMEDRIVE/HOMEPATH is set. This is
+			// preserved deliberately for byte-for-byte parity — see the parity
+			// tests, which compare this branch against the real package.
 			getEnv("HOMEDRIVE") || getEnv("HOMEPATH")
 				? path.join(getEnv("HOMEDRIVE") ?? "", getEnv("HOMEPATH") ?? "")
 				: undefined,
