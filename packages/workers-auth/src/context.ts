@@ -111,6 +111,14 @@ export interface OAuthFlowContext {
 	 * The consumer is responsible for mapping profile names to concrete storage
 	 * backends (e.g. wrangler maps each profile to a separate TOML file under
 	 * the global config directory).
+	 *
+	 * Consumers that want OS-keyring-backed encryption pass the
+	 * `storageFactory` from {@link createCredentialStorageContext} (in the
+	 * `credential-store` module) — for each profile that adapter resolves
+	 * between the plaintext TOML file and the encrypted-file-with-keyring-key
+	 * implementation on every call, so runtime preference changes
+	 * (`--use-keyring` / `CLOUDFLARE_AUTH_USE_KEYRING`) take effect without
+	 * rebuilding the flow.
 	 */
 	storageFactory: (profile?: string) => AuthConfigStorage;
 

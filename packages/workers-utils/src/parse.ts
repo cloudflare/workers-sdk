@@ -55,6 +55,12 @@ export class APIError extends ParseError {
 	#status?: number;
 	code?: number;
 	accountTag?: string;
+	/**
+	 * Optional structured metadata hoisted from the first `FetchError.meta`
+	 * on the v4 response envelope. Consumers can inspect this to render
+	 * endpoint-specific structured error payloads.
+	 */
+	meta?: { details?: unknown } & Record<string, unknown>;
 
 	constructor({ status, ...rest }: MessageInit & { status?: number }) {
 		super(rest);

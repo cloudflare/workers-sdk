@@ -26,7 +26,7 @@ import { fetch } from "undici";
 import { getCloudflaredPathFromEnv } from "./environment-variables/misc-variables";
 import { UserError } from "./errors";
 import { removeDirSync } from "./fs-helpers";
-import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+import { getGlobalConfigPath } from "./global-wrangler-config-path";
 import type { Logger } from "./logger";
 import type { ChildProcess } from "node:child_process";
 
@@ -248,7 +248,7 @@ async function getLatestVersionInfo(options?: {
  * Uses the resolved version so the cache is per-version.
  */
 function getCacheDir(version: string): string {
-	return join(getGlobalWranglerConfigPath(), "cloudflared", version);
+	return join(getGlobalConfigPath(), "cloudflared", version);
 }
 
 /**
@@ -299,7 +299,7 @@ function validateBinary(
 			errorMessage += `  - For Debian/Ubuntu: sudo apt-get install libc6\n`;
 		}
 
-		const cacheDir = join(getGlobalWranglerConfigPath(), "cloudflared");
+		const cacheDir = join(getGlobalConfigPath(), "cloudflared");
 		errorMessage += `\nYou can try:\n`;
 		errorMessage += `  1. Deleting the cache directory: rm -rf ${cacheDir}\n`;
 		errorMessage += `  2. Running the command again to re-download\n`;
@@ -726,7 +726,7 @@ export async function spawnCloudflared(
 export function removeCloudflaredCache(version?: string): string | null {
 	const cacheDir = version
 		? getCacheDir(version)
-		: join(getGlobalWranglerConfigPath(), "cloudflared");
+		: join(getGlobalConfigPath(), "cloudflared");
 	if (existsSync(cacheDir)) {
 		removeDirSync(cacheDir);
 		return cacheDir;

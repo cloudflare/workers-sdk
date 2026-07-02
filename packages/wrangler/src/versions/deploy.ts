@@ -7,8 +7,13 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
-import { type ApiVersion, printVersions } from "@cloudflare/deploy-helpers";
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	type ApiVersion,
+	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
+	printVersions,
+	renderInconsistentExportsAcrossVersionsError,
+} from "@cloudflare/deploy-helpers";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
@@ -200,18 +205,47 @@ export const versionsDeployCommand = createCommand({
 
 		const start = Date.now();
 
-		const { id: deploymentId } = await spinnerWhile({
-			startMessage: `Deploying ${confirmedVersionsToDeploy.length} version(s)`,
-			promise() {
-				return createDeployment(
-					config,
-					accountId,
-					workerName,
-					confirmedVersionTraffic,
-					message
+		let deploymentId: string;
+		try {
+			const result = await spinnerWhile({
+				startMessage: `Deploying ${confirmedVersionsToDeploy.length} version(s)`,
+				promise() {
+					return createDeployment(
+						config,
+						accountId,
+						workerName,
+						confirmedVersionTraffic,
+						message
+					);
+				},
+			});
+			deploymentId = result.id;
+		} catch (e) {
+			if (
+				e instanceof APIError &&
+				e.code === INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE
+			) {
+				e.preventReport();
+				// Strip the trailing ` [code: N]` suffix that the cfetch layer
+				// appended to the note so we can re-render with our own framing.
+				const serverMessage =
+					e.notes[0]?.text
+						.replace(
+							` [code: ${INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE}]`,
+							""
+						)
+						.trim() ??
+					"All versions in a multi-version deployment must declare identical `exports`.";
+				throw new UserError(
+					renderInconsistentExportsAcrossVersionsError(serverMessage),
+					{
+						telemetryMessage:
+							"versions deploy inconsistent exports across versions",
+					}
 				);
-			},
-		});
+			}
+			throw e;
+		}
 
 		await maybePatchSettings(config, accountId, workerName);
 
