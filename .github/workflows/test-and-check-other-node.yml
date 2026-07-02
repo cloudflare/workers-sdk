@@ -23,8 +23,17 @@ jobs:
         # expected_to_fail: if true, tests may fail on this Node version.
         # These versions are skipped on normal PRs but run on Version Packages PRs
         # (changeset-release/main) or when the 'ci:test-all-node-versions' label is added.
+        #
+        # Node 24 is pinned to 24.18.0 (rather than floating `24`): Node 24.17.0
+        # regressed node-fetch@2 keep-alive responses with ERR_STREAM_PREMATURE_CLOSE
+        # (nodejs/node#63989, fixed in 24.18.0). `description` stays "Node 24" to
+        # keep the job/check name stable.
         include:
-          - { node_version: 24, description: "Node 24", expected_to_fail: true }
+          - {
+              node_version: 24.18.0,
+              description: "Node 24",
+              expected_to_fail: true,
+            }
           - { node_version: 25, description: "Node 25", expected_to_fail: true }
 
     steps:
