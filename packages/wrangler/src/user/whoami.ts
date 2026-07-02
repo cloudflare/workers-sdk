@@ -9,9 +9,10 @@ import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchAllAccounts } from "./fetch-accounts";
 import { fetchMembershipRoles } from "./membership";
-import { getCredentialStore } from "./user";
+import { getActiveAccount, getCredentialStore } from "./user";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { Scope } from ".";
+import type { AccountSource, ActiveAccount } from "./user";
 import type {
 	ComplianceConfig,
 	ApiCredentials,
@@ -88,6 +89,7 @@ export async function whoami(
 	}
 	printComplianceRegion(complianceConfig);
 	printAccountList(user);
+	printActiveAccount(user, getActiveAccount(complianceConfig));
 	printAccountIdMismatchWarning(user, accountFilter, configAccountId);
 	printTokenPermissions(user);
 	await printMembershipInfo(complianceConfig, user, accountFilter);
@@ -129,6 +131,57 @@ function printAccountList(user: UserInfo) {
 			"Account Name": account.name,
 			"Account ID": account.id,
 		}))
+	);
+}
+
+function accountSourceDescription(source: AccountSource) {
+	switch (source) {
+		case "temporary":
+			return "a temporary preview account";
+		case "config":
+			return "the Wrangler configuration";
+		case "environment":
+			return "CLOUDFLARE_ACCOUNT_ID";
+		case "cache":
+			return "Wrangler's account cache";
+	}
+}
+
+function printActiveAccount(user: UserInfo, activeAccount?: ActiveAccount) {
+	if (!activeAccount) {
+		return;
+	}
+
+	const source = accountSourceDescription(activeAccount.source);
+	const authenticatedAccount = user.accounts.find(
+		(account) => account.id === activeAccount.id
+	);
+	if (authenticatedAccount) {
+		logger.log(
+			`🧭 Active account: ${chalk.blue(authenticatedAccount.name)} (${activeAccount.id}) from ${source}.`
+		);
+		return;
+	}
+
+	const notes =
+		activeAccount.source === "cache"
+			? [
+					{
+						text: "Wrangler commands will ignore this cached account and select from the accounts available to the current authentication.",
+					},
+				]
+			: [
+					{
+						text: "Wrangler commands will still use this explicit account ID. Check your Wrangler configuration or environment variables if this is not intended.",
+					},
+				];
+
+	logger.log(
+		formatMessage({
+			text: `The active account (${chalk.blue(activeAccount.id)}) from ${source} does not match any account available to the current authentication.`,
+			kind: "warning",
+			notes,
+		})
 	);
 }
 

@@ -1676,17 +1676,41 @@ describe("User", () => {
 				name: "Only Account",
 			});
 
-			// Set up another membership response for verification
-			// (won't be called because cache is used)
+			// The cached account is validated against the current authentication before use.
 			msw.use(
 				...getMswSuccessMembershipHandlers([
-					{ id: "different-account", name: "Different" },
+					{ id: "single-account", name: "Only Account" },
 				])
 			);
 
-			// Second call should use cache
+			// Second call should use the cache after validating that the account is
+			// still available to the current authentication.
 			const secondAccountId = await getOrSelectAccountId({});
 			expect(secondAccountId).toBe("single-account");
+		});
+
+		it("should ignore a cached account that is unavailable to the current authentication", async ({
+			expect,
+		}) => {
+			saveToConfigCache("wrangler-account.json", {
+				account: { id: "stale-account", name: "Stale Account" },
+			});
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "current-account", name: "Current Account" },
+				])
+			);
+
+			const accountId = await getOrSelectAccountId({});
+
+			expect(accountId).toBe("current-account");
+			expect(getAccountFromCache()).toEqual({
+				id: "current-account",
+				name: "Current Account",
+			});
+			expect(std.warn).toContain(
+				'Ignoring cached account "stale-account" because it does not match any account available to the current authentication.'
+			);
 		});
 	});
 

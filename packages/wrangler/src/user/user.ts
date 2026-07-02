@@ -419,66 +419,85 @@ export { PKCE_CHARSET } from "@cloudflare/workers-auth";
 // Account selection
 // ---------------------------------------------------------------------------
 
+export type AccountSource = "temporary" | "config" | "environment" | "cache";
+
+export type ActiveAccount = Account & {
+	source: AccountSource;
+};
+
 /**
- * Returns the active account ID without side effects.
+ * Returns the active account selection without side effects.
  *
- * Resolves the account ID from static sources only — no API calls, no
+ * Resolves the account from static sources only — no API calls, no
  * interactive prompts. Tries the following sources in order:
- * 1. `config.account_id` from the wrangler configuration file
- * 2. `CLOUDFLARE_ACCOUNT_ID` environment variable
- * 3. Cached account from a previous interactive selection
+ * 1. temporary preview account
+ * 2. `config.account_id` from the wrangler configuration file
+ * 3. `CLOUDFLARE_ACCOUNT_ID` environment variable
+ * 4. Cached account from a previous interactive selection
  *
  * @param config - The config object potentially containing an `account_id`
- * @returns The active account ID, or `undefined` if none can be determined
+ * @returns The active account selection, or `undefined` if none can be determined
  */
-export function getActiveAccountId(config: {
-	account_id?: string;
-}): string | undefined {
+export function getActiveAccount(
+	config: ComplianceConfig & {
+		account_id?: string;
+	}
+): ActiveAccount | undefined {
 	// When operating as a temporary preview account, its id is the whole
 	// identity and takes precedence over config/env/cache.
 	const temporaryAccount = oauthFlow.getActiveTemporaryAccount();
 	if (temporaryAccount) {
-		return temporaryAccount.account.id;
+		return {
+			...temporaryAccount.account,
+			source: "temporary",
+		};
 	}
 
 	if (config.account_id) {
-		return config.account_id;
+		return {
+			id: config.account_id,
+			name: config.account_id,
+			source: "config",
+		};
 	}
 	const envAccountId = getCloudflareAccountIdFromEnv();
 	if (envAccountId) {
-		return envAccountId;
+		return {
+			id: envAccountId,
+			name: envAccountId,
+			source: "environment",
+		};
 	}
-	return getAccountFromCache()?.id;
+	const cachedAccount = getAccountFromCache();
+	if (cachedAccount) {
+		return {
+			...cachedAccount,
+			source: "cache",
+		};
+	}
 }
 
 /**
- * Resolves the account ID to use for API requests.
+ * Returns the active account ID without side effects.
  *
- * First tries static sources via {@link getActiveAccountId} (config, env var,
- * cache). If none are available, falls back to fetching accounts from the API:
- * - Auto-selects if only one account is available
- * - Prompts the user to select an account interactively if multiple are available
- *
- * When an account is resolved via API fetch or interactive prompt,
- * it is cached for subsequent calls.
- *
- * @param config - Configuration containing an optional `account_id` and compliance settings
- * @returns The resolved account ID
- * @throws {UserError} If in a non-interactive environment and multiple accounts are
- *   available (the user must set `account_id` in config or `CLOUDFLARE_ACCOUNT_ID` env var)
- * @throws {UserError} If no accounts are found for the authenticated user
+ * @param config - The config object potentially containing an `account_id`
+ * @returns The active account ID, or `undefined` if none can be determined
  */
-export async function getOrSelectAccountId(
-	config: ComplianceConfig & { account_id?: string }
-): Promise<string> {
-	// TODO: v5 we should prioritise the env var instead of the config value here,
-	// for consistency with other env vars.
-	const activeAccountId = getActiveAccountId(config);
-	if (activeAccountId) {
-		return activeAccountId;
+export function getActiveAccountId(
+	config: ComplianceConfig & {
+		account_id?: string;
 	}
+): string | undefined {
+	return getActiveAccount(config)?.id;
+}
 
-	const accounts = await fetchAllAccounts(config);
+function accountIsAvailable(accountId: string, accounts: Account[]): boolean {
+	return accounts.some((account) => account.id === accountId);
+}
+
+async function resolveAccountFromAvailableAccounts(
+	accounts: Account[]
+): Promise<string> {
 	if (accounts.length === 1) {
 		saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
 		return accounts[0].id;
@@ -522,6 +541,50 @@ ${accounts
 		}
 		throw e;
 	}
+}
+
+/**
+ * Resolves the account ID to use for API requests.
+ *
+ * First uses explicit static sources via {@link getActiveAccountId} (config,
+ * env var). A cached account is used only after confirming it is available to
+ * the current authentication. If no valid static account is available, falls
+ * back to fetching accounts from the API:
+ * - Auto-selects if only one account is available
+ * - Prompts the user to select an account interactively if multiple are available
+ *
+ * When an account is resolved via API fetch or interactive prompt,
+ * it is cached for subsequent calls.
+ *
+ * @param config - Configuration containing an optional `account_id` and compliance settings
+ * @returns The resolved account ID
+ * @throws {UserError} If in a non-interactive environment and multiple accounts are
+ *   available (the user must set `account_id` in config or `CLOUDFLARE_ACCOUNT_ID` env var)
+ * @throws {UserError} If no accounts are found for the authenticated user
+ */
+export async function getOrSelectAccountId(
+	config: ComplianceConfig & { account_id?: string }
+): Promise<string> {
+	// TODO: v5 we should prioritise the env var instead of the config value here,
+	// for consistency with other env vars.
+	const activeAccount = getActiveAccount(config);
+	if (activeAccount) {
+		if (activeAccount.source !== "cache") {
+			return activeAccount.id;
+		}
+
+		const accounts = await fetchAllAccounts(config);
+		if (accountIsAvailable(activeAccount.id, accounts)) {
+			return activeAccount.id;
+		}
+
+		logger.warn(
+			`Ignoring cached account "${activeAccount.id}" because it does not match any account available to the current authentication.`
+		);
+		return resolveAccountFromAvailableAccounts(accounts);
+	}
+
+	return resolveAccountFromAvailableAccounts(await fetchAllAccounts(config));
 }
 
 /**

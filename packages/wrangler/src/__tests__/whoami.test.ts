@@ -2,6 +2,7 @@ import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../config-cache";
 import { writeAuthCredentials } from "../user";
 import { getUserInfo } from "../user/whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -285,6 +286,40 @@ describe("whoami", () => {
 		expect(std.out).not.toContain(
 			"does not match any of your authenticated accounts"
 		);
+	});
+
+	it("should display the active account when it is read from cache", async ({
+		expect,
+	}) => {
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		saveToConfigCache("wrangler-account.json", {
+			account: { id: "account-2", name: "Account Two" },
+		});
+
+		await runWrangler("whoami");
+
+		expect(std.out).toContain(
+			"Active account: Account Two (account-2) from Wrangler's account cache."
+		);
+	});
+
+	it("should warn when the cached active account is unavailable to the current authentication", async ({
+		expect,
+	}) => {
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		saveToConfigCache("wrangler-account.json", {
+			account: { id: "stale-account", name: "Stale Account" },
+		});
+
+		await runWrangler("whoami");
+
+		expect(std.out).toContain(
+			"The active account (stale-account) from Wrangler's account cache does not match any account available to the current authentication."
+		);
+		expect(std.out).toContain(
+			"Wrangler commands will ignore this cached account and select from the accounts available to the"
+		);
+		expect(std.out).toContain("current authentication.");
 	});
 
 	it("should display membership roles if --account flag is given", async ({
