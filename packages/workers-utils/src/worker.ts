@@ -1,4 +1,9 @@
-import type { CacheOptions, Observability, Route } from "./config/environment";
+import type {
+	CacheOptions,
+	Exports,
+	Observability,
+	Route,
+} from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
@@ -424,6 +429,13 @@ export interface CfDurableObjectMigrations {
 	}[];
 }
 
+/**
+ * The declarative `exports` map keyed by class name.
+ *
+ * Durable Objects can only be configured by `exports` or `migrations`, not both.
+ */
+export type CfExports = Exports;
+
 export type CfPlacement =
 	| { mode: "smart"; hint?: string }
 	| { mode?: "targeted"; region: string }
@@ -464,6 +476,11 @@ export interface CfWorkerInit {
 	containers: { class_name: string }[] | undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
+	/**
+	 * Declarative exports configuration. Durable Object entries are sent instead
+	 * of `migrations` and require the `X_DO_EXPORTS` environment variable.
+	 */
+	exports: CfExports | undefined;
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
 	keepVars: boolean | undefined;

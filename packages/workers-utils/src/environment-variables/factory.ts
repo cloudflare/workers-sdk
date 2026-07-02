@@ -103,6 +103,12 @@ type VariableNames =
 	| "CLOUDFLARE_ACCESS_CLIENT_ID"
 	/** Cloudflare Access Service Token Client Secret. Used with CLOUDFLARE_ACCESS_CLIENT_ID. */
 	| "CLOUDFLARE_ACCESS_CLIENT_SECRET"
+	/**
+	 * Store OAuth credentials in the OS keychain instead of a plaintext TOML
+	 * file. Overrides the persistent `keyring_enabled` preference written by
+	 * `wrangler login --use-keyring`.
+	 */
+	| "CLOUDFLARE_AUTH_USE_KEYRING"
 
 	// ## Experimental Feature Flags
 
@@ -110,6 +116,8 @@ type VariableNames =
 	| "X_LOCAL_EXPLORER"
 	/** Open the browser in headful (visible) mode when using the Browser Run API in local dev (default: false). */
 	| "X_BROWSER_HEADFUL"
+	/** Send declarative Durable Object `exports` to the upload API instead of computing `migrations` steps (experimental, default: false). */
+	| "X_DO_EXPORTS"
 
 	// ## CI-specific Variables (Internal Use)
 

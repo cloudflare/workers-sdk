@@ -1,7 +1,7 @@
 import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { getGlobalConfigPath } from "../global-wrangler-config-path";
 import {
 	getBooleanEnvironmentVariableFactory,
 	getEnvironmentVariableFactory,
@@ -261,7 +261,7 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
 export const getRegistryPath = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_REGISTRY_PATH",
 	defaultValue() {
-		return path.join(getGlobalWranglerConfigPath(), "registry");
+		return path.join(getGlobalConfigPath(), "registry");
 	},
 });
 
@@ -372,6 +372,27 @@ export const getBrowserRenderingHeadfulFromEnv =
 		variableName: "X_BROWSER_HEADFUL",
 		defaultValue: false,
 	});
+
+/**
+ * `X_DO_EXPORTS` enables the experimental declarative Durable Object `exports`
+ * flow. When set, `wrangler deploy` and `wrangler versions upload` send the
+ * declarative `exports` map to the upload API instead of computing
+ * `migrations` steps; the validator's "no lifecycle declared" warning also
+ * recommends the `exports` shape rather than the legacy `migrations` array.
+ *
+ * Set to "true" to enable:
+ *
+ * ```sh
+ * X_DO_EXPORTS=true wrangler deploy
+ * ```
+ *
+ * The flow remains experimental until server-side support is available
+ * broadly.
+ */
+export const getDoExportsEnabledFromEnv = getBooleanEnvironmentVariableFactory({
+	variableName: "X_DO_EXPORTS",
+	defaultValue: false,
+});
 
 /**
  * `CLOUDFLARE_CF_FETCH_ENABLED` controls whether Miniflare fetches the `cf.json` file

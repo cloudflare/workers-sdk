@@ -4,8 +4,8 @@ import type {
 	TypedWorkerBinding,
 } from "./bindings";
 import type {
+	InferDurableNamespaces,
 	InferWorkerName,
-	InferExportsByType,
 	InferWorkerEntrypointExports,
 } from "./inference";
 import type { UserConfig } from "./types";
@@ -51,9 +51,7 @@ export interface TypedWorkerDefinition<
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 */
-	durableObject<
-		TExportName extends InferExportsByType<TConfig, "durable-object">,
-	>(options: {
+	durableObject<TExportName extends InferDurableNamespaces<TConfig>>(options: {
 		workerName: TWorkerName;
 		exportName: TExportName;
 	}): TypedDurableObjectBinding<TConfig, TExportName>;
