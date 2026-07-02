@@ -4976,17 +4976,25 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	const options: {
 		key: string;
 		type: "number" | "string" | "boolean";
+		nullable?: boolean;
 	}[] = [
 		{ key: "type", type: "string" },
 		{ key: "max_batch_size", type: "number" },
 		{ key: "max_batch_timeout", type: "number" },
 		{ key: "max_retries", type: "number" },
 		{ key: "dead_letter_queue", type: "string" },
-		{ key: "max_concurrency", type: "number" },
+		// `null` opts the consumer in to the platform's maximum concurrency (auto-scaling)
+		{ key: "max_concurrency", type: "number", nullable: true },
 		{ key: "visibility_timeout_ms", type: "number" },
 		{ key: "retry_delay", type: "number" },
 	];
 	for (const optionalOpt of options) {
+		if (
+			optionalOpt.nullable &&
+			(value as Record<string, unknown>)[optionalOpt.key] === null
+		) {
+			continue;
+		}
 		if (!isOptionalProperty(value, optionalOpt.key, optionalOpt.type)) {
 			diagnostics.errors.push(
 				`"${field}" should, optionally, have a ${optionalOpt.type} "${

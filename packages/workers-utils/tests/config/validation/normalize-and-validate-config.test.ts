@@ -4495,6 +4495,23 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should allow queues consumer max_concurrency to be null", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						queues: {
+							consumers: [{ queue: "myQueue", max_concurrency: null }],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it("should warn if delivery_delay is set on a queue producer", ({
 				expect,
 			}) => {
