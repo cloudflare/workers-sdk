@@ -39,7 +39,6 @@
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
-		"blake3-wasm": "2.1.5",
 		"chalk": "catalog:default",
 		"command-exists": "catalog:default",
 		"dotenv": "catalog:default",
@@ -60,6 +59,7 @@
 		"concurrently": "^8.2.2",
 		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "catalog:default",
+		"hash-wasm": "4.12.0",
 		"json-diff": "^1.0.6",
 		"ts-dedent": "^2.2.0",
 		"tsup": "8.3.0",

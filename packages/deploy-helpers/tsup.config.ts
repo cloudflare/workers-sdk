@@ -26,7 +26,6 @@ export default defineConfig(() => [
 		],
 		external: [
 			/^@cloudflare\//,
-			"blake3-wasm",
 			"miniflare",
 			"p-queue",
 			"pretty-bytes",
