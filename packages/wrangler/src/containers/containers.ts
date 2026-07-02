@@ -5,7 +5,7 @@ import {
 } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
+import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import YAML from "yaml";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
@@ -135,7 +135,7 @@ export const containersInfoCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
-		printBanner: () => !isNonInteractiveOrCI(),
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {
 		ID: {
@@ -143,10 +143,30 @@ export const containersInfoCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
+		json: {
+			describe: "Return output as JSON",
+			type: "boolean",
+			default: false,
+		},
 	},
 	positionalArgs: ["ID"],
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
+		if (args.json) {
+			try {
+				const application = await ApplicationsService.getApplication(args.ID);
+				logger.json(application);
+				return;
+			} catch (err) {
+				if (err instanceof UserError) {
+					throw err;
+				}
+				const message = err instanceof Error ? err.message : "Unknown error";
+				throw new JsonFriendlyFatalError(JSON.stringify({ error: message }), {
+					telemetryMessage: "containers info json output failed",
+				});
+			}
+		}
 		await infoCommand(args, config);
 	},
 });
