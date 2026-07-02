@@ -209,7 +209,6 @@
 				"packages/edge-preview-authenticated-proxy/**",
 				"packages/local-explorer-ui/**",
 				"packages/vite-plugin-cloudflare/**",
-				"packages/vitest-pool-workers/**",
 				"packages/workflows-shared/**",
 				"packages/wrangler/**",
 			],
