@@ -353,6 +353,8 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 			});
 
 			mockServiceScriptData({});
+			// A new Worker triggers a pre-upload workers.dev subdomain check.
+			mockSubDomainRequest();
 
 			await expect(
 				runWrangler("deploy index.js")
@@ -384,7 +386,9 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 			// Worker does not exist
 			mockServiceScriptData({});
 
-			mockSubDomainRequest();
+			// The subdomain is fetched both before upload (new Worker check) and
+			// again for the post-upload triggers, so use a persistent handler.
+			mockSubDomainRequest("test-sub-domain", true, false);
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
@@ -427,6 +431,8 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 
 			// Worker does not exist
 			mockServiceScriptData({});
+			// A new Worker triggers a pre-upload workers.dev subdomain check.
+			mockSubDomainRequest();
 
 			await expect(
 				runWrangler(`deploy --secrets-file ${secretsFile}`)

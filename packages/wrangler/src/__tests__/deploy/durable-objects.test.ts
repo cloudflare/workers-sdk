@@ -369,7 +369,9 @@ describe("deploy", () => {
 					"index.js",
 					`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
 				);
-				mockSubDomainRequest();
+				// A new Worker is fetched both before upload (new Worker check) and
+				// again for the post-upload triggers, so use a persistent handler.
+				mockSubDomainRequest("test-sub-domain", true, false);
 				mockServiceScriptData({}); // no scripts at all
 				mockUploadWorkerRequest({
 					useServiceEnvironments: true,
