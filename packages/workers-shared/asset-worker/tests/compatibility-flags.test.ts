@@ -1,28 +1,23 @@
 import { describe, test } from "vitest";
-import { resolveCompatibilityOptions } from "../src/compatibility-flags";
+import { resolveCompatibilityFlags } from "../../utils/compatibility-flags";
 
-describe("resolveCompatibilityOptions", () => {
+describe("resolveCompatibilityFlags", () => {
 	test("it does not interfere with existing flags", ({ expect }) => {
-		expect(resolveCompatibilityOptions({ compatibility_flags: ["foo", "bar"] }))
+		expect(resolveCompatibilityFlags({ compatibilityFlags: ["foo", "bar"] }))
 			.toMatchInlineSnapshot(`
-			{
-			  "compatibilityDate": "2021-11-02",
-			  "compatibilityFlags": [
-			    "foo",
-			    "bar",
-			  ],
-			}
+			[
+			  "foo",
+			  "bar",
+			]
 		`);
 	});
 
 	test("it opts you into new flags if you have a future date", ({ expect }) => {
-		const { compatibilityDate, compatibilityFlags } =
-			resolveCompatibilityOptions({
-				compatibility_flags: ["foo", "bar"],
-				compatibility_date: "2099-12-12",
-			});
+		const compatibilityFlags = resolveCompatibilityFlags({
+			compatibilityFlags: ["foo", "bar"],
+			compatibilityDate: "2099-12-12",
+		});
 
-		expect(compatibilityDate).toEqual("2099-12-12");
 		expect(compatibilityFlags).toContain("foo");
 		expect(compatibilityFlags).toContain("bar");
 		expect(compatibilityFlags).toContain(
@@ -33,17 +28,15 @@ describe("resolveCompatibilityOptions", () => {
 	test("it doesn't double you up if you've already opted into new flags and have a future date", ({
 		expect,
 	}) => {
-		const { compatibilityDate, compatibilityFlags } =
-			resolveCompatibilityOptions({
-				compatibility_flags: [
-					"foo",
-					"bar",
-					"assets_navigation_prefers_asset_serving",
-				],
-				compatibility_date: "2099-12-12",
-			});
+		const compatibilityFlags = resolveCompatibilityFlags({
+			compatibilityFlags: [
+				"foo",
+				"bar",
+				"assets_navigation_prefers_asset_serving",
+			],
+			compatibilityDate: "2099-12-12",
+		});
 
-		expect(compatibilityDate).toEqual("2099-12-12");
 		expect(compatibilityFlags).toContain("foo");
 		expect(compatibilityFlags).toContain("bar");
 		expect(
@@ -56,17 +49,25 @@ describe("resolveCompatibilityOptions", () => {
 	test("it doesn't opt you into new flags if you have a future date and have disabled it", ({
 		expect,
 	}) => {
-		const { compatibilityDate, compatibilityFlags } =
-			resolveCompatibilityOptions({
-				compatibility_flags: ["foo", "bar", "assets_navigation_has_no_effect"],
-				compatibility_date: "2099-12-12",
-			});
+		const compatibilityFlags = resolveCompatibilityFlags({
+			compatibilityFlags: ["foo", "bar", "assets_navigation_has_no_effect"],
+			compatibilityDate: "2099-12-12",
+		});
 
-		expect(compatibilityDate).toEqual("2099-12-12");
 		expect(compatibilityFlags).toContain("foo");
 		expect(compatibilityFlags).toContain("bar");
 		expect(compatibilityFlags).not.toContain(
 			"assets_navigation_prefers_asset_serving"
 		);
+	});
+
+	test("it does not mutate the passed-in flags array", ({ expect }) => {
+		const input = ["foo"];
+		resolveCompatibilityFlags({
+			compatibilityFlags: input,
+			compatibilityDate: "2099-12-12",
+		});
+
+		expect(input).toEqual(["foo"]);
 	});
 });

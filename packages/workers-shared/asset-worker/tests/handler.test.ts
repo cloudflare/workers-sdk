@@ -1,4 +1,5 @@
 import { describe, it, vi } from "vitest";
+import { resolveCompatibilityFlags } from "../../utils/compatibility-flags";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "../src/analytics";
 import { SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING } from "../src/compatibility-flags";
@@ -1523,14 +1524,19 @@ describe("[Asset Worker] `canFetch`", () => {
 				},
 				{ expect }
 			) => {
+				// Date-based flag resolution now happens at CONFIG-construction
+				// time (deploy/dev/vite), so mirror that here before normalizing.
+				const compatibility_flags = resolveCompatibilityFlags({
+					compatibilityDate,
+					compatibilityFlags,
+				});
 				expect(
 					await canFetch(
 						new Request("https://example.com/foo", { headers }),
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
 						normalizeConfiguration({
-							compatibility_date: compatibilityDate,
-							compatibility_flags: compatibilityFlags,
+							compatibility_flags,
 							not_found_handling: notFoundHandling,
 							has_static_routing: hasStaticRouting,
 						}),
@@ -1544,8 +1550,7 @@ describe("[Asset Worker] `canFetch`", () => {
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
 						normalizeConfiguration({
-							compatibility_date: compatibilityDate,
-							compatibility_flags: compatibilityFlags,
+							compatibility_flags,
 							not_found_handling: notFoundHandling,
 							has_static_routing: hasStaticRouting,
 						}),
@@ -1559,8 +1564,7 @@ describe("[Asset Worker] `canFetch`", () => {
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
 						normalizeConfiguration({
-							compatibility_date: compatibilityDate,
-							compatibility_flags: compatibilityFlags,
+							compatibility_flags,
 							not_found_handling: notFoundHandling,
 							has_static_routing: hasStaticRouting,
 						}),
@@ -1574,8 +1578,7 @@ describe("[Asset Worker] `canFetch`", () => {
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
 						normalizeConfiguration({
-							compatibility_date: compatibilityDate,
-							compatibility_flags: compatibilityFlags,
+							compatibility_flags,
 							not_found_handling: notFoundHandling,
 							has_static_routing: hasStaticRouting,
 						}),
