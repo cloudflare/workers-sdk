@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { join, resolve } from "node:path";
-import { afterAll, beforeAll, describe, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { unstable_startWorker } from "wrangler";
 
 const basePath = resolve(__dirname, "..");
@@ -10,7 +10,6 @@ describe("durable objects declared via the new `exports` config", () => {
 	const instance = randomUUID();
 
 	beforeAll(async () => {
-		vi.stubEnv("X_DO_EXPORTS", "true");
 		worker = await unstable_startWorker({
 			config: join(basePath, "wrangler.jsonc"),
 		});
@@ -18,7 +17,6 @@ describe("durable objects declared via the new `exports` config", () => {
 
 	afterAll(async () => {
 		await worker?.dispose();
-		vi.unstubAllEnvs();
 	});
 
 	it("starts CounterA at 0 and increments it via SQLite-backed storage", async ({

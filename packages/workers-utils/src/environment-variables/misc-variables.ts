@@ -374,27 +374,6 @@ export const getBrowserRenderingHeadfulFromEnv =
 	});
 
 /**
- * `X_DO_EXPORTS` enables the experimental declarative Durable Object `exports`
- * flow. When set, `wrangler deploy` and `wrangler versions upload` send the
- * declarative `exports` map to the upload API instead of computing
- * `migrations` steps; the validator's "no lifecycle declared" warning also
- * recommends the `exports` shape rather than the legacy `migrations` array.
- *
- * Set to "true" to enable:
- *
- * ```sh
- * X_DO_EXPORTS=true wrangler deploy
- * ```
- *
- * The flow remains experimental until server-side support is available
- * broadly.
- */
-export const getDoExportsEnabledFromEnv = getBooleanEnvironmentVariableFactory({
-	variableName: "X_DO_EXPORTS",
-	defaultValue: false,
-});
-
-/**
  * `CLOUDFLARE_CF_FETCH_ENABLED` controls whether Miniflare fetches the `cf.json` file
  * containing request.cf properties from workers.cloudflare.com.
  *

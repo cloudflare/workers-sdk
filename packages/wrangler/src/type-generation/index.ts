@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import {
-	assertDoExportsEnabledIfConfigured,
 	CommandLineArgsError,
 	configFileName,
 	experimental_readRawConfig,
@@ -485,9 +484,6 @@ async function generateTypesFromResolvedOptions(
 	options: ResolvedGenerateTypesOptions,
 	log: boolean
 ): Promise<GeneratedTypesResult> {
-	// Keep generated types aligned with the deploy / dev opt-in contract.
-	assertDoExportsEnabledIfConfigured(options.config.exports, "types");
-
 	const entrypoint = await getTypesEntrypoint(options.config);
 	const entrypointFormat = entrypoint?.format ?? "modules";
 

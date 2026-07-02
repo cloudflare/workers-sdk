@@ -577,7 +577,6 @@ interface EnvironmentInheritable {
 	 * Declarative exports configuration — a map of class name to export configuration.
 	 *
 	 * The configuration of Durable Objects via `exports` is mutually exclusive with `migrations`.
-	 * Durable Object exports are gated behind the `X_DO_EXPORTS` environment variable for Wrangler commands.
 	 *
 	 * @default {}
 	 * @inheritable

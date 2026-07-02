@@ -1082,16 +1082,14 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler.toml configuration:
 				  - "unsafe" fields are experimental and may change or break at any time.
-				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your wrangler.toml file. Add the following configuration:
+				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
 
 				    \`\`\`
-				    [[migrations]]
-				    tag = "v1"
-				    new_sqlite_classes = [ "CLASS1" ]
+				    [exports.CLASS1]
+				    type = "durable-object"
+				    storage = "sqlite"
 
-				    \`\`\`
-
-				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
+				    \`\`\`"
 			`);
 		});
 
@@ -2323,33 +2321,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(rendered).not.toContain("new_sqlite_classes");
 			});
 
-			it("warns and suggests an `exports` entry when neither lifecycle is declared and `X_DO_EXPORTS` is set", ({
-				expect,
-			}) => {
-				vi.stubEnv("X_DO_EXPORTS", "true");
-				try {
-					const { diagnostics } = normalizeAndValidateConfig(
-						{
-							durable_objects: {
-								bindings: [{ name: "DO", class_name: "MyDO" }],
-							},
-						},
-						undefined,
-						undefined,
-						{ env: undefined }
-					);
-
-					expect(diagnostics.hasWarnings()).toBe(true);
-					const rendered = diagnostics.renderWarnings();
-					expect(rendered).toContain("no live `exports` entry for them");
-					expect(rendered).toContain('"type": "durable-object"');
-					expect(rendered).not.toContain("new_sqlite_classes");
-				} finally {
-					vi.unstubAllEnvs();
-				}
-			});
-
-			it("warns and suggests `migrations` when neither lifecycle is declared and `X_DO_EXPORTS` is unset", ({
+			it("warns and suggests an `exports` entry when neither lifecycle is declared", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -2365,9 +2337,10 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(true);
 				const rendered = diagnostics.renderWarnings();
-				expect(rendered).toContain("`migrations`");
-				expect(rendered).toContain("new_sqlite_classes");
-				expect(rendered).not.toContain("no live `exports` entry for them");
+				expect(rendered).toContain("no live `exports` entry for them");
+				expect(rendered).toContain('"type": "durable-object"');
+				expect(rendered).toContain('"storage": "sqlite"');
+				expect(rendered).not.toContain("new_sqlite_classes");
 			});
 		});
 

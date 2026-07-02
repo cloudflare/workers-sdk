@@ -51,9 +51,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helper.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain(
 					"Durable Object exports reconciliation"
@@ -64,9 +62,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			it("scenario 2: re-deploying with the same config is a no-op", async ({
 				expect,
 			}) => {
-				const output = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helper.run(`wrangler deploy`);
 
 				expect(output.stdout).not.toContain("Created: ");
 				expect(output.stdout).not.toContain("Deleted: ");
@@ -93,9 +89,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helper.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain("Deleted: MyDO");
 			});
@@ -103,9 +97,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			it("scenario T3: emits a stale-tombstone info and a removable_entries hint", async ({
 				expect,
 			}) => {
-				const output = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helper.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain("[stale_tombstone] MyDO");
 				expect(output.stdout).toContain("Safe to remove from `exports`: MyDO");
@@ -132,9 +124,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const result = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const result = await helper.run(`wrangler deploy`);
 
 				expect(result.status).not.toBe(0);
 				expect(result.stderr).toContain(
@@ -185,9 +175,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helper.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain("Created: Counter");
 			});
@@ -223,9 +211,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helper.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain("Renamed: Counter → CounterV2");
 				expect(output.stdout).not.toContain("Created: CounterV2");
@@ -257,9 +243,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helper.run(`wrangler deploy`);
 
 				expect(output.stdout).not.toContain("Renamed: ");
 				expect(output.stdout).not.toContain("Created: ");
@@ -308,9 +292,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helperA.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helperA.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain("Created: Widget");
 			});
@@ -351,9 +333,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helperB.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helperB.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain(
 					`Transfer pending: Widget ← ${workerA}`
@@ -385,9 +365,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helperA.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helperA.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain(
 					`Transferred (committed): Widget → ${workerB}`
@@ -421,9 +399,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helperB.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helperB.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain("env.WIDGET (Widget)");
 				expect(output.stdout).not.toContain("Created: ");
@@ -476,9 +452,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helper.run(`wrangler deploy`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helper.run(`wrangler deploy`);
 
 				expect(output.stdout).toContain("Created: SomeClass");
 			});
@@ -530,9 +504,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`,
 				});
 
-				const output = await helper.run(`wrangler versions upload`, {
-					env: { ...process.env, X_DO_EXPORTS: "true" },
-				});
+				const output = await helper.run(`wrangler versions upload`);
 
 				expect(output.stdout).toContain("Worker Version ID:");
 				expect(output.stdout).not.toContain(
@@ -551,27 +523,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				expect,
 			}) => {
 				const output = await helper.run(
-					`wrangler versions deploy ${versionId}@100% --yes`,
-					{
-						env: { ...process.env, X_DO_EXPORTS: "true" },
-					}
+					`wrangler versions deploy ${versionId}@100% --yes`
 				);
 
 				expect(output.stdout).toContain("SUCCESS");
-			});
-
-			it("rejects `exports` when `X_DO_EXPORTS` is off on the versions path", async ({
-				expect,
-			}) => {
-				// Symmetric to the deploy-side gate-off coverage above —
-				// pin down that the same `assertDoExportsEnabledIfConfigured`
-				// validator fires on the versions-upload path.
-				const result = await helper.run(`wrangler versions upload`);
-
-				expect(result.status).not.toBe(0);
-				expect(result.stderr).toContain(
-					"X_DO_EXPORTS` environment variable is not set"
-				);
 			});
 		});
 	}

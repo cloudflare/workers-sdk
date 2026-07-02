@@ -478,7 +478,7 @@ export interface CfWorkerInit {
 	migrations: CfDurableObjectMigrations | undefined;
 	/**
 	 * Declarative exports configuration. Durable Object entries are sent instead
-	 * of `migrations` and require the `X_DO_EXPORTS` environment variable.
+	 * of `migrations`.
 	 */
 	exports: CfExports | undefined;
 	compatibility_date: string | undefined;

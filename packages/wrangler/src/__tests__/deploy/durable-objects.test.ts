@@ -93,7 +93,7 @@ describe("deploy", () => {
 	});
 
 	describe("durable object migrations", () => {
-		it("should warn when you try to deploy durable objects without migrations", async ({
+		it("should warn when you try to deploy durable objects without a lifecycle declared", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -128,19 +128,15 @@ describe("deploy", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker
-				  (SomeClass), but no \`migrations\` for them. This may not work as expected until you add a
-				  \`migrations\` section to your wrangler.toml file. Add the following configuration:
+				  (SomeClass), but no live \`exports\` entry for them. This may not work as expected until you add a
+				  live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
 
 				      \`\`\`
-				      [[migrations]]
-				      tag = "v1"
-				      new_sqlite_classes = [ "SomeClass" ]
+				      [exports.SomeClass]
+				      type = "durable-object"
+				      storage = "sqlite"
 
 				      \`\`\`
-
-				      Refer to
-				  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
-				  details.
 
 				"
 			`);
@@ -761,28 +757,9 @@ describe("deploy", () => {
 	});
 
 	describe("durable object exports (declarative)", () => {
-		it("errors when `exports` is set but the `X_DO_EXPORTS` env var is off", async ({
+		it("sends the `exports` payload (and omits `migrations`)", async ({
 			expect,
 		}) => {
-			writeWranglerConfig({
-				durable_objects: {
-					bindings: [{ name: "DO", class_name: "MyDO" }],
-				},
-				exports: {
-					MyDO: { type: "durable-object", storage: "sqlite" },
-				},
-			});
-			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
-
-			await expect(runWrangler("deploy index.js")).rejects.toThrow(
-				/`X_DO_EXPORTS` environment variable is not set/
-			);
-		});
-
-		it("sends the `exports` payload (and omits `migrations`) when `X_DO_EXPORTS=true`", async ({
-			expect,
-		}) => {
-			vi.stubEnv("X_DO_EXPORTS", "true");
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [{ name: "DO", class_name: "MyDO" }],
@@ -809,7 +786,6 @@ describe("deploy", () => {
 		it("renders the success-side reconciliation envelope", async ({
 			expect,
 		}) => {
-			vi.stubEnv("X_DO_EXPORTS", "true");
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [{ name: "DO", class_name: "MyDO" }],
@@ -858,7 +834,6 @@ describe("deploy", () => {
 		it("renders the error-side reconciliation envelope with per-class detail", async ({
 			expect,
 		}) => {
-			vi.stubEnv("X_DO_EXPORTS", "true");
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [{ name: "DO", class_name: "MyDO" }],
