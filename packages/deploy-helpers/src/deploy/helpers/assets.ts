@@ -74,12 +74,21 @@ export const syncAssets = async (
 
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
-	const initializeAssetsResponse =
-		await fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
-			headers: { "Content-Type": "application/json" },
-			method: "POST",
-			body: JSON.stringify({ manifest: manifest }),
-		});
+	let initializeAssetsResponse: InitializeAssetsResponse | null;
+	try {
+		initializeAssetsResponse = await fetchResult<InitializeAssetsResponse | null>(
+			complianceConfig,
+			url,
+			{
+				headers: { "Content-Type": "application/json" },
+				method: "POST",
+				body: JSON.stringify({ manifest: manifest }),
+			}
+		);
+	} catch (e) {
+		logPotentialUriEncodingPaths(e, manifest);
+		throw e;
+	}
 
 	// In the past we've seen the endpoint return that incorrectly doesn't contain
 	// a null response (see: https://github.com/cloudflare/workers-sdk/issues/9465).
@@ -329,6 +338,42 @@ export const buildAssetManifest = async (dir: string) => {
 	);
 	return manifest;
 };
+
+function logPotentialUriEncodingPaths(e: unknown, manifest: AssetManifest) {
+	if (
+		!(e instanceof APIError) ||
+		e.code !== 10304 ||
+		!e.notes.some((note) => note.text.includes("Manifest path must be URI encoded"))
+	) {
+		return;
+	}
+
+	const candidatePaths = Object.keys(manifest).filter(isUriEncodingErrorCandidate);
+	if (candidatePaths.length === 0) {
+		logger.warn(
+			"The Assets API rejected the upload manifest because one or more paths must be URI encoded, but Wrangler could not identify any asset paths that fail URI decoding."
+		);
+		return;
+	}
+
+	const displayedPaths = candidatePaths
+		.map((assetPath) => `  - ${assetPath}`)
+		.join("\n");
+	logger.warn(
+		"The Assets API rejected the upload manifest because one or more paths must be URI encoded. " +
+			"The following asset paths fail URI decoding and may help identify the file that triggered the API error:\n" +
+			displayedPaths
+	);
+}
+
+function isUriEncodingErrorCandidate(assetPath: string) {
+	try {
+		decodeURIComponent(assetPath);
+		return false;
+	} catch {
+		return true;
+	}
+}
 
 function logAssetUpload(line: string, diffCount: number) {
 	const level = logger.loggerLevel ?? "log";

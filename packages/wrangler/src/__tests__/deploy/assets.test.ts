@@ -478,6 +478,7 @@ describe("deploy", () => {
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file#1.txt", content: "Content of file-2" },
 				{ filePath: "béëp/boo^p.txt", content: "Content of file-3" },
+				{ filePath: "space [file].txt", content: "Content of file-4" },
 			];
 			writeAssets(assets);
 			writeWranglerConfig({
@@ -490,6 +491,7 @@ describe("deploy", () => {
 					"ff5016e92f039aa743a4ff7abb3180fa",
 					"7574a8cd3094a050388ac9663af1c1d6",
 					"0de3dd5df907418e9730fd2bd747bd5e",
+					"361741650531ac969c8ca70a5438e7c1",
 				],
 			];
 			await mockAUSRequest(manifestBodies, mockBuckets, "<<aus-token>>");
@@ -526,6 +528,10 @@ describe("deploy", () => {
 						hash: "0de3dd5df907418e9730fd2bd747bd5e",
 						size: 17,
 					},
+					"/space [file].txt": {
+						hash: "361741650531ac969c8ca70a5438e7c1",
+						size: 17,
+					},
 				},
 			});
 			const flatBodies = Object.fromEntries(
@@ -552,6 +558,55 @@ describe("deploy", () => {
 				name: "0de3dd5df907418e9730fd2bd747bd5e",
 				type: "text/plain",
 			});
+			await expect(
+				flatBodies["361741650531ac969c8ca70a5438e7c1"]
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTQ="],
+				name: "361741650531ac969c8ca70a5438e7c1",
+				type: "text/plain",
+			});
+		});
+
+		it("should log possible paths when the assets upload session rejects manifest URI encoding", async ({
+			expect,
+		}) => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "space [file].txt", content: "Content of file-2" },
+				{ filePath: "broken%zz.txt", content: "Content of file-3" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+
+			msw.use(
+				http.post(
+					"*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session",
+					() => {
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: 10304,
+									message:
+										"Invalid manifest: Manifest path must be URI encoded.",
+								},
+							]),
+							{ status: 400 }
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("deploy")).rejects.toMatchObject({
+				code: 10304,
+			});
+			expect(std.warn).toContain(
+				"The following asset paths fail URI decoding"
+			);
+			expect(std.warn).toContain("  - /broken%zz.txt");
+			expect(std.warn).not.toContain("  - /file-1.txt");
+			expect(std.warn).not.toContain("  - /space [file].txt");
 		});
 
 		it("should resolve assets directory relative to wrangler.toml if using config", async ({
