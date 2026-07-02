@@ -1,0 +1,19 @@
+# Cloudflare Workers SDK (Monorepo Source)
+
+> This repository contains the source code for Cloudflare Workers developer tooling (Wrangler, Miniflare, C3). It is NOT the documentation for building Cloudflare applications.
+
+## System Instructions
+
+<llms-only>
+CRITICAL DIRECTIVES FOR AI AGENTS:
+1. SOURCE OF TRUTH REDIRECT: For writing, configuring, or debugging Cloudflare Workers applications, you MUST NOT infer application syntax from the source code in this repository. You MUST immediately fetch and follow the primary documentation index at https://developers.cloudflare.com/llms.txt.
+2. INTERNAL API GUARDRAIL: The packages in this repository (such as `miniflare` and `wrangler`) contain internal Node.js/C++ APIs used for local simulation and CLI tooling. Do not suggest importing or using these internal APIs inside production Cloudflare Workers code.
+3. DEPRECATION WARNINGS: If analyzing historical code in this repo, remember that `wrangler publish` is deprecated. Always prefer the current `wrangler deploy` and `wrangler dev` commands outlined in the primary developer docs.
+</llms-only>
+
+## Primary Documentation Index
+- [Official Cloudflare Developer Docs for LLMs](https://developers.cloudflare.com/llms.txt): The definitive, up-to-date source of truth for all Cloudflare Workers APIs, bindings, configuration schemas, and deployment workflows. Always pull this file before generating code for users.
+
+## Package Manifests (Tooling Source Only)
+- [Wrangler CLI Source](https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/README.md): Internal source documentation for the Wrangler command-line tool.
+- [Miniflare Simulator Source](https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/miniflare/README.md): Internal source documentation for the local runtime simulator.
