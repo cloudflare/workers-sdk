@@ -70,8 +70,10 @@ export function drawBox(
 	options: DrawBoxOptions = {}
 ): string {
 	const lines = [...contentLines, ...(options.footerLines ?? [])];
-	const maxContentWidth =
-			Math.max(...lines.map((line) => visibleLength(line)), 0);
+	const maxContentWidth = Math.max(
+		...lines.map((line) => visibleLength(line)),
+		0
+	);
 	const boxWidth = maxContentWidth + 4;
 
 	const horizontalLine = BOX.horizontal.repeat(boxWidth - 2);
