@@ -3,7 +3,6 @@ import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
-	assertDoExportsEnabledIfConfigured,
 	configFileName,
 	formatConfigSnippet,
 	getTodaysCompatDate,
@@ -505,9 +504,6 @@ async function resolveConfig(
 			"Queues are not yet supported in wrangler dev remote mode."
 		);
 	}
-
-	// Keep dev aligned with deploy when declarative `exports` is configured.
-	assertDoExportsEnabledIfConfigured(resolved.exports, "dev");
 
 	if (resolved.dev.remote) {
 		// We're in remote mode (`--remote`)
