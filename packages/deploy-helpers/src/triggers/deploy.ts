@@ -1,6 +1,7 @@
 import {
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
+	ParseError,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -331,7 +332,7 @@ export async function triggersDeploy(
 	if (errors.length > 0) {
 		throw new UserError(
 			`Some triggers failed to deploy for ${workerName}:\n` +
-				errors.map((error) => `  - ${error.message}`).join("\n"),
+				errors.map((error) => formatTriggerError(error)).join("\n"),
 			{
 				// Preserve the original errors (with stacks and subclass info) for
 				// debugging, while still presenting a single aggregated message.
@@ -345,6 +346,29 @@ export async function triggersDeploy(
 	}
 
 	return targets;
+}
+
+/**
+ * Format a single trigger deployment error for display in the aggregated
+ * "Some triggers failed to deploy" message.
+ *
+ * For APIError/ParseError, `.message` is only the generic "A request to the
+ * Cloudflare API (...) failed." text — the actual cause lives in `.notes[]`.
+ * We append those note texts so users see the real reason without needing
+ * WRANGLER_LOG=debug.
+ */
+function formatTriggerError(error: Error): string {
+	const base = `  - ${error.message}`;
+	if (error instanceof ParseError && error.notes.length > 0) {
+		// Note text can itself span multiple lines (e.g. a chained API error or a
+		// documentation link), so indent every line to keep it aligned.
+		const noteLines = error.notes
+			.flatMap((note) => note.text.split("\n"))
+			.map((line) => `    ${line}`)
+			.join("\n");
+		return `${base}\n${noteLines}`;
+	}
+	return base;
 }
 
 /**
