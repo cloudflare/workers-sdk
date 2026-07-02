@@ -110,7 +110,12 @@ export function registerRollbackFn(
 	const { cacheKey, fn, stepContext, output, config } = registration;
 	const existing = registry.get(cacheKey);
 	if (existing) {
-		disposeRollbackStub(existing.fn);
+		registry.set(cacheKey, {
+			...existing,
+			stepContext,
+			...("output" in registration && { output }),
+		});
+		return;
 	}
 	registry.set(cacheKey, {
 		fn: dupRollbackStub(fn),

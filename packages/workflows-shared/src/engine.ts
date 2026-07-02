@@ -270,7 +270,6 @@ export class Engine extends DurableObject<Env> {
 		for (const row of rows) {
 			if (row.event === InstanceEvent.STEP_START) {
 				stepStartGroupKeysDesc.push(row.groupKey);
-				continue;
 			}
 
 			if (
@@ -286,6 +285,7 @@ export class Engine extends DurableObject<Env> {
 			}
 
 			if (
+				row.event !== InstanceEvent.STEP_START &&
 				row.event !== InstanceEvent.STEP_SUCCESS &&
 				row.event !== InstanceEvent.STEP_FAILURE
 			) {

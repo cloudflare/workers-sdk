@@ -1775,6 +1775,68 @@ describe("Rollback", () => {
 		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(1);
 	});
 
+	it("replays cached failed steps before terminate rollback when registry is empty", async ({
+		expect,
+	}) => {
+		const instanceId = "RB-TERMINATE-FAILED-REPLAY";
+		const engineStub = await runWorkflow(instanceId, async (_e, step) => {
+			try {
+				await doWithRollback(
+					step,
+					"failed-setup",
+					{ retries: { limit: 0, delay: 0, backoff: "constant" } },
+					async () => {
+						throw new Error("step-boom");
+					},
+					rollbackOptions()
+				);
+			} catch {
+				// Keep the workflow running so terminate rollback can replay the cached
+				// failed step and re-register its rollback handler.
+			}
+			await step.sleep("wait-forever", "1 hour");
+		});
+
+		await readLogsAfter(engineStub, (currentLogs) =>
+			currentLogs.logs.some(
+				(log) =>
+					log.event === InstanceEvent.STEP_FAILURE &&
+					log.target === "failed-setup-1"
+			)
+		);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			engine.rollbackRegistry.clear();
+		});
+
+		try {
+			await runInDurableObject(engineStub, async (engine) => {
+				await engine.changeInstanceStatus("terminate", undefined, {
+					rollback: true,
+				});
+			});
+		} catch (error) {
+			if (
+				!(error instanceof Error) ||
+				!error.message.startsWith("Aborting engine:")
+			) {
+				throw error;
+			}
+		}
+
+		const logs = await readLogsAfter(
+			env.ENGINE.get(env.ENGINE.idFromName(instanceId)),
+			(currentLogs) =>
+				currentLogs.logs.some(
+					(log) => log.event === InstanceEvent.WORKFLOW_TERMINATED
+				)
+		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"failed-setup-1",
+		]);
+		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(1);
+	});
+
 	it("runs terminate rollback while paused with an empty registry", async ({
 		expect,
 	}) => {

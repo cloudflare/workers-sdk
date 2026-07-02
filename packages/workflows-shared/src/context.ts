@@ -459,6 +459,17 @@ export class Context extends RpcTarget {
 		) as Error | undefined;
 
 		if (maybeError) {
+			const cachedState = maybeMap.get(stepStateKey) as StepState | undefined;
+			this.#registerRollback({
+				cacheKey,
+				rollbackFn,
+				stepContext: {
+					step: { name, count },
+					attempt: cachedState?.attemptedCount ?? 1,
+					config: cachedConfig ?? config,
+				},
+				rollbackConfig,
+			});
 			maybeError.isUserError = true;
 			throw maybeError;
 		}
@@ -468,6 +479,21 @@ export class Context extends RpcTarget {
 			await this.#state.storage.put(configKey, config);
 		} else {
 			config = cachedConfig;
+		}
+
+		if (this.#engine.rollbackPhase === "replay" && !isRollback) {
+			const cachedState = maybeMap.get(stepStateKey) as StepState | undefined;
+			this.#registerRollback({
+				cacheKey,
+				rollbackFn,
+				stepContext: {
+					step: { name, count },
+					attempt: cachedState?.attemptedCount ?? 1,
+					config,
+				},
+				rollbackConfig,
+			});
+			return undefined;
 		}
 
 		const attemptLogs = this.#engine
@@ -543,6 +569,7 @@ export class Context extends RpcTarget {
 			if (stepState.attemptedCount == 0) {
 				this.#engine.writeLog(events.start, cacheKey, stepNameWithCounter, {
 					config,
+					...(!isRollback && rollbackFn ? { hasRollback: true } : {}),
 				});
 			} else {
 				// in case the engine dies while retrying and wakes up before the retry period
@@ -628,6 +655,12 @@ export class Context extends RpcTarget {
 					}
 				);
 				stepState.attemptedCount++;
+				this.#registerRollback({
+					cacheKey,
+					rollbackFn,
+					stepContext: forwardStepContext(),
+					rollbackConfig,
+				});
 				await this.#state.storage.put(stepStateKey, stepState);
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 
