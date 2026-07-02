@@ -1768,7 +1768,11 @@ describe("versions upload", () => {
 				compatibility_flags: ["nodejs_compat"],
 				placement: { mode: "smart" },
 				limits: { cpu_ms: 100 },
-				cache: { enabled: true },
+				cache: { enabled: true, cross_version_cache: true },
+				exports: {
+					default: { type: "worker", cache: { enabled: false } },
+					Admin: { type: "worker", cache: { enabled: true } },
+				},
 			});
 			writeWorkerSource();
 
@@ -1783,6 +1787,38 @@ describe("versions upload", () => {
 			// cache is serialized as cache_options in the upload form metadata
 			expect((metadata as Record<string, unknown>).cache_options).toEqual({
 				enabled: true,
+				cross_version_cache: true,
+			});
+			expect((metadata as Record<string, unknown>).exports).toEqual({
+				default: { type: "worker", cache: { enabled: false } },
+				Admin: { type: "worker", cache: { enabled: true } },
+			});
+		});
+
+		test("should include worker export cache config without top-level cache", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				compatibility_date: "2024-01-01",
+				exports: {
+					Admin: { type: "worker", cache: { enabled: true } },
+				},
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(
+				(metadata as Record<string, unknown>).cache_options
+			).toBeUndefined();
+			expect((metadata as Record<string, unknown>).exports).toEqual({
+				Admin: { type: "worker", cache: { enabled: true } },
 			});
 		});
 	});
@@ -2307,23 +2343,28 @@ describe("versions upload", () => {
 			mockGetScript();
 			const requests = mockUploadVersion(false, 0);
 
-			writeWranglerConfig({
-				name: "test-name",
-				main: "./index.js",
-				durable_objects: {
-					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					durable_objects: {
+						bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+					},
+					exports: {
+						MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
 				},
-				exports: {
-					MyDurableObject: { type: "durable-object", storage: "sqlite" },
-				},
-			});
+				"./wrangler.json"
+			);
 			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
 
-			await runWrangler("versions upload");
+			await runWrangler("versions upload --config ./wrangler.json");
 
 			const metadata = await getMetadata(requests[requests.length - 1]);
 			expect(metadata.exports).toEqual({
 				MyDurableObject: { type: "durable-object", storage: "sqlite" },
+				Admin: { type: "worker", cache: { enabled: true } },
 			});
 			expect(metadata.migrations).toBeUndefined();
 		});

@@ -1,5 +1,6 @@
 import { getDoExportsEnabledFromEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { partitionExports } from "./exports";
 import type { Config } from "./config";
 import type { DurableObjectExport } from "./environment";
 
@@ -21,18 +22,17 @@ export type DoExportsOptInContext =
  * user discovers the missing opt-in locally before any side effects fire.
  *
  * Called from the deploy / versions-upload payload resolution (so the
- * declarative payload doesn't get silently downgraded to legacy
- * `migrations` on the wire), from the `wrangler dev` config-resolution path
- * (so a local-dev session can't drift from production semantics), from the
- * `wrangler types` flow (so the generated `.d.ts` surface can't drift
- * either), and from `@cloudflare/vitest-pool-workers` (so tests can't drift
- * either).
+ * declarative payload doesn't get silently downgraded to legacy `migrations`),
+ * from the `wrangler dev` config-resolution path (so a local-dev session can't
+ * drift from production semantics), from the `wrangler types` flow (so the
+ * generated `.d.ts` surface can't drift either), and from
+ * `@cloudflare/vitest-pool-workers` (so tests can't drift either).
  */
 export function assertDoExportsEnabledIfConfigured(
 	exports: Config["exports"] | undefined,
 	context: DoExportsOptInContext
 ): void {
-	if (exports === undefined || Object.keys(exports).length === 0) {
+	if (!hasDurableObjectExports(exports)) {
 		return;
 	}
 	if (getDoExportsEnabledFromEnv()) {
@@ -68,13 +68,13 @@ export function assertDoExportsEnabledIfConfigured(
  * Returns a map of exports that are only of type "durable-object".
  */
 export function getDurableObjectExports(
-	exports: Config["exports"]
+	exports: Config["exports"] | undefined
 ): Record<string, DurableObjectExport> {
-	const durableObjectExports: Record<string, DurableObjectExport> = {};
-	for (const [className, exportConfig] of Object.entries(exports)) {
-		if (exportConfig.type === "durable-object") {
-			durableObjectExports[className] = exportConfig;
-		}
-	}
-	return durableObjectExports;
+	return partitionExports(exports)["durable-object"];
+}
+
+export function hasDurableObjectExports(
+	exports: Config["exports"] | undefined
+): boolean {
+	return Object.keys(getDurableObjectExports(exports)).length > 0;
 }

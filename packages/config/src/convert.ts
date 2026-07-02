@@ -1,4 +1,8 @@
-import { UserError, type RawConfig } from "@cloudflare/workers-utils";
+import {
+	UserError,
+	type RawConfig,
+	type Exports,
+} from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
 import type { ParsedInputWorkerConfig } from "./schema";
 import type { Json } from "./utils";
@@ -84,7 +88,14 @@ function convertTopLevel(
 		result.observability = convertObservability(config.observability);
 	}
 	if (config.cache !== undefined) {
-		result.cache = { enabled: config.cache.enabled };
+		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
+		const cache: RawCacheConfig = {
+			enabled: config.cache.enabled,
+		};
+		if (config.cache.crossVersionCache !== undefined) {
+			cache.cross_version_cache = config.cache.crossVersionCache;
+		}
+		result.cache = cache;
 	}
 	if (config.unsafe !== undefined) {
 		result.unsafe = convertUnsafeTopLevel(config.unsafe);
@@ -653,7 +664,7 @@ function convertBindingsAndAssets(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EXPORTS (Durable Objects)
+// EXPORTS (Workers + Durable Objects)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertExports(
@@ -665,31 +676,36 @@ function convertExports(
 		return;
 	}
 
-	const converted: RawConfig["exports"] = {};
-	const unknownExports: ParsedInputWorkerConfig["exports"] = {};
-	for (const [className, value] of Object.entries(exports)) {
+	const converted: Exports = {};
+	const unknownExports: typeof exports = {};
+	for (const [exportName, value] of Object.entries(exports)) {
+		if (value.type === "worker") {
+			converted[exportName] = value;
+			continue;
+		}
+
 		if (value.type !== "durable-object") {
-			unknownExports[className] = value;
+			unknownExports[exportName] = value;
 			continue;
 		}
 		switch (value.state) {
 			case undefined:
 			case "created": {
-				converted[className] = {
+				converted[exportName] = {
 					type: "durable-object",
 					storage: value.storage,
 				};
 				break;
 			}
 			case "deleted": {
-				converted[className] = {
+				converted[exportName] = {
 					type: "durable-object",
 					state: "deleted",
 				};
 				break;
 			}
 			case "renamed": {
-				converted[className] = {
+				converted[exportName] = {
 					type: "durable-object",
 					state: "renamed",
 					renamed_to: value.renamedTo,
@@ -697,7 +713,7 @@ function convertExports(
 				break;
 			}
 			case "transferred": {
-				converted[className] = {
+				converted[exportName] = {
 					type: "durable-object",
 					state: "transferred",
 					transferred_to: value.transferredTo,
@@ -705,7 +721,7 @@ function convertExports(
 				break;
 			}
 			case "expecting-transfer": {
-				converted[className] = {
+				converted[exportName] = {
 					type: "durable-object",
 					state: "expecting-transfer",
 					storage: value.storage,

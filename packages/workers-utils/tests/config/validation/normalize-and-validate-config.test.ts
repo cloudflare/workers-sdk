@@ -1921,6 +1921,92 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
+			it("accepts worker entries with cache config", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						default: { type: "worker", cache: { enabled: false } },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("accepts mixed Durable Object and worker entries", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Admin: {
+								type: "worker",
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+								cache: { enabled: "true" } as any,
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "exports.Admin.cache.enabled" to be of type boolean'
+				);
+			});
+
+			it("warns when worker entries include unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Admin: {
+								type: "worker",
+								storage: "sqlite",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in exports.Admin field: "storage"'
+				);
+			});
+
 			it("errors when storage is missing on a live entry", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -2118,7 +2204,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "exports.Weird.type" is required and must be "durable-object", but got "container"."
+					  - "exports.Weird.type" must be "durable-object" or "worker", but got "container"."
 				`);
 			});
 
@@ -10111,6 +10197,52 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(config.cache).toEqual({ enabled: false });
+			});
+
+			it("should not error when cross_version_cache is true and cache is disabled", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: false,
+							cross_version_cache: true,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({
+					enabled: false,
+					cross_version_cache: true,
+				});
+			});
+
+			it("should error when cache.cross_version_cache is not a boolean", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+							cross_version_cache: "true",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "cache.cross_version_cache" to be of type boolean but got "true"."
+				`);
 			});
 
 			it("should warn on unexpected fields in cache config", ({ expect }) => {

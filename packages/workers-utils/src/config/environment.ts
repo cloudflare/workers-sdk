@@ -358,11 +358,8 @@ export type DurableObjectExportStorage = "sqlite" | "legacy-kv";
 
 /**
  * A single declarative Durable Object export entry in the `exports` config
- * map. Discriminated union of `type` (kind) and `state` (lifecycle). `type`
- * is reserved for the export kind and is always `"durable-object"` today;
- * future export kinds (e.g. workflows, containers) will be added here.
- * `state` carries the lifecycle and defaults to `"created"` (live) when
- * omitted.
+ * map. `type` is reserved for the export kind. `state` carries the Durable
+ * Object lifecycle and defaults to `"created"` (live) when omitted.
  *
  * Mutually exclusive with {@link DurableObjectMigration} at the config-
  * validation boundary.
@@ -400,15 +397,21 @@ export type DurableObjectExport =
 			transfer_from: string;
 	  };
 
+export interface WorkerEntrypointExport {
+	type: "worker";
+	cache?: {
+		/** Whether cache is enabled for this entrypoint. */
+		enabled: boolean;
+	};
+}
+
+export type ConfiguredExport = DurableObjectExport | WorkerEntrypointExport;
+
 /**
+ * The declarative `exports` map keyed by export name. Durable Object exports
+ * are mutually exclusive with `migrations` at the wrangler config layer.
  */
-/**
- * The declarative `exports` map keyed by class name.
- *
- * Currently the only export kind supported is `durable-object` (see {@link DurableObjectExport}).
- * The value of each entry configures the exported class.
- */
-export type Exports = Record<string, DurableObjectExport>;
+export type Exports = Record<string, ConfiguredExport>;
 
 /**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
@@ -1775,6 +1778,8 @@ export interface Observability {
 export interface CacheOptions {
 	/** If cache is enabled for this Worker */
 	enabled: boolean;
+	/** Whether cached assets may be reused across Worker versions. */
+	cross_version_cache?: boolean;
 }
 
 export type DockerConfiguration = {

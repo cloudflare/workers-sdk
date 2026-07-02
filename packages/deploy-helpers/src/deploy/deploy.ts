@@ -8,6 +8,7 @@ import {
 	APIError,
 	formatTime,
 	getDockerPath,
+	hasDurableObjectExports,
 	parseNonHyphenedUuid,
 	retryOnAPIFailure,
 	UserError,
@@ -25,13 +26,13 @@ import { printBundleSize } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
-import { resolveDoLifecyclePayload } from "./helpers/durable";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
 import { EXPORTS_RECONCILIATION_ERROR_CODE } from "./helpers/error-codes";
+import { resolveExportsUploadPayload } from "./helpers/exports";
 import {
 	isExportsReconciliationErrorDetails,
 	renderExportsReconciliationError,
@@ -211,7 +212,7 @@ export default async function deploy(
 	} = buildResult;
 	// Durable Object lifecycle is expressed through either legacy `migrations`
 	// or the declarative `exports` map. Only one is sent on each upload.
-	const { migrations, exports } = await resolveDoLifecyclePayload({
+	const { migrations, exports } = await resolveExportsUploadPayload({
 		scriptName,
 		isDryRun,
 		accountId,
@@ -356,9 +357,8 @@ export default async function deploy(
 	// * aren't a dispatch namespace deploy
 	// * aren't a service env deploy
 	// * aren't a service Worker
-	// * we don't have DO migrations OR declarative DO `exports`.
-	//   Both are Durable Object lifecycle configurations, so deploys with them
-	//   use the PUT path that can apply lifecycle changes.
+	// * we don't have DO migrations or Durable Object `exports`.
+	//   Worker exports do not apply lifecycle changes, so they can use this path.
 	// * we aren't an fpw
 	// * not a container worker
 	const canUseNewVersionsDeploymentsApi =
@@ -367,7 +367,7 @@ export default async function deploy(
 		!useServiceEnvironments &&
 		format === "modules" &&
 		migrations === undefined &&
-		exports === undefined &&
+		!hasDurableObjectExports(config.exports) &&
 		!config.first_party_worker &&
 		config.containers === undefined;
 

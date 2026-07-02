@@ -242,6 +242,7 @@ export function isParsedUnsafeBinding(
 
 const CacheSchema = z.strictObject({
 	enabled: z.boolean(),
+	crossVersionCache: z.boolean().optional(),
 });
 
 /**
@@ -315,6 +316,10 @@ const ExportSchema = z.union([
 		state: z.literal("expecting-transfer"),
 		storage: z.enum(["sqlite", "legacy-kv"]),
 		transferFrom: z.string(),
+	}),
+	z.strictObject({
+		type: z.literal("worker"),
+		cache: z.strictObject({ enabled: z.boolean() }).optional(),
 	}),
 	// TODO: support Workflows
 	// z.strictObject({

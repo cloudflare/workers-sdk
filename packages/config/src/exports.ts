@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPORTS API
-// Named types and helper factories for declaring class exports.
+// Named types and helper factories for declaring exports.
 //
 // The TS-facing API follows the same structural shape as wrangler upload
 // metadata, with two stylistic transforms:
@@ -114,6 +114,17 @@ type DurableObjectExports =
 	| DurableObjectTransferredExport
 	| DurableObjectExpectingTransferExport;
 
+export interface WorkerEntrypointExportOptions {
+	cache?: {
+		/** Whether cache is enabled for this entrypoint. */
+		enabled: boolean;
+	};
+}
+
+export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
+	type: "worker";
+}
+
 /**
  * Configuration for named exports declared by the Worker. Each entry's
  * key is the exported class name; the value configures the export.
@@ -155,6 +166,9 @@ export interface Exports {
 	durableObject(
 		options: DurableObjectExpectingTransferExportOptions
 	): DurableObjectExpectingTransferExport;
+
+	/** Declares a WorkerEntrypoint export defined by this Worker. */
+	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
 }
 
 function durableObject(
@@ -178,6 +192,12 @@ function durableObject(
 	return { type: "durable-object", ...options };
 }
 
+function worker(
+	options: WorkerEntrypointExportOptions = {}
+): WorkerEntrypointExport {
+	return { type: "worker", ...options };
+}
+
 /**
  * Exports builder for configuring Worker exports.
  *
@@ -198,4 +218,5 @@ function durableObject(
  */
 export const exports: Exports = {
 	durableObject,
+	worker,
 };

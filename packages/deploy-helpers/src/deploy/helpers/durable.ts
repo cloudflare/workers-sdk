@@ -118,8 +118,6 @@ const suppressNotFoundError = (err: unknown) => {
 
 /**
  * Resolve which Durable Object lifecycle payload to send with the upload.
- * `migrations` and `exports` are mutually exclusive, so only one is set on
- * any given upload.
  */
 export async function resolveDoLifecyclePayload(props: {
 	scriptName: string;
@@ -139,9 +137,13 @@ export async function resolveDoLifecyclePayload(props: {
 		props.optInContext ?? "deploy"
 	);
 
-	const exports = getDurableObjectExports(props.config.exports);
-	if (getDoExportsEnabledFromEnv() && Object.keys(exports).length > 0) {
-		return { migrations: undefined, exports };
+	const durableObjectExports = getDurableObjectExports(props.config.exports);
+	const hasDurableObjectExports = Object.keys(durableObjectExports).length > 0;
+	if (getDoExportsEnabledFromEnv() && hasDurableObjectExports) {
+		return {
+			migrations: undefined,
+			exports: durableObjectExports,
+		};
 	}
 
 	const migrations = !props.isDryRun
@@ -154,5 +156,8 @@ export async function resolveDoLifecyclePayload(props: {
 			})
 		: undefined;
 
-	return { migrations, exports: undefined };
+	return {
+		migrations,
+		exports: undefined,
+	};
 }

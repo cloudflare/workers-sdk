@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import { convertToWranglerConfig } from "../convert";
+import { exports as exportConfig } from "../exports";
 
 const baseConfig = { name: "worker", compatibilityDate: "2026-06-01" } as const;
 
@@ -109,6 +110,15 @@ describe("convertToWranglerConfig", () => {
 				convertToWranglerConfig({ ...baseConfig, cache: { enabled: true } })
 					.cache
 			).toEqual({ enabled: true });
+		});
+
+		it("maps cross version cache to wrangler config", ({ expect }) => {
+			expect(
+				convertToWranglerConfig({
+					...baseConfig,
+					cache: { enabled: false, crossVersionCache: true },
+				}).cache
+			).toEqual({ enabled: false, cross_version_cache: true });
 		});
 
 		it("maps unsafe.metadata directly", ({ expect }) => {
@@ -737,6 +747,38 @@ describe("convertToWranglerConfig", () => {
 					storage: "sqlite",
 					transfer_from: "source-worker",
 				},
+			});
+		});
+
+		it("passes worker export cache config through", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					default: exportConfig.worker({ cache: { enabled: false } }),
+					Admin: exportConfig.worker({ cache: { enabled: true } }),
+				},
+			});
+
+			expect((result as { exports?: unknown }).exports).toEqual({
+				default: { type: "worker", cache: { enabled: false } },
+				Admin: { type: "worker", cache: { enabled: true } },
+			});
+		});
+
+		it("passes mixed Durable Object and worker exports through", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Counter: exportConfig.durableObject({ storage: "sqlite" }),
+					Admin: exportConfig.worker({ cache: { enabled: true } }),
+				},
+			});
+
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Counter: { type: "durable-object", storage: "sqlite" },
+				Admin: { type: "worker", cache: { enabled: true } },
 			});
 		});
 

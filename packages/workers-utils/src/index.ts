@@ -7,9 +7,12 @@ export type {
 	ConfigBindingOptions,
 } from "./config";
 export * from "./config/environment";
+export { partitionExports } from "./config/exports";
+export type { ExportType, PartitionedExports } from "./config/exports";
 export {
 	assertDoExportsEnabledIfConfigured,
 	getDurableObjectExports,
+	hasDurableObjectExports,
 	type DoExportsOptInContext,
 } from "./config/durable-object-exports";
 export {

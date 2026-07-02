@@ -5890,11 +5890,12 @@ function validateDurableObjectExportProperties(
 /**
  * Validate a Durable Object `exports` configuration.
  *
- * - `type` carries the export kind - must be `"durable-object"`
- * - `state` carries the lifecycle: one of `"created"` (default), `"deleted"`, `"renamed"`, `"transferred"`, `"expecting-transfer"`.
- * - depending upon `state`, certain properties are required or forbidden.
+ * - `type` carries the export kind and must be `"durable-object"`.
+ * - `state` carries the lifecycle: `"created"`, `"deleted"`, `"renamed"`,
+ *   `"transferred"`, or `"expecting-transfer"`.
+ * - Depending on `state`, some properties are required or forbidden.
  *
- * Deeper validation of `renamed_to` and `transferred_to` etc is performed server-side.
+ * Deeper validation of `renamed_to` and `transferred_to` happens in the API.
  */
 function validateDurableObjectExport(
 	diagnostics: Diagnostics,
@@ -6030,6 +6031,67 @@ function validateDurableObjectExport(
 	return valid;
 }
 
+function validateWorkerExport(
+	diagnostics: Diagnostics,
+	exportName: string,
+	workerExport: { cache?: unknown } & Record<string, unknown>
+): boolean {
+	let valid = true;
+
+	valid =
+		validateAdditionalProperties(
+			diagnostics,
+			`exports.${exportName}`,
+			Object.keys(workerExport),
+			["type", "cache"]
+		) && valid;
+
+	valid =
+		validateWorkerExportCache(
+			diagnostics,
+			`exports.${exportName}.cache`,
+			workerExport.cache
+		) && valid;
+
+	return valid;
+}
+
+function validateWorkerExportCache(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): boolean {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const cache = value as Record<string, unknown>;
+	let valid = true;
+
+	valid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"enabled",
+			cache.enabled,
+			"boolean"
+		) && valid;
+
+	valid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(cache), [
+			"enabled",
+		]) && valid;
+
+	return valid;
+}
+
 const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined || value === null) {
 		return true;
@@ -6044,30 +6106,27 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	let valid = true;
-	for (const [className, durableObjectExport] of Object.entries(value)) {
-		if (
-			typeof durableObjectExport !== "object" ||
-			durableObjectExport === null
-		) {
+	for (const [exportName, exportConfig] of Object.entries(value)) {
+		if (typeof exportConfig !== "object" || exportConfig === null) {
 			diagnostics.errors.push(
-				`"exports.${className}" should be an object but got ${JSON.stringify(
-					durableObjectExport
+				`"exports.${exportName}" should be an object but got ${JSON.stringify(
+					exportConfig
 				)}.`
 			);
 			valid = false;
 			continue;
 		}
-		if (durableObjectExport.type === "durable-object") {
+		if (exportConfig.type === "durable-object") {
 			valid =
-				validateDurableObjectExport(
-					diagnostics,
-					className,
-					durableObjectExport
-				) && valid;
+				validateDurableObjectExport(diagnostics, exportName, exportConfig) &&
+				valid;
+		} else if (exportConfig.type === "worker") {
+			valid =
+				validateWorkerExport(diagnostics, exportName, exportConfig) && valid;
 		} else {
 			valid = false;
 			diagnostics.errors.push(
-				`"exports.${className}.type" is required and must be "durable-object", but got ${JSON.stringify(durableObjectExport.type)}.`
+				`"exports.${exportName}.type" must be "durable-object" or "worker", but got ${JSON.stringify(exportConfig.type)}.`
 			);
 		}
 	}
@@ -6284,8 +6343,18 @@ const validateCache: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"cross_version_cache",
+			val.cross_version_cache,
+			"boolean"
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
+			"cross_version_cache",
 		]) && isValid;
 
 	return isValid;
@@ -6393,7 +6462,7 @@ function errorIfMigrationsAndExportsBothSet(
 	if (
 		migrations.length > 0 &&
 		exports !== undefined &&
-		Object.keys(exports).length > 0
+		Object.values(exports).some((entry) => entry.type === "durable-object")
 	) {
 		diagnostics.errors.push(
 			`\`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both.`
