@@ -1,18 +1,6 @@
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 
-export function splitAppIdAndKeys(targets: string[]): {
-	appId: string;
-	keys: string[];
-} {
-	if (targets.length < 2) {
-		throw new UserError("An app ID and at least one flag key are required.", {
-			telemetryMessage: "flagship flag key required",
-		});
-	}
-	return { appId: targets[0], keys: targets.slice(1) };
-}
-
 export async function runBulk<T>(
 	targets: string[],
 	action: (target: string) => Promise<T>,

@@ -143,6 +143,38 @@ describe("flagship", () => {
 			expect(std.out).toContain("checkout");
 		});
 
+		it("follows app list cursors", async ({ expect }) => {
+			mockPaged("apps", [
+				{
+					items: [
+						{
+							id: "app-1",
+							name: "checkout",
+							created_at: "2026-01-01",
+							updated_at: "2026-01-02",
+							updated_by: "dev@cloudflare.com",
+						},
+					],
+					cursor: "page-2",
+				},
+				{
+					items: [
+						{
+							id: "app-2",
+							name: "experiments",
+							created_at: "2026-01-01",
+							updated_at: "2026-01-03",
+							updated_by: "dev@cloudflare.com",
+						},
+					],
+					cursor: null,
+				},
+			]);
+			await runWrangler("flagship apps list");
+			expect(std.out).toContain("app-1");
+			expect(std.out).toContain("app-2");
+		});
+
 		it("updates an app", async ({ expect }) => {
 			const body = captureBody("put", "apps/app-1", {
 				id: "app-1",
@@ -379,6 +411,34 @@ describe("flagship", () => {
 			expect(std.out).toContain("30% rollout by user_id");
 		});
 
+		it("encodes flag keys in API paths", async ({ expect }) => {
+			let url = "";
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/flagship/apps/app-1/flags/:flagKey",
+					({ params, request }) => {
+						url = request.url;
+						expect(params.flagKey).toBe("foo/bar");
+						return HttpResponse.json(
+							createFetchResult(
+								{
+									key: "foo/bar",
+									enabled: true,
+									default_variation: "off",
+									variations: { on: true, off: false },
+									rules: [],
+								},
+								true
+							)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler('flagship flags get app-1 "foo/bar"');
+			expect(url).toContain("/flags/foo%2Fbar");
+		});
+
 		it("evaluates a flag with context", async ({ expect }) => {
 			let url = "";
 			msw.use(
@@ -404,6 +464,19 @@ describe("flagship", () => {
 			expect(url).toContain("targetingKey=user-1");
 			expect(std.out).toContain("evaluated");
 			expect(std.out).toContain("TARGETING_MATCH");
+		});
+
+		it("evaluates a flag from a standard API envelope", async ({ expect }) => {
+			mockGet("apps/app-1/evaluate", {
+				flagKey: "new-ui",
+				value: true,
+				variant: "on",
+				reason: "DEFAULT",
+			});
+			await runWrangler("flagship flags evaluate app-1 new-ui");
+			expect(std.out).toContain("new-ui");
+			expect(std.out).toContain("true");
+			expect(std.out).toContain("DEFAULT");
 		});
 
 		it("does not let context override the flag key", async ({ expect }) => {
@@ -525,9 +598,7 @@ describe("flagship", () => {
 		it("requires an app id and at least one flag key", async ({ expect }) => {
 			await expect(
 				runWrangler("flagship flags delete app-1 --force")
-			).rejects.toThrowError(
-				/An app ID and at least one flag key are required/
-			);
+			).rejects.toThrowError(/Not enough non-option arguments/);
 		});
 
 		it("requires --force to delete with --json", async ({ expect }) => {
@@ -829,6 +900,14 @@ describe("flagship", () => {
 				],
 			});
 			expect(std.out).toContain("Updated rollout");
+		});
+
+		it("rejects a non-finite rollout percentage", async ({ expect }) => {
+			await expect(
+				runWrangler(
+					"flagship flags rollout app-1 new-ui --to on --percentage NaN"
+				)
+			).rejects.toThrowError(/--percentage must be between 0 and 100/);
 		});
 
 		it("removes the rollout without changing the default when percentage is 0", async ({
@@ -1217,6 +1296,14 @@ describe("flagship", () => {
 			).rejects.toThrowError(/single non-empty attribute/);
 		});
 
+		it("rejects a rollout with an empty percentage", async ({ expect }) => {
+			await expect(
+				runWrangler(
+					`flagship flags create app-1 f -V on=true -V off=false --default off --rule "serve=on; rollout=@user_id"`
+				)
+			).rejects.toThrowError(/Expected a percentage between 0 and 100/);
+		});
+
 		it("rejects duplicate variation names", async ({ expect }) => {
 			await expect(
 				runWrangler(
@@ -1503,6 +1590,28 @@ describe("flagship", () => {
 			await expect(
 				runWrangler("flagship flags rules reorder app-1 new-ui --order 1,wat,2")
 			).rejects.toThrowError(/Invalid --order/);
+		});
+
+		it("rejects duplicate and extra reorder priorities", async ({ expect }) => {
+			const flag = {
+				key: "new-ui",
+				enabled: true,
+				default_variation: "off",
+				variations: { on: true, off: false },
+				rules: [
+					{ priority: 1, serve_variation: "on", conditions: [] },
+					{ priority: 2, serve_variation: "off", conditions: [] },
+				],
+			};
+			mockGet("apps/app-1/flags/new-ui", flag);
+			await expect(
+				runWrangler("flagship flags rules reorder app-1 new-ui --order 1,2,1")
+			).rejects.toThrowError(/must contain each existing rule priority/);
+
+			mockGet("apps/app-1/flags/new-ui", flag);
+			await expect(
+				runWrangler("flagship flags rules reorder app-1 new-ui --order 1,2,3")
+			).rejects.toThrowError(/must contain each existing rule priority/);
 		});
 	});
 

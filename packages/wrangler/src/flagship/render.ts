@@ -13,10 +13,7 @@ import type { EvaluationResult } from "./client";
 const INDENT = "  ";
 
 export function formatValue(value: unknown): string {
-	if (typeof value === "string") {
-		return `"${value}"`;
-	}
-	return JSON.stringify(value) ?? String(value);
+	return JSON.stringify(value) ?? "undefined";
 }
 
 export function statusBadge(enabled: boolean): string {

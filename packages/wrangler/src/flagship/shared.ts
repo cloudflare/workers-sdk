@@ -794,8 +794,14 @@ export function parseRollout(value: string): {
 	const at = value.indexOf("@");
 	const pctPart = at === -1 ? value : value.slice(0, at);
 	const attribute = at === -1 ? undefined : value.slice(at + 1).trim();
-	const percentage = Number(pctPart.replace(/%$/, "").trim());
-	if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
+	const pctText = pctPart.replace(/%$/, "").trim();
+	const percentage = Number(pctText);
+	if (
+		pctText === "" ||
+		!Number.isFinite(percentage) ||
+		percentage < 0 ||
+		percentage > 100
+	) {
 		invalid(
 			`Invalid rollout "${value}". Expected a percentage between 0 and 100, optionally followed by "@attribute".`,
 			"flagship rollout invalid"

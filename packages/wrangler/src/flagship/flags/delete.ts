@@ -1,6 +1,6 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { runBulk, splitAppIdAndKeys } from "../bulk";
+import { runBulk } from "../bulk";
 import { deleteFlag } from "../client";
 import { jsonFriendlyError } from "../shared";
 
@@ -14,11 +14,16 @@ export const flagshipFlagsDeleteCommand = createCommand({
 		printBanner: (args) => !args.json,
 	},
 	args: {
-		target: {
+		"app-id": {
+			type: "string",
+			demandOption: true,
+			description: "The ID of the app",
+		},
+		key: {
 			type: "string",
 			array: true,
 			demandOption: true,
-			description: "The app ID followed by one or more flag keys to delete",
+			description: "One or more flag keys to delete",
 		},
 		force: {
 			type: "boolean",
@@ -32,9 +37,9 @@ export const flagshipFlagsDeleteCommand = createCommand({
 			description: "Return output as JSON",
 		},
 	},
-	positionalArgs: ["target"],
+	positionalArgs: ["app-id", "key"],
 	async handler(args, { config, confirm }) {
-		const { appId, keys } = splitAppIdAndKeys(args.target);
+		const { appId, key: keys } = args;
 		if (args.json && !args.force) {
 			throw jsonFriendlyError(
 				"Pass --force to skip the confirmation prompt when using --json.",

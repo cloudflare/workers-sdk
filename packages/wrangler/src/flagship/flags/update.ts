@@ -18,6 +18,28 @@ export const flagshipFlagsUpdateCommand = createCommand({
 		description: "Update a feature flag in a Flagship app",
 		status: "open beta",
 		owner: "Product: Flagship",
+		examples: [
+			{
+				command:
+					'wrangler flagship flags update <APP_ID> new-checkout --description "Redesigned checkout experience"',
+				description: "Update flag metadata",
+			},
+			{
+				command:
+					"wrangler flagship flags update <APP_ID> upload-limit --set-variation team=500",
+				description: "Add or replace a variation",
+			},
+			{
+				command:
+					'wrangler flagship flags update <APP_ID> premium-banner --add-rule "serve=off; when=account_age less_than 7"',
+				description: "Append a targeting rule",
+			},
+			{
+				command:
+					"wrangler flagship flags update <APP_ID> premium-banner --clear-rules",
+				description: "Remove all targeting rules",
+			},
+		],
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

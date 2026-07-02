@@ -112,6 +112,10 @@ export type Page<T> = {
 
 const JSON_HEADERS = { "content-type": "application/json" };
 
+function pathSegment(value: string): string {
+	return encodeURIComponent(value);
+}
+
 async function fetchPage<T>(
 	config: Config,
 	resource: string,
@@ -150,16 +154,26 @@ export async function createApp(config: Config, name: string): Promise<App> {
 
 export async function listApps(config: Config): Promise<App[]> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(config, `/accounts/${accountId}/flagship/apps`, {
-		method: "GET",
-	});
+	const items: App[] = [];
+	let cursor: string | undefined;
+	do {
+		const page = await fetchPage<App>(
+			config,
+			`/accounts/${accountId}/flagship/apps`,
+			undefined,
+			cursor
+		);
+		items.push(...page.items);
+		cursor = page.cursor ?? undefined;
+	} while (cursor);
+	return items;
 }
 
 export async function getApp(config: Config, appId: string): Promise<App> {
 	const accountId = await requireAuth(config);
 	return await fetchResult(
 		config,
-		`/accounts/${accountId}/flagship/apps/${appId}`,
+		`/accounts/${accountId}/flagship/apps/${pathSegment(appId)}`,
 		{ method: "GET" }
 	);
 }
@@ -172,7 +186,7 @@ export async function updateApp(
 	const accountId = await requireAuth(config);
 	return await fetchResult(
 		config,
-		`/accounts/${accountId}/flagship/apps/${appId}`,
+		`/accounts/${accountId}/flagship/apps/${pathSegment(appId)}`,
 		{ method: "PUT", headers: JSON_HEADERS, body: JSON.stringify({ name }) }
 	);
 }
@@ -184,7 +198,7 @@ export async function deleteApp(
 	const accountId = await requireAuth(config);
 	return await fetchResult(
 		config,
-		`/accounts/${accountId}/flagship/apps/${appId}`,
+		`/accounts/${accountId}/flagship/apps/${pathSegment(appId)}`,
 		{ method: "DELETE" }
 	);
 }
@@ -198,7 +212,7 @@ export async function listFlags(
 	const accountId = await requireAuth(config);
 	return await fetchPage<Flag>(
 		config,
-		`/accounts/${accountId}/flagship/apps/${appId}/flags`,
+		`/accounts/${accountId}/flagship/apps/${pathSegment(appId)}/flags`,
 		limit,
 		cursor
 	);
@@ -226,7 +240,7 @@ export async function createFlag(
 	const accountId = await requireAuth(config);
 	return await fetchResult(
 		config,
-		`/accounts/${accountId}/flagship/apps/${appId}/flags`,
+		`/accounts/${accountId}/flagship/apps/${pathSegment(appId)}/flags`,
 		{ method: "POST", headers: JSON_HEADERS, body: JSON.stringify(flag) }
 	);
 }
@@ -239,7 +253,7 @@ export async function getFlag(
 	const accountId = await requireAuth(config);
 	return await fetchResult(
 		config,
-		`/accounts/${accountId}/flagship/apps/${appId}/flags/${flagKey}`,
+		`/accounts/${accountId}/flagship/apps/${pathSegment(appId)}/flags/${pathSegment(flagKey)}`,
 		{ method: "GET" }
 	);
 }
@@ -253,7 +267,7 @@ export async function updateFlag(
 	const accountId = await requireAuth(config);
 	return await fetchResult(
 		config,
-		`/accounts/${accountId}/flagship/apps/${appId}/flags/${flagKey}`,
+		`/accounts/${accountId}/flagship/apps/${pathSegment(appId)}/flags/${pathSegment(flagKey)}`,
 		{ method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(flag) }
 	);
 }
@@ -266,7 +280,7 @@ export async function deleteFlag(
 	const accountId = await requireAuth(config);
 	return await fetchResult(
 		config,
-		`/accounts/${accountId}/flagship/apps/${appId}/flags/${flagKey}`,
+		`/accounts/${accountId}/flagship/apps/${pathSegment(appId)}/flags/${pathSegment(flagKey)}`,
 		{ method: "DELETE" }
 	);
 }
@@ -281,7 +295,7 @@ export async function getFlagChangelog(
 	const accountId = await requireAuth(config);
 	return await fetchPage<ChangelogEntry>(
 		config,
-		`/accounts/${accountId}/flagship/apps/${appId}/flags/${flagKey}/changelog`,
+		`/accounts/${accountId}/flagship/apps/${pathSegment(appId)}/flags/${pathSegment(flagKey)}/changelog`,
 		limit,
 		cursor
 	);
@@ -315,7 +329,7 @@ export async function evaluateFlag(
 	context: Record<string, string>
 ): Promise<EvaluationResult> {
 	const accountId = await requireAuth(config);
-	const resource = `/accounts/${accountId}/flagship/apps/${appId}/evaluate`;
+	const resource = `/accounts/${accountId}/flagship/apps/${pathSegment(appId)}/evaluate`;
 	const query = new URLSearchParams({ ...context, flagKey });
 	const response = await performApiFetch(
 		config,
@@ -325,9 +339,12 @@ export async function evaluateFlag(
 	);
 	const body = (await response.json()) as
 		| EvaluationResult
-		| FetchResult<unknown>;
-	if ("success" in body && !body.success) {
-		throwFetchError(resource, body, response.status);
+		| FetchResult<EvaluationResult>;
+	if ("success" in body) {
+		if (!body.success) {
+			throwFetchError(resource, body, response.status);
+		}
+		return body.result;
 	}
 	return body as EvaluationResult;
 }

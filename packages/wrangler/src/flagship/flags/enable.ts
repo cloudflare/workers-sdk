@@ -1,6 +1,6 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { runBulk, splitAppIdAndKeys } from "../bulk";
+import { runBulk } from "../bulk";
 import { getFlag, toFlagInput, updateFlag } from "../client";
 import { renderFlag } from "../render";
 
@@ -16,11 +16,16 @@ function makeToggleCommand(enabled: boolean) {
 			printBanner: (args) => !args.json,
 		},
 		args: {
-			target: {
+			"app-id": {
+				type: "string",
+				demandOption: true,
+				description: "The ID of the app",
+			},
+			key: {
 				type: "string",
 				array: true,
 				demandOption: true,
-				description: `The app ID followed by one or more flag keys to ${verb.toLowerCase()}`,
+				description: `One or more flag keys to ${verb.toLowerCase()}`,
 			},
 			json: {
 				type: "boolean",
@@ -28,9 +33,9 @@ function makeToggleCommand(enabled: boolean) {
 				description: "Return output as JSON",
 			},
 		},
-		positionalArgs: ["target"],
+		positionalArgs: ["app-id", "key"],
 		async handler(args, { config }) {
-			const { appId, keys } = splitAppIdAndKeys(args.target);
+			const { appId, key: keys } = args;
 			await runBulk(
 				keys,
 				async (key) => {

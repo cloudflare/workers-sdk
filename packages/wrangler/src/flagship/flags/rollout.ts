@@ -68,7 +68,11 @@ export const flagshipFlagsRolloutCommand = createCommand({
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config, confirm }) {
 		const { appId, key } = args;
-		if (args.percentage < 0 || args.percentage > 100) {
+		if (
+			!Number.isFinite(args.percentage) ||
+			args.percentage < 0 ||
+			args.percentage > 100
+		) {
 			throw new UserError("--percentage must be between 0 and 100.", {
 				telemetryMessage: "flagship rollout invalid percentage",
 			});
