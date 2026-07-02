@@ -1,13 +1,18 @@
 import { spawnSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import dedent from "ts-dedent";
-import { describe, it, vitest } from "vitest";
+import { afterEach, describe, it, vitest } from "vitest";
 import {
 	commitAndPush,
 	generateChangesetHeader,
 	generateCommitMessage,
+	getChangesetFilename,
+	getFilenameSlug,
 	getPackageJsonDiff,
+	mergeChanges,
+	parseChangesetForChanges,
 	parseDiffForChanges,
+	readExistingChanges,
 	writeChangeSet,
 } from "../generate-dependabot-pr-changesets";
 import type { Mock } from "vitest";
@@ -20,8 +25,13 @@ vitest.mock("node:child_process", async () => {
 
 vitest.mock("node:fs", async () => {
 	return {
+		readFileSync: vitest.fn(),
 		writeFileSync: vitest.fn(),
 	};
+});
+
+afterEach(() => {
+	vitest.resetAllMocks();
 });
 
 describe("getPackageJsonDiff()", () => {
@@ -83,6 +93,141 @@ describe("parseDiffForChanges()", () => {
 	it("should ignore lines that do not match a change", ({ expect }) => {
 		const changes = parseDiffForChanges(["", undefined, "random text"]);
 		expect(changes.size).toBe(0);
+	});
+});
+
+describe("getFilenameSlug()", () => {
+	it("should return a sanitized slug for the first changed dependency", ({
+		expect,
+	}) => {
+		const slug = getFilenameSlug("@namespace/some-package");
+		expect(slug).toBe("namespace-some-package");
+	});
+});
+
+describe("getChangesetFilename()", () => {
+	it("should derive a changeset filename from the first changed dependency", ({
+		expect,
+	}) => {
+		const changesetFilename = getChangesetFilename(
+			"some-prefix",
+			new Map([["@namespace/some-package", { from: "1.0.0", to: "1.0.1" }]])
+		);
+		expect(changesetFilename).toBe("some-prefix-namespace-some-package.md");
+	});
+
+	it("should use a stable changeset label", ({ expect }) => {
+		const changesetFilename = getChangesetFilename(
+			"some-prefix",
+			new Map([["some-package", { from: "1.0.0", to: "1.0.1" }]]),
+			"stable-name"
+		);
+		expect(changesetFilename).toBe("some-prefix-stable-name.md");
+	});
+
+	it("should require a stable changeset label for multiple changed dependencies", ({
+		expect,
+	}) => {
+		expect(() =>
+			getChangesetFilename(
+				"some-prefix",
+				new Map([
+					["some-package", { from: "1.0.0", to: "1.0.1" }],
+					["other-package", { from: "2.0.0", to: "2.0.1" }],
+				])
+			)
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Cannot generate dependency-scoped changeset filename for multiple dependency changes. Pass a stable changeset label.]`
+		);
+	});
+
+	it("should throw for an empty changes map", ({ expect }) => {
+		expect(() =>
+			getChangesetFilename("some-prefix", new Map())
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Cannot generate changeset filename without dependency changes.]`
+		);
+	});
+});
+
+describe("parseChangesetForChanges()", () => {
+	it("should parse dependency rows from a generated changeset", ({
+		expect,
+	}) => {
+		const changes = parseChangesetForChanges(dedent`
+			---
+			"package-name": patch
+			---
+
+			Update dependencies of "package-name"
+
+			The following dependency versions have been updated:
+
+			| Dependency              | From   | To     |
+			| ----------------------- | ------ | ------ |
+			| some-package            | ^0.0.1 | ^0.0.2 |
+			| @namespace/some-package | 1.3.4  | 1.4.5  |
+		`);
+
+		expect(changes).toEqual(
+			new Map([
+				["some-package", { from: "^0.0.1", to: "^0.0.2" }],
+				["@namespace/some-package", { from: "1.3.4", to: "1.4.5" }],
+			])
+		);
+	});
+});
+
+describe("readExistingChanges()", () => {
+	it("should return an empty map when the changeset does not exist", ({
+		expect,
+	}) => {
+		const error = Object.assign(new Error("File not found"), {
+			code: "ENOENT",
+		});
+		(readFileSync as Mock).mockImplementation(() => {
+			throw error;
+		});
+
+		expect(readExistingChanges("missing.md")).toEqual(new Map());
+		expect(readFileSync).toHaveBeenCalledWith(".changeset/missing.md", "utf-8");
+	});
+
+	it("should parse an existing changeset", ({ expect }) => {
+		(readFileSync as Mock).mockReturnValue(dedent`
+			| Dependency   | From  | To    |
+			| ------------ | ----- | ----- |
+			| some-package | 1.0.0 | 1.0.1 |
+		`);
+
+		expect(readExistingChanges("existing.md")).toEqual(
+			new Map([["some-package", { from: "1.0.0", to: "1.0.1" }]])
+		);
+		expect(readFileSync).toHaveBeenCalledWith(
+			".changeset/existing.md",
+			"utf-8"
+		);
+	});
+});
+
+describe("mergeChanges()", () => {
+	it("should preserve the original from version and update to the latest version", ({
+		expect,
+	}) => {
+		const changes = mergeChanges(
+			new Map([
+				["some-package", { from: "1.0.0", to: "1.0.1" }],
+				["other-package", { from: "2.0.0", to: "2.0.1" }],
+			]),
+			new Map([["some-package", { from: "1.0.1", to: "1.0.2" }]])
+		);
+
+		expect(changes).toEqual(
+			new Map([
+				["some-package", { from: "1.0.0", to: "1.0.2" }],
+				["other-package", { from: "2.0.0", to: "2.0.1" }],
+			])
+		);
 	});
 });
 
@@ -182,10 +327,10 @@ describe("writeChangeSet()", () => {
 		| some-package            | ^0.0.1 | ^0.0.2 |
 		| @namespace/some-package | 1.3.4  | 1.4.5  |
 	`;
-		writeChangeSet("some-prefix", "1234", header, body);
+		writeChangeSet("some-prefix-some-package.md", header, body);
 		expect(writeFileSync).toHaveBeenCalledOnce();
 		expect((writeFileSync as Mock).mock.lastCall?.[0]).toMatchInlineSnapshot(
-			`".changeset/some-prefix-1234.md"`
+			`".changeset/some-prefix-some-package.md"`
 		);
 		expect((writeFileSync as Mock).mock.lastCall?.[1]).toMatchInlineSnapshot(`
 			"---
