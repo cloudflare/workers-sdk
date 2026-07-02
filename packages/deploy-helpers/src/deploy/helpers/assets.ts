@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { createReadStream } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { resolveCompatibilityFlags } from "@cloudflare/workers-shared/utils/compatibility-flags";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
@@ -829,8 +830,10 @@ export function resolveAssetOptions(
 		not_found_handling: config.assets?.not_found_handling,
 		base_path: config.assets?.base_path,
 		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
-		compatibility_date: config.compatibility_date,
-		compatibility_flags: config.compatibility_flags,
+		compatibility_flags: resolveCompatibilityFlags({
+			compatibilityDate: config.compatibility_date,
+			compatibilityFlags: config.compatibility_flags,
+		}),
 	};
 
 	return {
