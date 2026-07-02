@@ -103,6 +103,12 @@ type VariableNames =
 	| "CLOUDFLARE_ACCESS_CLIENT_ID"
 	/** Cloudflare Access Service Token Client Secret. Used with CLOUDFLARE_ACCESS_CLIENT_ID. */
 	| "CLOUDFLARE_ACCESS_CLIENT_SECRET"
+	/**
+	 * Store OAuth credentials in the OS keychain instead of a plaintext TOML
+	 * file. Overrides the persistent `keyring_enabled` preference written by
+	 * `wrangler login --use-keyring`.
+	 */
+	| "CLOUDFLARE_AUTH_USE_KEYRING"
 
 	// ## Experimental Feature Flags
 
