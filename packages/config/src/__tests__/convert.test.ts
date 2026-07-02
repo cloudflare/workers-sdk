@@ -765,6 +765,23 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("passes mixed Durable Object and worker exports through", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Counter: exportConfig.durableObject({ storage: "sqlite" }),
+					Admin: exportConfig.worker({ cache: { enabled: true } }),
+				},
+			});
+
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Counter: { type: "durable-object", storage: "sqlite" },
+				Admin: { type: "worker", cache: { enabled: true } },
+			});
+		});
+
 		it("emits no exports key when the map is empty", ({ expect }) => {
 			const result = convertToWranglerConfig({ ...baseConfig, exports: {} });
 			expect("exports" in (result as object)).toBe(false);

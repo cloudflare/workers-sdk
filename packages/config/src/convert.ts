@@ -88,7 +88,8 @@ function convertTopLevel(
 		result.observability = convertObservability(config.observability);
 	}
 	if (config.cache !== undefined) {
-		const cache: NonNullable<RawConfig["cache"]> = {
+		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
+		const cache: RawCacheConfig = {
 			enabled: config.cache.enabled,
 		};
 		if (config.cache.crossVersionCache !== undefined) {

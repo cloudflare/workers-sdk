@@ -15,6 +15,8 @@ export async function resolveExportsUploadPayload(
 	const partitionedExports = partitionExports(props.config.exports);
 	const { migrations, exports: durableObjectExports } =
 		await resolveDoLifecyclePayload(props);
+	// Durable Object exports replace migrations. Worker exports can upload with
+	// either path, but not both.
 	const exports = {
 		...partitionedExports.worker,
 		...(durableObjectExports ?? {}),

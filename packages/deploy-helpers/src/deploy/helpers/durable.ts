@@ -118,8 +118,6 @@ const suppressNotFoundError = (err: unknown) => {
 
 /**
  * Resolve which Durable Object lifecycle payload to send with the upload.
- * Durable Object exports replace `migrations`. Worker exports can upload with
- * either path.
  */
 export async function resolveDoLifecyclePayload(props: {
 	scriptName: string;

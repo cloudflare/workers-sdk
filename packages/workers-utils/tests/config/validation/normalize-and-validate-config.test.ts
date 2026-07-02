@@ -1941,6 +1941,26 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
+			it("accepts mixed Durable Object and worker entries", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
 			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{

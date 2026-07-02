@@ -214,6 +214,20 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 			},
 		},
 		{
+			label: "mixed exports",
+			overrides: {
+				exports: {
+					Counter: { type: "durable-object", storage: "sqlite" },
+					Admin: { type: "worker", cache: { enabled: true } },
+				},
+			},
+			key: "exports",
+			expected: {
+				Counter: { type: "durable-object", storage: "sqlite" },
+				Admin: { type: "worker", cache: { enabled: true } },
+			},
+		},
+		{
 			label: "annotations",
 			overrides: {
 				annotations: {
