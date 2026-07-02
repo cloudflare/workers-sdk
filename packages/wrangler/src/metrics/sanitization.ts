@@ -99,6 +99,11 @@ export const COMMAND_ARG_ALLOW_LIST: AllowList = {
 	deploy: {
 		containersRollout: ["immediate", "gradual"],
 	},
+	"list-commands": {
+		includeAliases: ALLOW,
+		all: ALLOW,
+		base: ALLOW,
+	},
 };
 
 /**

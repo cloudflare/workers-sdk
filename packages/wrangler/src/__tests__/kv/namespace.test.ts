@@ -120,7 +120,11 @@ describe("kv", () => {
 					      --preview        Interact with a preview namespace  [boolean]
 					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
 					      --update-config  Automatically update your config file with the newly added resource  [boolean]
-					      --binding        The binding name of this resource in your Worker  [string]"
+					      --binding        The binding name of this resource in your Worker  [string]
+
+					☝️ Tip: Run \`wrangler list-commands\` to see all available commands and subcommands.
+
+					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m

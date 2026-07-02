@@ -45,6 +45,7 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
+				  wrangler list-commands          List all available commands and subcommands
 
 				  wrangler email                  Manage Cloudflare Email services [open beta]
 
@@ -146,6 +147,7 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
+				  wrangler list-commands          List all available commands and subcommands
 
 				  wrangler email                  Manage Cloudflare Email services [open beta]
 
@@ -207,7 +209,11 @@ describe("wrangler", () => {
 				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
-				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+
+				☝️ Tip: Run \`wrangler list-commands\` to see all available commands and subcommands.
+
+				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
