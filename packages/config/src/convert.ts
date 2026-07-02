@@ -1,7 +1,7 @@
+import { UserError, type RawConfig } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
 import type { ParsedInputWorkerConfig } from "./schema";
 import type { Json } from "./utils";
-import type { RawConfig } from "@cloudflare/workers-utils";
 
 /**
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
@@ -653,23 +653,82 @@ function convertBindingsAndAssets(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EXPORTS (Durable Objects + Workflows)
+// EXPORTS (Durable Objects)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertExports(
 	config: ParsedInputWorkerConfig,
-	_result: RawConfig
+	result: RawConfig
 ): void {
 	const exports = config.exports;
 	if (!exports) {
 		return;
 	}
 
-	for (const value of Object.values(exports)) {
-		if (value.type === "durable-object") {
-			throw new Error("Durable Object exports are not currently supported.");
+	const converted: RawConfig["exports"] = {};
+	const unknownExports: ParsedInputWorkerConfig["exports"] = {};
+	for (const [className, value] of Object.entries(exports)) {
+		if (value.type !== "durable-object") {
+			unknownExports[className] = value;
+			continue;
 		}
-		// TODO: support Workflows
+		switch (value.state) {
+			case undefined:
+			case "created": {
+				converted[className] = {
+					type: "durable-object",
+					storage: value.storage,
+				};
+				break;
+			}
+			case "deleted": {
+				converted[className] = {
+					type: "durable-object",
+					state: "deleted",
+				};
+				break;
+			}
+			case "renamed": {
+				converted[className] = {
+					type: "durable-object",
+					state: "renamed",
+					renamed_to: value.renamedTo,
+				};
+				break;
+			}
+			case "transferred": {
+				converted[className] = {
+					type: "durable-object",
+					state: "transferred",
+					transferred_to: value.transferredTo,
+				};
+				break;
+			}
+			case "expecting-transfer": {
+				converted[className] = {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: value.storage,
+					transfer_from: value.transferFrom,
+				};
+				break;
+			}
+		}
+	}
+	if (Object.keys(unknownExports).length > 0) {
+		throw new UserError(
+			"Unknown export types found: " +
+				Object.entries(unknownExports)
+					.map(([exportName, { type }]) => `- ${exportName} : ${type}`)
+					.join("\n"),
+			{
+				telemetryMessage: "Unknown export types found",
+			}
+		);
+	}
+
+	if (Object.keys(converted).length > 0) {
+		result.exports = converted;
 	}
 }
 

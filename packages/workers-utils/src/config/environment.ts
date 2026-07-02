@@ -351,6 +351,66 @@ export type DurableObjectMigration = {
 };
 
 /**
+ * Storage backend for a declarative Durable Object export. See
+ * {@link DurableObjectExport}.
+ */
+export type DurableObjectExportStorage = "sqlite" | "legacy-kv";
+
+/**
+ * A single declarative Durable Object export entry in the `exports` config
+ * map. Discriminated union of `type` (kind) and `state` (lifecycle). `type`
+ * is reserved for the export kind and is always `"durable-object"` today;
+ * future export kinds (e.g. workflows, containers) will be added here.
+ * `state` carries the lifecycle and defaults to `"created"` (live) when
+ * omitted.
+ *
+ * Mutually exclusive with {@link DurableObjectMigration} at the config-
+ * validation boundary.
+ *
+ *  - `created` (default, live): `storage` is required.
+ *  - `deleted` (tombstone): retire a provisioned namespace whose class has
+ *    been removed from code.
+ *  - `renamed` (tombstone): rewrite a provisioned namespace's class name to
+ *    `renamed_to`. The target name must also appear as a live (state
+ *    `"created"`) `durable-object` entry in the same map.
+ *  - `transferred` (tombstone): hand ownership of the namespace to another
+ *    script in the same account (`transferred_to`). Two-phase commit;
+ *    the target must first deploy an `expecting-transfer` entry naming this
+ *    script via `transfer_from`.
+ *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
+ *    `storage` and `transfer_from` are both required.
+ */
+export type DurableObjectExport =
+	| {
+			type: "durable-object";
+			state?: "created";
+			storage: DurableObjectExportStorage;
+	  }
+	| { type: "durable-object"; state: "deleted" }
+	| { type: "durable-object"; state: "renamed"; renamed_to: string }
+	| {
+			type: "durable-object";
+			state: "transferred";
+			transferred_to: string;
+	  }
+	| {
+			type: "durable-object";
+			state: "expecting-transfer";
+			storage: DurableObjectExportStorage;
+			transfer_from: string;
+	  };
+
+/**
+ */
+/**
+ * The declarative `exports` map keyed by class name.
+ *
+ * Currently the only export kind supported is `durable-object` (see {@link DurableObjectExport}).
+ * The value of each entry configures the exported class.
+ */
+export type Exports = Record<string, DurableObjectExport>;
+
+/**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
  */
@@ -509,6 +569,17 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	migrations: DurableObjectMigration[];
+
+	/**
+	 * Declarative exports configuration — a map of class name to export configuration.
+	 *
+	 * The configuration of Durable Objects via `exports` is mutually exclusive with `migrations`.
+	 * Durable Object exports are gated behind the `X_DO_EXPORTS` environment variable for Wrangler commands.
+	 *
+	 * @default {}
+	 * @inheritable
+	 */
+	exports: Exports;
 
 	/**
 	 * "Cron" definitions to trigger a Worker's "scheduled" function.

@@ -1,6 +1,9 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
-import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
+import {
+	ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE,
+	generatePreviewAlias,
+} from "@cloudflare/deploy-helpers";
 import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
 import {
 	runInTempDir,
@@ -2264,6 +2267,167 @@ describe("versions upload", () => {
 			await runWrangler("versions upload --dry-run");
 
 			expect(std.out).toContain("--dry-run: exiting now.");
+		});
+	});
+
+	describe("durable object exports (declarative)", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("errors when `exports` is set but the `X_DO_EXPORTS` env var is off", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				durable_objects: {
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+				},
+				exports: {
+					MyDurableObject: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+
+			await expect(runWrangler("versions upload")).rejects.toThrow(
+				/`X_DO_EXPORTS` environment variable is not set/
+			);
+		});
+
+		test("sends the `exports` payload (and omits `migrations`) when `X_DO_EXPORTS=true`", async ({
+			expect,
+		}) => {
+			// The versions POST controller (EWC) accepts `exports` and
+			// persists it on the new script_version row with
+			// `SkipDeploy:true`; reconciliation runs at deploy time
+			// (`wrangler deploy` or `wrangler versions deploy <id>`).
+			vi.stubEnv("X_DO_EXPORTS", "true");
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				durable_objects: {
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+				},
+				exports: {
+					MyDurableObject: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.exports).toEqual({
+				MyDurableObject: { type: "durable-object", storage: "sqlite" },
+			});
+			expect(metadata.migrations).toBeUndefined();
+		});
+
+		test("surfaces a friendly error when EWC rejects a binding to a not-yet-provisioned `exports` class (code 100406)", async ({
+			expect,
+		}) => {
+			// EWC returns 100406 (ErrActorBindingDependsOnExport) when a
+			// `versions upload` payload binds to a DO class that is declared in
+			// `exports` but not yet provisioned — reconciliation defers to
+			// deploy, so the namespace can't exist at upload time. The message
+			// is already actionable, so wrangler surfaces it verbatim.
+			vi.stubEnv("X_DO_EXPORTS", "true");
+			mockGetScript();
+
+			const serverMessage =
+				"Durable Object binding 'ANOTHER' references class 'AnotherClass', which is declared in `exports` but not yet provisioned. Declarative `exports` are reconciled when the version is deployed, so the namespace must exist before a binding can reference it. Deploy this version to provision the class, or remove the binding and access the Durable Object via `ctx.exports.AnotherClass` until then.";
+
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
+					() =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE,
+									message: serverMessage,
+								},
+							]),
+							{ status: 403 }
+						),
+					{ once: true }
+				)
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				durable_objects: {
+					bindings: [{ name: "ANOTHER", class_name: "AnotherClass" }],
+				},
+				exports: {
+					AnotherClass: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			writeWorkerSource({ durableObjects: ["AnotherClass"] });
+
+			const rejection = runWrangler("versions upload");
+
+			// The EWC message is surfaced verbatim (binding/class names + both
+			// remediations), not the generic "request to the Cloudflare API
+			// failed" envelope.
+			await expect(rejection).rejects.toThrow(
+				/declared in `exports` but not yet provisioned/
+			);
+			await expect(rejection).rejects.toThrow(/ctx\.exports\.AnotherClass/);
+			await expect(rejection).rejects.not.toThrow(
+				/A request to the Cloudflare API .* failed/
+			);
+		});
+
+		test("does not remap unrelated EWC errors on `versions upload`", async ({
+			expect,
+		}) => {
+			// A different EWC error code must pass through untransformed — the
+			// 100406 branch falls through and the original APIError surfaces.
+			vi.stubEnv("X_DO_EXPORTS", "true");
+			mockGetScript();
+
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
+					() =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10001, message: "some other API error" },
+							]),
+							// 4xx so the upload isn't retried (retryOnAPIFailure
+							// only retries 5xx), keeping this test fast.
+							{ status: 400 }
+						),
+					{ once: true }
+				)
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				durable_objects: {
+					bindings: [{ name: "ANOTHER", class_name: "AnotherClass" }],
+				},
+				exports: {
+					AnotherClass: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			writeWorkerSource({ durableObjects: ["AnotherClass"] });
+
+			const rejection = runWrangler("versions upload");
+			await expect(rejection).rejects.toThrow(
+				/A request to the Cloudflare API .* failed/
+			);
+			await expect(rejection).rejects.not.toThrow(
+				/declared in `exports` but not yet provisioned/
+			);
 		});
 	});
 

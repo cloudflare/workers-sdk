@@ -1,8 +1,17 @@
 import assert from "node:assert";
-import { configFileName } from "@cloudflare/workers-utils";
+import {
+	assertDoExportsEnabledIfConfigured,
+	configFileName,
+	getDoExportsEnabledFromEnv,
+	getDurableObjectExports,
+} from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerInit,
+	Config,
+	DoExportsOptInContext,
+} from "@cloudflare/workers-utils";
 
 /**
  * For a given Worker + migrations config, figure out which migrations
@@ -106,3 +115,44 @@ const suppressNotFoundError = (err: unknown) => {
 		throw err;
 	}
 };
+
+/**
+ * Resolve which Durable Object lifecycle payload to send with the upload.
+ * `migrations` and `exports` are mutually exclusive, so only one is set on
+ * any given upload.
+ */
+export async function resolveDoLifecyclePayload(props: {
+	scriptName: string;
+	isDryRun: boolean | undefined;
+	accountId: string | undefined;
+	config: Config;
+	useServiceEnvironments: boolean | undefined;
+	env: string | undefined;
+	dispatchNamespace: string | undefined;
+	optInContext?: DoExportsOptInContext;
+}): Promise<{
+	migrations: CfWorkerInit["migrations"];
+	exports: CfWorkerInit["exports"];
+}> {
+	assertDoExportsEnabledIfConfigured(
+		props.config.exports,
+		props.optInContext ?? "deploy"
+	);
+
+	const exports = getDurableObjectExports(props.config.exports);
+	if (getDoExportsEnabledFromEnv() && Object.keys(exports).length > 0) {
+		return { migrations: undefined, exports };
+	}
+
+	const migrations = !props.isDryRun
+		? await getMigrationsToUpload(props.scriptName, {
+				accountId: props.accountId,
+				config: props.config,
+				useServiceEnvironments: props.useServiceEnvironments,
+				env: props.env,
+				dispatchNamespace: props.dispatchNamespace,
+			})
+		: undefined;
+
+	return { migrations, exports: undefined };
+}

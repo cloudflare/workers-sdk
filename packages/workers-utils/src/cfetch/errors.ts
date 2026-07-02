@@ -5,6 +5,16 @@ export interface FetchError {
 	documentation_url?: string;
 	message: string;
 	error_chain?: FetchError[];
+	/**
+	 * Optional structured error metadata returned alongside the message. The
+	 * Cloudflare v4 envelope permits a `meta` object whose shape varies by
+	 * endpoint; consumers are expected to validate the shape at use site
+	 * before relying on any field.
+	 *
+	 * Known usage: declarative DO exports reconciliation returns `meta.details`
+	 * as an array of per-class errors.
+	 */
+	meta?: { details?: unknown } & Record<string, unknown>;
 }
 
 function buildDetailedError(message: string, ...extra: string[]) {

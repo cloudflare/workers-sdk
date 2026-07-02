@@ -612,30 +612,150 @@ describe("convertToWranglerConfig", () => {
 	});
 
 	describe("exports", () => {
-		it("throws when sqlite durable-object exports are present", ({
+		it("converts a sqlite durable-object export to the wrangler shape (no `state` when default)", ({
 			expect,
 		}) => {
-			expect(() =>
-				convertToWranglerConfig({
-					...baseConfig,
-					exports: {
-						MyDO: { type: "durable-object", storage: "sqlite" },
-					},
-				})
-			).toThrow(/Durable Object exports/);
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				MyDO: { type: "durable-object", storage: "sqlite" },
+			});
 		});
 
-		it("throws when legacy-kv durable-object exports are present", ({
+		it("passes a legacy-kv storage value through to the wrangler shape", ({
 			expect,
 		}) => {
-			expect(() =>
-				convertToWranglerConfig({
-					...baseConfig,
-					exports: {
-						LegacyDO: { type: "durable-object", storage: "legacy-kv" },
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					LegacyDO: { type: "durable-object", storage: "legacy-kv" },
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				LegacyDO: { type: "durable-object", storage: "legacy-kv" },
+			});
+		});
+
+		it('treats an explicit `state: "created"` like the default and omits it on the wire', ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					MyDO: {
+						type: "durable-object",
+						state: "created",
+						storage: "sqlite",
 					},
-				})
-			).toThrow(/Durable Object exports/);
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				MyDO: { type: "durable-object", storage: "sqlite" },
+			});
+		});
+
+		it("converts a deleted tombstone to the (type, state) wrangler shape", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					OldClass: { type: "durable-object", state: "deleted" },
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				OldClass: { type: "durable-object", state: "deleted" },
+			});
+		});
+
+		it("converts a renamed tombstone (camelCase `renamedTo` -> snake_case `renamed_to`)", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					OldName: {
+						type: "durable-object",
+						state: "renamed",
+						renamedTo: "NewName",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				OldName: {
+					type: "durable-object",
+					state: "renamed",
+					renamed_to: "NewName",
+				},
+			});
+		});
+
+		it("converts a transferred tombstone (camelCase `transferredTo` -> snake_case `transferred_to`)", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Movee: {
+						type: "durable-object",
+						state: "transferred",
+						transferredTo: "target-worker",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Movee: {
+					type: "durable-object",
+					state: "transferred",
+					transferred_to: "target-worker",
+				},
+			});
+		});
+
+		it("converts an expecting-transfer entry (camelCase `transferFrom` -> snake_case `transfer_from`)", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Incoming: {
+						type: "durable-object",
+						state: "expecting-transfer",
+						storage: "sqlite",
+						transferFrom: "source-worker",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Incoming: {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: "sqlite",
+					transfer_from: "source-worker",
+				},
+			});
+		});
+
+		it("emits no exports key when the map is empty", ({ expect }) => {
+			const result = convertToWranglerConfig({ ...baseConfig, exports: {} });
+			expect("exports" in (result as object)).toBe(false);
+		});
+
+		it("throws when an export has an unknown type", ({ expect }) => {
+			const config = {
+				...baseConfig,
+				exports: {
+					FutureExport: { type: "workflow" },
+				},
+			} as unknown as Parameters<typeof convertToWranglerConfig>[0];
+
+			expect(() => convertToWranglerConfig(config)).toThrow(
+				/Unknown export types found: - FutureExport : workflow/
+			);
 		});
 	});
 
