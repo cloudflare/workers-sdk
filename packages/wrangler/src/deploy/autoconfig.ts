@@ -19,6 +19,7 @@ import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
+import { isRedirectingPagesToWorkers } from "../pages/redirect-to-workers";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import type { ReadConfigCommandArgs } from "../config";
 
@@ -137,6 +138,9 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				const autoConfigSummary = await runAutoConfigLogic(details, {
 					context: autoConfigContext,
 					dryRun: !!args.dryRun,
+					// Only skip confirmations for the Pages-to-Workers redirect flow,
+					// not for every agent-driven `wrangler deploy`.
+					skipConfirmations: isRedirectingPagesToWorkers(),
 				});
 
 				writeOutput({

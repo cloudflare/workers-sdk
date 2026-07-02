@@ -29,6 +29,7 @@ import {
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
+import { maybeRedirectPagesToWorkers } from "./redirect-to-workers";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
 import type { PagesConfigCache } from "./types";
 import type {
@@ -112,6 +113,12 @@ export const pagesDeployCommand = createCommand({
 			default: false,
 			description:
 				"Whether to upload any server-side sourcemaps with this deployment",
+		},
+		force: {
+			type: "boolean",
+			default: false,
+			description:
+				"Deploy directly to Cloudflare Pages, bypassing the automatic redirect to Cloudflare Workers for new static projects",
 		},
 	},
 	positionalArgs: ["directory"],
@@ -200,6 +207,21 @@ export const pagesDeployCommand = createCommand({
 					isExistingProject = false;
 				}
 			}
+		}
+
+		// When run by an AI agent, redirect brand-new static Pages deploys to a
+		// Workers static-assets deploy. Existing projects, projects using
+		// unsupported Pages features, and `--force` are never redirected.
+		const redirect = await maybeRedirectPagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			assetsDirectory: directory,
+			existingProject: Boolean(projectName) && isExistingProject,
+			force: args.force,
+			projectName,
+		});
+		if (redirect.handled) {
+			return;
 		}
 
 		const isInteractive = process.stdin.isTTY;
