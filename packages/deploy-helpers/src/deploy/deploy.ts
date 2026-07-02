@@ -62,6 +62,7 @@ import {
 } from "./helpers/versions-api";
 import { addWorkersSitesBindings } from "./helpers/workers-sites-bindings";
 import type { DeployProps, WorkerBuildResult } from "../shared/types";
+import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type {
 	ApiVersion,
@@ -141,6 +142,7 @@ export default async function deploy(
 	sourceMapSize?: number;
 	versionId: string | null;
 	workerTag: string | null;
+	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
 }> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
@@ -223,7 +225,7 @@ export default async function deploy(
 	});
 
 	// Upload assets if assets is being used
-	const assetsJwt =
+	const assetsUploadResult =
 		assetsOptions && !isDryRun
 			? await syncAssets(
 					config,
@@ -233,6 +235,8 @@ export default async function deploy(
 					props.dispatchNamespace
 				)
 			: undefined;
+	const assetsJwt = assetsUploadResult?.jwt;
+	const assetUploadStats = assetsUploadResult?.assetUploadStats;
 
 	// validate asset directory
 	if (assetsOptions && isDryRun) {
@@ -751,7 +755,7 @@ export default async function deploy(
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag };
+		return { versionId, workerTag, assetUploadStats };
 	}
 	assert(accountId);
 	// deploy triggers
@@ -772,6 +776,7 @@ export default async function deploy(
 		sourceMapSize,
 		versionId,
 		workerTag,
+		assetUploadStats,
 		targets: targets ?? [],
 	};
 }

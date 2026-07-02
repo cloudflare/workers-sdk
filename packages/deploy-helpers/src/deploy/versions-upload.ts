@@ -45,6 +45,7 @@ import {
 import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
 import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
+import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
@@ -59,6 +60,7 @@ export default async function versionsUpload(
 ): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
+	assetUploadStats?: AssetUploadStats;
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
 }> {
@@ -126,10 +128,11 @@ export default async function versionsUpload(
 	});
 
 	// Upload assets if assets is being used
-	const assetsJwt =
+	const assetsUploadResult =
 		assetsOptions && !props.dryRun
 			? await syncAssets(config, accountId, assetsOptions.directory, scriptName)
 			: undefined;
+	const assetsJwt = assetsUploadResult?.jwt;
 
 	if (props.secretsFile) {
 		const secretsResult = await parseBulkInputToObject(props.secretsFile);
@@ -422,5 +425,11 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 `)
 	);
 
-	return { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl };
+	return {
+		versionId,
+		workerTag,
+		assetUploadStats: assetsUploadResult?.assetUploadStats,
+		versionPreviewUrl,
+		versionPreviewAliasUrl,
+	};
 }
