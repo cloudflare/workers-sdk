@@ -11,6 +11,14 @@ interface Env {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 }
 
+interface ImageSignedUrlOptions {
+	variant: string;
+	expiresIn?: number;
+	keyName?: string;
+}
+
+const LOCAL_SIGNING_KEY = "miniflare-images-signing-key";
+
 function buildVariantUrl(
 	publicUrl: URL,
 	imageId: string,
@@ -20,6 +28,54 @@ function buildVariantUrl(
 		`${CorePaths.IMAGE_DELIVERY}/${imageId}/${variant}`,
 		publicUrl
 	).toString();
+}
+
+function bufferToHex(buffer: ArrayBuffer): string {
+	return Array.from(new Uint8Array(buffer))
+		.map((byte) => byte.toString(16).padStart(2, "0"))
+		.join("");
+}
+
+async function hmacSha256Hex(secret: string, value: string): Promise<string> {
+	const encoder = new TextEncoder();
+	const key = await crypto.subtle.importKey(
+		"raw",
+		encoder.encode(secret),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"]
+	);
+	const signature = await crypto.subtle.sign(
+		"HMAC",
+		key,
+		encoder.encode(value)
+	);
+	return bufferToHex(signature);
+}
+
+function getSignedPath(url: URL): string {
+	const exp = url.searchParams.get("exp");
+	return exp === null ? url.pathname : `${url.pathname}?exp=${exp}`;
+}
+
+async function isValidSignedUrl(url: URL): Promise<boolean> {
+	const sig = url.searchParams.get("sig");
+	if (sig === null) {
+		return false;
+	}
+
+	const exp = url.searchParams.get("exp");
+	if (exp !== null) {
+		const expiresAt = Number(exp);
+		if (
+			!Number.isInteger(expiresAt) ||
+			expiresAt < Math.floor(Date.now() / 1000)
+		) {
+			return false;
+		}
+	}
+
+	return sig === (await hmacSha256Hex(LOCAL_SIGNING_KEY, getSignedPath(url)));
 }
 
 // Rewrites stored variant names (e.g. `["public"]`) to absolute URLs.
@@ -82,6 +138,31 @@ class ImageHandleImpl extends RpcTarget {
 			return null;
 		}
 		return new Blob([data]).stream();
+	}
+
+	async signedUrl(options: ImageSignedUrlOptions): Promise<string> {
+		const publicUrl = await getPublicUrl(
+			this.#env[CoreBindings.SERVICE_LOOPBACK]
+		);
+		const url = new URL(
+			buildVariantUrl(publicUrl, this.#imageId, options.variant)
+		);
+
+		if (options.expiresIn !== undefined) {
+			if (!Number.isInteger(options.expiresIn) || options.expiresIn <= 0) {
+				throw new Error("expiresIn must be a positive integer");
+			}
+			url.searchParams.set(
+				"exp",
+				String(Math.floor(Date.now() / 1000) + options.expiresIn)
+			);
+		}
+
+		url.searchParams.set(
+			"sig",
+			await hmacSha256Hex(LOCAL_SIGNING_KEY, getSignedPath(url))
+		);
+		return url.toString();
 	}
 
 	async update(options: ImageUpdateOptions): Promise<ImageMetadata> {
@@ -261,13 +342,23 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 				return new Response("Missing image ID", { status: 400 });
 			}
 
-			const data = await this.env.IMAGES_STORE.get(imageId, "arrayBuffer");
-			if (data === null) {
+			const existing =
+				await this.env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
+					imageId,
+					"arrayBuffer"
+				);
+			if (existing.value === null || existing.metadata === null) {
 				return new Response("Image not found", { status: 404 });
 			}
+			if (
+				existing.metadata.requireSignedURLs &&
+				!(await isValidSignedUrl(url))
+			) {
+				return new Response("Invalid image signature", { status: 403 });
+			}
 
-			const contentType = await this.#detectContentType(data);
-			return new Response(data, {
+			const contentType = await this.#detectContentType(existing.value);
+			return new Response(existing.value, {
 				headers: { "Content-Type": contentType },
 			});
 		}
