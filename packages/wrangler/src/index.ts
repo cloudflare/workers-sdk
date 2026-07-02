@@ -217,6 +217,11 @@ import {
 	helloWorldNamespace,
 	helloWorldSetCommand,
 } from "./hello-world";
+import {
+	renderAgentHelp,
+	resolveCommandNode,
+	shouldUseAgentHelp,
+} from "./help/agent-help";
 import { hyperdriveCreateCommand } from "./hyperdrive/create";
 import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
 import { hyperdriveGetCommand } from "./hyperdrive/get";
@@ -2583,7 +2588,26 @@ export async function main(argv: string[]): Promise<void> {
 	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
 	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
 
-	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
+	const { wrangler, registry, globalFlags, showHelpWithCategories } =
+		createCLIParser(argv);
+
+	// When an AI coding agent is detected (or forced via `WRANGLER_HELP_FORMAT`),
+	// render help as Markdown by walking the command registry directly.
+	// This short-circuits before yargs parsing so it covers both the root and
+	// any subcommand/namespace help request.
+	if (hasHelpFlag && shouldUseAgentHelp()) {
+		const root = registry.getDefinitionTreeRoot();
+		const command = resolveCommandNode(root, nonFlagArgs);
+		logger.log(
+			renderAgentHelp({
+				command,
+				globalFlags,
+				orderedCategories: registry.orderedCategories,
+				root,
+			})
+		);
+		return;
+	}
 
 	if (isRootHelpRequest) {
 		await showHelpWithCategories();

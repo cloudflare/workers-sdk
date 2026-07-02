@@ -57,6 +57,8 @@ type VariableNames =
 	| "WRANGLER_OUTPUT_FILE_DIRECTORY"
 	/** Hide the Wrangler version banner */
 	| "WRANGLER_HIDE_BANNER"
+	/** Override the `--help` output format: "agent" (Markdown for AI coding agents) or "human". Defaults to auto-detection. */
+	| "WRANGLER_HELP_FORMAT"
 
 	// ## Build & Deployment Configuration
 
