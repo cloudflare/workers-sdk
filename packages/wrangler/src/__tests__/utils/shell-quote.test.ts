@@ -40,16 +40,19 @@ describe("parse", () => {
 		expect(parse('"hello world"')).toEqual(["hello world"]);
 	});
 
-	it.skipIf(process.platform === "win32")("handles escaped characters", ({ expect }) => {
-		expect(parse("a\\ b")).toEqual(["a b"]);
-	});
+	it.skipIf(process.platform === "win32")(
+		"handles escaped characters",
+		({ expect }) => {
+			expect(parse("a\\ b")).toEqual(["a b"]);
+		}
+	);
 
 	it("handles environment variables when env is provided", ({ expect }) => {
 		expect(parse("$HOME", { HOME: "/root" })).toEqual(["/root"]);
 	});
 
 	it("returns empty string for unresolved env variable", ({ expect }) => {
-		expect(parse("$HOME")).toEqual([""]);
+		expect(parse("$HOME", {})).toEqual([""]);
 	});
 
 	it("handles glob patterns", ({ expect }) => {
@@ -68,9 +71,12 @@ describe("parse", () => {
 		expect(parse("")).toEqual([]);
 	});
 
-	it.skipIf(process.platform === "win32")("handles Windows-style backslash paths", ({ expect }) => {
-		expect(parse(String.raw`C:\\foo\\bar`)).toEqual([String.raw`C:\foo\bar`]);
-	});
+	it.skipIf(process.platform === "win32")(
+		"handles Windows-style backslash paths",
+		({ expect }) => {
+			expect(parse(String.raw`C:\\foo\\bar`)).toEqual([String.raw`C:\foo\bar`]);
+		}
+	);
 
 	it("handles nested quotes", ({ expect }) => {
 		expect(parse("\"foo'bar'\"")).toEqual(["foo'bar'"]);
