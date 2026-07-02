@@ -1245,6 +1245,19 @@ export interface EnvironmentNonInheritable {
 				binding: string;
 				/** Whether the Images binding should be remote or not in local development */
 				remote?: boolean;
+				/**
+				 * Configures URL-based image transformations (`/cdn-cgi/image/...`)
+				 * for this Worker.
+				 *
+				 * TODO: nail down structure.
+				 */
+				url_transformations?: {
+					/**
+					 * When true, miniflare intercepts `/cdn-cgi/image/...` requests
+					 * and transforms them locally.
+					 */
+					enabled: boolean;
+				};
 		  }
 		| undefined;
 

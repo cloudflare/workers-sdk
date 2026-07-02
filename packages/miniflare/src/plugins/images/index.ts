@@ -19,9 +19,14 @@ import type { Service } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const ImagesSchema = z.object({
-	binding: z.string(),
+	binding: z.string().optional(),
 	remoteProxyConnectionString: z
 		.custom<RemoteProxyConnectionString>()
+		.optional(),
+	urlTransformations: z
+		.object({
+			enabled: z.boolean(),
+		})
 		.optional(),
 });
 
@@ -35,6 +40,9 @@ export const ImagesSharedOptionsSchema = z.object({
 
 export const IMAGES_PLUGIN_NAME = "images";
 
+/** Shared service that backs the `/cdn-cgi/image/` URL transformation handler. */
+export const CDN_CGI_IMAGE_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:cdn-cgi-image`;
+
 export const IMAGES_PLUGIN: Plugin<
 	typeof ImagesOptionsSchema,
 	typeof ImagesSharedOptionsSchema
@@ -43,7 +51,7 @@ export const IMAGES_PLUGIN: Plugin<
 	sharedOptions: ImagesSharedOptionsSchema,
 	bindingTypeDescription: "Images",
 	async getBindings(options) {
-		if (!options.images) {
+		if (!options.images?.binding) {
 			return [];
 		}
 
@@ -69,7 +77,7 @@ export const IMAGES_PLUGIN: Plugin<
 		];
 	},
 	getNodeBindings(options: z.infer<typeof ImagesOptionsSchema>) {
-		if (!options.images) {
+		if (!options.images?.binding) {
 			return {};
 		}
 		return {
@@ -83,7 +91,7 @@ export const IMAGES_PLUGIN: Plugin<
 		defaultPersistRoot,
 		unsafeStickyBlobs,
 	}) {
-		if (!options.images) {
+		if (!options.images?.binding) {
 			return [];
 		}
 

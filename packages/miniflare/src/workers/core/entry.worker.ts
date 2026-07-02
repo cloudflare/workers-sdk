@@ -15,6 +15,7 @@ type Env = {
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
+	[CoreBindings.SERVICE_IMAGE_TRANSFORM]?: Fetcher;
 	[CoreBindings.SERVICE_R2_PUBLIC]?: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
@@ -556,6 +557,12 @@ export default <ExportedHandler<Env>>{
 				imagesDelivery
 			) {
 				return await imagesDelivery.fetch(request);
+			}
+			if (url.pathname.startsWith(`${CorePaths.IMAGE_TRANSFORM}/`)) {
+				const imageTransform = env[CoreBindings.SERVICE_IMAGE_TRANSFORM];
+				if (imageTransform) {
+					return await imageTransform.fetch(request);
+				}
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
 				if (
