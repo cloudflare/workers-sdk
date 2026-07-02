@@ -110,6 +110,8 @@ export function registerRollbackFn(
 	const { cacheKey, fn, stepContext, output, config } = registration;
 	const existing = registry.get(cacheKey);
 	if (existing) {
+		// Existing entry already owns the duped rollback stub. Duplicate registrations
+		// refresh context/output only; this helper has not duped the incoming fn.
 		registry.set(cacheKey, {
 			...existing,
 			stepContext,

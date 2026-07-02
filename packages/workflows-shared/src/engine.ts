@@ -985,9 +985,10 @@ export class Engine extends DurableObject<Env> {
 				metadata.event,
 				stubStep as unknown as WorkflowStep
 			);
-		} catch {
+		} catch (replayErr) {
 			// Match the production engine: replay may stop on normal workflow control
 			// flow; rollback execution uses whatever handlers replay registered.
+			console.debug("Rollback replay stopped:", replayErr);
 		} finally {
 			this.setRollbackPhase(undefined);
 			this.rollbackEligibleCacheKeys = undefined;
