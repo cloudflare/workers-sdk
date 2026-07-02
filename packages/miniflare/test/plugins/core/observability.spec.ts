@@ -374,3 +374,134 @@ describe("unsafeObservability (write-through capture)", () => {
 	});
 });
 
+// A plain user worker (no manual seeding): it does some work, logs, and proxies
+// `/wobs/*` to the collector's read API. With `unsafeObservability`, core attaches
+// the collector as a streaming-tail consumer, so the worker's invocation is folded
+// (via cf-to-otel) into spans/logs and persisted — nothing observability-specific
+// is wired here by hand.
+const CAPTURE_WORKER = `export default {
+	async fetch(request, env) {
+		const url = new URL(request.url);
+		if (url.pathname.startsWith("/wobs/")) {
+			return env.WOBS.fetch(
+				new Request("http://collector" + url.pathname.slice("/wobs".length) + url.search, request)
+			);
+		}
+		if (url.pathname === "/boom") {
+			throw new Error("boom-kaboom");
+		}
+		await env.CACHE.get("some-key");
+		console.log("handled request");
+		return new Response("ok");
+	},
+};`;
+
+function captureWorker(): WorkerOptions {
+	return {
+		name: "user",
+		modules: true,
+		compatibilityDate: "2026-06-01",
+		script: CAPTURE_WORKER,
+		kvNamespaces: { CACHE: "cache-namespace" },
+		serviceBindings: { WOBS: { name: OBSERVABILITY_COLLECTOR_SERVICE_NAME } },
+	};
+}
+
+/** Wait for the collector's streaming-tail persist to flush. */
+async function flush() {
+	await new Promise((resolve) => setTimeout(resolve, 1000));
+}
+
+describe("unsafeObservability (capture via cf-to-otel)", () => {
+	test("captures a worker's trace, child spans, and logs", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			unsafeObservability: true,
+			workers: [captureWorker()],
+		});
+		useDispose(mf);
+
+		expect(
+			await (await mf.dispatchFetch("http://localhost/orders")).text()
+		).toBe("ok");
+		await flush();
+
+		const traces = (await queryStore(
+			mf,
+			TRACE_LIST_SQL
+		)) as unknown as TraceRow[];
+		// cf-to-otel names the root fetch span after the method. The finished
+		// /orders request is a "GET"; the `POST /wobs/query` read we're issuing
+		// right now is itself captured (write-through) as a still-running "POST".
+		const trace = traces.find((t) => t.name === "GET" && t.outcome !== null);
+		assert(trace, "expected a captured 'GET' trace");
+		expect(trace.outcome).toBe("ok");
+		// Write-through in action: this very read request is captured while still
+		// running, so a POST trace with no outcome yet is present alongside it.
+		expect(traces.some((t) => t.name === "POST" && t.outcome === null)).toBe(
+			true
+		);
+		expect(trace.span_count).toBeGreaterThan(1); // root + KV child
+		expect(trace.error_count).toBe(0);
+
+		const spans = (await queryStore(mf, TRACE_SPANS_SQL, [
+			trace.trace_id,
+		])) as unknown as Array<{ kind: string; attributes: string | null }>;
+		const logs = (await queryStore(mf, TRACE_LOGS_SQL, [
+			trace.trace_id,
+		])) as unknown as Array<{ level: string; message: string }>;
+
+		// The KV read is captured as a child span with a friendly kind.
+		expect(spans.some((s) => s.kind === "kv")).toBe(true);
+
+		// console.log is captured, and the synthetic per-invocation log shows up
+		// (so silent workers still appear) — its body carries the request path.
+		expect(logs.some((l) => l.message.includes("handled request"))).toBe(true);
+		expect(logs.some((l) => l.message.includes("/orders"))).toBe(true);
+
+		// The root span carries the cf-to-otel-shaped attributes, incl. the HTTP
+		// status folded in as an attribute (not a column) per the schema.
+		const root = spans.find((s) => {
+			const a = JSON.parse(s.attributes ?? "{}");
+			return a["faas.trigger"] === "http";
+		});
+		assert(root, "expected a root http span");
+		const attrs = JSON.parse(root.attributes ?? "{}");
+		expect(attrs["http.request.method"]).toBe("GET");
+		expect(attrs["http.response.status_code"]).toBe(200);
+		expect(attrs["cloudflare.outcome"]).toBe("ok");
+		expect(typeof attrs["cpu_time_ms"]).toBe("number");
+	});
+
+	test("captures an uncaught exception as a span error and error log", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			unsafeObservability: true,
+			workers: [captureWorker()],
+		});
+		useDispose(mf);
+
+		await (await mf.dispatchFetch("http://localhost/boom")).text();
+		await flush();
+
+		const traces = (await queryStore(
+			mf,
+			TRACE_LIST_SQL
+		)) as unknown as TraceRow[];
+		// The in-flight `/wobs/query` read is also a "GET" trace (outcome NULL);
+		// select the finished /boom one.
+		const trace = traces.find((t) => t.name === "GET" && t.outcome !== null);
+		assert(trace, "expected a captured 'GET' trace");
+		expect(trace.error_count).toBeGreaterThan(0);
+
+		const logs = (await queryStore(mf, TRACE_LOGS_SQL, [
+			trace.trace_id,
+		])) as unknown as Array<{ level: string; message: string }>;
+		expect(
+			logs.some((l) => l.level === "error" && l.message.includes("boom-kaboom"))
+		).toBe(true);
+	});
+});
+
