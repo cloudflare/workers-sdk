@@ -132,6 +132,58 @@ describe("versions secret put", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
+	test("preserves the capnp schema from the existing version", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+
+		mockPrompt({
+			text: "Enter a secret value:",
+			options: { isSecret: true },
+			result: "the-secret",
+		});
+
+		mockSetupApiCalls(expect, {
+			capnpSchema: {
+				name: "./capnp-12345.compiled",
+				content: "my compiled capnp data",
+			},
+		});
+		mockPostVersion(expect, (metadata, formData) => {
+			// The schema is re-attached and referenced via metadata.capnp_schema
+			expect(metadata.capnp_schema).toEqual("./capnp-12345.compiled");
+			expect(formData.get("./capnp-12345.compiled")).not.toBeNull();
+			// The schema is not re-uploaded as a stray module binding
+			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
+				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
+			]);
+		});
+		await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("does not set capnp_schema when the version has none", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+
+		mockPrompt({
+			text: "Enter a secret value:",
+			options: { isSecret: true },
+			result: "the-secret",
+		});
+
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
+			expect(metadata.capnp_schema).toBeUndefined();
+		});
+		await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	test("no wrangler configuration warnings shown", async ({ expect }) => {
 		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
 		setIsTTY(true);

@@ -56,7 +56,17 @@ export function createWorkerUploadForm(
 	bindings: Record<string, Binding> | undefined,
 	options?: {
 		dryRun?: true;
-		unsafe?: { metadata?: Record<string, unknown>; capnp?: CfCapnp };
+		unsafe?: {
+			metadata?: Record<string, unknown>;
+			capnp?: CfCapnp;
+			/**
+			 * A pre-compiled capnp schema to attach as-is, used when re-uploading
+			 * the content of an existing version (e.g. `wrangler versions secret put`).
+			 * Unlike `capnp`, this is not compiled from source - the bytes are
+			 * attached directly and referenced via `metadata.capnp_schema`.
+			 */
+			capnpSchema?: { name: string; content: Uint8Array };
+		};
 	}
 ): FormData {
 	const formData = new FormData();
@@ -788,7 +798,18 @@ export function createWorkerUploadForm(
 	}
 
 	let capnpSchemaOutputFile: string | undefined;
-	if (options?.unsafe?.capnp) {
+	if (options?.unsafe?.capnpSchema) {
+		// Pre-compiled schema (e.g. re-uploading an existing version's content):
+		// attach the bytes directly under their existing part name.
+		const { name, content } = options.unsafe.capnpSchema;
+		capnpSchemaOutputFile = name;
+		formData.set(
+			name,
+			new File([content], name, {
+				type: "application/octet-stream",
+			})
+		);
+	} else if (options?.unsafe?.capnp) {
 		const capnpOutput = handleUnsafeCapnp(options.unsafe.capnp);
 		capnpSchemaOutputFile = `./capnp-${Date.now()}.compiled`;
 		formData.set(
