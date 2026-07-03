@@ -1,26 +1,46 @@
 import { ms } from "itty-time";
-// @ts-expect-error workflows "shared" package will be pulled in later
-import type { ResolvedStepConfig, StepState } from "shared";
+import type { ResolvedStepConfig, StepState } from "../context";
+import type { WorkflowSleepDuration } from "cloudflare:workers";
+
+export class DelayFunctionError extends Error {
+	constructor(reason: string) {
+		super(reason);
+		this.name = "DelayFunctionError";
+	}
+}
 
 export function calcRetryDuration(
 	config: ResolvedStepConfig,
-	stepState: StepState
+	stepState: StepState,
+	delayValue: unknown
 ): number {
 	const { attemptedCount: attemptCount } = stepState;
 	const { retries } = config;
 
-	const delay = ms(retries.delay);
+	let base: number;
+	try {
+		base = ms(delayValue as WorkflowSleepDuration);
+	} catch {
+		throw new DelayFunctionError(
+			'returned an invalid delay value (expected a number of ms or a duration string like "30 seconds")'
+		);
+	}
+	if (!Number.isFinite(base) || base < 0) {
+		throw new DelayFunctionError(
+			'returned an invalid delay value (expected a number of ms or a duration string like "30 seconds")'
+		);
+	}
 
 	switch (retries.backoff) {
 		case "exponential": {
-			return delay * Math.pow(2, attemptCount - 1);
+			return base * Math.pow(2, attemptCount - 1);
 		}
 		case "linear": {
-			return delay * attemptCount;
+			return base * attemptCount;
 		}
 		case "constant":
 		default: {
-			return delay;
+			return base;
 		}
 	}
 }

@@ -18,7 +18,12 @@ import type {
 	RollbackFn,
 	WorkflowStepRollbackOptions,
 } from "../src/lib/rollback";
-import type { WorkflowStep, WorkflowStepConfig } from "cloudflare:workers";
+import type {
+	WorkflowDelayFunction,
+	WorkflowStep,
+	WorkflowStepConfig,
+	WorkflowStepContext,
+} from "cloudflare:workers";
 
 afterEach(async () => {
 	await workerdUnsafe.abortAllDurableObjects();
@@ -178,6 +183,170 @@ describe("Engine", () => {
 		expect(
 			logs.logs.filter((val) => val.event == InstanceEvent.ATTEMPT_FAILURE)
 		).toHaveLength(1);
+	});
+
+	it("applies a dynamic delay function and succeeds after retries", async ({
+		expect,
+	}) => {
+		const instanceId = "DYNAMIC-DELAY-APPLIED";
+		const dynamicDelay: WorkflowDelayFunction = () => 50;
+		let attempts = 0;
+
+		const engineStub = await runWorkflow(instanceId, async (_event, step) => {
+			await step.do(
+				"dynamic-delay-step",
+				{
+					retries: { limit: 3, delay: dynamicDelay, backoff: "constant" },
+				} as unknown as WorkflowStepConfig,
+				async () => {
+					attempts++;
+					if (attempts < 2) {
+						throw new Error("transient");
+					}
+					return "ok";
+				}
+			);
+			return "done";
+		});
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		const attemptFailures = logs.logs.filter(
+			(val) => val.event === InstanceEvent.ATTEMPT_FAILURE
+		);
+
+		expect(attemptFailures.length).toBeGreaterThanOrEqual(1);
+		expect(attemptFailures[0]?.metadata).toMatchObject({ retryDelayMs: 50 });
+	});
+
+	it("fails non-retryably when the delay function throws", async ({
+		expect,
+	}) => {
+		const instanceId = "DYNAMIC-DELAY-BROKEN";
+		const throwingDelay: WorkflowDelayFunction = () => {
+			throw new Error("delay boom");
+		};
+
+		const engineStub = await runWorkflow(instanceId, async (_event, step) => {
+			await step.do(
+				"broken-delay-step",
+				{
+					retries: { limit: 5, delay: throwingDelay, backoff: "constant" },
+				},
+				async () => {
+					throw new Error("step failed");
+				}
+			);
+			return "done";
+		});
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+
+		// The broken delay function turns the retry into a non-retryable failure,
+		// so the step is only attempted once.
+		expect(
+			logs.logs.filter((val) => val.event === InstanceEvent.ATTEMPT_START)
+		).toHaveLength(1);
+
+		// The NonRetryableDelayError crosses the engine<->workflow RPC boundary,
+		// which collapses the custom error class to name "Error" and folds the
+		// original class name into the message.
+		const workflowFailure = logs.logs.find(
+			(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+		);
+		expect(workflowFailure?.metadata.error.message).toContain(
+			"NonRetryableDelayError"
+		);
+		expect(workflowFailure?.metadata.error.message).toContain("delay function");
+		expect(workflowFailure?.metadata.error.message).toContain("delay boom");
+	});
+
+	it("omits delay from ctx.config for a dynamic delay but includes it for a static delay", async ({
+		expect,
+	}) => {
+		const dynamicDelay: WorkflowDelayFunction = () => 10;
+		let dynamicConfig:
+			| WorkflowStepContext<WorkflowDelayFunction>["config"]
+			| undefined;
+		let staticConfig: WorkflowStepContext<number>["config"] | undefined;
+
+		const dynamicStub = await runWorkflow(
+			"DYNAMIC-DELAY-CTX-HIDDEN",
+			async (_event, step) => {
+				await step.do(
+					"dynamic-config-step",
+					{
+						retries: { limit: 1, delay: dynamicDelay, backoff: "constant" },
+					},
+					async (ctx) => {
+						dynamicConfig = ctx.config;
+						return "ok";
+					}
+				);
+				return "done";
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await dynamicStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const staticStub = await runWorkflow(
+			"STATIC-DELAY-CTX-VISIBLE",
+			async (_event, step) => {
+				await step.do(
+					"static-config-step",
+					{
+						retries: { limit: 1, delay: 1234, backoff: "constant" },
+					},
+					async (ctx) => {
+						staticConfig = ctx.config;
+						return "ok";
+					}
+				);
+				return "done";
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await staticStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const dynamicRetries = dynamicConfig?.retries;
+		expect(dynamicRetries).toBeDefined();
+		expect(dynamicRetries && "delay" in dynamicRetries).toBe(false);
+		expect(staticConfig?.retries?.delay).toBe(1234);
 	});
 
 	it("waitForEvent should receive events while active", async ({ expect }) => {
@@ -1528,7 +1697,7 @@ describe("Rollback", () => {
 		const rollbackConfig = {
 			retries: { limit: 0, delay: 0, backoff: "constant" },
 			timeout: "30 seconds",
-		};
+		} satisfies WorkflowStepConfig;
 		const stub = await runWorkflowAndAwait("RB-CONFIG", async (_e, step) => {
 			await doWithRollback(
 				step,
@@ -1977,6 +2146,79 @@ describe("Rollback", () => {
 					(log) => log.event === InstanceEvent.WORKFLOW_TERMINATED
 				)
 		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"failed-setup-1",
+		]);
+		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(1);
+	});
+
+	it("omits dynamic delay from rollback ctx.config on cached-error replay", async ({
+		expect,
+	}) => {
+		const dynamicDelay: WorkflowDelayFunction = () => 1000;
+		const instanceId = "RB-TERMINATE-FAILED-REPLAY-DYNAMIC-DELAY";
+		const engineStub = await runWorkflow(instanceId, async (_e, step) => {
+			try {
+				await doWithRollback(
+					step,
+					"failed-setup",
+					{ retries: { limit: 0, delay: dynamicDelay, backoff: "constant" } },
+					async () => {
+						throw new Error("step-boom");
+					},
+					rollbackOptions(async (ctx) => {
+						// A dynamic delay must be omitted from the user-facing config,
+						// never surfaced as the internal "[dynamic]" marker string.
+						if ("delay" in ctx.ctx.config.retries) {
+							throw new Error(
+								"dynamic delay marker leaked into rollback ctx.config"
+							);
+						}
+					})
+				);
+			} catch {
+				// Keep the workflow running so terminate rollback can replay the cached
+				// failed step and re-register its rollback handler.
+			}
+			await step.sleep("wait-forever", "1 hour");
+		});
+
+		await readLogsAfter(engineStub, (currentLogs) =>
+			currentLogs.logs.some(
+				(log) =>
+					log.event === InstanceEvent.STEP_FAILURE &&
+					log.target === "failed-setup-1"
+			)
+		);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			engine.rollbackRegistry.clear();
+		});
+
+		try {
+			await runInDurableObject(engineStub, async (engine) => {
+				await engine.changeInstanceStatus("terminate", undefined, {
+					rollback: true,
+				});
+			});
+		} catch (error) {
+			if (
+				!(error instanceof Error) ||
+				!error.message.startsWith("Aborting engine:")
+			) {
+				throw error;
+			}
+		}
+
+		const logs = await readLogsAfter(
+			env.ENGINE.get(env.ENGINE.idFromName(instanceId)),
+			(currentLogs) =>
+				currentLogs.logs.some(
+					(log) => log.event === InstanceEvent.WORKFLOW_TERMINATED
+				)
+		);
+		// ROLLBACK_STEP_SUCCESS only fires if the rollback fn did not throw, i.e.
+		// the leaked marker was stripped by toEngineStepConfig on the replay path.
 		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
 			"failed-setup-1",
 		]);
