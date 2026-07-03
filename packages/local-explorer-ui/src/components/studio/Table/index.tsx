@@ -159,6 +159,8 @@ export function StudioTable<T = unknown>(
 				}
 			} else if (e.key === "Enter") {
 				state.enterEditMode();
+			} else {
+				return;
 			}
 
 			e.preventDefault();
