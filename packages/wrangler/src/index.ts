@@ -241,7 +241,7 @@ import {
 	kvNamespaceNamespace,
 	kvNamespaceRenameCommand,
 } from "./kv";
-import { listCommandsCommand } from "./list-commands";
+import { listCmdsAlias, listCommandsCommand } from "./list-commands";
 import { logger, LOGGER_LEVELS } from "./logger";
 import { allMetricsDispatchesCompleted, getMetricsDispatcher } from "./metrics";
 import {
@@ -873,6 +873,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler list-commands",
 			definition: listCommandsCommand,
+		},
+		{
+			command: "wrangler list-cmds",
+			definition: listCmdsAlias,
 		},
 	]);
 	registry.registerNamespace("list-commands");

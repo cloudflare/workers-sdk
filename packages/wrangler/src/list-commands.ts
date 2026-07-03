@@ -1,5 +1,5 @@
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
-import { createCommand } from "./core/create-command";
+import { createAlias, createCommand } from "./core/create-command";
 import { experimental_getWranglerCommands } from "./experimental-commands-api";
 import { logger } from "./logger";
 import { stripAnsi } from "./utils/box";
@@ -326,4 +326,8 @@ export const listCommandsCommand = createCommand({
 		const lines = [basePath.join(" "), ...renderTree(tree)];
 		logger.log(lines.join("\n"));
 	},
+});
+
+export const listCmdsAlias = createAlias({
+	aliasOf: "wrangler list-commands",
 });
