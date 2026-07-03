@@ -330,4 +330,7 @@ export const listCommandsCommand = createCommand({
 
 export const listCmdsAlias = createAlias({
 	aliasOf: "wrangler list-commands",
+	metadata: {
+		hidden: true,
+	},
 });

@@ -48,9 +48,6 @@ describe("wrangler", () => {
 				  wrangler list-commands [base..]  List all available commands and subcommands
 
 				  wrangler email                   Manage Cloudflare Email services [open beta]
-				  wrangler list-cmds [base..]      List all available commands and subcommands
-
-				                                   Alias for "wrangler list-commands".
 
 				ACCOUNT
 				  wrangler auth                    🔐 Manage authentication
@@ -153,9 +150,6 @@ describe("wrangler", () => {
 				  wrangler list-commands [base..]  List all available commands and subcommands
 
 				  wrangler email                   Manage Cloudflare Email services [open beta]
-				  wrangler list-cmds [base..]      List all available commands and subcommands
-
-				                                   Alias for "wrangler list-commands".
 
 				ACCOUNT
 				  wrangler auth                    🔐 Manage authentication
