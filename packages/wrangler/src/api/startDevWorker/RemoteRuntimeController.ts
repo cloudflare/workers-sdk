@@ -4,10 +4,7 @@ import chalk from "chalk";
 import { Mutex, type Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { version as packageVersion } from "../../../package.json";
-import {
-	createPreviewSession,
-	createWorkerPreview,
-} from "../../dev/preview";
+import { createPreviewSession, createWorkerPreview } from "../../dev/preview";
 import {
 	createRemoteWorkerInit,
 	getWorkerAccountAndContext,

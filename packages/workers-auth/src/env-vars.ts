@@ -5,16 +5,15 @@ import {
 } from "@cloudflare/workers-utils";
 
 /**
- * `CLOUDFLARE_AUTH_DOMAIN` (legacy alias `WRANGLER_AUTH_DOMAIN`) is the URL base
- * domain that is used to access OAuth URLs for the Cloudflare APIs.
+ * `WRANGLER_AUTH_DOMAIN` is the URL base domain that is used
+ * to access OAuth URLs for the Cloudflare APIs.
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `CLOUDFLARE_API_ENVIRONMENT=staging` environment variable instead.
+ * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getAuthDomainFromEnv = getEnvironmentVariableFactory({
-	variableName: "CLOUDFLARE_AUTH_DOMAIN",
-	deprecatedName: "WRANGLER_AUTH_DOMAIN",
+	variableName: "WRANGLER_AUTH_DOMAIN",
 	defaultValue: () =>
 		getCloudflareApiEnvironmentFromEnv() === "staging"
 			? "dash.staging.cloudflare.com"
@@ -22,44 +21,41 @@ export const getAuthDomainFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `CLOUDFLARE_AUTH_URL` (legacy alias `WRANGLER_AUTH_URL`) is the path that is
- * used to access OAuth for the Cloudflare APIs.
+ * `WRANGLER_AUTH_URL` is the path that is used to access OAuth
+ * for the Cloudflare APIs.
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `CLOUDFLARE_API_ENVIRONMENT=staging` environment variable instead.
+ * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getAuthUrlFromEnv = getEnvironmentVariableFactory({
-	variableName: "CLOUDFLARE_AUTH_URL",
-	deprecatedName: "WRANGLER_AUTH_URL",
+	variableName: "WRANGLER_AUTH_URL",
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/auth`,
 });
 
 /**
- * `CLOUDFLARE_TOKEN_URL` (legacy alias `WRANGLER_TOKEN_URL`) is the path that is
- * used to exchange an OAuth token for an API token.
+ * `WRANGLER_TOKEN_URL` is the path that is used to exchange an OAuth
+ * token for an API token.
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `CLOUDFLARE_API_ENVIRONMENT=staging` environment variable instead.
+ * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getTokenUrlFromEnv = getEnvironmentVariableFactory({
-	variableName: "CLOUDFLARE_TOKEN_URL",
-	deprecatedName: "WRANGLER_TOKEN_URL",
+	variableName: "WRANGLER_TOKEN_URL",
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/token`,
 });
 
 /**
- * `CLOUDFLARE_REVOKE_URL` (legacy alias `WRANGLER_REVOKE_URL`) is the path that
- * is used to exchange an OAuth refresh token for a new OAuth token.
+ * `WRANGLER_REVOKE_URL` is the path that is used to exchange an OAuth
+ * refresh token for a new OAuth token.
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `CLOUDFLARE_API_ENVIRONMENT=staging` environment variable instead.
+ * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
-	variableName: "CLOUDFLARE_REVOKE_URL",
-	deprecatedName: "WRANGLER_REVOKE_URL",
+	variableName: "WRANGLER_REVOKE_URL",
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
 });
 
@@ -98,15 +94,13 @@ export const getAccessClientSecretFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `CLOUDFLARE_CF_AUTHORIZATION_TOKEN` (legacy alias
- * `WRANGLER_CF_AUTHORIZATION_TOKEN`) is an explicit `CF_Authorization` cookie
- * value used to authenticate against the OAuth auth domain when it is
- * Access-protected (typically staging). When set, the OAuth flow skips Access
- * detection and uses this token directly.
+ * `WRANGLER_CF_AUTHORIZATION_TOKEN` is an explicit `CF_Authorization` cookie value
+ * used to authenticate against the OAuth auth domain when it is Access-protected
+ * (typically staging). When set, the OAuth flow skips Access detection and uses
+ * this token directly.
  */
 export const getCfAuthorizationTokenFromEnv = getEnvironmentVariableFactory({
-	variableName: "CLOUDFLARE_CF_AUTHORIZATION_TOKEN",
-	deprecatedName: "WRANGLER_CF_AUTHORIZATION_TOKEN",
+	variableName: "WRANGLER_CF_AUTHORIZATION_TOKEN",
 });
 
 /**
