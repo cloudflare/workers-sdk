@@ -378,7 +378,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Welcome to Nuxt!",
+				expectedText: "Nuxt UI - Starter",
 			},
 			nodeCompat: false,
 			verifyPreview: {
@@ -386,7 +386,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			flags: ["--template", "minimal"],
+			flags: ["--template", "ui"],
 		},
 		{
 			name: "nuxt:workers",
@@ -405,7 +405,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Welcome to Nuxt!",
+				expectedText: "Nuxt UI - Starter",
 			},
 			verifyPreview: {
 				previewArgs: ["--inspector-port=0"],
@@ -413,7 +413,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: false,
-			flags: ["--template", "minimal"],
+			flags: ["--template", "ui"],
 		},
 		{
 			name: "react:pages",
@@ -825,7 +825,7 @@ function getExperimentalFrameworkTestConfig(
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Welcome to Nuxt!",
+				expectedText: "Nuxt UI - Starter",
 			},
 			verifyPreview: {
 				previewArgs: ["--inspector-port=0"],
@@ -834,7 +834,7 @@ function getExperimentalFrameworkTestConfig(
 			},
 			nodeCompat: false,
 			verifyTypes: false,
-			flags: ["--template", "minimal"],
+			flags: ["--template", "ui"],
 		},
 		{
 			name: "solid",

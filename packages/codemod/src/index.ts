@@ -75,7 +75,8 @@ export function transformFile(filePath: string, methods: recast.types.Visitor) {
 
 /**
  * merges provided properties into a given object (updating the object itself), deeply merging them in case
- * some properties are object themselves
+ * some properties are objects themselves and concatenating them (de-duplicating string entries) in case
+ * some properties are arrays
  *
  * @param sourceObject the object into which merge the new properties
  * @param newProperties the new properties to add/merge
@@ -111,7 +112,48 @@ export function mergeObjectProperties(
 			return;
 		}
 
+		if (
+			existing.type === "ObjectProperty" &&
+			existing.value.type === "ArrayExpression" &&
+			newProp.value.type === "ArrayExpression"
+		) {
+			mergeArrayElements(existing.value, newProp.value);
+			return;
+		}
+
 		sourceObject.properties[indexOfExisting] = newProp;
+	});
+}
+
+/**
+ * concatenates the elements of one array expression onto another (updating the target array itself),
+ * skipping any string literal that is already present so that existing entries are preserved rather
+ * than overwritten
+ *
+ * @param existingArray the array expression to merge new elements into
+ * @param newArray the array expression whose elements should be appended
+ */
+function mergeArrayElements(
+	existingArray: recast.types.namedTypes.ArrayExpression,
+	newArray: recast.types.namedTypes.ArrayExpression
+): void {
+	const existingStringValues = new Set(
+		existingArray.elements
+			.filter(
+				(el): el is recast.types.namedTypes.StringLiteral =>
+					el?.type === "StringLiteral"
+			)
+			.map((el) => el.value)
+	);
+
+	newArray.elements.forEach((el) => {
+		if (el?.type === "StringLiteral") {
+			if (existingStringValues.has(el.value)) {
+				return;
+			}
+			existingStringValues.add(el.value);
+		}
+		existingArray.elements.push(el);
 	});
 }
 
