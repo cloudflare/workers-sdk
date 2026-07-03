@@ -167,6 +167,7 @@ export async function convertToConfigBundle(
 		complianceRegion: event.config.complianceRegion,
 		bindings,
 		migrations: event.config.migrations,
+		exports: event.config.exports,
 		devRegistry: event.config.dev.registry,
 		legacyAssetPaths: event.config.legacy?.site?.bucket
 			? {

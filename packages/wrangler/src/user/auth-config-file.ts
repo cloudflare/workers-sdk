@@ -7,11 +7,13 @@ import {
 } from "node:fs";
 import path from "node:path";
 import {
-	getCloudflareApiEnvironmentFromEnv,
-	getGlobalWranglerConfigPath,
+	getAuthConfigFilePath as getAuthConfigFilePathForConfig,
+	getEncryptedAuthConfigFilePath as getEncryptedAuthConfigFilePathForConfig,
+} from "@cloudflare/workers-auth";
+import {
+	getGlobalConfigPath,
 	parseTOML,
 	readFileSync,
-	UserError,
 } from "@cloudflare/workers-utils";
 import TOML from "smol-toml";
 import type {
@@ -22,20 +24,44 @@ import type {
 
 /**
  * A TOML-file-on-disk storage backend, parameterised by the path it reads and
- * writes. Shared by the OAuth auth-config store ({@link defaultAuthConfigStorage})
- * and the temporary-preview-account store (`defaultTemporaryAccountStorage`) so
- * both get identical owner-only permission handling.
+ * writes. Used by the temporary-preview-account store
+ * (`defaultTemporaryAccountStorage`) and the plaintext auth-profile primitives
+ * (`defaultAuthConfigStorage` / `readAuthConfigFile` / `writeAuthConfigFile`).
  *
- * `read()` throws when the file is missing or cannot be parsed — callers treat a
- * throw as "nothing stored". Files are written with mode `0o600` on creation and
- * re-`chmod`'d on every save (the `mode` option only applies on creation) so
- * other local users on shared hosts can't read the stored credentials.
+ * `read()` follows the `ConfigStorage<T>` contract: a missing file *or* a file
+ * that exists but can't be parsed as `T` is the empty state and returns
+ * `undefined`, so a corrupt store is treated as "nothing usable here" (e.g. a
+ * stale temporary-account cache is re-minted instead of hard-erroring). Only
+ * genuine I/O errors (`EACCES`, `EISDIR`, ...) propagate. This is deliberately
+ * distinct from `@cloudflare/workers-auth`'s `FileCredentialStore`, which
+ * surfaces a corrupt *credential* file as a throw so the user can fix it.
+ *
+ * Files are written with mode `0o600` on creation and re-`chmod`'d on every
+ * save (the `mode` option only applies on creation) so other local users on
+ * shared hosts can't read the stored credentials.
  */
 export function createTomlFileStorage<T extends object>(
 	getPath: () => string
 ): ConfigStorage<T> {
 	return {
-		read: () => parseTOML(readFileSync(getPath())) as T,
+		read: () => {
+			const filePath = getPath();
+			// Per the `ConfigStorage<T>.read()` contract, the empty state
+			// returns `undefined` rather than throwing — that covers both a
+			// missing file and a file that exists but can't be parsed as `T`.
+			// The read itself is kept outside the try so genuine I/O errors
+			// (`EACCES`, `EISDIR`, ...) still propagate; only the parse is
+			// treated as "corrupt ⇒ empty".
+			if (!existsSync(filePath)) {
+				return undefined;
+			}
+			const contents = readFileSync(filePath);
+			try {
+				return parseTOML(contents) as T;
+			} catch {
+				return undefined;
+			}
+		},
 		write(config) {
 			const configPath = getPath();
 			mkdirSync(path.dirname(configPath), { recursive: true });
@@ -55,12 +81,36 @@ export function createTomlFileStorage<T extends object>(
 	};
 }
 
+// `@cloudflare/workers-auth` owns the auth profile → on-disk path layout (the
+// `.toml` plaintext file and its sibling `.enc` encrypted file), but takes the
+// global config directory as an argument rather than resolving it: the client
+// (wrangler here, a future `cf` CLI elsewhere) owns where its config lives.
+// Wrangler binds both helpers to its own `getGlobalConfigPath()` and exposes
+// the `(profile)` form so callers and tests keep the ergonomic signature. The
+// dir is re-resolved on each call so tests that re-stub HOME / XDG_CONFIG_HOME
+// point at the right place.
+export function getAuthConfigFilePath(profile?: string): string {
+	return getAuthConfigFilePathForConfig(getGlobalConfigPath(), profile);
+}
+
+export function getEncryptedAuthConfigFilePath(profile?: string): string {
+	return getEncryptedAuthConfigFilePathForConfig(
+		getGlobalConfigPath(),
+		profile
+	);
+}
+
 /**
- * Wrangler's default `AuthConfigStorage`: a TOML file on disk, located under
- * the global Wrangler config directory.
+ * A plaintext-TOML `AuthConfigStorage` for a specific auth profile, located
+ * under the global Wrangler config directory.
  *
- * Injected into `@cloudflare/workers-auth` (the OAuth flow, `getAPIToken`, and
- * `readStoredAuthState`), which no longer ships a default of its own.
+ * This is the *plaintext profile-file* primitive used by profile management
+ * (listing / deleting named profiles by their `.toml` file in
+ * `profile-store.ts`) and by tests that seed a particular profile's file
+ * directly. The production login / logout / refresh path does NOT use this —
+ * it goes through the keyring-aware `storageFactory` wired up in `user.ts`,
+ * which may persist the active profile's credentials in an encrypted file
+ * instead of plaintext TOML.
  */
 export function defaultAuthConfigStorage(profile?: string): AuthConfigStorage {
 	return createTomlFileStorage<UserAuthConfig>(() =>
@@ -69,65 +119,26 @@ export function defaultAuthConfigStorage(profile?: string): AuthConfigStorage {
 }
 
 /**
- * The path to the config file that holds user authentication data,
- * relative to the user's home directory.
- */
-const USER_AUTH_CONFIG_PATH = "config";
-
-/**
- * Returns the absolute path to the auth config TOML file.
+ * Write a profile's plaintext-TOML auth config to disk.
  *
- * The file lives under the global Wrangler config directory and is named
- * `default.toml` in production, or `<environment>.toml` for the staging /
- * other Cloudflare API environments.
- */
-export function getAuthConfigFilePath(profile?: string): string {
-	if (profile && !/^[a-zA-Z0-9_-]+$/.test(profile)) {
-		throw new UserError(
-			`Invalid profile name "${profile}". Profile names may only contain alphanumeric characters, hyphens, and underscores.`,
-			{ telemetryMessage: "auth profile invalid name" }
-		);
-	}
-	const resolved = profile ?? "default";
-	let fileName: string;
-	if (resolved === "default") {
-		const environment = getCloudflareApiEnvironmentFromEnv();
-		fileName =
-			environment === "production" ? "default.toml" : `${environment}.toml`;
-	} else {
-		fileName = `${resolved}.toml`;
-	}
-	return path.join(
-		getGlobalWranglerConfigPath(),
-		USER_AUTH_CONFIG_PATH,
-		fileName
-	);
-}
-
-/**
- * Writes the user auth config to disk.
- *
- * No in-memory cache to invalidate — auth state is read on demand by every call
- * site that needs it. Callers are responsible for any consumer-side cache
- * purging (e.g. via the `OAuthFlowContext.purgeOnLoginOrLogout` hook).
+ * Profile-explicit plaintext counterpart to `writeAuthCredentials` (which
+ * targets the active profile via the keyring-aware store).
  */
 export function writeAuthConfigFile(
 	config: UserAuthConfig,
 	profile?: string
 ): void {
-	createTomlFileStorage<UserAuthConfig>(() =>
-		getAuthConfigFilePath(profile)
-	).write(config);
+	defaultAuthConfigStorage(profile).write(config);
 }
 
 /**
- * Reads the user auth config from disk.
+ * Read a profile's plaintext-TOML auth config from disk. Returns `undefined`
+ * when the file does not exist or cannot be parsed as valid TOML.
  *
- * @throws if the file does not exist or cannot be parsed as TOML. Callers
- * typically catch this and treat the failure as "not logged in via local OAuth".
+ * Profile-explicit plaintext counterpart to `readAuthCredentials`.
  */
-export function readAuthConfigFile(profile?: string): UserAuthConfig {
-	return createTomlFileStorage<UserAuthConfig>(() =>
-		getAuthConfigFilePath(profile)
-	).read();
+export function readAuthConfigFile(
+	profile?: string
+): UserAuthConfig | undefined {
+	return defaultAuthConfigStorage(profile).read();
 }

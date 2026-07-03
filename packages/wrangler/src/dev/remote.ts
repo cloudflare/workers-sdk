@@ -197,7 +197,7 @@ export async function createRemoteWorkerInit(props: {
 		});
 	}
 
-	const assetsJwt = props.assets
+	const assetsUploadResult = props.assets
 		? await syncAssets(
 				props.complianceConfig,
 				props.accountId,
@@ -205,6 +205,7 @@ export async function createRemoteWorkerInit(props: {
 				props.name
 			)
 		: undefined;
+	const assetsJwt = assetsUploadResult?.jwt;
 
 	const bindings = { ...props.bindings };
 
@@ -233,6 +234,7 @@ export async function createRemoteWorkerInit(props: {
 		modules,
 		bindings,
 		migrations: undefined, // no migrations in dev
+		exports: undefined,
 		compatibility_date: props.compatibilityDate,
 		compatibility_flags: props.compatibilityFlags,
 		keepVars: true,
