@@ -58,7 +58,6 @@ const commonOptions: UserConfig = {
 		// Virtual/runtime modules
 		"__VITEST_POOL_WORKERS_DEFINES",
 		"__VITEST_POOL_WORKERS_USER_OBJECT",
-		"__VITEST_POOL_WORKERS_RATELIMIT_BINDING_NAMES",
 		// Runtime dependencies and peer dependencies (derived from package.json)
 		...runtimeDepPatterns,
 	],
