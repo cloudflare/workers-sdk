@@ -56,51 +56,34 @@ describe("drawBox", () => {
 	it("draws a box around content", ({ expect }) => {
 		const result = drawBox(["hello", "world"]);
 		expect(result).toBe(
-			[
-				"╭───────╮",
-				"│ hello │",
-				"│ world │",
-				"╰───────╯",
-			].join("\n")
+			["╭───────╮", "│ hello │", "│ world │", "╰───────╯"].join("\n")
 		);
 	});
 
 	it("handles single-line content", ({ expect }) => {
 		const result = drawBox(["hello"]);
-		expect(result).toBe(
-			["╭───────╮", "│ hello │", "╰───────╯"].join("\n")
-		);
+		expect(result).toBe(["╭───────╮", "│ hello │", "╰───────╯"].join("\n"));
 	});
 
 	it("handles empty content with footer lines", ({ expect }) => {
 		const result = drawBox([], { footerLines: ["footer"] });
-		expect(result).toBe(
-			["╭────────╮", "│ footer │", "╰────────╯"].join("\n")
-		);
+		expect(result).toBe(["╭────────╮", "│ footer │", "╰────────╯"].join("\n"));
 	});
 
 	it("handles empty content array without crashing", ({ expect }) => {
 		const result = drawBox([]);
-		expect(result).toBe(
-			["╭──╮", "╰──╯"].join("\n")
-		);
+		expect(result).toBe(["╭──╮", "╰──╯"].join("\n"));
 	});
 
 	it("renders bottom connector when connectToChild is set", ({ expect }) => {
 		const result = drawBox(["parent"], { connectToChild: true });
-		expect(result).toBe(
-			["╭────────╮", "│ parent │", "╰─┬──────╯"].join("\n")
-		);
+		expect(result).toBe(["╭────────╮", "│ parent │", "╰─┬──────╯"].join("\n"));
 	});
 
 	it("handles ANSI escape codes in content", ({ expect }) => {
 		const result = drawBox(["\x1b[32mgreen\x1b[0m"]);
 		expect(result).toBe(
-			[
-				"╭───────╮",
-				"│ \x1b[32mgreen\x1b[0m │",
-				"╰───────╯",
-			].join("\n")
+			["╭───────╮", "│ \x1b[32mgreen\x1b[0m │", "╰───────╯"].join("\n")
 		);
 	});
 
@@ -121,24 +104,16 @@ describe("drawConnectedChildBox", () => {
 	it("draws a connected child box", ({ expect }) => {
 		const result = drawConnectedChildBox(["child"]);
 		expect(result).toBe(
-			[
-				"  │",
-				"  │ ╭───────╮",
-				"  ╰─┤ child │",
-				"    ╰───────╯",
-			].join("\n")
+			["  │", "  │ ╭───────╮", "  ╰─┤ child │", "    ╰───────╯"].join("\n")
 		);
 	});
 
 	it("respects custom indent", ({ expect }) => {
 		const result = drawConnectedChildBox(["child"], { indent: "    " });
 		expect(result).toBe(
-			[
-				"    │",
-				"    │ ╭───────╮",
-				"    ╰─┤ child │",
-				"      ╰───────╯",
-			].join("\n")
+			["    │", "    │ ╭───────╮", "    ╰─┤ child │", "      ╰───────╯"].join(
+				"\n"
+			)
 		);
 	});
 
