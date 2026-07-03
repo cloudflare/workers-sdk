@@ -47,6 +47,18 @@ export function getInstalledPackageVersion(
 			readFileSync(packageJsonPath),
 			packageJsonPath
 		);
+		// The requested package may be installed under an alias (e.g. vite+
+		// installs `@voidzero-dev/vite-plus-core` under the `vite` alias). In that
+		// case the resolved package.json belongs to the aliased package, so its
+		// `version` is not the version of the requested package. Prefer the version
+		// declared in `bundledVersions` for the requested package when the name
+		// doesn't match.
+		if (packageJson.name !== packageName) {
+			const bundledVersion = packageJson.bundledVersions?.[packageName];
+			if (bundledVersion !== undefined) {
+				return bundledVersion;
+			}
+		}
 		return packageJson.version;
 	} catch {}
 }

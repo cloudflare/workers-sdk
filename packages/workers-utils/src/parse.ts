@@ -134,6 +134,13 @@ export type PackageJSON = {
 	devDependencies?: Record<string, unknown>;
 	dependencies?: Record<string, unknown>;
 	scripts?: Record<string, unknown>;
+	/**
+	 * Versions of packages bundled/re-exported by this package, keyed by package
+	 * name. Used by wrapper packages that alias another dependency (e.g. vite+,
+	 * which installs `@voidzero-dev/vite-plus-core` under the `vite` alias) to
+	 * declare the underlying version they provide.
+	 */
+	bundledVersions?: Record<string, string | undefined>;
 };
 
 /**
