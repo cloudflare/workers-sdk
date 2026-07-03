@@ -416,6 +416,67 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			flags: ["--template", "ui"],
 		},
 		{
+			name: "nuxt:pages:minimal",
+			promptHandlers: [
+				{
+					matcher: /Would you like to .* install .*modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "pages"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			// yarn: nitro requires youch which expects Node 20+, and yarn fails
+			// hard since we run on Node 18. npm: the `nuxt:pages` (ui) test
+			// already covers npm, so skip it here to avoid running Nuxt twice.
+			unsupportedPms: ["yarn", "npm"],
+			unsupportedOSs: ["win32"],
+			// Nuxt's deps trip `ERR_PNPM_IGNORED_BUILDS` on pnpm 11; the e2e
+			// harness has closed stdin by the time C3's recovery prompt fires
+			// (real-TTY users are unaffected). The `nuxt:pages` (ui) test covers
+			// pnpm 11+, so this `minimal` variant runs on pnpm 10 to keep the
+			// pre-pnpm-11 install path (and the default template) under test.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Nuxt!",
+			},
+			nodeCompat: false,
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			flags: ["--template", "minimal"],
+		},
+		{
+			name: "nuxt:workers:minimal",
+			promptHandlers: [
+				{
+					matcher: /Would you like to .* install .*modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			// See notes on nuxt:pages:minimal above.
+			unsupportedPms: ["yarn", "npm"],
+			unsupportedOSs: ["win32"],
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Nuxt!",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			flags: ["--template", "minimal"],
+		},
+		{
 			name: "react:pages",
 			argv: ["--platform", "pages"],
 			promptHandlers: [
@@ -835,6 +896,34 @@ function getExperimentalFrameworkTestConfig(
 			nodeCompat: false,
 			verifyTypes: false,
 			flags: ["--template", "ui"],
+		},
+		{
+			name: "nuxt:workers:minimal",
+			promptHandlers: [
+				{
+					matcher: /Would you like to .* install .*modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			// The ui variant covers pnpm 11+ (see nuxt:pages:minimal in
+			// getFrameworkTestConfig); this variant runs on pnpm 10.
+			unsupportedPmRanges: { pnpm: ">=11.0.0" },
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Nuxt!",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+			flags: ["--template", "minimal"],
 		},
 		{
 			name: "solid",
