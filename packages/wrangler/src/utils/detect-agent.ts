@@ -6,38 +6,41 @@ import { detectAgenticEnvironment } from "am-i-vibing";
 // is sufficient for identifying most agentic environments.
 const NO_PROCESS_ANCESTRY: { command?: string }[] = [];
 
-/**
- * Detects whether Wrangler is currently being run by an AI coding agent.
- *
- * This is intentionally strict: it only returns `true` when the detected
- * environment type is exactly `"agent"`, NOT `"hybrid"` or `"interactive"`.
- * Hybrid terminals (such as Warp or VS Code) embed agentic features but are
- * still driven by a human at the keyboard, so they should behave like a human.
- *
- * Mirrors the silent-failure pattern in metrics-dispatcher.ts: any error
- * results in `false` rather than propagating.
- */
-export function isAgenticAgent(): boolean {
-	try {
-		return (
-			detectAgenticEnvironment(process.env, NO_PROCESS_ANCESTRY).type ===
-			"agent"
-		);
-	} catch {
-		// Silent failure - assume we are not being run by an agent.
-		return false;
-	}
+/** The result of a single agentic-environment detection pass. */
+export interface DetectedAgent {
+	/**
+	 * True only when the detected environment type is exactly `"agent"`, NOT
+	 * `"hybrid"` or `"interactive"`. Hybrid terminals (such as Warp or VS Code)
+	 * embed agentic features but are still driven by a human at the keyboard, so
+	 * they should behave like a human.
+	 */
+	isAgent: boolean;
+	/**
+	 * The detected agent's identifier, or `null` when nothing is detected or
+	 * detection fails. Intended for telemetry.
+	 */
+	id: string | null;
 }
 
 /**
- * Returns the detected agentic environment id (e.g. the agent's identifier),
- * or `null` when nothing is detected or detection fails. Intended for telemetry.
+ * Detects whether Wrangler is currently being run by an AI coding agent,
+ * returning both whether it is a pure agent and the detected agent id in a
+ * single pass. Callers that need both (e.g. the Pages-to-Workers redirect,
+ * which gates on `isAgent` and records `id` in telemetry) should use this
+ * rather than detecting twice.
+ *
+ * Mirrors the silent-failure pattern in metrics-dispatcher.ts: any error
+ * resolves to a non-agent result rather than propagating.
  */
-export function getDetectedAgentId(): string | null {
+export function detectAgent(): DetectedAgent {
 	try {
-		return detectAgenticEnvironment(process.env, NO_PROCESS_ANCESTRY).id;
+		const detection = detectAgenticEnvironment(
+			process.env,
+			NO_PROCESS_ANCESTRY
+		);
+		return { isAgent: detection.type === "agent", id: detection.id };
 	} catch {
-		// Silent failure - no id available.
-		return null;
+		// Silent failure - assume we are not being run by an agent.
+		return { isAgent: false, id: null };
 	}
 }

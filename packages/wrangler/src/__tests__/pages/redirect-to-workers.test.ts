@@ -5,7 +5,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { main } from "../../index";
 import { sendMetricsEvent } from "../../metrics";
 import { maybeRedirectPagesToWorkers } from "../../pages/redirect-to-workers";
-import { getDetectedAgentId, isAgenticAgent } from "../../utils/detect-agent";
+import { detectAgent } from "../../utils/detect-agent";
 import { mockConsoleMethods } from "../helpers/mock-console";
 
 vi.mock("../../utils/detect-agent");
@@ -28,15 +28,14 @@ describe("maybeRedirectPagesToWorkers", () => {
 	runInTempDir();
 
 	beforeEach(() => {
-		vi.mocked(isAgenticAgent).mockReturnValue(true);
-		vi.mocked(getDetectedAgentId).mockReturnValue("test-agent");
+		vi.mocked(detectAgent).mockReturnValue({ isAgent: true, id: "test-agent" });
 		vi.mocked(main).mockResolvedValue(undefined);
 	});
 
 	it("does not redirect (or emit telemetry) when not run by an agent", async ({
 		expect,
 	}) => {
-		vi.mocked(isAgenticAgent).mockReturnValue(false);
+		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
 
 		const result = await maybeRedirectPagesToWorkers({
 			command: "deploy",
@@ -181,6 +180,29 @@ describe("maybeRedirectPagesToWorkers", () => {
 
 		expect(result).toEqual({ handled: true });
 		expect(main).toHaveBeenCalledWith(["deploy", "--name", "my-app"]);
+	});
+
+	it("forwards the exact assets directory the user asked to deploy", async ({
+		expect,
+	}) => {
+		const assetsDirectory = join(process.cwd(), "dist");
+		mkdirSync(assetsDirectory);
+
+		const result = await maybeRedirectPagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			assetsDirectory,
+			projectName: "my-app",
+		});
+
+		expect(result).toEqual({ handled: true });
+		expect(main).toHaveBeenCalledWith([
+			"deploy",
+			"--assets",
+			assetsDirectory,
+			"--name",
+			"my-app",
+		]);
 	});
 
 	it("carries name and compatibility settings across on create", async ({

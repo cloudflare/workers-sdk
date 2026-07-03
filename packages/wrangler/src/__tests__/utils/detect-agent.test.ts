@@ -1,6 +1,6 @@
 import { detectAgenticEnvironment } from "am-i-vibing";
 import { beforeEach, describe, it, vi } from "vitest";
-import { getDetectedAgentId, isAgenticAgent } from "../../utils/detect-agent";
+import { detectAgent } from "../../utils/detect-agent";
 
 vi.mock("am-i-vibing");
 
@@ -9,8 +9,10 @@ describe("detect-agent", () => {
 		vi.mocked(detectAgenticEnvironment).mockReset();
 	});
 
-	describe("isAgenticAgent()", () => {
-		it("returns true when detection type is 'agent'", ({ expect }) => {
+	describe("detectAgent()", () => {
+		it("reports an agent (with id) when detection type is 'agent'", ({
+			expect,
+		}) => {
 			vi.mocked(detectAgenticEnvironment).mockReturnValue({
 				isAgentic: true,
 				id: "claude-code",
@@ -18,10 +20,12 @@ describe("detect-agent", () => {
 				type: "agent",
 			});
 
-			expect(isAgenticAgent()).toBe(true);
+			expect(detectAgent()).toEqual({ isAgent: true, id: "claude-code" });
 		});
 
-		it("returns false when type is 'hybrid'", ({ expect }) => {
+		it("is not an agent when type is 'hybrid', but still reports the id", ({
+			expect,
+		}) => {
 			vi.mocked(detectAgenticEnvironment).mockReturnValue({
 				isAgentic: true,
 				id: "warp",
@@ -29,10 +33,10 @@ describe("detect-agent", () => {
 				type: "hybrid",
 			});
 
-			expect(isAgenticAgent()).toBe(false);
+			expect(detectAgent()).toEqual({ isAgent: false, id: "warp" });
 		});
 
-		it("returns false when type is 'interactive'", ({ expect }) => {
+		it("is not an agent when type is 'interactive'", ({ expect }) => {
 			vi.mocked(detectAgenticEnvironment).mockReturnValue({
 				isAgentic: false,
 				id: null,
@@ -40,20 +44,18 @@ describe("detect-agent", () => {
 				type: "interactive",
 			});
 
-			expect(isAgenticAgent()).toBe(false);
+			expect(detectAgent()).toEqual({ isAgent: false, id: null });
 		});
 
-		it("returns false when detectAgenticEnvironment throws", ({ expect }) => {
+		it("resolves to a non-agent result when detection throws", ({ expect }) => {
 			vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
 				throw new Error("boom");
 			});
 
-			expect(isAgenticAgent()).toBe(false);
+			expect(detectAgent()).toEqual({ isAgent: false, id: null });
 		});
-	});
 
-	describe("getDetectedAgentId()", () => {
-		it("returns the id when detection succeeds", ({ expect }) => {
+		it("detects in a single pass", ({ expect }) => {
 			vi.mocked(detectAgenticEnvironment).mockReturnValue({
 				isAgentic: true,
 				id: "claude-code",
@@ -61,15 +63,9 @@ describe("detect-agent", () => {
 				type: "agent",
 			});
 
-			expect(getDetectedAgentId()).toBe("claude-code");
-		});
+			detectAgent();
 
-		it("returns null when detection throws", ({ expect }) => {
-			vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
-				throw new Error("boom");
-			});
-
-			expect(getDetectedAgentId()).toBe(null);
+			expect(detectAgenticEnvironment).toHaveBeenCalledTimes(1);
 		});
 	});
 });

@@ -17,11 +17,12 @@
  * would risk deploying the same project to both platforms. A failed Workers
  * deploy surfaces its error and points the agent at the `--force` opt-out.
  */
+import { AsyncLocalStorage } from "node:async_hooks";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
-import { getDetectedAgentId, isAgenticAgent } from "../utils/detect-agent";
+import { detectAgent } from "../utils/detect-agent";
 
 export type PagesRedirectCommand = "deploy" | "create";
 
@@ -113,10 +114,12 @@ export async function maybeRedirectPagesToWorkers(
 		return { handled: false };
 	}
 
-	// Humans and hybrid terminals keep using Pages as before. Agent detection
-	// gates the whole feature, so non-agents are never redirected and never
-	// produce telemetry.
-	if (!isAgenticAgent()) {
+	// Detect the agentic environment once and reuse the result: `isAgent` gates
+	// the whole feature and `id` labels the telemetry. Humans and hybrid
+	// terminals keep using Pages as before, so non-agents are never redirected
+	// and never produce telemetry.
+	const agent = detectAgent();
+	if (!agent.isAgent) {
 		return { handled: false };
 	}
 
@@ -124,14 +127,14 @@ export async function maybeRedirectPagesToWorkers(
 	// reach for `--force` are agents we previously redirected, so this is a
 	// strong signal of dissatisfaction with the redirect — record it.
 	if (options.force) {
-		recordRedirect("forced", options);
+		recordRedirect("forced", options, agent.id);
 		logger.debug("Pages-to-Workers redirect skipped: --force opt-out");
 		return { handled: false };
 	}
 
 	// Never disrupt an existing Pages project — only brand-new projects are redirected.
 	if (options.command === "deploy" && options.existingProject === true) {
-		skipRedirect("existing pages project", options);
+		skipRedirect("existing pages project", options, agent.id);
 		return { handled: false };
 	}
 
@@ -142,23 +145,28 @@ export async function maybeRedirectPagesToWorkers(
 		options.assetsDirectory
 	);
 	if (unsupportedFeature) {
-		skipRedirect(unsupportedFeature, options);
+		skipRedirect(unsupportedFeature, options, agent.id);
 		return { handled: false };
 	}
 
 	// Eligible: commit to the Workers deploy. From here we own the deployment
 	// and never fall back to Pages (see file header).
-	recordRedirect("redirected", options);
+	recordRedirect("redirected", options, agent.id);
 	logger.log(REDIRECT_NOTICE_MESSAGE);
 
-	redirectingPagesToWorkers = true;
 	try {
 		// Dynamic import to avoid a circular dependency: this module is
 		// transitively imported by `src/index.ts`.
 		const { main } = await import("../index");
-		await main(buildWorkersDeployArgs(options));
+		// Mark the redirect as active for the duration of the nested deploy. The
+		// signal is scoped to this async call stack (see `redirectingPagesToWorkers`)
+		// so autoconfig can read it and the re-entrancy guard above trips on any
+		// nested call, without a module-level mutable flag.
+		await redirectingPagesToWorkers.run(true, () =>
+			main(buildWorkersDeployArgs(options))
+		);
 	} catch (error) {
-		recordRedirect("failure", options, {
+		recordRedirect("failure", options, agent.id, {
 			errorName: error instanceof Error ? error.name : "unknown",
 		});
 		logger.warn(buildWorkersDeployFailedMessage(options.command));
@@ -166,38 +174,49 @@ export async function maybeRedirectPagesToWorkers(
 		// side effects, and deploying to both platforms would be worse than
 		// surfacing the failure.
 		throw error;
-	} finally {
-		redirectingPagesToWorkers = false;
 	}
 
-	recordRedirect("success", options);
+	recordRedirect("success", options, agent.id);
 	logger.warn(AGENT_GUIDANCE_MESSAGE);
 	return { handled: true };
 }
 
 /**
- * True while a Pages-to-Workers redirect is actively running its Workers
- * deploy. Autoconfig reads this so it only skips confirmations for the redirect
- * flow, rather than for every agent-driven `wrangler deploy`.
+ * Tracks whether a Pages-to-Workers redirect is actively running its Workers
+ * deploy. Held in AsyncLocalStorage rather than a module-level mutable variable
+ * so the signal is scoped to the redirect's async call stack: it is visible to
+ * the nested `main()` invocation (including autoconfig, which reads it to skip
+ * confirmations only for this flow) and to the re-entrancy guard, and it is
+ * torn down automatically when the deploy settles.
  */
-let redirectingPagesToWorkers = false;
+const redirectingPagesToWorkers = new AsyncLocalStorage<true>();
 
 export function isRedirectingPagesToWorkers(): boolean {
-	return redirectingPagesToWorkers;
+	return redirectingPagesToWorkers.getStore() === true;
 }
 
 /**
- * Builds the `wrangler deploy` argv for the redirect. We deliberately pass no
- * positional path or `--assets` so that autoconfig runs, detects the static
- * assets directory, and writes a Workers config. We do carry across the
- * agent's explicit, deliberate inputs (name, compatibility date/flags), which
- * take precedence on the deploy.
+ * Builds the `wrangler deploy` argv for the redirect.
+ *
+ * For `pages deploy` we forward the exact assets directory the user asked to
+ * deploy via `--assets`, so the Workers deploy honours that directory rather
+ * than re-detecting one. Passing `--assets` means autoconfig does not run (it
+ * only runs when no assets/path/config is supplied); deploying the directory
+ * the user actually specified takes precedence over writing a Workers config.
+ *
+ * For `pages project create` there is no assets directory, so autoconfig runs
+ * and detects the static directory. In both cases we carry across the agent's
+ * explicit, deliberate inputs (name, compatibility date/flags), which take
+ * precedence on the deploy.
  */
 function buildWorkersDeployArgs(
 	options: MaybeRedirectPagesToWorkersOptions
 ): string[] {
 	const args = ["deploy"];
 
+	if (options.assetsDirectory) {
+		args.push("--assets", options.assetsDirectory);
+	}
 	if (options.projectName) {
 		args.push("--name", options.projectName);
 	}
@@ -217,16 +236,18 @@ function buildWorkersDeployArgs(
  */
 function skipRedirect(
 	reason: string,
-	options: MaybeRedirectPagesToWorkersOptions
+	options: MaybeRedirectPagesToWorkersOptions,
+	agentId: string | null
 ): void {
 	logger.debug(`Pages-to-Workers redirect skipped: ${reason}`);
-	recordRedirect("skipped", options, { reason });
+	recordRedirect("skipped", options, agentId, { reason });
 }
 
 /** Sends a `pages redirect to workers` metrics event for the given outcome. */
 function recordRedirect(
 	result: RedirectResult,
 	options: MaybeRedirectPagesToWorkersOptions,
+	agentId: string | null,
 	extra: Record<string, string> = {}
 ): void {
 	sendMetricsEvent(
@@ -234,7 +255,7 @@ function recordRedirect(
 		{
 			command: options.command,
 			result,
-			agent: getDetectedAgentId(),
+			agent: agentId,
 			...extra,
 		},
 		{}
