@@ -297,7 +297,9 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				const argsWithSanitizedKeys = sanitizeArgKeys(
 					args,
 					argv,
-					def.positionalArgs
+					def.behaviour?.includePositionalArgsInMetrics
+						? def.positionalArgs
+						: undefined
 				);
 				const sanitizedArgs = sanitizeArgValues(
 					argsWithSanitizedKeys,

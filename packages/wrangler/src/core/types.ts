@@ -256,6 +256,16 @@ export type CommandDefinition<
 		 * @default true
 		 */
 		printActiveProfile?: boolean;
+
+		/**
+		 * Whether to include positional args in metrics reporting.
+		 * By default, positional args are excluded from `argsUsed` and `sanitizedArgs`.
+		 * Set to `true` to opt in for commands where positional arg usage is useful
+		 * for telemetry (e.g. `list-commands d1 migrations`).
+		 *
+		 * @default false
+		 */
+		includePositionalArgsInMetrics?: boolean;
 	};
 
 	/**

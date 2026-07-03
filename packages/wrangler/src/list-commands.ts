@@ -273,6 +273,7 @@ export const listCommandsCommand = createCommand({
 	behaviour: {
 		printBanner: (args) => !args.json,
 		provideConfig: false,
+		includePositionalArgsInMetrics: true,
 	},
 	args: {
 		json: {
