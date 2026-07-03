@@ -372,10 +372,10 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 			unsupportedOSs: ["win32"],
-			// Nuxt's deps trip `ERR_PNPM_IGNORED_BUILDS` on pnpm 11; the e2e
-			// harness has closed stdin by the time C3's recovery prompt fires
-			// (real-TTY users are unaffected).
-			unsupportedPmRanges: { pnpm: ">=11.0.0" },
+			// The Nuxt `ui` template pins `packageManager: pnpm@11.9.0`, so run
+			// it only on pnpm 11+: under pnpm 10 the cross-version self-provision
+			// recurses and fails with ENAMETOOLONG.
+			unsupportedPmRanges: { pnpm: "<11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Nuxt UI - Starter",
@@ -402,7 +402,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 			unsupportedOSs: ["win32"],
 			// See note on nuxt:pages above.
-			unsupportedPmRanges: { pnpm: ">=11.0.0" },
+			unsupportedPmRanges: { pnpm: "<11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Nuxt UI - Starter",
@@ -822,7 +822,7 @@ function getExperimentalFrameworkTestConfig(
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
 			// See note on nuxt:pages above.
-			unsupportedPmRanges: { pnpm: ">=11.0.0" },
+			unsupportedPmRanges: { pnpm: "<11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Nuxt UI - Starter",
