@@ -3,10 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
-import {
-	getCloudflareEnv,
-	getDoExportsEnabledFromEnv,
-} from "../environment-variables/misc-variables";
+import { getCloudflareEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
@@ -6414,40 +6411,20 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 		(durable) => durable.class_name
 	) as string[];
 
-	const usingExports = exports !== undefined && Object.keys(exports).length > 0;
-	const preferExports = usingExports || getDoExportsEnabledFromEnv();
-
-	if (preferExports) {
-		const suggestedExports: NonNullable<RawConfig["exports"]> = {};
-		for (const className of durableObjectClassnames) {
-			suggestedExports[className] = {
-				type: "durable-object",
-				storage: "sqlite",
-			};
-		}
-
-		diagnostics.warnings.push(dedent`
-		In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
-
-		\`\`\`
-		${formatConfigSnippet({ exports: suggestedExports }, configPath)}
-		\`\`\``);
-		return;
+	const suggestedExports: NonNullable<RawConfig["exports"]> = {};
+	for (const className of durableObjectClassnames) {
+		suggestedExports[className] = {
+			type: "durable-object",
+			storage: "sqlite",
+		};
 	}
 
 	diagnostics.warnings.push(dedent`
-	In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your ${configFileName(configPath)} file. Add the following configuration:
+	In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
 
 	\`\`\`
-	${formatConfigSnippet(
-		{
-			migrations: [{ tag: "v1", new_sqlite_classes: durableObjectClassnames }],
-		},
-		configPath
-	)}
-	\`\`\`
-
-	Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
+	${formatConfigSnippet({ exports: suggestedExports }, configPath)}
+	\`\`\``);
 }
 
 /**

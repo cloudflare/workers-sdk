@@ -45,6 +45,7 @@ import {
 import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
 import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
+import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
@@ -59,6 +60,7 @@ export default async function versionsUpload(
 ): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
+	assetUploadStats?: AssetUploadStats;
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
 }> {
@@ -107,12 +109,10 @@ export default async function versionsUpload(
 	}
 
 	// Resolve which Durable Object lifecycle payload to forward — either
-	// the legacy `migrations` steps or the declarative `exports` map.
-	// `exports` is gated behind `X_DO_EXPORTS` (the gate-off error is
-	// raised inside `resolveExportsUploadPayload`). The server's versions
-	// POST controller persists `exports` on the new script_version row
-	// with `SkipDeploy:true`, so reconciliation is deferred to the
-	// subsequent deploy (either `wrangler deploy` or
+	// the legacy `migrations` steps or the declarative `exports` map. The
+	// server's versions POST controller persists `exports` on the new
+	// script_version row with `SkipDeploy:true`, so reconciliation is
+	// deferred to the subsequent deploy (either `wrangler deploy` or
 	// `wrangler versions deploy <id>`).
 	const { migrations, exports } = await resolveExportsUploadPayload({
 		scriptName,
@@ -122,14 +122,14 @@ export default async function versionsUpload(
 		useServiceEnvironments: useServiceEnvironmentsConfig(config),
 		env: props.env,
 		dispatchNamespace: undefined,
-		optInContext: "versions upload",
 	});
 
 	// Upload assets if assets is being used
-	const assetsJwt =
+	const assetsUploadResult =
 		assetsOptions && !props.dryRun
 			? await syncAssets(config, accountId, assetsOptions.directory, scriptName)
 			: undefined;
+	const assetsJwt = assetsUploadResult?.jwt;
 
 	if (props.secretsFile) {
 		const secretsResult = await parseBulkInputToObject(props.secretsFile);
@@ -422,5 +422,11 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 `)
 	);
 
-	return { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl };
+	return {
+		versionId,
+		workerTag,
+		assetUploadStats: assetsUploadResult?.assetUploadStats,
+		versionPreviewUrl,
+		versionPreviewAliasUrl,
+	};
 }

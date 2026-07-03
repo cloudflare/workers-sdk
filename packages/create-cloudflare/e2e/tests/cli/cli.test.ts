@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
 import { detectPackageManager } from "helpers/packageManagers";
 import { beforeAll, describe } from "vitest";
 import { version } from "../../../package.json";
@@ -192,13 +193,7 @@ describe("Create Cloudflare CLI", () => {
 					expect(output).toContain(`lang TypeScript`);
 					expect(output).toContain(`no deploy`);
 				} finally {
-					// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- see e2e/helpers/log-stream.ts for rationale
-					fs.rmSync(existingFilePath, {
-						recursive: true,
-						force: true,
-						maxRetries: 5,
-						retryDelay: 100,
-					});
+					removeDirSync(existingFilePath);
 				}
 			}
 		);

@@ -9,4 +9,4 @@ The following dependency versions have been updated:
 
 | Dependency | From         | To           |
 | ---------- | ------------ | ------------ |
-| workerd    | 1.20260630.1 | 1.20260701.1 |
+| workerd    | 1.20260701.1 | 1.20260702.1 |
