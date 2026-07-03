@@ -142,18 +142,14 @@ export const deployCommand = createCommand({
 
 			const buildResult = await buildWorker(buildProps, config);
 
-			const { sourceMapSize, versionId, workerTag, targets } = await deploy(
-				props,
-				config,
-				buildResult,
-				{
+			const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
+				await deploy(props, config, buildResult, {
 					syncWorkersSite,
 					getNormalizedContainerOptions,
 					buildContainer,
 					deployContainers,
 					analyseBundle,
-				}
-			);
+				});
 
 			writeOutput({
 				type: "deploy",
@@ -172,6 +168,7 @@ export const deployCommand = createCommand({
 					usesTypeScript: /\.tsx?$/.test(props.entry.file),
 					durationMs: Date.now() - beforeUpload,
 					sourceMapSize,
+					...assetUploadStats,
 				},
 				{
 					sendMetrics: config.send_metrics,

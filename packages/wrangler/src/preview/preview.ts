@@ -321,14 +321,14 @@ async function assemblePreviewDeploymentSettings(
 	request.modules = deploymentModules.modules;
 
 	if (assetsOptions) {
-		const assetsJwt = await syncAssets(
+		const assetsUploadResult = await syncAssets(
 			config,
 			accountId,
 			assetsOptions.directory,
 			workerName
 		);
 		request.assets = {
-			jwt: assetsJwt,
+			jwt: assetsUploadResult.jwt,
 			config: {
 				html_handling: assetsOptions.assetConfig.html_handling,
 				not_found_handling: assetsOptions.assetConfig.not_found_handling,

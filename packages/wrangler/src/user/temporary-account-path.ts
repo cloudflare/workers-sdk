@@ -1,7 +1,7 @@
 import path from "node:path";
 import {
 	getCloudflareApiEnvironmentFromEnv,
-	getGlobalWranglerConfigPath,
+	getGlobalConfigPath,
 } from "@cloudflare/workers-utils";
 
 function getTemporaryAccountConfigFile(): string {
@@ -18,8 +18,5 @@ function getTemporaryAccountConfigFile(): string {
  * `TemporaryAccountStorage` injected into the OAuth flow.
  */
 export function getTemporaryPreviewAccountConfigPath(): string {
-	return path.join(
-		getGlobalWranglerConfigPath(),
-		getTemporaryAccountConfigFile()
-	);
+	return path.join(getGlobalConfigPath(), getTemporaryAccountConfigFile());
 }

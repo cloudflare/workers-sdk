@@ -1,5 +1,32 @@
 # @cloudflare/workers-utils
 
+## 0.25.0
+
+### Minor Changes
+
+- [#14474](https://github.com/cloudflare/workers-sdk/pull/14474) [`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add cache options for WorkerEntrypoint exports
+
+  You can now set cache options on `WorkerEntrypoint` exports and configure cross-version cache behavior globally:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "cache": { "enabled": true, "cross_version_cache": true },
+    "exports": {
+      "default": {
+        "type": "worker",
+        "cache": { "enabled": false }
+      },
+      "Admin": {
+        "type": "worker",
+        "cache": { "enabled": true }
+      }
+    }
+  }
+  ```
+
+  Wrangler sends the `exports` config to the deploy and version upload APIs alongside the global `cache.enabled` and `cache.cross_version_cache` settings. The platform resolves those global settings plus cache overrides on exports and validates which entrypoint names are cacheable.
+
 ## 0.24.0
 
 ### Minor Changes

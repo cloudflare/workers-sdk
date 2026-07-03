@@ -1,5 +1,43 @@
 # @cloudflare/deploy-helpers
 
+## 0.3.0
+
+### Minor Changes
+
+- [#14474](https://github.com/cloudflare/workers-sdk/pull/14474) [`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add cache options for WorkerEntrypoint exports
+
+  You can now set cache options on `WorkerEntrypoint` exports and configure cross-version cache behavior globally:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "cache": { "enabled": true, "cross_version_cache": true },
+    "exports": {
+      "default": {
+        "type": "worker",
+        "cache": { "enabled": false }
+      },
+      "Admin": {
+        "type": "worker",
+        "cache": { "enabled": true }
+      }
+    }
+  }
+  ```
+
+  Wrangler sends the `exports` config to the deploy and version upload APIs alongside the global `cache.enabled` and `cache.cross_version_cache` settings. The platform resolves those global settings plus cache overrides on exports and validates which entrypoint names are cacheable.
+
+### Patch Changes
+
+- [#14305](https://github.com/cloudflare/workers-sdk/pull/14305) [`98793d8`](https://github.com/cloudflare/workers-sdk/commit/98793d8e00567462518d983d974e0e89b6a474c3) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Improve asset upload performance with single-file uploads
+
+  Asset uploads now use a more efficient per-file upload path when the platform enables it. This is rolled out server-side and requires no configuration changes. Existing upload behavior is unchanged when the new path is not enabled.
+
+- Updated dependencies [[`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933), [`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1)]:
+  - @cloudflare/workers-utils@0.25.0
+  - miniflare@4.20260701.0
+  - @cloudflare/cli-shared-helpers@0.1.11
+
 ## 0.2.5
 
 ### Patch Changes
