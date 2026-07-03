@@ -20,6 +20,7 @@ import type { NonVersionedScriptSettings } from "../../versions/api";
 import type {
 	AssetConfigMetadata,
 	CfWorkerInit,
+	ExportsReconciliationResult,
 	RawConfig,
 	RawEnvironment,
 	WorkerMetadata,
@@ -42,6 +43,12 @@ export function mockUploadWorkerRequest(
 		expectedCompatibilityDate?: string;
 		expectedCompatibilityFlags?: string[];
 		expectedMigrations?: CfWorkerInit["migrations"];
+		expectedExports?: CfWorkerInit["exports"];
+		/**
+		 * When set, the upload mock returns this `exports_reconciliation`
+		 * envelope alongside the success response so deploy.ts can render it.
+		 */
+		mockUploadReturnsExportsReconciliation?: ExportsReconciliationResult;
 		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
 		expectedUnsafeMetaData?: Record<string, unknown>;
 		expectedCapnpSchema?: string;
@@ -137,6 +144,9 @@ export function mockUploadWorkerRequest(
 		if ("expectedMigrations" in options) {
 			expect(metadata.migrations).toEqual(expectedMigrations);
 		}
+		if ("expectedExports" in options) {
+			expect(metadata.exports).toEqual(expectedExports);
+		}
 		if ("expectedTailConsumers" in options) {
 			expect(metadata.tail_consumers).toEqual(expectedTailConsumers);
 		}
@@ -183,6 +193,9 @@ export function mockUploadWorkerRequest(
 					tag: "sample-tag",
 					deployment_id: "Galaxy-Class",
 					startup_time_ms: 100,
+					...(mockUploadReturnsExportsReconciliation && {
+						exports_reconciliation: mockUploadReturnsExportsReconciliation,
+					}),
 				})
 			);
 		}
@@ -196,6 +209,9 @@ export function mockUploadWorkerRequest(
 						etag: "etag98765",
 					},
 				},
+				...(mockUploadReturnsExportsReconciliation && {
+					exports_reconciliation: mockUploadReturnsExportsReconciliation,
+				}),
 			})
 		);
 	};
@@ -216,6 +232,8 @@ export function mockUploadWorkerRequest(
 		env = undefined,
 		useServiceEnvironments = true,
 		expectedMigrations,
+		expectedExports,
+		mockUploadReturnsExportsReconciliation,
 		expectedTailConsumers,
 		expectedUnsafeMetaData,
 		expectedCapnpSchema,

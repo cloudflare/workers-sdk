@@ -1210,7 +1210,12 @@ async function generateSimpleEnvTypes(
 			entrypoint
 				? generateImportSpecifier(fullOutputPath, entrypoint.file)
 				: undefined,
-			[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
+			[
+				...getDurableObjectClassNameToUseSQLiteMap(
+					config.migrations,
+					config.exports
+				).keys(),
+			],
 			typeDefinitions
 		);
 
@@ -1663,7 +1668,12 @@ async function generatePerEnvironmentTypes(
 		entrypoint
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined,
-		[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
+		[
+			...getDurableObjectClassNameToUseSQLiteMap(
+				config.migrations,
+				config.exports
+			).keys(),
+		],
 		[...typeDefinitions]
 	);
 

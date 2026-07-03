@@ -283,7 +283,11 @@ export type InferEnv<TUnwrappedConfig> = TUnwrappedConfig extends {
 
 /**
  * Infer the Durable Object namespace names from a Worker config's exports.
- * Returns a union of export names that have `type: "durable-object"`.
+ * Returns a union of export names that declare a *live* Durable Object —
+ * `type: "durable-object"` with `state` either omitted, `"created"`, or
+ * `"expecting-transfer"`. Tombstone entries (`deleted`, `renamed`,
+ * `transferred`) are excluded because they retire the namespace and a
+ * binding to a tombstoned class would fail at deploy time.
  *
  * @example
  * ```typescript
@@ -293,19 +297,31 @@ export type InferEnv<TUnwrappedConfig> = TUnwrappedConfig extends {
  * const config = defineWorker({
  *   exports: {
  *     MyDurableObject: { type: "durable-object", storage: "sqlite" },
- *     MyWorkflow: { type: "workflow", name: "my-workflow" },
+ *     OldGone:         { type: "durable-object", state: "deleted" },
  *   },
  * });
  *
  * type WorkerConfig = UnwrapConfig<typeof config>;
- * // Inferred as: "MyDurableObject"
+ * // Inferred as: "MyDurableObject" (the deleted tombstone is excluded)
  * type DurableNamespaces = InferDurableNamespaces<WorkerConfig>;
  * ```
  */
-export type InferDurableNamespaces<TUnwrappedConfig> = InferExportsByType<
-	TUnwrappedConfig,
-	"durable-object"
->;
+export type InferDurableNamespaces<TUnwrappedConfig> =
+	TUnwrappedConfig extends {
+		exports: infer TExports extends Record<string, { type: string }>;
+	}
+		? {
+				[K in keyof TExports]: TExports[K] extends {
+					type: "durable-object";
+				}
+					? TExports[K] extends {
+							state: "deleted" | "renamed" | "transferred";
+						}
+						? never
+						: K & string
+					: never;
+			}[keyof TExports]
+		: never;
 
 /**
  * Infer the main module type from a Worker config's entrypoint.

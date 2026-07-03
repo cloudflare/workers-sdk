@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { isJwtExpired } from "@cloudflare/deploy-helpers";
+import { decodeJwtPayload, isJwtExpired } from "@cloudflare/deploy-helpers";
 import {
 	APIError,
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
@@ -28,7 +28,7 @@ import { validate } from "./validate";
 import type { UploadPayloadFile } from "./types";
 import type { FileContainer } from "./validate";
 
-export { isJwtExpired } from "@cloudflare/deploy-helpers";
+export { decodeJwtPayload, isJwtExpired } from "@cloudflare/deploy-helpers";
 
 export const pagesProjectUploadCommand = createCommand({
 	metadata: {
@@ -408,9 +408,7 @@ export const maxFileCountAllowedFromClaims = (token: string): number => {
 		// Not validating the JWT here, which ordinarily would be a big red flag.
 		// However, if the JWT is invalid, no uploads (calls to /pages/assets/upload)
 		// will succeed.
-		const decodedJwt = JSON.parse(
-			Buffer.from(token.split(".")[1], "base64").toString()
-		);
+		const decodedJwt = decodeJwtPayload(token);
 
 		const maxFileCountAllowed = decodedJwt["max_file_count_allowed"];
 		if (typeof maxFileCountAllowed == "number") {

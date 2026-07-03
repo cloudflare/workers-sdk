@@ -133,6 +133,7 @@ describe("RemoteRuntimeController", () => {
 			modules: [],
 			bindings: {},
 			migrations: undefined,
+			exports: undefined,
 			compatibility_date: "2025-11-11",
 			compatibility_flags: [],
 			keepVars: true,

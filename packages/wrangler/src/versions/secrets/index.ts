@@ -174,6 +174,7 @@ export async function copyWorkerVersionWithNewSecrets({
 		containers: config.containers,
 		sourceMaps: sourceMaps,
 		migrations: undefined,
+		exports: undefined,
 		compatibility_date: versionInfo.resources.script_runtime.compatibility_date,
 		compatibility_flags:
 			versionInfo.resources.script_runtime.compatibility_flags,

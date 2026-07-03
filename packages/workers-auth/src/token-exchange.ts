@@ -197,7 +197,7 @@ export async function exchangeRefreshTokenForAccessToken(
 			// despite using the singular name "scope".
 			const scopes: string[] = scope ? scope.split(" ") : [];
 
-			// The caller (refreshToken) persists this via writeAuthConfigFile.
+			// The caller (refreshToken) persists this via writeAuthCredentials.
 			// No need to mirror the values into any module-level cache.
 			//
 			// The OAuth server is allowed to omit `refresh_token` from a successful
@@ -281,7 +281,7 @@ export async function exchangeAuthCodeForAccessToken(
 	// despite using the singular name "scope".
 	const scopes: string[] = scope ? scope.split(" ") : [];
 
-	// The caller (login) persists this via writeAuthConfigFile.
+	// The caller (login) persists this via writeAuthCredentials.
 	// No need to mirror the values into any module-level cache.
 	const accessContext: AccessContext = {
 		token: accessToken,

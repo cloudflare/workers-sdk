@@ -11,6 +11,7 @@ import type {
 	RawEnvironment,
 } from "../../../src/config";
 import type { RedirectedRawConfig } from "../../../src/config/config";
+import type { DurableObjectExport } from "../../../src/config/environment";
 
 describe("normalizeAndValidateConfig()", () => {
 	it("should use defaults for empty configuration", ({ expect }) => {
@@ -68,6 +69,7 @@ describe("normalizeAndValidateConfig()", () => {
 			send_metrics: undefined,
 			main: undefined,
 			migrations: [],
+			exports: {},
 			name: undefined,
 			queues: {
 				consumers: [],
@@ -1080,16 +1082,14 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler.toml configuration:
 				  - "unsafe" fields are experimental and may change or break at any time.
-				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your wrangler.toml file. Add the following configuration:
+				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
 
 				    \`\`\`
-				    [[migrations]]
-				    tag = "v1"
-				    new_sqlite_classes = [ "CLASS1" ]
+				    [exports.CLASS1]
+				    type = "durable-object"
+				    storage = "sqlite"
 
-				    \`\`\`
-
-				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
+				    \`\`\`"
 			`);
 		});
 
@@ -1831,6 +1831,516 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected "migrations[0].renamed_classes" to be an array of "{from: string, to: string}" objects but got [{"from":"FROM_CLASS","to":"TO_CLASS"},{"a":"something","b":"someone"}].
 					  - Expected "migrations[0].transferred_classes" to be an array of "{from: string, from_script: string, to: string}" objects but got [{"from":"FROM_CLASS","from_script":"FROM_SCRIPT","to":"TO_CLASS"},{"from":"FROM_CLASS","to":"TO_CLASS"}]."
 				`);
+			});
+		});
+
+		describe("[exports]", () => {
+			it("accepts a live durable-object entry with sqlite storage and no explicit state", ({
+				expect,
+			}) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						MyDO: { type: "durable-object", storage: "sqlite" },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it('accepts a live durable-object entry with an explicit state of "created"', ({
+				expect,
+			}) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						MyDO: {
+							type: "durable-object",
+							state: "created",
+							storage: "sqlite",
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("accepts all tombstone states and expecting-transfer alongside a live entry", ({
+				expect,
+			}) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						NewName: { type: "durable-object", storage: "sqlite" },
+						OldGone: { type: "durable-object", state: "deleted" },
+						OldName: {
+							type: "durable-object",
+							state: "renamed",
+							renamed_to: "NewName",
+						},
+						Movee: {
+							type: "durable-object",
+							state: "transferred",
+							transferred_to: "target-worker",
+						},
+						Incoming: {
+							type: "durable-object",
+							state: "expecting-transfer",
+							storage: "sqlite",
+							transfer_from: "source-worker",
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("accepts worker entries with cache config", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						default: { type: "worker", cache: { enabled: false } },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("accepts mixed Durable Object and worker entries", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Admin: {
+								type: "worker",
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+								cache: { enabled: "true" } as any,
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "exports.Admin.cache.enabled" to be of type boolean'
+				);
+			});
+
+			it("warns when worker entries include unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Admin: {
+								type: "worker",
+								storage: "sqlite",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in exports.Admin field: "storage"'
+				);
+			});
+
+			it("errors when storage is missing on a live entry", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							MyDO: { type: "durable-object" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.MyDO.storage" is required for state "created"'
+				);
+			});
+
+			it("errors when storage uses an unknown value", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							MyDO: { type: "durable-object", storage: "kv" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain('"exports.MyDO.storage"');
+			});
+
+			it("errors when renamed_to equals the source class name", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Same: {
+								type: "durable-object",
+								state: "renamed",
+								renamed_to: "Same",
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"cannot equal the source class name"
+				);
+			});
+
+			it("errors when a deleted tombstone carries forbidden fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Bad: {
+								type: "durable-object",
+								state: "deleted",
+								storage: "sqlite",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Bad.storage" is forbidden on state "deleted"'
+				);
+			});
+
+			it("errors when a transferred tombstone omits transferred_to", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Movee: {
+								type: "durable-object",
+								state: "transferred",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Movee.transferred_to" is required'
+				);
+			});
+
+			it("errors when an expecting-transfer entry omits transfer_from", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Incoming: {
+								type: "durable-object",
+								state: "expecting-transfer",
+								storage: "sqlite",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Incoming.transfer_from" is required'
+				);
+			});
+
+			it("errors when an expecting-transfer entry omits storage", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Incoming: {
+								type: "durable-object",
+								state: "expecting-transfer",
+								transfer_from: "source-worker",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Incoming.storage" is required for state "expecting-transfer"'
+				);
+			});
+
+			it("errors when transfer_from is set on a live `created` entry", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							MyDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								transfer_from: "source-worker",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.MyDO.transfer_from" is forbidden on state "created".
+					  - Allowed properties are: type, state, and storage."
+				`);
+			});
+
+			it("errors when the type is unknown", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							Weird: { type: "container" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.Weird.type" must be "durable-object" or "worker", but got "container"."
+				`);
+			});
+
+			it("errors when the state is unknown", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							Weird: { type: "durable-object", state: "rebooted" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.Weird.state" must be one of "created", "deleted", "renamed", "transferred", or "expecting-transfer" but got "rebooted"."
+				`);
+			});
+
+			it("errors when `migrations` and `exports` are both non-empty", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						migrations: [{ tag: "v1", new_sqlite_classes: ["MyDO"] }],
+						exports: {
+							MyDO: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both."
+				`);
+			});
+
+			it("does not warn about missing migrations when exports covers the bound class", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "DO", class_name: "MyDO" }],
+						},
+						exports: {
+							MyDO: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("warns and suggests an `exports` entry when the only entry for a bound class is a tombstone", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "DO", class_name: "MyDO" }],
+						},
+						exports: {
+							MyDO: { type: "durable-object", state: "deleted" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				const rendered = diagnostics.renderWarnings();
+				expect(rendered).toContain("no live `exports` entry for them");
+				expect(rendered).toContain('"type": "durable-object"');
+				expect(rendered).toContain('"storage": "sqlite"');
+				expect(rendered).not.toContain("new_sqlite_classes");
+			});
+
+			it("warns and suggests an `exports` entry when `exports` is in use but the bound class is missing", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "DO", class_name: "MyDO" }],
+						},
+						exports: {
+							// User is already on the `exports` path (unrelated
+							// tombstone present) but forgot to add a live entry
+							// for `MyDO`.
+							OldGone: { type: "durable-object", state: "deleted" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				const rendered = diagnostics.renderWarnings();
+				expect(rendered).toContain("no live `exports` entry for them");
+				expect(rendered).toContain('"MyDO"');
+				expect(rendered).not.toContain("new_sqlite_classes");
+			});
+
+			it("warns and suggests an `exports` entry when neither lifecycle is declared", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "DO", class_name: "MyDO" }],
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				const rendered = diagnostics.renderWarnings();
+				expect(rendered).toContain("no live `exports` entry for them");
+				expect(rendered).toContain('"type": "durable-object"');
+				expect(rendered).toContain('"storage": "sqlite"');
+				expect(rendered).not.toContain("new_sqlite_classes");
 			});
 		});
 
@@ -9660,6 +10170,52 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(config.cache).toEqual({ enabled: false });
+			});
+
+			it("should not error when cross_version_cache is true and cache is disabled", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: false,
+							cross_version_cache: true,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({
+					enabled: false,
+					cross_version_cache: true,
+				});
+			});
+
+			it("should error when cache.cross_version_cache is not a boolean", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+							cross_version_cache: "true",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "cache.cross_version_cache" to be of type boolean but got "true"."
+				`);
 			});
 
 			it("should warn on unexpected fields in cache config", ({ expect }) => {
