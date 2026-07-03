@@ -12,6 +12,7 @@ import {
 	WorkflowIntrospectorHandle,
 } from "@cloudflare/workflows-shared/src/introspection";
 import { Headers, Request } from "miniflare";
+import { readConfig } from "../config";
 import {
 	buildMigrationQuery,
 	getCreateMigrationsTableQuery,
@@ -55,14 +56,20 @@ import type {
 	WorkerdStructuredLog,
 } from "miniflare";
 
-export type TestHarnessOptions = {
+export type TestHarnessOptions<
+	PrimaryWorkerName extends string | undefined = string | undefined,
+> = {
 	/**
 	 * Base directory used to resolve relative worker config paths.
 	 * Defaults to `process.cwd()`.
 	 */
 	root?: string | undefined;
 	/**
-	 * Workers to run in this server. The first worker is the primary worker.
+	 * Worker to use as the primary worker. When omitted, the first worker is primary.
+	 */
+	primaryWorker?: PrimaryWorkerName;
+	/**
+	 * Workers to run in this server.
 	 */
 	workers: WorkerInput[];
 };
@@ -92,6 +99,35 @@ export type WorkerExport =
 	| (new (...args: any[]) => Rpc.WorkerEntrypointBranded)
 	| Rpc.WorkerEntrypointBranded
 	| AnyExportedHandler;
+
+declare global {
+	// oxlint-disable-next-line typescript/no-namespace -- Ambient registry for generated worker types.
+	namespace Cloudflare {
+		// oxlint-disable-next-line typescript/no-empty-object-type -- Augmented by `wrangler types`.
+		interface Workers {}
+	}
+}
+
+type RegisteredWorkerEnv<Worker> = Worker extends { env: infer Env }
+	? Env
+	: AnyEnv;
+
+type RegisteredWorkerModule<Worker> = Worker extends {
+	module: infer Module extends WorkerModule;
+}
+	? Module
+	: { default: AnyExportedHandler };
+
+type RegisteredWorkerName<Workers> = keyof Workers & string;
+
+type PrimaryWorkerHandle<Workers, PrimaryWorkerName> = [
+	PrimaryWorkerName,
+] extends [RegisteredWorkerName<Workers>]
+	? WorkerHandle<
+			RegisteredWorkerEnv<Workers[PrimaryWorkerName]>,
+			RegisteredWorkerModule<Workers[PrimaryWorkerName]>
+		>
+	: WorkerHandle;
 
 export type WorkerHandle<
 	Env = AnyEnv,
@@ -176,7 +212,10 @@ export type WorkerHandle<
 	getExport(): Promise<Service<Module["default"]>>;
 };
 
-export type TestHarness = {
+export type TestHarness<
+	Workers = Cloudflare.Workers,
+	PrimaryWorkerName extends string | undefined = undefined,
+> = {
 	/**
 	 * Starts the server and returns its current URL.
 	 * Calling this more than once returns the same running server session until
@@ -223,6 +262,13 @@ export type TestHarness = {
 	 * When no name is provided, this returns the primary Worker, which is the first
 	 * Worker in the server's `workers` options.
 	 */
+	getWorker<Name extends RegisteredWorkerName<Workers>>(
+		name: Name
+	): WorkerHandle<
+		RegisteredWorkerEnv<Workers[Name]>,
+		RegisteredWorkerModule<Workers[Name]>
+	>;
+	getWorker(): PrimaryWorkerHandle<Workers, PrimaryWorkerName>;
 	getWorker<
 		Env = AnyEnv,
 		Module extends WorkerModule = { default: AnyExportedHandler },
@@ -254,8 +300,10 @@ export type TestHarness = {
 	 */
 	update(
 		options:
-			| TestHarnessOptions
-			| ((currentOptions: TestHarnessOptions) => TestHarnessOptions)
+			| TestHarnessOptions<PrimaryWorkerName>
+			| ((
+					currentOptions: TestHarnessOptions<PrimaryWorkerName>
+			  ) => TestHarnessOptions<PrimaryWorkerName>)
 	): Promise<void>;
 	/**
 	 * Restores the server to the options used when the current session first
@@ -307,6 +355,11 @@ type ServerSession = {
 	devEnvs: DevEnv[];
 };
 
+type ResolvedWorkerInput = {
+	name: string | undefined;
+	input: WranglerStartDevWorkerInput;
+};
+
 type DebugLog = {
 	source: "server" | "runtime";
 	worker?: string;
@@ -331,7 +384,12 @@ type DebugLog = {
  * await server.close();
  * ```
  */
-export function createTestHarness(options?: TestHarnessOptions): TestHarness {
+export function createTestHarness<
+	Workers = Cloudflare.Workers,
+	const PrimaryWorkerName extends string | undefined = undefined,
+>(
+	options?: TestHarnessOptions<PrimaryWorkerName>
+): TestHarness<Workers, PrimaryWorkerName> {
 	let initialOptions = options;
 	let currentOptions = options;
 	let serverSession: ServerSession | undefined;
@@ -397,77 +455,126 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	function resolveWorkerInputs(
-		serverOptions: TestHarnessOptions
-	): WranglerStartDevWorkerInput[] {
+		serverOptions: TestHarnessOptions<string | undefined>
+	): ResolvedWorkerInput[] {
 		if (serverOptions.workers.length === 0) {
 			throw new Error("Test harness requires at least one worker.");
 		}
 
 		const root = serverOptions.root ?? process.cwd();
 
-		return serverOptions.workers.map((input, index, list) => {
-			const isPrimaryWorker = index === 0;
-			const isMultiworker = list.length > 1;
-			const workerBindingOverrides =
-				"configPath" in input ? input.bindingOverrides : undefined;
-			const bindings = convertConfigToBindings(
-				{ vars: "vars" in input ? input.vars : undefined },
-				{ usePreviewIds: true }
-			);
-			const secrets = "secrets" in input ? input.secrets : undefined;
-			for (const [key, value] of Object.entries(secrets ?? {})) {
-				bindings[key] = { type: "secret_text", value };
-			}
-			for (const [key, value] of Object.entries(workerBindingOverrides ?? {})) {
-				bindings[key] = { type: "service", service: value };
-			}
-
-			return {
-				config:
+		return serverOptions.workers.map(
+			(
+				input
+			): { name: string | undefined; input: WranglerStartDevWorkerInput } => {
+				const env = "env" in input ? input.env : undefined;
+				const workerConfig =
 					"config" in input
 						? normalizeInlineWorkerConfig(input.config, root)
-						: resolvePath(root, input.configPath),
-				env: "env" in input ? input.env : undefined,
-				bindings,
-				dev: {
-					auth: serverAuthHook,
-					server: { hostname: "127.0.0.1", port: 0 },
-					logLevel: "none",
-					watch: false,
-					persist: false,
-					inspector: false,
-					registry: undefined,
-					structuredLogsHandler: (log: WorkerdStructuredLog) =>
-						captureStructuredLog(log),
-					outboundService: (request) => {
-						/**
-						 * Miniflare passes its own undici-based Request here. Pass the URL as
-						 * RequestInfo and the request as RequestInit so method, headers, body,
-						 * and duplex are preserved by global fetch.
-						 */
-						return globalThis.fetch(request.url, request);
+						: readConfig(
+								{ config: resolvePath(root, input.configPath), env },
+								{ hideWarnings: true }
+							);
+				const name = workerConfig.name;
+
+				const workerBindingOverrides =
+					"configPath" in input ? input.bindingOverrides : undefined;
+				const bindings = convertConfigToBindings(
+					{ vars: "vars" in input ? input.vars : undefined },
+					{ usePreviewIds: true }
+				);
+				const secrets = "secrets" in input ? input.secrets : undefined;
+				for (const [key, value] of Object.entries(secrets ?? {})) {
+					bindings[key] = { type: "secret_text", value };
+				}
+				for (const [key, value] of Object.entries(
+					workerBindingOverrides ?? {}
+				)) {
+					bindings[key] = { type: "service", service: value };
+				}
+
+				const workerInput: WranglerStartDevWorkerInput = {
+					config: workerConfig,
+					env,
+					bindings,
+					dev: {
+						auth: serverAuthHook,
+						server: { hostname: "127.0.0.1", port: 0 },
+						logLevel: "none",
+						watch: false,
+						persist: false,
+						inspector: false,
+						registry: undefined,
+						structuredLogsHandler: (log: WorkerdStructuredLog) =>
+							captureStructuredLog(log),
+						outboundService: (request) => {
+							/**
+							 * Miniflare passes its own undici-based Request here. Pass the URL as
+							 * RequestInfo and the request as RequestInit so method, headers, body,
+							 * and duplex are preserved by global fetch.
+							 */
+							return globalThis.fetch(request.url, request);
+						},
+						multiworkerPrimary: undefined,
+						inferOriginFromRoutes: false,
+						routeRequestsByRoutes: true,
 					},
-					multiworkerPrimary: isMultiworker ? isPrimaryWorker : undefined,
-					inferOriginFromRoutes: false,
-					routeRequestsByRoutes: true,
-				},
-				build: {
-					nodejsCompatMode: (config) => {
-						return validateNodeCompatMode(
-							config.compatibility_date,
-							config.compatibility_flags ?? [],
-							{ noBundle: config.no_bundle }
-						);
+					build: {
+						nodejsCompatMode: (config) => {
+							return validateNodeCompatMode(
+								config.compatibility_date,
+								config.compatibility_flags ?? [],
+								{ noBundle: config.no_bundle }
+							);
+						},
 					},
-				},
-			};
-		});
+				};
+
+				return { name, input: workerInput };
+			}
+		);
+	}
+
+	function applyPrimaryWorker(
+		workers: ResolvedWorkerInput[],
+		primaryWorker: string | undefined
+	): WranglerStartDevWorkerInput[] {
+		const primaryIndex = primaryWorker
+			? workers.findIndex(
+					(worker) => worker.name === primaryWorker
+				)
+			: 0;
+		if (primaryIndex === -1) {
+			throw new TypeError(
+				`Primary Worker ${JSON.stringify(primaryWorker)} does not exist in this server.`
+			);
+		}
+
+		const orderedWorkers =
+			primaryIndex === 0
+				? workers
+				: [
+						workers[primaryIndex],
+						...workers.slice(0, primaryIndex),
+						...workers.slice(primaryIndex + 1),
+					];
+		const isMultiworker = orderedWorkers.length > 1;
+		return orderedWorkers.map(({ input }, index) => ({
+			...input,
+			dev: {
+				...input.dev,
+				multiworkerPrimary: isMultiworker ? index === 0 : undefined,
+			},
+		}));
 	}
 
 	async function createSession(
-		serverOptions: TestHarnessOptions
+		serverOptions: TestHarnessOptions<string | undefined>
 	): Promise<ServerSession> {
-		const inputs = resolveWorkerInputs(serverOptions);
+		const inputs = applyPrimaryWorker(
+			resolveWorkerInputs(serverOptions),
+			serverOptions.primaryWorker
+		);
 		const [, ...auxiliaryWorkers] = inputs;
 		const isMultiworker = auxiliaryWorkers.length > 0;
 		const primaryDevEnv = isMultiworker
@@ -1000,7 +1107,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			console.log(message);
 		},
 		async update(updateInput) {
-			let nextOptions: TestHarnessOptions;
+			let nextOptions: TestHarnessOptions<PrimaryWorkerName>;
 
 			if (typeof updateInput === "function") {
 				assert(

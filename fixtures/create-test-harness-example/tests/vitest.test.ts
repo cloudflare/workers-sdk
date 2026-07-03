@@ -12,29 +12,21 @@ import { createTestHarness } from "wrangler";
 
 // Point each worker to the Wrangler config you want to test.
 const server = createTestHarness({
+	primaryWorker: "web-worker",
 	workers: [
+		{ configPath: "./workers/api/wrangler.jsonc" },
+		{ configPath: "./workers/mock-browser/wrangler.jsonc" },
 		{
 			configPath: "./workers/web/wrangler.jsonc",
 			bindingOverrides: { BROWSER: "mock-browser" },
 		},
-		{ configPath: "./workers/api/wrangler.jsonc" },
-		{ configPath: "./workers/mock-browser/wrangler.jsonc" },
 	],
 });
 
 // server.getWorker() would return the first Worker, but naming it makes it explicit.
-const webWorker = server.getWorker<
-	WebEnv,
-	typeof import("../workers/web/index")
->("web-worker");
-const apiWorker = server.getWorker<
-	ApiEnv,
-	typeof import("../workers/api/index")
->("api-worker");
-const mockBrowserWorker = server.getWorker<
-	unknown,
-	typeof import("../workers/mock-browser/index")
->("mock-browser");
+const webWorker = server.getWorker();
+const apiWorker = server.getWorker("api-worker");
+const mockBrowserWorker = server.getWorker("mock-browser");
 
 // Workers started by createTestHarness route outbound fetches to globalThis.fetch().
 // You can use libraries like MSW to intercept those requests.

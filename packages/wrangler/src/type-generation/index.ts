@@ -1214,6 +1214,7 @@ async function generateSimpleEnvTypes(
 			entrypoint
 				? generateImportSpecifier(fullOutputPath, entrypoint.file)
 				: undefined,
+			config.name,
 			[
 				...getDurableObjectClassNameToUseSQLiteMap(
 					config.migrations,
@@ -1672,6 +1673,7 @@ async function generatePerEnvironmentTypes(
 		entrypoint
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined,
+		config.name,
 		[
 			...getDurableObjectClassNameToUseSQLiteMap(
 				config.migrations,
@@ -1701,6 +1703,24 @@ async function generatePerEnvironmentTypes(
  */
 function prefixEnvInterface(envInterface: string) {
 	return `__BaseEnv_${envInterface}`;
+}
+
+function generateWorkerRegistryContent(
+	workerName: string | undefined,
+	internalEnvInterface: string,
+	entrypointModule: string | undefined
+) {
+	if (!workerName) {
+		return "";
+	}
+
+	return `
+	interface Workers {
+		${constructTypeKey(workerName)}: {
+			env: ${internalEnvInterface};
+			module: ${entrypointModule ? `typeof import("${entrypointModule}")` : "{ default: ExportedHandler }"};
+		};
+	}`;
 }
 
 /**
@@ -1733,6 +1753,7 @@ function generatePerEnvTypeStrings(
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
+	workerName: string | undefined,
 	configuredDurableObjects: string[],
 	typeDefinitions: string[] = []
 ): { fileContent: string; consoleOutput: string } {
@@ -1764,8 +1785,13 @@ function generatePerEnvTypeStrings(
 			: "";
 
 		const internalEnvInterface = prefixEnvInterface(envInterface);
+		const workersContent = generateWorkerRegistryContent(
+			workerName,
+			internalEnvInterface,
+			entrypointModule
+		);
 
-		baseContent = `interface ${internalEnvInterface} {\n${envBindingLines}\n}\ndeclare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
+		baseContent = `interface ${internalEnvInterface} {\n${envBindingLines}\n}\ndeclare namespace Cloudflare {${globalPropsContent}${workersContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
 		// Service worker syntax - type definitions go at the top level since there's no namespace
 		const globalTypeDefsContent =
@@ -1844,6 +1870,7 @@ function generateTypeStrings(
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
+	workerName: string | undefined,
 	configuredDurableObjects: string[],
 	typeDefinitions: string[] = []
 ): {
@@ -1869,8 +1896,13 @@ function generateTypeStrings(
 		}
 
 		const internalEnvInterface = prefixEnvInterface(envInterface);
+		const workersContent = generateWorkerRegistryContent(
+			workerName,
+			internalEnvInterface,
+			entrypointModule
+		);
 
-		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
+		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${workersContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
 		// For service worker format, type definitions still go at the top level since there's no namespace
 		const globalTypeDefsContent =

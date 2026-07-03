@@ -4,9 +4,10 @@
 	"description": "Integration tests with the createTestHarness() API",
 	"type": "module",
 	"scripts": {
-		"cf-typegen": "pnpm typegen:web && pnpm typegen:api",
+		"cf-typegen": "pnpm typegen:web && pnpm typegen:api && pnpm typegen:mock-browser",
 		"typegen:web": "wrangler types ./workers/web/worker-configuration.d.ts -c ./workers/web/wrangler.jsonc -c ./workers/api/wrangler.jsonc --env-interface WebEnv --no-include-runtime",
 		"typegen:api": "wrangler types ./workers/api/worker-configuration.d.ts -c ./workers/api/wrangler.jsonc --env-interface ApiEnv --no-include-runtime",
+		"typegen:mock-browser": "wrangler types ./workers/mock-browser/worker-configuration.d.ts -c ./workers/mock-browser/wrangler.jsonc --no-include-runtime",
 		"check:type": "tsc",
 		"build": "vite build",
 		"playwright:install": "pnpm playwright install chromium",
