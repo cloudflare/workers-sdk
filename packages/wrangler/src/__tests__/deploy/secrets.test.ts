@@ -338,7 +338,7 @@ SECRET3=value3`
 				runWrangler("deploy index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The following required secrets have not been set: API_KEY, DB_PASSWORD
-Use \`wrangler secret put <NAME>\` to set secrets before deploying.
+Use \`wrangler secret put <NAME>\` to set secrets before deploying, or provide them at deploy time with \`wrangler deploy --secrets-file <FILE>\`.
 See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.]`
 			);
 		});
@@ -358,7 +358,8 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 				runWrangler("deploy index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The following required secrets have not been set: API_KEY, DB_PASSWORD
-Use \`wrangler secret put <NAME>\` to set secrets before deploying.
+This Worker does not exist yet, so set these secrets at deploy time with \`wrangler deploy --secrets-file <FILE>\`.
+Once the Worker exists, you can also use \`wrangler secret put <NAME>\`.
 See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.]`
 			);
 		});
@@ -432,7 +433,8 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 				runWrangler(`deploy --secrets-file ${secretsFile}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The following required secrets have not been set: SECRET2, SECRET3
-Use \`wrangler secret put <NAME>\` to set secrets before deploying.
+This Worker does not exist yet, so set these secrets at deploy time with \`wrangler deploy --secrets-file <FILE>\`.
+Once the Worker exists, you can also use \`wrangler secret put <NAME>\`.
 See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.]`
 			);
 		});

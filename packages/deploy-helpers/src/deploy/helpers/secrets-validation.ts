@@ -34,7 +34,8 @@ export function addRequiredSecretsInheritBindings(
 	if (options.type === "deploy" && !options.workerExists) {
 		throw new UserError(
 			`The following required secrets have not been set: ${inheritedSecrets.join(", ")}\n` +
-				`Use \`wrangler secret put <NAME>\` to set secrets before deploying.\n` +
+				`This Worker does not exist yet, so set these secrets at deploy time with \`wrangler deploy --secrets-file <FILE>\`.\n` +
+				`Once the Worker exists, you can also use \`wrangler secret put <NAME>\`.\n` +
 				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`,
 			{ telemetryMessage: "required secrets missing before deploy" }
 		);
@@ -68,9 +69,19 @@ export function handleMissingSecretsError(
 
 	if (missingSecretNames.length > 0) {
 		err.preventReport();
+		const secretPutCommand =
+			options.type === "deploy"
+				? "wrangler secret put"
+				: "wrangler versions secret put";
+		const secretsFileCommand =
+			options.type === "deploy"
+				? "wrangler deploy --secrets-file <FILE>"
+				: "wrangler versions upload --secrets-file <FILE>";
+		const action = options.type === "deploy" ? "deploying" : "uploading";
+		const actionNoun = options.type === "deploy" ? "deploy" : "upload";
 		throw new UserError(
 			`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +
-				`Use \`wrangler ${options.type === "deploy" ? "secret put" : "versions secret put"} <NAME>\` to set secrets before ${options.type === "deploy" ? "deploying" : "uploading"}.\n` +
+				`Use \`${secretPutCommand} <NAME>\` to set secrets before ${action}, or provide them at ${actionNoun} time with \`${secretsFileCommand}\`.\n` +
 				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`,
 			{ telemetryMessage: "required secrets missing during upload or deploy" }
 		);

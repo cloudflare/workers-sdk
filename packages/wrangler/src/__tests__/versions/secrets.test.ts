@@ -331,7 +331,7 @@ SECRET3=value3`
 				runWrangler(`versions upload --name ${workerName}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The following required secrets have not been set: API_KEY, DB_PASSWORD
-Use \`wrangler versions secret put <NAME>\` to set secrets before uploading.
+Use \`wrangler versions secret put <NAME>\` to set secrets before uploading, or provide them at upload time with \`wrangler versions upload --secrets-file <FILE>\`.
 See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.]`
 			);
 		});
