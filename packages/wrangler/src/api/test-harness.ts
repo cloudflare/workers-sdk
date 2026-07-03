@@ -2,6 +2,12 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+	BUILD_OUTPUT_VERSION,
+	WORKER_CONFIG_FILENAME,
+	convertToWranglerConfig,
+	OutputWorkerSchema,
+} from "@cloudflare/config";
 import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
 	normalizeAndValidateConfig,
@@ -41,7 +47,7 @@ import type {
 	Service,
 	Workflow,
 } from "@cloudflare/workers-types/latest";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type { Binding, Config, RawConfig } from "@cloudflare/workers-utils";
 import type {
 	WorkflowBinding,
 	WorkflowInstanceIntrospector,
@@ -300,6 +306,12 @@ type WorkerInput =
 			 * Inline Wrangler config for this Worker.
 			 */
 			config: InlineConfig;
+	  }
+	| {
+			/**
+			 * Path to a Build Output API root directory, for example `./.cloudflare/output`.
+			 */
+			buildOutput: string | URL;
 	  };
 
 type ServerSession = {
@@ -396,6 +408,146 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return normalizedConfig;
 	}
 
+	function normalizeBuildOutputWorkerConfig(
+		config: RawConfig,
+		configPath: string
+	): Config {
+		const { config: normalizedConfig, diagnostics } =
+			normalizeAndValidateConfig(config, configPath, configPath, {}, true);
+
+		if (diagnostics.hasWarnings()) {
+			debugLog(diagnostics.renderWarnings(), normalizedConfig.name);
+		}
+
+		if (diagnostics.hasErrors()) {
+			throw new UserError(diagnostics.renderErrors(), {
+				telemetryMessage: "create server build output config validation failed",
+			});
+		}
+
+		return normalizedConfig;
+	}
+
+	function readBuildOutputWorkerInputs(
+		buildOutput: string | URL,
+		root: string
+	): WranglerStartDevWorkerInput[] {
+		const outputRoot = resolvePath(root, buildOutput);
+		const workersDir = path.join(outputRoot, BUILD_OUTPUT_VERSION, "workers");
+
+		if (!fs.existsSync(workersDir)) {
+			throw new Error(`No Build Output API tree found at ${workersDir}.`);
+		}
+
+		const workerNames = fs
+			.readdirSync(workersDir, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => entry.name)
+			.sort();
+
+		if (workerNames.length === 0) {
+			throw new Error(
+				`Build Output API tree at ${workersDir} contains no Worker directories.`
+			);
+		}
+
+		return workerNames.map((workerName) => {
+			const workerDir = path.join(workersDir, workerName);
+			const configPath = path.join(workerDir, WORKER_CONFIG_FILENAME);
+			if (!fs.existsSync(configPath)) {
+				throw new Error(
+					`Build Output API: missing \`${WORKER_CONFIG_FILENAME}\` for Worker ${JSON.stringify(workerName)} at ${configPath}.`
+				);
+			}
+
+			const outputConfig = OutputWorkerSchema.parse(
+				JSON.parse(fs.readFileSync(configPath, "utf-8"))
+			);
+			const { manifest, ...inputShape } = outputConfig;
+			const rawConfig = convertToWranglerConfig(inputShape);
+			const build: WranglerStartDevWorkerInput["build"] = {
+				nodejsCompatMode: (workerConfig) => {
+					return validateNodeCompatMode(
+						workerConfig.compatibility_date,
+						workerConfig.compatibility_flags ?? [],
+						{ noBundle: workerConfig.no_bundle }
+					);
+				},
+			};
+
+			if (manifest) {
+				const bundleDir = path.join(workerDir, "bundle");
+				rawConfig.main = path.join(bundleDir, manifest.mainModule);
+				rawConfig.no_bundle = true;
+				build.bundle = false;
+				build.moduleRoot = bundleDir;
+			}
+
+			const assetsDir = path.join(workerDir, "assets");
+			if (fs.existsSync(assetsDir)) {
+				rawConfig.assets = {
+					...(rawConfig.assets ?? {}),
+					directory: assetsDir,
+				};
+			}
+
+			return createWorkerInput({
+				config: normalizeBuildOutputWorkerConfig(rawConfig, configPath),
+				build,
+			});
+		});
+	}
+
+	function createWorkerInput({
+		config,
+		env,
+		bindings = {},
+		build,
+	}: {
+		config: Config | string;
+		env?: string;
+		bindings?: Record<string, Binding>;
+		build?: WranglerStartDevWorkerInput["build"];
+	}): WranglerStartDevWorkerInput {
+		return {
+			config,
+			env,
+			bindings,
+			dev: {
+				auth: serverAuthHook,
+				server: { hostname: "127.0.0.1", port: 0 },
+				logLevel: "none",
+				watch: false,
+				persist: false,
+				inspector: false,
+				registry: undefined,
+				structuredLogsHandler: (log: WorkerdStructuredLog) =>
+					captureStructuredLog(log),
+				outboundService: (request) => {
+					/**
+					 * Miniflare passes its own undici-based Request here. Pass the URL as
+					 * RequestInfo and the request as RequestInit so method, headers, body,
+					 * and duplex are preserved by global fetch.
+					 */
+					return globalThis.fetch(request.url, request);
+				},
+				multiworkerPrimary: undefined,
+				inferOriginFromRoutes: false,
+				routeRequestsByRoutes: true,
+			},
+			build: {
+				nodejsCompatMode: (workerConfig) => {
+					return validateNodeCompatMode(
+						workerConfig.compatibility_date,
+						workerConfig.compatibility_flags ?? [],
+						{ noBundle: workerConfig.no_bundle }
+					);
+				},
+				...build,
+			},
+		};
+	}
+
 	function resolveWorkerInputs(
 		serverOptions: TestHarnessOptions
 	): WranglerStartDevWorkerInput[] {
@@ -405,9 +557,11 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 		const root = serverOptions.root ?? process.cwd();
 
-		return serverOptions.workers.map((input, index, list) => {
-			const isPrimaryWorker = index === 0;
-			const isMultiworker = list.length > 1;
+		const inputs = serverOptions.workers.flatMap((input) => {
+			if ("buildOutput" in input) {
+				return readBuildOutputWorkerInputs(input.buildOutput, root);
+			}
+
 			const workerBindingOverrides =
 				"configPath" in input ? input.bindingOverrides : undefined;
 			const bindings = convertConfigToBindings(
@@ -422,46 +576,23 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				bindings[key] = { type: "service", service: value };
 			}
 
-			return {
+			return createWorkerInput({
 				config:
 					"config" in input
 						? normalizeInlineWorkerConfig(input.config, root)
 						: resolvePath(root, input.configPath),
 				env: "env" in input ? input.env : undefined,
 				bindings,
-				dev: {
-					auth: serverAuthHook,
-					server: { hostname: "127.0.0.1", port: 0 },
-					logLevel: "none",
-					watch: false,
-					persist: false,
-					inspector: false,
-					registry: undefined,
-					structuredLogsHandler: (log: WorkerdStructuredLog) =>
-						captureStructuredLog(log),
-					outboundService: (request) => {
-						/**
-						 * Miniflare passes its own undici-based Request here. Pass the URL as
-						 * RequestInfo and the request as RequestInit so method, headers, body,
-						 * and duplex are preserved by global fetch.
-						 */
-						return globalThis.fetch(request.url, request);
-					},
-					multiworkerPrimary: isMultiworker ? isPrimaryWorker : undefined,
-					inferOriginFromRoutes: false,
-					routeRequestsByRoutes: true,
-				},
-				build: {
-					nodejsCompatMode: (config) => {
-						return validateNodeCompatMode(
-							config.compatibility_date,
-							config.compatibility_flags ?? [],
-							{ noBundle: config.no_bundle }
-						);
-					},
-				},
-			};
+			});
 		});
+		const isMultiworker = inputs.length > 1;
+		return inputs.map((input, index) => ({
+			...input,
+			dev: {
+				...input.dev,
+				multiworkerPrimary: isMultiworker ? index === 0 : undefined,
+			},
+		}));
 	}
 
 	async function createSession(
