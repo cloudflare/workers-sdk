@@ -2,23 +2,42 @@ import { UserError } from "@cloudflare/workers-utils";
 import { getErrorType } from "../core/handle-errors";
 
 /**
- * Sanitizes the non-positional args provided to the command for metrics reporting.
+ * Sanitizes the args provided to the command for metrics reporting.
  *
  * Removes non-canonical args and filters out args that were not provided on the command line.
+ * Positional args bypass the argv check since they don't appear as `--flag` in the raw argv.
+ *
+ * @param args - The parsed yargs arguments object
+ * @param argv - The raw command line arguments (used to detect which flags were explicitly provided)
+ * @param positionalArgs - Names of positional args that should bypass the argv flag check
  */
 export function sanitizeArgKeys(
 	args: Record<string, unknown>,
-	argv: string[] | undefined
+	argv: string[] | undefined,
+	positionalArgs?: ReadonlyArray<string>
 ) {
 	const special = new Set(["$0", "_"]);
+	const positionals = new Set(positionalArgs ?? []);
 	const sanitizedArgs: Record<string, unknown> = {};
 
 	for (const arg of Object.keys(args)) {
+		if (special.has(arg)) {
+			continue;
+		}
+
+		// Positional args don't appear as --flag in argv, so we include them
+		// if their value is defined (meaning the user provided them).
+		if (positionals.has(arg)) {
+			if (args[arg] !== undefined) {
+				sanitizedArgs[canonicalArg(arg)] = args[arg];
+			}
+			continue;
+		}
+
 		if (
-			!special.has(arg) &&
-			(argv === undefined ||
-				argv.includes(`--${arg}`) ||
-				argv.includes(`-${arg[0]}`))
+			argv === undefined ||
+			argv.includes(`--${arg}`) ||
+			argv.includes(`-${arg[0]}`)
 		) {
 			sanitizedArgs[canonicalArg(arg)] = args[arg];
 		}

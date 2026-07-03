@@ -140,13 +140,15 @@ describe("COMMAND_ARG_ALLOW_LIST", () => {
 	it("should pass list-commands arg values through the full sanitisation pipeline", ({
 		expect,
 	}) => {
-		// Simulate: wrangler list-commands --json --include-aliases --all --base "d1 migrations"
+		// Simulate: wrangler list-commands d1 migrations --json --include-aliases --all
+		// "base" is a positional arg — it doesn't appear as "--base" in argv,
+		// but sanitizeArgKeys accepts positionalArgs to pass them through.
 		const args = {
 			json: true,
 			"include-aliases": true,
 			includeAliases: true,
 			all: true,
-			base: "d1 migrations",
+			base: ["d1", "migrations"],
 			$0: "wrangler",
 			_: [],
 		};
@@ -154,14 +156,14 @@ describe("COMMAND_ARG_ALLOW_LIST", () => {
 			"node",
 			"wrangler",
 			"list-commands",
+			"d1",
+			"migrations",
 			"--json",
 			"--include-aliases",
 			"--all",
-			"--base",
-			"d1 migrations",
 		];
 
-		const argsWithSanitizedKeys = sanitizeArgKeys(args, argv);
+		const argsWithSanitizedKeys = sanitizeArgKeys(args, argv, ["base"]);
 		const allowedArgs = getAllowedArgs(COMMAND_ARG_ALLOW_LIST, "list-commands");
 		const sanitizedArgs = sanitizeArgValues(argsWithSanitizedKeys, allowedArgs);
 
@@ -169,7 +171,7 @@ describe("COMMAND_ARG_ALLOW_LIST", () => {
 			json: true,
 			includeAliases: true,
 			all: true,
-			base: "d1 migrations",
+			base: ["d1", "migrations"],
 		});
 	});
 

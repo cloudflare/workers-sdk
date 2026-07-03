@@ -289,22 +289,22 @@ export const listCommandsCommand = createCommand({
 			type: "boolean",
 			default: false,
 			description:
-				"Show all subcommands at every depth. Warning: this can be very token-intensive at the top level when run by AI agents — consider using --base to scope the output",
+				"Show all subcommands at every depth. Warning: this can be very token-intensive at the top level when run by AI agents — consider scoping to a subtree instead (e.g. `wrangler list-commands d1`)",
 		},
 		base: {
 			type: "string",
+			array: true,
 			description:
 				'Show commands under a specific base command (e.g. "d1 migrations")',
 		},
 	},
+	positionalArgs: ["base"],
 	handler(args) {
 		const { registry } = experimental_getWranglerCommands();
 
-		// Navigate to the base node if --base is provided
+		// Navigate to the base node if positional segments are provided
 		let rootNode = registry;
-		const baseSegments = args.base
-			? args.base.split(/\s+/).filter(Boolean)
-			: [];
+		const baseSegments = args.base ?? [];
 		if (baseSegments.length > 0) {
 			rootNode = navigateToBase(registry, baseSegments);
 		}

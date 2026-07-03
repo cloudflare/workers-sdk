@@ -121,9 +121,9 @@ describe("list-commands", () => {
 		});
 	});
 
-	describe("--base", () => {
+	describe("positional base", () => {
 		it("should scope output to a specific base command", async ({ expect }) => {
-			await runWrangler('list-commands --base="d1"');
+			await runWrangler("list-commands d1");
 
 			// Root should be "wrangler d1"
 			expect(std.out).toContain("wrangler d1");
@@ -140,7 +140,7 @@ describe("list-commands", () => {
 		});
 
 		it("should support multi-segment base paths", async ({ expect }) => {
-			await runWrangler('list-commands --base="ai-search jobs"');
+			await runWrangler("list-commands ai-search jobs");
 
 			// Root should be the full path
 			expect(std.out).toContain("wrangler ai-search jobs");
@@ -156,7 +156,7 @@ describe("list-commands", () => {
 		it("should show ellipsis for nested commands when not using --all", async ({
 			expect,
 		}) => {
-			await runWrangler('list-commands --base="d1"');
+			await runWrangler("list-commands d1");
 
 			// "migrations" has subcommands, so it should show "..."
 			expect(std.out).toMatch(/migrations\s+.*\.\.\./);
@@ -165,7 +165,7 @@ describe("list-commands", () => {
 		it("should show full depth when combined with --all", async ({
 			expect,
 		}) => {
-			await runWrangler('list-commands --base="d1" --all');
+			await runWrangler("list-commands d1 --all");
 
 			// migrations subcommands should be visible
 			expect(std.out).toContain("apply");
@@ -176,12 +176,12 @@ describe("list-commands", () => {
 
 		it("should throw an error for an invalid base path", async ({ expect }) => {
 			await expect(
-				runWrangler('list-commands --base="nonexistent-command"')
+				runWrangler("list-commands nonexistent-command")
 			).rejects.toThrowError(/Unknown command/);
 		});
 
 		it("should work with --json", async ({ expect }) => {
-			await runWrangler('list-commands --base="d1" --json --all');
+			await runWrangler("list-commands d1 --json --all");
 
 			const output = JSON.parse(std.out);
 

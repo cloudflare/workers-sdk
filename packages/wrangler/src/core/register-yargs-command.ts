@@ -294,7 +294,11 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					COMMAND_ARG_ALLOW_LIST,
 					sanitizedCommand
 				);
-				const argsWithSanitizedKeys = sanitizeArgKeys(args, argv);
+				const argsWithSanitizedKeys = sanitizeArgKeys(
+					args,
+					argv,
+					def.positionalArgs
+				);
 				const sanitizedArgs = sanitizeArgValues(
 					argsWithSanitizedKeys,
 					allowedArgs

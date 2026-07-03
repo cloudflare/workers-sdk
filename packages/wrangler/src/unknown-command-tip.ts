@@ -23,16 +23,16 @@ export function logUnknownCommandTip(): void {
 
 			Tip: Use \`wrangler list-commands\` to explore all available commands and subcommands.
 
-			By default, only top-level commands are shown. Use these flags to dig deeper:
+			By default, only top-level commands are shown. Use these options to dig deeper:
+			  <base..>           Scope to a specific command subtree
 			  --all              Show the full command tree (all nesting levels)
-			  --base="<cmd>"     Scope to a specific command subtree
 			  --json             Output as JSON
 
 			Examples:
 			  wrangler list-commands                          List all top-level commands
-			  wrangler list-commands --base="d1"              Show d1 subcommands
-			  wrangler list-commands --base="kv"              Show kv subcommands
-			  wrangler list-commands --base="ai-search jobs"  Show ai-search jobs subcommands
+			  wrangler list-commands d1                       Show d1 subcommands
+			  wrangler list-commands kv                       Show kv subcommands
+			  wrangler list-commands ai-search jobs           Show ai-search jobs subcommands
 			  wrangler list-commands --all                    Show entire command tree (token-intensive)
 			  wrangler list-commands --json                   Machine-readable output
 		`);

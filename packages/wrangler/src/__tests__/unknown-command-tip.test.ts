@@ -30,7 +30,7 @@ describe("unknown command tip", () => {
 			);
 
 			// Should NOT contain the detailed agentic message
-			expect(std.out).not.toContain('--base="<cmd>"');
+			expect(std.out).not.toContain("<base..>");
 			expect(std.out).not.toContain("Examples:");
 		});
 
@@ -46,7 +46,7 @@ describe("unknown command tip", () => {
 			);
 
 			// Should NOT contain the detailed agentic message
-			expect(std.out).not.toContain('--base="<cmd>"');
+			expect(std.out).not.toContain("<base..>");
 			expect(std.out).not.toContain("Examples:");
 		});
 	});
@@ -73,18 +73,16 @@ describe("unknown command tip", () => {
 				"Use `wrangler list-commands` to explore all available commands and subcommands."
 			);
 
-			// Should describe the flags
+			// Should describe the options
+			expect(std.out).toContain("<base..>");
 			expect(std.out).toContain("--all");
-			expect(std.out).toContain('--base="<cmd>"');
 			expect(std.out).toContain("--json");
 
 			// Should include usage examples
 			expect(std.out).toContain("Examples:");
-			expect(std.out).toContain('wrangler list-commands --base="d1"');
-			expect(std.out).toContain('wrangler list-commands --base="kv"');
-			expect(std.out).toContain(
-				'wrangler list-commands --base="ai-search jobs"'
-			);
+			expect(std.out).toContain("wrangler list-commands d1");
+			expect(std.out).toContain("wrangler list-commands kv");
+			expect(std.out).toContain("wrangler list-commands ai-search jobs");
 			expect(std.out).toContain("wrangler list-commands --all");
 			expect(std.out).toContain("wrangler list-commands --json");
 
@@ -107,9 +105,9 @@ describe("unknown command tip", () => {
 				"Use `wrangler list-commands` to explore all available commands and subcommands."
 			);
 
-			// Should describe the flags
+			// Should describe the options
+			expect(std.out).toContain("<base..>");
 			expect(std.out).toContain("--all");
-			expect(std.out).toContain('--base="<cmd>"');
 			expect(std.out).toContain("--json");
 
 			// Should include usage examples
