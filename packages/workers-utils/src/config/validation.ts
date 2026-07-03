@@ -4153,6 +4153,42 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isOptionalProperty(value, "database_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "database_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "migrations_dir", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "migrations_dir" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "migrations_table", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "migrations_table" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "database_internal_env", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "database_internal_env" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"database_id",
