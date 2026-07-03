@@ -26,6 +26,7 @@ export type { OAuthFlowContext, OAuthFlowLogger } from "./context";
 
 export {
 	getAuthUrlFromEnv,
+	getClientIdFromEnv,
 	getCloudflareAuthUseKeyringFromEnv,
 } from "./env-vars";
 

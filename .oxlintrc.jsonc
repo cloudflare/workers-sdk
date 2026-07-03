@@ -96,6 +96,9 @@
 		"!packages/create-cloudflare/**/templates*/**/c3.ts",
 		// TODO: we really should be linting this folder
 		"packages/wrangler/templates/**",
+		// Worker template bundled into the package at build time; mirrors the
+		// (ignored) wrangler ProxyServerWorker template.
+		"packages/remote-bindings/templates/**",
 		// Ignore generated files
 		"packages/containers-shared/src/client/**",
 		"packages/local-explorer-ui/src/api/generated/**",

@@ -12,15 +12,17 @@ export const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_CLIENT_ID` is the UUID of Wrangler's registered OAuth app, used to
- * identify Wrangler to the Cloudflare OAuth server.
+ * The UUID of Wrangler's registered OAuth app, used to identify Wrangler to the
+ * Cloudflare OAuth server. Prefers the CLI-neutral `CLOUDFLARE_OAUTH_CLIENT_ID`,
+ * falling back to the legacy `WRANGLER_CLIENT_ID`, then Wrangler's own default.
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
+ * `CLOUDFLARE_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getClientIdFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_CLIENT_ID",
+	variableName: "CLOUDFLARE_OAUTH_CLIENT_ID",
+	deprecatedName: "WRANGLER_CLIENT_ID",
 	defaultValue: () =>
 		getCloudflareApiEnvironmentFromEnv() === "staging"
 			? "4b2ea6cc-9421-4761-874b-ce550e0e3def"

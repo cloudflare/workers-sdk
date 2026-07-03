@@ -65,7 +65,7 @@ interface TestConfig {
 	 * `updateBindings` when this test case runs.
 	 */
 	remoteProxySessionConfig: {
-		bindings: StartDevWorkerInput["bindings"];
+		bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 	};
 	/**
 	 * The Miniflare config (mostly bindings) for this test case. This will be merged with all other test cases to create a single Miniflare instance for all tests.
@@ -583,7 +583,7 @@ const testCases: TestCase[] = [
 							type: "vpc_network",
 							network_id: "cf1:network",
 						},
-					} as unknown as StartDevWorkerInput["bindings"],
+					} as unknown as NonNullable<StartDevWorkerInput["bindings"]>,
 				},
 				miniflareConfig: (connection) =>
 					({

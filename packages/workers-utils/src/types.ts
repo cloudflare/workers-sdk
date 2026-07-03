@@ -54,6 +54,7 @@ import type {
 	CfWorkflow,
 	CfScriptFormat,
 	CfUnsafe,
+	CfWorkerInit,
 } from "./worker";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type { MockAgent } from "undici";
@@ -508,6 +509,18 @@ export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
 // Duplicate of Miniflare's NodeJSCompatMode to keep workers-utils from depending on Miniflare.
 export type NodeJSCompatMode = "als" | "v1" | "v2" | null;
+
+/**
+ * A {@link CfWorkerInit} that is guaranteed to have a `name` and whose
+ * `bindings` use the flat {@link StartDevWorkerInput} record shape.
+ *
+ * Shared between wrangler's dev path (`createRemoteWorkerInit`) and
+ * `@cloudflare/remote-bindings`, both of which build preview uploads.
+ */
+export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
+	Omit<CfWorkerInit, "bindings"> & {
+		bindings: StartDevWorkerInput["bindings"];
+	};
 
 export interface StartDevWorkerInput {
 	/** The name of the worker. */

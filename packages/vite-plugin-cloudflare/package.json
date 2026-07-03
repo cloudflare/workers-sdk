@@ -53,6 +53,7 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
+		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",

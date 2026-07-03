@@ -1,0 +1,14 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"inputs": ["$TURBO_DEFAULT$", "!**/test/**"],
+			"outputs": ["dist/**"]
+		},
+		"test:ci": {
+			"dependsOn": ["build"],
+			"env": ["LC_ALL", "TZ"]
+		}
+	}
+}

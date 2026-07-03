@@ -77,25 +77,35 @@ type VariableNames =
 
 	/** Custom directory for Wrangler's cache files (overrides `node_modules/.cache/wrangler`). */
 	| "WRANGLER_CACHE_DIR"
+	/** Pins the global config directory so delegated tools resolve the same OAuth token (overrides XDG / `~/.wrangler`). */
+	| "CLOUDFLARE_CONFIG_DIR"
+	/** Absolute path to the auth-config file a delegated tool should read/refresh, for CLIs whose file differs from the default. Format inferred from the extension (`.toml` / `.json`). */
+	| "CLOUDFLARE_AUTH_CONFIG_FILE"
 	/** Custom path to cloudflared binary (overrides automatic binary management). */
 	| "CLOUDFLARED_PATH"
 
 	// ## Advanced Configuration
+	// `CLOUDFLARE_`-prefixed names are the current expectation; the legacy
+	// `WRANGLER_`-prefixed equivalents live in `DeprecatedNames`.
 
 	/** Set to "staging" to use staging APIs instead of production. */
-	| "WRANGLER_API_ENVIRONMENT"
-	/** Custom auth domain (usually auto-configured). */
-	| "WRANGLER_AUTH_DOMAIN"
-	/** Custom auth URL (usually auto-configured). */
-	| "WRANGLER_AUTH_URL"
-	/** Custom OAuth client ID (usually auto-configured). */
-	| "WRANGLER_CLIENT_ID"
-	/** Custom token URL (usually auto-configured). */
-	| "WRANGLER_TOKEN_URL"
-	/** Custom token revocation URL (usually auto-configured). */
-	| "WRANGLER_REVOKE_URL"
-	/** Direct authorization token for API requests. */
-	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
+	| "CLOUDFLARE_API_ENVIRONMENT"
+	/** Custom OAuth auth domain (usually auto-configured). */
+	| "CLOUDFLARE_AUTH_DOMAIN"
+	/** Custom OAuth authorize URL (usually auto-configured). */
+	| "CLOUDFLARE_AUTH_URL"
+	/** Custom OAuth token URL (usually auto-configured). */
+	| "CLOUDFLARE_TOKEN_URL"
+	/** Custom OAuth token revocation URL (usually auto-configured). */
+	| "CLOUDFLARE_REVOKE_URL"
+	/** OAuth client ID (usually auto-configured). */
+	| "CLOUDFLARE_OAUTH_CLIENT_ID"
+	/** `CF_Authorization` cookie for reaching an Access-protected auth domain non-interactively. */
+	| "CLOUDFLARE_CF_AUTHORIZATION_TOKEN"
+	/** Honour the global API key + email pair in delegated auth resolution (default: true). */
+	| "CLOUDFLARE_ALLOW_GLOBAL_API_KEY"
+	/** Command a user runs to authenticate (e.g. `cf login`), used in delegated "not authenticated" errors. */
+	| "CLOUDFLARE_LOGIN_COMMAND"
 
 	// ## Cloudflare Access Service Token (for CI/non-interactive environments)
 
@@ -155,7 +165,15 @@ type DeprecatedNames =
 	| "CF_API_TOKEN"
 	| "CF_API_KEY"
 	| "CF_EMAIL"
-	| "CF_API_BASE_URL";
+	| "CF_API_BASE_URL"
+	// Legacy `WRANGLER_`-prefixed OAuth/API names, superseded by `CLOUDFLARE_`.
+	| "WRANGLER_API_ENVIRONMENT"
+	| "WRANGLER_AUTH_DOMAIN"
+	| "WRANGLER_AUTH_URL"
+	| "WRANGLER_TOKEN_URL"
+	| "WRANGLER_REVOKE_URL"
+	| "WRANGLER_CLIENT_ID"
+	| "WRANGLER_CF_AUTHORIZATION_TOKEN";
 
 type ElementType<A> = A extends readonly (infer T)[] ? T : never;
 

@@ -21,7 +21,7 @@ import type {
 	CfModule,
 	CfScriptFormat,
 	CfWorkerContext,
-	CfWorkerInit,
+	CfWorkerInitWithName,
 	ComplianceConfig,
 	LegacyAssetPaths,
 	Route,
@@ -131,11 +131,6 @@ export function handlePreviewSessionCreationError(
 		logger.error("Error while creating remote dev session:", err);
 	}
 }
-
-export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
-	Omit<CfWorkerInit, "bindings"> & {
-		bindings: StartDevWorkerInput["bindings"];
-	};
 
 /**
  * Create remote worker init from StartDevWorkerInput["bindings"] format

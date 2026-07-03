@@ -789,7 +789,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			workerName: "worker",
 		});
 		assert(auth);
-		expect(await unwrapHook(auth, { account_id: undefined })).toEqual({
+		expect(await unwrapHook(auth)).toEqual({
 			accountId: "some-account-id",
 			apiToken: { apiToken: "some-api-token" },
 		});
@@ -833,7 +833,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			workerName: "worker",
 		});
 		assert(auth2);
-		expect(await unwrapHook(auth2, { account_id: undefined })).toEqual({
+		expect(await unwrapHook(auth2)).toEqual({
 			accountId: "mock-account-id",
 			apiToken: { apiToken: "some-api-token" },
 		});

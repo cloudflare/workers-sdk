@@ -36,6 +36,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/local-explorer-ui",
 				"@cloudflare/pages-shared",
 				"@cloudflare/playground-preview-worker",
+				"@cloudflare/remote-bindings",
 				"@cloudflare/quick-edit",
 				"@cloudflare/turbo-r2-archive",
 				"@cloudflare/unenv-preset",

@@ -58,11 +58,14 @@ export const getWranglerSendErrorReportsFromEnv =
 	});
 
 /**
- * Set `WRANGLER_API_ENVIRONMENT` environment variable to "staging" to tell Wrangler to hit the staging APIs rather than production.
+ * Set to "staging" to hit the staging APIs (flips both the API base URL and the
+ * OAuth auth domain). Prefers `CLOUDFLARE_API_ENVIRONMENT`, falling back to the
+ * legacy `WRANGLER_API_ENVIRONMENT`.
  */
 export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
 	{
-		variableName: "WRANGLER_API_ENVIRONMENT",
+		variableName: "CLOUDFLARE_API_ENVIRONMENT",
+		deprecatedName: "WRANGLER_API_ENVIRONMENT",
 		defaultValue: () => "production" as const,
 		choices: ["production", "staging"] as const,
 	}

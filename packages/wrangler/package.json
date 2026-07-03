@@ -96,6 +96,7 @@
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
+		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
