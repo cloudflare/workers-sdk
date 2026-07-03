@@ -19,4 +19,12 @@ export type WorkerDefinition = {
 	 * workers it bypasses the Assets proxy (whether built-in or userland)
 	 */
 	userWorkerService: string;
+	/**
+	 * Canonical registry key when it differs from the on-disk filename. Used for
+	 * synthetic entries whose key contains characters that are invalid in a
+	 * filename (e.g. queue entries keyed `queues:queue:<id>`, where the colons are
+	 * sanitized on disk). Absent for normal worker entries, whose key equals their
+	 * filename.
+	 */
+	name?: string;
 };

@@ -90,6 +90,10 @@ export interface PluginServicesOptions<
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
+	// Queue names produced locally that have no local consumer and must be
+	// forwarded to a consumer in another `wrangler dev` process via the dev
+	// registry. Empty when the dev registry is disabled.
+	queueProducersToForward: Set<string>;
 	hyperdriveProxyController: HyperdriveProxyController;
 }
 
