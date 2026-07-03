@@ -198,25 +198,21 @@ export function isRedirectingPagesToWorkers(): boolean {
 /**
  * Builds the `wrangler deploy` argv for the redirect.
  *
- * For `pages deploy` we forward the exact assets directory the user asked to
- * deploy via `--assets`, so the Workers deploy honours that directory rather
- * than re-detecting one. Passing `--assets` means autoconfig does not run (it
- * only runs when no assets/path/config is supplied); deploying the directory
- * the user actually specified takes precedence over writing a Workers config.
- *
- * For `pages project create` there is no assets directory, so autoconfig runs
- * and detects the static directory. In both cases we carry across the agent's
- * explicit, deliberate inputs (name, compatibility date/flags), which take
- * precedence on the deploy.
+ * We deliberately pass no positional path and no `--assets`, even though
+ * `pages deploy` knows the assets directory. Passing `--assets` would disable
+ * autoconfig (it only runs when no assets/path/config is supplied), and
+ * autoconfig is what makes the redirected deploy viable: it detects the static
+ * directory and writes a Workers config with a compatibility date. Without it,
+ * a non-interactive agent deploy has no compatibility date and fails
+ * validation. So we let autoconfig detect and configure the deploy, and only
+ * carry across the agent's explicit, deliberate inputs (name, compatibility
+ * date/flags), which take precedence on the deploy.
  */
 function buildWorkersDeployArgs(
 	options: MaybeRedirectPagesToWorkersOptions
 ): string[] {
 	const args = ["deploy"];
 
-	if (options.assetsDirectory) {
-		args.push("--assets", options.assetsDirectory);
-	}
 	if (options.projectName) {
 		args.push("--name", options.projectName);
 	}

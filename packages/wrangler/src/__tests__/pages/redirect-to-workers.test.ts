@@ -182,7 +182,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 		expect(main).toHaveBeenCalledWith(["deploy", "--name", "my-app"]);
 	});
 
-	it("forwards the exact assets directory the user asked to deploy", async ({
+	it("does not forward --assets, so autoconfig stays enabled to configure the deploy", async ({
 		expect,
 	}) => {
 		const assetsDirectory = join(process.cwd(), "dist");
@@ -196,13 +196,14 @@ describe("maybeRedirectPagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ handled: true });
-		expect(main).toHaveBeenCalledWith([
-			"deploy",
-			"--assets",
-			assetsDirectory,
-			"--name",
-			"my-app",
-		]);
+		// Regression guard: forwarding `--assets` would disable autoconfig, and a
+		// non-interactive agent deploy would then have no compatibility date and
+		// fail validation. autoconfig must run to detect the directory and write a
+		// Workers config, so the assets directory must never reach the deploy argv.
+		expect(main).toHaveBeenCalledWith(["deploy", "--name", "my-app"]);
+		const argv = vi.mocked(main).mock.calls[0]?.[0] ?? [];
+		expect(argv).not.toContain("--assets");
+		expect(argv).not.toContain(assetsDirectory);
 	});
 
 	it("carries name and compatibility settings across on create", async ({
