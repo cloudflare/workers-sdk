@@ -1,5 +1,11 @@
-import { newWorkersRpcResponse } from "capnweb";
 import { EmailMessage } from "cloudflare:email";
+// The remote-bindings boundary's server logic is shared with Miniflare's storage
+// owner. Import the single implementation from Miniflare (a build-time
+// dependency; esbuild bundles it into this template) rather than duplicating it.
+import {
+	BindingError,
+	createRemoteBindingsProxyServer,
+} from "../../../miniflare/src/workers/shared/remote-bindings-proxy-server";
 
 type Env = Record<string, unknown>;
 
@@ -10,12 +16,6 @@ type SendEmailInput =
 			to: string;
 			"EmailMessage::raw": ReadableStream<Uint8Array>;
 	  };
-
-class BindingNotFoundError extends Error {
-	constructor(name?: string) {
-		super(`Binding ${name ? `"${name}"` : ""} not found`);
-	}
-}
 
 /**
  * For most bindings, we expose them as
@@ -40,12 +40,12 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 	const url = new URL(request.url);
 	const bindingName = url.searchParams.get("MF-Binding");
 	if (!bindingName) {
-		throw new BindingNotFoundError();
+		throw new BindingError("Binding not found");
 	}
 
 	const targetBinding = env[bindingName];
 	if (!targetBinding) {
-		throw new BindingNotFoundError(bindingName);
+		throw new BindingError(`Binding "${bindingName}" not found`);
 	}
 
 	if (targetBinding.constructor.name === "SendEmail") {
@@ -79,15 +79,15 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 	return targetBinding;
 }
 
-function getExposedFetcher(request: Request, env: Env) {
+function getExposedFetcher(request: Request, env: Env): Fetcher {
 	const bindingName = request.headers.get("MF-Binding");
 	if (!bindingName) {
-		throw new BindingNotFoundError();
+		throw new BindingError("Binding not found");
 	}
 
 	const targetBinding = env[bindingName];
 	if (!targetBinding) {
-		throw new BindingNotFoundError(bindingName);
+		throw new BindingError(`Binding "${bindingName}" not found`);
 	}
 
 	// Special case the Dispatch Namespace binding because it has a top-level synchronous .get() call
@@ -101,52 +101,9 @@ function getExposedFetcher(request: Request, env: Env) {
 	return targetBinding as Fetcher;
 }
 
-/**
- * This Worker can proxy two types of remote binding:
- *  1. "raw" bindings, where this Worker has been configured to pass through the raw
- *     fetch from a local workerd instance to the relevant binding
- *  2. JSRPC bindings, where this Worker uses capnweb to proxy RPC
- *     communication in userland. This is always over a WebSocket connection
- */
-function isJSRPCBinding(request: Request): boolean {
-	const url = new URL(request.url);
-	return request.headers.has("Upgrade") && url.searchParams.has("MF-Binding");
-}
-
-export default {
-	async fetch(request, env) {
-		try {
-			if (isJSRPCBinding(request)) {
-				return await newWorkersRpcResponse(
-					request,
-					getExposedJSRPCBinding(request, env)
-				);
-			} else {
-				const fetcher = getExposedFetcher(request, env);
-				const originalHeaders = new Headers();
-				for (const [name, value] of request.headers) {
-					if (name.startsWith("mf-header-")) {
-						originalHeaders.set(name.slice("mf-header-".length), value);
-					} else if (name === "upgrade") {
-						// The `Upgrade` header needs to be special-cased to prevent:
-						//   TypeError: Worker tried to return a WebSocket in a response to a request which did not contain the header "Upgrade: websocket"
-						originalHeaders.set(name, value);
-					}
-				}
-
-				return await fetcher.fetch(
-					request.headers.get("MF-URL") ?? "http://example.com",
-					new Request(request, {
-						redirect: "manual",
-						headers: originalHeaders,
-					})
-				);
-			}
-		} catch (e) {
-			if (e instanceof BindingNotFoundError) {
-				return new Response(e.message, { status: 400 });
-			}
-			return new Response((e as Error).message, { status: 500 });
-		}
-	},
-} satisfies ExportedHandler<Env>;
+export default createRemoteBindingsProxyServer<Env>({
+	resolveRpcBinding: getExposedJSRPCBinding,
+	resolveFetchBinding: (request, env) => ({
+		fetcher: getExposedFetcher(request, env),
+	}),
+});
