@@ -1,10 +1,7 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {
-	getGlobalWranglerConfigPath,
-	parseJSONC,
-} from "@cloudflare/workers-utils";
+import { getGlobalConfigPath, parseJSONC } from "@cloudflare/workers-utils";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
 import { install as rosieInstall, agents as rosieAgents } from "rosie-skills";
@@ -315,20 +312,14 @@ const SKILLS_REPO_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  * Returns the absolute path to the skills install config file within the global wrangler config directory.
  */
 function getSkillsInstallMetadataFilePath(): string {
-	return path.resolve(
-		getGlobalWranglerConfigPath(),
-		SKILLS_INSTALL_METADATA_FILENAME
-	);
+	return path.resolve(getGlobalConfigPath(), SKILLS_INSTALL_METADATA_FILENAME);
 }
 
 /**
  * Returns the absolute path to the skills repo cache file within the global wrangler config directory.
  */
 function getSkillsRepoCachePath(): string {
-	return path.resolve(
-		getGlobalWranglerConfigPath(),
-		SKILLS_REPO_CACHE_FILENAME
-	);
+	return path.resolve(getGlobalConfigPath(), SKILLS_REPO_CACHE_FILENAME);
 }
 
 /**

@@ -30,6 +30,14 @@
 		"./test-helpers": {
 			"import": "./dist/test-helpers/index.mjs",
 			"types": "./dist/test-helpers/index.d.mts"
+		},
+		"./fs-helpers": {
+			"import": "./dist/fs-helpers.mjs",
+			"types": "./dist/fs-helpers.d.mts"
+		},
+		"./global-wrangler-config-path": {
+			"import": "./dist/global-wrangler-config-path.mjs",
+			"types": "./dist/global-wrangler-config-path.d.mts"
 		}
 	},
 	"scripts": {
