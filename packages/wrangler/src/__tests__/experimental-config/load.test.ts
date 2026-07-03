@@ -317,6 +317,35 @@ describe("loadNewConfig", () => {
 		});
 	});
 
+	describe("Email Routing", () => {
+		it("loads email triggers as Wrangler addresses", async ({ expect }) => {
+			await seed({
+				"cloudflare.config.ts": `
+					export default {
+						name: "email-worker",
+						compatibilityDate: "2026-05-18",
+						triggers: [
+							{
+								type: "email",
+								addresses: ["support@example.com", "*@example.com"],
+							},
+						],
+					};
+				`,
+			});
+
+			const result = await loadNewConfig({
+				cwd: process.cwd(),
+				args: {},
+			});
+
+			expect(result.rawConfig.addresses).toEqual([
+				"support@example.com",
+				"*@example.com",
+			]);
+		});
+	});
+
 	describe("types.generate", () => {
 		it("defaults to true when wrangler.config.ts is absent", async ({
 			expect,
