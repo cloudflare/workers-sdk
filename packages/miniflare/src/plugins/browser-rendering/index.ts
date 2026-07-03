@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { brandColor, dim, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { removeDir } from "@cloudflare/workers-utils";
+import {
+	getGlobalWranglerCachePath,
+	removeDir,
+} from "@cloudflare/workers-utils";
 import {
 	Browser,
 	CDP_WEBSOCKET_ENDPOINT_REGEX,
@@ -14,7 +17,6 @@ import {
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
-import { getGlobalWranglerCachePath } from "../../shared/wrangler";
 import {
 	getUserBindingServiceName,
 	ProxyNodeBinding,

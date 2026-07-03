@@ -1,5 +1,132 @@
 # wrangler
 
+## 4.107.0
+
+### Minor Changes
+
+- [#14474](https://github.com/cloudflare/workers-sdk/pull/14474) [`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add cache options for WorkerEntrypoint exports
+
+  You can now set cache options on `WorkerEntrypoint` exports and configure cross-version cache behavior globally:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "cache": { "enabled": true, "cross_version_cache": true },
+    "exports": {
+      "default": {
+        "type": "worker",
+        "cache": { "enabled": false }
+      },
+      "Admin": {
+        "type": "worker",
+        "cache": { "enabled": true }
+      }
+    }
+  }
+  ```
+
+  Wrangler sends the `exports` config to the deploy and version upload APIs alongside the global `cache.enabled` and `cache.cross_version_cache` settings. The platform resolves those global settings plus cache overrides on exports and validates which entrypoint names are cacheable.
+
+- [#14382](https://github.com/cloudflare/workers-sdk/pull/14382) [`fd92d56`](https://github.com/cloudflare/workers-sdk/commit/fd92d5657c4d35758ce42c4f706611623be80a8e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for declarative Durable Object exports
+
+  `wrangler deploy` now accepts an `exports` map in `wrangler.json` as a declarative alternative to the legacy `migrations` array.
+
+  Each entry in `exports` is keyed by Durable Object class name. `type` carries the export _kind_ (currently always `"durable-object"`); the `state` field carries the lifecycle and defaults to `"created"` (live) when omitted:
+
+  ```jsonc
+  {
+    "exports": {
+      // Provision a new Durable Object class (`MyDO`)
+      "MyDO": { "type": "durable-object", "storage": "sqlite" },
+      // Delete Durable Object class (`OldGone`)
+      "OldGone": { "type": "durable-object", "state": "deleted" },
+      // Rename a Durable Object class (from `OldName` to `NewName`)
+      "OldName": {
+        "type": "durable-object",
+        "state": "renamed",
+        "renamed_to": "NewName"
+      },
+      "NewName": { "type": "durable-object", "storage": "sqlite" },
+      // Transfer a Durable Object (`Outgoing`) to a new Worker (`target-worker`)
+      "Outgoing": {
+        "type": "durable-object",
+        "state": "transferred",
+        "transferred_to": "target-worker"
+      },
+      // Prepare to receive the transfer of a Durable Object (`Incoming`) from another Worker (`source-worker`)
+      "Incoming": {
+        "type": "durable-object",
+        "state": "expecting-transfer",
+        "storage": "sqlite",
+        "transfer_from": "source-worker"
+      }
+    }
+  }
+  ```
+
+  When a Worker declares Durable Object class bindings but no lifecycle for them (neither a `migrations` array nor an `exports` map), wrangler warns and now suggests a declarative `exports` entry for each class (previously it suggested a legacy `migrations` block).
+
+  The deployment response now surfaces the server's reconciliation result — created namespaces, applied tombstones, structured per-scenario info entries, and a `removable_entries` hint for stale tombstones that are safe to delete from the config. Blocking errors return the structured per-class detail with scenario tags, suggested remediation, and any referencing-script context.
+
+  `wrangler versions upload` also forwards `exports`. Declarative `exports` lifecycle changes are reconciled when the version is deployed (`wrangler versions deploy` or `wrangler deploy`), so a `versions upload` payload can declare new classes in `exports` without immediately provisioning them. An actor binding (`durable_objects.bindings`) to a class declared only in `exports` on the same `versions upload` is rejected with a clear error (code 100406) — the binding cannot be resolved until the namespace is provisioned. Either stage the new class via `ctx.exports.X` (no binding required) on `versions upload` and add the binding at deploy time, or use `wrangler deploy` to provision and bind in one step (the same constraint applies to the `migrations` flow).
+
+  Multi-version deploys (`wrangler versions deploy A@50% B@50%`) where the selected versions disagree on declarative `exports` are rejected server-side with a clear message: deploy the version that changes `exports` at 100% first, then run the percentage-split deploy. This prevents traffic on one branch routing to code that references unprovisioned or just-deleted DO namespaces. Single-version (100%) deploys are unaffected.
+
+  Local development (`wrangler dev`, `vite dev` and `unstable_startWorker`) reads Durable Object SQLite storage settings from the new `exports` field, so applications using the declarative flow get correct local-dev storage without needing to also declare a `migrations` block.
+
+  `@cloudflare/vitest-pool-workers` also picks up Durable Object configuration from `exports`, so tests against an `exports`-only Worker run with the correct local SQLite storage and can reach unbound Durable Object classes via `ctx.exports.X`.
+
+  `wrangler types` is also aware of `exports`. Live entries (including `expecting-transfer`, the receiving side of a two-phase transfer) are added to `Cloudflare.GlobalProps.durableNamespaces`, which types `ctx.exports.X` for unbound Durable Objects declared only via `exports`.
+
+- [#14423](https://github.com/cloudflare/workers-sdk/pull/14423) [`be3f792`](https://github.com/cloudflare/workers-sdk/commit/be3f792f8e004857e60a58f823435784c2423868) Thanks [@akshitsinha](https://github.com/akshitsinha)! - Add `wrangler flagship` commands for managing Flagship apps and feature flags.
+
+  The new `wrangler flagship apps` and `wrangler flagship flags` command groups let you create, list, get, inspect, update, set, split, rollout, enable, disable, evaluate, and delete Flagship apps and flags from the CLI, including targeting rules, variations, percentage rollouts, evaluation context, and flag changelogs.
+
+- [#14156](https://github.com/cloudflare/workers-sdk/pull/14156) [`e1532eb`](https://github.com/cloudflare/workers-sdk/commit/e1532eba6681f4552ae02f6b435cc04f42cc9bdd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add opt-in OS keychain storage for OAuth credentials
+
+  By default `wrangler` stores your OAuth tokens in a plaintext file, and that is unchanged. You can now opt in to encrypting them at rest instead: `wrangler login --use-keyring` writes the tokens to an AES-256-GCM-encrypted file whose key is held in your OS keyring (macOS Keychain, libsecret on Linux, or Windows Credential Manager). Existing plaintext credentials are migrated automatically on first use.
+
+  Toggle it with any of:
+
+  - `wrangler login --use-keyring` / `--no-use-keyring`
+  - `wrangler auth keyring enable` / `disable` (or `wrangler auth keyring` to print the current setting) — useful if you only use named profiles and never run the global `wrangler login`
+  - `CLOUDFLARE_AUTH_USE_KEYRING=true|false` to override the saved preference for a single command
+
+  Opting out **deletes** the encrypted credentials rather than decrypting them back to disk, so you re-authenticate afterwards. The preference applies to every auth profile, and each named profile gets its own encrypted file and key.
+
+  Per-platform requirements: macOS uses the built-in `security` tool (nothing to install); Linux uses `secret-tool` from `libsecret-tools` (wrangler prints an install hint if it is missing); Windows lazily installs `@napi-rs/keyring` (~1.9 MB) on first opt-in, and errors with instructions in non-interactive/CI contexts.
+
+  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_API_KEY`/`CLOUDFLARE_EMAIL` continue to take priority over any stored OAuth credentials.
+
+### Patch Changes
+
+- [#14502](https://github.com/cloudflare/workers-sdk/pull/14502) [`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260630.1 | 1.20260701.1 |
+
+- [#14306](https://github.com/cloudflare/workers-sdk/pull/14306) [`bfe48db`](https://github.com/cloudflare/workers-sdk/commit/bfe48db29d41f4963170e80dbdba8f80a55c6098) Thanks [@matingathani](https://github.com/matingathani)! - Remove deprecated `--experimental-vm-modules` flag and prevent silent exit on unexpected errors
+
+  `wrangler` was silently exiting with code 1 on Node.js v26 with no error message shown. This release fixes two independent issues that caused this behaviour:
+
+  1. A stale Node.js flag that caused unexpected behaviour on Node.js v26 has been removed.
+
+  2. If an error occurs in a situation where the normal error reporting path itself fails, `wrangler` now always prints the original error to stderr so the cause is visible rather than silently disappearing.
+
+- [#14481](https://github.com/cloudflare/workers-sdk/pull/14481) [`0277bfa`](https://github.com/cloudflare/workers-sdk/commit/0277bfa153acae7bef9597ef0a13ece913fa286f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve error message when deploying to a non-existent Pages project in non-interactive mode
+
+  Previously, running `wrangler pages deploy` with a `--project-name` that doesn't exist in a non-interactive context (e.g. CI, piped input) would fail with a generic "project not found" or "This command cannot be run in a non-interactive context" error. Now it provides a specific error message explaining that the project doesn't exist and suggests how to create it. The error also suggests using `wrangler deploy` to deploy a Worker instead.
+
+- [#14305](https://github.com/cloudflare/workers-sdk/pull/14305) [`98793d8`](https://github.com/cloudflare/workers-sdk/commit/98793d8e00567462518d983d974e0e89b6a474c3) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Improve asset upload performance with single-file uploads
+
+  Asset uploads now use a more efficient per-file upload path when the platform enables it. This is rolled out server-side and requires no configuration changes. Existing upload behavior is unchanged when the new path is not enabled.
+
+- Updated dependencies [[`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1)]:
+  - miniflare@4.20260701.0
+
 ## 4.106.0
 
 ### Minor Changes

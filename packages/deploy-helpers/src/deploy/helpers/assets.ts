@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { createReadStream } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
@@ -27,7 +28,7 @@ import prettyBytes from "pretty-bytes";
 import { FormData } from "undici";
 import { fetchResult, logger } from "../../shared/context";
 import { hashFile } from "./hash";
-import { isJwtExpired } from "./jwt";
+import { decodeJwtPayload, isJwtExpired } from "./jwt";
 import type { SharedDeployVersionsProps } from "../../shared/types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type {
@@ -48,8 +49,21 @@ type UploadResponse = {
 	jwt?: string;
 };
 
+export type AssetUploadStats = {
+	assetUploadDurationMs: number;
+	assetUploadIsBulk: boolean;
+	assetUploadFileCount: number;
+	assetUploadTotalBytes: number;
+};
+
+export type AssetsUploadResult = {
+	jwt: string;
+	assetUploadStats: AssetUploadStats;
+};
+
 // constants same as Pages for now
 const BULK_UPLOAD_CONCURRENCY = 3;
+const EDGE_KV_UPLOAD_CONCURRENCY = 50;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 
@@ -61,7 +75,7 @@ export const syncAssets = async (
 	assetDirectory: string,
 	scriptName: string,
 	dispatchNamespace?: string
-): Promise<string> => {
+): Promise<AssetsUploadResult> => {
 	assert(accountId, "Missing accountId");
 
 	// 1. generate asset manifest
@@ -92,8 +106,13 @@ export const syncAssets = async (
 		);
 	}
 
+	const filesToUpload = initializeAssetsResponse.buckets.flat();
+	const useSingleAssetUpload = isSingleAssetUploadMode(
+		initializeAssetsResponse.jwt
+	);
+
 	// if nothing to upload, return
-	if (initializeAssetsResponse.buckets.flat().length === 0) {
+	if (filesToUpload.length === 0) {
 		if (!initializeAssetsResponse.jwt) {
 			throw new FatalError(
 				"Could not find assets information to attach to deployment. Please try again.",
@@ -103,11 +122,19 @@ export const syncAssets = async (
 		logger.info(
 			`No updated asset files to upload. Proceeding with deployment...`
 		);
-		return initializeAssetsResponse.jwt;
+		return {
+			jwt: initializeAssetsResponse.jwt,
+			assetUploadStats: {
+				assetUploadDurationMs: 0,
+				assetUploadIsBulk: !useSingleAssetUpload,
+				assetUploadFileCount: 0,
+				assetUploadTotalBytes: 0,
+			},
+		};
 	}
 
 	// 3. fill buckets and upload assets
-	const numberFilesToUpload = initializeAssetsResponse.buckets.flat().length;
+	const numberFilesToUpload = filesToUpload.length;
 	logger.info(
 		`🌀 Found ${numberFilesToUpload} new or modified static asset${
 			numberFilesToUpload > 1 ? "s" : ""
@@ -140,54 +167,90 @@ export const syncAssets = async (
 		});
 	});
 
-	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
+	const uploadBuckets = useSingleAssetUpload
+		? assetBuckets.flat().map((entry) => [entry])
+		: assetBuckets;
+
+	const concurrency = useSingleAssetUpload
+		? getEdgeKvUploadConcurrency(initializeAssetsResponse.jwt)
+		: BULK_UPLOAD_CONCURRENCY;
+	if (useSingleAssetUpload) {
+		logger.debug(`Edge KV asset upload concurrency: ${concurrency}`);
+	}
+	const queue = new PQueue({ concurrency });
 	const queuePromises: Array<Promise<void>> = [];
-	let attempts = 0;
 	const start = Date.now();
 	let completionJwt = "";
 	let uploadedAssetsCount = 0;
+	let uploadedBytes = 0;
 
-	for (const [bucketIndex, bucket] of assetBuckets.entries()) {
-		attempts = 0;
+	for (const [bucketIndex, bucket] of uploadBuckets.entries()) {
+		let attempts = 0;
 		let gatewayErrors = 0;
 		const doUpload = async (): Promise<UploadResponse> => {
-			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
-			// This is so we don't run out of memory trying to upload the files.
-			const payload = new FormData();
 			const uploadedFiles: string[] = [];
 			for (const manifestEntry of bucket) {
-				const absFilePath = path.join(assetDirectory, manifestEntry[0]);
 				uploadedFiles.push(manifestEntry[0]);
-				payload.append(
-					manifestEntry[1].hash,
-					new File(
-						[(await readFile(absFilePath)).toString("base64")],
-						manifestEntry[1].hash,
-						{
-							// Most formdata body encoders (incl. undici's) will override with "application/octet-stream" if you use a falsy value here
-							// Additionally, it appears that undici doesn't support non-standard main types (e.g. "null")
-							// So, to make it easier for any other clients, we'll just parse "application/null" on the API
-							// to mean actually null (signal to not send a Content-Type header with the response)
-							type: getContentType(absFilePath) ?? "application/null",
-						}
-					),
-					manifestEntry[1].hash
-				);
 			}
 
 			try {
-				const res = await fetchResult<UploadResponse>(
-					complianceConfig,
-					`/accounts/${accountId}/workers/assets/upload?base64=true`,
-					{
-						method: "POST",
-						headers: {
-							Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
-						},
-						body: payload,
+				let res: UploadResponse;
+				if (useSingleAssetUpload) {
+					const manifestEntry = bucket[0];
+					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
+					const contentType = getContentType(absFilePath);
+					res = await fetchResult<UploadResponse>(
+						complianceConfig,
+						`/accounts/${accountId}/workers/assets/upload/${manifestEntry[1].hash}`,
+						{
+							method: "POST",
+							headers: {
+								Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
+								"Content-Type": contentType ?? "application/null",
+							},
+							body: createReadStream(absFilePath),
+							duplex: "half",
+						}
+					);
+				} else {
+					// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
+					// This is so we don't run out of memory trying to upload the files.
+					const payload = new FormData();
+					for (const manifestEntry of bucket) {
+						const absFilePath = path.join(assetDirectory, manifestEntry[0]);
+						payload.append(
+							manifestEntry[1].hash,
+							new File(
+								[(await readFile(absFilePath)).toString("base64")],
+								manifestEntry[1].hash,
+								{
+									// Most formdata body encoders (incl. undici's) will override with "application/octet-stream" if you use a falsy value here
+									// Additionally, it appears that undici doesn't support non-standard main types (e.g. "null")
+									// So, to make it easier for any other clients, we'll just parse "application/null" on the API
+									// to mean actually null (signal to not send a Content-Type header with the response)
+									type: getContentType(absFilePath) ?? "application/null",
+								}
+							),
+							manifestEntry[1].hash
+						);
 					}
-				);
+					res = await fetchResult<UploadResponse>(
+						complianceConfig,
+						`/accounts/${accountId}/workers/assets/upload?base64=true`,
+						{
+							method: "POST",
+							headers: {
+								Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
+							},
+							body: payload,
+						}
+					);
+				}
 				uploadedAssetsCount += bucket.length;
+				uploadedBytes += bucket.reduce(
+					(total, manifestEntry) => total + manifestEntry[1].size,
+					0
+				);
 				logAssetsUploadStatus(
 					numberFilesToUpload,
 					uploadedAssetsCount,
@@ -225,7 +288,7 @@ export const syncAssets = async (
 					throw new FatalError(
 						`Upload took too long.\n` +
 							`Asset upload took too long on bucket ${bucketIndex + 1}/${
-								initializeAssetsResponse.buckets.length
+								uploadBuckets.length
 							}. Please try again.\n` +
 							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
 						{ telemetryMessage: "Asset upload took too long" }
@@ -271,8 +334,33 @@ export const syncAssets = async (
 		} ${skippedMessage}${formatTime(uploadMs)}\n`
 	);
 
-	return completionJwt;
+	return {
+		jwt: completionJwt,
+		assetUploadStats: {
+			assetUploadDurationMs: uploadMs,
+			assetUploadIsBulk: !useSingleAssetUpload,
+			assetUploadFileCount: uploadedAssetsCount,
+			assetUploadTotalBytes: uploadedBytes,
+		},
+	};
 };
+
+function isSingleAssetUploadMode(jwt: string): boolean {
+	try {
+		return decodeJwtPayload(jwt).wrangler_single_asset_uploads === true;
+	} catch {
+		return false;
+	}
+}
+
+export function getEdgeKvUploadConcurrency(jwt: string): number {
+	try {
+		const value = Number(decodeJwtPayload(jwt).edge_kv_upload_concurrency);
+		return value > 0 ? Math.floor(value) : EDGE_KV_UPLOAD_CONCURRENCY;
+	} catch {
+		return EDGE_KV_UPLOAD_CONCURRENCY;
+	}
+}
 
 export const buildAssetManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });

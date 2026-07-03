@@ -1,17 +1,11 @@
 import assert from "node:assert";
 import {
-	assertDoExportsEnabledIfConfigured,
 	configFileName,
-	getDoExportsEnabledFromEnv,
 	getDurableObjectExports,
 } from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
-import type {
-	CfWorkerInit,
-	Config,
-	DoExportsOptInContext,
-} from "@cloudflare/workers-utils";
+import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 
 /**
  * For a given Worker + migrations config, figure out which migrations
@@ -127,19 +121,13 @@ export async function resolveDoLifecyclePayload(props: {
 	useServiceEnvironments: boolean | undefined;
 	env: string | undefined;
 	dispatchNamespace: string | undefined;
-	optInContext?: DoExportsOptInContext;
 }): Promise<{
 	migrations: CfWorkerInit["migrations"];
 	exports: CfWorkerInit["exports"];
 }> {
-	assertDoExportsEnabledIfConfigured(
-		props.config.exports,
-		props.optInContext ?? "deploy"
-	);
-
 	const durableObjectExports = getDurableObjectExports(props.config.exports);
 	const hasDurableObjectExports = Object.keys(durableObjectExports).length > 0;
-	if (getDoExportsEnabledFromEnv() && hasDurableObjectExports) {
+	if (hasDurableObjectExports) {
 		return {
 			migrations: undefined,
 			exports: durableObjectExports,
