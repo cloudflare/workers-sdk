@@ -3701,7 +3701,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if D1 database optional config fields have incorrect types", ({
+			it("should error if D1 database database_name has incorrect type", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -3709,12 +3709,7 @@ describe("normalizeAndValidateConfig()", () => {
 						d1_databases: [
 							{
 								binding: "DB",
-								database_id: 123,
-								preview_database_id: 456,
 								database_name: true,
-								migrations_dir: false,
-								migrations_table: 789,
-								database_internal_env: {},
 							},
 						],
 					} as unknown as RawConfig,
@@ -3727,12 +3722,82 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "d1_databases[0]" bindings must have a "database_id" field but got {"binding":"DB","database_id":123,"preview_database_id":456,"database_name":true,"migrations_dir":false,"migrations_table":789,"database_internal_env":{}}.
-					  - "d1_databases[0]" bindings should, optionally, have a string "preview_database_id" field but got {"binding":"DB","database_id":123,"preview_database_id":456,"database_name":true,"migrations_dir":false,"migrations_table":789,"database_internal_env":{}}.
-					  - "d1_databases[0]" bindings should, optionally, have a string "database_name" field but got {"binding":"DB","database_id":123,"preview_database_id":456,"database_name":true,"migrations_dir":false,"migrations_table":789,"database_internal_env":{}}.
-					  - "d1_databases[0]" bindings should, optionally, have a string "migrations_dir" field but got {"binding":"DB","database_id":123,"preview_database_id":456,"database_name":true,"migrations_dir":false,"migrations_table":789,"database_internal_env":{}}.
-					  - "d1_databases[0]" bindings should, optionally, have a string "migrations_table" field but got {"binding":"DB","database_id":123,"preview_database_id":456,"database_name":true,"migrations_dir":false,"migrations_table":789,"database_internal_env":{}}.
-					  - "d1_databases[0]" bindings should, optionally, have a string "database_internal_env" field but got {"binding":"DB","database_id":123,"preview_database_id":456,"database_name":true,"migrations_dir":false,"migrations_table":789,"database_internal_env":{}}."
+					  - "d1_databases[0]" bindings should, optionally, have a string "database_name" field but got {"binding":"DB","database_name":true}."
+				`);
+			});
+
+			it("should error if D1 database migrations_dir has incorrect type", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{
+								binding: "DB",
+								migrations_dir: 123,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "d1_databases[0]" bindings should, optionally, have a string "migrations_dir" field but got {"binding":"DB","migrations_dir":123}."
+				`);
+			});
+
+			it("should error if D1 database migrations_table has incorrect type", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{
+								binding: "DB",
+								migrations_table: {},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "d1_databases[0]" bindings should, optionally, have a string "migrations_table" field but got {"binding":"DB","migrations_table":{}}."
+				`);
+			});
+
+			it("should error if D1 database database_internal_env has incorrect type", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{
+								binding: "DB",
+								database_internal_env: false,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "d1_databases[0]" bindings should, optionally, have a string "database_internal_env" field but got {"binding":"DB","database_internal_env":false}."
 				`);
 			});
 		});
