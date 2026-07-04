@@ -283,6 +283,58 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			});
 		});
 
+		it("detects a gated Vite app target as a static package app", async ({
+			expect,
+		}) => {
+			await seed({
+				"app/package.json": JSON.stringify({
+					name: "vite-app",
+					scripts: { build: "vite build" },
+					devDependencies: { vite: "7.0.0" },
+				}),
+				"app/pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+				"app/dist/index.html": "<h1>Hello from Vite</h1>",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "app",
+						targetKind: "directory",
+						currentDeployInterpretation: "assets",
+						sourceCategory: "directory",
+						staticAssetsAutoConfig: true,
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "static-package-app",
+				projectKind: "static-assets",
+				confidence: "high",
+				outputDir: "dist",
+				sourceCategory: "package-app",
+				configurationPlan: {
+					mode: "no-write",
+					commands: [
+						{
+							command: "pnpm run build",
+							when: "build",
+							label: "build",
+						},
+					],
+					deploy: {
+						generatedAssetsDirectory: "build-output",
+					},
+				},
+				deployTarget: {
+					type: "static-app-output",
+					assetsDirectory: expect.stringContaining("app/dist"),
+				},
+			});
+		});
+
 		it("detects explicit Express entrypoints", async ({ expect }) => {
 			await seed({
 				"package.json": JSON.stringify({ dependencies: { express: "5" } }),
@@ -407,6 +459,54 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					},
 				},
 			});
+		});
+
+		it("falls back to port 80 and warns when a Dockerfile has no port hints", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM nginx:1\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+						containersAutoConfig: true,
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					warnings: expect.arrayContaining([
+						"No EXPOSE or ENV PORT was detected. Port 80 was selected; add EXPOSE to your Dockerfile if your app listens elsewhere.",
+					]),
+					summaryFields: {
+						port: 80,
+					},
+				},
+			});
+		});
+
+		it("rejects Dockerfile-to-Containers auto-configuration in non-interactive sessions", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context: createMockContext({ isNonInteractiveOrCI: () => true }),
+					deployIntent: {
+						trigger: "setup",
+						containersAutoConfig: true,
+					},
+				})
+			).rejects.toThrow(
+				"Dockerfile-to-Containers auto-configuration currently requires an interactive local session."
+			);
 		});
 	});
 

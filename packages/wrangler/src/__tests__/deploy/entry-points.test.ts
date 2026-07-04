@@ -437,6 +437,132 @@ export default{
 			);
 		});
 
+		it("should deploy an explicit static folder through the gated no-write path", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("site", { recursive: true });
+			fs.writeFileSync("site/index.html", "<html>site</html>");
+			fs.writeFileSync("site/main.css", "body{}");
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+			msw.use(
+				http.get("https://test-name.test-sub-domain.workers.dev", () =>
+					HttpResponse.text("ok")
+				)
+			);
+
+			await runWrangler(
+				"deploy site --name test-name --compatibility-date 2024-01-01 --experimental-auto-config-static-assets",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			expect(bodies).toEqual([
+				{
+					manifest: {
+						"/index.html": {
+							hash: expect.any(String),
+							size: 17,
+						},
+						"/main.css": {
+							hash: expect.any(String),
+							size: 6,
+						},
+					},
+				},
+			]);
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+			expect(std.out).toContain("Project Type: Static assets");
+			expect(std.out).toContain("No local project files will be written.");
+
+			const outputEntries = fs
+				.readFileSync("output.json", "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line));
+			expect(outputEntries).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						type: "autoconfig",
+						summary: expect.objectContaining({
+							adapterId: "static-assets",
+							deployMode: "no-write",
+							projectKind: "static-assets",
+							sourceCategory: "directory",
+						}),
+					}),
+					expect.objectContaining({
+						type: "deploy",
+						auto_config_adapter_id: "static-assets",
+						auto_config_deploy_mode: "no-write",
+						auto_config_project_kind: "static-assets",
+						auto_config_source_category: "directory",
+						url_verification: {
+							status: "success",
+							status_code: 200,
+						},
+					}),
+				])
+			);
+		});
+
+		it("should record a failed URL verification for auto-configured deploys", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.html", "<html>test</html>");
+			await mockAUSRequest([]);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+			msw.use(
+				http.get("https://test-name.test-sub-domain.workers.dev", () =>
+					HttpResponse.text("not ready", { status: 503 })
+				)
+			);
+
+			await runWrangler(
+				"deploy index.html --name test-name --compatibility-date 2024-01-01",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			const outputEntries = fs
+				.readFileSync("output.json", "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line));
+			expect(outputEntries).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						type: "deploy",
+						url_verification: {
+							status: "failure",
+							status_code: 503,
+						},
+					}),
+				])
+			);
+		});
+
 		it("should keep plain explicit Worker scripts on the existing deploy path without config", async ({
 			expect,
 		}) => {

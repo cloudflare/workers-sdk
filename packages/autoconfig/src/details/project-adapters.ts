@@ -640,10 +640,13 @@ function analyzeNodeHttpServerSource(source: string): {
 	const envPortMatch = source.match(
 		/process\.env\.PORT\s*(?:\|\||\?\?)\s*(\d{2,5})/
 	);
+	const listenConstPort = listenConstMatch
+		? constPorts.get(listenConstMatch[1])
+		: undefined;
 	const port = listenMatch
 		? Number(listenMatch[1])
-		: listenConstMatch
-			? constPorts.get(listenConstMatch[1])
+		: listenConstPort
+			? listenConstPort
 			: envPortMatch
 				? Number(envPortMatch[1])
 				: undefined;
