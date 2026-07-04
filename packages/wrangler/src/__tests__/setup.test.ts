@@ -47,9 +47,10 @@ describe("wrangler setup", () => {
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
-			  -y, --yes      Answer "yes" to any prompts for configuring your project  [boolean] [default: false]
-			      --build    Run your project's build command once it has been configured  [boolean] [default: false]
-			      --dry-run  Runs the command without applying any filesystem modifications  [boolean]"
+			  -y, --yes                                  Answer "yes" to any prompts for configuring your project  [boolean] [default: false]
+			      --build                                Run your project's build command once it has been configured  [boolean] [default: false]
+			      --dry-run                              Runs the command without applying any filesystem modifications  [boolean]
+			      --experimental-auto-config-containers  Experimental: allow auto-config to generate a Containers Worker from Dockerfile projects  [boolean] [default: false]"
 		`);
 	});
 
@@ -267,7 +268,7 @@ describe("wrangler setup", () => {
 				    ]
 				  }
 
-				✋  Autoconfig process run in dry-run mode, existing now.
+				✋  Autoconfig process run in dry-run mode, exiting now.
 				"
 			`);
 		});

@@ -358,6 +358,106 @@ export default{
 			expect(runAutoConfigSpy).not.toHaveBeenCalled();
 		});
 
+		it("should deploy an explicit index.html file as no-write static assets", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.html", "<html>test</html>");
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+			msw.use(
+				http.get("https://test-name.test-sub-domain.workers.dev", () =>
+					HttpResponse.text("ok")
+				)
+			);
+
+			await runWrangler(
+				"deploy index.html --name test-name --compatibility-date 2024-01-01",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			expect(bodies).toEqual([
+				{
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				},
+			]);
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+			expect(std.out).toContain("Project Type: Single file site");
+			expect(std.out).toContain("No local project files will be written.");
+			expect(std.out).toContain(
+				"https://test-name.test-sub-domain.workers.dev"
+			);
+			expect(std.err).toBe("");
+
+			const outputEntries = fs
+				.readFileSync("output.json", "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line));
+			expect(outputEntries).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						type: "autoconfig",
+						summary: expect.objectContaining({
+							adapterId: "single-file-site",
+							deployMode: "no-write",
+							projectKind: "single-file-site",
+							sourceCategory: "html-file",
+						}),
+					}),
+					expect.objectContaining({
+						type: "deploy",
+						auto_config_adapter_id: "single-file-site",
+						auto_config_deploy_mode: "no-write",
+						auto_config_project_kind: "single-file-site",
+						auto_config_source_category: "html-file",
+						live_url: "https://test-name.test-sub-domain.workers.dev",
+						url_verification: {
+							status: "success",
+							status_code: 200,
+						},
+					}),
+				])
+			);
+		});
+
+		it("should keep plain explicit Worker scripts on the existing deploy path without config", async ({
+			expect,
+		}) => {
+			const { runAutoConfig: runAutoConfigSpy } =
+				await import("@cloudflare/autoconfig");
+
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedEntry: "var foo = 100;",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+			mockSubDomainRequest();
+
+			await runWrangler(
+				"deploy index.js --name test-name --compatibility-date 2024-01-01"
+			);
+
+			expect(runAutoConfigSpy).not.toHaveBeenCalled();
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
 		it("should preserve exports on a module format worker", async ({
 			expect,
 		}) => {

@@ -1,4 +1,5 @@
 import { deploy } from "@cloudflare/deploy-helpers";
+import { fetch } from "undici";
 import { analyseBundle } from "../check/commands";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -20,6 +21,7 @@ import { syncWorkersSite } from "../sites";
 import { getScriptName } from "../utils/getScriptName";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
+import type { AutoConfigDeploymentMetadata } from "./autoconfig";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -84,6 +86,18 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. If set to none, the Worker will be deployed without building or updating any Containers.",
 			choices: ["immediate", "gradual", "none"] as const,
 		},
+		"experimental-auto-config-static-assets": {
+			describe:
+				"Experimental: allow auto-config to reinterpret explicit static folders and static app directories during deploy",
+			type: "boolean",
+			default: false,
+		},
+		"experimental-auto-config-containers": {
+			describe:
+				"Experimental: allow auto-config to generate a Containers Worker from Dockerfile projects",
+			type: "boolean",
+			default: false,
+		},
 		autoconfig: {
 			describe:
 				"Enables framework detection and automatic configuration when deploying",
@@ -113,6 +127,7 @@ export const deployCommand = createCommand({
 			return;
 		}
 		config = autoConfigResult.config;
+		const autoConfigDeploymentMetadata = autoConfigResult.deploymentMetadata;
 
 		// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
 		args = await promptForMissingDeployConfig(args, config);
@@ -150,6 +165,12 @@ export const deployCommand = createCommand({
 					deployContainers,
 					analyseBundle,
 				});
+			const liveUrl = getLiveUrl(targets);
+			const urlVerification = await maybeVerifyDeploymentUrl(
+				liveUrl,
+				autoConfigDeploymentMetadata,
+				args.dryRun ?? false
+			);
 
 			writeOutput({
 				type: "deploy",
@@ -160,6 +181,13 @@ export const deployCommand = createCommand({
 				targets,
 				wrangler_environment: args.env,
 				worker_name_overridden: workerNameOverridden,
+				auto_config_adapter_id: autoConfigDeploymentMetadata?.adapterId,
+				auto_config_project_kind: autoConfigDeploymentMetadata?.projectKind,
+				auto_config_deploy_mode: autoConfigDeploymentMetadata?.deployMode,
+				auto_config_source_category:
+					autoConfigDeploymentMetadata?.sourceCategory,
+				live_url: autoConfigDeploymentMetadata ? liveUrl : undefined,
+				url_verification: urlVerification,
 			});
 
 			metrics.sendMetricsEvent(
@@ -176,8 +204,47 @@ export const deployCommand = createCommand({
 			);
 		} finally {
 			cleanupDestination(buildProps.destination);
+			await autoConfigDeploymentMetadata?.cleanup?.();
 		}
 	},
 });
 
 export type DeployArgs = (typeof deployCommand)["args"];
+
+type DeploymentUrlVerification =
+	| { status: "success"; status_code: number }
+	| { status: "failure"; status_code?: number; error?: "request-failed" }
+	| { status: "skipped"; reason: "no-url" | "dry-run" | "not-autoconfig" };
+
+function getLiveUrl(targets: string[] | undefined): string | undefined {
+	return targets?.find((target) => /^https?:\/\//.test(target));
+}
+
+async function maybeVerifyDeploymentUrl(
+	liveUrl: string | undefined,
+	autoConfigDeploymentMetadata: AutoConfigDeploymentMetadata | undefined,
+	dryRun: boolean
+): Promise<DeploymentUrlVerification | undefined> {
+	if (!autoConfigDeploymentMetadata) {
+		return undefined;
+	}
+	if (dryRun) {
+		return { status: "skipped", reason: "dry-run" };
+	}
+	if (!liveUrl) {
+		return { status: "skipped", reason: "no-url" };
+	}
+
+	try {
+		const response = await fetch(liveUrl, {
+			method: "GET",
+			signal: AbortSignal.timeout(5_000),
+		});
+		if (response.ok) {
+			return { status: "success", status_code: response.status };
+		}
+		return { status: "failure", status_code: response.status };
+	} catch {
+		return { status: "failure", error: "request-failed" };
+	}
+}

@@ -101,6 +101,21 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
+	/** Auto-config adapter selected for this deployment, if any. */
+	auto_config_adapter_id?: string;
+	/** Auto-config project kind selected for this deployment, if any. */
+	auto_config_project_kind?: string;
+	/** Auto-config deploy mode selected for this deployment, if any. */
+	auto_config_deploy_mode?: "persistent" | "no-write";
+	/** Sanitized source category for the auto-config deployment, if any. */
+	auto_config_source_category?: string;
+	/** The first live URL reported by deploy for auto-config driven deployments. */
+	live_url?: string;
+	/** Verification result for the live URL, when attempted. */
+	url_verification?:
+		| { status: "success"; status_code: number }
+		| { status: "failure"; status_code?: number; error?: "request-failed" }
+		| { status: "skipped"; reason: "no-url" | "dry-run" | "not-autoconfig" };
 }
 
 interface OutputEntryPreview extends OutputEntryBase<"preview"> {

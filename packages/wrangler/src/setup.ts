@@ -51,6 +51,12 @@ export const setupCommand = createCommand({
 			default: true,
 			hidden: true,
 		},
+		"experimental-auto-config-containers": {
+			describe:
+				"Experimental: allow auto-config to generate a Containers Worker from Dockerfile projects",
+			type: "boolean",
+			default: false,
+		},
 	},
 
 	async handler(args, { config }) {
@@ -67,6 +73,10 @@ export const setupCommand = createCommand({
 				command: "wrangler setup",
 				wranglerConfig: config,
 				context,
+				deployIntent: {
+					trigger: "setup",
+					containersAutoConfig: args.experimentalAutoConfigContainers,
+				},
 			});
 		} catch (error) {
 			sendAutoConfigProcessEndedMetricsEvent({

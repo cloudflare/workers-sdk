@@ -188,6 +188,228 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
+	describe("project adapters", () => {
+		it("detects an explicit html file as a no-write single-file site", async ({
+			expect,
+		}) => {
+			await writeFile("index.html", "<h1>Hello World</h1>");
+
+			const result = await details.getDetailsForAutoConfig({
+				context,
+				deployIntent: {
+					trigger: "explicit-target",
+					originalTarget: "index.html",
+					targetKind: "file",
+					currentDeployInterpretation: "script",
+					sourceCategory: "html-file",
+				},
+			});
+
+			expect(result).toMatchObject({
+				configured: false,
+				adapterId: "single-file-site",
+				projectKind: "single-file-site",
+				confidence: "high",
+				sourceCategory: "html-file",
+				configurationPlan: {
+					mode: "no-write",
+					generatedFiles: ["temporary-assets-directory"],
+				},
+				deployTarget: {
+					type: "single-html-file",
+					sourcePath: expect.stringContaining("index.html"),
+				},
+			});
+		});
+
+		it("does not claim explicit worker scripts without a high-confidence adapter", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"index.js",
+				"export default { fetch() { return new Response('ok'); } };"
+			);
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "index.js",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "worker-script",
+					},
+				})
+			).resolves.toMatchObject({ configured: true });
+		});
+
+		it("only claims explicit static folders when the rollout gate is enabled", async ({
+			expect,
+		}) => {
+			await seed({
+				"site/index.html": "<h1>Hello World</h1>",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "site",
+						targetKind: "directory",
+						currentDeployInterpretation: "assets",
+						sourceCategory: "directory",
+					},
+				})
+			).resolves.toMatchObject({ configured: true });
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "site",
+						targetKind: "directory",
+						currentDeployInterpretation: "assets",
+						sourceCategory: "directory",
+						staticAssetsAutoConfig: true,
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "static-assets",
+				configurationPlan: { mode: "no-write" },
+			});
+		});
+
+		it("detects explicit Express entrypoints", async ({ expect }) => {
+			await seed({
+				"package.json": JSON.stringify({ dependencies: { express: "5" } }),
+				"index.js": `
+					import express from "express";
+					const app = express();
+					app.get("/", (_req, res) => res.send("ok"));
+					app.listen(3000);
+				`,
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "index.js",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "worker-script",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "express-node-http-server",
+				projectKind: "node-http-server",
+				configurationPlan: {
+					mode: "persistent",
+					wranglerConfig: {
+						main: "src/worker.js",
+						compatibility_flags: ["nodejs_compat"],
+					},
+					filesToCreate: [
+						{
+							path: "src/worker.js",
+							contents: expect.stringContaining(
+								"export default httpServerHandler({ port });"
+							),
+						},
+					],
+					summaryFields: {
+						entrypoint: "index.js",
+						generatedEntrypoint: "src/worker.js",
+						port: 3000,
+					},
+				},
+			});
+		});
+
+		it("detects explicit Dockerfile targets only with the Containers gate", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 8080\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({ configured: true });
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+						containersAutoConfig: true,
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "dockerfile-container",
+				projectKind: "container-image",
+				configurationPlan: {
+					mode: "persistent",
+					dependencies: [{ name: "@cloudflare/containers" }],
+					wranglerConfig: {
+						main: "src/worker.js",
+						containers: [
+							{
+								class_name: "AppContainer",
+								image: "./Dockerfile",
+								max_instances: 1,
+							},
+						],
+						durable_objects: {
+							bindings: [
+								{
+									name: "APP_CONTAINER",
+									class_name: "AppContainer",
+								},
+							],
+						},
+						migrations: [
+							{
+								new_sqlite_classes: ["AppContainer"],
+							},
+						],
+					},
+					filesToCreate: [
+						{
+							path: "src/worker.js",
+							contents: expect.stringContaining('PORT: "8080"'),
+						},
+					],
+					summaryFields: {
+						dockerfile: "Dockerfile",
+						generatedEntrypoint: "src/worker.js",
+						port: 8080,
+						routing: "singleton",
+						maxInstances: 1,
+					},
+				},
+			});
+		});
+	});
+
 	it("an error should be thrown if no output dir can be detected", async ({
 		expect,
 	}) => {
