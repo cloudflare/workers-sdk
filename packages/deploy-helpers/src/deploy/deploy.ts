@@ -169,7 +169,6 @@ export default async function deploy(
 
 	const autoConfigDeploymentMetadata = options.autoConfigDeploymentMetadata;
 	const liveUrl = getLiveUrl(result.targets);
-	const urlVerification = await maybeVerifyDeploymentUrl(liveUrl, autoConfigDeploymentMetadata, props.dryRun ?? false);
 	writeOutput({
 		type: "deploy",
 		version: 1,
@@ -184,7 +183,6 @@ export default async function deploy(
 		auto_config_deploy_mode: autoConfigDeploymentMetadata?.deployMode,
 		auto_config_source_category: autoConfigDeploymentMetadata?.sourceCategory,
 		live_url: autoConfigDeploymentMetadata ? liveUrl : undefined,
-		url_verification: urlVerification,
 		bundle_size: result.bundleSize
 			? {
 					raw_bytes: result.bundleSize.size,
@@ -950,40 +948,6 @@ async function deployWorker(
 	};
 }
 
-type DeploymentUrlVerification =
-	| { status: "success"; status_code: number }
-	| { status: "failure"; status_code?: number; error?: "request-failed" }
-	| { status: "skipped"; reason: "no-url" | "dry-run" | "not-autoconfig" };
-
 function getLiveUrl(targets: string[] | undefined): string | undefined {
 	return targets?.find((target) => /^https?:\/\//.test(target));
-}
-
-async function maybeVerifyDeploymentUrl(
-	liveUrl: string | undefined,
-	autoConfigDeploymentMetadata: DeployOptions["autoConfigDeploymentMetadata"],
-	dryRun: boolean
-): Promise<DeploymentUrlVerification | undefined> {
-	if (!autoConfigDeploymentMetadata) {
-		return undefined;
-	}
-	if (dryRun) {
-		return { status: "skipped", reason: "dry-run" };
-	}
-	if (!liveUrl) {
-		return { status: "skipped", reason: "no-url" };
-	}
-
-	try {
-		const response = await fetch(liveUrl, {
-			method: "GET",
-			signal: AbortSignal.timeout(5_000),
-		});
-		if (response.ok) {
-			return { status: "success", status_code: response.status };
-		}
-		return { status: "failure", status_code: response.status };
-	} catch {
-		return { status: "failure", error: "request-failed" };
-	}
 }

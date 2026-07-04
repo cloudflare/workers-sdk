@@ -62,7 +62,7 @@ describe("autoconfig run - project adapters", () => {
 		expect(summary).toMatchObject({
 			adapterId: "express-node-http-server",
 			projectKind: "node-http-server",
-			wranglerInstall: true,
+			wranglerInstall: false,
 			scripts: {
 				deploy: "wrangler deploy",
 				preview: "wrangler dev",
@@ -201,6 +201,7 @@ describe("autoconfig run - project adapters", () => {
 		expect(summary).toMatchObject({
 			adapterId: "dockerfile-container",
 			projectKind: "container-image",
+			wranglerInstall: false,
 			scripts: {
 				"cf-typegen": "wrangler types",
 				deploy: "wrangler deploy",
@@ -220,6 +221,7 @@ describe("autoconfig run - project adapters", () => {
 				"Containers require the Workers Paid plan.",
 			])
 		);
+		expect(context.logger.warn).toHaveBeenCalledTimes(3);
 		expect(cliPackages.installPackages).toHaveBeenCalledWith(
 			"npm",
 			["@cloudflare/containers"],

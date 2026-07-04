@@ -138,6 +138,23 @@ describe("wrangler setup", () => {
 		expect(runSpy).toHaveBeenCalled();
 
 		expect(installSpy).not.toHaveBeenCalled();
+		expect(std.out).not.toContain("wrangler (devDependency)");
+	});
+
+	test("should use the detected package manager in the completion message", async ({
+		expect,
+	}) => {
+		await seed({
+			"public/index.html": `<h1>Hello World</h1>`,
+			"package.json": JSON.stringify({}),
+			"pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+		});
+
+		vi.spyOn(cliPackages, "installWrangler").mockImplementation(async () => {});
+
+		await runWrangler("setup --no-install-wrangler");
+
+		expect(std.out).toContain("You can now deploy with pnpm run deploy");
 	});
 
 	test("should output an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH", async ({
