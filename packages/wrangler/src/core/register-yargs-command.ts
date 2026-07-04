@@ -2,6 +2,7 @@ import path from "node:path";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
 import {
 	defaultWranglerConfig,
+	APIError,
 	FatalError,
 	getCloudflareEnv,
 	getWranglerHideBanner,
@@ -420,16 +421,106 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 			const outputErr =
 				err instanceof CommandHandledError ? err.originalError : err;
 			if (outputErr instanceof Error) {
-				const code =
-					"code" in outputErr ? (outputErr.code as number) : undefined;
 				writeOutput({
 					type: "command-failed",
 					version: 1,
-					code,
-					message: outputErr.message,
+					...getCommandFailedOutputFields(outputErr),
 				});
 			}
 			throw err;
 		}
 	};
+}
+
+export function getCommandFailedOutputFields(error: Error): {
+	code: number | undefined;
+	status?: number;
+	message: string | undefined;
+	details?: string[];
+	api_errors?: Array<{ code?: number; message: string }>;
+} {
+	return {
+		code: getNumericProperty(error, "code"),
+		status: getNumericProperty(error, "status"),
+		message: error.message,
+		details: getOutputErrorDetails(error),
+		api_errors: getOutputApiErrors(error),
+	};
+}
+
+function getNumericProperty(error: Error, key: "code" | "status") {
+	const value = (error as unknown as Record<string, unknown>)[key];
+	return typeof value === "number" ? value : undefined;
+}
+
+function getOutputErrorDetails(error: Error): string[] | undefined {
+	if (!(error instanceof APIError)) {
+		return undefined;
+	}
+
+	const notes = (error as { notes?: unknown }).notes;
+	if (!Array.isArray(notes)) {
+		return undefined;
+	}
+
+	const details = notes
+		.map((note) => {
+			if (!isRecord(note) || typeof note.text !== "string") {
+				return undefined;
+			}
+			return sanitizeOutputDetailText(note.text);
+		})
+		.filter((note): note is string => note !== undefined);
+
+	return details.length > 0 ? details : undefined;
+}
+
+function getOutputApiErrors(
+	error: Error
+): Array<{ code?: number; message: string }> | undefined {
+	if (!(error instanceof APIError)) {
+		return undefined;
+	}
+
+	const meta = (error as { meta?: unknown }).meta;
+	if (!isRecord(meta)) {
+		return undefined;
+	}
+
+	const details = meta.details;
+	const apiErrors = Array.isArray(details)
+		? details
+		: isRecord(details) && Array.isArray(details.errors)
+			? details.errors
+			: undefined;
+	if (!apiErrors) {
+		return undefined;
+	}
+
+	const outputErrors = apiErrors
+		.map((apiError) => {
+			if (!isRecord(apiError) || typeof apiError.message !== "string") {
+				return undefined;
+			}
+			const code =
+				typeof apiError.code === "number" ? apiError.code : undefined;
+			return {
+				...(code === undefined ? {} : { code }),
+				message: sanitizeOutputDetailText(apiError.message),
+			};
+		})
+		.filter(
+			(apiError): apiError is { code?: number; message: string } =>
+				apiError !== undefined
+		);
+
+	return outputErrors.length > 0 ? outputErrors : undefined;
+}
+
+function sanitizeOutputDetailText(text: string): string {
+	return text.replace(/\s+/g, " ").trim().slice(0, 1_000);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

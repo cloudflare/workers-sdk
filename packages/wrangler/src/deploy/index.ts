@@ -1,5 +1,4 @@
 import { deploy } from "@cloudflare/deploy-helpers";
-import { fetch } from "undici";
 import { analyseBundle } from "../check/commands";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -21,7 +20,6 @@ import { syncWorkersSite } from "../sites";
 import { getScriptName } from "../utils/getScriptName";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
-import type { AutoConfigDeploymentMetadata } from "./autoconfig";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -166,11 +164,6 @@ export const deployCommand = createCommand({
 					analyseBundle,
 				});
 			const liveUrl = getLiveUrl(targets);
-			const urlVerification = await maybeVerifyDeploymentUrl(
-				liveUrl,
-				autoConfigDeploymentMetadata,
-				args.dryRun ?? false
-			);
 
 			writeOutput({
 				type: "deploy",
@@ -187,7 +180,6 @@ export const deployCommand = createCommand({
 				auto_config_source_category:
 					autoConfigDeploymentMetadata?.sourceCategory,
 				live_url: autoConfigDeploymentMetadata ? liveUrl : undefined,
-				url_verification: urlVerification,
 			});
 
 			metrics.sendMetricsEvent(
@@ -211,40 +203,6 @@ export const deployCommand = createCommand({
 
 export type DeployArgs = (typeof deployCommand)["args"];
 
-type DeploymentUrlVerification =
-	| { status: "success"; status_code: number }
-	| { status: "failure"; status_code?: number; error?: "request-failed" }
-	| { status: "skipped"; reason: "no-url" | "dry-run" | "not-autoconfig" };
-
 function getLiveUrl(targets: string[] | undefined): string | undefined {
 	return targets?.find((target) => /^https?:\/\//.test(target));
-}
-
-async function maybeVerifyDeploymentUrl(
-	liveUrl: string | undefined,
-	autoConfigDeploymentMetadata: AutoConfigDeploymentMetadata | undefined,
-	dryRun: boolean
-): Promise<DeploymentUrlVerification | undefined> {
-	if (!autoConfigDeploymentMetadata) {
-		return undefined;
-	}
-	if (dryRun) {
-		return { status: "skipped", reason: "dry-run" };
-	}
-	if (!liveUrl) {
-		return { status: "skipped", reason: "no-url" };
-	}
-
-	try {
-		const response = await fetch(liveUrl, {
-			method: "GET",
-			signal: AbortSignal.timeout(5_000),
-		});
-		if (response.ok) {
-			return { status: "success", status_code: response.status };
-		}
-		return { status: "failure", status_code: response.status };
-	} catch {
-		return { status: "failure", error: "request-failed" };
-	}
 }

@@ -137,6 +137,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		});
 
 		const autoConfigContext = createWranglerAutoConfigContext();
+		let deploymentMetadata: AutoConfigDeploymentMetadata | undefined;
 
 		try {
 			const details = await runAutoConfigDetection({
@@ -194,20 +195,22 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				}
 
 				if (details.configurationPlan?.mode === "no-write") {
-					const deploymentMetadata = await prepareNoWriteDeployment(
+					deploymentMetadata = await prepareNoWriteDeployment(
 						args,
 						config,
 						details,
 						autoConfigSummary
 					);
-					return { config, aborted: false, deploymentMetadata };
-				}
+				} else {
+					deploymentMetadata = getDeploymentMetadata(details, autoConfigSummary);
+					applyPersistentAutoConfigDeployTarget(args, deployIntent, details);
 
-				// If autoconfig worked, there should now be a new config file, and so we need to read config again
-				config = readConfig(args, {
-					hideWarnings: false,
-					useRedirectIfAvailable: true,
-				});
+					// If autoconfig worked, there should now be a new config file, and so we need to read config again
+					config = readConfig(args, {
+						hideWarnings: false,
+						useRedirectIfAvailable: true,
+					});
+				}
 			}
 		} catch (error) {
 			sendAutoConfigProcessEndedMetricsEvent({
@@ -224,9 +227,45 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 			command: "wrangler deploy",
 			dryRun: !!args.dryRun,
 		});
+
+		return { config, aborted: false, deploymentMetadata };
 	}
 
 	return { config, aborted: false };
+}
+
+function applyPersistentAutoConfigDeployTarget<Args extends AutoConfigArgs>(
+	args: Args,
+	deployIntent: DeployIntent | undefined,
+	details: AutoConfigDetails
+): void {
+	if (
+		deployIntent?.trigger !== "explicit-target" ||
+		details.configurationPlan?.mode !== "persistent" ||
+		!deployIntent.originalTarget
+	) {
+		return;
+	}
+
+	const generatedConfig = details.configurationPlan.wranglerConfig;
+	const generatedConfigHasDeployTarget = Boolean(
+		generatedConfig?.main ||
+			generatedConfig?.assets ||
+			generatedConfig?.containers?.length
+	);
+	if (!generatedConfigHasDeployTarget) {
+		return;
+	}
+
+	if (args.path === deployIntent.originalTarget) {
+		args.path = undefined;
+	}
+	if (args.script === deployIntent.originalTarget) {
+		args.script = undefined;
+	}
+	if (args.assets === deployIntent.originalTarget) {
+		args.assets = undefined;
+	}
 }
 
 function getDeployIntent(
@@ -310,10 +349,17 @@ async function prepareNoWriteDeployment<Args extends AutoConfigArgs>(
 			const assetsDirectory = await mkdtemp(
 				path.join(tmpdir(), "wrangler-single-file-site-")
 			);
+			const sourceBasename = path.basename(details.deployTarget.sourcePath);
 			await copyFile(
 				details.deployTarget.sourcePath,
 				path.join(assetsDirectory, "index.html")
 			);
+			if (sourceBasename !== "index.html") {
+				await copyFile(
+					details.deployTarget.sourcePath,
+					path.join(assetsDirectory, sourceBasename)
+				);
+			}
 			args.assets = assetsDirectory;
 			args.script = undefined;
 			args.path = undefined;

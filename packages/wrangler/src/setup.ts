@@ -9,7 +9,6 @@ import { createWranglerAutoConfigContext } from "./autoconfig-context";
 import { createCommand } from "./core/create-command";
 import { logger } from "./logger";
 import { writeOutput } from "./output";
-import { getPackageManager } from "./package-manager";
 
 export const setupCommand = createCommand({
 	metadata: {
@@ -139,10 +138,11 @@ export const setupCommand = createCommand({
 		});
 
 		if (!args.dryRun) {
-			const { type } = await getPackageManager();
 			logCompletionMessage(
 				`You can now deploy with ${brandColor(
-					details.packageJson ? `${type} run deploy` : "wrangler deploy"
+					details.packageJson
+						? `${details.packageManager.type} run deploy`
+						: "wrangler deploy"
 				)}`
 			);
 		}

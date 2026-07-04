@@ -156,7 +156,8 @@ export async function runAutoConfig(
 				`${npx} wrangler versions upload`,
 		},
 		context,
-		dryRunConfigurationResults.packageJsonScriptsOverrides
+		dryRunConfigurationResults.packageJsonScriptsOverrides,
+		enableWranglerInstallation
 	);
 
 	if (
@@ -275,7 +276,8 @@ async function runConfigurationPlan(
 	const autoConfigSummary = buildConfigurationPlanSummary(
 		autoConfigDetails,
 		wranglerConfigToWrite,
-		context
+		context,
+		enableWranglerInstallation
 	);
 
 	if (
@@ -394,7 +396,8 @@ async function runConfigurationPlan(
 function buildConfigurationPlanSummary(
 	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject,
 	wranglerConfigToWrite: RawConfig | null | undefined,
-	context: AutoConfigContext
+	context: AutoConfigContext,
+	enableWranglerInstallation: boolean
 ): AutoConfigSummary {
 	const { logger } = context;
 	const plan = autoConfigDetails.configurationPlan;
@@ -403,7 +406,9 @@ function buildConfigurationPlanSummary(
 
 	const summary: AutoConfigSummary = {
 		wranglerInstall:
-			plan.mode === "persistent" && Boolean(autoConfigDetails.packageJson),
+			enableWranglerInstallation &&
+			plan.mode === "persistent" &&
+			Boolean(autoConfigDetails.packageJson),
 		scripts: plan.packageJsonScripts ?? {},
 		...(wranglerConfigToWrite ? { wranglerConfig: wranglerConfigToWrite } : {}),
 		outputDir: autoConfigDetails.outputDir,
@@ -477,12 +482,6 @@ function buildConfigurationPlanSummary(
 			logger.log(` - ${command.command}`);
 		}
 		logger.log("");
-	}
-
-	if (plan.warnings?.length) {
-		for (const warning of plan.warnings) {
-			logger.warn(warning);
-		}
 	}
 
 	return summary;
@@ -591,7 +590,8 @@ export async function buildOperationsSummary(
 		version?: string;
 	},
 	context: AutoConfigContext,
-	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
+	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides,
+	enableWranglerInstallation = true
 ): Promise<AutoConfigSummary> {
 	const { logger } = context;
 	logger.log("");
@@ -612,12 +612,14 @@ export async function buildOperationsSummary(
 	};
 
 	if (autoConfigDetails.packageJson) {
-		// If there is a package.json file we will want to install wrangler
-		summary.wranglerInstall = true;
+		if (enableWranglerInstallation) {
+			// If there is a package.json file we will want to install wrangler
+			summary.wranglerInstall = true;
 
-		logger.log("📦 Install packages:");
-		logger.log(` - wrangler (devDependency)`);
-		logger.log("");
+			logger.log("📦 Install packages:");
+			logger.log(` - wrangler (devDependency)`);
+			logger.log("");
+		}
 
 		summary.scripts = {
 			deploy:

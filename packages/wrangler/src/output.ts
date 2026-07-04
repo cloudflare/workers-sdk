@@ -111,11 +111,6 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	auto_config_source_category?: string;
 	/** The first live URL reported by deploy for auto-config driven deployments. */
 	live_url?: string;
-	/** Verification result for the live URL, when attempted. */
-	url_verification?:
-		| { status: "success"; status_code: number }
-		| { status: "failure"; status_code?: number; error?: "request-failed" }
-		| { status: "skipped"; reason: "no-url" | "dry-run" | "not-autoconfig" };
 }
 
 interface OutputEntryPreview extends OutputEntryBase<"preview"> {
@@ -210,6 +205,12 @@ interface OutputEntryCommandFailed extends OutputEntryBase<"command-failed"> {
 	version: 1;
 	/** The code in the error. */
 	code: number | undefined;
+	/** HTTP status for API failures, when available. */
+	status?: number;
 	/** The message in the error. */
 	message: string | undefined;
+	/** Additional safe, human-readable error details. */
+	details?: string[];
+	/** Structured API error details, when available. */
+	api_errors?: Array<{ code?: number; message: string }>;
 }

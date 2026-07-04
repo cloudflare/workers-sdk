@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
+import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { findWranglerConfig } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -26,6 +27,7 @@ import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
 import { runWrangler } from "../helpers/run-wrangler";
+import { serialize, toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
 	mockAUSRequest,
@@ -373,12 +375,6 @@ export default{
 				expectedType: "none",
 				expectedCompatibilityDate: "2024-01-01",
 			});
-			msw.use(
-				http.get("https://test-name.test-sub-domain.workers.dev", () =>
-					HttpResponse.text("ok")
-				)
-			);
-
 			await runWrangler(
 				"deploy index.html --name test-name --compatibility-date 2024-01-01",
 				{
@@ -428,10 +424,6 @@ export default{
 						auto_config_project_kind: "single-file-site",
 						auto_config_source_category: "html-file",
 						live_url: "https://test-name.test-sub-domain.workers.dev",
-						url_verification: {
-							status: "success",
-							status_code: 200,
-						},
 					}),
 				])
 			);
@@ -454,12 +446,6 @@ export default{
 				expectedType: "none",
 				expectedCompatibilityDate: "2024-01-01",
 			});
-			msw.use(
-				http.get("https://test-name.test-sub-domain.workers.dev", () =>
-					HttpResponse.text("ok")
-				)
-			);
-
 			await runWrangler(
 				"deploy site --name test-name --compatibility-date 2024-01-01 --experimental-auto-config-static-assets",
 				{
@@ -508,20 +494,17 @@ export default{
 						auto_config_deploy_mode: "no-write",
 						auto_config_project_kind: "static-assets",
 						auto_config_source_category: "directory",
-						url_verification: {
-							status: "success",
-							status_code: 200,
-						},
 					}),
 				])
 			);
 		});
 
-		it("should record a failed URL verification for auto-configured deploys", async ({
+		it("should deploy a named HTML file at root and at its original filename", async ({
 			expect,
 		}) => {
-			fs.writeFileSync("index.html", "<html>test</html>");
-			await mockAUSRequest([]);
+			fs.writeFileSync("landing.html", "<html>landing</html>");
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedAssets: {
@@ -531,35 +514,73 @@ export default{
 				expectedType: "none",
 				expectedCompatibilityDate: "2024-01-01",
 			});
-			msw.use(
-				http.get("https://test-name.test-sub-domain.workers.dev", () =>
-					HttpResponse.text("not ready", { status: 503 })
-				)
-			);
-
 			await runWrangler(
-				"deploy index.html --name test-name --compatibility-date 2024-01-01",
+				"deploy landing.html --name test-name --compatibility-date 2024-01-01",
 				{
 					...process.env,
 					WRANGLER_OUTPUT_FILE_PATH: "output.json",
 				}
 			);
 
-			const outputEntries = fs
-				.readFileSync("output.json", "utf8")
-				.split("\n")
-				.filter(Boolean)
-				.map((line) => JSON.parse(line));
-			expect(outputEntries).toEqual(
-				expect.arrayContaining([
-					expect.objectContaining({
-						type: "deploy",
-						url_verification: {
-							status: "failure",
-							status_code: 503,
+			expect(bodies).toEqual([
+				{
+					manifest: {
+						"/index.html": {
+							hash: expect.any(String),
+							size: 20,
 						},
-					}),
-				])
+						"/landing.html": {
+							hash: expect.any(String),
+							size: 20,
+						},
+					},
+				},
+			]);
+		});
+
+		it("should not upload Wrangler temp files or output JSON when deploying the current directory as assets", async ({
+			expect,
+		}) => {
+			fs.mkdirSync(path.join(".wrangler", "tmp", "deploy-test"), {
+				recursive: true,
+			});
+			fs.writeFileSync("index.html", "<html>site</html>");
+			fs.writeFileSync(
+				path.join(".wrangler", "tmp", "deploy-test", "no-op-worker.js"),
+				"export default {};"
+			);
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+
+			await runWrangler(
+				"deploy . --name test-name --compatibility-date 2024-01-01",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			expect(bodies).toEqual([
+				{
+					manifest: {
+						"/index.html": {
+							hash: expect.any(String),
+							size: 17,
+						},
+					},
+				},
+			]);
+			expect(std.warn).toContain(
+				"Ignoring output.json because WRANGLER_OUTPUT_FILE_PATH points inside the assets directory."
 			);
 		});
 
@@ -581,6 +602,101 @@ export default{
 			);
 
 			expect(runAutoConfigSpy).not.toHaveBeenCalled();
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should deploy the generated Express JS wrapper after direct explicit-target auto-config", async ({
+			expect,
+		}) => {
+			vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+			mockConfirm(
+				{
+					text: "Do you want to modify these settings?",
+					options: { defaultValue: false },
+					result: false,
+				},
+				{ text: "Proceed with setup?", result: true }
+			);
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "express-direct-js",
+					dependencies: { express: "5.1.0" },
+				})
+			);
+			fs.writeFileSync(
+				"server.js",
+				dedent`
+					const app = { listen(_port) {} };
+					app.listen(8787);
+				`
+			);
+			let uploadedEntry: string | null = null;
+			mockUploadAndCaptureEntry((entry) => {
+				uploadedEntry = entry;
+			});
+			mockSubDomainRequest();
+
+			await runWrangler(
+				"deploy server.js --name test-name --compatibility-date 2024-01-01"
+			);
+
+			expect(JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"))).toMatchObject({
+				main: "src/worker.js",
+			});
+			expect(uploadedEntry).toContain("httpServerHandler");
+			expect(uploadedEntry).toContain("8787");
+			expect(std.out).toContain("Project Type: Express Node HTTP server");
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should deploy the generated Express TS wrapper after direct explicit-target auto-config", async ({
+			expect,
+		}) => {
+			vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+			mockConfirm(
+				{
+					text: "Do you want to modify these settings?",
+					options: { defaultValue: false },
+					result: false,
+				},
+				{ text: "Proceed with setup?", result: true }
+			);
+			fs.mkdirSync("src", { recursive: true });
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "express-direct-ts",
+					dependencies: { express: "5.1.0" },
+				})
+			);
+			fs.writeFileSync(
+				"tsconfig.json",
+				JSON.stringify({ compilerOptions: {} })
+			);
+			fs.writeFileSync(
+				"src/index.ts",
+				dedent`
+					const app = { listen(_port: number) {} };
+					app.listen(8788);
+				`
+			);
+			let uploadedEntry: string | null = null;
+			mockUploadAndCaptureEntry((entry) => {
+				uploadedEntry = entry;
+			});
+			mockSubDomainRequest();
+
+			await runWrangler(
+				"deploy src/index.ts --name test-name --compatibility-date 2024-01-01"
+			);
+
+			expect(JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"))).toMatchObject({
+				main: "src/worker.ts",
+			});
+			expect(uploadedEntry).toContain("httpServerHandler");
+			expect(uploadedEntry).toContain("8788");
+			expect(std.out).toContain("Project Type: Express Node HTTP server");
 			expect(std.out).toContain("Uploaded test-name");
 		});
 
@@ -1502,3 +1618,86 @@ addEventListener('fetch', event => {});`
 		});
 	});
 });
+
+function mockUploadAndCaptureEntry(onEntry: (entry: string | null) => void) {
+	const handleVersionUpload = async ({ request }: { request: Request }) => {
+		const formBody = await request.formData();
+		const metadata = JSON.parse(await toString(formBody.get("metadata"))) as {
+			body_part?: string;
+			main_module?: string;
+		};
+		onEntry(
+			await serialize(
+				formBody.get(metadata.main_module ?? metadata.body_part ?? "index.js")
+			)
+		);
+
+		return HttpResponse.json(
+			createFetchResult({
+				id: "Galaxy-Class",
+				startup_time_ms: 100,
+				resources: {
+					script: {
+						etag: "etag98765",
+					},
+				},
+			})
+		);
+	};
+	const handleDeployment = () =>
+		HttpResponse.json(createFetchResult({ id: "Deployment-ID" }));
+
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/workers/services/:scriptName",
+			({ params }) => {
+				const tag = `tag:${params.scriptName}`;
+				return HttpResponse.json(
+					createFetchResult({
+						default_environment: {
+							script: { last_deployed_from: "wrangler", tag },
+						},
+					})
+				);
+			},
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+			() => HttpResponse.json(createFetchResult({ deployments: [] })),
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/workers/scripts/:scriptName/subdomain",
+			() =>
+				HttpResponse.json(
+					createFetchResult({ enabled: true, previews_enabled: true })
+				),
+			{ once: true }
+		),
+		http.post(
+			"*/accounts/:accountId/workers/scripts/:scriptName/subdomain",
+			() =>
+				HttpResponse.json(
+					createFetchResult({ enabled: true, previews_enabled: true })
+				),
+			{ once: true }
+		),
+		http.post(
+			"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+			handleVersionUpload
+		),
+		http.post(
+			"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+			handleDeployment
+		),
+		http.post(
+			"*/accounts/:accountId/workers/services/:scriptName/environments/:envName/versions",
+			handleVersionUpload
+		),
+		http.post(
+			"*/accounts/:accountId/workers/services/:scriptName/environments/:envName/deployments",
+			handleDeployment
+		)
+	);
+}
