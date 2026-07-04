@@ -110,6 +110,18 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. If set to none, the Worker will be deployed without building or updating any Containers.",
 			choices: ["immediate", "gradual", "none"] as const,
 		},
+		"experimental-auto-config-static-assets": {
+			describe:
+				"Experimental: allow auto-config to reinterpret explicit static folders and static app directories during deploy",
+			type: "boolean",
+			default: false,
+		},
+		"experimental-auto-config-containers": {
+			describe:
+				"Experimental: allow auto-config to generate a Containers Worker from Dockerfile projects",
+			type: "boolean",
+			default: false,
+		},
 		autoconfig: {
 			describe:
 				"Enables framework detection and automatic configuration when deploying",
@@ -204,6 +216,7 @@ export async function runDeployCommandHandler(
 		return;
 	}
 	config = autoConfigResult.config;
+	const autoConfigDeploymentMetadata = autoConfigResult.deploymentMetadata;
 
 	// Autoconfig may leave no Wrangler config, for example for an existing Vite
 	// deployment or a dry run. Apply the delegated assets and compatibility date
@@ -323,6 +336,7 @@ export async function runDeployCommandHandler(
 				observabilityTargetPercentageField: "target_instance_percentage",
 				observabilityTargetCountField: "target_instance_count",
 				syncWorkersSite,
+				autoConfigDeploymentMetadata,
 			}
 		);
 
@@ -357,5 +371,6 @@ export async function runDeployCommandHandler(
 			);
 		}
 		cleanupDestination(buildProps.destination);
+		await autoConfigDeploymentMetadata?.cleanup?.();
 	}
 }

@@ -112,6 +112,7 @@ import type { FormData } from "undici";
  * Consumer-specific values and integrations injected into `deploy()`.
  */
 export type DeployOptions = {
+	autoConfigDeploymentMetadata?: { adapterId?: string; projectKind?: string; deployMode?: "persistent" | "no-write"; sourceCategory?: string; };
 	deployCommand: string;
 	versionsDeployCommand: string;
 	d1ListCommand: string;
@@ -166,6 +167,9 @@ export default async function deploy(
 
 	const result = await deployWorker(props, config, buildResult, options);
 
+	const autoConfigDeploymentMetadata = options.autoConfigDeploymentMetadata;
+	const liveUrl = getLiveUrl(result.targets);
+	const urlVerification = await maybeVerifyDeploymentUrl(liveUrl, autoConfigDeploymentMetadata, props.dryRun ?? false);
 	writeOutput({
 		type: "deploy",
 		version: 1,
@@ -175,6 +179,12 @@ export default async function deploy(
 		targets: result.targets,
 		wrangler_environment: props.env,
 		worker_name_overridden: props.workerNameOverridden ?? false,
+		auto_config_adapter_id: autoConfigDeploymentMetadata?.adapterId,
+		auto_config_project_kind: autoConfigDeploymentMetadata?.projectKind,
+		auto_config_deploy_mode: autoConfigDeploymentMetadata?.deployMode,
+		auto_config_source_category: autoConfigDeploymentMetadata?.sourceCategory,
+		live_url: autoConfigDeploymentMetadata ? liveUrl : undefined,
+		url_verification: urlVerification,
 		bundle_size: result.bundleSize
 			? {
 					raw_bytes: result.bundleSize.size,
@@ -938,4 +948,42 @@ async function deployWorker(
 		targets: targets ?? [],
 		bundleSize,
 	};
+}
+
+type DeploymentUrlVerification =
+	| { status: "success"; status_code: number }
+	| { status: "failure"; status_code?: number; error?: "request-failed" }
+	| { status: "skipped"; reason: "no-url" | "dry-run" | "not-autoconfig" };
+
+function getLiveUrl(targets: string[] | undefined): string | undefined {
+	return targets?.find((target) => /^https?:\/\//.test(target));
+}
+
+async function maybeVerifyDeploymentUrl(
+	liveUrl: string | undefined,
+	autoConfigDeploymentMetadata: DeployOptions["autoConfigDeploymentMetadata"],
+	dryRun: boolean
+): Promise<DeploymentUrlVerification | undefined> {
+	if (!autoConfigDeploymentMetadata) {
+		return undefined;
+	}
+	if (dryRun) {
+		return { status: "skipped", reason: "dry-run" };
+	}
+	if (!liveUrl) {
+		return { status: "skipped", reason: "no-url" };
+	}
+
+	try {
+		const response = await fetch(liveUrl, {
+			method: "GET",
+			signal: AbortSignal.timeout(5_000),
+		});
+		if (response.ok) {
+			return { status: "success", status_code: response.status };
+		}
+		return { status: "failure", status_code: response.status };
+	} catch {
+		return { status: "failure", error: "request-failed" };
+	}
 }

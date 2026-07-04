@@ -7,8 +7,6 @@ import {
 	checkWorkerNameValidity,
 	getWorkerName,
 	NpmPackageManager,
-	parsePackageJSON,
-	readFileSync,
 } from "@cloudflare/workers-utils";
 import {
 	AutoConfigDetectionError,
@@ -22,9 +20,15 @@ import {
 import { detectFramework } from "./framework-detection";
 import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
+import {
+	detectProjectAdapter,
+	getPackageManager,
+	readPackageJson,
+} from "./project-adapters";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
+	DeployIntent,
 } from "../types";
 import type { DetectedFramework } from "./framework-detection";
 import type { PackageManager } from "@cloudflare/workers-utils";
@@ -141,6 +145,7 @@ export async function getDetailsForAutoConfig({
 	target = "cf",
 	outputDir: requestedOutputDir,
 	context,
+	deployIntent,
 }: {
 	/** The path to the project, defaults to cwd. */
 	projectPath?: string;
@@ -160,6 +165,8 @@ export async function getDetailsForAutoConfig({
 	outputDir?: string;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
 	context: AutoConfigContext;
+	/** Optional deploy intent preserving the original positional target shape. */
+	deployIntent?: DeployIntent;
 }): Promise<AutoConfigDetails> {
 	const { logger } = context;
 
@@ -184,6 +191,27 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
+	const adapterDetails = await detectProjectAdapter({
+		projectPath,
+		wranglerConfigPath: wranglerConfig?.configPath,
+		context,
+		deployIntent,
+	});
+	if (adapterDetails) {
+		return adapterDetails;
+	}
+
+	if (deployIntent?.trigger === "explicit-target") {
+		const packageJson = readPackageJson(projectPath);
+		return {
+			configured: true,
+			projectPath,
+			workerName: getWorkerName(packageJson?.name, projectPath),
+			packageJson,
+			packageManager: getPackageManager(projectPath),
+		};
+	}
+
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
 	const nodeModulesPaths = getNodeModulesPaths(projectPath, workspaceRoot);
@@ -202,16 +230,8 @@ export async function getDetailsForAutoConfig({
 	let framework = useStaticAssets
 		? getFrameworkClassInstance(staticFramework.id, target)
 		: detectedFrameworkInstance;
-	const packageJsonPath = resolve(projectPath, "package.json");
-
-	let packageJson: PackageJSON | undefined;
-
-	try {
-		packageJson = parsePackageJSON(
-			readFileSync(packageJsonPath),
-			packageJsonPath
-		);
-	} catch {
+	const packageJson = readPackageJson(projectPath);
+	if (!packageJson) {
 		logger.debug("No package.json found when running autoconfig");
 	}
 
@@ -489,6 +509,9 @@ export function displayAutoConfigDetails(
 	logger.log(displayOptions?.heading ?? "Detected Project Settings:");
 
 	logger.log(brandColor(" - Worker Name:"), autoConfigDetails.workerName);
+	if (autoConfigDetails.adapterName) {
+		logger.log(brandColor(" - Project Type:"), autoConfigDetails.adapterName);
+	}
 	if (autoConfigDetails.framework) {
 		logger.log(brandColor(" - Framework:"), autoConfigDetails.framework.name);
 	}
@@ -497,6 +520,23 @@ export function displayAutoConfigDetails(
 	}
 	if (autoConfigDetails.outputDir) {
 		logger.log(brandColor(" - Output Directory:"), autoConfigDetails.outputDir);
+	}
+	if (autoConfigDetails.confidence) {
+		logger.log(
+			brandColor(" - Detection Confidence:"),
+			autoConfigDetails.confidence
+		);
+	}
+	if (autoConfigDetails.evidence?.length) {
+		logger.log(
+			brandColor(" - Evidence:"),
+			autoConfigDetails.evidence.join(", ")
+		);
+	}
+	if (autoConfigDetails.configurationPlan?.warnings?.length) {
+		for (const warning of autoConfigDetails.configurationPlan.warnings) {
+			logger.warn(warning);
+		}
 	}
 
 	logger.log("");
@@ -545,58 +585,60 @@ export async function confirmAutoConfigDetails(
 
 	updatedAutoConfigDetails.workerName = workerName;
 
-	const frameworkId = await dialogs.select(
-		"What framework is your application using?",
-		{
-			choices: allFrameworksInfos.map((f) => ({
-				title: f.name,
-				value: f.id,
-				description:
-					f.id === staticFramework.id
-						? "No framework at all, or a static framework such as Vite, React or Gatsby."
-						: `The ${f.name} JavaScript framework`,
-			})),
-			defaultOption: allFrameworksInfos.findIndex((framework) => {
-				if (!autoConfigDetails?.framework) {
-					// If there is no framework already detected let's default to the static one
-					// (note: there should always be a framework at this point)
-					return framework.id === staticFramework.id;
-				}
-				return autoConfigDetails.framework.id === framework.id;
-			}),
-		}
-	);
+	if (autoConfigDetails.framework) {
+		const frameworkId = await dialogs.select(
+			"What framework is your application using?",
+			{
+				choices: allFrameworksInfos.map((f) => ({
+					title: f.name,
+					value: f.id,
+					description:
+						f.id === staticFramework.id
+							? "No framework at all, or a static framework such as Vite, React or Gatsby."
+							: `The ${f.name} JavaScript framework`,
+				})),
+				defaultOption: allFrameworksInfos.findIndex(
+					(framework) => autoConfigDetails.framework?.id === framework.id
+				),
+			}
+		);
 
 	updatedAutoConfigDetails.framework = getFrameworkClassInstance(
 		frameworkId,
 		target
 	);
 
-	const outputDir = await dialogs.prompt(
-		"What directory contains your applications' output/asset files?",
-		{
-			defaultValue: autoConfigDetails.outputDir ?? "",
-			validate: async (value) => {
-				if (!value) {
-					return "Please provide a valid directory path";
-				}
-				const valueStats = statSync(resolve(value), { throwIfNoEntry: false });
-				if (!valueStats) {
-					// If the path doesn't point to anything that's fine since the directory will likely be
-					// generated by the build command anyways
+		const outputDir = await dialogs.prompt(
+			"What directory contains your applications' output/asset files?",
+			{
+				defaultValue: autoConfigDetails.outputDir ?? "",
+				validate: async (value) => {
+					if (!value) {
+						return "Please provide a valid directory path";
+					}
+					const valueStats = statSync(resolve(value), {
+						throwIfNoEntry: false,
+					});
+					if (!valueStats) {
+						// If the path doesn't point to anything that's fine since the directory will likely be
+						// generated by the build command anyways
+						return true;
+					}
+					if (valueStats?.isFile()) {
+						return "Please select a directory";
+					}
 					return true;
-				}
-				if (valueStats?.isFile()) {
-					return "Please select a directory";
-				}
-				return true;
-			},
-		}
-	);
+				},
+			}
+		);
 
-	updatedAutoConfigDetails.outputDir = outputDir;
+		updatedAutoConfigDetails.outputDir = outputDir;
+	}
 
-	if (autoConfigDetails.buildCommand || autoConfigDetails.packageJson) {
+	if (
+		!autoConfigDetails.configurationPlan &&
+		(autoConfigDetails.buildCommand || autoConfigDetails.packageJson)
+	) {
 		const buildCommand = await dialogs.prompt(
 			"What is your application's build command?",
 			{

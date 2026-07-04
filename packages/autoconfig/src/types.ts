@@ -28,7 +28,7 @@ type AutoConfigDetailsBase = {
 	/** Whether the project is already configured (no autoconfig required) */
 	configured: boolean;
 	/** Details about the detected framework. It can be a JS framework or 'Static' if no actual JS framework is used. */
-	framework: Framework;
+	framework?: Framework;
 	/** The dev command used to run the project locally (if any) */
 	devCommand?: string;
 	/** The build command used to build the project (if any) */
@@ -40,11 +40,27 @@ type AutoConfigDetailsBase = {
 	/** Environment required when running the detected dev or build commands. */
 	env?: Readonly<Record<string, string>>;
 	/** The output directory (if no framework is used, points to the raw asset files) */
-	outputDir: string;
+	outputDir?: string;
 	/** The detected package manager for the project */
 	packageManager: PackageManager;
 	/** Whether the current path is at the root of a workspace */
 	isWorkspaceRoot?: boolean;
+	/** The broad project type selected by the adapter model. */
+	projectKind?: ProjectKind;
+	/** The selected adapter identifier. */
+	adapterId?: string;
+	/** The selected adapter display name. */
+	adapterName?: string;
+	/** Detection confidence for the selected adapter. */
+	confidence?: DetectionConfidence;
+	/** Sanitized, path-free detection evidence to show users and report in summaries. */
+	evidence?: string[];
+	/** Coarse source category for explicit targets. Never contains a raw path. */
+	sourceCategory?: SourceCategory;
+	/** Adapter-owned configuration plan. Framework projects continue to use Framework.configure(). */
+	configurationPlan?: ConfigurationPlan;
+	/** Adapter-private deployment target details used by Wrangler to prepare no-write deploys. */
+	deployTarget?: DeployTarget;
 };
 
 export type AutoConfigDetailsForConfiguredProject = Optional<
@@ -89,15 +105,90 @@ export type AutoConfigOptions = {
 	enableTargetCliInstallation?: boolean;
 };
 
+export type ProjectKind =
+	| "framework"
+	| "static-assets"
+	| "single-file-site"
+	| "worker-entrypoint"
+	| "node-http-server"
+	| "container-image";
+
+export type DetectionConfidence = "high" | "medium" | "low";
+
+export type SourceCategory =
+	| "html-file"
+	| "static-file"
+	| "directory"
+	| "package-app"
+	| "worker-script"
+	| "dockerfile"
+	| "unknown";
+
+export type DeployIntent = {
+	trigger: "bare" | "explicit-target" | "setup";
+	originalTarget?: string;
+	targetKind?: "file" | "directory" | "missing";
+	currentDeployInterpretation?: "script" | "assets" | "none";
+	sourceCategory?: SourceCategory;
+	staticAssetsAutoConfig?: boolean;
+	containersAutoConfig?: boolean;
+};
+
+export type ConfigurationPlan = {
+	mode: "persistent" | "no-write";
+	wranglerConfig?: RawConfig | null;
+	packageJsonScripts?: Record<string, string>;
+	dependencies?: Array<{ name: string; dev?: boolean }>;
+	filesToCreate?: Array<{ path: string; contents: string }>;
+	commands?: Array<{
+		command: string;
+		when: "setup" | "build";
+		label?: string;
+	}>;
+	warnings?: string[];
+	generatedFiles?: string[];
+	deploy?: {
+		assets?: string;
+		script?: string;
+		generatedAssetsDirectory?: "temporary" | "existing" | "build-output";
+	};
+	summaryFields?: Record<string, string | number | boolean>;
+};
+
+export type DeployTarget =
+	| {
+			type: "single-html-file";
+			sourcePath: string;
+	  }
+	| {
+			type: "assets-directory";
+			assetsDirectory: string;
+	  }
+	| {
+			type: "static-app-output";
+			assetsDirectory: string;
+	  };
+
 export type AutoConfigSummary = {
 	scripts: Record<string, string>;
 	workerConfig?: WorkerConfig;
 	buildConfig?: BuildConfig;
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
-	outputDir: string;
+	outputDir?: string;
 	frameworkId?: string;
 	buildCommand?: string;
 	deployCommand?: string;
 	versionCommand?: string;
+	projectKind?: ProjectKind;
+	adapterId?: string;
+	adapterName?: string;
+	confidence?: DetectionConfidence;
+	deployMode?: "persistent" | "no-write";
+	sourceCategory?: SourceCategory;
+	evidence?: string[];
+	warnings?: string[];
+	generatedFiles?: string[];
+	deploy?: ConfigurationPlan["deploy"];
+	summaryFields?: Record<string, string | number | boolean>;
 };
