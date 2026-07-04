@@ -131,6 +131,14 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	auto_config_source_category?: string;
 	/** The first live URL reported by deploy for auto-config driven deployments. */
 	live_url?: string;
+	/** Container application changes made during this deployment, if any. */
+	containers?: Array<{
+		name: string;
+		application_id?: string;
+		action: "created" | "modified" | "unchanged";
+		image?: string;
+		image_digest?: string;
+	}>;
 }
 
 interface OutputEntryPreview extends OutputEntryBase<"preview"> {

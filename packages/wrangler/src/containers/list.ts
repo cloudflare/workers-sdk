@@ -96,6 +96,7 @@ function appsToJsonOutput(apps: DashApplication[]) {
 		name: app.name,
 		state: deriveContainerState(app),
 		instances: app.instances,
+		health: app.health,
 		image: app.image,
 		version: app.version,
 		updated_at: app.updated_at,

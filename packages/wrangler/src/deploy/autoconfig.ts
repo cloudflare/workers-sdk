@@ -109,6 +109,8 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	aborted: boolean;
 	deploymentMetadata?: AutoConfigDeploymentMetadata;
 }> {
+	throwIfConfiguredContainerDockerfileTarget(args, config);
+
 	const deployIntent = getDeployIntent(args, config);
 	const shouldRunBareAutoConfig =
 		args.autoconfig &&
@@ -182,7 +184,10 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				const autoConfigSummary = await runAutoConfigLogic(details, {
 					context: autoConfigContext,
 					dryRun: !!args.dryRun,
-					skipConfirmations: options.skipConfirmations === true || details.configurationPlan?.mode === "no-write",
+					skipConfirmations: options.skipConfirmations === true || shouldSkipAutoConfigConfirmations(
+						details,
+						deployIntent
+					),
 				});
 
 				writeOutput({
@@ -211,7 +216,10 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 						autoConfigSummary
 					);
 				} else {
-					deploymentMetadata = getDeploymentMetadata(details, autoConfigSummary);
+					deploymentMetadata = getDeploymentMetadata(
+						details,
+						autoConfigSummary
+					);
 					applyPersistentAutoConfigDeployTarget(args, deployIntent, details);
 
 					// If autoconfig worked, there should now be a new config file, and so we need to read config again
@@ -243,6 +251,47 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	return { config, aborted: false };
 }
 
+function throwIfConfiguredContainerDockerfileTarget<
+	Args extends AutoConfigArgs,
+>(args: Args, config: Config): void {
+	if (
+		!config.configPath ||
+		!args.path ||
+		!config.containers?.length ||
+		!isDockerfileName(args.path)
+	) {
+		return;
+	}
+
+	throw new UserError(
+		"This project is already configured for Containers. Run `wrangler deploy` to deploy the Worker and configured Dockerfile container. `wrangler deploy Dockerfile` treats Dockerfile as a Worker entrypoint and is not supported in configured projects.",
+		{
+			telemetryMessage:
+				"autoconfig configured containers dockerfile target unsupported",
+		}
+	);
+}
+
+function shouldSkipAutoConfigConfirmations(
+	details: AutoConfigDetails,
+	deployIntent: DeployIntent | undefined
+): boolean | undefined {
+	if (details.configurationPlan?.mode === "no-write") {
+		return true;
+	}
+
+	if (
+		isNonInteractiveOrCI() &&
+		deployIntent?.trigger === "explicit-target" &&
+		deployIntent.sourceCategory === "dockerfile" &&
+		details.adapterId === "dockerfile-container"
+	) {
+		return true;
+	}
+
+	return undefined;
+}
+
 function applyPersistentAutoConfigDeployTarget<Args extends AutoConfigArgs>(
 	args: Args,
 	deployIntent: DeployIntent | undefined,
@@ -259,8 +308,8 @@ function applyPersistentAutoConfigDeployTarget<Args extends AutoConfigArgs>(
 	const generatedConfig = details.configurationPlan.wranglerConfig;
 	const generatedConfigHasDeployTarget = Boolean(
 		generatedConfig?.main ||
-			generatedConfig?.assets ||
-			generatedConfig?.containers?.length
+		generatedConfig?.assets ||
+		generatedConfig?.containers?.length
 	);
 	if (!generatedConfigHasDeployTarget) {
 		return;
@@ -331,10 +380,15 @@ function getSourceCategory(
 		return "worker-script";
 	}
 	const name = path.basename(target);
-	if (name === "Dockerfile" || name === "Containerfile") {
+	if (isDockerfileName(name)) {
 		return "dockerfile";
 	}
 	return targetKind === "file" ? "static-file" : "unknown";
+}
+
+function isDockerfileName(target: string): boolean {
+	const name = path.basename(target);
+	return name === "Dockerfile" || name === "Containerfile";
 }
 
 async function prepareNoWriteDeployment<Args extends AutoConfigArgs>(

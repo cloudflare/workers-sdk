@@ -443,9 +443,20 @@ async function detectContainer(
 		return undefined;
 	}
 
-	if (input.context.isNonInteractiveOrCI?.() ?? false) {
+	const isExplicitDockerfileTarget =
+		input.deployIntent.trigger === "explicit-target" &&
+		input.deployIntent.sourceCategory === "dockerfile";
+	const isAllowedSetup =
+		input.deployIntent.trigger === "setup" &&
+		input.deployIntent.allowNonInteractivePersistentSetup === true;
+
+	if (
+		(input.context.isNonInteractiveOrCI?.() ?? false) &&
+		!isExplicitDockerfileTarget &&
+		!isAllowedSetup
+	) {
 		throw new FatalError(
-			"Dockerfile-to-Containers auto-configuration currently requires an interactive local session.",
+			"Dockerfile-to-Containers auto-configuration in non-interactive sessions requires an explicit Dockerfile target or `wrangler setup --yes`.",
 			{ telemetryMessage: "autoconfig containers non interactive unsupported" }
 		);
 	}

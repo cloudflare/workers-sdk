@@ -346,29 +346,9 @@ export async function pushImageIfChanged({
 		);
 		const [, hash] = remoteDigest.split("@");
 
-		logger.debug(
-			`'docker manifest inspect -v ${resolveImageName(account.external_account_id, remoteDigest, complianceConfig)}:`
-		);
-		// NOTE: this is an experimental docker command so the API may change
-		// and break this flow. Hopefully not!
-		// http://docs.docker.com/reference/cli/docker/manifest/inspect/
-		// Checks if this image already exists in the managed registry. If this
-		// succeeds it means this image already exists remotely. If this errors,
-		// it probably doesn't exist and we should push, which we will do in the
-		// catch block.
-		const remoteManifest = runDockerCmdWithOutput(pathToDocker, [
-			"manifest",
-			"inspect",
-			"-v",
-			resolveImageName(
-				account.external_account_id,
-				remoteDigest,
-				complianceConfig
-			),
-		]);
-		const parsedRemoteManifest = JSON.parse(remoteManifest);
-
-		if (parsedRemoteManifest.Descriptor.digest === hash) {
+		const remoteManifestDigest = tryFindRemoteManifestDigest(pathToDocker, resolveImageName(account.external_account_id, remoteDigest, complianceConfig));
+		if (remoteManifestDigest === hash) {
+			logger.log("Dockerfile-backed Containers are built locally during deploy to determine whether the image changed. To deploy only Worker changes without building or updating Containers, pass --containers-rollout=none.");
 			logger.log("Image already exists remotely, skipping push");
 			if (cleanupSourceTag !== false) {
 				logger.debug(
@@ -866,4 +846,29 @@ export async function dockerBuild(
 		},
 		ready,
 	};
+}
+
+function tryFindRemoteManifestDigest(
+	pathToDocker: string,
+	remoteImageRef: string
+): string | undefined {
+	logger.debug(`'docker manifest inspect -v ${remoteImageRef}':`);
+	try {
+		return findManifestDigest(
+			runDockerCmdWithOutput(pathToDocker, [
+				"manifest",
+				"inspect",
+				"-v",
+				remoteImageRef,
+			])
+		);
+	} catch (error) {
+		logger.debug(
+			`Remote image manifest ${remoteImageRef} was not found or could not be inspected; image will be pushed.`
+		);
+		if (error instanceof Error) {
+			logger.debug(error.message);
+		}
+		return undefined;
+	}
 }

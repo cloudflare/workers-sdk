@@ -132,6 +132,7 @@ export type DeployIntent = {
 	sourceCategory?: SourceCategory;
 	staticAssetsAutoConfig?: boolean;
 	containersAutoConfig?: boolean;
+	allowNonInteractivePersistentSetup?: boolean;
 };
 
 export type ConfigurationPlan = {

@@ -5,6 +5,7 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, assert, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { OutputEntry } from "../output";
 
@@ -23,9 +24,11 @@ vi.mock("../package-manager", async (importOriginal) => {
 
 describe("wrangler setup", () => {
 	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
 	runInTempDir();
 
 	afterEach(() => {
+		setIsTTY(true);
 		clearOutputFilePath();
 	});
 
@@ -155,6 +158,41 @@ describe("wrangler setup", () => {
 		await runWrangler("setup --no-install-wrangler");
 
 		expect(std.out).toContain("You can now deploy with pnpm run deploy");
+	});
+
+	test("should setup Dockerfile Containers projects non-interactively with --yes", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		await seed({
+			Dockerfile: "FROM node:22\nEXPOSE 3000\n",
+			"package.json": JSON.stringify({ name: "container-project" }),
+		});
+
+		vi.spyOn(cliPackages, "installWrangler").mockImplementation(async () => {});
+		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
+
+		await runWrangler(
+			"setup --yes --no-install-wrangler --experimental-auto-config-containers"
+		);
+
+		const wranglerConfig = JSON.parse(await readFile("wrangler.jsonc", "utf8"));
+		expect(wranglerConfig).toMatchObject({
+			name: "container-project",
+			main: "src/worker.js",
+			containers: [
+				{
+					name: "container-project",
+					class_name: "AppContainer",
+					image: "./Dockerfile",
+					max_instances: 1,
+				},
+			],
+		});
+		expect(await readFile("src/worker.js", "utf8")).toContain('PORT: "3000"');
+		expect(std.out).toContain(
+			"🎉 Your project is now setup to deploy to Cloudflare"
+		);
 	});
 
 	test("should output an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH", async ({
