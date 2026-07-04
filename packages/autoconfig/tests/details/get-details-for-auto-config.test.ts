@@ -491,7 +491,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			});
 		});
 
-		it("rejects Dockerfile-to-Containers auto-configuration in non-interactive sessions", async ({
+		it("rejects bare Dockerfile-to-Containers auto-configuration in non-interactive sessions", async ({
 			expect,
 		}) => {
 			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\n");
@@ -505,8 +505,59 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					},
 				})
 			).rejects.toThrow(
-				"Dockerfile-to-Containers auto-configuration currently requires an interactive local session."
+				"Dockerfile-to-Containers auto-configuration in non-interactive sessions requires an explicit Dockerfile target or `wrangler setup --yes`."
 			);
+		});
+
+		it("allows setup --yes Dockerfile-to-Containers auto-configuration in non-interactive sessions", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context: createMockContext({ isNonInteractiveOrCI: () => true }),
+					deployIntent: {
+						trigger: "setup",
+						containersAutoConfig: true,
+						allowNonInteractivePersistentSetup: true,
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					summaryFields: {
+						port: 3000,
+					},
+				},
+			});
+		});
+
+		it("allows explicit Dockerfile targets in non-interactive sessions", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context: createMockContext({ isNonInteractiveOrCI: () => true }),
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+						containersAutoConfig: true,
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					summaryFields: {
+						port: 3000,
+					},
+				},
+			});
 		});
 	});
 

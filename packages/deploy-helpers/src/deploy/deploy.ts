@@ -83,6 +83,18 @@ import type {
 } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
+export type ContainerDeploymentAction = "created" | "modified" | "unchanged";
+
+export type ContainerDeployResult = {
+	name: string;
+	applicationId?: string;
+	action: ContainerDeploymentAction;
+	image?: string;
+	imageDigest?: string;
+};
+
+export type ContainersRollout = "gradual" | "immediate" | "none";
+
 /**
  * Wrangler-specific functions injected into `deploy()`. These remain in
  * wrangler because they depend on wrangler-only systems (account selection,
@@ -126,7 +138,7 @@ export type DeployCallbacks = {
 				config: Config,
 				normalisedContainerConfig: ContainerNormalizedConfig[],
 				args: { versionId: string; accountId: string; scriptName: string }
-		  ) => Promise<void>)
+		  ) => Promise<ContainerDeployResult[]>)
 		| undefined;
 	analyseBundle:
 		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
@@ -144,6 +156,8 @@ export default async function deploy(
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
+	containerDeployments?: ContainerDeployResult[];
+	containersRollout?: ContainersRollout;
 }> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
@@ -204,6 +218,10 @@ export default async function deploy(
 	const normalisedContainerConfig = callbacks.getNormalizedContainerOptions
 		? await callbacks.getNormalizedContainerOptions(config, props)
 		: [];
+	const containersRollout: ContainersRollout | undefined =
+		normalisedContainerConfig.length
+			? (props.containersRollout ?? "gradual")
+			: undefined;
 	const {
 		modules,
 		dependencies,
@@ -739,23 +757,35 @@ export default async function deploy(
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
+	let containerDeployments: ContainerDeployResult[] | undefined;
 	if (
 		normalisedContainerConfig.length &&
 		props.containersRollout !== "none" &&
 		callbacks.deployContainers
 	) {
 		assert(versionId && accountId);
-		await callbacks.deployContainers(config, normalisedContainerConfig, {
-			versionId,
-			accountId,
-			scriptName,
-		});
+		containerDeployments = await callbacks.deployContainers(
+			config,
+			normalisedContainerConfig,
+			{
+				versionId,
+				accountId,
+				scriptName,
+			}
+		);
+		printContainerReadinessMessage(containerDeployments);
 	}
 
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag, assetUploadStats };
+		return {
+			versionId,
+			workerTag,
+			assetUploadStats,
+			containerDeployments,
+			containersRollout,
+		};
 	}
 	assert(accountId);
 	// deploy triggers
@@ -778,5 +808,27 @@ export default async function deploy(
 		workerTag,
 		assetUploadStats,
 		targets: targets ?? [],
+		containerDeployments,
+		containersRollout,
 	};
+}
+
+function printContainerReadinessMessage(
+	containerDeployments: ContainerDeployResult[] | undefined
+): void {
+	const updatedContainers = containerDeployments?.filter(
+		(container) =>
+			container.action === "created" || container.action === "modified"
+	);
+	if (!updatedContainers?.length) {
+		return;
+	}
+
+	const statusCommand =
+		updatedContainers.length === 1 && updatedContainers[0].applicationId
+			? `wrangler containers instances ${updatedContainers[0].applicationId}`
+			: "wrangler containers list";
+	logger.log(
+		`Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`${statusCommand}\`.`
+	);
 }

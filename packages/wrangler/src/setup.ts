@@ -75,6 +75,7 @@ export const setupCommand = createCommand({
 				deployIntent: {
 					trigger: "setup",
 					containersAutoConfig: args.experimentalAutoConfigContainers,
+					allowNonInteractivePersistentSetup: args.yes,
 				},
 			});
 		} catch (error) {

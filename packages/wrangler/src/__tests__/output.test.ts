@@ -300,8 +300,7 @@ describe("writeOutput()", () => {
 				errors: [
 					{
 						code: 10068,
-						message:
-							"The uploaded script has no registered event handlers.",
+						message: "The uploaded script has no registered event handlers.",
 					},
 				],
 			},

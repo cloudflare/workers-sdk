@@ -584,6 +584,41 @@ export default{
 			);
 		});
 
+		it("should show a targeted error for Dockerfile targets in configured Containers projects", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				name: "test-name",
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+				durable_objects: {
+					bindings: [
+						{
+							name: "APP_CONTAINER",
+							class_name: "AppContainer",
+						},
+					],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["AppContainer"] }],
+				containers: [
+					{
+						name: "test-name",
+						class_name: "AppContainer",
+						image: "./Dockerfile",
+					},
+				],
+			});
+			fs.writeFileSync(
+				"index.js",
+				"export class AppContainer {}; export default {};"
+			);
+			fs.writeFileSync("Dockerfile", "FROM scratch");
+
+			await expect(runWrangler("deploy Dockerfile")).rejects.toThrow(
+				"This project is already configured for Containers. Run `wrangler deploy` to deploy the Worker and configured Dockerfile container."
+			);
+		});
+
 		it("should keep plain explicit Worker scripts on the existing deploy path without config", async ({
 			expect,
 		}) => {
@@ -641,7 +676,9 @@ export default{
 				"deploy server.js --name test-name --compatibility-date 2024-01-01"
 			);
 
-			expect(JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"))).toMatchObject({
+			expect(
+				JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"))
+			).toMatchObject({
 				main: "src/worker.js",
 			});
 			expect(uploadedEntry).toContain("httpServerHandler");
@@ -691,7 +728,9 @@ export default{
 				"deploy src/index.ts --name test-name --compatibility-date 2024-01-01"
 			);
 
-			expect(JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"))).toMatchObject({
+			expect(
+				JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"))
+			).toMatchObject({
 				main: "src/worker.ts",
 			});
 			expect(uploadedEntry).toContain("httpServerHandler");

@@ -196,6 +196,48 @@ describe("containers instances", () => {
 		`);
 	});
 
+	it("should show a diagnostic hint for stopped or unhealthy instances", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		msw.use(
+			http.get(
+				"*/dash/applications/*/instances",
+				async () => {
+					return HttpResponse.json({
+						success: true,
+						result: {
+							instances: [
+								{
+									...MOCK_INSTANCES.instances[0],
+									current_placement: {
+										...MOCK_INSTANCES.instances[0].current_placement,
+										status: {
+											health: "stopped",
+											container_status: "stopped",
+										},
+									},
+								},
+							],
+							durable_objects: [],
+						},
+						result_info: { per_page: 50 },
+						errors: [],
+						messages: [],
+					});
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler(`containers instances ${APP_ID}`);
+
+		expect(std.out).toContain(
+			`Some instances are stopped or unhealthy. Run \`wrangler containers instances ${APP_ID} --json\` for placement status details.`
+		);
+	});
+
 	it("should reject --per-page 0", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -318,6 +360,10 @@ describe("containers instances", () => {
 			expect(output[0]).toEqual({
 				id: "11111111-1111-1111-1111-111111111111",
 				state: "running",
+				status: {
+					health: "running",
+					container_status: "running",
+				},
 				location: "sfo06",
 				version: 3,
 				created: "2025-06-01T10:00:00Z",
@@ -325,6 +371,9 @@ describe("containers instances", () => {
 			expect(output[1]).toEqual({
 				id: "22222222-2222-2222-2222-222222222222",
 				state: "provisioning",
+				status: {
+					health: "placed",
+				},
 				location: "iad01",
 				version: 2,
 				created: "2025-06-01T11:00:00Z",
@@ -357,6 +406,7 @@ describe("containers instances", () => {
 				id: "do-instance-1111",
 				name: "random-76",
 				state: "running",
+				status: { health: "running", container_status: "running" },
 				location: "dfw01",
 				version: 57,
 				created: "2025-06-01T10:00:00Z",
@@ -366,6 +416,7 @@ describe("containers instances", () => {
 				id: "do-instance-2222",
 				name: "random-88",
 				state: "inactive",
+				status: null,
 				location: null,
 				version: null,
 				created: "2025-05-26T10:00:00Z",

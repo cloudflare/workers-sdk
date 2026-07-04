@@ -155,14 +155,21 @@ export const deployCommand = createCommand({
 
 			const buildResult = await buildWorker(buildProps, config);
 
-			const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
-				await deploy(props, config, buildResult, {
-					syncWorkersSite,
-					getNormalizedContainerOptions,
-					buildContainer,
-					deployContainers,
-					analyseBundle,
-				});
+			const {
+				sourceMapSize,
+				versionId,
+				workerTag,
+				assetUploadStats,
+				targets,
+				containerDeployments,
+				containersRollout,
+			} = await deploy(props, config, buildResult, {
+				syncWorkersSite,
+				getNormalizedContainerOptions,
+				buildContainer,
+				deployContainers,
+				analyseBundle,
+			});
 			const liveUrl = getLiveUrl(targets);
 
 			writeOutput({
@@ -180,6 +187,14 @@ export const deployCommand = createCommand({
 				auto_config_source_category:
 					autoConfigDeploymentMetadata?.sourceCategory,
 				live_url: autoConfigDeploymentMetadata ? liveUrl : undefined,
+				containers_rollout: containersRollout,
+				containers: containerDeployments?.map((container) => ({
+					name: container.name,
+					application_id: container.applicationId,
+					action: container.action,
+					image: container.image,
+					image_digest: container.imageDigest,
+				})),
 			});
 
 			metrics.sendMetricsEvent(

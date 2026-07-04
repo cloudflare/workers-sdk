@@ -15,6 +15,7 @@ import {
 import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { clearCachedAccount } from "../../cloudchamber/locations";
+import { clearOutputFilePath } from "../../output";
 import * as user from "../../user";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockServiceScriptData } from "../deploy/helpers";
@@ -57,6 +58,7 @@ describe("wrangler deploy with containers", () => {
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 	});
 	afterEach(() => {
+		clearOutputFilePath();
 		vi.unstubAllEnvs();
 	});
 	it("should fail early if no docker is detected when deploying a container from a dockerfile", async ({
@@ -156,6 +158,7 @@ describe("wrangler deploy with containers", () => {
 			Uploaded test-name (TIMINGS)
 			Building image my-container:Galaxy
 			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -193,6 +196,75 @@ describe("wrangler deploy with containers", () => {
 
 			"
 		`);
+	});
+	it("should write container deployment details to WRANGLER_OUTPUT_FILE_PATH", async ({
+		expect,
+	}) => {
+		const outputFile = path.resolve("output.json");
+		mockGetVersion("Galaxy-Class");
+		setupDockerMocks(expect, "my-container", "Galaxy");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+		});
+		mockGetApplications([]);
+		fs.writeFileSync("./Dockerfile", "FROM scratch");
+		mockGenerateImageRegistryCredentials(expect);
+		msw.use(
+			http.post("*/applications", async ({ request }) => {
+				const json = (await request.json()) as CreateApplicationRequest;
+				expect(json).toMatchObject({
+					name: "my-container",
+					configuration: {
+						image:
+							getCloudflareContainerRegistry() +
+							"/some-account-id/my-container@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					},
+				});
+
+				return HttpResponse.json({
+					success: true,
+					result: {
+						id: "app-id",
+						...json,
+					},
+				});
+			})
+		);
+
+		await runWrangler("deploy index.js", {
+			...process.env,
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		});
+
+		expect(std.out).toContain(
+			"Container applications may take a few minutes to become ready."
+		);
+		expect(std.out).toContain("wrangler containers instances app-id");
+
+		const deployOutputEntry = fs
+			.readFileSync(outputFile, "utf8")
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line))
+			.find((entry) => entry.type === "deploy");
+
+		expect(deployOutputEntry).toMatchObject({
+			type: "deploy",
+			containers_rollout: "gradual",
+			containers: [
+				{
+					name: "my-container",
+					application_id: "app-id",
+					action: "created",
+					image:
+						getCloudflareContainerRegistry() +
+						"/some-account-id/my-container@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					image_digest:
+						"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			],
+		});
 	});
 	it("should be able to deploy a snapshot-enabled container from a dockerfile", async ({
 		expect,
@@ -296,6 +368,7 @@ describe("wrangler deploy with containers", () => {
 			- my-container (registry.cloudflare.com/hello:world)
 
 			Uploaded test-name (TIMINGS)
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -389,6 +462,7 @@ describe("wrangler deploy with containers", () => {
 			- my-container (registry.cloudflare.com/hello:world)
 
 			Uploaded test-name (TIMINGS)
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -492,6 +566,7 @@ describe("wrangler deploy with containers", () => {
 			- my-container (registry.cloudflare.com/hello:world)
 
 			Uploaded test-name (TIMINGS)
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -605,6 +680,7 @@ describe("wrangler deploy with containers", () => {
 				Uploaded test-name (TIMINGS)
 				Building image my-container:Galaxy
 				Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+				Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
@@ -674,6 +750,7 @@ describe("wrangler deploy with containers", () => {
 			Uploaded test-name (TIMINGS)
 			Building image my-container:Galaxy
 			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -2389,6 +2466,7 @@ describe("wrangler deploy with containers", () => {
 				- my-container (registry.cloudflare.com/hello:world)
 
 				Uploaded test-name (TIMINGS)
+				Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
