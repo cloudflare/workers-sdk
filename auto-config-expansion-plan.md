@@ -1,7 +1,8 @@
 # Wrangler Auto-Config Expansion Plan
 
-This note researches whether Wrangler's existing automatic configuration feature can grow from "detect supported web frameworks and configure Workers" into a broader "run `wrangler deploy` and Wrangler figures out what this project is" experience. It focuses on two near-term examples:
+This note researches whether Wrangler's existing automatic configuration feature can grow from "detect supported web frameworks and configure Workers" into a broader "run `wrangler deploy` and Wrangler figures out what this project is" experience. It focuses on three near-term examples:
 
+- Single file, static folder, and simple web app deployments that should eventually feel as direct as `dply index.html`, `dply ./my-website`, or `dply ./my-vite-app`.
 - Dockerfile projects that could be deployed as Cloudflare Containers.
 - Express or Node HTTP server projects that could be deployed directly to Workers using Node.js HTTP server compatibility.
 
@@ -9,12 +10,13 @@ This note researches whether Wrangler's existing automatic configuration feature
 
 We can build this, but the current auto-config implementation is not yet shaped for it.
 
-The current implementation is intentionally centered on frontend/full-stack JavaScript frameworks with asset output directories. It assumes every non-configured project has a `framework` and an `outputDir`, and it runs only for bare `wrangler deploy` or `wrangler setup`. That design worked for framework adapters, but it is too narrow for API-only Workers, Express apps, Hono apps, and Dockerfile-backed Containers.
+The current implementation is intentionally centered on frontend/full-stack JavaScript frameworks with asset output directories. It assumes every non-configured project has a `framework` and an `outputDir`, and it runs only for bare `wrangler deploy` or `wrangler setup`. That design worked for framework adapters, but it is too narrow for API-only Workers, Express apps, Hono apps, Dockerfile-backed Containers, and the simplest possible site deploys where the user points the CLI at one file or one folder and expects a URL.
 
 The good news is that the lower-level technical pieces already exist:
 
 - Wrangler deploy already knows how to build a configured local Dockerfile, push it, deploy the Worker, and roll out a Container application.
 - Workers runtime already supports enough Node.js HTTP server APIs for Express-style apps through `nodejs_compat` and `cloudflare:node`'s `httpServerHandler`.
+- Wrangler deploy already has most of the asset-upload plumbing that a thin wrapper can compose for `index.html`, static folders, Vite output, and normal Worker scripts. It also already maps a positional directory to assets and a positional file to a Worker script; the gap is preserving high-confidence user intent before that split turns `index.html` into an opaque script and `./my-vite-app` into raw assets.
 - The auto-config package already has a useful detect, prompt, dry-run, write config, install package, update scripts, and metrics loop.
 
 The main missing layer is a more general "project adapter" abstraction that can represent multiple deployment target shapes, not just web frameworks with static/SSR output directories.
@@ -23,9 +25,11 @@ Recommended direction:
 
 1. Refactor auto-config around `ProjectAdapter` or `ProjectRecipe` candidates, while preserving existing framework adapters as one adapter family.
 2. Make `outputDir` optional and move compatibility flags, source file generation, dependencies, and warnings into adapter-owned plans.
-3. Add custom detectors for explicit entrypoints, Node HTTP servers, and Dockerfiles alongside `@netlify/build-info` framework detection.
-4. Ship Express/Node server auto-config first because it exercises the new no-asset, entrypoint-wrapper path without needing Containers product decisions.
-5. Ship Dockerfile-to-Containers after product decisions about default scaling/routing, local Docker prerequisites, paid-plan messaging, and generated Worker shape.
+3. Add custom detectors for explicit files/folders, Node HTTP servers, and Dockerfiles alongside `@netlify/build-info` framework detection.
+4. Ship `wrangler deploy index.html` first as the only unflagged simple-deploy behavior change. It is the least ambiguous explicit target and directly addresses the wrapper-shaped DX gap.
+5. Put static-folder and static-app reinterpretation behind an explicit rollout gate until telemetry, tests, and release timing prove it is safe. These change existing positional directory semantics and may need a major release.
+6. Ship Express/Node server auto-config next because it exercises the new no-asset, entrypoint-wrapper path without needing Containers product decisions.
+7. Ship Dockerfile-to-Containers after product decisions about default scaling/routing, local Docker prerequisites, paid-plan messaging, and generated Worker shape.
 
 ## Source Material
 
@@ -33,6 +37,12 @@ Code inspected:
 
 - `packages/wrangler/src/deploy/index.ts`
 - `packages/wrangler/src/deploy/autoconfig.ts`
+- `packages/wrangler/src/deployment-bundle/deploy-args.ts`
+- `packages/wrangler/src/deployment-bundle/entry.ts`
+- `packages/wrangler/src/deployment-bundle/resolve-entry.ts`
+- `packages/wrangler/src/assets.ts`
+- `packages/wrangler/src/output.ts`
+- `packages/wrangler/src/user/user.ts`
 - `packages/wrangler/src/setup.ts`
 - `packages/wrangler/src/autoconfig/index.ts`
 - `packages/autoconfig/src/details/index.ts`
@@ -43,6 +53,7 @@ Code inspected:
 - `packages/wrangler/src/containers/*`
 - `packages/workers-utils/src/config/validation.ts`
 - Relevant Wrangler/autoconfig/container tests.
+- `southpolesteve/dply` README and `src/main.ts` for the wrapper DX that motivated this update.
 
 Docs and external sources reviewed:
 
@@ -56,6 +67,7 @@ Docs and external sources reviewed:
 - Workers Node HTTP docs: https://developers.cloudflare.com/workers/runtime-apis/nodejs/http/
 - Workers Node HTTPS docs: https://developers.cloudflare.com/workers/runtime-apis/nodejs/https/
 - Express on Workers tutorial: https://developers.cloudflare.com/workers/tutorials/deploy-an-express-app/
+- dply source: https://github.com/southpolesteve/dply
 
 ## Current Auto-Config Implementation
 
@@ -74,6 +86,36 @@ The deploy handler runs auto-config before missing deploy config prompts and bef
 - `setupCommand` is in `packages/wrangler/src/setup.ts:14-140`.
 - It runs detection, then `runAutoConfigLogic()` if the project is not configured.
 - It supports `--dry-run`, `--yes`, `--build`, and hidden install/completion toggles.
+
+### Current Positional Deploy and Assets Behavior
+
+`wrangler deploy` and `wrangler versions upload` both accept a positional `path`. The positional path is not ignored today. `validateDeployVersionsArgs()` in `packages/wrangler/src/deployment-bundle/deploy-args.ts:206-273` resolves it before config is read:
+
+- If `path` exists and is a directory, it sets `args.assets = args.path` unless `--assets` was already supplied.
+- If `path` exists and is not a directory, it sets `args.script = args.path`.
+- If `stat()` fails, it assumes the path is a script and lets downstream entrypoint validation fail.
+- The original `args.path` remains available, but later deploy code primarily sees `args.script` or `args.assets`.
+
+This means current behavior already supports important explicit-target cases:
+
+- `wrangler deploy ./site` can deploy `./site` as assets.
+- `wrangler deploy --assets ./site` can deploy the same directory as assets.
+- `wrangler versions upload ./site` can upload assets with a version.
+- `wrangler deploy ./src/index.ts` continues to deploy a normal Worker script.
+
+The current split also creates the DX gap this plan addresses:
+
+- `wrangler deploy index.html` is treated as a Worker script because it is a file, even though user intent is almost certainly a single-file site.
+- `wrangler deploy ./my-vite-app` is treated as raw assets because it is a directory, even though user intent may be "build this app and deploy the output".
+- `wrangler deploy index.js` is treated as an opaque Worker script, so an Express app cannot be wrapped with `cloudflare:node` before bundling.
+
+`getEntry()` in `packages/wrangler/src/deployment-bundle/entry.ts:28-114` then chooses the deployment entry:
+
+- `args.script` wins first and is resolved as the Worker entrypoint.
+- `config.main` and Workers Sites `entry-point` come next.
+- `args.assets` or `config.assets` uses `resolveEntryWithAssets()`, which points at Wrangler's `templates/no-op-worker.js`; this is the assets-only Worker path.
+
+Any explicit-target auto-config implementation must account for this order. It should not simply start "paying attention" to a previously ignored positional argument. Instead, it must preserve the original target intent, decide whether a high-confidence adapter should override the current script/assets interpretation, and fall back to today's behavior for normal Worker scripts and raw asset directories.
 
 ### When Auto-Config Runs
 
@@ -104,6 +146,13 @@ Tests explicitly lock this behavior in:
 - `packages/wrangler/src/__tests__/deploy/entry-points.test.ts:882-1033` asserts no auto-config for explicit asset directory flows.
 
 This is the first important blocker for `wrangler deploy index.js` where `index.js` is an Express app. The product requirement would require a new explicit-target auto-config mode, not just a new framework adapter.
+
+More precisely, the blocker is the combination of two current behaviors:
+
+- Auto-config intentionally skips when `args.path`, `args.script`, or `args.assets` is present.
+- The deploy argument validator has already converted the positional path into `args.script` or `args.assets` before the deploy handler starts.
+
+The future implementation should pass an explicit deployment intent into detection, for example `{ originalPath, resolvedKind, currentArgsInterpretation }`, rather than relying only on the mutated `args.script`/`args.assets` values.
 
 ### Detection Model
 
@@ -228,6 +277,87 @@ That path:
 
 This is why explicit `wrangler deploy ./assets` can get a config file, while explicit `wrangler deploy index.js` cannot be adapted into an Express Worker today.
 
+### Current Temporary Preview Account Support
+
+`wrangler deploy` already opts into the hidden `--temporary` flag through `supportTemporary: true` in `packages/wrangler/src/deploy/index.ts:94-105`.
+
+The command registration layer adds the hidden flag and enables temporary-account auth only when the command supports it and the user passes `--temporary`:
+
+- The flag definition is in `packages/wrangler/src/core/temporary-commands.ts:1-7`.
+- `register-yargs-command.ts:234-237` calls `setTemporaryAllowed()` based on command support and the parsed flag.
+- `requireAuth()` in `packages/wrangler/src/user/user.ts:538-570` activates a temporary preview account when temporary auth is allowed.
+- `requireAuth()` refuses `--temporary` when the user is already authenticated, when `CLOUDFLARE_API_TOKEN` is set, or when the compliance region is not public.
+- On missing auth in non-interactive mode, command error handling appends a hint to rerun with `--temporary` at `packages/wrangler/src/core/register-yargs-command.ts:399-409`.
+
+The current logger output includes the full claim URL in `logTemporaryPreviewAccount()` at `packages/wrangler/src/user/user.ts:178-191`.
+
+For this plan, the important correction is that Wrangler does not need a new temporary-account system, and simple deploy should not auto-enable the existing one. If the user is unauthenticated, keep the current auth failure or hint flow. Temporary preview accounts should be used only when the user explicitly passes `--temporary`.
+
+Claim URL handling is therefore out of scope for the simple-deploy MVP. The only safety requirement here is that new intent plumbing, telemetry, and structured output must not make claim-token handling worse for explicit `--temporary` users.
+
+### Current Structured Output
+
+Wrangler already has machine-readable output through `writeOutput()` in `packages/wrangler/src/output.ts:17-29`, controlled by `WRANGLER_OUTPUT_FILE_PATH` and `WRANGLER_OUTPUT_FILE_DIRECTORY`.
+
+Relevant existing output entries:
+
+- `deploy` entries include `worker_name`, `worker_tag`, `version_id`, `targets`, `worker_name_overridden`, and `wrangler_environment` at `packages/wrangler/src/output.ts:90-104`.
+- `autoconfig` entries include the triggering command and `AutoConfigSummary` at `packages/wrangler/src/output.ts:124-130`.
+- Deploy tests assert both deploy and auto-config entries are written when auto-config runs at `packages/wrangler/src/__tests__/deploy/core.test.ts:1989-2059`.
+- Setup tests assert auto-config summary output at `packages/wrangler/src/__tests__/setup.test.ts:142-202`.
+
+This plan should extend the existing output entry types and summaries rather than invent a second result channel. Useful new fields include selected adapter, project kind, detection confidence, deploy mode, generated temporary paths by category rather than absolute value, and URL verification status.
+
+### What the dply Wrapper Proves
+
+The `dply` wrapper is useful evidence because it is not a separate deployment platform. It is a thin, opinionated layer around Wrangler that demonstrates the DX users and coding agents expect for small deploys:
+
+```sh
+dply
+dply index.html
+dply ./site
+dply ./my-vite-app
+```
+
+From its README and implementation, `dply` does the following:
+
+- Accepts zero or one local file/directory argument.
+- Detects single HTML files, single static assets, static folders with `index.html`, Vite-family apps, obvious Worker-like JS/TS files, existing Wrangler projects, and a delegated path for specific framework projects.
+- For a single `index.html`, creates a temporary static assets directory containing that file as `index.html`.
+- For a single non-HTML static asset, creates a temporary static assets directory and a generated `index.html` that links to the asset.
+- For a Worker-like JS/TS file, generates a temporary Worker adapter project that imports the source and normalizes default/exported fetch handlers.
+- For static folders, deploys the folder as assets.
+- For package apps that clearly build to static assets, installs dependencies when needed, runs the build, then deploys `dist/` when `dist/index.html` exists.
+- Shells out to `npx --yes wrangler@latest deploy` rather than replacing Wrangler.
+- Supplies `--name` and `--compatibility-date` automatically for generated deploys.
+- Uses `--assets` for asset deploys and a temporary Wrangler working directory to avoid inheriting unrelated parent config.
+- Uses temporary Cloudflare preview account support when Wrangler is not authenticated.
+- Verifies the deployed URL after deploy.
+- Prints labeled, agent-readable output: selected adapter, source, generated project, deploy mode, live URL, verification result, decisions/actions, and next steps.
+
+This is exactly the kind of UX auto-config should absorb. It exists because the upstream path has too many tiny concepts for the simplest case: name, compatibility date, config-file prompting, asset-vs-script flags, auth state, temporary deploys, generated wrapper code, and output parsing.
+
+The key lesson is not that Wrangler needs a separate wrapper. The key lesson is that auto-config needs a low-ceremony path for explicit local targets.
+
+Concrete upstream targets:
+
+- `wrangler deploy index.html` should deploy a single HTML file as a site without asking the user to understand assets, config files, or generated directories.
+- `wrangler deploy ./my-website` should eventually deploy a folder with `index.html` as static assets through the lower-ceremony path, but this should be gated because directories already have working positional semantics today.
+- `wrangler deploy ./my-vite-app` should eventually detect a static build app, run or offer to run its build, and deploy the output, but this should be gated because it changes today's raw-assets interpretation.
+- `wrangler deploy index.js` should keep deploying normal Worker files, but if the file is a high-confidence Express-like or Node HTTP server target, it should select the right adapter instead of treating it as an opaque script.
+- `wrangler deploy` already has hidden `--temporary` support. Simple deploy must not auto-enable it; unauthenticated users should continue to fail or receive an explicit rerun hint unless they pass `--temporary` themselves.
+- The CLI should verify the resulting URL when possible and make the live URL machine-readable in structured output.
+- The CLI should explain decisions tersely, but the simple path should avoid the full "Detected Project Settings / write wrangler.jsonc?" ceremony unless persistence is valuable.
+
+There is a product split here:
+
+- Persistent setup mode should keep writing `wrangler.jsonc`, package scripts, `.gitignore`, and framework adapter changes.
+- No-write deploy mode should be allowed to generate temporary local working directories/config and deploy normally without leaving repository files behind.
+
+The existing `promptForMissingDeployConfig()` flow is close to the persistent setup mode. It is not enough for the `dply` use case because it does not run project detection, still asks config questions, and does not provide the deliberately simple deploy/result contract.
+
+No-write deploy is a proposed new product behavior, not today's default Wrangler behavior. Today, explicit directory/assets deploys can prompt for name, compatibility date, and whether to write `wrangler.jsonc`. The no-write recommendation comes from the wrapper-style DX and is strongest for `wrangler deploy index.html`: writing a useful persistent config for one file is not straightforward unless Wrangler also creates a durable assets directory or points config at the whole project root, both of which can be surprising. For static folders and package apps, the right persistence default is less obvious, so those behavior changes should stay behind a rollout gate until product decides whether no-write, prompt-to-save, or setup-first is the right default.
+
 ## Current Containers Support in Wrangler
 
 Wrangler already has the low-level deployment path needed for Dockerfile-backed Containers.
@@ -258,6 +388,8 @@ In other words, once Wrangler has a config with `containers`, a Worker entrypoin
 `isDockerfile()` is exported from workers-utils and implemented at `packages/workers-utils/src/config/validation.ts:6505-6549`. It currently treats an existing file path as a Dockerfile path. If the path exists but is a directory, it throws and tells the user to specify the Dockerfile directly.
 
 Container validation resolves Dockerfile paths relative to the config path at `packages/workers-utils/src/config/validation.ts:3333-3354`.
+
+Until that validation changes, generated auto-config should write an explicit Dockerfile path such as `"./Dockerfile"`, not a project directory path, even when the detected target is a directory containing a Dockerfile.
 
 ### Build and Deploy
 
@@ -359,7 +491,7 @@ Auto-config can generate or patch this bridge for many existing apps.
 
 A comparable container-platform launch matters because it sets a clear user expectation:
 
-- Put a platform-specific Dockerfile or Containerfile at the project root.
+- Put an explicit container build file at the project root.
 - Run the platform's deploy command.
 - The platform detects it, builds it, stores it in a managed registry, deploys it, autoscales it, and routes traffic to it.
 - The app must speak HTTP and listen on `$PORT`, defaulting to `80`.
@@ -387,6 +519,8 @@ The current `Framework` abstraction works when a detected framework can answer "
 
 It is awkward for:
 
+- Single-file site deploys.
+- Static folders passed explicitly to deploy.
 - API-only Workers.
 - Express apps.
 - Hono apps.
@@ -404,7 +538,7 @@ The current `AutoConfigDetails` and `AutoConfigSummary` should not require `outp
 
 We need custom detectors that can inspect:
 
-- Root files: `Dockerfile`, `Containerfile`, and platform-specific variants.
+- Root files: `Dockerfile`, `Containerfile`, and future Cloudflare-specific marker names if product adds them.
 - `package.json` dependencies and scripts.
 - Candidate source files such as `index.js`, `index.ts`, `server.js`, `server.ts`, `app.js`, `app.ts`, `src/index.ts`, `src/server.ts`, and `src/app.ts`.
 - AST patterns such as `express()`, `app.listen(...)`, `http.createServer(...)`, `https.createServer(...)`, `module.exports = app`, and `export default app`.
@@ -414,19 +548,23 @@ Netlify detection can remain the framework detector, but auto-config needs a bro
 
 ### 3. Explicit Entrypoints Need a New Trigger Mode
 
-The user's example `wrangler deploy index.js` is not achievable under current trigger rules because explicit `path` disables auto-config.
+The user's example `wrangler deploy index.js` is not achievable under current trigger rules because explicit `path` disables auto-config. The path has also already been interpreted as either `args.script` or `args.assets` before the deploy handler starts.
 
-We should not simply remove that guard. It currently protects users who intentionally pass a Worker script or assets directory from unexpected project mutation.
+We should not simply remove the guard. It currently protects users who intentionally pass a Worker script or assets directory from unexpected project mutation, and those paths already work. It also means the simplest wrapper-style inputs bypass the richer auto-config code.
 
 A safer design is:
 
 - Keep existing bare `wrangler deploy` behavior.
-- Add an explicit-target detection mode only when there is no Wrangler config and the positional path is a single file or Dockerfile-like file.
-- In explicit-target mode, only run a project adapter when confidence is high, for example an entry file that imports `express` and calls `listen()`.
+- Add an explicit-target detection mode when there is no Wrangler config and the original positional path is a file or directory.
+- Pass detection both the original target and Wrangler's current interpretation, for example `index.html -> script` or `./site -> assets`.
+- In explicit-target mode, only override today's interpretation for high-confidence targets: a single HTML file, a directory with `index.html`, an obvious static package app, or an entry file that imports `express` and calls/listens as a Node HTTP server.
+- Do not run the new adapter path for normal Worker scripts; let the existing deploy pipeline handle them.
 - Fall back to today's `promptForMissingDeployConfig()` for normal Worker scripts and asset directories.
 - In CI/non-interactive mode, require high-confidence detection or error with clear remediation.
 
-This preserves current behavior while enabling `wrangler deploy index.js` for Express-like apps.
+This preserves current behavior while enabling `wrangler deploy index.html` first, and later enabling low-ceremony `wrangler deploy ./site`, `wrangler deploy ./static-app`, and `wrangler deploy index.js` for Express-like apps behind the appropriate rollout gates.
+
+Before reinterpreting positional-argument semantics, add privacy-preserving telemetry to prove how risky this is. The telemetry should record only shape-level facts such as whether a positional argument was present, whether it resolved to a file or directory, a coarse extension/category, whether config was present, Wrangler's current interpretation, and which deploy path handled it. It should not record raw paths, filenames, command strings, URLs, claim tokens, or anything that could contain secrets.
 
 ### 4. Compatibility Flags Should Belong to Adapters
 
@@ -455,10 +593,13 @@ For broader software support, the adapter should return an explicit plan:
 - Commands to run.
 - Warnings to show.
 - Follow-up instructions.
+- Whether the plan is persistent or no-write.
 
 Then a shared runner can render the dry-run summary and apply the plan consistently.
 
 This is especially valuable for Express and Containers because generated source files are part of the core configuration, not an implementation detail.
+
+It is also valuable for wrapper-style simple deploys because the correct plan may be no-write: generate a temporary static directory, generate a temporary wrapper for a later explicit adapter, pass deploy arguments to Wrangler, verify the URL, and leave no repository files behind.
 
 ### 6. Container DX Requires Product Decisions, Not Just Code
 
@@ -481,6 +622,7 @@ Sketch:
 type ProjectKind =
 	| "framework"
 	| "static-assets"
+	| "single-file-site"
 	| "worker-entrypoint"
 	| "node-http-server"
 	| "container-image";
@@ -489,20 +631,33 @@ type DetectionCandidate = {
 	id: string;
 	name: string;
 	kind: ProjectKind;
+	trigger: "bare" | "explicit-target" | "setup";
 	confidence: "high" | "medium" | "low";
 	evidence: string[];
 	projectPath: string;
+	originalTarget?: string;
+	currentDeployInterpretation?: "script" | "assets" | "none";
+	sourceCategory?:
+		| "html-file"
+		| "static-file"
+		| "directory"
+		| "package-app"
+		| "worker-script"
+		| "dockerfile";
 	packageManager: PackageManager;
 	packageJson?: PackageJSON;
 	workerName: string;
 	buildCommand?: string;
 	entrypoint?: string;
+	assetsDirectory?: string;
 	outputDir?: string;
 	port?: number;
+	noWrite?: boolean;
 	warnings?: string[];
 };
 
 type ConfigurationPlan = {
+	mode: "persistent" | "no-write";
 	wranglerConfig?: RawConfig;
 	packageJsonScripts?: Record<string, string>;
 	dependencies?: Array<{ name: string; dev?: boolean }>;
@@ -510,6 +665,7 @@ type ConfigurationPlan = {
 	filesToPatch?: Array<{ path: string; description: string }>;
 	commands?: Array<{ command: string; when: "setup" | "build" }>;
 	warnings?: string[];
+	deployArgs?: Record<string, string | boolean | string[]>;
 	summaryFields?: Record<string, string | number | boolean>;
 };
 
@@ -528,6 +684,8 @@ Key changes needed:
 
 - `AutoConfigDetails` should hold a selected `DetectionCandidate` or equivalent.
 - `outputDir` should become optional and adapter-specific.
+- Plans should distinguish persistent setup from no-write deploys.
+- Detection should preserve original deploy intent separately from Wrangler's current `script`/`assets` interpretation.
 - The confirmation prompt should display fields based on `kind` rather than always asking for framework and output directory.
 - The summary should show `projectKind`, `adapterId`, generated entrypoint, container image, port, and output directory only when applicable.
 - `nodejs_compat` should no longer be added globally.
@@ -539,22 +697,139 @@ Key changes needed:
 A practical detection order:
 
 1. Existing config check. If a non-Pages Wrangler config exists, return already configured, as today.
-2. Explicit target detector. If the command passed `path`, inspect only that target and use high-confidence adapters. This enables `wrangler deploy index.js` without changing explicit assets behavior.
-3. Container detector. Look for platform-specific Dockerfile or Containerfile variants first, then root `Dockerfile` or `Containerfile` as a local prompt candidate.
-4. Node server detector. Look for Express/Fastify/Koa/raw HTTP server projects from package dependencies plus source patterns.
-5. Existing web framework detector. Keep `@netlify/build-info` and framework registry.
-6. Static detector. Use the existing `index.html` output directory heuristic as the fallback.
+2. Deployment intent normalization. For deploy commands, preserve the original positional target, its stat result, coarse category, and Wrangler's current interpretation (`script`, `assets`, or none). Do this before adapter selection so detection does not need to reverse-engineer intent from mutated args.
+3. Explicit target detector. If the command passed `path`, inspect only that target and use high-confidence adapters. This enables `wrangler deploy index.html` without making every positional argument dangerous, and creates the gated path for future folder/app and Express reinterpretation.
+4. Single-file/static-folder detector. Treat `index.html`, other safe static assets, and folders with `index.html` as first-class simple deploy candidates.
+5. Package static app detector. Detect Vite-family apps and other apps with a clear build command and static output.
+6. Container detector. Look for root `Dockerfile` or `Containerfile` as a local prompt candidate.
+7. Node server detector. Look for Express/Fastify/Koa/raw HTTP server projects from package dependencies plus source patterns.
+8. Existing web framework detector. Keep `@netlify/build-info` and framework registry.
+9. Static detector. Use the existing `index.html` output directory heuristic as the fallback for bare `wrangler deploy`.
 
 Confidence guidance:
 
-- Platform-specific Dockerfile or Containerfile variant at root: high confidence.
+- A root Dockerfile/Containerfile with an explicit future Cloudflare marker or flag: high confidence.
 - Root `Dockerfile` with no Wrangler config: medium confidence locally, maybe high only when no other candidate exists.
 - Root `Dockerfile` inside a recognized frontend framework project: low confidence unless user selects it.
 - Explicit `wrangler deploy Dockerfile`: high confidence for container setup if we choose to support this syntax.
+- Explicit `wrangler deploy index.html`: high confidence for no-write single-file site deploy.
+- Explicit `wrangler deploy ./dir` where `dir/index.html` exists: high confidence for static folder deploy.
+- Explicit `wrangler deploy ./dir` with `package.json`, a known static build tool, and a build script: medium/high confidence depending on output detection.
 - `package.json` has `express` and entry file imports/requires `express`: high confidence.
 - `package.json` has `express` but no source patterns: medium confidence.
 - `http.createServer(...).listen(...)` in explicit entrypoint: high confidence for Node HTTP server adapter.
 - Multiple high-confidence candidates in CI: error and ask for local `wrangler setup` or an explicit flag.
+
+## Simple File First, Then Gated Folder and Static App Deploy
+
+### Why This Is the First Upstreaming Target
+
+The `dply` wrapper shows that the lowest-friction deploy path is not an edge case. It is the first thing people expect:
+
+```sh
+wrangler deploy index.html
+```
+
+This input is easy to explain, easy to test, and mostly maps to existing Wrangler functionality. It should not require users or agents to learn `--assets`, pick a Worker name, choose a compatibility date, decide whether to write `wrangler.jsonc`, or parse output to find the URL.
+
+The folder and package-app forms are still important, but they are riskier:
+
+- `wrangler deploy ./my-website` already means "deploy this directory as assets" today.
+- `wrangler deploy ./my-vite-app` already means "upload this directory as raw assets" today, even if that is often not what the user wanted.
+- Changing either behavior can surprise users who rely on today's interpretation.
+
+Therefore `index.html` can be the first unflagged behavior change. Folder and static-app reinterpretation should be behind an explicit rollout gate first, and likely belongs in a major Wrangler release if the default behavior changes broadly.
+
+### Candidate Detection
+
+Support this shape first without a rollout flag:
+
+- A single `.html` file: deploy it as `index.html` in a generated temporary asset directory.
+
+Support these shapes only behind an explicit rollout gate at first:
+
+- A single safe static asset: deploy a generated temporary asset directory with the file and a generated `index.html` linking to it.
+- A folder with `index.html`: deploy the folder as static assets.
+- A folder with `package.json`, a static-app build script, and a verifiable static output directory: build and deploy the output rather than uploading the whole source tree as raw assets.
+- A folder with an existing Wrangler config: treat this as a project-targeting follow-up unless product decides `wrangler deploy ./project` should re-root config discovery.
+- A Worker-like `.js`, `.ts`, or `.mjs` file: preserve today's direct Worker deploy behavior. Do not route it through the simple-deploy adapter unless a later high-confidence adapter, such as Express, claims it.
+- A Vite-family static app: install dependencies if needed, run the build, and deploy the static output if `dist/index.html` exists.
+
+This should be implemented as adapter detection, not as a pile of special cases in the deploy command. The important distinction is that these adapters can return no-write plans.
+
+### No-Write Plan Shape
+
+For `wrangler deploy index.html`, the plan should be roughly:
+
+```txt
+Project Type: single-file site
+Source: index.html
+Generated Assets Directory: <temporary directory>
+Persistent Files: none
+Wrangler Invocation: deploy --assets <temporary directory> --name <derived> --compatibility-date <today>
+```
+
+The deployed Worker/assets are not temporary. "No-write" only describes local repository behavior: Wrangler may generate temporary working files internally and clean them up, but it does not write `wrangler.jsonc`, move the user's `index.html`, or modify `package.json`.
+
+For the gated future `wrangler deploy ./my-website` path, the plan could be:
+
+```txt
+Project Type: static assets
+Source: ./my-website
+Assets Directory: ./my-website
+Persistent Files: none by default
+Wrangler Invocation: deploy --assets ./my-website --name <derived> --compatibility-date <today>
+```
+
+For a Worker-like file, do nothing in the simple-deploy adapter by default. Wrangler already handles ESM, service-worker format, TypeScript transpilation, and export preservation through the existing build pipeline. The important simple-deploy test is that normal Worker files continue to skip auto-config and deploy exactly as they do today.
+
+### Prompting and Persistence
+
+For `wrangler deploy index.html`, no-write should be the default because persisting config is ambiguous:
+
+- `assets.directory` must point to a directory, not the single file.
+- Pointing config at the project root could upload unrelated files on future deploys.
+- Creating a durable assets directory would be a more invasive scaffolding action than the user requested.
+
+Recommended behavior:
+
+- Default to no-write deploy with no generated repository files for `index.html`.
+- Print the derived name and compatibility date, but do not ask about them unless there is a conflict or invalid derived name.
+- Offer persistence as an optional follow-up: "Run `wrangler setup` to save this configuration" or "Add `--save-config` to write `wrangler.jsonc`."
+- Keep `wrangler setup` as the explicit command for persistent project configuration.
+
+For static folders and package apps, persistence remains a product decision. The gated rollout should compare no-write, prompt-to-save, and setup-first behavior before making either default.
+
+### Authentication and Agent Output
+
+Simple deploy should not change authentication semantics:
+
+- If Wrangler is authenticated, deploy to the user's account.
+- If Wrangler is not authenticated, keep today's auth failure or hint. Do not automatically use `--temporary`.
+- If the user explicitly passes `--temporary`, continue using the existing temporary preview account flow.
+- Print the live URL clearly.
+- Include structured output for adapter id, source path category, generated file categories, deploy mode, live URL, and verification status.
+- Verify the deployed URL when possible and report the HTTP result.
+
+Agent-readable output matters because many of these deploys will be requested through coding agents. The CLI should not force agents to scrape human prose to find the only URL the user needs.
+
+### MVP Scope
+
+Start with:
+
+- `wrangler deploy index.html`.
+- Behavior-preserving intent plumbing for positional deploy targets.
+- Optional privacy-preserving positional-argument telemetry before broader rollout.
+- Structured output updates for live URL, selected adapter, deploy mode, and verification.
+- Regression tests proving ordinary Worker script deploys keep the existing path and do not get claimed by simple-deploy detection.
+
+Defer:
+
+- Arbitrary static asset single-file previews beyond a small allowlist.
+- Unflagged `wrangler deploy ./folder-with-index-html` behavior changes.
+- Unflagged `wrangler deploy ./vite-app` behavior changes.
+- Complex framework builds and broad dependency installation heuristics.
+- Claim URL or temporary-account output changes.
 
 ## Express and Node HTTP Server Auto-Config
 
@@ -575,16 +850,15 @@ Detect likely Node HTTP server projects using:
 - `package.json` dependencies: `express`, then later `fastify`, `koa`, `@hono/node-server`, `h3`, etc.
 - Entrypoint names: `app`, `index`, `server`, under root and `src`, with JS/TS/CJS/MJS variants.
 - Explicit CLI path: `wrangler deploy index.js` should inspect exactly `index.js`.
-- AST/source patterns:
-  - `import express from "express"`
-  - `const express = require("express")`
-  - `const app = express()`
-  - `app.listen(3000)`
-  - `http.createServer(...)`
-  - `https.createServer(...)`
-  - `server.listen(...)`
-  - `export default app`
-  - `module.exports = app`
+- AST/source pattern: `import express from "express"`.
+- AST/source pattern: `const express = require("express")`.
+- AST/source pattern: `const app = express()`.
+- AST/source pattern: `app.listen(3000)`.
+- AST/source pattern: `http.createServer(...)`.
+- AST/source pattern: `https.createServer(...)`.
+- AST/source pattern: `server.listen(...)`.
+- AST/source pattern: `export default app`.
+- AST/source pattern: `module.exports = app`.
 
 ### Generated Configuration
 
@@ -629,6 +903,8 @@ export default httpServerHandler({ port: 3000 });
 ```
 
 The actual generator should choose static imports where possible and dynamic imports only when it needs to set `process.env.PORT` before loading the user's module.
+
+The snippets above assume the wrapper and app entrypoint are siblings. The real generator must compute relative import specifiers from the generated wrapper path to the detected source path, including root `index.js` imported from `src/worker.ts`.
 
 ### Port Detection
 
@@ -683,15 +959,14 @@ Auto-config therefore needs to generate the Worker side of the deployment, not j
 
 Detect:
 
-- Platform-specific Dockerfile variant at project root.
-- Platform-specific Containerfile variant at project root.
+- Future Cloudflare-specific Dockerfile or Containerfile marker names, if product decides to add them.
 - `Dockerfile` at project root.
 - `Containerfile` at project root.
 - Potential future explicit target: `wrangler deploy Dockerfile`.
 
 Recommended confidence:
 
-- Platform-specific Dockerfile and Containerfile variants: high confidence. These files intentionally encode deploy-to-platform behavior.
+- Future Cloudflare-specific Dockerfile and Containerfile marker names: high confidence. These files would intentionally encode deploy-to-Cloudflare behavior.
 - `Dockerfile` and `Containerfile`: prompt locally because many repos include Dockerfiles for local development, CI, databases, or build tooling.
 - In non-interactive mode, use root `Dockerfile` only when there are no stronger framework or Worker candidates, or require an explicit flag.
 
@@ -708,7 +983,7 @@ Recommended Cloudflare default:
 
 - If `EXPOSE` is present and single, use it.
 - If `EXPOSE` has multiple ports, prompt for the HTTP port.
-- If a platform-specific Dockerfile variant exists and no `EXPOSE`, default to `80` with a warning because that matches common container-platform expectations.
+- If a future Cloudflare-specific Dockerfile marker exists and no `EXPOSE`, default to `80` with a warning because that matches common container-platform expectations.
 - If plain `Dockerfile` exists and no `EXPOSE`, prompt locally and use `8080` or `3000` only with explicit user confirmation.
 
 For local dev, Cloudflare docs say `EXPOSE` is important because Wrangler needs to connect to ports locally, even if production does not require it. Auto-config should warn when no `EXPOSE` exists and suggest adding one.
@@ -718,7 +993,7 @@ For local dev, Cloudflare docs say `EXPOSE` is important because Wrangler needs 
 Generated TypeScript shape:
 
 ```ts
-import { Container, getRandom } from "@cloudflare/containers";
+import { Container, getContainer } from "@cloudflare/containers";
 
 export class AppContainer extends Container {
 	defaultPort = 8080;
@@ -734,7 +1009,7 @@ type Env = {
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
-		const container = await getRandom(env.APP_CONTAINER, 3);
+		const container = getContainer(env.APP_CONTAINER);
 		return container.fetch(request);
 	},
 };
@@ -840,20 +1115,82 @@ For Containers:
 - If Docker is unavailable in Builds, the automatic PR can still be useful, but preview deployment may fail until the build environment supports container image builds.
 - Non-interactive Dockerfile detection should likely be more conservative than local detection.
 
+## Implementation Invariants and Safety Gates
+
+These are the rules a coding agent should treat as non-negotiable while implementing the phases:
+
+- Existing configured Worker projects must remain pass-through. Auto-config should not mutate or repair a project with a real non-Pages Wrangler config unless the user explicitly requests a future repair/setup mode.
+- Ordinary Worker script deploys must keep the current path. A `.js`, `.ts`, `.mjs`, or extensionless Worker file should not be claimed by simple-deploy detection unless a later high-confidence adapter such as Express explicitly matches it.
+- Positional directory deploys must keep working as assets. The new behavior for a folder with `index.html` should reduce prompt/persistence ceremony, not break the existing assets upload path.
+- Explicit-target detection must preserve original intent separately from mutated args. Do not make adapters infer intent only from `args.script` or `args.assets`.
+- No-write plans must leave no repository files behind. Temporary generated assets, wrappers, and config should live under Wrangler-managed temporary directories and be cleaned up through existing cleanup paths.
+- Persistent plans must be explicit. `wrangler setup`, an accepted prompt, or a future `--save-config` flag can write `wrangler.jsonc`, package scripts, generated wrappers, `.gitignore`, and `.assetsignore`.
+- `--dry-run` must not install dependencies, write files, build containers, upload assets, deploy Workers, provision temporary accounts, or verify remote URLs. It should still render the selected plan and structured output.
+- Telemetry must be shape-only. Record path presence, file/directory category, coarse extension class, current interpretation, adapter id, project kind, confidence, and outcome. Never record raw paths, filenames, URLs, command strings, claim tokens, secrets, package script bodies, or source snippets.
+- Structured output should extend existing `autoconfig` and `deploy` entries. Preserve existing output fields and add optional versioned fields rather than changing current meanings.
+- Simple deploy must not auto-enable `--temporary`. Temporary-account handling should remain explicit, reuse existing `--temporary` infrastructure, keep refusing authenticated sessions and non-public compliance regions, and never send claim tokens to telemetry.
+- Claim URL exposure changes are out of scope for this plan. Do not add claim URL structured output as part of simple deploy.
+- Generated config examples and files must use `wrangler.jsonc`, not TOML.
+- Container generated config must use `new_sqlite_classes`, same-Worker Durable Object bindings, matching `containers.class_name`, and an explicit Dockerfile file path such as `"./Dockerfile"`.
+- Container generated code and config must agree on routing scale. If code uses a singleton, generated `max_instances` should be `1`; if code uses a pool, generated `max_instances` and the pool size should match.
+- Node HTTP generated configs must include `nodejs_compat`. If the generated compatibility date is before `2025-09-01`, add `enable_nodejs_http_server_modules` or block with a clear warning.
+- Each phase must land with focused tests and should be safe to stop after that phase. Do not merge broad detector refactors and Containers behavior in the same change.
+
+## Concrete Test Matrix
+
+Use this as the baseline test coverage checklist. The exact test files can change, but the behaviors should be covered before enabling each phase by default.
+
+| Area | Required tests |
+| --- | --- |
+| Current behavior preservation | Existing `deploy/entry-points.test.ts` cases for `wrangler deploy <script>` still skip auto-config and deploy normally. |
+| Current behavior preservation | Existing explicit directory and `--assets` tests still upload assets and do not run framework auto-config unless the new explicit-target mode intentionally claims the path. |
+| Argument intent | Unit tests for `validateDeployVersionsArgs()` or a new intent helper covering file, directory, missing path, `--assets` override, and `--script` directory errors. |
+| Telemetry | If telemetry is added, tests assert positional telemetry contains only coarse categories and never raw target strings, filenames, URLs, claim tokens, or command strings. |
+| Structured output | Tests assert existing `deploy` and `autoconfig` output snapshots remain backward-compatible and new optional fields appear only when the new adapter path runs. |
+| No-write simple file | `wrangler deploy index.html --dry-run` selects `single-file-site`, creates no repo files, and emits a plan with generated asset directory category rather than an absolute temp path. |
+| No-write simple file | `wrangler deploy index.html` uploads a temporary assets directory containing `/index.html`, uses a derived name and compatibility date, and does not write `wrangler.jsonc` by default. |
+| Static folder gated | Without the rollout gate, `wrangler deploy ./site` where `site/index.html` exists preserves today's assets/prompt behavior. With the gate, it can exercise the lower-ceremony path. |
+| Static folder fallback | `wrangler deploy ./assets` without `index.html` preserves today's asset deploy and missing-config prompt behavior. |
+| Static package app gated | Without the rollout gate, a Vite project directory preserves today's raw-assets interpretation. With the gate, a fixture builds once, deploys `dist/` only when `dist/index.html` exists, and reports a clear error when build output is missing. |
+| Normal Worker script | ESM, service-worker, TypeScript, and extensionless Worker entrypoint tests continue through the existing deployment-bundle pipeline. |
+| Authentication | Unauthenticated simple deploy does not auto-use `--temporary`; explicit `--temporary` keeps current temporary preview account behavior and does not put claim tokens in telemetry. |
+| URL verification | Verification is skipped in dry-run, succeeds with a mocked 2xx response, reports non-2xx without hiding the deploy URL, and has timeout/retry tests. |
+| Express detection | Unit tests cover dependency plus AST/source patterns for `import express`, `require("express")`, `app.listen(<number>)`, default-exported app, and false positives. |
+| Express wrapper | Generated wrapper imports the detected source using the correct relative specifier for root and `src/` entrypoints. |
+| Express compatibility | Generated config includes `nodejs_compat` and handles `enable_nodejs_http_server_modules` correctly for older compatibility dates. |
+| Express negative cases | Unsupported `upgrade`, direct socket access, unsupported `listen()` signatures, and TLS option patterns warn or block as specified. |
+| Containers detection | Unit tests cover `Dockerfile`, `Containerfile`, explicit `wrangler deploy Dockerfile`, multiple candidates, and stronger framework candidates. |
+| Containers port inference | Tests cover `EXPOSE`, multiple `EXPOSE` values, `ENV PORT`, no port, and local vs non-interactive behavior. |
+| Containers config | Generated config includes `main`, `containers`, `durable_objects.bindings`, `migrations.new_sqlite_classes`, explicit Dockerfile path, and matching names/classes. |
+| Containers deployment | Wrangler deploy tests with mocked Docker/container APIs prove generated config flows into existing build/push/deploy code without adding a parallel Containers deploy path. |
+| Dashboard/Builds | Non-interactive tests cover conservative Dockerfile detection and clear remediation when Docker or product prerequisites are unavailable. |
+
 ## Product/API Prerequisites
 
-Before or alongside implementation, decide these product contracts:
+Resolved for the next implementation attempt:
 
-1. Does `wrangler deploy Dockerfile` mean "deploy this as a Container"?
-2. Does root `Dockerfile` always imply Containers, or only platform-specific Dockerfile/Containerfile variants?
-3. What is the default Container routing policy: singleton, fixed random pool, path-keyed, or new helper?
-4. What default `max_instances` should auto-config generate?
-5. Should the generated Container Worker set `envVars.PORT` automatically?
-6. Should generated Container code be TypeScript or JavaScript based on project detection?
-7. Should Wrangler detect and warn about Paid plan requirements before writing files, before deploy, or both?
-8. Should `nodejs_compat` continue to be globally added for legacy framework adapters, or should each adapter own it immediately?
-9. Should auto-config ever update an existing Wrangler config, or only configure projects with no config as today?
-10. Should dashboard automatic PRs support Dockerfile projects immediately, or should Containers start as local-only auto-config?
+1. Keep behavior-preserving deploy intent plumbing. It should preserve original positional target information before Wrangler turns files into `args.script` and directories into `args.assets`.
+2. Treat telemetry as optional or scoped. If added, it must be privacy-preserving and shape-only.
+3. Make `wrangler deploy index.html` the first unflagged behavior change.
+4. Use no-write deploy behavior for `wrangler deploy index.html` by default. This means no repository files are written; the remote deployment itself is a normal deployment.
+5. Put static folder and static package-app reinterpretation behind a rollout gate first. Broad default changes may need a major Wrangler release.
+6. Do not auto-enable `--temporary`. Unauthenticated deploys should keep today's auth failure or explicit rerun guidance unless the user passes `--temporary`.
+7. Treat claim URL output changes as out of scope for the simple-deploy MVP.
+
+Still open before those later phases:
+
+1. What exact rollout gate should protect folder/static-app reinterpretation: hidden flag, experimental flag, prerelease-only behavior, or major-version gate?
+2. Should a future `--save-config` flag exist, or should persistence stay under `wrangler setup` and interactive prompts?
+3. Does `wrangler deploy Dockerfile` mean "deploy this as a Container"?
+4. Does root `Dockerfile` always imply Containers, only an explicit target, or only a future Cloudflare-specific marker/flag?
+5. What is the default Container routing policy: singleton, fixed random pool, path-keyed, or new helper?
+6. What default `max_instances` should auto-config generate?
+7. Should the generated Container Worker set `envVars.PORT` automatically?
+8. Should generated Container code be TypeScript or JavaScript based on project detection?
+9. Should Wrangler detect and warn about Paid plan requirements before writing files, before deploy, or both?
+10. Should `nodejs_compat` continue to be globally added for legacy framework adapters, or should each adapter own it immediately?
+11. Should auto-config ever update an existing Wrangler config, or only configure projects with no config as today?
+12. Should dashboard automatic PRs support Dockerfile projects immediately, or should Containers start as local-only auto-config?
 
 ## Phased Implementation Plan
 
@@ -861,6 +1198,10 @@ Before or alongside implementation, decide these product contracts:
 
 Decisions:
 
+- Confirm the default command semantics for `wrangler deploy index.html`.
+- Confirm the rollout gate for `wrangler deploy <directory>` reinterpretation.
+- Confirm no-write vs persistent defaults for each gated simple-deploy shape.
+- Decide the privacy-preserving telemetry fields for positional deploy arguments.
 - Decide accepted Dockerfile names and confidence behavior.
 - Decide whether explicit `wrangler deploy <file>` can trigger auto-config.
 - Decide default Container routing and `max_instances`.
@@ -869,7 +1210,7 @@ Decisions:
 
 Output:
 
-- Short product spec for Express and Containers flows.
+- Short product spec for `index.html`, gated folder/static-app, Express, and Containers flows.
 - CLI examples and final generated code/config examples.
 
 ### Phase 1: Refactor Auto-Config Core
@@ -879,21 +1220,67 @@ Goal: make current framework auto-config one adapter family in a broader project
 Changes:
 
 - Introduce `ProjectKind`, `DetectionCandidate`, and `ConfigurationPlan` concepts.
+- Introduce a deploy intent object that preserves original positional target details separately from `args.script` and `args.assets`.
 - Make `outputDir` optional in auto-config details and summary.
+- Add no-write plan support for deploys that should not write repository files.
 - Move Node compatibility flag insertion from global `runAutoConfig()` into adapters.
 - Replace hard-coded confirmation prompts with kind-aware prompts.
 - Replace framework-only summary fields with generic summary rendering.
 - Add evidence and warning display.
 - Add explicit target mode plumbing from `wrangler deploy` to detection.
+- Extend existing `autoconfig` structured output with optional project kind, adapter id, confidence, deploy mode, and sanitized source category fields.
 - Preserve current framework behavior and snapshots as much as possible.
 
 Tests:
 
 - Existing framework tests should still pass with minimal snapshot changes.
 - Add unit tests for no-output-dir candidates.
+- Add unit tests for no-write simple-deploy plans.
 - Add tests that explicit Worker script deploys still skip auto-config unless a high-confidence adapter matches.
+- Add tests that positional intent never emits raw paths or filenames in telemetry.
 
-### Phase 2: Ship Express/Node Server Adapter
+### Phase 2: Ship `wrangler deploy index.html`
+
+Goal: `wrangler deploy index.html` deploys a single HTML file as a normal remote deployment without treating the file as a Worker script.
+
+Scope:
+
+- Detect single HTML files and deploy them as a generated temporary asset directory.
+- Preserve normal Worker-like JS/TS files on the existing Worker script deploy path.
+- Default to no-write deploy with no repository file writes.
+- Use derived name and current compatibility date without prompting unless needed.
+- Do not auto-enable `--temporary`; unauthenticated deploys keep existing auth behavior.
+- Verify the deployed URL when possible.
+- Add structured output fields for selected adapter, deploy mode, live URL, and verification.
+
+Tests:
+
+- Unit tests for single HTML file detection.
+- Unit tests proving folder/package targets are not reinterpreted without the rollout gate.
+- Integration tests for `wrangler deploy index.html`.
+- Tests that no `wrangler.jsonc` is written by default.
+- Tests that normal Worker script deploys still do not run simple-deploy auto-config.
+- Tests that unauthenticated deploys do not silently use temporary preview accounts.
+- If telemetry is added, tests that only path shape/category is recorded, not raw values.
+
+### Phase 2b: Gate Folder and Static App Reinterpretation
+
+Goal: test lower-ceremony folder and static-app deploy behavior without changing existing positional directory semantics for all users.
+
+Scope:
+
+- Detect folders with `index.html` and deploy them as assets through the gated lower-ceremony path.
+- Detect Vite-family static apps, run the build when safe, and deploy `dist/` when `dist/index.html` exists.
+- Preserve current behavior by default when the rollout gate is not enabled.
+- Decide whether this can graduate in a minor release or should wait for a major release.
+
+Tests:
+
+- Integration tests for gated `wrangler deploy ./site`.
+- Integration tests for a gated simple Vite app fixture.
+- Tests that ungated `wrangler deploy ./site` and `wrangler deploy ./vite-app` keep today's behavior.
+
+### Phase 3: Ship Express/Node Server Adapter
 
 Goal: `wrangler deploy` and `wrangler deploy index.js` work for common Express apps.
 
@@ -915,13 +1302,13 @@ Tests:
 - Dry-run summary snapshots.
 - Negative tests for plain Worker `index.js` continuing through existing deploy config prompts.
 
-### Phase 3: Ship Dockerfile-to-Containers Adapter
+### Phase 4: Ship Dockerfile-to-Containers Adapter
 
 Goal: `wrangler deploy` in a project with a Dockerfile can create the Worker shim and config needed for Containers.
 
 Scope:
 
-- Detect platform-specific Dockerfile/Containerfile variants, `Dockerfile`, and `Containerfile`.
+- Detect future Cloudflare-specific Dockerfile/Containerfile markers if added, plus `Dockerfile` and `Containerfile`.
 - Parse `EXPOSE` and `ENV PORT` enough for port inference.
 - Prompt for port/routing/max instances when needed.
 - Generate Worker entrypoint with `Container` subclass.
@@ -938,7 +1325,7 @@ Tests:
 - Wrangler deploy tests with mocked Docker/container APIs proving generated config flows into existing container build/deploy.
 - Negative tests for projects with Dockerfile plus stronger framework detection.
 
-### Phase 4: Expand Software Support
+### Phase 5: Expand Software Support
 
 After the abstraction exists, support more "software beyond frameworks":
 
@@ -952,19 +1339,35 @@ After the abstraction exists, support more "software beyond frameworks":
 
 Recommended order:
 
-1. Refactor just enough to allow no-output-dir adapters and explicit target detection.
-2. Implement Express auto-config.
-3. Use learnings to implement Dockerfile-to-Containers behind an experimental flag or limited high-confidence detection.
-4. Graduate Dockerfile support once routing/scaling defaults and Builds behavior are resolved.
+1. Refactor just enough to allow no-output-dir adapters, no-write plans, and explicit target detection.
+2. Implement unflagged `wrangler deploy index.html`.
+3. Implement gated folder/static app reinterpretation and gather confidence before changing defaults.
+4. Implement Express auto-config.
+5. Use learnings to implement Dockerfile-to-Containers behind an experimental flag or limited high-confidence detection.
+6. Graduate Dockerfile support once routing/scaling defaults and Builds behavior are resolved.
 
-Why Express first:
+Why `index.html` first:
+
+- It directly addresses the reason a thin wrapper exists.
+- It is the smallest technical step because it mostly composes existing Wrangler asset deploy behavior.
+- It creates the explicit target and no-write plan machinery needed by later app types.
+- It gives coding agents a predictable way to get a URL without teaching them Wrangler configuration concepts first.
+- It is less risky than folders or package apps because `index.html` is currently treated as a Worker script, which is rarely the user's intent.
+
+Why folders and static apps are gated:
+
+- Positional directories already work today as raw assets.
+- Static app detection can require installs/builds and can change which files are uploaded.
+- Those defaults are more likely to surprise existing users and may need a major release.
+
+Why Express next:
 
 - It directly addresses a clear user ask.
 - It is technically smaller.
 - It pressures the exact abstraction issue, `outputDir` being required.
 - It avoids premature product promises about Containers autoscaling.
 
-Why Containers second:
+Why Containers after that:
 
 - The lower-level Wrangler deploy path already exists.
 - The generated Worker/config shape is clear.
@@ -979,6 +1382,8 @@ Broad detection can be wrong. A root Dockerfile may be for local Postgres, not t
 ### Backward Compatibility
 
 Current tests assert explicit `wrangler deploy <script>` skips auto-config. Any change here must be narrow and high-confidence to avoid breaking existing workflows.
+
+For `index.html`, the risk is low because today's file-as-script interpretation is almost never useful. For static folders and package apps, the risk is higher because Wrangler already accepts positional directories as assets. Changing those defaults should be gated and backed by tests, release planning, and optional shape-only telemetry.
 
 ### Existing Configs
 
