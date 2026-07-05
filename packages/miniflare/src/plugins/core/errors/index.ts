@@ -310,15 +310,19 @@ export async function handlePrettyErrorRequest(
 	// (workerd catches handler exceptions to build the 500, so it never
 	// reaches the inspector's Runtime.exceptionThrown). The callback observes
 	// the error response, so it must not be able to break it: contain a
-	// throwing callback and keep building the page.
-	try {
-		handleUncaughtError?.(error);
-	} catch (callbackError) {
+	// throwing callback — and absorb a rejecting async one, which is
+	// type-assignable to the void contract — and keep building the page.
+	const logCallbackError = (callbackError: unknown) =>
 		log.error(
 			callbackError instanceof Error
 				? callbackError
 				: new Error(String(callbackError))
 		);
+	try {
+		const result: unknown = handleUncaughtError?.(error);
+		if (result instanceof Promise) result.catch(logCallbackError);
+	} catch (callbackError) {
+		logCallbackError(callbackError);
 	}
 
 	// Only return a pretty-error HTML page if the client accepts it. Specifically

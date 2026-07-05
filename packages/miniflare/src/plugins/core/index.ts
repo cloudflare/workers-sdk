@@ -289,9 +289,12 @@ export const CoreSharedOptionsSchema = z
 			.returns(z.void())
 			.optional(),
 
+		// Deliberately not z.function(): its call-time wrapper rejects an
+		// async callback's returned promise as an invalid return type and
+		// drops it un-awaited, turning a type-legal callback into an
+		// unhandled rejection. The invocation site owns containment instead.
 		handleUncaughtError: z
-			.function(z.tuple([z.instanceof(Error)]))
-			.returns(z.void())
+			.custom<(error: Error) => void>((value) => typeof value === "function")
 			.optional(),
 
 		upstream: z.string().optional(),

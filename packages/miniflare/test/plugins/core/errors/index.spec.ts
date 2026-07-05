@@ -554,3 +554,31 @@ test("keeps building the error response when handleUncaughtError throws", async 
 	expect(errorLogs[0]).toMatch(/Unusual oops!/);
 	expect(errorLogs[1]).toMatch(/Callback oops!/);
 });
+
+test("absorbs a rejecting async handleUncaughtError callback", async ({
+	expect,
+}) => {
+	const log = new CustomLog();
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		// An async callback is type-assignable to the void contract; its
+		// rejection must be absorbed, not left to crash the process
+		async handleUncaughtError() {
+			throw new Error("Async callback oops!");
+		},
+		script: JSON_ERROR_SCRIPT,
+	});
+	useDispose(mf);
+
+	const res = await fetch(await mf.ready);
+	expect(res.status).toBe(500);
+	expect(await res.text()).toMatch(/Unusual oops!/);
+
+	// The rejection is absorbed into the log, not left unhandled (an
+	// unhandled rejection would also fail the test file under vitest)
+	await new Promise((resolve) => setTimeout(resolve, 10));
+	const errorLogs = log.getLogs(LogLevel.ERROR);
+	expect(errorLogs[0]).toMatch(/Unusual oops!/);
+	expect(errorLogs[1]).toMatch(/Async callback oops!/);
+});
