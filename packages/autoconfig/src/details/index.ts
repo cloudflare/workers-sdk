@@ -12,7 +12,7 @@ import {
 	AutoConfigDetectionError,
 	AutoConfigFrameworkConfigurationError,
 } from "../errors";
-import { getFrameworkClassInstance } from "../frameworks";
+import { getFrameworkClassInstance, isFrameworkSupported, isKnownFramework } from "../frameworks";
 import {
 	getAllFrameworksInfos,
 	staticFramework,
@@ -22,6 +22,7 @@ import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import {
 	detectProjectAdapter,
+	detectRootContainerFallback,
 	getPackageManager,
 	readPackageJson,
 } from "./project-adapters";
@@ -191,12 +192,13 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
-	const adapterDetails = await detectProjectAdapter({
+	const adapterInput = {
 		projectPath,
 		wranglerConfigPath: wranglerConfig?.configPath,
 		context,
 		deployIntent,
-	});
+	};
+	const adapterDetails = await detectProjectAdapter(adapterInput);
 	if (adapterDetails) {
 		return adapterDetails;
 	}
@@ -315,7 +317,19 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
+	if (shouldFallbackToRootContainer(framework.id)) {
+		const containerDetails = await detectRootContainerFallback(adapterInput);
+		if (containerDetails) {
+			return containerDetails;
+		}
+	}
+
 	if (!outputDir) {
+		const containerDetails = await detectRootContainerFallback(adapterInput);
+		if (containerDetails) {
+			return containerDetails;
+		}
+
 		const errorMessage =
 			framework.id === "static" || framework.id === "cloudflare-pages"
 				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
@@ -334,6 +348,14 @@ export async function getDetailsForAutoConfig({
 		configured: false,
 		isWorkspaceRoot,
 	};
+}
+
+function shouldFallbackToRootContainer(frameworkId: string): boolean {
+	return (
+		frameworkId !== "cloudflare-pages" &&
+		isKnownFramework(frameworkId) &&
+		!isFrameworkSupported(frameworkId)
+	);
 }
 
 /**

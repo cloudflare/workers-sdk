@@ -121,6 +121,21 @@ export async function detectProjectAdapter(
 	return await detectBareOrSetupProject(adapterInput);
 }
 
+export async function detectRootContainerFallback(
+	input: DetectionInput
+): Promise<AutoConfigDetailsForNonConfiguredProject | undefined> {
+	if (
+		input.deployIntent?.trigger !== "bare" &&
+		input.deployIntent?.trigger !== "setup"
+	) {
+		return undefined;
+	}
+
+	const packageJson = readPackageJson(input.projectPath);
+	const packageManager = getPackageManager(input.projectPath);
+	return await detectRootContainer({ ...input, packageJson, packageManager });
+}
+
 async function detectExplicitTarget(
 	input: ProjectAdapterDetectionInput
 ): Promise<AutoConfigDetailsForNonConfiguredProject | undefined> {
@@ -189,11 +204,6 @@ async function detectExplicitTarget(
 async function detectBareOrSetupProject(
 	input: ProjectAdapterDetectionInput
 ): Promise<AutoConfigDetailsForNonConfiguredProject | undefined> {
-	const containerDetails = await detectRootContainer(input);
-	if (containerDetails) {
-		return containerDetails;
-	}
-
 	return await detectNodeHttpServerProject(input);
 }
 
@@ -420,10 +430,6 @@ async function detectNodeHttpServerFromSource({
 async function detectRootContainer(
 	input: ProjectAdapterDetectionInput
 ): Promise<AutoConfigDetailsForNonConfiguredProject | undefined> {
-	if (!input.deployIntent?.containersAutoConfig) {
-		return undefined;
-	}
-
 	for (const fileName of ["Dockerfile", "Containerfile"]) {
 		const filePath = resolve(input.projectPath, fileName);
 		const stats = statSync(filePath, { throwIfNoEntry: false });
@@ -440,15 +446,11 @@ async function detectContainer(
 	dockerfilePath: string,
 	confidence: DetectionConfidence
 ): Promise<AutoConfigDetailsForNonConfiguredProject | undefined> {
-	if (!input.deployIntent?.containersAutoConfig) {
-		return undefined;
-	}
-
 	const isExplicitDockerfileTarget =
-		input.deployIntent.trigger === "explicit-target" &&
+		input.deployIntent?.trigger === "explicit-target" &&
 		input.deployIntent.sourceCategory === "dockerfile";
 	const isAllowedSetup =
-		input.deployIntent.trigger === "setup" &&
+		input.deployIntent?.trigger === "setup" &&
 		input.deployIntent.allowNonInteractivePersistentSetup === true;
 
 	if (

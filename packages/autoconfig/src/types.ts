@@ -131,7 +131,6 @@ export type DeployIntent = {
 	currentDeployInterpretation?: "script" | "assets" | "none";
 	sourceCategory?: SourceCategory;
 	staticAssetsAutoConfig?: boolean;
-	containersAutoConfig?: boolean;
 	allowNonInteractivePersistentSetup?: boolean;
 };
 
