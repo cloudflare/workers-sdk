@@ -134,6 +134,18 @@ export type PackageJSON = {
 	devDependencies?: Record<string, unknown>;
 	dependencies?: Record<string, unknown>;
 	scripts?: Record<string, unknown>;
+	/**
+	 * NOTE: This is **not** a standard `package.json` field — don't confuse it
+	 * with the standard `bundledDependencies`. It is a convention introduced by
+	 * vite+ (https://viteplus.dev): vite+ installs `@voidzero-dev/vite-plus-core`
+	 * under the `vite` npm alias and records the versions of the tools it bundles
+	 * here, keyed by package name
+	 * (e.g. `{ "vite": "8.1.2", "rolldown": "...", "tsdown": "..." }`).
+	 *
+	 * We read it to recover the underlying Vite version when Vite is installed via
+	 * such an alias. It is optional and absent for the vast majority of packages.
+	 */
+	bundledVersions?: Record<string, string | undefined>;
 };
 
 /**
