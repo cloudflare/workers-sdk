@@ -308,8 +308,18 @@ export async function handlePrettyErrorRequest(
 	// Hand the revived, source-mapped error to the embedder — the one place
 	// an uncaught Worker exception exists as a structured value in Node
 	// (workerd catches handler exceptions to build the 500, so it never
-	// reaches the inspector's Runtime.exceptionThrown).
-	handleUncaughtError?.(error);
+	// reaches the inspector's Runtime.exceptionThrown). The callback observes
+	// the error response, so it must not be able to break it: contain a
+	// throwing callback and keep building the page.
+	try {
+		handleUncaughtError?.(error);
+	} catch (callbackError) {
+		log.error(
+			callbackError instanceof Error
+				? callbackError
+				: new Error(String(callbackError))
+		);
+	}
 
 	// Only return a pretty-error HTML page if the client accepts it. Specifically
 	// don't return a HTML page to cURL, as HTML with minified scripts is hard to

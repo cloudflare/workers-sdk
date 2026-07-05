@@ -479,3 +479,78 @@ Caused by: TypeError: The value cannot be converted because it is not an integer
 	// Check `dispatchFetch()` propagates exception
 	await expect(mf.dispatchFetch(url)).rejects.toThrow("Unusual oops!");
 });
+
+// This emulates a Worker bundled with the Wrangler json-error middleware
+// See packages/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
+const JSON_ERROR_SCRIPT = `
+function reduceError(e) {
+	return {
+		name: e?.name,
+		message: e?.message ?? String(e),
+		stack: e?.stack,
+		cause: e?.cause === undefined ? undefined : reduceError(e.cause),
+	};
+}
+export default {
+	async fetch() {
+		try {
+			throw new Error("Unusual oops!");
+		} catch (e) {
+			return Response.json(reduceError(e), {
+				status: 500,
+				headers: { "MF-Experimental-Error-Stack": "true" },
+			});
+		}
+	},
+}`;
+
+test("invokes handleUncaughtError with the revived error", async ({
+	expect,
+}) => {
+	const log = new CustomLog();
+	const errors: Error[] = [];
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		handleUncaughtError(error) {
+			errors.push(error);
+		},
+		script: JSON_ERROR_SCRIPT,
+	});
+	useDispose(mf);
+
+	const res = await fetch(await mf.ready);
+	expect(res.status).toBe(500);
+	expect(errors.length).toBe(1);
+	expect(errors[0]).toBeInstanceOf(Error);
+	expect(errors[0].message).toBe("Unusual oops!");
+	expect(errors[0].stack).toMatch(/Object\.fetch/);
+});
+
+test("keeps building the error response when handleUncaughtError throws", async ({
+	expect,
+}) => {
+	const log = new CustomLog();
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		handleUncaughtError() {
+			throw new Error("Callback oops!");
+		},
+		script: JSON_ERROR_SCRIPT,
+	});
+	useDispose(mf);
+
+	// The pretty-error page is still returned...
+	const res = await fetch(await mf.ready, {
+		headers: { Accept: "text/html" },
+	});
+	expect(res.status).toBe(500);
+	expect(res.headers.get("Content-Type") ?? "").toMatch(/^text\/html/);
+	expect(await res.text()).toMatch(/Unusual oops!/);
+
+	// ...and the callback's own error is logged after the Worker error
+	const errorLogs = log.getLogs(LogLevel.ERROR);
+	expect(errorLogs[0]).toMatch(/Unusual oops!/);
+	expect(errorLogs[1]).toMatch(/Callback oops!/);
+});
