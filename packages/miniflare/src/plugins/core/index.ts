@@ -289,6 +289,11 @@ export const CoreSharedOptionsSchema = z
 			.returns(z.void())
 			.optional(),
 
+		handleUncaughtError: z
+			.function(z.tuple([z.instanceof(Error)]))
+			.returns(z.void())
+			.optional(),
+
 		upstream: z.string().optional(),
 		// TODO: add back validation of cf object
 		cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),

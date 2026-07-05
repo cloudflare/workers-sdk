@@ -273,7 +273,8 @@ export function reviveError(
 export async function handlePrettyErrorRequest(
 	log: Log,
 	workerSrcOpts: NameSourceOptions[],
-	request: Request
+	request: Request,
+	handleUncaughtError?: (error: Error) => void
 ): Promise<Response> {
 	// Parse and validate the error we've been given from user code
 	const caught = JsonErrorSchema.parse(await request.json());
@@ -303,6 +304,12 @@ export async function handlePrettyErrorRequest(
 
 	// Log source-mapped error to console if logging enabled
 	log.error(error);
+
+	// Hand the revived, source-mapped error to the embedder — the one place
+	// an uncaught Worker exception exists as a structured value in Node
+	// (workerd catches handler exceptions to build the 500, so it never
+	// reaches the inspector's Runtime.exceptionThrown).
+	handleUncaughtError?.(error);
 
 	// Only return a pretty-error HTML page if the client accepts it. Specifically
 	// don't return a HTML page to cURL, as HTML with minified scripts is hard to

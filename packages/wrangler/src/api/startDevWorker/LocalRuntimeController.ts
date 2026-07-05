@@ -391,6 +391,18 @@ export class LocalRuntimeController extends RuntimeController {
 				}
 			);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
+			// Surface uncaught Worker exceptions as typed events (workerd
+			// catches handler exceptions to build the 500 response, so they
+			// never reach the inspector — Miniflare's pretty-error path is
+			// where the revived, source-mapped Error exists).
+			options.handleUncaughtError = (error) => {
+				this.bus.dispatch({
+					type: "runtimeError",
+					source: "LocalRuntimeController",
+					text: `${error.name ?? "Error"}: ${error.message}`,
+					stack: error.stack ?? "",
+				});
+			};
 
 			// Bail out if a newer bundle arrived while we were building
 			// miniflare options — avoid a redundant local server reload.

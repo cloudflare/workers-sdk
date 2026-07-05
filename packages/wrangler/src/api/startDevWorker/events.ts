@@ -80,17 +80,21 @@ export type DevRegistryUpdateEvent = {
 	registry: WorkerRegistry;
 };
 
-// ProxyController
+// LocalRuntimeController (uncaught Worker exceptions, revived and
+// source-mapped by Miniflare's pretty-error path) and ProxyController
+// (inspector-relayed Runtime.exceptionThrown, for exceptions the runtime
+// did not catch).
 export type RuntimeErrorEvent = {
 	type: "runtimeError";
-	source: "ProxyController";
+	source: "LocalRuntimeController" | "ProxyController";
 
-	/** The exception summary line (`exceptionDetails.text`). */
+	/** The exception summary line. */
 	text: string;
 	/** The source-mapped stack. */
 	stack: string;
-	/** The raw Chrome DevTools Protocol exception details. */
-	exceptionDetails: Protocol.Runtime.ExceptionDetails;
+	/** The raw Chrome DevTools Protocol exception details, when the event
+	 * came over the inspector. */
+	exceptionDetails?: Protocol.Runtime.ExceptionDetails;
 };
 export type PreviewTokenExpiredEvent = {
 	type: "previewTokenExpired";
