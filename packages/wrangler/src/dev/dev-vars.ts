@@ -40,9 +40,12 @@ export type VarBinding = Extract<
  * Any values in these files (all formatted like `.env` files) will add to or override `vars`
  * bindings provided in the Wrangler configuration file.
  *
- * When `secrets` is defined in the config, only the declared secret keys are loaded from
- * `.dev.vars`/`.env`/`process.env`. All other keys in those files are excluded. A warning
- * is emitted for any required secrets that are missing.
+ * When `secrets` is defined in the config, `.dev.vars` values will still
+ * override existing config `vars` (so that local development overrides always
+ * take effect). Additionally, any `required` secret keys that are not already
+ * in the config vars will also be loaded from `.dev.vars`. Keys in `.dev.vars`
+ * that are neither existing config vars nor declared required secrets are
+ * excluded. A warning is emitted for any required secrets that are missing.
  *
  * @param configPath - The path to the Wrangler configuration file, if defined.
  * @param envFiles - An array of paths to .env files to load; if `undefined` the default .env files will be used (see `getDefaultEnvFiles()`).
@@ -100,11 +103,19 @@ export function getVarsForDev(
 
 	// Merge loaded secrets into result
 	if (secrets) {
-		// Explicit secrets: only declared secret keys
+		// Explicit secrets mode: first, override any config vars that also appear
+		// in .dev.vars (these remain as secret_text since they come from dev vars).
+		// Then, additionally load declared secret keys from .dev.vars.
+		// Keys in .dev.vars that are neither in the config vars nor declared as
+		// required secrets are excluded.
 		const requiredSecrets = secrets.required ?? [];
-		for (const key of requiredSecrets) {
-			if (loadedSecrets !== undefined && key in loadedSecrets) {
-				result[key] = { type: "secret_text", value: loadedSecrets[key] };
+		if (loadedSecrets !== undefined) {
+			for (const [key, value] of Object.entries(loadedSecrets)) {
+				// Always override if the key was already a config var (plain_text/json),
+				// or if it is a declared required secret.
+				if (key in result || requiredSecrets.includes(key)) {
+					result[key] = { type: "secret_text", value };
+				}
 			}
 		}
 		// Warn about missing required secrets
