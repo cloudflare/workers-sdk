@@ -11,7 +11,7 @@ import type { Colorize } from "kleur/colors";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
-	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
+	[CoreBindings.SERVICE_INGRESS_FALLBACK]: Fetcher;
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
@@ -28,7 +28,7 @@ type Env = {
 	[CoreBindings.LOG_REQUESTS]: boolean;
 	[CoreBindings.STRIP_DISABLE_PRETTY_ERROR]: boolean;
 } & {
-	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
+	[K in `${typeof CoreBindings.SERVICE_INGRESS_ROUTE_PREFIX}${string}`]:
 		| Fetcher
 		| undefined; // Won't have a `Fetcher` for every possible `string`
 };
@@ -136,14 +136,14 @@ function getUserRequest(
 }
 
 function getTargetService(request: Request, url: URL, env: Env) {
-	let service: Fetcher | undefined = env[CoreBindings.SERVICE_USER_FALLBACK];
+	let service: Fetcher | undefined = env[CoreBindings.SERVICE_INGRESS_FALLBACK];
 
 	const override = request.headers.get(CoreHeaders.ROUTE_OVERRIDE);
 	request.headers.delete(CoreHeaders.ROUTE_OVERRIDE);
 
 	const route = override ?? matchRoutes(env[CoreBindings.JSON_ROUTES], url);
 	if (route !== null) {
-		service = env[`${CoreBindings.SERVICE_USER_ROUTE_PREFIX}${route}`];
+		service = env[`${CoreBindings.SERVICE_INGRESS_ROUTE_PREFIX}${route}`];
 	}
 	return service;
 }
@@ -557,6 +557,7 @@ export default <ExportedHandler<Env>>{
 			) {
 				return await imagesDelivery.fetch(request);
 			}
+
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
 				if (
 					url.pathname === CorePaths.SCHEDULED ||

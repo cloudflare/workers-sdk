@@ -17,13 +17,14 @@ import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containe
 import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
+import SCRIPT_INGRESS from "worker:core/ingress";
 import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
 import { fetch } from "../../http";
 import { kVoid } from "../../runtime";
 import { JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
-import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
+import { ROUTER_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import { IMAGES_PLUGIN_NAME } from "../images";
@@ -44,6 +45,7 @@ import {
 	getBuiltinServiceName,
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
+	getIngressServiceName,
 	getUserServiceName,
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
@@ -155,7 +157,6 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeInspectorProxy: z.boolean().optional(),
 
 		routes: z.string().array().optional(),
-
 		bindings: z.record(JsonSchema).optional(),
 		wasmBindings: z
 			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
@@ -434,7 +435,7 @@ function getCustomServiceDesignator(
 		// Sets SELF binding to point to the (assets) RPC Proxy Worker
 		// if assets are present.
 		serviceName = hasAssetsAndIsVitest
-			? `${RPC_PROXY_SERVICE_NAME}:${refererName}`
+			? getIngressServiceName(refererName)
 			: getUserServiceName(refererName);
 	} else {
 		// Regular user worker
@@ -1019,7 +1020,7 @@ export interface GlobalServicesOptions {
 	/** Pass Workflow configuration for the explorer worker */
 	workflowOptions?: Map<string, WorkflowOption>;
 	/** All worker options for building per-worker resource bindings */
-	allWorkerOpts?: PluginWorkerOptions[];
+	allWorkerOpts: PluginWorkerOptions[];
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -1052,9 +1053,13 @@ export function getGlobalServices({
 		{ name: CoreBindings.JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
 		{
-			name: CoreBindings.SERVICE_USER_FALLBACK,
+			name: CoreBindings.SERVICE_INGRESS_FALLBACK,
 			service: { name: fallbackWorkerName },
 		},
+		...workerNames.map((name) => ({
+			name: CoreBindings.SERVICE_INGRESS_ROUTE_PREFIX + name,
+			service: { name: getIngressServiceName(name) },
+		})),
 		...workerNames.map((name) => ({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
 			service: { name: getUserServiceName(name) },
@@ -1193,6 +1198,37 @@ export function getGlobalServices({
 
 	if (r2PublicService !== undefined) {
 		services.push(r2PublicService);
+	}
+
+	for (const worker of allWorkerOpts) {
+		if (!workerNames.includes(worker.core.name ?? "")) {
+			continue;
+		}
+
+		const serviceName = getUserServiceName(worker.core.name);
+		const fetchTargetServiceName = worker.assets.assets
+			? `${ROUTER_SERVICE_NAME}:${worker.assets.assets.workerName}`
+			: serviceName;
+		const bindings: Worker_Binding[] = [
+			{
+				name: CoreBindings.SERVICE_INGRESS_FETCH_TARGET,
+				service: { name: fetchTargetServiceName },
+			},
+			{
+				name: CoreBindings.SERVICE_INGRESS_RPC_TARGET,
+				service: { name: serviceName },
+			},
+		];
+
+		services.push({
+			name: getIngressServiceName(worker.core.name),
+			worker: {
+				modules: [{ name: "ingress.worker.js", esModule: SCRIPT_INGRESS() }],
+				compatibilityDate: "2025-03-17",
+				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
+				bindings,
+			},
+		});
 	}
 
 	if (sharedOptions.unsafeLocalExplorer) {

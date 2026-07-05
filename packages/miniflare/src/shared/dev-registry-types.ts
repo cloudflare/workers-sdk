@@ -8,15 +8,13 @@ export type WorkerDefinition = {
 	debugPortAddress: string;
 	/**
 	 * The workerd service name for the default entrypoint. This varies by worker type:
-	 * - Workers with assets: routes through the assets RPC proxy
 	 * - Vite workers: routes through the vite proxy worker
-	 * - Plain workers: routes directly to the user worker service
+	 * - Plain workers: routes through the ingress worker service
 	 */
 	defaultEntrypointService: string;
 	/**
 	 * The workerd service name for the user worker directly
-	 * For plain workers this is identical to defaultEntrypointService, but for other
-	 * workers it bypasses the Assets proxy (whether built-in or userland)
+	 * This bypasses the ingress layer for named entrypoints and Durable Objects.
 	 */
 	userWorkerService: string;
 };
