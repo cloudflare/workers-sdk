@@ -82,8 +82,11 @@ export type DevRegistryUpdateEvent = {
 
 // LocalRuntimeController (uncaught Worker exceptions, revived and
 // source-mapped by Miniflare's pretty-error path) and ProxyController
-// (inspector-relayed Runtime.exceptionThrown, for exceptions the runtime
-// did not catch).
+// (inspector-relayed Runtime.exceptionThrown). The two sources are disjoint
+// for a given exception: the pretty-error path only sees exceptions the
+// runtime caught to build a 500 response — which therefore never reach the
+// inspector — while the inspector only reports exceptions the runtime did
+// not catch. `source` distinguishes them should that invariant ever change.
 export type RuntimeErrorEvent = {
 	type: "runtimeError";
 	source: "LocalRuntimeController" | "ProxyController";
