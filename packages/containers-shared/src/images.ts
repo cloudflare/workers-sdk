@@ -119,12 +119,6 @@ export async function prepareContainerImagesForDev(args: {
 		onContainerImagePreparationEnd,
 	} = args;
 	let aborted = false;
-	if (process.platform === "win32") {
-		throw new UserError(
-			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application.",
-			{ telemetryMessage: false }
-		);
-	}
 	await verifyDockerInstalled({
 		dockerPath,
 		operation: "running dev",

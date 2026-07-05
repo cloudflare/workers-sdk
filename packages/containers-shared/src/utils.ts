@@ -359,25 +359,13 @@ export function resolveDockerHost(dockerPath: string): string {
 		return contextSocket;
 	}
 
-	// 4. Fall back to platform-specific defaults
-	// (note windows doesn't work yet due to a runtime limitation)
+	// 4. Fall back to platform-specific defaults.
+	// On Windows this is the Docker Desktop named pipe; miniflare bridges it to a
+	// loopback TCP address before handing it to workerd (see containers-shared/docker-proxy).
 	return process.platform === "win32"
 		? "//./pipe/docker_engine"
 		: "unix:///var/run/docker.sock";
 }
-
-/**
- *
- * Get docker host from environment variables or platform defaults.
- * Does not use the docker context ls command, so we
- */
-export const getDockerHostFromEnv = (): string => {
-	const fromEnv = process.env.WRANGLER_DOCKER_HOST ?? process.env.DOCKER_HOST;
-
-	return (fromEnv ?? process.platform === "win32")
-		? "//./pipe/docker_engine"
-		: "unix:///var/run/docker.sock";
-};
 
 /**
  * Get all repository tags for a given image

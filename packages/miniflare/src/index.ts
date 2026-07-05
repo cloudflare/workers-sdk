@@ -10,6 +10,11 @@ import { ReadableStream } from "node:stream/web";
 import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
+import {
+	type DockerProxy,
+	isNamedPipeAddress,
+	startDockerProxy,
+} from "@cloudflare/containers-shared";
 import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
 import { $ as colors$, bold, dim, green, yellow } from "kleur/colors";
 import stoppable from "stoppable";
@@ -141,6 +146,7 @@ import type {
 	SocketIdentifier,
 	SocketPorts,
 	Worker_Binding,
+	Worker_ContainerEngine,
 	Worker_DurableObjectNamespace,
 	Worker_Module,
 } from "./runtime";
@@ -982,6 +988,10 @@ export class Miniflare {
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
+	// On Windows, workerd can't connect to the Docker named pipe, so we bridge it to
+	// a loopback TCP proxy and hand workerd that address instead. Created lazily when
+	// containers are in use, disposed with the instance.
+	#dockerProxy?: DockerProxy;
 	#runtimeEntryURL?: URL;
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
@@ -2128,6 +2138,18 @@ export class Miniflare {
 			// value from MiniflareOptions is picked up on first startup.
 			this.publicUrl = sharedOpts.core.publicUrl;
 
+			const workerUsesContainers = [
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].some(
+				(designator) =>
+					typeof designator === "object" && designator.container !== undefined
+			);
+			const resolvedContainerEngine = await this.#resolveContainerEngine(
+				workerOpts.core.containerEngine,
+				workerUsesContainers
+			);
+
 			const pluginServicesOptionsBase: Omit<
 				PluginServicesOptions<z.ZodTypeAny, undefined>,
 				"options" | "sharedOptions"
@@ -2145,6 +2167,7 @@ export class Miniflare {
 				unsafeStickyBlobs,
 				wrappedBindingNames,
 				durableObjectClassNames,
+				resolvedContainerEngine,
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
@@ -3176,6 +3199,39 @@ export class Miniflare {
 		return [...PLUGIN_ENTRIES, ...this.#externalPlugins.entries()];
 	}
 
+	// Resolve the container engine address for a worker into something workerd can
+	// connect to. On Windows, workerd can't reach the Docker named pipe, so we bridge
+	// it to a loopback TCP proxy (created once per instance) and return that address.
+	async #resolveContainerEngine(
+		rawEngine: Worker_ContainerEngine | string | undefined,
+		workerUsesContainers: boolean
+	): Promise<Worker_ContainerEngine | string | undefined> {
+		if (process.platform !== "win32" || !workerUsesContainers) {
+			return rawEngine;
+		}
+		// `undefined` means the default Windows Docker named pipe (see getContainerEngine);
+		// the object form carries the address in localDocker.socketPath.
+		const socketPath =
+			typeof rawEngine === "string"
+				? rawEngine
+				: rawEngine === undefined
+					? "//./pipe/docker_engine"
+					: rawEngine.localDocker.socketPath;
+		if (!isNamedPipeAddress(socketPath)) {
+			// Already a TCP address -- workerd can consume it directly.
+			return rawEngine;
+		}
+		const proxy = (this.#dockerProxy ??= await startDockerProxy(socketPath));
+		if (typeof rawEngine === "object") {
+			// Preserve other fields (e.g. containerEgressInterceptorImage) from the object form.
+			return {
+				...rawEngine,
+				localDocker: { ...rawEngine.localDocker, socketPath: proxy.address },
+			};
+		}
+		return proxy.address;
+	}
+
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
@@ -3227,6 +3283,9 @@ export class Miniflare {
 
 			// shutdown hyperdrive proxies if any exist
 			await this.#hyperdriveProxyController.dispose();
+
+			// Close the Windows Docker named-pipe -> TCP proxy if one was started
+			await this.#dockerProxy?.[Symbol.asyncDispose]();
 
 			// Remove from instance registry as last step in `finally`, to make sure
 			// all dispose steps complete

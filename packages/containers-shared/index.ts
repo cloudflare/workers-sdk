@@ -2,6 +2,7 @@ export * from "./src/client";
 export * from "./src/build";
 export * from "./src/login";
 export * from "./src/knobs";
+export * from "./src/docker-proxy";
 export * from "./src/utils";
 export * from "./src/types";
 export * from "./src/inspect";

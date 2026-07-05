@@ -10,6 +10,7 @@ import type {
 	Extension,
 	Service,
 	Worker_Binding,
+	Worker_ContainerEngine,
 	Worker_Module,
 } from "../../runtime";
 import type { Log, OptionalZodTypeOf } from "../../shared";
@@ -87,6 +88,9 @@ export interface PluginServicesOptions<
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	wrappedBindingNames: WrappedBindingNames;
 	durableObjectClassNames: DurableObjectClassNames;
+	// The container engine address to hand to workerd, after any platform-specific
+	// resolution (e.g. bridging a Windows Docker named pipe to a loopback TCP proxy).
+	resolvedContainerEngine: Worker_ContainerEngine | string | undefined;
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
