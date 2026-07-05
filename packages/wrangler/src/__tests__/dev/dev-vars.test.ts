@@ -75,9 +75,7 @@ describe("getVarsForDev", () => {
 		expect(result).toEqual({
 			MY_VARIABLE_A: { type: "secret_text", value: "900" }
 		});
-		expect(std.warn).toHaveBeenCalledWith(
-			expect.stringContaining("Missing required secrets: MY_MISSING_SECRET")
-		);
+		expect(std.warn).toContain("Missing required secrets: MY_MISSING_SECRET");
 	});
 
 	it("falls back to .env files when CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is not false", ({ expect }) => {

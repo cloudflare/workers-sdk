@@ -121,7 +121,7 @@ export function getVarsForDev(
 		// Warn about missing required secrets
 		if (!silent) {
 			const missing = requiredSecrets.filter(
-				(key) => loadedSecrets === undefined || !(key in loadedSecrets)
+				(key) => !(key in result)
 			);
 			if (missing.length > 0) {
 				logger.warn(
