@@ -145,6 +145,12 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 				this.emit("reloadComplete", event);
 				break;
 
+			case "runtimeError":
+				// Re-emitted as an external EventEmitter event (like
+				// `reloadComplete`) so callers can observe runtime errors.
+				this.emit("runtimeError", event);
+				break;
+
 			case "devRegistryUpdate":
 				this.config.onDevRegistryUpdate(event);
 				break;

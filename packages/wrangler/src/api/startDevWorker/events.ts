@@ -1,5 +1,6 @@
 import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
+import type Protocol from "devtools-protocol";
 import type { Miniflare, WorkerRegistry } from "miniflare";
 
 export type ErrorEvent =
@@ -80,6 +81,17 @@ export type DevRegistryUpdateEvent = {
 };
 
 // ProxyController
+export type RuntimeErrorEvent = {
+	type: "runtimeError";
+	source: "ProxyController";
+
+	/** The exception summary line (`exceptionDetails.text`). */
+	text: string;
+	/** The source-mapped stack. */
+	stack: string;
+	/** The raw Chrome DevTools Protocol exception details. */
+	exceptionDetails: Protocol.Runtime.ExceptionDetails;
+};
 export type PreviewTokenExpiredEvent = {
 	type: "previewTokenExpired";
 
