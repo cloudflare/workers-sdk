@@ -322,6 +322,60 @@ describe("writeOutput()", () => {
 		});
 	});
 
+	it("should sanitize command-failed API details and support array API metadata", () => {
+		const longDetail = `First line\n${"x".repeat(1_200)}`;
+		const sanitizedLongDetail = longDetail
+			.replace(/\s+/g, " ")
+			.trim()
+			.slice(0, 1_000);
+		const error = new APIError({
+			status: 500,
+			text: "A request to the Cloudflare API failed.",
+			notes: [
+				{
+					text: longDetail,
+				},
+			],
+			telemetryMessage: false,
+		});
+		error.meta = {
+			details: [
+				{
+					code: 1234,
+					message: longDetail,
+				},
+				{
+					message: "Second\n\tmessage",
+				},
+				{
+					code: "not-a-number",
+					message:
+						"ignored because the code is not numeric, but the message is safe",
+				},
+			],
+		};
+
+		expect(getCommandFailedOutputFields(error)).toEqual({
+			api_errors: [
+				{
+					code: 1234,
+					message: sanitizedLongDetail,
+				},
+				{
+					message: "Second message",
+				},
+				{
+					message:
+						"ignored because the code is not numeric, but the message is safe",
+				},
+			],
+			code: undefined,
+			details: [sanitizedLongDetail],
+			message: "A request to the Cloudflare API failed.",
+			status: 500,
+		});
+	});
+
 	it("should write an error log when a handler throws an error", async () => {
 		vi.mock("../user/whoami", () => {
 			return {

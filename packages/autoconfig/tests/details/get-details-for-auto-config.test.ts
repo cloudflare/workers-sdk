@@ -269,6 +269,33 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			});
 		});
 
+		it("does not treat explicit directory targets containing a Dockerfile as Containers", async ({
+			expect,
+		}) => {
+			await seed({
+				Dockerfile: "FROM node:22\nEXPOSE 3000\n",
+				"index.html": "<h1>Hello World</h1>",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: ".",
+						targetKind: "directory",
+						currentDeployInterpretation: "assets",
+						sourceCategory: "directory",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "static-assets",
+				projectKind: "static-assets",
+				configurationPlan: { mode: "no-write" },
+			});
+		});
+
 		it("detects a gated Vite app target as a static package app", async ({
 			expect,
 		}) => {
@@ -486,6 +513,41 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			});
 		});
 
+		it("detects explicit Containerfile targets as Containers", async ({
+			expect,
+		}) => {
+			await writeFile("Containerfile", "FROM node:22\nEXPOSE 7070\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Containerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					wranglerConfig: {
+						containers: [
+							{
+								image: "./Containerfile",
+							},
+						],
+					},
+					summaryFields: {
+						dockerfile: "Containerfile",
+						port: 7070,
+					},
+				},
+			});
+		});
+
 		it("falls back to port 80 and warns when a Dockerfile has no port hints", async ({
 			expect,
 		}) => {
@@ -510,6 +572,35 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					]),
 					summaryFields: {
 						port: 80,
+					},
+				},
+			});
+		});
+
+		it("selects the first exposed port and warns when a Dockerfile exposes multiple ports", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\nEXPOSE 8080\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					warnings: expect.arrayContaining([
+						"Multiple EXPOSE ports were detected; the first port was selected. Update generated configuration if this is not your HTTP port.",
+					]),
+					summaryFields: {
+						port: 3000,
 					},
 				},
 			});
