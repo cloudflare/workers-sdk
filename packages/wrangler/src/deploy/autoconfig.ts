@@ -116,7 +116,8 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		args.autoconfig &&
 		deployIntent?.trigger === "explicit-target" &&
 		(deployIntent.targetKind === "file" ||
-			deployIntent.staticAssetsAutoConfig === true) &&
+			deployIntent.staticAssetsAutoConfig === true ||
+			shouldRunDefaultDirectoryAutoConfig(args, config, deployIntent)) &&
 		!args.config &&
 		!config.configPath;
 	const shouldRunAutoConfig =
@@ -280,6 +281,20 @@ function shouldSkipAutoConfigConfirmations(
 	}
 
 	return undefined;
+}
+
+function shouldRunDefaultDirectoryAutoConfig(
+	args: AutoConfigArgs,
+	config: Config,
+	deployIntent: DeployIntent | undefined
+): boolean {
+	// Preserve the existing interactive missing-name/date flow, which can write a
+	// persistent wrangler.jsonc for raw asset directories.
+	return (
+		deployIntent?.targetKind === "directory" &&
+		Boolean(args.name ?? config.name) &&
+		Boolean(args.latest || args.compatibilityDate || config.compatibility_date)
+	);
 }
 
 function applyPersistentAutoConfigDeployTarget<Args extends AutoConfigArgs>(

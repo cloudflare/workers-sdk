@@ -429,7 +429,7 @@ export default{
 			);
 		});
 
-		it("should deploy an explicit static folder through the gated no-write path", async ({
+		it("should deploy an explicit static folder through the default no-write path", async ({
 			expect,
 		}) => {
 			fs.mkdirSync("site", { recursive: true });
@@ -447,7 +447,7 @@ export default{
 				expectedCompatibilityDate: "2024-01-01",
 			});
 			await runWrangler(
-				"deploy site --name test-name --compatibility-date 2024-01-01 --experimental-auto-config-static-assets",
+				"deploy site --name test-name --compatibility-date 2024-01-01",
 				{
 					...process.env,
 					WRANGLER_OUTPUT_FILE_PATH: "output.json",

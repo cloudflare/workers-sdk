@@ -244,7 +244,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			).resolves.toMatchObject({ configured: true });
 		});
 
-		it("only claims explicit static folders when the rollout gate is enabled", async ({
+		it("detects explicit static folders as no-write assets by default", async ({
 			expect,
 		}) => {
 			await seed({
@@ -260,20 +260,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 						targetKind: "directory",
 						currentDeployInterpretation: "assets",
 						sourceCategory: "directory",
-					},
-				})
-			).resolves.toMatchObject({ configured: true });
-
-			await expect(
-				details.getDetailsForAutoConfig({
-					context,
-					deployIntent: {
-						trigger: "explicit-target",
-						originalTarget: "site",
-						targetKind: "directory",
-						currentDeployInterpretation: "assets",
-						sourceCategory: "directory",
-						staticAssetsAutoConfig: true,
 					},
 				})
 			).resolves.toMatchObject({
@@ -295,6 +281,19 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				"app/pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
 				"app/dist/index.html": "<h1>Hello from Vite</h1>",
 			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "app",
+						targetKind: "directory",
+						currentDeployInterpretation: "assets",
+						sourceCategory: "directory",
+					},
+				})
+			).resolves.toMatchObject({ configured: true });
 
 			await expect(
 				details.getDetailsForAutoConfig({

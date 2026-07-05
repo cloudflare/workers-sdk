@@ -157,15 +157,16 @@ async function detectExplicitTarget(
 		return undefined;
 	}
 
-	if (
-		!targetStats.isDirectory() ||
-		!input.deployIntent?.staticAssetsAutoConfig
-	) {
+	if (!targetStats.isDirectory()) {
 		return undefined;
 	}
 
 	const targetPackageJson = readPackageJson(targetPath);
 	if (targetPackageJson) {
+		if (!input.deployIntent?.staticAssetsAutoConfig) {
+			return undefined;
+		}
+
 		const targetPackageManager = getPackageManager(targetPath);
 		const staticAppDetails = await detectStaticPackageApp({
 			...input,
