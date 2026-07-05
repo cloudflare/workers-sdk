@@ -3,6 +3,8 @@
 "wrangler": minor
 "@cloudflare/workers-shared": patch
 "@cloudflare/deploy-helpers": minor
+"@cloudflare/containers-shared": patch
+"@cloudflare/workers-utils": patch
 ---
 
 Add expanded auto-configuration and clearer Containers deploy feedback

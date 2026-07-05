@@ -112,7 +112,12 @@ import type { FormData } from "undici";
  * Consumer-specific values and integrations injected into `deploy()`.
  */
 export type DeployOptions = {
-	autoConfigDeploymentMetadata?: { adapterId?: string; projectKind?: string; deployMode?: "persistent" | "no-write"; sourceCategory?: string; };
+	autoConfigDeploymentMetadata?: {
+		adapterId?: string;
+		projectKind?: string;
+		deployMode?: "persistent" | "no-write";
+		sourceCategory?: string;
+	};
 	deployCommand: string;
 	versionsDeployCommand: string;
 	d1ListCommand: string;
@@ -149,7 +154,13 @@ export type DeployOptions = {
 };
 
 export type ContainerDeploymentAction = "created" | "modified" | "unchanged";
-export type ContainerDeployResult = {name: string; applicationId?: string; action: ContainerDeploymentAction; image?: string; imageDigest?: string; };
+export type ContainerDeployResult = {
+	name: string;
+	applicationId?: string;
+	action: ContainerDeploymentAction;
+	image?: string;
+	imageDigest?: string;
+};
 export type ContainersRollout = "gradual" | "immediate" | "none";
 
 type DeployResult = {
@@ -189,7 +200,15 @@ export default async function deploy(
 		auto_config_deploy_mode: autoConfigDeploymentMetadata?.deployMode,
 		auto_config_source_category: autoConfigDeploymentMetadata?.sourceCategory,
 		live_url: autoConfigDeploymentMetadata ? liveUrl : undefined,
-		containers: result.containerDeployments,
+		containers: result.containerDeployments?.map(
+			({ name, applicationId, action, image, imageDigest }) => ({
+				name,
+				application_id: applicationId,
+				action,
+				image,
+				image_digest: imageDigest,
+			})
+		),
 		containers_rollout: result.containersRollout,
 		bundle_size: result.bundleSize
 			? {
@@ -258,7 +277,9 @@ async function deployWorker(
 	const isDryRun = props.dryRun;
 
 	const normalisedContainerConfig = props.containers.standard.normalized;
-	const containersRollout = normalisedContainerConfig.length ? (props.containersRollout ?? "gradual") : undefined;
+	const containersRollout = normalisedContainerConfig.length
+		? (props.containersRollout ?? "gradual")
+		: undefined;
 	const builtContainerImages = props.containers.standard.builtImages;
 	const durableObjectContainerConfig = getDurableObjectContainerApps(
 		props.containers.source
@@ -927,7 +948,14 @@ async function deployWorker(
 			);
 		}
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag, assetUploadStats, bundleSize, containerDeployments, containersRollout };
+		return {
+			versionId,
+			workerTag,
+			assetUploadStats,
+			bundleSize,
+			containerDeployments,
+			containersRollout,
+		};
 	}
 	assert(accountId);
 	// deploy triggers

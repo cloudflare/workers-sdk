@@ -185,18 +185,20 @@ export async function deployContainers(
 	const results: ContainerDeployResult[] = [];
 	for (const { container, imageRef } of containerDeployments) {
 		const namespaceId = await resolveNamespaceId(container.class_name);
-		results.push(await apply(
-			{
-				imageRef,
-				durable_object_namespace_id: namespaceId,
-				configFileName,
-				observabilityTargetPercentageField,
-				observabilityTargetCountField,
-			},
-			container,
-			config,
-			accountId
-		));
+		results.push(
+			await apply(
+				{
+					imageRef,
+					durable_object_namespace_id: namespaceId,
+					configFileName,
+					observabilityTargetPercentageField,
+					observabilityTargetCountField,
+				},
+				container,
+				config,
+				accountId
+			)
+		);
 	}
 	return results;
 }
@@ -812,7 +814,13 @@ export async function apply(
 			if (migratedLegacyObservability) {
 				newline();
 				endSection("Applied changes");
-				return;
+				return {
+					name: prevApp.name,
+					applicationId: prevApp.id,
+					action: "modified",
+					image: imageRef,
+					imageDigest,
+				};
 			}
 			updateStatus(`no changes ${brandColor(prevApp.name)}`);
 			endSection("No changes to be made");

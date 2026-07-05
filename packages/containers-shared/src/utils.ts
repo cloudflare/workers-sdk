@@ -88,7 +88,7 @@ export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 	try {
 		const stdout = execFileSync(dockerPath, args, {
 			encoding: "utf8",
-			stdio: ["ignore", "pipe", "pipe"],
+			stdio: "pipe",
 		});
 		return stdout.trim();
 	} catch (error) {

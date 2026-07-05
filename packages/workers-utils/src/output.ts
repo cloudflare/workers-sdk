@@ -132,6 +132,7 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	/** The first live URL reported by deploy for auto-config driven deployments. */
 	live_url?: string;
 	/** Container application changes made during this deployment, if any. */
+	containers_rollout?: "gradual" | "immediate" | "none";
 	containers?: Array<{
 		name: string;
 		application_id?: string;

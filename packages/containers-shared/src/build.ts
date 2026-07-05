@@ -346,9 +346,18 @@ export async function pushImageIfChanged({
 		);
 		const [, hash] = remoteDigest.split("@");
 
-		const remoteManifestDigest = tryFindRemoteManifestDigest(pathToDocker, resolveImageName(account.external_account_id, remoteDigest, complianceConfig));
+		const remoteManifestDigest = tryFindRemoteManifestDigest(
+			pathToDocker,
+			resolveImageName(
+				account.external_account_id,
+				remoteDigest,
+				complianceConfig
+			)
+		);
 		if (remoteManifestDigest === hash) {
-			logger.log("Dockerfile-backed Containers are built locally during deploy to determine whether the image changed. To deploy only Worker changes without building or updating Containers, pass --containers-rollout=none.");
+			logger.log(
+				"Dockerfile-backed Containers are built locally during deploy to determine whether the image changed. To deploy only Worker changes without building or updating Containers, pass --containers-rollout=none."
+			);
 			logger.log("Image already exists remotely, skipping push");
 			if (cleanupSourceTag !== false) {
 				logger.debug(

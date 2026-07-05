@@ -137,10 +137,7 @@ export async function runAutoConfig(
 	const { packageManager } = autoConfigDetails;
 	const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
 
-	const frameworkPackageInfo = getFrameworkPackageInfo(
-		framework.id,
-		target
-	);
+	const frameworkPackageInfo = getFrameworkPackageInfo(framework.id, target);
 	if (frameworkPackageInfo) {
 		framework.validateFrameworkVersion(
 			autoConfigDetails.projectPath,
@@ -149,17 +146,16 @@ export async function runAutoConfig(
 		);
 	}
 
-	const dryRunConfigurationResults =
-		await framework.configure({
-			target,
-			outputDir: autoConfigDetails.outputDir,
-			projectPath: autoConfigDetails.projectPath,
-			workerName: autoConfigDetails.workerName,
-			isWorkspaceRoot,
-			dryRun: true,
-			packageManager,
-			context,
-		});
+	const dryRunConfigurationResults = await framework.configure({
+		target,
+		outputDir: autoConfigDetails.outputDir,
+		projectPath: autoConfigDetails.projectPath,
+		workerName: autoConfigDetails.workerName,
+		isWorkspaceRoot,
+		dryRun: true,
+		packageManager,
+		context,
+	});
 	const dryRunWorkerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
 		dryRunConfigurationResults.workerConfig
@@ -209,8 +205,7 @@ export async function runAutoConfig(
 		enableTargetCliInstallation,
 		target,
 		context,
-		dryRunConfigurationResults.packageJsonScriptsOverrides,
-		enableWranglerInstallation
+		dryRunConfigurationResults.packageJsonScriptsOverrides
 	);
 
 	if (
@@ -418,7 +413,7 @@ async function runConfigurationPlan(
 	const skipConfirmations =
 		dryRun || autoConfigOptions.skipConfirmations === true;
 	const enableWranglerInstallation =
-		autoConfigOptions.enableWranglerInstallation ?? true;
+		autoConfigOptions.enableTargetCliInstallation ?? true;
 	const plan = autoConfigDetails.configurationPlan;
 	assert(plan, "Expected configuration plan to be present");
 
@@ -867,8 +862,7 @@ export async function buildOperationsSummary(
 	enableTargetCliInstallation: boolean,
 	target: AutoConfigTarget,
 	context: AutoConfigContext,
-	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides,
-	enableWranglerInstallation = true
+	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<AutoConfigSummary> {
 	const { logger } = context;
 	logger.log("");
@@ -886,7 +880,7 @@ export async function buildOperationsSummary(
 					buildConfig: configurationResults.buildConfig,
 				}),
 		outputDir: autoConfigDetails.outputDir,
-		frameworkId: framework.id,
+		frameworkId: autoConfigDetails.framework.id,
 		buildCommand: projectCommands.build,
 		deployCommand: projectCommands.deploy,
 		versionCommand: projectCommands.version,

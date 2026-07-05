@@ -170,6 +170,8 @@ export type DeployTarget =
 	  };
 
 export type AutoConfigSummary = {
+	/** Whether a Wrangler adapter plan installs Wrangler. */
+	wranglerInstall?: boolean;
 	scripts: Record<string, string>;
 	workerConfig?: WorkerConfig;
 	buildConfig?: BuildConfig;

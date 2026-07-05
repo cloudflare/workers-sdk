@@ -29,11 +29,8 @@ import type {
 	DetectionConfidence,
 	SourceCategory,
 } from "../types";
-import type {
-	PackageJSON,
-	PackageManager,
-	RawConfig,
-} from "@cloudflare/workers-utils";
+import type { PackageJSON, PackageManager } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 type DetectionInput = {
 	projectPath: string;

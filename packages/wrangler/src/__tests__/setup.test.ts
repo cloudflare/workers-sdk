@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as run from "@cloudflare/autoconfig";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
@@ -190,6 +191,22 @@ describe("wrangler setup", () => {
 		expect(std.out).toContain(
 			"🎉 Your project is now setup to deploy to Cloudflare"
 		);
+	});
+
+	test("should reject Dockerfile Containers setup non-interactively without --yes", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		await seed({
+			Dockerfile: "FROM node:22\nEXPOSE 3000\n",
+			"package.json": JSON.stringify({ name: "container-project" }),
+		});
+
+		await expect(runWrangler("setup --no-install-wrangler")).rejects.toThrow(
+			"Dockerfile-to-Containers auto-configuration in non-interactive sessions requires an explicit Dockerfile target or `wrangler setup --yes`."
+		);
+		expect(existsSync("wrangler.jsonc")).toBe(false);
+		expect(existsSync("src/worker.js")).toBe(false);
 	});
 
 	test("should output an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH", async ({

@@ -491,6 +491,7 @@ describe("containers instances", () => {
 					id: "do-instance-1111",
 					name: "random-76",
 					state: "running",
+					status: { container_status: "running", health: "running" },
 					location: "dfw01",
 					version: 57,
 					created: "2025-06-01T10:00:00Z",
@@ -794,6 +795,7 @@ describe("containers instances", () => {
 					{
 						id: "22222222-2222-2222-2222-222222222222",
 						state: "provisioning",
+						status: { health: "placed" },
 						location: "iad01",
 						version: 2,
 						created: "2025-06-01T11:00:00Z",

@@ -1243,7 +1243,9 @@ describe("wrangler deploy with containers", () => {
 		);
 		expectGeneratedContainerUpload(upload.metadata, expect);
 		expect(std.out).toContain("Uploaded test-name");
-		expect(std.out).toContain("Building image test-name:Galaxy");
+		expect(std.out).toContain(
+			`Building image test-name:${TEST_CONTAINER_BUILD_TAG}`
+		);
 	});
 
 	it("should auto-configure and deploy a nested explicit Dockerfile target from its directory", async ({
@@ -1301,7 +1303,9 @@ describe("wrangler deploy with containers", () => {
 		).toContain("defaultPort = 8787;");
 		expectGeneratedContainerUpload(upload.metadata, expect);
 		expect(std.out).toContain("Uploaded test-name");
-		expect(std.out).toContain("Building image test-name:Galaxy");
+		expect(std.out).toContain(
+			`Building image test-name:${TEST_CONTAINER_BUILD_TAG}`
+		);
 	});
 	it("should write container deployment details to WRANGLER_OUTPUT_FILE_PATH", async ({
 		expect,
@@ -5424,6 +5428,7 @@ function mockUploadGeneratedContainerWorker(): {
 		http.put(
 			"*/accounts/:accountId/workers/scripts/:scriptName",
 			async ({ request }) => {
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 				const formBody = await request.formData();
 				upload.metadata = JSON.parse(
 					await formDataEntryToString(formBody.get("metadata"))
@@ -5461,7 +5466,9 @@ function expectGeneratedContainerUpload(
 			}),
 		])
 	);
-	expect(metadata?.containers).toEqual([{ class_name: "AppContainer" }]);
+	expect(metadata?.containers).toEqual([
+		{ name: "test-name", class_name: "AppContainer" },
+	]);
 }
 
 type TextFormDataEntry = {

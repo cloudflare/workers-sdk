@@ -504,6 +504,7 @@ function getRetryAfterMs(err: Error): number | undefined {
 	return undefined;
 }
 
+/** Extracts structured API failure details for Wrangler's output file. */
 export function getCommandFailedOutputFields(error: Error): {
 	code: number | undefined;
 	status?: number;

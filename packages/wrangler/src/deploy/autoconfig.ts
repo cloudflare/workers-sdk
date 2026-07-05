@@ -184,10 +184,9 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				const autoConfigSummary = await runAutoConfigLogic(details, {
 					context: autoConfigContext,
 					dryRun: !!args.dryRun,
-					skipConfirmations: options.skipConfirmations === true || shouldSkipAutoConfigConfirmations(
-						details,
-						deployIntent
-					),
+					skipConfirmations:
+						options.skipConfirmations === true ||
+						shouldSkipAutoConfigConfirmations(details, deployIntent),
 				});
 
 				writeOutput({

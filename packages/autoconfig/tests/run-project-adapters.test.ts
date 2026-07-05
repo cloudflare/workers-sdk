@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import {
 	mockConsoleMethods,
@@ -56,7 +57,8 @@ describe("autoconfig run - project adapters", () => {
 			context,
 			skipConfirmations: true,
 			runBuild: false,
-			enableWranglerInstallation: false,
+			target: "wrangler",
+			enableTargetCliInstallation: false,
 		});
 
 		expect(summary).toMatchObject({
@@ -88,7 +90,6 @@ describe("autoconfig run - project adapters", () => {
 		expect(JSON.parse(readFileSync("wrangler.jsonc", "utf8"))).toMatchObject({
 			name: "express-example",
 			main: "src/worker.js",
-			compatibility_flags: ["nodejs_compat"],
 			observability: { enabled: true },
 		});
 		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
@@ -122,7 +123,8 @@ describe("autoconfig run - project adapters", () => {
 			context,
 			skipConfirmations: true,
 			runBuild: false,
-			enableWranglerInstallation: false,
+			target: "wrangler",
+			enableTargetCliInstallation: false,
 		});
 
 		expect(summary).toMatchObject({
@@ -168,7 +170,8 @@ describe("autoconfig run - project adapters", () => {
 				context,
 				skipConfirmations: true,
 				runBuild: false,
-				enableWranglerInstallation: false,
+				target: "wrangler",
+				enableTargetCliInstallation: false,
 			})
 		).rejects.toThrow("Refusing to overwrite generated file src/worker.js");
 		expect(readFileSync("src/worker.js", "utf8")).toBe("export default {};\n");
@@ -194,7 +197,8 @@ describe("autoconfig run - project adapters", () => {
 			context,
 			skipConfirmations: true,
 			runBuild: false,
-			enableWranglerInstallation: false,
+			target: "wrangler",
+			enableTargetCliInstallation: false,
 		});
 
 		expect(summary).toMatchObject({
@@ -259,6 +263,109 @@ describe("autoconfig run - project adapters", () => {
 				{
 					tag: "v1",
 					new_sqlite_classes: ["AppContainer"],
+				},
+			],
+		});
+	});
+
+	it("runs static package app build commands from the targeted app directory", async ({
+		expect,
+	}) => {
+		await seed({
+			"app/package.json": JSON.stringify({
+				name: "vite-app",
+				scripts: { build: "vite build" },
+				devDependencies: { vite: "7.0.0" },
+			}),
+			"app/dist/index.html": "<h1>Hello from Vite</h1>",
+		});
+
+		const details = await getDetailsForAutoConfig({
+			context,
+			deployIntent: {
+				trigger: "explicit-target",
+				originalTarget: "app",
+				targetKind: "directory",
+				currentDeployInterpretation: "assets",
+				sourceCategory: "directory",
+				staticAssetsAutoConfig: true,
+			},
+		});
+		const summary = await runAutoConfig(details, {
+			context,
+			skipConfirmations: true,
+			runBuild: true,
+			target: "wrangler",
+			enableTargetCliInstallation: false,
+		});
+
+		const appPath = join(process.cwd(), "app");
+		expect(context.runCommand).toHaveBeenCalledWith(
+			"npm run build",
+			appPath,
+			"[build]"
+		);
+		expect(summary).toMatchObject({
+			adapterId: "static-package-app",
+			deployMode: "no-write",
+			deploy: {
+				assets: join(appPath, "dist"),
+				generatedAssetsDirectory: "build-output",
+			},
+		});
+		expect(existsSync("wrangler.jsonc")).toBe(false);
+	});
+
+	it("applies edited Worker names to Dockerfile container config", async ({
+		expect,
+	}) => {
+		const confirm = vi
+			.fn()
+			.mockResolvedValueOnce(true)
+			.mockResolvedValueOnce(true);
+		const prompt = vi.fn().mockResolvedValue("renamed-container");
+		context = createMockContext({
+			dialogs: {
+				confirm,
+				prompt,
+				select: vi.fn(),
+			},
+		});
+		await seed({
+			"package.json": JSON.stringify({ name: "container-example" }),
+			Dockerfile: "FROM node:22\nEXPOSE 3000\n",
+		});
+
+		const details = await getDetailsForAutoConfig({
+			context,
+			deployIntent: {
+				trigger: "setup",
+			},
+		});
+		const summary = await runAutoConfig(details, {
+			context,
+			skipConfirmations: false,
+			runBuild: false,
+			target: "wrangler",
+			enableTargetCliInstallation: false,
+		});
+
+		const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
+		expect(wranglerConfig).toMatchObject({
+			name: "renamed-container",
+			containers: [
+				{
+					name: "renamed-container",
+					class_name: "AppContainer",
+					image: "./Dockerfile",
+				},
+			],
+		});
+		expect(summary.wranglerConfig).toMatchObject({
+			name: "renamed-container",
+			containers: [
+				{
+					name: "renamed-container",
 				},
 			],
 		});

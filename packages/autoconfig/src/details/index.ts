@@ -12,20 +12,24 @@ import {
 	AutoConfigDetectionError,
 	AutoConfigFrameworkConfigurationError,
 } from "../errors";
-import { getFrameworkClassInstance, isFrameworkSupported, isKnownFramework } from "../frameworks";
+import {
+	getFrameworkClassInstance,
+	isFrameworkSupported,
+	isKnownFramework,
+} from "../frameworks";
 import {
 	getAllFrameworksInfos,
 	staticFramework,
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
-import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
-import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import {
 	detectProjectAdapter,
 	detectRootContainerFallback,
 	getPackageManager,
 	readPackageJson,
 } from "./project-adapters";
+import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
+import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
@@ -317,7 +321,7 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
-	if (shouldFallbackToRootContainer(framework.id)) {
+	if (shouldFallbackToRootContainer(framework.id, target)) {
 		const containerDetails = await detectRootContainerFallback(adapterInput);
 		if (containerDetails) {
 			return containerDetails;
@@ -350,11 +354,14 @@ export async function getDetailsForAutoConfig({
 	};
 }
 
-function shouldFallbackToRootContainer(frameworkId: string): boolean {
+function shouldFallbackToRootContainer(
+	frameworkId: string,
+	target: AutoConfigTarget
+): boolean {
 	return (
 		frameworkId !== "cloudflare-pages" &&
-		isKnownFramework(frameworkId) &&
-		!isFrameworkSupported(frameworkId)
+		isKnownFramework(frameworkId, target) &&
+		!isFrameworkSupported(frameworkId, target)
 	);
 }
 
@@ -625,10 +632,10 @@ export async function confirmAutoConfigDetails(
 			}
 		);
 
-	updatedAutoConfigDetails.framework = getFrameworkClassInstance(
-		frameworkId,
-		target
-	);
+		updatedAutoConfigDetails.framework = getFrameworkClassInstance(
+			frameworkId,
+			target
+		);
 
 		const outputDir = await dialogs.prompt(
 			"What directory contains your applications' output/asset files?",
