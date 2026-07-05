@@ -50,10 +50,9 @@ describe("wrangler setup", () => {
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
-			  -y, --yes                                  Answer "yes" to any prompts for configuring your project  [boolean] [default: false]
-			      --build                                Run your project's build command once it has been configured  [boolean] [default: false]
-			      --dry-run                              Runs the command without applying any filesystem modifications  [boolean]
-			      --experimental-auto-config-containers  Experimental: allow auto-config to generate a Containers Worker from Dockerfile projects  [boolean] [default: false]"
+			  -y, --yes      Answer "yes" to any prompts for configuring your project  [boolean] [default: false]
+			      --build    Run your project's build command once it has been configured  [boolean] [default: false]
+			      --dry-run  Runs the command without applying any filesystem modifications  [boolean]"
 		`);
 	});
 
@@ -172,9 +171,7 @@ describe("wrangler setup", () => {
 		vi.spyOn(cliPackages, "installWrangler").mockImplementation(async () => {});
 		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
 
-		await runWrangler(
-			"setup --yes --no-install-wrangler --experimental-auto-config-containers"
-		);
+		await runWrangler("setup --yes --no-install-wrangler");
 
 		const wranglerConfig = JSON.parse(await readFile("wrangler.jsonc", "utf8"));
 		expect(wranglerConfig).toMatchObject({

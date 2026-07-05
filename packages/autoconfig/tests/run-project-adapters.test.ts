@@ -188,7 +188,6 @@ describe("autoconfig run - project adapters", () => {
 			context,
 			deployIntent: {
 				trigger: "setup",
-				containersAutoConfig: true,
 			},
 		});
 		const summary = await runAutoConfig(details, {

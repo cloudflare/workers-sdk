@@ -383,7 +383,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			});
 		});
 
-		it("detects explicit Dockerfile targets only with the Containers gate", async ({
+		it("detects explicit Dockerfile targets as Containers", async ({
 			expect,
 		}) => {
 			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 8080\n");
@@ -397,20 +397,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 						targetKind: "file",
 						currentDeployInterpretation: "script",
 						sourceCategory: "dockerfile",
-					},
-				})
-			).resolves.toMatchObject({ configured: true });
-
-			await expect(
-				details.getDetailsForAutoConfig({
-					context,
-					deployIntent: {
-						trigger: "explicit-target",
-						originalTarget: "Dockerfile",
-						targetKind: "file",
-						currentDeployInterpretation: "script",
-						sourceCategory: "dockerfile",
-						containersAutoConfig: true,
 					},
 				})
 			).resolves.toMatchObject({
@@ -460,6 +446,46 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			});
 		});
 
+		it("uses the Dockerfile directory as the project root for nested explicit Dockerfile targets", async ({
+			expect,
+		}) => {
+			await seed({
+				"services/api/package.json": JSON.stringify({ name: "api-service" }),
+				"services/api/Dockerfile": "FROM node:22\nEXPOSE 8787\n",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "services/api/Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "dockerfile-container",
+				projectPath: expect.stringContaining(join("services", "api")),
+				workerName: "api-service",
+				configurationPlan: {
+					wranglerConfig: {
+						name: "api-service",
+						containers: [
+							{
+								image: "./Dockerfile",
+							},
+						],
+					},
+					summaryFields: {
+						port: 8787,
+					},
+				},
+			});
+		});
+
 		it("falls back to port 80 and warns when a Dockerfile has no port hints", async ({
 			expect,
 		}) => {
@@ -474,7 +500,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 						targetKind: "file",
 						currentDeployInterpretation: "script",
 						sourceCategory: "dockerfile",
-						containersAutoConfig: true,
 					},
 				})
 			).resolves.toMatchObject({
@@ -500,7 +525,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					context: createMockContext({ isNonInteractiveOrCI: () => true }),
 					deployIntent: {
 						trigger: "setup",
-						containersAutoConfig: true,
 					},
 				})
 			).rejects.toThrow(
@@ -518,7 +542,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					context: createMockContext({ isNonInteractiveOrCI: () => true }),
 					deployIntent: {
 						trigger: "setup",
-						containersAutoConfig: true,
 						allowNonInteractivePersistentSetup: true,
 					},
 				})
@@ -546,7 +569,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 						targetKind: "file",
 						currentDeployInterpretation: "script",
 						sourceCategory: "dockerfile",
-						containersAutoConfig: true,
 					},
 				})
 			).resolves.toMatchObject({
@@ -554,6 +576,109 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				configurationPlan: {
 					summaryFields: {
 						port: 3000,
+					},
+				},
+			});
+		});
+
+		it("uses a root Dockerfile as a bare deploy fallback when no other detection works", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "bare",
+						currentDeployInterpretation: "none",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "dockerfile-container",
+				confidence: "medium",
+				configurationPlan: {
+					summaryFields: {
+						port: 3000,
+					},
+				},
+			});
+		});
+
+		it("does not let a root Dockerfile preempt Express project detection", async ({
+			expect,
+		}) => {
+			await seed({
+				"package.json": JSON.stringify({ dependencies: { express: "5" } }),
+				Dockerfile: "FROM node:22\nEXPOSE 3000\n",
+				"index.js": `
+					import express from "express";
+					const app = express();
+					app.listen(3000);
+				`,
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "bare",
+						currentDeployInterpretation: "none",
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "express-node-http-server",
+				projectKind: "node-http-server",
+			});
+		});
+
+		it("does not let a root Dockerfile preempt static output detection", async ({
+			expect,
+		}) => {
+			await seed({
+				Dockerfile: "FROM nginx:1\nEXPOSE 80\n",
+				"index.html": "<h1>Hello World</h1>",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "bare",
+						currentDeployInterpretation: "none",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				framework: {
+					id: "static",
+				},
+				outputDir: ".",
+			});
+		});
+
+		it("uses a root Dockerfile fallback for unsupported framework projects", async ({
+			expect,
+		}) => {
+			await seed({
+				"package.json": JSON.stringify({ dependencies: { hono: "4" } }),
+				Dockerfile: "FROM node:22\nEXPOSE 8787\n",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "bare",
+						currentDeployInterpretation: "none",
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					summaryFields: {
+						port: 8787,
 					},
 				},
 			});

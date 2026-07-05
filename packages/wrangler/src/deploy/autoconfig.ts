@@ -75,7 +75,6 @@ type AutoConfigArgs = ReadConfigCommandArgs &
 		dryRun: boolean | undefined;
 		latest: boolean | undefined;
 		experimentalAutoConfigStaticAssets: boolean | undefined;
-		experimentalAutoConfigContainers: boolean | undefined;
 	};
 
 export type AutoConfigDeploymentMetadata = {
@@ -329,6 +328,10 @@ function applyPersistentAutoConfigDeployTarget<Args extends AutoConfigArgs>(
 	if (args.assets === deployIntent.originalTarget) {
 		args.assets = undefined;
 	}
+
+	if (details.configurationPlan.wranglerConfig) {
+		args.config = path.join(details.projectPath, "wrangler.jsonc");
+	}
 }
 
 function getDeployIntent(
@@ -355,7 +358,6 @@ function getDeployIntent(
 						: "none",
 			sourceCategory: getSourceCategory(args.path, targetKind),
 			staticAssetsAutoConfig: args.experimentalAutoConfigStaticAssets,
-			containersAutoConfig: args.experimentalAutoConfigContainers,
 		};
 	}
 
@@ -363,7 +365,6 @@ function getDeployIntent(
 		return {
 			trigger: "bare",
 			currentDeployInterpretation: "none",
-			containersAutoConfig: args.experimentalAutoConfigContainers,
 		};
 	}
 

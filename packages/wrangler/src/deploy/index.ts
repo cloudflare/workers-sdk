@@ -90,12 +90,6 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
-		"experimental-auto-config-containers": {
-			describe:
-				"Experimental: allow auto-config to generate a Containers Worker from Dockerfile projects",
-			type: "boolean",
-			default: false,
-		},
 		autoconfig: {
 			describe:
 				"Enables framework detection and automatic configuration when deploying",
