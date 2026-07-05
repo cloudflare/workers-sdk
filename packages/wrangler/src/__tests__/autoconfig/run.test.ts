@@ -311,9 +311,6 @@ describe("autoconfig (deploy)", () => {
 				 - Output Directory: dist
 
 
-				📦 Install packages:
-				 - wrangler (devDependency)
-
 				📝 Update package.json scripts:
 				 - "deploy": "echo 'built' > build.txt && wrangler deploy"
 				 - "preview": "echo 'built' > build.txt && wrangler dev"
@@ -374,9 +371,8 @@ describe("autoconfig (deploy)", () => {
 				"
 			`);
 
-			// Wrangler installation was disabled (enableWranglerInstallation: false) to avoid
-			// running the real installer in tests. The "📦 Install packages:" output in the
-			// snapshot above confirms the intent is recorded in the autoconfig summary.
+			// Wrangler installation was disabled (enableWranglerInstallation: false) to
+			// avoid running the real installer in tests.
 			expect(installSpy).not.toHaveBeenCalled();
 
 			// The framework's configuration command should have been run
