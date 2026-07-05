@@ -294,6 +294,23 @@ export class BundlerController extends Controller {
 				onStart: () => {
 					this.emitBundleStartEvent(config);
 				},
+				onRebuildError: (errors, warnings) => {
+					if (!buildAborter.signal.aborted) {
+						// Watch-mode rebuild failures route through the same error
+						// path as initial-build failures, so DevEnv logs them
+						// (logBuildFailure) and emits `buildFailed` symmetrically.
+						this.emitErrorEvent({
+							type: "error",
+							reason: "Failed to rebuild the Worker",
+							cause: Object.assign(
+								new Error(`Build failed with ${errors.length} error(s)`),
+								{ errors, warnings }
+							),
+							source: "BundlerController",
+							data: undefined,
+						});
+					}
+				},
 				checkFetch: shouldCheckFetch(
 					config.compatibilityDate,
 					config.compatibilityFlags

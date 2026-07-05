@@ -133,6 +133,66 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				`);
 		});
 
+		test("a watch-mode rebuild failure emits an error event and recovers", async ({
+			expect,
+		}) => {
+			await seed({
+				"src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("ok")
+					}
+				} satisfies ExportedHandler
+			`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("src/index.ts"),
+				projectRoot: path.resolve("src"),
+			});
+			const first = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			await first;
+
+			// Break the source: the rebuild failure must surface as an error
+			// event (routed like initial-build failures, so DevEnv can emit
+			// `buildFailed`), not just terminal text.
+			const errorEvent = bus.waitFor(
+				"error",
+				(e) =>
+					e.source === "BundlerController" &&
+					e.reason === "Failed to rebuild the Worker"
+			);
+			await seed({
+				"src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+			`,
+			});
+			const errored = await errorEvent;
+			expect(errored.cause).toMatchObject({
+				errors: expect.arrayContaining([
+					expect.objectContaining({
+						location: expect.objectContaining({ file: "index.ts" }),
+					}),
+				]),
+			});
+
+			// Fixing the source recovers the watch loop with a fresh bundle.
+			const recovered = bus.waitFor("bundleComplete");
+			await seed({
+				"src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("fixed")
+					}
+				} satisfies ExportedHandler
+			`,
+			});
+			expect(
+				findSourceFile((await recovered).bundle.entrypointSource, "index.ts")
+			).toContain("fixed");
+		});
+
 		test("multiple ts source files", async ({ expect }) => {
 			await seed({
 				"src/index.ts": dedent /* javascript */ `
