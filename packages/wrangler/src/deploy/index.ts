@@ -14,6 +14,7 @@ import {
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { syncWorkersSite } from "../sites";
@@ -121,6 +122,27 @@ export async function runDeployCommandHandler(
 		pagesToWorkersDelegation = false,
 	}: { config: Config; pagesToWorkersDelegation?: boolean }
 ): Promise<void> {
+	// Capture whether this project can prove it owns the target Worker name,
+	// BEFORE autoconfig generates or rewrites the config. Ownership is proven by
+	// a config file that names the Worker; without one a same-named remote Worker
+	// is a probable collision rather than a redeploy. We only guard
+	// non-interactive deploys (agents, CI, the Pages-to-Workers delegation):
+	// there we cannot prompt to resolve the collision, and silently overwriting
+	// an unrelated Worker is the worst outcome. Interactive users pick the name
+	// at a prompt and keep the existing confirmation flow.
+	//
+	// For the Pages-to-Workers delegation we guard even when a name was passed:
+	// the name is a Pages project name carried across, and an existing Worker of
+	// the same name is a different resource we must not clobber. Repeat
+	// delegations are unaffected because the first one writes a config file
+	// (so `configPath` is then set). Outside the delegation, an explicit `--name`
+	// is treated as deliberate ownership so plain `wrangler deploy --name foo`
+	// keeps working in CI. See `failIfWorkerNameTaken` in preUploadApiChecks.
+	const nameOwnershipUnverified =
+		!config.configPath &&
+		isNonInteractiveOrCI() &&
+		(pagesToWorkersDelegation || !args.name);
+
 	// --- Step 0. Auto-config --- //
 	const autoConfigResult = await maybeRunAutoConfig(args, config, {
 		skipConfirmations: pagesToWorkersDelegation,
@@ -148,6 +170,7 @@ export async function runDeployCommandHandler(
 
 	// Merge CLI args with config into props for building and deploying
 	const { props, buildProps } = await mergeDeployConfigArgs(args, config);
+	props.failIfWorkerNameTaken = nameOwnershipUnverified;
 
 	try {
 		// Derive workerNameOverridden by comparing pre-merge name with post-merge name
