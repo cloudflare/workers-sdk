@@ -83,8 +83,20 @@ export function buildDeprecateCommand(
 	return ["deprecate", `${pkgName}@${version}`, message];
 }
 
-export function runNpmCommand(args: string[]): SpawnSyncReturns<Buffer> {
-	return spawnSync("npm", args, { env: process.env });
+/**
+ * Runs an npm command. Read-only checks (view/whoami) keep piped stdio so
+ * their output can be inspected programmatically. Mutating commands
+ * (dist-tag add, deprecate) use inherited stdio so npm can prompt for an
+ * OTP (2FA) and its own output/errors are visible during an incident.
+ */
+export function runNpmCommand(
+	args: string[],
+	{ inherit = false }: { inherit?: boolean } = {}
+): SpawnSyncReturns<Buffer> {
+	return spawnSync("npm", args, {
+		env: process.env,
+		stdio: inherit ? "inherit" : "pipe",
+	});
 }
 
 export function verifyVersionExists(pkgName: string, version: string): boolean {
@@ -121,13 +133,13 @@ export function revertPackage(
 	}
 
 	console.log(`[${spec.name}] Running: npm ${distTagArgs.join(" ")}`);
-	const distTagResult = runNpmCommand(distTagArgs);
+	const distTagResult = runNpmCommand(distTagArgs, { inherit: true });
 	if (distTagResult.status !== 0) {
 		return `[${spec.name}] Failed to move "${options.tag}" tag to ${spec.goodVersion}`;
 	}
 
 	console.log(`[${spec.name}] Running: npm ${deprecateArgs.join(" ")}`);
-	const deprecateResult = runNpmCommand(deprecateArgs);
+	const deprecateResult = runNpmCommand(deprecateArgs, { inherit: true });
 	if (deprecateResult.status !== 0) {
 		return `[${spec.name}] Failed to deprecate ${spec.badVersion}`;
 	}
@@ -238,7 +250,14 @@ export function parseCliArgs(argv: string[]): {
 	// collect it in a first pass before validating package names.
 	for (let i = 0; i < argv.length; i++) {
 		if (argv[i] === "--allow-package") {
-			allowedPackages.add(argv[++i]);
+			const value = argv[i + 1];
+			if (!value) {
+				console.error('Error: missing value for "--allow-package".');
+				process.exit(1);
+				return { specs: [], dryRun, tag, deprecateMessage };
+			}
+			allowedPackages.add(value);
+			i++;
 		}
 	}
 
@@ -250,8 +269,9 @@ export function parseCliArgs(argv: string[]): {
 		} else if (arg === "--package") {
 			const value = argv[i + 1];
 			if (!value) {
-				console.error("Error: missing value for \"--package\".");
+				console.error('Error: missing value for "--package".');
 				process.exit(1);
+				continue;
 			}
 			i++;
 			const spec = parsePackageArg(value);
@@ -268,16 +288,18 @@ export function parseCliArgs(argv: string[]): {
 		} else if (arg === "--tag") {
 			const value = argv[i + 1];
 			if (!value) {
-				console.error("Error: missing value for \"--tag\".");
+				console.error('Error: missing value for "--tag".');
 				process.exit(1);
+				continue;
 			}
 			tag = value;
 			i++;
 		} else if (arg === "--message") {
 			const value = argv[i + 1];
 			if (!value) {
-				console.error("Error: missing value for \"--message\".");
+				console.error('Error: missing value for "--message".');
 				process.exit(1);
+				continue;
 			}
 			deprecateMessage = value;
 			i++;
@@ -290,6 +312,7 @@ export function parseCliArgs(argv: string[]): {
 		console.error("Error: at least one --package must be given.\n");
 		printUsage();
 		process.exit(1);
+		return { specs: [], dryRun, tag, deprecateMessage };
 	}
 
 	return { specs, dryRun, tag, deprecateMessage };
