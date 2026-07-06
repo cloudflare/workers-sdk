@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import { getVarsForDev } from "../../dev/dev-vars";
 import { mockConsoleMethods } from "../helpers/mock-console";
 
@@ -86,10 +86,7 @@ describe("getVarsForDev", () => {
 	it("falls back to .env files when CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is not false", ({
 		expect,
 	}) => {
-		// eslint-disable-next-line turbo/no-undeclared-env-vars -- Bypassing turbo check for tests
-		const originalEnv = process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV;
-		// eslint-disable-next-line turbo/no-undeclared-env-vars -- Bypassing turbo check for tests
-		delete process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV;
+		vi.stubEnv("CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV", "true");
 		try {
 			fs.writeFileSync(".env", "MY_VARIABLE_A=900\nENV_SECRET=moon");
 
@@ -110,13 +107,7 @@ describe("getVarsForDev", () => {
 				ENV_SECRET: { type: "secret_text", value: "moon" },
 			});
 		} finally {
-			if (originalEnv === undefined) {
-				// eslint-disable-next-line turbo/no-undeclared-env-vars -- Bypassing turbo check for tests
-				delete process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV;
-			} else {
-				// eslint-disable-next-line turbo/no-undeclared-env-vars -- Bypassing turbo check for tests
-				process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = originalEnv;
-			}
+			vi.unstubAllEnvs();
 		}
 	});
 
