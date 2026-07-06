@@ -443,7 +443,10 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					watch: false,
 					persist: false,
 					inspector: false,
-					registry: undefined,
+					// `false`, not `undefined`: harness workers must stay
+					// invisible to the shared dev registry (undefined now
+					// means "apply the CLI default", mirroring `persist`).
+					registry: false,
 					structuredLogsHandler: (log: WorkerdStructuredLog) =>
 						captureStructuredLog(log),
 					outboundService: (request) => {

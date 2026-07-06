@@ -263,7 +263,7 @@ async function setupDevEnv(
 				liveReload: args.liveReload,
 				testScheduled: args.testScheduled,
 				logLevel: args.logLevel,
-				registry: args.disableDevRegistry ? undefined : getRegistryPath(),
+				registry: args.disableDevRegistry ? false : getRegistryPath(),
 				multiworkerPrimary: args.multiworkerPrimary,
 				enableContainers: args.enableContainers,
 				dockerPath: args.dockerPath,

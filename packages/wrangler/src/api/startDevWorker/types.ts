@@ -77,6 +77,9 @@ export type StartDevWorkerOptions = Omit<
 	};
 	dev: StartDevWorkerInput["dev"] & {
 		persist: string | false;
+		/** Resolved: the default registry path is applied and `false`
+		 * (discovery disabled) resolves to undefined. */
+		registry?: string;
 		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to the Wrangler configuration file, not by other controllers eg RemoteRuntimeContoller)
 		/** Handles structured runtime logs. */
 		structuredLogsHandler?: (log: WorkerdStructuredLog) => void;

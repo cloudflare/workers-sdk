@@ -649,8 +649,12 @@ export interface StartDevWorkerInput {
 		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
 		enableContainers?: boolean;
 
-		/** Path to the dev registry directory */
-		registry?: string;
+		/** Path to the dev registry directory. Defaults to the shared dev
+		 * registry (`WRANGLER_REGISTRY_PATH` or `<global config>/registry` —
+		 * the same resolution the CLI uses), so programmatic dev workers
+		 * discover and are discovered by other local dev sessions. Set
+		 * `false` to disable cross-session service discovery. */
+		registry?: string | false;
 
 		/** Path to the docker executable. Defaults to 'docker' */
 		dockerPath?: string;

@@ -8,6 +8,7 @@ import {
 	getTodaysCompatDate,
 	getDisableConfigWatching,
 	getDockerPath,
+	getRegistryPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
@@ -110,6 +111,14 @@ async function resolveDevConfig(
 		config
 	);
 
+	// Mirror `persist`: apply the CLI's default so programmatic dev workers
+	// join the shared dev registry (cross-session service discovery) unless
+	// the caller passes an explicit path or opts out with `false`.
+	const devRegistryPath =
+		input.dev?.registry === false
+			? undefined
+			: (input.dev?.registry ?? getRegistryPath());
+
 	const { host, routes } = await getHostAndRoutes(
 		{
 			host: input.dev?.origin?.hostname,
@@ -171,7 +180,7 @@ async function resolveDevConfig(
 		structuredLogsHandler: input.dev?.structuredLogsHandler,
 		// absolute resolved path
 		persist: localPersistencePath,
-		registry: input.dev?.registry,
+		registry: devRegistryPath,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		inferOriginFromRoutes: input.dev?.inferOriginFromRoutes ?? true,
 		routeRequestsByRoutes: input.dev?.routeRequestsByRoutes ?? false,
@@ -272,7 +281,11 @@ async function resolveBindings(
 		);
 	};
 
-	// Print the initial bindings table
+	// Print the initial bindings table. Deliberately keyed on the EXPLICIT
+	// input, not the resolved default: printing is cosmetic and reading the
+	// defaulted registry here would change output for every caller that
+	// never opted in (the CLI always passes an explicit path, so its print
+	// behavior is unchanged).
 	printCurrentBindings(
 		input.dev?.registry ? getWorkerRegistry(input.dev.registry) : null
 	);

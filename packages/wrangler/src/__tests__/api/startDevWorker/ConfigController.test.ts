@@ -1,4 +1,5 @@
 import path from "node:path";
+import { getRegistryPath } from "@cloudflare/workers-utils";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -139,6 +140,51 @@ describe("ConfigController", () => {
 				entrypoint: path.join(process.cwd(), "src/index.ts"),
 			},
 		});
+	});
+
+	it("should default dev.registry like the CLI, with a `false` opt-out", async ({
+		expect,
+	}) => {
+		await seed({
+			"src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
+		});
+
+		// Unset: the CLI's shared-registry default applies, so programmatic
+		// dev workers discover (and are discovered by) other dev sessions.
+		const defaulted = bus.waitFor("configUpdate");
+		await controller.set({ entrypoint: "src/index.ts" });
+		await expect(defaulted).resolves.toMatchObject({
+			type: "configUpdate",
+			config: { dev: { registry: getRegistryPath() } },
+		});
+
+		// Explicit path: preserved verbatim.
+		const explicit = bus.waitFor("configUpdate");
+		await controller.set({
+			entrypoint: "src/index.ts",
+			dev: { registry: path.join(process.cwd(), "custom-registry") },
+		});
+		await expect(explicit).resolves.toMatchObject({
+			config: {
+				dev: { registry: path.join(process.cwd(), "custom-registry") },
+			},
+		});
+
+		// `false`: discovery disabled — resolves to undefined, mirroring
+		// `persist: false`.
+		const disabled = bus.waitFor("configUpdate");
+		await controller.set({
+			entrypoint: "src/index.ts",
+			dev: { registry: false },
+		});
+		const disabledEvent = await disabled;
+		expect(disabledEvent.config.dev.registry).toBeUndefined();
 	});
 
 	it("should apply module root to parent if main is nested from base_dir", async ({
