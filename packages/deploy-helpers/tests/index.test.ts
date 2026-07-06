@@ -4,8 +4,9 @@ import { describe, it } from "vitest";
 
 describe("context singleton", () => {
 	// Verifies that both package entry points (. and ./context) share the same
-	// context module. This only holds if tsup's splitting is enabled — if it's
-	// disabled, each entry bundles its own copy and this test will fail.
+	// context module. This relies on the bundler code-splitting the shared
+	// context into a common chunk (always enabled in tsdown) — otherwise each
+	// entry bundles its own copy and this test will fail.
 	it("init from main entry propagates to context entry", ({ expect }) => {
 		const mockLogger = { debug: () => {}, log: () => {} };
 
