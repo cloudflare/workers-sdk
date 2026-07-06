@@ -6,7 +6,6 @@ import { sendMetricsEvent } from "../../metrics";
 import {
 	maybeDelegatePagesToWorkers,
 	recordPagesToWorkersDelegateFailure,
-	runWithPagesToWorkersDelegation,
 } from "../../pages/delegate-to-workers";
 import { detectAgent } from "../../utils/detect-agent";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -317,26 +316,5 @@ describe("maybeDelegatePagesToWorkers", () => {
 		);
 
 		expect(std.warn).toContain("wrangler pages project create --force");
-	});
-
-	it("does not re-enter (cannot loop) while a delegation is already running", async ({
-		expect,
-	}) => {
-		let nested:
-			| Awaited<ReturnType<typeof maybeDelegatePagesToWorkers>>
-			| undefined;
-
-		const result = await runWithPagesToWorkersDelegation(async () => {
-			nested = await maybeDelegatePagesToWorkers({
-				command: "deploy",
-				projectPath: process.cwd(),
-			});
-			return { handled: true };
-		});
-
-		expect(result).toEqual({ handled: true });
-		// The nested call bailed via the re-entrancy guard rather than starting
-		// another deploy.
-		expect(nested).toEqual({ handled: false });
 	});
 });

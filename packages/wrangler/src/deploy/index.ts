@@ -1,5 +1,4 @@
 import { deploy } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
 import { analyseBundle } from "../check/commands";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -21,6 +20,7 @@ import { syncWorkersSite } from "../sites";
 import { getScriptName } from "../utils/getScriptName";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -116,10 +116,15 @@ export type DeployArgs = (typeof deployCommand)["args"];
 
 export async function runDeployCommandHandler(
 	args: DeployArgs,
-	{ config }: { config: Config }
+	{
+		config,
+		pagesToWorkersDelegation = false,
+	}: { config: Config; pagesToWorkersDelegation?: boolean }
 ): Promise<void> {
 	// --- Step 0. Auto-config --- //
-	const autoConfigResult = await maybeRunAutoConfig(args, config);
+	const autoConfigResult = await maybeRunAutoConfig(args, config, {
+		skipConfirmations: pagesToWorkersDelegation,
+	});
 	if (autoConfigResult.aborted) {
 		return;
 	}

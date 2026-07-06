@@ -17,7 +17,6 @@
  * would risk deploying the same project to both platforms. A failed Workers
  * deploy surfaces its error and points the agent at the `--force` opt-out.
  */
-import { AsyncLocalStorage } from "node:async_hooks";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { logger } from "../logger";
@@ -122,15 +121,6 @@ function buildWorkersDeployFailedMessage(
 export async function maybeDelegatePagesToWorkers(
 	options: MaybeDelegatePagesToWorkersOptions
 ): Promise<PagesToWorkersDelegateResult> {
-	// Re-entrancy guard: a Workers deploy started by this delegation must never
-	// trigger another delegation. Together with the no-fallback failure handling
-	// below (we re-throw rather than running the original Pages command), this
-	// guarantees the delegation cannot loop back into itself or into the Pages
-	// command it replaced.
-	if (isDelegatingPagesToWorkers()) {
-		return { handled: false };
-	}
-
 	// Detect the agentic environment once and reuse the result: `isAgent` gates
 	// the whole feature and `id` labels the telemetry. Humans and hybrid
 	// terminals keep using Pages as before, so non-agents are never delegated
@@ -186,25 +176,6 @@ export async function maybeDelegatePagesToWorkers(
 		deployArgs: buildWorkersDeployArgs(options),
 	};
 }
-
-/**
- * Tracks whether a Pages-to-Workers delegation is actively running its Workers
- * deploy. Held in AsyncLocalStorage rather than a module-level mutable variable
- * so the signal is scoped to the delegation's async call stack: it is visible to
- * the nested deploy invocation (including autoconfig, which reads it to skip
- * confirmations only for this flow) and to the re-entrancy guard, and it is
- * torn down automatically when the deploy settles.
- */
-const delegatingPagesToWorkers = new AsyncLocalStorage<true>();
-
-export function isDelegatingPagesToWorkers(): boolean {
-	return delegatingPagesToWorkers.getStore() === true;
-}
-
-export function runWithPagesToWorkersDelegation<T>(callback: () => T): T {
-	return delegatingPagesToWorkers.run(true, callback);
-}
-
 export function recordPagesToWorkersDelegateSuccess(
 	command: PagesDelegateCommand,
 	deployArgs: PagesToWorkersDeployArgs,

@@ -19,7 +19,6 @@ import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
-import { isDelegatingPagesToWorkers } from "../pages/delegate-to-workers";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import type { ReadConfigCommandArgs } from "../config";
 
@@ -76,7 +75,8 @@ type AutoConfigArgs = ReadConfigCommandArgs &
  */
 export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	args: Args,
-	config: Config
+	config: Config,
+	options: { skipConfirmations?: boolean } = {}
 ): Promise<{ config: Config; aborted: boolean }> {
 	const shouldRunAutoConfig =
 		args.autoconfig &&
@@ -138,9 +138,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				const autoConfigSummary = await runAutoConfigLogic(details, {
 					context: autoConfigContext,
 					dryRun: !!args.dryRun,
-					// Only skip confirmations for the Pages-to-Workers delegation flow,
-					// not for every agent-driven `wrangler deploy`.
-					skipConfirmations: isDelegatingPagesToWorkers(),
+					skipConfirmations: options.skipConfirmations === true,
 				});
 
 				writeOutput({

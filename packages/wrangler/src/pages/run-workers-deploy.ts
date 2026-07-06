@@ -14,7 +14,6 @@ import { logger } from "../logger";
 import {
 	recordPagesToWorkersDelegateFailure,
 	recordPagesToWorkersDelegateSuccess,
-	runWithPagesToWorkersDelegation,
 	type PagesToWorkersDelegateResult,
 } from "./delegate-to-workers";
 
@@ -37,23 +36,24 @@ export async function runPagesToWorkersDeploy(
 	};
 
 	try {
-		await run(experimentalFlags, () =>
-			runWithPagesToWorkersDelegation(async () => {
-				initDeployHelpersContext({
-					logger,
-					fetchResult,
-					fetchListResult,
-					fetchPagedListResult,
-					fetchKVGetValue,
-					confirm,
-					prompt,
-					select,
-					isNonInteractiveOrCI,
-				});
+		await run(experimentalFlags, async () => {
+			initDeployHelpersContext({
+				logger,
+				fetchResult,
+				fetchListResult,
+				fetchPagedListResult,
+				fetchKVGetValue,
+				confirm,
+				prompt,
+				select,
+				isNonInteractiveOrCI,
+			});
 
-				await runDeployCommandHandler(args, { config });
-			})
-		);
+			await runDeployCommandHandler(args, {
+				config,
+				pagesToWorkersDelegation: true,
+			});
+		});
 	} catch (error) {
 		recordPagesToWorkersDelegateFailure(
 			delegation.command,
