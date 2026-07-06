@@ -8,9 +8,9 @@
  * platform) without disrupting humans or existing Pages projects.
  *
  * The delegation is intentionally conservative: it only triggers for agents,
- * never for existing Pages projects, and never for projects that use any Pages
- * feature we can't carry across to Workers (Pages Functions, advanced-mode
- * `_worker.js`, or `_routes.json`).
+ * never for accounts that already have Pages projects, and never for projects
+ * that use any Pages feature we can't carry across to Workers (Pages Functions,
+ * advanced-mode `_worker.js`, or `_routes.json`).
  *
  * Once we commit to the Workers deploy we do NOT fall back to Pages, even on
  * failure: the Workers deploy may already have side effects, so falling back
@@ -31,8 +31,18 @@ export interface MaybeDelegatePagesToWorkersOptions {
 	projectPath: string;
 	/** The static-assets directory the user asked to deploy (pages deploy only) */
 	assetsDirectory?: string;
-	/** Whether the targeted Pages project already exists (pages deploy only). When true we never delegate. */
-	existingProject?: boolean;
+	/**
+	 * Resolves whether the account already has any Cloudflare Pages projects.
+	 * When it resolves true we never delegate: an account that already uses Pages
+	 * keeps using Pages, whatever command or project name was targeted.
+	 *
+	 * A lazy callback rather than a boolean so the (paginated) list-projects API
+	 * call only runs for agent sessions that have already passed every cheaper,
+	 * local skip check. Non-agents, `--force` opt-outs, unsupported args, and
+	 * unsupported Pages features all short-circuit before it is invoked, so they
+	 * never pay for the extra request.
+	 */
+	accountHasPagesProjects?: () => Promise<boolean>;
 	/** When true, the user explicitly forced a direct Pages deployment (`--force`), so we never delegate. */
 	force?: boolean;
 	/** Project/worker name to carry across to the Workers deploy. */
@@ -113,10 +123,11 @@ function buildWorkersDeployFailedMessage(
  *
  * Returns `{ handled: true }` once we commit to the delegation and the caller
  * should NOT run the original Pages command. Returns `{ handled: false }` when
- * we deliberately did not delegate (not an agent, `--force`, existing project,
- * Pages-only CLI args, or an unsupported Pages feature) so the caller proceeds
- * with the original Pages command. If the Workers deploy fails after the caller
- * runs it, the caller must re-throw rather than falling back to Pages.
+ * we deliberately did not delegate (not an agent, `--force`, an account that
+ * already has Pages projects, Pages-only CLI args, or an unsupported Pages
+ * feature) so the caller proceeds with the original Pages command. If the
+ * Workers deploy fails after the caller runs it, the caller must re-throw
+ * rather than falling back to Pages.
  */
 export async function maybeDelegatePagesToWorkers(
 	options: MaybeDelegatePagesToWorkersOptions
@@ -139,12 +150,6 @@ export async function maybeDelegatePagesToWorkers(
 		return { handled: false };
 	}
 
-	// Never disrupt an existing Pages project — only brand-new projects are delegated.
-	if (options.command === "deploy" && options.existingProject === true) {
-		skipDelegate("existing pages project", options, agent.id);
-		return { handled: false };
-	}
-
 	if (options.unsupportedArgs && options.unsupportedArgs.length > 0) {
 		skipDelegate(
 			`unsupported args: ${options.unsupportedArgs.join(", ")}`,
@@ -163,6 +168,30 @@ export async function maybeDelegatePagesToWorkers(
 	if (unsupportedFeature) {
 		skipDelegate(unsupportedFeature, options, agent.id);
 		return { handled: false };
+	}
+
+	// An account that already has Pages projects keeps using Pages — we only
+	// steer brand-new accounts onto Workers. Checked last because it is the only
+	// network call here: every cheaper, local skip reason above avoids it. If the
+	// lookup itself fails we skip delegation rather than risk disrupting a Pages
+	// user.
+	if (options.accountHasPagesProjects) {
+		let hasPagesProjects: boolean;
+		try {
+			hasPagesProjects = await options.accountHasPagesProjects();
+		} catch (e) {
+			logger.debug(
+				`Pages-to-Workers delegation: could not list account Pages projects (${
+					e instanceof Error ? e.message : String(e)
+				})`
+			);
+			skipDelegate("account pages projects lookup failed", options, agent.id);
+			return { handled: false };
+		}
+		if (hasPagesProjects) {
+			skipDelegate("account has pages projects", options, agent.id);
+			return { handled: false };
+		}
 	}
 
 	// Eligible: commit to the Workers deploy. From here the caller owns the

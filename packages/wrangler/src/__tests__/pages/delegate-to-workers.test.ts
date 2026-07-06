@@ -46,13 +46,52 @@ describe("maybeDelegatePagesToWorkers", () => {
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
-	it("does not delegate an existing Pages project on deploy, and records why", async ({
+	for (const command of ["deploy", "create"] as const) {
+		it(`does not delegate when the account already has Pages projects (${command}), and records why`, async ({
+			expect,
+		}) => {
+			const result = await maybeDelegatePagesToWorkers({
+				command,
+				projectPath: process.cwd(),
+				accountHasPagesProjects: async () => true,
+			});
+
+			expect(result).toEqual({ handled: false });
+			expect(sendMetricsEvent).toHaveBeenCalledWith(
+				"pages delegate to workers",
+				expect.objectContaining({
+					result: "skipped",
+					reason: "account has pages projects",
+				}),
+				expect.anything()
+			);
+		});
+	}
+
+	it("delegates when the account has no Pages projects", async ({ expect }) => {
+		const result = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			accountHasPagesProjects: async () => false,
+		});
+
+		expect(result).toEqual({
+			handled: true,
+			command: "deploy",
+			agentId: "test-agent",
+			deployArgs: {},
+		});
+	});
+
+	it("skips delegation (and records why) when the account Pages projects lookup fails", async ({
 		expect,
 	}) => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
-			existingProject: true,
+			accountHasPagesProjects: async () => {
+				throw new Error("boom");
+			},
 		});
 
 		expect(result).toEqual({ handled: false });
@@ -60,7 +99,33 @@ describe("maybeDelegatePagesToWorkers", () => {
 			"pages delegate to workers",
 			expect.objectContaining({
 				result: "skipped",
-				reason: "existing pages project",
+				reason: "account pages projects lookup failed",
+			}),
+			expect.anything()
+		);
+	});
+
+	it("does not query account Pages projects when a cheaper, local check already skips", async ({
+		expect,
+	}) => {
+		createFunctionsDir(process.cwd());
+		const accountHasPagesProjects = vi.fn(async () => true);
+
+		const result = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			accountHasPagesProjects,
+		});
+
+		expect(result).toEqual({ handled: false });
+		// The functions/ directory is a local, no-cost skip reason, so the
+		// account-listing API call must never be made.
+		expect(accountHasPagesProjects).not.toHaveBeenCalled();
+		expect(sendMetricsEvent).toHaveBeenCalledWith(
+			"pages delegate to workers",
+			expect.objectContaining({
+				result: "skipped",
+				reason: "pages functions directory",
 			}),
 			expect.anything()
 		);

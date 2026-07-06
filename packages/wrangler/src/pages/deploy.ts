@@ -218,7 +218,8 @@ export const pagesDeployCommand = createCommand({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
-			existingProject: Boolean(projectName) && isExistingProject,
+			accountHasPagesProjects: async () =>
+				(await listProjects({ accountId })).length > 0,
 			force: args.force,
 			projectName,
 			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),
