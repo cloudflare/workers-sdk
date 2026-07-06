@@ -79,24 +79,34 @@ describe("getVarsForDev", () => {
 	});
 
 	it("falls back to .env files when CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is not false", ({ expect }) => {
-		fs.writeFileSync(".env", "MY_VARIABLE_A=900\nENV_SECRET=moon");
-		
-		const vars = { MY_VARIABLE_A: "100900" };
-		const secrets = { required: ["ENV_SECRET"] };
-		
-		const result = getVarsForDev(
-			path.resolve("wrangler.jsonc"),
-			undefined,
-			vars,
-			undefined,
-			true,
-			secrets
-		);
-		
-		expect(result).toEqual({
-			MY_VARIABLE_A: { type: "secret_text", value: "900" },
-			ENV_SECRET: { type: "secret_text", value: "moon" }
-		});
+		const originalEnv = process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV;
+		delete process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV;
+		try {
+			fs.writeFileSync(".env", "MY_VARIABLE_A=900\nENV_SECRET=moon");
+			
+			const vars = { MY_VARIABLE_A: "100900" };
+			const secrets = { required: ["ENV_SECRET"] };
+			
+			const result = getVarsForDev(
+				path.resolve("wrangler.jsonc"),
+				undefined,
+				vars,
+				undefined,
+				true,
+				secrets
+			);
+			
+			expect(result).toEqual({
+				MY_VARIABLE_A: { type: "secret_text", value: "900" },
+				ENV_SECRET: { type: "secret_text", value: "moon" }
+			});
+		} finally {
+			if (originalEnv === undefined) {
+				delete process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV;
+			} else {
+				process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = originalEnv;
+			}
+		}
 	});
 
 	it("overrides json-typed config vars", ({ expect }) => {
