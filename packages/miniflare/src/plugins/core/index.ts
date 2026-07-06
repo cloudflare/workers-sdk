@@ -856,7 +856,14 @@ export const CORE_PLUGIN: Plugin<
 		const streamingTails = observabilityEnabled
 			? [
 					...(options.streamingTails ?? []),
-					{ name: OBSERVABILITY_COLLECTOR_SERVICE_NAME },
+					// Pass the worker's name to the collector via binding props. workerd
+					// doesn't populate the tail onset's `scriptName` locally, so this is
+					// how the collector attributes each captured invocation to its worker
+					// (each worker streams to the collector with its own props).
+					{
+						name: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+						props: { worker: name },
+					},
 				]
 			: options.streamingTails;
 		const compatibilityFlags = observabilityEnabled

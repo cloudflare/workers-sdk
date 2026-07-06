@@ -19,6 +19,8 @@ export interface SpanInput {
 	traceId: string;
 	spanId: string;
 	parentId: string | null;
+	/** Owning worker (service) name, for multi-worker attribution/filtering. */
+	service: string | null;
 	name: string | null;
 	kind: string | null;
 	startMs: number;
@@ -55,6 +57,7 @@ const SCHEMA = [
 		trace_id     TEXT NOT NULL,
 		span_id      TEXT NOT NULL,
 		parent_id    TEXT,
+		service      TEXT,
 		name         TEXT,
 		kind         TEXT,
 		start_ms     INTEGER,
@@ -102,11 +105,12 @@ export class TraceStore extends DurableObject {
 		for (const s of spans) {
 			this.sql.exec(
 				`INSERT OR REPLACE INTO spans
-					(trace_id, span_id, parent_id, name, kind, start_ms, duration_ms, outcome, error, attributes)
-					VALUES (?,?,?,?,?,?,?,?,?, jsonb(?))`,
+					(trace_id, span_id, parent_id, service, name, kind, start_ms, duration_ms, outcome, error, attributes)
+					VALUES (?,?,?,?,?,?,?,?,?,?, jsonb(?))`,
 				s.traceId,
 				s.spanId,
 				s.parentId,
+				s.service,
 				s.name,
 				s.kind,
 				s.startMs,
@@ -160,12 +164,13 @@ export class TraceStore extends DurableObject {
 	openSpan(s: SpanInput): void {
 		this.sql.exec(
 			`INSERT INTO spans
-				(trace_id, span_id, parent_id, name, kind, start_ms, duration_ms, outcome, error, attributes)
-				VALUES (?,?,?,?,?,?,?,?,?, jsonb(?))
+				(trace_id, span_id, parent_id, service, name, kind, start_ms, duration_ms, outcome, error, attributes)
+				VALUES (?,?,?,?,?,?,?,?,?,?, jsonb(?))
 				ON CONFLICT (trace_id, span_id) DO NOTHING`,
 			s.traceId,
 			s.spanId,
 			s.parentId,
+			s.service,
 			s.name,
 			s.kind,
 			s.startMs,

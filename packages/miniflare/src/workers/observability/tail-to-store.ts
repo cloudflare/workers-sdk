@@ -207,9 +207,11 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 
 	constructor(
 		private readonly store: WriteThroughStore,
-		onset: TailStream.TailEvent<TailStream.Onset>
+		onset: TailStream.TailEvent<TailStream.Onset>,
+		/** Owning worker name (from miniflare core), for multi-worker attribution. */
+		private readonly worker?: string
 	) {
-		const { traceId, spanId } = ids(onset);
+		const { traceId, spanId, parentId } = ids(onset);
 		if (!spanId) {
 			return;
 		}
@@ -239,7 +241,11 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		this.#open({
 			traceId,
 			spanId,
-			parentId: null,
+			// A sub-invocation (e.g. downstream of a service binding) carries the
+			// caller's span as its parent, so it nests into one distributed trace;
+			// a true top-level invocation has no inherited parent (→ null root).
+			parentId: parentId ?? null,
+			service: this.worker ?? null,
 			name,
 			kind: friendlyKind(attributes["faas.trigger"] as string, name),
 			startMs: this.#startMs,
@@ -269,6 +275,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			traceId,
 			spanId,
 			parentId: parentId ?? null,
+			service: this.worker ?? null,
 			name: event.event.name,
 			kind: friendlyKind(undefined, event.event.name),
 			startMs,

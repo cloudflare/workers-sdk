@@ -505,3 +505,115 @@ describe("unsafeObservability (capture via cf-to-otel)", () => {
 	});
 });
 
+// Two user workers with a service binding between them. The collector is attached
+// to *every* user worker, so both invocations are captured; each span records its
+// owning worker (`service`) for multi-worker attribution.
+const DOWNSTREAM_WORKER = `export default {
+	async fetch(request, env) {
+		await env.CACHE.get("b-key");
+		console.log("handled by downstream");
+		return new Response("from-downstream");
+	},
+};`;
+
+const UPSTREAM_WORKER = `export default {
+	async fetch(request, env) {
+		const url = new URL(request.url);
+		if (url.pathname.startsWith("/wobs/")) {
+			return env.WOBS.fetch(
+				new Request("http://collector" + url.pathname.slice("/wobs".length) + url.search, request)
+			);
+		}
+		const res = await env.DOWNSTREAM.fetch("http://downstream/work");
+		return new Response("upstream->" + (await res.text()));
+	},
+};`;
+
+function multiWorkerSetup(): WorkerOptions[] {
+	return [
+		{
+			name: "upstream",
+			modules: true,
+			compatibilityDate: "2026-06-01",
+			script: UPSTREAM_WORKER,
+			serviceBindings: {
+				DOWNSTREAM: "downstream",
+				WOBS: { name: OBSERVABILITY_COLLECTOR_SERVICE_NAME },
+			},
+		},
+		{
+			name: "downstream",
+			modules: true,
+			compatibilityDate: "2026-06-01",
+			script: DOWNSTREAM_WORKER,
+			kvNamespaces: { CACHE: "cache-namespace" },
+		},
+	];
+}
+
+interface MultiTraceRow extends TraceRow {
+	service: string;
+	service_count: number;
+}
+interface DetailSpan {
+	span_id: string;
+	parent_id: string | null;
+	service: string | null;
+	name: string;
+	kind: string;
+}
+
+describe("unsafeObservability (multi-worker)", () => {
+	test("captures a cross-worker distributed trace, attributed per worker", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			unsafeObservability: true,
+			workers: multiWorkerSetup(),
+		});
+		useDispose(mf);
+
+		expect(
+			await (await mf.dispatchFetch("http://localhost/entry")).text()
+		).toBe("upstream->from-downstream");
+		await flush();
+
+		const traces = (await queryStore(
+			mf,
+			TRACE_LIST_SQL
+		)) as unknown as MultiTraceRow[];
+
+		// upstream → downstream over a service binding is a single distributed
+		// trace — the only one spanning two workers.
+		const trace = traces.find((t) => t.service_count === 2);
+		assert(trace, "expected a distributed trace spanning two workers");
+		expect(trace.service).toBe("upstream"); // rooted at the entry worker
+		expect(trace.name).toBe("GET");
+		expect(trace.outcome).toBe("ok");
+		expect(trace.span_count).toBeGreaterThanOrEqual(4);
+
+		const spans = (await queryStore(mf, TRACE_SPANS_SQL, [
+			trace.trace_id,
+		])) as unknown as DetailSpan[];
+
+		// Both workers' spans are present and attributed to the right worker.
+		const services = new Set(spans.map((s) => s.service));
+		expect(services.has("upstream")).toBe(true);
+		expect(services.has("downstream")).toBe(true);
+		const kv = spans.find((s) => s.kind === "kv");
+		assert(kv, "expected the downstream KV span");
+		expect(kv.service).toBe("downstream");
+
+		// Exactly one root (the upstream invocation); every other span links to a
+		// parent within the same trace (the cross-worker call graph is stitched).
+		const ids = new Set(spans.map((s) => s.span_id));
+		const roots = spans.filter((s) => s.parent_id === null);
+		expect(roots).toHaveLength(1);
+		expect(roots[0].service).toBe("upstream");
+		for (const s of spans) {
+			if (s.parent_id !== null) {
+				expect(ids.has(s.parent_id)).toBe(true);
+			}
+		}
+	});
+});

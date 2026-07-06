@@ -26,7 +26,11 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 		const store = this.env.TRACE_STORE.get(
 			this.env.TRACE_STORE.idFromName("singleton")
 		);
-		return new TailToStoreHandler(store, onset);
+		// Miniflare core passes the source worker's name in binding props (workerd
+		// doesn't surface it on the tail onset locally), so captured spans can be
+		// attributed to the right worker.
+		const worker = (this.ctx.props as { worker?: string } | undefined)?.worker;
+		return new TailToStoreHandler(store, onset, worker);
 	}
 
 	/**
