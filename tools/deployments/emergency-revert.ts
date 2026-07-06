@@ -248,7 +248,13 @@ export function parseCliArgs(argv: string[]): {
 			printUsage();
 			process.exit(0);
 		} else if (arg === "--package") {
-			const spec = parsePackageArg(argv[++i]);
+			const value = argv[i + 1];
+			if (!value) {
+				console.error("Error: missing value for \"--package\".");
+				process.exit(1);
+			}
+			i++;
+			const spec = parsePackageArg(value);
 			if (!allowedPackages.has(spec.name)) {
 				console.error(
 					`Error: "${spec.name}" is not a known coordinated package; pass --allow-package ${spec.name} if this is intentional.`
@@ -260,9 +266,21 @@ export function parseCliArgs(argv: string[]): {
 		} else if (arg === "--execute") {
 			dryRun = false;
 		} else if (arg === "--tag") {
-			tag = argv[++i];
+			const value = argv[i + 1];
+			if (!value) {
+				console.error("Error: missing value for \"--tag\".");
+				process.exit(1);
+			}
+			tag = value;
+			i++;
 		} else if (arg === "--message") {
-			deprecateMessage = argv[++i];
+			const value = argv[i + 1];
+			if (!value) {
+				console.error("Error: missing value for \"--message\".");
+				process.exit(1);
+			}
+			deprecateMessage = value;
+			i++;
 		} else if (arg === "--allow-package") {
 			i++; // already handled above
 		}
