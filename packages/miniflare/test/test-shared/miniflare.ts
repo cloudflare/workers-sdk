@@ -62,41 +62,6 @@ export function useDispose(mf: Miniflare): void {
 	onTestFinished(() => disposeWithRetry(mf));
 }
 
-/**
- * `dispatchFetch` with retry logic for transient connection resets.
- * On Windows CI runners, the loopback connection to the local explorer
- * server occasionally resets mid-request (ECONNRESET), unrelated to the
- * behaviour under test.
- *
- * This is a Fetcher, not a full `dispatchFetch`, since retrying requires
- * calling with the same args again - `mf.dispatchFetch` args are passed
- * straight through to `fetch()`.
- */
-export async function dispatchFetchWithRetry(
-	mf: Miniflare,
-	input: Parameters<Miniflare["dispatchFetch"]>[0],
-	init?: Parameters<Miniflare["dispatchFetch"]>[1],
-	maxRetries = 2,
-	initialDelayMs = 50
-): Promise<Awaited<ReturnType<Miniflare["dispatchFetch"]>>> {
-	let lastError: unknown;
-	for (let attempt = 0; attempt <= maxRetries; attempt++) {
-		try {
-			return await mf.dispatchFetch(input, init);
-		} catch (e) {
-			lastError = e;
-			const code = (e as { cause?: NodeJS.ErrnoException })?.cause?.code;
-			if (isWindows && code === "ECONNRESET" && attempt < maxRetries) {
-				const delay = initialDelayMs * Math.pow(2, attempt);
-				await new Promise((resolve) => setTimeout(resolve, delay));
-				continue;
-			}
-			throw e;
-		}
-	}
-	throw lastError;
-}
-
 export type TestMiniflareHandler<Env> = (
 	global: ServiceWorkerGlobalScope,
 	request: WorkerRequest,

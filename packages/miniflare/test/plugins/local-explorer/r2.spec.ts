@@ -8,7 +8,7 @@ import {
 	zR2BucketPutObjectResponse,
 	zR2ListBucketsResponse,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
-import { dispatchFetchWithRetry, disposeWithRetry } from "../../test-shared";
+import { disposeWithRetry } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
@@ -272,8 +272,7 @@ describe("R2 API", () => {
 		});
 
 		test("returns 404 for non-existent bucket", async ({ expect }) => {
-			const response = await dispatchFetchWithRetry(
-				mf,
+			const response = await mf.dispatchFetch(
 				`${BASE_URL}/r2/buckets/NON_EXISTENT/objects/some-object.txt`,
 				{
 					method: "PUT",
