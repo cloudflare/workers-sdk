@@ -254,6 +254,7 @@ export function parseCliArgs(argv: string[]): {
 					`Error: "${spec.name}" is not a known coordinated package; pass --allow-package ${spec.name} if this is intentional.`
 				);
 				process.exit(1);
+				continue;
 			}
 			specs.push(spec);
 		} else if (arg === "--execute") {
