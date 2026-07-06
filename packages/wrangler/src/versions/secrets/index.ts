@@ -244,6 +244,7 @@ async function parseModules(
 	if (
 		contentRes.headers.get("content-type")?.startsWith("multipart/form-data")
 	) {
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 		const formData = await contentRes.formData();
 
 		// Workers Sites is not supported

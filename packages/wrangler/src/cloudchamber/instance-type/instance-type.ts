@@ -191,6 +191,7 @@ export function cleanForInstanceType(
 	}
 
 	delete app.configuration.disk;
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- intentionally cleaning up deprecated `memory` field
 	delete app.configuration.memory;
 	delete app.configuration.memory_mib;
 	delete app.configuration.vcpu;

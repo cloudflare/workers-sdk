@@ -52,14 +52,14 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	const amplitude_session_id = Date.now();
 	let amplitude_event_id = 0;
 
-	// Detect agent environment once when dispatcher is created
-	// Pass empty array for processAncestry to skip process tree checks entirely.
-	// Process tree traversal uses execSync('ps ...') which is slow and can cause
-	// timeouts, especially in CI environments. Environment variable detection
-	// is sufficient for identifying most agentic environments.
+	// Detect agent environment once when dispatcher is created.
+	// Environment variable detection is sufficient for identifying most agentic
+	// environments — process tree traversal (checkProcesses) is disabled by
+	// default since it uses execSync('ps ...') which is slow and can cause
+	// timeouts, especially in CI environments.
 	let agent: string | null = null;
 	try {
-		const agentDetection = detectAgenticEnvironment(process.env, []);
+		const agentDetection = detectAgenticEnvironment();
 		agent = agentDetection.id;
 	} catch {
 		// Silent failure - agent remains null
