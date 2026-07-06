@@ -123,7 +123,8 @@ describe("R2 API", () => {
 		});
 
 		test("returns 404 for non-existent bucket", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
+			const response = await dispatchFetchWithRetry(
+				mf,
 				`${BASE_URL}/r2/buckets/NON_EXISTENT/objects`
 			);
 
@@ -193,7 +194,8 @@ describe("R2 API", () => {
 		});
 
 		test("returns 404 for non-existent bucket", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
+			const response = await dispatchFetchWithRetry(
+				mf,
 				`${BASE_URL}/r2/buckets/NON_EXISTENT/objects/some-object.txt`
 			);
 
@@ -360,7 +362,8 @@ describe("R2 API", () => {
 		});
 
 		test("returns 404 for non-existent bucket", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
+			const response = await dispatchFetchWithRetry(
+				mf,
 				`${BASE_URL}/r2/buckets/NON_EXISTENT/objects`,
 				{
 					method: "DELETE",
