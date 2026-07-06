@@ -61,8 +61,8 @@ catalogs:
       specifier: 1.60.0
       version: 1.60.0
     signal-exit:
-      specifier: 3.0.7
-      version: 3.0.7
+      specifier: 4.1.0
+      version: 4.1.0
     smol-toml:
       specifier: 1.5.2
       version: 1.5.2
@@ -4182,9 +4182,6 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
-      '@types/signal-exit':
-        specifier: ^3.0.1
-        version: 3.0.1
       '@vitest/ui':
         specifier: catalog:default
         version: 4.1.0(vitest@4.1.0)
@@ -4205,7 +4202,7 @@ importers:
         version: 3.2.0
       signal-exit:
         specifier: catalog:default
-        version: 3.0.7
+        version: 4.1.0
       smol-toml:
         specifier: catalog:default
         version: 1.5.2
@@ -4391,9 +4388,6 @@ importers:
       '@types/shell-quote':
         specifier: ^1.7.2
         version: 1.7.2
-      '@types/signal-exit':
-        specifier: ^3.0.1
-        version: 3.0.1
       '@types/supports-color':
         specifier: ^8.1.1
         version: 8.1.1
@@ -4531,7 +4525,7 @@ importers:
         version: 1.8.1
       signal-exit:
         specifier: catalog:default
-        version: 3.0.7
+        version: 4.1.0
       smol-toml:
         specifier: catalog:default
         version: 1.5.2
@@ -9384,9 +9378,6 @@ packages:
 
   '@types/shell-quote@1.7.2':
     resolution: {integrity: sha512-p3SZxGp6LXB6RPdMpJmquKjaxQlN/ijyBLTKGPg9IJK6J2g2sJsMmtXP9kNR+Axxi6MDKN2e/76HCOUmvkIpcw==}
-
-  '@types/signal-exit@3.0.1':
-    resolution: {integrity: sha512-OSitN9PP9E/c4tlt1Qdj3CAz5uHD9Da5rhUqlaKyQRCX1T7Zdpbk6YdeZbR2eiE2ce+NMBgVnMxGqpaPSNQDUQ==}
 
   '@types/stack-utils@2.0.3':
     resolution: {integrity: sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==}
@@ -20412,8 +20403,6 @@ snapshots:
       '@types/send': 0.17.4
 
   '@types/shell-quote@1.7.2': {}
-
-  '@types/signal-exit@3.0.1': {}
 
   '@types/stack-utils@2.0.3': {}
 
