@@ -154,6 +154,27 @@ describe("maybeDelegatePagesToWorkers", () => {
 				deployArgs: {},
 			});
 		});
+
+		it(`delegates when the assets directory has a supported ${marker} file`, async ({
+			expect,
+		}) => {
+			const assetsDirectory = join(process.cwd(), "dist");
+			mkdirSync(assetsDirectory);
+			createFile(assetsDirectory, marker);
+
+			const result = await maybeDelegatePagesToWorkers({
+				command: "deploy",
+				projectPath: process.cwd(),
+				assetsDirectory,
+			});
+
+			expect(result).toEqual({
+				handled: true,
+				command: "deploy",
+				agentId: "test-agent",
+				deployArgs: {},
+			});
+		});
 	}
 
 	it("does not delegate when Pages-only args are present", async ({
