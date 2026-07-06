@@ -27,7 +27,7 @@ export const RatelimitConfigSchema = z.object({
 		limit: z.number().gt(0),
 
 		// may relax this to be any number in the future
-		period: z.nativeEnum(PeriodType).optional(),
+		period: z.nativeEnum(PeriodType).optional().default(PeriodType.MINUTE),
 	}),
 });
 export const RatelimitOptionsSchema = z.object({
