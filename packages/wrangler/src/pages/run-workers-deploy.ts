@@ -20,19 +20,30 @@ import {
 export async function runPagesToWorkersDeploy(
 	delegation: Extract<PagesToWorkersDelegateResult, { handled: true }>
 ): Promise<void> {
+	// This path calls the deploy handler directly, bypassing yargs. Keep these
+	// defaults aligned with the `wrangler deploy` command definition for values
+	// the delegated deploy path can observe.
 	const args = {
 		_: ["deploy"],
 		$0: "wrangler",
 		autoconfig: true,
+		experimentalAutoCreate: true,
+		experimentalDeployHelpers: false,
+		experimentalNewConfig: false,
+		latest: false,
+		keepVars: false,
+		noBundle: false,
+		strict: false,
 		...delegation.deployArgs,
-	} as DeployArgs;
-	const config = readConfig(args, {
+	} satisfies Partial<DeployArgs>;
+	const deployArgs = args as DeployArgs;
+	const config = readConfig(deployArgs, {
 		useRedirectIfAvailable: true,
 	});
 	const experimentalFlags = {
 		MULTIWORKER: false,
-		RESOURCES_PROVISION: args.experimentalProvision ?? false,
-		AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
+		RESOURCES_PROVISION: deployArgs.experimentalProvision ?? false,
+		AUTOCREATE_RESOURCES: deployArgs.experimentalAutoCreate ?? true,
 	};
 
 	try {
@@ -49,7 +60,7 @@ export async function runPagesToWorkersDeploy(
 				isNonInteractiveOrCI,
 			});
 
-			await runDeployCommandHandler(args, {
+			await runDeployCommandHandler(deployArgs, {
 				config,
 				pagesToWorkersDelegation: true,
 			});
