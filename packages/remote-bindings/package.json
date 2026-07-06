@@ -34,7 +34,8 @@
 		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
-		"undici": "catalog:default"
+		"undici": "catalog:default",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

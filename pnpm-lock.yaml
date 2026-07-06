@@ -2573,6 +2573,9 @@ importers:
       undici:
         specifier: catalog:default
         version: 7.28.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
