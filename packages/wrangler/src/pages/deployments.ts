@@ -251,12 +251,18 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		);
 
 		for (const currentDeploymentId of deploymentIds) {
+			if (deploymentCount > 1) {
+				logger.log(`Deleting deployment ${currentDeploymentId}...`);
+			}
 			await fetchResult(
 				COMPLIANCE_REGION_CONFIG_PUBLIC,
 				`/accounts/${accountId}/pages/projects/${projectName}/deployments/${currentDeploymentId}`,
 				{ method: "DELETE" },
 				new URLSearchParams({ force: force.toString() })
 			);
+			if (deploymentCount > 1) {
+				logger.log(`Deleted deployment ${currentDeploymentId}`);
+			}
 		}
 
 		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {

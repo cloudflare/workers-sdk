@@ -175,6 +175,10 @@ describe("pages deployment delete", () => {
 		);
 
 		expect(std.out).toContain("Deleting 2 deployments...");
+		expect(std.out).toContain("Deleting deployment abc123...");
+		expect(std.out).toContain("Deleted deployment abc123");
+		expect(std.out).toContain("Deleting deployment def456...");
+		expect(std.out).toContain("Deleted deployment def456");
 		expect(std.out).toContain("Successfully deleted 2 deployments");
 		expect(remainingDeploymentIds).toEqual([]);
 	});
