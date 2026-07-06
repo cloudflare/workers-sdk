@@ -1106,6 +1106,64 @@ test("reply: MessageBuilder generates reply headers", async ({ expect }) => {
 	expect(fileContent).toContain("YXR0YWNoZWQgZmlsZSBjb250ZW50");
 });
 
+test("reply: MessageBuilder preserves existing References chain", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = new Miniflare({
+		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
+		modules: true,
+		script: REPLY_EMAIL_BUILDER_WORKER,
+		unsafeTriggerHandlers: true,
+
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	// The incoming email is already part of a reply chain, so it carries both
+	// In-Reply-To and References headers (required for it to be replyable).
+	const email = dedent`
+		From: someone <someone@example.com>
+		To: someone else <someone-else@example.com>
+		Message-ID: <im-a-random-message-id@example.com>
+		In-Reply-To: <im-a-random-parent-message-id@example.com>
+		References: <im-a-random-grandparent-message-id@example.com> <im-a-random-parent-message-id@example.com>
+		MIME-Version: 1.0
+		Content-Type: text/plain
+
+		This is a random email body.`;
+
+	const url = new URL("http://localhost/cdn-cgi/handler/email");
+	url.searchParams.set("from", "someone@example.com");
+	url.searchParams.set("to", "someone-else@example.com");
+
+	const res = await mf.dispatchFetch(url.href, {
+		body: email,
+		method: "POST",
+	});
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
+	expect(log.logs[1][0]).toBe(LogLevel.INFO);
+	expect(log.logs[1][1].split("\n")[0]).toBe(
+		"Email handler replied to sender with the following message:"
+	);
+
+	const file = log.logs[1][1].split("\n")[1].trim();
+	const fileContent = await readFile(file, "utf-8");
+	// Per RFC 5322 §3.6.4, the reply's References is the incoming References
+	// chain followed by the incoming Message-ID.
+	expect(fileContent).toContain(
+		"References: <im-a-random-grandparent-message-id@example.com> <im-a-random-parent-message-id@example.com> <im-a-random-message-id@example.com>"
+	);
+	expect(fileContent).toContain(
+		"In-Reply-To: <im-a-random-message-id@example.com>"
+	);
+});
+
 const MESSAGE_BUILDER_WORKER = dedent /* javascript */ `
 	export default {
 		async fetch(request, env) {

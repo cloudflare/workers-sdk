@@ -136,13 +136,18 @@ function buildEmailMessage(
 			messageOrBuilder.attachments
 		);
 		const uuid = crypto.randomUUID().replaceAll("-", "");
+
+		const incomingReferences = parsedIncomingEmail.references ?? "";
+		const references = `${incomingReferences}${incomingReferences.length > 0 ? " " : ""}${parsedIncomingEmail.messageId}`;
+
 		const headers = [
 			`From: ${formatEmailAddress(messageOrBuilder.from)}`,
 			`To: ${recipient}`,
 			`Subject: ${messageOrBuilder.subject}`,
 			`Message-ID: <${uuid}@example.com>`,
 			`In-Reply-To: ${parsedIncomingEmail.messageId}`,
-			"MIME-Version: 1.0",
+			`References: ${references}`,
+			`MIME-Version: 1.0`,
 			`Content-Type: ${contentType}`,
 		] satisfies string[];
 
