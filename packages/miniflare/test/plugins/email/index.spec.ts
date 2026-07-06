@@ -39,6 +39,19 @@ const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent /* javascript */ `
 	};
 `;
 
+const REPLY_EMAIL_BUILDER_WORKER = dedent /* javascript */ `
+	export default {
+		fetch() {},
+		async email(message) {
+			await message.reply({
+				from: message.to,
+				subject: "Re: Test email",
+				text: "This is a builder reply.",
+			});
+		}
+	};
+`;
+
 test("Unbound send_email binding works", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
@@ -1027,6 +1040,58 @@ test("reply: references generated correctly", async ({ expect }) => {
 			`References: <im-a-random-parent-message-id@example.com>`
 		)
 	).toBe(true);
+});
+
+test("reply: MessageBuilder generates reply headers", async ({ expect }) => {
+	const log = new TestLog();
+	const mf = new Miniflare({
+		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
+		modules: true,
+		script: REPLY_EMAIL_BUILDER_WORKER,
+		unsafeTriggerHandlers: true,
+
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const email = dedent`
+		From: someone <someone@example.com>
+		To: someone else <someone-else@example.com>
+		Message-ID: <im-a-random-parent-message-id@example.com>
+		MIME-Version: 1.0
+		Content-Type: text/plain
+
+		This is a random email body.`;
+
+	const url = new URL("http://localhost/cdn-cgi/handler/email");
+	url.searchParams.set("from", "someone@example.com");
+	url.searchParams.set("to", "someone-else@example.com");
+
+	const res = await mf.dispatchFetch(url.href, {
+		body: email,
+		method: "POST",
+	});
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
+	expect(log.logs[1][0]).toBe(LogLevel.INFO);
+	expect(log.logs[1][1].split("\n")[0]).toBe(
+		"Email handler replied to sender with the following message:"
+	);
+
+	const file = log.logs[1][1].split("\n")[1].trim();
+	const fileContent = await readFile(file, "utf-8");
+	expect(fileContent).toContain(
+		"References: <im-a-random-parent-message-id@example.com>"
+	);
+	expect(fileContent).toContain(
+		"In-Reply-To: <im-a-random-parent-message-id@example.com>"
+	);
+	expect(fileContent).toContain("Subject: Re: Test email");
+	expect(fileContent).toContain("This is a builder reply.");
 });
 
 const MESSAGE_BUILDER_WORKER = dedent /* javascript */ `
