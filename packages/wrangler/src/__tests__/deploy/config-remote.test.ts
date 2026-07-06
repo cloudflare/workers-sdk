@@ -364,13 +364,13 @@ describe("deploy", () => {
 				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
 
 				   {
-				  +  assets: {
-				  +    binding: "ASSETS"
-				  +  }
 				     vars: {
 				  -    MY_VAR: "abc"
 				  +    MY_VAR: "this is a toml file"
 				     }
+				  +  assets: {
+				  +    binding: "ASSETS"
+				  +  }
 				   }
 
 
