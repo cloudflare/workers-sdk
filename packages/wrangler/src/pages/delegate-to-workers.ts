@@ -70,7 +70,7 @@ export type PagesToWorkersDelegateResult =
 			deployArgs: PagesToWorkersDeployArgs;
 	  };
 
-/** The outcome recorded against the `pages delegate to workers` metrics event. */
+/** The outcome recorded against the `delegate pages to workers` metrics event. */
 type DelegateResult =
 	| "delegated"
 	| "success"
@@ -275,7 +275,7 @@ function skipDelegate(
 	recordDelegate("skipped", options, agentId, { reason });
 }
 
-/** Sends a `pages delegate to workers` metrics event for the given outcome. */
+/** Sends a `delegate pages to workers` metrics event for the given outcome. */
 function recordDelegate(
 	result: DelegateResult,
 	options: MaybeDelegatePagesToWorkersOptions,
@@ -283,7 +283,7 @@ function recordDelegate(
 	extra: Record<string, string> = {}
 ): void {
 	sendMetricsEvent(
-		"pages delegate to workers",
+		"delegate pages to workers",
 		{
 			command: options.command,
 			result,

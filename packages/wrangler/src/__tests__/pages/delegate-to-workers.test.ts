@@ -58,7 +58,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 
 			expect(result).toEqual({ delegate: false });
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
-				"pages delegate to workers",
+				"delegate pages to workers",
 				expect.objectContaining({
 					result: "skipped",
 					reason: "account has pages projects",
@@ -96,7 +96,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 
 		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages delegate to workers",
+			"delegate pages to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "account pages projects lookup failed",
@@ -122,7 +122,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		// account-listing API call must never be made.
 		expect(accountHasPagesProjects).not.toHaveBeenCalled();
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages delegate to workers",
+			"delegate pages to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "pages functions directory",
@@ -143,7 +143,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 
 		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages delegate to workers",
+			"delegate pages to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "pages functions directory",
@@ -170,7 +170,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 
 			expect(result).toEqual({ delegate: false });
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
-				"pages delegate to workers",
+				"delegate pages to workers",
 				expect.objectContaining({ result: "skipped", reason }),
 				expect.anything()
 			);
@@ -192,7 +192,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 
 		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages delegate to workers",
+			"delegate pages to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "_routes.json file",
@@ -253,7 +253,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 
 		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages delegate to workers",
+			"delegate pages to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "unsupported args: --branch",
@@ -278,7 +278,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			"Delegating to the latest version of Cloudflare Pages, now part of Cloudflare Workers"
 		);
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages delegate to workers",
+			"delegate pages to workers",
 			expect.objectContaining({ command: "deploy", result: "delegated" }),
 			expect.anything()
 		);
@@ -365,7 +365,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 
 		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages delegate to workers",
+			"delegate pages to workers",
 			expect.objectContaining({ command: "deploy", result: "forced" }),
 			expect.anything()
 		);
@@ -385,7 +385,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		expect(std.warn).toContain("do not retry it unchanged");
 		expect(std.warn).toContain("wrangler pages deploy --force");
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages delegate to workers",
+			"delegate pages to workers",
 			expect.objectContaining({ command: "deploy", result: "failure" }),
 			expect.anything()
 		);
