@@ -1,13 +1,13 @@
 /**
- * Pages-to-Workers redirect.
+ * Pages-to-Workers delegation.
  *
  * When Wrangler is run by a pure AI coding agent and that agent tries to
  * deploy or create a brand-new, purely static Cloudflare Pages project, we
- * redirect the request to a Cloudflare Workers static-assets deploy instead.
+ * delegate the request to a Cloudflare Workers static-assets deploy instead.
  * The goal is to steer new static projects onto Workers (the recommended
  * platform) without disrupting humans or existing Pages projects.
  *
- * The redirect is intentionally conservative: it only triggers for agents,
+ * The delegation is intentionally conservative: it only triggers for agents,
  * never for existing Pages projects, and never for projects that use any Pages
  * feature we can't carry across to Workers (Pages Functions, advanced-mode
  * `_worker.js`, or `_routes.json`).
@@ -24,17 +24,17 @@ import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { detectAgent } from "../utils/detect-agent";
 
-export type PagesRedirectCommand = "deploy" | "create";
+export type PagesDelegateCommand = "deploy" | "create";
 
-export interface MaybeRedirectPagesToWorkersOptions {
-	command: PagesRedirectCommand;
+export interface MaybeDelegatePagesToWorkersOptions {
+	command: PagesDelegateCommand;
 	/** Project root (typically process.cwd()) */
 	projectPath: string;
 	/** The static-assets directory the user asked to deploy (pages deploy only) */
 	assetsDirectory?: string;
-	/** Whether the targeted Pages project already exists (pages deploy only). When true we never intercept. */
+	/** Whether the targeted Pages project already exists (pages deploy only). When true we never delegate. */
 	existingProject?: boolean;
-	/** When true, the user explicitly forced a direct Pages deployment (`--force`), so we never redirect. */
+	/** When true, the user explicitly forced a direct Pages deployment (`--force`), so we never delegate. */
 	force?: boolean;
 	/** Project/worker name to carry across to the Workers deploy. */
 	projectName?: string;
@@ -52,18 +52,18 @@ export interface PagesToWorkersDeployArgs {
 	compatibilityFlags?: string[];
 }
 
-export type PagesToWorkersRedirectResult =
+export type PagesToWorkersDelegateResult =
 	| { handled: false }
 	| {
 			handled: true;
-			command: PagesRedirectCommand;
+			command: PagesDelegateCommand;
 			agentId: string | null;
 			deployArgs: PagesToWorkersDeployArgs;
 	  };
 
-/** The outcome recorded against the `pages redirect to workers` metrics event. */
-type RedirectResult =
-	| "redirected"
+/** The outcome recorded against the `pages delegate to workers` metrics event. */
+type DelegateResult =
+	| "delegated"
 	| "success"
 	| "failure"
 	| "skipped"
@@ -73,11 +73,11 @@ type RedirectResult =
  * Status line emitted at the top of the deploy flow, before the Workers deploy
  * runs, so the agent sees what is happening up front.
  */
-const REDIRECT_NOTICE_MESSAGE =
-	"Redirecting to the latest version of Cloudflare Pages, now part of Cloudflare Workers";
+const DELEGATE_NOTICE_MESSAGE =
+	"Delegating to the latest version of Cloudflare Pages, now part of Cloudflare Workers";
 
 /**
- * Agent-facing guidance, emitted after a successful redirect. It tells the
+ * Agent-facing guidance, emitted after a successful delegation. It tells the
  * agent how to talk to the user about the deployment and makes clear that the
  * `--force` opt-out exists but must not be used unless the user asks for it.
  */
@@ -88,13 +88,13 @@ const AGENT_GUIDANCE_MESSAGE =
  * Agent-facing guidance emitted when the Workers deploy fails.
  *
  * We never fall back to Pages, and re-running the same command simply retries
- * the redirect, so an agent that blindly retries would loop. This message is
+ * the delegation, so an agent that blindly retries would loop. This message is
  * deliberately explicit: it states nothing was deployed, warns against an
  * unchanged retry, and gives the exact `--force` command that deploys to Pages
  * directly. Being unambiguous about `--force` here is what breaks the loop.
  */
 function buildWorkersDeployFailedMessage(
-	command: PagesRedirectCommand
+	command: PagesDelegateCommand
 ): string {
 	const forceCommand =
 		command === "deploy"
@@ -102,38 +102,38 @@ function buildWorkersDeployFailedMessage(
 			: "wrangler pages project create --force";
 	return (
 		"Notice to agents: the deployment to the latest version of Cloudflare Pages (now part of Cloudflare Workers) failed and nothing was deployed. " +
-		"Re-running the command will attempt the same redirect and fail again, so do not retry it unchanged. " +
+		"Re-running the command will attempt the same delegation and fail again, so do not retry it unchanged. " +
 		`To deploy to the previous version of Cloudflare Pages directly instead, re-run it with the --force flag: \`${forceCommand}\`. ` +
 		"Otherwise, report the error above to the user."
 	);
 }
 
 /**
- * Decides whether to redirect a Pages command to a Workers static-assets deploy
+ * Decides whether to delegate a Pages command to a Workers static-assets deploy
  * and, if so, returns the args for the caller to run as a Workers deploy.
  *
- * Returns `{ handled: true }` once we commit to the redirect and the caller
+ * Returns `{ handled: true }` once we commit to the delegation and the caller
  * should NOT run the original Pages command. Returns `{ handled: false }` when
- * we deliberately did not redirect (not an agent, `--force`, existing project,
+ * we deliberately did not delegate (not an agent, `--force`, existing project,
  * Pages-only CLI args, or an unsupported Pages feature) so the caller proceeds
  * with the original Pages command. If the Workers deploy fails after the caller
  * runs it, the caller must re-throw rather than falling back to Pages.
  */
-export async function maybeRedirectPagesToWorkers(
-	options: MaybeRedirectPagesToWorkersOptions
-): Promise<PagesToWorkersRedirectResult> {
-	// Re-entrancy guard: a Workers deploy started by this redirect must never
-	// trigger another redirect. Together with the no-fallback failure handling
+export async function maybeDelegatePagesToWorkers(
+	options: MaybeDelegatePagesToWorkersOptions
+): Promise<PagesToWorkersDelegateResult> {
+	// Re-entrancy guard: a Workers deploy started by this delegation must never
+	// trigger another delegation. Together with the no-fallback failure handling
 	// below (we re-throw rather than running the original Pages command), this
-	// guarantees the redirect cannot loop back into itself or into the Pages
+	// guarantees the delegation cannot loop back into itself or into the Pages
 	// command it replaced.
-	if (isRedirectingPagesToWorkers()) {
+	if (isDelegatingPagesToWorkers()) {
 		return { handled: false };
 	}
 
 	// Detect the agentic environment once and reuse the result: `isAgent` gates
 	// the whole feature and `id` labels the telemetry. Humans and hybrid
-	// terminals keep using Pages as before, so non-agents are never redirected
+	// terminals keep using Pages as before, so non-agents are never delegated
 	// and never produce telemetry.
 	const agent = detectAgent();
 	if (!agent.isAgent) {
@@ -141,22 +141,22 @@ export async function maybeRedirectPagesToWorkers(
 	}
 
 	// The agent explicitly opted out with `--force`. The only callers who should
-	// reach for `--force` are agents we previously redirected, so this is a
-	// strong signal of dissatisfaction with the redirect — record it.
+	// reach for `--force` are agents we previously delegated, so this is a
+	// strong signal of dissatisfaction with the delegation — record it.
 	if (options.force) {
-		recordRedirect("forced", options, agent.id);
-		logger.debug("Pages-to-Workers redirect skipped: --force opt-out");
+		recordDelegate("forced", options, agent.id);
+		logger.debug("Pages-to-Workers delegation skipped: --force opt-out");
 		return { handled: false };
 	}
 
-	// Never disrupt an existing Pages project — only brand-new projects are redirected.
+	// Never disrupt an existing Pages project — only brand-new projects are delegated.
 	if (options.command === "deploy" && options.existingProject === true) {
-		skipRedirect("existing pages project", options, agent.id);
+		skipDelegate("existing pages project", options, agent.id);
 		return { handled: false };
 	}
 
 	if (options.unsupportedArgs && options.unsupportedArgs.length > 0) {
-		skipRedirect(
+		skipDelegate(
 			`unsupported args: ${options.unsupportedArgs.join(", ")}`,
 			options,
 			agent.id
@@ -171,14 +171,14 @@ export async function maybeRedirectPagesToWorkers(
 		options.assetsDirectory
 	);
 	if (unsupportedFeature) {
-		skipRedirect(unsupportedFeature, options, agent.id);
+		skipDelegate(unsupportedFeature, options, agent.id);
 		return { handled: false };
 	}
 
 	// Eligible: commit to the Workers deploy. From here the caller owns the
 	// deployment and must never fall back to Pages (see file header).
-	recordRedirect("redirected", options, agent.id);
-	logger.log(REDIRECT_NOTICE_MESSAGE);
+	recordDelegate("delegated", options, agent.id);
+	logger.log(DELEGATE_NOTICE_MESSAGE);
 	return {
 		handled: true,
 		command: options.command,
@@ -188,29 +188,29 @@ export async function maybeRedirectPagesToWorkers(
 }
 
 /**
- * Tracks whether a Pages-to-Workers redirect is actively running its Workers
+ * Tracks whether a Pages-to-Workers delegation is actively running its Workers
  * deploy. Held in AsyncLocalStorage rather than a module-level mutable variable
- * so the signal is scoped to the redirect's async call stack: it is visible to
- * the nested `main()` invocation (including autoconfig, which reads it to skip
+ * so the signal is scoped to the delegation's async call stack: it is visible to
+ * the nested deploy invocation (including autoconfig, which reads it to skip
  * confirmations only for this flow) and to the re-entrancy guard, and it is
  * torn down automatically when the deploy settles.
  */
-const redirectingPagesToWorkers = new AsyncLocalStorage<true>();
+const delegatingPagesToWorkers = new AsyncLocalStorage<true>();
 
-export function isRedirectingPagesToWorkers(): boolean {
-	return redirectingPagesToWorkers.getStore() === true;
+export function isDelegatingPagesToWorkers(): boolean {
+	return delegatingPagesToWorkers.getStore() === true;
 }
 
-export function runWithPagesToWorkersRedirect<T>(callback: () => T): T {
-	return redirectingPagesToWorkers.run(true, callback);
+export function runWithPagesToWorkersDelegation<T>(callback: () => T): T {
+	return delegatingPagesToWorkers.run(true, callback);
 }
 
-export function recordPagesToWorkersRedirectSuccess(
-	command: PagesRedirectCommand,
+export function recordPagesToWorkersDelegateSuccess(
+	command: PagesDelegateCommand,
 	deployArgs: PagesToWorkersDeployArgs,
 	agentId: string | null
 ): void {
-	recordRedirect(
+	recordDelegate(
 		"success",
 		{ command, projectPath: "", ...deployArgs },
 		agentId
@@ -218,13 +218,13 @@ export function recordPagesToWorkersRedirectSuccess(
 	logger.warn(AGENT_GUIDANCE_MESSAGE);
 }
 
-export function recordPagesToWorkersRedirectFailure(
-	command: PagesRedirectCommand,
+export function recordPagesToWorkersDelegateFailure(
+	command: PagesDelegateCommand,
 	deployArgs: PagesToWorkersDeployArgs,
 	agentId: string | null,
 	error: unknown
 ): void {
-	recordRedirect(
+	recordDelegate(
 		"failure",
 		{ command, projectPath: "", ...deployArgs },
 		agentId,
@@ -236,12 +236,12 @@ export function recordPagesToWorkersRedirectFailure(
 }
 
 /**
- * Builds the `wrangler deploy` args for the redirect.
+ * Builds the `wrangler deploy` args for the delegation.
  *
  * We deliberately pass no positional path and no `--assets`, even though
  * `pages deploy` knows the assets directory. Passing `--assets` would disable
  * autoconfig (it only runs when no assets/path/config is supplied), and
- * autoconfig is what makes the redirected deploy viable: it detects the static
+ * autoconfig is what makes the delegated deploy viable: it detects the static
  * directory and writes a Workers config with a compatibility date. Without it,
  * a non-interactive agent deploy has no compatibility date and fails
  * validation. So we let autoconfig detect and configure the deploy, and only
@@ -249,7 +249,7 @@ export function recordPagesToWorkersRedirectFailure(
  * date/flags), which take precedence on the deploy.
  */
 function buildWorkersDeployArgs(
-	options: MaybeRedirectPagesToWorkersOptions
+	options: MaybeDelegatePagesToWorkersOptions
 ): PagesToWorkersDeployArgs {
 	return {
 		...(options.projectName ? { name: options.projectName } : {}),
@@ -263,27 +263,27 @@ function buildWorkersDeployArgs(
 }
 
 /**
- * Records a `skipped` redirect: logs the reason (so we can see why redirects
+ * Records a `skipped` delegation: logs the reason (so we can see why delegations
  * don't happen) and sends a metrics event carrying that reason.
  */
-function skipRedirect(
+function skipDelegate(
 	reason: string,
-	options: MaybeRedirectPagesToWorkersOptions,
+	options: MaybeDelegatePagesToWorkersOptions,
 	agentId: string | null
 ): void {
-	logger.debug(`Pages-to-Workers redirect skipped: ${reason}`);
-	recordRedirect("skipped", options, agentId, { reason });
+	logger.debug(`Pages-to-Workers delegation skipped: ${reason}`);
+	recordDelegate("skipped", options, agentId, { reason });
 }
 
-/** Sends a `pages redirect to workers` metrics event for the given outcome. */
-function recordRedirect(
-	result: RedirectResult,
-	options: MaybeRedirectPagesToWorkersOptions,
+/** Sends a `pages delegate to workers` metrics event for the given outcome. */
+function recordDelegate(
+	result: DelegateResult,
+	options: MaybeDelegatePagesToWorkersOptions,
 	agentId: string | null,
 	extra: Record<string, string> = {}
 ): void {
 	sendMetricsEvent(
-		"pages redirect to workers",
+		"pages delegate to workers",
 		{
 			command: options.command,
 			result,
@@ -318,8 +318,8 @@ const UNSUPPORTED_PAGES_FEATURES: UnsupportedPagesFeature[] = [
 ];
 
 /**
- * Returns the reason a project is ineligible for the Workers redirect, or
- * `undefined` if it is a purely static project we can redirect. Both the
+ * Returns the reason a project is ineligible for the Workers delegation, or
+ * `undefined` if it is a purely static project we can delegate. Both the
  * project root and the assets directory are checked for Pages feature markers.
  */
 function findUnsupportedPagesFeature(

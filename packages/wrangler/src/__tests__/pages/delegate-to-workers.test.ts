@@ -4,10 +4,10 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { sendMetricsEvent } from "../../metrics";
 import {
-	maybeRedirectPagesToWorkers,
-	recordPagesToWorkersRedirectFailure,
-	runWithPagesToWorkersRedirect,
-} from "../../pages/redirect-to-workers";
+	maybeDelegatePagesToWorkers,
+	recordPagesToWorkersDelegateFailure,
+	runWithPagesToWorkersDelegation,
+} from "../../pages/delegate-to-workers";
 import { detectAgent } from "../../utils/detect-agent";
 import { mockConsoleMethods } from "../helpers/mock-console";
 
@@ -24,7 +24,7 @@ function createFile(dir: string, name: string): void {
 	writeFileSync(join(dir, name), "");
 }
 
-describe("maybeRedirectPagesToWorkers", () => {
+describe("maybeDelegatePagesToWorkers", () => {
 	const std = mockConsoleMethods();
 
 	runInTempDir();
@@ -33,12 +33,12 @@ describe("maybeRedirectPagesToWorkers", () => {
 		vi.mocked(detectAgent).mockReturnValue({ isAgent: true, id: "test-agent" });
 	});
 
-	it("does not redirect (or emit telemetry) when not run by an agent", async ({
+	it("does not delegate (or emit telemetry) when not run by an agent", async ({
 		expect,
 	}) => {
 		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
 
-		const result = await maybeRedirectPagesToWorkers({
+		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 		});
@@ -47,10 +47,10 @@ describe("maybeRedirectPagesToWorkers", () => {
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
-	it("does not redirect an existing Pages project on deploy, and records why", async ({
+	it("does not delegate an existing Pages project on deploy, and records why", async ({
 		expect,
 	}) => {
-		const result = await maybeRedirectPagesToWorkers({
+		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			existingProject: true,
@@ -58,7 +58,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 
 		expect(result).toEqual({ handled: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
+			"pages delegate to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "existing pages project",
@@ -67,19 +67,19 @@ describe("maybeRedirectPagesToWorkers", () => {
 		);
 	});
 
-	it("does not redirect when project has a functions directory", async ({
+	it("does not delegate when project has a functions directory", async ({
 		expect,
 	}) => {
 		createFunctionsDir(process.cwd());
 
-		const result = await maybeRedirectPagesToWorkers({
+		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 		});
 
 		expect(result).toEqual({ handled: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
+			"pages delegate to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "pages functions directory",
@@ -94,33 +94,33 @@ describe("maybeRedirectPagesToWorkers", () => {
 	];
 
 	for (const [marker, reason] of unsupportedFileMarkers) {
-		it(`does not redirect when project has a ${marker}, and records why`, async ({
+		it(`does not delegate when project has a ${marker}, and records why`, async ({
 			expect,
 		}) => {
 			createFile(process.cwd(), marker);
 
-			const result = await maybeRedirectPagesToWorkers({
+			const result = await maybeDelegatePagesToWorkers({
 				command: "deploy",
 				projectPath: process.cwd(),
 			});
 
 			expect(result).toEqual({ handled: false });
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
-				"pages redirect to workers",
+				"pages delegate to workers",
 				expect.objectContaining({ result: "skipped", reason }),
 				expect.anything()
 			);
 		});
 	}
 
-	it("does not redirect when the assets directory has unsupported markers", async ({
+	it("does not delegate when the assets directory has unsupported markers", async ({
 		expect,
 	}) => {
 		const assetsDirectory = join(process.cwd(), "dist");
 		mkdirSync(assetsDirectory);
 		createFile(assetsDirectory, "_routes.json");
 
-		const result = await maybeRedirectPagesToWorkers({
+		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory,
@@ -128,7 +128,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 
 		expect(result).toEqual({ handled: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
+			"pages delegate to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "_routes.json file",
@@ -138,12 +138,12 @@ describe("maybeRedirectPagesToWorkers", () => {
 	});
 
 	for (const marker of ["_redirects", "_headers"]) {
-		it(`redirects when project has a supported ${marker} file`, async ({
+		it(`delegates when project has a supported ${marker} file`, async ({
 			expect,
 		}) => {
 			createFile(process.cwd(), marker);
 
-			const result = await maybeRedirectPagesToWorkers({
+			const result = await maybeDelegatePagesToWorkers({
 				command: "deploy",
 				projectPath: process.cwd(),
 			});
@@ -157,10 +157,10 @@ describe("maybeRedirectPagesToWorkers", () => {
 		});
 	}
 
-	it("does not redirect when Pages-only args are present", async ({
+	it("does not delegate when Pages-only args are present", async ({
 		expect,
 	}) => {
-		const result = await maybeRedirectPagesToWorkers({
+		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			unsupportedArgs: ["--branch"],
@@ -168,7 +168,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 
 		expect(result).toEqual({ handled: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
+			"pages delegate to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "unsupported args: --branch",
@@ -177,8 +177,8 @@ describe("maybeRedirectPagesToWorkers", () => {
 		);
 	});
 
-	it("redirects a brand-new static deploy to Workers", async ({ expect }) => {
-		const result = await maybeRedirectPagesToWorkers({
+	it("delegates a brand-new static deploy to Workers", async ({ expect }) => {
+		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 		});
@@ -190,11 +190,11 @@ describe("maybeRedirectPagesToWorkers", () => {
 			deployArgs: {},
 		});
 		expect(std.out).toContain(
-			"Redirecting to the latest version of Cloudflare Pages, now part of Cloudflare Workers"
+			"Delegating to the latest version of Cloudflare Pages, now part of Cloudflare Workers"
 		);
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
-			expect.objectContaining({ command: "deploy", result: "redirected" }),
+			"pages delegate to workers",
+			expect.objectContaining({ command: "deploy", result: "delegated" }),
 			expect.anything()
 		);
 	});
@@ -202,7 +202,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 	it("carries the project name across to the Workers deploy", async ({
 		expect,
 	}) => {
-		const result = await maybeRedirectPagesToWorkers({
+		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			projectName: "my-app",
@@ -222,7 +222,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 		const assetsDirectory = join(process.cwd(), "dist");
 		mkdirSync(assetsDirectory);
 
-		const result = await maybeRedirectPagesToWorkers({
+		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory,
@@ -236,7 +236,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 			deployArgs: { name: "my-app" },
 		});
 		if (!result.handled) {
-			throw new Error("Expected redirect to be handled");
+			throw new Error("Expected delegation to be handled");
 		}
 		// Regression guard: forwarding `--assets` would disable autoconfig, and a
 		// non-interactive agent deploy would then have no compatibility date and
@@ -249,7 +249,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 	it("carries name and compatibility settings across on create", async ({
 		expect,
 	}) => {
-		const result = await maybeRedirectPagesToWorkers({
+		const result = await maybeDelegatePagesToWorkers({
 			command: "create",
 			projectPath: process.cwd(),
 			projectName: "my-proj",
@@ -269,10 +269,10 @@ describe("maybeRedirectPagesToWorkers", () => {
 		});
 	});
 
-	it("does not redirect when --force is set, and records the opt-out", async ({
+	it("does not delegate when --force is set, and records the opt-out", async ({
 		expect,
 	}) => {
-		const result = await maybeRedirectPagesToWorkers({
+		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			force: true,
@@ -280,7 +280,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 
 		expect(result).toEqual({ handled: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
+			"pages delegate to workers",
 			expect.objectContaining({ command: "deploy", result: "forced" }),
 			expect.anything()
 		);
@@ -289,7 +289,7 @@ describe("maybeRedirectPagesToWorkers", () => {
 	it("records failure and gives explicit, loop-safe --force guidance", async ({
 		expect,
 	}) => {
-		recordPagesToWorkersRedirectFailure(
+		recordPagesToWorkersDelegateFailure(
 			"deploy",
 			{},
 			"test-agent",
@@ -300,16 +300,16 @@ describe("maybeRedirectPagesToWorkers", () => {
 		expect(std.warn).toContain("do not retry it unchanged");
 		expect(std.warn).toContain("wrangler pages deploy --force");
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
+			"pages delegate to workers",
 			expect.objectContaining({ command: "deploy", result: "failure" }),
 			expect.anything()
 		);
 	});
 
-	it("gives create-specific --force guidance when a create redirect fails", async ({
+	it("gives create-specific --force guidance when a create delegation fails", async ({
 		expect,
 	}) => {
-		recordPagesToWorkersRedirectFailure(
+		recordPagesToWorkersDelegateFailure(
 			"create",
 			{ name: "my-proj" },
 			"test-agent",
@@ -319,15 +319,15 @@ describe("maybeRedirectPagesToWorkers", () => {
 		expect(std.warn).toContain("wrangler pages project create --force");
 	});
 
-	it("does not re-enter (cannot loop) while a redirect is already running", async ({
+	it("does not re-enter (cannot loop) while a delegation is already running", async ({
 		expect,
 	}) => {
 		let nested:
-			| Awaited<ReturnType<typeof maybeRedirectPagesToWorkers>>
+			| Awaited<ReturnType<typeof maybeDelegatePagesToWorkers>>
 			| undefined;
 
-		const result = await runWithPagesToWorkersRedirect(async () => {
-			nested = await maybeRedirectPagesToWorkers({
+		const result = await runWithPagesToWorkersDelegation(async () => {
+			nested = await maybeDelegatePagesToWorkers({
 				command: "deploy",
 				projectPath: process.cwd(),
 			});

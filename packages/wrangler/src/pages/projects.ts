@@ -12,7 +12,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import { maybeRedirectPagesToWorkers } from "./redirect-to-workers";
+import { maybeDelegatePagesToWorkers } from "./delegate-to-workers";
 import { runPagesToWorkersDeploy } from "./run-workers-deploy";
 import type { PagesConfigCache, Project } from "./types";
 
@@ -131,7 +131,7 @@ export const pagesProjectCreateCommand = createCommand({
 			default: false,
 			hidden: true,
 			description:
-				"Create a Cloudflare Pages project directly, bypassing the automatic redirect to Cloudflare Workers for new static projects",
+				"Create a Cloudflare Pages project directly, bypassing the automatic delegation to Cloudflare Workers for new static projects",
 		},
 	},
 	positionalArgs: ["project-name"],
@@ -147,10 +147,10 @@ export const pagesProjectCreateCommand = createCommand({
 		);
 		const accountId = await requireAuth(config);
 
-		// When run by an AI agent, redirect new static Pages projects to a Workers
+		// When run by an AI agent, delegate new static Pages projects to a Workers
 		// static-assets deploy of the current directory. Projects using
-		// unsupported Pages features and `--force` are never redirected.
-		const redirect = await maybeRedirectPagesToWorkers({
+		// unsupported Pages features and `--force` are never delegated.
+		const delegation = await maybeDelegatePagesToWorkers({
 			command: "create",
 			projectPath: process.cwd(),
 			force,
@@ -159,8 +159,8 @@ export const pagesProjectCreateCommand = createCommand({
 			compatibilityFlags,
 			unsupportedArgs: productionBranch ? ["--production-branch"] : [],
 		});
-		if (redirect.handled) {
-			await runPagesToWorkersDeploy(redirect);
+		if (delegation.handled) {
+			await runPagesToWorkersDeploy(delegation);
 			return;
 		}
 

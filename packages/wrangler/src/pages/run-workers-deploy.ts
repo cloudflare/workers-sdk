@@ -12,20 +12,20 @@ import { run } from "../experimental-flags";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
-	recordPagesToWorkersRedirectFailure,
-	recordPagesToWorkersRedirectSuccess,
-	runWithPagesToWorkersRedirect,
-	type PagesToWorkersRedirectResult,
-} from "./redirect-to-workers";
+	recordPagesToWorkersDelegateFailure,
+	recordPagesToWorkersDelegateSuccess,
+	runWithPagesToWorkersDelegation,
+	type PagesToWorkersDelegateResult,
+} from "./delegate-to-workers";
 
 export async function runPagesToWorkersDeploy(
-	redirect: Extract<PagesToWorkersRedirectResult, { handled: true }>
+	delegation: Extract<PagesToWorkersDelegateResult, { handled: true }>
 ): Promise<void> {
 	const args = {
 		_: ["deploy"],
 		$0: "wrangler",
 		autoconfig: true,
-		...redirect.deployArgs,
+		...delegation.deployArgs,
 	} as DeployArgs;
 	const config = readConfig(args, {
 		useRedirectIfAvailable: true,
@@ -38,7 +38,7 @@ export async function runPagesToWorkersDeploy(
 
 	try {
 		await run(experimentalFlags, () =>
-			runWithPagesToWorkersRedirect(async () => {
+			runWithPagesToWorkersDelegation(async () => {
 				initDeployHelpersContext({
 					logger,
 					fetchResult,
@@ -55,18 +55,18 @@ export async function runPagesToWorkersDeploy(
 			})
 		);
 	} catch (error) {
-		recordPagesToWorkersRedirectFailure(
-			redirect.command,
-			redirect.deployArgs,
-			redirect.agentId,
+		recordPagesToWorkersDelegateFailure(
+			delegation.command,
+			delegation.deployArgs,
+			delegation.agentId,
 			error
 		);
 		throw error;
 	}
 
-	recordPagesToWorkersRedirectSuccess(
-		redirect.command,
-		redirect.deployArgs,
-		redirect.agentId
+	recordPagesToWorkersDelegateSuccess(
+		delegation.command,
+		delegation.deployArgs,
+		delegation.agentId
 	);
 }

@@ -26,10 +26,10 @@ import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
 	PAGES_CONFIG_CACHE_FILENAME,
 } from "./constants";
+import { maybeDelegatePagesToWorkers } from "./delegate-to-workers";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
-import { maybeRedirectPagesToWorkers } from "./redirect-to-workers";
 import { runPagesToWorkersDeploy } from "./run-workers-deploy";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
 import type { PagesConfigCache } from "./types";
@@ -120,7 +120,7 @@ export const pagesDeployCommand = createCommand({
 			default: false,
 			hidden: true,
 			description:
-				"Deploy directly to Cloudflare Pages, bypassing the automatic redirect to Cloudflare Workers for new static projects",
+				"Deploy directly to Cloudflare Pages, bypassing the automatic delegation to Cloudflare Workers for new static projects",
 		},
 	},
 	positionalArgs: ["directory"],
@@ -211,20 +211,20 @@ export const pagesDeployCommand = createCommand({
 			}
 		}
 
-		// When run by an AI agent, redirect brand-new static Pages deploys to a
+		// When run by an AI agent, delegate brand-new static Pages deploys to a
 		// Workers static-assets deploy. Existing projects, projects using
-		// unsupported Pages features, and `--force` are never redirected.
-		const redirect = await maybeRedirectPagesToWorkers({
+		// unsupported Pages features, and `--force` are never delegated.
+		const delegation = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
 			existingProject: Boolean(projectName) && isExistingProject,
 			force: args.force,
 			projectName,
-			unsupportedArgs: getUnsupportedDeployRedirectArgs(args),
+			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),
 		});
-		if (redirect.handled) {
-			await runPagesToWorkersDeploy(redirect);
+		if (delegation.handled) {
+			await runPagesToWorkersDeploy(delegation);
 			return;
 		}
 
@@ -636,7 +636,7 @@ export const pagesDeployCommand = createCommand({
 	},
 });
 
-function getUnsupportedDeployRedirectArgs(
+function getUnsupportedDeployDelegateArgs(
 	args: (typeof pagesDeployCommand)["args"]
 ): string[] {
 	return [

@@ -25,7 +25,7 @@ export interface DetectedAgent {
 /**
  * Detects whether Wrangler is currently being run by an AI coding agent,
  * returning both whether it is a pure agent and the detected agent id in a
- * single pass. Callers that need both (e.g. the Pages-to-Workers redirect,
+ * single pass. Callers that need both (e.g. the Pages-to-Workers delegation,
  * which gates on `isAgent` and records `id` in telemetry) should use this
  * rather than detecting twice.
  *

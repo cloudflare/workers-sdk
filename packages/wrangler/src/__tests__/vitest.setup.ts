@@ -232,7 +232,7 @@ afterEach(() => {
 // Mock `am-i-vibing` globally so AI-agent detection is disabled by default,
 // regardless of the environment the tests run in (e.g. inside an AI agent shell
 // such as Claude Code or Cursor, where the relevant env vars would otherwise be
-// present). This keeps agent-gated behaviour (e.g. the Pages-to-Workers redirect)
+// present). This keeps agent-gated behaviour (e.g. the Pages-to-Workers delegation)
 // deterministically off. Tests that need to exercise agent behaviour mock
 // `../utils/detect-agent` or `am-i-vibing` themselves, which takes precedence.
 vi.mock("am-i-vibing", () => ({
