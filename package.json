@@ -23,6 +23,7 @@
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"check:workflows": "node -r esbuild-register tools/github-workflow-helpers/validate-action-pinning.ts",
 		"dev": "dotenv -- turbo dev",
+		"emergency:revert": "node -r esbuild-register tools/deployments/emergency-revert.ts",
 		"fix": "oxlint --fix --type-aware && pnpm run prettify",
 		"prettify": "oxfmt",
 		"test": "dotenv -- turbo test",

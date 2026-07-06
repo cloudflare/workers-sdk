@@ -14,6 +14,8 @@ Tools for helping with CI
 - `deployments/validate-pinned-dependencies.ts` - Ensures all non-bundled dependencies of published packages (and all pnpm catalog entries) are pinned to exact versions.
   Used by the test-and-check.yml GitHub Action workflow, as part of the `check` npm script (`pnpm check:pinned-deps`).
 
+- `deployments/emergency-revert.ts` - Reverts the npm `latest` dist-tag and deprecates bad versions for wrangler and its coordinated dependents (miniflare, `@cloudflare/vite-plugin`, `@cloudflare/vitest-pool-workers`, `create-cloudflare`) during a broken-release incident. Unlike the other scripts in this directory, this is run manually (`pnpm emergency:revert -- ...`) by an authenticated npm org member — it is not invoked by any CI workflow, since OIDC Trusted Publishing does not grant `dist-tag`/`deprecate` permissions.
+
 - `dependabot/generate-dependabot-pr-changesets.ts` - Generates and commits a changeset for a Dependabot PR.
   Used by the c3-dependabot-versioning-prs.yml and miniflare-dependabot-versioning-prs.yml GitHub Action workflows.
 
