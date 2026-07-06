@@ -205,6 +205,7 @@ export async function maybeDelegatePagesToWorkers(
 		deployArgs: buildWorkersDeployArgs(options),
 	};
 }
+
 export function recordPagesToWorkersDelegateSuccess(
 	command: PagesDelegateCommand,
 	deployArgs: PagesToWorkersDeployArgs,
