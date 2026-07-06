@@ -44,6 +44,14 @@ const REPLY_EMAIL_BUILDER_WORKER = dedent /* javascript */ `
 		fetch() {},
 		async email(message) {
 			await message.reply({
+				attachments: [
+					{
+						content: "attached file content",
+						disposition: "attachment",
+						filename: "reply.txt",
+						type: "text/plain",
+					},
+				],
 				from: message.to,
 				subject: "Re: Test email",
 				text: "This is a builder reply.",
@@ -1092,6 +1100,10 @@ test("reply: MessageBuilder generates reply headers", async ({ expect }) => {
 	);
 	expect(fileContent).toContain("Subject: Re: Test email");
 	expect(fileContent).toContain("This is a builder reply.");
+	expect(fileContent).toContain(
+		'Content-Disposition: attachment; filename="reply.txt"'
+	);
+	expect(fileContent).toContain("YXR0YWNoZWQgZmlsZSBjb250ZW50");
 });
 
 const MESSAGE_BUILDER_WORKER = dedent /* javascript */ `

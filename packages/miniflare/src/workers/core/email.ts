@@ -6,7 +6,11 @@ import { RAW_EMAIL } from "../email/constants";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
 import type { MiniflareEmailMessage } from "../email/email.worker";
-import type { EmailAddress, EmailReplyMessageBuilder } from "../email/types";
+import type {
+	EmailAddress,
+	EmailAttachment,
+	EmailReplyMessageBuilder,
+} from "../email/types";
 import type {
 	EmailMessage as WorkersEmailMessage,
 	ForwardableEmailMessage,
@@ -44,6 +48,76 @@ function formatEmailAddress(addr: string | EmailAddress): string {
 	return `"${addr.name}" <${addr.email}>`;
 }
 
+function formatContentId(contentId: string): string {
+	return contentId.startsWith("<") && contentId.endsWith(">")
+		? contentId
+		: `<${contentId}>`;
+}
+
+function encodeBase64(content: string | ArrayBuffer | ArrayBufferView): string {
+	let bytes: Uint8Array;
+	if (typeof content === "string") {
+		bytes = new TextEncoder().encode(content);
+	} else if (content instanceof ArrayBuffer) {
+		bytes = new Uint8Array(content);
+	} else {
+		bytes = new Uint8Array(
+			content.buffer,
+			content.byteOffset,
+			content.byteLength
+		);
+	}
+
+	let binary = "";
+	for (let i = 0; i < bytes.byteLength; i += 0x8000) {
+		binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+	}
+
+	return btoa(binary)
+		.replace(/.{1,76}/g, "$&\r\n")
+		.trimEnd();
+}
+
+function renderAttachment(attachment: EmailAttachment): string {
+	// Formats the mime parameter
+	const filename = attachment.filename.replace(/["\\\r\n]/g, "_");
+	const headers = [
+		"Content-Transfer-Encoding: base64",
+		`Content-Disposition: ${attachment.disposition}; filename="${filename}"`,
+		`Content-Type: ${attachment.type}; name="${filename}"`,
+	] satisfies string[];
+
+	if (attachment.contentId !== undefined) {
+		headers.push(`Content-ID: ${formatContentId(attachment.contentId)}`);
+	}
+
+	return `${headers.join("\r\n")}\r\n\r\n${encodeBase64(attachment.content)}`;
+}
+
+function renderEmailBody(
+	body: string,
+	contentType: string,
+	attachments: EmailAttachment[] | undefined
+): { body: string; contentType: string } {
+	if (attachments === undefined || attachments.length === 0) {
+		return {
+			contentType: `${contentType}; charset=UTF-8`,
+			body,
+		};
+	}
+
+	const boundary = `----=_Part_${crypto.randomUUID().replaceAll("-", "")}`;
+	const parts = [
+		`Content-Type: ${contentType}; charset=UTF-8\r\n\r\n${body}`,
+		...attachments.map(renderAttachment),
+	] satisfies string[];
+
+	return {
+		contentType: `multipart/mixed; boundary="${boundary}"`,
+		body: `${parts.map((part) => `--${boundary}\r\n${part}`).join("\r\n")}\r\n--${boundary}--`,
+	};
+}
+
 function buildEmailMessage(
 	messageOrBuilder: WorkersEmailMessage | EmailReplyMessageBuilder,
 	parsedIncomingEmail: Email
@@ -56,9 +130,11 @@ function buildEmailMessage(
 		const recipient = parsedIncomingEmail.from.address;
 		assert(recipient !== undefined, "Incoming email From address is undefined");
 
-		const contentType =
-			messageOrBuilder.html === undefined ? "text/plain" : "text/html";
-		const body = messageOrBuilder.html ?? messageOrBuilder.text ?? "";
+		const { body, contentType } = renderEmailBody(
+			messageOrBuilder.html ?? messageOrBuilder.text ?? "",
+			messageOrBuilder.html === undefined ? "text/plain" : "text/html",
+			messageOrBuilder.attachments
+		);
 		const uuid = crypto.randomUUID().replaceAll("-", "");
 		const headers = [
 			`From: ${formatEmailAddress(messageOrBuilder.from)}`,
@@ -67,7 +143,7 @@ function buildEmailMessage(
 			`Message-ID: <${uuid}@example.com>`,
 			`In-Reply-To: ${parsedIncomingEmail.messageId}`,
 			"MIME-Version: 1.0",
-			`Content-Type: ${contentType}; charset=UTF-8`,
+			`Content-Type: ${contentType}`,
 		] satisfies string[];
 
 		if (messageOrBuilder.replyTo !== undefined) {
