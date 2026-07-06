@@ -137,6 +137,7 @@ export async function runDeployCommandHandler(
 	// As a precaution we're gating the feature under the autoconfig flag for the time being.
 	// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
 	if (
+		!pagesToWorkersDelegation &&
 		args.autoconfig &&
 		!args.config &&
 		!args.dryRun &&
