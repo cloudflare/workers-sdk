@@ -1,4 +1,5 @@
 import { cp } from "node:fs/promises";
+import path from "node:path";
 import { build, context } from "esbuild";
 import { globSync } from "tinyglobby";
 import type { BuildOptions } from "esbuild";
@@ -15,7 +16,13 @@ const run = async () => {
 		// This is required to support jsonc-parser. See https://github.com/microsoft/node-jsonc-parser/issues/57
 		mainFields: ["module", "main"],
 		format: "cjs",
+		// Provide a real `import.meta.url` for the CJS bundle. Bundled ESM
+		// dependencies (e.g. `@cloudflare/workers-utils`) contain
+		// `createRequire(import.meta.url)` shims that would otherwise receive
+		// `undefined` and throw on load. Mirrors wrangler's tsup config.
+		inject: [path.join(__dirname, "..", "import-meta-url.js")],
 		define: {
+			"import.meta.url": "import_meta_url",
 			"process.env.SPARROW_SOURCE_KEY": JSON.stringify(
 				process.env.SPARROW_SOURCE_KEY ?? ""
 			),
