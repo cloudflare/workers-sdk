@@ -62,9 +62,9 @@ export interface PagesToWorkersDeployArgs {
 }
 
 export type PagesToWorkersDelegateResult =
-	| { handled: false }
+	| { delegate: false }
 	| {
-			handled: true;
+			delegate: true;
 			command: PagesDelegateCommand;
 			agentId: string | null;
 			deployArgs: PagesToWorkersDeployArgs;
@@ -121,8 +121,8 @@ function buildWorkersDeployFailedMessage(
  * Decides whether to delegate a Pages command to a Workers static-assets deploy
  * and, if so, returns the args for the caller to run as a Workers deploy.
  *
- * Returns `{ handled: true }` once we commit to the delegation and the caller
- * should NOT run the original Pages command. Returns `{ handled: false }` when
+ * Returns `{ delegate: true }` once we commit to the delegation and the caller
+ * should NOT run the original Pages command. Returns `{ delegate: false }` when
  * we deliberately did not delegate (not an agent, `--force`, an account that
  * already has Pages projects, Pages-only CLI args, or an unsupported Pages
  * feature) so the caller proceeds with the original Pages command. If the
@@ -138,7 +138,7 @@ export async function maybeDelegatePagesToWorkers(
 	// and never produce telemetry.
 	const agent = detectAgent();
 	if (!agent.isAgent) {
-		return { handled: false };
+		return { delegate: false };
 	}
 
 	// The agent explicitly opted out with `--force`. The only callers who should
@@ -147,7 +147,7 @@ export async function maybeDelegatePagesToWorkers(
 	if (options.force) {
 		recordDelegate("forced", options, agent.id);
 		logger.debug("Pages-to-Workers delegation skipped: --force opt-out");
-		return { handled: false };
+		return { delegate: false };
 	}
 
 	if (options.unsupportedArgs && options.unsupportedArgs.length > 0) {
@@ -156,7 +156,7 @@ export async function maybeDelegatePagesToWorkers(
 			options,
 			agent.id
 		);
-		return { handled: false };
+		return { delegate: false };
 	}
 
 	// Bail (and record why) if the project uses any Pages feature we can't carry
@@ -167,7 +167,7 @@ export async function maybeDelegatePagesToWorkers(
 	);
 	if (unsupportedFeature) {
 		skipDelegate(unsupportedFeature, options, agent.id);
-		return { handled: false };
+		return { delegate: false };
 	}
 
 	// An account that already has Pages projects keeps using Pages — we only
@@ -186,11 +186,11 @@ export async function maybeDelegatePagesToWorkers(
 				})`
 			);
 			skipDelegate("account pages projects lookup failed", options, agent.id);
-			return { handled: false };
+			return { delegate: false };
 		}
 		if (hasPagesProjects) {
 			skipDelegate("account has pages projects", options, agent.id);
-			return { handled: false };
+			return { delegate: false };
 		}
 	}
 
@@ -199,7 +199,7 @@ export async function maybeDelegatePagesToWorkers(
 	recordDelegate("delegated", options, agent.id);
 	logger.log(DELEGATE_NOTICE_MESSAGE);
 	return {
-		handled: true,
+		delegate: true,
 		command: options.command,
 		agentId: agent.id,
 		deployArgs: buildWorkersDeployArgs(options),

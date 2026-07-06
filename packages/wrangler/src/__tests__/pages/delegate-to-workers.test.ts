@@ -42,7 +42,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			projectPath: process.cwd(),
 		});
 
-		expect(result).toEqual({ handled: false });
+		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
@@ -56,7 +56,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 				accountHasPagesProjects: async () => true,
 			});
 
-			expect(result).toEqual({ handled: false });
+			expect(result).toEqual({ delegate: false });
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
 				"pages delegate to workers",
 				expect.objectContaining({
@@ -76,7 +76,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({
-			handled: true,
+			delegate: true,
 			command: "deploy",
 			agentId: "test-agent",
 			deployArgs: {},
@@ -94,7 +94,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			},
 		});
 
-		expect(result).toEqual({ handled: false });
+		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages delegate to workers",
 			expect.objectContaining({
@@ -117,7 +117,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			accountHasPagesProjects,
 		});
 
-		expect(result).toEqual({ handled: false });
+		expect(result).toEqual({ delegate: false });
 		// The functions/ directory is a local, no-cost skip reason, so the
 		// account-listing API call must never be made.
 		expect(accountHasPagesProjects).not.toHaveBeenCalled();
@@ -141,7 +141,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			projectPath: process.cwd(),
 		});
 
-		expect(result).toEqual({ handled: false });
+		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages delegate to workers",
 			expect.objectContaining({
@@ -168,7 +168,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 				projectPath: process.cwd(),
 			});
 
-			expect(result).toEqual({ handled: false });
+			expect(result).toEqual({ delegate: false });
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
 				"pages delegate to workers",
 				expect.objectContaining({ result: "skipped", reason }),
@@ -190,7 +190,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			assetsDirectory,
 		});
 
-		expect(result).toEqual({ handled: false });
+		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages delegate to workers",
 			expect.objectContaining({
@@ -213,7 +213,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			});
 
 			expect(result).toEqual({
-				handled: true,
+				delegate: true,
 				command: "deploy",
 				agentId: "test-agent",
 				deployArgs: {},
@@ -234,7 +234,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			});
 
 			expect(result).toEqual({
-				handled: true,
+				delegate: true,
 				command: "deploy",
 				agentId: "test-agent",
 				deployArgs: {},
@@ -251,7 +251,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			unsupportedArgs: ["--branch"],
 		});
 
-		expect(result).toEqual({ handled: false });
+		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages delegate to workers",
 			expect.objectContaining({
@@ -269,7 +269,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({
-			handled: true,
+			delegate: true,
 			command: "deploy",
 			agentId: "test-agent",
 			deployArgs: {},
@@ -294,7 +294,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({
-			handled: true,
+			delegate: true,
 			command: "deploy",
 			agentId: "test-agent",
 			deployArgs: { name: "my-app" },
@@ -315,13 +315,13 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({
-			handled: true,
+			delegate: true,
 			command: "deploy",
 			agentId: "test-agent",
 			deployArgs: { name: "my-app" },
 		});
-		if (!result.handled) {
-			throw new Error("Expected delegation to be handled");
+		if (!result.delegate) {
+			throw new Error("Expected delegation to be actioned");
 		}
 		// Regression guard: forwarding `--assets` would disable autoconfig, and a
 		// non-interactive agent deploy would then have no compatibility date and
@@ -343,7 +343,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({
-			handled: true,
+			delegate: true,
 			command: "create",
 			agentId: "test-agent",
 			deployArgs: {
@@ -363,7 +363,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			force: true,
 		});
 
-		expect(result).toEqual({ handled: false });
+		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages delegate to workers",
 			expect.objectContaining({ command: "deploy", result: "forced" }),

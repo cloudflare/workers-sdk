@@ -47,15 +47,17 @@ describe("runPagesToWorkersDeploy", () => {
 	it("runs delegated deploys with the yargs defaults the handler expects", async ({
 		expect,
 	}) => {
-		const delegation: Extract<PagesToWorkersDelegateResult, { handled: true }> =
-			{
-				handled: true,
-				command: "deploy",
-				agentId: "test-agent",
-				deployArgs: {
-					name: "test-project",
-				},
-			};
+		const delegation: Extract<
+			PagesToWorkersDelegateResult,
+			{ delegate: true }
+		> = {
+			delegate: true,
+			command: "deploy",
+			agentId: "test-agent",
+			deployArgs: {
+				name: "test-project",
+			},
+		};
 
 		await runPagesToWorkersDeploy(delegation);
 

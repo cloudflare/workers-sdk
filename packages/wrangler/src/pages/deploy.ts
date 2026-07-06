@@ -224,7 +224,7 @@ export const pagesDeployCommand = createCommand({
 			projectName,
 			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),
 		});
-		if (delegation.handled) {
+		if (delegation.delegate) {
 			await runPagesToWorkersDeploy(delegation);
 			return;
 		}

@@ -162,7 +162,7 @@ export const pagesProjectCreateCommand = createCommand({
 			compatibilityFlags,
 			unsupportedArgs: productionBranch ? ["--production-branch"] : [],
 		});
-		if (delegation.handled) {
+		if (delegation.delegate) {
 			await runPagesToWorkersDeploy(delegation);
 			return;
 		}

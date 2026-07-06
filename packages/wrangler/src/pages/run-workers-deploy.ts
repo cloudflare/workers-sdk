@@ -18,7 +18,7 @@ import {
 } from "./delegate-to-workers";
 
 export async function runPagesToWorkersDeploy(
-	delegation: Extract<PagesToWorkersDelegateResult, { handled: true }>
+	delegation: Extract<PagesToWorkersDelegateResult, { delegate: true }>
 ): Promise<void> {
 	// This path calls the deploy handler directly, bypassing yargs. Keep these
 	// defaults aligned with the `wrangler deploy` command definition for values
