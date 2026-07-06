@@ -4,7 +4,7 @@ import {
 	FatalError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import onExit from "signal-exit";
+import { onExit } from "signal-exit";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
@@ -280,7 +280,7 @@ export const pagesDeploymentTailCommand = createCommand({
 			};
 		})();
 
-		onExit(onCloseTail);
+		onExit(() => void onCloseTail());
 
 		tail.on("message", (data) => {
 			if (format === "pretty") {
