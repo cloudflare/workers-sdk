@@ -4,6 +4,7 @@ import path from "node:path";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
+import { BuildFailure } from "../../deployment-bundle/build-failures";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
 import {
@@ -302,9 +303,10 @@ export class BundlerController extends Controller {
 						this.emitErrorEvent({
 							type: "error",
 							reason: "Failed to rebuild the Worker",
-							cause: Object.assign(
-								new Error(`Build failed with ${errors.length} error(s)`),
-								{ errors, warnings }
+							cause: new BuildFailure(
+								`Build failed with ${errors.length} error(s)`,
+								errors,
+								warnings
 							),
 							source: "BundlerController",
 							data: undefined,
