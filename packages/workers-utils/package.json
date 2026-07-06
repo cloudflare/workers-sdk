@@ -58,7 +58,6 @@
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/command-exists": "^1.2.0",
 		"@types/node": "catalog:default",
-		"@types/signal-exit": "^3.0.1",
 		"@vitest/ui": "catalog:default",
 		"cloudflare": "^5.2.0",
 		"command-exists": "catalog:default",
