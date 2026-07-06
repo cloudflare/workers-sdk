@@ -31,11 +31,15 @@ export type ConfigBindingOptions = Pick<
 >;
 export type {
 	CacheOptions,
+	ConfiguredExport,
 	ConfigModuleRuleType,
 	Environment,
 	PreviewsConfig,
 	RawEnvironment,
+	WorkerEntrypointExport,
 } from "./environment";
+export { partitionExports } from "./exports";
+export type { ExportType, PartitionedExports } from "./exports";
 
 export function configFormat(
 	configPath: string | undefined

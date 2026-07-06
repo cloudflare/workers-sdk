@@ -75,12 +75,13 @@ export function readStoredAuthState(options: {
 }): StoredAuthState {
 	const { configOverride, warningLogger, storage } = options;
 
-	let parsed: UserAuthConfig;
-	try {
-		parsed = configOverride ?? storage.read();
-	} catch {
-		return {};
-	}
+	// `storage.read()` returns `undefined` for the "no usable credentials"
+	// state (missing file, corrupted ciphertext, etc.) — see the
+	// `ConfigStorage<T>` interface docs. Genuine errors (filesystem
+	// permission failures, etc.) still propagate. The `?? {}` keeps the
+	// destructuring below uniform without bringing back a try/catch
+	// that swallows real errors.
+	const parsed = configOverride ?? storage.read() ?? {};
 
 	// eslint-disable-next-line @typescript-eslint/no-deprecated -- api_token is a deprecated property, but still needs to be supported for backwards compatibility so we need to handle appropriately here
 	const { oauth_token, refresh_token, expiration_time, scopes, api_token } =

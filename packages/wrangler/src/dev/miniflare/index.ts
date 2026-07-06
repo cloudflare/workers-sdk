@@ -75,6 +75,7 @@ export interface ConfigBundle {
 	complianceRegion: Config["compliance_region"] | undefined;
 	bindings: StartDevWorkerInput["bindings"];
 	migrations: Config["migrations"] | undefined;
+	exports: Config["exports"] | undefined;
 	devRegistry: string | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	assets: AssetsOptions | undefined;
@@ -471,6 +472,7 @@ type MiniflareBindingsConfig = Pick<
 	ConfigBundle,
 	| "bindings"
 	| "migrations"
+	| "exports"
 	| "queueConsumers"
 	| "name"
 	| "tails"
@@ -666,7 +668,8 @@ export function buildMiniflareBindingOptions(
 	}
 
 	const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
-		config.migrations
+		config.migrations,
+		config.exports
 	);
 
 	const externalWorkers: WorkerOptions[] = [];

@@ -380,6 +380,7 @@ export const defaultWranglerConfig: Config = {
 	jsx_factory: "React.createElement",
 	jsx_fragment: "React.Fragment",
 	migrations: [],
+	exports: {},
 	triggers: {
 		crons: undefined,
 	},

@@ -46,6 +46,7 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 		);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Workers API for parsing multipart bodies; only deprecated on undici's server-side Request
 	const data = await request.formData();
 
 	const body = data.get("image");
@@ -349,6 +350,7 @@ export async function cfImageLocalFetcher(request: Request): Promise<Response> {
 	let body: unknown;
 	let options: RequestInitCfPropertiesImage;
 	try {
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Workers API for parsing multipart bodies; only deprecated on undici's server-side Request
 		const data = await request.formData();
 		body = data.get("image");
 		const optionsJson = data.get("options");
