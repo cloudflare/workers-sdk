@@ -1,5 +1,6 @@
 ---
 "wrangler": patch
+"@cloudflare/workers-utils": patch
 ---
 
 Upgrade `signal-exit` from v3 to v4
