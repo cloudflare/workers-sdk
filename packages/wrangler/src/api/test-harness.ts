@@ -31,16 +31,16 @@ import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
 import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
 import type {
-	FetcherScheduledOptions,
-	FetcherScheduledResult,
-} from "@cloudflare/workers-types/experimental";
-import type {
 	D1Database,
 	ExportedHandler,
 	Rpc,
 	Service,
 	Workflow,
-} from "@cloudflare/workers-types/latest";
+} from "@cloudflare/workers-types";
+import type {
+	FetcherScheduledOptions,
+	FetcherScheduledResult,
+} from "@cloudflare/workers-types/experimental";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type {
 	WorkflowBinding,
