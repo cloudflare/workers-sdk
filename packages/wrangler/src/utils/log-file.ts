@@ -7,7 +7,7 @@ import {
 	getGlobalConfigPath,
 } from "@cloudflare/workers-utils";
 import { Mutex } from "miniflare";
-import onExit from "signal-exit";
+import { onExit } from "signal-exit";
 import { logger } from "../logger";
 import { ensureDirectoryExists } from "./filesystem";
 import type { LoggerLevel } from "../logger";
