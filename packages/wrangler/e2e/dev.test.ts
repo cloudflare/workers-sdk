@@ -758,11 +758,8 @@ describe.each([{ cmd: "wrangler dev" }])(
 // per-connection socket of the test's `nodeNet.Server`. Without an `error`
 // listener Node escalates it to `uncaughtException`, which Vitest catches as
 // an unhandled error and fails the run even though the test itself passed.
-// The same teardown race can also surface as EPIPE, if the server's initial
-// handshake write (e.g. `MYSQL_INITIAL_HANDSHAKE_PACKET`) lands after the
-// other end has already been torn down.
 function ignoreEconnreset(err: NodeJS.ErrnoException): void {
-	if (err.code !== "ECONNRESET" && err.code !== "EPIPE") {
+	if (err.code !== "ECONNRESET") {
 		throw err;
 	}
 }
