@@ -68,9 +68,9 @@ export function useDispose(mf: Miniflare): void {
  * server occasionally resets mid-request (ECONNRESET), unrelated to the
  * behaviour under test.
  *
- * This is a Fetcher, not a full `dispatchFetch`, since retrying requires
- * calling with the same args again - `mf.dispatchFetch` args are passed
- * straight through to `fetch()`.
+ * Note: retries require the request to be repeatable (e.g. string/ArrayBuffer bodies).
+ * Passing a `Request` or `init.body` backed by a stream may fail on retry once the body is used.
+ * This helper is intended for tests where inputs are trivially re-creatable.
  */
 export async function dispatchFetchWithRetry(
 	mf: Miniflare,
