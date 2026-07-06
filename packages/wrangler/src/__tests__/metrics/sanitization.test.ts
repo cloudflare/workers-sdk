@@ -1,4 +1,6 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
+import { CLIError } from "../../../src/cli-errors";
 import {
 	ALLOW,
 	COMMAND_ARG_ALLOW_LIST,
@@ -6,7 +8,9 @@ import {
 	REDACT,
 	sanitizeArgKeys,
 	sanitizeArgValues,
+	sanitizeError,
 } from "../../../src/metrics/sanitization";
+import type { CLIErrorOptions } from "../../../src/cli-errors";
 import type { AllowedArgs, AllowList } from "../../../src/metrics/sanitization";
 
 describe("sanitizeArgKeys", () => {
@@ -167,5 +171,60 @@ describe("COMMAND_ARG_ALLOW_LIST", () => {
 			dryRun: true,
 			json: true,
 		});
+	});
+});
+
+/**
+ * Concrete subclass for testing the abstract CLIError.
+ */
+class TestCLIError extends CLIError {
+	constructor(
+		humanMessage: string,
+		aiMessage: string,
+		options: CLIErrorOptions
+	) {
+		super(humanMessage, aiMessage, options);
+	}
+}
+
+describe("sanitizeError", () => {
+	it("should return errorMessage from a UserError", ({ expect }) => {
+		const error = new UserError("something went wrong", {
+			telemetryMessage: "deploy missing field",
+		});
+		const result = sanitizeError(error);
+		expect(result.errorMessage).toBe("deploy missing field");
+		expect(result.errorType).toBe("UserError");
+	});
+
+	it("should return errorMessage from a CLIError with a string telemetryMessage", ({
+		expect,
+	}) => {
+		const error = new TestCLIError("human msg", "ai msg", {
+			telemetryMessage: "type generation config missing",
+		});
+		const result = sanitizeError(error);
+		expect(result.errorMessage).toBe("type generation config missing");
+		expect(result.errorType).toBe("TestCLIError");
+	});
+
+	it("should return undefined errorMessage from a CLIError with telemetryMessage false", ({
+		expect,
+	}) => {
+		const error = new TestCLIError("human msg", "ai msg", {
+			telemetryMessage: false,
+		});
+		const result = sanitizeError(error);
+		expect(result.errorMessage).toBeUndefined();
+		expect(result.errorType).toBe("TestCLIError");
+	});
+
+	it("should return undefined errorMessage for a generic Error", ({
+		expect,
+	}) => {
+		const error = new Error("something unexpected");
+		const result = sanitizeError(error);
+		expect(result.errorMessage).toBeUndefined();
+		expect(result.errorType).toBe("Error");
 	});
 });

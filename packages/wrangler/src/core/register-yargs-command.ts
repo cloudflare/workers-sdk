@@ -22,6 +22,7 @@ import {
 	fetchPagedListResult,
 } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
+import { CLIError } from "../cli-errors";
 import { readConfig, readNewConfig } from "../config";
 import { confirm, prompt, select } from "../dialogs";
 import { run } from "../experimental-flags";
@@ -390,7 +391,9 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 							durationMs,
 							errorType: getErrorType(err),
 							errorMessage:
-								err instanceof UserError ? err.telemetryMessage : undefined,
+								err instanceof UserError || err instanceof CLIError
+									? err.telemetryMessage
+									: undefined,
 						},
 						def.behaviour
 					);

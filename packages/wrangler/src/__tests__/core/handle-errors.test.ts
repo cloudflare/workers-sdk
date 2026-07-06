@@ -1,11 +1,13 @@
 import { APIError, ParseError } from "@cloudflare/workers-utils";
 import { beforeEach, describe, it, vi } from "vitest";
+import { CLIError } from "../../cli-errors";
 import {
 	getErrorType,
 	handleError,
 	isAuthenticationError,
 } from "../../core/handle-errors";
 import { mockConsoleMethods } from "../helpers/mock-console";
+import type { CLIErrorOptions } from "../../cli-errors";
 
 describe("getErrorType", () => {
 	describe("DNS errors", () => {
@@ -318,6 +320,26 @@ describe("getErrorType", () => {
 			expect(getErrorType("string error")).toBe(undefined);
 			expect(getErrorType(null)).toBe(undefined);
 			expect(getErrorType(undefined)).toBe(undefined);
+		});
+
+		it("should return the concrete subclass name for CLIError instances", ({
+			expect,
+		}) => {
+			class MissingConfigFileError extends CLIError {
+				constructor(
+					humanMessage: string,
+					aiMessage: string,
+					options: CLIErrorOptions
+				) {
+					super(humanMessage, aiMessage, options);
+				}
+			}
+
+			const error = new MissingConfigFileError("human", "ai", {
+				telemetryMessage: "type generation command missing config",
+			});
+
+			expect(getErrorType(error)).toBe("MissingConfigFileError");
 		});
 	});
 });

@@ -1,4 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { CLIError } from "../cli-errors";
 import { getErrorType } from "../core/handle-errors";
 
 /**
@@ -174,6 +175,8 @@ export function sanitizeError(error: unknown) {
 	return {
 		errorType: getErrorType(error),
 		errorMessage:
-			error instanceof UserError ? error.telemetryMessage : undefined,
+			error instanceof UserError || error instanceof CLIError
+				? error.telemetryMessage
+				: undefined,
 	};
 }

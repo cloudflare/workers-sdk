@@ -3,6 +3,7 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
 import { experimental_generateTypes } from "../api";
+import { MissingBindingFieldError } from "../cli-errors/type-generation";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
@@ -237,9 +238,19 @@ describe("validateEnvInterfaceNames", () => {
 });
 
 describe("throwMissingBindingError", () => {
-	it("should throw a `UserError` for top-level bindings with array index", ({
+	it("should throw a `MissingBindingFieldError` for top-level bindings with array index", ({
 		expect,
 	}) => {
+		expect(() =>
+			throwMissingBindingError({
+				binding: { id: "1234" },
+				bindingType: "kv_namespaces",
+				configPath: "wrangler.json",
+				envName: TOP_LEVEL_ENV_NAME,
+				fieldName: "binding",
+				index: 0,
+			})
+		).toThrow(MissingBindingFieldError);
 		expect(() =>
 			throwMissingBindingError({
 				binding: { id: "1234" },
@@ -254,7 +265,7 @@ describe("throwMissingBindingError", () => {
 		);
 	});
 
-	it("should throw a `UserError` for environment bindings with array index", ({
+	it("should throw a `MissingBindingFieldError` for environment bindings with array index", ({
 		expect,
 	}) => {
 		expect(() =>

@@ -1,4 +1,5 @@
 import { generateRuntimeTypes as generateRuntimeTypesImpl } from "@cloudflare/runtime-types";
+import { MissingCompatibilityDateError } from "../../cli-errors/type-generation";
 import { logger } from "../../logger";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -12,7 +13,7 @@ import type { Config } from "@cloudflare/workers-utils";
  * The caller reads the existing `.d.ts` file (if any) and passes its contents as
  * `existingContent` for cache detection, so the file is read at most once per generation.
  *
- * @throws {Error} If the config file does not have a compatibility date.
+ * @throws {MissingCompatibilityDateError} If the config file does not have a compatibility date.
  *
  * @example
  * import { generateRuntimeTypes } from './path/to/this/file';
@@ -29,7 +30,7 @@ export async function generateRuntimeTypes({
 	existingContent?: string;
 }): Promise<{ runtimeHeader: string; runtimeTypes: string }> {
 	if (!compatibility_date) {
-		throw new Error("Config must have a compatibility date.");
+		throw new MissingCompatibilityDateError();
 	}
 
 	const { runtimeHeader, runtimeTypes, isCached } =

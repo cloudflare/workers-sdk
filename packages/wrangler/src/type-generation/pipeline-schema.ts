@@ -1,3 +1,4 @@
+import { MissingPipelineStreamIdError } from "../cli-errors/type-generation";
 import { logger } from "../logger";
 import { getStream } from "../pipelines/client";
 import { getAPIToken } from "../user";
@@ -236,9 +237,7 @@ export async function fetchPipelineTypes(
 		pipelines.map((p) => {
 			const streamID = p.stream || p.pipeline;
 			if (!streamID) {
-				throw new Error(
-					`Pipeline binding ${p.binding} is missing the stream ID`
-				);
+				throw new MissingPipelineStreamIdError(p.binding);
 			}
 			return fetchStream(config, streamID);
 		})

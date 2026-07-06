@@ -150,7 +150,10 @@ type VariableNames =
 	| "DOCKER_HOST"
 
 	/** Environment variable used to signal that the current process is being run by the open-next deploy command. */
-	| "OPEN_NEXT_DEPLOY";
+	| "OPEN_NEXT_DEPLOY"
+
+	/** When "true" forces outputs whenever available to be AI-optimised, or "false" always avoid such AI-optimized outputs. When unset, output format is auto-detected via `am-i-vibing`. */
+	| "WRANGLER_OUTPUTS_FOR_AGENTS";
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"

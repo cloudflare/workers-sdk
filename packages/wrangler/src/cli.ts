@@ -24,6 +24,7 @@ import {
 	unstable_pages,
 	unstable_readConfig,
 } from "./api";
+import { CLIError } from "./cli-errors";
 import { main } from "./index";
 import type {
 	Binding,
@@ -56,7 +57,10 @@ if (typeof vitest === "undefined" && require.main === module) {
 		// The logging of any error that was thrown from `main()` is handled in the `yargs.fail()` handler.
 		// Here we just want to ensure that the process exits with a non-zero code.
 		// We don't want to do this inside the `main()` function, since that would kill the process when running our tests.
-		const exitCode = (e instanceof FatalError && e.code) || 1;
+		const exitCode =
+			(e instanceof FatalError && e.code) ||
+			(e instanceof CLIError && e.exitCode) ||
+			1;
 		process.exit(exitCode);
 	});
 }
