@@ -2,10 +2,13 @@ import SCRIPT_RATELIMIT_CLIENT from "worker:ratelimit/ratelimit";
 import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit-object";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
+import { SharedBindings } from "../../workers";
 import {
+	getMiniflareObjectBindings,
 	getUserBindingServiceName,
 	objectEntryWorker,
 	ProxyNodeBinding,
+	SERVICE_LOOPBACK,
 } from "../shared";
 import type {
 	Service,
@@ -91,7 +94,7 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 			])
 		);
 	},
-	async getServices({ options }) {
+	async getServices({ options, unsafeStickyBlobs }) {
 		if (!options.ratelimits) {
 			return [];
 		}
@@ -120,6 +123,13 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 				// process, never persisted across restarts (matching the previous
 				// purely in-memory implementation).
 				durableObjectStorage: { inMemory: kVoid },
+				bindings: [
+					{
+						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+						service: { name: SERVICE_LOOPBACK },
+					},
+					...getMiniflareObjectBindings(unsafeStickyBlobs),
+				],
 			},
 		});
 
