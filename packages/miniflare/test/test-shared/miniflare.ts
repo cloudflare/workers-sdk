@@ -65,8 +65,9 @@ export function useDispose(mf: Miniflare): void {
 /**
  * `dispatchFetch` with retry logic for transient connection resets.
  * On Windows CI runners, the loopback connection to the local explorer
- * server occasionally resets mid-request (ECONNRESET), unrelated to the
- * behaviour under test.
+ * server occasionally resets mid-request (ECONNRESET) or, depending on
+ * timing of the initial write vs. the other end closing, surfaces as
+ * EPIPE instead — both unrelated to the behaviour under test.
  *
  * Note: retries require the request to be repeatable (e.g. string/ArrayBuffer bodies).
  * Passing a `Request` or `init.body` backed by a stream may fail on retry once the body is used.
@@ -86,7 +87,8 @@ export async function dispatchFetchWithRetry(
 		} catch (e) {
 			lastError = e;
 			const code = (e as { cause?: NodeJS.ErrnoException })?.cause?.code;
-			if (isWindows && code === "ECONNRESET" && attempt < maxRetries) {
+			const isRetryableCode = code === "ECONNRESET" || code === "EPIPE";
+			if (isWindows && isRetryableCode && attempt < maxRetries) {
 				const delay = initialDelayMs * Math.pow(2, attempt);
 				await new Promise((resolve) => setTimeout(resolve, delay));
 				continue;
