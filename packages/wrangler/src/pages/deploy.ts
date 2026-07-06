@@ -30,6 +30,7 @@ import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
 import { maybeRedirectPagesToWorkers } from "./redirect-to-workers";
+import { runPagesToWorkersDeploy } from "./run-workers-deploy";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
 import type { PagesConfigCache } from "./types";
 import type {
@@ -117,6 +118,7 @@ export const pagesDeployCommand = createCommand({
 		force: {
 			type: "boolean",
 			default: false,
+			hidden: true,
 			description:
 				"Deploy directly to Cloudflare Pages, bypassing the automatic redirect to Cloudflare Workers for new static projects",
 		},
@@ -219,8 +221,10 @@ export const pagesDeployCommand = createCommand({
 			existingProject: Boolean(projectName) && isExistingProject,
 			force: args.force,
 			projectName,
+			unsupportedArgs: getUnsupportedDeployRedirectArgs(args),
 		});
 		if (redirect.handled) {
+			await runPagesToWorkersDeploy(redirect);
 			return;
 		}
 
@@ -631,6 +635,23 @@ export const pagesDeployCommand = createCommand({
 		metrics.sendMetricsEvent("create pages deployment");
 	},
 });
+
+function getUnsupportedDeployRedirectArgs(
+	args: (typeof pagesDeployCommand)["args"]
+): string[] {
+	return [
+		["--branch", args.branch],
+		["--commit-hash", args.commitHash],
+		["--commit-message", args.commitMessage],
+		["--commit-dirty", args.commitDirty],
+		["--skip-caching", args.skipCaching],
+		["--bundle", args.bundle],
+		["--no-bundle", args.noBundle],
+		["--upload-source-maps", args.uploadSourceMaps],
+	]
+		.filter(([, value]) => value !== undefined && value !== false)
+		.map(([flag]) => flag as string);
+}
 
 type NewOrExistingItem = {
 	key: string;

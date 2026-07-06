@@ -13,6 +13,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { maybeRedirectPagesToWorkers } from "./redirect-to-workers";
+import { runPagesToWorkersDeploy } from "./run-workers-deploy";
 import type { PagesConfigCache, Project } from "./types";
 
 export const pagesProjectListCommand = createCommand({
@@ -128,6 +129,7 @@ export const pagesProjectCreateCommand = createCommand({
 		force: {
 			type: "boolean",
 			default: false,
+			hidden: true,
 			description:
 				"Create a Cloudflare Pages project directly, bypassing the automatic redirect to Cloudflare Workers for new static projects",
 		},
@@ -155,8 +157,10 @@ export const pagesProjectCreateCommand = createCommand({
 			projectName,
 			compatibilityDate,
 			compatibilityFlags,
+			unsupportedArgs: productionBranch ? ["--production-branch"] : [],
 		});
 		if (redirect.handled) {
+			await runPagesToWorkersDeploy(redirect);
 			return;
 		}
 

@@ -1,4 +1,5 @@
 import { deploy } from "@cloudflare/deploy-helpers";
+import type { Config } from "@cloudflare/workers-utils";
 import { analyseBundle } from "../check/commands";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -107,77 +108,84 @@ export const deployCommand = createCommand({
 		validateDeployVersionsArgs(args, "deploy");
 	},
 	async handler(args, { config }) {
-		// --- Step 0. Auto-config --- //
-		const autoConfigResult = await maybeRunAutoConfig(args, config);
-		if (autoConfigResult.aborted) {
-			return;
-		}
-		config = autoConfigResult.config;
-
-		// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
-		args = await promptForMissingDeployConfig(args, config);
-
-		// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
-		// As a precaution we're gating the feature under the autoconfig flag for the time being.
-		// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
-		if (
-			args.autoconfig &&
-			!args.config &&
-			!args.dryRun &&
-			(await maybeDelegateToOpenNextDeployCommand(process.cwd()))
-		) {
-			return;
-		}
-
-		// Merge CLI args with config into props for building and deploying
-		const { props, buildProps } = await mergeDeployConfigArgs(args, config);
-
-		try {
-			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
-			const preMergeName = getScriptName(args, config);
-			const workerNameOverridden =
-				props.name !== undefined && props.name !== preMergeName;
-
-			const beforeUpload = Date.now();
-
-			const buildResult = await buildWorker(buildProps, config);
-
-			const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
-				await deploy(props, config, buildResult, {
-					syncWorkersSite,
-					getNormalizedContainerOptions,
-					buildContainer,
-					deployContainers,
-					analyseBundle,
-				});
-
-			writeOutput({
-				type: "deploy",
-				version: 1,
-				worker_name: props.name ?? null,
-				worker_tag: workerTag,
-				version_id: versionId,
-				targets,
-				wrangler_environment: args.env,
-				worker_name_overridden: workerNameOverridden,
-			});
-
-			metrics.sendMetricsEvent(
-				"deploy worker script",
-				{
-					usesTypeScript: /\.tsx?$/.test(props.entry.file),
-					durationMs: Date.now() - beforeUpload,
-					sourceMapSize,
-					...assetUploadStats,
-				},
-				{
-					sendMetrics: config.send_metrics,
-				}
-			);
-		} finally {
-			cleanupDestination(buildProps.destination);
-		}
+		await runDeployCommandHandler(args, { config });
 	},
 });
 
 export type DeployArgs = (typeof deployCommand)["args"];
+
+export async function runDeployCommandHandler(
+	args: DeployArgs,
+	{ config }: { config: Config }
+): Promise<void> {
+	// --- Step 0. Auto-config --- //
+	const autoConfigResult = await maybeRunAutoConfig(args, config);
+	if (autoConfigResult.aborted) {
+		return;
+	}
+	config = autoConfigResult.config;
+
+	// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
+	args = await promptForMissingDeployConfig(args, config);
+
+	// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
+	// As a precaution we're gating the feature under the autoconfig flag for the time being.
+	// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
+	if (
+		args.autoconfig &&
+		!args.config &&
+		!args.dryRun &&
+		(await maybeDelegateToOpenNextDeployCommand(process.cwd()))
+	) {
+		return;
+	}
+
+	// Merge CLI args with config into props for building and deploying
+	const { props, buildProps } = await mergeDeployConfigArgs(args, config);
+
+	try {
+		// Derive workerNameOverridden by comparing pre-merge name with post-merge name
+		const preMergeName = getScriptName(args, config);
+		const workerNameOverridden =
+			props.name !== undefined && props.name !== preMergeName;
+
+		const beforeUpload = Date.now();
+
+		const buildResult = await buildWorker(buildProps, config);
+
+		const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
+			await deploy(props, config, buildResult, {
+				syncWorkersSite,
+				getNormalizedContainerOptions,
+				buildContainer,
+				deployContainers,
+				analyseBundle,
+			});
+
+		writeOutput({
+			type: "deploy",
+			version: 1,
+			worker_name: props.name ?? null,
+			worker_tag: workerTag,
+			version_id: versionId,
+			targets,
+			wrangler_environment: args.env,
+			worker_name_overridden: workerNameOverridden,
+		});
+
+		metrics.sendMetricsEvent(
+			"deploy worker script",
+			{
+				usesTypeScript: /\.tsx?$/.test(props.entry.file),
+				durationMs: Date.now() - beforeUpload,
+				sourceMapSize,
+				...assetUploadStats,
+			},
+			{
+				sendMetrics: config.send_metrics,
+			}
+		);
+	} finally {
+		cleanupDestination(buildProps.destination);
+	}
+}

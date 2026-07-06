@@ -2,14 +2,16 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
-import { main } from "../../index";
 import { sendMetricsEvent } from "../../metrics";
-import { maybeRedirectPagesToWorkers } from "../../pages/redirect-to-workers";
+import {
+	maybeRedirectPagesToWorkers,
+	recordPagesToWorkersRedirectFailure,
+	runWithPagesToWorkersRedirect,
+} from "../../pages/redirect-to-workers";
 import { detectAgent } from "../../utils/detect-agent";
 import { mockConsoleMethods } from "../helpers/mock-console";
 
 vi.mock("../../utils/detect-agent");
-vi.mock("../../index", () => ({ main: vi.fn() }));
 vi.mock("../../metrics");
 
 /** Create a `functions/` directory marker inside `dir`. */
@@ -29,7 +31,6 @@ describe("maybeRedirectPagesToWorkers", () => {
 
 	beforeEach(() => {
 		vi.mocked(detectAgent).mockReturnValue({ isAgent: true, id: "test-agent" });
-		vi.mocked(main).mockResolvedValue(undefined);
 	});
 
 	it("does not redirect (or emit telemetry) when not run by an agent", async ({
@@ -43,7 +44,6 @@ describe("maybeRedirectPagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ handled: false });
-		expect(main).not.toHaveBeenCalled();
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
@@ -57,7 +57,6 @@ describe("maybeRedirectPagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ handled: false });
-		expect(main).not.toHaveBeenCalled();
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages redirect to workers",
 			expect.objectContaining({
@@ -79,7 +78,6 @@ describe("maybeRedirectPagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ handled: false });
-		expect(main).not.toHaveBeenCalled();
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages redirect to workers",
 			expect.objectContaining({
@@ -92,8 +90,6 @@ describe("maybeRedirectPagesToWorkers", () => {
 
 	const unsupportedFileMarkers: [marker: string, reason: string][] = [
 		["_worker.js", "advanced-mode _worker.js"],
-		["_redirects", "_redirects file"],
-		["_headers", "_headers file"],
 		["_routes.json", "_routes.json file"],
 	];
 
@@ -109,7 +105,6 @@ describe("maybeRedirectPagesToWorkers", () => {
 			});
 
 			expect(result).toEqual({ handled: false });
-			expect(main).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
 				"pages redirect to workers",
 				expect.objectContaining({ result: "skipped", reason }),
@@ -132,12 +127,51 @@ describe("maybeRedirectPagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ handled: false });
-		expect(main).not.toHaveBeenCalled();
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages redirect to workers",
 			expect.objectContaining({
 				result: "skipped",
 				reason: "_routes.json file",
+			}),
+			expect.anything()
+		);
+	});
+
+	for (const marker of ["_redirects", "_headers"]) {
+		it(`redirects when project has a supported ${marker} file`, async ({
+			expect,
+		}) => {
+			createFile(process.cwd(), marker);
+
+			const result = await maybeRedirectPagesToWorkers({
+				command: "deploy",
+				projectPath: process.cwd(),
+			});
+
+			expect(result).toEqual({
+				handled: true,
+				command: "deploy",
+				agentId: "test-agent",
+				deployArgs: {},
+			});
+		});
+	}
+
+	it("does not redirect when Pages-only args are present", async ({
+		expect,
+	}) => {
+		const result = await maybeRedirectPagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			unsupportedArgs: ["--branch"],
+		});
+
+		expect(result).toEqual({ handled: false });
+		expect(sendMetricsEvent).toHaveBeenCalledWith(
+			"pages redirect to workers",
+			expect.objectContaining({
+				result: "skipped",
+				reason: "unsupported args: --branch",
 			}),
 			expect.anything()
 		);
@@ -149,22 +183,18 @@ describe("maybeRedirectPagesToWorkers", () => {
 			projectPath: process.cwd(),
 		});
 
-		expect(result).toEqual({ handled: true });
-		expect(main).toHaveBeenCalledWith(["deploy"]);
+		expect(result).toEqual({
+			handled: true,
+			command: "deploy",
+			agentId: "test-agent",
+			deployArgs: {},
+		});
 		expect(std.out).toContain(
 			"Redirecting to the latest version of Cloudflare Pages, now part of Cloudflare Workers"
-		);
-		expect(std.warn).toContain(
-			"live on the latest version of Cloudflare Pages, now part of Cloudflare Workers"
 		);
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages redirect to workers",
 			expect.objectContaining({ command: "deploy", result: "redirected" }),
-			expect.anything()
-		);
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
-			expect.objectContaining({ command: "deploy", result: "success" }),
 			expect.anything()
 		);
 	});
@@ -178,8 +208,12 @@ describe("maybeRedirectPagesToWorkers", () => {
 			projectName: "my-app",
 		});
 
-		expect(result).toEqual({ handled: true });
-		expect(main).toHaveBeenCalledWith(["deploy", "--name", "my-app"]);
+		expect(result).toEqual({
+			handled: true,
+			command: "deploy",
+			agentId: "test-agent",
+			deployArgs: { name: "my-app" },
+		});
 	});
 
 	it("does not forward --assets, so autoconfig stays enabled to configure the deploy", async ({
@@ -195,15 +229,21 @@ describe("maybeRedirectPagesToWorkers", () => {
 			projectName: "my-app",
 		});
 
-		expect(result).toEqual({ handled: true });
+		expect(result).toEqual({
+			handled: true,
+			command: "deploy",
+			agentId: "test-agent",
+			deployArgs: { name: "my-app" },
+		});
+		if (!result.handled) {
+			throw new Error("Expected redirect to be handled");
+		}
 		// Regression guard: forwarding `--assets` would disable autoconfig, and a
 		// non-interactive agent deploy would then have no compatibility date and
 		// fail validation. autoconfig must run to detect the directory and write a
 		// Workers config, so the assets directory must never reach the deploy argv.
-		expect(main).toHaveBeenCalledWith(["deploy", "--name", "my-app"]);
-		const argv = vi.mocked(main).mock.calls[0]?.[0] ?? [];
-		expect(argv).not.toContain("--assets");
-		expect(argv).not.toContain(assetsDirectory);
+		expect(result.deployArgs).not.toHaveProperty("assets");
+		expect(result.deployArgs).not.toHaveProperty("path");
 	});
 
 	it("carries name and compatibility settings across on create", async ({
@@ -217,21 +257,16 @@ describe("maybeRedirectPagesToWorkers", () => {
 			compatibilityFlags: ["nodejs_compat"],
 		});
 
-		expect(result).toEqual({ handled: true });
-		expect(main).toHaveBeenCalledWith([
-			"deploy",
-			"--name",
-			"my-proj",
-			"--compatibility-date",
-			"2024-01-01",
-			"--compatibility-flag",
-			"nodejs_compat",
-		]);
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
-			expect.objectContaining({ command: "create", result: "success" }),
-			expect.anything()
-		);
+		expect(result).toEqual({
+			handled: true,
+			command: "create",
+			agentId: "test-agent",
+			deployArgs: {
+				name: "my-proj",
+				compatibilityDate: "2024-01-01",
+				compatibilityFlags: ["nodejs_compat"],
+			},
+		});
 	});
 
 	it("does not redirect when --force is set, and records the opt-out", async ({
@@ -244,7 +279,6 @@ describe("maybeRedirectPagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ handled: false });
-		expect(main).not.toHaveBeenCalled();
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages redirect to workers",
 			expect.objectContaining({ command: "deploy", result: "forced" }),
@@ -252,91 +286,57 @@ describe("maybeRedirectPagesToWorkers", () => {
 		);
 	});
 
-	it("re-throws and does not fall back to Pages when the Workers deploy fails", async ({
+	it("records failure and gives explicit, loop-safe --force guidance", async ({
 		expect,
 	}) => {
-		vi.mocked(main).mockRejectedValue(new Error("boom"));
-
-		await expect(
-			maybeRedirectPagesToWorkers({
-				command: "deploy",
-				projectPath: process.cwd(),
-			})
-		).rejects.toThrow("boom");
-
-		expect(main).toHaveBeenCalledTimes(1);
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"pages redirect to workers",
-			expect.objectContaining({ result: "failure" }),
-			expect.anything()
+		recordPagesToWorkersRedirectFailure(
+			"deploy",
+			{},
+			"test-agent",
+			new Error("boom")
 		);
-		expect(sendMetricsEvent).not.toHaveBeenCalledWith(
-			"pages redirect to workers",
-			expect.objectContaining({ result: "success" }),
-			expect.anything()
-		);
-	});
-
-	it("gives explicit, loop-safe --force guidance when a deploy redirect fails", async ({
-		expect,
-	}) => {
-		vi.mocked(main).mockRejectedValue(new Error("boom"));
-
-		await expect(
-			maybeRedirectPagesToWorkers({
-				command: "deploy",
-				projectPath: process.cwd(),
-			})
-		).rejects.toThrow("boom");
 
 		expect(std.warn).toContain("nothing was deployed");
 		expect(std.warn).toContain("do not retry it unchanged");
 		expect(std.warn).toContain("wrangler pages deploy --force");
-	});
-
-	it("re-throws a failed create redirect without falling back to create", async ({
-		expect,
-	}) => {
-		vi.mocked(main).mockRejectedValue(new Error("nope"));
-
-		await expect(
-			maybeRedirectPagesToWorkers({
-				command: "create",
-				projectPath: process.cwd(),
-				projectName: "my-proj",
-			})
-		).rejects.toThrow("nope");
-
-		expect(main).toHaveBeenCalledTimes(1);
-		expect(std.warn).toContain("wrangler pages project create --force");
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"pages redirect to workers",
-			expect.objectContaining({ command: "create", result: "failure" }),
+			expect.objectContaining({ command: "deploy", result: "failure" }),
 			expect.anything()
 		);
+	});
+
+	it("gives create-specific --force guidance when a create redirect fails", async ({
+		expect,
+	}) => {
+		recordPagesToWorkersRedirectFailure(
+			"create",
+			{ name: "my-proj" },
+			"test-agent",
+			new Error("nope")
+		);
+
+		expect(std.warn).toContain("wrangler pages project create --force");
 	});
 
 	it("does not re-enter (cannot loop) while a redirect is already running", async ({
 		expect,
 	}) => {
-		let nested: { handled: boolean } | undefined;
-		// Simulate the Workers deploy itself trying to trigger another redirect.
-		vi.mocked(main).mockImplementation(async () => {
+		let nested:
+			| Awaited<ReturnType<typeof maybeRedirectPagesToWorkers>>
+			| undefined;
+
+		const result = await runWithPagesToWorkersRedirect(async () => {
 			nested = await maybeRedirectPagesToWorkers({
 				command: "deploy",
 				projectPath: process.cwd(),
 			});
-		});
-
-		const result = await maybeRedirectPagesToWorkers({
-			command: "deploy",
-			projectPath: process.cwd(),
+			return { handled: true };
 		});
 
 		expect(result).toEqual({ handled: true });
 		// The nested call bailed via the re-entrancy guard rather than starting
-		// another deploy, so `main` ran exactly once.
+		// another deploy.
 		expect(nested).toEqual({ handled: false });
-		expect(main).toHaveBeenCalledTimes(1);
 	});
 });
