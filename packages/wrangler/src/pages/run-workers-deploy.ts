@@ -20,23 +20,72 @@ import {
 export async function runPagesToWorkersDeploy(
 	delegation: Extract<PagesToWorkersDelegateResult, { delegate: true }>
 ): Promise<void> {
-	// This path calls the deploy handler directly, bypassing yargs. Keep these
-	// defaults aligned with the `wrangler deploy` command definition for values
-	// the delegated deploy path can observe.
-	const args = {
+	// This path invokes the deploy handler directly, bypassing yargs, so it must
+	// supply every `DeployArgs` field the parser would otherwise populate. Fields
+	// without a yargs default are set to `undefined` (what a real `wrangler
+	// deploy` produces when the flag is absent); the few with a default mirror
+	// the values from the `wrangler deploy` command definition. Using `satisfies
+	// DeployArgs` rather than casting makes the compiler flag this object if the
+	// command's arg shape ever changes.
+	const deployArgs = {
 		_: ["deploy"],
 		$0: "wrangler",
+		// Defaults mirrored from the `wrangler deploy` command definition.
 		autoconfig: true,
 		experimentalAutoCreate: true,
+		installSkills: false,
 		experimentalDeployHelpers: false,
 		experimentalNewConfig: false,
 		latest: false,
 		keepVars: false,
 		noBundle: false,
 		strict: false,
+		// No yargs default: an absent flag parses as `undefined`.
+		v: undefined,
+		cwd: undefined,
+		config: undefined,
+		env: undefined,
+		envFile: undefined,
+		experimentalProvision: undefined,
+		profile: undefined,
+		triggers: undefined,
+		routes: undefined,
+		domains: undefined,
+		metafile: undefined,
+		legacyEnv: undefined,
+		logpush: undefined,
+		oldAssetTtl: undefined,
+		dispatchNamespace: undefined,
+		containersRollout: undefined,
+		path: undefined,
+		script: undefined,
+		name: undefined,
+		tag: undefined,
+		message: undefined,
+		bundle: undefined,
+		outdir: undefined,
+		outfile: undefined,
+		compatibilityDate: undefined,
+		compatibilityFlags: undefined,
+		assets: undefined,
+		site: undefined,
+		siteInclude: undefined,
+		siteExclude: undefined,
+		var: undefined,
+		define: undefined,
+		alias: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		minify: undefined,
+		uploadSourceMaps: undefined,
+		nodeCompat: undefined,
+		dryRun: undefined,
+		secretsFile: undefined,
+		// The agent's explicit inputs (name, compatibility date/flags) override
+		// the `undefined` placeholders above.
 		...delegation.deployArgs,
-	} satisfies Partial<DeployArgs>;
-	const deployArgs = args as DeployArgs;
+	} satisfies DeployArgs;
 	const config = readConfig(deployArgs, {
 		useRedirectIfAvailable: true,
 	});

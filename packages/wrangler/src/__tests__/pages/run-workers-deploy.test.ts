@@ -65,6 +65,7 @@ describe("runPagesToWorkersDeploy", () => {
 			expect.objectContaining({
 				autoconfig: true,
 				experimentalAutoCreate: true,
+				installSkills: false,
 				experimentalDeployHelpers: false,
 				experimentalNewConfig: false,
 				latest: false,
@@ -79,6 +80,7 @@ describe("runPagesToWorkersDeploy", () => {
 			expect.objectContaining({
 				autoconfig: true,
 				experimentalAutoCreate: true,
+				installSkills: false,
 				experimentalDeployHelpers: false,
 				experimentalNewConfig: false,
 				latest: false,
