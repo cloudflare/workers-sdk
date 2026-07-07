@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
@@ -3428,6 +3429,42 @@ describe("generate types - CLI", () => {
 				).rejects.toThrow(
 					"At least one of --include-env or --include-runtime must be enabled."
 				);
+			});
+
+			it("should ignore a non-Wrangler types file in a parent directory", async ({
+				expect,
+			}) => {
+				const parentDir = path.resolve("..");
+				const parentTypesPath = path.join(
+					parentDir,
+					"worker-configuration.d.ts"
+				);
+
+				fs.writeFileSync(parentTypesPath, "export interface CustomEnv {}");
+
+				try {
+					fs.writeFileSync(
+						"./index.ts",
+						"export default { async fetch() {} };"
+					);
+					fs.writeFileSync(
+						"./wrangler.jsonc",
+						JSON.stringify({
+							compatibility_date: "2022-01-12",
+							name: "test-name",
+							main: "./index.ts",
+						}),
+						"utf-8"
+					);
+
+					await runWrangler("types");
+
+					expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
+				} finally {
+					try {
+						fs.unlinkSync(parentTypesPath);
+					} catch {}
+				}
 			});
 		});
 
