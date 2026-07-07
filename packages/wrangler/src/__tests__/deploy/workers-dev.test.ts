@@ -1063,6 +1063,71 @@ describe("deploy", () => {
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+
+			it("does not check for a workers.dev subdomain when a new Worker only targets routes", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					routes: ["http://example.com/*"],
+				});
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				// A brand-new Worker is uploaded via the old upload API.
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+				mockGetWorkerSubdomain({ enabled: false });
+				mockGetZones(expect, "example.com", [{ id: "example-id" }]);
+				mockGetZoneWorkerRoutes(expect, "example-id");
+				mockPublishRoutesRequest({ routes: ["http://example.com/*"] });
+				// The account-level workers.dev subdomain endpoint is deliberately not
+				// mocked: a routes-only deploy does not publish to workers.dev, so the
+				// pre-upload check must be skipped entirely. MSW throws on any
+				// unhandled request, so a regression that reintroduced the original
+				// `!workerExists`-only gate (fetching the subdomain here) would fail.
+				await runWrangler("deploy index.js");
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  http://example.com/*
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("does not check for a workers.dev subdomain when a new Worker sets workers_dev = false", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					workers_dev: false,
+				});
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				// A brand-new Worker is uploaded via the old upload API.
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+				mockGetWorkerSubdomain({ enabled: false });
+				// As above, the account-level subdomain endpoint must never be hit
+				// when the deploy does not target workers.dev.
+				await runWrangler("deploy ./index");
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					No targets deployed for test-name (TIMINGS)
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 
 		it("should not deploy to workers.dev if there are any routes defined", async ({
