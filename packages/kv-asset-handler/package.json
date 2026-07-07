@@ -31,7 +31,7 @@
 		"access": "public"
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc",
 		"prepack": "npm run build",
 		"pretest": "npm run build",
@@ -44,7 +44,7 @@
 		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
 		"mime": "^3.0.0",
-		"tsup": "8.3.0",
+		"tsdown": "0.16.3",
 		"vitest": "catalog:default"
 	},
 	"engines": {
