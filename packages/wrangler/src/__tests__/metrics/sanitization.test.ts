@@ -1,6 +1,10 @@
+import * as fs from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
 	ALLOW,
+	categoriseArgs,
+	categorisePositionalPath,
 	COMMAND_ARG_ALLOW_LIST,
 	getAllowedArgs,
 	REDACT,
@@ -133,6 +137,92 @@ describe("getAllowedArgs", () => {
 		expect(r2Result.sharedArg).toBe(ALLOW);
 		expect(r2Result.r2Only).toBe(ALLOW);
 		expect(r2Result.global).toBe(ALLOW);
+	});
+});
+
+describe("categorisePositionalPath", () => {
+	runInTempDir();
+
+	it("returns null when no value is provided", ({ expect }) => {
+		expect(categorisePositionalPath(undefined)).toBeNull();
+		expect(categorisePositionalPath("")).toBeNull();
+		expect(categorisePositionalPath(123)).toBeNull();
+	});
+
+	it("categorises the current directory reference", ({ expect }) => {
+		expect(categorisePositionalPath(".")).toBe("current-dir");
+		expect(categorisePositionalPath("./")).toBe("current-dir");
+	});
+
+	it("categorises parent-relative references", ({ expect }) => {
+		expect(categorisePositionalPath("..")).toBe("parent-relative");
+		expect(categorisePositionalPath("../example")).toBe("parent-relative");
+		expect(categorisePositionalPath("../../dist")).toBe("parent-relative");
+	});
+
+	it("categorises an existing directory", ({ expect }) => {
+		fs.mkdirSync("./public");
+		expect(categorisePositionalPath("./public")).toBe("directory");
+		expect(categorisePositionalPath("public")).toBe("directory");
+	});
+
+	it("categorises an existing file", ({ expect }) => {
+		fs.writeFileSync("./index.js", "export default {};");
+		expect(categorisePositionalPath("./index.js")).toBe("file");
+		expect(categorisePositionalPath("index.js")).toBe("file");
+	});
+
+	it("categorises a path that does not exist as not-found", ({ expect }) => {
+		expect(categorisePositionalPath("does-not-exist")).toBe("not-found");
+		expect(categorisePositionalPath("src/missing.ts")).toBe("not-found");
+	});
+});
+
+describe("categoriseArgs", () => {
+	runInTempDir();
+
+	it("only categorises args whose allow-list entry is a categoriser", ({
+		expect,
+	}) => {
+		fs.mkdirSync("./public");
+		const allowedArgs: AllowedArgs = {
+			path: categorisePositionalPath,
+			force: ALLOW,
+			config: REDACT,
+		};
+		const result = categoriseArgs(
+			{ path: "./public", force: true, config: "wrangler.toml" },
+			allowedArgs
+		);
+		expect(result).toEqual({ path: "directory" });
+	});
+
+	it("reads positional values straight from the full args object", ({
+		expect,
+	}) => {
+		// `path` here mirrors the positional set by yargs, which sanitizeArgKeys
+		// would otherwise drop because it is not passed as `--path` in argv.
+		const result = categoriseArgs(
+			{ path: "../example" },
+			{ path: categorisePositionalPath }
+		);
+		expect(result).toEqual({ path: "parent-relative" });
+	});
+
+	it("records null when a positional is absent", ({ expect }) => {
+		const result = categoriseArgs(
+			{ path: undefined },
+			{ path: categorisePositionalPath }
+		);
+		expect(result).toEqual({ path: null });
+	});
+
+	it("omits args when the categoriser returns undefined", ({ expect }) => {
+		const result = categoriseArgs(
+			{ path: "anything" },
+			{ path: () => undefined }
+		);
+		expect(result).toEqual({});
 	});
 });
 
