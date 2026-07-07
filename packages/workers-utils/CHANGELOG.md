@@ -1,5 +1,23 @@
 # @cloudflare/workers-utils
 
+## 0.25.1
+
+### Patch Changes
+
+- [#14530](https://github.com/cloudflare/workers-sdk/pull/14530) [`aad35b7`](https://github.com/cloudflare/workers-sdk/commit/aad35b79d07df1bb764a4a5912d6b4328a34474b) Thanks [@Partha-Shankar](https://github.com/Partha-Shankar)! - Validate optional configuration fields for D1 database bindings
+
+  Enforce type checks for the optional D1 database properties `database_name`, `migrations_dir`, `migrations_table`, and `database_internal_env` to ensure consistency with other binding types.
+
+- [#14492](https://github.com/cloudflare/workers-sdk/pull/14492) [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5) Thanks [@penalosa](https://github.com/penalosa)! - Replace the CommonJS `xdg-app-paths` dependency with a vendored pure-ESM implementation
+
+  `xdg-app-paths` (and its `xdg-portable`/`os-paths` dependencies) are CommonJS only, which caused "Dynamic require of 'path' is not supported" errors when the surrounding code was bundled to ESM. The global config/cache directory resolution is now provided by a small, dependency-free pure-ESM module in `@cloudflare/workers-utils` that reproduces the previous path resolution exactly (verified against the real package in unit tests), so existing config and credential locations are unchanged. This also drops the transitive `fsevents` optional dependency that `xdg-app-paths` pulled in.
+
+  Miniflare and create-cloudflare now consume the shared helpers from `@cloudflare/workers-utils` instead of maintaining their own copies, importing node-only leaf entry points (`@cloudflare/workers-utils/fs-helpers`, `@cloudflare/workers-utils/global-wrangler-config-path`) where ESM bundling is required.
+
+- [#14570](https://github.com/cloudflare/workers-sdk/pull/14570) [`1ca8d8f`](https://github.com/cloudflare/workers-sdk/commit/1ca8d8f0bbd012a1d65cabadf7b6987b252775e9) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade `signal-exit` from v3 to v4
+
+  The bundled `signal-exit` dependency was CJS-only. Upgrading to v4 (which ships a dual ESM/CJS build) unblocks ESM output. Exit-cleanup behaviour is unchanged, though v4 no longer registers handlers for a few signals that are no longer supported by the OS (`SIGUNUSED` on Linux; `SIGABRT`/`SIGALRM` on Windows).
+
 ## 0.25.0
 
 ### Minor Changes
