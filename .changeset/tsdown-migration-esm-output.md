@@ -2,6 +2,8 @@
 "@cloudflare/workers-utils": patch
 "@cloudflare/workers-auth": patch
 "@cloudflare/deploy-helpers": patch
+"@cloudflare/kv-asset-handler": patch
+"@cloudflare/autoconfig": patch
 ---
 
 Build with tsdown so the ESM output can be loaded in a pure-ESM context

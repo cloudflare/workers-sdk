@@ -19,7 +19,7 @@ const run = async () => {
 		// Provide a real `import.meta.url` for the CJS bundle. Bundled ESM
 		// dependencies (e.g. `@cloudflare/workers-utils`) contain
 		// `createRequire(import.meta.url)` shims that would otherwise receive
-		// `undefined` and throw on load. Mirrors wrangler's tsup config.
+		// `undefined` and throw on load. Mirrors wrangler's build config.
 		inject: [path.join(__dirname, "..", "import-meta-url.js")],
 		define: {
 			"import.meta.url": "import_meta_url",
