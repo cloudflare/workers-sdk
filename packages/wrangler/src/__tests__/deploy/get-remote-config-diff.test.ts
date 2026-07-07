@@ -155,7 +155,6 @@ describe("getRemoteConfigsDiff", () => {
 		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
 			" {
 			   kv_namespaces: [
-			     ...
 			+    {
 			+      binding: "MY_KV_2"
 			+      id: "my-kv-456"
@@ -240,12 +239,6 @@ describe("getRemoteConfigsDiff", () => {
 		assert(diff);
 		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
 			" {
-			-  kv_namespaces: [
-			-    {
-			-      binding: "MY_KV"
-			-      id: "my-kv-123"
-			-    }
-			-  ]
 			-  compatibility_date: "2025-07-08"
 			+  compatibility_date: "2025-07-09"
 			   observability: {
@@ -256,6 +249,12 @@ describe("getRemoteConfigsDiff", () => {
 			+      enabled: false
 			     }
 			   }
+			-  kv_namespaces: [
+			-    {
+			-      binding: "MY_KV"
+			-      id: "my-kv-123"
+			-    }
+			-  ]
 			 }
 			"
 		`);
@@ -809,8 +808,6 @@ describe("getRemoteConfigsDiff", () => {
 		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
 			" {
 			   kv_namespaces: [
-			     ...
-			     ...
 			     {
 			-      id: "id-3"
 			+      id: "id-4"
@@ -820,15 +817,18 @@ describe("getRemoteConfigsDiff", () => {
 			   ]
 			   durable_objects: {
 			     bindings: [
-			+      {
+			       {
+			-        name: "DO_A"
 			+        name: "DO_B"
+			-        class_name: "DurableObjectA"
 			+        class_name: "DurableObjectB"
-			+      }
-			       ...
-			-      {
+			       }
+			       {
 			-        name: "DO_C"
+			+        name: "DO_A"
 			-        class_name: "DurableObjectC"
-			-      }
+			+        class_name: "DurableObjectA"
+			       }
 			     ]
 			   }
 			 }
