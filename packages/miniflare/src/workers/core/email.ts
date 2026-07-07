@@ -2,19 +2,10 @@ import assert from "node:assert";
 import { $, blue, red, reset, yellow } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime from "postal-mime";
-import { RAW_EMAIL } from "../email/constants";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
 import type { MiniflareEmailMessage } from "../email/email.worker";
-import type {
-	EmailAddress,
-	EmailAttachment,
-	EmailReplyMessageBuilder,
-} from "../email/types";
-import type {
-	EmailMessage as WorkersEmailMessage,
-	ForwardableEmailMessage,
-} from "@cloudflare/workers-types/experimental";
+import type { ForwardableEmailMessage } from "@cloudflare/workers-types/experimental";
 import type { Email } from "postal-mime";
 
 // Force-enable colours, because kleur can't detect this setting correctly from within a Worker
@@ -29,147 +20,6 @@ function renderEmailHeaders(headers: Headers | undefined) {
 	return headers
 		? `\n  headers:\n${[...headers.entries()].map(([k, v]) => `    ${k}: ${v}`).join("\n")}`
 		: "";
-}
-
-function extractEmailAddress(addr: string | EmailAddress): string {
-	if (typeof addr !== "string") {
-		return addr.email;
-	}
-
-	const match = addr.match(/<([^>]+)>$/);
-	return match ? match[1].trim() : addr.trim();
-}
-
-function formatEmailAddress(addr: string | EmailAddress): string {
-	if (typeof addr === "string") {
-		return addr;
-	}
-
-	return `"${addr.name}" <${addr.email}>`;
-}
-
-function formatContentId(contentId: string): string {
-	return contentId.startsWith("<") && contentId.endsWith(">")
-		? contentId
-		: `<${contentId}>`;
-}
-
-function encodeBase64(content: string | ArrayBuffer | ArrayBufferView): string {
-	let bytes: Uint8Array;
-	if (typeof content === "string") {
-		bytes = new TextEncoder().encode(content);
-	} else if (content instanceof ArrayBuffer) {
-		bytes = new Uint8Array(content);
-	} else {
-		bytes = new Uint8Array(
-			content.buffer,
-			content.byteOffset,
-			content.byteLength
-		);
-	}
-
-	let binary = "";
-	for (let i = 0; i < bytes.byteLength; i += 0x8000) {
-		binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-	}
-
-	return btoa(binary)
-		.replace(/.{1,76}/g, "$&\r\n")
-		.trimEnd();
-}
-
-function renderAttachment(attachment: EmailAttachment): string {
-	// Formats the mime parameter
-	const filename = attachment.filename.replace(/["\\\r\n]/g, "_");
-	const headers = [
-		"Content-Transfer-Encoding: base64",
-		`Content-Disposition: ${attachment.disposition}; filename="${filename}"`,
-		`Content-Type: ${attachment.type}; name="${filename}"`,
-	] satisfies string[];
-
-	if (attachment.contentId !== undefined) {
-		headers.push(`Content-ID: ${formatContentId(attachment.contentId)}`);
-	}
-
-	return `${headers.join("\r\n")}\r\n\r\n${encodeBase64(attachment.content)}`;
-}
-
-function renderEmailBody(
-	body: string,
-	contentType: string,
-	attachments: EmailAttachment[] | undefined
-): { body: string; contentType: string } {
-	if (attachments === undefined || attachments.length === 0) {
-		return {
-			contentType: `${contentType}; charset=UTF-8`,
-			body,
-		};
-	}
-
-	const boundary = `----=_Part_${crypto.randomUUID().replaceAll("-", "")}`;
-	const parts = [
-		`Content-Type: ${contentType}; charset=UTF-8\r\n\r\n${body}`,
-		...attachments.map(renderAttachment),
-	] satisfies string[];
-
-	return {
-		contentType: `multipart/mixed; boundary="${boundary}"`,
-		body: `${parts.map((part) => `--${boundary}\r\n${part}`).join("\r\n")}\r\n--${boundary}--`,
-	};
-}
-
-function buildEmailMessage(
-	messageOrBuilder: WorkersEmailMessage | EmailReplyMessageBuilder,
-	parsedIncomingEmail: Email
-): MiniflareEmailMessage | null {
-	if (RAW_EMAIL in messageOrBuilder) {
-		return messageOrBuilder as MiniflareEmailMessage;
-	}
-
-	if ("subject" in messageOrBuilder) {
-		const recipient = parsedIncomingEmail.from.address;
-		assert(recipient !== undefined, "Incoming email From address is undefined");
-
-		const { body, contentType } = renderEmailBody(
-			messageOrBuilder.html ?? messageOrBuilder.text ?? "",
-			messageOrBuilder.html === undefined ? "text/plain" : "text/html",
-			messageOrBuilder.attachments
-		);
-		const uuid = crypto.randomUUID().replaceAll("-", "");
-
-		const incomingReferences = parsedIncomingEmail.references ?? "";
-		const references = `${incomingReferences}${incomingReferences.length > 0 ? " " : ""}${parsedIncomingEmail.messageId}`;
-
-		const headers = [
-			`From: ${formatEmailAddress(messageOrBuilder.from)}`,
-			`To: ${recipient}`,
-			`Subject: ${messageOrBuilder.subject}`,
-			`Message-ID: <${uuid}@example.com>`,
-			`In-Reply-To: ${parsedIncomingEmail.messageId}`,
-			`References: ${references}`,
-			`MIME-Version: 1.0`,
-			`Content-Type: ${contentType}`,
-		] satisfies string[];
-
-		if (messageOrBuilder.replyTo !== undefined) {
-			headers.push(`Reply-To: ${formatEmailAddress(messageOrBuilder.replyTo)}`);
-		}
-
-		for (const [key, value] of Object.entries(messageOrBuilder.headers ?? {})) {
-			headers.push(`${key}: ${value}`);
-		}
-
-		const raw = new Response(`${headers.join("\r\n")}\r\n\r\n${body}`).body;
-		assert(raw !== null, "Reply message body is null");
-
-		return {
-			[RAW_EMAIL]: raw,
-			from: extractEmailAddress(messageOrBuilder.from),
-			to: recipient,
-		};
-	}
-
-	return null;
 }
 
 export async function handleEmail(
@@ -317,7 +167,12 @@ export async function handleEmail(
 				const uuid = crypto.randomUUID().replaceAll("-", "");
 				return { messageId: `${uuid}@example.com` };
 			},
-			reply: async (replyMessage) => {
+			reply: async (replyMessage): Promise<EmailSendResult> => {
+				assert(
+					!("subject" in replyMessage),
+					"EmailReplyMessageBuilder is not currently supported"
+				);
+
 				if (
 					!(await isEmailReplyable(
 						parsedIncomingEmail,
@@ -337,18 +192,9 @@ export async function handleEmail(
 				) {
 					throw new Error("Original email is not replyable");
 				}
-
-				const emailMessage = buildEmailMessage(
-					replyMessage,
-					parsedIncomingEmail
-				);
-				if (!emailMessage) {
-					throw new Error("Unsupported email reply message");
-				}
-
 				const finalReply = await validateReply(
 					parsedIncomingEmail,
-					emailMessage
+					replyMessage as MiniflareEmailMessage
 				);
 
 				const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
