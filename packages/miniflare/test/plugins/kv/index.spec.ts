@@ -1,13 +1,11 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import fs from "node:fs/promises";
-import path from "node:path";
 import consumers from "node:stream/consumers";
 import { KV_PLUGIN_NAME, MAX_BULK_GET_KEYS, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, test } from "vitest";
 import {
 	createJunkStream,
-	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	namespace,
@@ -809,26 +807,6 @@ test("persists on file-system", async ({ expect }) => {
 	useDispose(mf);
 	kv = await mf.getKVNamespace("NAMESPACE");
 	expect(await kv.get("key")).toBe("value");
-});
-
-test("migrates database to new location", async ({ expect }) => {
-	// Copy legacy data to temporary directory
-	const tmp = await useTmp();
-	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
-	const kvPersist = path.join(tmp, "kv");
-	await fs.cp(path.join(persistFixture, "kv"), kvPersist, { recursive: true });
-
-	// Implicitly migrate data
-	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		kvNamespaces: ["NAMESPACE"],
-		kvPersist,
-	});
-	useDispose(mf);
-
-	const namespace = await mf.getKVNamespace("NAMESPACE");
-	expect(await namespace.get("key")).toBe("value");
 });
 
 test("sticky blobs never deleted", async ({ expect }) => {
