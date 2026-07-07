@@ -1,11 +1,8 @@
-import crypto, { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import fs from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import { MiniflareCoreError, PathSchema } from "../../shared";
-import { sanitisePath } from "../../workers";
 import type {
 	Extension,
 	Service,
@@ -282,62 +279,6 @@ export function getPersistPath(
 	// errors. Forward slashes work for both Node.js fs APIs and workerd on all
 	// platforms.
 	return result.replaceAll("\\", "/");
-}
-
-// https://github.com/cloudflare/workerd/blob/81d97010e44f848bb95d0083e2677bca8d1658b7/src/workerd/server/workerd-api.c%2B%2B#L436
-function durableObjectNamespaceIdFromName(uniqueKey: string, name: string) {
-	const key = crypto.createHash("sha256").update(uniqueKey).digest();
-	const nameHmac = crypto
-		.createHmac("sha256", key)
-		.update(name)
-		.digest()
-		.subarray(0, 16);
-	const hmac = crypto
-		.createHmac("sha256", key)
-		.update(nameHmac)
-		.digest()
-		.subarray(0, 16);
-	return Buffer.concat([nameHmac, hmac]).toString("hex");
-}
-
-export async function migrateDatabase(
-	log: Log,
-	uniqueKey: string,
-	persistPath: string,
-	namespace: string
-) {
-	// Check if database exists at previous location
-	const sanitisedNamespace = sanitisePath(namespace);
-	const previousDir = path.join(persistPath, sanitisedNamespace);
-	const previousPath = path.join(previousDir, "db.sqlite");
-	const previousWalPath = path.join(previousDir, "db.sqlite-wal");
-	if (!existsSync(previousPath)) return;
-
-	// Move database to new location, if database isn't already there
-	const id = durableObjectNamespaceIdFromName(uniqueKey, namespace);
-	const newDir = path.join(persistPath, uniqueKey);
-	const newPath = path.join(newDir, `${id}.sqlite`);
-	const newWalPath = path.join(newDir, `${id}.sqlite-wal`);
-	if (existsSync(newPath)) {
-		log.debug(
-			`Not migrating ${previousPath} to ${newPath} as it already exists`
-		);
-		return;
-	}
-
-	log.debug(`Migrating ${previousPath} to ${newPath}...`);
-	await fs.mkdir(newDir, { recursive: true });
-
-	try {
-		await fs.copyFile(previousPath, newPath);
-		if (existsSync(previousWalPath)) {
-			await fs.copyFile(previousWalPath, newWalPath);
-		}
-		await fs.unlink(previousPath);
-		await fs.unlink(previousWalPath);
-	} catch (e) {
-		log.warn(`Error migrating ${previousPath} to ${newPath}: ${e}`);
-	}
 }
 
 /**
