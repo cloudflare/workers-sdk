@@ -169,7 +169,7 @@ export async function handleEmail(
 			},
 			reply: async (replyMessage): Promise<EmailSendResult> => {
 				assert(
-					!("subject" in replyMessage),
+					"from" in replyMessage && "to" in replyMessage,
 					"EmailReplyMessageBuilder is not currently supported"
 				);
 
