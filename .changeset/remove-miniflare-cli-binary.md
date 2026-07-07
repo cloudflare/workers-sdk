@@ -1,5 +1,5 @@
 ---
-"miniflare": minor
+"miniflare": major
 ---
 
 Remove dummy CLI binary

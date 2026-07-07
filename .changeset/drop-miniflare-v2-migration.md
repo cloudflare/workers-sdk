@@ -1,5 +1,5 @@
 ---
-"miniflare": minor
+"miniflare": major
 ---
 
 Drop miniflare v2 storage migration
