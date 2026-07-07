@@ -4,6 +4,7 @@ import path from "node:path";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
+import { BuildFailure } from "../../deployment-bundle/build-failures";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
 import {
@@ -293,6 +294,24 @@ export class BundlerController extends Controller {
 				projectRoot: config.projectRoot,
 				onStart: () => {
 					this.emitBundleStartEvent(config);
+				},
+				onRebuildError: (errors, warnings) => {
+					if (!buildAborter.signal.aborted) {
+						// Watch-mode rebuild failures route through the same error
+						// path as initial-build failures, so DevEnv logs them
+						// (logBuildFailure) and emits `buildFailed` symmetrically.
+						this.emitErrorEvent({
+							type: "error",
+							reason: "Failed to rebuild the Worker",
+							cause: new BuildFailure(
+								`Build failed with ${errors.length} error(s)`,
+								errors,
+								warnings
+							),
+							source: "BundlerController",
+							data: undefined,
+						});
+					}
 				},
 				checkFetch: shouldCheckFetch(
 					config.compatibilityDate,
