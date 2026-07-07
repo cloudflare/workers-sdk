@@ -40,5 +40,12 @@
 			"namespace_id": "1",
 			"simple": { "limit": 100, "period": 60 },
 		},
+		{
+			// Deliberately shares namespace_id "1" with RATE_LIMITER: two bindings
+			// pointing at the same namespace must share a single counter.
+			"name": "RATE_LIMITER_ALIAS",
+			"namespace_id": "1",
+			"simple": { "limit": 100, "period": 60 },
+		},
 	],
 }

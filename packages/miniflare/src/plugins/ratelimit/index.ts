@@ -23,6 +23,11 @@ export enum PeriodType {
 }
 
 export const RatelimitConfigSchema = z.object({
+	// The rate limiter's namespace identity. Counters are keyed by this, not by
+	// the binding name, so two bindings (in the same Worker or across Workers in
+	// a multiworker session) that reference the same namespace share a limit,
+	// while the same binding name pointing at different namespaces stays isolated.
+	namespace_id: z.string(),
 	simple: z.object({
 		limit: z.number().gt(0),
 
@@ -69,7 +74,7 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 							service: {
 								name: getUserBindingServiceName(
 									RATELIMIT_ENTRY_SERVICE_PREFIX,
-									name
+									config.namespace_id
 								),
 							},
 						},
@@ -98,11 +103,23 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 		if (!options.ratelimits) {
 			return [];
 		}
-		const names = Object.keys(options.ratelimits);
-		const services = names.map<Service>((name) => ({
-			name: getUserBindingServiceName(RATELIMIT_ENTRY_SERVICE_PREFIX, name),
-			worker: objectEntryWorker(RATELIMIT_OBJECT, name),
-		}));
+		// One entry service + Durable Object instance per unique namespace_id.
+		// Multiple bindings sharing a namespace collapse to a single counter.
+		const services: Service[] = [];
+		const seenNamespaces = new Set<string>();
+		for (const { namespace_id } of Object.values(options.ratelimits)) {
+			if (seenNamespaces.has(namespace_id)) {
+				continue;
+			}
+			seenNamespaces.add(namespace_id);
+			services.push({
+				name: getUserBindingServiceName(
+					RATELIMIT_ENTRY_SERVICE_PREFIX,
+					namespace_id
+				),
+				worker: objectEntryWorker(RATELIMIT_OBJECT, namespace_id),
+			});
+		}
 
 		const uniqueKey = `miniflare-${RATELIMIT_OBJECT_CLASS_NAME}`;
 		services.push({
