@@ -646,9 +646,6 @@ function getUnsupportedDeployDelegateArgs(
 		["--commit-message", args.commitMessage],
 		["--commit-dirty", args.commitDirty],
 		["--skip-caching", args.skipCaching],
-		["--bundle", args.bundle],
-		["--no-bundle", args.noBundle],
-		["--upload-source-maps", args.uploadSourceMaps],
 	]
 		.filter(([, value]) => value !== undefined && value !== false)
 		.map(([flag]) => flag as string);
