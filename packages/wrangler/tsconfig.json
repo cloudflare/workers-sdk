@@ -6,7 +6,7 @@
 		"jsx": "react-jsx",
 		"tsBuildInfoFile": ".tsbuildinfo"
 	},
-	"include": ["**/*.ts", "**/*.tsx", "**/*.js", "tsdown.config.mts"],
+	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
 	"exclude": [
 		"emitted-types",
 		"node_modules",
