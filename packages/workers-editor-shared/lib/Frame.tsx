@@ -1,11 +1,6 @@
 import { createComponent } from "@cloudflare/style-container";
-import type React from "react";
 
-type FrameProps = React.IframeHTMLAttributes<HTMLIFrameElement> & {
-	innerRef?: React.Ref<HTMLIFrameElement>;
-};
-
-const StyledFrame = createComponent<"iframe">(
+const Frame = createComponent<"iframe">(
 	() => ({
 		position: "absolute",
 		top: 0,
@@ -15,8 +10,6 @@ const StyledFrame = createComponent<"iframe">(
 		border: 0,
 	}),
 	"iframe"
-) as React.ComponentType<FrameProps>;
-
-const Frame = (props: FrameProps) => <StyledFrame {...props} />;
+);
 
 export default Frame;

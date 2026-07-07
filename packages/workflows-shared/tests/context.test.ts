@@ -50,7 +50,7 @@ describe("Context", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
-			{ timeout: 10000 }
+			{ timeout: 5000 }
 		);
 
 		expect(receivedAttempt).toBe(1);
