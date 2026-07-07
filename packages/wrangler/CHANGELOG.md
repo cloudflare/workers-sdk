@@ -1,5 +1,52 @@
 # wrangler
 
+## 4.107.1
+
+### Patch Changes
+
+- [#14514](https://github.com/cloudflare/workers-sdk/pull/14514) [`d88555e`](https://github.com/cloudflare/workers-sdk/commit/d88555edb671668ed7f73e587af9effe6e782f53) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260701.1 | 1.20260702.1 |
+
+- [#14564](https://github.com/cloudflare/workers-sdk/pull/14564) [`5fd8bee`](https://github.com/cloudflare/workers-sdk/commit/5fd8bee9eb73a140f8ddb02830851e15d486ca3e) Thanks [@jibin7jose](https://github.com/jibin7jose)! - Fix an issue where `wrangler dev` would not override config `vars` with values from `.dev.vars` during local development when the `secrets` field was defined in the configuration file.
+
+- [#14332](https://github.com/cloudflare/workers-sdk/pull/14332) [`5d9990e`](https://github.com/cloudflare/workers-sdk/commit/5d9990e1d7ee51041ce70c9df359b0352ae57ec6) Thanks [@Divkix](https://github.com/Divkix)! - Fix misleading error guidance when deploying a new Worker with `secrets.required`
+
+  When a Worker declares `secrets.required` and has never been deployed before, the previous error message suggested running `wrangler secret put <NAME>`, which doesn't work because the Worker doesn't exist yet.
+
+  The one path that does work — `wrangler deploy --secrets-file <path>` — was not mentioned anywhere in the error output.
+
+  The pre-deploy error now explains that `wrangler secret put` cannot be used for a new Worker, and directs users to the `--secrets-file` flag instead. The post-deploy error for existing Workers now also mentions `--secrets-file` alongside `wrangler secret put`.
+
+- [#14507](https://github.com/cloudflare/workers-sdk/pull/14507) [`bf49a41`](https://github.com/cloudflare/workers-sdk/commit/bf49a419e2f98ac770d5ecbf7e9cecdf95d87ce7) Thanks [@joey727](https://github.com/joey727)! - Fix a potential crash when displaying certain CLI output
+
+  Previously, some CLI output with no content lines could cause a crash. This is now handled correctly.
+
+- [#14492](https://github.com/cloudflare/workers-sdk/pull/14492) [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5) Thanks [@penalosa](https://github.com/penalosa)! - Replace the CommonJS `xdg-app-paths` dependency with a vendored pure-ESM implementation
+
+  `xdg-app-paths` (and its `xdg-portable`/`os-paths` dependencies) are CommonJS only, which caused "Dynamic require of 'path' is not supported" errors when the surrounding code was bundled to ESM. The global config/cache directory resolution is now provided by a small, dependency-free pure-ESM module in `@cloudflare/workers-utils` that reproduces the previous path resolution exactly (verified against the real package in unit tests), so existing config and credential locations are unchanged. This also drops the transitive `fsevents` optional dependency that `xdg-app-paths` pulled in.
+
+  Miniflare and create-cloudflare now consume the shared helpers from `@cloudflare/workers-utils` instead of maintaining their own copies, importing node-only leaf entry points (`@cloudflare/workers-utils/fs-helpers`, `@cloudflare/workers-utils/global-wrangler-config-path`) where ESM bundling is required.
+
+- [#14572](https://github.com/cloudflare/workers-sdk/pull/14572) [`f416dd9`](https://github.com/cloudflare/workers-sdk/commit/f416dd983e9c6e4d292317e077dfbe839d2f30c8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Key local rate limit counters by `namespace_id` instead of binding name
+
+  `wrangler dev` and Miniflare previously tracked each rate limit binding's counter by its binding name, so two bindings that referenced the same `namespace_id` were treated as separate limiters. Counters are now keyed by `namespace_id`, matching production: bindings that share a `namespace_id` share a limit, while distinct namespaces stay isolated. This also re-enables rate limit bindings in multiworker `wrangler dev` sessions, where they were previously stripped from secondary Workers to avoid a startup crash.
+
+- [#14570](https://github.com/cloudflare/workers-sdk/pull/14570) [`1ca8d8f`](https://github.com/cloudflare/workers-sdk/commit/1ca8d8f0bbd012a1d65cabadf7b6987b252775e9) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade `signal-exit` from v3 to v4
+
+  The bundled `signal-exit` dependency was CJS-only. Upgrading to v4 (which ships a dual ESM/CJS build) unblocks ESM output. Exit-cleanup behaviour is unchanged, though v4 no longer registers handlers for a few signals that are no longer supported by the OS (`SIGUNUSED` on Linux; `SIGABRT`/`SIGALRM` on Windows).
+
+- [#14561](https://github.com/cloudflare/workers-sdk/pull/14561) [`b973ed3`](https://github.com/cloudflare/workers-sdk/commit/b973ed30015e4e4bface3c0733c33f624066523a) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Emit an error event for watch-mode rebuild failures in `unstable_startWorker`
+
+  Initial build failures already dispatch an error event (surfaced as `buildFailed` on the DevEnv bus), but watch-mode rebuild failures were only logged from inside the esbuild plugin, so programmatic consumers had no way to observe them while dev kept serving the previous bundle. Rebuild failures now route through the same error path as initial-build failures: terminal output is unchanged and `buildFailed` fires symmetrically.
+
+- Updated dependencies [[`e7e5780`](https://github.com/cloudflare/workers-sdk/commit/e7e5780ea2db48fe43233ecedf01979db6c5ce9d), [`d88555e`](https://github.com/cloudflare/workers-sdk/commit/d88555edb671668ed7f73e587af9effe6e782f53), [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5), [`f416dd9`](https://github.com/cloudflare/workers-sdk/commit/f416dd983e9c6e4d292317e077dfbe839d2f30c8), [`16fbf81`](https://github.com/cloudflare/workers-sdk/commit/16fbf81d923760d295c7f05b0bd660b7be510e5d)]:
+  - miniflare@4.20260702.0
+
 ## 4.107.0
 
 ### Minor Changes

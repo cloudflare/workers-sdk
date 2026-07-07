@@ -1,5 +1,35 @@
 # miniflare
 
+## 4.20260702.0
+
+### Minor Changes
+
+- [#14469](https://github.com/cloudflare/workers-sdk/pull/14469) [`e7e5780`](https://github.com/cloudflare/workers-sdk/commit/e7e5780ea2db48fe43233ecedf01979db6c5ce9d) Thanks [@connyay](https://github.com/connyay)! - Support Queues across separate local dev processes
+
+  Queue producers can now send messages to consumers running in a separate local dev process. Messages produced before the consumer process has registered, or while it is down or reloading, are dropped rather than buffered, with a debug-level log emitted.
+
+### Patch Changes
+
+- [#14514](https://github.com/cloudflare/workers-sdk/pull/14514) [`d88555e`](https://github.com/cloudflare/workers-sdk/commit/d88555edb671668ed7f73e587af9effe6e782f53) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260701.1 | 1.20260702.1 |
+
+- [#14492](https://github.com/cloudflare/workers-sdk/pull/14492) [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5) Thanks [@penalosa](https://github.com/penalosa)! - Replace the CommonJS `xdg-app-paths` dependency with a vendored pure-ESM implementation
+
+  `xdg-app-paths` (and its `xdg-portable`/`os-paths` dependencies) are CommonJS only, which caused "Dynamic require of 'path' is not supported" errors when the surrounding code was bundled to ESM. The global config/cache directory resolution is now provided by a small, dependency-free pure-ESM module in `@cloudflare/workers-utils` that reproduces the previous path resolution exactly (verified against the real package in unit tests), so existing config and credential locations are unchanged. This also drops the transitive `fsevents` optional dependency that `xdg-app-paths` pulled in.
+
+  Miniflare and create-cloudflare now consume the shared helpers from `@cloudflare/workers-utils` instead of maintaining their own copies, importing node-only leaf entry points (`@cloudflare/workers-utils/fs-helpers`, `@cloudflare/workers-utils/global-wrangler-config-path`) where ESM bundling is required.
+
+- [#14572](https://github.com/cloudflare/workers-sdk/pull/14572) [`f416dd9`](https://github.com/cloudflare/workers-sdk/commit/f416dd983e9c6e4d292317e077dfbe839d2f30c8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Key local rate limit counters by `namespace_id` instead of binding name
+
+  `wrangler dev` and Miniflare previously tracked each rate limit binding's counter by its binding name, so two bindings that referenced the same `namespace_id` were treated as separate limiters. Counters are now keyed by `namespace_id`, matching production: bindings that share a `namespace_id` share a limit, while distinct namespaces stay isolated. This also re-enables rate limit bindings in multiworker `wrangler dev` sessions, where they were previously stripped from secondary Workers to avoid a startup crash.
+
+- [#14409](https://github.com/cloudflare/workers-sdk/pull/14409) [`16fbf81`](https://github.com/cloudflare/workers-sdk/commit/16fbf81d923760d295c7f05b0bd660b7be510e5d) Thanks [@matingathani](https://github.com/matingathani)! - `reset()` from `cloudflare:test` now resets ratelimit binding state between tests. Previously, `RATE_LIMITERS` bindings retained their in-memory bucket counts across test boundaries, causing later tests in the same file to see stale rate-limit exhaustion state.
+
 ## 4.20260701.0
 
 ### Patch Changes
