@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import fs from "node:fs/promises";
-import path from "node:path";
 import consumers from "node:stream/consumers";
 import { KV_PLUGIN_NAME, MAX_BULK_GET_KEYS, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, test } from "vitest";

@@ -3,7 +3,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import path from "node:path";
 import { text } from "node:stream/consumers";
 import { Headers, Miniflare, R2_PLUGIN_NAME } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
@@ -1607,5 +1606,3 @@ test("list: is multipart aware", async ({ expect }) => {
 	expect(object?.customMetadata).toEqual({ key: "value" });
 	expect(object?.httpMetadata).toEqual({ contentType: "text/plain" });
 });
-
-
