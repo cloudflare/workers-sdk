@@ -4,6 +4,7 @@ on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] dependabot-only job requires write access to push generated changesets; checkout v6 persists credentials under RUNNER_TEMP
     paths:
       - "packages/miniflare/package.json"
+      - "pnpm-workspace.yaml"
 
 permissions:
   # content:write permission needed to update add changesets to dependabot PRs
