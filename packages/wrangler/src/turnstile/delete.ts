@@ -1,4 +1,3 @@
-import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -37,15 +36,7 @@ export const turnstileWidgetDeleteCommand = createCommand({
 			}
 		}
 
-		try {
-			await deleteWidget(config, sitekey);
-		} catch (err) {
-			const cause = err instanceof Error ? err.message : String(err);
-			throw new UserError(
-				`Failed to delete Turnstile widget ${sitekey}: ${cause}`,
-				{ telemetryMessage: "turnstile widget delete failed" }
-			);
-		}
+		await deleteWidget(config, sitekey);
 		logger.log(`✅ Deleted Turnstile widget ${sitekey}`);
 	},
 });
