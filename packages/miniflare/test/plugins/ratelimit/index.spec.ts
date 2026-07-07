@@ -6,6 +6,7 @@ test("ratelimit", async ({ expect }) => {
 	const mf = new Miniflare({
 		ratelimits: {
 			TESTRATE: {
+				namespace_id: "test-namespace",
 				simple: {
 					limit: 2,
 					period: 60,
@@ -46,6 +47,7 @@ test("ratelimit validation", async ({ expect }) => {
 	const mf = new Miniflare({
 		ratelimits: {
 			TESTRATE: {
+				namespace_id: "test-namespace",
 				simple: {
 					limit: 2,
 					period: 60,
@@ -104,4 +106,57 @@ test("ratelimit validation", async ({ expect }) => {
 		// Mismatched error for [${body}]
 		expect(await res.text()).toBe(error);
 	}
+});
+
+test("ratelimit counters are keyed by namespace_id", async ({ expect }) => {
+	const mf = new Miniflare({
+		ratelimits: {
+			// Two bindings sharing a namespace_id must share a single counter...
+			RATE_A: {
+				namespace_id: "shared",
+				simple: { limit: 2, period: 60 },
+			},
+			RATE_B: {
+				namespace_id: "shared",
+				simple: { limit: 2, period: 60 },
+			},
+			// ...while a distinct namespace_id stays isolated.
+			RATE_C: {
+				namespace_id: "other",
+				simple: { limit: 2, period: 60 },
+			},
+		},
+
+		modules: true,
+		script: `
+		export default {
+			async fetch(request, env, ctx) {
+				const binding = new URL(request.url).searchParams.get("b");
+				const { success } = await env[binding].limit({ key: "k" });
+				return new Response(success ? "ok" : "limited", {
+					status: success ? 200 : 429,
+				});
+			},
+		}
+		`,
+	});
+	useDispose(mf);
+
+	const call = async (b: string) => {
+		const res = await mf.dispatchFetch(`http://localhost?b=${b}`);
+		await res.text();
+		return res.status;
+	};
+
+	// RATE_A and RATE_B share the "shared" namespace, so they increment the same
+	// counter: two successes across the pair, then the third call is limited.
+	expect(await call("RATE_A")).toBe(200);
+	expect(await call("RATE_B")).toBe(200);
+	expect(await call("RATE_A")).toBe(429);
+	expect(await call("RATE_B")).toBe(429);
+
+	// RATE_C is a different namespace, so its counter is untouched.
+	expect(await call("RATE_C")).toBe(200);
+	expect(await call("RATE_C")).toBe(200);
+	expect(await call("RATE_C")).toBe(429);
 });

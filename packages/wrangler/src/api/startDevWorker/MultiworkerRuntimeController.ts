@@ -114,13 +114,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			...primary.options,
 			workers: [
 				...primary.options.workers,
-				...secondary.flatMap((o) =>
-					o.options.workers.map((w) => {
-						// TODO: investigate why ratelimits causes everything to crash
-						delete w.ratelimits;
-						return w;
-					})
-				),
+				...secondary.flatMap((o) => o.options.workers),
 			],
 		};
 	}

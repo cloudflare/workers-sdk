@@ -83,3 +83,23 @@ it("sees reset ratelimit state after reset", async ({ expect }) => {
 	const result = await env.RATE_LIMITER.limit({ key: "test-key" });
 	expect(result.success).toBe(true);
 });
+
+it("shares ratelimit state across bindings with the same namespace_id", async ({
+	expect,
+}) => {
+	// RATE_LIMITER and RATE_LIMITER_ALIAS both reference namespace_id "1", so
+	// they increment the same underlying counter for a given key.
+	for (let i = 0; i < 100; i++) {
+		const res = await env.RATE_LIMITER.limit({ key: "shared" });
+		expect(res.success).toBe(true);
+	}
+
+	// The 101st call — made through the *other* binding — is rejected because
+	// the counter is shared across both bindings.
+	const viaAlias = await env.RATE_LIMITER_ALIAS.limit({ key: "shared" });
+	expect(viaAlias.success).toBe(false);
+
+	// A different key is still tracked independently within the namespace.
+	const otherKey = await env.RATE_LIMITER_ALIAS.limit({ key: "fresh" });
+	expect(otherKey.success).toBe(true);
+});
