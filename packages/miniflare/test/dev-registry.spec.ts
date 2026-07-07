@@ -1739,7 +1739,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("prunes a stale advertisement when its source is removed on reload", async ({
+	test("advertises consumed queues in the worker's registry entry", async ({
 		expect,
 	}) => {
 		const unsafeDevRegistryPath = await useTmp();
@@ -1752,7 +1752,7 @@ describe.sequential("DevRegistry", () => {
 
 		const mf = new Miniflare({
 			...sharedOptions,
-			// A locally-consumed queue is advertised under `queues:queue:<id>` so
+			// Consumed queues are advertised on the worker's own registry entry so
 			// producers in other processes can resolve this process's broker.
 			queueConsumers: ["my-queue"],
 			script: `export default { async queue() {} }`,
@@ -1763,13 +1763,15 @@ describe.sequential("DevRegistry", () => {
 		await vi.waitFor(
 			() => {
 				const registry = getWorkerRegistry(unsafeDevRegistryPath);
-				expect(registry["queues:queue:my-queue"]).toBeDefined();
+				expect(registry["consumer-worker"]?.queueConsumers).toEqual([
+					"my-queue",
+				]);
 			},
 			{ timeout: 10_000, interval: 100 }
 		);
 
-		// Remove the consumer on reload: its advertisement must be pruned, not
-		// left lingering (kept "fresh" by its heartbeat) to misdirect producers.
+		// Remove the consumer on reload so its advertisement is withdrawn and
+		// doesn't misdirect producers.
 		await mf.setOptions({
 			...sharedOptions,
 			script: `export default { async fetch() { return new Response("ok"); } }`,
@@ -1778,9 +1780,9 @@ describe.sequential("DevRegistry", () => {
 		await vi.waitFor(
 			() => {
 				const registry = getWorkerRegistry(unsafeDevRegistryPath);
-				expect(registry["queues:queue:my-queue"]).toBeUndefined();
-				// The worker's own entry is still advertised.
+				// The worker's own entry is still advertised, without the queue.
 				expect(registry["consumer-worker"]).toBeDefined();
+				expect(registry["consumer-worker"].queueConsumers).toBeUndefined();
 			},
 			{ timeout: 10_000, interval: 100 }
 		);

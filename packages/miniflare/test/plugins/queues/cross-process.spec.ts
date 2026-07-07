@@ -151,4 +151,77 @@ describe.sequential("cross-process queues", () => {
 			{ timeout: 10_000, interval: 100 }
 		);
 	});
+
+	test("routes dead-lettered messages to a consumer in another process", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const received: unknown[][] = [];
+
+		// This process consumes the dead-letter queue only.
+		const dlqConsumer = new Miniflare({
+			name: "dlq-consumer",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			queueConsumers: { "my-dlq": { maxBatchSize: 1, maxBatchTimeout: 0 } },
+			serviceBindings: {
+				async REPORTER(request) {
+					received.push((await request.json()) as unknown[]);
+					return new Response();
+				},
+			},
+			modules: true,
+			script: `export default {
+				async queue(batch, env) {
+					await env.REPORTER.fetch("http://localhost", {
+						method: "POST",
+						body: JSON.stringify(batch.messages.map((m) => m.body)),
+					});
+				}
+			}`,
+		});
+		useDispose(dlqConsumer);
+		await dlqConsumer.ready;
+
+		// This process produces and consumes "my-queue", always failing, so every
+		// message moves to "my-dlq", whose consumer lives in the other process.
+		const failingConsumer = new Miniflare({
+			name: "failing-consumer",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			queueProducers: { QUEUE: { queueName: "my-queue" } },
+			queueConsumers: {
+				"my-queue": {
+					maxBatchSize: 1,
+					maxBatchTimeout: 0,
+					maxRetries: 0,
+					deadLetterQueue: "my-dlq",
+				},
+			},
+			modules: true,
+			script: `export default {
+				async fetch(request, env) {
+					await env.QUEUE.send(await request.json());
+					return new Response(null, { status: 204 });
+				},
+				async queue() {
+					throw new Error("consumer always fails");
+				}
+			}`,
+		});
+		useDispose(failingConsumer);
+		await failingConsumer.ready;
+
+		await vi.waitFor(
+			async () => {
+				const res = await failingConsumer.dispatchFetch("http://placeholder", {
+					method: "POST",
+					body: JSON.stringify({ dead: "letter" }),
+				});
+				expect(res.status).toBe(204);
+				expect(received.flat()).toContainEqual({ dead: "letter" });
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
 });

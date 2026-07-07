@@ -20,11 +20,8 @@ export type WorkerDefinition = {
 	 */
 	userWorkerService: string;
 	/**
-	 * Canonical registry key when it differs from the on-disk filename. Used for
-	 * synthetic entries whose key contains characters that are invalid in a
-	 * filename (e.g. queue entries keyed `queues:queue:<id>`, where the colons are
-	 * sanitized on disk). Absent for normal worker entries, whose key equals their
-	 * filename.
+	 * Queue names consumed by this Worker. Producers in other dev sessions use
+	 * this to route messages for these queues to this process's queue broker.
 	 */
-	name?: string;
+	queueConsumers?: string[];
 };

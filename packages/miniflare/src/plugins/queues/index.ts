@@ -1,11 +1,12 @@
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
-import SCRIPT_QUEUE_FORWARDER from "worker:queues/forwarder";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
 import {
+	getQueueServiceName,
 	QueueBindings,
 	QueueConsumerOptionsSchema,
 	QueueProducerOptionsSchema,
+	SERVICE_QUEUE_PREFIX,
 	SharedBindings,
 } from "../../workers";
 import { getUserServiceName } from "../core";
@@ -19,7 +20,6 @@ import {
 } from "../shared";
 import type {
 	Service,
-	Worker,
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
@@ -47,21 +47,11 @@ export const QueuesOptionsSchema = z.object({
 });
 
 export const QUEUES_PLUGIN_NAME = "queues";
-const SERVICE_QUEUE_PREFIX = `${QUEUES_PLUGIN_NAME}:queue`;
 const QUEUE_BROKER_OBJECT_CLASS_NAME = "QueueBrokerObject";
 const QUEUE_BROKER_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: SERVICE_QUEUE_PREFIX,
 	className: QUEUE_BROKER_OBJECT_CLASS_NAME,
 };
-
-// The workerd service name backing a single queue: its local broker, or its
-// forwarder when the consumer runs in another process. Producers in other
-// Miniflare instances resolve the consumer's broker by this exact name through
-// the dev registry, so it must be derived in one place rather than reconstructed
-// at each call site.
-export function getQueueServiceName(queueId: string): string {
-	return `${SERVICE_QUEUE_PREFIX}:${queueId}`;
-}
 
 export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 	options: QueuesOptionsSchema,
@@ -84,47 +74,21 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		workerNames,
 		queueProducers: allQueueProducers,
 		queueConsumers: allQueueConsumers,
-		queueProducersToForward,
+		crossProcessQueues,
 		unsafeStickyBlobs,
 	}) {
-		const produced = bindingEntries(options.queueProducers);
+		const produced = bindingEntries(options.queueProducers).map(([, id]) => id);
+		// Consumed queues get a broker service even without a local producer so
+		// producers in other dev sessions can reach this process's broker through
+		// the dev registry's debug port.
 		const consumed = namespaceKeys(options.queueConsumers);
+		const queueIds = new Set([...produced, ...consumed]);
+		if (queueIds.size === 0) return [];
 
-		// Decide, per queue id, between an in-process broker and a forwarder.
-		// A queue produced here whose consumer lives in another `wrangler dev`
-		// process (no local consumer) is forwarded across the dev registry.
-		// Everything else is brokered locally, including queues consumed here
-		// without a local producer.
-		const services: Service[] = [];
-		const localBrokerIds = new Set<string>();
-		for (const [, id] of produced) {
-			if (queueProducersToForward.has(id)) {
-				const serviceName = getQueueServiceName(id);
-				services.push({
-					name: serviceName,
-					worker: queueForwarderWorker(serviceName),
-				});
-			} else {
-				localBrokerIds.add(id);
-			}
-		}
-		for (const id of consumed) {
-			localBrokerIds.add(id);
-		}
-
-		for (const id of localBrokerIds) {
-			services.push({
-				name: getQueueServiceName(id),
-				worker: objectEntryWorker(QUEUE_BROKER_OBJECT, id),
-			});
-		}
-
-		// The shared broker Durable Object is only needed when something is
-		// brokered locally; a forwarder-only worker (or no queues at all) doesn't
-		// reference it.
-		if (localBrokerIds.size === 0) {
-			return services;
-		}
+		const services = Array.from(queueIds).map<Service>((id) => ({
+			name: getQueueServiceName(id),
+			worker: objectEntryWorker(QUEUE_BROKER_OBJECT, id),
+		}));
 
 		const uniqueKey = `miniflare-${QUEUE_BROKER_OBJECT_CLASS_NAME}`;
 		const objectService: Service = {
@@ -172,6 +136,20 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 						name: QueueBindings.SERVICE_WORKER_PREFIX + name,
 						service: { name: getUserServiceName(name) },
 					})),
+					// When a produced queue's consumer may live in another dev session,
+					// the broker delivers otherwise-dropped messages through the
+					// dev-registry proxy (see `QueueBrokerObject.#tryRemoteConsumer`).
+					...(crossProcessQueues
+						? [
+								{
+									name: QueueBindings.MAYBE_SERVICE_QUEUE_PROXY,
+									service: {
+										name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
+										entrypoint: "ExternalQueueProxy",
+									},
+								},
+							]
+						: []),
 				],
 			},
 		};
@@ -197,36 +175,6 @@ function bindingEntries(
 	} else {
 		return [];
 	}
-}
-
-// Builds the worker that stands in for `queues:queue:<id>` in a producer's
-// process when the queue's consumer runs in another `wrangler dev` process.
-// It forwards the native producer's HTTP request to the remote queue's broker
-// via the dev-registry proxy's `ExternalServiceProxy` entrypoint.
-function queueForwarderWorker(queueServiceName: string): Worker {
-	return {
-		compatibilityDate: "2023-07-24",
-		modules: [
-			{ name: "forwarder.worker.js", esModule: SCRIPT_QUEUE_FORWARDER() },
-		],
-		bindings: [
-			{
-				name: "OUTBOUND",
-				service: {
-					name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
-					entrypoint: "ExternalServiceProxy",
-					props: {
-						json: JSON.stringify({
-							service: queueServiceName,
-							entrypoint: null,
-						}),
-					},
-				},
-			},
-			// Lets the forwarder name the queue in dropped-message diagnostics.
-			{ name: "QUEUE_SERVICE", text: queueServiceName },
-		],
-	};
 }
 
 export * from "./errors";

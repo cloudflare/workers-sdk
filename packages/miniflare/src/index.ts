@@ -39,13 +39,13 @@ import {
 	getDirectSocketName,
 	getGlobalServices,
 	getPersistPath,
-	getQueueServiceName,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	IMAGES_PLUGIN_NAME,
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	loadExternalPlugins,
+	namespaceKeys,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
 	ProxyClient,
@@ -499,10 +499,7 @@ function getDurableObjectClassNames(
  * entrypoint. Returns a map of external service names to the entrypoints
  * and DO classes that are referenced.
  */
-function getExternalServiceEntrypoints(
-	allWorkerOpts: PluginWorkerOptions[],
-	extraExternalServiceNames: Set<string>
-) {
+function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	const externalServices = new Map<
 		string,
 		{
@@ -650,19 +647,6 @@ function getExternalServiceEntrypoints(
 				}
 			}
 		}
-	}
-
-	// Extra external services that aren't reached through a rewritten binding
-	// (unlike the service-binding / tail / DO cases above). For cross-process
-	// queues the producer's binding already points at the `queues:queue:<id>`
-	// service, whose worker the queues plugin swaps for a forwarder, so there's
-	// no binding to rewrite here. Adding the service name to the watched set
-	// still makes (1) the dev-registry-proxy worker + socket get created, and
-	// (2) the target (un)registering trigger a registry push to the proxy.
-	// `classNames` stays empty, so no DO proxy class is generated, and
-	// `undefined` selects the default entrypoint.
-	for (const serviceName of extraExternalServiceNames) {
-		getEntrypoints(serviceName).entrypoints.add(undefined);
 	}
 
 	return externalServices;
@@ -1976,18 +1960,22 @@ export class Miniflare {
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 
-		// A queue produced here with no local consumer is delivered to a consumer
-		// in another `wrangler dev` process via the dev registry (the queues
-		// plugin swaps its local broker service for a forwarder). Only relevant
-		// when the dev registry is enabled.
-		const queueProducersToForward = new Set<string>();
-		if (devRegistryEnabled) {
-			for (const producer of queueProducers.values()) {
-				if (!queueConsumers.has(producer.queueName)) {
-					queueProducersToForward.add(producer.queueName);
-				}
-			}
-		}
+		// A queue this process sends to, with no local consumer, may have its
+		// consumer in another `wrangler dev` process: the queue's broker falls
+		// back to the dev-registry proxy at delivery time (see
+		// `ExternalQueueProxy`). This covers queues with a local producer binding
+		// and dead-letter queues of locally-consumed queues. Only relevant when
+		// the dev registry is enabled.
+		const crossProcessQueues =
+			devRegistryEnabled &&
+			(Array.from(queueProducers.values()).some(
+				(producer) => !queueConsumers.has(producer.queueName)
+			) ||
+				Array.from(queueConsumers.values()).some(
+					(consumer) =>
+						consumer.deadLetterQueue !== undefined &&
+						!queueConsumers.has(consumer.deadLetterQueue)
+				));
 
 		// Must run before `getDurableObjectClassNames`/`getWrappedBindingNames`,
 		// which read these opts: it rewrites external Durable Object / service
@@ -1995,14 +1983,7 @@ export class Miniflare {
 		// Run it later and external DOs stay keyed under `core:user:<scriptName>`,
 		// so workerd won't start.
 		const externalServices = devRegistryEnabled
-			? getExternalServiceEntrypoints(
-					allWorkerOpts,
-					// Each forwarded queue's `queues:queue:<id>` service must be watched
-					// and proxied. The queues plugin swaps that service's worker for a
-					// forwarder that routes to the consumer process, so unlike a service
-					// binding there's no binding rewrite to do here.
-					new Set(Array.from(queueProducersToForward, getQueueServiceName))
-				)
+			? getExternalServiceEntrypoints(allWorkerOpts)
 			: null;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
@@ -2192,7 +2173,7 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
-				queueProducersToForward,
+				crossProcessQueues,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -2277,9 +2258,9 @@ export class Miniflare {
 		if (
 			this.#devRegistry.isEnabled() &&
 			externalServices &&
-			externalServices.size > 0
+			(externalServices.size > 0 || crossProcessQueues)
 		) {
-			await this.#devRegistry.watch(externalServices);
+			await this.#devRegistry.watch(externalServices, crossProcessQueues);
 
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
@@ -2293,8 +2274,8 @@ export class Miniflare {
 			// worker has the correct registry from the moment workerd loads it.
 			const initialRegistry = this.#devRegistry.getRegistry();
 			const mainModuleSource = [
-				`import { ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
-				`export { ExternalServiceProxy };`,
+				`import { ExternalQueueProxy, ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
+				`export { ExternalQueueProxy, ExternalServiceProxy };`,
 				`setRegistry(${JSON.stringify(initialRegistry)});`,
 				`export default {`,
 				`  async fetch(request, env) {`,
@@ -2751,28 +2732,18 @@ export class Miniflare {
 				defaultEntrypointService = getUserServiceName(workerOpts.core.name);
 			}
 
+			// Advertise consumed queues so producers in other dev sessions can
+			// route messages for them to this process's queue broker (see
+			// `ExternalQueueProxy`).
+			const queueConsumers = namespaceKeys(workerOpts.queues.queueConsumers);
+
 			entries.push([
 				workerOpts.core.name,
 				{
 					debugPortAddress,
 					defaultEntrypointService,
 					userWorkerService: getUserServiceName(workerOpts.core.name),
-				},
-			]);
-		}
-
-		// Advertise locally-consumed queues so producers in other processes can
-		// resolve this process's broker by the queue's service name. The colon in
-		// the key is sanitized to a filename by the registry, which records the
-		// canonical key in the entry's `name` field (see `DevRegistry.register`).
-		for (const queueName of getQueueConsumers(this.#workerOpts).keys()) {
-			const service = getQueueServiceName(queueName);
-			entries.push([
-				service,
-				{
-					debugPortAddress,
-					defaultEntrypointService: service,
-					userWorkerService: service,
+					...(queueConsumers.length > 0 ? { queueConsumers } : {}),
 				},
 			]);
 		}

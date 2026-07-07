@@ -20,6 +20,7 @@ import type { FSWatcher } from "chokidar";
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registeredWorkers: Set<string> = new Set();
+	private watchQueueConsumers = false;
 	private externalServices: Map<
 		string,
 		{
@@ -45,13 +46,15 @@ export class DevRegistry {
 				classNames: Set<string>;
 				entrypoints: Set<string | undefined>;
 			}
-		>
+		>,
+		watchQueueConsumers = false
 	): void {
-		if (services.size === 0 || !this.registryPath) {
+		if ((services.size === 0 && !watchQueueConsumers) || !this.registryPath) {
 			return;
 		}
 
 		this.externalServices = new Map(services);
+		this.watchQueueConsumers = watchQueueConsumers;
 
 		mkdirSync(this.registryPath, { recursive: true });
 
@@ -108,7 +111,7 @@ export class DevRegistry {
 			}
 
 			if (this.registryPath) {
-				unlinkSync(path.join(this.registryPath, registryFileName(name)));
+				unlinkSync(path.join(this.registryPath, name));
 			}
 		} catch (e) {
 			this.log?.debug(`Failed to unregister worker "${name}": ${e}`);
@@ -156,33 +159,14 @@ export class DevRegistry {
 		// Make sure the registry path exists
 		mkdirSync(this.registryPath, { recursive: true });
 
-		// `register` receives the full set of workers this instance owns, so prune
-		// anything it previously advertised that is now absent (e.g. a queue
-		// consumer or a worker removed on a config reload). Without this the stale
-		// file lingers (its heartbeat keeps refreshing the mtime, so it never ages
-		// out) and other processes keep routing to a service that no longer
-		// exists, silently dropping whatever they send to it.
-		const nextNames = new Set(Object.keys(workers));
-		const staleNames = [...this.registeredWorkers].filter(
-			(name) => !nextNames.has(name)
-		);
-		for (const name of staleNames) {
-			this.unregister(name);
-			this.registeredWorkers.delete(name);
-		}
-
 		for (const [name, definition] of Object.entries(workers)) {
-			const fileName = registryFileName(name);
-			const definitionPath = path.join(this.registryPath, fileName);
+			const definitionPath = path.join(this.registryPath, name);
 			const existingHeartbeat = this.heartbeats.get(name);
 			if (existingHeartbeat) {
 				clearInterval(existingHeartbeat);
 			}
 
-			// Record the canonical key only when it can't be recovered from the
-			// (sanitized) filename, so normal worker entries are unchanged on disk.
-			const toWrite = fileName === name ? definition : { ...definition, name };
-			writeFileSync(definitionPath, JSON.stringify(toWrite, null, 2));
+			writeFileSync(definitionPath, JSON.stringify(definition, null, 2));
 			this.registeredWorkers.add(name);
 			this.heartbeats.set(
 				name,
@@ -210,6 +194,12 @@ export class DevRegistry {
 		}
 		const previousRegistry = JSON.parse(this.previousJSON);
 		this.previousJSON = json;
+		// Queue consumers may be advertised by any worker in the registry (their
+		// names aren't known upfront), so any registry change may matter.
+		if (this.watchQueueConsumers) {
+			this.onUpdate(registry);
+			return;
+		}
 		for (const [service] of this.externalServices) {
 			if (
 				JSON.stringify(registry[service]) !==
@@ -220,16 +210,6 @@ export class DevRegistry {
 			}
 		}
 	}
-}
-
-/**
- * Map a registry key to a filename safe across platforms. Worker names are
- * already filename-safe, but synthetic keys may contain `:` (invalid on
- * Windows), so we sanitize it. The canonical key is preserved in the file's
- * `name` field for recovery in {@link getWorkerRegistry}.
- */
-function registryFileName(name: string): string {
-	return name.replace(/:/g, "__");
 }
 
 /**
@@ -262,10 +242,7 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 				encoding: "utf8",
 				flag: "r",
 			});
-			const definition: WorkerDefinition = JSON.parse(file);
-			// Recover the canonical key for synthetic entries whose filename was
-			// sanitized (e.g. `queues:queue:<id>`); normal entries key by filename.
-			registry[definition.name ?? workerName] = definition;
+			registry[workerName] = JSON.parse(file);
 		} catch {
 			// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel process
 		}
