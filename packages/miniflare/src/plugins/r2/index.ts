@@ -8,7 +8,6 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
-	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
@@ -127,7 +126,6 @@ export const R2_PLUGIN: Plugin<
 		sharedOptions,
 		tmpPath,
 		defaultPersistRoot,
-		log,
 		unsafeStickyBlobs,
 	}) {
 		const persist = sharedOptions.r2Persist;
@@ -200,13 +198,6 @@ export const R2_PLUGIN: Plugin<
 				},
 			};
 			services.push(storageService, objectService);
-
-			for (const [, bucket] of buckets) {
-				if (bucket.remoteProxyConnectionString) {
-					continue;
-				}
-				await migrateDatabase(log, uniqueKey, persistPath, bucket.id);
-			}
 		}
 
 		return services;

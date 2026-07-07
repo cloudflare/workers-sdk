@@ -16,14 +16,13 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `src/runtime/config/generated/workerd.ts` — Generated workerd Cap'n Proto config types
 - `test/` — Tests (`.spec.ts` naming, NOT `.test.ts`)
 - `test/test-shared/` — Shared test utilities
-- `bootstrap.js` — Deprecated CLI stub (prints error directing to `wrangler dev`)
 - `scripts/build.mjs` — Custom esbuild build script
 
 ## Build
 
 - Custom `scripts/build.mjs` bundles `src/index.ts` as CJS → `dist/src/index.js`
 - Also compiles ~30 embedded worker scripts via `worker:...` virtual import scheme — each triggers a nested esbuild sub-build producing standalone ESM worker scripts
-- Build outputs: `dist/`, `bootstrap.js`, `worker-metafiles/`
+- Build outputs: `dist/`, `worker-metafiles/`
 
 ## Lint Status (Transitional)
 
