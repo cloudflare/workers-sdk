@@ -1966,16 +1966,18 @@ export class Miniflare {
 		// `ExternalQueueProxy`). This covers queues with a local producer binding
 		// and dead-letter queues of locally-consumed queues. Only relevant when
 		// the dev registry is enabled.
+		const emittedQueues = [
+			...Array.from(queueProducers.values(), (producer) => producer.queueName),
+			...Array.from(
+				queueConsumers.values(),
+				(consumer) => consumer.deadLetterQueue
+			),
+		];
 		const crossProcessQueues =
 			devRegistryEnabled &&
-			(Array.from(queueProducers.values()).some(
-				(producer) => !queueConsumers.has(producer.queueName)
-			) ||
-				Array.from(queueConsumers.values()).some(
-					(consumer) =>
-						consumer.deadLetterQueue !== undefined &&
-						!queueConsumers.has(consumer.deadLetterQueue)
-				));
+			emittedQueues.some(
+				(queueName) => queueName !== undefined && !queueConsumers.has(queueName)
+			);
 
 		// Must run before `getDurableObjectClassNames`/`getWrappedBindingNames`,
 		// which read these opts: it rewrites external Durable Object / service

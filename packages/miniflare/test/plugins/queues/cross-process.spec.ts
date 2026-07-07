@@ -8,15 +8,16 @@ import { useDispose, useTmp } from "../../test-shared";
 // it across the dev registry.
 function createConsumer(
 	unsafeDevRegistryPath: string,
-	received: unknown[][]
+	received: unknown[][],
+	{ name = "consumer", queueName = "my-queue" } = {}
 ): Miniflare {
 	return new Miniflare({
-		name: "consumer",
+		name,
 		unsafeDevRegistryPath,
 		compatibilityFlags: ["experimental"],
 		queueConsumers: {
 			// Flush immediately so delivery is deterministic.
-			"my-queue": { maxBatchSize: 1, maxBatchTimeout: 0 },
+			[queueName]: { maxBatchSize: 1, maxBatchTimeout: 0 },
 		},
 		serviceBindings: {
 			async REPORTER(request) {
@@ -159,26 +160,9 @@ describe.sequential("cross-process queues", () => {
 		const received: unknown[][] = [];
 
 		// This process consumes the dead-letter queue only.
-		const dlqConsumer = new Miniflare({
+		const dlqConsumer = createConsumer(unsafeDevRegistryPath, received, {
 			name: "dlq-consumer",
-			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			queueConsumers: { "my-dlq": { maxBatchSize: 1, maxBatchTimeout: 0 } },
-			serviceBindings: {
-				async REPORTER(request) {
-					received.push((await request.json()) as unknown[]);
-					return new Response();
-				},
-			},
-			modules: true,
-			script: `export default {
-				async queue(batch, env) {
-					await env.REPORTER.fetch("http://localhost", {
-						method: "POST",
-						body: JSON.stringify(batch.messages.map((m) => m.body)),
-					});
-				}
-			}`,
+			queueName: "my-dlq",
 		});
 		useDispose(dlqConsumer);
 		await dlqConsumer.ready;
