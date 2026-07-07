@@ -1,5 +1,5 @@
 import { defineConfig } from "tsdown";
-import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
+import { EXTERNAL_DEPENDENCIES } from "./scripts/deps.ts";
 
 export default defineConfig({
 	entry: ["src/index.ts"],

@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 import { defineConfig } from "tsdown";
-import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
+import { EXTERNAL_DEPENDENCIES } from "./scripts/deps.ts";
 import type { UserConfig } from "tsdown";
 
 // The rolldown `Plugin` type, derived from tsdown's config so we don't need a

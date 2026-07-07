@@ -4,7 +4,10 @@
 		"module": "preserve",
 		"types": ["node"],
 		"jsx": "react-jsx",
-		"tsBuildInfoFile": ".tsbuildinfo"
+		"tsBuildInfoFile": ".tsbuildinfo",
+		// Allows tsdown.config.ts to import "./scripts/deps.ts" with an explicit
+		// extension, which Node's native TypeScript config loader requires.
+		"allowImportingTsExtensions": true
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
 	"exclude": [

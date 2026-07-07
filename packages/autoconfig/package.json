@@ -22,9 +22,9 @@
 		}
 	},
 	"scripts": {
-		"build": "tsdown --config-loader unrun",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
-		"dev": "tsdown --watch --config-loader unrun",
+		"dev": "tsdown --watch",
 		"test": "vitest",
 		"test:ci": "vitest run"
 	},
