@@ -74,6 +74,7 @@ export interface PluginServicesOptions<
 	options: z.infer<Options>;
 	sharedOptions: OptionalZodTypeOf<SharedOptions>;
 	workerBindings: Worker_Binding[];
+	workerName: string;
 	workerIndex: number;
 	additionalModules: Worker_Module[];
 	tmpPath: string;
