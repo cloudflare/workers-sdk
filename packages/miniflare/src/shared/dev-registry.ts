@@ -226,12 +226,17 @@ function getQueueConsumersView(registry: WorkerRegistry): string {
 	return JSON.stringify(
 		Object.entries(registry)
 			.filter(([, definition]) => definition.queueConsumers !== undefined)
-			.map(([workerName, definition]) => [
-				workerName,
-				definition.debugPortAddress,
-				definition.queueConsumers,
-			])
-			.sort()
+			.map(
+				([workerName, definition]) =>
+					[
+						workerName,
+						definition.debugPortAddress,
+						definition.queueConsumers,
+					] as const
+			)
+			.sort(([previousWorkerName], [nextWorkerName]) =>
+				previousWorkerName.localeCompare(nextWorkerName)
+			)
 	);
 }
 

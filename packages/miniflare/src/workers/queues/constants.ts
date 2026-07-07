@@ -3,8 +3,7 @@ export const QueueBindings = {
 	MAYBE_JSON_QUEUE_PRODUCERS: "MINIFLARE_QUEUE_PRODUCERS",
 	MAYBE_JSON_QUEUE_CONSUMERS: "MINIFLARE_QUEUE_CONSUMERS",
 	// Optional service binding to the dev-registry proxy's `ExternalQueueProxy`
-	// entrypoint, present when a locally-produced queue may have its consumer in
-	// another dev session.
+	// entrypoint, present when the dev registry is enabled for queue brokers.
 	MAYBE_SERVICE_QUEUE_PROXY: "MINIFLARE_QUEUE_PROXY",
 } as const;
 

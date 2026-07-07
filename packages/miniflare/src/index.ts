@@ -2445,9 +2445,9 @@ export class Miniflare {
 		if (this.#devRegistry.isEnabled()) {
 			requiredSockets.push(SOCKET_DEBUG_PORT);
 			// SOCKET_DEV_REGISTRY is already in config.sockets (and therefore
-			// requiredSockets) when external services are configured. Don't add
-			// it unconditionally — if no external services exist, the socket
-			// isn't defined and waiting for it would hang.
+			// requiredSockets) when external services or queues are configured.
+			// Don't add it unconditionally — if neither exists, the socket isn't
+			// defined and waiting for it would hang.
 		}
 
 		// Reload runtime
