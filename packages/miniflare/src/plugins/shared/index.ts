@@ -90,11 +90,11 @@ export interface PluginServicesOptions<
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
-	// True when the dev registry is enabled and a locally-produced queue has no
-	// local consumer, i.e. its consumer may live in another `wrangler dev`
-	// process. The queue broker then falls back to the dev-registry proxy for
-	// delivery.
-	crossProcessQueues: boolean;
+	// True when the dev registry is enabled, i.e. workers in other dev
+	// processes may be bound to. Plugins use this to set up service bindings to
+	// the dev-registry proxy worker, e.g. so the queue broker can deliver
+	// messages to a consumer in another `wrangler dev` process.
+	devRegistryEnabled: boolean;
 	hyperdriveProxyController: HyperdriveProxyController;
 }
 

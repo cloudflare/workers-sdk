@@ -1968,25 +1968,11 @@ export class Miniflare {
 		);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
-
-		// A queue this process sends to, with no local consumer, may have its
-		// consumer in another `wrangler dev` process: the queue's broker falls
-		// back to the dev-registry proxy at delivery time (see
-		// `ExternalQueueProxy`). This covers queues with a local producer binding
-		// and dead-letter queues of locally-consumed queues. Only relevant when
-		// the dev registry is enabled.
-		const emittedQueues = [
-			...Array.from(queueProducers.values(), (producer) => producer.queueName),
-			...Array.from(
-				queueConsumers.values(),
-				(consumer) => consumer.deadLetterQueue
-			),
-		];
-		const crossProcessQueues =
-			devRegistryEnabled &&
-			emittedQueues.some(
-				(queueName) => queueName !== undefined && !queueConsumers.has(queueName)
-			);
+		// When the dev registry is enabled, queue brokers bind to the dev-registry
+		// proxy so they can deliver to consumers in other `wrangler dev` processes
+		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever
+		// there are queues.
+		const hasQueues = queueProducers.size > 0 || queueConsumers.size > 0;
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
 		const workerNames = [...allWorkerRoutes.keys()];
 
@@ -2168,7 +2154,7 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
-				crossProcessQueues,
+				devRegistryEnabled,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -2253,9 +2239,9 @@ export class Miniflare {
 		if (
 			this.#devRegistry.isEnabled() &&
 			externalServices &&
-			(externalServices.size > 0 || crossProcessQueues)
+			(externalServices.size > 0 || hasQueues)
 		) {
-			await this.#devRegistry.watch(externalServices, crossProcessQueues);
+			await this.#devRegistry.watch(externalServices, hasQueues);
 
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>

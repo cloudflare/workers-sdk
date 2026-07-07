@@ -74,7 +74,7 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		workerNames,
 		queueProducers: allQueueProducers,
 		queueConsumers: allQueueConsumers,
-		crossProcessQueues,
+		devRegistryEnabled,
 		unsafeStickyBlobs,
 	}) {
 		const produced = bindingEntries(options.queueProducers).map(([, id]) => id);
@@ -136,10 +136,11 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 						name: QueueBindings.SERVICE_WORKER_PREFIX + name,
 						service: { name: getUserServiceName(name) },
 					})),
-					// When a produced queue's consumer may live in another dev session,
-					// the broker delivers otherwise-dropped messages through the
-					// dev-registry proxy (see `QueueBrokerObject.#tryRemoteConsumer`).
-					...(crossProcessQueues
+					// When the dev registry is enabled, a produced queue's consumer may
+					// live in another dev session: the broker delivers otherwise-dropped
+					// messages through the dev-registry proxy (see
+					// `QueueBrokerObject.#tryRemoteConsumer`).
+					...(devRegistryEnabled
 						? [
 								{
 									name: QueueBindings.MAYBE_SERVICE_QUEUE_PROXY,

@@ -195,8 +195,13 @@ export class DevRegistry {
 		const previousRegistry = JSON.parse(this.previousJSON);
 		this.previousJSON = json;
 		// Queue consumers may be advertised by any worker in the registry (their
-		// names aren't known upfront), so any registry change may matter.
-		if (this.watchQueueConsumers) {
+		// names aren't known upfront), so compare the queue-consumer view of the
+		// whole registry rather than specific entries.
+		if (
+			this.watchQueueConsumers &&
+			getQueueConsumersView(registry) !==
+				getQueueConsumersView(previousRegistry)
+		) {
 			this.onUpdate(registry);
 			return;
 		}
@@ -210,6 +215,24 @@ export class DevRegistry {
 			}
 		}
 	}
+}
+
+/**
+ * Serialise the parts of the registry that matter for routing cross-process
+ * queue messages: which workers consume which queues, and the debug address
+ * each can be reached on (see `findQueueConsumer`).
+ */
+function getQueueConsumersView(registry: WorkerRegistry): string {
+	return JSON.stringify(
+		Object.entries(registry)
+			.filter(([, definition]) => definition.queueConsumers !== undefined)
+			.map(([workerName, definition]) => [
+				workerName,
+				definition.debugPortAddress,
+				definition.queueConsumers,
+			])
+			.sort()
+	);
 }
 
 /**
