@@ -7,7 +7,6 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
-	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
@@ -116,7 +115,6 @@ export const KV_PLUGIN: Plugin<
 		sharedOptions,
 		tmpPath,
 		defaultPersistRoot,
-		log,
 		unsafeStickyBlobs,
 	}) {
 		const persist = sharedOptions.kvPersist;
@@ -178,15 +176,6 @@ export const KV_PLUGIN: Plugin<
 				},
 			};
 			services.push(storageService, objectService);
-
-			// Before the switch to Durable Object simulators, Miniflare stored
-			// databases alongside blobs in a namespace specific directory. To avoid
-			// another breaking change to the persistence location, migrate SQLite
-			// databases from the old location to the new location. Blobs are still
-			// stored in the same location.
-			for (const namespace of namespaces) {
-				await migrateDatabase(log, uniqueKey, persistPath, namespace[1].id);
-			}
 		}
 
 		if (isWorkersSitesEnabled(options)) {
