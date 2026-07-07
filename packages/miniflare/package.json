@@ -20,13 +20,9 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/miniflare"
 	},
-	"bin": {
-		"miniflare": "bootstrap.js"
-	},
 	"files": [
 		"dist/src",
-		"dist/local-explorer-ui",
-		"bootstrap.js"
+		"dist/local-explorer-ui"
 	],
 	"main": "./dist/src/index.js",
 	"types": "./dist/src/index.d.ts",
