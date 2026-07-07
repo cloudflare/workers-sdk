@@ -348,20 +348,12 @@ export async function triggersDeploy(
 	return targets;
 }
 
-/**
- * Format a single trigger deployment error for display in the aggregated
- * "Some triggers failed to deploy" message.
- *
- * For APIError/ParseError, `.message` is only the generic "A request to the
- * Cloudflare API (...) failed." text — the actual cause lives in `.notes[]`.
- * We append those note texts so users see the real reason without needing
- * WRANGLER_LOG=debug.
- */
+/** Format a single trigger deployment error for the aggregated message. */
 function formatTriggerError(error: Error): string {
 	const base = `  - ${error.message}`;
 	if (error instanceof ParseError && error.notes.length > 0) {
-		// Note text can itself span multiple lines (e.g. a chained API error or a
-		// documentation link), so indent every line to keep it aligned.
+		// API errors reach this point after fetchResult() has called
+		// throwFetchError(), so notes already include the full API error details.
 		const noteLines = error.notes
 			.flatMap((note) => note.text.split("\n"))
 			.map((line) => `    ${line}`)
