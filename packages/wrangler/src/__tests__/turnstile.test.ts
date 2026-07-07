@@ -73,16 +73,13 @@ describe("turnstile widget commands", () => {
 			"turnstile widget create Example --domain example.com --domain www.example.com --mode managed"
 		);
 
-		// The `(Wrangler)` suffix is appended to the widget name at creation
-		// time so wrangler-created widgets are attributable in analytics.
-		// Matches the shape Spin uses for its dashboard-created widgets.
 		await expect(reqProm).resolves.toEqual({
-			name: "Example (Wrangler)",
+			name: "Example",
 			domains: ["example.com", "www.example.com"],
 			mode: "managed",
 		});
 
-		expect(std.out).toContain("Created Turnstile widget 'Example (Wrangler)'");
+		expect(std.out).toContain("Created Turnstile widget 'Example'");
 		expect(std.out).toContain(widgetFixture.sitekey);
 		expect(std.out).toContain(widgetFixture.secret);
 		expect(std.out).toContain(
@@ -93,16 +90,6 @@ describe("turnstile widget commands", () => {
 		expect(std.out).not.toContain("wrangler.jsonc");
 	});
 
-	it("doesn't double-append the attribution suffix", async ({ expect }) => {
-		const reqProm = mockWidgetCreate();
-		await runWrangler(
-			"turnstile widget create 'MyWidget (Wrangler)' --domain example.com --mode managed"
-		);
-
-		const body = await reqProm;
-		expect(body.name).toBe("MyWidget (Wrangler)");
-	});
-
 	it("creates a widget with optional fields", async ({ expect }) => {
 		const reqProm = mockWidgetCreate();
 		await runWrangler(
@@ -110,7 +97,7 @@ describe("turnstile widget commands", () => {
 		);
 
 		await expect(reqProm).resolves.toEqual({
-			name: "Example (Wrangler)",
+			name: "Example",
 			domains: ["example.com"],
 			mode: "invisible",
 			bot_fight_mode: true,

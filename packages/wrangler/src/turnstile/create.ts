@@ -35,18 +35,8 @@ export const turnstileWidgetCreateCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
-		// Append a `(Wrangler)` suffix to the widget name so wrangler-created
-		// widgets are attributable in the dashboard's widget list and in the
-		// Turnstile analytics UI (parallel to how the dashboard's Spin flow
-		// tags widgets with `(Spin)`). The regex matches trailing suffixes
-		// with optional whitespace to avoid double-appending if a caller
-		// deliberately included the marker themselves.
-		const attributed = /\s\(Wrangler\)\s*$/.test(args.name)
-			? args.name
-			: `${args.name.trim()} (Wrangler)`;
-
 		const widget = await createWidget(config, {
-			name: attributed,
+			name: args.name,
 			domains: args.domain,
 			mode: args.mode,
 			bot_fight_mode: args.botFightMode,
