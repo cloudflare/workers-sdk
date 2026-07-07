@@ -7,6 +7,12 @@ export type {
 	ConfigBindingOptions,
 } from "./config";
 export * from "./config/environment";
+export { partitionExports } from "./config/exports";
+export type { ExportType, PartitionedExports } from "./config/exports";
+export {
+	getDurableObjectExports,
+	hasDurableObjectExports,
+} from "./config/durable-object-exports";
 export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,
@@ -43,7 +49,6 @@ export {
 	parseByteSize,
 } from "./parse";
 export {
-	friendlyBindingNames,
 	getBindingTypeFriendlyName,
 	isPagesConfig,
 	normalizeAndValidateConfig,
@@ -52,6 +57,14 @@ export {
 	isValidR2BucketName,
 	bucketFormatMessage,
 } from "./config/validation";
+
+import * as validation from "./config/validation";
+
+/**
+ * @deprecated new code should use getBindingTypeFriendlyName() instead
+ */
+export const friendlyBindingNames = validation.friendlyBindingNames;
+
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
@@ -90,7 +103,7 @@ export * from "./environment-variables/misc-variables";
 
 export {
 	getGlobalConfigPath,
-	getGlobalWranglerConfigPath,
+	getGlobalWranglerCachePath,
 } from "./global-wrangler-config-path";
 export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";
 

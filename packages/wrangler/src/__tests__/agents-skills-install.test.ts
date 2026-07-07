@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
@@ -79,7 +79,7 @@ const DEFAULT_INSTALL_RESULT = {
 
 /** Writes the skills-install metadata file to the global wrangler config path. */
 function writeMetadataFile(content: Record<string, unknown>): void {
-	const configDir = getGlobalWranglerConfigPath();
+	const configDir = getGlobalConfigPath();
 	mkdirSync(configDir, { recursive: true });
 	writeFileSync(
 		path.join(configDir, "agents-skills-install.jsonc"),
@@ -90,7 +90,7 @@ function writeMetadataFile(content: Record<string, unknown>): void {
 /** Reads and parses the skills-install metadata file. */
 function readMetadataFile(): Record<string, unknown> {
 	const filePath = path.join(
-		getGlobalWranglerConfigPath(),
+		getGlobalConfigPath(),
 		"agents-skills-install.jsonc"
 	);
 	return JSON.parse(readFileSync(filePath, "utf8"));
@@ -1344,7 +1344,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
 
 		// Write a fresh cache file
-		const configDir = getGlobalWranglerConfigPath();
+		const configDir = getGlobalConfigPath();
 		mkdirSync(configDir, { recursive: true });
 		writeFileSync(
 			path.join(configDir, "cloudflare-skills-repo-cache.json"),
@@ -1393,7 +1393,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
 
 		// Write an expired cache file (TTL is 24h, set lastUpdate to 48h ago)
-		const configDir = getGlobalWranglerConfigPath();
+		const configDir = getGlobalConfigPath();
 		mkdirSync(configDir, { recursive: true });
 		writeFileSync(
 			path.join(configDir, "cloudflare-skills-repo-cache.json"),

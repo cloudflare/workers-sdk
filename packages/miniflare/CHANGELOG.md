@@ -1,5 +1,60 @@
 # miniflare
 
+## 4.20260701.0
+
+### Patch Changes
+
+- [#14502](https://github.com/cloudflare/workers-sdk/pull/14502) [`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260630.1 | 1.20260701.1 |
+
+## 4.20260630.0
+
+### Patch Changes
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260625.1 | 1.20260629.1 |
+
+- [#14478](https://github.com/cloudflare/workers-sdk/pull/14478) [`f10d4ad`](https://github.com/cloudflare/workers-sdk/commit/f10d4ad99a3e67e04c16425fe25b6c61ec0c54db) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260629.1 | 1.20260630.1 |
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix edge cases on the local R2 public bucket endpoint (`/cdn-cgi/local/r2/public`) to match r2.dev: write methods are rejected with 401, malformed/multiple/inverted ranges with 400 and unsatisfiable ranges (including `bytes=-0`) with 416, `Range` is honored on HEAD requests with a bodyless 206, `Content-Range` is correct for suffix ranges, object keys are percent-decoded exactly once (keys containing a literal `%` no longer fail), and objects stored without a content type are served as `application/octet-stream` instead of omitting the `Content-Type` header. Unread object bodies are also cancelled (on HEAD and unsatisfiable-range responses) instead of leaking a read stream until garbage collection.
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add Workflow introspection to `createTestHarness()`
+
+  Worker handles can now introspect Workflow bindings by name, allowing tests to disable sleeps, mock step results, and wait for Workflow outcomes. Tests can introspect a known Workflow instance by ID or track instances created after introspection starts.
+
+  ```ts
+  const harness = createTestHarness({
+  	workers: [{ configPath: "./wrangler.json" }],
+  });
+
+  const worker = harness.getWorker();
+  await using workflow = await worker.introspectWorkflow("MY_WORKFLOW");
+
+  await workflow.modifyAll((modifier) =>
+  	modifier.disableSleeps([{ name: "wait-for-approval" }])
+  );
+
+  const response = await worker.fetch("/start-workflow");
+  const [instance] = await workflow.get();
+  await instance.waitForStatus("complete");
+  ```
+
 ## 4.20260625.0
 
 ### Patch Changes

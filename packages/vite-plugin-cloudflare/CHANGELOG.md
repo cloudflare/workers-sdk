@@ -1,5 +1,78 @@
 # @cloudflare/vite-plugin
 
+## 1.43.0
+
+### Minor Changes
+
+- [#14382](https://github.com/cloudflare/workers-sdk/pull/14382) [`fd92d56`](https://github.com/cloudflare/workers-sdk/commit/fd92d5657c4d35758ce42c4f706611623be80a8e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for declarative Durable Object exports
+
+  `wrangler deploy` now accepts an `exports` map in `wrangler.json` as a declarative alternative to the legacy `migrations` array.
+
+  Each entry in `exports` is keyed by Durable Object class name. `type` carries the export _kind_ (currently always `"durable-object"`); the `state` field carries the lifecycle and defaults to `"created"` (live) when omitted:
+
+  ```jsonc
+  {
+    "exports": {
+      // Provision a new Durable Object class (`MyDO`)
+      "MyDO": { "type": "durable-object", "storage": "sqlite" },
+      // Delete Durable Object class (`OldGone`)
+      "OldGone": { "type": "durable-object", "state": "deleted" },
+      // Rename a Durable Object class (from `OldName` to `NewName`)
+      "OldName": {
+        "type": "durable-object",
+        "state": "renamed",
+        "renamed_to": "NewName"
+      },
+      "NewName": { "type": "durable-object", "storage": "sqlite" },
+      // Transfer a Durable Object (`Outgoing`) to a new Worker (`target-worker`)
+      "Outgoing": {
+        "type": "durable-object",
+        "state": "transferred",
+        "transferred_to": "target-worker"
+      },
+      // Prepare to receive the transfer of a Durable Object (`Incoming`) from another Worker (`source-worker`)
+      "Incoming": {
+        "type": "durable-object",
+        "state": "expecting-transfer",
+        "storage": "sqlite",
+        "transfer_from": "source-worker"
+      }
+    }
+  }
+  ```
+
+  When a Worker declares Durable Object class bindings but no lifecycle for them (neither a `migrations` array nor an `exports` map), wrangler warns and now suggests a declarative `exports` entry for each class (previously it suggested a legacy `migrations` block).
+
+  The deployment response now surfaces the server's reconciliation result — created namespaces, applied tombstones, structured per-scenario info entries, and a `removable_entries` hint for stale tombstones that are safe to delete from the config. Blocking errors return the structured per-class detail with scenario tags, suggested remediation, and any referencing-script context.
+
+  `wrangler versions upload` also forwards `exports`. Declarative `exports` lifecycle changes are reconciled when the version is deployed (`wrangler versions deploy` or `wrangler deploy`), so a `versions upload` payload can declare new classes in `exports` without immediately provisioning them. An actor binding (`durable_objects.bindings`) to a class declared only in `exports` on the same `versions upload` is rejected with a clear error (code 100406) — the binding cannot be resolved until the namespace is provisioned. Either stage the new class via `ctx.exports.X` (no binding required) on `versions upload` and add the binding at deploy time, or use `wrangler deploy` to provision and bind in one step (the same constraint applies to the `migrations` flow).
+
+  Multi-version deploys (`wrangler versions deploy A@50% B@50%`) where the selected versions disagree on declarative `exports` are rejected server-side with a clear message: deploy the version that changes `exports` at 100% first, then run the percentage-split deploy. This prevents traffic on one branch routing to code that references unprovisioned or just-deleted DO namespaces. Single-version (100%) deploys are unaffected.
+
+  Local development (`wrangler dev`, `vite dev` and `unstable_startWorker`) reads Durable Object SQLite storage settings from the new `exports` field, so applications using the declarative flow get correct local-dev storage without needing to also declare a `migrations` block.
+
+  `@cloudflare/vitest-pool-workers` also picks up Durable Object configuration from `exports`, so tests against an `exports`-only Worker run with the correct local SQLite storage and can reach unbound Durable Object classes via `ctx.exports.X`.
+
+  `wrangler types` is also aware of `exports`. Live entries (including `expecting-transfer`, the receiving side of a two-phase transfer) are added to `Cloudflare.GlobalProps.durableNamespaces`, which types `ctx.exports.X` for unbound Durable Objects declared only via `exports`.
+
+### Patch Changes
+
+- Updated dependencies [[`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933), [`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1), [`fd92d56`](https://github.com/cloudflare/workers-sdk/commit/fd92d5657c4d35758ce42c4f706611623be80a8e), [`bfe48db`](https://github.com/cloudflare/workers-sdk/commit/bfe48db29d41f4963170e80dbdba8f80a55c6098), [`be3f792`](https://github.com/cloudflare/workers-sdk/commit/be3f792f8e004857e60a58f823435784c2423868), [`0277bfa`](https://github.com/cloudflare/workers-sdk/commit/0277bfa153acae7bef9597ef0a13ece913fa286f), [`98793d8`](https://github.com/cloudflare/workers-sdk/commit/98793d8e00567462518d983d974e0e89b6a474c3), [`e1532eb`](https://github.com/cloudflare/workers-sdk/commit/e1532eba6681f4552ae02f6b435cc04f42cc9bdd)]:
+  - wrangler@4.107.0
+  - miniflare@4.20260701.0
+
+## 1.42.4
+
+### Patch Changes
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve D1 migration paths in generated Worker configs
+
+  When a Worker config with a D1 binding is built by the Vite plugin, the generated `wrangler.json` now points `migrations_dir` back to the source migration directory. This lets tools that read the generated config, such as `createTestHarness()`, find the same D1 migrations as the source Worker config.
+
+- Updated dependencies [[`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`f10d4ad`](https://github.com/cloudflare/workers-sdk/commit/f10d4ad99a3e67e04c16425fe25b6c61ec0c54db), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`d292046`](https://github.com/cloudflare/workers-sdk/commit/d2920467490d53eacde2a1e31013699bd212ee88), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`e0cc2cb`](https://github.com/cloudflare/workers-sdk/commit/e0cc2cb864da208fe6ce1ff98eda67c6dcfb9bf7), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a)]:
+  - wrangler@4.106.0
+  - miniflare@4.20260630.0
+
 ## 1.42.3
 
 ### Patch Changes

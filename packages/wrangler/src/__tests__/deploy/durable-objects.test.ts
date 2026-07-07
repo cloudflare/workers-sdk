@@ -87,12 +87,13 @@ describe("deploy", () => {
 
 	afterEach(() => {
 		vi.unstubAllGlobals();
+		vi.unstubAllEnvs();
 		clearDialogs();
 		clearOutputFilePath();
 	});
 
 	describe("durable object migrations", () => {
-		it("should warn when you try to deploy durable objects without migrations", async ({
+		it("should warn when you try to deploy durable objects without a lifecycle declared", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -127,19 +128,15 @@ describe("deploy", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker
-				  (SomeClass), but no \`migrations\` for them. This may not work as expected until you add a
-				  \`migrations\` section to your wrangler.toml file. Add the following configuration:
+				  (SomeClass), but no live \`exports\` entry for them. This may not work as expected until you add a
+				  live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
 
 				      \`\`\`
-				      [[migrations]]
-				      tag = "v1"
-				      new_sqlite_classes = [ "SomeClass" ]
+				      [exports.SomeClass]
+				      type = "durable-object"
+				      storage = "sqlite"
 
 				      \`\`\`
-
-				      Refer to
-				  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
-				  details.
 
 				"
 			`);
@@ -758,6 +755,134 @@ describe("deploy", () => {
 			});
 		});
 	});
+
+	describe("durable object exports (declarative)", () => {
+		it("sends the `exports` payload (and omits `migrations`)", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [{ name: "DO", class_name: "MyDO" }],
+				},
+				exports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+				expectedMigrations: undefined,
+				useOldUploadApi: true,
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("renders the success-side reconciliation envelope", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [{ name: "DO", class_name: "MyDO" }],
+				},
+				exports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+					OldGone: { type: "durable-object", state: "deleted" },
+				},
+			});
+			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+					OldGone: { type: "durable-object", state: "deleted" },
+				},
+				useOldUploadApi: true,
+				mockUploadReturnsExportsReconciliation: {
+					created: ["MyDO"],
+					updated: [],
+					deleted: [],
+					renamed: [],
+					transferred: [],
+					transfer_pending: [],
+					warnings: [],
+					info: [
+						{
+							class: "OldGone",
+							scenario: "stale_tombstone",
+							message:
+								"Tombstone of state 'deleted' for class 'OldGone' has no effect.",
+						},
+					],
+					removable_entries: ["OldGone"],
+				},
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.out).toContain("Durable Object exports reconciliation:");
+			expect(std.out).toContain("Created: MyDO");
+			expect(std.out).toContain("[stale_tombstone] OldGone");
+			expect(std.out).toContain("Safe to remove from `exports`: OldGone");
+		});
+
+		it("renders the error-side reconciliation envelope with per-class detail", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [{ name: "DO", class_name: "MyDO" }],
+				},
+				exports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
+			mockSubDomainRequest();
+
+			// Override the upload handler with a structured reconciliation error.
+			msw.use(
+				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () =>
+					HttpResponse.json(
+						{
+							success: false,
+							errors: [
+								{
+									code: 100402,
+									message: "Durable Object exports reconciliation failed",
+									meta: {
+										details: [
+											{
+												class: "OrphanedClass",
+												scenario: "orphaned_provisioned_namespace",
+												message:
+													"Namespace exists but no config entry covers it.",
+												suggestion: "Add a tombstone entry for the class.",
+												referencing_scripts: ["worker-foo"],
+											},
+										],
+									},
+								},
+							],
+							messages: [],
+							result: null,
+						},
+						{ status: 400 }
+					)
+				)
+			);
+
+			await expect(runWrangler("deploy index.js")).rejects.toThrow(
+				/Durable Object exports reconciliation failed/
+			);
+		});
+	});
+
 	describe("tail consumers", () => {
 		it("should allow specifying workers as tail consumers", async ({
 			expect,

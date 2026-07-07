@@ -1,5 +1,8 @@
 import assert from "node:assert";
-import { configFileName } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	getDurableObjectExports,
+} from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
@@ -106,3 +109,43 @@ const suppressNotFoundError = (err: unknown) => {
 		throw err;
 	}
 };
+
+/**
+ * Resolve which Durable Object lifecycle payload to send with the upload.
+ */
+export async function resolveDoLifecyclePayload(props: {
+	scriptName: string;
+	isDryRun: boolean | undefined;
+	accountId: string | undefined;
+	config: Config;
+	useServiceEnvironments: boolean | undefined;
+	env: string | undefined;
+	dispatchNamespace: string | undefined;
+}): Promise<{
+	migrations: CfWorkerInit["migrations"];
+	exports: CfWorkerInit["exports"];
+}> {
+	const durableObjectExports = getDurableObjectExports(props.config.exports);
+	const hasDurableObjectExports = Object.keys(durableObjectExports).length > 0;
+	if (hasDurableObjectExports) {
+		return {
+			migrations: undefined,
+			exports: durableObjectExports,
+		};
+	}
+
+	const migrations = !props.isDryRun
+		? await getMigrationsToUpload(props.scriptName, {
+				accountId: props.accountId,
+				config: props.config,
+				useServiceEnvironments: props.useServiceEnvironments,
+				env: props.env,
+				dispatchNamespace: props.dispatchNamespace,
+			})
+		: undefined;
+
+	return {
+		migrations,
+		exports: undefined,
+	};
+}

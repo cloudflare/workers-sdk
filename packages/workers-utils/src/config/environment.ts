@@ -351,6 +351,69 @@ export type DurableObjectMigration = {
 };
 
 /**
+ * Storage backend for a declarative Durable Object export. See
+ * {@link DurableObjectExport}.
+ */
+export type DurableObjectExportStorage = "sqlite" | "legacy-kv";
+
+/**
+ * A single declarative Durable Object export entry in the `exports` config
+ * map. `type` is reserved for the export kind. `state` carries the Durable
+ * Object lifecycle and defaults to `"created"` (live) when omitted.
+ *
+ * Mutually exclusive with {@link DurableObjectMigration} at the config-
+ * validation boundary.
+ *
+ *  - `created` (default, live): `storage` is required.
+ *  - `deleted` (tombstone): retire a provisioned namespace whose class has
+ *    been removed from code.
+ *  - `renamed` (tombstone): rewrite a provisioned namespace's class name to
+ *    `renamed_to`. The target name must also appear as a live (state
+ *    `"created"`) `durable-object` entry in the same map.
+ *  - `transferred` (tombstone): hand ownership of the namespace to another
+ *    script in the same account (`transferred_to`). Two-phase commit;
+ *    the target must first deploy an `expecting-transfer` entry naming this
+ *    script via `transfer_from`.
+ *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
+ *    `storage` and `transfer_from` are both required.
+ */
+export type DurableObjectExport =
+	| {
+			type: "durable-object";
+			state?: "created";
+			storage: DurableObjectExportStorage;
+	  }
+	| { type: "durable-object"; state: "deleted" }
+	| { type: "durable-object"; state: "renamed"; renamed_to: string }
+	| {
+			type: "durable-object";
+			state: "transferred";
+			transferred_to: string;
+	  }
+	| {
+			type: "durable-object";
+			state: "expecting-transfer";
+			storage: DurableObjectExportStorage;
+			transfer_from: string;
+	  };
+
+export interface WorkerEntrypointExport {
+	type: "worker";
+	cache?: {
+		/** Whether cache is enabled for this entrypoint. */
+		enabled: boolean;
+	};
+}
+
+export type ConfiguredExport = DurableObjectExport | WorkerEntrypointExport;
+
+/**
+ * The declarative `exports` map keyed by export name. Durable Object exports
+ * are mutually exclusive with `migrations` at the wrangler config layer.
+ */
+export type Exports = Record<string, ConfiguredExport>;
+
+/**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
  */
@@ -509,6 +572,16 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	migrations: DurableObjectMigration[];
+
+	/**
+	 * Declarative exports configuration — a map of class name to export configuration.
+	 *
+	 * The configuration of Durable Objects via `exports` is mutually exclusive with `migrations`.
+	 *
+	 * @default {}
+	 * @inheritable
+	 */
+	exports: Exports;
 
 	/**
 	 * "Cron" definitions to trigger a Worker's "scheduled" function.
@@ -1704,6 +1777,8 @@ export interface Observability {
 export interface CacheOptions {
 	/** If cache is enabled for this Worker */
 	enabled: boolean;
+	/** Whether cached assets may be reused across Worker versions. */
+	cross_version_cache?: boolean;
 }
 
 export type DockerConfiguration = {

@@ -62,3 +62,24 @@ it("sees reset Durable Object storage after reset", async ({ expect }) => {
 	const response = await stub.fetch("https://example.com");
 	expect(await response.text()).toBe("1");
 });
+
+it("exhausts ratelimit then resets between tests", async ({ expect }) => {
+	// First call succeeds
+	const first = await env.RATE_LIMITER.limit({ key: "test-key" });
+	expect(first.success).toBe(true);
+
+	// Exhaust the full limit of 100
+	for (let i = 1; i < 100; i++) {
+		await env.RATE_LIMITER.limit({ key: "test-key" });
+	}
+
+	// 101st call should fail
+	const over = await env.RATE_LIMITER.limit({ key: "test-key" });
+	expect(over.success).toBe(false);
+});
+
+it("sees reset ratelimit state after reset", async ({ expect }) => {
+	// After reset(), buckets should be cleared — first call succeeds again
+	const result = await env.RATE_LIMITER.limit({ key: "test-key" });
+	expect(result.success).toBe(true);
+});

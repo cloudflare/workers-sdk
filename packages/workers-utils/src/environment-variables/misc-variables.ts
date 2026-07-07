@@ -1,7 +1,7 @@
 import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { getGlobalConfigPath } from "../global-wrangler-config-path";
 import {
 	getBooleanEnvironmentVariableFactory,
 	getEnvironmentVariableFactory,
@@ -261,7 +261,7 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
 export const getRegistryPath = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_REGISTRY_PATH",
 	defaultValue() {
-		return path.join(getGlobalWranglerConfigPath(), "registry");
+		return path.join(getGlobalConfigPath(), "registry");
 	},
 });
 
