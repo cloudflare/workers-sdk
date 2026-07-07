@@ -1,5 +1,33 @@
 # wrangler
 
+## 4.108.0
+
+### Minor Changes
+
+- [#14312](https://github.com/cloudflare/workers-sdk/pull/14312) [`54f74b8`](https://github.com/cloudflare/workers-sdk/commit/54f74b857cf6688a0577a214aa0b6dddb9192aaa) Thanks [@MattieTK](https://github.com/MattieTK)! - Delegate agent-driven static Pages deploys to Workers
+
+  When `wrangler pages deploy` or `wrangler pages project create` is run by an AI coding agent against a brand-new, purely static project, Wrangler now delegates it to Workers static assets (using autoconfig) instead of Cloudflare Pages. Accounts that already have Cloudflare Pages projects, non-agent (human) sessions, and projects using Pages features that can't be carried across to Workers (Pages Functions, a `_worker.js`, or a `_routes.json` file) are unaffected and continue to use Pages. Passing `--force` to either command opts out of the delegation and deploys to Pages directly. Once the Workers deploy starts it is not silently swapped back to Pages: if it fails, the error is surfaced and the `--force` opt-out is suggested.
+
+### Patch Changes
+
+- [#14567](https://github.com/cloudflare/workers-sdk/pull/14567) [`0852346`](https://github.com/cloudflare/workers-sdk/commit/08523467752daa79f0f8950a01f35797aa6f3052) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler", "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From         | To           |
+  | ------------------------- | ------------ | ------------ |
+  | workerd                   | 1.20260702.1 | 1.20260706.1 |
+  | @cloudflare/workers-types | 4.20260702.1 | 5.20260706.1 |
+
+- [#14312](https://github.com/cloudflare/workers-sdk/pull/14312) [`54f74b8`](https://github.com/cloudflare/workers-sdk/commit/54f74b857cf6688a0577a214aa0b6dddb9192aaa) Thanks [@MattieTK](https://github.com/MattieTK)! - Avoid silently overwriting an existing Worker during non-interactive deploys that cannot prove they own the name
+
+  A non-interactive deploy (an agent, CI, or the agent-delegated `wrangler pages deploy`) has no way to prompt before overwriting a Worker, so it now stops if the target name is already taken and this run cannot show it owns that Worker. This applies when there is no Wrangler configuration file naming the Worker and either the name was generated automatically or the deploy is the Pages-to-Workers delegation (where the name carried across is a Pages project name, not proof of Worker ownership). The check reuses the service metadata the deploy already fetches, so it adds no extra API calls.
+
+  Deploys are unaffected when a configuration file names the Worker (so repeat deployments continue to update it), and interactive deploys keep their existing confirmation flow. To update an existing Worker in one of the guarded cases, add a Wrangler configuration file naming it, or deploy under a different name.
+
+- Updated dependencies [[`0852346`](https://github.com/cloudflare/workers-sdk/commit/08523467752daa79f0f8950a01f35797aa6f3052)]:
+  - miniflare@4.20260706.0
+
 ## 4.107.1
 
 ### Patch Changes
