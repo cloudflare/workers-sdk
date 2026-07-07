@@ -184,7 +184,7 @@
 		"zod": "^4.4.3"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20241011.0 || ^5.20260706.1"
+		"@cloudflare/workers-types": "catalog:default"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {
