@@ -1,7 +1,7 @@
 import type React from "react";
 import { createComponent } from "@cloudflare/style-container";
 
-const Frame: React.ComponentType<React.IframeHTMLAttributes<HTMLIFrameElement>> =
+const Frame: React.ComponentType<React.IframeHTMLAttributes<HTMLIFrameElement> & { innerRef?: React.RefObject<HTMLIFrameElement> }> =
 	createComponent<"iframe">(
 		() => ({
 			position: "absolute",
