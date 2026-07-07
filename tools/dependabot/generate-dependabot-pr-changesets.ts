@@ -22,6 +22,11 @@ if (require.main === module) {
 	}
 }
 
+// pnpm catalog file. Catalog-pinned deps (e.g. "@cloudflare/workers-types",
+// referenced as "catalog:default" in `package.json`) have their real versions
+// here, so Dependabot bumps them in this file rather than in `package.json`.
+const PNPM_CATALOG_FILE = "pnpm-workspace.yaml";
+
 type Args = {
 	// PR number
 	prNumber: string;
@@ -64,8 +69,7 @@ function main({
 	packageJSONPath,
 	changesetPrefix,
 }: Args): void {
-	const diffLines = getPackageJsonDiff(resolve(packageJSONPath));
-	const changes = parseDiffForChanges(diffLines);
+	const changes = getDependencyChanges([packageJSONPath, PNPM_CATALOG_FILE]);
 	if (changes.size === 0) {
 		console.warn(dedent`
 			WARN: No dependency changes detected for "${packageNames}".
@@ -90,6 +94,16 @@ export type Change = {
 	from: string;
 	to: string;
 };
+
+// Collects dependency changes across every provided file, merging them into a
+// single map. We diff both the target package.json and the pnpm catalog because
+// catalog-pinned deps are bumped in the catalog, not in the package.json.
+export function getDependencyChanges(diffPaths: string[]): Map<string, Change> {
+	const diffLines = diffPaths.flatMap((path) =>
+		getPackageJsonDiff(resolve(path))
+	);
+	return parseDiffForChanges(diffLines);
+}
 
 export function parseDiffForChanges(
 	diffLines: (string | undefined)[]

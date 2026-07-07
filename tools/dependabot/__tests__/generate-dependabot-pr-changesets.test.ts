@@ -6,6 +6,7 @@ import {
 	commitAndPush,
 	generateChangesetHeader,
 	generateCommitMessage,
+	getDependencyChanges,
 	getPackageJsonDiff,
 	parseDiffForChanges,
 	writeChangeSet,
@@ -83,6 +84,95 @@ describe("parseDiffForChanges()", () => {
 	it("should ignore lines that do not match a change", ({ expect }) => {
 		const changes = parseDiffForChanges(["", undefined, "random text"]);
 		expect(changes.size).toBe(0);
+	});
+
+	it("should capture quoted pnpm catalog entries and ignore unquoted keys", ({
+		expect,
+	}) => {
+		const changes = parseDiffForChanges([
+			// A literal dependency in a package.json
+			`-		"workerd": "1.20260702.1",`,
+			`+		"workerd": "1.20260706.1",`,
+			// A quoted catalog entry in pnpm-workspace.yaml (caret preserved)
+			`-  "@cloudflare/workers-types": "^4.20260702.1"`,
+			`+  "@cloudflare/workers-types": "^5.20260706.1"`,
+			// An unquoted catalog key must not match, so it can't corrupt the
+			// workerd change captured from the package.json above.
+			`-  workerd: "1.20260702.1"`,
+			`+  workerd: "1.20260706.1"`,
+		]);
+		expect(changes).toEqual(
+			new Map([
+				[
+					"workerd",
+					{
+						from: "1.20260702.1",
+						to: "1.20260706.1",
+					},
+				],
+				[
+					"@cloudflare/workers-types",
+					{
+						from: "^4.20260702.1",
+						to: "^5.20260706.1",
+					},
+				],
+			])
+		);
+	});
+});
+
+describe("getDependencyChanges()", () => {
+	it("should diff every provided path and merge the changes", ({ expect }) => {
+		(spawnSync as Mock).mockClear();
+		(spawnSync as Mock).mockImplementation((_command, args) => {
+			const path: string = args[2];
+			if (path.endsWith("package.json")) {
+				return {
+					output: [
+						`-		"workerd": "1.20260702.1",`,
+						`+		"workerd": "1.20260706.1",`,
+					],
+				};
+			}
+			if (path.endsWith("pnpm-workspace.yaml")) {
+				return {
+					output: [
+						`-  "@cloudflare/workers-types": "^4.20260702.1"`,
+						`+  "@cloudflare/workers-types": "^5.20260706.1"`,
+					],
+				};
+			}
+
+			return {
+				output: [],
+			};
+		});
+
+		const changes = getDependencyChanges([
+			"packages/miniflare/package.json",
+			"pnpm-workspace.yaml",
+		]);
+
+		expect(spawnSync).toHaveBeenCalledTimes(2);
+		expect(changes).toEqual(
+			new Map([
+				[
+					"workerd",
+					{
+						from: "1.20260702.1",
+						to: "1.20260706.1",
+					},
+				],
+				[
+					"@cloudflare/workers-types",
+					{
+						from: "^4.20260702.1",
+						to: "^5.20260706.1",
+					},
+				],
+			])
+		);
 	});
 });
 
