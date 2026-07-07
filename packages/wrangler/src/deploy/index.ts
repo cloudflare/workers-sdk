@@ -84,6 +84,12 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. If set to none, the Worker will be deployed without building or updating any Containers.",
 			choices: ["immediate", "gradual", "none"] as const,
 		},
+		"experimental-auto-config-static-assets": {
+			describe:
+				"Experimental: allow auto-config to reinterpret explicit static folders and static app directories during deploy",
+			type: "boolean",
+			default: false,
+		},
 		autoconfig: {
 			describe:
 				"Enables framework detection and automatic configuration when deploying",
@@ -113,6 +119,7 @@ export const deployCommand = createCommand({
 			return;
 		}
 		config = autoConfigResult.config;
+		const autoConfigDeploymentMetadata = autoConfigResult.deploymentMetadata;
 
 		// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
 		args = await promptForMissingDeployConfig(args, config);
@@ -142,14 +149,22 @@ export const deployCommand = createCommand({
 
 			const buildResult = await buildWorker(buildProps, config);
 
-			const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
-				await deploy(props, config, buildResult, {
-					syncWorkersSite,
-					getNormalizedContainerOptions,
-					buildContainer,
-					deployContainers,
-					analyseBundle,
-				});
+			const {
+				sourceMapSize,
+				versionId,
+				workerTag,
+				assetUploadStats,
+				targets,
+				containerDeployments,
+				containersRollout,
+			} = await deploy(props, config, buildResult, {
+				syncWorkersSite,
+				getNormalizedContainerOptions,
+				buildContainer,
+				deployContainers,
+				analyseBundle,
+			});
+			const liveUrl = getLiveUrl(targets);
 
 			writeOutput({
 				type: "deploy",
@@ -160,6 +175,20 @@ export const deployCommand = createCommand({
 				targets,
 				wrangler_environment: args.env,
 				worker_name_overridden: workerNameOverridden,
+				auto_config_adapter_id: autoConfigDeploymentMetadata?.adapterId,
+				auto_config_project_kind: autoConfigDeploymentMetadata?.projectKind,
+				auto_config_deploy_mode: autoConfigDeploymentMetadata?.deployMode,
+				auto_config_source_category:
+					autoConfigDeploymentMetadata?.sourceCategory,
+				live_url: autoConfigDeploymentMetadata ? liveUrl : undefined,
+				containers_rollout: containersRollout,
+				containers: containerDeployments?.map((container) => ({
+					name: container.name,
+					application_id: container.applicationId,
+					action: container.action,
+					image: container.image,
+					image_digest: container.imageDigest,
+				})),
 			});
 
 			metrics.sendMetricsEvent(
@@ -176,8 +205,13 @@ export const deployCommand = createCommand({
 			);
 		} finally {
 			cleanupDestination(buildProps.destination);
+			await autoConfigDeploymentMetadata?.cleanup?.();
 		}
 	},
 });
 
 export type DeployArgs = (typeof deployCommand)["args"];
+
+function getLiveUrl(targets: string[] | undefined): string | undefined {
+	return targets?.find((target) => /^https?:\/\//.test(target));
+}

@@ -393,6 +393,9 @@ describe("containers list", () => {
 					name: expect.any(String),
 					state: expect.any(String),
 					instances: expect.any(Number),
+					health: expect.objectContaining({
+						instances: expect.any(Object),
+					}),
 					image: expect.any(String),
 					version: expect.any(Number),
 					updated_at: expect.any(String),

@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type -- Type augmentation interfaces intentionally left empty */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { FatalError } from "@cloudflare/workers-utils";
+import { APIError, FatalError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 /* eslint-disable-next-line no-restricted-imports --
  * Uses expect in MSW handlers outside test callbacks
  * TODO: remove this `expect` import
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { getCommandFailedOutputFields } from "../core/register-yargs-command";
 import { clearOutputFilePath, writeOutput } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -280,6 +281,99 @@ describe("writeOutput()", () => {
 				deployment_urls: ["https://abc12345.worker.cloudflare.app"],
 			},
 		]);
+	});
+
+	it("should extract safe API details for command-failed outputs", () => {
+		const error = new APIError({
+			status: 400,
+			text: "A request to the Cloudflare API failed.",
+			notes: [
+				{
+					text: "The uploaded script has no registered event handlers. [code: 10068]",
+				},
+			],
+			telemetryMessage: false,
+		});
+		error.code = 10068;
+		error.meta = {
+			details: {
+				errors: [
+					{
+						code: 10068,
+						message: "The uploaded script has no registered event handlers.",
+					},
+				],
+			},
+		};
+
+		expect(getCommandFailedOutputFields(error)).toEqual({
+			api_errors: [
+				{
+					code: 10068,
+					message: "The uploaded script has no registered event handlers.",
+				},
+			],
+			code: 10068,
+			details: [
+				"The uploaded script has no registered event handlers. [code: 10068]",
+			],
+			message: "A request to the Cloudflare API failed.",
+			status: 400,
+		});
+	});
+
+	it("should sanitize command-failed API details and support array API metadata", () => {
+		const longDetail = `First line\n${"x".repeat(1_200)}`;
+		const sanitizedLongDetail = longDetail
+			.replace(/\s+/g, " ")
+			.trim()
+			.slice(0, 1_000);
+		const error = new APIError({
+			status: 500,
+			text: "A request to the Cloudflare API failed.",
+			notes: [
+				{
+					text: longDetail,
+				},
+			],
+			telemetryMessage: false,
+		});
+		error.meta = {
+			details: [
+				{
+					code: 1234,
+					message: longDetail,
+				},
+				{
+					message: "Second\n\tmessage",
+				},
+				{
+					code: "not-a-number",
+					message:
+						"ignored because the code is not numeric, but the message is safe",
+				},
+			],
+		};
+
+		expect(getCommandFailedOutputFields(error)).toEqual({
+			api_errors: [
+				{
+					code: 1234,
+					message: sanitizedLongDetail,
+				},
+				{
+					message: "Second message",
+				},
+				{
+					message:
+						"ignored because the code is not numeric, but the message is safe",
+				},
+			],
+			code: undefined,
+			details: [sanitizedLongDetail],
+			message: "A request to the Cloudflare API failed.",
+			status: 500,
+		});
 	});
 
 	it("should write an error log when a handler throws an error", async () => {

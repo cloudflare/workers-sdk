@@ -188,6 +188,594 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
+	describe("project adapters", () => {
+		it("detects an explicit html file as a no-write single-file site", async ({
+			expect,
+		}) => {
+			await writeFile("index.html", "<h1>Hello World</h1>");
+
+			const result = await details.getDetailsForAutoConfig({
+				context,
+				deployIntent: {
+					trigger: "explicit-target",
+					originalTarget: "index.html",
+					targetKind: "file",
+					currentDeployInterpretation: "script",
+					sourceCategory: "html-file",
+				},
+			});
+
+			expect(result).toMatchObject({
+				configured: false,
+				adapterId: "single-file-site",
+				projectKind: "single-file-site",
+				confidence: "high",
+				sourceCategory: "html-file",
+				configurationPlan: {
+					mode: "no-write",
+					generatedFiles: ["temporary-assets-directory"],
+				},
+				deployTarget: {
+					type: "single-html-file",
+					sourcePath: expect.stringContaining("index.html"),
+				},
+			});
+		});
+
+		it("does not claim explicit worker scripts without a high-confidence adapter", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"index.js",
+				"export default { fetch() { return new Response('ok'); } };"
+			);
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "index.js",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "worker-script",
+					},
+				})
+			).resolves.toMatchObject({ configured: true });
+		});
+
+		it("detects explicit static folders as no-write assets by default", async ({
+			expect,
+		}) => {
+			await seed({
+				"site/index.html": "<h1>Hello World</h1>",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "site",
+						targetKind: "directory",
+						currentDeployInterpretation: "assets",
+						sourceCategory: "directory",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "static-assets",
+				configurationPlan: { mode: "no-write" },
+			});
+		});
+
+		it("does not treat explicit directory targets containing a Dockerfile as Containers", async ({
+			expect,
+		}) => {
+			await seed({
+				Dockerfile: "FROM node:22\nEXPOSE 3000\n",
+				"index.html": "<h1>Hello World</h1>",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: ".",
+						targetKind: "directory",
+						currentDeployInterpretation: "assets",
+						sourceCategory: "directory",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "static-assets",
+				projectKind: "static-assets",
+				configurationPlan: { mode: "no-write" },
+			});
+		});
+
+		it("detects a gated Vite app target as a static package app", async ({
+			expect,
+		}) => {
+			await seed({
+				"app/package.json": JSON.stringify({
+					name: "vite-app",
+					scripts: { build: "vite build" },
+					devDependencies: { vite: "7.0.0" },
+				}),
+				"app/pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+				"app/dist/index.html": "<h1>Hello from Vite</h1>",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "app",
+						targetKind: "directory",
+						currentDeployInterpretation: "assets",
+						sourceCategory: "directory",
+					},
+				})
+			).resolves.toMatchObject({ configured: true });
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "app",
+						targetKind: "directory",
+						currentDeployInterpretation: "assets",
+						sourceCategory: "directory",
+						staticAssetsAutoConfig: true,
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "static-package-app",
+				projectKind: "static-assets",
+				confidence: "high",
+				outputDir: "dist",
+				sourceCategory: "package-app",
+				configurationPlan: {
+					mode: "no-write",
+					commands: [
+						{
+							command: "pnpm run build",
+							when: "build",
+							label: "build",
+						},
+					],
+					deploy: {
+						generatedAssetsDirectory: "build-output",
+					},
+				},
+				deployTarget: {
+					type: "static-app-output",
+					assetsDirectory: expect.stringContaining("app/dist"),
+				},
+			});
+		});
+
+		it("detects explicit Express entrypoints", async ({ expect }) => {
+			await seed({
+				"package.json": JSON.stringify({ dependencies: { express: "5" } }),
+				"index.js": `
+					import express from "express";
+					const app = express();
+					app.get("/", (_req, res) => res.send("ok"));
+					app.listen(3000);
+				`,
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "index.js",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "worker-script",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "express-node-http-server",
+				projectKind: "node-http-server",
+				configurationPlan: {
+					mode: "persistent",
+					wranglerConfig: {
+						main: "src/worker.js",
+						compatibility_flags: ["nodejs_compat"],
+					},
+					filesToCreate: [
+						{
+							path: "src/worker.js",
+							contents: expect.stringContaining(
+								"export default httpServerHandler({ port });"
+							),
+						},
+					],
+					summaryFields: {
+						entrypoint: "index.js",
+						generatedEntrypoint: "src/worker.js",
+						port: 3000,
+					},
+				},
+			});
+		});
+
+		it("detects explicit Dockerfile targets as Containers", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 8080\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "dockerfile-container",
+				projectKind: "container-image",
+				configurationPlan: {
+					mode: "persistent",
+					dependencies: [{ name: "@cloudflare/containers" }],
+					wranglerConfig: {
+						main: "src/worker.js",
+						containers: [
+							{
+								class_name: "AppContainer",
+								image: "./Dockerfile",
+								max_instances: 1,
+							},
+						],
+						durable_objects: {
+							bindings: [
+								{
+									name: "APP_CONTAINER",
+									class_name: "AppContainer",
+								},
+							],
+						},
+						migrations: [
+							{
+								new_sqlite_classes: ["AppContainer"],
+							},
+						],
+					},
+					filesToCreate: [
+						{
+							path: "src/worker.js",
+							contents: expect.stringContaining('PORT: "8080"'),
+						},
+					],
+					summaryFields: {
+						dockerfile: "Dockerfile",
+						generatedEntrypoint: "src/worker.js",
+						port: 8080,
+						routing: "singleton",
+						maxInstances: 1,
+					},
+				},
+			});
+		});
+
+		it("uses the Dockerfile directory as the project root for nested explicit Dockerfile targets", async ({
+			expect,
+		}) => {
+			await seed({
+				"services/api/package.json": JSON.stringify({ name: "api-service" }),
+				"services/api/Dockerfile": "FROM node:22\nEXPOSE 8787\n",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "services/api/Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "dockerfile-container",
+				projectPath: expect.stringContaining(join("services", "api")),
+				workerName: "api-service",
+				configurationPlan: {
+					wranglerConfig: {
+						name: "api-service",
+						containers: [
+							{
+								image: "./Dockerfile",
+							},
+						],
+					},
+					summaryFields: {
+						port: 8787,
+					},
+				},
+			});
+		});
+
+		it("detects explicit Containerfile targets as Containers", async ({
+			expect,
+		}) => {
+			await writeFile("Containerfile", "FROM node:22\nEXPOSE 7070\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Containerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					wranglerConfig: {
+						containers: [
+							{
+								image: "./Containerfile",
+							},
+						],
+					},
+					summaryFields: {
+						dockerfile: "Containerfile",
+						port: 7070,
+					},
+				},
+			});
+		});
+
+		it("falls back to port 80 and warns when a Dockerfile has no port hints", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM nginx:1\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					warnings: expect.arrayContaining([
+						"No EXPOSE or ENV PORT was detected. Port 80 was selected; add EXPOSE to your Dockerfile if your app listens elsewhere.",
+					]),
+					summaryFields: {
+						port: 80,
+					},
+				},
+			});
+		});
+
+		it("selects the first exposed port and warns when a Dockerfile exposes multiple ports", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\nEXPOSE 8080\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					warnings: expect.arrayContaining([
+						"Multiple EXPOSE ports were detected; the first port was selected. Update generated configuration if this is not your HTTP port.",
+					]),
+					summaryFields: {
+						port: 3000,
+					},
+				},
+			});
+		});
+
+		it("rejects bare Dockerfile-to-Containers auto-configuration in non-interactive sessions", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context: createMockContext({ isNonInteractiveOrCI: () => true }),
+					deployIntent: {
+						trigger: "setup",
+					},
+				})
+			).rejects.toThrow(
+				"Dockerfile-to-Containers auto-configuration in non-interactive sessions requires an explicit Dockerfile target or `wrangler setup --yes`."
+			);
+		});
+
+		it("allows setup --yes Dockerfile-to-Containers auto-configuration in non-interactive sessions", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context: createMockContext({ isNonInteractiveOrCI: () => true }),
+					deployIntent: {
+						trigger: "setup",
+						allowNonInteractivePersistentSetup: true,
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					summaryFields: {
+						port: 3000,
+					},
+				},
+			});
+		});
+
+		it("allows explicit Dockerfile targets in non-interactive sessions", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context: createMockContext({ isNonInteractiveOrCI: () => true }),
+					deployIntent: {
+						trigger: "explicit-target",
+						originalTarget: "Dockerfile",
+						targetKind: "file",
+						currentDeployInterpretation: "script",
+						sourceCategory: "dockerfile",
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					summaryFields: {
+						port: 3000,
+					},
+				},
+			});
+		});
+
+		it("uses a root Dockerfile as a bare deploy fallback when no other detection works", async ({
+			expect,
+		}) => {
+			await writeFile("Dockerfile", "FROM node:22\nEXPOSE 3000\n");
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "bare",
+						currentDeployInterpretation: "none",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				adapterId: "dockerfile-container",
+				confidence: "medium",
+				configurationPlan: {
+					summaryFields: {
+						port: 3000,
+					},
+				},
+			});
+		});
+
+		it("does not let a root Dockerfile preempt Express project detection", async ({
+			expect,
+		}) => {
+			await seed({
+				"package.json": JSON.stringify({ dependencies: { express: "5" } }),
+				Dockerfile: "FROM node:22\nEXPOSE 3000\n",
+				"index.js": `
+					import express from "express";
+					const app = express();
+					app.listen(3000);
+				`,
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "bare",
+						currentDeployInterpretation: "none",
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "express-node-http-server",
+				projectKind: "node-http-server",
+			});
+		});
+
+		it("does not let a root Dockerfile preempt static output detection", async ({
+			expect,
+		}) => {
+			await seed({
+				Dockerfile: "FROM nginx:1\nEXPOSE 80\n",
+				"index.html": "<h1>Hello World</h1>",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "bare",
+						currentDeployInterpretation: "none",
+					},
+				})
+			).resolves.toMatchObject({
+				configured: false,
+				framework: {
+					id: "static",
+				},
+				outputDir: ".",
+			});
+		});
+
+		it("uses a root Dockerfile fallback for unsupported framework projects", async ({
+			expect,
+		}) => {
+			await seed({
+				"package.json": JSON.stringify({ dependencies: { hono: "4" } }),
+				Dockerfile: "FROM node:22\nEXPOSE 8787\n",
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({
+					context,
+					deployIntent: {
+						trigger: "bare",
+						currentDeployInterpretation: "none",
+					},
+				})
+			).resolves.toMatchObject({
+				adapterId: "dockerfile-container",
+				configurationPlan: {
+					summaryFields: {
+						port: 8787,
+					},
+				},
+			});
+		});
+	});
+
 	it("an error should be thrown if no output dir can be detected", async ({
 		expect,
 	}) => {

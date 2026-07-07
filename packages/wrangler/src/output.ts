@@ -101,6 +101,26 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
+	/** Auto-config adapter selected for this deployment, if any. */
+	auto_config_adapter_id?: string;
+	/** Auto-config project kind selected for this deployment, if any. */
+	auto_config_project_kind?: string;
+	/** Auto-config deploy mode selected for this deployment, if any. */
+	auto_config_deploy_mode?: "persistent" | "no-write";
+	/** Sanitized source category for the auto-config deployment, if any. */
+	auto_config_source_category?: string;
+	/** The first live URL reported by deploy for auto-config driven deployments. */
+	live_url?: string;
+	/** Rollout strategy used for configured Containers, if any. */
+	containers_rollout?: "gradual" | "immediate" | "none";
+	/** Container application changes made during this deployment, if any. */
+	containers?: Array<{
+		name: string;
+		application_id?: string;
+		action: "created" | "modified" | "unchanged";
+		image?: string;
+		image_digest?: string;
+	}>;
 }
 
 interface OutputEntryPreview extends OutputEntryBase<"preview"> {
@@ -195,6 +215,12 @@ interface OutputEntryCommandFailed extends OutputEntryBase<"command-failed"> {
 	version: 1;
 	/** The code in the error. */
 	code: number | undefined;
+	/** HTTP status for API failures, when available. */
+	status?: number;
 	/** The message in the error. */
 	message: string | undefined;
+	/** Additional safe, human-readable error details. */
+	details?: string[];
+	/** Structured API error details, when available. */
+	api_errors?: Array<{ code?: number; message: string }>;
 }

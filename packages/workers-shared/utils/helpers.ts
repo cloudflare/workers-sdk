@@ -77,6 +77,7 @@ export async function createAssetsIgnoreFunction(dir: string) {
 		`/${CF_ASSETS_IGNORE_FILENAME}`,
 		`/${REDIRECTS_FILENAME}`,
 		`/${HEADERS_FILENAME}`,
+		`/.wrangler/**`,
 	];
 
 	let assetsIgnoreFilePresent = false;

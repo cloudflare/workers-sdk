@@ -4,6 +4,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import {
 	checkExposedPorts,
 	cleanupDuplicateImageTags,
+	runDockerCmdWithOutput,
 	verifyDockerInstalled,
 } from "./../src/utils";
 import type { ContainerDevOptions } from "../src/types";
@@ -92,7 +93,28 @@ describe("cleanupDuplicateImageTags", () => {
 		expect(execFileSync).toHaveBeenCalledWith(
 			"docker",
 			["rmi", "cloudflare-dev/egresstestcontainer:build-122"],
-			{ encoding: "utf8" }
+			{ encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }
+		);
+	});
+});
+
+describe("runDockerCmdWithOutput", () => {
+	beforeEach(() => {
+		vi.mocked(execFileSync).mockReset();
+	});
+
+	it("pipes stderr so callers can decide whether to surface failures", ({
+		expect,
+	}) => {
+		vi.mocked(execFileSync).mockReturnValue("ok\n");
+
+		expect(runDockerCmdWithOutput("docker", ["manifest", "inspect"])).toBe(
+			"ok"
+		);
+		expect(execFileSync).toHaveBeenCalledWith(
+			"docker",
+			["manifest", "inspect"],
+			{ encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }
 		);
 	});
 });

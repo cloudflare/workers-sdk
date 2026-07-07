@@ -36,7 +36,7 @@ describe("buildAndMaybePush", () => {
 	runInTempDir();
 	mockApiToken();
 	mockAccountId();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(dockerImageInspect)
@@ -374,9 +374,13 @@ describe("buildAndMaybePush", () => {
 			"test-app:tag",
 		]);
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
+		expect(std.out).toContain(
+			"Dockerfile-backed Containers are built locally during deploy to determine whether the image changed. To deploy only Worker changes without building or updating Containers, pass --containers-rollout=none."
+		);
+		expect(std.out).toContain("Image already exists remotely, skipping push");
 	});
 
-	it("should inspect the pushed image digest if the local digest is not remote", async ({
+	it("should inspect the pushed image digest if the remote manifest preflight misses", async ({
 		expect,
 	}) => {
 		vi.mocked(dockerImageInspect).mockReset();
@@ -390,7 +394,7 @@ describe("buildAndMaybePush", () => {
 			);
 		vi.mocked(runDockerCmdWithOutput).mockReset();
 		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
-			return '{"Descriptor":{"digest":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}}';
+			throw new Error("no such manifest: test-app@sha256:bbbbbbbb");
 		});
 
 		await runWrangler(
@@ -413,6 +417,7 @@ describe("buildAndMaybePush", () => {
 			imageTag: `${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			formatString: "{{ json .RepoDigests }}",
 		});
+		expect(std.out).not.toContain("no such manifest");
 	});
 
 	it("should match digests for images with registry ports", async ({

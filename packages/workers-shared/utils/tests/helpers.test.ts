@@ -15,23 +15,32 @@ describe("assets", () => {
 			expect(assetsIgnoreFunction(".assetsignore")).toBeTruthy();
 			expect(assetsIgnoreFunction("_redirects")).toBeTruthy();
 			expect(assetsIgnoreFunction("_headers")).toBeTruthy();
+			expect(
+				assetsIgnoreFunction(join(".wrangler", "tmp", "worker.js"))
+			).toBeTruthy();
 
 			// don't ignore metafiles in child directories
 			expect(assetsIgnoreFunction(join("child", ".assetsignore"))).toBeFalsy();
 			expect(assetsIgnoreFunction(join("child", "_redirects"))).toBeFalsy();
 			expect(assetsIgnoreFunction(join("child", "_headers"))).toBeFalsy();
+			expect(
+				assetsIgnoreFunction(join("child", ".wrangler", "tmp", "worker.js"))
+			).toBeFalsy();
 		});
 
 		it("should allow users to force opt-in metafiles", async ({ expect }) => {
 			await writeFile(
 				join(tmpDir, "./.assetsignore"),
-				"!.assetsignore\n!_redirects\n!_headers"
+				"!.assetsignore\n!_redirects\n!_headers\n!/.wrangler/**"
 			);
 			const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(tmpDir);
 
 			expect(assetsIgnoreFunction(".assetsignore")).toBeFalsy();
 			expect(assetsIgnoreFunction("_redirects")).toBeFalsy();
 			expect(assetsIgnoreFunction("_headers")).toBeFalsy();
+			expect(
+				assetsIgnoreFunction(join(".wrangler", "tmp", "worker.js"))
+			).toBeFalsy();
 		});
 
 		it("should allow users to ignore files", async ({ expect }) => {

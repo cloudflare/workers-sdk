@@ -73,11 +73,19 @@ type DeployContainersArgs = {
 	scriptName: string;
 };
 
+type ContainerDeployResult = {
+	name: string;
+	applicationId?: string;
+	action: "created" | "modified" | "unchanged";
+	image?: string;
+	imageDigest?: string;
+};
+
 export async function deployContainers(
 	config: Config,
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	{ versionId, accountId, scriptName }: DeployContainersArgs
-) {
+): Promise<ContainerDeployResult[]> {
 	await fillOpenAPIConfiguration(config, containersScope);
 
 	const pathToDocker = getDockerPath();
@@ -88,6 +96,7 @@ export async function deployContainers(
 	let imageRef: ImageRef;
 	let maybeVersionInfo: ApiVersion | undefined;
 	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
+	const results: ContainerDeployResult[] = [];
 
 	for (const container of normalisedContainerConfig) {
 		if ("dockerfile" in container) {
@@ -136,13 +145,15 @@ export async function deployContainers(
 				targetDurableObject && targetDurableObject.namespace_id !== undefined
 			);
 
-			await apply(
-				{
-					imageRef,
-					durable_object_namespace_id: targetDurableObject.namespace_id,
-				},
-				container,
-				config
+			results.push(
+				await apply(
+					{
+						imageRef,
+						durable_object_namespace_id: targetDurableObject.namespace_id,
+					},
+					container,
+					config
+				)
 			);
 		} else {
 			// The DO is unbound, so we need to list all DO namespaces to find the right one
@@ -155,16 +166,20 @@ export async function deployContainers(
 			);
 
 			assert(targetDurableObject, "Durable Object not returned from list API");
-			await apply(
-				{
-					imageRef,
-					durable_object_namespace_id: targetDurableObject.id,
-				},
-				container,
-				config
+			results.push(
+				await apply(
+					{
+						imageRef,
+						durable_object_namespace_id: targetDurableObject.id,
+					},
+					container,
+					config
+				)
 			);
 		}
 	}
+
+	return results;
 }
 
 async function fetchUploadedVersion(
@@ -387,9 +402,12 @@ export async function apply(
 	},
 	containerConfig: ContainerNormalizedConfig,
 	config: Config
-) {
+): Promise<ContainerDeployResult> {
 	if (!config.containers || config.containers.length === 0) {
-		return;
+		return {
+			name: containerConfig.name,
+			action: "unchanged",
+		};
 	}
 	startSection(
 		"Deploy a container application",
@@ -411,7 +429,9 @@ export async function apply(
 		"remoteDigest" in args.imageRef
 			? args.imageRef.remoteDigest
 			: args.imageRef.newTag;
+	const imageDigest = getImageDigest(args.imageRef);
 	log(dim("Container application changes\n"));
+	let result: ContainerDeployResult;
 
 	const accountId = await getOrSelectAccountId(config);
 
@@ -483,7 +503,13 @@ export async function apply(
 		if (diff.changes === 0) {
 			updateStatus(`no changes ${brandColor(prevApp.name)}`);
 			endSection("No changes to be made");
-			return;
+			return {
+				name: prevApp.name,
+				applicationId: prevApp.id,
+				action: "unchanged",
+				image: imageRef,
+				imageDigest,
+			};
 		}
 
 		updateStatus(`${brandColor.underline("EDIT")} ${prevApp.name}`, false);
@@ -493,7 +519,7 @@ export async function apply(
 		newline();
 
 		if (containerConfig.rollout_kind !== "none") {
-			await doAction({
+			const modifiedApplication = await doAction({
 				action: "modify",
 				application: modifyReq,
 				id: prevApp.id,
@@ -504,9 +530,23 @@ export async function apply(
 						? CreateApplicationRolloutRequest.kind.FULL_MANUAL
 						: CreateApplicationRolloutRequest.kind.FULL_AUTO,
 			});
+			result = {
+				name: modifiedApplication.name,
+				applicationId: modifiedApplication.id,
+				action: "modified",
+				image: imageRef,
+				imageDigest,
+			};
 		} else {
 			log("Skipping application rollout");
 			newline();
+			result = {
+				name: prevApp.name,
+				applicationId: prevApp.id,
+				action: "unchanged",
+				image: imageRef,
+				imageDigest,
+			};
 		}
 	} else {
 		// **************
@@ -529,13 +569,32 @@ export async function apply(
 		newline();
 		// add to the actions array to create the app later
 
-		await doAction({
+		const createdApplication = await doAction({
 			action: "create",
 			application: appConfig,
 		});
+		result = {
+			name: createdApplication.name,
+			applicationId: createdApplication.id,
+			action: "created",
+			image: imageRef,
+			imageDigest,
+		};
 	}
 	newline();
 	endSection("Applied changes");
+	return result;
+}
+
+function getImageDigest(imageRef: ImageRef): string | undefined {
+	if (!("remoteDigest" in imageRef)) {
+		return undefined;
+	}
+
+	const digestSeparatorIndex = imageRef.remoteDigest.lastIndexOf("@");
+	return digestSeparatorIndex === -1
+		? undefined
+		: imageRef.remoteDigest.slice(digestSeparatorIndex + 1);
 }
 
 /**
@@ -592,7 +651,7 @@ const doAction = async (
 				rollout_step_percentage: number | number[];
 				rollout_kind: CreateApplicationRolloutRequest.kind;
 		  }
-) => {
+): Promise<{ id: ApplicationID; name: ApplicationName }> => {
 	if (action.action === "create") {
 		let application: Application;
 		try {
@@ -630,6 +689,7 @@ const doAction = async (
 				shape: shapes.bar,
 			}
 		);
+		return { id: application.id, name: application.name };
 	}
 
 	if (action.action === "modify") {
@@ -707,7 +767,10 @@ const doAction = async (
 				shape: shapes.bar,
 			}
 		);
+		return { id: action.id, name: action.name };
 	}
+
+	throw new Error("Unexpected container action");
 };
 
 /**

@@ -29,6 +29,11 @@ export type {
 	AutoConfigDetailsForNonConfiguredProject,
 	AutoConfigOptions,
 	AutoConfigSummary,
+	ConfigurationPlan,
+	DeployIntent,
+	DetectionConfidence,
+	ProjectKind,
+	SourceCategory,
 } from "./types";
 
 export {

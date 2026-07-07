@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
+import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { findWranglerConfig } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -11,6 +12,10 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
+import {
+	runCommand as runCustomBuildCommand,
+	runCustomBuild,
+} from "../../deployment-bundle/run-custom-build";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -26,6 +31,7 @@ import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
 import { runWrangler } from "../helpers/run-wrangler";
+import { serialize, toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
 	mockAUSRequest,
@@ -38,6 +44,7 @@ import {
 import type { AssetManifest } from "../../assets";
 
 vi.mock("command-exists");
+vi.mock("../../deployment-bundle/run-custom-build");
 vi.mock("../../check/commands", async (importOriginal) => {
 	return {
 		...(await importOriginal()),
@@ -78,6 +85,10 @@ describe("deploy", () => {
 		mockPatchScriptSettings();
 		mockGetSettings();
 		msw.use(...mswListNewDeploymentsLatestFull);
+		vi.mocked(runCustomBuildCommand).mockReset();
+		vi.mocked(runCustomBuildCommand).mockResolvedValue(undefined);
+		vi.mocked(runCustomBuild).mockReset();
+		vi.mocked(runCustomBuild).mockResolvedValue(undefined);
 		// Pretend all R2 buckets exist for the purposes of deployment testing.
 		// Otherwise, wrangler deploy would try to provision them. The provisioning
 		// behaviour is tested in provision.test.ts
@@ -356,6 +367,531 @@ export default{
 
 			expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
 			expect(runAutoConfigSpy).not.toHaveBeenCalled();
+		});
+
+		it("should deploy an explicit index.html file as no-write static assets", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.html", "<html>test</html>");
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+			await runWrangler(
+				"deploy index.html --name test-name --compatibility-date 2024-01-01",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			expect(bodies).toEqual([
+				{
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				},
+			]);
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+			expect(std.out).toContain("Project Type: Single file site");
+			expect(std.out).toContain("No local project files will be written.");
+			expect(std.out).toContain(
+				"https://test-name.test-sub-domain.workers.dev"
+			);
+			expect(std.err).toBe("");
+
+			const outputEntries = fs
+				.readFileSync("output.json", "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line));
+			expect(outputEntries).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						type: "autoconfig",
+						summary: expect.objectContaining({
+							adapterId: "single-file-site",
+							deployMode: "no-write",
+							projectKind: "single-file-site",
+							sourceCategory: "html-file",
+						}),
+					}),
+					expect.objectContaining({
+						type: "deploy",
+						auto_config_adapter_id: "single-file-site",
+						auto_config_deploy_mode: "no-write",
+						auto_config_project_kind: "single-file-site",
+						auto_config_source_category: "html-file",
+						live_url: "https://test-name.test-sub-domain.workers.dev",
+					}),
+				])
+			);
+		});
+
+		it("should deploy an explicit static folder through the default no-write path", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("site", { recursive: true });
+			fs.writeFileSync("site/index.html", "<html>site</html>");
+			fs.writeFileSync("site/main.css", "body{}");
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+			await runWrangler(
+				"deploy site --name test-name --compatibility-date 2024-01-01",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			expect(bodies).toEqual([
+				{
+					manifest: {
+						"/index.html": {
+							hash: expect.any(String),
+							size: 17,
+						},
+						"/main.css": {
+							hash: expect.any(String),
+							size: 6,
+						},
+					},
+				},
+			]);
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+			expect(std.out).toContain("Project Type: Static assets");
+			expect(std.out).toContain("No local project files will be written.");
+
+			const outputEntries = fs
+				.readFileSync("output.json", "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line));
+			expect(outputEntries).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						type: "autoconfig",
+						summary: expect.objectContaining({
+							adapterId: "static-assets",
+							deployMode: "no-write",
+							projectKind: "static-assets",
+							sourceCategory: "directory",
+						}),
+					}),
+					expect.objectContaining({
+						type: "deploy",
+						auto_config_adapter_id: "static-assets",
+						auto_config_deploy_mode: "no-write",
+						auto_config_project_kind: "static-assets",
+						auto_config_source_category: "directory",
+					}),
+				])
+			);
+		});
+
+		it("should deploy a gated static package app from its build output directory", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("app/dist/assets", { recursive: true });
+			fs.mkdirSync("app/src", { recursive: true });
+			fs.writeFileSync(
+				"app/package.json",
+				JSON.stringify({
+					name: "vite-app",
+					scripts: { build: "vite build" },
+					devDependencies: { vite: "7.0.0" },
+				})
+			);
+			fs.writeFileSync("app/dist/index.html", "<html>app</html>");
+			fs.writeFileSync("app/dist/assets/app.js", "console.log('app');");
+			fs.writeFileSync("app/src/main.js", "console.log('source');");
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+
+			await runWrangler(
+				"deploy app --experimental-auto-config-static-assets --name test-name --compatibility-date 2024-01-01",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			expect(runCustomBuildCommand).toHaveBeenCalledWith(
+				"npm run build",
+				path.resolve("app"),
+				"[build]"
+			);
+			expect(bodies).toEqual([
+				{
+					manifest: {
+						"/assets/app.js": {
+							hash: expect.any(String),
+							size: 19,
+						},
+						"/index.html": {
+							hash: expect.any(String),
+							size: 16,
+						},
+					},
+				},
+			]);
+			expect(fs.existsSync("app/wrangler.jsonc")).toBe(false);
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+
+			const outputEntries = fs
+				.readFileSync("output.json", "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line));
+			expect(outputEntries).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						type: "autoconfig",
+						summary: expect.objectContaining({
+							adapterId: "static-package-app",
+							deployMode: "no-write",
+							projectKind: "static-assets",
+							sourceCategory: "package-app",
+						}),
+					}),
+					expect.objectContaining({
+						type: "deploy",
+						auto_config_adapter_id: "static-package-app",
+						auto_config_deploy_mode: "no-write",
+						auto_config_project_kind: "static-assets",
+						auto_config_source_category: "package-app",
+						live_url: "https://test-name.test-sub-domain.workers.dev",
+					}),
+				])
+			);
+		});
+
+		it("should reject gated static package app deploys when the build output has no index.html", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("app", { recursive: true });
+			fs.writeFileSync(
+				"app/package.json",
+				JSON.stringify({
+					name: "vite-app",
+					scripts: { build: "vite build" },
+					devDependencies: { vite: "7.0.0" },
+				})
+			);
+
+			await expect(
+				runWrangler(
+					"deploy app --experimental-auto-config-static-assets --name test-name --compatibility-date 2024-01-01"
+				)
+			).rejects.toThrow(
+				"Static app auto-configuration expected the build output to contain an index.html file."
+			);
+			expect(runCustomBuildCommand).toHaveBeenCalledWith(
+				"npm run build",
+				path.resolve("app"),
+				"[build]"
+			);
+			expect(fs.existsSync("app/wrangler.jsonc")).toBe(false);
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+		});
+
+		it("should deploy a named HTML file at root and at its original filename", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("landing.html", "<html>landing</html>");
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+			await runWrangler(
+				"deploy landing.html --name test-name --compatibility-date 2024-01-01",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			expect(bodies).toEqual([
+				{
+					manifest: {
+						"/index.html": {
+							hash: expect.any(String),
+							size: 20,
+						},
+						"/landing.html": {
+							hash: expect.any(String),
+							size: 20,
+						},
+					},
+				},
+			]);
+		});
+
+		it("should not upload Wrangler temp files or output JSON when deploying the current directory as assets", async ({
+			expect,
+		}) => {
+			fs.mkdirSync(path.join(".wrangler", "tmp", "deploy-test"), {
+				recursive: true,
+			});
+			fs.writeFileSync("index.html", "<html>site</html>");
+			fs.writeFileSync(
+				path.join(".wrangler", "tmp", "deploy-test", "no-op-worker.js"),
+				"export default {};"
+			);
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+
+			await runWrangler(
+				"deploy . --name test-name --compatibility-date 2024-01-01",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			expect(bodies).toEqual([
+				{
+					manifest: {
+						"/index.html": {
+							hash: expect.any(String),
+							size: 17,
+						},
+					},
+				},
+			]);
+			expect(std.warn).toContain(
+				"Ignoring output.json because WRANGLER_OUTPUT_FILE_PATH points inside the assets directory."
+			);
+		});
+
+		it("should show a targeted error for Dockerfile targets in configured Containers projects", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				name: "test-name",
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+				durable_objects: {
+					bindings: [
+						{
+							name: "APP_CONTAINER",
+							class_name: "AppContainer",
+						},
+					],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["AppContainer"] }],
+				containers: [
+					{
+						name: "test-name",
+						class_name: "AppContainer",
+						image: "./Dockerfile",
+					},
+				],
+			});
+			fs.writeFileSync(
+				"index.js",
+				"export class AppContainer {}; export default {};"
+			);
+			fs.writeFileSync("Dockerfile", "FROM scratch");
+
+			await expect(runWrangler("deploy Dockerfile")).rejects.toThrow(
+				"This project is already configured for Containers. Run `wrangler deploy` to deploy the Worker and configured Dockerfile container."
+			);
+		});
+
+		it("should keep plain explicit Worker scripts on the existing deploy path without config", async ({
+			expect,
+		}) => {
+			const { runAutoConfig: runAutoConfigSpy } =
+				await import("@cloudflare/autoconfig");
+
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedEntry: "var foo = 100;",
+				expectedCompatibilityDate: "2024-01-01",
+			});
+			mockSubDomainRequest();
+
+			await runWrangler(
+				"deploy index.js --name test-name --compatibility-date 2024-01-01"
+			);
+
+			expect(runAutoConfigSpy).not.toHaveBeenCalled();
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should deploy the generated Express JS wrapper after direct explicit-target auto-config", async ({
+			expect,
+		}) => {
+			vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+			mockConfirm(
+				{
+					text: "Do you want to modify these settings?",
+					options: { defaultValue: false },
+					result: false,
+				},
+				{ text: "Proceed with setup?", result: true }
+			);
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "express-direct-js",
+					dependencies: { express: "5.1.0" },
+				})
+			);
+			fs.writeFileSync(
+				"server.js",
+				dedent`
+					const app = { listen(_port) {} };
+					app.listen(8787);
+				`
+			);
+			let uploadedEntry: string | null = null;
+			mockUploadAndCaptureEntry((entry) => {
+				uploadedEntry = entry;
+			});
+			mockSubDomainRequest();
+
+			await runWrangler(
+				"deploy server.js --name test-name --compatibility-date 2024-01-01",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: "output.json",
+				}
+			);
+
+			expect(
+				JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"))
+			).toMatchObject({
+				main: "src/worker.js",
+			});
+			expect(uploadedEntry).toContain("httpServerHandler");
+			expect(uploadedEntry).toContain("8787");
+			expect(std.out).toContain("Project Type: Express Node HTTP server");
+			expect(std.out).toContain("Uploaded test-name");
+
+			const outputEntries = fs
+				.readFileSync("output.json", "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line));
+			expect(outputEntries).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						type: "autoconfig",
+						summary: expect.objectContaining({
+							adapterId: "express-node-http-server",
+							deployMode: "persistent",
+							projectKind: "node-http-server",
+							sourceCategory: "worker-script",
+						}),
+					}),
+					expect.objectContaining({
+						type: "deploy",
+						auto_config_adapter_id: "express-node-http-server",
+						auto_config_deploy_mode: "persistent",
+						auto_config_project_kind: "node-http-server",
+						auto_config_source_category: "worker-script",
+						live_url: "https://test-name.test-sub-domain.workers.dev",
+					}),
+				])
+			);
+		});
+
+		it("should deploy the generated Express TS wrapper after direct explicit-target auto-config", async ({
+			expect,
+		}) => {
+			vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+			mockConfirm(
+				{
+					text: "Do you want to modify these settings?",
+					options: { defaultValue: false },
+					result: false,
+				},
+				{ text: "Proceed with setup?", result: true }
+			);
+			fs.mkdirSync("src", { recursive: true });
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "express-direct-ts",
+					dependencies: { express: "5.1.0" },
+				})
+			);
+			fs.writeFileSync(
+				"tsconfig.json",
+				JSON.stringify({ compilerOptions: {} })
+			);
+			fs.writeFileSync(
+				"src/index.ts",
+				dedent`
+					const app = { listen(_port: number) {} };
+					app.listen(8788);
+				`
+			);
+			let uploadedEntry: string | null = null;
+			mockUploadAndCaptureEntry((entry) => {
+				uploadedEntry = entry;
+			});
+			mockSubDomainRequest();
+
+			await runWrangler(
+				"deploy src/index.ts --name test-name --compatibility-date 2024-01-01"
+			);
+
+			expect(
+				JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"))
+			).toMatchObject({
+				main: "src/worker.ts",
+			});
+			expect(uploadedEntry).toContain("httpServerHandler");
+			expect(uploadedEntry).toContain("8788");
+			expect(std.out).toContain("Project Type: Express Node HTTP server");
+			expect(std.out).toContain("Uploaded test-name");
 		});
 
 		it("should preserve exports on a module format worker", async ({
@@ -1276,3 +1812,86 @@ addEventListener('fetch', event => {});`
 		});
 	});
 });
+
+function mockUploadAndCaptureEntry(onEntry: (entry: string | null) => void) {
+	const handleVersionUpload = async ({ request }: { request: Request }) => {
+		const formBody = await request.formData();
+		const metadata = JSON.parse(await toString(formBody.get("metadata"))) as {
+			body_part?: string;
+			main_module?: string;
+		};
+		onEntry(
+			await serialize(
+				formBody.get(metadata.main_module ?? metadata.body_part ?? "index.js")
+			)
+		);
+
+		return HttpResponse.json(
+			createFetchResult({
+				id: "Galaxy-Class",
+				startup_time_ms: 100,
+				resources: {
+					script: {
+						etag: "etag98765",
+					},
+				},
+			})
+		);
+	};
+	const handleDeployment = () =>
+		HttpResponse.json(createFetchResult({ id: "Deployment-ID" }));
+
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/workers/services/:scriptName",
+			({ params }) => {
+				const tag = `tag:${params.scriptName}`;
+				return HttpResponse.json(
+					createFetchResult({
+						default_environment: {
+							script: { last_deployed_from: "wrangler", tag },
+						},
+					})
+				);
+			},
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+			() => HttpResponse.json(createFetchResult({ deployments: [] })),
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/workers/scripts/:scriptName/subdomain",
+			() =>
+				HttpResponse.json(
+					createFetchResult({ enabled: true, previews_enabled: true })
+				),
+			{ once: true }
+		),
+		http.post(
+			"*/accounts/:accountId/workers/scripts/:scriptName/subdomain",
+			() =>
+				HttpResponse.json(
+					createFetchResult({ enabled: true, previews_enabled: true })
+				),
+			{ once: true }
+		),
+		http.post(
+			"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+			handleVersionUpload
+		),
+		http.post(
+			"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+			handleDeployment
+		),
+		http.post(
+			"*/accounts/:accountId/workers/services/:scriptName/environments/:envName/versions",
+			handleVersionUpload
+		),
+		http.post(
+			"*/accounts/:accountId/workers/services/:scriptName/environments/:envName/deployments",
+			handleDeployment
+		)
+	);
+}

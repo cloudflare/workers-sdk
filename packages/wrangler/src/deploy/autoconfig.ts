@@ -1,8 +1,11 @@
-import { writeFileSync } from "node:fs";
+import { existsSync, statSync, writeFileSync } from "node:fs";
+import { copyFile, mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import {
 	configFileName,
 	getTodaysCompatDate,
+	removeDir,
 	UserError,
 	type Config,
 } from "@cloudflare/workers-utils";
@@ -21,6 +24,12 @@ import { logger } from "../logger";
 import { writeOutput } from "../output";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import type { ReadConfigCommandArgs } from "../config";
+import type {
+	AutoConfigDetails,
+	AutoConfigSummary,
+	DeployIntent,
+	SourceCategory,
+} from "@cloudflare/autoconfig";
 
 /**
  * CLI flags that affect the worker's deployment configuration.
@@ -65,7 +74,16 @@ type AutoConfigArgs = ReadConfigCommandArgs &
 		assets: string | undefined;
 		dryRun: boolean | undefined;
 		latest: boolean | undefined;
+		experimentalAutoConfigStaticAssets: boolean | undefined;
 	};
+
+export type AutoConfigDeploymentMetadata = {
+	adapterId?: string;
+	projectKind?: string;
+	deployMode?: "persistent" | "no-write";
+	sourceCategory?: SourceCategory;
+	cleanup?: () => Promise<void>;
+};
 
 /**
  * Runs autoconfig if applicable, including open-next delegation and interactive
@@ -76,8 +94,15 @@ type AutoConfigArgs = ReadConfigCommandArgs &
 export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	args: Args,
 	config: Config
-): Promise<{ config: Config; aborted: boolean }> {
-	const shouldRunAutoConfig =
+): Promise<{
+	config: Config;
+	aborted: boolean;
+	deploymentMetadata?: AutoConfigDeploymentMetadata;
+}> {
+	throwIfConfiguredContainerDockerfileTarget(args, config);
+
+	const deployIntent = getDeployIntent(args, config);
+	const shouldRunBareAutoConfig =
 		args.autoconfig &&
 		// If there is a positional parameter, an assets directory specified via --assets, or an
 		// explicit --config path then we don't want to run autoconfig since we assume that the
@@ -86,6 +111,16 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		!args.script &&
 		!args.assets &&
 		!args.config;
+	const shouldRunExplicitTargetAutoConfig =
+		args.autoconfig &&
+		deployIntent?.trigger === "explicit-target" &&
+		(deployIntent.targetKind === "file" ||
+			deployIntent.staticAssetsAutoConfig === true ||
+			shouldRunDefaultDirectoryAutoConfig(args, config, deployIntent)) &&
+		!args.config &&
+		!config.configPath;
+	const shouldRunAutoConfig =
+		shouldRunBareAutoConfig || shouldRunExplicitTargetAutoConfig;
 	if (
 		config.pages_build_output_dir &&
 		// Note: autoconfig handle Pages projects on its own, so we don't want to hard fail here if autoconfig run
@@ -104,12 +139,14 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		});
 
 		const autoConfigContext = createWranglerAutoConfigContext();
+		let deploymentMetadata: AutoConfigDeploymentMetadata | undefined;
 
 		try {
 			const details = await runAutoConfigDetection({
 				command: "wrangler deploy",
 				wranglerConfig: config,
 				context: autoConfigContext,
+				deployIntent,
 			});
 
 			if (details.framework?.id === "cloudflare-pages") {
@@ -137,6 +174,10 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				const autoConfigSummary = await runAutoConfigLogic(details, {
 					context: autoConfigContext,
 					dryRun: !!args.dryRun,
+					skipConfirmations: shouldSkipAutoConfigConfirmations(
+						details,
+						deployIntent
+					),
 				});
 
 				writeOutput({
@@ -146,11 +187,37 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 					summary: autoConfigSummary,
 				});
 
-				// If autoconfig worked, there should now be a new config file, and so we need to read config again
-				config = readConfig(args, {
-					hideWarnings: false,
-					useRedirectIfAvailable: true,
-				});
+				if (args.dryRun && details.configurationPlan) {
+					return {
+						config,
+						aborted: true,
+						deploymentMetadata: getDeploymentMetadata(
+							details,
+							autoConfigSummary
+						),
+					};
+				}
+
+				if (details.configurationPlan?.mode === "no-write") {
+					deploymentMetadata = await prepareNoWriteDeployment(
+						args,
+						config,
+						details,
+						autoConfigSummary
+					);
+				} else {
+					deploymentMetadata = getDeploymentMetadata(
+						details,
+						autoConfigSummary
+					);
+					applyPersistentAutoConfigDeployTarget(args, deployIntent, details);
+
+					// If autoconfig worked, there should now be a new config file, and so we need to read config again
+					config = readConfig(args, {
+						hideWarnings: false,
+						useRedirectIfAvailable: true,
+					});
+				}
 			}
 		} catch (error) {
 			sendAutoConfigProcessEndedMetricsEvent({
@@ -167,9 +234,245 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 			command: "wrangler deploy",
 			dryRun: !!args.dryRun,
 		});
+
+		return { config, aborted: false, deploymentMetadata };
 	}
 
 	return { config, aborted: false };
+}
+
+function throwIfConfiguredContainerDockerfileTarget<
+	Args extends AutoConfigArgs,
+>(args: Args, config: Config): void {
+	if (
+		!config.configPath ||
+		!args.path ||
+		!config.containers?.length ||
+		!isDockerfileName(args.path)
+	) {
+		return;
+	}
+
+	throw new UserError(
+		"This project is already configured for Containers. Run `wrangler deploy` to deploy the Worker and configured Dockerfile container. `wrangler deploy Dockerfile` treats Dockerfile as a Worker entrypoint and is not supported in configured projects.",
+		{
+			telemetryMessage:
+				"autoconfig configured containers dockerfile target unsupported",
+		}
+	);
+}
+
+function shouldSkipAutoConfigConfirmations(
+	details: AutoConfigDetails,
+	deployIntent: DeployIntent | undefined
+): boolean | undefined {
+	if (details.configurationPlan?.mode === "no-write") {
+		return true;
+	}
+
+	if (
+		isNonInteractiveOrCI() &&
+		deployIntent?.trigger === "explicit-target" &&
+		deployIntent.sourceCategory === "dockerfile" &&
+		details.adapterId === "dockerfile-container"
+	) {
+		return true;
+	}
+
+	return undefined;
+}
+
+function shouldRunDefaultDirectoryAutoConfig(
+	args: AutoConfigArgs,
+	config: Config,
+	deployIntent: DeployIntent | undefined
+): boolean {
+	// Preserve the existing interactive missing-name/date flow, which can write a
+	// persistent wrangler.jsonc for raw asset directories.
+	return (
+		deployIntent?.targetKind === "directory" &&
+		Boolean(args.name ?? config.name) &&
+		Boolean(args.latest || args.compatibilityDate || config.compatibility_date)
+	);
+}
+
+function applyPersistentAutoConfigDeployTarget<Args extends AutoConfigArgs>(
+	args: Args,
+	deployIntent: DeployIntent | undefined,
+	details: AutoConfigDetails
+): void {
+	if (
+		deployIntent?.trigger !== "explicit-target" ||
+		details.configurationPlan?.mode !== "persistent" ||
+		!deployIntent.originalTarget
+	) {
+		return;
+	}
+
+	const generatedConfig = details.configurationPlan.wranglerConfig;
+	const generatedConfigHasDeployTarget = Boolean(
+		generatedConfig?.main ||
+		generatedConfig?.assets ||
+		generatedConfig?.containers?.length
+	);
+	if (!generatedConfigHasDeployTarget) {
+		return;
+	}
+
+	if (args.path === deployIntent.originalTarget) {
+		args.path = undefined;
+	}
+	if (args.script === deployIntent.originalTarget) {
+		args.script = undefined;
+	}
+	if (args.assets === deployIntent.originalTarget) {
+		args.assets = undefined;
+	}
+
+	if (details.configurationPlan.wranglerConfig) {
+		args.config = path.join(details.projectPath, "wrangler.jsonc");
+	}
+}
+
+function getDeployIntent(
+	args: AutoConfigArgs,
+	config: Config
+): DeployIntent | undefined {
+	if (args.path && !config.configPath) {
+		const targetStats = statSync(args.path, { throwIfNoEntry: false });
+		const targetKind = targetStats?.isDirectory()
+			? "directory"
+			: targetStats?.isFile()
+				? "file"
+				: "missing";
+
+		return {
+			trigger: "explicit-target",
+			originalTarget: args.path,
+			targetKind,
+			currentDeployInterpretation:
+				args.assets === args.path
+					? "assets"
+					: args.script === args.path
+						? "script"
+						: "none",
+			sourceCategory: getSourceCategory(args.path, targetKind),
+			staticAssetsAutoConfig: args.experimentalAutoConfigStaticAssets,
+		};
+	}
+
+	if (!args.path && !args.script && !args.assets && !args.config) {
+		return {
+			trigger: "bare",
+			currentDeployInterpretation: "none",
+		};
+	}
+
+	return undefined;
+}
+
+function getSourceCategory(
+	target: string,
+	targetKind: DeployIntent["targetKind"]
+): SourceCategory {
+	if (targetKind === "directory") {
+		return "directory";
+	}
+	const extension = path.extname(target).toLowerCase();
+	if (extension === ".html") {
+		return "html-file";
+	}
+	if ([".js", ".mjs", ".cjs", ".ts"].includes(extension)) {
+		return "worker-script";
+	}
+	const name = path.basename(target);
+	if (isDockerfileName(name)) {
+		return "dockerfile";
+	}
+	return targetKind === "file" ? "static-file" : "unknown";
+}
+
+function isDockerfileName(target: string): boolean {
+	const name = path.basename(target);
+	return name === "Dockerfile" || name === "Containerfile";
+}
+
+async function prepareNoWriteDeployment<Args extends AutoConfigArgs>(
+	args: Args,
+	config: Config,
+	details: AutoConfigDetails,
+	summary: AutoConfigSummary
+): Promise<AutoConfigDeploymentMetadata> {
+	const metadata = getDeploymentMetadata(details, summary);
+	if (!details.deployTarget) {
+		return metadata;
+	}
+
+	args.name ??= config.name ?? details.workerName;
+	if (!args.latest && !args.compatibilityDate && !config.compatibility_date) {
+		args.compatibilityDate = getTodaysCompatDate();
+	}
+
+	switch (details.deployTarget.type) {
+		case "single-html-file": {
+			const assetsDirectory = await mkdtemp(
+				path.join(tmpdir(), "wrangler-single-file-site-")
+			);
+			const sourceBasename = path.basename(details.deployTarget.sourcePath);
+			await copyFile(
+				details.deployTarget.sourcePath,
+				path.join(assetsDirectory, "index.html")
+			);
+			if (sourceBasename !== "index.html") {
+				await copyFile(
+					details.deployTarget.sourcePath,
+					path.join(assetsDirectory, sourceBasename)
+				);
+			}
+			args.assets = assetsDirectory;
+			args.script = undefined;
+			args.path = undefined;
+			metadata.cleanup = async () => {
+				await removeDir(assetsDirectory);
+			};
+			return metadata;
+		}
+		case "assets-directory":
+			args.assets = details.deployTarget.assetsDirectory;
+			args.script = undefined;
+			args.path = undefined;
+			return metadata;
+		case "static-app-output": {
+			const indexHtml = path.join(
+				details.deployTarget.assetsDirectory,
+				"index.html"
+			);
+			if (!existsSync(indexHtml)) {
+				throw new UserError(
+					"Static app auto-configuration expected the build output to contain an index.html file. Check your build command or deploy the output directory explicitly with --assets.",
+					{ telemetryMessage: "autoconfig static app output missing" }
+				);
+			}
+			args.assets = details.deployTarget.assetsDirectory;
+			args.script = undefined;
+			args.path = undefined;
+			return metadata;
+		}
+	}
+
+	return metadata;
+}
+
+function getDeploymentMetadata(
+	details: AutoConfigDetails,
+	summary: AutoConfigSummary
+): AutoConfigDeploymentMetadata {
+	return {
+		adapterId: details.adapterId ?? summary.adapterId,
+		projectKind: details.projectKind ?? summary.projectKind,
+		deployMode: summary.deployMode,
+		sourceCategory: details.sourceCategory ?? summary.sourceCategory,
+	};
 }
 
 /**

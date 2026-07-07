@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as run from "@cloudflare/autoconfig";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
@@ -5,6 +6,7 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, assert, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { OutputEntry } from "../output";
 
@@ -23,9 +25,11 @@ vi.mock("../package-manager", async (importOriginal) => {
 
 describe("wrangler setup", () => {
 	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
 	runInTempDir();
 
 	afterEach(() => {
+		setIsTTY(true);
 		clearOutputFilePath();
 	});
 
@@ -137,6 +141,72 @@ describe("wrangler setup", () => {
 		expect(runSpy).toHaveBeenCalled();
 
 		expect(installSpy).not.toHaveBeenCalled();
+		expect(std.out).not.toContain("wrangler (devDependency)");
+	});
+
+	test("should use the detected package manager in the completion message", async ({
+		expect,
+	}) => {
+		await seed({
+			"public/index.html": `<h1>Hello World</h1>`,
+			"package.json": JSON.stringify({}),
+			"pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+		});
+
+		vi.spyOn(cliPackages, "installWrangler").mockImplementation(async () => {});
+
+		await runWrangler("setup --no-install-wrangler");
+
+		expect(std.out).toContain("You can now deploy with pnpm run deploy");
+	});
+
+	test("should setup Dockerfile Containers projects non-interactively with --yes", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		await seed({
+			Dockerfile: "FROM node:22\nEXPOSE 3000\n",
+			"package.json": JSON.stringify({ name: "container-project" }),
+		});
+
+		vi.spyOn(cliPackages, "installWrangler").mockImplementation(async () => {});
+		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
+
+		await runWrangler("setup --yes --no-install-wrangler");
+
+		const wranglerConfig = JSON.parse(await readFile("wrangler.jsonc", "utf8"));
+		expect(wranglerConfig).toMatchObject({
+			name: "container-project",
+			main: "src/worker.js",
+			containers: [
+				{
+					name: "container-project",
+					class_name: "AppContainer",
+					image: "./Dockerfile",
+					max_instances: 1,
+				},
+			],
+		});
+		expect(await readFile("src/worker.js", "utf8")).toContain('PORT: "3000"');
+		expect(std.out).toContain(
+			"🎉 Your project is now setup to deploy to Cloudflare"
+		);
+	});
+
+	test("should reject Dockerfile Containers setup non-interactively without --yes", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		await seed({
+			Dockerfile: "FROM node:22\nEXPOSE 3000\n",
+			"package.json": JSON.stringify({ name: "container-project" }),
+		});
+
+		await expect(runWrangler("setup --no-install-wrangler")).rejects.toThrow(
+			"Dockerfile-to-Containers auto-configuration in non-interactive sessions requires an explicit Dockerfile target or `wrangler setup --yes`."
+		);
+		expect(existsSync("wrangler.jsonc")).toBe(false);
+		expect(existsSync("src/worker.js")).toBe(false);
 	});
 
 	test("should output an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH", async ({
@@ -267,7 +337,7 @@ describe("wrangler setup", () => {
 				    ]
 				  }
 
-				✋  Autoconfig process run in dry-run mode, existing now.
+				✋  Autoconfig process run in dry-run mode, exiting now.
 				"
 			`);
 		});
