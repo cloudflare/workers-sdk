@@ -183,11 +183,20 @@ export class ProxyWorker implements DurableObject {
 					// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
 					// and that this error is stale since it was for a request to the old UserWorker
 					// so here we construct a newUserWorkerUrl so we can compare it to the (old) userWorkerUrl
+					// NOTE: compare .origin, not .href — userWorkerUrl carries the request's
+					// path+query (it is the request URL with protocol/host/port overridden)
+					// while urlFromParts() always yields origin + "/". An href comparison
+					// can therefore only match for requests to "/", misclassifying every
+					// other request's genuine network error as "UserWorker changed":
+					// failed GET/HEAD requests are silently parked in the retry queue
+					// (the client hangs) and non-GET requests receive a misleading
+					// "Your worker restarted mid-request" 503, with the underlying error
+					// never reported to the ProxyController.
 					const newUserWorkerUrl =
 						this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
 
 					// only report errors if the downstream proxy has NOT changed
-					if (userWorkerUrl.href === newUserWorkerUrl?.href) {
+					if (userWorkerUrl.origin === newUserWorkerUrl?.origin) {
 						void sendMessageToProxyController(this.env, {
 							type: "error",
 							error: {
