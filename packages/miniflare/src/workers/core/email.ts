@@ -167,9 +167,12 @@ export async function handleEmail(
 				const uuid = crypto.randomUUID().replaceAll("-", "");
 				return { messageId: `${uuid}@example.com` };
 			},
-			reply: async (
-				replyMessage: MiniflareEmailMessage
-			): Promise<EmailSendResult> => {
+			reply: async (replyMessage): Promise<EmailSendResult> => {
+				assert(
+					"from" in replyMessage && "to" in replyMessage,
+					"EmailReplyMessageBuilder is not currently supported"
+				);
+
 				if (
 					!(await isEmailReplyable(
 						parsedIncomingEmail,
@@ -191,7 +194,7 @@ export async function handleEmail(
 				}
 				const finalReply = await validateReply(
 					parsedIncomingEmail,
-					replyMessage
+					replyMessage as MiniflareEmailMessage
 				);
 
 				const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
