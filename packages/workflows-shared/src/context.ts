@@ -1088,6 +1088,12 @@ export class Context extends RpcTarget {
 					try {
 						let resolvedDelay: unknown;
 						if (typeof liveDelay === "function") {
+							// Park a default-delayed retry before invoking the user's
+							// delay function so a crash while the function is in flight
+							// still reschedules the step. The PQ table is append-only
+							// with a UNIQUE(action, entryType, hash) constraint, so this
+							// exact entry is reused as the retry entry below — it is
+							// never removed and re-added (that would violate UNIQUE).
 							// @ts-expect-error priorityQueue is initiated in init
 							await this.#engine.priorityQueue.add({
 								hash: priorityQueueHash,
@@ -1164,6 +1170,16 @@ export class Context extends RpcTarget {
 					// only static delays add here. The live wait below uses
 					// effectiveDuration regardless; the parked entry's timestamp only
 					// drives crash recovery.
+					//
+					// Known trade-off: for a dynamic delay the parked entry keeps the
+					// DEFAULT_RETRY_DELAY_MS placeholder timestamp set before the delay
+					// function ran (see the add above) — the UNIQUE(action, entryType,
+					// hash) constraint means it can't be overwritten in place with the
+					// computed value without a remove+re-add that would violate the
+					// constraint. So if the engine crashes mid-wait, recovery resumes
+					// the step at the placeholder delay rather than the computed one.
+					// This is accepted for local dev: the step still retries with the
+					// correct semantics, only the post-crash wait can be shorter.
 					if (typeof liveDelay !== "function") {
 						// @ts-expect-error priorityQueue is initiated in init
 						await this.#engine.priorityQueue.add({

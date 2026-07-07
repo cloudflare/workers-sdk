@@ -197,7 +197,7 @@ describe("Engine", () => {
 				"dynamic-delay-step",
 				{
 					retries: { limit: 3, delay: dynamicDelay, backoff: "constant" },
-				} as unknown as WorkflowStepConfig,
+				},
 				async () => {
 					attempts++;
 					if (attempts < 2) {

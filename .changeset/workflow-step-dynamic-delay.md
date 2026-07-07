@@ -1,5 +1,7 @@
 ---
 "wrangler": minor
+"@cloudflare/vite-plugin": minor
+"@cloudflare/vitest-pool-workers": patch
 "miniflare": minor
 ---
 
