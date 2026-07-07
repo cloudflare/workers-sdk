@@ -236,7 +236,7 @@ SECRET3=value3`
 				runWrangler(
 					`versions upload --name ${workerName} --secrets-file non-existent-file.json`
 				)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 
 		it("should fail when secrets file is neither valid JSON nor .env format", async ({
@@ -249,7 +249,7 @@ SECRET3=value3`
 				runWrangler(
 					`versions upload --name ${workerName} --secrets-file ${secretsFile}`
 				)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 	});
 
@@ -331,7 +331,8 @@ SECRET3=value3`
 				runWrangler(`versions upload --name ${workerName}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The following required secrets have not been set: API_KEY, DB_PASSWORD
-Use \`wrangler versions secret put <NAME>\` to set secrets before uploading.
+Use \`wrangler versions secret put <NAME>\` to set secrets before uploading,
+or supply them when uploading with \`wrangler versions upload --secrets-file <path-to-file>\`.
 See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.]`
 			);
 		});

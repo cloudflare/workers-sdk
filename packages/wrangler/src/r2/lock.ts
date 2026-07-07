@@ -145,9 +145,12 @@ export const r2BucketLockAddCommand = createCommand({
 		}
 
 		if (!name) {
-			throw new UserError("Must specify a rule name.", {
-				telemetryMessage: "r2 lock add missing rule name",
-			});
+			throw new UserError(
+				"Missing required rule name. Provide a name with --name <rule-name> or as a positional argument:\n  wrangler r2 bucket lock add <bucket> <name>",
+				{
+					telemetryMessage: "r2 lock add missing rule name",
+				}
+			);
 		}
 
 		const newRule: BucketLockRule = {
@@ -204,16 +207,19 @@ export const r2BucketLockAddCommand = createCommand({
 					};
 				} else {
 					throw new UserError(
-						`Days must be a positive number: ${retentionDays}`,
+						`The value for --retention-days must be a positive number, but received '${retentionDays}'.`,
 						{
 							telemetryMessage: "Retention days not a positive number.",
 						}
 					);
 				}
 			} else {
-				throw new UserError(`Days must be a number.`, {
-					telemetryMessage: "Retention days not a positive number.",
-				});
+				throw new UserError(
+					"The value for --retention-days must be a number. Retry with a numeric value (e.g. --retention-days 30).",
+					{
+						telemetryMessage: "Retention days not a positive number.",
+					}
+				);
 			}
 		} else if (retentionDate !== undefined) {
 			if (isValidDate(retentionDate)) {
@@ -225,7 +231,7 @@ export const r2BucketLockAddCommand = createCommand({
 				};
 			} else {
 				throw new UserError(
-					`Date must be a valid date in the YYYY-MM-DD format: ${String(retentionDate)}`,
+					`The value for --retention-date must be in YYYY-MM-DD format (e.g. 2025-12-31), but received '${String(retentionDate)}'.`,
 					{
 						telemetryMessage:
 							"Retention date not a valid date in the YYYY-MM-DD format.",
@@ -240,9 +246,12 @@ export const r2BucketLockAddCommand = createCommand({
 				type: "Indefinite",
 			};
 		} else {
-			throw new UserError(`Retention must be specified.`, {
-				telemetryMessage: "Lock retention not specified.",
-			});
+			throw new UserError(
+				"No retention specified. Use one of --retention-days <number>, --retention-date <YYYY-MM-DD>, or --retention-indefinite to set a retention.",
+				{
+					telemetryMessage: "Lock retention not specified.",
+				}
+			);
 		}
 		rules.push(newRule);
 		logger.log(`Adding lock rule '${name}' to bucket '${bucket}'...`);

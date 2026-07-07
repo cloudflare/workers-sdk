@@ -88,6 +88,7 @@ describe("pages deploy", () => {
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
 			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
@@ -120,6 +121,161 @@ describe("pages deploy", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`
 		);
+	});
+
+	it("should error if the specified project does not exist in non-interactive mode", async ({
+		expect,
+	}) => {
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/pages/projects/:projectName",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.projectName).toEqual("non-existent-project");
+
+					return HttpResponse.json(
+						{
+							success: false,
+							errors: [
+								{
+									code: 8000007,
+									message:
+										"Project not found. The specified project name does not match any of your existing projects.",
+								},
+							],
+							result: null,
+						},
+						{ status: 404 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await expect(
+			runWrangler("pages deploy public --project-name non-existent-project")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: The Pages project "non-existent-project" does not exist.
+			Maybe you intended to deploy a Worker project instead? Workers are the recommended way to deploy all new projects. If so, run \`wrangler deploy\`.
+
+			If you are targeting an existing Pages project, verify that the project name is correct and that it exists in your account (the account in use has id some-account-id).
+
+			Otherwise, if you are trying to create a new Pages project, start by running: \`wrangler pages project create\` (though we strongly recommend using Workers instead).]
+		`
+		);
+	});
+
+	it("should include the account name in the error when it is available in cache", async ({
+		expect,
+	}) => {
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+		saveToConfigCache("wrangler-account.json", {
+			account: { id: "some-account-id", name: "My Test Account" },
+		});
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/pages/projects/:projectName",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.projectName).toEqual("non-existent-project");
+
+					return HttpResponse.json(
+						{
+							success: false,
+							errors: [
+								{
+									code: 8000007,
+									message:
+										"Project not found. The specified project name does not match any of your existing projects.",
+								},
+							],
+							result: null,
+						},
+						{ status: 404 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await expect(
+			runWrangler("pages deploy public --project-name non-existent-project")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: The Pages project "non-existent-project" does not exist.
+			Maybe you intended to deploy a Worker project instead? Workers are the recommended way to deploy all new projects. If so, run \`wrangler deploy\`.
+
+			If you are targeting an existing Pages project, verify that the project name is correct and that it exists in your account (the account in use is "My Test Account" with id some-account-id).
+
+			Otherwise, if you are trying to create a new Pages project, start by running: \`wrangler pages project create\` (though we strongly recommend using Workers instead).]
+		`
+		);
+	});
+
+	it("should suggest `wrangler deploy` if a Workers config is detected when deploying to a non-existent Pages project", async ({
+		expect,
+	}) => {
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+		writeWranglerConfig({ name: "my-worker" });
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/pages/projects/:projectName",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.projectName).toEqual("non-existent-project");
+
+					return HttpResponse.json(
+						{
+							success: false,
+							errors: [
+								{
+									code: 8000007,
+									message:
+										"Project not found. The specified project name does not match any of your existing projects.",
+								},
+							],
+							result: null,
+						},
+						{ status: 404 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		let errorMessage = "";
+		try {
+			await runWrangler(
+				"pages deploy public --project-name non-existent-project"
+			);
+			expect.unreachable("Expected command to throw");
+		} catch (e) {
+			errorMessage = (e as Error).message;
+		}
+
+		expect(errorMessage).toContain(
+			'The Pages project "non-existent-project" does not exist.'
+		);
+		expect(errorMessage).toMatch(
+			/A configuration file was found at .+wrangler\.toml that does not appear to be for a Pages project/
+		);
+		expect(errorMessage).toContain(
+			"Did you mean to run `wrangler deploy` (to deploy a Worker) instead?"
+		);
+		expect(errorMessage).toContain(
+			"If you are targeting an existing Pages project"
+		);
+		expect(errorMessage).toContain(
+			"Otherwise, if you are trying to create a new Pages project"
+		);
+
+		// The error already mentions the config file, so the warning should not be emitted
+		expect(std.warn).not.toContain("We detected a configuration file");
 	});
 
 	it("should error if the [--config] command line arg was specififed", async ({

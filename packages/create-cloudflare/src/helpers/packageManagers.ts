@@ -2,6 +2,7 @@ import { existsSync, rmSync } from "node:fs";
 import nodePath from "node:path";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";
 import {
@@ -105,21 +106,7 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 
 	const nodeModulesPath = nodePath.join(ctx.project.path, "node_modules");
 	if (existsSync(nodeModulesPath)) {
-		/* eslint-disable-next-line workers-sdk/no-direct-recursive-rm --
-		   Note: this is intentionally inlined rather than importing `removeDirSync`
-		   from `@cloudflare/workers-utils`. That package's barrel export pulls in CJS
-		   dependencies (e.g. `xdg-app-paths`) that break when Vite bundles code into
-		   ESM — the shimmed `require()` calls throw "Dynamic require of 'path' is not
-		   supported". While the production build (esbuild → CJS) would handle this
-		   fine, the e2e tests import this file through Vitest which uses Vite's bundler.
-		   Keep aligned with `removeDirSync()` in `packages/workers-utils/src/fs-helpers.ts`.
-		*/
-		rmSync(nodeModulesPath, {
-			recursive: true,
-			force: true,
-			maxRetries: 5,
-			retryDelay: 100,
-		});
+		removeDirSync(nodeModulesPath);
 	}
 
 	const lockfilePath = nodePath.join(ctx.project.path, "package-lock.json");

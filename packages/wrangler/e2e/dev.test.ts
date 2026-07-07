@@ -758,8 +758,11 @@ describe.each([{ cmd: "wrangler dev" }])(
 // per-connection socket of the test's `nodeNet.Server`. Without an `error`
 // listener Node escalates it to `uncaughtException`, which Vitest catches as
 // an unhandled error and fails the run even though the test itself passed.
+// The same teardown race can also surface as EPIPE, if the server's initial
+// handshake write (e.g. `MYSQL_INITIAL_HANDSHAKE_PACKET`) lands after the
+// other end has already been torn down.
 function ignoreEconnreset(err: NodeJS.ErrnoException): void {
-	if (err.code !== "ECONNRESET") {
+	if (err.code !== "ECONNRESET" && err.code !== "EPIPE") {
 		throw err;
 	}
 }
@@ -1448,7 +1451,7 @@ describe("custom builds", () => {
 		// regression: https://github.com/cloudflare/workers-sdk/issues/6876
 		await expect(
 			worker.readUntil(/\[custom build\] Running/, 5_000)
-		).rejects.toThrowError();
+		).rejects.toThrow();
 
 		// now check assets are still fetchable, even after updates
 
@@ -2085,7 +2088,7 @@ describe("watch mode", () => {
 				await worker.waitForReload();
 
 				// The three changes should be debounced, so only one reload should occur
-				await expect(worker.waitForReload(5_000)).rejects.toThrowError();
+				await expect(worker.waitForReload(5_000)).rejects.toThrow();
 
 				// now check assets are still fetchable
 				await expect(fetchText(url)).resolves.toBe("Hello from Assets");

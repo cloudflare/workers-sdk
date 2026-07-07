@@ -64,12 +64,11 @@ function isFutureTimestamp(timestamp: string): boolean {
 export function getCachedTemporaryPreviewAccount(
 	storage: TemporaryAccountStorage
 ): TemporaryPreviewAccount | undefined {
-	let temporaryPreviewAccount: TemporaryPreviewAccount | undefined;
-	try {
-		temporaryPreviewAccount = storage.read();
-	} catch {
-		return undefined;
-	}
+	// `storage.read()` returns `undefined` for the empty state per the
+	// `ConfigStorage<T>` contract. Genuine errors (e.g. filesystem
+	// permission failures) propagate so the user sees them rather than
+	// silently being treated as "no temporary account cached".
+	const temporaryPreviewAccount = storage.read();
 
 	if (!temporaryPreviewAccount) {
 		return undefined;

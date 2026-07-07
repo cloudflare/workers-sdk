@@ -52,6 +52,11 @@ describe("experimental_getWranglerCommands", () => {
 			    "describe": "Install Cloudflare skills for detected AI coding agents before running the command",
 			    "type": "boolean",
 			  },
+			  "profile": {
+			    "describe": "Use a specific auth profile",
+			    "requiresArg": true,
+			    "type": "string",
+			  },
 			  "v": {
 			    "alias": "version",
 			    "describe": "Show version number",

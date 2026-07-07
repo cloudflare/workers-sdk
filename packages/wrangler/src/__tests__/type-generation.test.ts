@@ -211,7 +211,7 @@ describe("validateEnvInterfaceNames", () => {
 	});
 
 	it("should throw for reserved name Env", ({ expect }) => {
-		expect(() => validateEnvInterfaceNames(["env"])).toThrowError(
+		expect(() => validateEnvInterfaceNames(["env"])).toThrow(
 			/Environment name "env" converts to reserved interface name "Env"/
 		);
 	});
@@ -222,7 +222,7 @@ describe("validateEnvInterfaceNames", () => {
 		// Both staging-env and staging_env convert to StagingEnv
 		expect(() =>
 			validateEnvInterfaceNames(["staging-env", "staging_env"])
-		).toThrowError(
+		).toThrow(
 			/Environment names "staging-env" and "staging_env" both convert to interface name "StagingEnv"/
 		);
 	});
@@ -230,9 +230,7 @@ describe("validateEnvInterfaceNames", () => {
 	it("should throw when names with different separators collide", ({
 		expect,
 	}) => {
-		expect(() =>
-			validateEnvInterfaceNames(["my-prod", "my_prod"])
-		).toThrowError(
+		expect(() => validateEnvInterfaceNames(["my-prod", "my_prod"])).toThrow(
 			/Environment names "my-prod" and "my_prod" both convert to interface name "MyProdEnv"/
 		);
 	});
@@ -251,7 +249,7 @@ describe("throwMissingBindingError", () => {
 				fieldName: "binding",
 				index: 0,
 			})
-		).toThrowError(
+		).toThrow(
 			'Processing wrangler.json configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {"id":"1234"}.'
 		);
 	});
@@ -268,7 +266,7 @@ describe("throwMissingBindingError", () => {
 				fieldName: "binding",
 				index: 2,
 			})
-		).toThrowError(
+		).toThrow(
 			'Processing wrangler.json configuration:\n  - "env.production" environment configuration\n    - "env.production.d1_databases[2]" bindings should have a string "binding" field but got {"database_id":"abc123"}.'
 		);
 	});
@@ -282,7 +280,7 @@ describe("throwMissingBindingError", () => {
 				envName: TOP_LEVEL_ENV_NAME,
 				fieldName: "binding",
 			})
-		).toThrowError(
+		).toThrow(
 			'Processing wrangler.json configuration:\n  - "ai" bindings should have a string "binding" field but got {}.'
 		);
 	});
@@ -297,7 +295,7 @@ describe("throwMissingBindingError", () => {
 				fieldName: "binding",
 				index: 0,
 			})
-		).toThrowError(
+		).toThrow(
 			'Processing Wrangler configuration configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {}.'
 		);
 	});
@@ -312,7 +310,7 @@ describe("throwMissingBindingError", () => {
 				fieldName: "name",
 				index: 1,
 			})
-		).toThrowError(
+		).toThrow(
 			'Processing wrangler.json configuration:\n  - "env.staging" environment configuration\n    - "env.staging.unsafe[1]" bindings should have a string "name" field but got {"type":"ratelimit"}.'
 		);
 	});
@@ -2652,7 +2650,7 @@ describe("generate types - CLI", () => {
 
 			await expect(
 				runWrangler("types --include-runtime=false")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/Processing wrangler\.jsonc configuration:\n\s+- "env\.staging" environment configuration\n\s+- "env\.staging\.kv_namespaces\[0\]" bindings should have a string "binding" field but got \{\}/
 			);
 		});
@@ -2674,7 +2672,7 @@ describe("generate types - CLI", () => {
 
 			await expect(
 				runWrangler("types --include-runtime=false")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/Processing wrangler\.jsonc configuration:\n\s+- "r2_buckets\[0\]" bindings should have a string "binding" field/
 			);
 		});
@@ -3232,7 +3230,7 @@ describe("generate types - CLI", () => {
 
 			await expect(
 				runWrangler("types --include-runtime=false")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/Environment names "my-env" and "my_env" both convert to interface name "MyEnv"/
 			);
 		});
@@ -3290,7 +3288,7 @@ describe("generate types - CLI", () => {
 					"utf-8"
 				);
 
-				await expect(runWrangler("types --env-interface")).rejects.toThrowError(
+				await expect(runWrangler("types --env-interface")).rejects.toThrow(
 					`Not enough arguments following: env-interface`
 				);
 			});
@@ -3318,7 +3316,7 @@ describe("generate types - CLI", () => {
 				for (const interfaceName of invalidInterfaceNames) {
 					await expect(
 						runWrangler(`types --env-interface '${interfaceName}'`)
-					).rejects.toThrowError(
+					).rejects.toThrow(
 						/The provided env-interface value .*? does not satisfy the validation regex/
 					);
 				}
@@ -3344,7 +3342,7 @@ describe("generate types - CLI", () => {
 
 				await expect(
 					runWrangler("types --env-interface CloudflareEnv")
-				).rejects.toThrowError(
+				).rejects.toThrow(
 					"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
 				);
 			});
@@ -3408,7 +3406,7 @@ describe("generate types - CLI", () => {
 				];
 
 				for (const path of invalidPaths) {
-					await expect(runWrangler(`types ${path}`)).rejects.toThrowError(
+					await expect(runWrangler(`types ${path}`)).rejects.toThrow(
 						/The provided output path '.*?' does not point to a declaration file/
 					);
 				}
@@ -3427,7 +3425,7 @@ describe("generate types - CLI", () => {
 
 				await expect(
 					runWrangler("types --include-env=false --include-runtime=false")
-				).rejects.toThrowError(
+				).rejects.toThrow(
 					"At least one of --include-env or --include-runtime must be enabled."
 				);
 			});
@@ -3716,6 +3714,78 @@ describe("generate types - CLI", () => {
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
+	});
+
+	describe("declarative Durable Object `exports`", () => {
+		it("populates `durableNamespaces` from live `exports` entries (including unbound + `expecting-transfer`) and excludes tombstones", async ({
+			expect,
+		}) => {
+			// `UnboundDO` and `IncomingDO` are reachable only through `ctx.exports`.
+			fs.writeFileSync(
+				"./index.ts",
+				`import { DurableObject } from "cloudflare:workers";
+export class BoundDO extends DurableObject {}
+export class UnboundDO extends DurableObject {}
+export class IncomingDO extends DurableObject {}
+export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-exports-types",
+					main: "./index.ts",
+					durable_objects: {
+						bindings: [{ name: "BOUND_DO", class_name: "BoundDO" }],
+					},
+					exports: {
+						BoundDO: { type: "durable-object", storage: "sqlite" },
+						UnboundDO: { type: "durable-object", storage: "sqlite" },
+						IncomingDO: {
+							type: "durable-object",
+							state: "expecting-transfer",
+							storage: "sqlite",
+							transfer_from: "source-worker",
+						},
+						// Tombstones must not appear in `durableNamespaces`.
+						OldGone: { type: "durable-object", state: "deleted" },
+						LegacyName: {
+							type: "durable-object",
+							state: "renamed",
+							renamed_to: "BoundDO",
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				interface __BaseEnv_Env {
+					BOUND_DO: DurableObjectNamespace<import("./index").BoundDO>;
+				}
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						mainModule: typeof import("./index");
+						durableNamespaces: "BoundDO" | "UnboundDO" | "IncomingDO";
+					}
+					interface Env extends __BaseEnv_Env {}
+				}
+				interface Env extends __BaseEnv_Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
 	});
 });
 

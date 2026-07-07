@@ -84,12 +84,6 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. If set to none, the Worker will be deployed without building or updating any Containers.",
 			choices: ["immediate", "gradual", "none"] as const,
 		},
-		strict: {
-			describe:
-				"Enables strict mode for the deploy command, this prevents deployments to occur when there are even small potential risks.",
-			type: "boolean",
-			default: false,
-		},
 		autoconfig: {
 			describe:
 				"Enables framework detection and automatic configuration when deploying",
@@ -148,18 +142,14 @@ export const deployCommand = createCommand({
 
 			const buildResult = await buildWorker(buildProps, config);
 
-			const { sourceMapSize, versionId, workerTag, targets } = await deploy(
-				props,
-				config,
-				buildResult,
-				{
+			const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
+				await deploy(props, config, buildResult, {
 					syncWorkersSite,
 					getNormalizedContainerOptions,
 					buildContainer,
 					deployContainers,
 					analyseBundle,
-				}
-			);
+				});
 
 			writeOutput({
 				type: "deploy",
@@ -178,6 +168,7 @@ export const deployCommand = createCommand({
 					usesTypeScript: /\.tsx?$/.test(props.entry.file),
 					durationMs: Date.now() - beforeUpload,
 					sourceMapSize,
+					...assetUploadStats,
 				},
 				{
 					sendMetrics: config.send_metrics,

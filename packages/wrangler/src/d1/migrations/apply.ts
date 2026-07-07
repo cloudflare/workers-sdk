@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { createCommand } from "../../core/create-command";
@@ -8,6 +7,7 @@ import { logger } from "../../logger";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
+	buildMigrationQuery,
 	getMigrationsPath,
 	getUnappliedMigrations,
 	initMigrationsTable,
@@ -146,14 +146,11 @@ Your database may not be available to serve requests during the migration, conti
 		}
 
 		for (const migration of unappliedMigrations) {
-			let query = fs.readFileSync(
-				`${migrationsPath}/${migration.name}`,
-				"utf8"
-			);
-			query += `
-								INSERT INTO ${migrationsConfig.migrationsTableName} (name)
-								values ('${migration.name}');
-						`;
+			const query = buildMigrationQuery({
+				migrationName: migration.name,
+				migrationsPath,
+				migrationsTableName: migrationsConfig.migrationsTableName,
+			});
 
 			let success = true;
 			let errorNotes: Array<string> = [];

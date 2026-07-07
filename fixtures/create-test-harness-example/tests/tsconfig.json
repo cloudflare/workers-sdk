@@ -1,0 +1,14 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"module": "esnext",
+		"noEmit": true,
+		"types": ["@cloudflare/workers-types/latest", "node"]
+	},
+	"include": [
+		"../playwright.config.ts",
+		"../workers/*/worker-configuration.d.ts",
+		"**/*.ts"
+	],
+	"exclude": []
+}

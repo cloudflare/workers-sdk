@@ -64,6 +64,7 @@ async function createDraftWorker({
 					},
 					modules: [],
 					migrations: undefined,
+					exports: undefined,
 					compatibility_date: undefined,
 					compatibility_flags: undefined,
 					keepVars: false, // this doesn't matter since it's a new script anyway
@@ -357,11 +358,7 @@ export const secretListCommand = createCommand({
 		let secrets: Awaited<ReturnType<typeof fetchSecrets>>;
 
 		try {
-			secrets = await fetchSecrets(
-				{ ...config, name: scriptName },
-				accountId,
-				args.env
-			);
+			secrets = await fetchSecrets(config, scriptName, accountId, args.env);
 		} catch (e) {
 			if (isWorkerNotFoundError(e)) {
 				throw new UserError(

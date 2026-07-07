@@ -46,7 +46,14 @@ import type {
 	// TODO: re-enable when workflow bindings return.
 	// WorkflowBinding,
 } from "./bindings";
-import type { DurableObjectExport } from "./exports";
+import type {
+	DurableObjectDeletedExport,
+	DurableObjectExpectingTransferExport,
+	DurableObjectCreatedExport,
+	DurableObjectRenamedExport,
+	DurableObjectTransferredExport,
+	WorkerEntrypointExport,
+} from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
 	FetchTrigger,
@@ -103,11 +110,18 @@ type Binding =
 type Trigger = FetchTrigger | QueueConsumerTrigger | ScheduledTrigger;
 
 /**
- * Union of all export definitions accepted in `exports`.
+ * Union of all export definitions accepted in `exports`. Worker entries
+ * configure WorkerEntrypoint exports. Durable Object entries configure live
+ * classes and tombstone lifecycle operations.
  */
-type Export = DurableObjectExport;
+type Export =
+	| DurableObjectCreatedExport
+	| DurableObjectDeletedExport
+	| DurableObjectRenamedExport
+	| DurableObjectTransferredExport
+	| DurableObjectExpectingTransferExport
+	| WorkerEntrypointExport;
 // TODO: support Workflows
-// type Export = DurableObjectExport | WorkflowExport;
 
 /**
  * Worker configuration. This is the input shape passed to
@@ -226,6 +240,8 @@ export interface UserConfig {
 	cache?: {
 		/** If cache is enabled for this Worker. */
 		enabled: boolean;
+		/** Whether cached assets may be reused across Worker versions. */
+		crossVersionCache?: boolean;
 	};
 
 	/**
@@ -381,19 +397,14 @@ export interface UserConfig {
 	/**
 	 * Configuration for named exports declared by the Worker. Each entry's
 	 * key is the exported class name; the value configures the export.
-	 * Construct entries with `exports.durableObject(...)` or
-	 * `exports.workflow(...)`.
 	 *
-	 * Two export kinds are supported:
+	 * Only one export kind is currently supported:
 	 *
-	 * - `durable-object`: declares a Durable Object class defined by this
-	 *   Worker. For more information about Durable Objects, see the
-	 *   documentation at
-	 *   https://developers.cloudflare.com/workers/learning/using-durable-objects
-	 *
-	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
-	 *
-	 * - `workflow`: declares a Workflow defined by this Worker.
+	 * - Construct entries with `exports.durableObject(...)`.
+	 * - Declares Durable Object classes exported from this Worker.
+	 *   For more information about Durable Objects, see the documentation at
+	 *   https://developers.cloudflare.com/workers/learning/using-durable-objects.
+	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
 	 */
 	exports?: Record<string, Export>;
 }

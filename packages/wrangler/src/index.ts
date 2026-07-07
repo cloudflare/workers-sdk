@@ -22,6 +22,12 @@ import { aiSearchCreateCommand } from "./ai-search/create";
 import { aiSearchDeleteCommand } from "./ai-search/delete";
 import { aiSearchGetCommand } from "./ai-search/get";
 import { aiSearchNamespace } from "./ai-search/index";
+import { aiSearchJobsCancelCommand } from "./ai-search/jobs/cancel";
+import { aiSearchJobsCreateCommand } from "./ai-search/jobs/create";
+import { aiSearchJobsGetCommand } from "./ai-search/jobs/get";
+import { aiSearchJobsNamespace } from "./ai-search/jobs/index";
+import { aiSearchJobsListCommand } from "./ai-search/jobs/list";
+import { aiSearchJobsLogsCommand } from "./ai-search/jobs/logs";
 import { aiSearchListCommand } from "./ai-search/list";
 import { aiSearchNamespaceCreateCommand } from "./ai-search/namespace/create";
 import { aiSearchNamespaceDeleteCommand } from "./ai-search/namespace/delete";
@@ -170,6 +176,42 @@ import { emailSendingSendCommand } from "./email-routing/sending/send";
 import { emailSendingSendRawCommand } from "./email-routing/sending/send-raw";
 import { emailSendingSettingsCommand } from "./email-routing/sending/settings";
 import { emailRoutingSettingsCommand } from "./email-routing/settings";
+import { flagshipAppsCreateCommand } from "./flagship/apps/create";
+import { flagshipAppsDeleteCommand } from "./flagship/apps/delete";
+import { flagshipAppsGetCommand } from "./flagship/apps/get";
+import { flagshipAppsListCommand } from "./flagship/apps/list";
+import { flagshipAppsUpdateCommand } from "./flagship/apps/update";
+import { flagshipFlagsChangelogCommand } from "./flagship/flags/changelog";
+import { flagshipFlagsCreateCommand } from "./flagship/flags/create";
+import { flagshipFlagsDeleteCommand } from "./flagship/flags/delete";
+import {
+	flagshipFlagsDisableCommand,
+	flagshipFlagsEnableCommand,
+} from "./flagship/flags/enable";
+import { flagshipFlagsEvaluateCommand } from "./flagship/flags/evaluate";
+import { flagshipFlagsGetCommand } from "./flagship/flags/get";
+import { flagshipFlagsListCommand } from "./flagship/flags/list";
+import { flagshipFlagsRolloutCommand } from "./flagship/flags/rollout";
+import { flagshipFlagsRulesDeleteCommand } from "./flagship/flags/rules/delete";
+import { flagshipFlagsRulesListCommand } from "./flagship/flags/rules/list";
+import { flagshipFlagsRulesReorderCommand } from "./flagship/flags/rules/reorder";
+import { flagshipFlagsRulesUpdateCommand } from "./flagship/flags/rules/update";
+import { flagshipFlagsSetCommand } from "./flagship/flags/set";
+import { flagshipFlagsSplitCommand } from "./flagship/flags/split";
+import { flagshipFlagsUpdateCommand } from "./flagship/flags/update";
+import {
+	flagshipAppsDeleteAlias,
+	flagshipAppsListAlias,
+	flagshipAppsNamespace,
+	flagshipFlagsChangelogAlias,
+	flagshipFlagsDeleteAlias,
+	flagshipFlagsEvaluateAlias,
+	flagshipFlagsGetAlias,
+	flagshipFlagsListAlias,
+	flagshipFlagsNamespace,
+	flagshipFlagsRulesNamespace,
+	flagshipNamespace,
+} from "./flagship/index";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -427,12 +469,20 @@ import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
 import {
+	authKeyringCommand,
 	authNamespace,
 	authTokenCommand,
 	loginCommand,
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
+import {
+	authActivateCommand,
+	authCreateCommand,
+	authDeactivateCommand,
+	authDeleteCommand,
+	authListCommand,
+} from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
@@ -553,6 +603,11 @@ export function createCLIParser(argv: string[]) {
 			type: "boolean",
 			default: false,
 		},
+		profile: {
+			describe: "Use a specific auth profile",
+			type: "string",
+			requiresArg: true,
+		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -629,7 +684,16 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "env-file", "help", "install-skills", "version"],
+		[
+			"config",
+			"cwd",
+			"env",
+			"env-file",
+			"help",
+			"install-skills",
+			"profile",
+			"version",
+		],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 
@@ -1491,6 +1555,127 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("hyperdrive");
 
+	// flagship
+	registry.define([
+		{ command: "wrangler flagship", definition: flagshipNamespace },
+		{ command: "wrangler flagship apps", definition: flagshipAppsNamespace },
+		{
+			command: "wrangler flagship apps create",
+			definition: flagshipAppsCreateCommand,
+		},
+		{
+			command: "wrangler flagship apps list",
+			definition: flagshipAppsListCommand,
+		},
+		{ command: "wrangler flagship apps ls", definition: flagshipAppsListAlias },
+		{
+			command: "wrangler flagship apps get",
+			definition: flagshipAppsGetCommand,
+		},
+		{
+			command: "wrangler flagship apps update",
+			definition: flagshipAppsUpdateCommand,
+		},
+		{
+			command: "wrangler flagship apps delete",
+			definition: flagshipAppsDeleteCommand,
+		},
+		{
+			command: "wrangler flagship apps rm",
+			definition: flagshipAppsDeleteAlias,
+		},
+		{ command: "wrangler flagship flags", definition: flagshipFlagsNamespace },
+		{
+			command: "wrangler flagship flags create",
+			definition: flagshipFlagsCreateCommand,
+		},
+		{
+			command: "wrangler flagship flags list",
+			definition: flagshipFlagsListCommand,
+		},
+		{
+			command: "wrangler flagship flags ls",
+			definition: flagshipFlagsListAlias,
+		},
+		{
+			command: "wrangler flagship flags get",
+			definition: flagshipFlagsGetCommand,
+		},
+		{
+			command: "wrangler flagship flags inspect",
+			definition: flagshipFlagsGetAlias,
+		},
+		{
+			command: "wrangler flagship flags update",
+			definition: flagshipFlagsUpdateCommand,
+		},
+		{
+			command: "wrangler flagship flags set",
+			definition: flagshipFlagsSetCommand,
+		},
+		{
+			command: "wrangler flagship flags rules",
+			definition: flagshipFlagsRulesNamespace,
+		},
+		{
+			command: "wrangler flagship flags rules list",
+			definition: flagshipFlagsRulesListCommand,
+		},
+		{
+			command: "wrangler flagship flags rules update",
+			definition: flagshipFlagsRulesUpdateCommand,
+		},
+		{
+			command: "wrangler flagship flags rules delete",
+			definition: flagshipFlagsRulesDeleteCommand,
+		},
+		{
+			command: "wrangler flagship flags rules reorder",
+			definition: flagshipFlagsRulesReorderCommand,
+		},
+		{
+			command: "wrangler flagship flags split",
+			definition: flagshipFlagsSplitCommand,
+		},
+		{
+			command: "wrangler flagship flags rollout",
+			definition: flagshipFlagsRolloutCommand,
+		},
+		{
+			command: "wrangler flagship flags enable",
+			definition: flagshipFlagsEnableCommand,
+		},
+		{
+			command: "wrangler flagship flags disable",
+			definition: flagshipFlagsDisableCommand,
+		},
+		{
+			command: "wrangler flagship flags evaluate",
+			definition: flagshipFlagsEvaluateCommand,
+		},
+		{
+			command: "wrangler flagship flags eval",
+			definition: flagshipFlagsEvaluateAlias,
+		},
+		{
+			command: "wrangler flagship flags delete",
+			definition: flagshipFlagsDeleteCommand,
+		},
+		{
+			command: "wrangler flagship flags rm",
+			definition: flagshipFlagsDeleteAlias,
+		},
+		{
+			command: "wrangler flagship flags changelog",
+			definition: flagshipFlagsChangelogCommand,
+		},
+		{
+			command: "wrangler flagship flags history",
+			definition: flagshipFlagsChangelogAlias,
+		},
+	]);
+	registry.registerNamespace("flagship");
+
 	// tunnel
 	registry.define([
 		{ command: "wrangler tunnel", definition: tunnelNamespace },
@@ -1559,6 +1744,30 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler ai-search namespace delete",
 			definition: aiSearchNamespaceDeleteCommand,
+		},
+		{
+			command: "wrangler ai-search jobs",
+			definition: aiSearchJobsNamespace,
+		},
+		{
+			command: "wrangler ai-search jobs list",
+			definition: aiSearchJobsListCommand,
+		},
+		{
+			command: "wrangler ai-search jobs create",
+			definition: aiSearchJobsCreateCommand,
+		},
+		{
+			command: "wrangler ai-search jobs get",
+			definition: aiSearchJobsGetCommand,
+		},
+		{
+			command: "wrangler ai-search jobs cancel",
+			definition: aiSearchJobsCancelCommand,
+		},
+		{
+			command: "wrangler ai-search jobs logs",
+			definition: aiSearchJobsLogsCommand,
 		},
 	]);
 	registry.registerNamespace("ai-search");
@@ -2280,6 +2489,30 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler auth token",
 			definition: authTokenCommand,
 		},
+		{
+			command: "wrangler auth keyring",
+			definition: authKeyringCommand,
+		},
+		{
+			command: "wrangler auth create",
+			definition: authCreateCommand,
+		},
+		{
+			command: "wrangler auth delete",
+			definition: authDeleteCommand,
+		},
+		{
+			command: "wrangler auth activate",
+			definition: authActivateCommand,
+		},
+		{
+			command: "wrangler auth deactivate",
+			definition: authDeactivateCommand,
+		},
+		{
+			command: "wrangler auth list",
+			definition: authListCommand,
+		},
 	]);
 	registry.registerNamespace("auth");
 
@@ -2419,7 +2652,20 @@ export async function main(argv: string[]): Promise<void> {
 			if (dispatcher) {
 				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
 			}
-			await handleError(e, configArgs, argv);
+			try {
+				await handleError(e, configArgs, argv);
+			} catch (handleErrorErr) {
+				// handleError itself threw before it could log the error.
+				// Fall back to raw stderr so the user always sees something.
+				const message = e instanceof Error ? (e.stack ?? e.message) : String(e);
+				const handlerMessage =
+					handleErrorErr instanceof Error
+						? (handleErrorErr.stack ?? handleErrorErr.message)
+						: String(handleErrorErr);
+				process.stderr.write(
+					`\n${message}${handlerMessage ? `\n\n(error handler also failed: ${handlerMessage})` : ""}\n`
+				);
+			}
 			throw e;
 		}
 	} finally {
