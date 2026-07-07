@@ -1957,6 +1957,15 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
 
+		const externalServices = devRegistryEnabled
+			? getExternalServiceEntrypoints(allWorkerOpts)
+			: null;
+
+		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
+		const wrappedBindingNames = getWrappedBindingNames(
+			allWorkerOpts,
+			durableObjectClassNames
+		);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 
@@ -1978,22 +1987,6 @@ export class Miniflare {
 			emittedQueues.some(
 				(queueName) => queueName !== undefined && !queueConsumers.has(queueName)
 			);
-
-		// Must run before `getDurableObjectClassNames`/`getWrappedBindingNames`,
-		// which read these opts: it rewrites external Durable Object / service
-		// bindings in `allWorkerOpts` in place to point at the dev-registry proxy.
-		// Run it later and external DOs stay keyed under `core:user:<scriptName>`,
-		// so workerd won't start.
-		const externalServices = devRegistryEnabled
-			? getExternalServiceEntrypoints(allWorkerOpts)
-			: null;
-
-		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
-		const wrappedBindingNames = getWrappedBindingNames(
-			allWorkerOpts,
-			durableObjectClassNames
-		);
-
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
 		const workerNames = [...allWorkerRoutes.keys()];
 
