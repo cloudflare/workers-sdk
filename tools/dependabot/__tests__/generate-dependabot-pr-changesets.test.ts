@@ -96,10 +96,13 @@ describe("parseDiffForChanges()", () => {
 			// A quoted catalog entry in pnpm-workspace.yaml (caret preserved)
 			`-  "@cloudflare/workers-types": "^4.20260702.1"`,
 			`+  "@cloudflare/workers-types": "^5.20260706.1"`,
-			// An unquoted catalog key must not match, so it can't corrupt the
-			// workerd change captured from the package.json above.
-			`-  workerd: "1.20260702.1"`,
-			`+  workerd: "1.20260706.1"`,
+			// workerd also appears in pnpm-workspace.yaml, but as an *unquoted*
+			// YAML key. The "quoted name" regex must skip it. Distinct versions
+			// are used here so that if the regex ever matched unquoted keys,
+			// these values would overwrite the workerd change captured from the
+			// package.json above and this assertion would fail.
+			`-  workerd: "9.99999990.0"`,
+			`+  workerd: "9.99999999.9"`,
 		]);
 		expect(changes).toEqual(
 			new Map([
