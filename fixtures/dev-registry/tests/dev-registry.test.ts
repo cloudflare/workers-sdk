@@ -463,6 +463,53 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			});
 		}, waitForTimeout);
 	});
+
+	it("supports queues across dev sessions", async ({ devRegistryPath }) => {
+		const exportedHandler = await runWranglerDev(
+			"wrangler.exported-handler.jsonc",
+			devRegistryPath
+		);
+		const sendParams = new URLSearchParams({
+			"test-method": "queue-send",
+		});
+		const receivedParams = new URLSearchParams({
+			"test-method": "queue-received",
+		});
+
+		// Sending with no consumer session running mirrors the local no-consumer
+		// behaviour: the message is dropped, but `send()` still succeeds
+		await vi.waitFor(async () => {
+			const response = await fetch(`${exportedHandler}?${sendParams}`, {
+				method: "POST",
+				body: "dropped message",
+			});
+
+			expect(await response.text()).toBe("Queued");
+			expect(response.status).toBe(200);
+		}, waitForTimeout);
+
+		const workerEntrypoint = await runWranglerDev(
+			"wrangler.worker-entrypoint.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const sendResponse = await fetch(`${exportedHandler}?${sendParams}`, {
+				method: "POST",
+				body: "hello from producer",
+			});
+			expect(sendResponse.status).toBe(200);
+
+			const receivedResponse = await fetch(
+				`${workerEntrypoint}?${receivedParams}`
+			);
+			const received = await receivedResponse.json();
+			expect(received).toContain("hello from producer");
+			// Messages sent before the consumer session started are dropped, not
+			// buffered
+			expect(received).not.toContain("dropped message");
+		}, waitForTimeout);
+	});
 });
 
 describe("Dev Registry: vite dev <-> vite dev", () => {
@@ -723,6 +770,39 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			});
 		}, waitForTimeout);
 	});
+
+	it("supports queues across dev sessions", async ({ devRegistryPath }) => {
+		const exportedHandler = await runViteDev(
+			"vite.exported-handler.config.ts",
+			devRegistryPath
+		);
+		const workerEntrypoint = await runViteDev(
+			"vite.worker-entrypoint.config.ts",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const sendParams = new URLSearchParams({
+				"test-method": "queue-send",
+			});
+			const sendResponse = await fetch(`${exportedHandler}?${sendParams}`, {
+				method: "POST",
+				body: "hello from vite producer",
+			});
+			expect(await sendResponse.text()).toBe("Queued");
+			expect(sendResponse.status).toBe(200);
+
+			const receivedParams = new URLSearchParams({
+				"test-method": "queue-received",
+			});
+			const receivedResponse = await fetch(
+				`${workerEntrypoint}?${receivedParams}`
+			);
+			expect(await receivedResponse.json()).toContain(
+				"hello from vite producer"
+			);
+		}, waitForTimeout);
+	});
 });
 
 describe("Dev Registry: vite dev <-> wrangler dev", () => {
@@ -950,6 +1030,39 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
 				]),
 			});
+		}, waitForTimeout);
+	});
+
+	it("supports queues across dev sessions", async ({ devRegistryPath }) => {
+		const exportedHandler = await runViteDev(
+			"vite.exported-handler.config.ts",
+			devRegistryPath
+		);
+		const workerEntrypoint = await runWranglerDev(
+			"wrangler.worker-entrypoint.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const sendParams = new URLSearchParams({
+				"test-method": "queue-send",
+			});
+			const sendResponse = await fetch(`${exportedHandler}?${sendParams}`, {
+				method: "POST",
+				body: "hello from vite to wrangler",
+			});
+			expect(await sendResponse.text()).toBe("Queued");
+			expect(sendResponse.status).toBe(200);
+
+			const receivedParams = new URLSearchParams({
+				"test-method": "queue-received",
+			});
+			const receivedResponse = await fetch(
+				`${workerEntrypoint}?${receivedParams}`
+			);
+			expect(await receivedResponse.json()).toContain(
+				"hello from vite to wrangler"
+			);
 		}, waitForTimeout);
 	});
 });

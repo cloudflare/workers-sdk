@@ -1,4 +1,4 @@
-import { Miniflare } from "miniflare";
+import { getWorkerRegistry, Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { useDispose, useTmp } from "./test-shared";
 import type { MiniflareOptions, WorkerRegistry } from "miniflare";
@@ -1734,6 +1734,55 @@ describe.sequential("DevRegistry", () => {
 				const latestInvocation = secondCallbackInvocations.at(-1);
 				// Registry should not contain remote-worker
 				expect(latestInvocation?.registry["remote-worker"]).toBeUndefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
+	test("advertises consumed queues in the worker's registry entry", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const sharedOptions = {
+			name: "consumer-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+		} satisfies Partial<MiniflareOptions>;
+
+		const mf = new Miniflare({
+			...sharedOptions,
+			// Consumed queues are advertised on the worker's own registry entry so
+			// producers in other processes can resolve this process's broker.
+			queueConsumers: ["my-queue"],
+			script: `export default { async queue() {} }`,
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["consumer-worker"]?.queueConsumers).toEqual([
+					"my-queue",
+				]);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Remove the consumer on reload so its advertisement is withdrawn and
+		// doesn't misdirect producers.
+		await mf.setOptions({
+			...sharedOptions,
+			script: `export default { async fetch() { return new Response("ok"); } }`,
+		});
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				// The worker's own entry is still advertised, without the queue.
+				expect(registry["consumer-worker"]).toBeDefined();
+				expect(registry["consumer-worker"].queueConsumers).toBeUndefined();
 			},
 			{ timeout: 10_000, interval: 100 }
 		);
