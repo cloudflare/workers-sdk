@@ -2,6 +2,6 @@
 "wrangler": patch
 ---
 
-Correctly classify dev proxy fetch errors by comparing UserWorker origins instead of hrefs
+Fix dev proxy silently hanging or returning a misleading 503 on network errors for non-root-path requests
 
-The ProxyWorker's stale-error guard compared a path-bearing URL against an origin-only URL, so it could only match for requests to `/`. Genuine network errors on any other path were misclassified as "UserWorker changed": failed GET/HEAD requests were silently parked in the retry queue (the client hangs), and non-GET requests received a misleading "Your worker restarted mid-request" 503. Errors for an unchanged UserWorker are now reported and rejected immediately.
+During `wrangler dev`, a transient network error on any request path other than `/` could be misclassified as the worker being reloaded, even when it wasn't: `GET`/`HEAD` requests would silently hang (with nothing logged) until the client timed out, and other methods would receive a misleading `Your worker restarted mid-request` 503. Such errors are now reported and surfaced immediately when the worker has not actually changed.
