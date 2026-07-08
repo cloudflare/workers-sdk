@@ -4,16 +4,19 @@ import { detectAgent } from "../../utils/detect-agent";
 
 vi.mock("am-i-vibing");
 
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- the function has a deprecated overload; we only reference it here for mocking
+const mockDetectAgenticEnvironment = vi.mocked(detectAgenticEnvironment);
+
 describe("detect-agent", () => {
 	beforeEach(() => {
-		vi.mocked(detectAgenticEnvironment).mockReset();
+		mockDetectAgenticEnvironment.mockReset();
 	});
 
 	describe("detectAgent()", () => {
 		it("reports an agent (with id) when detection type is 'agent'", ({
 			expect,
 		}) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: true,
 				id: "claude-code",
 				name: "Claude Code",
@@ -26,7 +29,7 @@ describe("detect-agent", () => {
 		it("is not an agent when type is 'hybrid', but still reports the id", ({
 			expect,
 		}) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: true,
 				id: "warp",
 				name: "Warp",
@@ -37,7 +40,7 @@ describe("detect-agent", () => {
 		});
 
 		it("is not an agent when type is 'interactive'", ({ expect }) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: false,
 				id: null,
 				name: null,
@@ -48,7 +51,7 @@ describe("detect-agent", () => {
 		});
 
 		it("resolves to a non-agent result when detection throws", ({ expect }) => {
-			vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
+			mockDetectAgenticEnvironment.mockImplementation(() => {
 				throw new Error("boom");
 			});
 
@@ -56,7 +59,7 @@ describe("detect-agent", () => {
 		});
 
 		it("detects in a single pass", ({ expect }) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: true,
 				id: "claude-code",
 				name: "Claude Code",
@@ -65,7 +68,7 @@ describe("detect-agent", () => {
 
 			detectAgent();
 
-			expect(detectAgenticEnvironment).toHaveBeenCalledTimes(1);
+			expect(mockDetectAgenticEnvironment).toHaveBeenCalledTimes(1);
 		});
 	});
 });
