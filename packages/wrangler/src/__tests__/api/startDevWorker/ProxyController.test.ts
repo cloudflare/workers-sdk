@@ -33,6 +33,6 @@ describe("ProxyController", () => {
 		expect(event.source).toBe("ProxyController");
 		expect(event.text).toBe("Uncaught Error: boom");
 		expect(event.stack).toContain("Error: boom");
-		expect(event.exceptionDetails.exceptionId).toBe(1);
+		expect(event.exceptionDetails?.exceptionId).toBe(1);
 	});
 });
