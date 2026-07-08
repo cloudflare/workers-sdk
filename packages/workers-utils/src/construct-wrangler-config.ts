@@ -8,7 +8,7 @@ import type {
 	ZoneNameRoute,
 } from "./config/environment";
 import type { WorkerMetadata } from "./types";
-import type { AssetConfig } from "@cloudflare/workers-shared";
+import type { AssetConfig } from "./workers-shared-config";
 import type { Cloudflare } from "cloudflare";
 
 type RoutesRes = {

@@ -6,7 +6,7 @@ import type {
 } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
-import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type { AssetConfig, RouterConfig } from "./workers-shared-config";
 
 /**
  * The type of Worker

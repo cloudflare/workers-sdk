@@ -14,7 +14,30 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/containers-shared"
 	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		},
+		"./src/knobs": {
+			"types": "./dist/src/knobs.d.mts",
+			"import": "./dist/src/knobs.mjs"
+		},
+		"./src/utils": {
+			"types": "./dist/src/utils.d.mts",
+			"import": "./dist/src/utils.mjs"
+		},
+		"./src/client/core/request": {
+			"types": "./dist/src/client/core/request.d.mts",
+			"import": "./dist/src/client/core/request.mjs"
+		},
+		"./src/client/models/ApplicationAffinityHardwareGeneration": {
+			"types": "./dist/src/client/models/ApplicationAffinityHardwareGeneration.d.mts",
+			"import": "./dist/src/client/models/ApplicationAffinityHardwareGeneration.mjs"
+		}
+	},
 	"scripts": {
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json && pnpm run type:tests",
 		"deploy": "echo 'no deploy'",
 		"test": "vitest",
@@ -26,6 +49,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},

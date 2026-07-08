@@ -67,7 +67,7 @@
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",
-		"tsdown": "0.16.3",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"update-check": "^1.5.4",
 		"vitest": "catalog:default",

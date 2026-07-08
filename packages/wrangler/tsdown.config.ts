@@ -119,9 +119,7 @@ export default defineConfig((options): UserConfig[] => [
 		format: ["cjs"],
 		outDir: OUT_DIR,
 		tsconfig: "tsconfig.json",
-		dts: {
-			resolve: ["@cloudflare/workflows-shared/src/types"],
-		},
+		dts: true,
 		// wrangler's published entry points expect `cli.js` / `cli.d.ts`, not
 		// tsdown's default `.cjs` / `.d.cts` for the CommonJS format.
 		outExtensions: () => ({ js: ".js", dts: ".d.ts" }),
@@ -166,8 +164,6 @@ export default defineConfig((options): UserConfig[] => [
 		outDir: OUT_DIR,
 		clean: false,
 		tsconfig: "tsconfig.experimental-config.json",
-		dts: {
-			resolve: ["@cloudflare/config"],
-		},
+		dts: true,
 	},
 ]);

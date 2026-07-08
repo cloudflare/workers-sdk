@@ -40,7 +40,7 @@
 		"@vitest/ui": "catalog:default",
 		"concurrently": "^8.2.2",
 		"recast": "^0.23.11",
-		"tsdown": "0.16.3",
+		"tsdown": "catalog:default",
 		"tsx": "^3.12.8",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"

@@ -141,7 +141,10 @@ function toVarBinding(value: string | Json): VarBinding {
 
 export interface DotDevDotVars {
 	path: string;
-	parsed: dotenv.DotenvParseOutput;
+	// Equivalent to dotenv's `DotenvParseOutput` (`{ [name: string]: string }`).
+	// Avoids referencing dotenv's CommonJS (`export =`) types in the bundled
+	// `.d.ts`, which tsdown's declaration bundler cannot resolve.
+	parsed: Record<string, string>;
 }
 
 function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {
