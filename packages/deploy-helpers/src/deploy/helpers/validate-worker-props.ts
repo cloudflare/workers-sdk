@@ -98,6 +98,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	if (config.images && !config.cache?.enabled) {
+		const warnFn = logger.once?.warn ?? logger.warn;
+		warnFn(
+			"Your Worker has an Images binding configured, but Workers Cache is not enabled. Enabling `cache.enabled` lets Cloudflare cache transformed images at the edge and reduce Images usage. Read more: https://developers.cloudflare.com/workers/cache/configuration/"
+		);
+	}
+
 	if (props.command === "deploy") {
 		validateRoutes(props.routes, props.assetsOptions);
 		assert(

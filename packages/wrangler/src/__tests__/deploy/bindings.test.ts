@@ -2061,6 +2061,45 @@ describe("deploy", () => {
 			});
 		});
 
+		describe("[images]", () => {
+			it("should warn when an images binding is configured without cache enabled", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					images: { binding: "IMAGES" },
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [{ name: "IMAGES", type: "images" }],
+				});
+
+				await runWrangler("deploy index.js");
+
+				expect(std.warn).toContain(
+					"Your Worker has an Images binding configured, but Workers Cache is not enabled."
+				);
+			});
+
+			it("should not warn when an images binding is configured with cache enabled", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					images: { binding: "IMAGES" },
+					cache: { enabled: true },
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [{ name: "IMAGES", type: "images" }],
+				});
+
+				await runWrangler("deploy index.js");
+
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+		});
+
 		describe("[dispatch_namespaces]", () => {
 			it("should support bindings to a dispatch namespace", async ({
 				expect,
