@@ -152,6 +152,19 @@ function convertObservability(
 		}
 		out.traces = traces;
 	}
+	if (observability.metrics !== undefined) {
+		const metrics: NonNullable<
+			NonNullable<RawConfig["observability"]>["metrics"]
+		> = {};
+		const { metrics: src } = observability;
+		if (src.enabled !== undefined) {
+			metrics.enabled = src.enabled;
+		}
+		if (src.destinations !== undefined) {
+			metrics.destinations = src.destinations;
+		}
+		out.metrics = metrics;
+	}
 	return out;
 }
 

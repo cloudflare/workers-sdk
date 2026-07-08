@@ -9978,7 +9978,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
+					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" or "observability.metrics.enabled" is required.
 					  - Expected "observability.head_sampling_rate" to be of type number but got true."
 				`);
 			});
@@ -10001,6 +10001,10 @@ describe("normalizeAndValidateConfig()", () => {
 								head_sampling_rate: 1,
 								destinations: ["test"],
 								persist: true,
+							},
+							metrics: {
+								enabled: true,
+								destinations: ["test"],
 							},
 						},
 					} as unknown as RawConfig,
@@ -10115,6 +10119,77 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
+
+			it("should not error on nested [observability.metrics] config only", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+								destinations: ["opentelemetry-metrics"],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error when metrics export is enabled without destinations", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \"observability.metrics.destinations\" is required when \"observability.metrics.enabled\" is true."
+				`);
+			});
+
+			it("should error when metrics export destinations are empty", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+								destinations: [],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \"observability.metrics.destinations\" must contain at least one destination when \"observability.metrics.enabled\" is true."
+				`);
+			});
+
 			it("should error on a sampling rate out of range", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{

@@ -6183,7 +6183,8 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	let isValid = true;
 
 	/**
-	 * One of observability.enabled, observability.logs.enabled, observability.traces.enabled must be defined
+	 * One of observability.enabled, observability.logs.enabled,
+	 * observability.traces.enabled, observability.metrics.enabled must be defined
 	 */
 	isValid =
 		validateAtLeastOnePropertyRequired(diagnostics, field, [
@@ -6200,6 +6201,11 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			{
 				key: "traces.enabled",
 				value: val.traces?.enabled,
+				type: "boolean",
+			},
+			{
+				key: "metrics.enabled",
+				value: val.metrics?.enabled,
 				type: "boolean",
 			},
 		]) && isValid;
@@ -6227,11 +6233,21 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"metrics",
+			val.metrics,
+			"object"
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
 			"head_sampling_rate",
 			"logs",
 			"traces",
+			"metrics",
 		]) && isValid;
 
 	/**
@@ -6337,6 +6353,50 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 				field,
 				Object.keys(val.traces),
 				["enabled", "head_sampling_rate", "destinations", "persist"]
+			) && isValid;
+	}
+
+	/**
+	 * Validate the optional nested metrics configuration
+	 */
+	if (typeof val.metrics === "object") {
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"metrics.enabled",
+				val.metrics.enabled,
+				"boolean"
+			) && isValid;
+
+		isValid =
+			validateOptionalTypedArray(
+				diagnostics,
+				"metrics.destinations",
+				val.metrics?.destinations,
+				"string"
+			) && isValid;
+
+		if (val.metrics.enabled === true && val.metrics.destinations?.length === 0) {
+			diagnostics.errors.push(
+				`"${field}.metrics.destinations" must contain at least one destination when "${field}.metrics.enabled" is true.`
+			);
+			isValid = false;
+		}
+
+		if (val.metrics.enabled === true && val.metrics.destinations === undefined) {
+			diagnostics.errors.push(
+				`"${field}.metrics.destinations" is required when "${field}.metrics.enabled" is true.`
+			);
+			isValid = false;
+		}
+
+		isValid =
+			validateAdditionalProperties(
+				diagnostics,
+				field,
+				Object.keys(val.metrics),
+				["enabled", "destinations"]
 			) && isValid;
 	}
 

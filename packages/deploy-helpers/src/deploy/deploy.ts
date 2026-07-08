@@ -39,6 +39,10 @@ import {
 	renderExportsReconciliationSuccess,
 } from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import {
+	reconcileMetricsExportConfig,
+	withoutMetricsExportConfig,
+} from "./helpers/metrics-export";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
@@ -342,7 +346,7 @@ export default async function deploy(
 						run_worker_first: assetsOptions.run_worker_first,
 					}
 				: undefined,
-		observability: config.observability,
+		observability: withoutMetricsExportConfig(config.observability),
 		cache: config.cache,
 	};
 
@@ -758,6 +762,14 @@ export default async function deploy(
 		return { versionId, workerTag, assetUploadStats };
 	}
 	assert(accountId);
+	await reconcileMetricsExportConfig({
+		config,
+		accountId,
+		scriptName,
+		envName,
+		useServiceEnvironments,
+	});
+
 	// deploy triggers
 	const targets = await triggersDeploy({
 		config,

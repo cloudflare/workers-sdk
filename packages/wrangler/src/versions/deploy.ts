@@ -248,6 +248,7 @@ export const versionsDeployCommand = createCommand({
 		}
 
 		await maybePatchSettings(config, accountId, workerName);
+		await reconcileMetricsExportConfig(config, accountId, workerName);
 
 		const elapsedMilliseconds = Date.now() - start;
 		const elapsedSeconds = elapsedMilliseconds / 1000;
@@ -545,7 +546,7 @@ async function maybePatchSettings(
 		logpush: config.logpush,
 		tail_consumers: config.tail_consumers,
 		streaming_tail_consumers: config.streaming_tail_consumers,
-		observability: config.observability, // TODO reconcile with how regular deploy handles empty state
+		observability: withoutMetricsExportConfig(config.observability), // TODO reconcile with how regular deploy handles empty state
 	};
 	const definedSettings = Object.fromEntries(
 		Object.entries(maybeUndefinedSettings).filter(
@@ -934,4 +935,73 @@ export function validateTrafficSubtotal(
 			}
 		);
 	}
+}
+
+function withoutMetricsExportConfig(
+	observability: Config["observability"]
+): Config["observability"] {
+	if (observability === undefined || observability.metrics === undefined) {
+		return observability;
+	}
+
+	const { metrics: _metrics, ...uploadObservability } = observability;
+
+	return Object.keys(uploadObservability).length > 0
+		? uploadObservability
+		: undefined;
+}
+
+async function reconcileMetricsExportConfig(
+	config: Config,
+	accountId: string,
+	workerName: string
+) {
+	const metricsConfig = config.observability?.metrics;
+
+	if (metricsConfig?.enabled === undefined) {
+		return;
+	}
+
+	const resourceId = metricsConfig.enabled
+		? await fetchWorkerScriptId(config, accountId, workerName)
+		: workerName;
+
+	await fetchResult(
+		config,
+		`/accounts/${accountId}/workers/observability/metricsexport`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				requester: {
+					requesterType: "workers",
+					requesterId: workerName,
+				},
+				resources: metricsConfig.enabled
+					? [
+							{
+								resourceType: "workers",
+								resourceId,
+								meta: "self",
+								destinations: metricsConfig.destinations ?? [],
+							},
+						]
+					: [],
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
+async function fetchWorkerScriptId(
+	config: Config,
+	accountId: string,
+	workerName: string
+) {
+	const serviceMetadata = await fetchResult<{
+		default_environment: { script: { id: string } };
+	}>(config, `/accounts/${accountId}/workers/services/${workerName}`);
+
+	return serviceMetadata.default_environment.script.id;
 }
