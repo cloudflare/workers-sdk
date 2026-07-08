@@ -163,7 +163,7 @@
 		"resolve": "^1.22.8",
 		"rosie-skills": "^0.8.1",
 		"semiver": "^1.1.0",
-		"shell-quote": "^1.8.1",
+		"shell-quote": "^1.8.4",
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
 		"supports-color": "^9.2.2",
