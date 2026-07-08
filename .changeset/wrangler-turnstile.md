@@ -14,7 +14,7 @@ wrangler turnstile widget update <sitekey> --name "Renamed"
 wrangler turnstile widget delete <sitekey>
 ```
 
-`create`, `list`, and `update` accept `--json` for clean machine-readable output. `--domain` accepts comma-separated values, e.g. `--domain a.com,b.com`.
+All five subcommands accept `--json` for machine-readable output (`get` prints a formatted view by default; the rest print a short human summary). `--domain` accepts comma-separated values, e.g. `--domain a.com,b.com`. `delete --json` requires `--skip-confirmation`/`-y` to keep output pipeable.
 
 `create` prints the sitekey, the secret, and the canonical `challenges.cloudflare.com/turnstile/v0/siteverify` endpoint for backend verification. The hint is backend-agnostic; it doesn't assume Workers. The secret is redacted from `list` and `update` output but remains available via `get` for retrieval later. `delete` prompts for confirmation; pass `--skip-confirmation`/`-y` to bypass.
 

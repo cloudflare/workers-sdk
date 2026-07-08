@@ -322,6 +322,28 @@ describe("turnstile widget commands", () => {
 			`Deleted Turnstile widget ${widgetFixture.sitekey}`
 		);
 	});
+
+	it("outputs JSON when --json is set with --skip-confirmation", async ({
+		expect,
+	}) => {
+		mockWidgetDelete(widgetFixture.sitekey);
+		await runWrangler(
+			`turnstile widget delete ${widgetFixture.sitekey} --skip-confirmation --json`
+		);
+
+		expect(JSON.parse(std.out)).toEqual({
+			sitekey: widgetFixture.sitekey,
+			success: true,
+		});
+	});
+
+	it("errors when --json is set without --skip-confirmation", async ({
+		expect,
+	}) => {
+		await expect(
+			runWrangler(`turnstile widget delete ${widgetFixture.sitekey} --json`)
+		).rejects.toThrow(/skip-confirmation/);
+	});
 });
 
 function mockWidgetCreate(): Promise<CreateWidgetBody> {
