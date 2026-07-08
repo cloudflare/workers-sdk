@@ -9,8 +9,8 @@ import {
 import { logger } from "../../shared/context";
 
 /**
- * A single npm package dependency entry, matching the EWC API schema.
- * Field names are camelCase to match the EWC Go struct JSON tags.
+ * A single npm package dependency entry, matching the upload API schema
+ * see: https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/update.
  */
 export type PackageDependency = {
 	/** The npm package name, e.g. "lodash" or "@cloudflare/workers-types". */
@@ -23,7 +23,7 @@ export type PackageDependency = {
 
 /**
  * Maximum number of dependency entries to include in a single upload.
- * EWC will also truncate to this limit server-side, but we cap client-side
+ * This also gets truncated to this limit server-side, but we cap client-side
  * to avoid sending unnecessarily large payloads.
  */
 const MAX_PACKAGE_DEPENDENCIES = 200;
