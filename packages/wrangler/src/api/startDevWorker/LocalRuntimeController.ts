@@ -193,7 +193,6 @@ export async function convertToConfigBundle(
 					inspectorHost: event.config.dev.inspector?.hostname,
 				}),
 		localPersistencePath: event.config.dev.persist,
-		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
 		routes: event.config.dev.routeRequestsByRoutes ? routes : undefined,
 		queueConsumers,
@@ -390,8 +389,6 @@ export class LocalRuntimeController extends RuntimeController {
 					});
 				}
 			);
-			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
-
 			// Bail out if a newer bundle arrived while we were building
 			// miniflare options — avoid a redundant local server reload.
 			if (id !== this.#currentBundleId) {

@@ -208,13 +208,9 @@ test("Miniflare: ready returns copy of entry URL", async ({ expect }) => {
 });
 
 test("Miniflare: setOptions: can update host/port", async ({ expect }) => {
-	// Extract loopback port from injected live reload script
-	const loopbackPortRegexp = /\/\/ Miniflare Live Reload.+url\.port = (\d+)/s;
-
 	const opts: MiniflareOptions = {
 		port: 0,
 		inspectorPort: 0,
-		liveReload: true,
 		script: `addEventListener("fetch", (event) => {
 			event.respondWith(new Response("<p>👋</p>", {
 				headers: { "Content-Type": "text/html;charset=utf-8" }
@@ -227,9 +223,7 @@ test("Miniflare: setOptions: can update host/port", async ({ expect }) => {
 	async function getState() {
 		const url = await mf.ready;
 		const inspectorUrl = await mf.getInspectorURL();
-		const res = await mf.dispatchFetch("http://localhost");
-		const loopbackPort = loopbackPortRegexp.exec(await res.text())?.[1];
-		return { url, inspectorUrl, loopbackPort };
+		return { url, inspectorUrl };
 	}
 
 	const state1 = await getState();
@@ -243,19 +237,12 @@ test("Miniflare: setOptions: can update host/port", async ({ expect }) => {
 	expect(state1.inspectorUrl.port).not.toBe("0");
 	expect(state1.inspectorUrl.port).toBe(state2.inspectorUrl.port);
 
-	// Make sure updating the host restarted the loopback server
-	expect(state1.loopbackPort).toBeDefined();
-	expect(state2.loopbackPort).toBeDefined();
-	expect(state1.loopbackPort).not.toBe(state2.loopbackPort);
-
-	// Make sure setting port to `undefined` always gives a new port, but keeps
-	// existing loopback server
+	// Make sure setting port to `undefined` always gives a new port
 	opts.port = undefined;
 	await mf.setOptions(opts);
 	const state3 = await getState();
 	expect(state3.url.port).not.toBe("0");
 	expect(state1.url.port).not.toBe(state3.url.port);
-	expect(state2.loopbackPort).toBe(state3.loopbackPort);
 });
 
 const interfaces = os.networkInterfaces();

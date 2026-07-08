@@ -21,7 +21,6 @@ type Env = {
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
-	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
@@ -278,45 +277,6 @@ function maybePrettifyError(request: Request, response: Response, env: Env) {
 			cf: { prettyErrorOriginalUrl: request.url },
 		}
 	);
-}
-
-function maybeInjectLiveReload(
-	response: Response,
-	env: Env,
-	ctx: ExecutionContext
-) {
-	const liveReloadScript = env[CoreBindings.DATA_LIVE_RELOAD_SCRIPT];
-	if (
-		liveReloadScript === undefined ||
-		!response.headers.get("Content-Type")?.toLowerCase().includes("text/html")
-	) {
-		return response;
-	}
-
-	const headers = new Headers(response.headers);
-	const contentLength = parseInt(headers.get("content-length") ?? "NaN");
-	if (!isNaN(contentLength)) {
-		headers.set(
-			"content-length",
-			String(contentLength + liveReloadScript.byteLength)
-		);
-	}
-
-	const { readable, writable } = new IdentityTransformStream();
-	ctx.waitUntil(
-		(async () => {
-			await response.body?.pipeTo(writable, { preventClose: true });
-			const writer = writable.getWriter();
-			await writer.write(liveReloadScript);
-			await writer.close();
-		})()
-	);
-
-	return new Response(readable, {
-		status: response.status,
-		statusText: response.statusText,
-		headers,
-	});
 }
 
 const acceptEncodingElement =
@@ -619,7 +579,6 @@ export default <ExportedHandler<Env>>{
 			if (!disablePrettyErrorPage) {
 				response = await maybePrettifyError(request, response, env);
 			}
-			response = maybeInjectLiveReload(response, env, ctx);
 			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
 			if (env[CoreBindings.LOG_REQUESTS]) {
 				response = maybeLogRequest(request, response, env, ctx, startTime);

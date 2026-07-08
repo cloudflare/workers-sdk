@@ -11,8 +11,6 @@ export const CorePaths = {
 	EMAIL: "/cdn-cgi/handler/email",
 	/** Handler path prefix for validation */
 	HANDLER_PREFIX: "/cdn-cgi/handler/",
-	/** Live reload WebSocket endpoint */
-	LIVE_RELOAD: "/cdn-cgi/mf/reload",
 	/** Local explorer UI and API */
 	EXPLORER: "/cdn-cgi/explorer",
 	/** Legacy way to trigger scheduled event handlers */
@@ -68,7 +66,6 @@ export const CoreBindings = {
 	JSON_CF_BLOB: "CF_BLOB",
 	JSON_ROUTES: "MINIFLARE_ROUTES",
 	JSON_LOG_LEVEL: "MINIFLARE_LOG_LEVEL",
-	DATA_LIVE_RELOAD_SCRIPT: "MINIFLARE_LIVE_RELOAD_SCRIPT",
 	DURABLE_OBJECT_NAMESPACE_PROXY: "MINIFLARE_PROXY",
 	DATA_PROXY_SECRET: "MINIFLARE_PROXY_SECRET",
 	DATA_PROXY_SHARED_SECRET: "MINIFLARE_PROXY_SHARED_SECRET",

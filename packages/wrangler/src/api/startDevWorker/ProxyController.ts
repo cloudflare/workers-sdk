@@ -133,7 +133,6 @@ export class ProxyController extends Controller {
 				this.localServerReady.promise
 			),
 			handleStructuredLogs,
-			liveReload: false,
 		};
 
 		if (this.inspectorEnabled) {

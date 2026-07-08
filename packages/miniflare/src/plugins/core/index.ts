@@ -295,8 +295,6 @@ export const CoreSharedOptionsSchema = z
 		// TODO: add back validation of cf object
 		cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
 
-		liveReload: z.boolean().optional(),
-
 		// Enable auto service / durable objects discovery with the dev registry
 		unsafeDevRegistryPath: z.string().optional(),
 		// Called when external workers this instance depends on are updated in the dev registry
@@ -361,26 +359,6 @@ export const CoreSharedOptionsSchema = z
 	);
 
 export const CORE_PLUGIN_NAME = "core";
-
-const LIVE_RELOAD_SCRIPT_TEMPLATE = (
-	port: number
-) => `<script defer type="application/javascript">
-(function () {
-  // Miniflare Live Reload
-  var url = new URL("/cdn-cgi/mf/reload", location.origin);
-  url.protocol = url.protocol.replace("http", "ws");
-  url.port = ${port};
-  function reload() { location.reload(); }
-  function connect(reconnected) {
-    var ws = new WebSocket(url);
-    if (reconnected) ws.onopen = reload;
-    ws.onclose = function(e) {
-      e.code === 1012 ? reload() : e.code === 1000 || e.code === 1001 || setTimeout(connect, 1000, true);
-    }
-  }
-  connect();
-})();
-</script>`;
 
 export const SCRIPT_CUSTOM_FETCH_SERVICE = `addEventListener("fetch", (event) => {
   const request = new Request(event.request);
@@ -1030,7 +1008,6 @@ export function getGlobalServices({
 	sharedOptions,
 	allWorkerRoutes,
 	fallbackWorkerName,
-	loopbackPort,
 	tmpPath,
 	log,
 	proxyBindings,
@@ -1141,14 +1118,6 @@ export function getGlobalServices({
 			data: encoder.encode(sharedOptions.unsafeProxySharedSecret),
 		});
 	}
-	if (sharedOptions.liveReload) {
-		const liveReloadScript = LIVE_RELOAD_SCRIPT_TEMPLATE(loopbackPort);
-		serviceEntryBindings.push({
-			name: CoreBindings.DATA_LIVE_RELOAD_SCRIPT,
-			data: encoder.encode(liveReloadScript),
-		});
-	}
-
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
