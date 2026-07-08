@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.25.0",
+	"version": "0.25.1",
 	"description": "Internal utility package for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
 	"bugs": {
@@ -58,7 +58,6 @@
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/command-exists": "^1.2.0",
 		"@types/node": "catalog:default",
-		"@types/signal-exit": "^3.0.1",
 		"@vitest/ui": "catalog:default",
 		"cloudflare": "^5.2.0",
 		"command-exists": "catalog:default",

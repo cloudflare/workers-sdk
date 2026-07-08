@@ -26,9 +26,11 @@ import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
 	PAGES_CONFIG_CACHE_FILENAME,
 } from "./constants";
+import { maybeDelegatePagesToWorkers } from "./delegate-to-workers";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
+import { runPagesToWorkersDeploy } from "./run-workers-deploy";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
 import type { PagesConfigCache } from "./types";
 import type {
@@ -112,6 +114,13 @@ export const pagesDeployCommand = createCommand({
 			default: false,
 			description:
 				"Whether to upload any server-side sourcemaps with this deployment",
+		},
+		force: {
+			type: "boolean",
+			default: false,
+			hidden: true,
+			description:
+				"Deploy directly to Cloudflare Pages, bypassing the automatic delegation to Cloudflare Workers for new static projects",
 		},
 	},
 	positionalArgs: ["directory"],
@@ -200,6 +209,24 @@ export const pagesDeployCommand = createCommand({
 					isExistingProject = false;
 				}
 			}
+		}
+
+		// When run by an AI agent, delegate brand-new static Pages deploys to a
+		// Workers static-assets deploy. Existing projects, projects using
+		// unsupported Pages features, and `--force` are never delegated.
+		const delegation = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			assetsDirectory: directory,
+			accountHasPagesProjects: async () =>
+				(await listProjects({ accountId })).length > 0,
+			force: args.force,
+			projectName,
+			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),
+		});
+		if (delegation.delegate) {
+			await runPagesToWorkersDeploy(delegation);
+			return;
 		}
 
 		const isInteractive = process.stdin.isTTY;
@@ -609,6 +636,20 @@ export const pagesDeployCommand = createCommand({
 		metrics.sendMetricsEvent("create pages deployment");
 	},
 });
+
+function getUnsupportedDeployDelegateArgs(
+	args: (typeof pagesDeployCommand)["args"]
+): string[] {
+	return [
+		["--branch", args.branch],
+		["--commit-hash", args.commitHash],
+		["--commit-message", args.commitMessage],
+		["--commit-dirty", args.commitDirty],
+		["--skip-caching", args.skipCaching],
+	]
+		.filter(([, value]) => value !== undefined && value !== false)
+		.map(([flag]) => flag as string);
+}
 
 type NewOrExistingItem = {
 	key: string;

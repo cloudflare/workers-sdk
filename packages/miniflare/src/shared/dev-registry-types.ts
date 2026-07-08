@@ -19,4 +19,9 @@ export type WorkerDefinition = {
 	 * workers it bypasses the Assets proxy (whether built-in or userland)
 	 */
 	userWorkerService: string;
+	/**
+	 * Queue names consumed by this Worker. Producers in other dev sessions use
+	 * this to route messages for these queues to this process's queue broker.
+	 */
+	queueConsumers?: string[];
 };

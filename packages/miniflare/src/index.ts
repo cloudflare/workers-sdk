@@ -45,6 +45,7 @@ import {
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	loadExternalPlugins,
+	namespaceKeys,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
 	ProxyClient,
@@ -1967,6 +1968,11 @@ export class Miniflare {
 		);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
+		// When the dev registry is enabled, queue brokers bind to the dev-registry
+		// proxy so they can deliver to consumers in other `wrangler dev` processes
+		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever
+		// there are queues.
+		const hasQueues = queueProducers.size > 0 || queueConsumers.size > 0;
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
 		const workerNames = [...allWorkerRoutes.keys()];
 
@@ -2148,6 +2154,7 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
+				devRegistryEnabled,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -2232,9 +2239,9 @@ export class Miniflare {
 		if (
 			this.#devRegistry.isEnabled() &&
 			externalServices &&
-			externalServices.size > 0
+			(externalServices.size > 0 || hasQueues)
 		) {
-			await this.#devRegistry.watch(externalServices);
+			await this.#devRegistry.watch(externalServices, hasQueues);
 
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
@@ -2248,8 +2255,8 @@ export class Miniflare {
 			// worker has the correct registry from the moment workerd loads it.
 			const initialRegistry = this.#devRegistry.getRegistry();
 			const mainModuleSource = [
-				`import { ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
-				`export { ExternalServiceProxy };`,
+				`import { ExternalQueueProxy, ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
+				`export { ExternalQueueProxy, ExternalServiceProxy };`,
 				`setRegistry(${JSON.stringify(initialRegistry)});`,
 				`export default {`,
 				`  async fetch(request, env) {`,
@@ -2438,9 +2445,9 @@ export class Miniflare {
 		if (this.#devRegistry.isEnabled()) {
 			requiredSockets.push(SOCKET_DEBUG_PORT);
 			// SOCKET_DEV_REGISTRY is already in config.sockets (and therefore
-			// requiredSockets) when external services are configured. Don't add
-			// it unconditionally — if no external services exist, the socket
-			// isn't defined and waiting for it would hang.
+			// requiredSockets) when external services or queues are configured.
+			// Don't add it unconditionally — if neither exists, the socket isn't
+			// defined and waiting for it would hang.
 		}
 
 		// Reload runtime
@@ -2706,12 +2713,18 @@ export class Miniflare {
 				defaultEntrypointService = getUserServiceName(workerOpts.core.name);
 			}
 
+			// Advertise consumed queues so producers in other dev sessions can
+			// route messages for them to this process's queue broker (see
+			// `ExternalQueueProxy`).
+			const queueConsumers = namespaceKeys(workerOpts.queues.queueConsumers);
+
 			entries.push([
 				workerOpts.core.name,
 				{
 					debugPortAddress,
 					defaultEntrypointService,
 					userWorkerService: getUserServiceName(workerOpts.core.name),
+					...(queueConsumers.length > 0 ? { queueConsumers } : {}),
 				},
 			]);
 		}
