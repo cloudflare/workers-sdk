@@ -1,13 +1,11 @@
-import {
-	createDeferred,
-	DeferredPromise,
-	urlFromParts,
-} from "../../src/api/startDevWorker/utils";
+import { createDeferred } from "../src/deferred";
+import { urlFromParts } from "../src/url";
+import type { DeferredPromise } from "../src/deferred";
 import type {
 	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
-} from "../../src/api/startDevWorker/events";
+} from "../src/proxy-data";
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;

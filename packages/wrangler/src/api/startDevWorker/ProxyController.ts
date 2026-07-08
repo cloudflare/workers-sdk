@@ -2,10 +2,13 @@ import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
+import {
+	createProxyWorkerOptions,
+	sendProxyWorkerMessage,
+} from "@cloudflare/dev-proxy";
 import { assertNever } from "@cloudflare/workers-utils";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
-import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import WebSocket from "ws";
 import { version as packageVersion } from "../../../package.json";
 import {
@@ -83,39 +86,13 @@ export class ProxyController extends Controller {
 			stripDisablePrettyError: false,
 			unsafeLocalExplorer: false,
 			workers: [
-				{
-					name: "ProxyWorker",
-					compatibilityDate: "2023-12-18",
-					compatibilityFlags: ["nodejs_compat"],
-					modulesRoot: path.dirname(proxyWorkerPath),
-					modules: [{ type: "ESModule", path: proxyWorkerPath }],
-					durableObjects: {
-						DURABLE_OBJECT: {
-							className: "ProxyWorker",
-							unsafePreventEviction: true,
-						},
-					},
-					// Miniflare will strip CF-Connecting-IP from outgoing fetches from a Worker (to fix https://github.com/cloudflare/workers-sdk/issues/7924)
-					// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
-					stripCfConnectingIp: false,
-					serviceBindings: {
-						PROXY_CONTROLLER: async (req): Promise<Response> => {
-							const message =
-								(await req.json()) as ProxyWorkerOutgoingRequestBody;
-
-							this.onProxyWorkerMessage(message);
-
-							return new Response(null, { status: 204 });
-						},
-					},
-					bindings: {
-						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
-					},
-
-					// no need to use file-system, so don't
-					cache: false,
-					unsafeEphemeralDurableObjects: true,
-				},
+				// The ProxyWorker itself + how it's wired into Miniflare live in
+				// `@cloudflare/dev-proxy` (shared with remote bindings) so there's a
+				// single source of truth for the proxy behaviour.
+				createProxyWorkerOptions({
+					authSecret: this.secret,
+					onMessage: (message) => this.onProxyWorkerMessage(message),
+				}),
 			],
 
 			verbose: logger.loggerLevel === "debug",
@@ -338,13 +315,7 @@ export class ProxyController extends Controller {
 					return;
 				}
 
-				return proxyWorker.dispatchFetch(
-					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
-					{
-						headers: { Authorization: this.secret },
-						cf: { hostMetadata: message },
-					}
-				);
+				return sendProxyWorkerMessage(proxyWorker, this.secret, message);
 			});
 		} catch (cause) {
 			if (this._torndown) {

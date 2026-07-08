@@ -1,0 +1,55 @@
+{
+	"name": "@cloudflare/dev-proxy",
+	"version": "0.0.0",
+	"description": "The local dev proxy worker shared by wrangler's dev server and remote bindings",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/dev-proxy#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "workers-devprod@cloudflare.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/dev-proxy"
+	},
+	"files": [
+		"dist"
+	],
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check:type": "tsc -p ./tsconfig.json",
+		"test": "vitest",
+		"test:ci": "vitest run"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@types/node": "catalog:default",
+		"esbuild": "catalog:default",
+		"tsdown": "0.16.3",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"peerDependencies": {
+		"miniflare": "workspace:*"
+	},
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}

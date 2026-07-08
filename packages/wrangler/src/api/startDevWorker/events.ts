@@ -1,6 +1,28 @@
+import { serialiseError } from "@cloudflare/dev-proxy";
 import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
+import type {
+	ProxyData,
+	ProxyWorkerIncomingRequestBody,
+	ProxyWorkerOutgoingRequestBody,
+	SerializedError,
+	UrlOriginAndPathnameParts,
+	UrlOriginParts,
+} from "@cloudflare/dev-proxy";
 import type { Miniflare, WorkerRegistry } from "miniflare";
+
+// The proxy-worker protocol types + `ProxyData` now live in `@cloudflare/dev-proxy`
+// (shared with the ProxyWorker itself and remote bindings). Re-exported here so
+// wrangler-internal importers are unchanged.
+export { serialiseError };
+export type {
+	ProxyData,
+	ProxyWorkerIncomingRequestBody,
+	ProxyWorkerOutgoingRequestBody,
+	SerializedError,
+	UrlOriginParts,
+	UrlOriginAndPathnameParts,
+};
 
 export type ErrorEvent =
 	| BaseErrorEvent<
@@ -93,16 +115,6 @@ export type ReadyEvent = {
 	inspectorUrl: URL | undefined;
 };
 
-// ProxyWorker
-export type ProxyWorkerIncomingRequestBody =
-	| { type: "play"; proxyData: ProxyData }
-	| { type: "pause" };
-export type ProxyWorkerOutgoingRequestBody =
-	| { type: "error"; error: SerializedError }
-	| { type: "sseResponseDetected" }
-	| { type: "previewTokenExpired"; proxyData: ProxyData }
-	| { type: "debug-log"; args: Parameters<typeof console.debug> };
-
 // InspectorProxyWorker
 export * from "./devtools";
 export type InspectorProxyWorkerIncomingWebSocketMessage =
@@ -124,37 +136,3 @@ export type InspectorProxyWorkerOutgoingRequestBody =
 	| { type: "debug-log"; args: Parameters<typeof console.debug> }
 	// Intercepted Chrome DevTools Protocol Messages
 	| { type: "load-network-resource"; url: string }; // responds with `url`'s contents
-
-export type SerializedError = {
-	message: string;
-	name?: string;
-	stack?: string | undefined;
-	cause?: unknown;
-};
-export function serialiseError(e: unknown): SerializedError {
-	if (e instanceof Error) {
-		return {
-			message: e.message,
-			name: e.name,
-			stack: e.stack,
-			cause: e.cause && serialiseError(e.cause),
-		};
-	} else {
-		return { message: String(e) };
-	}
-}
-
-export type UrlOriginParts = Pick<URL, "protocol" | "hostname" | "port">;
-export type UrlOriginAndPathnameParts = Pick<
-	URL,
-	"protocol" | "hostname" | "port" | "pathname"
->;
-
-export type ProxyData = {
-	userWorkerUrl: UrlOriginParts;
-	userWorkerInspectorUrl?: UrlOriginAndPathnameParts;
-	userWorkerInnerUrlOverrides?: Partial<UrlOriginParts>;
-	headers: Record<string, string>;
-	liveReload?: boolean;
-	proxyLogsToController?: boolean;
-};
