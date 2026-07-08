@@ -1,6 +1,10 @@
 import { readFile, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+	LOCAL_EXPLORER_API_PATH,
+	LOCAL_EXPLORER_BASE_PATH,
+} from "../constants";
 import { page, viteUrl, workerUrl } from "./setup";
 
 export { page, viteUrl };
@@ -57,7 +61,7 @@ export async function seedWorkflow(workflowName: string): Promise<{
 	const workflowId = `e2e-test-${Date.now()}`;
 
 	await fetch(
-		`${workerUrl}/cdn-cgi/explorer/api/workflows/${workflowName}/instances`,
+		`${workerUrl}${LOCAL_EXPLORER_API_PATH}/workflows/${workflowName}/instances`,
 		{
 			body: JSON.stringify({
 				id: workflowId,
@@ -79,9 +83,12 @@ export async function seedWorkflow(workflowName: string): Promise<{
  * Delete all instances of a workflow via the explorer API.
  */
 export async function cleanupWorkflow(workflowName: string): Promise<void> {
-	await fetch(`${workerUrl}/cdn-cgi/explorer/api/workflows/${workflowName}`, {
-		method: "DELETE",
-	});
+	await fetch(
+		`${workerUrl}${LOCAL_EXPLORER_API_PATH}/workflows/${workflowName}`,
+		{
+			method: "DELETE",
+		}
+	);
 }
 
 /**
@@ -96,7 +103,7 @@ const WAIT_OPTIONS = {
  * Navigate to a KV namespace.
  */
 export async function navigateToKV(namespaceId: string): Promise<void> {
-	await navigateTo(`/cdn-cgi/explorer/kv/${namespaceId}`);
+	await navigateTo(`${LOCAL_EXPLORER_BASE_PATH}/kv/${namespaceId}`);
 	await waitForPageLoad();
 }
 
@@ -104,7 +111,7 @@ export async function navigateToKV(namespaceId: string): Promise<void> {
  * Navigate to an R2 bucket.
  */
 export async function navigateToR2Bucket(bucketName: string): Promise<void> {
-	await navigateTo(`/cdn-cgi/explorer/r2/${bucketName}`);
+	await navigateTo(`${LOCAL_EXPLORER_BASE_PATH}/r2/${bucketName}`);
 	await waitForPageLoad();
 }
 
@@ -116,7 +123,7 @@ export async function navigateToR2Object(
 	objectKey: string
 ): Promise<void> {
 	await navigateTo(
-		`/cdn-cgi/explorer/r2/${bucketName}/object/${encodeURIComponent(objectKey)}`
+		`${LOCAL_EXPLORER_BASE_PATH}/r2/${bucketName}/object/${encodeURIComponent(objectKey)}`
 	);
 	await waitForPageLoad();
 }
@@ -128,7 +135,7 @@ export async function navigateToD1(
 	databaseId: string,
 	table?: string
 ): Promise<void> {
-	let path = `/cdn-cgi/explorer/d1/${databaseId}`;
+	let path = `${LOCAL_EXPLORER_BASE_PATH}/d1/${databaseId}`;
 	if (table) {
 		path += `?table=${encodeURIComponent(table)}`;
 	}
@@ -141,7 +148,7 @@ export async function navigateToD1(
  * Navigate to a Durable Object class.
  */
 export async function navigateToDOClass(className: string): Promise<void> {
-	await navigateTo(`/cdn-cgi/explorer/do/${className}`);
+	await navigateTo(`${LOCAL_EXPLORER_BASE_PATH}/do/${className}`);
 	await waitForPageLoad();
 }
 
@@ -149,7 +156,7 @@ export async function navigateToDOClass(className: string): Promise<void> {
  * Navigate to a Workflow instances list page.
  */
 export async function navigateToWorkflow(workflowName: string): Promise<void> {
-	await navigateTo(`/cdn-cgi/explorer/workflows/${workflowName}`);
+	await navigateTo(`${LOCAL_EXPLORER_BASE_PATH}/workflows/${workflowName}`);
 	await waitForPageLoad();
 }
 
@@ -164,7 +171,7 @@ export async function navigateToDOObject(
 	objectId: string,
 	table?: string
 ): Promise<void> {
-	let path = `/cdn-cgi/explorer/do/${className}/${objectId}`;
+	let path = `${LOCAL_EXPLORER_BASE_PATH}/do/${className}/${objectId}`;
 	if (table) {
 		path += `?table=${encodeURIComponent(table)}`;
 	}

@@ -8,7 +8,7 @@
 	"servers": [
 		{
 			"description": "Local Explorer",
-			"url": "/cdn-cgi/explorer/api"
+			"url": "/cdn-cgi/local/explorer/api"
 		}
 	],
 	"paths": {

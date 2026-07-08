@@ -1711,11 +1711,11 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/local/scheduled");
 	expect(await res.text()).toBe("ok");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/scheduled?format=json"
+		"http://localhost/cdn-cgi/local/scheduled?format=json"
 	);
 	expect(await res.json()).toEqual({ outcome: "ok", noRetry: true });
 
@@ -1782,7 +1782,7 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 	expect(res.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
 	expect(await res.text()).toBe("asset");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/local/scheduled");
 	expect(await res.text()).toBe("ok");
 
 	res = await mf.dispatchFetch("http://localhost");
@@ -1792,7 +1792,7 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 	expect(json.scheduledTime).toBeDefined();
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/scheduled?format=json&cron=0+0+0+0+0&time=1234567890987"
+		"http://localhost/cdn-cgi/local/scheduled?format=json&cron=0+0+0+0+0&time=1234567890987"
 	);
 	expect(await res.json()).toEqual({
 		outcome: "ok",
@@ -1832,7 +1832,7 @@ test("Miniflare: manually triggered email handler - valid email", async ({
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -1879,7 +1879,7 @@ test("Miniflare: manually triggered email handler - setReject does not throw", a
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -1928,7 +1928,7 @@ test("Miniflare: manually triggered email handler - forward does not throw", asy
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -1974,7 +1974,7 @@ test("Miniflare: manually triggered email handler - invalid email, no message id
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -2037,7 +2037,7 @@ This is a random email body.
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -2057,9 +2057,7 @@ This is a random email body.
 	expect(await res.text()).toBe("true");
 });
 
-test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async ({
-	expect,
-}) => {
+test("Miniflare: unrecognised /cdn-cgi/local/ routes", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `
@@ -2073,9 +2071,9 @@ test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async ({
 	});
 	useDispose(mf);
 
-	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/foo");
+	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/local/foo");
 	expect(await res.text()).toBe(
-		`"/cdn-cgi/handler/foo" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled" or "/cdn-cgi/handler/email"?`
+		`"/cdn-cgi/local/foo" is not a recognised local endpoint.`
 	);
 	expect(res.status).toBe(404);
 });
@@ -2137,7 +2135,7 @@ test("Miniflare: blocks non-local Host headers from reaching /cdn-cgi/ routes", 
 				setHost: false,
 				headers: {
 					Host: "example.trycloudflare.com",
-					"MF-Original-URL": "http://localhost/cdn-cgi/handler/scheduled",
+					"MF-Original-URL": "http://localhost/cdn-cgi/local/scheduled",
 				},
 			},
 			(res) => {

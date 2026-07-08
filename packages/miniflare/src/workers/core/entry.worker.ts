@@ -518,24 +518,7 @@ export default <ExportedHandler<Env>>{
 				return await imagesDelivery.fetch(request);
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
-				if (
-					url.pathname === CorePaths.SCHEDULED ||
-					/* legacy URL path */ url.pathname === CorePaths.LEGACY_SCHEDULED
-				) {
-					if (url.pathname === CorePaths.LEGACY_SCHEDULED) {
-						ctx.waitUntil(
-							env[CoreBindings.SERVICE_LOOPBACK].fetch(
-								"http://localhost/core/log",
-								{
-									method: "POST",
-									headers: {
-										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
-									},
-									body: `Triggering scheduled handlers via a request to \`${CorePaths.LEGACY_SCHEDULED}\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`${CorePaths.SCHEDULED}\``,
-								}
-							)
-						);
-					}
+				if (url.pathname === CorePaths.SCHEDULED) {
 					return await handleScheduled(url.searchParams, service);
 				}
 
@@ -546,13 +529,6 @@ export default <ExportedHandler<Env>>{
 						service,
 						env,
 						ctx
-					);
-				}
-
-				if (url.pathname.startsWith(CorePaths.HANDLER_PREFIX)) {
-					return new Response(
-						`"${url.pathname}" is not a valid handler. Did you mean to use "${CorePaths.SCHEDULED}" or "${CorePaths.EMAIL}"?`,
-						{ status: 404 }
 					);
 				}
 			}
@@ -573,6 +549,13 @@ export default <ExportedHandler<Env>>{
 				r2PublicService
 			) {
 				return await r2PublicService.fetch(request);
+			}
+
+			if (url.pathname.startsWith(CorePaths.LOCAL_PREFIX)) {
+				return new Response(
+					`"${url.pathname}" is not a recognised local endpoint.`,
+					{ status: 404 }
+				);
 			}
 
 			let response = await service.fetch(request);

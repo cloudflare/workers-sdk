@@ -13,6 +13,7 @@ import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { CopyButton } from "../../../components/CopyButton";
 import { NotFound } from "../../../components/NotFound";
 import { ResourceError } from "../../../components/ResourceError";
+import { LOCAL_EXPLORER_API_PATH } from "../../../constants";
 import { formatDate, formatSize } from "../../../utils/format";
 import type { R2HeadObjectResult } from "../../../api";
 
@@ -148,7 +149,7 @@ function ObjectDetailView(): JSX.Element {
 	const [error, setError] = useState<string | null>(null);
 
 	function handleDownload(): void {
-		const downloadUrl = `/cdn-cgi/explorer/api/r2/buckets/${encodeURIComponent(params.bucketName)}/objects/${encodeURIComponent(loaderData.objectKey)}`;
+		const downloadUrl = `${LOCAL_EXPLORER_API_PATH}/r2/buckets/${encodeURIComponent(params.bucketName)}/objects/${encodeURIComponent(loaderData.objectKey)}`;
 		const link = document.createElement("a");
 		link.href = downloadUrl;
 		link.download = loaderData.objectKey.split("/").pop() || "download";

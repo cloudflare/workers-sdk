@@ -308,14 +308,14 @@ export const CoreSharedOptionsSchema = z
 		unsafeModuleFallbackService: CustomFetchServiceSchema.optional(),
 		// Keep blobs when deleting/overwriting keys, required for stacked storage
 		unsafeStickyBlobs: z.boolean().optional(),
-		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
+		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/local/scheduled`
 		unsafeTriggerHandlers: z.boolean().optional(),
 		// Extra environment variables to set on the spawned `workerd` subprocess.
 		// Merged on top of `process.env` and Miniflare's own defaults
 		// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
 		// (for example, to test timezone-dependent behaviour).
 		unsafeRuntimeEnv: z.record(z.string()).optional(),
-		// Enable the local explorer at /cdn-cgi/explorer
+		// Enable the local explorer at /cdn-cgi/local/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
@@ -992,7 +992,6 @@ export interface GlobalServicesOptions {
 	sharedOptions: z.infer<typeof CoreSharedOptionsSchema>;
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
-	loopbackPort: number;
 	tmpPath: string;
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */

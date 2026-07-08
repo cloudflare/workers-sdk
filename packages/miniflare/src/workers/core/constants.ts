@@ -1,24 +1,25 @@
 /**
- * Reserved `/cdn-cgi/` paths for internal Miniflare endpoints.
- * These paths are reserved by Cloudflare's network and won't conflict with user routes.
+ * Reserved paths for internal Miniflare endpoints.
+ *
+ * Paths under `/cdn-cgi/local/` are reserved by Cloudflare's network
+ * and won't conflict with user routes. Paths under `/__cf_local/` live
+ * outside `/cdn-cgi/` so they remain reachable over tunnels.
  */
 export const CorePaths = {
 	/** Magic proxy used by getPlatformProxy */
-	PLATFORM_PROXY: "/cdn-cgi/platform-proxy",
+	PLATFORM_PROXY: "/cdn-cgi/local/platform-proxy",
 	/** Trigger scheduled event handlers */
-	SCHEDULED: "/cdn-cgi/handler/scheduled",
+	SCHEDULED: "/cdn-cgi/local/scheduled",
 	/** Trigger email event handlers */
-	EMAIL: "/cdn-cgi/handler/email",
-	/** Handler path prefix for validation */
-	HANDLER_PREFIX: "/cdn-cgi/handler/",
+	EMAIL: "/cdn-cgi/local/email",
+	/** Local endpoint prefix for catch-all validation */
+	LOCAL_PREFIX: "/cdn-cgi/local/",
 	/** Local explorer UI and API */
-	EXPLORER: "/cdn-cgi/explorer",
-	/** Legacy way to trigger scheduled event handlers */
-	LEGACY_SCHEDULED: "/cdn-cgi/mf/scheduled",
-	/** Stream video serving endpoint */
-	STREAM_VIDEO: "/cdn-cgi/mf/stream",
-	/** Local image delivery endpoint for serving hosted images */
-	IMAGE_DELIVERY: "/cdn-cgi/mf/imagedelivery",
+	EXPLORER: "/cdn-cgi/local/explorer",
+	/** Stream video serving endpoint (outside /cdn-cgi/ for tunnel access) */
+	STREAM_VIDEO: "/__cf_local/stream",
+	/** Local image delivery endpoint (outside /cdn-cgi/ for tunnel access) */
+	IMAGE_DELIVERY: "/__cf_local/imagedelivery",
 	/** Public R2 bucket object serving endpoint */
 	R2_PUBLIC: "/cdn-cgi/local/r2/public",
 } as const;

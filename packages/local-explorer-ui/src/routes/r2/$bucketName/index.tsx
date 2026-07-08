@@ -31,6 +31,7 @@ import { NotFound } from "../../../components/NotFound";
 import { R2ObjectTable } from "../../../components/R2ObjectTable";
 import { R2UploadDialog } from "../../../components/R2UploadDialog";
 import { ResourceError } from "../../../components/ResourceError";
+import { LOCAL_EXPLORER_API_PATH } from "../../../constants";
 import { withMinimumDelay } from "../../../utils/async";
 import type { R2Object } from "../../../api";
 
@@ -215,7 +216,7 @@ function BucketView(): JSX.Element {
 
 	function handleDownload(keys: string[]): void {
 		for (const key of keys) {
-			const downloadUrl = `/cdn-cgi/explorer/api/r2/buckets/${encodeURIComponent(params.bucketName)}/objects/${encodeURIComponent(key)}`;
+			const downloadUrl = `${LOCAL_EXPLORER_API_PATH}/r2/buckets/${encodeURIComponent(params.bucketName)}/objects/${encodeURIComponent(key)}`;
 			const link = document.createElement("a");
 			link.href = downloadUrl;
 			link.download = key.split("/").pop() || "download";
