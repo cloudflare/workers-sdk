@@ -4,4 +4,4 @@
 
 Add nub to the list of recognised package managers
 
-nub is a package manager whose lock file is `nub.lock`. Adding a `NubPackageManager` descriptor lets projects managed by nub be detected by their lock file.
+Projects using nub can now be automatically detected by their `nub.lock` file.
