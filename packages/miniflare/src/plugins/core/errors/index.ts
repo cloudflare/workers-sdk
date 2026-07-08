@@ -307,23 +307,23 @@ export async function handlePrettyErrorRequest(
 
 	// Hand the revived, source-mapped error to the embedder — the one place
 	// an uncaught Worker exception exists as a structured value in Node
-	// (workerd catches handler exceptions to build the 500, so it never
-	// reaches the inspector's Runtime.exceptionThrown). The callback observes
-	// the error response, so it must not be able to break it: contain a
-	// throwing callback — and absorb a rejecting async one, which is
-	// type-assignable to the void contract — and keep building the page.
-	const logCallbackError = (callbackError: unknown) =>
-		log.error(
-			callbackError instanceof Error
-				? callbackError
-				: new Error(String(callbackError))
-		);
-	try {
-		const result: unknown = handleUncaughtError?.(error);
-		if (result instanceof Promise) result.catch(logCallbackError);
-	} catch (callbackError) {
-		logCallbackError(callbackError);
-	}
+	// (workerd catches handler exceptions to build the 500 response, so they
+	// never reach the inspector's `Runtime.exceptionThrown`).
+	//
+	// The callback only observes the error, so a misbehaving callback must
+	// not break the error response we are building here. It can fail in two
+	// ways: throw synchronously, or — since an async function is assignable
+	// to the `void`-returning signature — return a promise that later
+	// rejects. The async wrapper funnels both into a single rejection, which
+	// we log instead of propagating.
+	void (async () => handleUncaughtError?.(error))().catch(
+		(callbackError: unknown) =>
+			log.error(
+				callbackError instanceof Error
+					? callbackError
+					: new Error(String(callbackError))
+			)
+	);
 
 	// Only return a pretty-error HTML page if the client accepts it. Specifically
 	// don't return a HTML page to cURL, as HTML with minified scripts is hard to
