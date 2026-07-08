@@ -367,4 +367,44 @@ describe("ConfigController", () => {
 
 		expect(warningCount).toBe(1);
 	});
+
+	it("should warn when queues are configured in remote dev mode", async ({
+		expect,
+	}) => {
+		await seed({
+			"src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch() {
+						return new Response("hello world")
+					}
+				}
+			`,
+			"wrangler.toml": dedent /* toml */ `
+				name = "my-worker"
+				main = "src/index.ts"
+				compatibility_date = "2024-06-01"
+
+				[[queues.producers]]
+				binding = "QUEUE"
+				queue = "test-queue"
+			`,
+		});
+
+		const event = bus.waitFor("configUpdate");
+		await controller.set({
+			config: "./wrangler.toml",
+			dev: {
+				remote: true,
+				auth: {
+					accountId: "some-account-id",
+					apiToken: { apiToken: "some-api-token" },
+				},
+			},
+		});
+		await event;
+
+		expect(std.warn).toContain(
+			"Queues are not yet supported in wrangler dev remote mode."
+		);
+	});
 });
