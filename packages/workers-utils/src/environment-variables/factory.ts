@@ -77,6 +77,16 @@ type VariableNames =
 
 	/** Custom directory for Wrangler's cache files (overrides `node_modules/.cache/wrangler`). */
 	| "WRANGLER_CACHE_DIR"
+	/** Pins the global config directory so delegated tools resolve the same OAuth token (overrides XDG / `~/.wrangler`). */
+	| "CLOUDFLARE_CONFIG_DIR"
+	/** Absolute path to the auth-config file a delegated tool should read/refresh, for CLIs whose file differs from the default. Format inferred from the extension (`.toml` / `.json`). */
+	| "CLOUDFLARE_AUTH_CONFIG_FILE"
+	/** OAuth client ID identifying a delegated tool to the Cloudflare OAuth server (undefaulted). */
+	| "CLOUDFLARE_OAUTH_CLIENT_ID"
+	/** Honour the global API key + email pair in delegated auth resolution (default: true). */
+	| "CLOUDFLARE_ALLOW_GLOBAL_API_KEY"
+	/** Command a user runs to authenticate (e.g. `cf login`), used in delegated "not authenticated" errors. */
+	| "CLOUDFLARE_LOGIN_COMMAND"
 	/** Custom path to cloudflared binary (overrides automatic binary management). */
 	| "CLOUDFLARED_PATH"
 

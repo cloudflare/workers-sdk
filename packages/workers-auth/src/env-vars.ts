@@ -60,6 +60,18 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
+ * `CLOUDFLARE_OAUTH_CLIENT_ID` is the OAuth client ID identifying the consuming
+ * CLI to the Cloudflare OAuth server. It is intentionally undefaulted here: a
+ * delegated tool (e.g. `@cloudflare/remote-bindings`) must be told which OAuth
+ * app minted the stored token it is refreshing, and each CLI registers its own
+ * app. Consumers that ship their own app (e.g. wrangler) layer their default on
+ * top of this reader.
+ */
+export const getClientIdFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_OAUTH_CLIENT_ID",
+});
+
+/**
  * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID of a Cloudflare Access Service Token.
  * Used together with `CLOUDFLARE_ACCESS_CLIENT_SECRET` to authenticate with
  * Access-protected domains in non-interactive environments (e.g. CI).

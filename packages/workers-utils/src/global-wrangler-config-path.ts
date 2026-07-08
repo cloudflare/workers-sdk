@@ -1,7 +1,16 @@
 import os from "node:os";
 import path from "node:path";
+import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { isDirectory } from "./fs-helpers";
 import { xdgAppPaths } from "./xdg-app-paths";
+
+/**
+ * `CLOUDFLARE_CONFIG_DIR` pins the global config directory, so delegated tools
+ * resolve the same OAuth token location as the CLI that invoked them.
+ */
+export const getGlobalConfigDirFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_CONFIG_DIR",
+});
 
 export interface GetGlobalConfigPathOptions {
 	/**
@@ -34,7 +43,11 @@ export function getGlobalConfigPath({
 	leadingDot = true,
 	useLegacyHomeDir = true,
 }: GetGlobalConfigPathOptions = {}) {
-	//TODO: We should implement a custom path --global-config and/or the WRANGLER_HOME type environment variable
+	const configDirFromEnv = getGlobalConfigDirFromEnv();
+	if (configDirFromEnv) {
+		return configDirFromEnv;
+	}
+
 	const dirName = `${leadingDot ? "." : ""}${appName}`;
 	const configDir = xdgAppPaths(dirName).config(); // New XDG compliant config path
 
