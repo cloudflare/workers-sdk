@@ -1,10 +1,9 @@
-import { existsSync } from "node:fs";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
 	getInstalledPackageVersion,
 	getPackagePath,
 	parsePackageJSON,
-	readFileSync,
 } from "@cloudflare/workers-utils";
 import { logger } from "../../shared/context";
 
@@ -44,17 +43,19 @@ const MAX_PACKAGE_DEPENDENCIES = 200;
  * @returns An array of package dependency entries, or `undefined` if package.json
  *          cannot be read or no valid dependencies are found
  */
-export function collectPackageDependencies(
+export async function collectPackageDependencies(
 	projectPath: string
-): PackageDependency[] | undefined {
+): Promise<PackageDependency[] | undefined> {
 	const packageJsonPath = path.join(projectPath, "package.json");
 
-	if (!existsSync(packageJsonPath)) {
+	try {
+		await access(packageJsonPath);
+	} catch {
 		return undefined;
 	}
 
 	try {
-		const content = readFileSync(packageJsonPath);
+		const content = await readFile(packageJsonPath, "utf-8");
 		const packageJson = parsePackageJSON(content, packageJsonPath);
 
 		const allDependencies = {
@@ -87,7 +88,7 @@ export function collectPackageDependencies(
 				continue;
 			}
 
-			if (isPackagePrivate(dependencyName, projectPath)) {
+			if (await isPackagePrivate(dependencyName, projectPath)) {
 				continue;
 			}
 
@@ -107,7 +108,6 @@ export function collectPackageDependencies(
 	}
 }
 
-
 /**
  * Checks whether a package is marked as private in its own package.json.
  *
@@ -118,7 +118,10 @@ export function collectPackageDependencies(
  * @param projectPath - Path to the project directory
  * @returns `true` if the package has `"private": true`, `false` otherwise
  */
-function isPackagePrivate(packageName: string, projectPath: string): boolean {
+async function isPackagePrivate(
+	packageName: string,
+	projectPath: string
+): Promise<boolean> {
 	try {
 		const packagePath = getPackagePath(packageName, projectPath);
 		if (!packagePath) {
@@ -131,13 +134,16 @@ function isPackagePrivate(packageName: string, projectPath: string): boolean {
 
 		while (currentDir !== root) {
 			const potentialPackageJson = path.join(currentDir, "package.json");
-			if (existsSync(potentialPackageJson)) {
-				const content = readFileSync(potentialPackageJson);
+			try {
+				await access(potentialPackageJson);
+				const content = await readFile(potentialPackageJson, "utf-8");
 				const packageJson = parsePackageJSON(content, potentialPackageJson);
 
 				if (packageJson.name === packageName) {
 					return packageJson.private === true;
 				}
+			} catch {
+				// package.json doesn't exist at this level, keep walking up
 			}
 			currentDir = path.dirname(currentDir);
 		}

@@ -7,13 +7,15 @@ import { collectPackageDependencies } from "../src/deploy/helpers/package-depend
 describe("collectPackageDependencies", () => {
 	runInTempDir();
 
-	it("should return undefined when no package.json exists", ({ expect }) => {
-		const result = collectPackageDependencies(process.cwd());
+	it("should return undefined when no package.json exists", async ({
+		expect,
+	}) => {
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toBeUndefined();
 	});
 
-	it("should return undefined when package.json has no dependencies", ({
+	it("should return undefined when package.json has no dependencies", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -21,12 +23,12 @@ describe("collectPackageDependencies", () => {
 			JSON.stringify({ name: "test-project" }, null, 2)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toBeUndefined();
 	});
 
-	it("should skip workspace dependencies", ({ expect }) => {
+	it("should skip workspace dependencies", async ({ expect }) => {
 		fs.writeFileSync(
 			"package.json",
 			JSON.stringify(
@@ -42,12 +44,12 @@ describe("collectPackageDependencies", () => {
 			)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toBeUndefined();
 	});
 
-	it("should skip catalog dependencies", ({ expect }) => {
+	it("should skip catalog dependencies", async ({ expect }) => {
 		fs.writeFileSync(
 			"package.json",
 			JSON.stringify(
@@ -63,12 +65,12 @@ describe("collectPackageDependencies", () => {
 			)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toBeUndefined();
 	});
 
-	it("should collect public package dependencies", ({ expect }) => {
+	it("should collect public package dependencies", async ({ expect }) => {
 		const nodeModulesPath = path.join(process.cwd(), "node_modules");
 		const packagePath = path.join(nodeModulesPath, "test-public-package");
 		fs.mkdirSync(packagePath, { recursive: true });
@@ -99,7 +101,7 @@ describe("collectPackageDependencies", () => {
 			)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toEqual([
 			{
@@ -110,7 +112,7 @@ describe("collectPackageDependencies", () => {
 		]);
 	});
 
-	it("should collect from both dependencies and devDependencies", ({
+	it("should collect from both dependencies and devDependencies", async ({
 		expect,
 	}) => {
 		const nodeModulesPath = path.join(process.cwd(), "node_modules");
@@ -150,7 +152,7 @@ describe("collectPackageDependencies", () => {
 			)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toEqual([
 			{
@@ -166,7 +168,7 @@ describe("collectPackageDependencies", () => {
 		]);
 	});
 
-	it("should skip private packages", ({ expect }) => {
+	it("should skip private packages", async ({ expect }) => {
 		const nodeModulesPath = path.join(process.cwd(), "node_modules");
 		const packagePath = path.join(nodeModulesPath, "@company/private-package");
 		fs.mkdirSync(packagePath, { recursive: true });
@@ -198,12 +200,12 @@ describe("collectPackageDependencies", () => {
 			)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toBeUndefined();
 	});
 
-	it("should skip dependencies that cannot be resolved", ({ expect }) => {
+	it("should skip dependencies that cannot be resolved", async ({ expect }) => {
 		fs.writeFileSync(
 			"package.json",
 			JSON.stringify(
@@ -218,12 +220,12 @@ describe("collectPackageDependencies", () => {
 			)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toBeUndefined();
 	});
 
-	it("should handle mixed dependencies correctly", ({ expect }) => {
+	it("should handle mixed dependencies correctly", async ({ expect }) => {
 		const nodeModulesPath = path.join(process.cwd(), "node_modules");
 
 		// Create a public package
@@ -265,7 +267,7 @@ describe("collectPackageDependencies", () => {
 			)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toEqual([
 			{
@@ -276,7 +278,7 @@ describe("collectPackageDependencies", () => {
 		]);
 	});
 
-	it("should cap at 200 entries", ({ expect }) => {
+	it("should cap at 200 entries", async ({ expect }) => {
 		const nodeModulesPath = path.join(process.cwd(), "node_modules");
 		const dependencies: Record<string, string> = {};
 
@@ -305,13 +307,13 @@ describe("collectPackageDependencies", () => {
 			)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		expect(result).toBeDefined();
 		expect(result).toHaveLength(200);
 	});
 
-	it("should use devDependencies version when duplicate exists in dependencies", ({
+	it("should use devDependencies version when duplicate exists in dependencies", async ({
 		expect,
 	}) => {
 		const nodeModulesPath = path.join(process.cwd(), "node_modules");
@@ -341,7 +343,7 @@ describe("collectPackageDependencies", () => {
 			)
 		);
 
-		const result = collectPackageDependencies(process.cwd());
+		const result = await collectPackageDependencies(process.cwd());
 
 		// devDependencies spread over dependencies, so devDependencies version wins
 		expect(result).toEqual([

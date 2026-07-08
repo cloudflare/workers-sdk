@@ -347,7 +347,7 @@ export default async function deploy(
 		cache: config.cache,
 		package_dependencies:
 			config.dependencies_instrumentation !== false && projectRoot
-				? collectPackageDependencies(projectRoot)
+				? await collectPackageDependencies(projectRoot)
 				: undefined,
 	};
 

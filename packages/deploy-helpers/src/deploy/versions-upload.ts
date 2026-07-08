@@ -195,7 +195,7 @@ export default async function versionsUpload(
 		cache: config.cache, // cache is a versioned setting
 		package_dependencies:
 			config.dependencies_instrumentation !== false && projectRoot
-				? collectPackageDependencies(projectRoot)
+				? await collectPackageDependencies(projectRoot)
 				: undefined,
 	};
 
