@@ -57,10 +57,10 @@ export function collectPackageDependencies(
 		const content = readFileSync(packageJsonPath);
 		const packageJson = parsePackageJSON(content, packageJsonPath);
 
-		const allDependencies: Record<string, string> = {
-			...toStringRecord(packageJson.dependencies),
-			...toStringRecord(packageJson.devDependencies),
-		};
+		const allDependencies = {
+			...packageJson.dependencies,
+			...packageJson.devDependencies,
+		} as Record<string, string>;
 
 		const result: PackageDependency[] = [];
 
@@ -107,27 +107,6 @@ export function collectPackageDependencies(
 	}
 }
 
-/**
- * Converts a `Record<string, unknown>` (as typed in PackageJSON) to
- * a `Record<string, string>`, filtering out any non-string values.
- *
- * @param record - The record to convert
- * @returns A new record containing only string-valued entries
- */
-function toStringRecord(
-	record: Record<string, unknown> | undefined
-): Record<string, string> {
-	if (!record) {
-		return {};
-	}
-	const result: Record<string, string> = {};
-	for (const [key, value] of Object.entries(record)) {
-		if (typeof value === "string") {
-			result[key] = value;
-		}
-	}
-	return result;
-}
 
 /**
  * Checks whether a package is marked as private in its own package.json.
