@@ -17,6 +17,7 @@ import {
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zObservabilityQueryData,
 	zWorkflowsChangeInstanceStatusData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
@@ -31,6 +32,7 @@ import {
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
+import { runQuery } from "./resources/observability";
 import {
 	deleteR2Objects,
 	getR2Object,
@@ -73,6 +75,9 @@ export type Env = {
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
 	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
 	[CoreBindings.DEV_REGISTRY_DEBUG_PORT]: WorkerdDebugPortConnector;
+	// Internal observability collector's read API — only bound when local
+	// observability is enabled (see getExplorerServices).
+	[CoreBindings.SERVICE_OBSERVABILITY_COLLECTOR]?: Fetcher;
 };
 
 export type AppBindings = { Bindings: Env };
@@ -347,6 +352,16 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 		c.req.param("workflow_name"),
 		c.req.param("instance_id")
 	)
+);
+
+// ============================================================================
+// Observability Endpoints (experimental)
+// ============================================================================
+
+app.post(
+	"/api/local/observability/query",
+	validateRequestBody(zObservabilityQueryData.shape.body),
+	(c) => runQuery(c, c.req.valid("json"))
 );
 
 // ============================================================================

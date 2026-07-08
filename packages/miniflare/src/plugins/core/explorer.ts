@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { OBSERVABILITY_COLLECTOR_SERVICE_NAME } from "@cloudflare/workers-utils";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import {
@@ -39,6 +40,8 @@ export interface ExplorerServicesOptions {
 		enabled: boolean;
 		deviceId?: string;
 	};
+	/** Whether local observability is enabled — gates the collector binding. */
+	observabilityEnabled: boolean;
 }
 
 /**
@@ -55,6 +58,7 @@ export function getExplorerServices(
 		workerNames,
 		explorerWorkerOpts,
 		telemetry,
+		observabilityEnabled,
 	} = options;
 
 	const explorerBindings: Worker_Binding[] = [
@@ -92,6 +96,17 @@ export function getExplorerServices(
 			workerdDebugPort: kVoid,
 		},
 	];
+
+	// Only bind the observability collector when observability is enabled —
+	// otherwise the service doesn't exist and workerd would fail to start.
+	if (observabilityEnabled) {
+		explorerBindings.push({
+			name: CoreBindings.SERVICE_OBSERVABILITY_COLLECTOR,
+			service: {
+				name: getUserServiceName(OBSERVABILITY_COLLECTOR_SERVICE_NAME),
+			},
+		});
+	}
 
 	if (hasDurableObjects) {
 		// Add Durable Object namespace bindings for the explorer

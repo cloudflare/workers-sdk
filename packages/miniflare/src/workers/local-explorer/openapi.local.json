@@ -1928,6 +1928,71 @@
 				"summary": "Send Event to Workflow Instance",
 				"tags": ["Workflows"]
 			}
+		},
+		"/local/observability/query": {
+			"post": {
+				"description": "Runs a single read-only SQL query against the local trace store and returns { columns, rows }.\nThis is the only observability read endpoint: the Observability tab and coding agents both read through it (the UI ships the common views as canned queries).\n\nOnly one SELECT/WITH statement is allowed; writes, DDL, PRAGMA, ATTACH, and multiple statements are rejected, and at most 10000 rows are returned.\nBind values with `params` rather than string-interpolating them.\n`attributes` is stored as JSONB — wrap it with `json(attributes)` to read it back as JSON.\n\nSchema (the query contract):\n\nCREATE TABLE spans (\n  trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_id TEXT, -- parent_id IS NULL on a root (invocation) span\n  service TEXT,        -- owning worker name (multi-worker attribution)\n  name TEXT, kind TEXT,\n  start_ms INTEGER,    -- absolute epoch ms\n  duration_ms INTEGER, -- whole ms; NULL while the span is still running\n  outcome TEXT, error TEXT,\n  attributes BLOB,     -- JSONB; read via json(attributes)\n  created_at TEXT,\n  PRIMARY KEY (trace_id, span_id)\n);\n-- index spans_roots ON spans (start_ms) WHERE parent_id IS NULL\n\nCREATE TABLE logs (\n  trace_id TEXT NOT NULL, span_id TEXT,\n  seq INTEGER NOT NULL, -- order within the trace\n  ts_ms INTEGER, level TEXT, message TEXT, -- message is a JSON-encoded console arg array\n  operation TEXT, created_at TEXT,\n  PRIMARY KEY (trace_id, seq)\n);",
+				"operationId": "observability-query",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"sql": {
+										"type": "string",
+										"description": "A single read-only SELECT/WITH query against the spans/logs schema above."
+									},
+									"params": {
+										"type": "array",
+										"items": {},
+										"description": "Values bound to `?` placeholders in the query, in order."
+									}
+								},
+								"required": ["sql"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/observability_query-result"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Query response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Query response failure."
+					}
+				},
+				"summary": "Query Observability Store",
+				"tags": ["Observability"]
+			}
 		}
 	},
 	"components": {
@@ -3284,6 +3349,26 @@
 					}
 				},
 				"required": ["id", "status"]
+			},
+			"observability_query-result": {
+				"type": "object",
+				"description": "Columns and rows for a read-only SQL query.",
+				"properties": {
+					"columns": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"rows": {
+						"type": "array",
+						"items": {
+							"type": "array",
+							"items": {}
+						}
+					}
+				},
+				"required": ["columns", "rows"]
 			}
 		}
 	}
