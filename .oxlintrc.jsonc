@@ -96,6 +96,10 @@
 		"!packages/create-cloudflare/**/templates*/**/c3.ts",
 		// TODO: we really should be linting this folder
 		"packages/wrangler/templates/**",
+		// Embedded worker scripts bundled at build time (use workers-types globals
+		// and edge-only patterns not compatible with the Node-focused lint rules).
+		"packages/dev-proxy/templates/**",
+		"packages/remote-bindings/templates/**",
 		// Ignore generated files
 		"packages/containers-shared/src/client/**",
 		"packages/local-explorer-ui/src/api/generated/**",
