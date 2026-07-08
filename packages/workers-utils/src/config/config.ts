@@ -73,17 +73,25 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	send_metrics: boolean | undefined;
 
 	/**
-	 * Whether Wrangler should collect and send npm package dependency metadata
-	 * when deploying or uploading a Worker version.
+	 * Configuration for npm package dependency instrumentation.
 	 *
-	 * When set to `false`, Wrangler will not include `package_dependencies` in
-	 * the upload payload. Defaults to `true` (enabled) when not specified.
+	 * Controls whether Wrangler should collect and send npm package dependency
+	 * metadata when deploying or uploading a Worker version.
+	 *
+	 * When `enabled` is set to `false`, Wrangler will not include
+	 * `package_dependencies` in the upload payload. Defaults to enabled when
+	 * not specified.
 	 *
 	 * Note: This is considered build metadata, so managed separately from the
 	 *       telemetry one and not disabled when
 	 *       `send_metrics`/`WRANGLER_SEND_METRICS` is set to `false`
 	 */
-	dependencies_instrumentation: boolean | undefined;
+	dependencies_instrumentation:
+		| {
+				/** Whether dependency instrumentation is enabled. Defaults to `true`. */
+				enabled: boolean;
+		  }
+		| undefined;
 
 	/**
 	 * Options to configure the development server that your worker will use.

@@ -2615,7 +2615,7 @@ describe("versions upload", () => {
 			]);
 		});
 
-		test("should omit package_dependencies when dependencies_instrumentation is false", async ({
+		test("should omit package_dependencies when dependencies_instrumentation.enabled is false", async ({
 			expect,
 		}) => {
 			mockGetScript();
@@ -2633,7 +2633,7 @@ describe("versions upload", () => {
 			writeWranglerConfig({
 				name: "test-name",
 				main: "./index.js",
-				dependencies_instrumentation: false,
+				dependencies_instrumentation: { enabled: false },
 			});
 			fs.writeFileSync(
 				"package.json",

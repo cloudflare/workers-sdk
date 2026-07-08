@@ -346,7 +346,7 @@ export default async function deploy(
 		observability: config.observability,
 		cache: config.cache,
 		package_dependencies:
-			config.dependencies_instrumentation !== false && projectRoot
+			config.dependencies_instrumentation?.enabled !== false && projectRoot
 				? await collectPackageDependencies(projectRoot)
 				: undefined,
 	};

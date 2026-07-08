@@ -302,13 +302,34 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
-	validateOptionalProperty(
-		diagnostics,
-		"",
-		"dependencies_instrumentation",
-		rawConfig.dependencies_instrumentation,
-		"boolean"
-	);
+	if (
+		validateOptionalProperty(
+			diagnostics,
+			"",
+			"dependencies_instrumentation",
+			rawConfig.dependencies_instrumentation,
+			"object"
+		)
+	) {
+		if (typeof rawConfig.dependencies_instrumentation === "object") {
+			validateOptionalProperty(
+				diagnostics,
+				"dependencies_instrumentation",
+				"enabled",
+				rawConfig.dependencies_instrumentation.enabled,
+				"boolean"
+			);
+
+			validateAdditionalProperties(
+				diagnostics,
+				"dependencies_instrumentation",
+				Object.keys(
+					rawConfig.dependencies_instrumentation as Record<string, unknown>
+				),
+				["enabled"]
+			);
+		}
+	}
 
 	validateOptionalProperty(
 		diagnostics,

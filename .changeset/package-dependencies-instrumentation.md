@@ -8,10 +8,12 @@ Wrangler now collects npm package dependency information from the project's `pac
 
 The collected data includes the package name, the version constraint from `package.json`, and the exact installed version from `node_modules`. Both `dependencies` and `devDependencies` are included, while workspace packages, local packages, private packages, and unresolvable packages are excluded. The list is capped at 200 entries per upload.
 
-To opt out, set `dependencies_instrumentation` to `false` in your Wrangler configuration file:
+To opt out, set `dependencies_instrumentation.enabled` to `false` in your Wrangler configuration file:
 
 ```json
 {
-	"dependencies_instrumentation": false
+	"dependencies_instrumentation": {
+		"enabled": false
+	}
 }
 ```
