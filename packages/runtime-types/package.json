@@ -36,6 +36,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
