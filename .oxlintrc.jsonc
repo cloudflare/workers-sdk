@@ -209,7 +209,6 @@
 				"packages/local-explorer-ui/**",
 				"packages/vite-plugin-cloudflare/**",
 				"packages/workflows-shared/**",
-				"packages/wrangler/**",
 			],
 			"rules": {
 				"@typescript-eslint/no-deprecated": "off",
