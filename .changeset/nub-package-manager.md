@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-utils": minor
+"@cloudflare/workers-utils": patch
 ---
 
 Add nub to the list of recognised package managers
