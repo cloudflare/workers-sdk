@@ -148,6 +148,7 @@ import type {
 } from "./runtime";
 import type { Log } from "./shared";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
+import type { DevControl } from "./workers/core/dev-control";
 import type {
 	CacheStorage,
 	D1Database,
@@ -3100,6 +3101,45 @@ export class Miniflare {
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
 		return this.#getProxy(DURABLE_OBJECTS_PLUGIN_NAME, bindingName, workerName);
+	}
+	async #getDevControl(): Promise<DevControl> {
+		const proxyClient = await this._getProxyClient();
+		const control = proxyClient.env[CoreBindings.SERVICE_DEV_CONTROL] as
+			| DevControl
+			| undefined;
+		assert(control !== undefined, "Expected dev control service");
+
+		return control;
+	}
+	async evictDurableObject(
+		scriptName: string,
+		className: string,
+		options: ({ name: string; id?: never } | { id: string; name?: never }) & {
+			webSockets?: "close" | "hibernate";
+		}
+	): Promise<void> {
+		const durableObjectExists = this.#workerOpts.some((workerOpts) => {
+			const workerName = workerOpts.core.name ?? "";
+			return [
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].some((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					(durableObject.scriptName ?? workerName) === scriptName &&
+					durableObject.className === className
+				);
+			});
+		});
+
+		if (!durableObjectExists) {
+			throw new TypeError(
+				`No Durable Object class named ${JSON.stringify(className)} found in ${JSON.stringify(scriptName)} worker.`
+			);
+		}
+
+		const control = await this.#getDevControl();
+		await control.evictDurableObject(scriptName, className, options);
 	}
 	async listDurableObjectIds(
 		bindingName: string,

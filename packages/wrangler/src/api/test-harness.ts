@@ -156,6 +156,24 @@ export type WorkerHandle<
 	 */
 	applyD1Migrations(bindingName: BindingName<Env, D1Database>): Promise<void>;
 	/**
+	 * Evicts a currently running Durable Object instance while preserving its durable storage.
+	 * In-memory state is reset the next time the object starts.
+	 *
+	 * @example
+	 * ```ts
+	 * await worker.evictDurableObject("COUNTER", {
+	 *   name: "user-123",
+	 *   webSockets: "hibernate",
+	 * });
+	 * ```
+	 */
+	evictDurableObject(
+		bindingName: BindingName<Env, DurableObjectNamespace>,
+		options: ({ name: string; id?: never } | { id: string; name?: never }) & {
+			webSockets?: "close" | "hibernate";
+		}
+	): Promise<void>;
+	/**
 	 * Creates an introspector for a specific Workflow instance.
 	 */
 	introspectWorkflowInstance(
@@ -558,6 +576,30 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		}
 
 		return workerName;
+	}
+
+	function resolveDurableObjectBinding(
+		session: ServerSession,
+		workerName: string,
+		bindingName: string
+	) {
+		const workerConfig = session.devEnvs.find(
+			(devEnv) => devEnv.config.latestConfig?.name === workerName
+		)?.config.latestWranglerConfig;
+		const durableObject = workerConfig?.durable_objects.bindings.find(
+			(binding) => binding.name === bindingName
+		);
+
+		if (durableObject === undefined) {
+			throw new TypeError(
+				`No Durable Object namespace binding named ${JSON.stringify(bindingName)} found in ${JSON.stringify(workerName)} worker.`
+			);
+		}
+
+		return {
+			scriptName: durableObject.script_name ?? workerName,
+			className: durableObject.class_name,
+		};
 	}
 
 	async function serverAuthHook(
@@ -993,6 +1035,22 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						debugLog(`d1 migrations - ${bindingName} - failed`, workerName);
 						throw error;
 					}
+				},
+				async evictDurableObject(bindingName, evictionOptions) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const { scriptName, className } = resolveDurableObjectBinding(
+						session,
+						workerName,
+						bindingName
+					);
+
+					await miniflare.evictDurableObject(
+						scriptName,
+						className,
+						evictionOptions
+					);
 				},
 				async getEnv() {
 					const session = await resolveSession();
