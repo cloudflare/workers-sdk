@@ -1,4 +1,5 @@
 import {
+	APIError,
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
 	retryOnAPIFailure,
@@ -6,6 +7,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
+import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-codes";
 import {
 	fetchListResult,
 	fetchResult,
@@ -296,7 +298,28 @@ export async function triggersDeploy(
 					}
 				).then(
 					() => ({ targets: [`workflow: ${workflow.name}`] }),
-					(error) => ({ targets: [], error })
+					(error) => {
+						if (
+							error instanceof APIError &&
+							error.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE &&
+							workflow.schedules
+						) {
+							error.preventReport();
+							return {
+								targets: [],
+								error: new UserError(
+									`Workflow "${workflow.name}" has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
+									{
+										cause: error,
+										telemetryMessage:
+											"triggers deploy workflow cron requires paid plan",
+									}
+								),
+							};
+						}
+
+						return { targets: [], error };
+					}
 				)
 			);
 		}

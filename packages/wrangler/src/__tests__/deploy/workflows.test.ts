@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
+import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -345,6 +346,61 @@ describe("deploy", () => {
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.out).toContain("workflow: my-workflow");
+		});
+
+		it("should explain that cron-triggered workflows require a paid plan", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						schedules: "0 * * * *",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			msw.use(
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+								message: "Cron-triggered workflows require a paid plan",
+							},
+						]),
+						{ status: 403 }
+					);
+				})
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Some triggers failed to deploy for test-name:
+				  - Workflow "my-workflow" has "schedules" configured, but scheduled Workflows require a paid Workers plan.]
+			`);
 		});
 
 		it("should deploy a workflow with schedules as an array of cron expressions", async ({
