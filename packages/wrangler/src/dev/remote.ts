@@ -13,7 +13,7 @@ import { getAuthFromEnv, requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import type { StartDevWorkerInput } from "../api";
-import type { CfAccount } from "./create-worker-preview";
+import type { CfAccount } from "./preview";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { ApiCredentials } from "@cloudflare/workers-utils";
 import type {

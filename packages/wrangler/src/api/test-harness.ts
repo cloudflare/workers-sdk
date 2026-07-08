@@ -27,7 +27,7 @@ import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
-import type { CfAccount } from "../dev/create-worker-preview";
+import type { CfAccount } from "../dev/preview";
 import type { ErrorEvent } from "./startDevWorker/events";
 import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
 import type {

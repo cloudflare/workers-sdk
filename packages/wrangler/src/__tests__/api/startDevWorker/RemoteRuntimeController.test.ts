@@ -5,7 +5,7 @@ import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRunti
 import {
 	createPreviewSession,
 	createWorkerPreview,
-} from "../../../dev/create-worker-preview";
+} from "../../../dev/preview";
 import {
 	createRemoteWorkerInit,
 	getWorkerAccountAndContext,
@@ -23,7 +23,7 @@ import type {
 } from "../../../api";
 
 // Mock the API modules
-vi.mock("../../../dev/create-worker-preview", () => ({
+vi.mock("../../../dev/preview", () => ({
 	createPreviewSession: vi.fn(),
 	createWorkerPreview: vi.fn(),
 }));

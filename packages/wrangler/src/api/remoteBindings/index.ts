@@ -7,7 +7,7 @@ import { readConfig } from "../../config";
 import { requireApiToken, requireAuth } from "../../user";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
-import type { CfAccount } from "../../dev/create-worker-preview";
+import type { CfAccount } from "../../dev/preview";
 import type {
 	AsyncHook,
 	Binding,

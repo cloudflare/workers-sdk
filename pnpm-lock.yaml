@@ -4396,6 +4396,9 @@ importers:
       '@cloudflare/pages-shared':
         specifier: workspace:^
         version: link:../pages-shared
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
       '@cloudflare/types':
         specifier: 6.18.4
         version: 6.18.4(react@19.2.4)

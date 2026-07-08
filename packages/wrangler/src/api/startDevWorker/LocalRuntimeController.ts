@@ -15,7 +15,7 @@ import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { getBinaryFileContents } from "./utils";
-import type { CfAccount } from "../../dev/create-worker-preview";
+import type { CfAccount } from "../../dev/preview";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,

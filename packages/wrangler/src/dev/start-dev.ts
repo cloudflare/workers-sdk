@@ -23,7 +23,7 @@ import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
 import type { StartDevOptionsBindings } from "../api/startDevWorker/binding-utils";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { CfAccount } from "./create-worker-preview";
+import type { CfAccount } from "./preview";
 import type { Config } from "@cloudflare/workers-utils";
 
 /**
