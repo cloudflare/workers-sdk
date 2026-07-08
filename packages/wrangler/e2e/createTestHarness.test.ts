@@ -22,7 +22,7 @@ import type {
 	DurableObjectNamespace,
 	KVNamespace,
 	R2Bucket,
-} from "@cloudflare/workers-types/experimental";
+} from "@cloudflare/workers-types";
 
 const { createTestHarness } = await importWrangler();
 
