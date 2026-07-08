@@ -10,8 +10,8 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
-import { getGlobalWranglerConfigPath } from "./wrangler";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 export type { WorkerDefinition, WorkerRegistry };
 import type { Log } from "./log";
@@ -20,6 +20,7 @@ import type { FSWatcher } from "chokidar";
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registeredWorkers: Set<string> = new Set();
+	private watchQueueConsumers = false;
 	private externalServices: Map<
 		string,
 		{
@@ -45,13 +46,15 @@ export class DevRegistry {
 				classNames: Set<string>;
 				entrypoints: Set<string | undefined>;
 			}
-		>
+		>,
+		watchQueueConsumers = false
 	): void {
-		if (services.size === 0 || !this.registryPath) {
+		if ((services.size === 0 && !watchQueueConsumers) || !this.registryPath) {
 			return;
 		}
 
 		this.externalServices = new Map(services);
+		this.watchQueueConsumers = watchQueueConsumers;
 
 		mkdirSync(this.registryPath, { recursive: true });
 
@@ -191,6 +194,17 @@ export class DevRegistry {
 		}
 		const previousRegistry = JSON.parse(this.previousJSON);
 		this.previousJSON = json;
+		// Queue consumers may be advertised by any worker in the registry (their
+		// names aren't known upfront), so compare the queue-consumer view of the
+		// whole registry rather than specific entries.
+		if (
+			this.watchQueueConsumers &&
+			getQueueConsumersView(registry) !==
+				getQueueConsumersView(previousRegistry)
+		) {
+			this.onUpdate(registry);
+			return;
+		}
 		for (const [service] of this.externalServices) {
 			if (
 				JSON.stringify(registry[service]) !==
@@ -201,6 +215,29 @@ export class DevRegistry {
 			}
 		}
 	}
+}
+
+/**
+ * Serialise the parts of the registry that matter for routing cross-process
+ * queue messages: which workers consume which queues, and the debug address
+ * each can be reached on (see `findQueueConsumer`).
+ */
+function getQueueConsumersView(registry: WorkerRegistry): string {
+	return JSON.stringify(
+		Object.entries(registry)
+			.filter(([, definition]) => definition.queueConsumers !== undefined)
+			.map(
+				([workerName, definition]) =>
+					[
+						workerName,
+						definition.debugPortAddress,
+						definition.queueConsumers,
+					] as const
+			)
+			.sort(([previousWorkerName], [nextWorkerName]) =>
+				previousWorkerName.localeCompare(nextWorkerName)
+			)
+	);
 }
 
 /**
@@ -249,6 +286,6 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 export function getDefaultDevRegistryPath() {
 	return (
 		process.env.MINIFLARE_REGISTRY_PATH ??
-		path.join(getGlobalWranglerConfigPath(), "registry")
+		path.join(getGlobalConfigPath(), "registry")
 	);
 }

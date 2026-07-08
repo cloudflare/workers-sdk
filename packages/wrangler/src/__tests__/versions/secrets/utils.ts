@@ -149,6 +149,7 @@ export function mockPostVersion(
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toMatch(/script-name(-test)?/);
 
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 				const formData = await request.formData();
 				const metadata = JSON.parse(
 					formData.get("metadata") as string

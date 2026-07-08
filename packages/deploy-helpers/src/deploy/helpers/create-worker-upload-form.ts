@@ -64,6 +64,7 @@ export function createWorkerUploadForm(
 		main,
 		sourceMaps,
 		migrations,
+		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
 		keepVars,
@@ -827,6 +828,10 @@ export function createWorkerUploadForm(
 			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
+		...(configuredExports &&
+			Object.keys(configuredExports).length > 0 && {
+				exports: configuredExports,
+			}),
 		capnp_schema: capnpSchemaOutputFile,
 		...(keep_bindings && { keep_bindings }),
 		...(logpush !== undefined && { logpush }),

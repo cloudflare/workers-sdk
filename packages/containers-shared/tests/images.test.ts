@@ -116,7 +116,7 @@ describe("getAndValidateRegistryType - GAR", () => {
 	];
 	for (const domain of invalidGarDomains) {
 		it(`rejects ${domain}`, ({ expect }) => {
-			expect(() => getAndValidateRegistryType(domain)).toThrowError(
+			expect(() => getAndValidateRegistryType(domain)).toThrow(
 				`${domain} is not a supported image registry`
 			);
 		});

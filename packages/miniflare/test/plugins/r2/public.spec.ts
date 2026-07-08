@@ -50,6 +50,20 @@ test("a plain GET returns the full object as 200, not 206", async ({
 	expect(res.headers.get("Accept-Ranges")).toBe("bytes");
 });
 
+test("defaults Content-Type to application/octet-stream when unset", async ({
+	expect,
+}) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("no-type-key", "0123456789");
+
+	const res = await fetch(bucketUrl("/no-type-key", ctx.url));
+
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("0123456789");
+	expect(res.headers.get("Content-Type")).toBe("application/octet-stream");
+	expect(res.headers.get("Content-Length")).toBe("10");
+});
+
 test("forwards all stored HTTP metadata as response headers", async ({
 	expect,
 }) => {
@@ -102,6 +116,12 @@ test("decodes percent-encoded keys", async ({ expect }) => {
 
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe("nested");
+
+	// Keys containing `%` must be decoded exactly once
+	await r2.put("100%/a%2Bb.txt", "percent");
+	const percent = await fetch(bucketUrl("/100%25/a%252Bb.txt", ctx.url));
+	expect(percent.status).toBe(200);
+	expect(await percent.text()).toBe("percent");
 });
 
 test("GET supports range requests", async ({ expect }) => {
@@ -116,6 +136,35 @@ test("GET supports range requests", async ({ expect }) => {
 	expect(await res.text()).toBe("0123");
 	expect(res.headers.get("Content-Range")).toBe("bytes 0-3/10");
 	expect(res.headers.get("Content-Length")).toBe("4");
+});
+
+test("GET honors suffix ranges with a partial 206", async ({ expect }) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("suffix-range-key", "0123456789");
+
+	const res = await fetch(bucketUrl("/suffix-range-key", ctx.url), {
+		headers: { Range: "bytes=-4" },
+	});
+
+	expect(res.status).toBe(206);
+	expect(await res.text()).toBe("6789");
+	expect(res.headers.get("Content-Range")).toBe("bytes 6-9/10");
+	expect(res.headers.get("Content-Length")).toBe("4");
+});
+
+test("HEAD honors Range with a bodyless 206", async ({ expect }) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("head-range-key", "0123456789");
+
+	const res = await fetch(bucketUrl("/head-range-key", ctx.url), {
+		method: "HEAD",
+		headers: { Range: "bytes=0-3" },
+	});
+
+	expect(res.status).toBe(206);
+	expect(res.headers.get("Content-Range")).toBe("bytes 0-3/10");
+	expect(res.headers.get("Content-Length")).toBe("4");
+	expect(await res.text()).toBe("");
 });
 
 test("HEAD returns headers without a body", async ({ expect }) => {
@@ -144,9 +193,7 @@ test("HEAD returns 404 for a missing key", async ({ expect }) => {
 	await res.arrayBuffer();
 });
 
-test("rejects write methods with 405 and an Allow header", async ({
-	expect,
-}) => {
+test("rejects write methods with 401", async ({ expect }) => {
 	const r2 = await ctx.mf.getR2Bucket("BUCKET");
 	await r2.put("readonly-key", "untouched");
 
@@ -155,13 +202,52 @@ test("rejects write methods with 405 and an Allow header", async ({
 			method,
 			body: method === "DELETE" ? undefined : "tampered",
 		});
-		expect(res.status, `${method} should be rejected`).toBe(405);
-		expect(res.headers.get("Allow")).toBe("GET, HEAD, OPTIONS");
+		expect(res.status, `${method} should be rejected`).toBe(401);
 		await res.arrayBuffer();
 	}
 
 	const after = await r2.get("readonly-key");
 	expect(await after?.text()).toBe("untouched");
+});
+
+test("rejects malformed and multiple ranges with 400", async ({ expect }) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("bad-range-key", "0123456789");
+
+	for (const range of ["bytes=zzz", "bytes=0-1,3-4", "0-3", "bytes=5-2"]) {
+		const res = await fetch(bucketUrl("/bad-range-key", ctx.url), {
+			headers: { Range: range },
+		});
+		expect(res.status, `"${range}" should be rejected`).toBe(400);
+		await res.arrayBuffer();
+	}
+});
+
+test("rejects unsatisfiable ranges with 416", async ({ expect }) => {
+	const r2 = await ctx.mf.getR2Bucket("BUCKET");
+	await r2.put("unsat-range-key", "0123456789");
+
+	const res = await fetch(bucketUrl("/unsat-range-key", ctx.url), {
+		headers: { Range: "bytes=99999-" },
+	});
+	expect(res.status).toBe(416);
+	await res.arrayBuffer();
+
+	// A zero suffix length is unsatisfiable for any object
+	const zeroSuffix = await fetch(bucketUrl("/unsat-range-key", ctx.url), {
+		headers: { Range: "bytes=-0" },
+	});
+	expect(zeroSuffix.status).toBe(416);
+	await zeroSuffix.arrayBuffer();
+
+	// Any range on a zero-length object is unsatisfiable, including a suffix
+	// range (which the simulator would otherwise serve as a zero-length 206)
+	await r2.put("empty-range-key", "");
+	const emptySuffix = await fetch(bucketUrl("/empty-range-key", ctx.url), {
+		headers: { Range: "bytes=-5" },
+	});
+	expect(emptySuffix.status).toBe(416);
+	await emptySuffix.arrayBuffer();
 });
 
 // The entry worker rejects /cdn-cgi/* requests from non-localhost origins

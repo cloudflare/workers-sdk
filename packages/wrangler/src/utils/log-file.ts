@@ -4,10 +4,10 @@ import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import {
 	getEnvironmentVariableFactory,
-	getGlobalWranglerConfigPath,
+	getGlobalConfigPath,
 } from "@cloudflare/workers-utils";
 import { Mutex } from "miniflare";
-import onExit from "signal-exit";
+import { onExit } from "signal-exit";
 import { logger } from "../logger";
 import { ensureDirectoryExists } from "./filesystem";
 import type { LoggerLevel } from "../logger";
@@ -15,7 +15,7 @@ import type { LoggerLevel } from "../logger";
 const getDebugFileDir = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_PATH",
 	defaultValue() {
-		const gobalWranglerConfigDir = getGlobalWranglerConfigPath();
+		const gobalWranglerConfigDir = getGlobalConfigPath();
 
 		return path.join(gobalWranglerConfigDir, "logs");
 	},

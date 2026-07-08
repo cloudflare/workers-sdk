@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.24.0",
+	"version": "0.25.1",
 	"description": "Internal utility package for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
 	"bugs": {
@@ -30,6 +30,14 @@
 		"./test-helpers": {
 			"import": "./dist/test-helpers/index.mjs",
 			"types": "./dist/test-helpers/index.d.mts"
+		},
+		"./fs-helpers": {
+			"import": "./dist/fs-helpers.mjs",
+			"types": "./dist/fs-helpers.d.mts"
+		},
+		"./global-wrangler-config-path": {
+			"import": "./dist/global-wrangler-config-path.mjs",
+			"types": "./dist/global-wrangler-config-path.d.mts"
 		}
 	},
 	"scripts": {
@@ -50,7 +58,6 @@
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/command-exists": "^1.2.0",
 		"@types/node": "catalog:default",
-		"@types/signal-exit": "^3.0.1",
 		"@vitest/ui": "catalog:default",
 		"cloudflare": "^5.2.0",
 		"command-exists": "catalog:default",

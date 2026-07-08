@@ -86,6 +86,7 @@ describe("tunnel help", () => {
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
 			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
@@ -204,7 +205,7 @@ describe("tunnel commands", () => {
 
 			await expect(
 				runWrangler("tunnel info f70ff985-a4ef-4643-bbbc-4a0ed4fc0000")
-			).rejects.toThrowError(UserError);
+			).rejects.toThrow(UserError);
 
 			expect(std.err).toContain("ERROR");
 		});
@@ -304,7 +305,7 @@ describe("tunnel commands", () => {
 		});
 
 		it("should require tunnel or token", async ({ expect }) => {
-			await expect(runWrangler("tunnel run")).rejects.toThrowError(UserError);
+			await expect(runWrangler("tunnel run")).rejects.toThrow(UserError);
 		});
 	});
 });

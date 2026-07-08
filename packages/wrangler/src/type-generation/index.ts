@@ -1210,7 +1210,12 @@ async function generateSimpleEnvTypes(
 			entrypoint
 				? generateImportSpecifier(fullOutputPath, entrypoint.file)
 				: undefined,
-			[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
+			[
+				...getDurableObjectClassNameToUseSQLiteMap(
+					config.migrations,
+					config.exports
+				).keys(),
+			],
 			typeDefinitions
 		);
 
@@ -1663,7 +1668,12 @@ async function generatePerEnvironmentTypes(
 		entrypoint
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined,
-		[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
+		[
+			...getDurableObjectClassNameToUseSQLiteMap(
+				config.migrations,
+				config.exports
+			).keys(),
+		],
 		[...typeDefinitions]
 	);
 
@@ -2897,6 +2907,7 @@ function collectAllPipelines(
 				});
 			}
 
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `pipeline` when `stream` is not set
 			if (!pipeline.stream && !pipeline.pipeline) {
 				throwMissingBindingError({
 					binding: pipeline,
@@ -2915,6 +2926,7 @@ function collectAllPipelines(
 			pipelinesMap.set(pipeline.binding, {
 				binding: pipeline.binding,
 				stream: pipeline.stream,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `pipeline` when `stream` is not set
 				pipeline: pipeline.pipeline,
 			});
 		}
@@ -4114,9 +4126,11 @@ function collectPipelinesPerEnvironment(
 					binding: pipeline.binding,
 					stream: pipeline.stream,
 				});
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `pipeline` when `stream` is not set
 			} else if (pipeline.pipeline) {
 				pipelines.push({
 					binding: pipeline.binding,
+					// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `pipeline` when `stream` is not set
 					pipeline: pipeline.pipeline,
 				});
 			} else {

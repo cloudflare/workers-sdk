@@ -72,6 +72,11 @@ export default {
 				return new Response(null, { status: 101, webSocket: client });
 			}
 
+			if (testMethod === "queue-send") {
+				await env.QUEUE.send(await request.text());
+				return new Response("Queued");
+			}
+
 			if (testMethod === "tail") {
 				if (request.method === "POST") {
 					const logs = await request.json();
@@ -117,4 +122,5 @@ export default {
 	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
 	NAMED_ENTRYPOINT: Fetcher;
 	NAMED_ENTRYPOINT_WITH_ASSETS: Fetcher;
+	QUEUE: Queue;
 }>;

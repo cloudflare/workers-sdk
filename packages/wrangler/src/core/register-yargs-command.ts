@@ -1,3 +1,4 @@
+import path from "node:path";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
 import {
 	defaultWranglerConfig,
@@ -33,7 +34,8 @@ import {
 } from "../metrics/sanitization";
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
-import { setTemporaryAllowed } from "../user";
+import { setProfile, setTemporaryAllowed } from "../user";
+import { createWranglerProfileStore } from "../user/profile-store";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
@@ -146,6 +148,19 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 			"experimentalNewConfig" in args && args.experimentalNewConfig === true;
 
 		try {
+			const firstConfigPath = Array.isArray(args.config)
+				? args.config[0]
+				: args.config;
+			const cwd = firstConfigPath
+				? path.dirname(path.resolve(firstConfigPath))
+				: process.cwd();
+			const profile = createWranglerProfileStore().resolve({
+				profile: args.profile,
+				cwd,
+			});
+
+			setProfile(profile);
+
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
 			const bannerEnabled =
 				shouldPrintBanner === true ||
@@ -153,7 +168,10 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					shouldPrintBanner(args) === true);
 
 			if (bannerEnabled) {
-				await printWranglerBanner();
+				await printWranglerBanner(
+					true,
+					def.behaviour?.printActiveProfile ?? true
+				);
 			}
 
 			if (args.installSkills) {

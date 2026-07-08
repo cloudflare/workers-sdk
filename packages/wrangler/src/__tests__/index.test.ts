@@ -65,6 +65,7 @@ describe("wrangler", () => {
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
+				  wrangler flagship               🚩 Manage Flagship apps and feature flags [open beta]
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
@@ -102,6 +103,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -123,7 +125,7 @@ describe("wrangler", () => {
 
 	describe("--temporary", () => {
 		it("is rejected on commands that don't opt in", async ({ expect }) => {
-			await expect(runWrangler("whoami --temporary")).rejects.toThrowError(
+			await expect(runWrangler("whoami --temporary")).rejects.toThrow(
 				/Unknown argument: temporary/
 			);
 		});
@@ -164,6 +166,7 @@ describe("wrangler", () => {
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
+				  wrangler flagship               🚩 Manage Flagship apps and feature flags [open beta]
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
@@ -201,6 +204,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -299,6 +303,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -326,6 +331,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -353,6 +359,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -379,6 +386,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -405,6 +413,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});

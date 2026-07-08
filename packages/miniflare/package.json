@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "4.20260623.0",
+	"version": "4.20260706.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -52,7 +52,7 @@
 		"@cspotcode/source-map-support": "0.8.1",
 		"sharp": "0.34.5",
 		"undici": "catalog:default",
-		"workerd": "1.20260623.1",
+		"workerd": "1.20260708.1",
 		"ws": "catalog:default",
 		"youch": "4.1.0-beta.10"
 	},
@@ -104,7 +104,6 @@
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"which": "^2.0.2",
-		"xdg-app-paths": "^8.3.0",
 		"zod": "^3.25.76"
 	},
 	"engines": {

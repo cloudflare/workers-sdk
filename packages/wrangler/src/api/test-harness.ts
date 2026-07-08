@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
@@ -6,7 +7,21 @@ import {
 	normalizeAndValidateConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	WorkflowInstanceIntrospectorHandle,
+	WorkflowIntrospectorHandle,
+} from "@cloudflare/workflows-shared/src/introspection";
 import { Headers, Request } from "miniflare";
+import {
+	buildMigrationQuery,
+	getCreateMigrationsTableQuery,
+	getListAppliedMigrationsQuery,
+	getMigrationNames,
+	getUnappliedMigrationNames,
+	resolveMigrationsConfig,
+} from "../d1/migrations/helpers";
+import { splitSqlQuery } from "../d1/splitter";
+import { getDatabaseInfoFromConfig } from "../d1/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
@@ -16,10 +31,23 @@ import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
 import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
 import type {
+	D1Database,
+	DurableObjectNamespace,
+	ExportedHandler,
+	Rpc,
+	Service,
+	Workflow,
+} from "@cloudflare/workers-types";
+import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type {
+	WorkflowBinding,
+	WorkflowInstanceIntrospector,
+	WorkflowIntrospector,
+} from "@cloudflare/workflows-shared/src/types";
 import type {
 	DispatchFetch,
 	Json,
@@ -40,8 +68,38 @@ export type TestHarnessOptions = {
 	workers: WorkerInput[];
 };
 
+export type BindingName<Env, Type> = string extends keyof Env
+	? string
+	: Extract<
+			{
+				[K in keyof Env]-?: NonNullable<Env[K]> extends Type ? K : never;
+			}[keyof Env],
+			string
+		>;
+
+export type WorkerModule = {
+	default: WorkerExport;
+	[key: string]: WorkerExport | undefined;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> ExportedHandler constraint.
+export type AnyExportedHandler = ExportedHandler<any, any, any, any>;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
-export type WorkerHandle<Env = Record<string, any>> = {
+export type AnyEnv = Record<string, any>;
+
+export type WorkerExport =
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.
+	| (new (...args: any[]) => Rpc.WorkerEntrypointBranded)
+	| Rpc.WorkerEntrypointBranded
+	| AnyExportedHandler;
+
+export type WorkerHandle<
+	Env = AnyEnv,
+	Module extends WorkerModule = {
+		default: AnyExportedHandler;
+	},
+> = {
 	/**
 	 * Dispatches a fetch event directly to this worker.
 	 * Relative URL inputs are resolved against the URL returned by `listen()`.
@@ -80,6 +138,49 @@ export type WorkerHandle<Env = Record<string, any>> = {
 	 * ```
 	 */
 	getEnv(): Promise<Env>;
+	/**
+	 * Lists the string IDs of Durable Object instances with persisted storage for a binding.
+	 */
+	listDurableObjectIds(
+		bindingName: BindingName<Env, DurableObjectNamespace>
+	): Promise<string[]>;
+	/**
+	 * Applies D1 migration files that have not already run to a D1 binding on this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * beforeEach(async () => {
+	 *   await worker.applyD1Migrations("DATABASE");
+	 * });
+	 * ```
+	 */
+	applyD1Migrations(bindingName: BindingName<Env, D1Database>): Promise<void>;
+	/**
+	 * Creates an introspector for a specific Workflow instance.
+	 */
+	introspectWorkflowInstance(
+		bindingName: BindingName<Env, Workflow>,
+		instanceId: string
+	): Promise<WorkflowInstanceIntrospector>;
+	/**
+	 * Creates an introspector for Workflow instances created after this method is called.
+	 */
+	introspectWorkflow(
+		bindingName: BindingName<Env, Workflow>
+	): Promise<WorkflowIntrospector>;
+	/**
+	 * Returns the default Worker export, including JSRPC methods.
+	 *
+	 * @example
+	 * ```ts
+	 * type ApiWorkerModule = typeof import("../src/api-worker");
+	 *
+	 * const worker = server.getWorker<Cloudflare.Env, ApiWorkerModule>("api-worker");
+	 * const api = await worker.getExport();
+	 * api.getMessage();
+	 * ```
+	 */
+	getExport(): Promise<Service<Module["default"]>>;
 };
 
 export type TestHarness = {
@@ -129,8 +230,12 @@ export type TestHarness = {
 	 * When no name is provided, this returns the primary Worker, which is the first
 	 * Worker in the server's `workers` options.
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
-	getWorker<Env = Record<string, any>>(name?: string): WorkerHandle<Env>;
+	getWorker<
+		Env = AnyEnv,
+		Module extends WorkerModule = { default: AnyExportedHandler },
+	>(
+		name?: string
+	): WorkerHandle<Env, Module>;
 	/**
 	 * Returns captured Workers runtime logs since the current server session
 	 * started or `clearLogs()` was last called.
@@ -191,6 +296,11 @@ type WorkerInput =
 			 * Test-only secrets that override values loaded from `.dev.vars` and `.env` files.
 			 */
 			secrets?: Record<string, string>;
+			/**
+			 * Test-only service binding overrides. Keys are binding names in this
+			 * Worker's environment, and values are Worker names in this test harness.
+			 */
+			bindingOverrides?: Record<string, string>;
 	  }
 	| {
 			/**
@@ -305,6 +415,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return serverOptions.workers.map((input, index, list) => {
 			const isPrimaryWorker = index === 0;
 			const isMultiworker = list.length > 1;
+			const workerBindingOverrides =
+				"configPath" in input ? input.bindingOverrides : undefined;
 			const bindings = convertConfigToBindings(
 				{ vars: "vars" in input ? input.vars : undefined },
 				{ usePreviewIds: true }
@@ -312,6 +424,9 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			const secrets = "secrets" in input ? input.secrets : undefined;
 			for (const [key, value] of Object.entries(secrets ?? {})) {
 				bindings[key] = { type: "secret_text", value };
+			}
+			for (const [key, value] of Object.entries(workerBindingOverrides ?? {})) {
+				bindings[key] = { type: "service", service: value };
 			}
 
 			return {
@@ -586,6 +701,19 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return miniflare;
 	}
 
+	function getWorkerDevEnv(session: ServerSession, workerName: string) {
+		const devEnv = session.devEnvs.find(
+			(d) => d.config.latestConfig?.name === workerName
+		);
+
+		assert(
+			devEnv,
+			`Worker ${JSON.stringify(workerName)} config is not available.`
+		);
+
+		return devEnv;
+	}
+
 	function getInputUrl(input: RequestInfo) {
 		if (typeof input === "string") {
 			return input;
@@ -662,9 +790,49 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 			return dispatchFetch(miniflare, input, init);
 		},
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
-		getWorker<Env = Record<string, any>>(name?: string): WorkerHandle<Env> {
+		getWorker<
+			Env = AnyEnv,
+			Module extends WorkerModule = { default: AnyExportedHandler },
+		>(name?: string): WorkerHandle<Env, Module> {
+			async function getWorkflowBinding(bindingName: string) {
+				const session = await resolveSession();
+				const miniflare = await getRuntimeMiniflare(session);
+				const workerName = resolveWorkerName(session, name);
+				const bindingConfig = getWorkerDevEnv(session, workerName).config
+					.latestConfig?.bindings?.[bindingName];
+
+				if (bindingConfig?.type !== "workflow") {
+					throw new TypeError(
+						`No Workflow binding named ${JSON.stringify(bindingName)} found in ${JSON.stringify(workerName)} worker.`
+					);
+				}
+
+				const bindings =
+					await miniflare.getBindings<Record<string, unknown>>(workerName);
+				const workflow = bindings[bindingName] as WorkflowBinding | undefined;
+
+				if (!workflow) {
+					throw new TypeError(
+						`Workflow binding ${JSON.stringify(bindingName)} is not available in ${JSON.stringify(workerName)} worker.`
+					);
+				}
+
+				return workflow;
+			}
+
 			return {
+				async introspectWorkflow(bindingName) {
+					const workflow = await getWorkflowBinding(bindingName);
+
+					const introspector = new WorkflowIntrospectorHandle(workflow);
+					await introspector.start();
+					return introspector;
+				},
+				async introspectWorkflowInstance(bindingName, instanceId) {
+					const workflow = await getWorkflowBinding(bindingName);
+
+					return new WorkflowInstanceIntrospectorHandle(workflow, instanceId);
+				},
 				async fetch(input, init) {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
@@ -702,12 +870,144 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 					return result as FetcherScheduledResult;
 				},
+				async listDurableObjectIds(bindingName) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+
+					debugLog(`durable object ids - ${bindingName} - started`, workerName);
+
+					try {
+						const ids = await miniflare.listDurableObjectIds(
+							bindingName,
+							workerName
+						);
+						debugLog(
+							`durable object ids - ${bindingName} - completed (${ids.length} found)`,
+							workerName
+						);
+						return ids;
+					} catch (error) {
+						debugLog(
+							`durable object ids - ${bindingName} - failed`,
+							workerName
+						);
+						throw error;
+					}
+				},
+				async applyD1Migrations(bindingName) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const workerConfig = getWorkerDevEnv(session, workerName).config
+						.latestWranglerConfig;
+
+					assert(
+						workerConfig,
+						`Worker ${JSON.stringify(workerName)} config is not available.`
+					);
+					assert(
+						workerConfig.configPath,
+						`Worker ${JSON.stringify(workerName)} config path is not available.`
+					);
+
+					const database = await miniflare.getD1Database(
+						bindingName,
+						workerName
+					);
+					const migrationConfig = resolveMigrationsConfig({
+						databaseInfo: getDatabaseInfoFromConfig(workerConfig, bindingName),
+						configPath: workerConfig.configPath,
+					});
+					const resolvedMigrationsPath = path.resolve(
+						migrationConfig.projectPath,
+						migrationConfig.migrationsDir
+					);
+
+					debugLog(`d1 migrations - ${bindingName} - started`, workerName);
+
+					try {
+						if (!fs.existsSync(resolvedMigrationsPath)) {
+							throw new UserError(
+								`No migrations present at ${resolvedMigrationsPath}.`,
+								{
+									telemetryMessage:
+										"d1 migrations missing migrations directory",
+								}
+							);
+						}
+
+						await database
+							.prepare(
+								getCreateMigrationsTableQuery(
+									migrationConfig.migrationsTableName
+								)
+							)
+							.run();
+						const appliedMigrationNamesResult = await database
+							.prepare(
+								getListAppliedMigrationsQuery(
+									migrationConfig.migrationsTableName
+								)
+							)
+							.all<{ name: string }>();
+						const migrationNames = getMigrationNames(migrationConfig, {
+							logHint: true,
+						});
+						const unappliedMigrationNames = getUnappliedMigrationNames(
+							migrationNames,
+							appliedMigrationNamesResult.results.map((item) => item.name)
+						);
+						for (const migrationName of unappliedMigrationNames) {
+							const query = buildMigrationQuery({
+								migrationName,
+								migrationsPath: resolvedMigrationsPath,
+								migrationsTableName: migrationConfig.migrationsTableName,
+							});
+							await database.batch(
+								splitSqlQuery(query).map((part) => database.prepare(part))
+							);
+							debugLog(
+								`d1 migrations - ${bindingName} - applied ${migrationName}`,
+								workerName
+							);
+						}
+
+						if (migrationNames.length === 0) {
+							debugLog(
+								`d1 migrations - ${bindingName} - completed (no migrations found)`,
+								workerName
+							);
+						} else if (unappliedMigrationNames.length === 0) {
+							debugLog(
+								`d1 migrations - ${bindingName} - completed (no migrations to apply)`,
+								workerName
+							);
+						} else {
+							debugLog(
+								`d1 migrations - ${bindingName} - completed (${unappliedMigrationNames.length} applied)`,
+								workerName
+							);
+						}
+					} catch (error) {
+						debugLog(`d1 migrations - ${bindingName} - failed`, workerName);
+						throw error;
+					}
+				},
 				async getEnv() {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
 
 					return miniflare.getBindings<Env>(workerName);
+				},
+				async getExport() {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const entrypoint = await miniflare.getWorker(workerName);
+					/** Miniflare returns the same runtime stub with a different Workers type entry. */
+					return entrypoint as unknown as Service<Module["default"]>;
 				},
 			};
 		},

@@ -82,8 +82,8 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 				const request = new IncomingRequest(BASE_URL + requestPath);
 				let response = await SELF.fetch(request);
 				if (matchedFile && finalPath) {
-					expect(getAssetWithMetadataFromKV).toBeCalledTimes(1);
-					expect(getAssetWithMetadataFromKV).toBeCalledWith(
+					expect(getAssetWithMetadataFromKV).toHaveBeenCalledTimes(1);
+					expect(getAssetWithMetadataFromKV).toHaveBeenCalledWith(
 						undefined,
 						matchedFile
 					);
@@ -92,7 +92,7 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 					// can't check intermediate 307 directly:
 					expect(response.redirected).toBe(requestPath !== finalPath);
 				} else {
-					expect(getAssetWithMetadataFromKV).not.toBeCalled();
+					expect(getAssetWithMetadataFromKV).not.toHaveBeenCalled();
 					expect(response.status).toBe(404);
 				}
 			}
