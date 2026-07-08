@@ -150,6 +150,7 @@ export {
 	PnpmPackageManager,
 	YarnPackageManager,
 	BunPackageManager,
+	NubPackageManager,
 } from "./package-manager";
 
 export {
