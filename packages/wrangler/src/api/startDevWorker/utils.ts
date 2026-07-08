@@ -10,18 +10,15 @@ import type { WorkerMetadataBinding } from "@cloudflare/workers-utils";
 
 export function assertNever(_value: never) {}
 
-/**
- * When to proactively refresh the preview token.
- *
- * Preview tokens expire after 1 hour (hardcoded in the Workers control plane), so we retry after 50 mins.
- */
-export const PREVIEW_TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
-
-// `createDeferred`/`urlFromParts` and their types now live in
-// `@cloudflare/dev-proxy` (the single source of truth shared with the
-// ProxyWorker and remote bindings). Re-exported here so wrangler-internal
-// importers are unchanged.
-export { createDeferred, urlFromParts } from "@cloudflare/dev-proxy";
+// `createDeferred`/`urlFromParts`, their types, and the preview-token refresh
+// interval now live in `@cloudflare/dev-proxy` (the single source of truth
+// shared with the ProxyWorker and remote bindings). Re-exported here so
+// wrangler-internal importers are unchanged.
+export {
+	createDeferred,
+	PREVIEW_TOKEN_REFRESH_INTERVAL,
+	urlFromParts,
+} from "@cloudflare/dev-proxy";
 export type { DeferredPromise, MaybePromise } from "@cloudflare/dev-proxy";
 
 type UnwrapHook<

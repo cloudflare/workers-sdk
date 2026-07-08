@@ -9,6 +9,14 @@ export type ProxyData = {
 	proxyLogsToController?: boolean;
 };
 
+/**
+ * How long to wait before proactively refreshing an edge-preview token.
+ * Preview tokens expire after 1 hour; refreshing at 50 minutes leaves headroom
+ * so an in-flight request never races the expiry. Shared by `wrangler dev
+ * --remote` and `@cloudflare/remote-bindings`.
+ */
+export const PREVIEW_TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
+
 /** An edge-preview token: the host to talk to and the value to authenticate with. */
 export interface RemotePreviewToken {
 	/** The host where the preview is served (e.g. `foo.workers.dev`). */

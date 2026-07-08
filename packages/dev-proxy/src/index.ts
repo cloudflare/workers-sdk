@@ -2,7 +2,11 @@ export { createDeferred } from "./deferred";
 export type { DeferredPromise, MaybePromise } from "./deferred";
 export { urlFromParts } from "./url";
 export type { UrlOriginParts, UrlOriginAndPathnameParts } from "./url";
-export { createRemoteModeProxyData, serialiseError } from "./proxy-data";
+export {
+	createRemoteModeProxyData,
+	PREVIEW_TOKEN_REFRESH_INTERVAL,
+	serialiseError,
+} from "./proxy-data";
 export type {
 	ProxyData,
 	ProxyWorkerIncomingRequestBody,
