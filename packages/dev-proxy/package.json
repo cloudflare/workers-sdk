@@ -22,6 +22,10 @@
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
+		},
+		"./protocol": {
+			"types": "./dist/protocol.d.mts",
+			"import": "./dist/protocol.mjs"
 		}
 	},
 	"scripts": {

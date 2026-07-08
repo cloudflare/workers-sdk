@@ -1,4 +1,4 @@
-import { serialiseError } from "@cloudflare/dev-proxy";
+import { serialiseError } from "@cloudflare/dev-proxy/protocol";
 import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
 import type {
@@ -8,7 +8,7 @@ import type {
 	SerializedError,
 	UrlOriginAndPathnameParts,
 	UrlOriginParts,
-} from "@cloudflare/dev-proxy";
+} from "@cloudflare/dev-proxy/protocol";
 import type { Miniflare, WorkerRegistry } from "miniflare";
 
 // The proxy-worker protocol types + `ProxyData` now live in `@cloudflare/dev-proxy`

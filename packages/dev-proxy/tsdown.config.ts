@@ -49,7 +49,7 @@ function proxyWorkerPlugin(): Plugin {
 }
 
 export default defineConfig({
-	entry: ["src/index.ts"],
+	entry: ["src/index.ts", "src/protocol.ts"],
 	platform: "node",
 	format: ["esm"],
 	outDir: "dist",

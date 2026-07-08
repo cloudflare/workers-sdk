@@ -13,13 +13,18 @@ export function assertNever(_value: never) {}
 // `createDeferred`/`urlFromParts`, their types, and the preview-token refresh
 // interval now live in `@cloudflare/dev-proxy` (the single source of truth
 // shared with the ProxyWorker and remote bindings). Re-exported here so
-// wrangler-internal importers are unchanged.
+// wrangler-internal importers are unchanged. Import from the `/protocol`
+// (miniflare-free) subpath so these can be bundled into workerd workers (e.g.
+// the InspectorProxyWorker) without dragging in miniflare.
 export {
 	createDeferred,
 	PREVIEW_TOKEN_REFRESH_INTERVAL,
 	urlFromParts,
-} from "@cloudflare/dev-proxy";
-export type { DeferredPromise, MaybePromise } from "@cloudflare/dev-proxy";
+} from "@cloudflare/dev-proxy/protocol";
+export type {
+	DeferredPromise,
+	MaybePromise,
+} from "@cloudflare/dev-proxy/protocol";
 
 type UnwrapHook<
 	T extends HookValues | Promise<HookValues>,
