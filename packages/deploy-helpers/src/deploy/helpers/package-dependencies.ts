@@ -34,6 +34,7 @@ const MAX_PACKAGE_DEPENDENCIES = 200;
  * installed version from node_modules, and filters out:
  * - Workspace packages (version prefixed with `workspace:`)
  * - Pnpm catalog packages (version prefixed with `catalog:`)
+ * - Local packages (version prefixed with `file:` or `link:`)
  * - Private packages (`"private": true` in the package's own package.json)
  * - Packages whose installed version cannot be resolved
  *
@@ -74,7 +75,9 @@ export async function collectPackageDependencies(
 
 			if (
 				packageJsonVersion.startsWith("workspace:") ||
-				packageJsonVersion.startsWith("catalog:")
+				packageJsonVersion.startsWith("catalog:") ||
+				packageJsonVersion.startsWith("file:") ||
+				packageJsonVersion.startsWith("link:")
 			) {
 				continue;
 			}

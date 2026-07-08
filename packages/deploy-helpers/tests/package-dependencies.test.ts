@@ -168,6 +168,27 @@ describe("collectPackageDependencies", () => {
 		]);
 	});
 
+	it("should skip file: and link: dependencies", async ({ expect }) => {
+		fs.writeFileSync(
+			"package.json",
+			JSON.stringify(
+				{
+					name: "test-project",
+					dependencies: {
+						"local-file-pkg": "file:../local-file-pkg",
+						"local-link-pkg": "link:../local-link-pkg",
+					},
+				},
+				null,
+				2
+			)
+		);
+
+		const result = await collectPackageDependencies(process.cwd());
+
+		expect(result).toBeUndefined();
+	});
+
 	it("should skip private packages", async ({ expect }) => {
 		const nodeModulesPath = path.join(process.cwd(), "node_modules");
 		const packagePath = path.join(nodeModulesPath, "@company/private-package");
@@ -259,6 +280,7 @@ describe("collectPackageDependencies", () => {
 						"public-pkg": "^1.0.0",
 						"private-pkg": "^2.0.0",
 						"workspace-pkg": "workspace:^",
+						"local-pkg": "file:../local-pkg",
 						"nonexistent-pkg": "^3.0.0",
 					},
 				},
