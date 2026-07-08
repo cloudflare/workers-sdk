@@ -83,6 +83,7 @@ export interface PluginServicesOptions<
 	loopbackPort: number;
 	publicUrl: string | undefined;
 	unsafeStickyBlobs: boolean;
+	rootPath: string;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	wrappedBindingNames: WrappedBindingNames;

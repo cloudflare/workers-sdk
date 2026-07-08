@@ -82,7 +82,9 @@ function joinPath(base: string, ...segments: string[]): string {
 
 interface SendEmailEnv {
 	MINIFLARE_EMAIL_DISK: Fetcher;
+	MINIFLARE_EMAIL_DISK_WRANGLER: Fetcher;
 	email_directory: string;
+	email_directory_wrangler: string
 	destination_address: string | undefined;
 	allowed_destination_addresses: string[] | undefined;
 	allowed_sender_addresses: string[] | undefined;
@@ -101,7 +103,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	private async storeTempFile(
 		content: string | ArrayBuffer | ArrayBufferView,
 		extension: string,
-		prefix: string
+		prefix: string,
+		osDir: boolean = true,
 	): Promise<string> {
 		let body: string | Uint8Array;
 		if (typeof content === "string") {
@@ -119,12 +122,20 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 
 		const fileName = `${crypto.randomUUID()}.${extension}`;
 		const url = new URL(`${prefix}/${fileName}`, "http://placeholder/");
-		await this.env.MINIFLARE_EMAIL_DISK.fetch(url, {
+
+		if (osDir) {
+			await this.env.MINIFLARE_EMAIL_DISK.fetch(url, {
+				method: "PUT",
+				body,
+			});
+			return joinPath(this.env.email_directory, prefix, fileName);
+		}
+
+		await this.env.MINIFLARE_EMAIL_DISK_WRANGLER.fetch(url, {
 			method: "PUT",
 			body,
 		});
-
-		return joinPath(this.env.email_directory, prefix, fileName);
+		return joinPath(this.env.email_directory_wrangler, prefix, fileName);
 	}
 
 	private checkDestinationAllowed(to: string) {
@@ -234,6 +245,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			}
 
 			const file = await this.storeTempFile(rawEmailBuffer, "eml", "email");
+			const fileWrangler = await this.storeTempFile(rawEmailBuffer, "eml", "email", false);
 
 			this.log(
 				`${blue("send_email binding called with the following message:")}\n  ${file}`
@@ -257,6 +269,13 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					"email-text"
 				);
 				files.push(`Text: ${filePath}`);
+				const filePathWrangler = await this.storeTempFile(
+					builder.text,
+					"txt",
+					"email-text",
+					false
+				);
+				files.push(`Text (Wrangler): ${filePathWrangler}`);
 			}
 
 			if (builder.html) {
@@ -266,6 +285,13 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					"email-html"
 				);
 				files.push(`HTML: ${filePath}`);
+				const filePathWrangler = await this.storeTempFile(
+					builder.html,
+					"html",
+					"email-html",
+					false
+				);
+				files.push(`HTML (Wrangler): ${filePathWrangler}`);
 			}
 
 			// Store attachments
@@ -280,8 +306,17 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						extension,
 						"email-attachment"
 					);
+					const filePathWrangler = await this.storeTempFile(
+						attachment.content,
+						extension,
+						"email-attachment",
+						false
+					);
 					files.push(
 						`Attachment (${attachment.disposition}): ${attachment.filename} -> ${filePath}`
+					);
+					files.push(
+						`Attachment (${attachment.disposition}) (Wrangler): ${attachment.filename} -> ${filePathWrangler}`
 					);
 				}
 			}

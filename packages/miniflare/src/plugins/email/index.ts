@@ -10,6 +10,7 @@ import {
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
+import { getWranglerHiddenDirPath } from "@cloudflare/workers-utils";
 
 // Define the mutually exclusive schema
 const EmailBindingOptionsSchema = z
@@ -45,6 +46,9 @@ export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
 const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
 const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
+
+const EMAIL_DISK_SERVICE_NAME_WRANGLER = `${EMAIL_DISK_SERVICE_NAME}:wrangler`;
+const EMAIL_DISK_BINDING_NAME_WRANGLER = "MINIFLARE_EMAIL_DISK_WRANGLER";
 
 function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
@@ -87,14 +91,38 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			return [];
 		}
 
+		// Used to send email logs to the system's temp directory.
 		const emailDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
 		await mkdir(emailDirectory, { recursive: true });
+
+		// Used to send email logs to .wrangler/tmp/email
+		const workerName = args.workerNames[args.workerIndex] || "default";
+		const wranglerDirectory = getWranglerHiddenDirPath(args.rootPath);
+		const emailTmpDirectory = path.join(
+			wranglerDirectory,
+			"tmp",
+			"email",
+			workerName
+		);
+		await mkdir(emailTmpDirectory, { recursive: true });
+		const emailSessionDirectory = path.join(
+			emailTmpDirectory,
+			crypto.randomUUID()
+		);
+		await mkdir(emailSessionDirectory, { recursive: true });
 
 		const services: Service[] = [
 			{
 				name: EMAIL_DISK_SERVICE_NAME,
 				disk: {
 					path: emailDirectory,
+					writable: true,
+				},
+			},
+			{
+				name: EMAIL_DISK_SERVICE_NAME_WRANGLER,
+				disk: {
+					path: emailSessionDirectory,
 					writable: true,
 				},
 			},
@@ -121,8 +149,16 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 									service: { name: EMAIL_DISK_SERVICE_NAME },
 								},
 								{
+									name: EMAIL_DISK_BINDING_NAME_WRANGLER,
+									service: { name: EMAIL_DISK_SERVICE_NAME_WRANGLER },
+								},
+								{
 									name: "email_directory",
 									json: JSON.stringify(emailDirectory),
+								},
+								{
+									name: "email_directory_wrangler",
+									json: JSON.stringify(emailSessionDirectory),
 								},
 							],
 						},
