@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { createRemoteModeProxyData } from "@cloudflare/dev-proxy";
 import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex, type Miniflare } from "miniflare";
@@ -324,20 +325,11 @@ export class RemoteRuntimeController extends RuntimeController {
 
 		const accessHeaders = await getAccessHeaders(token.host);
 
-		const proxyData: ProxyData = {
-			userWorkerUrl: {
-				protocol: "https:",
-				hostname: token.host,
-				port: "443",
-			},
-			headers: {
-				"cf-workers-preview-token": token.value,
-				...accessHeaders,
-				"cf-connecting-ip": "",
-			},
-			liveReload: config.dev.liveReload,
-			proxyLogsToController: true,
-		};
+		const proxyData: ProxyData = createRemoteModeProxyData(
+			token,
+			accessHeaders,
+			{ liveReload: config.dev.liveReload }
+		);
 
 		this.#latestProxyData = proxyData;
 

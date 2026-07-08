@@ -9,6 +9,47 @@ export type ProxyData = {
 	proxyLogsToController?: boolean;
 };
 
+/** An edge-preview token: the host to talk to and the value to authenticate with. */
+export interface RemotePreviewToken {
+	/** The host where the preview is served (e.g. `foo.workers.dev`). */
+	host: string;
+	/** The `cf-workers-preview-token` header value. */
+	value: string;
+}
+
+/**
+ * Build the {@link ProxyData} that points the shared ProxyWorker at a remote
+ * edge preview: HTTPS to the token's host on 443, injecting the preview token
+ * (plus any Cloudflare Access headers) on every forwarded request.
+ *
+ * This is the single definition of the remote-mode proxy configuration, shared
+ * by `wrangler dev --remote` (RemoteRuntimeController) and
+ * `@cloudflare/remote-bindings`, so both drive the ProxyWorker identically.
+ *
+ * `accessHeaders` is resolved by the caller (via `getAccessHeaders`) so each
+ * consumer can inject its own logger/interactivity behaviour.
+ */
+export function createRemoteModeProxyData(
+	token: RemotePreviewToken,
+	accessHeaders: Record<string, string>,
+	options: { liveReload?: boolean } = {}
+): ProxyData {
+	return {
+		userWorkerUrl: {
+			protocol: "https:",
+			hostname: token.host,
+			port: "443",
+		},
+		headers: {
+			"cf-workers-preview-token": token.value,
+			...accessHeaders,
+			"cf-connecting-ip": "",
+		},
+		liveReload: options.liveReload,
+		proxyLogsToController: true,
+	};
+}
+
 // Messages sent from the controller (Node) into the ProxyWorker.
 export type ProxyWorkerIncomingRequestBody =
 	| { type: "play"; proxyData: ProxyData }
