@@ -27,16 +27,19 @@ const configure = async (ctx: C3Context) => {
 		doneText: `${brandColor(`installed`)} ${dim(pkg)}`,
 	});
 
-	updateSvelteConfig();
+	updateViteConfig(ctx);
 	updatePlaywrightConfig(usesTypescript(ctx));
 	updateTypeDefinitions(ctx);
 };
 
-const updateSvelteConfig = () => {
-	// All we need to do is change the import statement in svelte.config.js
-	updateStatus(`Changing adapter in ${blue("svelte.config.js")}`);
+const updateViteConfig = (ctx: C3Context) => {
+	// As of `sv` 0.16, the adapter is configured in the Vite config rather than
+	// in `svelte.config.js`, so all we need to do is change the adapter import
+	// statement there.
+	const configFile = usesTypescript(ctx) ? "vite.config.ts" : "vite.config.js";
+	updateStatus(`Changing adapter in ${blue(configFile)}`);
 
-	transformFile("svelte.config.js", {
+	transformFile(configFile, {
 		visitImportDeclaration: function (n) {
 			// importSource is the `x` in `import y from "x"`
 			const importSource = n.value.source;
