@@ -527,6 +527,57 @@ test("invokes handleUncaughtError with the revived error", async ({
 	expect(errors[0].stack).toMatch(/Object\.fetch/);
 });
 
+// A stack frame may name a `file://` URL that `fileURLToPath` cannot convert
+// to a local path. No single URL is invalid everywhere — a drive-less
+// `file:///...` (every frame a POSIX-built bundle reports) throws on Windows
+// but is fine on POSIX, while a non-local-host URL throws on POSIX but is a
+// valid UNC path on Windows — so the stack carries one of each, and every
+// platform's runner exercises the degradation through its own rejection.
+const UNMAPPABLE_STACK_SCRIPT = `
+export default {
+	async fetch() {
+		return Response.json(
+			{
+				name: "Error",
+				message: "Unmappable oops!",
+				stack: "Error: Unmappable oops!\\n    at fetch (file:///virtual/index.mjs:2:3)\\n    at reroute (file://not-local/index.mjs:1:1)",
+			},
+			{
+				status: 500,
+				headers: { "MF-Experimental-Error-Stack": "true" },
+			}
+		);
+	},
+}`;
+
+test("still reports the error when a stack frame's file URL has no local path", async ({
+	expect,
+}) => {
+	const log = new CustomLog();
+	const errors: Error[] = [];
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		handleUncaughtError(error) {
+			errors.push(error);
+		},
+		script: UNMAPPABLE_STACK_SCRIPT,
+	});
+	useDispose(mf);
+
+	const res = await fetch(await mf.ready);
+	expect(res.status).toBe(500);
+	// The error response is still built from the revived error...
+	expect(await res.text()).toMatch(/Unmappable oops!/);
+	// ...the error is still logged...
+	expect(log.getLogs(LogLevel.ERROR)[0]).toMatch(/Unmappable oops!/);
+	// ...and the callback still fires, with both frames preserved un-mapped.
+	expect(errors.length).toBe(1);
+	expect(errors[0].message).toBe("Unmappable oops!");
+	expect(errors[0].stack).toContain("file:///virtual/index.mjs");
+	expect(errors[0].stack).toContain("file://not-local/index.mjs");
+});
+
 test("keeps building the error response when handleUncaughtError throws", async ({
 	expect,
 }) => {

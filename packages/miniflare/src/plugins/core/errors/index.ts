@@ -182,7 +182,16 @@ function getSourceMappedStack(
 		return { map: sourceMapFile.contents, url: sourceMapFile.path };
 	}
 
-	return getSourceMapper()(retrieveSourceMap, error);
+	// Both our retriever above and the library's own fallback handlers convert
+	// frame specifiers with `fileURLToPath`, which throws on file URLs with no
+	// local-path form (a non-local host; on Windows, any drive-less path, e.g.
+	// from a POSIX-built bundle). A stack trace must never break error
+	// reporting: degrade to the unmapped stack instead.
+	try {
+		return getSourceMapper()(retrieveSourceMap, error);
+	} catch {
+		return error.stack ?? "";
+	}
 }
 
 // Due to a bug in `workerd`, if `Promise`s returned from native C++ APIs are
@@ -396,13 +405,23 @@ export async function handlePrettyErrorRequest(
 		].join("");
 	});
 
-	const html = await youch.toHTML(error, {
-		request: {
-			url: `${request.cf?.prettyErrorOriginalUrl ?? request.url}`,
-			method: request.method,
-			headers: getHeaders(request),
-		},
-	});
+	// `youch`'s frame parsing converts `file://` frame specifiers with
+	// `fileURLToPath`, which throws on URLs with no local-path form (a
+	// non-local host; on Windows, any drive-less path). The pretty page is
+	// best-effort: fall back to the plain stack response rather than failing
+	// the request.
+	let html: string;
+	try {
+		html = await youch.toHTML(error, {
+			request: {
+				url: `${request.cf?.prettyErrorOriginalUrl ?? request.url}`,
+				method: request.method,
+				headers: getHeaders(request),
+			},
+		});
+	} catch {
+		return new Response(error.stack, { status: 500 });
+	}
 
 	return new Response(html, {
 		status: 500,
