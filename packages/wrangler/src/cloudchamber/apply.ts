@@ -195,6 +195,7 @@ function observabilityToConfiguration(
 function containerAppToInstanceType(
 	containerApp: ContainerApp
 ): Partial<UserDeploymentConfiguration> {
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, reads deprecated `configuration` from API response
 	let configuration = (containerApp.configuration ??
 		{}) as Partial<UserDeploymentConfiguration>;
 
@@ -259,6 +260,7 @@ function containerAppToCreateApplication(
 	);
 	const instanceType = containerAppToInstanceType(containerApp);
 	const configuration: UserDeploymentConfiguration = {
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, reads deprecated `configuration` from API response
 		...(containerApp.configuration as UserDeploymentConfiguration),
 		...instanceType,
 		observability: observabilityConfiguration,
@@ -280,6 +282,7 @@ function containerAppToCreateApplication(
 			// De-sugar image name
 			image: resolveImageName(accountId, configuration.image),
 		},
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, `instances` is deprecated in favor of `max_instances`
 		instances: containerApp.instances ?? 0,
 		scheduling_policy:
 			(containerApp.scheduling_policy as SchedulingPolicy) ??
@@ -372,7 +375,9 @@ export async function apply(
 	log(dim("Container application changes\n"));
 
 	for (const appConfigNoDefaults of config.containers) {
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, populates deprecated `configuration` for API compatibility
 		appConfigNoDefaults.configuration ??= {};
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, populates deprecated `configuration` for API compatibility
 		appConfigNoDefaults.configuration.image = appConfigNoDefaults.image;
 		const application =
 			applicationByNames[
@@ -405,8 +410,10 @@ export async function apply(
 
 			if (
 				prevApp.durable_objects !== undefined &&
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, reads deprecated `durable_objects` from config
 				appConfigNoDefaults.durable_objects !== undefined &&
 				prevApp.durable_objects.namespace_id !==
+					// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, reads deprecated `durable_objects` from config
 					appConfigNoDefaults.durable_objects.namespace_id
 			) {
 				throw new UserError(
@@ -438,6 +445,7 @@ export async function apply(
 				config.configPath
 			);
 
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- Diff is used here for formatted config string diffing, not JSON objects
 			const diff = new Diff(prev, now);
 			if (diff.changes === 0) {
 				updateStatus(`no changes ${brandColor(application.name)}`);

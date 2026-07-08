@@ -332,10 +332,12 @@ export async function fetchWorkerDefinitionFromDash(
 
 	if (usesModules) {
 		// For testing purposes only, sorry not sorry -- msw doesn't implement Response#formData
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 		if (!response.formData) {
 			response = new Response(await response.text(), response);
 		}
 
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 		const form = await response.formData();
 		const files = Array.from(form.entries()).map(([filename, contents]) =>
 			contents instanceof File ? contents : new File([contents], filename)

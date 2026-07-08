@@ -199,11 +199,13 @@ async function parseFormDataFromFile(file: string): Promise<FormData> {
 	const boundary = Uint8Array.prototype.slice
 		.call(bundle, 2, firstLine)
 		.toString();
-	return await new Response(bundle, {
+	const response = new Response(bundle, {
 		headers: {
 			"Content-Type": "multipart/form-data; boundary=" + boundary,
 		},
-	}).formData();
+	});
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
+	return await response.formData();
 }
 
 export async function analyseBundle(

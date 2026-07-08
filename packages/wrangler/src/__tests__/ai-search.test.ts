@@ -724,7 +724,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type builtin --source-jurisdiction eu"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/--source-jurisdiction is only supported with --type r2/
 			);
 		});
@@ -737,7 +737,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type web-crawler --source https://example.com --source-jurisdiction eu"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/--source-jurisdiction is only supported with --type r2/
 			);
 		});

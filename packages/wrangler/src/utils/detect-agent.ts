@@ -34,10 +34,10 @@ export interface DetectedAgent {
  */
 export function detectAgent(): DetectedAgent {
 	try {
-		const detection = detectAgenticEnvironment(
-			process.env,
-			NO_PROCESS_ANCESTRY
-		);
+		const detection = detectAgenticEnvironment({
+			env: process.env,
+			processAncestry: NO_PROCESS_ANCESTRY,
+		});
 		return { isAgent: detection.type === "agent", id: detection.id };
 	} catch {
 		// Silent failure - assume we are not being run by an agent.
