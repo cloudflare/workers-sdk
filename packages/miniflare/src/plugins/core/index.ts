@@ -25,12 +25,14 @@ import { JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
-import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
+import {
+	DURABLE_OBJECTS_STORAGE_SERVICE_NAME,
+	getDurableObjectUniqueKey,
+} from "../do";
 import { IMAGES_PLUGIN_NAME } from "../images";
 import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
 import {
 	getUserBindingServiceName,
-	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -866,8 +868,14 @@ export const CORE_PLUGIN: Plugin<
 									unsafePreventEviction: preventEviction,
 									container,
 								},
-							]) =>
-								unsafeUniqueKey === kUnsafeEphemeralUniqueKey
+							]) => {
+								const uniqueKey = getDurableObjectUniqueKey(
+									className,
+									options.name,
+									unsafeUniqueKey
+								);
+
+								return uniqueKey === undefined
 									? {
 											className,
 											enableSql,
@@ -878,14 +886,11 @@ export const CORE_PLUGIN: Plugin<
 									: {
 											className,
 											enableSql,
-											// This `uniqueKey` will (among other things) be used as part of the
-											// path when persisting to the file-system. `-` is invalid in
-											// JavaScript class names, but safe on filesystems (incl. Windows).
-											uniqueKey:
-												unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
+											uniqueKey,
 											preventEviction,
 											container,
-										}
+										};
+							}
 						),
 					durableObjectStorage:
 						classNamesEntries.length === 0
