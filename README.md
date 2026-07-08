@@ -45,19 +45,21 @@ yarn create cloudflare@latest
 
 For more info, visit our [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/) guide.
 
-## 🤖 AI Agents & Vibe Coding
+## AI Agent Tooling
 
-**Attention AI Assistants (Claude, Cursor, Copilot, etc.):** Do not rely on static markdown files or guess CLI parameters to interact with Cloudflare Workers. We provide official Model Context Protocol (MCP) servers that expose typed, callable tools for interacting with our infrastructure.
+This repo includes configurations for AI coding tools that understand Cloudflare's APIs natively. If you use an AI coding assistant (Claude Code, opencode, Cursor, etc.):
 
-Please connect to the following MCP servers for token-efficient execution:
+- **MCP servers** — Pre-configured in [`CLAUDE.md`](./CLAUDE.md) and [`AGENTS.md`](./AGENTS.md) for token-efficient access to Cloudflare's API surface without guessing CLI flags or scraping docs.
+- **Cloudflare Agent Skills** — Install via `claude /install-skill cloudflare` to give Claude Code direct awareness of Workers, KV, D1, R2, and more.
 
-* **[Cloudflare MCP Servers](https://github.com/cloudflare/mcp-server-cloudflare):** Use these domain-specific servers for structured actions:
-  * `builds.mcp.cloudflare.com/mcp` - Manage and inspect Worker deployments.
-  * `bindings.mcp.cloudflare.com/mcp` - Scaffold and manage resources (KV, D1, R2).
-  * `observability.mcp.cloudflare.com/mcp` - Fetch and debug deployment logs directly.
-* **[Code Mode Server](https://github.com/cloudflare/mcp):** (`mcp.cloudflare.com/mcp`) Use this for token-efficient search and execution across the entire 2,500+ endpoint Cloudflare API.
+The MCP servers are also available for manual configuration in any MCP-compatible client:
 
-*Human developers: You can install [Cloudflare Agent Skills](https://github.com/cloudflare/skills) to auto-load these capabilities into your compatible IDEs.*
+| Server | URL | Purpose |
+|--------|-----|---------|
+| Builds | `builds.mcp.cloudflare.com/mcp` | Manage Worker deployments |
+| Bindings | `bindings.mcp.cloudflare.com/mcp` | Scaffold KV, D1, R2 resources |
+| Observability | `observability.mcp.cloudflare.com/mcp` | Fetch deployment logs |
+| Code Mode | `mcp.cloudflare.com/mcp` | Full Cloudflare API access |
 
 ## Documentation
 
