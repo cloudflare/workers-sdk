@@ -198,18 +198,19 @@ describe("pages deployment delete", () => {
 		expect(std.out).not.toContain("Successfully deleted");
 	});
 
-	it("should require --yes or --force for bulk delete in non-interactive mode", async ({
+	it("should not bulk delete in non-interactive mode without --yes or --force", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
 
-		await expect(
-			runWrangler(
-				"pages deployment delete abc123 def456 --project-name=my-project"
-			)
-		).rejects.toThrow(
-			"The --yes or --force flag is required to delete multiple Pages deployments in non-interactive mode."
+		await runWrangler(
+			"pages deployment delete abc123 def456 --project-name=my-project"
 		);
+
+		expect(std.out).toContain(
+			"Using fallback value in non-interactive context: no"
+		);
+		expect(std.out).not.toContain("Successfully deleted");
 	});
 
 	it("should delete without asking but preserve API force=false if --yes is provided", async ({

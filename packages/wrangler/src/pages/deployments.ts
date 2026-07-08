@@ -49,12 +49,9 @@ async function confirmDeleteDeployments({
 	}
 
 	if (isNonInteractiveOrCI()) {
-		throw new UserError(
-			"The --yes or --force flag is required to delete multiple Pages deployments in non-interactive mode.",
-			{
-				telemetryMessage:
-					"pages deployments bulk delete non-interactive force required",
-			}
+		return confirm(
+			`Are you sure you want to delete ${deploymentIds.length} deployments in project "${projectName}"? This action cannot be undone.`,
+			{ fallbackValue: false }
 		);
 	}
 
