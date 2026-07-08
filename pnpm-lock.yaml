@@ -84,6 +84,9 @@ catalogs:
     vitest:
       specifier: 4.1.0
       version: 4.1.0
+    workerd:
+      specifier: 1.20260708.1
+      version: 1.20260708.1
     ws:
       specifier: 8.21.0
       version: 8.21.0
@@ -2264,7 +2267,7 @@ importers:
         specifier: catalog:default
         version: 7.28.0
       workerd:
-        specifier: 1.20260708.1
+        specifier: catalog:default
         version: 1.20260708.1
       ws:
         specifier: catalog:default
@@ -4289,7 +4292,7 @@ importers:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
       workerd:
-        specifier: 1.20260708.1
+        specifier: catalog:default
         version: 1.20260708.1
     devDependencies:
       '@aws-sdk/client-s3':
