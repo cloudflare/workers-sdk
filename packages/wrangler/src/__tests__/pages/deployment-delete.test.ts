@@ -198,7 +198,7 @@ describe("pages deployment delete", () => {
 		expect(std.out).not.toContain("Successfully deleted");
 	});
 
-	it("should require --force for bulk delete in non-interactive mode", async ({
+	it("should require --yes or --force for bulk delete in non-interactive mode", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
@@ -208,8 +208,20 @@ describe("pages deployment delete", () => {
 				"pages deployment delete abc123 def456 --project-name=my-project"
 			)
 		).rejects.toThrow(
-			"The --force flag is required to delete multiple Pages deployments in non-interactive mode."
+			"The --yes or --force flag is required to delete multiple Pages deployments in non-interactive mode."
 		);
+	});
+
+	it("should delete without asking but preserve API force=false if --yes is provided", async ({
+		expect,
+	}) => {
+		mockDeleteDeploymentRequest(expect, { force: false });
+
+		await runWrangler(
+			"pages deployment delete abc123 --project-name=my-project --yes"
+		);
+
+		expect(std.out).toContain("Successfully deleted deployment abc123");
 	});
 
 	it("should delete without asking if --force is provided", async ({
@@ -219,6 +231,16 @@ describe("pages deployment delete", () => {
 
 		await runWrangler(
 			"pages deployment delete abc123 --project-name=my-project --force"
+		);
+
+		expect(std.out).toContain("Successfully deleted deployment abc123");
+	});
+
+	it("should support -y alias for --yes", async ({ expect }) => {
+		mockDeleteDeploymentRequest(expect, { force: false });
+
+		await runWrangler(
+			"pages deployment delete abc123 --project-name=my-project -y"
 		);
 
 		expect(std.out).toContain("Successfully deleted deployment abc123");
@@ -245,6 +267,23 @@ describe("pages deployment delete", () => {
 
 		await runWrangler(
 			"pages deployment delete abc123 def456 --project-name=my-project --force"
+		);
+
+		expect(std.out).toContain("Successfully deleted 2 deployments");
+		expect(remainingDeploymentIds).toEqual([]);
+	});
+
+	it("should bulk delete without forcing aliased deployments if --yes is provided", async ({
+		expect,
+	}) => {
+		const remainingDeploymentIds = mockDeleteDeploymentRequests(
+			expect,
+			["abc123", "def456"],
+			{ force: false }
+		);
+
+		await runWrangler(
+			"pages deployment delete abc123 def456 --project-name=my-project --yes"
 		);
 
 		expect(std.out).toContain("Successfully deleted 2 deployments");

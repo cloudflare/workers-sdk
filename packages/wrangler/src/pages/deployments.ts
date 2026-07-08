@@ -30,12 +30,14 @@ async function confirmDeleteDeployments({
 	deploymentIds,
 	projectName,
 	force,
+	yes,
 }: {
 	deploymentIds: string[];
 	projectName: string;
 	force: boolean;
+	yes: boolean;
 }) {
-	if (force) {
+	if (force || yes) {
 		return true;
 	}
 
@@ -48,7 +50,7 @@ async function confirmDeleteDeployments({
 
 	if (isNonInteractiveOrCI()) {
 		throw new UserError(
-			"The --force flag is required to delete multiple Pages deployments in non-interactive mode.",
+			"The --yes or --force flag is required to delete multiple Pages deployments in non-interactive mode.",
 			{
 				telemetryMessage:
 					"pages deployments bulk delete non-interactive force required",
@@ -199,12 +201,18 @@ export const pagesDeploymentDeleteCommand = createCommand({
 			type: "boolean",
 			alias: "f",
 			description:
-				"Delete even if the deployment has an active alias and skip confirmation",
+				"Delete even if the deployment has an active alias. Also skips confirmation",
+			default: false,
+		},
+		yes: {
+			type: "boolean",
+			alias: "y",
+			description: "Skip confirmation without forcing aliased deployments",
 			default: false,
 		},
 	},
 	positionalArgs: ["deployment-id"],
-	async handler({ deploymentId, projectName, force }) {
+	async handler({ deploymentId, projectName, force, yes }) {
 		const deploymentIds = Array.isArray(deploymentId)
 			? deploymentId
 			: [deploymentId];
@@ -237,6 +245,7 @@ export const pagesDeploymentDeleteCommand = createCommand({
 			deploymentIds,
 			projectName,
 			force,
+			yes,
 		});
 
 		if (!confirmed) {
