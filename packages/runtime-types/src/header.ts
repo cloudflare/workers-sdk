@@ -21,5 +21,5 @@ export function getRuntimeHeader(
 	compatibilityDate: string,
 	compatibilityFlags: string[] = []
 ): string {
-	return `${RUNTIME_HEADER_COMMENT_PREFIX}${workerdVersion} ${compatibilityDate} ${compatibilityFlags.sort().join(",")}`;
+	return `${RUNTIME_HEADER_COMMENT_PREFIX}${workerdVersion} ${compatibilityDate} ${[...compatibilityFlags].sort().join(",")}`;
 }

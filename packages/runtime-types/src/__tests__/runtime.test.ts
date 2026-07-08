@@ -66,10 +66,10 @@ describe("generateRuntimeTypes", () => {
 			outFile: OUT_FILE,
 		});
 
-		// `getRuntimeHeader` sorts the flags array in place before the URL is
-		// built, so the dispatched flags are sorted (with nodejs_compat stripped).
+		// nodejs_compat flags are stripped from the dispatch URL; the remaining
+		// flags keep their original caller-provided order.
 		expect(dispatchFetchMock).toHaveBeenCalledWith(
-			"http://dummy.com/2024-11-06+flag_a+flag_b"
+			"http://dummy.com/2024-11-06+flag_b+flag_a"
 		);
 		expect(result.runtimeHeader).toBe(
 			getRuntimeHeader(WORKERD_VERSION, "2024-11-06", [
