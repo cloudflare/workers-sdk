@@ -1,7 +1,20 @@
-import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit";
+import SCRIPT_RATELIMIT_CLIENT from "worker:ratelimit/ratelimit";
+import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit-object";
 import { z } from "zod";
-import { ProxyNodeBinding } from "../shared";
-import type { Worker_Binding } from "../../runtime";
+import { kVoid } from "../../runtime";
+import { SharedBindings } from "../../workers";
+import {
+	getMiniflareObjectBindings,
+	getUserBindingServiceName,
+	objectEntryWorker,
+	ProxyNodeBinding,
+	SERVICE_LOOPBACK,
+} from "../shared";
+import type {
+	Service,
+	Worker_Binding,
+	Worker_Binding_DurableObjectNamespaceDesignator,
+} from "../../runtime";
 import type { Plugin } from "../shared";
 
 export enum PeriodType {
@@ -10,11 +23,16 @@ export enum PeriodType {
 }
 
 export const RatelimitConfigSchema = z.object({
+	// The rate limiter's namespace identity. Counters are keyed by this, not by
+	// the binding name, so two bindings (in the same Worker or across Workers in
+	// a multiworker session) that reference the same namespace share a limit,
+	// while the same binding name pointing at different namespaces stays isolated.
+	namespace_id: z.string(),
 	simple: z.object({
 		limit: z.number().gt(0),
 
 		// may relax this to be any number in the future
-		period: z.nativeEnum(PeriodType).optional(),
+		period: z.nativeEnum(PeriodType).optional().default(PeriodType.MINUTE),
 	}),
 });
 export const RatelimitOptionsSchema = z.object({
@@ -24,6 +42,12 @@ export const RatelimitOptionsSchema = z.object({
 export const RATELIMIT_PLUGIN_NAME = "ratelimit";
 const SERVICE_RATELIMIT_PREFIX = `${RATELIMIT_PLUGIN_NAME}`;
 const SERVICE_RATELIMIT_MODULE = `cloudflare-internal:${SERVICE_RATELIMIT_PREFIX}:module`;
+const RATELIMIT_ENTRY_SERVICE_PREFIX = `${RATELIMIT_PLUGIN_NAME}:ns`;
+const RATELIMIT_OBJECT_CLASS_NAME = "RateLimiterObject";
+const RATELIMIT_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
+	serviceName: RATELIMIT_ENTRY_SERVICE_PREFIX,
+	className: RATELIMIT_OBJECT_CLASS_NAME,
+};
 
 function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
@@ -44,11 +68,21 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 				name,
 				wrapped: {
 					moduleName: SERVICE_RATELIMIT_MODULE,
-					innerBindings: buildJsonBindings({
-						namespaceId: name,
-						limit: config.simple.limit,
-						period: config.simple.period,
-					}),
+					innerBindings: [
+						{
+							name: "fetcher",
+							service: {
+								name: getUserBindingServiceName(
+									RATELIMIT_ENTRY_SERVICE_PREFIX,
+									config.namespace_id
+								),
+							},
+						},
+						...buildJsonBindings({
+							limit: config.simple.limit,
+							period: config.simple.period,
+						}),
+					],
 				},
 			})
 		);
@@ -65,8 +99,58 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 			])
 		);
 	},
-	async getServices() {
-		return [];
+	async getServices({ options, unsafeStickyBlobs }) {
+		if (!options.ratelimits) {
+			return [];
+		}
+		// One entry service + Durable Object instance per unique namespace_id.
+		// Multiple bindings sharing a namespace collapse to a single counter.
+		const services: Service[] = [];
+		const seenNamespaces = new Set<string>();
+		for (const { namespace_id } of Object.values(options.ratelimits)) {
+			if (seenNamespaces.has(namespace_id)) {
+				continue;
+			}
+			seenNamespaces.add(namespace_id);
+			services.push({
+				name: getUserBindingServiceName(
+					RATELIMIT_ENTRY_SERVICE_PREFIX,
+					namespace_id
+				),
+				worker: objectEntryWorker(RATELIMIT_OBJECT, namespace_id),
+			});
+		}
+
+		const uniqueKey = `miniflare-${RATELIMIT_OBJECT_CLASS_NAME}`;
+		services.push({
+			name: RATELIMIT_ENTRY_SERVICE_PREFIX,
+			worker: {
+				compatibilityDate: "2023-07-24",
+				compatibilityFlags: ["nodejs_compat", "experimental"],
+				modules: [
+					{
+						name: "ratelimit-object.worker.js",
+						esModule: SCRIPT_RATELIMIT_OBJECT(),
+					},
+				],
+				durableObjectNamespaces: [
+					{ className: RATELIMIT_OBJECT_CLASS_NAME, uniqueKey },
+				],
+				// Counters are only ever needed for the lifetime of the Miniflare
+				// process, never persisted across restarts (matching the previous
+				// purely in-memory implementation).
+				durableObjectStorage: { inMemory: kVoid },
+				bindings: [
+					{
+						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+						service: { name: SERVICE_LOOPBACK },
+					},
+					...getMiniflareObjectBindings(unsafeStickyBlobs),
+				],
+			},
+		});
+
+		return services;
 	},
 	getExtensions({ options }) {
 		if (!options.some((o) => o.ratelimits)) {
@@ -77,7 +161,7 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 				modules: [
 					{
 						name: SERVICE_RATELIMIT_MODULE,
-						esModule: SCRIPT_RATELIMIT_OBJECT(),
+						esModule: SCRIPT_RATELIMIT_CLIENT(),
 						internal: true,
 					},
 				],

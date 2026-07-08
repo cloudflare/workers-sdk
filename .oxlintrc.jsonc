@@ -206,11 +206,9 @@
 		// TODO: Remove the following overrides, one package at a time.
 		{
 			"files": [
-				"packages/edge-preview-authenticated-proxy/**",
 				"packages/local-explorer-ui/**",
 				"packages/vite-plugin-cloudflare/**",
 				"packages/workflows-shared/**",
-				"packages/wrangler/**",
 			],
 			"rules": {
 				"@typescript-eslint/no-deprecated": "off",

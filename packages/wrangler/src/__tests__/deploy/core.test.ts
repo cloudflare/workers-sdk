@@ -9,7 +9,7 @@ import {
 	TEMPORARY_TERMS_NOTICE,
 	TEMPORARY_TERMS_PROMPT,
 } from "@cloudflare/workers-auth";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -1064,7 +1064,7 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				const globalTemporaryAccountPath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.toml"
 				);
 				const localTemporaryAccountPath = path.join(
@@ -1213,11 +1213,11 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				const stagingTemporaryAccountPath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.staging.toml"
 				);
 				const productionTemporaryAccountPath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.toml"
 				);
 
@@ -1332,7 +1332,7 @@ describe("deploy", () => {
 				// the optional-chaining fix this crashed with a TypeError when
 				// reading `.account.expiresAt`.
 				const cachePath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.toml"
 				);
 				fs.mkdirSync(path.dirname(cachePath), { recursive: true });

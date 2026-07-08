@@ -129,6 +129,17 @@ export type DeployProps = SharedDeployVersionsProps & {
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
 	containersRollout: "immediate" | "gradual" | "none" | undefined;
+	/**
+	 * When true, an existing Worker with the same name aborts the deploy instead
+	 * of updating it, because this run cannot confirm the local project owns the
+	 * remote Worker. Set for non-interactive deploys with no pre-existing config
+	 * file when either the name was generated automatically (no user-supplied
+	 * name) or the deploy is the Pages-to-Workers delegation (where the name is a
+	 * Pages project name carried across, not proof of Worker ownership). Deploys
+	 * that carry a config file naming the Worker leave this false and update it as
+	 * normal.
+	 */
+	failIfWorkerNameTaken?: boolean;
 };
 
 export type VersionsUploadProps = SharedDeployVersionsProps & {

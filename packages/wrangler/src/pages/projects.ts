@@ -12,6 +12,8 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
+import { maybeDelegatePagesToWorkers } from "./delegate-to-workers";
+import { runPagesToWorkersDeploy } from "./run-workers-deploy";
 import type { PagesConfigCache, Project } from "./types";
 
 export const pagesProjectListCommand = createCommand({
@@ -124,6 +126,13 @@ export const pagesProjectCreateCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		force: {
+			type: "boolean",
+			default: false,
+			hidden: true,
+			description:
+				"Create a Cloudflare Pages project directly, bypassing the automatic delegation to Cloudflare Workers for new static projects",
+		},
 	},
 	positionalArgs: ["project-name"],
 	async handler({
@@ -131,11 +140,32 @@ export const pagesProjectCreateCommand = createCommand({
 		compatibilityFlags,
 		compatibilityDate,
 		projectName,
+		force,
 	}) {
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
 		const accountId = await requireAuth(config);
+
+		// When run by an AI agent, delegate new static Pages projects to a Workers
+		// static-assets deploy of the current directory. Accounts that already
+		// have Pages projects, projects using unsupported Pages features, and
+		// `--force` are never delegated.
+		const delegation = await maybeDelegatePagesToWorkers({
+			command: "create",
+			projectPath: process.cwd(),
+			accountHasPagesProjects: async () =>
+				(await listProjects({ accountId })).length > 0,
+			force,
+			projectName,
+			compatibilityDate,
+			compatibilityFlags,
+			unsupportedArgs: productionBranch ? ["--production-branch"] : [],
+		});
+		if (delegation.delegate) {
+			await runPagesToWorkersDeploy(delegation);
+			return;
+		}
 
 		const isInteractive = process.stdin.isTTY;
 		if (!projectName && isInteractive) {

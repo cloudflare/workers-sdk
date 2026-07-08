@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
@@ -24,6 +24,9 @@ import type * as SendEventModule from "../metrics/send-event";
 vi.unmock("../agents-skills-install");
 
 vi.mock("am-i-vibing");
+
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- the function has a deprecated overload; we only reference it here for mocking
+const mockDetectAgenticEnvironment = vi.mocked(detectAgenticEnvironment);
 
 // Mock rosie-skills to avoid real network/WASM calls.
 // vi.hoisted() is required because vi.mock() factories are hoisted above normal
@@ -79,7 +82,7 @@ const DEFAULT_INSTALL_RESULT = {
 
 /** Writes the skills-install metadata file to the global wrangler config path. */
 function writeMetadataFile(content: Record<string, unknown>): void {
-	const configDir = getGlobalWranglerConfigPath();
+	const configDir = getGlobalConfigPath();
 	mkdirSync(configDir, { recursive: true });
 	writeFileSync(
 		path.join(configDir, "agents-skills-install.jsonc"),
@@ -90,7 +93,7 @@ function writeMetadataFile(content: Record<string, unknown>): void {
 /** Reads and parses the skills-install metadata file. */
 function readMetadataFile(): Record<string, unknown> {
 	const filePath = path.join(
-		getGlobalWranglerConfigPath(),
+		getGlobalConfigPath(),
 		"agents-skills-install.jsonc"
 	);
 	return JSON.parse(readFileSync(filePath, "utf8"));
@@ -1071,7 +1074,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 
 	beforeEach(() => {
 		// Default: no agent detected
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: false,
 			id: null,
 			name: null,
@@ -1090,7 +1093,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to null when detectAgenticEnvironment throws", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
+		mockDetectAgenticEnvironment.mockImplementation(() => {
 			throw new Error("Detection failed");
 		});
 		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
@@ -1103,7 +1106,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to null when agent is detected but not in telemetryAgentMappings", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "jules",
 			name: "Jules",
@@ -1119,7 +1122,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to false when GitHub API fetch fails and no cache exists", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1137,7 +1140,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to false when no skills are present in agent's globalSkillsPath", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1155,7 +1158,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to 'manual' when some skills exist but no metadata file", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1175,7 +1178,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to 'automatic' when skills exist and metadata confirms successful install", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1208,7 +1211,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to 'manual' when metadata says install failed entirely (installFailed: true)", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1241,7 +1244,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to 'manual' when metadata says install failed for this agent (installFailed: string[])", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1274,7 +1277,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to 'manual' when agent is not in detectedAgents", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1301,7 +1304,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to 'manual' when metadata has accepted='unanswered' (user interrupted prompt)", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1333,7 +1336,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	});
 
 	test("uses cached GitHub API response within TTL", async ({ expect }) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1344,7 +1347,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
 
 		// Write a fresh cache file
-		const configDir = getGlobalWranglerConfigPath();
+		const configDir = getGlobalConfigPath();
 		mkdirSync(configDir, { recursive: true });
 		writeFileSync(
 			path.join(configDir, "cloudflare-skills-repo-cache.json"),
@@ -1382,7 +1385,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("falls back to stale cache when GitHub API returns an error", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "claude-code",
 			name: "Claude Code",
@@ -1393,7 +1396,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
 
 		// Write an expired cache file (TTL is 24h, set lastUpdate to 48h ago)
-		const configDir = getGlobalWranglerConfigPath();
+		const configDir = getGlobalConfigPath();
 		mkdirSync(configDir, { recursive: true });
 		writeFileSync(
 			path.join(configDir, "cloudflare-skills-repo-cache.json"),
@@ -1428,7 +1431,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	});
 
 	test("works with cursor-agent amIVibingId mapping", async ({ expect }) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "cursor-agent",
 			name: "Cursor Agent",
@@ -1461,7 +1464,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to 'manual' when skills exist at an alternativeGlobalPath but no metadata", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "opencode",
 			name: "OpenCode",
@@ -1483,7 +1486,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to 'automatic' when skills at alternativeGlobalPath were installed for another agent", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "opencode",
 			name: "OpenCode",
@@ -1517,7 +1520,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to 'manual' when skills at alternativeGlobalPath were installed for another agent but failed", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "opencode",
 			name: "OpenCode",
@@ -1549,7 +1552,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	test("resolves to false when skills are not at primary or any alternativeGlobalPath", async ({
 		expect,
 	}) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: true,
 			id: "opencode",
 			name: "OpenCode",
@@ -1572,7 +1575,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		test("resolves to 'automatic' when metadata uses the legacy flat AgentInfo schema", async ({
 			expect,
 		}) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: true,
 				id: "claude-code",
 				name: "Claude Code",
@@ -1605,7 +1608,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		test("migrates legacy metadata to version 1 on disk when read", async ({
 			expect,
 		}) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: true,
 				id: "claude-code",
 				name: "Claude Code",
@@ -1652,7 +1655,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		test("resolves to 'manual' when legacy metadata says install failed", async ({
 			expect,
 		}) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: true,
 				id: "claude-code",
 				name: "Claude Code",
@@ -1684,7 +1687,7 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 	});
 
 	test("memoises the result across multiple calls", async ({ expect }) => {
-		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+		mockDetectAgenticEnvironment.mockReturnValue({
 			isAgentic: false,
 			id: null,
 			name: null,
