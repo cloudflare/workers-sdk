@@ -46,6 +46,7 @@ import type {
 } from "./context";
 import type { PersistState } from "./plugin-config";
 import type { ModuleType } from "@cloudflare/config";
+import type { RemoteProxySession } from "@cloudflare/remote-bindings";
 import type {
 	MiniflareOptions,
 	ModuleRuleType,
@@ -53,15 +54,21 @@ import type {
 	WorkerOptions,
 } from "miniflare";
 import type * as vite from "vite";
-import type {
-	Binding,
-	RemoteProxySession,
-	SourcelessWorkerOptions,
-} from "wrangler";
+import type { Binding, SourcelessWorkerOptions } from "wrangler";
 
 const INTERNAL_WORKERS_COMPATIBILITY_DATE = "2024-10-04";
 // Used to mark HTML assets as being in the public directory so that they can be resolved from their root relative paths
 const PUBLIC_DIR_PREFIX = "/__vite_public_dir__";
+
+// Imported lazily, only when a remote proxy session is actually needed, so the
+// Node-only `@cloudflare/remote-bindings` package (and its transitive
+// `@cloudflare/workers-utils` barrel, which evaluates modules that perform a
+// top-level dynamic `require`, e.g. `signal-exit`) stays out of the plugin's
+// module graph at config-load time — Vite evaluates the config in a pure-ESM
+// context where such a `require` throws.
+async function importRemoteBindings() {
+	return import("@cloudflare/remote-bindings");
+}
 
 function getPersistenceRoot(
 	root: string,
@@ -270,11 +277,13 @@ export async function getDevMiniflareOptions(
 								!resolvedPluginConfig.remoteBindings
 									? // if remote bindings are not enabled then the proxy session can simply be null
 										null
-									: await wrangler.maybeStartOrUpdateRemoteProxySession(
+									: await (
+											await importRemoteBindings()
+										).maybeStartOrUpdateRemoteProxySession(
 											{
 												name: worker.config.name,
 												bindings: bindings ?? {},
-												account_id: worker.config.account_id,
+												accountId: worker.config.account_id,
 											},
 											preExistingRemoteProxySession ?? null
 										);
@@ -660,11 +669,13 @@ export async function getPreviewMiniflareOptions(
 				const remoteProxySessionData = !resolvedPluginConfig.remoteBindings
 					? // if remote bindings are not enabled then the proxy session can simply be null
 						null
-					: await wrangler.maybeStartOrUpdateRemoteProxySession(
+					: await (
+							await importRemoteBindings()
+						).maybeStartOrUpdateRemoteProxySession(
 							{
 								name: workerConfig.name,
 								bindings: bindings ?? {},
-								account_id: workerConfig.account_id,
+								accountId: workerConfig.account_id,
 							},
 							preExistingRemoteProxySessionData ?? null
 						);
