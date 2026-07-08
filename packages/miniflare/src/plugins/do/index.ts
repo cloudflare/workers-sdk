@@ -91,6 +91,18 @@ export function normaliseDurableObject(
 	};
 }
 
+export function getDurableObjectUniqueKey(
+	className: string,
+	workerName: string | undefined,
+	unsafeUniqueKey: UnsafeUniqueKey | undefined
+): string | undefined {
+	if (unsafeUniqueKey === kUnsafeEphemeralUniqueKey) {
+		return undefined;
+	}
+
+	return unsafeUniqueKey ?? `${workerName ?? ""}-${className}`;
+}
+
 export const DURABLE_OBJECTS_PLUGIN_NAME = "do";
 
 export const DURABLE_OBJECTS_STORAGE_SERVICE_NAME = `${DURABLE_OBJECTS_PLUGIN_NAME}:storage`;

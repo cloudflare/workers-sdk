@@ -33,6 +33,8 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { ExpectStatic } from "vitest";
 
 vi.mock("am-i-vibing");
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- the function has a deprecated overload; we only reference it here for mocking
+const mockDetectAgenticEnvironment = vi.mocked(detectAgenticEnvironment);
 vi.mock("../metrics/helpers");
 vi.mock("../metrics/send-event");
 vi.mock("../package-manager");
@@ -90,7 +92,7 @@ describe("metrics", () => {
 		describe("sendAdhocEvent()", () => {
 			beforeEach(() => {
 				// Default: no agent detected
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
+				mockDetectAgenticEnvironment.mockReturnValue({
 					isAgentic: false,
 					id: null,
 					name: null,
@@ -196,7 +198,7 @@ describe("metrics", () => {
 			});
 
 			it("should include agent ID when detected", async ({ expect }) => {
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
+				mockDetectAgenticEnvironment.mockReturnValue({
 					isAgentic: true,
 					id: "claude-code",
 					name: "Claude Code",
@@ -215,7 +217,7 @@ describe("metrics", () => {
 			});
 
 			it("should set agent to null if detection throws", async ({ expect }) => {
-				vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
+				mockDetectAgenticEnvironment.mockImplementation(() => {
 					throw new Error("Detection failed");
 				});
 
@@ -257,7 +259,7 @@ describe("metrics", () => {
 			};
 			beforeEach(() => {
 				// Default: no agent detected
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
+				mockDetectAgenticEnvironment.mockReturnValue({
 					isAgentic: false,
 					id: null,
 					name: null,
@@ -530,7 +532,7 @@ describe("metrics", () => {
 			it("should include agent ID in command events when detected", async ({
 				expect,
 			}) => {
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
+				mockDetectAgenticEnvironment.mockReturnValue({
 					isAgentic: true,
 					id: "cursor-agent",
 					name: "Cursor Agent",

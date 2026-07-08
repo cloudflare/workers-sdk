@@ -75,6 +75,7 @@ export {
 	unstable_getVarsForDev,
 	unstable_readConfig,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- re-exporting deprecated public API for backward compatibility
 	unstable_getDevCompatibilityDate,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,

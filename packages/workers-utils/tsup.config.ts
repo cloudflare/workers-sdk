@@ -9,6 +9,11 @@ export default defineConfig(() => [
 			"src/browser.ts",
 			"src/prometheus-metrics.ts",
 			"src/test-helpers/index.ts",
+			// Leaf entry points that only depend on Node.js builtins, so they can
+			// be imported by packages bundling to ESM (e.g. via Vite) without
+			// pulling in the barrel's CommonJS dependencies.
+			"src/fs-helpers.ts",
+			"src/global-wrangler-config-path.ts",
 		],
 		platform: "node",
 		format: "esm",

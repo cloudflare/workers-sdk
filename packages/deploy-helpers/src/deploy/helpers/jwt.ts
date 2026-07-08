@@ -1,3 +1,7 @@
+export const decodeJwtPayload = (token: string) => {
+	return JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
+};
+
 export const isJwtExpired = (token: string): boolean | undefined => {
 	// During testing we don't use valid JWTs, so don't try and parse them.
 	if (
@@ -9,9 +13,7 @@ export const isJwtExpired = (token: string): boolean | undefined => {
 		return false;
 	}
 	try {
-		const decodedJwt = JSON.parse(
-			Buffer.from(token.split(".")[1], "base64").toString()
-		);
+		const decodedJwt = decodeJwtPayload(token);
 
 		const dateNow = new Date().getTime() / 1000;
 

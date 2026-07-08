@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
@@ -155,8 +156,13 @@ export async function installWrangler(
 	packageManager: "npm" | "pnpm" | "yarn" | "bun" | "nub",
 	isWorkspaceRoot: boolean
 ) {
+	const packages = [`wrangler@latest`] satisfies string[];
+	if (hasDependency("@cloudflare/workers-types")) {
+		packages.push("@cloudflare/workers-types@latest");
+	}
+
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
-	await installPackages(packageManager, [`wrangler@latest`], {
+	await installPackages(packageManager, packages, {
 		dev: true,
 		isWorkspaceRoot,
 		startText: `Installing wrangler ${dim(
@@ -166,4 +172,17 @@ export async function installWrangler(
 			`via \`${packageManager} install wrangler --save-dev\``
 		)}`,
 	});
+}
+
+function hasDependency(packageName: string): boolean {
+	const pkgJsonPath = path.join(process.cwd(), "package.json");
+	if (!existsSync(pkgJsonPath)) {
+		return false;
+	}
+
+	const pkgJson = parsePackageJSON(readFileSync(pkgJsonPath), pkgJsonPath);
+	return Boolean(
+		pkgJson.dependencies?.[packageName] ||
+		pkgJson.devDependencies?.[packageName]
+	);
 }

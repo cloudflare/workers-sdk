@@ -1,5 +1,207 @@
 # wrangler
 
+## 4.108.0
+
+### Minor Changes
+
+- [#14312](https://github.com/cloudflare/workers-sdk/pull/14312) [`54f74b8`](https://github.com/cloudflare/workers-sdk/commit/54f74b857cf6688a0577a214aa0b6dddb9192aaa) Thanks [@MattieTK](https://github.com/MattieTK)! - Delegate agent-driven static Pages deploys to Workers
+
+  When `wrangler pages deploy` or `wrangler pages project create` is run by an AI coding agent against a brand-new, purely static project, Wrangler now delegates it to Workers static assets (using autoconfig) instead of Cloudflare Pages. Accounts that already have Cloudflare Pages projects, non-agent (human) sessions, and projects using Pages features that can't be carried across to Workers (Pages Functions, a `_worker.js`, or a `_routes.json` file) are unaffected and continue to use Pages. Passing `--force` to either command opts out of the delegation and deploys to Pages directly. Once the Workers deploy starts it is not silently swapped back to Pages: if it fails, the error is surfaced and the `--force` opt-out is suggested.
+
+### Patch Changes
+
+- [#14567](https://github.com/cloudflare/workers-sdk/pull/14567) [`0852346`](https://github.com/cloudflare/workers-sdk/commit/08523467752daa79f0f8950a01f35797aa6f3052) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler", "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From         | To           |
+  | ------------------------- | ------------ | ------------ |
+  | workerd                   | 1.20260702.1 | 1.20260706.1 |
+  | @cloudflare/workers-types | 4.20260702.1 | 5.20260706.1 |
+
+- [#14312](https://github.com/cloudflare/workers-sdk/pull/14312) [`54f74b8`](https://github.com/cloudflare/workers-sdk/commit/54f74b857cf6688a0577a214aa0b6dddb9192aaa) Thanks [@MattieTK](https://github.com/MattieTK)! - Avoid silently overwriting an existing Worker during non-interactive deploys that cannot prove they own the name
+
+  A non-interactive deploy (an agent, CI, or the agent-delegated `wrangler pages deploy`) has no way to prompt before overwriting a Worker, so it now stops if the target name is already taken and this run cannot show it owns that Worker. This applies when there is no Wrangler configuration file naming the Worker and either the name was generated automatically or the deploy is the Pages-to-Workers delegation (where the name carried across is a Pages project name, not proof of Worker ownership). The check reuses the service metadata the deploy already fetches, so it adds no extra API calls.
+
+  Deploys are unaffected when a configuration file names the Worker (so repeat deployments continue to update it), and interactive deploys keep their existing confirmation flow. To update an existing Worker in one of the guarded cases, add a Wrangler configuration file naming it, or deploy under a different name.
+
+- Updated dependencies [[`0852346`](https://github.com/cloudflare/workers-sdk/commit/08523467752daa79f0f8950a01f35797aa6f3052)]:
+  - miniflare@4.20260706.0
+
+## 4.107.1
+
+### Patch Changes
+
+- [#14514](https://github.com/cloudflare/workers-sdk/pull/14514) [`d88555e`](https://github.com/cloudflare/workers-sdk/commit/d88555edb671668ed7f73e587af9effe6e782f53) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260701.1 | 1.20260702.1 |
+
+- [#14564](https://github.com/cloudflare/workers-sdk/pull/14564) [`5fd8bee`](https://github.com/cloudflare/workers-sdk/commit/5fd8bee9eb73a140f8ddb02830851e15d486ca3e) Thanks [@jibin7jose](https://github.com/jibin7jose)! - Fix an issue where `wrangler dev` would not override config `vars` with values from `.dev.vars` during local development when the `secrets` field was defined in the configuration file.
+
+- [#14332](https://github.com/cloudflare/workers-sdk/pull/14332) [`5d9990e`](https://github.com/cloudflare/workers-sdk/commit/5d9990e1d7ee51041ce70c9df359b0352ae57ec6) Thanks [@Divkix](https://github.com/Divkix)! - Fix misleading error guidance when deploying a new Worker with `secrets.required`
+
+  When a Worker declares `secrets.required` and has never been deployed before, the previous error message suggested running `wrangler secret put <NAME>`, which doesn't work because the Worker doesn't exist yet.
+
+  The one path that does work — `wrangler deploy --secrets-file <path>` — was not mentioned anywhere in the error output.
+
+  The pre-deploy error now explains that `wrangler secret put` cannot be used for a new Worker, and directs users to the `--secrets-file` flag instead. The post-deploy error for existing Workers now also mentions `--secrets-file` alongside `wrangler secret put`.
+
+- [#14507](https://github.com/cloudflare/workers-sdk/pull/14507) [`bf49a41`](https://github.com/cloudflare/workers-sdk/commit/bf49a419e2f98ac770d5ecbf7e9cecdf95d87ce7) Thanks [@joey727](https://github.com/joey727)! - Fix a potential crash when displaying certain CLI output
+
+  Previously, some CLI output with no content lines could cause a crash. This is now handled correctly.
+
+- [#14492](https://github.com/cloudflare/workers-sdk/pull/14492) [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5) Thanks [@penalosa](https://github.com/penalosa)! - Replace the CommonJS `xdg-app-paths` dependency with a vendored pure-ESM implementation
+
+  `xdg-app-paths` (and its `xdg-portable`/`os-paths` dependencies) are CommonJS only, which caused "Dynamic require of 'path' is not supported" errors when the surrounding code was bundled to ESM. The global config/cache directory resolution is now provided by a small, dependency-free pure-ESM module in `@cloudflare/workers-utils` that reproduces the previous path resolution exactly (verified against the real package in unit tests), so existing config and credential locations are unchanged. This also drops the transitive `fsevents` optional dependency that `xdg-app-paths` pulled in.
+
+  Miniflare and create-cloudflare now consume the shared helpers from `@cloudflare/workers-utils` instead of maintaining their own copies, importing node-only leaf entry points (`@cloudflare/workers-utils/fs-helpers`, `@cloudflare/workers-utils/global-wrangler-config-path`) where ESM bundling is required.
+
+- [#14572](https://github.com/cloudflare/workers-sdk/pull/14572) [`f416dd9`](https://github.com/cloudflare/workers-sdk/commit/f416dd983e9c6e4d292317e077dfbe839d2f30c8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Key local rate limit counters by `namespace_id` instead of binding name
+
+  `wrangler dev` and Miniflare previously tracked each rate limit binding's counter by its binding name, so two bindings that referenced the same `namespace_id` were treated as separate limiters. Counters are now keyed by `namespace_id`, matching production: bindings that share a `namespace_id` share a limit, while distinct namespaces stay isolated. This also re-enables rate limit bindings in multiworker `wrangler dev` sessions, where they were previously stripped from secondary Workers to avoid a startup crash.
+
+- [#14570](https://github.com/cloudflare/workers-sdk/pull/14570) [`1ca8d8f`](https://github.com/cloudflare/workers-sdk/commit/1ca8d8f0bbd012a1d65cabadf7b6987b252775e9) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade `signal-exit` from v3 to v4
+
+  The bundled `signal-exit` dependency was CJS-only. Upgrading to v4 (which ships a dual ESM/CJS build) unblocks ESM output. Exit-cleanup behaviour is unchanged, though v4 no longer registers handlers for a few signals that are no longer supported by the OS (`SIGUNUSED` on Linux; `SIGABRT`/`SIGALRM` on Windows).
+
+- [#14561](https://github.com/cloudflare/workers-sdk/pull/14561) [`b973ed3`](https://github.com/cloudflare/workers-sdk/commit/b973ed30015e4e4bface3c0733c33f624066523a) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Emit an error event for watch-mode rebuild failures in `unstable_startWorker`
+
+  Initial build failures already dispatch an error event (surfaced as `buildFailed` on the DevEnv bus), but watch-mode rebuild failures were only logged from inside the esbuild plugin, so programmatic consumers had no way to observe them while dev kept serving the previous bundle. Rebuild failures now route through the same error path as initial-build failures: terminal output is unchanged and `buildFailed` fires symmetrically.
+
+- Updated dependencies [[`e7e5780`](https://github.com/cloudflare/workers-sdk/commit/e7e5780ea2db48fe43233ecedf01979db6c5ce9d), [`d88555e`](https://github.com/cloudflare/workers-sdk/commit/d88555edb671668ed7f73e587af9effe6e782f53), [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5), [`f416dd9`](https://github.com/cloudflare/workers-sdk/commit/f416dd983e9c6e4d292317e077dfbe839d2f30c8), [`16fbf81`](https://github.com/cloudflare/workers-sdk/commit/16fbf81d923760d295c7f05b0bd660b7be510e5d)]:
+  - miniflare@4.20260702.0
+
+## 4.107.0
+
+### Minor Changes
+
+- [#14474](https://github.com/cloudflare/workers-sdk/pull/14474) [`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add cache options for WorkerEntrypoint exports
+
+  You can now set cache options on `WorkerEntrypoint` exports and configure cross-version cache behavior globally:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "cache": { "enabled": true, "cross_version_cache": true },
+    "exports": {
+      "default": {
+        "type": "worker",
+        "cache": { "enabled": false }
+      },
+      "Admin": {
+        "type": "worker",
+        "cache": { "enabled": true }
+      }
+    }
+  }
+  ```
+
+  Wrangler sends the `exports` config to the deploy and version upload APIs alongside the global `cache.enabled` and `cache.cross_version_cache` settings. The platform resolves those global settings plus cache overrides on exports and validates which entrypoint names are cacheable.
+
+- [#14382](https://github.com/cloudflare/workers-sdk/pull/14382) [`fd92d56`](https://github.com/cloudflare/workers-sdk/commit/fd92d5657c4d35758ce42c4f706611623be80a8e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for declarative Durable Object exports
+
+  `wrangler deploy` now accepts an `exports` map in `wrangler.json` as a declarative alternative to the legacy `migrations` array.
+
+  Each entry in `exports` is keyed by Durable Object class name. `type` carries the export _kind_ (currently always `"durable-object"`); the `state` field carries the lifecycle and defaults to `"created"` (live) when omitted:
+
+  ```jsonc
+  {
+    "exports": {
+      // Provision a new Durable Object class (`MyDO`)
+      "MyDO": { "type": "durable-object", "storage": "sqlite" },
+      // Delete Durable Object class (`OldGone`)
+      "OldGone": { "type": "durable-object", "state": "deleted" },
+      // Rename a Durable Object class (from `OldName` to `NewName`)
+      "OldName": {
+        "type": "durable-object",
+        "state": "renamed",
+        "renamed_to": "NewName"
+      },
+      "NewName": { "type": "durable-object", "storage": "sqlite" },
+      // Transfer a Durable Object (`Outgoing`) to a new Worker (`target-worker`)
+      "Outgoing": {
+        "type": "durable-object",
+        "state": "transferred",
+        "transferred_to": "target-worker"
+      },
+      // Prepare to receive the transfer of a Durable Object (`Incoming`) from another Worker (`source-worker`)
+      "Incoming": {
+        "type": "durable-object",
+        "state": "expecting-transfer",
+        "storage": "sqlite",
+        "transfer_from": "source-worker"
+      }
+    }
+  }
+  ```
+
+  When a Worker declares Durable Object class bindings but no lifecycle for them (neither a `migrations` array nor an `exports` map), wrangler warns and now suggests a declarative `exports` entry for each class (previously it suggested a legacy `migrations` block).
+
+  The deployment response now surfaces the server's reconciliation result — created namespaces, applied tombstones, structured per-scenario info entries, and a `removable_entries` hint for stale tombstones that are safe to delete from the config. Blocking errors return the structured per-class detail with scenario tags, suggested remediation, and any referencing-script context.
+
+  `wrangler versions upload` also forwards `exports`. Declarative `exports` lifecycle changes are reconciled when the version is deployed (`wrangler versions deploy` or `wrangler deploy`), so a `versions upload` payload can declare new classes in `exports` without immediately provisioning them. An actor binding (`durable_objects.bindings`) to a class declared only in `exports` on the same `versions upload` is rejected with a clear error (code 100406) — the binding cannot be resolved until the namespace is provisioned. Either stage the new class via `ctx.exports.X` (no binding required) on `versions upload` and add the binding at deploy time, or use `wrangler deploy` to provision and bind in one step (the same constraint applies to the `migrations` flow).
+
+  Multi-version deploys (`wrangler versions deploy A@50% B@50%`) where the selected versions disagree on declarative `exports` are rejected server-side with a clear message: deploy the version that changes `exports` at 100% first, then run the percentage-split deploy. This prevents traffic on one branch routing to code that references unprovisioned or just-deleted DO namespaces. Single-version (100%) deploys are unaffected.
+
+  Local development (`wrangler dev`, `vite dev` and `unstable_startWorker`) reads Durable Object SQLite storage settings from the new `exports` field, so applications using the declarative flow get correct local-dev storage without needing to also declare a `migrations` block.
+
+  `@cloudflare/vitest-pool-workers` also picks up Durable Object configuration from `exports`, so tests against an `exports`-only Worker run with the correct local SQLite storage and can reach unbound Durable Object classes via `ctx.exports.X`.
+
+  `wrangler types` is also aware of `exports`. Live entries (including `expecting-transfer`, the receiving side of a two-phase transfer) are added to `Cloudflare.GlobalProps.durableNamespaces`, which types `ctx.exports.X` for unbound Durable Objects declared only via `exports`.
+
+- [#14423](https://github.com/cloudflare/workers-sdk/pull/14423) [`be3f792`](https://github.com/cloudflare/workers-sdk/commit/be3f792f8e004857e60a58f823435784c2423868) Thanks [@akshitsinha](https://github.com/akshitsinha)! - Add `wrangler flagship` commands for managing Flagship apps and feature flags.
+
+  The new `wrangler flagship apps` and `wrangler flagship flags` command groups let you create, list, get, inspect, update, set, split, rollout, enable, disable, evaluate, and delete Flagship apps and flags from the CLI, including targeting rules, variations, percentage rollouts, evaluation context, and flag changelogs.
+
+- [#14156](https://github.com/cloudflare/workers-sdk/pull/14156) [`e1532eb`](https://github.com/cloudflare/workers-sdk/commit/e1532eba6681f4552ae02f6b435cc04f42cc9bdd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add opt-in OS keychain storage for OAuth credentials
+
+  By default `wrangler` stores your OAuth tokens in a plaintext file, and that is unchanged. You can now opt in to encrypting them at rest instead: `wrangler login --use-keyring` writes the tokens to an AES-256-GCM-encrypted file whose key is held in your OS keyring (macOS Keychain, libsecret on Linux, or Windows Credential Manager). Existing plaintext credentials are migrated automatically on first use.
+
+  Toggle it with any of:
+
+  - `wrangler login --use-keyring` / `--no-use-keyring`
+  - `wrangler auth keyring enable` / `disable` (or `wrangler auth keyring` to print the current setting) — useful if you only use named profiles and never run the global `wrangler login`
+  - `CLOUDFLARE_AUTH_USE_KEYRING=true|false` to override the saved preference for a single command
+
+  Opting out **deletes** the encrypted credentials rather than decrypting them back to disk, so you re-authenticate afterwards. The preference applies to every auth profile, and each named profile gets its own encrypted file and key.
+
+  Per-platform requirements: macOS uses the built-in `security` tool (nothing to install); Linux uses `secret-tool` from `libsecret-tools` (wrangler prints an install hint if it is missing); Windows lazily installs `@napi-rs/keyring` (~1.9 MB) on first opt-in, and errors with instructions in non-interactive/CI contexts.
+
+  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_API_KEY`/`CLOUDFLARE_EMAIL` continue to take priority over any stored OAuth credentials.
+
+### Patch Changes
+
+- [#14502](https://github.com/cloudflare/workers-sdk/pull/14502) [`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260630.1 | 1.20260701.1 |
+
+- [#14306](https://github.com/cloudflare/workers-sdk/pull/14306) [`bfe48db`](https://github.com/cloudflare/workers-sdk/commit/bfe48db29d41f4963170e80dbdba8f80a55c6098) Thanks [@matingathani](https://github.com/matingathani)! - Remove deprecated `--experimental-vm-modules` flag and prevent silent exit on unexpected errors
+
+  `wrangler` was silently exiting with code 1 on Node.js v26 with no error message shown. This release fixes two independent issues that caused this behaviour:
+
+  1. A stale Node.js flag that caused unexpected behaviour on Node.js v26 has been removed.
+
+  2. If an error occurs in a situation where the normal error reporting path itself fails, `wrangler` now always prints the original error to stderr so the cause is visible rather than silently disappearing.
+
+- [#14481](https://github.com/cloudflare/workers-sdk/pull/14481) [`0277bfa`](https://github.com/cloudflare/workers-sdk/commit/0277bfa153acae7bef9597ef0a13ece913fa286f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve error message when deploying to a non-existent Pages project in non-interactive mode
+
+  Previously, running `wrangler pages deploy` with a `--project-name` that doesn't exist in a non-interactive context (e.g. CI, piped input) would fail with a generic "project not found" or "This command cannot be run in a non-interactive context" error. Now it provides a specific error message explaining that the project doesn't exist and suggests how to create it. The error also suggests using `wrangler deploy` to deploy a Worker instead.
+
+- [#14305](https://github.com/cloudflare/workers-sdk/pull/14305) [`98793d8`](https://github.com/cloudflare/workers-sdk/commit/98793d8e00567462518d983d974e0e89b6a474c3) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Improve asset upload performance with single-file uploads
+
+  Asset uploads now use a more efficient per-file upload path when the platform enables it. This is rolled out server-side and requires no configuration changes. Existing upload behavior is unchanged when the new path is not enabled.
+
+- Updated dependencies [[`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1)]:
+  - miniflare@4.20260701.0
+
 ## 4.106.0
 
 ### Minor Changes

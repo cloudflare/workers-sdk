@@ -9,7 +9,7 @@ import {
 	TEMPORARY_TERMS_NOTICE,
 	TEMPORARY_TERMS_PROMPT,
 } from "@cloudflare/workers-auth";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -21,7 +21,7 @@ import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
-import { writeAuthConfigFile } from "../../user";
+import { writeAuthCredentials } from "../../user";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -944,7 +944,7 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				api_token: "some-api-token",
 			});
 
@@ -983,7 +983,7 @@ describe("deploy", () => {
 			expect,
 		}) => {
 			setIsTTY(false);
-			writeAuthConfigFile({ api_token: "cached-api-token" });
+			writeAuthCredentials({ api_token: "cached-api-token" });
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -1064,7 +1064,7 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				const globalTemporaryAccountPath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.toml"
 				);
 				const localTemporaryAccountPath = path.join(
@@ -1123,7 +1123,7 @@ describe("deploy", () => {
 				// expired — it would be refreshed on the next deploy — so
 				// `--temporary` must refuse rather than provision a throwaway
 				// account alongside it.
-				writeAuthConfigFile({
+				writeAuthCredentials({
 					oauth_token: "expired-token",
 					refresh_token: "expired-refresh-token",
 					expiration_time: new Date(Date.now() - 1000).toISOString(),
@@ -1213,11 +1213,11 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				const stagingTemporaryAccountPath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.staging.toml"
 				);
 				const productionTemporaryAccountPath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.toml"
 				);
 
@@ -1332,7 +1332,7 @@ describe("deploy", () => {
 				// the optional-chaining fix this crashed with a TypeError when
 				// reading `.account.expiresAt`.
 				const cachePath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.toml"
 				);
 				fs.mkdirSync(path.dirname(cachePath), { recursive: true });

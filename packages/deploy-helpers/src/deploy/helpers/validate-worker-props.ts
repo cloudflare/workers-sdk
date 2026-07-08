@@ -186,6 +186,21 @@ export async function preUploadApiChecks(
 			workerTag = script.tag;
 			tags = script.tags ?? tags;
 
+			// This non-interactive deploy could not prove the local project owns
+			// the target Worker name (no config file names it, and the name was
+			// either generated automatically or carried across by the
+			// Pages-to-Workers delegation). A same-named remote Worker is a
+			// probable collision rather than an intended redeploy, so abort instead
+			// of silently overwriting it. Reuses the service-metadata fetch above;
+			// the catch below only swallows not-found errors, so this UserError
+			// propagates.
+			if (props.command === "deploy" && props.failIfWorkerNameTaken) {
+				throw new UserError(
+					`A Worker named "${name}" already exists in your account. This deploy could not confirm that it should update that Worker, so it stopped instead of overwriting it. To update the existing Worker, add a Wrangler configuration file naming "${name}"; to deploy separately, use a different name.`,
+					{ telemetryMessage: "deploy unverified worker name already exists" }
+				);
+			}
+
 			if (script.last_deployed_from === "dash") {
 				const remoteWorkerConfig = await downloadWorkerConfig(
 					name,

@@ -1,0 +1,20 @@
+{
+	"name": "durable-objects-exports",
+	"main": "src/index.ts",
+	// don't provide compatibility_date so that vitest will infer the latest one
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "COUNTER",
+				"class_name": "Counter",
+			},
+		],
+	},
+	// Declarative DO `exports` — replaces the legacy `migrations` array.
+	// `Counter` is also bound (above); `UnboundCounter` is reachable only via
+	// `ctx.exports.UnboundCounter`.
+	"exports": {
+		"Counter": { "type": "durable-object", "storage": "sqlite" },
+		"UnboundCounter": { "type": "durable-object", "storage": "sqlite" },
+	},
+}

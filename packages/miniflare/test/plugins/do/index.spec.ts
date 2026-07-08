@@ -149,6 +149,33 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 	expect(await res.text()).toBe("2");
 });
 
+test("lists Durable Object ids with persisted storage", async ({ expect }) => {
+	const tmp = await useTmp();
+	const mf = new Miniflare({
+		defaultPersistRoot: tmp,
+		name: "worker",
+		modules: true,
+		script: COUNTER_SCRIPT(),
+		durableObjects: { COUNTER: "Counter" },
+	});
+	useDispose(mf);
+
+	const namespace = await mf.getDurableObjectNamespace("COUNTER");
+	const firstId = namespace.idFromName("/first").toString();
+	const secondId = namespace.idFromName("/second").toString();
+
+	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual([]);
+
+	let res = await mf.dispatchFetch("http://localhost/first");
+	expect(await res.text()).toBe("1");
+	res = await mf.dispatchFetch("http://localhost/second");
+	expect(await res.text()).toBe("1");
+
+	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual(
+		[firstId, secondId].sort()
+	);
+});
+
 test("multiple Workers access same Durable Object data", async ({ expect }) => {
 	const tmp = await useTmp();
 	const mf = new Miniflare({
@@ -493,6 +520,10 @@ test("colo-local actors", async ({ expect }) => {
 	const stub = ns.get("thing2");
 	res = await stub.fetch("http://localhost");
 	expect(await res.text()).toBe("body:thing2");
+
+	await expect(mf.listDurableObjectIds("OBJECT")).rejects.toThrow(
+		`Cannot list Durable Object ids for "OBJECT" because the namespace uses ephemeral local storage.`
+	);
 });
 
 test("multiple workers with DO conflicting useSQLite booleans cause options error", async ({

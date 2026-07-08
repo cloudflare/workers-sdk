@@ -1,0 +1,17 @@
+{
+	"name": "@fixture/durable-objects-exports-app",
+	"private": true,
+	"description": "Fixture demonstrating the declarative Durable Object `exports` config (with `state` for tombstones)",
+	"license": "ISC",
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev",
+		"test:ci": "vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}
