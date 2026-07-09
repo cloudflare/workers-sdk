@@ -4634,6 +4634,14 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (!isOptionalProperty(value, "preview_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "preview_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
 	if (!isOptionalProperty(value, "entrypoint", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "entrypoint" field but got ${JSON.stringify(

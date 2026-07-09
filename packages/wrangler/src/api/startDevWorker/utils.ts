@@ -214,6 +214,7 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 					type: "service",
 					service: b.service,
 					environment: b.environment,
+					preview_id: b.preview_id,
 					entrypoint: b.entrypoint,
 					cross_account_grant: b.cross_account_grant,
 				};

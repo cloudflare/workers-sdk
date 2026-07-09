@@ -91,9 +91,9 @@ export function getBindingValue(binding: Binding): string {
 		case "r2_bucket":
 			return String(binding.bucket_name ?? "");
 		case "service":
-			return binding.entrypoint
-				? `${binding.service}#${binding.entrypoint}`
-				: String(binding.service ?? "");
+			return `${binding.service ?? ""}${
+				binding.preview_id ? `@${binding.preview_id}` : ""
+			}${binding.entrypoint ? `#${binding.entrypoint}` : ""}`;
 		case "durable_object_namespace":
 			return binding.script_name
 				? `${binding.class_name} (${binding.script_name})`
@@ -177,6 +177,7 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
+			preview_id: service.preview_id,
 			entrypoint: service.entrypoint,
 			...(crossAccountGrant !== undefined && {
 				cross_account_grant: crossAccountGrant,

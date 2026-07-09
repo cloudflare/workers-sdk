@@ -326,6 +326,7 @@ export interface CfService {
 	binding: string;
 	service: string;
 	environment?: string;
+	preview_id?: string;
 	entrypoint?: string;
 	props?: Record<string, unknown>;
 	remote?: boolean;
