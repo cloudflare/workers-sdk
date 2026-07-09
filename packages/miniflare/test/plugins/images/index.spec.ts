@@ -38,6 +38,8 @@ async function handleCommand(images, op, args) {
 		}
 		case "details":
 			return hosted.image(args.id).details();
+		case "signedUrl":
+			return hosted.image(args.id).signedUrl(args.options);
 		case "update":
 			return hosted.image(args.id).update(args.options);
 		case "delete":
@@ -117,6 +119,44 @@ describe("Images local delivery", () => {
 		const response = await mf.dispatchFetch(
 			`${url.origin}/cdn-cgi/mf/imagedelivery/delivery-test/public`
 		);
+		expect(response.status).toBe(200);
+		const data = new Uint8Array(await response.arrayBuffer());
+		expect(data).toEqual(TEST_IMAGE_BYTES);
+	});
+
+	test("private image delivery rejects unsigned requests", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const url = await mf.ready;
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "private-delivery-test",
+			requireSignedURLs: true,
+		});
+
+		const response = await mf.dispatchFetch(
+			`${url.origin}/cdn-cgi/mf/imagedelivery/private-delivery-test/public`
+		);
+		expect(response.status).toBe(403);
+		await response.arrayBuffer();
+	});
+
+	test("private image delivery serves signed requests", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "signed-delivery-test",
+			requireSignedURLs: true,
+		});
+		const signedUrl = await sendCmd<string>(mf, "signedUrl", {
+			id: "signed-delivery-test",
+			options: { variant: "public", expiresIn: 60 },
+		});
+
+		const response = await mf.dispatchFetch(signedUrl);
 		expect(response.status).toBe(200);
 		const data = new Uint8Array(await response.arrayBuffer());
 		expect(data).toEqual(TEST_IMAGE_BYTES);
@@ -210,6 +250,24 @@ describe("Images hosted CRUD", () => {
 			options: { requireSignedURLs: true },
 		});
 		expect(metadata.requireSignedURLs).toBe(true);
+	});
+
+	test("generates signed URLs without expiration", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, { id: "signed-url-test" });
+		const signedUrl = await sendCmd<string>(mf, "signedUrl", {
+			id: "signed-url-test",
+			options: { variant: "public" },
+		});
+		const url = new URL(signedUrl);
+
+		expect(url.pathname).toMatch(
+			/\/cdn-cgi\/mf\/imagedelivery\/signed-url-test\/public$/
+		);
+		expect(url.searchParams.get("exp")).toBeNull();
+		expect(url.searchParams.get("sig")).toMatch(/^[0-9a-f]{64}$/);
 	});
 
 	test("delete image", async ({ expect }) => {
