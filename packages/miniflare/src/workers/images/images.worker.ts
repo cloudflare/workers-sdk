@@ -70,8 +70,12 @@ type ImageMetadataFilterValue =
 	| boolean
 	| ImageMetadataFilterOperators;
 
+interface ImageListFilter {
+	metadata?: Record<string, ImageMetadataFilterValue>;
+}
+
 interface ImageListOptionsWithFilters extends ImageListOptions {
-	metadataFilters?: Record<string, ImageMetadataFilterValue>;
+	filter?: ImageListFilter;
 }
 
 function resolveMetaPath(
@@ -266,8 +270,8 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 			);
 		}
 
-		if (options?.metadataFilters) {
-			const filters = options.metadataFilters;
+		if (options?.filter?.metadata) {
+			const filters = options.filter.metadata;
 			allImages.splice(
 				0,
 				allImages.length,

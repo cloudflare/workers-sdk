@@ -277,7 +277,7 @@ describe("Images hosted CRUD", () => {
 		});
 
 		const list = await sendCmd<ImageList>(mf, "list", {
-			options: { metadataFilters: { status: "active" } },
+			options: { filter: { metadata: { status: "active" } } },
 		});
 		expect(list.images).toHaveLength(1);
 		expect(list.images[0].id).toBe("active");
@@ -302,7 +302,7 @@ describe("Images hosted CRUD", () => {
 
 		const list = await sendCmd<ImageList>(mf, "list", {
 			options: {
-				metadataFilters: { region: { in: ["us-east", "eu-west"] } },
+				filter: { metadata: { region: { in: ["us-east", "eu-west"] } } },
 			},
 		});
 		expect(list.images.map((i) => i.id).sort()).toEqual(["a", "b"]);
@@ -319,7 +319,7 @@ describe("Images hosted CRUD", () => {
 		await upload(mf, TEST_IMAGE_BYTES, { id: "p5", metadata: { priority: 5 } });
 
 		const list = await sendCmd<ImageList>(mf, "list", {
-			options: { metadataFilters: { priority: { gte: 2, lte: 4 } } },
+			options: { filter: { metadata: { priority: { gte: 2, lte: 4 } } } },
 		});
 		expect(list.images).toHaveLength(1);
 		expect(list.images[0].id).toBe("p3");
@@ -339,7 +339,7 @@ describe("Images hosted CRUD", () => {
 		});
 
 		const list = await sendCmd<ImageList>(mf, "list", {
-			options: { metadataFilters: { "config.region": "eu-west" } },
+			options: { filter: { metadata: { "config.region": "eu-west" } } },
 		});
 		expect(list.images).toHaveLength(1);
 		expect(list.images[0].id).toBe("eu");
@@ -362,7 +362,7 @@ describe("Images hosted CRUD", () => {
 
 		const list = await sendCmd<ImageList>(mf, "list", {
 			options: {
-				metadataFilters: { status: "active", priority: { gte: 5 } },
+				filter: { metadata: { status: "active", priority: { gte: 5 } } },
 			},
 		});
 		expect(list.images).toHaveLength(1);
@@ -381,7 +381,7 @@ describe("Images hosted CRUD", () => {
 		});
 
 		const list = await sendCmd<ImageList>(mf, "list", {
-			options: { metadataFilters: { status: "missing" } },
+			options: { filter: { metadata: { status: "missing" } } },
 		});
 		expect(list.images).toHaveLength(0);
 		expect(list.listComplete).toBe(true);
