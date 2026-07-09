@@ -73,6 +73,27 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	send_metrics: boolean | undefined;
 
 	/**
+	 * Configuration for npm package dependency instrumentation.
+	 *
+	 * Controls whether Wrangler should collect and send npm package dependency
+	 * metadata when deploying or uploading a Worker version.
+	 *
+	 * When `enabled` is set to `false`, Wrangler will not include
+	 * `package_dependencies` in the upload payload. Defaults to enabled when
+	 * not specified.
+	 *
+	 * Note: This is considered build metadata, so managed separately from the
+	 *       telemetry one and not disabled when
+	 *       `send_metrics`/`WRANGLER_SEND_METRICS` is set to `false`
+	 */
+	dependencies_instrumentation:
+		| {
+				/** Whether dependency instrumentation is enabled. Defaults to `true`. */
+				enabled: boolean;
+		  }
+		| undefined;
+
+	/**
 	 * Options to configure the development server that your worker will use.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#local-development-settings
@@ -302,6 +323,7 @@ export const defaultWranglerConfig: Config = {
 	/* TOP-LEVEL ONLY FIELDS */
 	pages_build_output_dir: undefined,
 	send_metrics: undefined,
+	dependencies_instrumentation: undefined,
 	dev: {
 		ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
 		port: undefined, // the default of 8787 is set at runtime

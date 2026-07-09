@@ -122,9 +122,14 @@ export async function updateInstanceStatus(
 	workflowName: string,
 	instanceId: string,
 	status: "pause" | "resume" | "restart" | "terminate",
-	from?: WorkflowInstanceRestartFrom
+	from?: WorkflowInstanceRestartFrom,
+	rollback?: boolean
 ): Promise<void> {
-	const body = from ? { status, from } : { status };
+	const body = {
+		status,
+		...(from ? { from } : {}),
+		...(status === "terminate" && rollback === true ? { rollback: true } : {}),
+	};
 
 	await fetchResult(
 		config,

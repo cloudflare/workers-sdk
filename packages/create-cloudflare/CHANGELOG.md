@@ -1,5 +1,21 @@
 # create-cloudflare
 
+## 2.70.10
+
+### Patch Changes
+
+- [#14292](https://github.com/cloudflare/workers-sdk/pull/14292) [`21d048f`](https://github.com/cloudflare/workers-sdk/commit/21d048f3efa9aec85822ed7a06e6b11bfa31c624) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.15.4 | 0.16.1 |
+
+- [#14292](https://github.com/cloudflare/workers-sdk/pull/14292) [`21d048f`](https://github.com/cloudflare/workers-sdk/commit/21d048f3efa9aec85822ed7a06e6b11bfa31c624) Thanks [@dependabot](https://github.com/apps/dependabot)! - Fix SvelteKit project creation failing with "Error parsing file: svelte.config.js"
+
+  As of `sv` 0.16, newly scaffolded SvelteKit projects no longer include a `svelte.config.js` file, and the adapter is configured in the Vite config instead. C3 now updates the adapter import in `vite.config.ts`/`vite.config.js` rather than `svelte.config.js`, so creating a SvelteKit project succeeds again.
+
 ## 2.70.9
 
 ### Patch Changes
