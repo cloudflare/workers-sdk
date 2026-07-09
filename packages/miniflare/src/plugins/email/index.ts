@@ -44,11 +44,13 @@ export const EmailOptionsSchema = z.object({
 
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
+// Disk service name and binding name for writing temporary files to system temp directory
 const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
 const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
 
-const EMAIL_DISK_SERVICE_NAME_WRANGLER = `${EMAIL_DISK_SERVICE_NAME}:wrangler`;
-const EMAIL_DISK_BINDING_NAME_WRANGLER = "MINIFLARE_EMAIL_DISK_WRANGLER";
+// Disk service name and binding name for writing temporary files to .wrangler
+const EMAIL_DISK_SERVICE_NAME_LOCAL = `${EMAIL_DISK_SERVICE_NAME}:local`;
+const EMAIL_DISK_BINDING_NAME_LOCAL = "MINIFLARE_EMAIL_DISK_LOCAL";
 
 function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
@@ -97,19 +99,19 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 
 		// Used to send email logs to .wrangler/tmp/email
 		const workerName = args.workerNames[args.workerIndex] || "default";
-		const wranglerDirectory = getWranglerHiddenDirPath(args.rootPath);
-		const emailTmpDirectory = path.join(
-			wranglerDirectory,
+		const wranglerHiddenDirectory = getWranglerHiddenDirPath(args.rootPath);
+		const emailLocalDirectory = path.join(
+			wranglerHiddenDirectory,
 			"tmp",
 			"email",
 			workerName
 		);
-		await mkdir(emailTmpDirectory, { recursive: true });
-		const emailSessionDirectory = path.join(
-			emailTmpDirectory,
+		await mkdir(emailLocalDirectory, { recursive: true });
+		const emailLocalSessionDirectory = path.join(
+			emailLocalDirectory,
 			crypto.randomUUID()
 		);
-		await mkdir(emailSessionDirectory, { recursive: true });
+		await mkdir(emailLocalSessionDirectory, { recursive: true });
 
 		const services: Service[] = [
 			{
@@ -120,9 +122,9 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 				},
 			},
 			{
-				name: EMAIL_DISK_SERVICE_NAME_WRANGLER,
+				name: EMAIL_DISK_SERVICE_NAME_LOCAL,
 				disk: {
-					path: emailSessionDirectory,
+					path: emailLocalSessionDirectory,
 					writable: true,
 				},
 			},
@@ -149,16 +151,16 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 									service: { name: EMAIL_DISK_SERVICE_NAME },
 								},
 								{
-									name: EMAIL_DISK_BINDING_NAME_WRANGLER,
-									service: { name: EMAIL_DISK_SERVICE_NAME_WRANGLER },
+									name: EMAIL_DISK_BINDING_NAME_LOCAL,
+									service: { name: EMAIL_DISK_SERVICE_NAME_LOCAL },
 								},
 								{
 									name: "email_directory",
 									json: JSON.stringify(emailDirectory),
 								},
 								{
-									name: "email_directory_wrangler",
-									json: JSON.stringify(emailSessionDirectory),
+									name: "email_directory_local",
+									json: JSON.stringify(emailLocalSessionDirectory),
 								},
 							],
 						},

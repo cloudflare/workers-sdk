@@ -82,9 +82,9 @@ function joinPath(base: string, ...segments: string[]): string {
 
 interface SendEmailEnv {
 	MINIFLARE_EMAIL_DISK: Fetcher;
-	MINIFLARE_EMAIL_DISK_WRANGLER: Fetcher;
+	MINIFLARE_EMAIL_DISK_LOCAL: Fetcher;
 	email_directory: string;
-	email_directory_wrangler: string
+	email_directory_local: string
 	destination_address: string | undefined;
 	allowed_destination_addresses: string[] | undefined;
 	allowed_sender_addresses: string[] | undefined;
@@ -131,11 +131,11 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			return joinPath(this.env.email_directory, prefix, fileName);
 		}
 
-		await this.env.MINIFLARE_EMAIL_DISK_WRANGLER.fetch(url, {
+		await this.env.MINIFLARE_EMAIL_DISK_LOCAL.fetch(url, {
 			method: "PUT",
 			body,
 		});
-		return joinPath(this.env.email_directory_wrangler, prefix, fileName);
+		return joinPath(this.env.email_directory_local, prefix, fileName);
 	}
 
 	private checkDestinationAllowed(to: string) {
