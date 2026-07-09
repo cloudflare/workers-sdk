@@ -189,43 +189,6 @@ describe("collectPackageDependencies", () => {
 		expect(result).toBeUndefined();
 	});
 
-	it("should skip private packages", async ({ expect }) => {
-		const nodeModulesPath = path.join(process.cwd(), "node_modules");
-		const packagePath = path.join(nodeModulesPath, "@company/private-package");
-		fs.mkdirSync(packagePath, { recursive: true });
-		fs.writeFileSync(path.join(packagePath, "index.js"), "module.exports = {}");
-		fs.writeFileSync(
-			path.join(packagePath, "package.json"),
-			JSON.stringify(
-				{
-					name: "@company/private-package",
-					version: "2.0.0",
-					private: true,
-				},
-				null,
-				2
-			)
-		);
-
-		fs.writeFileSync(
-			"package.json",
-			JSON.stringify(
-				{
-					name: "test-project",
-					dependencies: {
-						"@company/private-package": "^2.0.0",
-					},
-				},
-				null,
-				2
-			)
-		);
-
-		const result = await collectPackageDependencies(process.cwd());
-
-		expect(result).toBeUndefined();
-	});
-
 	it("should skip dependencies that cannot be resolved", async ({ expect }) => {
 		fs.writeFileSync(
 			"package.json",
@@ -249,7 +212,7 @@ describe("collectPackageDependencies", () => {
 	it("should handle mixed dependencies correctly", async ({ expect }) => {
 		const nodeModulesPath = path.join(process.cwd(), "node_modules");
 
-		// Create a public package
+		// Create an installed package
 		const publicPath = path.join(nodeModulesPath, "public-pkg");
 		fs.mkdirSync(publicPath, { recursive: true });
 		fs.writeFileSync(path.join(publicPath, "index.js"), "module.exports = {}");
@@ -258,17 +221,13 @@ describe("collectPackageDependencies", () => {
 			JSON.stringify({ name: "public-pkg", version: "1.0.0" }, null, 2)
 		);
 
-		// Create a private package
-		const privatePath = path.join(nodeModulesPath, "private-pkg");
-		fs.mkdirSync(privatePath, { recursive: true });
-		fs.writeFileSync(path.join(privatePath, "index.js"), "module.exports = {}");
+		// Create another installed package
+		const anotherPath = path.join(nodeModulesPath, "another-pkg");
+		fs.mkdirSync(anotherPath, { recursive: true });
+		fs.writeFileSync(path.join(anotherPath, "index.js"), "module.exports = {}");
 		fs.writeFileSync(
-			path.join(privatePath, "package.json"),
-			JSON.stringify(
-				{ name: "private-pkg", version: "2.0.0", private: true },
-				null,
-				2
-			)
+			path.join(anotherPath, "package.json"),
+			JSON.stringify({ name: "another-pkg", version: "2.0.0" }, null, 2)
 		);
 
 		fs.writeFileSync(
@@ -278,7 +237,7 @@ describe("collectPackageDependencies", () => {
 					name: "test-project",
 					dependencies: {
 						"public-pkg": "^1.0.0",
-						"private-pkg": "^2.0.0",
+						"another-pkg": "^2.0.0",
 						"workspace-pkg": "workspace:^",
 						"local-pkg": "file:../local-pkg",
 						"nonexistent-pkg": "^3.0.0",
@@ -296,6 +255,11 @@ describe("collectPackageDependencies", () => {
 				name: "public-pkg",
 				packageJsonVersion: "^1.0.0",
 				installedVersion: "1.0.0",
+			},
+			{
+				name: "another-pkg",
+				packageJsonVersion: "^2.0.0",
+				installedVersion: "2.0.0",
 			},
 		]);
 	});

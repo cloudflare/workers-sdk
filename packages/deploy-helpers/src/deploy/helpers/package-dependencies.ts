@@ -2,7 +2,6 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
 	getInstalledPackageVersion,
-	getPackagePath,
 	parsePackageJSON,
 } from "@cloudflare/workers-utils";
 import { logger } from "../../shared/context";
@@ -35,7 +34,6 @@ const MAX_PACKAGE_DEPENDENCIES = 200;
  * - Workspace packages (version prefixed with `workspace:`)
  * - Pnpm catalog packages (version prefixed with `catalog:`)
  * - Local packages (version prefixed with `file:` or `link:`)
- * - Private packages (`"private": true` in the package's own package.json)
  * - Packages whose installed version cannot be resolved
  *
  * The result is capped at {@link MAX_PACKAGE_DEPENDENCIES} entries.
@@ -91,10 +89,6 @@ export async function collectPackageDependencies(
 				continue;
 			}
 
-			if (await isPackagePrivate(dependencyName, projectPath)) {
-				continue;
-			}
-
 			result.push({
 				name: dependencyName,
 				packageJsonVersion,
@@ -108,51 +102,5 @@ export async function collectPackageDependencies(
 			`Failed to collect package dependencies: ${error instanceof Error ? error.message : error}`
 		);
 		return undefined;
-	}
-}
-
-/**
- * Checks whether a package is marked as private in its own package.json.
- *
- * Resolves the package from the project's node_modules and reads its
- * package.json to check the `private` field.
- *
- * @param packageName - Name of the npm package to check
- * @param projectPath - Path to the project directory
- * @returns `true` if the package has `"private": true`, `false` otherwise
- */
-async function isPackagePrivate(
-	packageName: string,
-	projectPath: string
-): Promise<boolean> {
-	try {
-		const packagePath = getPackagePath(packageName, projectPath);
-		if (!packagePath) {
-			return false;
-		}
-
-		// Walk up from the resolved path to find the package's package.json
-		let currentDir = packagePath;
-		const root = path.parse(currentDir).root;
-
-		while (currentDir !== root) {
-			const potentialPackageJson = path.join(currentDir, "package.json");
-			try {
-				await access(potentialPackageJson);
-				const content = await readFile(potentialPackageJson, "utf-8");
-				const packageJson = parsePackageJSON(content, potentialPackageJson);
-
-				if (packageJson.name === packageName) {
-					return packageJson.private === true;
-				}
-			} catch {
-				// package.json doesn't exist at this level, keep walking up
-			}
-			currentDir = path.dirname(currentDir);
-		}
-
-		return false;
-	} catch {
-		return false;
 	}
 }
