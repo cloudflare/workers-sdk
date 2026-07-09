@@ -102,7 +102,7 @@ async function generate({
 		await fsp.readFile(require.resolve("workerd/worker.mjs"))
 	).toString();
 	const mf = new Miniflare({
-		compatibilityDate: "2024-01-01",
+		compatibilityDate: "2026-07-08",
 		compatibilityFlags: ["nodejs_compat", "rtti_api"],
 		modules: true,
 		script: worker,
