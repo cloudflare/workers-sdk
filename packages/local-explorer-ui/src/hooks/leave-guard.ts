@@ -39,7 +39,6 @@ interface UseLeaveGuardOptions {
 export function useLeaveGuard({
 	dependencies = [],
 	enabled,
-	fallbackMessage = "You have unsaved changes. Are you sure you want to leave?",
 	onBeforeLeave,
 }: UseLeaveGuardOptions): void {
 	const handlerCallback = useCallback(onBeforeLeave, [
@@ -58,17 +57,15 @@ export function useLeaveGuard({
 
 			if (typeof result === "string") {
 				e.preventDefault();
-				e.returnValue = result;
 				return;
 			}
 
 			if (result === true || result === undefined) {
 				e.preventDefault();
-				e.returnValue = fallbackMessage;
 			}
 		};
 
 		window.addEventListener("beforeunload", handleBeforeUnload);
 		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-	}, [enabled, handlerCallback, fallbackMessage]);
+	}, [enabled, handlerCallback]);
 }
