@@ -109,6 +109,271 @@ test(
 	}
 );
 
+test(
+	"reports unavailable Node imports without crashing workerd",
+	{ timeout: 60_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": dedent`
+				import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+
+				export default {
+					plugins: [
+						cloudflareTest({
+							wrangler: { configPath: "./wrangler.jsonc" },
+						}),
+					],
+					test: { testTimeout: 90_000 },
+				};
+			`,
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unavailable-node-import",
+					"main": "src/index.ts",
+					"compatibility_date": "2025-12-02"
+				}
+			`,
+			"src/index.ts": dedent`
+				import "node:child_process";
+
+				export default {
+					async fetch() {
+						return new Response("ok");
+					},
+				};
+			`,
+			"index.test.ts": dedent`
+				import { SELF } from "cloudflare:test";
+				import { it } from "vitest";
+
+				it("sends request", async ({ expect }) => {
+					const response = await SELF.fetch("https://example.com/");
+					expect(response.ok).toBe(true);
+				});
+			`,
+		});
+
+		let result = await vitestRun();
+		expect(await result.exitCode).toBe(1);
+		expect(result.stderr).toContain('No such module "node:child_process"');
+		expect(result.stderr).not.toMatch(
+			/Received signal #11|Segmentation fault|Worker exited unexpectedly/
+		);
+
+		await seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unavailable-node-import",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-03-17",
+					"compatibility_flags": ["nodejs_compat"]
+				}
+			`,
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
+		expect(result.stderr).not.toMatch(
+			/Received signal #11|Segmentation fault|Worker exited unexpectedly/
+		);
+
+		// A gated builtin outside the original hardcoded set (`node:punycode`,
+		// enabled from 2025-12-04) must also report a clean module error rather
+		// than crashing workerd through the fallback redirect.
+		await seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unavailable-node-import",
+					"main": "src/index.ts",
+					"compatibility_date": "2025-12-02",
+					"compatibility_flags": ["nodejs_compat"]
+				}
+			`,
+			"src/index.ts": dedent`
+				import "node:punycode";
+
+				export default {
+					async fetch() {
+						return new Response("ok");
+					},
+				};
+			`,
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(1);
+		expect(result.stderr).toContain('No such module "node:punycode"');
+		expect(result.stderr).not.toMatch(
+			/Received signal #11|Segmentation fault|Worker exited unexpectedly/
+		);
+
+		// `node:_http_server` sits behind a second sub-gate of the http override
+		// (enabled from 2025-09-01) that the pool does not force-enable, so at an
+		// earlier date it must report a clean module error rather than crash.
+		await seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unavailable-node-import",
+					"main": "src/index.ts",
+					"compatibility_date": "2025-08-31",
+					"compatibility_flags": ["nodejs_compat"]
+				}
+			`,
+			"src/index.ts": dedent`
+				import "node:_http_server";
+
+				export default {
+					async fetch() {
+						return new Response("ok");
+					},
+				};
+			`,
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(1);
+		expect(result.stderr).toContain('No such module "node:_http_server"');
+		expect(result.stderr).not.toMatch(
+			/Received signal #11|Segmentation fault|Worker exited unexpectedly/
+		);
+	}
+);
+
+test(
+	"reports unavailable Node requires without crashing workerd",
+	{ timeout: 60_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": dedent`
+				import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+
+				export default {
+					plugins: [
+						cloudflareTest({
+							wrangler: { configPath: "./wrangler.jsonc" },
+						}),
+					],
+					test: { testTimeout: 90_000 },
+				};
+			`,
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unavailable-node-require",
+					"main": "src/index.ts",
+					"compatibility_date": "2025-12-02",
+					"compatibility_flags": ["nodejs_compat"]
+				}
+			`,
+			"src/index.ts": dedent`
+				import "./dep.cjs";
+
+				export default {
+					async fetch() {
+						return new Response("ok");
+					},
+				};
+			`,
+			"src/dep.cjs": dedent`
+				module.exports = require("node:child_process");
+			`,
+			"index.test.ts": dedent`
+				import { SELF } from "cloudflare:test";
+				import { it } from "vitest";
+
+				it("sends request", async ({ expect }) => {
+					const response = await SELF.fetch("https://example.com/");
+					expect(response.ok).toBe(true);
+				});
+			`,
+		});
+
+		let result = await vitestRun();
+		expect(await result.exitCode).toBe(1);
+		expect(result.stderr).toContain('No such module "node:child_process"');
+		expect(result.stderr).not.toMatch(
+			/Received signal #11|Segmentation fault|Worker exited unexpectedly/
+		);
+
+		await seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unavailable-node-require",
+					"main": "src/index.ts",
+					"compatibility_date": "2025-12-02",
+					"compatibility_flags": ["nodejs_compat", "enable_nodejs_child_process_module"]
+				}
+			`,
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
+		expect(result.stderr).not.toMatch(
+			/Received signal #11|Segmentation fault|Worker exited unexpectedly/
+		);
+
+		await seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unavailable-node-require",
+					"main": "src/index.ts",
+					"compatibility_date": "2025-12-02",
+					"compatibility_flags": ["nodejs_compat"]
+				}
+			`,
+			"src/dep.cjs": dedent`
+				module.exports = require("node:assert");
+			`,
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
+		expect(result.stderr).not.toMatch(
+			/Received signal #11|Segmentation fault|Worker exited unexpectedly/
+		);
+
+		// A gated builtin outside the original hardcoded set (`node:punycode`,
+		// enabled from 2025-12-04) must also report a clean module error rather
+		// than crashing workerd through the fallback redirect.
+		await seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unavailable-node-require",
+					"main": "src/index.ts",
+					"compatibility_date": "2025-12-02",
+					"compatibility_flags": ["nodejs_compat"]
+				}
+			`,
+			"src/dep.cjs": dedent`
+				module.exports = require("node:punycode");
+			`,
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(1);
+		expect(result.stderr).toContain('No such module "node:punycode"');
+		expect(result.stderr).not.toMatch(
+			/Received signal #11|Segmentation fault|Worker exited unexpectedly/
+		);
+
+		// `node:_http_server` sits behind a second sub-gate of the http override
+		// (enabled from 2025-09-01) that the pool does not force-enable, so at an
+		// earlier date it must report a clean module error rather than crash.
+		await seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unavailable-node-require",
+					"main": "src/index.ts",
+					"compatibility_date": "2025-08-31",
+					"compatibility_flags": ["nodejs_compat"]
+				}
+			`,
+			"src/dep.cjs": dedent`
+				module.exports = require("node:_http_server");
+			`,
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(1);
+		expect(result.stderr).toContain('No such module "node:_http_server"');
+		expect(result.stderr).not.toMatch(
+			/Received signal #11|Segmentation fault|Worker exited unexpectedly/
+		);
+	}
+);
+
 describe("coverage provider validation", () => {
 	test(
 		"rejects v8 coverage provider with a clear error",

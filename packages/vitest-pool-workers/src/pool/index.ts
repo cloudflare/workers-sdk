@@ -29,7 +29,10 @@ import {
 	WORKER_NAME_PREFIX,
 } from "./helpers";
 import { handleLoopbackRequest } from "./loopback";
-import { handleModuleFallbackRequest } from "./module-fallback";
+import {
+	createBuiltinModuleAvailability,
+	handleModuleFallbackRequest,
+} from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
 	WorkersPoolOptions,
@@ -609,16 +612,49 @@ function getFirstAvailablePort(start: number): Promise<number> {
 type ModuleFallbackService = NonNullable<
 	MiniflareOptions["unsafeModuleFallbackService"]
 >;
-// Reuse the same bound module fallback service when constructing Miniflare
-// options, so deep equality checks succeed
-const moduleFallbackServices = new WeakMap<Vitest, ModuleFallbackService>();
-function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
-	let service = moduleFallbackServices.get(ctx);
-	if (service !== undefined) {
-		return service;
+
+function getModuleFallbackServiceKey(
+	compatibilityDate: string,
+	compatibilityFlags: readonly string[]
+): string {
+	return JSON.stringify([compatibilityDate, ...compatibilityFlags]);
+}
+
+const moduleFallbackServices = new WeakMap<
+	Vitest,
+	Map<string, ModuleFallbackService>
+>();
+function getModuleFallbackService(
+	ctx: Vitest,
+	compatibilityDate: string,
+	compatibilityFlags: readonly string[]
+): ModuleFallbackService {
+	let services = moduleFallbackServices.get(ctx);
+	if (services === undefined) {
+		services = new Map();
+		moduleFallbackServices.set(ctx, services);
 	}
-	service = handleModuleFallbackRequest.bind(undefined, ctx.vite);
-	moduleFallbackServices.set(ctx, service);
+
+	const key = getModuleFallbackServiceKey(
+		compatibilityDate,
+		compatibilityFlags
+	);
+	const existing = services.get(key);
+	if (existing !== undefined) {
+		return existing;
+	}
+
+	const isBuiltinModuleEnabled = createBuiltinModuleAvailability(
+		compatibilityDate,
+		compatibilityFlags
+	);
+	const service: ModuleFallbackService = (request) =>
+		handleModuleFallbackRequest(
+			ctx.vite,
+			(specifier) => isBuiltinModuleEnabled(specifier),
+			request
+		);
+	services.set(key, service);
 	return service;
 }
 
@@ -632,11 +668,17 @@ async function buildProjectMiniflareOptions(
 	customOptions: WorkersPoolOptions,
 	main: string | undefined
 ): Promise<MiniflareOptions> {
-	const moduleFallbackService = getModuleFallbackService(ctx);
 	const [runnerWorker, ...auxiliaryWorkers] = await buildProjectWorkerOptions(
 		project,
 		customOptions,
 		main
+	);
+	assert(runnerWorker.compatibilityDate !== undefined);
+	assert(runnerWorker.compatibilityFlags !== undefined);
+	const moduleFallbackService = getModuleFallbackService(
+		ctx,
+		runnerWorker.compatibilityDate,
+		runnerWorker.compatibilityFlags
 	);
 
 	assert(runnerWorker.name !== undefined);
