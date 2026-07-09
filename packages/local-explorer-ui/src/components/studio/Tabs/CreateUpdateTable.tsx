@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { isEqual } from "../../../utils/is-equal";
+import { getIsSchemaDirty } from "../../../utils/studio";
 import { useStudioContext } from "../Context";
 import { SkeletonBlock } from "../SkeletonBlock";
 import { StudioTableSchemaEditor } from "../Table/SchemaEditor";
@@ -43,10 +43,7 @@ export function StudioCreateUpdateTableTab({
 	const isCreateMode = !value.name.old;
 
 	const isSchemaDirty = useMemo(
-		(): boolean =>
-			value.name.new !== value.name.old ||
-			value.columns.some((change) => !isEqual(change.new, change.old)) ||
-			value.constraints.some((change) => !isEqual(change.new, change.old)),
+		(): boolean => getIsSchemaDirty(value),
 		[value]
 	);
 
