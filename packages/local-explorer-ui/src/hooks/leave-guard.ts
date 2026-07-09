@@ -15,11 +15,6 @@ interface UseLeaveGuardOptions {
 	enabled: boolean;
 
 	/**
-	 * Optional fallback message when `onBeforeLeave` returns void.
-	 */
-	fallbackMessage?: string;
-
-	/**
 	 * Handle user attempting to leave.
 	 *
 	 * - Return a `string` to show a confirmation message.
