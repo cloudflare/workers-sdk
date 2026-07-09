@@ -1,8 +1,10 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { LogLevel, Miniflare } from "miniflare";
+import path from "node:path";
+import { EMAIL_PLUGIN, LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { type ExpectStatic, test, vi } from "vitest";
-import { TestLog, useDispose } from "../../test-shared";
+import { describe, type ExpectStatic, test, vi } from "vitest";
+import { TestLog, useDispose, useTmp } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent /* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
@@ -1295,9 +1297,13 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 				Subject: Quarterly Report
 
 				Text: /email-text/[FILE].txt
+				Text (local): /email-text/[FILE].txt
 				HTML: /email-html/[FILE].html
+				HTML (local): /email-html/[FILE].html
 				Attachment (inline): logo.png -> /email-attachment/[FILE].png
-				Attachment (attachment): report.pdf -> /email-attachment/[FILE].pdf"
+				Attachment (inline) (local): logo.png -> /email-attachment/[FILE].png
+				Attachment (attachment): report.pdf -> /email-attachment/[FILE].pdf
+				Attachment (attachment) (local): report.pdf -> /email-attachment/[FILE].pdf"
 			`);
 		},
 		{ timeout: 5_000, interval: 100 }
@@ -2036,4 +2042,145 @@ test("send_email binding is available from getBindings", async ({ expect }) => {
 	expect(result).toEqual({
 		messageId: synthesizedMessageId(expect, "sender.domain"),
 	});
+});
+
+describe("EMAIL_PLUGIN.getServices", () => {
+	test("creates disk services for system temp and local directories", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const rootPath = await useTmp();
+
+		const result = await EMAIL_PLUGIN.getServices({
+			options: {
+				email: { send_email: [{ name: "SEND_EMAIL" }] },
+			},
+			tmpPath: tmp,
+			rootPath,
+			workerNames: ["default"],
+			workerIndex: 0,
+		} as unknown as Parameters<typeof EMAIL_PLUGIN.getServices>[0]);
+
+		if (!Array.isArray(result)) {
+			throw new Error("Expected getServices to return an array of services");
+		}
+		const services = result;
+
+		expect(services).toHaveLength(3);
+
+		const diskServices = services.filter((s) => "disk" in s) as Array<{
+			name: string;
+			disk: { path: string; writable?: boolean };
+		}>;
+		expect(diskServices).toHaveLength(2);
+
+		const systemTempDisk = diskServices.find((s) => s.name === "email:disk");
+		const localDisk = diskServices.find((s) => s.name === "email:disk:local");
+		if (!systemTempDisk || !localDisk) {
+			throw new Error("Expected both disk services to be present");
+		}
+
+		// System temp directory
+		expect(systemTempDisk.disk.path).toBe(path.join(tmp, "email"));
+		expect(existsSync(systemTempDisk.disk.path)).toBe(true);
+
+		// Local temp directory (.wrangler/tmp/email/)
+		expect(localDisk.disk.path).toMatch(
+			/\.wrangler[/\\]tmp[/\\]email[/\\]default[/\\][a-f0-9-]+$/
+		);
+		expect(existsSync(localDisk.disk.path)).toBe(true);
+
+		const workerService = services.find(
+			(s) => s.name === "SEND-EMAIL-WORKER:SEND_EMAIL"
+		) as
+			| { name: string; worker: { bindings: { name: string; json?: string }[] } }
+			| undefined;
+		if (!workerService) {
+			throw new Error("Expected send_email worker service to be present");
+		}
+
+		const bindings = workerService.worker.bindings;
+		const emailDirBinding = bindings.find((b) => b.name === "email_directory");
+		const emailLocalDirBinding = bindings.find(
+			(b) => b.name === "email_directory_local"
+		);
+		if (!emailDirBinding?.json || !emailLocalDirBinding?.json) {
+			throw new Error("Expected both email directory bindings with JSON values");
+		}
+
+		expect(JSON.parse(emailDirBinding.json)).toBe(path.join(tmp, "email"));
+		expect(JSON.parse(emailLocalDirBinding.json)).toBe(localDisk.disk.path);
+	});
+});
+
+test("MessageBuilder writes files to both system temp and local directories", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = new Miniflare({
+		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
+		modules: true,
+		script: MESSAGE_BUILDER_WORKER,
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			to: "recipient@example.com",
+			subject: "Dual Location Test",
+			text: "This should appear in both directories",
+		}),
+	});
+
+	expect(await res.text()).toBe("ok");
+	expect(res.status).toBe(200);
+
+	await vi.waitFor(
+		async () => {
+			const entry = log.logs.find(
+				([type, message]) =>
+					type === LogLevel.INFO &&
+					message.includes("send_email binding called with MessageBuilder:")
+			);
+			if (!entry) {
+				throw new Error(
+					"send_email binding log not found in " +
+						JSON.stringify(log.logs, null, 2)
+				);
+			}
+			const message = entry[1];
+
+			const systemTempMatch = message.match(/^Text: (.+)$/m);
+			const localMatch = message.match(/^Text \(local\): (.+)$/m);
+			expect(systemTempMatch).not.toBeNull();
+			expect(localMatch).not.toBeNull();
+
+			const systemTempPath = String(systemTempMatch?.[1]);
+			const localPath = String(localMatch?.[1]);
+
+			// Both files exist and hold identical content
+			expect(existsSync(systemTempPath)).toBe(true);
+			expect(existsSync(localPath)).toBe(true);
+			expect(await readFile(systemTempPath, "utf-8")).toBe(
+				"This should appear in both directories"
+			);
+			expect(await readFile(localPath, "utf-8")).toBe(
+				"This should appear in both directories"
+			);
+
+			// The local file lives under .wrangler/tmp/email
+			expect(localPath).toMatch(/\.wrangler[/\\]tmp[/\\]email[/\\]/);
+		},
+		{ timeout: 5_000, interval: 100 }
+	);
 });
