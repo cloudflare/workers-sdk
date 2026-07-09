@@ -10,7 +10,10 @@ import {
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
-import { getWranglerHiddenDirPath } from "@cloudflare/workers-utils";
+import {
+	getWranglerHiddenDirPath,
+	sweepStaleWranglerTmpDirs,
+} from "@cloudflare/workers-utils";
 
 // Define the mutually exclusive schema
 const EmailBindingOptionsSchema = z
@@ -107,11 +110,15 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			workerName
 		);
 		await mkdir(emailLocalDirectory, { recursive: true });
+
+		sweepStaleWranglerTmpDirs(emailLocalDirectory);
 		const emailLocalSessionDirectory = path.join(
 			emailLocalDirectory,
 			crypto.randomUUID()
 		);
 		await mkdir(emailLocalSessionDirectory, { recursive: true });
+
+		const localDiskServiceName = `${EMAIL_DISK_SERVICE_NAME_LOCAL}:${workerName}`;
 
 		const services: Service[] = [
 			{
@@ -122,7 +129,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 				},
 			},
 			{
-				name: EMAIL_DISK_SERVICE_NAME_LOCAL,
+				name: localDiskServiceName,
 				disk: {
 					path: emailLocalSessionDirectory,
 					writable: true,
@@ -152,7 +159,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 								},
 								{
 									name: EMAIL_DISK_BINDING_NAME_LOCAL,
-									service: { name: EMAIL_DISK_SERVICE_NAME_LOCAL },
+									service: { name: localDiskServiceName },
 								},
 								{
 									name: "email_directory",

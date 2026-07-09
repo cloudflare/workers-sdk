@@ -2075,7 +2075,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		expect(diskServices).toHaveLength(2);
 
 		const systemTempDisk = diskServices.find((s) => s.name === "email:disk");
-		const localDisk = diskServices.find((s) => s.name === "email:disk:local");
+		const localDisk = diskServices.find((s) => s.name === "email:disk:local:default");
 		if (!systemTempDisk || !localDisk) {
 			throw new Error("Expected both disk services to be present");
 		}
