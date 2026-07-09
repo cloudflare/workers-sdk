@@ -37,6 +37,7 @@ import {
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
+	getDurableObjectUniqueKey,
 	getGlobalServices,
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -45,6 +46,7 @@ import {
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	loadExternalPlugins,
+	namespaceKeys,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
 	ProxyClient,
@@ -1969,6 +1971,11 @@ export class Miniflare {
 		);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
+		// When the dev registry is enabled, queue brokers bind to the dev-registry
+		// proxy so they can deliver to consumers in other `wrangler dev` processes
+		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever
+		// there are queues.
+		const hasQueues = queueProducers.size > 0 || queueConsumers.size > 0;
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
 		const workerNames = [...allWorkerRoutes.keys()];
 
@@ -2150,6 +2157,7 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
+				devRegistryEnabled,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 				rootPath: this.#workerRootPaths[i],
 			};
@@ -2235,9 +2243,9 @@ export class Miniflare {
 		if (
 			this.#devRegistry.isEnabled() &&
 			externalServices &&
-			externalServices.size > 0
+			(externalServices.size > 0 || hasQueues)
 		) {
-			await this.#devRegistry.watch(externalServices);
+			await this.#devRegistry.watch(externalServices, hasQueues);
 
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
@@ -2251,8 +2259,8 @@ export class Miniflare {
 			// worker has the correct registry from the moment workerd loads it.
 			const initialRegistry = this.#devRegistry.getRegistry();
 			const mainModuleSource = [
-				`import { ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
-				`export { ExternalServiceProxy };`,
+				`import { ExternalQueueProxy, ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
+				`export { ExternalQueueProxy, ExternalServiceProxy };`,
 				`setRegistry(${JSON.stringify(initialRegistry)});`,
 				`export default {`,
 				`  async fetch(request, env) {`,
@@ -2441,9 +2449,9 @@ export class Miniflare {
 		if (this.#devRegistry.isEnabled()) {
 			requiredSockets.push(SOCKET_DEBUG_PORT);
 			// SOCKET_DEV_REGISTRY is already in config.sockets (and therefore
-			// requiredSockets) when external services are configured. Don't add
-			// it unconditionally — if no external services exist, the socket
-			// isn't defined and waiting for it would hang.
+			// requiredSockets) when external services or queues are configured.
+			// Don't add it unconditionally — if neither exists, the socket isn't
+			// defined and waiting for it would hang.
 		}
 
 		// Reload runtime
@@ -2709,12 +2717,18 @@ export class Miniflare {
 				defaultEntrypointService = getUserServiceName(workerOpts.core.name);
 			}
 
+			// Advertise consumed queues so producers in other dev sessions can
+			// route messages for them to this process's queue broker (see
+			// `ExternalQueueProxy`).
+			const queueConsumers = namespaceKeys(workerOpts.queues.queueConsumers);
+
 			entries.push([
 				workerOpts.core.name,
 				{
 					debugPortAddress,
 					defaultEntrypointService,
 					userWorkerService: getUserServiceName(workerOpts.core.name),
+					...(queueConsumers.length > 0 ? { queueConsumers } : {}),
 				},
 			]);
 		}
@@ -3090,6 +3104,80 @@ export class Miniflare {
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
 		return this.#getProxy(DURABLE_OBJECTS_PLUGIN_NAME, bindingName, workerName);
+	}
+	async listDurableObjectIds(
+		bindingName: string,
+		workerName?: string
+	): Promise<string[]> {
+		this.#checkDisposed();
+		await this.ready;
+
+		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
+		const workerOpts = this.#workerOpts[workerIndex];
+		const resolvedWorkerName = workerOpts.core.name ?? "";
+		const durableObject = workerOpts.do.durableObjects?.[bindingName];
+
+		if (durableObject === undefined) {
+			const friendlyWorkerName = resolvedWorkerName
+				? `${JSON.stringify(resolvedWorkerName)} worker`
+				: "the worker";
+			throw new TypeError(
+				`No Durable Object namespace binding named ${JSON.stringify(bindingName)} found in ${friendlyWorkerName}.`
+			);
+		}
+
+		const { className, scriptName } = normaliseDurableObject(durableObject);
+		const serviceName = getUserServiceName(scriptName ?? resolvedWorkerName);
+		const classConfig = getDurableObjectClassNames(this.#workerOpts)
+			.get(serviceName)
+			?.get(className);
+		const unsafeUniqueKey = classConfig?.unsafeUniqueKey;
+
+		const namespaceKey = getDurableObjectUniqueKey(
+			className,
+			scriptName ?? resolvedWorkerName,
+			unsafeUniqueKey
+		);
+
+		if (namespaceKey === undefined) {
+			throw new TypeError(
+				`Cannot list Durable Object ids for ${JSON.stringify(bindingName)} because the namespace uses ephemeral local storage.`
+			);
+		}
+
+		const durableObjectsPersistPath = getPersistPath(
+			DURABLE_OBJECTS_PLUGIN_NAME,
+			this.#tmpPath,
+			this.#sharedOpts.core.defaultPersistRoot,
+			this.#sharedOpts.do.durableObjectsPersist
+		);
+
+		try {
+			const entries = await fs.promises.readdir(
+				path.join(durableObjectsPersistPath, namespaceKey),
+				{ withFileTypes: true }
+			);
+
+			const ids: string[] = [];
+			for (const entry of entries) {
+				const objectId = path.basename(entry.name, ".sqlite");
+				if (
+					entry.isFile() &&
+					path.extname(entry.name) === ".sqlite" &&
+					objectId !== "metadata"
+				) {
+					ids.push(objectId);
+				}
+			}
+
+			return ids.sort();
+		} catch (error) {
+			if (isFileNotFoundError(error)) {
+				return [];
+			}
+
+			throw error;
+		}
 	}
 	getKVNamespace(
 		bindingName: string,

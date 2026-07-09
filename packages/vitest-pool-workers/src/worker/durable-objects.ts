@@ -256,27 +256,20 @@ export async function listDurableObjectIds(
 	// namespace to the test runner worker, since `DurableObjectNamespace` has no
 	// user-accessible constructor. This means `namespace` must be in `globalEnv`.
 	// We can use this to find the bound name for this binding. We inject a
-	// mapping between bound names and unique keys for namespaces. We then use
-	// this to get a unique key and find all IDs on disk.
+	// mapping between bound names and Durable Object designators. We pass the
+	// bound name to Miniflare's Node-side loopback to find all IDs on disk.
 	const boundName = Object.entries(env).find(
 		(entry) => namespace === entry[1]
 	)?.[0];
 	assert(boundName !== undefined, "Expected to find bound name for namespace");
 
 	const options = getSerializedOptions();
-	const designator = options.durableObjectBindingDesignators?.get(boundName);
-	assert(designator !== undefined, "Expected to find designator for namespace");
-
-	let uniqueKey = designator.unsafeUniqueKey;
-	if (uniqueKey === undefined) {
-		const scriptName = designator.scriptName ?? options.selfName;
-		const className = designator.className;
-		uniqueKey = `${scriptName}-${className}`;
+	const searchParams = new URLSearchParams({ binding_name: boundName });
+	if (options.selfName !== undefined) {
+		searchParams.set("worker_name", options.selfName);
 	}
 
-	const url = `http://placeholder/durable-objects?unique_key=${encodeURIComponent(
-		uniqueKey
-	)}`;
+	const url = `http://placeholder/durable-objects?${searchParams.toString()}`;
 	const res = await env.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(url);
 	assert.strictEqual(res.status, 200);
 	const ids = await res.json();

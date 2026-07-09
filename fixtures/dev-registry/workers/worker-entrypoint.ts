@@ -1,6 +1,7 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 
 let tailEvents = [];
+let queueMessages = [];
 
 export class NamedEntrypoint extends WorkerEntrypoint {
 	ping() {
@@ -94,6 +95,10 @@ export default class Worker extends WorkerEntrypoint<{
 				return new Response(null, { status: 101, webSocket: client });
 			}
 
+			if (testMethod === "queue-received") {
+				return Response.json(queueMessages);
+			}
+
 			if (testMethod === "tail") {
 				if (request.method === "POST") {
 					const logs = await request.json();
@@ -132,6 +137,12 @@ export default class Worker extends WorkerEntrypoint<{
 
 		if (logs.length > 0) {
 			tailEvents.push(logs);
+		}
+	}
+
+	queue(batch) {
+		for (const message of batch.messages) {
+			queueMessages.push(message.body);
 		}
 	}
 }

@@ -75,7 +75,8 @@ type AutoConfigArgs = ReadConfigCommandArgs &
  */
 export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	args: Args,
-	config: Config
+	config: Config,
+	options: { skipConfirmations?: boolean } = {}
 ): Promise<{ config: Config; aborted: boolean }> {
 	const shouldRunAutoConfig =
 		args.autoconfig &&
@@ -137,6 +138,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				const autoConfigSummary = await runAutoConfigLogic(details, {
 					context: autoConfigContext,
 					dryRun: !!args.dryRun,
+					skipConfirmations: options.skipConfirmations === true,
 				});
 
 				writeOutput({

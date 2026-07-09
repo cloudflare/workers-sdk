@@ -727,6 +727,7 @@ export const mockAssetUploadRequest = async (
 				uploadUrls?.push(request.url);
 				uploadContentTypeHeaders.push(request.headers.get("Content-Type"));
 				uploadAuthHeaders.push(request.headers.get("Authorization"));
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 				const formData = await request.formData();
 				bodies.push(formData);
 				if (bodies.length === numberOfBuckets) {

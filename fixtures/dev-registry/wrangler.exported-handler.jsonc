@@ -32,4 +32,12 @@
 			"service": "worker-entrypoint-with-assets",
 		},
 	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "QUEUE",
+				"queue": "test-queue",
+			},
+		],
+	},
 }

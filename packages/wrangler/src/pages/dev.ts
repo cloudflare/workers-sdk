@@ -1401,6 +1401,7 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 			})
 			.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;
 
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- intentionally checking deprecated `environment` field to warn users
 		if (services.find(({ environment }) => !!environment)) {
 			// We haven't yet properly defined how environments of service bindings should
 			// work, so if the user is using an environment for any of their service
