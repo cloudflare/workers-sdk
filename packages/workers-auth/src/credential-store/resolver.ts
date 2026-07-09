@@ -1,6 +1,7 @@
 import { existsSync, rmSync } from "node:fs";
 import { UserError } from "@cloudflare/workers-utils";
 import { getCloudflareAuthUseKeyringFromEnv } from "../env-vars";
+import { TOML_FILE_FORMAT } from "../file-format";
 import {
 	EncryptedFileCredentialStore,
 	getEncryptedAuthConfigFilePath,
@@ -11,6 +12,7 @@ import { PINNED_KEYRING_VERSION } from "./key-providers/lazy-installer";
 import { getResolverSessionFlags } from "./state";
 import type { AuthConfigStorage } from "../config-file/auth";
 import type { OAuthFlowLogger } from "../context";
+import type { FileFormat } from "../file-format";
 import type { PlaintextMigrationResult } from "./encrypted-file-store";
 import type { CredentialStore } from "./interface";
 
@@ -64,6 +66,15 @@ export interface CredentialStorageContext {
 	 * Defaults to `"your CLI"` when omitted.
 	 */
 	cliName?: string;
+
+	/**
+	 * On-disk format of the plaintext credentials file (`.toml` / `.json`).
+	 * Defaults to TOML for wrangler; cf and other CLIs pass JSON. The encrypted
+	 * `.enc` sibling is format-independent (its payload is opaque ciphertext),
+	 * but the format still governs the plaintext file extension and the
+	 * plaintext→encrypted migration read.
+	 */
+	format?: FileFormat;
 }
 
 /**
@@ -112,6 +123,7 @@ export function createCredentialStorageContext(
 	const config = {
 		...context,
 		cliName: context.cliName ?? "your CLI",
+		format: context.format ?? TOML_FILE_FORMAT,
 	};
 
 	function getActiveStore(profile?: string): CredentialStore {
@@ -143,14 +155,14 @@ function resolveActiveCredentialStore(
 	const configPath = config.getConfigPath();
 
 	if (envOverride === false) {
-		return new FileCredentialStore(configPath, profile);
+		return new FileCredentialStore(configPath, profile, config.format);
 	}
 
 	const forcedByEnvVar = envOverride === true;
 	const wantsKeyring = envOverride ?? config.isKeyringEnabled() ?? false;
 
 	if (!wantsKeyring) {
-		return new FileCredentialStore(configPath, profile);
+		return new FileCredentialStore(configPath, profile, config.format);
 	}
 
 	const resolution = resolveKeyProvider(
@@ -165,7 +177,8 @@ function resolveActiveCredentialStore(
 				configPath,
 				resolution.provider,
 				buildMigrationLogger(config),
-				profile
+				profile,
+				config.format
 			);
 
 		case "needs-install":
@@ -249,7 +262,8 @@ function handleNeedsInstall(
 		config.getConfigPath(),
 		resolution.afterInstall(),
 		buildMigrationLogger(config),
-		profile
+		profile,
+		config.format
 	);
 }
 
@@ -295,7 +309,11 @@ function handleUnsupported(
 				`${message}\n\nFalling back to the plaintext credentials file for this session.`
 			);
 		}
-		return new FileCredentialStore(config.getConfigPath(), profile);
+		return new FileCredentialStore(
+			config.getConfigPath(),
+			profile,
+			config.format
+		);
 	}
 
 	return fallbackToFileWithWarning(message, config, profile);
@@ -311,7 +329,11 @@ function fallbackToFileWithWarning(
 		flags.hasWarnedAboutKeyringFallback = true;
 		config.logger.warn(message);
 	}
-	return new FileCredentialStore(config.getConfigPath(), profile);
+	return new FileCredentialStore(
+		config.getConfigPath(),
+		profile,
+		config.format
+	);
 }
 
 function secretToolMissingMessage(cliName: string): string {
@@ -380,6 +402,7 @@ export function scrubEncryptedCredentials(options: {
 	serviceName: string;
 	configPath: string;
 	profile?: string;
+	format?: FileFormat;
 }): ScrubEncryptedCredentialsResult {
 	const encryptedPath = getEncryptedAuthConfigFilePath(
 		options.configPath,
@@ -397,7 +420,8 @@ export function scrubEncryptedCredentials(options: {
 			options.configPath,
 			resolution.provider,
 			undefined,
-			options.profile
+			options.profile,
+			options.format ?? TOML_FILE_FORMAT
 		).clear();
 		return { backendAvailable: true, encryptedFileExisted };
 	}

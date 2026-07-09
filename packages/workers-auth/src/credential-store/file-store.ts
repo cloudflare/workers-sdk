@@ -8,12 +8,12 @@ import {
 import path from "node:path";
 import {
 	getCloudflareApiEnvironmentFromEnv,
-	parseTOML,
 	readFileSync,
 } from "@cloudflare/workers-utils";
-import TOML from "smol-toml";
+import { TOML_FILE_FORMAT } from "../file-format";
 import { validateProfileName } from "../profiles";
 import type { UserAuthConfig } from "../config-file/auth";
+import type { FileFormat } from "../file-format";
 import type { CredentialStore } from "./interface";
 
 /**
@@ -63,12 +63,13 @@ export function resolveAuthProfileBaseName(profile?: string): string {
  */
 export function getAuthConfigFilePath(
 	configPath: string,
-	profile?: string
+	profile?: string,
+	extension: string = TOML_FILE_FORMAT.extension
 ): string {
 	return path.join(
 		configPath,
 		USER_AUTH_CONFIG_PATH,
-		`${resolveAuthProfileBaseName(profile)}.toml`
+		`${resolveAuthProfileBaseName(profile)}.${extension}`
 	);
 }
 
@@ -87,29 +88,40 @@ export class FileCredentialStore implements CredentialStore {
 	 * owns where its config lives, so workers-auth never resolves it itself).
 	 * @param profile the auth profile (defaults to the active environment's
 	 * default profile).
+	 * @param format on-disk file format (defaults to TOML for wrangler's
+	 * historical layout; cf and other CLIs pass JSON).
 	 */
 	constructor(
 		private readonly configPath: string,
-		private readonly profile?: string
+		private readonly profile?: string,
+		private readonly format: FileFormat = TOML_FILE_FORMAT
 	) {}
 
+	private filePath(): string {
+		return getAuthConfigFilePath(
+			this.configPath,
+			this.profile,
+			this.format.extension
+		);
+	}
+
 	read(): UserAuthConfig | undefined {
-		const filePath = getAuthConfigFilePath(this.configPath, this.profile);
+		const filePath = this.filePath();
 		if (!existsSync(filePath)) {
 			return undefined;
 		}
-		// If `parseTOML` throws we propagate the error so the user sees
+		// If the parse throws we propagate the error so the user sees
 		// the corruption rather than silently being treated as logged out.
-		return parseTOML(readFileSync(filePath)) as UserAuthConfig;
+		return this.format.parse(readFileSync(filePath)) as UserAuthConfig;
 	}
 
 	write(config: UserAuthConfig): void {
-		const filePath = getAuthConfigFilePath(this.configPath, this.profile);
+		const filePath = this.filePath();
 		mkdirSync(path.dirname(filePath), { recursive: true });
 		// Mode `0o600` only applies on file creation, so we also re-chmod
 		// every write to tighten any pre-existing file left behind by an
 		// older Wrangler version that wrote with the process umask.
-		writeFileSync(filePath, TOML.stringify(config), {
+		writeFileSync(filePath, this.format.stringify(config), {
 			encoding: "utf-8",
 			mode: 0o600,
 		});
@@ -117,7 +129,7 @@ export class FileCredentialStore implements CredentialStore {
 	}
 
 	clear(): boolean {
-		const filePath = getAuthConfigFilePath(this.configPath, this.profile);
+		const filePath = this.filePath();
 		const existed = existsSync(filePath);
 		if (existed) {
 			rmSync(filePath);
@@ -126,10 +138,10 @@ export class FileCredentialStore implements CredentialStore {
 	}
 
 	path(): string {
-		return getAuthConfigFilePath(this.configPath, this.profile);
+		return this.filePath();
 	}
 
 	describe(): string {
-		return getAuthConfigFilePath(this.configPath, this.profile);
+		return this.filePath();
 	}
 }

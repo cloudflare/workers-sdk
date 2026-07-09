@@ -1,10 +1,8 @@
-// The Cloudflare-specific OAuth scope catalog. This is wrangler product config
-// (the set of scopes wrangler's OAuth app requests) rather than generic auth
-// machinery, but it lives in the `/wrangler` layer so `createWranglerAuth` can
-// resolve the default scopes without them being injected. `DefaultScopeKeys` is
-// a mutable live binding: `setLoginScopeKeys` reassigns it (wrangler's
-// `--experimental-scopes` / product gating), and both the factory here and
-// wrangler's re-export observe the new value.
+// The Cloudflare OAuth scope catalog, shared by every CLI built on this auth
+// layer (wrangler, cf, …). `DefaultScopeKeys` is a mutable live binding:
+// `setLoginScopeKeys` reassigns it (wrangler's `--experimental-scopes` / product
+// gating), and both the factory and each product's re-export observe the new
+// value via the `AuthProduct.getDefaultScopeKeys` getter.
 
 export const DefaultScopes = {
 	"account:read":

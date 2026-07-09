@@ -7,6 +7,7 @@ export default defineConfig(() => [
 		entry: [
 			"src/index.ts",
 			"src/wrangler/index.ts",
+			"src/cf/index.ts",
 			"src/test-helpers/index.ts",
 		],
 		platform: "node",
