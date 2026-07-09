@@ -142,7 +142,7 @@ function SortableColumnList({
 	disabledRearrange,
 	onChange,
 	value,
-}: SortableColumnListProps): JSX.Element {
+}: SortableColumnListProps): React.JSX.Element {
 	const handleDragEnd = useCallback(
 		(event: DragEndEvent): void => {
 			const { active, over } = event;
@@ -181,7 +181,9 @@ interface SortableColumnItemProps {
 	id: string;
 }
 
-function SortableColumnItem({ id }: SortableColumnItemProps): JSX.Element {
+function SortableColumnItem({
+	id,
+}: SortableColumnItemProps): React.JSX.Element {
 	const { attributes, listeners, setNodeRef, transform, transition } =
 		useSortable({ id });
 

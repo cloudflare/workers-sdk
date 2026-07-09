@@ -21,7 +21,7 @@ export function StudioExportModal({
 	closeModal,
 	isOpen,
 	result,
-}: StudioExportModalProps): JSX.Element {
+}: StudioExportModalProps): React.JSX.Element {
 	const { driver } = useStudioContext();
 
 	const [error, setError] = useState<string | null>(null);

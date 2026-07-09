@@ -12,7 +12,7 @@ interface StudioQueryResultSummaryProps {
 
 export function StudioQueryResultSummary({
 	progress,
-}: StudioQueryResultSummaryProps): JSX.Element {
+}: StudioQueryResultSummaryProps): React.JSX.Element {
 	const [currentTime, setCurrentTime] = useState(() => Date.now());
 
 	useEffect(() => {

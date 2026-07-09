@@ -20,7 +20,7 @@ interface StudioSQLiteExplainTree extends StudioSQLiteExplainRow {
 
 export function StudioSQLiteExplainTab({
 	data,
-}: StudioSQLiteExplainProps): JSX.Element {
+}: StudioSQLiteExplainProps): React.JSX.Element {
 	const rows = data.rows as unknown as StudioSQLiteExplainRow[];
 
 	let tree = rows.map(
@@ -60,7 +60,7 @@ interface ExplainNodesProps {
 	data: StudioSQLiteExplainTree[];
 }
 
-function ExplainNodes({ data }: ExplainNodesProps): JSX.Element {
+function ExplainNodes({ data }: ExplainNodesProps): React.JSX.Element {
 	return (
 		<>
 			{data.map((row) => {

@@ -137,7 +137,7 @@ const StatusSummary = memo(function StatusSummary({
 	statusCounts,
 }: {
 	statusCounts: Record<string, number>;
-}): JSX.Element {
+}): React.JSX.Element {
 	return (
 		<div className="mb-4 flex divide-x divide-kumo-fill overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
 			{STATUS_SUMMARY_CONFIG.map(
@@ -200,7 +200,7 @@ const InstanceRow = memo(function InstanceRow({
 	instance: WorkflowsInstance;
 	onActionComplete: () => void;
 	workflowName: string;
-}): JSX.Element {
+}): React.JSX.Element {
 	const navigate = useNavigate();
 	const [actionInProgress, setActionInProgress] = useState<Action | null>(null);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);

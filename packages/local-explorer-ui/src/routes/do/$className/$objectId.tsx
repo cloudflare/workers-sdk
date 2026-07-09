@@ -77,7 +77,7 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 	}),
 });
 
-function ObjectView(): JSX.Element {
+function ObjectView(): React.JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const { namespaceId, objectId, objectName } = loaderData;

@@ -8,7 +8,9 @@ const DEFAULT_ERROR_DESCRIPTION =
 
 export function ResourceError({
 	error,
-}: ErrorComponentProps<Error | WorkersApiResponseCommonFailure>): JSX.Element {
+}: ErrorComponentProps<
+	Error | WorkersApiResponseCommonFailure
+>): React.JSX.Element {
 	const details =
 		("errors" in error ? error.errors?.[0]?.message : error.message) ??
 		DEFAULT_ERROR_DESCRIPTION;

@@ -8,7 +8,7 @@ import {
 	WarningCircleIcon,
 } from "@phosphor-icons/react";
 
-export function StatusIcon({ status }: { status: string }): JSX.Element {
+export function StatusIcon({ status }: { status: string }): React.JSX.Element {
 	switch (status) {
 		case "complete":
 			return (

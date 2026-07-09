@@ -41,7 +41,7 @@ const DEFAULT_PAGE_SIZE = 50;
 export function StudioTableExplorerTab({
 	schemaName,
 	tableName,
-}: StudioTableExplorerTabProps): JSX.Element {
+}: StudioTableExplorerTabProps): React.JSX.Element {
 	const { closeStudioTab, driver, schemas } = useStudioContext();
 
 	const [changeNumber, setChangeNumber] = useState<number>(0);

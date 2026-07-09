@@ -64,7 +64,7 @@ function InputCellEditor({
 	readOnly,
 	state,
 	value,
-}: Readonly<InputCellEditorProps>): JSX.Element {
+}: Readonly<InputCellEditorProps>): React.JSX.Element {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const shouldExit = useRef<boolean>(true);
 
@@ -185,7 +185,7 @@ function PopoverEditor({
 	defaultValue,
 	onApply,
 	readOnly,
-}: PopoverEditorProps): JSX.Element {
+}: PopoverEditorProps): React.JSX.Element {
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
 
 	const extensions = useMemo(

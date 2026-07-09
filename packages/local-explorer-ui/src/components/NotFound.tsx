@@ -1,7 +1,7 @@
 import { Button } from "@cloudflare/kumo";
 import { Link, type NotFoundRouteProps } from "@tanstack/react-router";
 
-export function NotFound(_props: NotFoundRouteProps): JSX.Element {
+export function NotFound(_props: NotFoundRouteProps): React.JSX.Element {
 	return (
 		<div className="text-text-secondary flex flex-1 flex-col items-center justify-center space-y-4 p-12 text-center">
 			<h2 className="text-text text-3xl font-bold">Page not found</h2>

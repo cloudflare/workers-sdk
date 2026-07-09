@@ -19,7 +19,7 @@ export function StudioTabContentWrapper({
 	onTabsChange,
 	selectedTabKey,
 	tab,
-}: StudioTabContentWrapperProps): JSX.Element {
+}: StudioTabContentWrapperProps): React.JSX.Element {
 	const tabKey = tab.key;
 
 	/**

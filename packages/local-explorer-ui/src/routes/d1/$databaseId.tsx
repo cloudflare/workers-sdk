@@ -48,7 +48,7 @@ export const Route = createFileRoute("/d1/$databaseId")({
 
 const rootRoute = getRouteApi("__root__");
 
-function DatabaseView(): JSX.Element {
+function DatabaseView(): React.JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const searchParams = Route.useSearch();

@@ -33,7 +33,7 @@ export function StudioWindowTab({
 	onTabsChange,
 	selectedTabKey,
 	tabs,
-}: StudioWindowTabProps): JSX.Element {
+}: StudioWindowTabProps): React.JSX.Element {
 	const beforeClosingHandlersRef = useRef(
 		new Map<string, BeforeTabClosingHandler>()
 	);

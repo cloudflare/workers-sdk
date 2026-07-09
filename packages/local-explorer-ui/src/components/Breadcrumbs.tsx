@@ -1,5 +1,6 @@
 import { Breadcrumbs as KumoBreadcrumbs } from "@cloudflare/kumo";
 import { Fragment } from "react";
+import type React from "react";
 import type { FC, PropsWithChildren, ReactNode } from "react";
 
 interface BreadcrumbsProps extends PropsWithChildren {
@@ -13,7 +14,7 @@ export function Breadcrumbs({
 	icon: Icon,
 	items,
 	title,
-}: BreadcrumbsProps): JSX.Element {
+}: BreadcrumbsProps): React.JSX.Element {
 	return (
 		<div className="box-border flex min-h-14.5 shrink-0 items-center gap-2 border-b border-kumo-fill bg-kumo-elevated px-6 text-sm">
 			<KumoBreadcrumbs>

@@ -39,7 +39,9 @@ export function useModal(): ModalContextValue {
 /**
  * Simple modal provider for the portable Studio component
  */
-export function ModalProvider({ children }: PropsWithChildren): JSX.Element {
+export function ModalProvider({
+	children,
+}: PropsWithChildren): React.JSX.Element {
 	const [modals, setModals] = useState<Array<IModalEntry>>([]);
 
 	const handleOpenModal = useCallback(

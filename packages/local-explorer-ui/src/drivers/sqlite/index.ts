@@ -475,7 +475,7 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		statement: string,
 		result: StudioResultSet
 	): {
-		component: JSX.Element;
+		component: React.JSX.Element;
 		icon: Icon;
 		label: string;
 	} | null {

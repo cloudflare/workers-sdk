@@ -134,7 +134,7 @@ export abstract class IStudioDriver {
 	abstract getQueryTabOverride(
 		statement: string,
 		result: StudioResultSet
-	): { label: string; icon: Icon; component: JSX.Element } | null;
+	): { label: string; icon: Icon; component: React.JSX.Element } | null;
 }
 
 export type StudioColumnConflict =

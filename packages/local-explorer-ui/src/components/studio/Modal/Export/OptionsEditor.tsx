@@ -15,7 +15,7 @@ interface StudioExportOptionProps {
 export function StudioExportOptionEditor({
 	onChange,
 	value,
-}: StudioExportOptionProps): JSX.Element {
+}: StudioExportOptionProps): React.JSX.Element {
 	return (
 		<>
 			<SettingItem>
@@ -75,7 +75,7 @@ interface SQLExportEditorProps {
 function SQLExportEditor({
 	onChange,
 	value,
-}: SQLExportEditorProps): JSX.Element {
+}: SQLExportEditorProps): React.JSX.Element {
 	return (
 		<>
 			<SettingItem>
@@ -159,7 +159,7 @@ interface CSVExportEditorProps {
 function CSVExportEditor({
 	onChange,
 	value,
-}: CSVExportEditorProps): JSX.Element {
+}: CSVExportEditorProps): React.JSX.Element {
 	return (
 		<>
 			<SettingItem>
@@ -243,7 +243,10 @@ interface SettingItemProps extends PropsWithChildren {
 	lastItem?: boolean;
 }
 
-function SettingItem({ children, lastItem }: SettingItemProps): JSX.Element {
+function SettingItem({
+	children,
+	lastItem,
+}: SettingItemProps): React.JSX.Element {
 	return (
 		<div
 			className={cn(
@@ -256,11 +259,11 @@ function SettingItem({ children, lastItem }: SettingItemProps): JSX.Element {
 	);
 }
 
-function SettingLabel({ children }: PropsWithChildren): JSX.Element {
+function SettingLabel({ children }: PropsWithChildren): React.JSX.Element {
 	return <div className="py-2 font-medium">{children}</div>;
 }
 
-function SettingOption({ children }: PropsWithChildren): JSX.Element {
+function SettingOption({ children }: PropsWithChildren): React.JSX.Element {
 	return <div>{children}</div>;
 }
 
@@ -274,7 +277,7 @@ function SettingOptionDropdown({
 	items,
 	onChange,
 	value,
-}: SettingOptionDropdownProps): JSX.Element {
+}: SettingOptionDropdownProps): React.JSX.Element {
 	return (
 		<select
 			className="cursor-pointer rounded-md border border-kumo-fill bg-transparent px-3 py-2 text-sm"

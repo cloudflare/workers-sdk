@@ -52,7 +52,7 @@ export function R2UploadDialog({
 	onOpenChange,
 	onUploadComplete,
 	open,
-}: R2UploadDialogProps): JSX.Element {
+}: R2UploadDialogProps): React.JSX.Element {
 	const [contentType, setContentType] = useState<string>("");
 	const [customMetadata, setCustomMetadata] = useState<MetadataEntry[]>([]);
 	const [dragOver, setDragOver] = useState<boolean>(false);

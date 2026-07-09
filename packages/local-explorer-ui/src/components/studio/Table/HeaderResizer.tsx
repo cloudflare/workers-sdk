@@ -8,7 +8,7 @@ interface StudioTableHeaderResizerProps {
 export function StudioTableHeaderResizer({
 	idx,
 	onResize,
-}: StudioTableHeaderResizerProps): JSX.Element {
+}: StudioTableHeaderResizerProps): React.JSX.Element {
 	const handlerRef = useRef<HTMLDivElement>(null);
 
 	const [resizing, setResizing] = useState<boolean>(false);

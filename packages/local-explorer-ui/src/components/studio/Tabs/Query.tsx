@@ -24,7 +24,9 @@ interface StudioQueryTabProps {
 	query?: string;
 }
 
-export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
+export function StudioQueryTab({
+	query,
+}: StudioQueryTabProps): React.JSX.Element {
 	const { driver, schemas, refreshSchema } = useStudioContext();
 
 	const editorRef = useRef<StudioCodeMirrorReference>(null);

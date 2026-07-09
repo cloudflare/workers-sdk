@@ -63,7 +63,7 @@ export function WorkerSelector({
 	workers,
 	selectedWorker,
 	onWorkerChange,
-}: WorkerSelectorProps): JSX.Element {
+}: WorkerSelectorProps): React.JSX.Element {
 	const sidebar = useSidebar();
 
 	const [open, setOpen] = useState(false);

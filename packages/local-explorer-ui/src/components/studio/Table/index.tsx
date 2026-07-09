@@ -4,7 +4,7 @@ import type { StudioTableProps } from "./BaseTable";
 
 export function StudioTable<T = unknown>(
 	props: StudioTableProps<T>
-): JSX.Element {
+): React.JSX.Element {
 	const {
 		onKeyDown: customKeyDownHandler,
 		onKeyUp: customKeyUpHandler,

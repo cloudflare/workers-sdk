@@ -22,7 +22,7 @@ interface StudioQueryResultStatsProps {
 
 export function StudioQueryResultStats({
 	stats,
-}: StudioQueryResultStatsProps): JSX.Element {
+}: StudioQueryResultStatsProps): React.JSX.Element {
 	const statsComponents = useMemo((): ReactElement[] => {
 		const content = new Array<ReactElement>();
 

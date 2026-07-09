@@ -19,7 +19,7 @@ const LAYOUT_CLASSES = "overflow-auto w-full h-full bg-kumo-base";
 export function StudioCreateUpdateTableTab({
 	schemaName,
 	tableName,
-}: StudioEditTableTabProps): JSX.Element {
+}: StudioEditTableTabProps): React.JSX.Element {
 	const { driver, refreshSchema, replaceStudioTab } = useStudioContext();
 	const {
 		identifier: tabIdentifier,

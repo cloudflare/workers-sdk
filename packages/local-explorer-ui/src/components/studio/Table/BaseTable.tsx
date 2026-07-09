@@ -223,7 +223,7 @@ function renderCellList<HeaderMetadata = unknown>({
 	rowHeight,
 	rowStart,
 	state,
-}: RenderCellListProps<HeaderMetadata>): JSX.Element {
+}: RenderCellListProps<HeaderMetadata>): React.JSX.Element {
 	const headerSizes = state.getHeaderWidth();
 
 	const templateSizes =

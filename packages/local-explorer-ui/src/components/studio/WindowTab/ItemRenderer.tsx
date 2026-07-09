@@ -18,7 +18,7 @@ export function StudioWindowTabItemRenderer({
 	onDoubleClick,
 	selected,
 	tab,
-}: StudioWindowTabItemRendererProps): JSX.Element {
+}: StudioWindowTabItemRendererProps): React.JSX.Element {
 	const isDirty = tab.isDirty;
 	const isTemp = tab.isTemp;
 

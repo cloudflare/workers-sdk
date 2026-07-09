@@ -51,14 +51,14 @@ export function StudioResultTable({
 	orderByColumn,
 	orderByDirection,
 	state,
-}: StudioResultTableProps): JSX.Element {
+}: StudioResultTableProps): React.JSX.Element {
 	const { copyCallback, onContextMenu, pasteCallback } =
 		useStudioResultTableContextMenu(state);
 
 	const renderCell = useCallback(
 		(
 			props: StudioTableCellRendererProps<StudioResultHeaderMetadata>
-		): JSX.Element => {
+		): React.JSX.Element => {
 			const { header, isFocus, x, y } = props;
 
 			const align = header.metadata?.typeHint === "NUMBER" ? "right" : "left";
@@ -120,7 +120,7 @@ export function StudioResultTable({
 	const renderHeader = useCallback(
 		(
 			header: StudioTableHeaderProps<StudioResultHeaderMetadata>
-		): JSX.Element => {
+		): React.JSX.Element => {
 			const hasColumnInfo =
 				(header.metadata.indexes && header.metadata.indexes.length > 0) ||
 				header.metadata.isPrimaryKey ||
@@ -282,7 +282,7 @@ function HeaderDropdownMenu({
 	header,
 	orderByColumn,
 	orderByDirection,
-}: HeaderDropdownMenuProps): JSX.Element {
+}: HeaderDropdownMenuProps): React.JSX.Element {
 	const [open, setOpen] = useState<boolean>(false);
 
 	const orderIconPart =

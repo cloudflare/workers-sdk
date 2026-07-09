@@ -42,7 +42,7 @@ export function StudioTableFakeBodyPadding({
 	rowEnd,
 	rowHeight,
 	rowStart,
-}: StudioTableFakeBodyPaddingProps): JSX.Element {
+}: StudioTableFakeBodyPaddingProps): React.JSX.Element {
 	const paddingTop = rowStart * rowHeight;
 	const paddingBottom = (rowCount - rowEnd) * rowHeight;
 

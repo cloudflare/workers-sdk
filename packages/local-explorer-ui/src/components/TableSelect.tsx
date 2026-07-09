@@ -20,7 +20,7 @@ export function TableSelect({
 	studioRef,
 	tables,
 	selectedTable,
-}: TableSelectProps): JSX.Element {
+}: TableSelectProps): React.JSX.Element {
 	const navigate = useNavigate();
 
 	const handleTableChange = useCallback(

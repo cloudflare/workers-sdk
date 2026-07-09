@@ -34,7 +34,7 @@ export function Timestamp({
 	value,
 }: {
 	value: string | undefined | null;
-}): JSX.Element {
+}): React.JSX.Element {
 	if (!value) {
 		return <span className="text-sm text-kumo-subtle">—</span>;
 	}

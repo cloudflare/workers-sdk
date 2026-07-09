@@ -31,7 +31,7 @@ export function StudioTableActionsDropdown({
 	currentTable,
 	driver,
 	schemaName = "main",
-}: TableActionsDropdownProps): JSX.Element {
+}: TableActionsDropdownProps): React.JSX.Element {
 	const handleCopyTableName = useCallback(async (): Promise<void> => {
 		if (!currentTable) {
 			return;

@@ -26,7 +26,7 @@ export function SidebarGroupPopup({
 	icon,
 	items,
 	title,
-}: SidebarGroupPopupProps): JSX.Element {
+}: SidebarGroupPopupProps): React.JSX.Element {
 	const hasActiveItem = items.some((item) => item.isActive);
 
 	return (

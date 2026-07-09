@@ -324,7 +324,7 @@ export abstract class StudioDriverCommon extends IStudioDriver {
 	getQueryTabOverride(
 		_: string,
 		__: StudioResultSet
-	): { label: string; icon: Icon; component: JSX.Element } | null {
+	): { label: string; icon: Icon; component: React.JSX.Element } | null {
 		return null;
 	}
 }

@@ -18,7 +18,7 @@ export function StudioTableHeaderList<HeaderMetadata = unknown>({
 	renderHeader,
 	state,
 	sticky,
-}: StudioTableHeaderListProps<HeaderMetadata>): JSX.Element {
+}: StudioTableHeaderListProps<HeaderMetadata>): React.JSX.Element {
 	return (
 		<thead className="contents">
 			<tr className="contents">
@@ -60,7 +60,7 @@ function StudioTableHeader<HeaderMetadata = unknown>({
 	renderHeader: (props: StudioTableHeaderProps<HeaderMetadata>) => ReactElement;
 	state: StudioTableState<HeaderMetadata>;
 	sticky: boolean;
-}): JSX.Element {
+}): React.JSX.Element {
 	return (
 		<th
 			className={cn(

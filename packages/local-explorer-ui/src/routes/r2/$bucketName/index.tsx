@@ -83,7 +83,7 @@ export const Route = createFileRoute("/r2/$bucketName/")({
 	}),
 });
 
-function BucketView(): JSX.Element {
+function BucketView(): React.JSX.Element {
 	const params = Route.useParams();
 	const search = Route.useSearch();
 	const loaderData = Route.useLoaderData();

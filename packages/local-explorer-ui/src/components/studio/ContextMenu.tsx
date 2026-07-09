@@ -64,7 +64,7 @@ interface DropdownMenuItemsBuilderProps {
 
 function DropdownMenuItemsBuilder({
 	items,
-}: DropdownMenuItemsBuilderProps): JSX.Element {
+}: DropdownMenuItemsBuilderProps): React.JSX.Element {
 	return (
 		<>
 			{items.map((item, index) => {

@@ -33,7 +33,7 @@ interface WorkflowStatusBadgeProps {
 
 export function WorkflowStatusBadge({
 	status,
-}: WorkflowStatusBadgeProps): JSX.Element {
+}: WorkflowStatusBadgeProps): React.JSX.Element {
 	const resolvedStatus = (
 		status && status in statusStyles ? status : "unknown"
 	) as WorkflowStatus;

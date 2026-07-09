@@ -45,7 +45,7 @@ function ActionMenu({
 	isDirectory,
 	onDelete,
 	onDownload,
-}: ActionMenuProps): JSX.Element {
+}: ActionMenuProps): React.JSX.Element {
 	return (
 		<DropdownMenu>
 			<DropdownMenu.Trigger
@@ -101,7 +101,7 @@ function BulkActionMenu({
 	onDownload,
 	selectedFileCount,
 	selectedTotalCount,
-}: BulkActionMenuProps): JSX.Element {
+}: BulkActionMenuProps): React.JSX.Element {
 	return (
 		<DropdownMenu>
 			<DropdownMenu.Trigger
@@ -159,7 +159,7 @@ export function R2ObjectTable({
 	onNavigateToPrefix,
 	onSelectionChange,
 	selectedKeys,
-}: R2ObjectTableProps): JSX.Element | null {
+}: R2ObjectTableProps): React.JSX.Element | null {
 	// Combine directories and files for display
 	const items: Array<
 		| {

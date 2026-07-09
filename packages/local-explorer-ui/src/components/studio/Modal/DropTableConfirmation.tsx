@@ -19,7 +19,7 @@ export function DropTableConfirmationModal({
 	onSuccess,
 	schemaName,
 	tableName,
-}: DropTableConfirmationModalProps): JSX.Element {
+}: DropTableConfirmationModalProps): React.JSX.Element {
 	const [challengeInput, setChallengeInput] = useState<string>("");
 	const [error, setError] = useState<string | null>(null);
 	const [isDeleting, setIsDeleting] = useState<boolean>(false);

@@ -14,7 +14,7 @@ export function CreateWorkflowInstanceDialog({
 	onOpenChange,
 	open,
 	workflowName,
-}: CreateWorkflowInstanceDialogProps): JSX.Element {
+}: CreateWorkflowInstanceDialogProps): React.JSX.Element {
 	const [creating, setCreating] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [instanceId, setInstanceId] = useState<string>("");

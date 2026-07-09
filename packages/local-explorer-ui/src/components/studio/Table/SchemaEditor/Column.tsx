@@ -51,7 +51,7 @@ export function StudioColumnSchemaEditor({
 	onChange,
 	readOnlyExistingColumns,
 	value,
-}: StudioColumnSchemaEditorProps): JSX.Element | null {
+}: StudioColumnSchemaEditorProps): React.JSX.Element | null {
 	const { openModal } = useModal();
 	const column = value.columns[columnIndex];
 
@@ -301,7 +301,7 @@ interface ColumnConstraintDescriptionProps {
 function ColumnConstraintDescription({
 	column,
 	constraints,
-}: ColumnConstraintDescriptionProps): JSX.Element {
+}: ColumnConstraintDescriptionProps): React.JSX.Element {
 	// Check if it contains foreign key
 	let referenceTableName = column.constraint?.foreignKey?.foreignTableName;
 	let referenceColumnName = column.constraint?.foreignKey?.foreignColumns?.[0];
@@ -360,7 +360,7 @@ function ColumnConstraintBadge({
 	children,
 	icon: IconComponent,
 	name,
-}: ColumnConstraintBadgeProps): JSX.Element {
+}: ColumnConstraintBadgeProps): React.JSX.Element {
 	return (
 		<div className="inline-flex items-center gap-1 overflow-hidden rounded border border-kumo-fill">
 			<div className="flex items-center border-r border-kumo-fill bg-kumo-overlay p-1">
@@ -386,7 +386,7 @@ export function StudioColumnEditorModal({
 	isOpen,
 	onConfirm,
 	schemaChanges,
-}: StudioColumnEditiorDrawerProps): JSX.Element {
+}: StudioColumnEditiorDrawerProps): React.JSX.Element {
 	const [value, setValue] = useState<StudioTableColumn>(() =>
 		defaultValue
 			? structuredClone(defaultValue)

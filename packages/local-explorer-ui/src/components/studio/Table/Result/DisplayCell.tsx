@@ -48,7 +48,10 @@ interface BlobCellValueProps {
 	vector?: boolean;
 }
 
-function BlobCellValue({ value, vector }: BlobCellValueProps): JSX.Element {
+function BlobCellValue({
+	value,
+	vector,
+}: BlobCellValueProps): React.JSX.Element {
 	if (vector) {
 		const floatArray = new Float32Array(new Uint8Array(value).buffer);
 		const floatArrayText = floatArray.join(", ");

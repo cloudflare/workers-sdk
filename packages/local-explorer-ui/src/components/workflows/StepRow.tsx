@@ -17,7 +17,7 @@ function StepStatusIcon({
 	finished?: boolean;
 	hasError?: boolean;
 	subtle?: boolean;
-}): JSX.Element {
+}): React.JSX.Element {
 	if (success === false || hasError) {
 		if (subtle) {
 			return (
@@ -78,7 +78,7 @@ export const StepRow = memo(function StepRow({
 	isExpanded: boolean;
 	onToggleExpanded: () => void;
 	onRestartFromStep?: (step: StepData) => void;
-}): JSX.Element {
+}): React.JSX.Element {
 	const hasDetails =
 		step.type === "step" ||
 		(step.type === "waitForEvent" &&
@@ -168,7 +168,7 @@ function StepCodeCard({
 }: {
 	label: string;
 	content: string;
-}): JSX.Element {
+}): React.JSX.Element {
 	return (
 		<div>
 			<h5 className="mb-2 text-sm font-medium text-kumo-default">{label}</h5>
@@ -182,7 +182,7 @@ function StepCodeCard({
 	);
 }
 
-function StepDoDetails({ step }: { step: StepData }): JSX.Element {
+function StepDoDetails({ step }: { step: StepData }): React.JSX.Element {
 	// Get error text from last failed attempt
 	const failedAttempt =
 		step.success === false && step.attempts
@@ -289,7 +289,7 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 	);
 }
 
-function WaitForEventDetails({ step }: { step: StepData }): JSX.Element {
+function WaitForEventDetails({ step }: { step: StepData }): React.JSX.Element {
 	const hasPayload = step.finished && !step.error;
 	const hasError = !!step.error;
 

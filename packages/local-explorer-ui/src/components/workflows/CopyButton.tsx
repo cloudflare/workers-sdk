@@ -7,7 +7,7 @@ export function CopyButton({
 }: {
 	text: string;
 	label?: string;
-}): JSX.Element {
+}): React.JSX.Element {
 	const [copied, setCopied] = useState(false);
 
 	function handleCopy(): void {

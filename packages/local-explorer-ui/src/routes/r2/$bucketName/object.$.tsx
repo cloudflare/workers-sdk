@@ -67,7 +67,9 @@ interface ObjectDetailsCardProps {
 	object: R2HeadObjectResult;
 }
 
-function ObjectDetailsCard({ object }: ObjectDetailsCardProps): JSX.Element {
+function ObjectDetailsCard({
+	object,
+}: ObjectDetailsCardProps): React.JSX.Element {
 	const contentType =
 		object.http_metadata?.contentType ?? "application/octet-stream";
 	const formattedDate = formatDate(object.last_modified);
@@ -112,7 +114,7 @@ interface CustomMetadataCardProps {
 
 function CustomMetadataCard({
 	metadata,
-}: CustomMetadataCardProps): JSX.Element {
+}: CustomMetadataCardProps): React.JSX.Element {
 	const entries = metadata ? Object.entries(metadata) : [];
 
 	return (
@@ -137,7 +139,7 @@ function CustomMetadataCard({
 	);
 }
 
-function ObjectDetailView(): JSX.Element {
+function ObjectDetailView(): React.JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const search = Route.useSearch();

@@ -1,7 +1,7 @@
 import type { Icon } from "@phosphor-icons/react";
 
 export interface StudioWindowTabItem {
-	component: JSX.Element;
+	component: React.JSX.Element;
 	icon: Icon;
 	identifier: string;
 	isDirty?: boolean;
