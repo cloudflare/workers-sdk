@@ -3,14 +3,10 @@ import {
 	SERVICE_TAG_PREFIX,
 } from "@cloudflare/workers-utils";
 import { logger } from "../../shared/context";
-import { useServiceEnvironments } from "./use-service-environments";
 import type { Config } from "@cloudflare/workers-utils";
 
 export function hasDefinedEnvironments(config: Config) {
-	return (
-		!useServiceEnvironments(config) &&
-		Boolean(config.definedEnvironments?.length)
-	);
+	return Boolean(config.definedEnvironments?.length);
 }
 
 export function applyServiceAndEnvironmentTags(config: Config, tags: string[]) {

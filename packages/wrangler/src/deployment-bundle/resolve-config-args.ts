@@ -2,7 +2,6 @@ import { validateRoutes } from "@cloudflare/deploy-helpers";
 import { UserError } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
 import { getScriptName } from "../utils/getScriptName";
-import { useServiceEnvironmentApi } from "../utils/useServiceEnvironments";
 import type { triggersDeployCommand } from "../triggers";
 import type { AssetsOptions, Config, Route } from "@cloudflare/workers-utils";
 
@@ -26,10 +25,8 @@ export function resolveTriggersInput(
 			{ telemetryMessage: "triggers deploy missing worker name" }
 		);
 	}
-	const useServiceEnvironments = useServiceEnvironmentApi(args, config);
 	return {
 		crons: resolveCronTriggers(args, config),
-		useServiceEnvironments,
 		routes: resolveRoutes(args, config, assetsOptions) ?? [],
 		scriptName,
 	};

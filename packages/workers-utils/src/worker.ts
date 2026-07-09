@@ -509,7 +509,6 @@ export interface CfWorkerInit {
 
 export interface CfWorkerContext {
 	env: string | undefined;
-	useServiceEnvironments: boolean | undefined;
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;

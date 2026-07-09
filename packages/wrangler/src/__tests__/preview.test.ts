@@ -978,7 +978,6 @@ describe("wrangler preview", () => {
 						"/Users/cina/src/github/example/project/wrangler.jsonc",
 					topLevelName: "entry-worker",
 					definedEnvironments: [],
-					legacy_env: true,
 					compatibility_date: "2025-01-01",
 					compatibility_flags: ["nodejs_compat"],
 					rules: [{ type: "ESModule", globs: ["**/*.mjs"] }],

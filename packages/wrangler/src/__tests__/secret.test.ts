@@ -100,26 +100,16 @@ describe("wrangler secret", () => {
 			expect: ExpectStatic,
 			input: { name: string; text: string },
 			env?: string,
-			useServiceEnvironments = true,
 			expectedScriptName = "script-name"
 		) {
-			const servicesOrScripts =
-				env && useServiceEnvironments ? "services" : "scripts";
-			const environment =
-				env && useServiceEnvironments ? "/environments/:envName" : "";
 			msw.use(
 				http.put(
-					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
 					async ({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							!useServiceEnvironments && env
-								? `${expectedScriptName}-${env}`
-								: expectedScriptName
+							env ? `${expectedScriptName}-${env}` : expectedScriptName
 						);
-						if (useServiceEnvironments) {
-							expect(params.envName).toEqual(env);
-						}
 						const { name, text, type } = (await request.json()) as Record<
 							string,
 							string
@@ -180,26 +170,6 @@ describe("wrangler secret", () => {
 				`);
 			});
 
-			it("should create a secret: service envs", async ({ expect }) => {
-				mockPrompt({
-					text: "Enter a secret value:",
-					options: { isSecret: true },
-					result: "the-secret",
-				});
-
-				mockPutRequest(expect, { name: "the-key", text: "the-secret" });
-				await runWrangler("secret put the-key --name script-name");
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					🌀 Creating the secret for the Worker "script-name"
-					✨ Success! Uploaded secret the-key"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
 			it("should create a secret", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
@@ -210,11 +180,10 @@ describe("wrangler secret", () => {
 				mockPutRequest(
 					expect,
 					{ name: "the-key", text: "the-secret" },
-					"some-env",
-					false
+					"some-env"
 				);
 				await runWrangler(
-					"secret put the-key --name script-name --env some-env --legacy-env"
+					"secret put the-key --name script-name --env some-env"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -222,33 +191,6 @@ describe("wrangler secret", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					🌀 Creating the secret for the Worker "script-name-some-env"
-					✨ Success! Uploaded secret the-key"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
-			it("should create a secret: service envs", async ({ expect }) => {
-				mockPrompt({
-					text: "Enter a secret value:",
-					options: { isSecret: true },
-					result: "the-secret",
-				});
-
-				mockPutRequest(
-					expect,
-					{ name: "the-key", text: "the-secret" },
-					"some-env",
-					true
-				);
-				await runWrangler(
-					"secret put the-key --name script-name --env some-env --legacy-env false"
-				);
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					🌀 Creating the secret for the Worker "script-name" (some-env)
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -389,7 +331,6 @@ describe("wrangler secret", () => {
 					expect,
 					{ name: "the-key", text: "hunter2" },
 					undefined,
-					undefined,
 					"non-existent-worker"
 				);
 				expect(
@@ -517,8 +458,7 @@ describe("wrangler secret", () => {
 					mockPutRequest(
 						expect,
 						{ name: "the-key", text: "the-secret" },
-						"test",
-						false
+						"test"
 					);
 					await runWrangler("secret put the-key --name script-name -e test");
 					expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -622,22 +562,15 @@ describe("wrangler secret", () => {
 				scriptName: string;
 				secretName: string;
 			},
-			env?: string,
-			useServiceEnvironments = true
+			env?: string
 		) {
-			const servicesOrScripts =
-				env && useServiceEnvironments ? "services" : "scripts";
-			const environment =
-				env && useServiceEnvironments ? "/environments/:envName" : "";
 			msw.use(
 				http.delete(
-					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets/:secretName`,
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets/:secretName`,
 					({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							!useServiceEnvironments && env
-								? `script-name-${env}`
-								: "script-name"
+							env ? `script-name-${env}` : "script-name"
 						);
 						expect(params.secretName).toEqual(input.secretName);
 						expect(
@@ -717,44 +650,20 @@ describe("wrangler secret", () => {
 			mockDeleteRequest(
 				expect,
 				{ scriptName: "script-name", secretName: "the-key" },
-				"some-env",
-				false
+				"some-env"
 			);
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name-some-env?",
 				result: true,
 			});
 			await runWrangler(
-				"secret delete the-key --name script-name --env some-env --legacy-env"
+				"secret delete the-key --name script-name --env some-env"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				🌀 Deleting the secret the-key on the Worker script-name-some-env
-				✨ Success! Deleted secret the-key"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should delete a secret: service envs", async ({ expect }) => {
-			mockDeleteRequest(
-				expect,
-				{ scriptName: "script-name", secretName: "the-key" },
-				"some-env"
-			);
-			mockConfirm({
-				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name (some-env)?",
-				result: true,
-			});
-			await runWrangler(
-				"secret delete the-key --name script-name --env some-env --legacy-env false"
-			);
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				🌀 Deleting the secret the-key on the Worker script-name (some-env)
 				✨ Success! Deleted secret the-key"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -902,26 +811,16 @@ describe("wrangler secret", () => {
 		function mockListRequest(
 			expect: ExpectStatic,
 			input: { scriptName: string },
-			env?: string,
-			useServiceEnvironments = true
+			env?: string
 		) {
-			const servicesOrScripts =
-				env && useServiceEnvironments ? "services" : "scripts";
-			const environment =
-				env && useServiceEnvironments ? "/environments/:envName" : "";
 			msw.use(
 				http.get(
-					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							!useServiceEnvironments && env
-								? `script-name-${env}`
-								: "script-name"
+							env ? `script-name-${env}` : "script-name"
 						);
-						if (useServiceEnvironments) {
-							expect(params.envName).toEqual(env);
-						}
 
 						return HttpResponse.json(
 							createFetchResult([
@@ -973,26 +872,8 @@ describe("wrangler secret", () => {
 		});
 
 		it("should list secrets: wrangler environment", async ({ expect }) => {
-			mockListRequest(expect, { scriptName: "script-name" }, "some-env", false);
-			await runWrangler(
-				"secret list --name script-name --env some-env --legacy-env"
-			);
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
-				  {
-				    "name": "the-secret-name",
-				    "type": "secret_text"
-				  }
-				]"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should list secrets: service envs", async ({ expect }) => {
 			mockListRequest(expect, { scriptName: "script-name" }, "some-env");
-			await runWrangler(
-				"secret list --name script-name --env some-env --legacy-env false"
-			);
+			await runWrangler("secret list --name script-name --env some-env");
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				  {

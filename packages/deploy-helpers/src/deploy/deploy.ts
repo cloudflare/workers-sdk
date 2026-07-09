@@ -51,7 +51,6 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
-import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
 import {
 	preUploadApiChecks,
 	validateWorkerProps,
@@ -166,28 +165,16 @@ export default async function deploy(
 	let versionId: string | null = null;
 	const scriptName = name;
 
-	const envName = props.env ?? "production";
-
 	const start = Date.now();
-	const useServiceEnvironments = props.useServiceEnvApiPath;
-	const workerName = useServiceEnvironments
-		? `${scriptName} (${envName})`
-		: scriptName;
+	const workerName = scriptName;
 	const workerUrl = props.dispatchNamespace
 		? `/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
-		: useServiceEnvironments
-			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-			: `/accounts/${accountId}/workers/scripts/${scriptName}`;
+		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	const { format } = entry;
 	const { projectRoot } = entry;
 
-	if (
-		!props.dispatchNamespace &&
-		!useServiceEnvironments &&
-		accountId &&
-		scriptName
-	) {
+	if (!props.dispatchNamespace && accountId && scriptName) {
 		const yes = await confirmLatestDeploymentOverwrite(
 			config,
 			accountId,
@@ -219,8 +206,6 @@ export default async function deploy(
 		isDryRun,
 		accountId,
 		config,
-		useServiceEnvironments: useServiceEnvironmentsConfig(config),
-		env: props.env,
 		dispatchNamespace: props.dispatchNamespace,
 	});
 
@@ -247,11 +232,7 @@ export default async function deploy(
 		? await callbacks.syncWorkersSite(
 				config,
 				accountId,
-				// When we're using the newer service environments, we wouldn't
-				// have added the env name on to the script name. However, we must
-				// include it in the kv namespace name regardless (since there's no
-				// concept of service environments for kv namespaces yet).
-				scriptName + (useServiceEnvironments ? `-${props.env}` : ""),
+				scriptName,
 				props.legacyAssetPaths,
 				false,
 				isDryRun,
@@ -359,7 +340,6 @@ export default async function deploy(
 	// We can use the new versions/deployments APIs if we:
 	// * are uploading a worker that already exists
 	// * aren't a dispatch namespace deploy
-	// * aren't a service env deploy
 	// * aren't a service Worker
 	// * we don't have DO migrations or Durable Object `exports`.
 	//   Worker exports do not apply lifecycle changes, so they can use this path.
@@ -368,7 +348,6 @@ export default async function deploy(
 	const canUseNewVersionsDeploymentsApi =
 		workerExists &&
 		props.dispatchNamespace === undefined &&
-		!useServiceEnvironments &&
 		format === "modules" &&
 		migrations === undefined &&
 		!hasDurableObjectExports(config.exports) &&
@@ -765,7 +744,6 @@ export default async function deploy(
 		scriptName,
 		env: props.env,
 		crons: props.triggers,
-		useServiceEnvironments,
 		firstDeploy: !workerExists,
 		routes: props.routes,
 	});

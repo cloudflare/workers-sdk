@@ -87,7 +87,6 @@ async function expectedHostAndZone(
 				}
 			}),
 		env: undefined,
-		useServiceEnvironments: undefined,
 		sendMetrics: undefined,
 		configPath: config.config,
 	});
