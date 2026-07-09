@@ -245,10 +245,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			}
 
 			const file = await this.storeTempFile(rawEmailBuffer, "eml", "email");
-			const fileWrangler = await this.storeTempFile(rawEmailBuffer, "eml", "email", false);
+			const fileLocal = await this.storeTempFile(rawEmailBuffer, "eml", "email", false);
 
 			this.log(
-				`${blue("send_email binding called with the following message:")}\n  ${file}`
+				`${blue("send_email binding called with the following message:")}\n  ${file}\n(local): ${fileLocal}`
 			);
 
 			return { messageId: synthesizeMessageId(emailMessage.from) };
@@ -269,13 +269,13 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					"email-text"
 				);
 				files.push(`Text: ${filePath}`);
-				const filePathWrangler = await this.storeTempFile(
+				const filePathLocal = await this.storeTempFile(
 					builder.text,
 					"txt",
 					"email-text",
 					false
 				);
-				files.push(`Text (Wrangler): ${filePathWrangler}`);
+				files.push(`Text (local): ${filePathLocal}`);
 			}
 
 			if (builder.html) {
@@ -285,13 +285,13 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					"email-html"
 				);
 				files.push(`HTML: ${filePath}`);
-				const filePathWrangler = await this.storeTempFile(
+				const filePathLocal = await this.storeTempFile(
 					builder.html,
 					"html",
 					"email-html",
 					false
 				);
-				files.push(`HTML (Wrangler): ${filePathWrangler}`);
+				files.push(`HTML (local): ${filePathLocal}`);
 			}
 
 			// Store attachments
@@ -306,7 +306,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						extension,
 						"email-attachment"
 					);
-					const filePathWrangler = await this.storeTempFile(
+					const filePathLocal = await this.storeTempFile(
 						attachment.content,
 						extension,
 						"email-attachment",
@@ -316,7 +316,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						`Attachment (${attachment.disposition}): ${attachment.filename} -> ${filePath}`
 					);
 					files.push(
-						`Attachment (${attachment.disposition}) (Wrangler): ${attachment.filename} -> ${filePathWrangler}`
+						`Attachment (${attachment.disposition}) (local): ${attachment.filename} -> ${filePathLocal}`
 					);
 				}
 			}
