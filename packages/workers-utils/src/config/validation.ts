@@ -302,6 +302,35 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
+	if (
+		validateOptionalProperty(
+			diagnostics,
+			"",
+			"dependencies_instrumentation",
+			rawConfig.dependencies_instrumentation,
+			"object"
+		)
+	) {
+		if (typeof rawConfig.dependencies_instrumentation === "object") {
+			validateOptionalProperty(
+				diagnostics,
+				"dependencies_instrumentation",
+				"enabled",
+				rawConfig.dependencies_instrumentation.enabled,
+				"boolean"
+			);
+
+			validateAdditionalProperties(
+				diagnostics,
+				"dependencies_instrumentation",
+				Object.keys(
+					rawConfig.dependencies_instrumentation as Record<string, unknown>
+				),
+				["enabled"]
+			);
+		}
+	}
+
 	validateOptionalProperty(
 		diagnostics,
 		"",
@@ -496,6 +525,7 @@ export function normalizeAndValidateConfig(
 		/** Legacy_env is wrangler environments, as opposed to service environments. Wrangler environments is not legacy.  */
 		legacy_env: !useServiceEnvironments,
 		send_metrics: rawConfig.send_metrics,
+		dependencies_instrumentation: rawConfig.dependencies_instrumentation,
 		keep_vars: rawConfig.keep_vars,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
