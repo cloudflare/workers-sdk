@@ -1,4 +1,3 @@
-import open from "open";
 import type { Logger } from "./logger";
 
 /**
@@ -18,6 +17,10 @@ export async function openInBrowser(
 	logger: Logger
 ): Promise<void> {
 	try {
+		// Imported lazily so that merely importing this module (e.g. via the
+		// package barrel) does not eagerly pull `open` — and its default
+		// `node:child_process` import — into every consumer's module graph.
+		const { default: open } = await import("open");
 		const childProcess = await open(url);
 		childProcess.on("error", (err) => {
 			handleBrowserOpenError(url, err, logger);

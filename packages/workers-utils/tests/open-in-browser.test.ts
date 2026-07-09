@@ -73,9 +73,11 @@ describe("openInBrowser", () => {
 		mockOpen.mockResolvedValue(fakeProcess);
 
 		const openPromise = openInBrowser("https://example.com", logger);
-		// Allow the internal `await open(url)` microtask to settle so the error
-		// handler is registered before we emit the error event.
-		await Promise.resolve();
+		// Allow the internal `await import("open")` + `await open(url)` microtasks
+		// to settle so the error handler is registered before we emit the error
+		// event. A macrotask tick flushes the whole pending microtask queue,
+		// regardless of how many awaits precede the handler registration.
+		await new Promise((resolve) => setImmediate(resolve));
 
 		const enoentError = Object.assign(new Error("spawn ENOENT"), {
 			code: "ENOENT",
