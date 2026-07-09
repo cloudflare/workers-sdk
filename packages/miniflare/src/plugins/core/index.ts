@@ -159,6 +159,7 @@ const CoreOptionsSchemaInput = z.intersection(
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
+		secretTextBindings: z.record(z.string()).optional(),
 		wasmBindings: z
 			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
@@ -346,6 +347,8 @@ export const CoreSharedOptionsSchema = z
 		// plugins like Stream to generate preview URLs that outlive runtime
 		// restarts. If not set, plugins fall back to the runtime entry URL.
 		publicUrl: z.string().url().optional(),
+		// Internal: emit a config intended to run directly under `workerd serve`.
+		unsafeWorkerdOutput: z.boolean().default(false),
 	})
 	.refine(
 		({ structuredWorkerdLogs, handleStructuredLogs }) => {
@@ -584,6 +587,14 @@ export const CORE_PLUGIN: Plugin<
 		if (options.bindings !== undefined) {
 			bindings.push(...buildBindings(options.bindings));
 		}
+		if (options.secretTextBindings !== undefined) {
+			bindings.push(
+				...Object.entries(options.secretTextBindings).map(([name, value]) => ({
+					name,
+					text: value,
+				}))
+			);
+		}
 		if (options.wasmBindings !== undefined) {
 			bindings.push(
 				...Object.entries(options.wasmBindings).map(([name, value]) =>
@@ -668,6 +679,9 @@ export const CORE_PLUGIN: Plugin<
 					JSON.parse(JSON.stringify(value)),
 				])
 			);
+		}
+		if (options.secretTextBindings !== undefined) {
+			bindingEntries.push(...Object.entries(options.secretTextBindings));
 		}
 		if (options.wasmBindings !== undefined) {
 			bindingEntries.push(
@@ -898,9 +912,14 @@ export const CORE_PLUGIN: Plugin<
 							: options.unsafeEphemeralDurableObjects
 								? { inMemory: kVoid }
 								: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
-					globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
-					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
+					globalOutbound: sharedOptions.unsafeWorkerdOutput
+						? (getGlobalOutbound(workerIndex, options) ?? { name: "internet" })
+						: { name: getOutboundInterceptorName(workerIndex) },
+					cacheApiOutbound: sharedOptions.unsafeWorkerdOutput
+						? undefined
+						: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:
+						!sharedOptions.unsafeWorkerdOutput &&
 						options.unsafeUseModuleFallbackService &&
 						sharedOptions.unsafeModuleFallbackService !== undefined
 							? `${loopbackHost}:${loopbackPort}`
@@ -975,7 +994,7 @@ export const CORE_PLUGIN: Plugin<
 			if (maybeService !== undefined) services.push(maybeService);
 		}
 
-		{
+		if (!sharedOptions.unsafeWorkerdOutput) {
 			// Use the zone option if provided, otherwise default to `${worker-name}.example.com`
 			const workerName = options.name ?? "worker";
 			const cfWorkerValue = options.zone ?? `${workerName}.example.com`;
@@ -1044,15 +1063,19 @@ export function getGlobalServices({
 
 	// Define core/shared services.
 	const serviceEntryBindings: Worker_Binding[] = [
-		WORKER_BINDING_SERVICE_LOOPBACK, // For converting stack-traces to pretty-error pages
 		{ name: CoreBindings.JSON_ROUTES, json: JSON.stringify(routes) },
 		{
 			name: CoreBindings.TRIGGER_HANDLERS,
-			json: JSON.stringify(!!sharedOptions.unsafeTriggerHandlers),
+			json: JSON.stringify(
+				!sharedOptions.unsafeWorkerdOutput &&
+					!!sharedOptions.unsafeTriggerHandlers
+			),
 		},
 		{
 			name: CoreBindings.LOG_REQUESTS,
-			json: JSON.stringify(!!sharedOptions.logRequests),
+			json: JSON.stringify(
+				!sharedOptions.unsafeWorkerdOutput && !!sharedOptions.logRequests
+			),
 		},
 		{ name: CoreBindings.JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
@@ -1065,32 +1088,38 @@ export function getGlobalServices({
 			service: { name: getUserServiceName(name) },
 		})),
 		{
-			name: CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,
-			durableObjectNamespace: { className: "ProxyServer" },
-		},
-		{
-			name: CoreBindings.DATA_PROXY_SECRET,
-			data: PROXY_SECRET,
-		},
-		{
 			name: CoreBindings.STRIP_DISABLE_PRETTY_ERROR,
 			json: JSON.stringify(sharedOptions.stripDisablePrettyError),
 		},
-		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
-		...proxyBindings,
-		// Add cache service binding for purgeCache() API
-		{
-			name: CoreBindings.SERVICE_CACHE,
-			service: { name: getCacheServiceName(0) },
-		},
 	];
-	if (sharedOptions.unsafeLocalExplorer) {
-		serviceEntryBindings.push({
-			name: CoreBindings.SERVICE_LOCAL_EXPLORER,
-			service: {
-				name: SERVICE_LOCAL_EXPLORER,
+	if (!sharedOptions.unsafeWorkerdOutput) {
+		serviceEntryBindings.push(
+			WORKER_BINDING_SERVICE_LOOPBACK, // For converting stack-traces to pretty-error pages
+			{
+				name: CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,
+				durableObjectNamespace: { className: "ProxyServer" },
 			},
-		});
+			{
+				name: CoreBindings.DATA_PROXY_SECRET,
+				data: PROXY_SECRET,
+			},
+			// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
+			...proxyBindings,
+			// Add cache service binding for purgeCache() API
+			{
+				name: CoreBindings.SERVICE_CACHE,
+				service: { name: getCacheServiceName(0) },
+			}
+		);
+
+		if (sharedOptions.unsafeLocalExplorer) {
+			serviceEntryBindings.push({
+				name: CoreBindings.SERVICE_LOCAL_EXPLORER,
+				service: {
+					name: SERVICE_LOCAL_EXPLORER,
+				},
+			});
+		}
 	}
 	const streamServiceEnabled = allWorkerOpts?.some(
 		(worker) =>
@@ -1141,7 +1170,7 @@ export function getGlobalServices({
 			data: encoder.encode(sharedOptions.unsafeProxySharedSecret),
 		});
 	}
-	if (sharedOptions.liveReload) {
+	if (sharedOptions.liveReload && !sharedOptions.unsafeWorkerdOutput) {
 		const liveReloadScript = LIVE_RELOAD_SCRIPT_TEMPLATE(loopbackPort);
 		serviceEntryBindings.push({
 			name: CoreBindings.DATA_LIVE_RELOAD_SCRIPT,
@@ -1151,34 +1180,38 @@ export function getGlobalServices({
 
 	const services: Service[] = [
 		{
-			name: SERVICE_LOOPBACK,
-			external: { http: { cfBlobHeader: CoreHeaders.CF_BLOB } },
-		},
-		{
 			name: SERVICE_ENTRY,
 			worker: {
 				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY() }],
 				compatibilityDate: "2025-03-17",
-				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
+				compatibilityFlags: sharedOptions.unsafeWorkerdOutput
+					? ["nodejs_compat"]
+					: ["nodejs_compat", "service_binding_extra_handlers"],
 				bindings: serviceEntryBindings,
-				durableObjectNamespaces: [
-					{
-						className: "ProxyServer",
-						uniqueKey: `${SERVICE_ENTRY}-ProxyServer`,
-						// `ProxyServer` relies on a singleton object containing of "heap"
-						// mapping addresses to native references. If the singleton object
-						// were evicted, addresses would be invalidated. Therefore, we
-						// prevent eviction to ensure heap addresses stay valid for the
-						// lifetime of the `workerd` process
-						preventEviction: true,
-					},
-				],
+				durableObjectNamespaces: sharedOptions.unsafeWorkerdOutput
+					? undefined
+					: [
+							{
+								className: "ProxyServer",
+								uniqueKey: `${SERVICE_ENTRY}-ProxyServer`,
+								// `ProxyServer` relies on a singleton object containing of "heap"
+								// mapping addresses to native references. If the singleton object
+								// were evicted, addresses would be invalidated. Therefore, we
+								// prevent eviction to ensure heap addresses stay valid for the
+								// lifetime of the `workerd` process
+								preventEviction: true,
+							},
+						],
 				// `ProxyServer` doesn't make use of Durable Object storage
-				durableObjectStorage: { inMemory: kVoid },
+				durableObjectStorage: sharedOptions.unsafeWorkerdOutput
+					? undefined
+					: { inMemory: kVoid },
 				// Always use the entrypoints cache implementation for proxying. This
 				// means if the entrypoint disables caching, proxied cache operations
 				// will be no-ops. Note we always require at least one worker to be set.
-				cacheApiOutbound: { name: "cache:0" },
+				cacheApiOutbound: sharedOptions.unsafeWorkerdOutput
+					? undefined
+					: { name: "cache:0" },
 			},
 		},
 		{
@@ -1196,11 +1229,18 @@ export function getGlobalServices({
 		},
 	];
 
+	if (!sharedOptions.unsafeWorkerdOutput) {
+		services.push({
+			name: SERVICE_LOOPBACK,
+			external: { http: { cfBlobHeader: CoreHeaders.CF_BLOB } },
+		});
+	}
+
 	if (r2PublicService !== undefined) {
 		services.push(r2PublicService);
 	}
 
-	if (sharedOptions.unsafeLocalExplorer) {
+	if (sharedOptions.unsafeLocalExplorer && !sharedOptions.unsafeWorkerdOutput) {
 		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
 			proxyBindings,

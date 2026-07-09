@@ -88,6 +88,7 @@ export interface PluginServicesOptions<
 	wrappedBindingNames: WrappedBindingNames;
 	durableObjectClassNames: DurableObjectClassNames;
 	unsafeEphemeralDurableObjects: boolean;
+	unsafeWorkerdOutput: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
 	// True when the dev registry is enabled, i.e. workers in other dev

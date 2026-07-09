@@ -433,6 +433,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 type WorkerOptionsBindings = Pick<
 	WorkerOptions,
 	| "bindings"
+	| "secretTextBindings"
 	| "ai"
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
@@ -782,15 +783,15 @@ export function buildMiniflareBindingOptions(
 	for (const binding of plainTextBindings) {
 		vars[binding.binding] = binding.value;
 	}
-	for (const binding of secretTextBindings) {
-		vars[binding.binding] = binding.value;
-	}
 	for (const binding of jsonBindings) {
 		vars[binding.binding] = binding.value as Json;
 	}
 
 	const bindingOptions: WorkerOptionsBindings = {
 		bindings: vars,
+		secretTextBindings: Object.fromEntries(
+			secretTextBindings.map(({ binding, value }) => [binding, value])
+		),
 		versionMetadata: versionMetadataBindings[0]?.binding,
 		textBlobBindings,
 		dataBlobBindings,

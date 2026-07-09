@@ -69,6 +69,21 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		expect(result.environmentNameToWorkerMap.get("aux_worker")).toBeDefined();
 	});
 
+	test("should resolve experimental workerd target", async ({ expect }) => {
+		const entryConfigPath = createEntryWorkerConfig(tempDir);
+
+		const result = (await resolvePluginConfig(
+			{
+				configPath: entryConfigPath,
+				experimental: { target: "workerd" },
+			},
+			{ root: tempDir },
+			viteEnv
+		)) as WorkersResolvedConfig;
+
+		expect(result.target).toBe("workerd");
+	});
+
 	test("should resolve inline auxiliary worker with config object", async ({
 		expect,
 	}) => {

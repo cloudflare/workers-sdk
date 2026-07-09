@@ -58,7 +58,10 @@ export const CACHE_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
+		unsafeWorkerdOutput,
 	}) {
+		if (unsafeWorkerdOutput) return [];
+
 		const cache = options.cache ?? true;
 		const cacheWarnUsage = options.cacheWarnUsage ?? false;
 

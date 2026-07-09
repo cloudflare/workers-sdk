@@ -83,7 +83,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 		);
 	},
 	async getServices(args) {
-		if (!args.options.email?.send_email) {
+		if (!args.options.email?.send_email?.length) {
 			return [];
 		}
 
