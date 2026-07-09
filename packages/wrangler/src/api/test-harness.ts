@@ -22,8 +22,8 @@ import {
 } from "../d1/migrations/helpers";
 import { splitSqlQuery } from "../d1/splitter";
 import { getDatabaseInfoFromConfig } from "../d1/utils";
-import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
@@ -69,6 +69,20 @@ export type TestHarnessOptions = {
 	workers: WorkerInput[];
 };
 
+export type ExportName<Module, Type> = string extends keyof Module
+	? string
+	: Extract<
+			{
+				[K in keyof Module]-?: NonNullable<Module[K]> extends
+					| Type
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+					| (abstract new (...args: any[]) => Type)
+					? K
+					: never;
+			}[keyof Module],
+			string
+		>;
+
 export type BindingName<Env, Type> = string extends keyof Env
 	? string
 	: Extract<
@@ -78,9 +92,14 @@ export type BindingName<Env, Type> = string extends keyof Env
 			string
 		>;
 
+export type WorkerDefaultExport =
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.
+	| (new (...args: any[]) => Rpc.WorkerEntrypointBranded)
+	| Rpc.WorkerEntrypointBranded
+	| AnyExportedHandler;
+
 export type WorkerModule = {
-	default: WorkerExport;
-	[key: string]: WorkerExport | undefined;
+	default: WorkerDefaultExport;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> ExportedHandler constraint.
@@ -88,12 +107,6 @@ export type AnyExportedHandler = ExportedHandler<any, any, any, any>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
 export type AnyEnv = Record<string, any>;
-
-export type WorkerExport =
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.
-	| (new (...args: any[]) => Rpc.WorkerEntrypointBranded)
-	| Rpc.WorkerEntrypointBranded
-	| AnyExportedHandler;
 
 export type WorkerHandle<
 	Env = AnyEnv,
@@ -171,7 +184,9 @@ export type WorkerHandle<
 	 * ```
 	 */
 	evictDurableObject(
-		classNameOrBindingName: string,
+		classNameOrBindingName:
+			| ExportName<Module, Rpc.DurableObjectBranded>
+			| BindingName<Env, DurableObjectNamespace>,
 		options: ({ name: string; id?: never } | { id: string; name?: never }) & {
 			webSockets?: "close" | "hibernate";
 		}
@@ -598,14 +613,14 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		classNameOrBindingName: string
 	) {
 		const workerConfig = getWorkerWranglerConfig(session, workerName);
-		const localDurableObjectBinding = workerConfig.durable_objects.bindings.find(
-			(binding) => {
+		const localDurableObjectBinding =
+			workerConfig.durable_objects.bindings.find((binding) => {
 				return (
 					binding.class_name === classNameOrBindingName &&
-					(binding.script_name === undefined || binding.script_name === workerName)
+					(binding.script_name === undefined ||
+						binding.script_name === workerName)
 				);
-			}
-		);
+			});
 		if (localDurableObjectBinding !== undefined) {
 			return {
 				scriptName: workerName,

@@ -20,6 +20,7 @@ import type {
 	CloudflareWorkersModule,
 	D1Database,
 	DurableObjectNamespace,
+	ExportedHandler,
 	KVNamespace,
 	R2Bucket,
 } from "@cloudflare/workers-types";
@@ -423,9 +424,17 @@ describe("createTestHarness", () => {
 
 		await server.listen();
 
-		const worker = server.getWorker<{ COUNTER: DurableObjectNamespace }>(
-			"do-worker"
-		);
+		type DoWorkerModule = {
+			default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+			Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject<{
+				COUNTER: DurableObjectNamespace;
+			}>;
+		};
+		const worker = server.getWorker<
+			{ COUNTER: DurableObjectNamespace },
+			DoWorkerModule
+		>("do-worker");
 		let response = await worker.fetch("/");
 		expect(await response.json()).toEqual({
 			memoryCount: 1,
