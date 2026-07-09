@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.18.3
+
+### Patch Changes
+
+- [#14489](https://github.com/cloudflare/workers-sdk/pull/14489) [`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `listDurableObjectIds()` to Miniflare
+
+  Miniflare now exposes `listDurableObjectIds()` for listing persisted Durable Object instance IDs by binding name. The Vitest pool now uses this shared Miniflare API internally instead of duplicating Miniflare's storage listing logic.
+
+- Updated dependencies [[`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`8511ddf`](https://github.com/cloudflare/workers-sdk/commit/8511ddf769a603f49576b8cf632ea330c353001f), [`9f74a5f`](https://github.com/cloudflare/workers-sdk/commit/9f74a5ff4a89e3bf2103e51fa2d66752f26f8217), [`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`c782e2a`](https://github.com/cloudflare/workers-sdk/commit/c782e2a7282bfa27064f62408b691e4936c5f33a), [`2fedb1f`](https://github.com/cloudflare/workers-sdk/commit/2fedb1fc811efb3f7544c569e57383cabd4f14f8), [`17d2fc1`](https://github.com/cloudflare/workers-sdk/commit/17d2fc12989f72a2fcd42e62fb152f270d61ab38)]:
+  - miniflare@4.20260708.0
+  - wrangler@4.109.0
+
 ## 0.18.2
 
 ### Patch Changes
