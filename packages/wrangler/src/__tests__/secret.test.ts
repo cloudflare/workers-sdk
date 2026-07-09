@@ -734,8 +734,7 @@ describe("wrangler secret", () => {
 				mockDeleteRequest(
 					expect,
 					{ scriptName: "script-name", secretName: "the-key" },
-					"test",
-					false
+					"test"
 				);
 				mockConfirm({
 					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name-test?",
@@ -1012,7 +1011,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Processing the secrets for the Worker "script-name" "
+				🌀 Processing the secrets for the Worker "script-name""
 			`
 			);
 			expect(std.err).toMatchInlineSnapshot(`
