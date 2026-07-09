@@ -207,7 +207,9 @@ export async function navigateToDOObjectByName(
 
 	// Extract the object ID from the current URL after navigation.
 	const objectPath = new URL(page.url()).pathname;
-	const match = objectPath.match(/\/cdn-cgi\/explorer\/do\/[^/]+\/([^/?#]+)/);
+	const match = objectPath.match(
+		/\/cdn-cgi\/local\/explorer\/do\/[^/]+\/([^/?#]+)/
+	);
 	if (!match || !match[1]) {
 		throw new Error(`Could not extract object ID from URL path: ${objectPath}`);
 	}

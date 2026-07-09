@@ -130,6 +130,13 @@ export class ProxyWorker implements DurableObject {
 				request.url
 			);
 
+			// rewrite requests to old miniflare paths
+			// because wrangler cannot have a breaking change
+			userWorkerUrl.pathname = rewriteLegacyMiniflarePath(
+				userWorkerUrl.pathname
+			);
+			innerUrl.pathname = rewriteLegacyMiniflarePath(innerUrl.pathname);
+
 			// Preserve client `Accept-Encoding`, rather than using Worker's default
 			// of `Accept-Encoding: br, gzip`
 			const encoding = request.cf?.clientAcceptEncoding;
@@ -234,6 +241,26 @@ export class ProxyWorker implements DurableObject {
 
 function isRequestFromProxyController(req: Request, env: Env): boolean {
 	return req.headers.get("Authorization") === env.PROXY_CONTROLLER_AUTH_SECRET;
+}
+
+// Miniflare v5 moved its internal endpoints under `/cdn-cgi/local/` (and
+// `/__cf_local/` for endpoints that must remain reachable over tunnels). These
+// map the pre-v5 paths onto their current equivalents.
+const LEGACY_PATH_REWRITES: readonly [string, string][] = [
+	["/cdn-cgi/handler", "/cdn-cgi/local"],
+	["/cdn-cgi/mf/scheduled", "/cdn-cgi/local/scheduled"],
+	["/cdn-cgi/mf/stream", "/__cf_local/stream"],
+	["/cdn-cgi/mf/imagedelivery", "/__cf_local/imagedelivery"],
+	["/cdn-cgi/explorer", "/cdn-cgi/local/explorer"],
+];
+
+function rewriteLegacyMiniflarePath(pathname: string): string {
+	for (const [oldPrefix, newPrefix] of LEGACY_PATH_REWRITES) {
+		if (pathname === oldPrefix || pathname.startsWith(`${oldPrefix}/`)) {
+			return newPrefix + pathname.slice(oldPrefix.length);
+		}
+	}
+	return pathname;
 }
 function isHtmlResponse(res: Response): boolean {
 	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
