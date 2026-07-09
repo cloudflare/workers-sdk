@@ -551,13 +551,6 @@ export default <ExportedHandler<Env>>{
 				return await r2PublicService.fetch(request);
 			}
 
-			if (url.pathname.startsWith(CorePaths.LOCAL_PREFIX)) {
-				return new Response(
-					`"${url.pathname}" is not a recognised local endpoint.`,
-					{ status: 404 }
-				);
-			}
-
 			let response = await service.fetch(request);
 			if (!disablePrettyErrorPage) {
 				response = await maybePrettifyError(request, response, env);

@@ -302,12 +302,12 @@ describe("Local Explorer API validation", () => {
 		test("does not match paths that start with /cdn-cgi/local/explorer but are not the explorer", async ({
 			expect,
 		}) => {
-			// /cdn-cgi/local/explorerfoo is not a recognised local endpoint
+			// /cdn-cgi/local/explorerfoo falls through to the user worker
 			const res = await mf.dispatchFetch(
 				"http://localhost/cdn-cgi/local/explorerfoo"
 			);
-			expect(res.status).toBe(404);
-			await res.arrayBuffer(); // Drain
+			expect(res.status).toBe(200);
+			expect(await res.text()).toBe("user worker");
 		});
 	});
 });

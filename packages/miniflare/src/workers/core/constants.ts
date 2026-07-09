@@ -12,8 +12,6 @@ export const CorePaths = {
 	SCHEDULED: "/cdn-cgi/local/scheduled",
 	/** Trigger email event handlers */
 	EMAIL: "/cdn-cgi/local/email",
-	/** Local endpoint prefix for catch-all validation */
-	LOCAL_PREFIX: "/cdn-cgi/local/",
 	/** Local explorer UI and API */
 	EXPLORER: "/cdn-cgi/local/explorer",
 	/** Stream video serving endpoint (outside /cdn-cgi/ for tunnel access) */

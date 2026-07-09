@@ -2057,7 +2057,9 @@ This is a random email body.
 	expect(await res.text()).toBe("true");
 });
 
-test("Miniflare: unrecognised /cdn-cgi/local/ routes", async ({ expect }) => {
+test("Miniflare: unrecognised /cdn-cgi/local/ routes fall through to user worker", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `
@@ -2072,10 +2074,8 @@ test("Miniflare: unrecognised /cdn-cgi/local/ routes", async ({ expect }) => {
 	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/local/foo");
-	expect(await res.text()).toBe(
-		`"/cdn-cgi/local/foo" is not a recognised local endpoint.`
-	);
-	expect(res.status).toBe(404);
+	expect(await res.text()).toBe("Hello world");
+	expect(res.status).toBe(200);
 });
 
 test("Miniflare: other /cdn-cgi/ routes", async ({ expect }) => {
