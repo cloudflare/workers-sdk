@@ -22,6 +22,7 @@ import {
 } from "../d1/migrations/helpers";
 import { splitSqlQuery } from "../d1/splitter";
 import { getDatabaseInfoFromConfig } from "../d1/utils";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
@@ -158,17 +159,19 @@ export type WorkerHandle<
 	/**
 	 * Evicts a currently running Durable Object instance while preserving its durable storage.
 	 * In-memory state is reset the next time the object starts.
+	 * Pass an exported Durable Object class name, or a Durable Object binding name.
+	 * Class names are resolved before binding names.
 	 *
 	 * @example
 	 * ```ts
-	 * await worker.evictDurableObject("COUNTER", {
+	 * await worker.evictDurableObject("Counter", {
 	 *   name: "user-123",
 	 *   webSockets: "hibernate",
 	 * });
 	 * ```
 	 */
 	evictDurableObject(
-		bindingName: BindingName<Env, DurableObjectNamespace>,
+		classNameOrBindingName: string,
 		options: ({ name: string; id?: never } | { id: string; name?: never }) & {
 			webSockets?: "close" | "hibernate";
 		}
@@ -578,28 +581,62 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return workerName;
 	}
 
-	function resolveDurableObjectBinding(
-		session: ServerSession,
-		workerName: string,
-		bindingName: string
-	) {
+	function getWorkerWranglerConfig(session: ServerSession, workerName: string) {
 		const workerConfig = session.devEnvs.find(
 			(devEnv) => devEnv.config.latestConfig?.name === workerName
 		)?.config.latestWranglerConfig;
-		const durableObject = workerConfig?.durable_objects.bindings.find(
-			(binding) => binding.name === bindingName
+		assert(
+			workerConfig,
+			`Worker ${JSON.stringify(workerName)} config is not available.`
 		);
+		return workerConfig;
+	}
 
-		if (durableObject === undefined) {
-			throw new TypeError(
-				`No Durable Object namespace binding named ${JSON.stringify(bindingName)} found in ${JSON.stringify(workerName)} worker.`
-			);
+	function resolveDurableObjectTarget(
+		session: ServerSession,
+		workerName: string,
+		classNameOrBindingName: string
+	) {
+		const workerConfig = getWorkerWranglerConfig(session, workerName);
+		const localDurableObjectBinding = workerConfig.durable_objects.bindings.find(
+			(binding) => {
+				return (
+					binding.class_name === classNameOrBindingName &&
+					(binding.script_name === undefined || binding.script_name === workerName)
+				);
+			}
+		);
+		if (localDurableObjectBinding !== undefined) {
+			return {
+				scriptName: workerName,
+				className: classNameOrBindingName,
+			};
 		}
 
-		return {
-			scriptName: durableObject.script_name ?? workerName,
-			className: durableObject.class_name,
-		};
+		const durableObjectClasses = getDurableObjectClassNameToUseSQLiteMap(
+			workerConfig.migrations,
+			workerConfig.exports
+		);
+		if (durableObjectClasses.has(classNameOrBindingName)) {
+			return {
+				scriptName: workerName,
+				className: classNameOrBindingName,
+			};
+		}
+
+		const durableObject = workerConfig.durable_objects.bindings.find(
+			(binding) => binding.name === classNameOrBindingName
+		);
+		if (durableObject !== undefined) {
+			return {
+				scriptName: durableObject.script_name ?? workerName,
+				className: durableObject.class_name,
+			};
+		}
+
+		throw new TypeError(
+			`No Durable Object class or namespace binding named ${JSON.stringify(classNameOrBindingName)} found in ${JSON.stringify(workerName)} worker.`
+		);
 	}
 
 	async function serverAuthHook(
@@ -1036,14 +1073,14 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						throw error;
 					}
 				},
-				async evictDurableObject(bindingName, evictionOptions) {
+				async evictDurableObject(classNameOrBindingName, evictionOptions) {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
-					const { scriptName, className } = resolveDurableObjectBinding(
+					const { scriptName, className } = resolveDurableObjectTarget(
 						session,
 						workerName,
-						bindingName
+						classNameOrBindingName
 					);
 
 					await miniflare.evictDurableObject(

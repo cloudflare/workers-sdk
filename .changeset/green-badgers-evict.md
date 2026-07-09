@@ -4,11 +4,9 @@
 
 Add Durable Object eviction support to `createTestHarness`
 
-Integration tests can now gracefully evict a currently-running Durable Object by binding name and object name or ID:
+You can now gracefully evict a running Durable Object by class name or binding name to verify how it recovers after its instance is torn down:
 
 ```ts
 const worker = server.getWorker();
-await worker.evictDurableObject("COUNTER", { name: "user-123" });
+await worker.evictDurableObject("Counter", { name: "user-123" });
 ```
-
-This lets tests verify how a Durable Object recovers after its instance is torn down.

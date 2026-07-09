@@ -367,21 +367,26 @@ describe("createTestHarness", () => {
 		await expect(adminResponse.text()).resolves.toBe("2");
 	});
 
-	it("evicts Durable Objects by binding name", async ({ expect }) => {
+	it("evicts Durable Objects by class name or binding name", async ({
+		expect,
+	}) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`
 				{
 					"name": "do-worker",
 					"main": "src/index.ts",
 					"compatibility_date": "2026-05-20",
+					"exports": {
+						"Counter": {
+							"type": "durable-object",
+							"storage": "sqlite"
+						}
+					},
 					"durable_objects": {
 						"bindings": [
 							{ "name": "COUNTER", "class_name": "Counter" }
 						]
-					},
-					"migrations": [
-						{ "tag": "v1", "new_sqlite_classes": ["Counter"] }
-					]
+					}
 				}
 			`,
 			"src/index.ts": dedent`
@@ -402,9 +407,9 @@ describe("createTestHarness", () => {
 				}
 
 				export default {
-					fetch(_request, env) {
-						const id = env.COUNTER.idFromName("user-123");
-						return env.COUNTER.get(id).fetch("http://counter");
+					fetch(_request, _env, ctx) {
+						const id = ctx.exports.Counter.idFromName("user-123");
+						return ctx.exports.Counter.get(id).fetch("http://counter");
 					}
 				};
 			`,
@@ -427,12 +432,20 @@ describe("createTestHarness", () => {
 			storageCount: 1,
 		});
 
-		await worker.evictDurableObject("COUNTER", { name: "user-123" });
+		await worker.evictDurableObject("Counter", { name: "user-123" });
 
 		response = await worker.fetch("/");
 		expect(await response.json()).toEqual({
 			memoryCount: 1,
 			storageCount: 2,
+		});
+
+		await worker.evictDurableObject("COUNTER", { name: "user-123" });
+
+		response = await worker.fetch("/");
+		expect(await response.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 3,
 		});
 	});
 
