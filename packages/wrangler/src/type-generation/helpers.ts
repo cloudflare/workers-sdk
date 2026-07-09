@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import {
 	getRuntimeHeader,
 	RUNTIME_HEADER_COMMENT_PREFIX,
+	RUNTIME_TYPES_MARKER,
 } from "@cloudflare/runtime-types";
 import {
 	configFileName,
@@ -369,10 +370,11 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 		outFile: DEFAULT_WORKERS_TYPES_FILE_PATH,
 	});
 	const newTypesFile = [
+		"/* eslint-disable */",
 		newEnvHeader,
 		runtimeHeader,
 		newEnvTypes,
-		runtimeTypes,
+		`${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`,
 	].join("\n");
 	try {
 		writeFileSync(DEFAULT_WORKERS_TYPES_FILE_PATH, newTypesFile);
