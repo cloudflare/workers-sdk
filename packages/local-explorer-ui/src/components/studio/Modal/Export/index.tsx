@@ -1,5 +1,5 @@
 import { Button, Dialog } from "@cloudflare/kumo";
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import {
 	exportCSVFromStudioResult,
 	exportSQLFromStudioResult,
@@ -21,7 +21,7 @@ export function StudioExportModal({
 	closeModal,
 	isOpen,
 	result,
-}: StudioExportModalProps): React.JSX.Element {
+}: StudioExportModalProps): JSX.Element {
 	const { driver } = useStudioContext();
 
 	const [error, setError] = useState<string | null>(null);

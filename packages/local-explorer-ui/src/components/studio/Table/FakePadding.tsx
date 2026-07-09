@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from "react";
+import type { JSX, PropsWithChildren } from "react";
 
 type StudioTableFakeBodyPaddingProps = PropsWithChildren<{
 	colCount: number;
@@ -42,7 +42,7 @@ export function StudioTableFakeBodyPadding({
 	rowEnd,
 	rowHeight,
 	rowStart,
-}: StudioTableFakeBodyPaddingProps): React.JSX.Element {
+}: StudioTableFakeBodyPaddingProps): JSX.Element {
 	const paddingTop = rowStart * rowHeight;
 	const paddingBottom = (rowCount - rowEnd) * rowHeight;
 

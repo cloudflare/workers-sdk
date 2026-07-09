@@ -11,7 +11,7 @@ import {
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type JSX } from "react";
 import { durableObjectsNamespaceListNamespaces } from "../../../api";
 import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
@@ -77,7 +77,7 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 	}),
 });
 
-function ObjectView(): React.JSX.Element {
+function ObjectView(): JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const { namespaceId, objectId, objectName } = loaderData;

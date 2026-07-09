@@ -1,9 +1,9 @@
-import { useCallback } from "react";
+import { useCallback, type JSX } from "react";
 import { useStudioContext } from "../Context";
 import { StudioWindowTab } from ".";
 import type { StudioWindowTabItem } from "./types";
 
-export function StudioWindowTabPane(): React.JSX.Element {
+export function StudioWindowTabPane(): JSX.Element {
 	const {
 		openStudioTab,
 		selectedTabKey,

@@ -8,6 +8,7 @@ import type {
 	StudioTableSchema,
 	StudioTableSchemaChange,
 } from "../../../types/studio";
+import type { JSX } from "react";
 
 interface StudioEditTableTabProps {
 	schemaName?: string;
@@ -19,7 +20,7 @@ const LAYOUT_CLASSES = "overflow-auto w-full h-full bg-kumo-base";
 export function StudioCreateUpdateTableTab({
 	schemaName,
 	tableName,
-}: StudioEditTableTabProps): React.JSX.Element {
+}: StudioEditTableTabProps): JSX.Element {
 	const { driver, refreshSchema, replaceStudioTab } = useStudioContext();
 	const {
 		identifier: tabIdentifier,

@@ -2,7 +2,7 @@ import { cn } from "@cloudflare/kumo";
 import { StudioTableHeaderResizer } from "./HeaderResizer";
 import type { StudioTableHeaderProps } from "./BaseTable";
 import type { StudioTableState } from "./State";
-import type { ReactElement } from "react";
+import type { JSX, MouseEventHandler, ReactElement } from "react";
 
 interface StudioTableHeaderListProps<HeaderMetadata> {
 	headers: StudioTableHeaderProps<HeaderMetadata>[];
@@ -18,7 +18,7 @@ export function StudioTableHeaderList<HeaderMetadata = unknown>({
 	renderHeader,
 	state,
 	sticky,
-}: StudioTableHeaderListProps<HeaderMetadata>): React.JSX.Element {
+}: StudioTableHeaderListProps<HeaderMetadata>): JSX.Element {
 	return (
 		<thead className="contents">
 			<tr className="contents">
@@ -55,12 +55,12 @@ function StudioTableHeader<HeaderMetadata = unknown>({
 }: {
 	header: StudioTableHeaderProps<HeaderMetadata>;
 	idx: number;
-	onContextMenu?: React.MouseEventHandler;
+	onContextMenu?: MouseEventHandler;
 	onHeaderResize: (idx: number, newWidth: number) => void;
 	renderHeader: (props: StudioTableHeaderProps<HeaderMetadata>) => ReactElement;
 	state: StudioTableState<HeaderMetadata>;
 	sticky: boolean;
-}): React.JSX.Element {
+}): JSX.Element {
 	return (
 		<th
 			className={cn(

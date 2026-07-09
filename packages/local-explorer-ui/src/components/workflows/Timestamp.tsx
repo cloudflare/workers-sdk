@@ -1,5 +1,6 @@
 import { Tooltip } from "@cloudflare/kumo";
 import { timeAgo } from "./helpers";
+import type { JSX } from "react";
 
 function formatShort(ts: string): string {
 	try {
@@ -34,7 +35,7 @@ export function Timestamp({
 	value,
 }: {
 	value: string | undefined | null;
-}): React.JSX.Element {
+}): JSX.Element {
 	if (!value) {
 		return <span className="text-sm text-kumo-subtle">—</span>;
 	}

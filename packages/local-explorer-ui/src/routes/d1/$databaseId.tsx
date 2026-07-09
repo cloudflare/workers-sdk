@@ -11,7 +11,7 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type JSX } from "react";
 import D1Icon from "../../assets/icons/d1.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { ResourceError } from "../../components/ResourceError";
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/d1/$databaseId")({
 
 const rootRoute = getRouteApi("__root__");
 
-function DatabaseView(): React.JSX.Element {
+function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const searchParams = Route.useSearch();

@@ -2,7 +2,7 @@ import { cn, Tooltip } from "@cloudflare/kumo";
 import { TableIcon } from "@phosphor-icons/react";
 import { Fragment } from "react";
 import type { StudioResultSet } from "../../../types/studio";
-import type { ReactNode } from "react";
+import type { JSX, ReactNode } from "react";
 
 interface StudioSQLiteExplainProps {
 	data: StudioResultSet;
@@ -20,7 +20,7 @@ interface StudioSQLiteExplainTree extends StudioSQLiteExplainRow {
 
 export function StudioSQLiteExplainTab({
 	data,
-}: StudioSQLiteExplainProps): React.JSX.Element {
+}: StudioSQLiteExplainProps): JSX.Element {
 	const rows = data.rows as unknown as StudioSQLiteExplainRow[];
 
 	let tree = rows.map(
@@ -60,7 +60,7 @@ interface ExplainNodesProps {
 	data: StudioSQLiteExplainTree[];
 }
 
-function ExplainNodes({ data }: ExplainNodesProps): React.JSX.Element {
+function ExplainNodes({ data }: ExplainNodesProps): JSX.Element {
 	return (
 		<>
 			{data.map((row) => {

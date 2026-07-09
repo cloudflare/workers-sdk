@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 
 interface StudioTableHeaderResizerProps {
 	idx: number;
@@ -8,7 +8,7 @@ interface StudioTableHeaderResizerProps {
 export function StudioTableHeaderResizer({
 	idx,
 	onResize,
-}: StudioTableHeaderResizerProps): React.JSX.Element {
+}: StudioTableHeaderResizerProps): JSX.Element {
 	const handlerRef = useRef<HTMLDivElement>(null);
 
 	const [resizing, setResizing] = useState<boolean>(false);

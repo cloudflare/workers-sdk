@@ -1,6 +1,12 @@
 import { Button, Dialog } from "@cloudflare/kumo";
 import { PlusIcon, TrashIcon, UploadIcon } from "@phosphor-icons/react";
-import { useCallback, useState } from "react";
+import {
+	useCallback,
+	useState,
+	type ChangeEvent,
+	type DragEvent,
+	type JSX,
+} from "react";
 import { r2BucketPutObject } from "../api";
 
 interface R2UploadDialogProps {
@@ -52,7 +58,7 @@ export function R2UploadDialog({
 	onOpenChange,
 	onUploadComplete,
 	open,
-}: R2UploadDialogProps): React.JSX.Element {
+}: R2UploadDialogProps): JSX.Element {
 	const [contentType, setContentType] = useState<string>("");
 	const [customMetadata, setCustomMetadata] = useState<MetadataEntry[]>([]);
 	const [dragOver, setDragOver] = useState<boolean>(false);
@@ -75,7 +81,7 @@ export function R2UploadDialog({
 		setContentType(getMimeType(selectedFile));
 	}
 
-	function handleFileChange(e: React.ChangeEvent<HTMLInputElement>): void {
+	function handleFileChange(e: ChangeEvent<HTMLInputElement>): void {
 		const [selectedFile] = e.target.files ?? [];
 		if (!selectedFile) {
 			return;
@@ -84,7 +90,7 @@ export function R2UploadDialog({
 		handleFileSelect(selectedFile);
 	}
 
-	function handleDrop(e: React.DragEvent<HTMLDivElement>): void {
+	function handleDrop(e: DragEvent<HTMLDivElement>): void {
 		e.preventDefault();
 		setDragOver(false);
 
@@ -96,12 +102,12 @@ export function R2UploadDialog({
 		handleFileSelect(droppedFile);
 	}
 
-	function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
+	function handleDragOver(e: DragEvent<HTMLDivElement>): void {
 		e.preventDefault();
 		setDragOver(true);
 	}
 
-	function handleDragLeave(e: React.DragEvent<HTMLDivElement>): void {
+	function handleDragLeave(e: DragEvent<HTMLDivElement>): void {
 		e.preventDefault();
 		setDragOver(false);
 	}

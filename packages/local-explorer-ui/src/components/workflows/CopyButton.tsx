@@ -1,5 +1,5 @@
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, type JSX } from "react";
 
 export function CopyButton({
 	text,
@@ -7,7 +7,7 @@ export function CopyButton({
 }: {
 	text: string;
 	label?: string;
-}): React.JSX.Element {
+}): JSX.Element {
 	const [copied, setCopied] = useState(false);
 
 	function handleCopy(): void {

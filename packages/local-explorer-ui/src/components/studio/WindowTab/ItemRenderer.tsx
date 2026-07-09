@@ -1,6 +1,6 @@
 import { cn } from "@cloudflare/kumo";
 import { CircleIcon, XIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import type { StudioWindowTabItem } from "./types";
 
 interface StudioWindowTabItemRendererProps {
@@ -18,7 +18,7 @@ export function StudioWindowTabItemRenderer({
 	onDoubleClick,
 	selected,
 	tab,
-}: StudioWindowTabItemRendererProps): React.JSX.Element {
+}: StudioWindowTabItemRendererProps): JSX.Element {
 	const isDirty = tab.isDirty;
 	const isTemp = tab.isTemp;
 

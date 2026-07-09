@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState } from "react";
-import type { ComponentType, PropsWithChildren } from "react";
+import type { ComponentType, JSX, PropsWithChildren } from "react";
 
 interface ModalInjectedProps {
 	closeModal: () => void;
@@ -39,9 +39,7 @@ export function useModal(): ModalContextValue {
 /**
  * Simple modal provider for the portable Studio component
  */
-export function ModalProvider({
-	children,
-}: PropsWithChildren): React.JSX.Element {
+export function ModalProvider({ children }: PropsWithChildren): JSX.Element {
 	const [modals, setModals] = useState<Array<IModalEntry>>([]);
 
 	const handleOpenModal = useCallback(

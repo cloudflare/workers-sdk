@@ -9,7 +9,7 @@ import {
 } from "react";
 import type { VirtualElement } from "@floating-ui/react";
 import type { Icon } from "@phosphor-icons/react";
-import type { PropsWithChildren, ReactNode } from "react";
+import type { JSX, MouseEvent, PropsWithChildren, ReactNode } from "react";
 
 interface DropdownButtonItem {
 	destructiveAction?: boolean;
@@ -31,7 +31,7 @@ export type DropdownItemBuilderProps = DropdownButtonItem | DropdownDividerItem;
 type OnOpenChangeHandler = (open: boolean) => void;
 
 type OpenContextMenuHandler = (
-	mouseEvent: React.MouseEvent<Element, MouseEvent>,
+	mouseEvent: MouseEvent<Element, MouseEvent>,
 	menuItems: DropdownItemBuilderProps[],
 	onOpenChange?: OnOpenChangeHandler
 ) => void;
@@ -64,7 +64,7 @@ interface DropdownMenuItemsBuilderProps {
 
 function DropdownMenuItemsBuilder({
 	items,
-}: DropdownMenuItemsBuilderProps): React.JSX.Element {
+}: DropdownMenuItemsBuilderProps): JSX.Element {
 	return (
 		<>
 			{items.map((item, index) => {
@@ -117,7 +117,7 @@ export function StudioContextMenuProvider({
 
 	const openContextMenu = useCallback(
 		(
-			mouseEvent: React.MouseEvent<Element, MouseEvent>,
+			mouseEvent: MouseEvent<Element, MouseEvent>,
 			items: DropdownItemBuilderProps[],
 			_onOpenChange?: OnOpenChangeHandler
 		) => {

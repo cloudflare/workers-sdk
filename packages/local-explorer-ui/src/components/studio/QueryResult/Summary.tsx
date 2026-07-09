@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { CodeBlock } from "../Code/Block";
 import { StudioQueryResultStats } from "./Stats";
 import type {
@@ -12,7 +12,7 @@ interface StudioQueryResultSummaryProps {
 
 export function StudioQueryResultSummary({
 	progress,
-}: StudioQueryResultSummaryProps): React.JSX.Element {
+}: StudioQueryResultSummaryProps): JSX.Element {
 	const [currentTime, setCurrentTime] = useState(() => Date.now());
 
 	useEffect(() => {

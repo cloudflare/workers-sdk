@@ -2,6 +2,7 @@ import { Sidebar, type SidebarMenuButtonProps } from "@cloudflare/kumo";
 import { Popover } from "@cloudflare/kumo/primitives/popover";
 import { Link } from "@tanstack/react-router";
 import type { FileRouteTypes } from "../routeTree.gen";
+import type { JSX } from "react";
 
 interface SidebarGroupItem {
 	id: string;
@@ -26,7 +27,7 @@ export function SidebarGroupPopup({
 	icon,
 	items,
 	title,
-}: SidebarGroupPopupProps): React.JSX.Element {
+}: SidebarGroupPopupProps): JSX.Element {
 	const hasActiveItem = items.some((item) => item.isActive);
 
 	return (

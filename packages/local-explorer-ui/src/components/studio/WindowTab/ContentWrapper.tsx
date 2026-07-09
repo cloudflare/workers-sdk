@@ -1,13 +1,17 @@
 import { cn } from "@cloudflare/kumo";
-import { useCallback } from "react";
+import {
+	useCallback,
+	type Dispatch,
+	type JSX,
+	type RefObject,
+	type SetStateAction,
+} from "react";
 import { StudioCurrentWindowTabContext } from "./Context";
 import type { BeforeTabClosingHandler, StudioWindowTabItem } from "./types";
 
 interface StudioTabContentWrapperProps {
-	beforeClosingHandlersRef: React.RefObject<
-		Map<string, BeforeTabClosingHandler>
-	>;
-	onTabsChange?: React.Dispatch<React.SetStateAction<StudioWindowTabItem[]>>;
+	beforeClosingHandlersRef: RefObject<Map<string, BeforeTabClosingHandler>>;
+	onTabsChange?: Dispatch<SetStateAction<StudioWindowTabItem[]>>;
 	selectedTabKey?: string;
 	tab: StudioWindowTabItem;
 }
@@ -19,7 +23,7 @@ export function StudioTabContentWrapper({
 	onTabsChange,
 	selectedTabKey,
 	tab,
-}: StudioTabContentWrapperProps): React.JSX.Element {
+}: StudioTabContentWrapperProps): JSX.Element {
 	const tabKey = tab.key;
 
 	/**

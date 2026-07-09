@@ -1,5 +1,5 @@
 import { Button, Dialog } from "@cloudflare/kumo";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type JSX } from "react";
 import { workflowsCreateInstance } from "../../api";
 
 interface CreateWorkflowInstanceDialogProps {
@@ -14,7 +14,7 @@ export function CreateWorkflowInstanceDialog({
 	onOpenChange,
 	open,
 	workflowName,
-}: CreateWorkflowInstanceDialogProps): React.JSX.Element {
+}: CreateWorkflowInstanceDialogProps): JSX.Element {
 	const [creating, setCreating] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [instanceId, setInstanceId] = useState<string>("");

@@ -1,6 +1,6 @@
 import { Loader, Tooltip } from "@cloudflare/kumo";
 import { ArrowClockwiseIcon, CheckIcon, PlusIcon } from "@phosphor-icons/react";
-import { memo } from "react";
+import { memo, type JSX } from "react";
 import { CopyButton } from "./CopyButton";
 import { formatDuration, formatJson } from "./helpers";
 import { ScrollableCodeBlock } from "./ScrollableCodeBlock";
@@ -17,7 +17,7 @@ function StepStatusIcon({
 	finished?: boolean;
 	hasError?: boolean;
 	subtle?: boolean;
-}): React.JSX.Element {
+}): JSX.Element {
 	if (success === false || hasError) {
 		if (subtle) {
 			return (
@@ -78,7 +78,7 @@ export const StepRow = memo(function StepRow({
 	isExpanded: boolean;
 	onToggleExpanded: () => void;
 	onRestartFromStep?: (step: StepData) => void;
-}): React.JSX.Element {
+}): JSX.Element {
 	const hasDetails =
 		step.type === "step" ||
 		(step.type === "waitForEvent" &&
@@ -168,7 +168,7 @@ function StepCodeCard({
 }: {
 	label: string;
 	content: string;
-}): React.JSX.Element {
+}): JSX.Element {
 	return (
 		<div>
 			<h5 className="mb-2 text-sm font-medium text-kumo-default">{label}</h5>
@@ -182,7 +182,7 @@ function StepCodeCard({
 	);
 }
 
-function StepDoDetails({ step }: { step: StepData }): React.JSX.Element {
+function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 	// Get error text from last failed attempt
 	const failedAttempt =
 		step.success === false && step.attempts
@@ -289,7 +289,7 @@ function StepDoDetails({ step }: { step: StepData }): React.JSX.Element {
 	);
 }
 
-function WaitForEventDetails({ step }: { step: StepData }): React.JSX.Element {
+function WaitForEventDetails({ step }: { step: StepData }): JSX.Element {
 	const hasPayload = step.finished && !step.error;
 	const hasError = !!step.error;
 

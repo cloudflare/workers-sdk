@@ -1,4 +1,5 @@
 import type { Icon } from "@phosphor-icons/react";
+import type { JSX } from "react";
 
 export interface IStudioConnection {
 	batch?(statements: string[]): Promise<StudioResultSet[]>; // Optimize for connection that support batch
@@ -134,7 +135,7 @@ export abstract class IStudioDriver {
 	abstract getQueryTabOverride(
 		statement: string,
 		result: StudioResultSet
-	): { label: string; icon: Icon; component: React.JSX.Element } | null;
+	): { label: string; icon: Icon; component: JSX.Element } | null;
 }
 
 export type StudioColumnConflict =

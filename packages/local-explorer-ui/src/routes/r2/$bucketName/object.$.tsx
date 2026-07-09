@@ -6,7 +6,7 @@ import {
 	notFound,
 	useNavigate,
 } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import { r2BucketDeleteObjects, r2BucketGetObject } from "../../../api";
 import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
@@ -67,9 +67,7 @@ interface ObjectDetailsCardProps {
 	object: R2HeadObjectResult;
 }
 
-function ObjectDetailsCard({
-	object,
-}: ObjectDetailsCardProps): React.JSX.Element {
+function ObjectDetailsCard({ object }: ObjectDetailsCardProps): JSX.Element {
 	const contentType =
 		object.http_metadata?.contentType ?? "application/octet-stream";
 	const formattedDate = formatDate(object.last_modified);
@@ -114,7 +112,7 @@ interface CustomMetadataCardProps {
 
 function CustomMetadataCard({
 	metadata,
-}: CustomMetadataCardProps): React.JSX.Element {
+}: CustomMetadataCardProps): JSX.Element {
 	const entries = metadata ? Object.entries(metadata) : [];
 
 	return (
@@ -139,7 +137,7 @@ function CustomMetadataCard({
 	);
 }
 
-function ObjectDetailView(): React.JSX.Element {
+function ObjectDetailView(): JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const search = Route.useSearch();

@@ -1,5 +1,6 @@
 import { cn } from "@cloudflare/kumo";
 import type { WorkflowsInstance } from "../../api";
+import type { JSX } from "react";
 
 type WorkflowStatus = NonNullable<WorkflowsInstance["status"]>;
 
@@ -33,7 +34,7 @@ interface WorkflowStatusBadgeProps {
 
 export function WorkflowStatusBadge({
 	status,
-}: WorkflowStatusBadgeProps): React.JSX.Element {
+}: WorkflowStatusBadgeProps): JSX.Element {
 	const resolvedStatus = (
 		status && status in statusStyles ? status : "unknown"
 	) as WorkflowStatus;

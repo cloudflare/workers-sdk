@@ -19,7 +19,7 @@ import {
 	notFound,
 	useNavigate,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type JSX } from "react";
 import {
 	r2BucketDeleteObjects,
 	r2BucketListObjects,
@@ -83,7 +83,7 @@ export const Route = createFileRoute("/r2/$bucketName/")({
 	}),
 });
 
-function BucketView(): React.JSX.Element {
+function BucketView(): JSX.Element {
 	const params = Route.useParams();
 	const search = Route.useSearch();
 	const loaderData = Route.useLoaderData();

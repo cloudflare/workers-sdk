@@ -1,6 +1,13 @@
 import { Button, Tooltip } from "@cloudflare/kumo";
 import { SpinnerIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type JSX,
+} from "react";
 import { tokenizeSQL } from "../../utils/studio/sql";
 import { StudioWhereParser } from "../../utils/studio/where-parser";
 import { StudioSQLWhereEditor } from "./SQLWhereEditor";
@@ -37,7 +44,7 @@ export function StudioWhereFilterInput({
 	loading,
 	onApply,
 	value,
-}: StudioWhereFilterInputProps): React.JSX.Element {
+}: StudioWhereFilterInputProps): JSX.Element {
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
 
 	const [currentValue, setCurrentValue] = useState<string>("");
@@ -104,37 +111,36 @@ export function StudioWhereFilterInput({
 		}
 	}, [editorRef]);
 
-	const applyButtonContent =
-		useMemo<React.JSX.Element>((): React.JSX.Element => {
-			if (loading) {
-				return (
-					<>
-						<SpinnerIcon className="animate-spin" />
-						<span>Applying</span>
-					</>
-				);
-			}
-
-			if (parsingError) {
-				return (
-					<>
-						<span className="text-red-500">●</span>
-						<span>Apply</span>
-					</>
-				);
-			}
-
-			if (currentValue === value) {
-				return <span>Applied</span>;
-			}
-
+	const applyButtonContent = useMemo<JSX.Element>((): JSX.Element => {
+		if (loading) {
 			return (
 				<>
-					<span className="text-kumo-subtle">●</span>
+					<SpinnerIcon className="animate-spin" />
+					<span>Applying</span>
+				</>
+			);
+		}
+
+		if (parsingError) {
+			return (
+				<>
+					<span className="text-red-500">●</span>
 					<span>Apply</span>
 				</>
 			);
-		}, [loading, currentValue, value, parsingError]);
+		}
+
+		if (currentValue === value) {
+			return <span>Applied</span>;
+		}
+
+		return (
+			<>
+				<span className="text-kumo-subtle">●</span>
+				<span>Apply</span>
+			</>
+		);
+	}, [loading, currentValue, value, parsingError]);
 
 	return (
 		<div className="flex items-center rounded border border-kumo-fill bg-kumo-elevated">

@@ -20,6 +20,7 @@ import type {
 	StudioTableSchemaChange,
 } from "../../types/studio";
 import type { Icon } from "@phosphor-icons/react";
+import type { JSX } from "react";
 
 /**
  * Represents a row from SQLite's `sqlite_master` system table.
@@ -475,7 +476,7 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		statement: string,
 		result: StudioResultSet
 	): {
-		component: React.JSX.Element;
+		component: JSX.Element;
 		icon: Icon;
 		label: string;
 	} | null {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, type DependencyList } from "react";
 
 type LeaveEvent = "navigation" | "unload";
 
@@ -7,7 +7,7 @@ interface UseLeaveGuardOptions {
 	 * List of reactive dependencies used inside `onBeforeLeave`.
 	 * Similar to a `useCallback` dependency array.
 	 */
-	dependencies?: React.DependencyList;
+	dependencies?: DependencyList;
 
 	/**
 	 * Enable or disable the leave guard. When false, no blocking is applied.

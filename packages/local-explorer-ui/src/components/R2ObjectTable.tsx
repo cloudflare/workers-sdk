@@ -7,7 +7,7 @@ import {
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
-import { useRef } from "react";
+import { useRef, type JSX } from "react";
 import { formatDate, formatSize } from "../utils/format";
 import type { R2Object } from "../api";
 
@@ -45,7 +45,7 @@ function ActionMenu({
 	isDirectory,
 	onDelete,
 	onDownload,
-}: ActionMenuProps): React.JSX.Element {
+}: ActionMenuProps): JSX.Element {
 	return (
 		<DropdownMenu>
 			<DropdownMenu.Trigger
@@ -101,7 +101,7 @@ function BulkActionMenu({
 	onDownload,
 	selectedFileCount,
 	selectedTotalCount,
-}: BulkActionMenuProps): React.JSX.Element {
+}: BulkActionMenuProps): JSX.Element {
 	return (
 		<DropdownMenu>
 			<DropdownMenu.Trigger
@@ -159,7 +159,7 @@ export function R2ObjectTable({
 	onNavigateToPrefix,
 	onSelectionChange,
 	selectedKeys,
-}: R2ObjectTableProps): React.JSX.Element | null {
+}: R2ObjectTableProps): JSX.Element | null {
 	// Combine directories and files for display
 	const items: Array<
 		| {

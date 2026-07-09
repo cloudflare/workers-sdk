@@ -1,5 +1,10 @@
 import { Button, cn } from "@cloudflare/kumo";
-import { useEffect, useState } from "react";
+import {
+	useEffect,
+	useState,
+	type ChangeEvent,
+	type SyntheticEvent,
+} from "react";
 import { validateKey } from "../utils/kv-validation";
 
 interface AddKVFormProps {
@@ -21,13 +26,13 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 		}
 	}, [clearSignal]);
 
-	const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleKeyChange = (e: ChangeEvent<HTMLInputElement>) => {
 		const newValue = e.target.value;
 		setKey(newValue);
 		setKeyError(newValue.trim() ? validateKey(newValue) : null);
 	};
 
-	const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+	const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
 		const validationError = validateKey(key);

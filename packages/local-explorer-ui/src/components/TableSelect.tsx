@@ -8,7 +8,7 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 import type { StudioRef } from "./studio";
-import type { RefObject } from "react";
+import type { JSX, RefObject } from "react";
 
 interface TableSelectProps {
 	studioRef: RefObject<StudioRef | null>;
@@ -20,7 +20,7 @@ export function TableSelect({
 	studioRef,
 	tables,
 	selectedTable,
-}: TableSelectProps): React.JSX.Element {
+}: TableSelectProps): JSX.Element {
 	const navigate = useNavigate();
 
 	const handleTableChange = useCallback(

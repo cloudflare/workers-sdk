@@ -18,7 +18,7 @@ import type { StudioTableHeaderProps } from "../BaseTable";
 import type { StudioTableState } from "../State";
 import type { StudioResultHeaderMetadata } from "../State/Helpers";
 import type { Extension } from "@codemirror/state";
-import type { ReactNode } from "react";
+import type { CSSProperties, FC, JSX, ReactNode } from "react";
 
 export type StudioTableCellEditorType = "input" | "json" | "text";
 
@@ -64,7 +64,7 @@ function InputCellEditor({
 	readOnly,
 	state,
 	value,
-}: Readonly<InputCellEditorProps>): React.JSX.Element {
+}: Readonly<InputCellEditorProps>): JSX.Element {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const shouldExit = useRef<boolean>(true);
 
@@ -97,7 +97,7 @@ function InputCellEditor({
 						className="fixed flex flex-col rounded border border-kumo-fill bg-kumo-base shadow"
 						ref={refs.setFloating}
 						style={{
-							...(floatingStyles as React.CSSProperties),
+							...(floatingStyles as CSSProperties),
 							width: POPOVER_WIDTH,
 							height: POPOVER_HEIGHT,
 						}}
@@ -185,7 +185,7 @@ function PopoverEditor({
 	defaultValue,
 	onApply,
 	readOnly,
-}: PopoverEditorProps): React.JSX.Element {
+}: PopoverEditorProps): JSX.Element {
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
 
 	const extensions = useMemo(
@@ -224,7 +224,7 @@ export function createStudioEditableCell<T = unknown>({
 	align,
 	toString,
 	toValue,
-}: TabeEditableCellProps<T>): React.FC<TableEditableCell<T>> {
+}: TabeEditableCellProps<T>): FC<TableEditableCell<T>> {
 	return function GenericEditableCell({
 		editMode,
 		editor,

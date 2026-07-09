@@ -1,10 +1,16 @@
-import { useCallback, useRef } from "react";
+import {
+	useCallback,
+	useRef,
+	type JSX,
+	type KeyboardEvent,
+	type MouseEvent,
+} from "react";
 import { StudioBaseTable } from "./BaseTable";
 import type { StudioTableProps } from "./BaseTable";
 
 export function StudioTable<T = unknown>(
 	props: StudioTableProps<T>
-): React.JSX.Element {
+): JSX.Element {
 	const {
 		onKeyDown: customKeyDownHandler,
 		onKeyUp: customKeyUpHandler,
@@ -14,7 +20,7 @@ export function StudioTable<T = unknown>(
 	const shiftSelectionPosition = useRef<{ x: number; y: number } | null>(null);
 
 	const onShiftKeyDownCallBack = useCallback(
-		(e: React.KeyboardEvent): void => {
+		(e: KeyboardEvent): void => {
 			const focus = state.getFocus();
 
 			if (e.shiftKey && focus) {
@@ -73,7 +79,7 @@ export function StudioTable<T = unknown>(
 
 	// Provide key navigation
 	const onKeyDown = useCallback(
-		(e: React.KeyboardEvent): void => {
+		(e: KeyboardEvent): void => {
 			if (state.isInEditMode()) {
 				return;
 			}
@@ -161,7 +167,7 @@ export function StudioTable<T = unknown>(
 	);
 
 	const onKeyUp = useCallback(
-		(e: React.KeyboardEvent): void => {
+		(e: KeyboardEvent): void => {
 			if (state.isInEditMode()) {
 				return;
 			}
@@ -178,7 +184,7 @@ export function StudioTable<T = unknown>(
 	);
 
 	const onGutterClick = useCallback(
-		(e: React.MouseEvent, rowNumber: number): void => {
+		(e: MouseEvent, rowNumber: number): void => {
 			const focusCell = state.getFocus();
 			if (e.shiftKey && focusCell) {
 				state.selectRowRange(focusCell.y, rowNumber);
@@ -194,7 +200,7 @@ export function StudioTable<T = unknown>(
 	);
 
 	const onCellMouseDown = useCallback(
-		(e: React.MouseEvent, { x, y }: { x: number; y: number }): void => {
+		(e: MouseEvent, { x, y }: { x: number; y: number }): void => {
 			const shiftKey = e.shiftKey;
 			const focusedCell = state.getFocus();
 

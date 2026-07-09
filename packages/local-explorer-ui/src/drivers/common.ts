@@ -11,6 +11,7 @@ import type {
 	StudioTableSchemaChange,
 } from "../types/studio";
 import type { Icon } from "@phosphor-icons/react";
+import type { JSX } from "react";
 
 /**
  * Common SQL driver implementation for databases that use SQL with slight dialect differences.
@@ -324,7 +325,7 @@ export abstract class StudioDriverCommon extends IStudioDriver {
 	getQueryTabOverride(
 		_: string,
 		__: StudioResultSet
-	): { label: string; icon: Icon; component: React.JSX.Element } | null {
+	): { label: string; icon: Icon; component: JSX.Element } | null {
 		return null;
 	}
 }

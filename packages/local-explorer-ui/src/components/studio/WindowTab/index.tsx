@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type Dispatch, type JSX, type SetStateAction } from "react";
 import { StudioTabContentWrapper } from "./ContentWrapper";
 import { StudioWindowTabItemRenderer } from "./ItemRenderer";
 import { StudioWindowTabMenu } from "./MenuProps";
@@ -14,7 +14,7 @@ export interface StudioWindowTabProps {
 	/**
 	 * Called when the tab list changes — either due to closing a tab or reordering tabs via drag-and-drop.
 	 */
-	onTabsChange?: React.Dispatch<React.SetStateAction<StudioWindowTabItem[]>>;
+	onTabsChange?: Dispatch<SetStateAction<StudioWindowTabItem[]>>;
 	/**
 	 * The key of the currently selected (active) tab.
 	 */
@@ -33,7 +33,7 @@ export function StudioWindowTab({
 	onTabsChange,
 	selectedTabKey,
 	tabs,
-}: StudioWindowTabProps): React.JSX.Element {
+}: StudioWindowTabProps): JSX.Element {
 	const beforeClosingHandlersRef = useRef(
 		new Map<string, BeforeTabClosingHandler>()
 	);

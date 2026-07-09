@@ -16,7 +16,7 @@ import type {
 	StudioTableSchemaChange,
 } from "../../../../types/studio";
 import type { StudioCodeMirrorReference } from "../../Code/Mirror";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, JSX, SetStateAction } from "react";
 
 interface StudioTableSchemaEditorProps {
 	disabledAddColumn?: boolean;
@@ -36,7 +36,7 @@ export function StudioTableSchemaEditor({
 	onSaveChange,
 	readOnlyExistingColumns,
 	value,
-}: StudioTableSchemaEditorProps): React.JSX.Element {
+}: StudioTableSchemaEditorProps): JSX.Element {
 	const { openModal } = useModal();
 
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
@@ -231,7 +231,7 @@ interface IndexListProps {
 	indexList: StudioTableIndex[];
 }
 
-function IndexList({ indexList }: IndexListProps): React.JSX.Element | null {
+function IndexList({ indexList }: IndexListProps): JSX.Element | null {
 	if (indexList.length === 0) {
 		return null;
 	}

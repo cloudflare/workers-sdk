@@ -26,7 +26,7 @@ import type {
 } from "../BaseTable";
 import type { StudioTableState } from "../State";
 import type { StudioResultHeaderMetadata } from "../State/Helpers";
-import type { PropsWithChildren, ReactNode } from "react";
+import type { JSX, KeyboardEvent, PropsWithChildren, ReactNode } from "react";
 
 interface StudioResultTableProps {
 	arrangeHeaderIndex: number[];
@@ -51,14 +51,14 @@ export function StudioResultTable({
 	orderByColumn,
 	orderByDirection,
 	state,
-}: StudioResultTableProps): React.JSX.Element {
+}: StudioResultTableProps): JSX.Element {
 	const { copyCallback, onContextMenu, pasteCallback } =
 		useStudioResultTableContextMenu(state);
 
 	const renderCell = useCallback(
 		(
 			props: StudioTableCellRendererProps<StudioResultHeaderMetadata>
-		): React.JSX.Element => {
+		): JSX.Element => {
 			const { header, isFocus, x, y } = props;
 
 			const align = header.metadata?.typeHint === "NUMBER" ? "right" : "left";
@@ -120,7 +120,7 @@ export function StudioResultTable({
 	const renderHeader = useCallback(
 		(
 			header: StudioTableHeaderProps<StudioResultHeaderMetadata>
-		): React.JSX.Element => {
+		): JSX.Element => {
 			const hasColumnInfo =
 				(header.metadata.indexes && header.metadata.indexes.length > 0) ||
 				header.metadata.isPrimaryKey ||
@@ -236,7 +236,7 @@ export function StudioResultTable({
 	);
 
 	const onKeyDown = useCallback(
-		(e: React.KeyboardEvent): void => {
+		(e: KeyboardEvent): void => {
 			// Detect the "modifier" key: Command (⌘) on macOS, Control (Ctrl) on Windows/Linux
 			const isModifierPressed = e.metaKey || e.ctrlKey;
 
@@ -282,7 +282,7 @@ function HeaderDropdownMenu({
 	header,
 	orderByColumn,
 	orderByDirection,
-}: HeaderDropdownMenuProps): React.JSX.Element {
+}: HeaderDropdownMenuProps): JSX.Element {
 	const [open, setOpen] = useState<boolean>(false);
 
 	const orderIconPart =

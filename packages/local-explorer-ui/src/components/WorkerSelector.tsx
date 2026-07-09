@@ -5,7 +5,7 @@ import {
 	CheckIcon,
 	TerminalIcon,
 } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import type { LocalExplorerWorker } from "../api";
 
 // Re-export the type for convenience
@@ -63,7 +63,7 @@ export function WorkerSelector({
 	workers,
 	selectedWorker,
 	onWorkerChange,
-}: WorkerSelectorProps): React.JSX.Element {
+}: WorkerSelectorProps): JSX.Element {
 	const sidebar = useSidebar();
 
 	const [open, setOpen] = useState(false);
