@@ -27,7 +27,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 		setKeyError(newValue.trim() ? validateKey(newValue) : null);
 	};
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
 		const validationError = validateKey(key);
