@@ -1,15 +1,14 @@
 import { existsSync } from "node:fs";
-import {
-	getCloudflareAuthUseKeyringFromEnv,
-	scrubEncryptedCredentials,
-	validateProfileName,
-} from "@cloudflare/workers-auth";
 import { getGlobalConfigPath } from "@cloudflare/workers-utils";
-import { logger } from "../logger";
+import { scrubEncryptedCredentials } from "../credential-store";
+import { getCloudflareAuthUseKeyringFromEnv } from "../env-vars";
+import { validateProfileName } from "../profiles";
 import { getEncryptedAuthConfigFilePath } from "./auth-config-file";
+import { WRANGLER_KEYRING_SERVICE_NAME } from "./constants";
 import { readUserPreferences, updateUserPreferences } from "./preferences";
 import { createWranglerProfileStore } from "./profile-store";
-import { getCredentialStore, WRANGLER_KEYRING_SERVICE_NAME } from "./user";
+import type { OAuthFlowContext } from "../context";
+import type { CredentialStore } from "../credential-store";
 
 /**
  * Result of {@link setKeyringPreference}: the preference actually persisted,
@@ -18,6 +17,13 @@ import { getCredentialStore, WRANGLER_KEYRING_SERVICE_NAME } from "./user";
  */
 export interface SetKeyringPreferenceResult {
 	enabled: boolean;
+}
+
+/** Consumer primitives {@link setKeyringPreference} needs. */
+export interface KeyringPreferenceContext {
+	logger: OAuthFlowContext["logger"];
+	/** The currently-active credential store for the active profile. */
+	getCredentialStore: () => CredentialStore;
 }
 
 /**
@@ -38,14 +44,16 @@ function describeProfile(profile: string | undefined): string {
  * are separated from the default profile here (the default profile is handled
  * explicitly as `undefined`).
  */
-function listEncryptedProfiles(): Array<string | undefined> {
+function listEncryptedProfiles(
+	logger: OAuthFlowContext["logger"]
+): Array<string | undefined> {
 	const encrypted: Array<string | undefined> = [];
 
 	if (existsSync(getEncryptedAuthConfigFilePath())) {
 		encrypted.push(undefined);
 	}
 
-	for (const name of createWranglerProfileStore().configs.list()) {
+	for (const name of createWranglerProfileStore({ logger }).configs.list()) {
 		try {
 			validateProfileName(name);
 		} catch {
@@ -69,8 +77,8 @@ function listEncryptedProfiles(): Array<string | undefined> {
  * disabling. The next `wrangler login` / `wrangler auth create` writes fresh
  * plaintext credentials.
  */
-function scrubAllEncryptedProfiles(): void {
-	const encryptedProfiles = listEncryptedProfiles();
+function scrubAllEncryptedProfiles(logger: OAuthFlowContext["logger"]): void {
+	const encryptedProfiles = listEncryptedProfiles(logger);
 	if (encryptedProfiles.length === 0) {
 		return;
 	}
@@ -139,8 +147,10 @@ function scrubAllEncryptedProfiles(): void {
  * enabling was rolled back).
  */
 export function setKeyringPreference(
-	enabled: boolean
+	enabled: boolean,
+	ctx: KeyringPreferenceContext
 ): SetKeyringPreferenceResult {
+	const { logger, getCredentialStore } = ctx;
 	const previouslyEnabled = readUserPreferences().keyring_enabled === true;
 	const envOverride = getCloudflareAuthUseKeyringFromEnv();
 	if (envOverride !== undefined && envOverride !== enabled) {
@@ -161,7 +171,7 @@ export function setKeyringPreference(
 	// encrypted credentials we just scrubbed, so scrubbing would be churn —
 	// the conflict warning above already told the user the env var wins.
 	if (!enabled && envOverride !== true) {
-		scrubAllEncryptedProfiles();
+		scrubAllEncryptedProfiles(logger);
 	}
 
 	updateUserPreferences({ keyring_enabled: enabled });

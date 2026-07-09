@@ -1,5 +1,6 @@
 import { PassThrough } from "node:stream";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { passthrough } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
@@ -10,7 +11,6 @@ import {
 	fetchPagedListResult,
 } from "../cfetch";
 import { confirm, prompt, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { msw } from "./helpers/msw";
 
@@ -176,36 +176,22 @@ afterEach(() => {
 afterAll(() => msw.close());
 
 // Make sure that we don't accidentally try to open a browser window when running tests.
-// We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
-vi.mock("../open-in-browser");
-
-// Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
-vi.mock("../user/generate-auth-url", async (importOriginal) => {
-	const OAUTH_CALLBACK_URL = (
-		await importOriginal<typeof import("../user/generate-auth-url")>()
-	).OAUTH_CALLBACK_URL;
-	return {
-		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
-		OAUTH_CALLBACK_URL,
-		generateAuthUrl: vi
-			.fn()
-			.mockImplementation(({ authUrl, clientId, scopes }) => {
-				return (
-					authUrl +
-					`?response_type=code&` +
-					`client_id=${encodeURIComponent(clientId)}&` +
-					`redirect_uri=${encodeURIComponent(OAUTH_CALLBACK_URL)}&` +
-					// we add offline_access manually for every request
-					`scope=${encodeURIComponent(
-						[...scopes, "offline_access"].join(" ")
-					)}&` +
-					`state=MOCK_STATE_PARAM&` +
-					`code_challenge=${encodeURIComponent("MOCK_CODE_CHALLENGE")}&` +
-					`code_challenge_method=S256`
-				);
-			}),
-	};
+// `openInBrowser` now lives in `@cloudflare/workers-utils` and is used both by
+// wrangler's own consumers (docs, pipelines, browser-rendering, hotkeys) and by
+// the OAuth flow in `@cloudflare/workers-auth`. We partial-mock that module,
+// replacing only `openInBrowser` with a spy the OAuth harness
+// (`mock-oauth-flow.ts`) and the browser tests drive via `mockImplementation`,
+// while leaving every other workers-utils export untouched.
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@cloudflare/workers-utils")>();
+	return { ...actual, openInBrowser: vi.fn() };
 });
+
+// The OAuth authorize URL contains a random `state` and PKCE `code_challenge`
+// on every run. Rather than mocking the URL builder, we let the real
+// `generateAuthUrl` run and scrub those two values in `normalizeString()` so
+// snapshots stay deterministic.
 
 // Mock `ci-info` globally so tests run with CI detection disabled by default.
 //
@@ -243,12 +229,6 @@ vi.mock("am-i-vibing", () => ({
 		type: null,
 	})),
 }));
-
-vi.mock("../user/generate-random-state", () => {
-	return {
-		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
-	};
-});
 
 vi.mock("../metrics/metrics-config", async (importOriginal) => {
 	const realModule =

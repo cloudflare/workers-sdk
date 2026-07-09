@@ -7,20 +7,17 @@ import {
 } from "node:fs";
 import path from "node:path";
 import {
-	getAuthConfigFilePath as getAuthConfigFilePathForConfig,
-	getEncryptedAuthConfigFilePath as getEncryptedAuthConfigFilePathForConfig,
-} from "@cloudflare/workers-auth";
-import {
 	getGlobalConfigPath,
 	parseTOML,
 	readFileSync,
 } from "@cloudflare/workers-utils";
 import TOML from "smol-toml";
-import type {
-	AuthConfigStorage,
-	ConfigStorage,
-	UserAuthConfig,
-} from "@cloudflare/workers-auth";
+import {
+	getAuthConfigFilePath as getAuthConfigFilePathForConfig,
+	getEncryptedAuthConfigFilePath as getEncryptedAuthConfigFilePathForConfig,
+} from "../credential-store";
+import type { ConfigStorage } from "../config-file";
+import type { AuthConfigStorage, UserAuthConfig } from "../config-file/auth";
 
 /**
  * A TOML-file-on-disk storage backend, parameterised by the path it reads and
@@ -81,14 +78,15 @@ export function createTomlFileStorage<T extends object>(
 	};
 }
 
-// `@cloudflare/workers-auth` owns the auth profile → on-disk path layout (the
-// `.toml` plaintext file and its sibling `.enc` encrypted file), but takes the
-// global config directory as an argument rather than resolving it: the client
-// (wrangler here, a future `cf` CLI elsewhere) owns where its config lives.
-// Wrangler binds both helpers to its own `getGlobalConfigPath()` and exposes
-// the `(profile)` form so callers and tests keep the ergonomic signature. The
-// dir is re-resolved on each call so tests that re-stub HOME / XDG_CONFIG_HOME
-// point at the right place.
+// `@cloudflare/workers-auth`'s credential-store layer owns the auth profile →
+// on-disk path layout (the `.toml` plaintext file and its sibling `.enc`
+// encrypted file), but takes the global config directory as an argument rather
+// than resolving it: the client (wrangler here, a future `cf` CLI elsewhere)
+// owns where its config lives. This wrangler layer binds both helpers to
+// wrangler's own `getGlobalConfigPath()` and exposes the `(profile)` form so
+// callers and tests keep the ergonomic signature. The dir is re-resolved on
+// each call so tests that re-stub HOME / XDG_CONFIG_HOME point at the right
+// place.
 export function getAuthConfigFilePath(profile?: string): string {
 	return getAuthConfigFilePathForConfig(getGlobalConfigPath(), profile);
 }
@@ -108,9 +106,9 @@ export function getEncryptedAuthConfigFilePath(profile?: string): string {
  * (listing / deleting named profiles by their `.toml` file in
  * `profile-store.ts`) and by tests that seed a particular profile's file
  * directly. The production login / logout / refresh path does NOT use this —
- * it goes through the keyring-aware `storageFactory` wired up in `user.ts`,
- * which may persist the active profile's credentials in an encrypted file
- * instead of plaintext TOML.
+ * it goes through the keyring-aware `storageFactory` wired up in
+ * `createWranglerAuth`, which may persist the active profile's credentials in
+ * an encrypted file instead of plaintext TOML.
  */
 export function defaultAuthConfigStorage(profile?: string): AuthConfigStorage {
 	return createTomlFileStorage<UserAuthConfig>(() =>

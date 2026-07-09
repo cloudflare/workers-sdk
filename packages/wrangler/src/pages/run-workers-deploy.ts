@@ -1,4 +1,5 @@
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import {
 	fetchKVGetValue,
 	fetchListResult,
@@ -9,7 +10,6 @@ import { readConfig } from "../config";
 import { runDeployCommandHandler, type DeployArgs } from "../deploy";
 import { confirm, prompt, select } from "../dialogs";
 import { run } from "../experimental-flags";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
 	recordPagesToWorkersDelegateFailure,

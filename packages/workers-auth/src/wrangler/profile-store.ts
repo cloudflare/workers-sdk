@@ -6,33 +6,38 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import {
-	createProfileStore,
-	scrubEncryptedCredentials,
-} from "@cloudflare/workers-auth";
 import { getGlobalConfigPath } from "@cloudflare/workers-utils";
-import { logger } from "../logger";
+import { scrubEncryptedCredentials } from "../credential-store";
+import { createProfileStore } from "../profiles";
 import {
 	defaultAuthConfigStorage,
 	getAuthConfigFilePath,
 	getEncryptedAuthConfigFilePath,
 } from "./auth-config-file";
-import { WRANGLER_KEYRING_SERVICE_NAME } from "./user";
+import { WRANGLER_KEYRING_SERVICE_NAME } from "./constants";
+import type { OAuthFlowContext } from "../context";
 import type {
 	DirectoryBindingsStorage,
 	ProfileConfigOperations,
 	ProfileStore,
-} from "@cloudflare/workers-auth";
+} from "../profiles";
 
 const DIRECTORY_BINDINGS_FILE = "profiles/directory-bindings.json";
 const PROFILE_CONFIG_EXTENSION = ".toml";
 const ENCRYPTED_PROFILE_CONFIG_EXTENSION = ".enc";
 
+/** Consumer primitives {@link createWranglerProfileStore} needs. */
+export interface WranglerProfileStoreContext {
+	logger: OAuthFlowContext["logger"];
+}
+
 function getProfileConfigDirectory(): string {
 	return path.dirname(getAuthConfigFilePath("default"));
 }
 
-function createWranglerProfileConfigOperations(): ProfileConfigOperations {
+function createWranglerProfileConfigOperations(
+	logger: OAuthFlowContext["logger"]
+): ProfileConfigOperations {
 	return {
 		exists(profile) {
 			// A profile's credentials may be stored as a plaintext TOML file
@@ -113,9 +118,16 @@ function createWranglerDirectoryBindingsStorage(): DirectoryBindingsStorage {
 	};
 }
 
-export function createWranglerProfileStore(): ProfileStore {
+/**
+ * Build wrangler's {@link ProfileStore}: the profile config operations (backed
+ * by the `.toml` / `.enc` files under the global config dir) plus the
+ * directory→profile bindings storage.
+ */
+export function createWranglerProfileStore(
+	ctx: WranglerProfileStoreContext
+): ProfileStore {
 	return createProfileStore({
-		configs: createWranglerProfileConfigOperations(),
+		configs: createWranglerProfileConfigOperations(ctx.logger),
 		bindings: createWranglerDirectoryBindingsStorage(),
 	});
 }

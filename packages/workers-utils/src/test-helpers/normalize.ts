@@ -16,7 +16,11 @@ export function normalizeString(input: string): string {
 						stripStartupProfileHash(
 							normalizeSlashes(
 								normalizeCwd(
-									normalizeTempDirs(stripTimings(replaceThinSpaces(input)))
+									normalizeTempDirs(
+										normalizeOAuthUrlParams(
+											stripTimings(replaceThinSpaces(input))
+										)
+									)
 								)
 							)
 						)
@@ -25,6 +29,17 @@ export function normalizeString(input: string): string {
 			)
 		)
 	);
+}
+
+/**
+ * The OAuth authorize URL contains a random `state` and PKCE `code_challenge`
+ * on every run. Replace those two values (but not `code_challenge_method`) with
+ * stable placeholders so snapshots of the login URL stay deterministic.
+ */
+function normalizeOAuthUrlParams(str: string): string {
+	return str
+		.replace(/([?&]state=)[^&\s]+/g, "$1<OAUTH_STATE>")
+		.replace(/([?&]code_challenge=)[^&\s]+/g, "$1<OAUTH_CODE_CHALLENGE>");
 }
 
 function stripStartupProfileHash(str: string): string {

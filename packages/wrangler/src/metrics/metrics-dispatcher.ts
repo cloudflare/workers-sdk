@@ -1,10 +1,10 @@
 import { configFormat } from "@cloudflare/workers-utils";
+import { isInteractive } from "@cloudflare/workers-utils";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import chalk from "chalk";
 import ci from "ci-info";
 import { fetch } from "undici";
 import { telemetryCurrentAgentSkillsInstalled } from "../agents-skills-install";
-import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import {

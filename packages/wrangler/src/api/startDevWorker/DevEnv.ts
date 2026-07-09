@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
 import { ParseError, UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
 import {
 	fetchKVGetValue,
@@ -14,7 +15,6 @@ import {
 	isBuildFailureFromCause,
 } from "../../deployment-bundle/build-failures";
 import { confirm, prompt, select } from "../../dialogs";
-import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logBuildFailure, logger, runWithLogLevel } from "../../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";

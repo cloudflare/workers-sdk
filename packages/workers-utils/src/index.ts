@@ -114,6 +114,9 @@ export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
 
+export { createConfigCache } from "./config-cache";
+export type { ConfigCache } from "./config-cache";
+
 export {
 	type EphemeralDirectory,
 	getWranglerHiddenDirPath,
@@ -135,6 +138,9 @@ export type { NpmVersionCheckResult } from "./update-check";
 
 export { LOGGER_LEVELS } from "./logger";
 export type { Logger, LoggerLevel } from "./logger";
+
+export { isInteractive, isNonInteractiveOrCI } from "./is-interactive";
+export { openInBrowser } from "./open-in-browser";
 
 export { retryOnAPIFailure } from "./retry";
 export { formatTime } from "./format-time";

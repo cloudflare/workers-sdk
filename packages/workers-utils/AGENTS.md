@@ -20,13 +20,19 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 - Validation pipeline normalizes wrangler.json/toml into typed config objects
 - Used by wrangler for all config loading
 
+### Shared runtime utilities
+
+- `createConfigCache(logger)` — file-backed JSON config cache (node_modules/.cache or `.wrangler/cache`). Generic mechanism; the consumer passes its logger (this package has no logger singleton). Both `wrangler` (`src/config-cache.ts`) and `@cloudflare/workers-auth` build their own instances.
+- `openInBrowser(url, logger)` — opens the `open` package with a graceful copy-paste fallback when no browser opener is available. Logger is a parameter, not imported.
+- `isInteractive()` / `isNonInteractiveOrCI()` — TTY / CI detection (the TTY check is inlined here to avoid a cycle back through `@cloudflare/cli-shared-helpers`).
+
 ### Test Helpers
 
 - `runInTempDir()` — Creates temp dir, chdir's into it, stubs HOME/XDG_CONFIG_HOME, cleans up
 - `seed(files)` — Writes `Record<string, string>` of path->content into temp dir
 - `writeWranglerConfig()` / `readWranglerConfig()` — Mock wrangler config files (TOML, JSON, JSONC)
 - `mockConsoleMethods()` — Spies on console, returns normalized output with `.debug`, `.out`, `.info`, `.err`, `.warn`
-- `normalizeString()` — Multi-stage pipeline: strips timings, thin spaces, temp dirs, normalizes slashes/cwd/dates/tables/error markers/byte values
+- `normalizeString()` — Multi-stage pipeline: strips timings, thin spaces, temp dirs, normalizes slashes/cwd/dates/tables/error markers/byte values, and scrubs the OAuth authorize URL's random `state` / `code_challenge` query params to `<OAUTH_STATE>` / `<OAUTH_CODE_CHALLENGE>` (so login-URL snapshots stay deterministic without mocking the URL builder)
 
 ## NOTES
 

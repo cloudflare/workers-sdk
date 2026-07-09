@@ -1,6 +1,7 @@
 import { execFileSync, execSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	configFileName,
@@ -20,7 +21,6 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { getAccountFromCache, requireAuth } from "../user";
-import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { diagnoseStartupError } from "../utils/friendly-validator-errors";
 import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,

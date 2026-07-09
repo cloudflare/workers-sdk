@@ -2,12 +2,12 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getGlobalConfigPath, parseJSONC } from "@cloudflare/workers-utils";
+import { isInteractive } from "@cloudflare/workers-utils";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
 import { install as rosieInstall, agents as rosieAgents } from "rosie-skills";
 import { fetch } from "undici";
 import { confirm } from "./dialogs";
-import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { sendMetricsEvent } from "./metrics";
 

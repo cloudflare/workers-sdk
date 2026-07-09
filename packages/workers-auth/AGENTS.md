@@ -12,7 +12,7 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/generate-random-state.ts` — CSRF state generator
 - `src/env-vars.ts` — `WRANGLER_*` and `CLOUDFLARE_AUTH_*` env-var getters
 - `src/access.ts` — Cloudflare Access detection + service-token / `cloudflared` headers
-- `src/config-file/auth.ts` — the `AuthConfigStorage` / `UserAuthConfig` storage contract (interfaces only). The default plaintext-TOML implementation now lives alongside the credential-store layer at `src/credential-store/file-store.ts` (see "Credential storage" below). Wrangler's `src/user/auth-config-file.ts` exposes a generic `createTomlFileStorage<T>` helper for non-credential TOML stores (the temporary-preview-account storage) and re-exports `getAuthConfigFilePath` for back-compat.
+- `src/config-file/auth.ts` — the `AuthConfigStorage` / `UserAuthConfig` storage contract (interfaces only). The default plaintext-TOML implementation now lives alongside the credential-store layer at `src/credential-store/file-store.ts` (see "Credential storage" below). The wrangler-layer `src/wrangler/auth-config-file.ts` exposes a generic `createTomlFileStorage<T>` helper for non-credential TOML stores (the temporary-preview-account storage) and re-exports `getAuthConfigFilePath`; both are re-exported from the `@cloudflare/workers-auth/wrangler` entrypoint that wrangler imports directly.
 - `src/config-file/temporary.ts` — `TemporaryAccountStorage` / `TemporaryPreviewAccount` storage contract for the temporary-preview-account flow
 - `src/config-file/index.ts` — generic `ConfigStorage<T>` interface shared by the auth and temporary-account contracts
 - `src/state.ts` — `readStoredAuthState()` + `StoredAuthState` shape
@@ -74,15 +74,32 @@ files and its own encryption key.
 - `generateAuthUrl?` / `generateRandomState?` — test overrides for deterministic
   snapshot tests (defaults pull from `./generate-auth-url` / `./generate-random-state`)
 
-`clientId`, `consent`, `redirectUri`, and `storageFactory` are consumer-specific
-(Wrangler's live in `packages/wrangler/src/user/`), so they are required rather
-than defaulted here.
+`clientId`, `consent`, `redirectUri`, and `storageFactory` are consumer-specific,
+so they are required rather than defaulted here. Wrangler's values live in the
+in-package wrangler layer (`src/wrangler/`, see below) rather than in the
+`wrangler` package itself.
 
-Wrangler wires the credential-storage layer once in
-`packages/wrangler/src/user/user.ts` via `createCredentialStorageContext(...)`
-and exposes the resulting `getActiveStore` (called with the active profile) as
+The wrangler layer (`src/wrangler/index.ts`, `createWranglerAuth`) wires the
+credential-storage layer once via `createCredentialStorageContext(...)` and
+exposes the resulting `getActiveStore` (called with the active profile) as
 `getCredentialStore()` for `whoami`-style code that wants to surface the active
 storage location.
+
+## WRANGLER LAYER (`src/wrangler/`)
+
+`@cloudflare/workers-auth/wrangler` (`createWranglerAuth(ctx)`) is the whole
+wrangler-specific auth layer that used to live in `packages/wrangler/src/user/`.
+It builds the OAuth flow, credential storage, config cache
+(`@cloudflare/workers-utils`' `createConfigCache`), account selection
+(`fetchInternalBase` with the token the flow already holds), scope catalog,
+preferences, keyring preference, and TOML-file storage helpers — importing only
+`@cloudflare/workers-utils`. The `wrangler` package injects just a handful of
+primitives it can't move (`logger`, the interactive `prompt` / `select`, and a
+`userAgent` string) and consumes everything else (scopes, `createTomlFileStorage`,
+`readUserPreferences`, `createWranglerProfileStore`, `setKeyringPreference`,
+`getClientIdFromEnv`, `OAUTH_CALLBACK_URL`, …) via direct imports from the
+`@cloudflare/workers-auth/wrangler` entrypoint — there are no re-export shim
+files in `wrangler/src/user/` any more.
 
 ## CONVENTIONS
 

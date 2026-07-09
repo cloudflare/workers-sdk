@@ -1,4 +1,5 @@
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import {
 	fetchKVGetValue,
 	fetchListResult,
@@ -6,7 +7,6 @@ import {
 	fetchResult,
 } from "../cfetch";
 import { confirm, prompt, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 
 export function initApiDeployHelpersContext(): void {

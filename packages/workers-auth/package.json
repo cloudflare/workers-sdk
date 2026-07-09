@@ -22,6 +22,10 @@
 			"import": "./dist/index.mjs",
 			"types": "./dist/index.d.mts"
 		},
+		"./wrangler": {
+			"import": "./dist/wrangler/index.mjs",
+			"types": "./dist/wrangler/index.d.mts"
+		},
 		"./test-helpers": {
 			"import": "./dist/test-helpers/index.mjs",
 			"types": "./dist/test-helpers/index.d.mts"
@@ -43,7 +47,9 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/node": "catalog:default",
 		"@vitest/ui": "catalog:default",
+		"ci-info": "catalog:default",
 		"concurrently": "^8.2.2",
+		"date-fns": "^4.1.0",
 		"msw": "catalog:default",
 		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",

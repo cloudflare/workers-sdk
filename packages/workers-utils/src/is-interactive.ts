@@ -1,5 +1,20 @@
-import { isInteractive as __isInteractive } from "@cloudflare/cli-shared-helpers/interactive";
 import ci from "ci-info";
+
+/**
+ * Whether stdin and stdout are both attached to a TTY.
+ *
+ * Inlined here (rather than importing `@cloudflare/cli-shared-helpers`) because
+ * that package depends on `@cloudflare/workers-utils`, so importing it back
+ * would create a dependency cycle. The check is a one-liner, so duplicating it
+ * is cheaper than the cycle.
+ */
+function isTtyInteractive(): boolean {
+	try {
+		return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+	} catch {
+		return false;
+	}
+}
 
 /**
  * Returns whether the process can handle interactive input (e.g. hotkeys).
@@ -22,7 +37,7 @@ import ci from "ci-info";
  *
  * @returns `true` if the process is interactive, `false` otherwise.
  */
-export default function isInteractive(): boolean {
+export function isInteractive(): boolean {
 	// Only Cloudflare-specific CI environments force non-interactive mode.
 	// Generic CI (e.g. GitHub Actions) is intentionally excluded here because
 	// tools like `node-pty` can attach a real PTY in CI, and features like
@@ -32,7 +47,7 @@ export default function isInteractive(): boolean {
 		return false;
 	}
 
-	return __isInteractive();
+	return isTtyInteractive();
 }
 
 /**
