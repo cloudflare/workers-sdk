@@ -2706,7 +2706,7 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	);
 });
 
-test("Miniflare: evictDurableObject() resets in-memory state and preserves durable storage", async ({
+test("Miniflare: unsafeEvictDurableObject() resets in-memory state and preserves durable storage", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
@@ -2747,7 +2747,9 @@ test("Miniflare: evictDurableObject() resets in-memory state and preserves durab
 		storageCount: 1,
 	});
 
-	await mf.evictDurableObject("do-worker", "Counter", { name: "user-123" });
+	await mf.unsafeEvictDurableObject("do-worker", "Counter", {
+		name: "user-123",
+	});
 
 	response = await mf.dispatchFetch("http://localhost");
 	expect(await response.json()).toEqual({

@@ -174,6 +174,9 @@ test("lists Durable Object ids with persisted storage", async ({ expect }) => {
 	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual(
 		[firstId, secondId].sort()
 	);
+	await expect(mf.listDurableObjectIds("Counter")).resolves.toEqual(
+		[firstId, secondId].sort()
+	);
 });
 
 test("multiple Workers access same Durable Object data", async ({ expect }) => {

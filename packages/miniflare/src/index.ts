@@ -148,7 +148,10 @@ import type {
 } from "./runtime";
 import type { Log } from "./shared";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
-import type { DevControl } from "./workers/core/dev-control";
+import type {
+	DevControl,
+	DurableObjectEvictionOptions,
+} from "./workers/core/dev-control";
 import type {
 	CacheStorage,
 	D1Database,
@@ -3111,12 +3114,10 @@ export class Miniflare {
 
 		return control;
 	}
-	async evictDurableObject(
+	async unsafeEvictDurableObject(
 		scriptName: string,
 		className: string,
-		options: ({ name: string; id?: never } | { id: string; name?: never }) & {
-			webSockets?: "close" | "hibernate";
-		}
+		options: DurableObjectEvictionOptions
 	): Promise<void> {
 		const durableObjectExists = this.#workerOpts.some((workerOpts) => {
 			const workerName = workerOpts.core.name ?? "";
@@ -3142,7 +3143,7 @@ export class Miniflare {
 		await control.evictDurableObject(scriptName, className, options);
 	}
 	async listDurableObjectIds(
-		bindingName: string,
+		classNameOrBindingName: string,
 		workerName?: string
 	): Promise<string[]> {
 		this.#checkDisposed();
@@ -3151,14 +3152,26 @@ export class Miniflare {
 		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
 		const workerOpts = this.#workerOpts[workerIndex];
 		const resolvedWorkerName = workerOpts.core.name ?? "";
-		const durableObject = workerOpts.do.durableObjects?.[bindingName];
+		const durableObject =
+			workerOpts.do.durableObjects?.[classNameOrBindingName] ??
+			[
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].find((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					durableObject.className === classNameOrBindingName &&
+					(durableObject.scriptName === undefined ||
+						durableObject.scriptName === resolvedWorkerName)
+				);
+			});
 
 		if (durableObject === undefined) {
 			const friendlyWorkerName = resolvedWorkerName
 				? `${JSON.stringify(resolvedWorkerName)} worker`
 				: "the worker";
 			throw new TypeError(
-				`No Durable Object namespace binding named ${JSON.stringify(bindingName)} found in ${friendlyWorkerName}.`
+				`No Durable Object class or namespace binding named ${JSON.stringify(classNameOrBindingName)} found in ${friendlyWorkerName}.`
 			);
 		}
 
@@ -3177,7 +3190,7 @@ export class Miniflare {
 
 		if (namespaceKey === undefined) {
 			throw new TypeError(
-				`Cannot list Durable Object ids for ${JSON.stringify(bindingName)} because the namespace uses ephemeral local storage.`
+				`Cannot list Durable Object ids for ${JSON.stringify(classNameOrBindingName)} because the namespace uses ephemeral local storage.`
 			);
 		}
 

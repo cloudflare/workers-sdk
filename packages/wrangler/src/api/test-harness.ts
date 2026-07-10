@@ -156,10 +156,13 @@ export type WorkerHandle<
 	 */
 	getEnv(): Promise<Env>;
 	/**
-	 * Lists the string IDs of Durable Object instances with persisted storage for a binding.
+	 * Lists the string IDs of Durable Object instances with persisted storage.
+	 * Pass an exported Durable Object class name, or a Durable Object binding name.
 	 */
 	listDurableObjectIds(
-		bindingName: BindingName<Env, DurableObjectNamespace>
+		classNameOrBindingName:
+			| ExportName<Module, Rpc.DurableObjectBranded>
+			| BindingName<Env, DurableObjectNamespace>
 	): Promise<string[]>;
 	/**
 	 * Evicts a currently running Durable Object instance while preserving its durable storage.
@@ -967,26 +970,29 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 					return result as FetcherScheduledResult;
 				},
-				async listDurableObjectIds(bindingName) {
+				async listDurableObjectIds(classNameOrBindingName) {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
 
-					debugLog(`durable object ids - ${bindingName} - started`, workerName);
+					debugLog(
+						`durable object ids - ${classNameOrBindingName} - started`,
+						workerName
+					);
 
 					try {
 						const ids = await miniflare.listDurableObjectIds(
-							bindingName,
+							classNameOrBindingName,
 							workerName
 						);
 						debugLog(
-							`durable object ids - ${bindingName} - completed (${ids.length} found)`,
+							`durable object ids - ${classNameOrBindingName} - completed (${ids.length} found)`,
 							workerName
 						);
 						return ids;
 					} catch (error) {
 						debugLog(
-							`durable object ids - ${bindingName} - failed`,
+							`durable object ids - ${classNameOrBindingName} - failed`,
 							workerName
 						);
 						throw error;
@@ -1101,7 +1107,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						classNameOrBindingName
 					);
 
-					await miniflare.evictDurableObject(
+					await miniflare.unsafeEvictDurableObject(
 						scriptName,
 						className,
 						evictionOptions

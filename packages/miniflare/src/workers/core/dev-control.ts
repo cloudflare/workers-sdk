@@ -1,8 +1,8 @@
-type DurableObjectTarget =
+export type DurableObjectIdentifier =
 	| { name: string; id?: never }
 	| { id: string; name?: never };
 
-export type DevControlDurableObjectEvictionOptions = DurableObjectTarget & {
+export type DurableObjectEvictionOptions = DurableObjectIdentifier & {
 	webSockets?: "close" | "hibernate";
 };
 
@@ -10,7 +10,7 @@ export interface DevControl {
 	evictDurableObject(
 		scriptName: string,
 		className: string,
-		options: DevControlDurableObjectEvictionOptions
+		options: DurableObjectEvictionOptions
 	): Promise<void>;
 }
 

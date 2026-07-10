@@ -424,35 +424,35 @@ describe("createTestHarness", () => {
 
 		await server.listen();
 
-		type DoWorkerModule = {
-			default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
-			Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject<{
-				COUNTER: DurableObjectNamespace;
-			}>;
-		};
 		const worker = server.getWorker<
 			{ COUNTER: DurableObjectNamespace },
-			DoWorkerModule
+			{
+				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
+			}
 		>("do-worker");
-		let response = await worker.fetch("/");
-		expect(await response.json()).toEqual({
+
+		const response1 = await worker.fetch("/");
+		expect(await response1.json()).toEqual({
 			memoryCount: 1,
 			storageCount: 1,
 		});
 
+		// Evict by class name
 		await worker.evictDurableObject("Counter", { name: "user-123" });
 
-		response = await worker.fetch("/");
-		expect(await response.json()).toEqual({
+		const response2 = await worker.fetch("/");
+		expect(await response2.json()).toEqual({
 			memoryCount: 1,
 			storageCount: 2,
 		});
 
+		// Evict by binding name
 		await worker.evictDurableObject("COUNTER", { name: "user-123" });
 
-		response = await worker.fetch("/");
-		expect(await response.json()).toEqual({
+		const response3 = await worker.fetch("/");
+		expect(await response3.json()).toEqual({
 			memoryCount: 1,
 			storageCount: 3,
 		});
@@ -1690,7 +1690,9 @@ describe("createTestHarness", () => {
 		`);
 	});
 
-	it("lists Durable Object ids", async ({ expect }) => {
+	it("lists Durable Object ids by class name or binding name", async ({
+		expect,
+	}) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`
 				{
@@ -1737,9 +1739,14 @@ describe("createTestHarness", () => {
 
 		await server.listen();
 
-		const worker = server.getWorker<{
-			COUNTER: DurableObjectNamespace;
-		}>();
+		const worker = server.getWorker<
+			{ COUNTER: DurableObjectNamespace },
+			{
+				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
+			}
+		>();
 		const env = await worker.getEnv();
 		const firstId = env.COUNTER.idFromName("first").toString();
 		const secondId = env.COUNTER.idFromName("second").toString();
@@ -1755,6 +1762,9 @@ describe("createTestHarness", () => {
 			200
 		);
 
+		await expect(worker.listDurableObjectIds("Counter")).resolves.toEqual(
+			[firstId, secondId].sort()
+		);
 		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual(
 			[firstId, secondId].sort()
 		);

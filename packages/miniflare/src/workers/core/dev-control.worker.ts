@@ -2,7 +2,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import workerdUnsafe from "workerd:unsafe";
 import {
 	type DevControl as DevControlInterface,
-	type DevControlDurableObjectEvictionOptions,
+	type DurableObjectEvictionOptions,
 	getDevControlDurableObjectBindingName,
 } from "./dev-control";
 import type { DurableObjectNamespace } from "@cloudflare/workers-types/experimental";
@@ -35,7 +35,7 @@ export default class DevControl
 	async evictDurableObject(
 		scriptName: string,
 		className: string,
-		options: DevControlDurableObjectEvictionOptions
+		options: DurableObjectEvictionOptions
 	): Promise<void> {
 		const doNamespace = getDurableObjectNamespace(
 			this.env,
