@@ -434,6 +434,62 @@ describe("createWorkerUploadForm — bindings", () => {
 		});
 	});
 
+	describe("flagship bindings", () => {
+		it("should include flagship binding with app_id", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				FLAGS: {
+					type: "flagship",
+					app_id: "flagship-app-id",
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "FLAGS",
+				type: "flagship",
+				app_id: "flagship-app-id",
+			});
+		});
+
+		it("should throw when flagship has no app_id and not in dry run", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				FLAGS: { type: "flagship" } as never,
+			};
+			expect(() => createWorkerUploadForm(createEsmWorker(), bindings)).toThrow(
+				'FLAGS bindings must have an "app_id" field'
+			);
+		});
+
+		it("should convert flagship to inherit binding during dry run when app_id is missing", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				FLAGS: { type: "flagship" } as never,
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings, {
+				dryRun: true,
+			});
+			expect(getBindings(form)).toContainEqual({
+				name: "FLAGS",
+				type: "inherit",
+			});
+		});
+
+		it("should convert flagship with INHERIT_SYMBOL to inherit binding", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				FLAGS: { type: "flagship", app_id: INHERIT_SYMBOL },
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "FLAGS",
+				type: "inherit",
+			});
+		});
+	});
+
 	describe("singleton bindings", () => {
 		it.for([
 			{ bindingName: "BROWSER", type: "browser" as const },

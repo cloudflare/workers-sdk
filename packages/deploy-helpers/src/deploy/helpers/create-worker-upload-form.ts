@@ -433,16 +433,27 @@ export function createWorkerUploadForm(
 	});
 
 	flagship.forEach(({ binding, app_id }) => {
-		if (app_id === undefined) {
+		let appId: string | typeof INHERIT_SYMBOL | undefined = app_id;
+		if (options?.dryRun) {
+			appId ??= INHERIT_SYMBOL;
+		}
+		if (appId === undefined) {
 			throw new UserError(`${binding} bindings must have an "app_id" field`, {
 				telemetryMessage: "flagship binding missing app_id",
 			});
 		}
-		metadataBindings.push({
-			name: binding,
-			type: "flagship",
-			app_id,
-		});
+		if (appId === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "flagship",
+				app_id: appId,
+			});
+		}
 	});
 
 	ratelimits.forEach(({ name, namespace_id, simple }) => {
