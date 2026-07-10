@@ -187,38 +187,51 @@ export async function resolveVersion(
 	return { name, badVersion, goodVersion };
 }
 
+export interface NpmCommand {
+	args: string[];
+	display: string;
+}
+
 /**
- * Builds the list of npm CLI commands to execute.
+ * Builds the list of npm commands to execute.
  * dist-tag commands come first (to stop users getting the bad version),
  * then deprecation commands.
  */
 export function buildCommands(
 	resolved: ResolvedPackage[],
 	reason: string
-): string[] {
-	const commands: string[] = [];
+): NpmCommand[] {
+	const commands: NpmCommand[] = [];
 
 	for (const { name, goodVersion } of resolved) {
-		commands.push(`npm dist-tag add ${name}@${goodVersion} latest`);
+		commands.push({
+			args: ["dist-tag", "add", `${name}@${goodVersion}`, "latest"],
+			display: `npm dist-tag add ${name}@${goodVersion} latest`,
+		});
 	}
 
 	for (const { name, badVersion, goodVersion } of resolved) {
-		commands.push(
-			`npm deprecate ${name}@${badVersion} "${reason}. Downgrade to ${goodVersion}"`
-		);
+		const message = `${reason}. Downgrade to ${goodVersion}`;
+		commands.push({
+			args: ["deprecate", `${name}@${badVersion}`, message],
+			display: `npm deprecate ${name}@${badVersion} "${message}"`,
+		});
 	}
 
 	return commands;
 }
 
 /**
- * Executes a list of npm CLI commands sequentially.
+ * Executes a list of npm commands sequentially via spawnSync.
  * Aborts on the first failure.
  */
-export function executeCommands(commands: string[]): void {
-	for (const cmd of commands) {
-		console.log(`  $ ${cmd}`);
-		execSync(cmd, { stdio: "inherit" });
+export function executeCommands(commands: NpmCommand[]): void {
+	for (const { args, display } of commands) {
+		console.log(`  $ ${display}`);
+		const result = spawnSync("npm", args, { stdio: "inherit" });
+		if (result.status !== 0) {
+			throw new Error(`Command failed: npm ${args.join(" ")}`);
+		}
 	}
 }
 
@@ -448,7 +461,7 @@ export async function main(argv: string[] = process.argv.slice(2)) {
 
 	console.log("\nCommands to execute:");
 	for (let i = 0; i < commands.length; i++) {
-		console.log(`  ${i + 1}. ${commands[i]}`);
+		console.log(`  ${i + 1}. ${commands[i].display}`);
 	}
 
 	if (dryRun) {

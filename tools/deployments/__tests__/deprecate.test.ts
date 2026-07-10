@@ -295,15 +295,38 @@ describe("buildCommands()", () => {
 			},
 		];
 		const commands = buildCommands(resolved, "Regression in X");
-		expect(commands).toEqual([
-			"npm dist-tag add wrangler@4.107.1 latest",
-			"npm dist-tag add @cloudflare/vite-plugin@1.43.1 latest",
-			'npm deprecate wrangler@4.108.0 "Regression in X. Downgrade to 4.107.1"',
-			'npm deprecate @cloudflare/vite-plugin@1.43.2 "Regression in X. Downgrade to 1.43.1"',
+		expect(commands.map((c) => c.args)).toEqual([
+			["dist-tag", "add", "wrangler@4.107.1", "latest"],
+			["dist-tag", "add", "@cloudflare/vite-plugin@1.43.1", "latest"],
+			[
+				"deprecate",
+				"wrangler@4.108.0",
+				"Regression in X. Downgrade to 4.107.1",
+			],
+			[
+				"deprecate",
+				"@cloudflare/vite-plugin@1.43.2",
+				"Regression in X. Downgrade to 1.43.1",
+			],
 		]);
 	});
 
-	it("should include the reason and downgrade version in deprecation message", ({
+	it("should produce display strings for logging", ({ expect }) => {
+		const resolved = [
+			{
+				name: "wrangler",
+				badVersion: "4.108.0",
+				goodVersion: "4.107.1",
+			},
+		];
+		const commands = buildCommands(resolved, "Regression in X");
+		expect(commands.map((c) => c.display)).toEqual([
+			"npm dist-tag add wrangler@4.107.1 latest",
+			'npm deprecate wrangler@4.108.0 "Regression in X. Downgrade to 4.107.1"',
+		]);
+	});
+
+	it("should include the reason and downgrade version in deprecation args", ({
 		expect,
 	}) => {
 		const resolved = [
@@ -314,9 +337,11 @@ describe("buildCommands()", () => {
 			},
 		];
 		const commands = buildCommands(resolved, "Scheduled handlers broken");
-		expect(commands[1]).toBe(
-			'npm deprecate miniflare@4.20260706.0 "Scheduled handlers broken. Downgrade to 4.20260702.0"'
-		);
+		expect(commands[1].args).toEqual([
+			"deprecate",
+			"miniflare@4.20260706.0",
+			"Scheduled handlers broken. Downgrade to 4.20260702.0",
+		]);
 	});
 });
 
