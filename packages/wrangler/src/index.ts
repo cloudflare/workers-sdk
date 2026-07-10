@@ -493,6 +493,7 @@ import {
 	authListCommand,
 } from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
+import { logDidYouMean } from "./utils/did-you-mean";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -2629,13 +2630,16 @@ export async function main(argv: string[]): Promise<void> {
 		return;
 	}
 
-	// Check for unknown command with a `--help` flag
+	// Check for unknown command with a `--help` flag.
+	// This throw happens before the try-catch that calls handleError(), so
+	// we log the error and suggestion here (handleError is never reached).
 	const [subCommand] = nonFlagArgs;
 	if (hasHelpFlag && subCommand) {
 		const knownCommands = registry.topLevelCommands;
 		if (!knownCommands.has(subCommand)) {
 			logger.info("");
 			logger.error(`Unknown argument: ${subCommand}`);
+			logDidYouMean(subCommand, knownCommands, "wrangler");
 			await showHelpWithCategories();
 			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`, {
 				telemetryMessage: "cli help unknown argument",
@@ -2692,7 +2696,11 @@ export async function main(argv: string[]): Promise<void> {
 				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
 			}
 			try {
-				await handleError(e, configArgs, argv);
+				await handleError(e, configArgs, argv, (path) =>
+					path.length === 0
+						? registry.topLevelCommands
+						: registry.getSubcommands(path)
+				);
 			} catch (handleErrorErr) {
 				// handleError itself threw before it could log the error.
 				// Fall back to raw stderr so the user always sees something.

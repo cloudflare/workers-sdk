@@ -1,6 +1,7 @@
 import { getZoneForRoute, getZoneIdFromHost } from "@cloudflare/deploy-helpers";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchListResult } from "./cfetch";
+import { levenshteinDistance } from "./utils/levenshtein";
 import type { ZoneIdCache } from "@cloudflare/deploy-helpers";
 import type { ComplianceConfig, Route } from "@cloudflare/workers-utils";
 
@@ -69,33 +70,6 @@ async function getRoutesForZone(
 }
 
 /**
- * Given two strings, return the levenshtein distance between them as a simple text match heuristic
- */
-function distanceBetween(a: string, b: string, cache = new Map()): number {
-	if (cache.has(`${a}|${b}`)) {
-		return cache.get(`${a}|${b}`);
-	}
-	let result;
-	if (b == "") {
-		result = a.length;
-	} else if (a == "") {
-		result = b.length;
-	} else if (a[0] === b[0]) {
-		result = distanceBetween(a.slice(1), b.slice(1), cache);
-	} else {
-		result =
-			1 +
-			Math.min(
-				distanceBetween(a.slice(1), b, cache),
-				distanceBetween(a, b.slice(1), cache),
-				distanceBetween(a.slice(1), b.slice(1), cache)
-			);
-	}
-	cache.set(`${a}|${b}`, result);
-	return result;
-}
-
-/**
  * Given an invalid route, sort the valid routes by closeness to the invalid route (levenstein distance)
  */
 function findClosestRoute(
@@ -103,8 +77,8 @@ function findClosestRoute(
 	assignedRoutes: WorkerRoute[]
 ): WorkerRoute[] {
 	return assignedRoutes.sort((a, b) => {
-		const distanceA = distanceBetween(providedRoute, a.pattern);
-		const distanceB = distanceBetween(providedRoute, b.pattern);
+		const distanceA = levenshteinDistance(providedRoute, a.pattern);
+		const distanceB = levenshteinDistance(providedRoute, b.pattern);
 		return distanceA - distanceB;
 	});
 }
