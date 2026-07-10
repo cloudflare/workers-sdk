@@ -91,6 +91,9 @@ export type BindingName<Env, Type> = string extends keyof Env
 			}[keyof Env],
 			string
 		>;
+export type DurableObjectIdentifier =
+	| { name: string; id?: never }
+	| { id: string; name?: never };
 
 export type WorkerDefaultExport =
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.
@@ -159,17 +162,6 @@ export type WorkerHandle<
 		bindingName: BindingName<Env, DurableObjectNamespace>
 	): Promise<string[]>;
 	/**
-	 * Applies D1 migration files that have not already run to a D1 binding on this Worker.
-	 *
-	 * @example
-	 * ```ts
-	 * beforeEach(async () => {
-	 *   await worker.applyD1Migrations("DATABASE");
-	 * });
-	 * ```
-	 */
-	applyD1Migrations(bindingName: BindingName<Env, D1Database>): Promise<void>;
-	/**
 	 * Evicts a currently running Durable Object instance while preserving its durable storage.
 	 * In-memory state is reset the next time the object starts.
 	 * Pass an exported Durable Object class name, or a Durable Object binding name.
@@ -187,10 +179,21 @@ export type WorkerHandle<
 		classNameOrBindingName:
 			| ExportName<Module, Rpc.DurableObjectBranded>
 			| BindingName<Env, DurableObjectNamespace>,
-		options: ({ name: string; id?: never } | { id: string; name?: never }) & {
+		options: DurableObjectIdentifier & {
 			webSockets?: "close" | "hibernate";
 		}
 	): Promise<void>;
+	/**
+	 * Applies D1 migration files that have not already run to a D1 binding on this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * beforeEach(async () => {
+	 *   await worker.applyD1Migrations("DATABASE");
+	 * });
+	 * ```
+	 */
+	applyD1Migrations(bindingName: BindingName<Env, D1Database>): Promise<void>;
 	/**
 	 * Creates an introspector for a specific Workflow instance.
 	 */
