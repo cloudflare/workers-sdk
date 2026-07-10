@@ -1,5 +1,15 @@
 # @cloudflare/workers-utils
 
+## 0.26.0
+
+### Minor Changes
+
+- [#14591](https://github.com/cloudflare/workers-sdk/pull/14591) [`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Export `getInstalledPackageVersion`, `getPackagePath`, and `isPackageInstalled` utilities
+
+  Package resolution helpers that were previously internal to `@cloudflare/autoconfig` are now exported from `@cloudflare/workers-utils` so they can be shared across packages without pulling in the full autoconfig dependency.
+
+  `getPackagePath` now also consistently returns a directory path. Previously the fallback resolution strategy could return a file path (the package entry point) instead of its containing directory.
+
 ## 0.25.1
 
 ### Patch Changes
