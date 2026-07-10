@@ -95,7 +95,10 @@ test("Unbound send_email binding works", async ({ expect }) => {
 						JSON.stringify(log.logs, null, 2)
 				);
 			}
-			const file = entry[/* message */ 1].split("\n")[1].trim();
+			const message = entry[1];
+			const fileMatch = message.match(/^  \(system\): (.+)$/m);
+			expect(fileMatch).toBeDefined();
+			const file = fileMatch![1];
 			expect(await readFile(file, "utf-8")).toBe(email);
 		},
 		{ timeout: 5_000, interval: 100 }
@@ -192,7 +195,10 @@ test("Single allowed destination send_email binding works", async ({
 						JSON.stringify(log.logs, null, 2)
 				);
 			}
-			const file = entry[/* message */ 1].split("\n")[1].trim();
+			const message = entry[1];
+			const fileMatch = message.match(/^  \(system\): (.+)$/m);
+			expect(fileMatch).toBeDefined();
+			const file = fileMatch![1];
 			expect(await readFile(file, "utf-8")).toBe(email);
 		},
 		{ timeout: 5_000, interval: 100 }
@@ -1021,7 +1027,10 @@ test("reply: references generated correctly", async ({ expect }) => {
 		"Email handler replied to sender with the following message:"
 	);
 
-	const file = log.logs[1][1].split("\n")[1].trim();
+	const message = log.logs[1][1];
+	const fileMatch = message.match(/^  (.+)$/m);
+	expect(fileMatch).toBeDefined();
+	const file = fileMatch![1];
 	const fileContent = await readFile(file, "utf-8");
 	expect(fileContent).toBeTruthy();
 	expect(
@@ -1090,8 +1099,8 @@ test("MessageBuilder with text only", async ({ expect }) => {
 			expect(message).toContain("From: sender@example.com");
 			expect(message).toContain("To: recipient@example.com");
 			expect(message).toContain("Subject: Test Email");
-			expect(message).toContain("Text: ");
-			const textFile = message.match(/^Text: (.+)$/m)?.[1];
+			expect(message).toContain("Text (system): ");
+			const textFile = message.match(/^Text \(system\): (.+)$/m)?.[1];
 			expect(textFile).toBeDefined();
 			expect(await readFile(String(textFile), "utf-8")).toBe(
 				"Hello, this is a test email!"
@@ -1205,9 +1214,9 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 			const message = entry[1];
 
 			// Verify attachment file path is logged
-			expect(message).toContain("Attachment (attachment): test.txt ->");
+			expect(message).toContain("Attachment (attachment) (system): test.txt ->");
 			const attachmentFile = message.match(
-				/^Attachment \(attachment\): test\.txt -> (.+)$/m
+				/^Attachment \(attachment\) \(system\): test\.txt -> (.+)$/m
 			)?.[1];
 			expect(attachmentFile).toBeDefined();
 			expect(await readFile(String(attachmentFile), "utf-8")).toBe(
@@ -1296,14 +1305,14 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 				Bcc: boss@example.com
 				Subject: Quarterly Report
 
-				Text: /email-text/[FILE].txt
-				Text (local): /email-text/[FILE].txt
-				HTML: /email-html/[FILE].html
-				HTML (local): /email-html/[FILE].html
-				Attachment (inline): logo.png -> /email-attachment/[FILE].png
-				Attachment (inline) (local): logo.png -> /email-attachment/[FILE].png
-				Attachment (attachment): report.pdf -> /email-attachment/[FILE].pdf
-				Attachment (attachment) (local): report.pdf -> /email-attachment/[FILE].pdf"
+				Text (system): /email-text/[FILE].txt
+				Text (project): /email-text/[FILE].txt
+				HTML (system): /email-html/[FILE].html
+				HTML (project): /email-html/[FILE].html
+				Attachment (inline) (system): logo.png -> /email-attachment/[FILE].png
+				Attachment (inline) (project): logo.png -> /email-attachment/[FILE].png
+				Attachment (attachment) (system): report.pdf -> /email-attachment/[FILE].pdf
+				Attachment (attachment) (project): report.pdf -> /email-attachment/[FILE].pdf"
 			`);
 		},
 		{ timeout: 5_000, interval: 100 }
@@ -2045,20 +2054,22 @@ test("send_email binding is available from getBindings", async ({ expect }) => {
 });
 
 describe("EMAIL_PLUGIN.getServices", () => {
-	test("creates disk services for system temp and local directories", async ({
+	test("creates disk services for system temp and project directories", async ({
 		expect,
 	}) => {
 		const tmp = await useTmp();
-		const rootPath = await useTmp();
+		const persistRoot = path.join(tmp, ".wrangler", "state", "v3");
 
 		const result = await EMAIL_PLUGIN.getServices({
 			options: {
 				email: { send_email: [{ name: "SEND_EMAIL" }] },
 			},
+			sharedOptions: {},
 			tmpPath: tmp,
-			rootPath,
+			defaultPersistRoot: persistRoot,
 			workerNames: ["default"],
 			workerIndex: 0,
+			emailSessionDirectories: new Set(),
 		} as unknown as Parameters<typeof EMAIL_PLUGIN.getServices>[0]);
 
 		if (!Array.isArray(result)) {
@@ -2074,9 +2085,9 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		}>;
 		expect(diskServices).toHaveLength(2);
 
-		const systemTempDisk = diskServices.find((s) => s.name === "email:disk");
-		const localDisk = diskServices.find((s) => s.name === "email:disk:local:default");
-		if (!systemTempDisk || !localDisk) {
+		const systemTempDisk = diskServices.find((s) => s.name === "email:disk:system");
+		const projectDisk = diskServices.find((s) => s.name === "email:disk:project");
+		if (!systemTempDisk || !projectDisk) {
 			throw new Error("Expected both disk services to be present");
 		}
 
@@ -2084,11 +2095,11 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		expect(systemTempDisk.disk.path).toBe(path.join(tmp, "email"));
 		expect(existsSync(systemTempDisk.disk.path)).toBe(true);
 
-		// Local temp directory (.wrangler/tmp/email/)
-		expect(localDisk.disk.path).toMatch(
-			/\.wrangler[/\\]tmp[/\\]email[/\\][a-f0-9-]+$/
+		// Project temp directory
+		expect(projectDisk.disk.path).toMatch(
+			/\.wrangler[/\\]state[/\\]v3[/\\]tmp[/\\]email[/\\][a-f0-9-]+$/
 		);
-		expect(existsSync(localDisk.disk.path)).toBe(true);
+		expect(existsSync(projectDisk.disk.path)).toBe(true);
 
 		const workerService = services.find(
 			(s) => s.name === "SEND-EMAIL-WORKER:SEND_EMAIL"
@@ -2100,20 +2111,23 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		}
 
 		const bindings = workerService.worker.bindings;
-		const emailDirBinding = bindings.find((b) => b.name === "email_directory");
-		const emailLocalDirBinding = bindings.find(
-			(b) => b.name === "email_directory_local"
-		);
-		if (!emailDirBinding?.json || !emailLocalDirBinding?.json) {
-			throw new Error("Expected both email directory bindings with JSON values");
+		const emailDiskServicesBinding = bindings.find((b) => b.name === "email_disk_services");
+		if (!emailDiskServicesBinding?.json) {
+			throw new Error("Expected email_disk_services binding with JSON value");
 		}
 
-		expect(JSON.parse(emailDirBinding.json)).toBe(path.join(tmp, "email"));
-		expect(JSON.parse(emailLocalDirBinding.json)).toBe(localDisk.disk.path);
+		const emailDiskServices = JSON.parse(emailDiskServicesBinding.json);
+		expect(emailDiskServices).toHaveLength(2);
+		expect(emailDiskServices[0].name).toBe("MINIFLARE_EMAIL_DISK_SYSTEM");
+		expect(emailDiskServices[0].service.name).toBe("email:disk:system");
+		expect(emailDiskServices[0].path).toBe(path.join(tmp, "email"));
+		expect(emailDiskServices[1].name).toBe("MINIFLARE_EMAIL_DISK_PROJECT");
+		expect(emailDiskServices[1].service.name).toBe("email:disk:project");
+		expect(emailDiskServices[1].path).toBe(projectDisk.disk.path);
 	});
 });
 
-test("MessageBuilder writes files to both system temp and local directories", async ({
+test("MessageBuilder writes files to both system temp and project directories", async ({
 	expect,
 }) => {
 	const log = new TestLog();
@@ -2160,26 +2174,25 @@ test("MessageBuilder writes files to both system temp and local directories", as
 			}
 			const message = entry[1];
 
-			const systemTempMatch = message.match(/^Text: (.+)$/m);
-			const localMatch = message.match(/^Text \(local\): (.+)$/m);
+			const systemTempMatch = message.match(/^Text \(system\): (.+)$/m);
+			const projectMatch = message.match(/^Text \(project\): (.+)$/m);
 			expect(systemTempMatch).not.toBeNull();
-			expect(localMatch).not.toBeNull();
+			expect(projectMatch).not.toBeNull();
 
 			const systemTempPath = String(systemTempMatch?.[1]);
-			const localPath = String(localMatch?.[1]);
+			const projectPath = String(projectMatch?.[1]);
 
 			// Both files exist and hold identical content
 			expect(existsSync(systemTempPath)).toBe(true);
-			expect(existsSync(localPath)).toBe(true);
+			expect(existsSync(projectPath)).toBe(true);
 			expect(await readFile(systemTempPath, "utf-8")).toBe(
 				"This should appear in both directories"
 			);
-			expect(await readFile(localPath, "utf-8")).toBe(
+			expect(await readFile(projectPath, "utf-8")).toBe(
 				"This should appear in both directories"
 			);
 
-			// The local file lives under .wrangler/tmp/email
-			expect(localPath).toMatch(/\.wrangler[/\\]tmp[/\\]email[/\\]/);
+			expect(projectPath).toMatch(/[/\\]tmp[/\\]email[/\\]/);
 		},
 		{ timeout: 5_000, interval: 100 }
 	);

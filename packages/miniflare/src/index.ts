@@ -294,7 +294,6 @@ function validateOptions(
 				);
 			}
 		}
-		pluginSharedOpts.core.workerRootPaths = workerRootPaths;
 	} catch (e) {
 		if (e instanceof z.ZodError) {
 			let formatted: string | undefined;
@@ -2169,7 +2168,6 @@ export class Miniflare {
 				queueConsumers,
 				devRegistryEnabled,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
-				rootPath: sharedOpts.core.workerRootPaths?.[i] ?? "",
 				emailSessionDirectories: this.#emailSessionDirectories,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {

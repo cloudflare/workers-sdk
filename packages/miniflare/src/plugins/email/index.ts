@@ -9,6 +9,7 @@ import {
 	remoteProxyClientWorker,
 	ProxyNodeBinding,
 } from "../shared";
+import { CoreSharedOptionsSchema } from "../core";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
@@ -46,11 +47,7 @@ export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
 // Disk service name and binding name for writing temporary files to system temp directory
 const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
-const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
-
-// Disk service name and binding name for writing temporary files to .wrangler
-const EMAIL_DISK_SERVICE_NAME_LOCAL = `${EMAIL_DISK_SERVICE_NAME}:local`;
-const EMAIL_DISK_BINDING_NAME_LOCAL = "MINIFLARE_EMAIL_DISK_LOCAL";
+const EMAIL_DISK_BINDING_NAME= "MINIFLARE_EMAIL_DISK";
 
 function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
@@ -59,8 +56,12 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	}));
 }
 
-export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
+export const EMAIL_PLUGIN: Plugin<
+	typeof EmailOptionsSchema,
+	typeof CoreSharedOptionsSchema
+> = {
 	options: EmailOptionsSchema,
+	sharedOptions: CoreSharedOptionsSchema,
 	bindingTypeDescription: "Email",
 	getBindings(options): Worker_Binding[] {
 		if (!options.email?.send_email) {
@@ -94,36 +95,37 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 		}
 
 		// Used to send email logs to the system's temp directory.
-		const emailDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
-		await mkdir(emailDirectory, { recursive: true });
+		const emailSystemDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
+		await mkdir(emailSystemDirectory, { recursive: true });
 
-		// Used to send email logs to .wrangler/tmp/email
-		const workerName = args.workerNames[args.workerIndex] || "default";
-		const wranglerHiddenDirectory = path.join(args.rootPath, ".wrangler");
-		const emailLocalDirectory = path.join(wranglerHiddenDirectory, "tmp", "email");
-		await mkdir(emailLocalDirectory, { recursive: true });
+		// Used to send email logs to the project persist directory
+		const persistRoot = args.defaultPersistRoot ?? args.tmpPath;
+		const emailProjectDirectory = path.join(persistRoot, "tmp", "email");
+		await mkdir(emailProjectDirectory, { recursive: true });
 
-		const emailLocalSessionDirectory = path.join(
-			emailLocalDirectory,
+		const emailProjectSessionDirectory = path.join(
+			emailProjectDirectory,
 			crypto.randomUUID()
 		);
-		await mkdir(emailLocalSessionDirectory, { recursive: true });
-		args.emailSessionDirectories.add(emailLocalSessionDirectory);
+		await mkdir(emailProjectSessionDirectory, { recursive: true });
+		args.emailSessionDirectories.add(emailProjectSessionDirectory);
 
-		const localDiskServiceName = `${EMAIL_DISK_SERVICE_NAME_LOCAL}:${workerName}`;
+		const workerName = args.workerNames[args.workerIndex] || "default";
+		const systemServiceName = `${EMAIL_DISK_SERVICE_NAME}:system`;
+		const projectServiceName = `${EMAIL_DISK_SERVICE_NAME}:project`;
 
 		const services: Service[] = [
 			{
-				name: EMAIL_DISK_SERVICE_NAME,
+				name: systemServiceName,
 				disk: {
-					path: emailDirectory,
+					path: emailSystemDirectory,
 					writable: true,
 				},
 			},
 			{
-				name: localDiskServiceName,
+				name: projectServiceName,
 				disk: {
-					path: emailLocalSessionDirectory,
+					path: emailProjectSessionDirectory,
 					writable: true,
 				},
 			},
@@ -145,21 +147,33 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 							],
 							bindings: [
 								...buildJsonBindings(config),
+								// Add service bindings for disk services
 								{
-									name: EMAIL_DISK_BINDING_NAME,
-									service: { name: EMAIL_DISK_SERVICE_NAME },
+									name: `${EMAIL_DISK_BINDING_NAME}_SYSTEM`,
+									service: { name: systemServiceName },
 								},
 								{
-									name: EMAIL_DISK_BINDING_NAME_LOCAL,
-									service: { name: localDiskServiceName },
+									name: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
+									service: { name: projectServiceName },
 								},
 								{
-									name: "email_directory",
-									json: JSON.stringify(emailDirectory),
-								},
-								{
-									name: "email_directory_local",
-									json: JSON.stringify(emailLocalSessionDirectory),
+									name: "email_disk_services",
+									json: JSON.stringify([
+										{
+											name: `${EMAIL_DISK_BINDING_NAME}_SYSTEM`,
+											service: {
+												name: systemServiceName,
+											},
+											path: emailSystemDirectory,
+										},
+										{
+											name: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
+											service: {
+												name: projectServiceName,
+											},
+											path: emailProjectSessionDirectory,
+										},
+									]),
 								},
 							],
 						},

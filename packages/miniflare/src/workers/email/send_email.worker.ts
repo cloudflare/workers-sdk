@@ -80,17 +80,38 @@ function joinPath(base: string, ...segments: string[]): string {
 	return [base.replace(/[\\/]+$/, ""), ...segments].join(separator);
 }
 
+interface DiskService {
+	fetch(url: URL | string, init?: RequestInit): Promise<Response>;
+}
+
+interface DiskServiceConfig {
+	name: string;
+	service: { name: string };
+	path: string;
+}
+
 interface SendEmailEnv {
-	MINIFLARE_EMAIL_DISK: Fetcher;
-	MINIFLARE_EMAIL_DISK_LOCAL: Fetcher;
-	email_directory: string;
-	email_directory_local: string
+	email_disk_services: DiskServiceConfig[];
 	destination_address: string | undefined;
 	allowed_destination_addresses: string[] | undefined;
 	allowed_sender_addresses: string[] | undefined;
+	MINIFLARE_EMAIL_DISK_SYSTEM: DiskService;
+	MINIFLARE_EMAIL_DISK_PROJECT: DiskService;
 }
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
+	/**
+	 * Gets a disk service binding by name in a type-safe way.
+	 */
+	private getServiceBinding(name: string): DiskService {
+		if (name === "MINIFLARE_EMAIL_DISK_SYSTEM") {
+			return this.env.MINIFLARE_EMAIL_DISK_SYSTEM;
+		} else if (name === "MINIFLARE_EMAIL_DISK_PROJECT") {
+			return this.env.MINIFLARE_EMAIL_DISK_PROJECT;
+		}
+		throw new Error(`Unknown disk service binding: ${name}`);
+	}
+
 	/**
 	 * Logs a message via the runtime console.
 	 */
@@ -104,7 +125,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		content: string | ArrayBuffer | ArrayBufferView,
 		extension: string,
 		prefix: string,
-		osDir: boolean = true,
+		location: "system" | "project" = "system",
 	): Promise<string> {
 		let body: string | Uint8Array;
 		if (typeof content === "string") {
@@ -123,19 +144,25 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		const fileName = `${crypto.randomUUID()}.${extension}`;
 		const url = new URL(`${prefix}/${fileName}`, "http://placeholder/");
 
-		if (osDir) {
-			await this.env.MINIFLARE_EMAIL_DISK.fetch(url, {
-				method: "PUT",
-				body,
-			});
-			return joinPath(this.env.email_directory, prefix, fileName);
+		// Find the appropriate disk service config
+		// Binding names are MINIFLARE_EMAIL_DISK_SYSTEM and MINIFLARE_EMAIL_DISK_PROJECT
+		const diskConfig = this.env.email_disk_services.find((config) =>
+			location === "system"
+				? config.name.includes("_SYSTEM")
+				: config.name.includes("_PROJECT")
+		);
+
+		if (!diskConfig) {
+			throw new Error(`Disk service for ${location} not found`);
 		}
 
-		await this.env.MINIFLARE_EMAIL_DISK_LOCAL.fetch(url, {
+		const service = this.getServiceBinding(diskConfig.name);
+		await service.fetch(url, {
 			method: "PUT",
 			body,
 		});
-		return joinPath(this.env.email_directory_local, prefix, fileName);
+
+		return joinPath(diskConfig.path, prefix, fileName);
 	}
 
 	private checkDestinationAllowed(to: string) {
@@ -244,11 +271,18 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				throw new Error("invalid headers set");
 			}
 
-			const file = await this.storeTempFile(rawEmailBuffer, "eml", "email");
-			const fileLocal = await this.storeTempFile(rawEmailBuffer, "eml", "email", false);
+			const locations: Array<"system" | "project"> = ["system", "project"];
+			const filePaths = await Promise.all(
+				locations.map((location) =>
+					this.storeTempFile(rawEmailBuffer, "eml", "email", location)
+				)
+			);
 
+			const fileInfo = locations
+				.map((location, i) => `Email (${location}): ${filePaths[i]}`)
+				.join("\n");
 			this.log(
-				`${blue("send_email binding called with the following message:")}\n  ${file}\n(local): ${fileLocal}`
+				`${blue("send_email binding called with the following message:")}\n${fileInfo}`
 			);
 
 			return { messageId: synthesizeMessageId(emailMessage.from) };
@@ -260,38 +294,29 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.validateMessageBuilder(builder);
 
 			// Store text, HTML content, and attachments to files for easy viewing
+			const locations: Array<"system" | "project"> = ["system", "project"];
 			const files: string[] = [];
 
 			if (builder.text) {
-				const filePath = await this.storeTempFile(
-					builder.text,
-					"txt",
-					"email-text"
+				await Promise.all(
+					locations.map((location) => {
+						return this.storeTempFile(builder.text!, "txt", "email-text", location).then((filePath) => {
+							files.push(`Text (${location}): ${filePath}`);
+							return filePath;
+						});
+					})
 				);
-				files.push(`Text: ${filePath}`);
-				const filePathLocal = await this.storeTempFile(
-					builder.text,
-					"txt",
-					"email-text",
-					false
-				);
-				files.push(`Text (local): ${filePathLocal}`);
 			}
 
 			if (builder.html) {
-				const filePath = await this.storeTempFile(
-					builder.html,
-					"html",
-					"email-html"
+				await Promise.all(
+					locations.map((location) =>
+						this.storeTempFile(builder.html!, "html", "email-html", location).then((filePath) => {
+							files.push(`HTML (${location}): ${filePath}`);
+							return filePath;
+						})
+					)
 				);
-				files.push(`HTML: ${filePath}`);
-				const filePathLocal = await this.storeTempFile(
-					builder.html,
-					"html",
-					"email-html",
-					false
-				);
-				files.push(`HTML (local): ${filePathLocal}`);
 			}
 
 			// Store attachments
@@ -301,22 +326,18 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					const extMatch = attachment.filename.match(/\.([^.]+)$/);
 					const extension = extMatch ? extMatch[1] : "bin";
 
-					const filePath = await this.storeTempFile(
-						attachment.content,
-						extension,
-						"email-attachment"
-					);
-					const filePathLocal = await this.storeTempFile(
-						attachment.content,
-						extension,
-						"email-attachment",
-						false
-					);
-					files.push(
-						`Attachment (${attachment.disposition}): ${attachment.filename} -> ${filePath}`
-					);
-					files.push(
-						`Attachment (${attachment.disposition}) (local): ${attachment.filename} -> ${filePathLocal}`
+					await Promise.all(
+						locations.map((location) =>
+							this.storeTempFile(
+								attachment.content,
+								extension,
+								"email-attachment",
+								location
+							).then((filePath) => {
+								files.push(`Attachment (${attachment.disposition}) (${location}): ${attachment.filename} -> ${filePath}`);
+								return filePath;
+							})
+						)
 					);
 				}
 			}
