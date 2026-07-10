@@ -115,7 +115,7 @@ export { isDockerfile } from "./config/validation";
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
 
 export { createConfigCache } from "./config-cache";
-export type { ConfigCache } from "./config-cache";
+export type { ConfigCache, ConfigCacheOptions } from "./config-cache";
 
 export {
 	type EphemeralDirectory,

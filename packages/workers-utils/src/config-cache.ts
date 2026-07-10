@@ -22,6 +22,19 @@ export interface ConfigCache {
 	purgeConfigCaches: () => void;
 }
 
+export interface ConfigCacheOptions {
+	/**
+	 * Namespace for the cache directory, so different Cloudflare CLIs get
+	 * isolated caches (`<node_modules>/.cache/<namespace>` or
+	 * `.<namespace>/cache`). Defaults to `"wrangler"` for backward compatibility.
+	 *
+	 * `purgeConfigCaches()` deletes the whole cache folder, so a non-default
+	 * namespace also ensures e.g. `cf login`/`logout` never wipes wrangler's
+	 * cache.
+	 */
+	namespace?: string;
+}
+
 const arrayFormatter = new Intl.ListFormat("en-US", {
 	style: "long",
 	type: "conjunction",
@@ -30,41 +43,50 @@ const arrayFormatter = new Intl.ListFormat("en-US", {
 /**
  * Build a file-backed config cache bound to the given logger.
  */
-export function createConfigCache(logger: Logger): ConfigCache {
+export function createConfigCache(
+	logger: Logger,
+	options?: ConfigCacheOptions
+): ConfigCache {
 	let cacheMessageShown = false;
+	const namespace = options?.namespace ?? "wrangler";
 
 	/**
 	 * Determines the cache folder location using the following priority:
-	 * 1. WRANGLER_CACHE_DIR environment variable (explicit override)
-	 * 2. Existing node_modules/.cache/wrangler directory (backward compatibility)
-	 * 3. Existing .wrangler/cache directory
-	 * 4. node_modules/.cache/wrangler if node_modules exists
-	 * 5. .wrangler/cache as final fallback
+	 * 1. WRANGLER_CACHE_DIR environment variable (wrangler namespace only)
+	 * 2. Existing <node_modules>/.cache/<namespace> directory (backward compatibility)
+	 * 3. Existing .<namespace>/cache directory
+	 * 4. <node_modules>/.cache/<namespace> if node_modules exists
+	 * 5. .<namespace>/cache as final fallback
 	 */
 	function getCacheFolder(): string {
-		// Priority 1: Explicit environment variable
-		const envCacheDir = getWranglerCacheDirFromEnv();
-		if (envCacheDir) {
-			return envCacheDir;
+		// Priority 1: Explicit environment variable. WRANGLER_CACHE_DIR is a
+		// wrangler-specific override, so only the wrangler namespace honours it;
+		// other CLIs get their own isolated cache dir instead of being redirected
+		// into wrangler's.
+		if (namespace === "wrangler") {
+			const envCacheDir = getWranglerCacheDirFromEnv();
+			if (envCacheDir) {
+				return envCacheDir;
+			}
 		}
 
 		// Find node_modules using existing find-up logic
 		const closestNodeModulesDirectory = find.dir("node_modules");
 
 		const nodeModulesCache = closestNodeModulesDirectory
-			? path.join(closestNodeModulesDirectory, ".cache", "wrangler")
+			? path.join(closestNodeModulesDirectory, ".cache", namespace)
 			: null;
 
-		const wranglerCache = path.join(process.cwd(), ".wrangler", "cache");
+		const localCache = path.join(process.cwd(), `.${namespace}`, "cache");
 
 		// Priority 2: Use existing node_modules cache if present
 		if (nodeModulesCache && existsSync(nodeModulesCache)) {
 			return nodeModulesCache;
 		}
 
-		// Priority 3: Use existing .wrangler/cache if present
-		if (existsSync(wranglerCache)) {
-			return wranglerCache;
+		// Priority 3: Use existing .<namespace>/cache if present
+		if (existsSync(localCache)) {
+			return localCache;
 		}
 
 		// Priority 4: Create in node_modules if it exists
@@ -72,8 +94,8 @@ export function createConfigCache(logger: Logger): ConfigCache {
 			return nodeModulesCache;
 		}
 
-		// Priority 5: Fall back to .wrangler/cache
-		return wranglerCache;
+		// Priority 5: Fall back to .<namespace>/cache
+		return localCache;
 	}
 
 	function showCacheMessage(fields: string[], folder: string) {

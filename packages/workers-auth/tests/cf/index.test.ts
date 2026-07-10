@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it, vi } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import {
 	createCfAuth,
 	createCfProfileStore,
@@ -74,6 +74,33 @@ describe("cf auth layer", () => {
 		expect(existsSync(filePath)).toBe(true);
 		expect(JSON.parse(readFileSync(filePath, "utf8"))).toEqual(SAMPLE_CONFIG);
 		expect(auth.readAuthCredentials()).toEqual(SAMPLE_CONFIG);
+	});
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("does not treat a global API key + email as env credentials (cf is scoped-token-only)", async ({
+		expect,
+	}) => {
+		// cf sets `allowGlobalAuthKey: false`, so a bare CLOUDFLARE_API_KEY +
+		// CLOUDFLARE_EMAIL pair (with no CLOUDFLARE_API_TOKEN) must NOT count as
+		// "logged in via env". Otherwise logout/login would wrongly bail with
+		// "You are logged in with an API Token" even though cf ignores those creds.
+		vi.stubEnv("CLOUDFLARE_API_KEY", "deadbeef");
+		vi.stubEnv("CLOUDFLARE_EMAIL", "user@example.com");
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
+
+		const ctx = createTestContext();
+		const auth = createCfAuth(ctx);
+
+		// No stored token and no honoured env creds → logout falls through to the
+		// "not logged in" path rather than the env-credential short-circuit.
+		await auth.logout();
+
+		const logged = vi.mocked(ctx.logger.log).mock.calls.flat().join("\n");
+		expect(logged).not.toContain("You are logged in with an API Token");
+		expect(logged).toContain("Not logged in, exiting...");
 	});
 
 	it("lists named profiles by their `.json` files", ({ expect }) => {

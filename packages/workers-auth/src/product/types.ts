@@ -86,6 +86,13 @@ export interface AuthProduct {
 	accountCachePrefix: string;
 
 	/**
+	 * Namespace for the config-cache directory, isolating each CLI's cache so
+	 * one CLI's login/logout purge never wipes another's. Omit to use wrangler's
+	 * shared cache dir (the historical default).
+	 */
+	cacheNamespace?: string;
+
+	/**
 	 * Label for the CLI's config file, used in "set `account_id` in your <file>"
 	 * hints. A getter so it can reflect runtime config state (wrangler resolves
 	 * this from `configFileName(undefined)`).

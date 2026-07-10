@@ -187,8 +187,12 @@ export function createCloudflareAuth(
 
 	// The config cache is generic file-backed storage owned by
 	// `@cloudflare/workers-utils`; build our own instance bound to the injected
-	// logger.
-	const configCache = createConfigCache(logger);
+	// logger. The namespace isolates each CLI's cache dir so one CLI's
+	// login/logout purge (`purgeConfigCaches`) never deletes another's.
+	const configCache = createConfigCache(
+		logger,
+		product.cacheNamespace ? { namespace: product.cacheNamespace } : undefined
+	);
 
 	// The product's credential-storage bundle. Plumbs the user-level keyring
 	// opt-in preference into the storage resolver so the OAuth flow's
@@ -211,17 +215,25 @@ export function createCloudflareAuth(
 	// `generateRandomState` are left to the flow's own defaults (from the shared
 	// core); tests keep deterministic snapshot URLs by normalising the random
 	// `state` / `code_challenge` values rather than mocking these.
+	// Resolved once so the env-credential *presence* check and the env-credential
+	// *resolution* agree. Otherwise a product that disables the global API key
+	// (e.g. cf) would still treat a bare `CLOUDFLARE_API_KEY`/`CLOUDFLARE_EMAIL`
+	// pair as "logged in via env" and block login/logout, even though its token
+	// resolution ignores those creds.
+	const allowGlobalAuthKey = product.allowGlobalAuthKey ?? true;
+
 	const oauthFlow = createOAuthFlow({
 		logger,
 		isNonInteractiveOrCI,
 		openInBrowser: (url) => openInBrowser(url, logger),
-		hasEnvCredentials: () => getAuthFromEnv() !== undefined,
+		hasEnvCredentials: () =>
+			getAuthFromEnv({ allowGlobalAuthKey }) !== undefined,
 		purgeOnLoginOrLogout: configCache.purgeConfigCaches,
 		clientId: product.clientId,
 		consent: product.consent,
 		redirectUri: product.redirectUri,
 		storageFactory: credentialStorage.storageFactory,
-		allowGlobalAuthKey: product.allowGlobalAuthKey ?? true,
+		allowGlobalAuthKey,
 		temporary: {
 			// The temporary-preview-account cache is product-owned storage (a
 			// file under the global config dir, scoped to the Cloudflare API
