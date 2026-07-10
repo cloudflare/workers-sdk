@@ -663,6 +663,7 @@ export async function resolvePluginConfig(
 				mode: viteEnv.mode,
 				generateTypes: false,
 			});
+			workerConfigPath = result.configPath;
 			auxiliaryRawConfigOverride = result.rawConfig;
 			auxiliaryParsedNewConfig = result.parsedConfig;
 			configPaths.add(result.configPath);
@@ -680,7 +681,7 @@ export async function resolvePluginConfig(
 		// Build auxiliary worker config: defaults → file config → config()
 		const workerResolvedConfig = resolveWorkerConfig({
 			root,
-			configPath: resolvedNewConfig ? undefined : workerConfigPath,
+			configPath: workerConfigPath,
 			env: cloudflareEnv,
 			configCustomizer: resolvedNewConfig
 				? undefined

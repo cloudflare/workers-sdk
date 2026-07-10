@@ -104,7 +104,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 				"import { defineWorker } from '@cloudflare/config';",
 				"export default defineWorker({",
 				"  name: 'aux-worker',",
-				"  entrypoint: './aux/index.ts',",
+				"  entrypoint: './index.ts',",
 				"  compatibilityDate: '2025-01-02',",
 				"});",
 			].join("\n")
