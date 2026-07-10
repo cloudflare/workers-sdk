@@ -9,6 +9,7 @@ export default defineWorker((ctx) => ({
 	entrypoint,
 	compatibilityDate: "2026-05-18",
 	env: {
+		AUXILIARY: bindings.worker({ workerName: "auxiliary-worker" }),
 		MY_TEXT: bindings.text(`The mode is ${ctx.mode}`),
 	},
 }));

@@ -71,6 +71,11 @@ interface EntryWorkerConfig extends BaseWorkerConfig {
 }
 
 interface AuxiliaryWorkerFileConfig extends BaseWorkerConfig {
+	/**
+	 * Path to this Worker's config file. When `experimental.newConfig` is
+	 * enabled, this must point to a TypeScript config created with
+	 * `defineWorker`; otherwise it points to a Wrangler config file.
+	 */
 	configPath: string;
 	devOnly?: DevOnly;
 }
@@ -470,11 +475,6 @@ export async function resolvePluginConfig(
 				"`configPath` cannot be used together with `experimental.newConfig`. Configure the entry Worker via `cloudflare.config.ts` instead."
 			);
 		}
-		if (pluginConfig.auxiliaryWorkers?.length) {
-			throw new Error(
-				"`auxiliaryWorkers` are not yet supported when `experimental.newConfig` is enabled."
-			);
-		}
 		if (pluginConfig.experimental?.prerenderWorker) {
 			throw new Error(
 				"`experimental.prerenderWorker` is not yet supported when `experimental.newConfig` is enabled."
@@ -641,19 +641,53 @@ export async function resolvePluginConfig(
 	const auxiliaryWorkersResolvedConfigs: WorkerResolvedConfig[] = [];
 
 	for (const auxiliaryWorker of pluginConfig.auxiliaryWorkers ?? []) {
-		const workerConfigPath = getValidatedWranglerConfigPath(
-			root,
-			auxiliaryWorker.configPath,
-			true
-		);
+		let workerConfigPath: string | undefined;
+		let auxiliaryRawConfigOverride: RawConfig | undefined;
+		let auxiliaryParsedNewConfig: ParsedInputWorkerConfig | undefined;
+
+		if (resolvedNewConfig) {
+			if (!auxiliaryWorker.configPath) {
+				throw new Error(
+					"Auxiliary Workers must specify a `configPath` when `experimental.newConfig` is enabled."
+				);
+			}
+			if ("config" in auxiliaryWorker) {
+				throw new Error(
+					"Auxiliary Worker `config` customizers cannot be used when `experimental.newConfig` is enabled. Configure the Worker in its TypeScript config file instead."
+				);
+			}
+
+			const result = await loadNewConfig({
+				root,
+				configPath: auxiliaryWorker.configPath,
+				mode: viteEnv.mode,
+				generateTypes: false,
+			});
+			auxiliaryRawConfigOverride = result.rawConfig;
+			auxiliaryParsedNewConfig = result.parsedConfig;
+			configPaths.add(result.configPath);
+			for (const dep of result.dependencies) {
+				configPaths.add(dep);
+			}
+		} else {
+			workerConfigPath = getValidatedWranglerConfigPath(
+				root,
+				auxiliaryWorker.configPath,
+				true
+			);
+		}
 
 		// Build auxiliary worker config: defaults → file config → config()
 		const workerResolvedConfig = resolveWorkerConfig({
 			root,
-			configPath: workerConfigPath,
+			configPath: resolvedNewConfig ? undefined : workerConfigPath,
 			env: cloudflareEnv,
-			configCustomizer:
-				"config" in auxiliaryWorker ? auxiliaryWorker.config : undefined,
+			configCustomizer: resolvedNewConfig
+				? undefined
+				: "config" in auxiliaryWorker
+					? auxiliaryWorker.config
+					: undefined,
+			rawConfigOverride: auxiliaryRawConfigOverride,
 			entryWorkerConfig: entryWorkerResolvedConfig.config,
 			visitedConfigPaths: configPaths,
 		});
@@ -674,7 +708,8 @@ export async function resolvePluginConfig(
 			workerEnvironmentName,
 			resolveWorker(
 				workerResolvedConfig.config as ResolvedWorkerConfig,
-				auxiliaryWorker.devOnly
+				auxiliaryWorker.devOnly,
+				auxiliaryParsedNewConfig
 			)
 		);
 
@@ -775,6 +810,7 @@ const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
  */
 async function loadNewConfig(options: {
 	root: string;
+	configPath?: string;
 	mode: string;
 	generateTypes: boolean;
 }): Promise<{
@@ -783,11 +819,15 @@ async function loadNewConfig(options: {
 	configPath: string;
 	dependencies: Set<string>;
 }> {
-	const configPath = path.resolve(options.root, NEW_CONFIG_FILENAME);
+	const configPath = path.resolve(
+		options.root,
+		options.configPath ?? NEW_CONFIG_FILENAME
+	);
+	const configDisplayName = options.configPath ?? NEW_CONFIG_FILENAME;
 
 	if (!fs.existsSync(configPath)) {
 		throw new Error(
-			`\`experimental.newConfig\` is enabled but no \`${NEW_CONFIG_FILENAME}\` was found at ${configPath}.`
+			`\`experimental.newConfig\` is enabled but no \`${configDisplayName}\` was found at ${configPath}.`
 		);
 	}
 
@@ -800,7 +840,7 @@ async function loadNewConfig(options: {
 	const parsed = InputWorkerSchema.safeParse(resolved);
 	if (!parsed.success) {
 		throw new Error(
-			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${parsed.error.message}`
+			`Invalid \`${configDisplayName}\`:\n${parsed.error.message}`
 		);
 	}
 

@@ -79,7 +79,60 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		).rejects.toThrow(/`configPath` cannot be used together/);
 	});
 
-	test("throws when auxiliaryWorkers are combined with experimental.newConfig", async ({
+	test("loads auxiliary Workers from TypeScript config files for build output", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'w',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+		fs.mkdirSync(path.join(tempDir, "aux"), { recursive: true });
+		fs.writeFileSync(
+			path.join(tempDir, "aux/index.ts"),
+			"export default { fetch() { return new Response('aux'); } }"
+		);
+		fs.writeFileSync(
+			path.join(tempDir, "aux/cloudflare.config.ts"),
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'aux-worker',",
+				"  entrypoint: './aux/index.ts',",
+				"  compatibilityDate: '2025-01-02',",
+				"});",
+			].join("\n")
+		);
+
+		const pluginConfig: PluginConfig = {
+			experimental: { newConfig: { cfBuildOutput: true } },
+			auxiliaryWorkers: [{ configPath: "aux/cloudflare.config.ts" }],
+		};
+
+		const result = (await resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			{ mode: "production", command: "build" }
+		)) as WorkersResolvedConfig;
+
+		const auxiliaryWorker = result.environmentNameToWorkerMap.get("aux_worker");
+		expect(auxiliaryWorker?.config.main).toBe(
+			path.join(tempDir, "aux/index.ts")
+		);
+		expect(auxiliaryWorker?.config.compatibility_date).toBe("2025-01-02");
+		expect(auxiliaryWorker?.parsedNewConfig?.name).toBe("aux-worker");
+		expect(result.configPaths).toContain(
+			path.join(tempDir, "aux/cloudflare.config.ts")
+		);
+	});
+
+	test("requires auxiliary Workers to use configPath with experimental.newConfig", async ({
 		expect,
 	}) => {
 		seedWorkerSource();
@@ -94,14 +147,16 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 			].join("\n")
 		);
 
-		const pluginConfig: PluginConfig = {
-			experimental: { newConfig: true },
-			auxiliaryWorkers: [{ configPath: "aux.jsonc" }],
-		};
-
 		await expect(
-			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
-		).rejects.toThrow(/auxiliaryWorkers/);
+			resolvePluginConfig(
+				{
+					experimental: { newConfig: true },
+					auxiliaryWorkers: [{ config: { name: "aux" } }],
+				},
+				{ root: tempDir },
+				viteEnv
+			)
+		).rejects.toThrow(/must specify a `configPath`/);
 	});
 
 	test("throws when experimental.prerenderWorker is combined with experimental.newConfig", async ({
