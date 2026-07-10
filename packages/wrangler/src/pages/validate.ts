@@ -1,4 +1,4 @@
-import { readdir, stat } from "node:fs/promises";
+import { lstat, readdir } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
 import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { getType } from "mime";
@@ -103,7 +103,7 @@ export const validate = async (args: {
 			files.map(async (file) => {
 				const filepath = join(dir, file);
 				const relativeFilepath = relative(startingDir, filepath);
-				const filestat = await stat(filepath);
+				const filestat = await lstat(filepath);
 
 				for (const minimatch of IGNORE_LIST) {
 					if (minimatch.match(relativeFilepath)) {
