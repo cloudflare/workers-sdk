@@ -52,10 +52,14 @@ export interface WranglerConfig {
 		/**
 		 * Type-generation settings. Consumed directly by the new-config
 		 * type-generation path (`regenerateNewConfigTypes`) — NOT threaded
-		 * through the merged `RawConfig`. Default: `{ generate: true }`.
-		 * Structured as an object to allow additional properties in future.
+		 * through the merged `RawConfig`. Default:
+		 * `{ generate: true, includeRuntime: true }`.
+		 *
+		 * - `generate`: emit `worker-configuration.d.ts`.
+		 * - `includeRuntime`: append the Workers runtime types (generated from
+		 *   the project's compatibility date/flags).
 		 */
-		types?: { generate?: boolean };
+		types?: { generate?: boolean; includeRuntime?: boolean };
 		/**
 		 * Container-related dev settings. `containers` itself is currently not
 		 * supported under `--experimental-new-config`, but these dev-time settings are
