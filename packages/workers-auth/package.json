@@ -51,7 +51,6 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/node": "catalog:default",
 		"@vitest/ui": "catalog:default",
-		"ci-info": "catalog:default",
 		"concurrently": "^8.2.2",
 		"date-fns": "^4.1.0",
 		"msw": "catalog:default",

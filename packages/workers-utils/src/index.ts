@@ -139,7 +139,7 @@ export type { NpmVersionCheckResult } from "./update-check";
 export { LOGGER_LEVELS } from "./logger";
 export type { Logger, LoggerLevel } from "./logger";
 
-export { isInteractive, isNonInteractiveOrCI } from "./is-interactive";
+export { isCI, isInteractive, isNonInteractiveOrCI } from "./is-interactive";
 export { openInBrowser } from "./open-in-browser";
 
 export { retryOnAPIFailure } from "./retry";

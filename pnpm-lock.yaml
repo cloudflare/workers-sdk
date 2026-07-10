@@ -3949,9 +3949,6 @@ importers:
       '@vitest/ui':
         specifier: catalog:default
         version: 4.1.0(vitest@4.1.0)
-      ci-info:
-        specifier: catalog:default
-        version: 4.4.0
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2

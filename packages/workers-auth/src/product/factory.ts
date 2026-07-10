@@ -19,12 +19,12 @@ import {
 	fetchInternalBase,
 	getCloudflareComplianceRegion,
 	hasMorePages,
+	isCI,
 	isNonInteractiveOrCI,
 	openInBrowser,
 	throwFetchError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import ci from "ci-info";
 import { formatDistanceToNowStrict } from "date-fns";
 import { dedent } from "ts-dedent";
 import { createCredentialStorageContext } from "../credential-store";
@@ -508,7 +508,7 @@ Alternatively, try running \`${cliName} login\` to re-authenticate.`,
 				// to avoid leaking sensitive information in public CI logs.
 				// Non-interactive terminals (agents, piped commands) still need
 				// to see account names to identify which account to configure.
-				const redactAccountName = ci.isCI;
+				const redactAccountName = isCI();
 				throw new UserError(
 					`More than one account available but unable to select one in non-interactive mode.
 Please set the appropriate \`account_id\` in your ${product.getConfigFileLabel()} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.

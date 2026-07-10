@@ -175,17 +175,37 @@ afterEach(() => {
 });
 afterAll(() => msw.close());
 
-// Make sure that we don't accidentally try to open a browser window when running tests.
-// `openInBrowser` now lives in `@cloudflare/workers-utils` and is used both by
-// wrangler's own consumers (docs, pipelines, browser-rendering, hotkeys) and by
-// the OAuth flow in `@cloudflare/workers-auth`. We partial-mock that module,
-// replacing only `openInBrowser` with a spy the OAuth harness
-// (`mock-oauth-flow.ts`) and the browser tests drive via `mockImplementation`,
-// while leaving every other workers-utils export untouched.
+// Partial-mock `@cloudflare/workers-utils`, leaving every other export intact.
+//
+// 1. `openInBrowser` → a spy, so tests never actually open a browser. Used both
+//    by wrangler's own consumers (docs, pipelines, browser-rendering, hotkeys)
+//    and by the OAuth flow in `@cloudflare/workers-auth`; the OAuth harness
+//    (`mock-oauth-flow.ts`) and the browser tests drive it via `mockImplementation`.
+//
+// 2. `isNonInteractiveOrCI` / `isCI` → their CI flag is read from the mockable
+//    `ci-info` below. These live in workers-utils and read `ci-info`, but
+//    workers-utils (and `@cloudflare/workers-auth`, which imports `isCI` from
+//    it) is consumed here as a *bundled* distributable, so its inlined `ci-info`
+//    copy is a separate, unmockable instance that reads the real environment —
+//    in CI that defaults `isNonInteractiveOrCI()` to `true`, silently flipping
+//    every prompt to non-interactive. Overriding these two exports (reusing the
+//    real `isInteractive` for the TTY half) lets the existing
+//    `vi.mocked(ci).isCI = ...` convention keep controlling CI-gated behaviour
+//    for every consumer — wrangler source *and* the bundled workers-auth (since
+//    `@cloudflare/*` is external in its bundle).
 vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
 	const actual =
 		await importOriginal<typeof import("@cloudflare/workers-utils")>();
-	return { ...actual, openInBrowser: vi.fn() };
+	// The mocked `ci-info` default export is a stable object that tests mutate
+	// in place (`vi.mocked(ci).isCI = true`), so reading `isCI` at call time
+	// reflects each test's override.
+	const ci = (await import("ci-info")).default;
+	return {
+		...actual,
+		openInBrowser: vi.fn(),
+		isNonInteractiveOrCI: () => !actual.isInteractive() || ci.isCI,
+		isCI: () => ci.isCI,
+	};
 });
 
 // The OAuth authorize URL contains a random `state` and PKCE `code_challenge`

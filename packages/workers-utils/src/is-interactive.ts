@@ -71,3 +71,20 @@ export function isInteractive(): boolean {
 export function isNonInteractiveOrCI(): boolean {
 	return !isInteractive() || ci.isCI;
 }
+
+/**
+ * Whether the process is running in any CI environment (per `ci-info`).
+ *
+ * Distinct from {@link isNonInteractiveOrCI}: this ignores TTY state, so it is
+ * `true` only for genuine CI, not for merely non-interactive contexts (agents,
+ * piped commands). Used for behaviour that should key off CI specifically — e.g.
+ * redacting account names / emails in public CI logs while still showing them to
+ * non-interactive local tooling.
+ *
+ * Exposed from this package (rather than having consumers `import "ci-info"`
+ * directly) so the value flows through the mockable `ci-info` boundary and
+ * consumers don't take a fresh, unmockable dependency on it.
+ */
+export function isCI(): boolean {
+	return ci.isCI;
+}
