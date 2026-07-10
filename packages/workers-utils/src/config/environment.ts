@@ -1562,8 +1562,11 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the bound Flagship service. */
 		binding: string;
 
-		/** The Flagship app ID to bind to. */
-		app_id: string;
+		/**
+		 * The Flagship app ID to bind to.
+		 * When omitted, `wrangler deploy` can auto-provision a new Flagship app.
+		 */
+		app_id?: string;
 
 		/** Set to `true` to suppress the remote binding warning in local dev. Flagship bindings are always remote. */
 		remote?: boolean;

@@ -433,6 +433,11 @@ export function createWorkerUploadForm(
 	});
 
 	flagship.forEach(({ binding, app_id }) => {
+		if (app_id === undefined) {
+			throw new UserError(`${binding} bindings must have an "app_id" field`, {
+				telemetryMessage: "flagship binding missing app_id",
+			});
+		}
 		metadataBindings.push({
 			name: binding,
 			type: "flagship",

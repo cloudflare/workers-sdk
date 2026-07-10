@@ -5967,6 +5967,9 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						flagship: [
 							{
+								binding: "DRAFT_FLAGS",
+							},
+							{
 								binding: "FLAGS",
 								app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 							},
@@ -5988,9 +5991,9 @@ describe("normalizeAndValidateConfig()", () => {
 							// @ts-expect-error purposely using an invalid value
 							{},
 							// @ts-expect-error purposely using an invalid value
-							{ binding: "VALID" },
-							// @ts-expect-error purposely using an invalid value
 							{ binding: 2000, app_id: 2111 },
+							// @ts-expect-error purposely using an invalid value
+							{ binding: "BAD_APP", app_id: 2111 },
 							{
 								binding: "BINDING_2",
 								app_id: "valid-app-id",
@@ -6006,10 +6009,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "flagship[0]" bindings must have a string "binding" field but got {}.
-					  - "flagship[0]" bindings must have a string "app_id" field but got {}.
-					  - "flagship[1]" bindings must have a string "app_id" field but got {"binding":"VALID"}.
-					  - "flagship[2]" bindings must have a string "binding" field but got {"binding":2000,"app_id":2111}.
-					  - "flagship[2]" bindings must have a string "app_id" field but got {"binding":2000,"app_id":2111}."
+					  - "flagship[1]" bindings must have a string "binding" field but got {"binding":2000,"app_id":2111}.
+					  - "flagship[1]" bindings must have a string "app_id" field when provided, but got {"binding":2000,"app_id":2111}.
+					  - "flagship[2]" bindings must have a string "app_id" field when provided, but got {"binding":"BAD_APP","app_id":2111}."
 				`);
 			});
 

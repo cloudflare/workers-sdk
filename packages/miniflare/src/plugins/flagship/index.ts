@@ -1,17 +1,11 @@
 import { z } from "zod";
-import {
-	getUserBindingServiceName,
-	ProxyNodeBinding,
-	remoteProxyClientWorker,
-} from "../shared";
+import { getUserBindingServiceName, ProxyNodeBinding, remoteProxyClientWorker } from "../shared";
 import type { Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const FlagshipSchema = z.object({
-	app_id: z.string(),
-	remoteProxyConnectionString: z
-		.custom<RemoteProxyConnectionString>()
-		.optional(),
+	app_id: z.string().optional(),
+	remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>().optional(),
 });
 
 export const FlagshipOptionsSchema = z.object({
@@ -28,28 +22,23 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 			return [];
 		}
 
-		return Object.entries(options.flagship).map<Worker_Binding>(
-			([name, config]) => ({
-				name,
-				service: {
-					name: getUserBindingServiceName(
-						FLAGSHIP_PLUGIN_NAME,
-						name,
-						config.remoteProxyConnectionString
-					),
-				},
-			})
-		);
+		return Object.entries(options.flagship).map<Worker_Binding>(([name, config]) => ({
+			name,
+			service: {
+				name: getUserBindingServiceName(
+					FLAGSHIP_PLUGIN_NAME,
+					name,
+					config.remoteProxyConnectionString,
+				),
+			},
+		}));
 	},
 	getNodeBindings(options: z.infer<typeof FlagshipOptionsSchema>) {
 		if (!options.flagship) {
 			return {};
 		}
 		return Object.fromEntries(
-			Object.keys(options.flagship).map((name) => [
-				name,
-				new ProxyNodeBinding(),
-			])
+			Object.keys(options.flagship).map((name) => [name, new ProxyNodeBinding()]),
 		);
 	},
 	async getServices({ options }) {
@@ -57,17 +46,11 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 			return [];
 		}
 
-		return Object.entries(options.flagship).map(
-			([name, { remoteProxyConnectionString }]) => {
-				return {
-					name: getUserBindingServiceName(
-						FLAGSHIP_PLUGIN_NAME,
-						name,
-						remoteProxyConnectionString
-					),
-					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
-				};
-			}
-		);
+		return Object.entries(options.flagship).map(([name, { remoteProxyConnectionString }]) => {
+			return {
+				name: getUserBindingServiceName(FLAGSHIP_PLUGIN_NAME, name, remoteProxyConnectionString),
+				worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
+			};
+		});
 	},
 };

@@ -8,13 +8,20 @@ import {
 	PatchConfigError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { fetchResult, logger, prompt, select } from "../../shared/context";
+import {
+	fetchPagedListResult,
+	fetchResult,
+	logger,
+	prompt,
+	select,
+} from "../../shared/context";
 import { printBindings } from "./print-bindings";
 import type {
 	Binding,
 	CfAgentMemory,
 	CfAISearchNamespace,
 	CfD1Database,
+	CfFlagship,
 	CfKvNamespace,
 	CfR2Bucket,
 	ComplianceConfig,
@@ -60,6 +67,11 @@ type AgentMemoryNamespace = {
 	account_id: string;
 	created_at: string;
 	updated_at: string;
+};
+
+type FlagshipApp = {
+	id: string;
+	name: string;
 };
 
 type KVNamespaceInfo = {
@@ -471,12 +483,75 @@ class D1Handler extends ProvisionResourceHandler<
 	}
 }
 
+class FlagshipAppHandler extends ProvisionResourceHandler<
+	"flagship",
+	Extract<Binding, { type: "flagship" }>
+> {
+	private inheritedAppId: string | undefined;
+
+	get name(): string | undefined {
+		return undefined;
+	}
+
+	async create(name: string) {
+		const app = await createFlagshipApp(
+			this.complianceConfig,
+			this.accountId,
+			name
+		);
+		return app.id;
+	}
+
+	constructor(
+		bindingName: string,
+		binding: Extract<Binding, { type: "flagship" }>,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super(
+			"flagship",
+			bindingName,
+			binding,
+			"app_id",
+			complianceConfig,
+			accountId
+		);
+	}
+
+	canInherit(settings: Settings | undefined): boolean {
+		const existing = settings?.bindings.find(
+			(existing) =>
+				existing.type === this.type &&
+				existing.name === this.bindingName &&
+				(this.binding.app_id ? this.binding.app_id === existing.app_id : true)
+		) as Extract<WorkerMetadataBinding, { type: "flagship" }> | undefined;
+		if (existing) {
+			this.inheritedAppId = existing.app_id;
+			return true;
+		}
+		return false;
+	}
+
+	override inherit(): void {
+		if (this.inheritedAppId) {
+			this.connect(this.inheritedAppId);
+			return;
+		}
+		super.inherit();
+	}
+
+	isFullySpecified(): boolean {
+		return !!this.binding.app_id;
+	}
+}
+
 type ProvisionableBinding =
 	| Extract<Binding, { type: "kv_namespace" }>
 	| Extract<Binding, { type: "d1" }>
 	| Extract<Binding, { type: "r2_bucket" }>
 	| Extract<Binding, { type: "ai_search_namespace" }>
-	| Extract<Binding, { type: "agent_memory" }>;
+	| Extract<Binding, { type: "agent_memory" }>
+	| Extract<Binding, { type: "flagship" }>;
 
 const HANDLERS = {
 	kv_namespace: {
@@ -605,6 +680,27 @@ const HANDLERS = {
 			};
 		},
 	},
+	flagship: {
+		Handler: FlagshipAppHandler,
+		sort: 5,
+		name: "Flagship App",
+		keyDescription: "name or id",
+		configField: "flagship" as const,
+		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
+			const apps = await listFlagshipApps(complianceConfig, accountId);
+			return apps.map((app) => ({ title: app.name, value: app.id }));
+		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "flagship" }>
+		): CfFlagship => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
+	},
 };
 
 type PendingResource = {
@@ -614,13 +710,15 @@ type PendingResource = {
 		| "d1"
 		| "r2_bucket"
 		| "ai_search_namespace"
-		| "agent_memory";
+		| "agent_memory"
+		| "flagship";
 	handler:
 		| KVHandler
 		| D1Handler
 		| R2Handler
 		| AISearchNamespaceHandler
-		| AgentMemoryNamespaceHandler;
+		| AgentMemoryNamespaceHandler
+		| FlagshipAppHandler;
 };
 
 function isProvisionableBinding(
@@ -639,7 +737,8 @@ function createHandler(
 	| D1Handler
 	| R2Handler
 	| AISearchNamespaceHandler
-	| AgentMemoryNamespaceHandler {
+	| AgentMemoryNamespaceHandler
+	| FlagshipAppHandler {
 	switch (binding.type) {
 		case "kv_namespace":
 			return new KVHandler(bindingName, binding, complianceConfig, accountId);
@@ -661,6 +760,13 @@ function createHandler(
 				complianceConfig,
 				accountId
 			);
+		case "flagship":
+			return new FlagshipAppHandler(
+				bindingName,
+				binding,
+				complianceConfig,
+				accountId
+			);
 	}
 }
 
@@ -672,7 +778,8 @@ function toConfigBinding(
 	| CfR2Bucket
 	| CfD1Database
 	| CfAISearchNamespace
-	| CfAgentMemory {
+	| CfAgentMemory
+	| CfFlagship {
 	switch (binding.type) {
 		case "kv_namespace":
 			return HANDLERS.kv_namespace.toConfig(bindingName, binding);
@@ -684,6 +791,8 @@ function toConfigBinding(
 			return HANDLERS.ai_search_namespace.toConfig(bindingName, binding);
 		case "agent_memory":
 			return HANDLERS.agent_memory.toConfig(bindingName, binding);
+		case "flagship":
+			return HANDLERS.flagship.toConfig(bindingName, binding);
 	}
 }
 
@@ -752,7 +861,14 @@ export async function provisionBindings(
 			configPath,
 			"Provisioning resources is not possible without a config file"
 		);
-
+		if (useServiceEnvironments(config)) {
+			throw new UserError(
+				"Provisioning resources is not supported with a service environment",
+				{
+					telemetryMessage: "provision resources with service environment",
+				}
+			);
+		}
 		logger.log();
 
 		printBindings(
@@ -1279,6 +1395,32 @@ async function createAgentMemoryNamespace(
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ name: namespaceName }),
+		}
+	);
+}
+
+async function listFlagshipApps(
+	complianceConfig: ComplianceConfig,
+	accountId: string
+): Promise<FlagshipApp[]> {
+	return await fetchPagedListResult<FlagshipApp>(
+		complianceConfig,
+		`/accounts/${accountId}/flagship/apps`
+	);
+}
+
+async function createFlagshipApp(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	name: string
+): Promise<FlagshipApp> {
+	return await fetchResult<FlagshipApp>(
+		complianceConfig,
+		`/accounts/${accountId}/flagship/apps`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name }),
 		}
 	);
 }

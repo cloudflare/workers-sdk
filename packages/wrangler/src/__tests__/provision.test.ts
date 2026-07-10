@@ -1398,6 +1398,172 @@ describe("resource provisioning", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
+	describe("provisions flagship bindings", () => {
+		beforeEach(() => {
+			writeWranglerConfig({
+				main: "index.js",
+				flagship: [{ binding: "FLAGS" }],
+			});
+		});
+
+		it("should inherit flagship binding if found in the deployed settings", async ({
+			expect,
+		}) => {
+			let uploadedBindings: unknown[] | undefined;
+			mockSubDomainRequest();
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "flagship",
+							name: "FLAGS",
+							app_id: "existing-flagship-app-id",
+						},
+					],
+				},
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					async ({ request }) => {
+						const formBody = await request.formData();
+						const metadataEntry = formBody.get("metadata");
+						const metadataText =
+							typeof metadataEntry === "string"
+								? metadataEntry
+								: await metadataEntry?.text();
+						const metadata = JSON.parse(metadataText ?? "{}") as {
+							bindings?: unknown[];
+						};
+						uploadedBindings = metadata.bindings;
+						return HttpResponse.json(
+							createFetchResult({
+								id: "Galaxy-Class",
+								startup_time_ms: 100,
+								resources: { script: { etag: "etag98765" } },
+							})
+						);
+					}
+				),
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+					() => HttpResponse.json(createFetchResult({ id: "Deployment-ID" }))
+				),
+				http.patch(
+					"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",
+					() => HttpResponse.json(createFetchResult({}))
+				),
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/subdomain",
+					() =>
+						HttpResponse.json(
+							createFetchResult({
+								enabled: true,
+								previews_enabled: true,
+							})
+						)
+				),
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/subdomain",
+					() =>
+						HttpResponse.json(
+							createFetchResult({
+								enabled: true,
+								previews_enabled: true,
+							})
+						)
+				),
+				...mswListNewDeploymentsLatestFull
+			);
+
+			await runWrangler("deploy");
+			expect(uploadedBindings).toEqual([
+				{
+					name: "FLAGS",
+					type: "flagship",
+					app_id: "existing-flagship-app-id",
+				},
+			]);
+			expect(std.out).toContain("env.FLAGS (existing-flagship-app-id)");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should connect to an existing flagship app when selected", async ({
+			expect,
+		}) => {
+			mockGetSettings();
+			mockListFlagshipApps([
+				{ id: "existing-flagship-app-id", name: "checkout" },
+			]);
+			mockSelect({
+				text: "Would you like to connect an existing Flagship App or create a new one?",
+				result: "existing-flagship-app-id",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "FLAGS",
+						type: "flagship",
+						app_id: "existing-flagship-app-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create=false");
+			expect(std.out).toContain("env.FLAGS (existing-flagship-app-id)");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create a flagship app for a draft binding and write it back to config", async ({
+			expect,
+		}) => {
+			mockListFlagshipApps([]);
+			mockGetSettings();
+			mockCreateFlagshipApp(expect, {
+				assertName: "test-name-flags",
+				resultId: "new-flagship-app-id",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "FLAGS",
+						type: "flagship",
+						app_id: "new-flagship-app-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.out).toContain(
+				'🌀 Creating new Flagship App "test-name-flags"...'
+			);
+			expect(std.out).toContain("env.FLAGS (new-flagship-app-id)");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot(`
+				"compatibility_date = "2022-01-12"
+				name = "test-name"
+				main = "index.js"
+
+				[[flagship]]
+				binding = "FLAGS"
+				app_id = "new-flagship-app-id"
+				"
+			`);
+		});
+	});
+
+	it("should error if used with a service environment", async ({ expect }) => {
+		writeWorkerSource();
+		writeWranglerConfig({
+			main: "index.js",
+			legacy_env: false,
+			kv_namespaces: [{ binding: "KV" }],
+		});
+		await expect(runWrangler("deploy --x-auto-create=false")).rejects.toThrow(
+			"Provisioning resources is not supported with a service environment"
+		);
+	});
 });
 
 function mockCreateD1Database(
@@ -1548,6 +1714,46 @@ function mockCreateAgentMemoryNamespace(
 					createFetchResult({
 						id: "new-agent-memory-namespace-id",
 						name: options.assertName ?? "test-namespace",
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockListFlagshipApps(apps: Array<{ id: string; name: string }>) {
+	msw.use(
+		http.get("*/accounts/:accountId/flagship/apps", async () => {
+			return HttpResponse.json(
+				createFetchResult(apps, true, [], [], {
+					count: apps.length,
+					cursor: null,
+				})
+			);
+		})
+	);
+}
+
+function mockCreateFlagshipApp(
+	expect: ExpectStatic,
+	options: {
+		resultId?: string;
+		assertName?: string;
+	} = {}
+) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/flagship/apps",
+			async ({ request }) => {
+				if (options.assertName) {
+					const requestBody = await request.json();
+					expect(requestBody).toEqual({ name: options.assertName });
+				}
+				return HttpResponse.json(
+					createFetchResult({
+						id: options.resultId ?? "new-flagship-app-id",
+						name: options.assertName ?? "test-name-flags",
 					})
 				);
 			},

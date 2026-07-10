@@ -12,9 +12,7 @@ test("FlagshipOptionsSchema: accepts valid flagship options", ({ expect }) => {
 	expect(result.success).toBe(true);
 });
 
-test("FlagshipOptionsSchema: accepts flagship with remoteProxyConnectionString", ({
-	expect,
-}) => {
+test("FlagshipOptionsSchema: accepts flagship with remoteProxyConnectionString", ({ expect }) => {
 	const result = FlagshipOptionsSchema.safeParse({
 		flagship: {
 			FLAGS: {
@@ -28,5 +26,14 @@ test("FlagshipOptionsSchema: accepts flagship with remoteProxyConnectionString",
 
 test("FlagshipOptionsSchema: accepts empty flagship", ({ expect }) => {
 	const result = FlagshipOptionsSchema.safeParse({});
+	expect(result.success).toBe(true);
+});
+
+test("FlagshipOptionsSchema: accepts a draft flagship binding without app_id", ({ expect }) => {
+	const result = FlagshipOptionsSchema.safeParse({
+		flagship: {
+			FLAGS: {},
+		},
+	});
 	expect(result.success).toBe(true);
 });
