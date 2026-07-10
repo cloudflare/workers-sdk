@@ -2,14 +2,15 @@ import { generateRuntimeTypes as generateRuntimeTypesImpl } from "@cloudflare/ru
 import { logger } from "../../logger";
 import type { Config } from "@cloudflare/workers-utils";
 
-const DEFAULT_OUTFILE_RELATIVE_PATH = "worker-configuration.d.ts";
-
 /**
  * Generates runtime types for a Workers project based on the provided project configuration.
  *
  * Thin adapter around `@cloudflare/runtime-types`' `generateRuntimeTypes` that maps wrangler's
  * snake_case `Config` shape onto the shared generator. Kept as a local module so that existing
  * tests can spy on `generateRuntimeTypes` via `import * as generateRuntime from "./runtime"`.
+ *
+ * The caller reads the existing `.d.ts` file (if any) and passes its contents as
+ * `existingContent` for cache detection, so the file is read at most once per generation.
  *
  * @throws {Error} If the config file does not have a compatibility date.
  *
@@ -22,10 +23,10 @@ const DEFAULT_OUTFILE_RELATIVE_PATH = "worker-configuration.d.ts";
  */
 export async function generateRuntimeTypes({
 	config: { compatibility_date, compatibility_flags = [] },
-	outFile = DEFAULT_OUTFILE_RELATIVE_PATH,
+	existingContent,
 }: {
 	config: Pick<Config, "compatibility_date" | "compatibility_flags">;
-	outFile?: string;
+	existingContent?: string;
 }): Promise<{ runtimeHeader: string; runtimeTypes: string }> {
 	if (!compatibility_date) {
 		throw new Error("Config must have a compatibility date.");
@@ -35,7 +36,7 @@ export async function generateRuntimeTypes({
 		await generateRuntimeTypesImpl({
 			compatibilityDate: compatibility_date,
 			compatibilityFlags: compatibility_flags,
-			outFile,
+			existingContent,
 		});
 
 	if (isCached) {

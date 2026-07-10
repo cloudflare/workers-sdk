@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 // `@cloudflare/config` is statically imported here. See new-config.ts for
 // documentation of the upstream build warnings this triggers.
@@ -28,6 +28,15 @@ export async function regenerateNewConfigTypes(options: {
 		return;
 	}
 
+	// Read the existing file once: it feeds both the runtime-types cache check
+	// and the diff-before-write.
+	let existing: string | undefined;
+	try {
+		existing = await readFile(DEFAULT_WORKERS_TYPES_FILE_PATH, "utf-8");
+	} catch {
+		// File doesn't exist yet — fall through to write.
+	}
+
 	let content: string;
 	try {
 		const outputDir = path.dirname(
@@ -46,7 +55,7 @@ export async function regenerateNewConfigTypes(options: {
 					compatibility_date: options.workerConfig.compatibilityDate,
 					compatibility_flags: options.workerConfig.compatibilityFlags ?? [],
 				},
-				outFile: DEFAULT_WORKERS_TYPES_FILE_PATH,
+				existingContent: existing,
 			});
 			content += `\n${runtimeHeader}\n${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`;
 		}
@@ -55,21 +64,12 @@ export async function regenerateNewConfigTypes(options: {
 		return;
 	}
 
-	// Diff against the on-disk file before writing to avoid mtime churn
-	// (matches the Vite plugin's behaviour for the same `.d.ts`).
-	let existing: string | undefined;
-	try {
-		existing = readFileSync(DEFAULT_WORKERS_TYPES_FILE_PATH, "utf-8");
-	} catch {
-		// File doesn't exist yet — fall through to write.
-	}
-
 	if (existing === content) {
 		return;
 	}
 
 	try {
-		writeFileSync(DEFAULT_WORKERS_TYPES_FILE_PATH, content);
+		await writeFile(DEFAULT_WORKERS_TYPES_FILE_PATH, content);
 		logger.log(
 			`📝 Regenerated ${path.relative(process.cwd(), DEFAULT_WORKERS_TYPES_FILE_NAME)} from ${path.relative(process.cwd(), options.cloudflareConfigPath)}.`
 		);

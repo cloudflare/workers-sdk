@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
 	convertToWranglerConfig,
@@ -855,11 +856,12 @@ async function loadNewConfig(options: {
  *
  * When `includeRuntime` is true, appends the Workers runtime types (generated
  * from the project's compatibility date/flags) after the inference block. The
- * runtime-types generator caches against the existing file, so it only spawns
- * workerd when the compat date/flags/workerd version change.
+ * runtime-types generator caches against the existing file content, so it only
+ * spawns workerd when the compat date/flags/workerd version change.
  *
- * Reads the existing file first and only writes if the content differs, to
- * avoid touching mtimes unnecessarily.
+ * The existing file is read once and reused for both the runtime-types cache
+ * check and the diff-before-write (only writes if content differs, to avoid
+ * touching mtimes unnecessarily).
  */
 async function writeWorkerConfigurationDts(options: {
 	root: string;
@@ -871,6 +873,14 @@ async function writeWorkerConfigurationDts(options: {
 	const outputPath = path.resolve(options.root, TYPES_OUTPUT_FILENAME);
 	const relativeConfigPath =
 		"./" + path.relative(options.root, options.configPath);
+
+	let existingContent: string | undefined;
+	try {
+		existingContent = await fsp.readFile(outputPath, "utf8");
+	} catch {
+		// File doesn't exist yet — we'll create it below.
+	}
+
 	let content = generateTypes({
 		configPath: relativeConfigPath,
 		packageName: EXPERIMENTAL_CONFIG_PKG,
@@ -880,18 +890,12 @@ async function writeWorkerConfigurationDts(options: {
 		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
 			compatibilityDate: options.compatibilityDate,
 			compatibilityFlags: options.compatibilityFlags,
-			outFile: outputPath,
+			existingContent,
 		});
 		content += `\n${runtimeHeader}\n${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`;
 	}
 
-	let existing: string | undefined;
-	try {
-		existing = fs.readFileSync(outputPath, "utf8");
-	} catch {
-		// File doesn't exist yet — we'll create it below.
-	}
-	if (existing !== content) {
-		fs.writeFileSync(outputPath, content);
+	if (existingContent !== content) {
+		await fsp.writeFile(outputPath, content);
 	}
 }
