@@ -1,5 +1,5 @@
-// cf-specific constants for the auth layer. Several values are placeholders
-// pending the real cf OAuth app registration — search for `TODO(cf)`.
+// cf-specific constants for the auth layer, matching the `cf` CLI's OAuth app
+// registration (client ID, callback port 8877, and branded consent pages).
 
 /**
  * OS-keyring service identifier for the `cf` CLI. Distinct from wrangler's so
@@ -14,16 +14,14 @@ export const CF_CLI_NAME = "cf";
 
 /**
  * The `redirect_uri` registered on cf's OAuth app; also the local callback URL.
- *
- * TODO(cf): replace with the real redirect URI registered on cf's OAuth app.
+ * cf uses the fixed local callback port 8877 (from its historical 8877–8886
+ * range).
  */
-export const CF_OAUTH_CALLBACK_URL = "http://localhost:8976/oauth/callback";
+export const CF_OAUTH_CALLBACK_URL = "http://localhost:8877/oauth/callback";
 
 /**
  * cf's branded OAuth consent pages, shown after the user grants or denies
  * consent to cf's OAuth app.
- *
- * TODO(cf): replace with cf's real branded consent page URLs.
  */
 export const CF_CONSENT_PAGES = {
 	granted: {
@@ -32,7 +30,7 @@ export const CF_CONSENT_PAGES = {
 	denied: {
 		url: "https://welcome.developers.workers.dev/cf-oauth-consent-denied",
 		error:
-			"Error: Consent denied. You must grant consent to the Cloudflare CLI in order to login.\n" +
+			"Error: Consent denied. You must grant consent to cf in order to login.\n" +
 			"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable",
 	},
 };

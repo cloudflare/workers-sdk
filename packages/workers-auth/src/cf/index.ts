@@ -12,7 +12,6 @@ import { createCloudflareAuth } from "../product/factory";
 import { createKeyringPreference } from "../product/keyring-preference";
 import { createPreferences } from "../product/preferences";
 import { createCloudflareProfileStore } from "../product/profile-store";
-import { DefaultScopeKeys } from "../product/scopes";
 import {
 	CF_CLI_NAME,
 	CF_CONSENT_PAGES,
@@ -21,6 +20,7 @@ import {
 } from "./constants";
 import { getClientIdFromEnv } from "./env";
 import { getCfConfigPath } from "./paths";
+import { DefaultScopeKeys } from "./scopes";
 import { getCfTemporaryAccountConfigPath } from "./temporary-account-path";
 import type { OAuthFlowContext } from "../context";
 import type { CloudflareAuth } from "../product/factory";
@@ -42,12 +42,11 @@ export {
 	writeAuthConfigFile,
 } from "./auth-config-file";
 export {
-	DefaultScopes,
 	DefaultScopeKeys,
 	setLoginScopeKeys,
 	validateScopeKeys,
 	type Scope,
-} from "../product/scopes";
+} from "./scopes";
 export { getClientIdFromEnv } from "./env";
 export { CF_OAUTH_CALLBACK_URL, CF_KEYRING_SERVICE_NAME } from "./constants";
 export { getCfConfigPath } from "./paths";
@@ -72,14 +71,16 @@ export const CF_PRODUCT: AuthProduct = {
 	clientId: getClientIdFromEnv,
 	consent: CF_CONSENT_PAGES,
 	redirectUri: CF_OAUTH_CALLBACK_URL,
-	allowGlobalAuthKey: true,
+	// cf only supports the scoped `CLOUDFLARE_API_TOKEN` env var, not the global
+	// API key + email pair, so the global-key resolution is disabled.
+	allowGlobalAuthKey: false,
 	getConfigPath: getCfConfigPath,
 	getTemporaryAccountConfigPath: getCfTemporaryAccountConfigPath,
 	fileFormat: JSON_FILE_FORMAT,
 	accountCachePrefix: "cloudflare-account",
-	// TODO(cf): decide whether cf has a config file to reference in the
-	// "set account_id in your <file>" account-selection hints, and reword if not.
-	getConfigFileLabel: () => "your Cloudflare config",
+	// cf persists its default account in `config.json` (`defaults.accountId`);
+	// this label is surfaced in the "set account_id in your <file>" hint.
+	getConfigFileLabel: () => "cf config",
 	getDefaultScopeKeys: () => DefaultScopeKeys,
 };
 

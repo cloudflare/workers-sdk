@@ -126,9 +126,12 @@ Each CLI is a thin **descriptor + entrypoint**:
   files remain in `wrangler/src/user/`.
 - `src/cf/` → `@cloudflare/workers-auth/cf`: `CF_PRODUCT` (JSON files under
   `~/.config/cloudflare`, the `"cloudflare"` keyring service, `CLOUDFLARE_CLIENT_ID`)
-  - `createCfAuth(ctx)`. Several product values are placeholders pending the real
-    cf OAuth app registration — search `TODO(cf)` (client-id UUIDs, redirect URI,
-    consent page URLs, and the account-selection config-file hint).
+  - `createCfAuth(ctx)`. OAuth-app values (client ID `cbca97e7-…`, callback port
+    8877, `cf-oauth-consent-*` pages, scoped-token-only auth) mirror the `cf`
+    CLI's registration. cf carries its own scope catalog (`src/cf/scopes.ts`) —
+    the full Cloudflare product surface as a flat list (no per-scope
+    descriptions), distinct from wrangler's smaller `src/product/scopes.ts`
+    key → description map — so it does not re-export `DefaultScopes`.
 
 ## CONVENTIONS
 
