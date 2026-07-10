@@ -26,7 +26,10 @@ import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
 	PAGES_CONFIG_CACHE_FILENAME,
 } from "./constants";
-import { maybeDelegatePagesToWorkers } from "./delegate-to-workers";
+import {
+	logPagesToWorkersForceOptOutNotice,
+	maybeDelegatePagesToWorkers,
+} from "./delegate-to-workers";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
@@ -634,6 +637,12 @@ export const pagesDeployCommand = createCommand({
 		});
 
 		metrics.sendMetricsEvent("create pages deployment");
+
+		// If the agent opted this deploy out of delegation with `--force`, tell it
+		// (at the end, on success) that `--force` is a one-time action.
+		if (delegation.forcedOptOut) {
+			logPagesToWorkersForceOptOutNotice("deploy");
+		}
 	},
 });
 
