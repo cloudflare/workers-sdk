@@ -13,6 +13,15 @@ const LEGACY_PATH_REWRITES: readonly [string, string][] = [
 	["/cdn-cgi/explorer", "/cdn-cgi/local/explorer"],
 ];
 
+export function rewriteLegacyMiniflarePath(pathname: string): string {
+	for (const [oldPrefix, newPrefix] of LEGACY_PATH_REWRITES) {
+		if (pathname === oldPrefix || pathname.startsWith(`${oldPrefix}/`)) {
+			return newPrefix + pathname.slice(oldPrefix.length);
+		}
+	}
+	return pathname;
+}
+
 /**
  * Plugin to forward trigger handler routes (scheduled, email) and other
  * internal Miniflare endpoints to Miniflare in development, including
