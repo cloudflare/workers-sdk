@@ -300,24 +300,24 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const files: string[] = [];
 
 			if (builder.text) {
-				await Promise.all(
-					locations.map((location) => {
-						return this.storeTempFile(
+				const textResults = await Promise.all(
+					locations.map((location) =>
+						this.storeTempFile(
 							builder.text!,
 							"txt",
 							"email-text",
 							location,
 							messageUUID
-						).then((filePath) => {
-							files.push(`Text (${location}): ${filePath}`);
-							return filePath;
-						});
-					})
+						)
+					)
 				);
+				for (let i = 0; i < locations.length; i++) {
+					files.push(`Text (${locations[i]}): ${textResults[i]}`);
+				}
 			}
 
 			if (builder.html) {
-				await Promise.all(
+				const htmlResults = await Promise.all(
 					locations.map((location) =>
 						this.storeTempFile(
 							builder.html!,
@@ -325,12 +325,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 							"email-html",
 							location,
 							messageUUID
-						).then((filePath) => {
-							files.push(`HTML (${location}): ${filePath}`);
-							return filePath;
-						})
+						)
 					)
 				);
+				for (let i = 0; i < locations.length; i++) {
+					files.push(`HTML (${locations[i]}): ${htmlResults[i]}`);
+				}
 			}
 
 			// Store attachments
@@ -339,22 +339,24 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					// Extract file extension from filename or use generic extension
 					const extMatch = attachment.filename.match(/\.([^.]+)$/);
 					const extension = extMatch ? extMatch[1] : "bin";
+					const attachmentUUID = crypto.randomUUID();
 
-					await Promise.all(
+					const attachmentResults = await Promise.all(
 						locations.map((location) =>
 							this.storeTempFile(
 								attachment.content,
 								extension,
 								"email-attachment",
-								location
-							).then((filePath) => {
-								files.push(
-									`Attachment (${attachment.disposition}) (${location}): ${attachment.filename} -> ${filePath}`
-								);
-								return filePath;
-							})
+								location,
+								attachmentUUID
+							)
 						)
 					);
+					for (let i = 0; i < locations.length; i++) {
+						files.push(
+							`Attachment (${attachment.disposition}) (${locations[i]}): ${attachment.filename} -> ${attachmentResults[i]}`
+						);
+					}
 				}
 			}
 
