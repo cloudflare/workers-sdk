@@ -252,10 +252,6 @@ export async function getDevMiniflareOptions(
 
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
 
-	const profileDir = entryWorkerConfig?.configPath
-		? path.dirname(entryWorkerConfig.configPath)
-		: process.cwd();
-
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
 			? await Promise.all(
@@ -279,7 +275,7 @@ export async function getDevMiniflareOptions(
 												name: worker.config.name,
 												bindings: bindings ?? {},
 												account_id: worker.config.account_id,
-												profileDir,
+												profileDir: resolvedViteConfig.root,
 											},
 											preExistingRemoteProxySession ?? null
 										);
@@ -649,12 +645,6 @@ export async function getPreviewMiniflareOptions(
 	const { resolvedPluginConfig, resolvedViteConfig } = ctx;
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
 
-	const firstWorkerConfigPath =
-		resolvedPluginConfig.workers[0]?.config.configPath;
-	const previewProfileDir = firstWorkerConfigPath
-		? path.dirname(firstWorkerConfigPath)
-		: undefined;
-
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
 			resolvedPluginConfig.workers.map(async (previewWorker) => {
@@ -676,7 +666,7 @@ export async function getPreviewMiniflareOptions(
 								name: workerConfig.name,
 								bindings: bindings ?? {},
 								account_id: workerConfig.account_id,
-								profileDir: previewProfileDir,
+								profileDir: resolvedViteConfig.root,
 							},
 							preExistingRemoteProxySessionData ?? null
 						);
