@@ -300,15 +300,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const files: string[] = [];
 
 			if (builder.text) {
+				const text = builder.text;
 				const textResults = await Promise.all(
 					locations.map((location) =>
-						this.storeTempFile(
-							builder.text!,
-							"txt",
-							"email-text",
-							location,
-							messageUUID
-						)
+						this.storeTempFile(text, "txt", "email-text", location, messageUUID)
 					)
 				);
 				for (let i = 0; i < locations.length; i++) {
@@ -317,10 +312,11 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			}
 
 			if (builder.html) {
+				const html = builder.html;
 				const htmlResults = await Promise.all(
 					locations.map((location) =>
 						this.storeTempFile(
-							builder.html!,
+							html,
 							"html",
 							"email-html",
 							location,
