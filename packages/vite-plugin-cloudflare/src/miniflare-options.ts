@@ -275,6 +275,9 @@ export async function getDevMiniflareOptions(
 												name: worker.config.name,
 												bindings: bindings ?? {},
 												account_id: worker.config.account_id,
+												profileDir: worker.config.configPath
+													? path.dirname(worker.config.configPath)
+													: undefined, // will fallback to cwd
 											},
 											preExistingRemoteProxySession ?? null
 										);
@@ -665,6 +668,9 @@ export async function getPreviewMiniflareOptions(
 								name: workerConfig.name,
 								bindings: bindings ?? {},
 								account_id: workerConfig.account_id,
+								profileDir: workerConfig.configPath
+									? path.dirname(workerConfig.configPath)
+									: undefined,
 							},
 							preExistingRemoteProxySessionData ?? null
 						);
