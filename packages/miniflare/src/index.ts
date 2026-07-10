@@ -3119,6 +3119,9 @@ export class Miniflare {
 		className: string,
 		options: DurableObjectEvictionOptions
 	): Promise<void> {
+		this.#checkDisposed();
+		await this.ready;
+
 		const durableObjectExists = this.#workerOpts.some((workerOpts) => {
 			const workerName = workerOpts.core.name ?? "";
 			return [
@@ -3153,7 +3156,6 @@ export class Miniflare {
 		const workerOpts = this.#workerOpts[workerIndex];
 		const resolvedWorkerName = workerOpts.core.name ?? "";
 		const durableObject =
-			workerOpts.do.durableObjects?.[classNameOrBindingName] ??
 			[
 				...Object.values(workerOpts.do.durableObjects ?? {}),
 				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
@@ -3164,7 +3166,7 @@ export class Miniflare {
 					(durableObject.scriptName === undefined ||
 						durableObject.scriptName === resolvedWorkerName)
 				);
-			});
+			}) ?? workerOpts.do.durableObjects?.[classNameOrBindingName];
 
 		if (durableObject === undefined) {
 			const friendlyWorkerName = resolvedWorkerName
