@@ -64,8 +64,12 @@ jobs:
             .github/opencode.json
 
       - name: Install OpenCode
+        # Pin to a known-good version (matches the Bonk workflow). Newer
+        # versions (e.g. 1.17.x) changed the default model to ones that are not
+        # provisioned in our AI Gateway, which surfaced as "Invalid Anthropic
+        # API Key" errors.
         run: |
-          npm install -g opencode-ai
+          npm install -g opencode-ai@1.15.13
           cp .github/opencode.json ./opencode.json
 
       - name: Fetch issue data
@@ -89,7 +93,9 @@ jobs:
           ISSUE: ${{ steps.issue.outputs.number }}
           REPO: ${{ github.repository }}
         run: |
-          opencode run \
+          opencode \
+            --model "cloudflare-ai-gateway/anthropic/claude-sonnet-4-5" \
+            run \
             --print-logs \
             "Analyze GitHub issue ${REPO}#${ISSUE} using the skill at .github/skills/issue-review.md.
 
