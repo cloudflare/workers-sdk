@@ -480,7 +480,7 @@ describe("createWorkerUploadForm — bindings", () => {
 			expect,
 		}) => {
 			const bindings: StartDevWorkerInput["bindings"] = {
-				FLAGS: { type: "flagship", app_id: INHERIT_SYMBOL },
+				FLAGS: { type: "flagship", app_id: INHERIT_SYMBOL } as never,
 			};
 			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
