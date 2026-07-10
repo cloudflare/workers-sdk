@@ -1,9 +1,9 @@
 import path from "node:path";
+import { unwrapHook } from "@cloudflare/remote-bindings/internal";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
-import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { logger } from "../../../logger";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";

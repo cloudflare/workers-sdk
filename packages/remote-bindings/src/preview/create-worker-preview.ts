@@ -1,19 +1,41 @@
 import crypto from "node:crypto";
 import { URL } from "node:url";
-import { getWorkersDevSubdomain } from "@cloudflare/deploy-helpers";
 import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
-import { fetch } from "undici";
-import { fetchResult } from "../cfetch";
-import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import { logger } from "../logger";
-import { getAccessHeaders } from "../user/access";
-import type { CfWorkerInitWithName } from "./remote";
 import type {
 	ApiCredentials,
+	CfWorkerInitWithName,
 	CfWorkerContext,
 	ComplianceConfig,
+	Logger,
 } from "@cloudflare/workers-utils";
-import type { HeadersInit } from "undici";
+import type { FormData, HeadersInit, RequestInit } from "undici";
+
+export interface CreateWorkerPreviewContext {
+	fetch: typeof import("undici").fetch;
+	fetchResult<ResponseType>(
+		complianceConfig: ComplianceConfig,
+		resource: string,
+		init?: RequestInit,
+		queryParams?: URLSearchParams,
+		abortSignal?: AbortSignal,
+		apiToken?: ApiCredentials
+	): Promise<ResponseType>;
+	createWorkerUploadForm(
+		worker: CfWorkerInitWithName,
+		bindings: CfWorkerInitWithName["bindings"]
+	): FormData;
+	getWorkersDevSubdomain(
+		complianceConfig: ComplianceConfig,
+		accountId: string,
+		options: { abortSignal: AbortSignal }
+	): Promise<string>;
+	getAccessHeaders(hostname: string): Promise<HeadersInit>;
+	logger: Pick<Logger, "debug" | "debugWithSanitization">;
+}
+
+export interface CreateWorkerPreviewOptions {
+	context: CreateWorkerPreviewContext;
+}
 
 /**
  * Maximum time (ms) to wait for an individual preview API request before
@@ -133,34 +155,41 @@ function switchHost(
 async function tryExpandToken(
 	exchangeUrl: string,
 	ctx: CfWorkerContext,
-	abortSignal: AbortSignal
+	abortSignal: AbortSignal,
+	options: CreateWorkerPreviewOptions
 ): Promise<string | null> {
+	const { context } = options;
 	try {
 		const switchedExchangeUrl = switchHost(exchangeUrl, ctx.host, !!ctx.zone);
 
-		const accessHeaders = await getAccessHeaders(switchedExchangeUrl.hostname);
+		const accessHeaders = await context.getAccessHeaders(
+			switchedExchangeUrl.hostname
+		);
 		const headers: HeadersInit = { ...accessHeaders };
 
-		logger.debugWithSanitization(
+		context.logger.debugWithSanitization?.(
 			"-- START EXCHANGE API REQUEST:",
 			` GET ${switchedExchangeUrl.href}`
 		);
 
-		logger.debug("-- END EXCHANGE API REQUEST");
-		const exchangeResponse = await fetch(switchedExchangeUrl, {
+		context.logger.debug("-- END EXCHANGE API REQUEST");
+		const exchangeResponse = await context.fetch(switchedExchangeUrl, {
 			signal: abortSignal,
 			headers,
 		});
 		const bodyText = await exchangeResponse.text();
-		logger.debug(
+		context.logger.debug(
 			"-- START EXCHANGE API RESPONSE:",
 			exchangeResponse.statusText,
 			exchangeResponse.status
 		);
-		logger.debug("HEADERS:", JSON.stringify(exchangeResponse.headers, null, 2));
-		logger.debugWithSanitization("RESPONSE:", bodyText);
+		context.logger.debug(
+			"HEADERS:",
+			JSON.stringify(exchangeResponse.headers, null, 2)
+		);
+		context.logger.debugWithSanitization?.("RESPONSE:", bodyText);
 
-		logger.debug("-- END EXCHANGE API RESPONSE");
+		context.logger.debug("-- END EXCHANGE API RESPONSE");
 
 		if (!exchangeResponse.ok) {
 			return null;
@@ -188,14 +217,16 @@ export async function createPreviewSession(
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal,
-	name: string | undefined
+	name: string | undefined,
+	options: CreateWorkerPreviewOptions
 ): Promise<CfPreviewSession> {
+	const { context } = options;
 	const { accountId, apiToken } = account;
 	const initUrl = ctx.zone
 		? `/zones/${ctx.zone}/workers/edge-preview`
 		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
-	const { token, exchange_url } = await fetchResult<{
+	const { token, exchange_url } = await context.fetchResult<{
 		token: string;
 		exchange_url?: string;
 	}>(
@@ -208,14 +239,18 @@ export async function createPreviewSession(
 	);
 
 	const previewSessionToken = exchange_url
-		? ((await tryExpandToken(exchange_url, ctx, withTimeout(abortSignal))) ??
-			token)
+		? ((await tryExpandToken(
+				exchange_url,
+				ctx,
+				withTimeout(abortSignal),
+				options
+			)) ?? token)
 		: token;
 
 	try {
 		let host = ctx.host;
 		if (!host) {
-			const subdomain = await getWorkersDevSubdomain(
+			const subdomain = await context.getWorkersDevSubdomain(
 				complianceConfig,
 				account.accountId,
 				{
@@ -255,8 +290,10 @@ async function createPreviewToken(
 	ctx: CfWorkerContext,
 	session: CfPreviewSession,
 	abortSignal: AbortSignal,
+	options: CreateWorkerPreviewOptions,
 	minimal_mode?: boolean
 ): Promise<CfPreviewToken> {
+	const { context } = options;
 	const { value, host } = session;
 	const { accountId } = account;
 	const url = `/accounts/${accountId}/workers/scripts/${worker.name}/edge-preview`;
@@ -281,10 +318,10 @@ async function createPreviewToken(
 			}
 		: { workers_dev: true, minimal_mode };
 
-	const formData = createWorkerUploadForm(worker, worker.bindings);
+	const formData = context.createWorkerUploadForm(worker, worker.bindings);
 	formData.set("wrangler-session-config", JSON.stringify(mode));
 
-	const { preview_token, tail_url } = await fetchResult<{
+	const { preview_token, tail_url } = await context.fetchResult<{
 		preview_token: string;
 		tail_url: string;
 	}>(
@@ -298,7 +335,8 @@ async function createPreviewToken(
 			},
 		},
 		undefined,
-		withTimeout(abortSignal)
+		withTimeout(abortSignal),
+		account.apiToken
 	);
 
 	return {
@@ -321,7 +359,8 @@ export async function createWorkerPreview(
 	ctx: CfWorkerContext,
 	session: CfPreviewSession,
 	abortSignal: AbortSignal,
-	minimal_mode?: boolean
+	minimal_mode: boolean | undefined,
+	options: CreateWorkerPreviewOptions
 ): Promise<CfPreviewToken> {
 	const token = await createPreviewToken(
 		complianceConfig,
@@ -330,6 +369,7 @@ export async function createWorkerPreview(
 		ctx,
 		session,
 		abortSignal,
+		options,
 		minimal_mode
 	);
 

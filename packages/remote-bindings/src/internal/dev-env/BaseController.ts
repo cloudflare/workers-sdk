@@ -1,4 +1,3 @@
-import { logger } from "../../logger";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -23,14 +22,30 @@ export type ControllerEvent =
 
 export interface ControllerBus {
 	dispatch(event: ControllerEvent): void;
+	controllerContext?: ControllerContext;
 }
+
+export interface ControllerContext {
+	logger: {
+		debug(message: string, ...args: unknown[]): void;
+	};
+}
+
+const defaultControllerContext: ControllerContext = {
+	logger: { debug() {} },
+};
 
 export abstract class Controller {
 	protected bus: ControllerBus;
+	protected logger: ControllerContext["logger"];
 	#tearingDown = false;
 
-	constructor(bus: ControllerBus) {
+	constructor(
+		bus: ControllerBus,
+		context = bus.controllerContext ?? defaultControllerContext
+	) {
 		this.bus = bus;
+		this.logger = context.logger;
 	}
 
 	async teardown(): Promise<void> {
@@ -39,9 +54,12 @@ export abstract class Controller {
 
 	protected emitErrorEvent(event: ErrorEvent) {
 		if (this.#tearingDown) {
-			logger.debug("Suppressing error event during teardown");
-			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
-			logger.debug("=> Error contextual data:", event.data);
+			this.logger.debug("Suppressing error event during teardown");
+			this.logger.debug(
+				`Error in ${event.source}: ${event.reason}\n`,
+				event.cause
+			);
+			this.logger.debug("=> Error contextual data:", event.data);
 			return;
 		}
 

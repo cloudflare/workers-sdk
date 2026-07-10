@@ -1,5 +1,5 @@
 import { describe, test } from "vitest";
-import { DevEnv } from "../../../api/startDevWorker/DevEnv";
+import { WranglerDevEnv } from "../../../api/startDevWorker/WranglerDevEnv";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 
 describe("DevEnv", () => {
@@ -9,7 +9,7 @@ describe("DevEnv", () => {
 		test("should format esbuild BuildFailure errors nicely for BundlerController", ({
 			expect,
 		}) => {
-			const devEnv = new DevEnv();
+			const devEnv = new WranglerDevEnv();
 
 			// Create an esbuild-like BuildFailure with errors and warnings arrays
 			const buildFailure = Object.assign(new Error("Build failed"), {
@@ -43,7 +43,7 @@ describe("DevEnv", () => {
 		test("should format esbuild BuildFailure from cause for BundlerController", ({
 			expect,
 		}) => {
-			const devEnv = new DevEnv();
+			const devEnv = new WranglerDevEnv();
 
 			// Create an esbuild-like BuildFailure nested in cause
 			const innerFailure = Object.assign(new Error("Build failed"), {
@@ -79,7 +79,7 @@ describe("DevEnv", () => {
 		test("should log non-esbuild BundlerController errors with just the message", ({
 			expect,
 		}) => {
-			const devEnv = new DevEnv();
+			const devEnv = new WranglerDevEnv();
 
 			const buildError = new Error("Custom build command failed");
 

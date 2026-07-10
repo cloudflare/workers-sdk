@@ -1,7 +1,7 @@
 import { newWorkersRpcResponse } from "capnweb";
 import { EmailMessage } from "cloudflare:email";
 
-interface Env extends Record<string, unknown> {}
+type Env = Record<string, unknown>;
 
 class BindingNotFoundError extends Error {
 	constructor(name?: string) {
@@ -42,28 +42,39 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 
 	if (targetBinding.constructor.name === "SendEmail") {
 		return {
-			async send(e: any) {
+			async send(e: unknown) {
 				// Check if this is an EmailMessage (has EmailMessage::raw property) or MessageBuilder
-				if ("EmailMessage::raw" in e) {
+				if (typeof e === "object" && e !== null && "EmailMessage::raw" in e) {
+					const email = e as {
+						from: string;
+						to: string;
+						"EmailMessage::raw": ReadableStream;
+					};
 					// EmailMessage API - reconstruct the EmailMessage object
 					const message = new EmailMessage(
-						e.from,
-						e.to,
-						e["EmailMessage::raw"]
+						email.from,
+						email.to,
+						email["EmailMessage::raw"]
 					);
 					return (targetBinding as SendEmail).send(message);
 				} else {
 					// MessageBuilder API - pass through directly as a plain object
-					return (targetBinding as SendEmail).send(e);
+					return (
+						targetBinding as { send(value: unknown): Promise<void> }
+					).send(e);
 				}
 			},
 		};
 	}
 
 	if (url.searchParams.has("MF-Dispatch-Namespace-Options")) {
-		const { name, args, options } = JSON.parse(
-			url.searchParams.get("MF-Dispatch-Namespace-Options")!
+		const dispatchOptions = url.searchParams.get(
+			"MF-Dispatch-Namespace-Options"
 		);
+		if (dispatchOptions === null) {
+			throw new Error("Missing dispatch namespace options");
+		}
+		const { name, args, options } = JSON.parse(dispatchOptions);
 		return (targetBinding as DispatchNamespace).get(name, args, options);
 	}
 

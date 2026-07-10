@@ -1,11 +1,11 @@
 import { APIError } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
+import { WranglerRemoteRuntimeController } from "../../../api/startDevWorker/WranglerRemoteRuntimeController";
 // Import the mocked functions so we can set their behavior
 import {
 	createPreviewSession,
 	createWorkerPreview,
-} from "../../../dev/create-worker-preview";
+} from "../../../dev/preview";
 import {
 	createRemoteWorkerInit,
 	getWorkerAccountAndContext,
@@ -23,7 +23,7 @@ import type {
 } from "../../../api";
 
 // Mock the API modules
-vi.mock("../../../dev/create-worker-preview", () => ({
+vi.mock("../../../dev/preview", () => ({
 	createPreviewSession: vi.fn(),
 	createWorkerPreview: vi.fn(),
 }));
@@ -95,7 +95,7 @@ describe("RemoteRuntimeController", () => {
 
 	function setup() {
 		const bus = new FakeBus();
-		const controller = new RemoteRuntimeController(bus);
+		const controller = new WranglerRemoteRuntimeController(bus);
 		teardown(() => controller.teardown());
 		return { controller, bus };
 	}

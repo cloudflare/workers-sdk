@@ -3,6 +3,11 @@ import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
+	castErrorCause,
+	Controller,
+	unwrapHook,
+} from "@cloudflare/remote-bindings/internal";
+import {
 	configFileName,
 	formatConfigSnippet,
 	getTodaysCompatDate,
@@ -39,17 +44,14 @@ import { getScriptName } from "../../utils/getScriptName";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { printBindings } from "../../utils/print-bindings";
 import { getZoneIdForPreview } from "../../zones";
-import { Controller } from "./BaseController";
-import { castErrorCause } from "./events";
-import { unwrapHook } from "./utils";
 import type { NewConfig, ReadConfigCommandArgs } from "../../config";
-import type { DevRegistryUpdateEvent } from "./events";
 import type {
+	DevRegistryUpdateEvent,
 	StartDevWorkerInput,
 	StartDevWorkerOptions,
 	Trigger,
 	WranglerStartDevWorkerInput,
-} from "./types";
+} from "@cloudflare/remote-bindings/internal";
 import type { LoginOrRefreshFailureReason } from "@cloudflare/workers-auth";
 import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";

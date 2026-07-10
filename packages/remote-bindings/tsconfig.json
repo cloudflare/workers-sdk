@@ -1,0 +1,10 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"module": "esnext",
+		"types": ["node", "@cloudflare/workers-types"],
+		"tsBuildInfoFile": ".tsbuildinfo"
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["dist", "node_modules", "**/*.test.ts"]
+}

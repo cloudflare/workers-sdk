@@ -1,29 +1,15 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import events from "node:events";
-import path from "node:path";
 import { assertNever } from "@cloudflare/workers-utils";
-import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
-import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
-import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
+import { Miniflare, Mutex, Response } from "miniflare";
+import inspectorProxyWorkerContents from "worker:dev-env/InspectorProxyWorker";
+import proxyWorkerContents from "worker:dev-env/ProxyWorker";
 import WebSocket from "ws";
-import { version as packageVersion } from "../../../package.json";
-import {
-	logConsoleMessage,
-	maybeHandleNetworkLoadResource,
-} from "../../dev/inspect";
-import {
-	castLogLevel,
-	handleStructuredLogs,
-	WranglerLog,
-} from "../../dev/miniflare";
-import { validateHttpsOptions } from "../../https-options";
-import { logger } from "../../logger";
-import { getSourceMappedStack } from "../../sourcemap";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
-import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ControllerBus } from "./BaseController";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
@@ -39,11 +25,50 @@ import type {
 	ReloadStartEvent,
 	SerializedError,
 } from "./events";
-import type { StartDevWorkerOptions } from "./types";
+import type { Bundle, StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
-import type { LogOptions, MiniflareOptions } from "miniflare";
+import type { Log, MiniflareOptions, WorkerdStructuredLog } from "miniflare";
+
+type ConsoleAPICalled = Extract<
+	InspectorProxyWorkerOutgoingWebsocketMessage,
+	{ method: "Runtime.consoleAPICalled" }
+>["params"];
+type ExceptionDetails = Extract<
+	InspectorProxyWorkerOutgoingWebsocketMessage,
+	{ method: "Runtime.exceptionThrown" }
+>["params"]["exceptionDetails"];
+
+export interface ProxyControllerContext {
+	logger: {
+		debug: (...args: unknown[]) => void;
+		error: (...args: unknown[]) => void;
+		loggerLevel: string;
+		once: { warn: (...args: unknown[]) => void };
+	};
+	packageVersion: string;
+	validateHttpsOptions: (
+		httpsKeyPath?: string,
+		httpsCertPath?: string
+	) => { key: string; cert: string } | undefined;
+	logConsoleMessage: (message: ConsoleAPICalled) => void;
+	maybeHandleNetworkLoadResource: (
+		url: string,
+		bundle: Bundle,
+		tmpDir?: string
+	) => string | undefined;
+	getSourceMappedStack: (details: ExceptionDetails) => string;
+	createProxyControllerLogger: (localServerReady: Promise<void>) => Log;
+	handleStructuredLogs: (log: WorkerdStructuredLog) => void;
+}
 
 export class ProxyController extends Controller {
+	constructor(
+		bus: ControllerBus,
+		private readonly context: ProxyControllerContext
+	) {
+		super(bus);
+	}
+
 	public ready = createDeferred<ReadyEvent>();
 
 	public localServerReady = createDeferred<void>();
@@ -53,7 +78,7 @@ export class ProxyController extends Controller {
 	private inspectorProxyWorkerWebSocket?: DeferredPromise<WebSocket>;
 
 	protected latestConfig?: StartDevWorkerOptions;
-	protected latestBundle?: EsbuildBundle;
+	protected latestBundle?: Bundle;
 
 	secret = randomUUID();
 
@@ -68,7 +93,7 @@ export class ProxyController extends Controller {
 			(this.inspectorEnabled &&
 				this.latestConfig.dev?.inspector &&
 				this.latestConfig.dev?.inspector?.secure)
-				? validateHttpsOptions(
+				? this.context.validateHttpsOptions(
 						this.latestConfig.dev.server?.httpsKeyPath,
 						this.latestConfig.dev.server?.httpsCertPath
 					)
@@ -87,8 +112,13 @@ export class ProxyController extends Controller {
 					name: "ProxyWorker",
 					compatibilityDate: "2023-12-18",
 					compatibilityFlags: ["nodejs_compat"],
-					modulesRoot: path.dirname(proxyWorkerPath),
-					modules: [{ type: "ESModule", path: proxyWorkerPath }],
+					modules: [
+						{
+							type: "ESModule",
+							path: "ProxyWorker.mjs",
+							contents: proxyWorkerContents,
+						},
+					],
 					durableObjects: {
 						DURABLE_OBJECT: {
 							className: "ProxyWorker",
@@ -118,21 +148,13 @@ export class ProxyController extends Controller {
 				},
 			],
 
-			verbose: logger.loggerLevel === "debug",
+			verbose: this.context.logger.loggerLevel === "debug",
 
 			// log requests into the ProxyWorker (for local + remote mode)
-			log: new ProxyControllerLogger(
-				castLogLevel(logger.loggerLevel),
-				{
-					prefix:
-						// if debugging, log requests with specic ProxyWorker prefix
-						logger.loggerLevel === "debug"
-							? "wrangler-ProxyWorker"
-							: "wrangler",
-				},
+			log: this.context.createProxyControllerLogger(
 				this.localServerReady.promise
 			),
-			handleStructuredLogs,
+			handleStructuredLogs: this.context.handleStructuredLogs,
 			liveReload: false,
 		};
 
@@ -145,8 +167,13 @@ export class ProxyController extends Controller {
 					"nodejs_compat",
 					"increase_websocket_message_size",
 				],
-				modulesRoot: path.dirname(inspectorProxyWorkerPath),
-				modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
+				modules: [
+					{
+						type: "ESModule",
+						path: "InspectorProxyWorker.mjs",
+						contents: inspectorProxyWorkerContents,
+					},
+				],
 				durableObjects: {
 					DURABLE_OBJECT: {
 						className: "InspectorProxyWorker",
@@ -163,7 +190,7 @@ export class ProxyController extends Controller {
 				},
 				bindings: {
 					PROXY_CONTROLLER_AUTH_SECRET: this.secret,
-					WRANGLER_VERSION: packageVersion,
+					WRANGLER_VERSION: this.context.packageVersion,
 				},
 
 				unsafeDirectSockets: [
@@ -189,7 +216,9 @@ export class ProxyController extends Controller {
 		this.proxyWorkerOptions = proxyWorkerOptions;
 
 		if (proxyWorkerOptionsChanged) {
-			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
+			this.context.logger.debug(
+				"ProxyWorker miniflare options changed, reinstantiating..."
+			);
 
 			void this.proxyWorker.setOptions(proxyWorkerOptions).catch((error) => {
 				this.emitErrorEvent("Failed to start ProxyWorker", error);
@@ -270,7 +299,7 @@ export class ProxyController extends Controller {
 			inspectorProxyWorkerUrl.pathname =
 				"/cdn-cgi/InspectorProxyWorker/websocket";
 
-			webSocket = new WebSocket(inspectorProxyWorkerUrl, {
+			webSocket = new WebSocket(inspectorProxyWorkerUrl.toString(), {
 				headers: { Authorization: this.secret },
 				// If compression is on, we sometimes get race conditions with MockHttpSocket closing down
 				// while the deflate extension is still trying to send decompressed chunks.
@@ -470,7 +499,7 @@ export class ProxyController extends Controller {
 
 				break;
 			case "debug-log":
-				logger.debug("[ProxyWorker]", ...message.args);
+				this.context.logger.debug("[ProxyWorker]", ...message.args);
 
 				break;
 			case "sseResponseDetected":
@@ -479,7 +508,7 @@ export class ProxyController extends Controller {
 					this.latestConfig?.dev?.tunnel?.enabled &&
 					this.latestConfig.dev.tunnel.name === undefined
 				) {
-					logger.once.warn(
+					this.context.logger.once.warn(
 						"Quick tunnels do not support Server-Sent Events (SSE). Use a named Cloudflare Tunnel if you need SSE over a public URL."
 					);
 				}
@@ -503,7 +532,7 @@ export class ProxyController extends Controller {
 					return;
 				}
 
-				logConsoleMessage(message.params);
+				this.context.logConsoleMessage(message.params);
 
 				break;
 			}
@@ -512,8 +541,10 @@ export class ProxyController extends Controller {
 					return;
 				}
 
-				const stack = getSourceMappedStack(message.params.exceptionDetails);
-				logger.error(message.params.exceptionDetails.text, stack);
+				const stack = this.context.getSourceMappedStack(
+					message.params.exceptionDetails
+				);
+				this.context.logger.error(message.params.exceptionDetails.text, stack);
 				break;
 			}
 			default: {
@@ -532,7 +563,7 @@ export class ProxyController extends Controller {
 		switch (message.type) {
 			case "runtime-websocket-error":
 				// TODO: consider sending proxyData again to trigger the InspectorProxyWorker to reconnect to the runtime
-				logger.debug(
+				this.context.logger.debug(
 					"[InspectorProxyWorker] 'runtime websocket' error",
 					message.error
 				);
@@ -547,7 +578,7 @@ export class ProxyController extends Controller {
 					break;
 				}
 
-				logger.debug("[InspectorProxyWorker]", ...message.args);
+				this.context.logger.debug("[InspectorProxyWorker]", ...message.args);
 
 				break;
 			case "load-network-resource": {
@@ -556,7 +587,7 @@ export class ProxyController extends Controller {
 
 				let maybeContents: string | undefined;
 				if (message.url.startsWith("wrangler-file:")) {
-					maybeContents = maybeHandleNetworkLoadResource(
+					maybeContents = this.context.maybeHandleNetworkLoadResource(
 						message.url.replace("wrangler-file:", "file:"),
 						this.latestBundle,
 						this.latestBundle.sourceMapMetadata?.tmpDir
@@ -580,7 +611,7 @@ export class ProxyController extends Controller {
 	_torndown = false;
 	override async teardown() {
 		await super.teardown();
-		logger.debug("ProxyController teardown beginning...");
+		this.context.logger.debug("ProxyController teardown beginning...");
 		this._torndown = true;
 
 		const { proxyWorker } = this;
@@ -595,7 +626,7 @@ export class ProxyController extends Controller {
 				}),
 		]);
 
-		logger.debug("ProxyController teardown complete");
+		this.context.logger.debug("ProxyController teardown complete");
 	}
 
 	// *********************
@@ -639,30 +670,6 @@ export class ProxyController extends Controller {
 			};
 		}
 		super.emitErrorEvent(data);
-	}
-}
-
-class ProxyControllerLogger extends WranglerLog {
-	constructor(
-		level: LogLevel,
-		opts: LogOptions,
-		private localServerReady: Promise<void>
-	) {
-		super(level, opts);
-	}
-
-	logReady(message: string): void {
-		this.localServerReady.then(() => super.logReady(message)).catch(() => {});
-	}
-
-	log(message: string) {
-		// filter out request logs being handled by the ProxyWorker
-		// the requests log remaining are handled by the UserWorker
-		// keep the ProxyWorker request logs if we're in debug mode
-		if (message.includes("/cdn-cgi/") && this.level < LogLevel.DEBUG) {
-			return;
-		}
-		super.log(message);
 	}
 }
 

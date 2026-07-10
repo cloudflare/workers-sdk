@@ -78,6 +78,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
+		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
 		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",

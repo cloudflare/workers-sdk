@@ -1,24 +1,29 @@
 import events from "node:events";
-import path from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
-import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
-import { RemoteSessionAuthenticationError } from "../../dev/remote";
-import { logger } from "../../logger";
-import { getBasePath } from "../../paths";
-import { startWorker } from "../startDevWorker";
-import type { LoggerLevel } from "../../logger";
-import type { StartDevWorkerInput, Worker } from "../startDevWorker";
-import type { ErrorEvent } from "../startDevWorker/events";
-import type { Config } from "@cloudflare/workers-utils";
+import { createDefaultAuthHook } from "../auth";
+import { createRemoteBindingsLogger } from "../logger";
+import {
+	RemoteProxyDevEnv,
+	RemoteSessionAuthenticationError,
+} from "./RemoteProxyDevEnv";
+import type { ErrorEvent } from "../internal/dev-env/events";
+import type { StartDevWorkerInput, Worker } from "../internal/dev-env/types";
+import type { RemoteBindingsLogger } from "../logger";
+import type { Config, LoggerLevel } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
 
 export type StartRemoteProxySessionOptions = {
 	workerName?: string;
 	auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
+	accountId?: string;
+	/** Directory used to resolve auth profile directory bindings. */
+	profileDir?: string;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
+	/** Logger used for lifecycle and runtime messages. */
+	logger?: RemoteBindingsLogger;
 };
 
 function isErrorEvent(error: unknown): error is ErrorEvent {
@@ -87,6 +92,7 @@ export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options?: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
+	const logger = options?.logger ?? createRemoteBindingsLogger();
 	logger.log(chalk.dim("⎔ Establishing remote connection..."));
 	// Transform all bindings to use "raw" mode
 	const rawBindings = Object.fromEntries(
@@ -96,46 +102,51 @@ export async function startRemoteProxySession(
 		])
 	);
 
-	const proxyServerWorkerWranglerConfig = path.resolve(
-		getBasePath(),
-		"templates/remoteBindings/wrangler.jsonc"
-	);
-
-	const worker = await startWorker({
-		name: options?.workerName,
-		entrypoint: remoteBindingsWorkerPath,
-		config: proxyServerWorkerWranglerConfig,
-		compatibilityDate: "2025-04-28",
-		dev: {
-			remote: "minimal",
-			auth: options?.auth,
-			server: {
-				port: 0,
-			},
-			inspector: false,
-			logLevel: getStartWorkerLogLevel(logger.loggerLevel),
-		},
-		bindings: rawBindings,
-	}).catch((startWorkerError) => {
-		// If the error is already a UserError (e.g. an auth failure from
-		// ConfigController), re-throw it directly so the top-level error
-		// handler can display the original, actionable message without
-		// wrapping it in a generic "Failed to start" envelope.
-		if (startWorkerError instanceof UserError) {
-			throw startWorkerError;
-		}
-		let errorMessage = startWorkerError;
-		if (startWorkerError instanceof Error) {
-			if (startWorkerError.cause instanceof Error) {
-				errorMessage = startWorkerError.cause.message;
-			} else {
-				errorMessage = startWorkerError.message;
-			}
-		}
-		throw new Error(
-			`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
+	const auth =
+		options?.auth ??
+		createDefaultAuthHook(
+			logger,
+			options?.accountId,
+			options?.complianceRegion,
+			options?.profileDir
 		);
-	});
+	const worker = await new RemoteProxyDevEnv(logger, options?.accountId)
+		.startWorker({
+			name: options?.workerName,
+			entrypoint: "ProxyServerWorker.mjs",
+			compatibilityDate: "2025-04-28",
+			complianceRegion: options?.complianceRegion,
+			dev: {
+				remote: "minimal",
+				auth,
+				server: {
+					port: 0,
+				},
+				inspector: false,
+				logLevel: getStartWorkerLogLevel(logger.loggerLevel),
+			},
+			bindings: rawBindings,
+		})
+		.catch((startWorkerError) => {
+			// If the error is already a UserError (e.g. an auth failure from
+			// ConfigController), re-throw it directly so the top-level error
+			// handler can display the original, actionable message without
+			// wrapping it in a generic "Failed to start" envelope.
+			if (startWorkerError instanceof UserError) {
+				throw startWorkerError;
+			}
+			let errorMessage = startWorkerError;
+			if (startWorkerError instanceof Error) {
+				if (startWorkerError.cause instanceof Error) {
+					errorMessage = startWorkerError.cause.message;
+				} else {
+					errorMessage = startWorkerError.message;
+				}
+			}
+			throw new Error(
+				`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
+			);
+		});
 
 	const maybeErrorPromise = new DeferredPromise<{ error: unknown }>();
 

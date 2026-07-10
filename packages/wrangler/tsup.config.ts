@@ -80,12 +80,16 @@ export default defineConfig((options) => [
 		platform: "node",
 		format: "cjs",
 		dts: {
-			resolve: ["@cloudflare/workflows-shared/src/types"],
+			resolve: [
+				"@cloudflare/workflows-shared/src/types",
+				"devtools-protocol/types/protocol-mapping",
+			],
 		},
 		outDir: "wrangler-dist",
 		tsconfig: "tsconfig.json",
 		metafile: true,
 		external: EXTERNAL_DEPENDENCIES,
+		noExternal: ["@cloudflare/remote-bindings"],
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		inject: [path.join(__dirname, "import_meta_url.js")],
 		// mainFields: ["module", "main"],

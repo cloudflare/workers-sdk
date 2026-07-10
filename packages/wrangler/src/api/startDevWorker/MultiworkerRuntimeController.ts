@@ -1,22 +1,24 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
+import { castErrorCause } from "@cloudflare/remote-bindings/internal";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
-import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
 	getContainerDevOptions,
 	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
-import type { RemoteProxySession } from "../remoteBindings";
-import type { ControllerBus } from "./BaseController";
-import type { BundleCompleteEvent } from "./events";
-import type { Binding } from "./index";
+import type { RemoteProxySession } from "../remote-bindings";
+import type {
+	Binding,
+	BundleCompleteEvent,
+	ControllerBus,
+} from "@cloudflare/remote-bindings/internal";
 
 // Ensure DO references from other workers have the same SQL setting as the DO definition in it's original Worker
 function ensureMatchingSql(options: MF.Options) {
@@ -142,7 +144,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
 				const { maybeStartOrUpdateRemoteProxySession } =
-					await import("../remoteBindings");
+					await import("../remote-bindings");
 				const remoteProxySession = await maybeStartOrUpdateRemoteProxySession(
 					{
 						name: configBundle.name,

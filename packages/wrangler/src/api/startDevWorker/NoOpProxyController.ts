@@ -1,10 +1,10 @@
-import { ProxyController } from "./ProxyController";
+import { ProxyController } from "./WranglerProxyController";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
-} from "./events";
+} from "@cloudflare/remote-bindings/internal";
 
 export class NoOpProxyController extends ProxyController {
 	onConfigUpdate(_data: ConfigUpdateEvent) {}

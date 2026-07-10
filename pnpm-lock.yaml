@@ -2587,6 +2587,64 @@ importers:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
+  packages/remote-bindings:
+    dependencies:
+      '@cloudflare/deploy-helpers':
+        specifier: workspace:*
+        version: link:../deploy-helpers
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
+      devtools-protocol:
+        specifier: 0.0.1182435
+        version: 0.0.1182435
+      undici:
+        specifier: catalog:default
+        version: 7.28.0
+      ws:
+        specifier: catalog:default
+        version: 8.21.0
+    devDependencies:
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
+      '@cloudflare/workers-auth':
+        specifier: workspace:*
+        version: link:../workers-auth
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20260708.1
+      '@types/node':
+        specifier: 22.15.17
+        version: 22.15.17
+      '@types/ws':
+        specifier: ^8.5.7
+        version: 8.5.13
+      capnweb:
+        specifier: catalog:default
+        version: 0.5.0
+      chalk:
+        specifier: catalog:default
+        version: 5.3.0
+      esbuild:
+        specifier: catalog:default
+        version: 0.28.1
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+      tsdown:
+        specifier: 0.16.3
+        version: 0.16.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+
   packages/solarflare-theme: {}
 
   packages/turbo-r2-archive:
@@ -2629,6 +2687,9 @@ importers:
 
   packages/vite-plugin-cloudflare:
     dependencies:
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
@@ -3882,6 +3943,9 @@ importers:
 
   packages/vitest-pool-workers:
     dependencies:
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
       cjs-module-lexer:
         specifier: 1.2.3
         version: 1.2.3
@@ -4316,6 +4380,9 @@ importers:
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset

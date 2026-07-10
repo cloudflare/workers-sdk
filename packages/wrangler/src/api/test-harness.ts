@@ -25,12 +25,16 @@ import { getDatabaseInfoFromConfig } from "../d1/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { requireApiToken, requireAuth } from "../user";
-import { DevEnv } from "./startDevWorker/DevEnv";
+import { ConfigController } from "./startDevWorker/ConfigController";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
-import type { CfAccount } from "../dev/create-worker-preview";
-import type { ErrorEvent } from "./startDevWorker/events";
-import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
+import { WranglerDevEnv } from "./startDevWorker/WranglerDevEnv";
+import type { CfAccount } from "../dev/preview";
+import type {
+	DevEnv,
+	ErrorEvent,
+	WranglerStartDevWorkerInput,
+} from "@cloudflare/remote-bindings/internal";
 import type {
 	D1Database,
 	DurableObjectNamespace,
@@ -520,15 +524,15 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		const [, ...auxiliaryWorkers] = inputs;
 		const isMultiworker = auxiliaryWorkers.length > 0;
 		const primaryDevEnv = isMultiworker
-			? new DevEnv({
+			? new WranglerDevEnv({
 					runtimeFactories: [
 						(devEnv) => new MultiworkerRuntimeController(devEnv, inputs.length),
 					],
 				})
-			: new DevEnv();
+			: new WranglerDevEnv();
 		const auxiliaryDevEnvs = auxiliaryWorkers.map(
 			() =>
-				new DevEnv({
+				new WranglerDevEnv({
 					runtimeFactories: [() => primaryDevEnv.runtimes[0]],
 					proxyFactory: (devEnv) => new NoOpProxyController(devEnv),
 				})
@@ -1002,8 +1006,9 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
-					const workerConfig = getWorkerDevEnv(session, workerName).config
-						.latestWranglerConfig;
+					const configController = getWorkerDevEnv(session, workerName).config;
+					assert(configController instanceof ConfigController);
+					const workerConfig = configController.latestWranglerConfig;
 
 					assert(
 						workerConfig,

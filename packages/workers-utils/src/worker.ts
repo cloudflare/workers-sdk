@@ -5,7 +5,7 @@ import type {
 	Route,
 } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
-import type { Json, WorkerMetadata } from "./types";
+import type { Json, StartDevWorkerInput, WorkerMetadata } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 /**
@@ -517,6 +517,11 @@ export interface CfWorkerInit {
 		  }>
 		| undefined;
 }
+
+export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
+	Omit<CfWorkerInit, "bindings"> & {
+		bindings: StartDevWorkerInput["bindings"];
+	};
 
 export interface CfWorkerContext {
 	env: string | undefined;

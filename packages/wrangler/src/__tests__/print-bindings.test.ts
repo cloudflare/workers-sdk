@@ -3,7 +3,7 @@ import { INHERIT_SYMBOL } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
 import { printBindings, warnOrError } from "../utils/print-bindings";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import type { StartDevWorkerInput } from "../api/startDevWorker/types";
+import type { StartDevWorkerInput } from "@cloudflare/remote-bindings/internal";
 
 function callPrintBindings(bindings: StartDevWorkerInput["bindings"]) {
 	const lines: string[] = [];

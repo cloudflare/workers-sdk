@@ -105,6 +105,7 @@ export type ProxyWorkerOutgoingRequestBody =
 
 // InspectorProxyWorker
 export * from "./devtools";
+export * from "./inspector-protocol";
 export type InspectorProxyWorkerIncomingWebSocketMessage =
 	| {
 			type: ReloadStartEvent["type"];

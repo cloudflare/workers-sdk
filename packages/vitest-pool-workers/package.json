@@ -53,6 +53,7 @@
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
+		"@cloudflare/remote-bindings": "workspace:*",
 		"cjs-module-lexer": "1.2.3",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",

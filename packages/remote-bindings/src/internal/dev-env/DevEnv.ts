@@ -1,53 +1,89 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
-import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
-import { ParseError, UserError } from "@cloudflare/workers-utils";
-import { MiniflareCoreError } from "miniflare";
-import {
-	fetchKVGetValue,
-	fetchListResult,
-	fetchPagedListResult,
-	fetchResult,
-} from "../../cfetch";
-import {
-	isBuildFailure,
-	isBuildFailureFromCause,
-} from "../../deployment-bundle/build-failures";
-import { confirm, prompt, select } from "../../dialogs";
-import { logBuildFailure, logger, runWithLogLevel } from "../../logger";
-import { BundlerController } from "./BundlerController";
-import { ConfigController } from "./ConfigController";
-import { LocalRuntimeController } from "./LocalRuntimeController";
-import { ProxyController } from "./ProxyController";
-import { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type {
-	Controller,
 	ControllerBus,
+	ControllerContext,
 	ControllerEvent,
 	RuntimeController,
 } from "./BaseController";
-import type { ErrorEvent } from "./events";
-import type { StartDevWorkerInput, Worker } from "./types";
+import type {
+	BundleStartEvent,
+	ConfigUpdateEvent,
+	DevRegistryUpdateEvent,
+	ErrorEvent,
+	ReadyEvent,
+	ReloadCompleteEvent,
+	ReloadStartEvent,
+} from "./events";
+import type {
+	LogLevel,
+	StartDevWorkerInput,
+	StartDevWorkerOptions,
+	Worker,
+} from "./types";
+import type { DeferredPromise } from "./utils";
 
-type ControllerFactory<C extends Controller> = (devEnv: DevEnv) => C;
+export type ControllerFactory<C> = (devEnv: DevEnv) => C;
+
+interface ControllerLike {
+	teardown(): Promise<void>;
+}
+
+export interface ConfigControllerLike extends ControllerLike {
+	latestInput?: StartDevWorkerInput;
+	latestConfig?: StartDevWorkerOptions;
+	set(
+		input: StartDevWorkerInput,
+		throwErrors?: boolean
+	): Promise<StartDevWorkerOptions | undefined>;
+	patch(
+		input: Partial<StartDevWorkerInput>
+	): Promise<StartDevWorkerOptions | undefined>;
+	onDevRegistryUpdate(event: DevRegistryUpdateEvent): void;
+}
+
+export interface BundlerControllerLike extends ControllerLike {
+	onConfigUpdate(event: ConfigUpdateEvent): void;
+}
+
+export interface ProxyControllerLike extends ControllerLike {
+	ready: DeferredPromise<ReadyEvent>;
+	localServerReady: DeferredPromise<void>;
+	runtimeMessageMutex: { drained(): Promise<void> };
+	proxyWorker?: ReadyEvent["proxyWorker"];
+	onConfigUpdate(event: ConfigUpdateEvent): void;
+	onBundleStart(event: BundleStartEvent): void;
+	onReloadStart(event: ReloadStartEvent): void;
+	onReloadComplete(event: ReloadCompleteEvent): void;
+}
+
+export interface DevEnvContext {
+	logger: ControllerContext["logger"] & {
+		warn(message: string, ...args: unknown[]): void;
+	};
+	initialize(): void;
+	handleErrorEvent(devEnv: DevEnv, event: ErrorEvent): void;
+	runWithLogLevel<V>(logLevel: LogLevel | undefined, callback: () => V): V;
+}
+
+export interface DevEnvOptions {
+	configFactory: ControllerFactory<ConfigControllerLike>;
+	bundlerFactory: ControllerFactory<BundlerControllerLike>;
+	runtimeFactories: ControllerFactory<RuntimeController>[];
+	proxyFactory: ControllerFactory<ProxyControllerLike>;
+	context: DevEnvContext;
+}
 
 export class DevEnv extends EventEmitter implements ControllerBus {
-	config: ConfigController;
-	bundler: BundlerController;
+	config: ConfigControllerLike;
+	bundler: BundlerControllerLike;
 	runtimes: RuntimeController[];
-	proxy: ProxyController;
+	proxy: ProxyControllerLike;
+	controllerContext: ControllerContext;
+	private context: DevEnvContext;
 
 	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
-		initDeployHelpersContext({
-			logger,
-			fetchResult,
-			fetchListResult,
-			fetchPagedListResult,
-			fetchKVGetValue,
-			confirm,
-			prompt,
-			select,
-		});
+		this.context.initialize();
 
 		const worker = createWorkerObject(this);
 
@@ -66,29 +102,27 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	}
 
 	constructor({
-		configFactory = (devEnv) => new ConfigController(devEnv),
-		bundlerFactory = (devEnv) => new BundlerController(devEnv),
-		runtimeFactories = [
-			(devEnv) => new LocalRuntimeController(devEnv),
-			(devEnv) => new RemoteRuntimeController(devEnv),
-		],
-		proxyFactory = (devEnv) => new ProxyController(devEnv),
-	}: {
-		configFactory?: ControllerFactory<ConfigController>;
-		bundlerFactory?: ControllerFactory<BundlerController>;
-		runtimeFactories?: ControllerFactory<RuntimeController>[];
-		proxyFactory?: ControllerFactory<ProxyController>;
-	} = {}) {
+		configFactory,
+		bundlerFactory,
+		runtimeFactories,
+		proxyFactory,
+		context,
+	}: DevEnvOptions) {
 		super();
 
+		this.context = context;
+		this.controllerContext = context;
 		this.config = configFactory(this);
 		this.bundler = bundlerFactory(this);
 		this.runtimes = runtimeFactories.map((factory) => factory(this));
 		this.proxy = proxyFactory(this);
 
 		this.on("error", (event: ErrorEvent) => {
-			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
-			logger.debug("=> Error contextual data:", event.data);
+			this.context.logger.debug(
+				`Error in ${event.source}: ${event.reason}\n`,
+				event.cause
+			);
+			this.context.logger.debug("=> Error contextual data:", event.data);
 		});
 	}
 
@@ -113,7 +147,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	dispatch(event: ControllerEvent): void {
 		switch (event.type) {
 			case "error":
-				this.handleErrorEvent(event);
+				this.context.handleErrorEvent(this, event);
 				break;
 
 			case "configUpdate":
@@ -155,74 +189,31 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 
 			default: {
 				const _exhaustive: never = event;
-				logger.warn(
+				this.context.logger.warn(
 					`Unknown event type: ${(_exhaustive as ControllerEvent).type}`
 				);
 			}
 		}
 	}
 
-	private handleErrorEvent(event: ErrorEvent): void {
-		if (
-			event.cause instanceof MiniflareCoreError &&
-			event.cause.isUserError()
-		) {
-			this.emit(
-				"error",
-				new UserError(event.cause.message, {
-					telemetryMessage: "api dev miniflare user error",
-				})
-			);
-		} else if (
-			event.source === "ProxyController" &&
-			(event.reason.startsWith("Failed to send message to") ||
-				event.reason.startsWith("Could not connect to InspectorProxyWorker"))
-		) {
-			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
-			logger.debug("=> Error contextual data:", event.data);
-		}
-		// Parse errors are recoverable by changing your Wrangler configuration file and saving
-		// All other errors from the ConfigController are non-recoverable
-		else if (
-			event.source === "ConfigController" &&
-			event.cause instanceof ParseError
-		) {
-			logger.error(event.cause);
-			this.emit("buildFailed", event);
-		}
-		// Build errors are recoverable by fixing the code and saving
-		else if (event.source === "BundlerController") {
-			if (isBuildFailure(event.cause)) {
-				logBuildFailure(event.cause.errors, event.cause.warnings);
-			} else if (isBuildFailureFromCause(event.cause)) {
-				logBuildFailure(event.cause.cause.errors, event.cause.cause.warnings);
-			} else {
-				logger.error(event.cause.message);
-			}
-			this.emit("buildFailed", event);
-		}
-		// if other knowable + recoverable errors occur, handle them here
-		else {
-			// otherwise, re-emit the unknowable errors to the top-level
-			this.emit("error", event);
-		}
-	}
-
 	async teardown() {
-		await runWithLogLevel(this.config.latestInput?.dev?.logLevel, async () => {
-			logger.debug("DevEnv teardown beginning...");
+		await this.context.runWithLogLevel(
+			this.config.latestInput?.dev?.logLevel,
+			async () => {
+				this.context.logger.debug("DevEnv teardown beginning...");
 
-			await Promise.all([
-				this.config.teardown(),
-				this.bundler.teardown(),
-				...this.runtimes.map((runtime) => runtime.teardown()),
-				this.proxy.teardown(),
-			]);
+				await Promise.all([
+					this.config.teardown(),
+					this.bundler.teardown(),
+					...this.runtimes.map((runtime) => runtime.teardown()),
+					this.proxy.teardown(),
+				]);
 
-			this.emit("teardown");
+				this.emit("teardown");
 
-			logger.debug("DevEnv teardown complete");
-		});
+				this.context.logger.debug("DevEnv teardown complete");
+			}
+		);
 	}
 }
 

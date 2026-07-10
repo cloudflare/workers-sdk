@@ -1,15 +1,8 @@
 import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
-import type { StartDevWorkerOptions } from ".";
 import type { AdditionalDevProps } from "../../dev";
-import type { Config, ConfigBindingFieldName } from "@cloudflare/workers-utils";
+import type { StartDevWorkerOptions } from "@cloudflare/remote-bindings/internal";
 
-export function convertConfigBindingsToStartWorkerBindings(
-	configBindings: Partial<Pick<Config, ConfigBindingFieldName>>
-): StartDevWorkerOptions["bindings"] {
-	return convertConfigToBindings(configBindings, {
-		usePreviewIds: true,
-	});
-}
+export { convertConfigBindingsToStartWorkerBindings } from "./config-binding-utils";
 
 /**
  * Bindings that can be passed via the StartDevOptions CLI interface.

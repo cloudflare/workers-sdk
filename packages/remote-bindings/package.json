@@ -1,0 +1,77 @@
+{
+	"name": "@cloudflare/remote-bindings",
+	"version": "0.0.1",
+	"description": "Remote Cloudflare bindings for local development.",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/remote-bindings#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "workers-devprod@cloudflare.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/remote-bindings"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.mts"
+		},
+		"./internal": {
+			"import": "./dist/internal.mjs",
+			"types": "./dist/internal.d.mts"
+		},
+		"./preview/create-worker-preview": {
+			"import": "./dist/preview/create-worker-preview.mjs",
+			"types": "./dist/preview/create-worker-preview.d.mts"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check:type": "tsc -p ./tsconfig.json",
+		"deploy": "echo 'no deploy'",
+		"dev": "tsdown --watch",
+		"test": "vitest",
+		"test:ci": "vitest run"
+	},
+	"dependencies": {
+		"@cloudflare/deploy-helpers": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"devtools-protocol": "0.0.1182435",
+		"undici": "catalog:default",
+		"ws": "catalog:default"
+	},
+	"devDependencies": {
+		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/workers-auth": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@types/node": "catalog:default",
+		"@types/ws": "^8.5.7",
+		"capnweb": "catalog:default",
+		"chalk": "catalog:default",
+		"esbuild": "catalog:default",
+		"miniflare": "workspace:*",
+		"tsdown": "0.16.3",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"peerDependencies": {
+		"miniflare": "workspace:*"
+	},
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}
