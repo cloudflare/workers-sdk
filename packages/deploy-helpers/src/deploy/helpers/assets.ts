@@ -362,8 +362,38 @@ export function getEdgeKvUploadConcurrency(jwt: string): number {
 	}
 }
 
+/**
+ * Recursively lists the files under `dir`, returning paths relative to it.
+ *
+ * Unlike `readdir(dir, { recursive: true })`, this does not follow symbolic
+ * links: symlinked files are skipped and symlinked directories are not
+ * descended into. Following symlinks would let a project upload files from
+ * outside its assets directory (e.g. a symlink to `/etc/passwd`, or a symlink
+ * to a directory whose contents are then enumerated) as static assets.
+ */
+async function listAssetFiles(
+	dir: string,
+	base: string = dir
+): Promise<string[]> {
+	const entries = await readdir(dir);
+	const nested = await Promise.all(
+		entries.map(async (entry) => {
+			const filepath = path.join(dir, entry);
+			const filestat = await lstat(filepath);
+			if (filestat.isSymbolicLink()) {
+				return [];
+			}
+			if (filestat.isDirectory()) {
+				return listAssetFiles(filepath, base);
+			}
+			return [path.relative(base, filepath)];
+		})
+	);
+	return nested.flat();
+}
+
 export const buildAssetManifest = async (dir: string) => {
-	const files = await readdir(dir, { recursive: true });
+	const files = await listAssetFiles(dir);
 	logReadFilesFromDirectory(dir, files);
 
 	const manifest: AssetManifest = {};
