@@ -103,13 +103,13 @@ export const validate = async (args: {
 			files.map(async (file) => {
 				const filepath = join(dir, file);
 				const relativeFilepath = relative(startingDir, filepath);
-				const filestat = await lstat(filepath);
-
 				for (const minimatch of IGNORE_LIST) {
 					if (minimatch.match(relativeFilepath)) {
 						return;
 					}
 				}
+
+				const filestat = await lstat(filepath);
 
 				if (filestat.isSymbolicLink()) {
 					return;
