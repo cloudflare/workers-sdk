@@ -861,14 +861,6 @@ export async function provisionBindings(
 			configPath,
 			"Provisioning resources is not possible without a config file"
 		);
-		if (useServiceEnvironments(config)) {
-			throw new UserError(
-				"Provisioning resources is not supported with a service environment",
-				{
-					telemetryMessage: "provision resources with service environment",
-				}
-			);
-		}
 		logger.log();
 
 		printBindings(
