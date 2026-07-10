@@ -113,15 +113,13 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			ctx.setHasShownWorkerConfigWarnings(false);
 		},
 		configureServer(viteDevServer) {
-			// Guards against config changes triggering a restart while another
-			// restart is already in flight. Deliberately not `watcher.off`: a
-			// failed restart (e.g. the changed config is invalid) resolves
-			// without replacing the server, so a removed handler would never be
-			// re-registered and config changes — including the one that fixes
-			// the config — would be ignored for the rest of the session. On a
-			// successful restart the new server registers a fresh handler and
-			// this server's watcher is closed, so the stale handler never fires
-			// again.
+			// This variable is used to guard against config changes triggering
+			// a restart while another restart is already in flight. Note that we are
+			// deliberately not calling `watcher.off` since on failed restarts
+			// (e.g. the changed config is invalid) vite would resolve without replacing
+			// the server, so a removed handler would never be re-registered and
+			// config changes, including the one that fixes the config, would be
+			// ignored for the rest of the session.
 			let restartInFlight = false;
 
 			const configChangedHandler = async (changedFilePath: string) => {
