@@ -96,10 +96,11 @@ test("Unbound send_email binding works", async ({ expect }) => {
 				);
 			}
 			const message = entry[1];
-			const fileMatch = message.match(/^  \(system\): (.+)$/m);
-			expect(fileMatch).toBeDefined();
-			const file = fileMatch![1];
-			expect(await readFile(file, "utf-8")).toBe(email);
+			const fileMatch = message.match(/^Email \(system\): (.+)$/m);
+			expect(fileMatch).not.toBeNull();
+			const file = fileMatch?.[1];
+			expect(file).toBeDefined();
+			expect(await readFile(String(file), "utf-8")).toBe(email);
 		},
 		{ timeout: 5_000, interval: 100 }
 	);
@@ -196,10 +197,11 @@ test("Single allowed destination send_email binding works", async ({
 				);
 			}
 			const message = entry[1];
-			const fileMatch = message.match(/^  \(system\): (.+)$/m);
-			expect(fileMatch).toBeDefined();
-			const file = fileMatch![1];
-			expect(await readFile(file, "utf-8")).toBe(email);
+			const fileMatch = message.match(/^Email \(system\): (.+)$/m);
+			expect(fileMatch).not.toBeNull();
+			const file = fileMatch?.[1];
+			expect(file).toBeDefined();
+			expect(await readFile(String(file), "utf-8")).toBe(email);
 		},
 		{ timeout: 5_000, interval: 100 }
 	);
@@ -1028,10 +1030,11 @@ test("reply: references generated correctly", async ({ expect }) => {
 	);
 
 	const message = log.logs[1][1];
-	const fileMatch = message.match(/^  (.+)$/m);
-	expect(fileMatch).toBeDefined();
-	const file = fileMatch![1];
-	const fileContent = await readFile(file, "utf-8");
+	const fileMatch = message.match(/^ {2}(.+)$/m);
+	expect(fileMatch).not.toBeNull();
+	const file = fileMatch?.[1];
+	expect(file).toBeDefined();
+	const fileContent = await readFile(String(file), "utf-8");
 	expect(fileContent).toBeTruthy();
 	expect(
 		fileContent.includes(
@@ -1214,7 +1217,9 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 			const message = entry[1];
 
 			// Verify attachment file path is logged
-			expect(message).toContain("Attachment (attachment) (system): test.txt ->");
+			expect(message).toContain(
+				"Attachment (attachment) (system): test.txt ->"
+			);
 			const attachmentFile = message.match(
 				/^Attachment \(attachment\) \(system\): test\.txt -> (.+)$/m
 			)?.[1];
@@ -2085,8 +2090,12 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		}>;
 		expect(diskServices).toHaveLength(2);
 
-		const systemTempDisk = diskServices.find((s) => s.name === "email:disk:system");
-		const projectDisk = diskServices.find((s) => s.name === "email:disk:project");
+		const systemTempDisk = diskServices.find(
+			(s) => s.name === "email:disk:system"
+		);
+		const projectDisk = diskServices.find(
+			(s) => s.name === "email:disk:project"
+		);
 		if (!systemTempDisk || !projectDisk) {
 			throw new Error("Expected both disk services to be present");
 		}
@@ -2104,25 +2113,41 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		const workerService = services.find(
 			(s) => s.name === "SEND-EMAIL-WORKER:SEND_EMAIL"
 		) as
-			| { name: string; worker: { bindings: { name: string; json?: string }[] } }
+			| {
+					name: string;
+					worker: { bindings: { name: string; json?: string }[] };
+			  }
 			| undefined;
 		if (!workerService) {
 			throw new Error("Expected send_email worker service to be present");
 		}
 
 		const bindings = workerService.worker.bindings;
-		const emailDiskServicesBinding = bindings.find((b) => b.name === "email_disk_services");
+
+		// Each disk service is bound so the worker can write to it via fetch.
+		const systemServiceBinding = bindings.find(
+			(b) => b.name === "MINIFLARE_EMAIL_DISK_SYSTEM"
+		) as { name: string; service?: { name: string } } | undefined;
+		const projectServiceBinding = bindings.find(
+			(b) => b.name === "MINIFLARE_EMAIL_DISK_PROJECT"
+		) as { name: string; service?: { name: string } } | undefined;
+		expect(systemServiceBinding?.service?.name).toBe("email:disk:system");
+		expect(projectServiceBinding?.service?.name).toBe("email:disk:project");
+
+		const emailDiskServicesBinding = bindings.find(
+			(b) => b.name === "email_disk_services"
+		);
 		if (!emailDiskServicesBinding?.json) {
 			throw new Error("Expected email_disk_services binding with JSON value");
 		}
 
 		const emailDiskServices = JSON.parse(emailDiskServicesBinding.json);
 		expect(emailDiskServices).toHaveLength(2);
-		expect(emailDiskServices[0].name).toBe("MINIFLARE_EMAIL_DISK_SYSTEM");
-		expect(emailDiskServices[0].service.name).toBe("email:disk:system");
+		expect(emailDiskServices[0].bindingName).toBe("MINIFLARE_EMAIL_DISK_SYSTEM");
+		expect(emailDiskServices[0].location).toBe("system");
 		expect(emailDiskServices[0].path).toBe(path.join(tmp, "email"));
-		expect(emailDiskServices[1].name).toBe("MINIFLARE_EMAIL_DISK_PROJECT");
-		expect(emailDiskServices[1].service.name).toBe("email:disk:project");
+		expect(emailDiskServices[1].bindingName).toBe("MINIFLARE_EMAIL_DISK_PROJECT");
+		expect(emailDiskServices[1].location).toBe("project");
 		expect(emailDiskServices[1].path).toBe(projectDisk.disk.path);
 	});
 });

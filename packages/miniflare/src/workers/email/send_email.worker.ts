@@ -80,13 +80,9 @@ function joinPath(base: string, ...segments: string[]): string {
 	return [base.replace(/[\\/]+$/, ""), ...segments].join(separator);
 }
 
-interface DiskService {
-	fetch(url: URL | string, init?: RequestInit): Promise<Response>;
-}
-
 interface DiskServiceConfig {
-	name: string;
-	service: { name: string };
+	bindingName: string;
+	location: "system" | "project";
 	path: string;
 }
 
@@ -95,21 +91,22 @@ interface SendEmailEnv {
 	destination_address: string | undefined;
 	allowed_destination_addresses: string[] | undefined;
 	allowed_sender_addresses: string[] | undefined;
-	MINIFLARE_EMAIL_DISK_SYSTEM: DiskService;
-	MINIFLARE_EMAIL_DISK_PROJECT: DiskService;
+	MINIFLARE_EMAIL_DISK_SYSTEM: Fetcher;
+	MINIFLARE_EMAIL_DISK_PROJECT: Fetcher;
 }
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	/**
-	 * Gets a disk service binding by name in a type-safe way.
+	 * Gets a disk service binding by name
 	 */
-	private getServiceBinding(name: string): DiskService {
-		if (name === "MINIFLARE_EMAIL_DISK_SYSTEM") {
-			return this.env.MINIFLARE_EMAIL_DISK_SYSTEM;
-		} else if (name === "MINIFLARE_EMAIL_DISK_PROJECT") {
-			return this.env.MINIFLARE_EMAIL_DISK_PROJECT;
-		}
-		throw new Error(`Unknown disk service binding: ${name}`);
+	private getServiceBinding(
+		bindingName: string
+	): Fetcher {
+		return this.env[
+			bindingName as
+				| "MINIFLARE_EMAIL_DISK_SYSTEM"
+				| "MINIFLARE_EMAIL_DISK_PROJECT"
+		];
 	}
 
 	/**
@@ -125,7 +122,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		content: string | ArrayBuffer | ArrayBufferView,
 		extension: string,
 		prefix: string,
-		location: "system" | "project" = "system",
+		location: "system" | "project" = "system"
 	): Promise<string> {
 		let body: string | Uint8Array;
 		if (typeof content === "string") {
@@ -144,19 +141,16 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		const fileName = `${crypto.randomUUID()}.${extension}`;
 		const url = new URL(`${prefix}/${fileName}`, "http://placeholder/");
 
-		// Find the appropriate disk service config
-		// Binding names are MINIFLARE_EMAIL_DISK_SYSTEM and MINIFLARE_EMAIL_DISK_PROJECT
-		const diskConfig = this.env.email_disk_services.find((config) =>
-			location === "system"
-				? config.name.includes("_SYSTEM")
-				: config.name.includes("_PROJECT")
+		// Find the disk service config for the requested location.
+		const diskConfig = this.env.email_disk_services.find(
+			(config) => config.location === location
 		);
 
 		if (!diskConfig) {
 			throw new Error(`Disk service for ${location} not found`);
 		}
 
-		const service = this.getServiceBinding(diskConfig.name);
+		const service = this.getServiceBinding(diskConfig.bindingName);
 		await service.fetch(url, {
 			method: "PUT",
 			body,
@@ -300,7 +294,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			if (builder.text) {
 				await Promise.all(
 					locations.map((location) => {
-						return this.storeTempFile(builder.text!, "txt", "email-text", location).then((filePath) => {
+						return this.storeTempFile(
+							builder.text!,
+							"txt",
+							"email-text",
+							location
+						).then((filePath) => {
 							files.push(`Text (${location}): ${filePath}`);
 							return filePath;
 						});
@@ -311,7 +310,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			if (builder.html) {
 				await Promise.all(
 					locations.map((location) =>
-						this.storeTempFile(builder.html!, "html", "email-html", location).then((filePath) => {
+						this.storeTempFile(
+							builder.html!,
+							"html",
+							"email-html",
+							location
+						).then((filePath) => {
 							files.push(`HTML (${location}): ${filePath}`);
 							return filePath;
 						})
@@ -334,7 +338,9 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 								"email-attachment",
 								location
 							).then((filePath) => {
-								files.push(`Attachment (${attachment.disposition}) (${location}): ${attachment.filename} -> ${filePath}`);
+								files.push(
+									`Attachment (${attachment.disposition}) (${location}): ${attachment.filename} -> ${filePath}`
+								);
 								return filePath;
 							})
 						)

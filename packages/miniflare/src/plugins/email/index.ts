@@ -4,12 +4,12 @@ import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
+import { CoreSharedOptionsSchema } from "../core";
 import {
 	getUserBindingServiceName,
 	remoteProxyClientWorker,
 	ProxyNodeBinding,
 } from "../shared";
-import { CoreSharedOptionsSchema } from "../core";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
@@ -47,7 +47,7 @@ export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
 // Disk service name and binding name for writing temporary files to system temp directory
 const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
-const EMAIL_DISK_BINDING_NAME= "MINIFLARE_EMAIL_DISK";
+const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
 
 function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
@@ -110,26 +110,29 @@ export const EMAIL_PLUGIN: Plugin<
 		await mkdir(emailProjectSessionDirectory, { recursive: true });
 		args.emailSessionDirectories.add(emailProjectSessionDirectory);
 
-		const workerName = args.workerNames[args.workerIndex] || "default";
-		const systemServiceName = `${EMAIL_DISK_SERVICE_NAME}:system`;
-		const projectServiceName = `${EMAIL_DISK_SERVICE_NAME}:project`;
+		// Map binding disk services to names and paths, for concise access when storing emails as files.
+		const diskServices = [
+			{
+				location: "system",
+				bindingName: `${EMAIL_DISK_BINDING_NAME}_SYSTEM`,
+				serviceName: `${EMAIL_DISK_SERVICE_NAME}:system`,
+				path: emailSystemDirectory,
+			},
+			{
+				location: "project",
+				bindingName: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
+				serviceName: `${EMAIL_DISK_SERVICE_NAME}:project`,
+				path: emailProjectSessionDirectory,
+			},
+		] as const;
 
-		const services: Service[] = [
-			{
-				name: systemServiceName,
-				disk: {
-					path: emailSystemDirectory,
-					writable: true,
-				},
+		const services: Service[] = diskServices.map(({ serviceName, path }) => ({
+			name: serviceName,
+			disk: {
+				path,
+				writable: true,
 			},
-			{
-				name: projectServiceName,
-				disk: {
-					path: emailProjectSessionDirectory,
-					writable: true,
-				},
-			},
-		];
+		}));
 
 		for (const { name, remoteProxyConnectionString, ...config } of args.options
 			.email?.send_email ?? []) {
@@ -147,33 +150,18 @@ export const EMAIL_PLUGIN: Plugin<
 							],
 							bindings: [
 								...buildJsonBindings(config),
-								// Add service bindings for disk services
-								{
-									name: `${EMAIL_DISK_BINDING_NAME}_SYSTEM`,
-									service: { name: systemServiceName },
-								},
-								{
-									name: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
-									service: { name: projectServiceName },
-								},
-								{
+								...diskServices.map(({ bindingName, serviceName }) => ({
+									name: bindingName,
+									service: { name: serviceName },
+								})),								{
 									name: "email_disk_services",
-									json: JSON.stringify([
-										{
-											name: `${EMAIL_DISK_BINDING_NAME}_SYSTEM`,
-											service: {
-												name: systemServiceName,
-											},
-											path: emailSystemDirectory,
-										},
-										{
-											name: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
-											service: {
-												name: projectServiceName,
-											},
-											path: emailProjectSessionDirectory,
-										},
-									]),
+									json: JSON.stringify(
+										diskServices.map(({ bindingName, location, path }) => ({
+											bindingName,
+											location,
+											path,
+										}))
+									),
 								},
 							],
 						},
