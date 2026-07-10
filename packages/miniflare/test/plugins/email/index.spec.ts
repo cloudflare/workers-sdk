@@ -2063,7 +2063,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		expect,
 	}) => {
 		const tmp = await useTmp();
-		const persistRoot = path.join(tmp, ".wrangler", "state", "v3");
+		const projectTmpPath = path.join(tmp, ".wrangler", "tmp");
 
 		const result = await EMAIL_PLUGIN.getServices({
 			options: {
@@ -2071,7 +2071,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 			},
 			sharedOptions: {},
 			tmpPath: tmp,
-			defaultPersistRoot: persistRoot,
+			defaultProjectTmpPath: projectTmpPath,
 			workerNames: ["default"],
 			workerIndex: 0,
 			emailSessionDirectories: new Set(),
@@ -2106,7 +2106,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 
 		// Project temp directory
 		expect(projectDisk.disk.path).toMatch(
-			/\.wrangler[/\\]state[/\\]v3[/\\]tmp[/\\]email[/\\][a-f0-9-]+$/
+			/\.wrangler[/\\]tmp[/\\]email[/\\][a-f0-9-]+$/
 		);
 		expect(existsSync(projectDisk.disk.path)).toBe(true);
 
@@ -2143,10 +2143,14 @@ describe("EMAIL_PLUGIN.getServices", () => {
 
 		const emailDiskServices = JSON.parse(emailDiskServicesBinding.json);
 		expect(emailDiskServices).toHaveLength(2);
-		expect(emailDiskServices[0].bindingName).toBe("MINIFLARE_EMAIL_DISK_SYSTEM");
+		expect(emailDiskServices[0].bindingName).toBe(
+			"MINIFLARE_EMAIL_DISK_SYSTEM"
+		);
 		expect(emailDiskServices[0].location).toBe("system");
 		expect(emailDiskServices[0].path).toBe(path.join(tmp, "email"));
-		expect(emailDiskServices[1].bindingName).toBe("MINIFLARE_EMAIL_DISK_PROJECT");
+		expect(emailDiskServices[1].bindingName).toBe(
+			"MINIFLARE_EMAIL_DISK_PROJECT"
+		);
 		expect(emailDiskServices[1].location).toBe("project");
 		expect(emailDiskServices[1].path).toBe(projectDisk.disk.path);
 	});

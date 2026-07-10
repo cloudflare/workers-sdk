@@ -99,9 +99,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	/**
 	 * Gets a disk service binding by name
 	 */
-	private getServiceBinding(
-		bindingName: string
-	): Fetcher {
+	private getServiceBinding(bindingName: string): Fetcher {
 		return this.env[
 			bindingName as
 				| "MINIFLARE_EMAIL_DISK_SYSTEM"

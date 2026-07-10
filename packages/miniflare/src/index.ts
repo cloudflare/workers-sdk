@@ -1149,7 +1149,9 @@ export class Miniflare {
 				try {
 					removeDirSync(dir);
 				} catch (e) {
-					this.#log.debug(`Unable to remove email session directory: ${String(e)}`);
+					this.#log.debug(
+						`Unable to remove email session directory: ${String(e)}`
+					);
 				}
 			}
 			// Unregister all workers from the dev registry. Note that dispose()
@@ -2156,6 +2158,7 @@ export class Miniflare {
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				defaultPersistRoot: sharedOpts.core.defaultPersistRoot,
+				defaultProjectTmpPath: sharedOpts.core.defaultProjectTmpPath,
 				workerNames,
 				loopbackHost,
 				loopbackPort,

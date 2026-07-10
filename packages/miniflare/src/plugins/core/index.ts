@@ -325,6 +325,9 @@ export const CoreSharedOptionsSchema = z
 		// Path to the root directory for persisting data
 		// Used as the default for all plugins with the plugin name as the subdirectory name
 		defaultPersistRoot: z.string().optional(),
+		// Path to the project temporary directory for plugins that need it
+		// (e.g. email logs). Falls back to a subdirectory of tmpPath if not set.
+		defaultProjectTmpPath: z.string().optional(),
 		// Strip the MF-DISABLE_PRETTY_ERROR header from user request
 		stripDisablePrettyError: z.boolean().default(true),
 

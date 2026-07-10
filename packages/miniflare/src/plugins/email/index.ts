@@ -98,9 +98,10 @@ export const EMAIL_PLUGIN: Plugin<
 		const emailSystemDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
 		await mkdir(emailSystemDirectory, { recursive: true });
 
-		// Used to send email logs to the project persist directory
-		const persistRoot = args.defaultPersistRoot ?? args.tmpPath;
-		const emailProjectDirectory = path.join(persistRoot, "tmp", "email");
+		// Used to send email logs to the project's temporary directory.
+		const projectTmpPath =
+			args.defaultProjectTmpPath ?? path.join(args.tmpPath, "tmp");
+		const emailProjectDirectory = path.join(projectTmpPath, EMAIL_PLUGIN_NAME);
 		await mkdir(emailProjectDirectory, { recursive: true });
 
 		const emailProjectSessionDirectory = path.join(
@@ -153,7 +154,8 @@ export const EMAIL_PLUGIN: Plugin<
 								...diskServices.map(({ bindingName, serviceName }) => ({
 									name: bindingName,
 									service: { name: serviceName },
-								})),								{
+								})),
+								{
 									name: "email_disk_services",
 									json: JSON.stringify(
 										diskServices.map(({ bindingName, location, path }) => ({

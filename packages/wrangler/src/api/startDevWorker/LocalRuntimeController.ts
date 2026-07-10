@@ -160,6 +160,7 @@ export async function convertToConfigBundle(
 
 	return {
 		name: event.config.name,
+		projectRoot: event.config.projectRoot,
 		bundle: event.bundle,
 		format: event.bundle.entry.format,
 		compatibilityDate: event.config.compatibilityDate,

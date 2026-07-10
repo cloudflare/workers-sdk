@@ -1,9 +1,11 @@
+import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	getDockerPath,
 	getRegistryPath,
 	getTodaysCompatDate,
+	getWranglerHiddenDirPath,
 } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
@@ -320,6 +322,7 @@ async function getMiniflareOptionsFromConfig(args: {
 		: {};
 
 	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
+	const defaultProjectTmpPath = getMiniflareProjectTmpPath(config);
 
 	const miniflareOptions: MiniflareOptions = {
 		workers: [
@@ -334,6 +337,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			...externalWorkers,
 		],
 		defaultPersistRoot,
+		defaultProjectTmpPath,
 	};
 
 	return {
@@ -363,6 +367,13 @@ function getMiniflarePersistRoot(
 		typeof persist === "object" ? persist.path : defaultPersistPath;
 
 	return persistPath;
+}
+
+function getMiniflareProjectTmpPath(config: Config): string {
+	const projectRoot = config.userConfigPath
+		? path.dirname(config.userConfigPath)
+		: undefined;
+	return path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
 }
 
 function deepFreeze<T extends Record<string | number | symbol, unknown>>(
