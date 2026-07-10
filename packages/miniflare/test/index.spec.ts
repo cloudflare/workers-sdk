@@ -2706,6 +2706,58 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	);
 });
 
+test("Miniflare: unsafeEvictDurableObject() resets in-memory state and preserves durable storage", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		name: "do-worker",
+		modules: true,
+		script: `
+			export class Counter {
+				constructor(state) {
+					this.state = state;
+					this.memoryCount = 0;
+				}
+
+				async fetch() {
+					this.memoryCount += 1;
+					const storageCount = ((await this.state.storage.get("count")) ?? 0) + 1;
+					await this.state.storage.put("count", storageCount);
+					return Response.json({
+						memoryCount: this.memoryCount,
+						storageCount,
+					});
+				}
+			}
+
+			export default {
+				fetch(_request, env) {
+					const id = env.COUNTER.idFromName("user-123");
+					return env.COUNTER.get(id).fetch("http://counter");
+				}
+			};
+		`,
+		durableObjects: { COUNTER: "Counter" },
+	});
+	useDispose(mf);
+
+	let response = await mf.dispatchFetch("http://localhost");
+	expect(await response.json()).toEqual({
+		memoryCount: 1,
+		storageCount: 1,
+	});
+
+	await mf.unsafeEvictDurableObject("do-worker", "Counter", {
+		name: "user-123",
+	});
+
+	response = await mf.dispatchFetch("http://localhost");
+	expect(await response.json()).toEqual({
+		memoryCount: 1,
+		storageCount: 2,
+	});
+});
+
 test("Miniflare: allows direct access to workers", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
