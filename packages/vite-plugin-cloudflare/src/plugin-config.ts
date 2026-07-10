@@ -7,6 +7,10 @@ import {
 	loadConfig,
 	resolveWorkerDefinition,
 } from "@cloudflare/config";
+import {
+	generateRuntimeTypes,
+	RUNTIME_TYPES_MARKER,
+} from "@cloudflare/runtime-types";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import { getWorkerNameFromProject } from "@cloudflare/workers-utils";
 import { defu } from "defu";
@@ -106,6 +110,12 @@ interface ExperimentalNewConfig {
 		 * root. Defaults to `true`.
 		 */
 		generate?: boolean;
+		/**
+		 * Whether to include the Worker's runtime types (generated from the
+		 * project's compatibility date and flags) in the generated
+		 * `worker-configuration.d.ts`. Defaults to `true`.
+		 */
+		includeRuntime?: boolean;
 	};
 	/**
 	 * Whether to emit the experimental Build Output API (`.cloudflare/output/v0/`)
@@ -115,7 +125,7 @@ interface ExperimentalNewConfig {
 }
 
 interface ResolvedExperimentalNewConfig {
-	types: { generate: boolean };
+	types: { generate: boolean; includeRuntime: boolean };
 	cfBuildOutput: boolean;
 }
 
@@ -147,6 +157,10 @@ function normalizeNewConfig(
 			types: {
 				generate:
 					typeof option === "object" ? (option.types?.generate ?? true) : true,
+				includeRuntime:
+					typeof option === "object"
+						? (option.types?.includeRuntime ?? true)
+						: true,
 			},
 			cfBuildOutput: true,
 		};
@@ -155,10 +169,16 @@ function normalizeNewConfig(
 		return undefined;
 	}
 	if (option === true) {
-		return { types: { generate: true }, cfBuildOutput: false };
+		return {
+			types: { generate: true, includeRuntime: true },
+			cfBuildOutput: false,
+		};
 	}
 	return {
-		types: { generate: option.types?.generate ?? true },
+		types: {
+			generate: option.types?.generate ?? true,
+			includeRuntime: option.types?.includeRuntime ?? true,
+		},
 		cfBuildOutput: option.cfBuildOutput ?? false,
 	};
 }
@@ -496,7 +516,8 @@ export async function resolvePluginConfig(
 		const result = await loadNewConfig({
 			root,
 			mode: viteEnv.mode,
-			generateTypes: resolvedNewConfig.types.generate,
+			command: viteEnv.command,
+			types: resolvedNewConfig.types,
 		});
 		configPath = result.configPath;
 		rawConfigOverride = result.rawConfig;
@@ -770,13 +791,15 @@ const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
  * file, and the set of files imported while resolving the config (for
  * watch-mode).
  *
- * If `generateTypes` is true, also writes `worker-configuration.d.ts` next to
- * the config when the generated content differs from what's already on disk.
+ * When `types.generate` is true, also writes `worker-configuration.d.ts` next
+ * to the config when the generated content differs from what's already on disk.
+ * Type generation only runs in dev.
  */
 async function loadNewConfig(options: {
 	root: string;
 	mode: string;
-	generateTypes: boolean;
+	command: "build" | "serve";
+	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<{
 	rawConfig: RawConfig;
 	parsedConfig: ParsedInputWorkerConfig;
@@ -806,10 +829,13 @@ async function loadNewConfig(options: {
 
 	const rawConfig = convertToWranglerConfig(parsed.data);
 
-	if (options.generateTypes) {
-		writeWorkerConfigurationDts({
+	if (options.command === "serve" && options.types.generate) {
+		await writeWorkerConfigurationDts({
 			root: options.root,
 			configPath,
+			includeRuntime: options.types.includeRuntime,
+			compatibilityDate: parsed.data.compatibilityDate,
+			compatibilityFlags: parsed.data.compatibilityFlags ?? [],
 		});
 	}
 
@@ -827,20 +853,37 @@ async function loadNewConfig(options: {
  * `experimental-config` subpath (so users don't need a direct dependency on
  * `@cloudflare/config`).
  *
+ * When `includeRuntime` is true, appends the Workers runtime types (generated
+ * from the project's compatibility date/flags) after the inference block. The
+ * runtime-types generator caches against the existing file, so it only spawns
+ * workerd when the compat date/flags/workerd version change.
+ *
  * Reads the existing file first and only writes if the content differs, to
  * avoid touching mtimes unnecessarily.
  */
-function writeWorkerConfigurationDts(options: {
+async function writeWorkerConfigurationDts(options: {
 	root: string;
 	configPath: string;
-}): void {
+	includeRuntime: boolean;
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): Promise<void> {
 	const outputPath = path.resolve(options.root, TYPES_OUTPUT_FILENAME);
 	const relativeConfigPath =
 		"./" + path.relative(options.root, options.configPath);
-	const content = generateTypes({
+	let content = generateTypes({
 		configPath: relativeConfigPath,
 		packageName: EXPERIMENTAL_CONFIG_PKG,
 	});
+
+	if (options.includeRuntime) {
+		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+			compatibilityDate: options.compatibilityDate,
+			compatibilityFlags: options.compatibilityFlags,
+			outFile: outputPath,
+		});
+		content += `\n${runtimeHeader}\n${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`;
+	}
 
 	let existing: string | undefined;
 	try {
