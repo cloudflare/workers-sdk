@@ -250,7 +250,7 @@ export function getRootPath(opts: unknown): string {
 
 function validateOptions(
 	opts: unknown
-): [PluginSharedOptions, PluginWorkerOptions[], string[]] {
+): [PluginSharedOptions, PluginWorkerOptions[]] {
 	// Normalise options into shared and worker-specific
 	const sharedOpts = opts;
 	const multipleWorkers = hasMultipleWorkers(opts);
@@ -294,6 +294,7 @@ function validateOptions(
 				);
 			}
 		}
+		pluginSharedOpts.core.workerRootPaths = workerRootPaths;
 	} catch (e) {
 		if (e instanceof z.ZodError) {
 			let formatted: string | undefined;
@@ -368,7 +369,7 @@ function validateOptions(
 		names.add(name);
 	}
 
-	return [pluginSharedOpts, pluginWorkerOpts, workerRootPaths];
+	return [pluginSharedOpts, pluginWorkerOpts];
 }
 
 // When creating user worker services, we need to know which Durable Objects
@@ -971,7 +972,6 @@ export class Miniflare {
 	#previousWorkerOpts?: PluginWorkerOptions[];
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
-	#workerRootPaths: string[];
 	#log: Log;
 
 	/**
@@ -999,6 +999,9 @@ export class Miniflare {
 	// Object storage. Note this may not exist, it's up to the consumers to
 	// create this if needed. Deleted on `dispose()`.
 	readonly #tmpPath: string;
+
+	// Track email session directories created in .wrangler for cleanup on exit
+	readonly #emailSessionDirectories: Set<string> = new Set();
 
 	// Mutual exclusion lock for runtime operations (i.e. initialisation and
 	// updating config). This essentially puts initialisation and future updates
@@ -1032,13 +1035,12 @@ export class Miniflare {
 
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
-		const [sharedOpts, workerOpts, workerRootPaths] = validateOptions(opts);
+		const [sharedOpts, workerOpts] = validateOptions(opts);
 
 		checkMacOSVersion({ shouldThrow: true });
 
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
-		this.#workerRootPaths = workerRootPaths;
 
 		const workerNamesToProxy = this.#workerNamesToProxy();
 		const enableInspectorProxy = workerNamesToProxy.size > 0;
@@ -1142,6 +1144,14 @@ export class Miniflare {
 				removeDirSync(this.#tmpPath);
 			} catch (e) {
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
+			}
+			// Clean up email session directories in .wrangler
+			for (const dir of this.#emailSessionDirectories) {
+				try {
+					removeDirSync(dir);
+				} catch (e) {
+					this.#log.debug(`Unable to remove email session directory: ${String(e)}`);
+				}
 			}
 			// Unregister all workers from the dev registry. Note that dispose()
 			// does synchronous cleanup (unregistering workers) then returns a
@@ -2159,7 +2169,8 @@ export class Miniflare {
 				queueConsumers,
 				devRegistryEnabled,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
-				rootPath: this.#workerRootPaths[i],
+				rootPath: sharedOpts.core.workerRootPaths?.[i] ?? "",
+				emailSessionDirectories: this.#emailSessionDirectories,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const workerOptions = this.#getWorkerOptsForPlugin(key, workerOpts);
@@ -2824,7 +2835,7 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 
 		// Split and validate options
-		const [sharedOpts, workerOpts, workerRootPaths] = validateOptions(opts);
+		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#previousSharedOpts = this.#sharedOpts;
 		this.#previousWorkerOpts = this.#workerOpts;
 		this.#sharedOpts = sharedOpts;
@@ -2834,7 +2845,6 @@ export class Miniflare {
 		this.#structuredWorkerdLogs =
 			this.#sharedOpts.core.structuredWorkerdLogs ??
 			this.#structuredWorkerdLogs;
-		this.#workerRootPaths = workerRootPaths;
 
 		const newExternalOnUpdate = sharedOpts.core.unsafeHandleDevRegistryUpdate;
 		await this.#devRegistry.updateRegistryPath(
@@ -3311,6 +3321,10 @@ export class Miniflare {
 			// immediately after disposal, causing EBUSY errors. The temp directory
 			// lives in os.tmpdir() so the OS will clean it up eventually.
 			removeDir(this.#tmpPath, { fireAndForget: true });
+			// Clean up email session directories in .wrangler
+			for (const dir of this.#emailSessionDirectories) {
+				removeDir(dir, { fireAndForget: true });
+			}
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();

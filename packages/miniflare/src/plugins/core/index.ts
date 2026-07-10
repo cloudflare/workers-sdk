@@ -266,6 +266,7 @@ export const WorkerdStructuredLogSchema = z.object({
 export const CoreSharedOptionsSchema = z
 	.object({
 		rootPath: UnusableStringSchema.optional(),
+		workerRootPaths: z.array(z.string()).optional(),
 
 		host: z.string().optional(),
 		port: z.number().optional(),

@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
@@ -10,10 +11,6 @@ import {
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
-import {
-	getWranglerHiddenDirPath,
-	sweepStaleWranglerTmpDirs,
-} from "@cloudflare/workers-utils";
 
 // Define the mutually exclusive schema
 const EmailBindingOptionsSchema = z
@@ -102,21 +99,16 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 
 		// Used to send email logs to .wrangler/tmp/email
 		const workerName = args.workerNames[args.workerIndex] || "default";
-		const wranglerHiddenDirectory = getWranglerHiddenDirPath(args.rootPath);
-		const emailLocalDirectory = path.join(
-			wranglerHiddenDirectory,
-			"tmp",
-			"email",
-			workerName
-		);
+		const wranglerHiddenDirectory = path.join(args.rootPath, ".wrangler");
+		const emailLocalDirectory = path.join(wranglerHiddenDirectory, "tmp", "email");
 		await mkdir(emailLocalDirectory, { recursive: true });
 
-		sweepStaleWranglerTmpDirs(emailLocalDirectory);
 		const emailLocalSessionDirectory = path.join(
 			emailLocalDirectory,
 			crypto.randomUUID()
 		);
 		await mkdir(emailLocalSessionDirectory, { recursive: true });
+		args.emailSessionDirectories.add(emailLocalSessionDirectory);
 
 		const localDiskServiceName = `${EMAIL_DISK_SERVICE_NAME_LOCAL}:${workerName}`;
 

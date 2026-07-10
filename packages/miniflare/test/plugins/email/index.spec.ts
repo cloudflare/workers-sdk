@@ -2086,7 +2086,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 
 		// Local temp directory (.wrangler/tmp/email/)
 		expect(localDisk.disk.path).toMatch(
-			/\.wrangler[/\\]tmp[/\\]email[/\\]default[/\\][a-f0-9-]+$/
+			/\.wrangler[/\\]tmp[/\\]email[/\\][a-f0-9-]+$/
 		);
 		expect(existsSync(localDisk.disk.path)).toBe(true);
 
