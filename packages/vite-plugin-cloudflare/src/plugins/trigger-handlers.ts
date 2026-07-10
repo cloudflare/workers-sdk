@@ -50,8 +50,7 @@ export const triggerHandlersPlugin = createPlugin("trigger-handlers", (ctx) => {
 					oldPrefix,
 					createRequestHandler((request) => {
 						const url = new URL(request.url);
-						url.pathname =
-							newPrefix + url.pathname.slice(oldPrefix.length);
+						url.pathname = newPrefix + url.pathname.slice(oldPrefix.length);
 						return dispatch(new MiniflareRequest(url, request));
 					})
 				);
