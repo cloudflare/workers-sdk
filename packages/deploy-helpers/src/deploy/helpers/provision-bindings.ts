@@ -520,10 +520,10 @@ class FlagshipAppHandler extends ProvisionResourceHandler<
 
 	canInherit(settings: Settings | undefined): boolean {
 		const existing = settings?.bindings.find(
-			(existing) =>
-				existing.type === this.type &&
-				existing.name === this.bindingName &&
-				(this.binding.app_id ? this.binding.app_id === existing.app_id : true)
+			(candidate) =>
+				candidate.type === this.type &&
+				candidate.name === this.bindingName &&
+				(this.binding.app_id ? this.binding.app_id === candidate.app_id : true)
 		) as Extract<WorkerMetadataBinding, { type: "flagship" }> | undefined;
 		if (existing) {
 			this.inheritedAppId = existing.app_id;

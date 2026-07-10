@@ -25,6 +25,7 @@ import {
 } from "./helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions";
 import { runWrangler } from "./helpers/run-wrangler";
+import { toString } from "./helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { DatabaseInfo } from "../d1/types";
 import type { ExpectStatic } from "vitest";
@@ -1426,13 +1427,11 @@ describe("resource provisioning", () => {
 				http.post(
 					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
 					async ({ request }) => {
+						// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 						const formBody = await request.formData();
-						const metadataEntry = formBody.get("metadata");
-						const metadataText =
-							typeof metadataEntry === "string"
-								? metadataEntry
-								: await metadataEntry?.text();
-						const metadata = JSON.parse(metadataText ?? "{}") as {
+						const metadata = JSON.parse(
+							await toString(formBody.get("metadata"))
+						) as {
 							bindings?: unknown[];
 						};
 						uploadedBindings = metadata.bindings;
