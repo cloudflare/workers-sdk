@@ -594,11 +594,10 @@ function mockDeleteWorkerRequest(
 	options: {
 		name?: string;
 		env?: string;
-		useServiceEnvironments?: boolean;
 		force?: boolean;
 	} = {}
 ) {
-	const { env, useServiceEnvironments, name } = options;
+	const { env, name } = options;
 	msw.use(
 		http.delete(
 			"*/accounts/:accountId/workers/services/:scriptName",
@@ -607,9 +606,7 @@ function mockDeleteWorkerRequest(
 
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					!useServiceEnvironments && env
-						? `${name ?? "test-name"}-${env}`
-						: `${name ?? "test-name"}`
+					env ? `${name ?? "test-name"}-${env}` : `${name ?? "test-name"}`
 				);
 
 				expect(url.searchParams.get("force")).toEqual(

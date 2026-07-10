@@ -1,6 +1,6 @@
 import { Loader, Tooltip } from "@cloudflare/kumo";
 import { ArrowClockwiseIcon, CheckIcon, PlusIcon } from "@phosphor-icons/react";
-import { memo } from "react";
+import { memo, type JSX } from "react";
 import { CopyButton } from "./CopyButton";
 import { formatDuration, formatJson } from "./helpers";
 import { ScrollableCodeBlock } from "./ScrollableCodeBlock";

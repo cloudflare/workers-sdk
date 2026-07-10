@@ -15,6 +15,8 @@ const generate = async (ctx: C3Context) => {
 		"cloudflare",
 		"--framework",
 		"react",
+		// c3 will later install the dependencies
+		"--no-install",
 		// to prevent asking about git twice, just let c3 do it
 		"--no-git",
 	]);

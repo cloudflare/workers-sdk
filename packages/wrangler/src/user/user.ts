@@ -252,6 +252,7 @@ const DefaultScopes = {
 	"email_sending:write":
 		"See and change Email Sending settings and configuration.",
 	"browser:write": "See and manage Browser Run sessions",
+	"challenge-widgets.write": "See and change Turnstile widgets",
 } as const;
 
 /**

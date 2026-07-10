@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import { RUNTIME_TYPES_MARKER } from "@cloudflare/runtime-types";
 import {
 	CommandLineArgsError,
 	configFileName,
@@ -529,7 +530,7 @@ async function generateTypesFromResolvedOptions(
 		});
 		runtime = runtimeTypes;
 		header.push(runtimeHeader);
-		content.push(`// Begin runtime types\n${runtimeTypes}`);
+		content.push(`${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`);
 		if (log) {
 			logger.log(chalk.dim("Runtime types generated.\n"));
 		}

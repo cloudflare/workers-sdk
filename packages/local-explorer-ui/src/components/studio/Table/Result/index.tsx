@@ -26,7 +26,7 @@ import type {
 } from "../BaseTable";
 import type { StudioTableState } from "../State";
 import type { StudioResultHeaderMetadata } from "../State/Helpers";
-import type { PropsWithChildren, ReactNode } from "react";
+import type { JSX, KeyboardEvent, PropsWithChildren, ReactNode } from "react";
 
 interface StudioResultTableProps {
 	arrangeHeaderIndex: number[];
@@ -236,7 +236,7 @@ export function StudioResultTable({
 	);
 
 	const onKeyDown = useCallback(
-		(e: React.KeyboardEvent): void => {
+		(e: KeyboardEvent): void => {
 			// Detect the "modifier" key: Command (⌘) on macOS, Control (Ctrl) on Windows/Linux
 			const isModifierPressed = e.metaKey || e.ctrlKey;
 

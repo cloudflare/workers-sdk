@@ -238,11 +238,6 @@ export const dev = createCommand({
 			describe: "Auto reload HTML pages when change is detected in local mode",
 			type: "boolean",
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 		"test-scheduled": {
 			describe: "Test scheduled events by visiting /__scheduled in browser",
 			type: "boolean",

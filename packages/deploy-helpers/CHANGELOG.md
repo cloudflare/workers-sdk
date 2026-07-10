@@ -1,5 +1,28 @@
 # @cloudflare/deploy-helpers
 
+## 0.4.0
+
+### Minor Changes
+
+- [#14591](https://github.com/cloudflare/workers-sdk/pull/14591) [`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Export `collectPackageDependencies` for npm dependency metadata collection
+
+  The package dependency discovery logic (collecting installed npm package names and versions from a project's `package.json`) is now owned by `deploy-helpers` and called internally during deploy and version uploads, rather than being pre-computed in wrangler and passed through as a prop.
+
+### Patch Changes
+
+- Updated dependencies [[`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3), [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f)]:
+  - @cloudflare/workers-utils@0.26.0
+  - miniflare@4.20260708.1
+  - @cloudflare/cli-shared-helpers@0.1.13
+
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`8511ddf`](https://github.com/cloudflare/workers-sdk/commit/8511ddf769a603f49576b8cf632ea330c353001f), [`2fedb1f`](https://github.com/cloudflare/workers-sdk/commit/2fedb1fc811efb3f7544c569e57383cabd4f14f8)]:
+  - miniflare@4.20260708.0
+  - @cloudflare/workers-utils@0.25.1
+
 ## 0.3.2
 
 ### Patch Changes

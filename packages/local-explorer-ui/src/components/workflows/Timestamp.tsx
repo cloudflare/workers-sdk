@@ -1,5 +1,6 @@
 import { Tooltip } from "@cloudflare/kumo";
 import { timeAgo } from "./helpers";
+import type { JSX } from "react";
 
 function formatShort(ts: string): string {
 	try {

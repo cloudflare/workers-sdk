@@ -48,7 +48,6 @@ type DeployConfigFlags = {
 	// Deployment behavior
 	logpush: boolean | undefined;
 	keepVars: boolean | undefined;
-	legacyEnv: boolean | undefined;
 	dispatchNamespace: string | undefined;
 };
 
@@ -292,9 +291,6 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 		if (args.keepVars) {
 			configContent.keep_vars = true;
 		}
-		if (args.legacyEnv) {
-			configContent.legacy_env = true;
-		}
 
 		const writeConfigFile = await confirm(
 			`Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\n${chalk.dim(
@@ -343,7 +339,6 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 				...(args.bundle === false ? ["--no-bundle"] : []),
 				...(args.logpush ? ["--logpush"] : []),
 				...(args.keepVars ? ["--keep-vars"] : []),
-				...(args.legacyEnv ? ["--legacy-env"] : []),
 				...(args.dispatchNamespace
 					? [`--dispatch-namespace ${args.dispatchNamespace}`]
 					: []),

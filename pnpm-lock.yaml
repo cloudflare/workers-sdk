@@ -84,6 +84,9 @@ catalogs:
     vitest:
       specifier: 4.1.0
       version: 4.1.0
+    workerd:
+      specifier: 1.20260708.1
+      version: 1.20260708.1
     ws:
       specifier: 8.21.0
       version: 8.21.0
@@ -2264,7 +2267,7 @@ importers:
         specifier: catalog:default
         version: 7.28.0
       workerd:
-        specifier: 1.20260708.1
+        specifier: catalog:default
         version: 1.20260708.1
       ws:
         specifier: catalog:default
@@ -2555,6 +2558,34 @@ importers:
       esbuild-register:
         specifier: ^3.5.0
         version: 3.5.0(esbuild@0.28.1)
+
+  packages/runtime-types:
+    dependencies:
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+      workerd:
+        specifier: catalog:default
+        version: 1.20260708.1
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
+      '@types/node':
+        specifier: 22.15.17
+        version: 22.15.17
+      tsdown:
+        specifier: 0.16.3
+        version: 0.16.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/solarflare-theme: {}
 
@@ -4289,7 +4320,7 @@ importers:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
       workerd:
-        specifier: 1.20260708.1
+        specifier: catalog:default
         version: 1.20260708.1
     devDependencies:
       '@aws-sdk/client-s3':
@@ -4319,6 +4350,9 @@ importers:
       '@cloudflare/pages-shared':
         specifier: workspace:^
         version: link:../pages-shared
+      '@cloudflare/runtime-types':
+        specifier: workspace:*
+        version: link:../runtime-types
       '@cloudflare/types':
         specifier: 6.18.4
         version: 6.18.4(react@19.2.4)

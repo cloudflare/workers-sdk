@@ -536,12 +536,11 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "dev",
-				useOldUploadApi: true,
 			});
 			mockGetWorkerSubdomain({ enabled: true, env: "dev" });
 			mockUpdateWorkerSubdomain({ enabled: false, env: "dev" });
 
-			await runWrangler("deploy ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -549,8 +548,8 @@ describe("deploy", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Uploaded test-name (dev) (TIMINGS)
-				No targets deployed for test-name (dev) (TIMINGS)
+				Uploaded test-name-dev (TIMINGS)
+				No targets deployed for test-name-dev (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -574,7 +573,7 @@ describe("deploy", () => {
 			mockGetWorkerSubdomain({ enabled: true, env: "dev" });
 			mockUpdateWorkerSubdomain({ enabled: false, env: "dev" });
 
-			await runWrangler("deploy ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -582,9 +581,9 @@ describe("deploy", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Uploaded test-name (dev) (TIMINGS)
-				No targets deployed for test-name (dev) (TIMINGS)
-				Current Version ID: undefined"
+				Uploaded test-name-dev (TIMINGS)
+				No targets deployed for test-name-dev (TIMINGS)
+				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -602,13 +601,12 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "dev",
-				useOldUploadApi: true,
 			});
 			mockGetWorkerSubdomain({ enabled: false, env: "dev" });
 			mockSubDomainRequest();
 			mockUpdateWorkerSubdomain({ enabled: true, env: "dev" });
 
-			await runWrangler("deploy ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -616,9 +614,9 @@ describe("deploy", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Uploaded test-name (dev) (TIMINGS)
-				Deployed test-name (dev) triggers (TIMINGS)
-				  https://dev.test-name.test-sub-domain.workers.dev
+				Uploaded test-name-dev (TIMINGS)
+				Deployed test-name-dev triggers (TIMINGS)
+				  https://test-name-dev.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -638,13 +636,12 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "dev",
-				useOldUploadApi: true,
 			});
 			mockGetWorkerSubdomain({ enabled: false, env: "dev" });
 			mockSubDomainRequest();
 			mockUpdateWorkerSubdomain({ enabled: true, env: "dev" });
 
-			await runWrangler("deploy ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -652,9 +649,9 @@ describe("deploy", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Uploaded test-name (dev) (TIMINGS)
-				Deployed test-name (dev) triggers (TIMINGS)
-				  https://dev.test-name.test-sub-domain.workers.dev
+				Uploaded test-name-dev (TIMINGS)
+				Deployed test-name-dev triggers (TIMINGS)
+				  https://test-name-dev.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -675,12 +672,11 @@ describe("deploy", () => {
 				env: "dev",
 				expectedCompatibilityDate: "2022-01-12",
 				expectedCompatibilityFlags: ["no_global_navigator"],
-				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockGetWorkerSubdomain({ enabled: true, env: "dev" });
 
-			await runWrangler("deploy ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -688,9 +684,9 @@ describe("deploy", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Uploaded test-name (dev) (TIMINGS)
-				Deployed test-name (dev) triggers (TIMINGS)
-				  https://dev.test-name.test-sub-domain.workers.dev
+				Uploaded test-name-dev (TIMINGS)
+				Deployed test-name-dev triggers (TIMINGS)
+				  https://test-name-dev.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -714,12 +710,11 @@ describe("deploy", () => {
 				env: "dev",
 				expectedCompatibilityDate: "2022-01-13",
 				expectedCompatibilityFlags: ["global_navigator"],
-				useOldUploadApi: true,
 			});
 			mockGetWorkerSubdomain({ enabled: true, env: "dev" });
 			mockSubDomainRequest();
 
-			await runWrangler("deploy ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -727,9 +722,9 @@ describe("deploy", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Uploaded test-name (dev) (TIMINGS)
-				Deployed test-name (dev) triggers (TIMINGS)
-				  https://dev.test-name.test-sub-domain.workers.dev
+				Uploaded test-name-dev (TIMINGS)
+				Deployed test-name-dev triggers (TIMINGS)
+				  https://test-name-dev.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -758,7 +753,7 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 
 			await runWrangler(
-				"deploy ./index --env dev --legacy-env false --compatibility-date 2022-01-14 --compatibility-flags url_standard"
+				"deploy ./index --env dev --compatibility-date 2022-01-14 --compatibility-flags url_standard"
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -767,10 +762,10 @@ describe("deploy", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Uploaded test-name (dev) (TIMINGS)
-				Deployed test-name (dev) triggers (TIMINGS)
-				  https://dev.test-name.test-sub-domain.workers.dev
-				Current Version ID: undefined"
+				Uploaded test-name-dev (TIMINGS)
+				Deployed test-name-dev triggers (TIMINGS)
+				  https://test-name-dev.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -972,19 +967,16 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetZones(expect, "production.example.com", [{ id: "example-id" }]);
 			mockGetZoneWorkerRoutes(expect, "example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -1017,19 +1009,16 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetZones(expect, "production.example.com", [{ id: "example-id" }]);
 			mockGetZoneWorkerRoutes(expect, "example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -1101,23 +1090,19 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				previews_enabled: true,
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockUpdateWorkerSubdomain({
 				enabled: true,
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -1152,23 +1137,19 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				previews_enabled: true,
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockUpdateWorkerSubdomain({
 				enabled: true,
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -1203,19 +1184,16 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetZones(expect, "production.example.com", [{ id: "example-id" }]);
 			mockGetZoneWorkerRoutes(expect, "example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
@@ -1249,19 +1227,16 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			mockGetZones(expect, "production.example.com", [{ id: "example-id" }]);
 			mockGetZoneWorkerRoutes(expect, "example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
-				useServiceEnvironments: false,
 			});
 			await runWrangler("deploy index.js --env production");
 
