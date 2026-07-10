@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
@@ -56,6 +55,34 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	}));
 }
 
+function getEmailProjectTmpPath(
+	defaultProjectTmpPath: string | undefined,
+	tmpPath: string
+): string {
+	return defaultProjectTmpPath ?? path.join(tmpPath, "tmp");
+}
+
+function getEmailProjectSessionDirectory(
+	defaultProjectTmpPath: string | undefined,
+	tmpPath: string
+): string {
+	return path.join(
+		getEmailProjectTmpPath(defaultProjectTmpPath, tmpPath),
+		EMAIL_PLUGIN_NAME,
+		path.basename(tmpPath)
+	);
+}
+
+export function getEmailPathsToClean(
+	defaultProjectTmpPath: string | undefined,
+	tmpPath: string
+): string[] {
+	if (defaultProjectTmpPath === undefined) {
+		return [];
+	}
+	return [getEmailProjectSessionDirectory(defaultProjectTmpPath, tmpPath)];
+}
+
 export const EMAIL_PLUGIN: Plugin<
 	typeof EmailOptionsSchema,
 	typeof CoreSharedOptionsSchema
@@ -99,17 +126,11 @@ export const EMAIL_PLUGIN: Plugin<
 		await mkdir(emailSystemDirectory, { recursive: true });
 
 		// Used to send email logs to the project's temporary directory.
-		const projectTmpPath =
-			args.defaultProjectTmpPath ?? path.join(args.tmpPath, "tmp");
-		const emailProjectDirectory = path.join(projectTmpPath, EMAIL_PLUGIN_NAME);
-		await mkdir(emailProjectDirectory, { recursive: true });
-
-		const emailProjectSessionDirectory = path.join(
-			emailProjectDirectory,
-			crypto.randomUUID()
+		const emailProjectSessionDirectory = getEmailProjectSessionDirectory(
+			args.defaultProjectTmpPath,
+			args.tmpPath
 		);
 		await mkdir(emailProjectSessionDirectory, { recursive: true });
-		args.emailSessionDirectories.add(emailProjectSessionDirectory);
 
 		// Map binding disk services to names and paths, for concise access when storing emails as files.
 		const diskServices = [

@@ -97,8 +97,6 @@ export interface PluginServicesOptions<
 	// messages to a consumer in another `wrangler dev` process.
 	devRegistryEnabled: boolean;
 	hyperdriveProxyController: HyperdriveProxyController;
-	// Set of email session directories created in .wrangler for cleanup on exit
-	emailSessionDirectories: Set<string>;
 }
 
 export interface ServicesExtensions {

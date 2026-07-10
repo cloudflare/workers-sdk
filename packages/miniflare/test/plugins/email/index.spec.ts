@@ -1,7 +1,12 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { EMAIL_PLUGIN, LogLevel, Miniflare } from "miniflare";
+import {
+	EMAIL_PLUGIN,
+	getEmailPathsToClean,
+	LogLevel,
+	Miniflare,
+} from "miniflare";
 import dedent from "ts-dedent";
 import { describe, type ExpectStatic, test, vi } from "vitest";
 import { TestLog, useDispose, useTmp } from "../../test-shared";
@@ -2074,7 +2079,6 @@ describe("EMAIL_PLUGIN.getServices", () => {
 			defaultProjectTmpPath: projectTmpPath,
 			workerNames: ["default"],
 			workerIndex: 0,
-			emailSessionDirectories: new Set(),
 		} as unknown as Parameters<typeof EMAIL_PLUGIN.getServices>[0]);
 
 		if (!Array.isArray(result)) {
@@ -2105,8 +2109,8 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		expect(existsSync(systemTempDisk.disk.path)).toBe(true);
 
 		// Project temp directory
-		expect(projectDisk.disk.path).toMatch(
-			/\.wrangler[/\\]tmp[/\\]email[/\\][a-f0-9-]+$/
+		expect(projectDisk.disk.path).toBe(
+			path.join(projectTmpPath, "email", path.basename(tmp))
 		);
 		expect(existsSync(projectDisk.disk.path)).toBe(true);
 
@@ -2153,6 +2157,26 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		);
 		expect(emailDiskServices[1].location).toBe("project");
 		expect(emailDiskServices[1].path).toBe(projectDisk.disk.path);
+	});
+});
+
+describe("getEmailPathsToClean", () => {
+	test("returns the project session directory when a project temp path is supplied", ({
+		expect,
+	}) => {
+		const tmpPath = path.join("/tmp", "miniflare-abc123");
+		const projectTmpPath = path.join("/project", ".wrangler", "tmp");
+
+		expect(getEmailPathsToClean(projectTmpPath, tmpPath)).toEqual([
+			path.join(projectTmpPath, "email", "miniflare-abc123"),
+		]);
+	});
+
+	test("returns nothing when no project temp path is supplied", ({
+		expect,
+	}) => {
+		const tmpPath = path.join("/tmp", "miniflare-abc123");
+		expect(getEmailPathsToClean(undefined, tmpPath)).toEqual([]);
 	});
 });
 

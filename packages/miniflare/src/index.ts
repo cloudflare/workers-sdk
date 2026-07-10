@@ -38,6 +38,7 @@ import {
 	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
 	getDurableObjectUniqueKey,
+	getEmailPathsToClean,
 	getGlobalServices,
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -999,9 +1000,6 @@ export class Miniflare {
 	// create this if needed. Deleted on `dispose()`.
 	readonly #tmpPath: string;
 
-	// Track email session directories created in .wrangler for cleanup on exit
-	readonly #emailSessionDirectories: Set<string> = new Set();
-
 	// Mutual exclusion lock for runtime operations (i.e. initialisation and
 	// updating config). This essentially puts initialisation and future updates
 	// in a queue, ensuring they're performed in calling order.
@@ -1144,8 +1142,13 @@ export class Miniflare {
 			} catch (e) {
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
 			}
-			// Clean up email session directories in .wrangler
-			for (const dir of this.#emailSessionDirectories) {
+			// Clean up email session directories in the project temp path. When no
+			// project temp path is supplied, these live inside `#tmpPath` and are
+			// already removed above.
+			for (const dir of getEmailPathsToClean(
+				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#tmpPath
+			)) {
 				try {
 					removeDirSync(dir);
 				} catch (e) {
@@ -2171,7 +2174,6 @@ export class Miniflare {
 				queueConsumers,
 				devRegistryEnabled,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
-				emailSessionDirectories: this.#emailSessionDirectories,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const workerOptions = this.#getWorkerOptsForPlugin(key, workerOpts);
@@ -3322,8 +3324,13 @@ export class Miniflare {
 			// immediately after disposal, causing EBUSY errors. The temp directory
 			// lives in os.tmpdir() so the OS will clean it up eventually.
 			removeDir(this.#tmpPath, { fireAndForget: true });
-			// Clean up email session directories in .wrangler
-			for (const dir of this.#emailSessionDirectories) {
+			// Clean up email session directories in the project temp path. When no
+			// project temp path is supplied, these live inside `#tmpPath` and are
+			// already removed above.
+			for (const dir of getEmailPathsToClean(
+				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#tmpPath
+			)) {
 				removeDir(dir, { fireAndForget: true });
 			}
 
