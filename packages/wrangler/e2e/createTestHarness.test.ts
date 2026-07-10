@@ -1160,6 +1160,12 @@ describe("createTestHarness", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[TypeError: Worker "unknown-worker" does not exist in this server.]`
 		);
+
+		await expect(
+			server.getWorker("unknown-worker").queue("email-jobs", [])
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[TypeError: Worker "unknown-worker" does not exist in this server.]`
+		);
 	});
 
 	it("uses the current Node process fetch for outbound requests by default", async ({
@@ -1597,6 +1603,231 @@ describe("createTestHarness", () => {
 			<timestamp> [server] fetch - GET / - started
 			<timestamp> [server] fetch - GET / - 200"
 		`);
+	});
+
+	it("triggers queue handlers", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "queue-consumer-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"queues": {
+						"consumers": [
+							{ "queue": "email-jobs" }
+						]
+					}
+				}
+			`,
+			"src/index.ts": dedent`
+				let lastBatch;
+
+				export default {
+					fetch() {
+						return Response.json(lastBatch);
+					},
+					queue(batch) {
+						lastBatch = {
+							queue: batch.queue,
+							messages: batch.messages.map((message) => ({
+								id: message.id,
+								timestamp: message.timestamp.getTime(),
+								attempts: message.attempts,
+								body: message.body,
+							})),
+							metadata: {
+								metrics: {
+									backlogCount: batch.metadata.metrics.backlogCount,
+									backlogBytes: batch.metadata.metrics.backlogBytes,
+									oldestMessageTimestamp: batch.metadata.metrics.oldestMessageTimestamp?.getTime(),
+								},
+							},
+						};
+
+						for (const message of batch.messages) {
+							const action = message.body.action;
+							if (action === "ack") {
+								message.ack();
+							} else if (action === "ackAll") {
+								batch.ackAll();
+							} else if (action === "retry") {
+								message.retry();
+							} else if (action === "retryAll") {
+								batch.retryAll();
+							} else if (action === "throw") {
+								throw new Error("queue failed");
+							}
+						}
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker();
+
+		await expect(
+			worker.queue("email-jobs", [
+				{
+					id: "first-message",
+					timestamp: new Date(1_700_000_000_000),
+					attempts: 2,
+					body: { userId: "123" },
+				},
+				{
+					id: "second-message",
+					timestamp: new Date(1_700_000_100_000),
+					attempts: 1,
+					body: { userId: "456" },
+				},
+			])
+		).resolves.toEqual({
+			outcome: "ok",
+			ackAll: false,
+			retryBatch: { retry: false },
+			retryMessages: [],
+			explicitAcks: [],
+		});
+
+		const defaultResponse = await worker.fetch("/");
+
+		await expect(defaultResponse.json()).resolves.toEqual({
+			queue: "email-jobs",
+			messages: [
+				{
+					id: "first-message",
+					timestamp: 1_700_000_000_000,
+					attempts: 2,
+					body: { userId: "123" },
+				},
+				{
+					id: "second-message",
+					timestamp: 1_700_000_100_000,
+					attempts: 1,
+					body: { userId: "456" },
+				},
+			],
+			metadata: {
+				metrics: {
+					backlogCount: 0,
+					backlogBytes: 0,
+				},
+			},
+		});
+
+		await expect(
+			worker.queue(
+				"email-jobs",
+				[
+					{
+						id: "ack-message",
+						timestamp: new Date(1_700_000_300_000),
+						attempts: 1,
+						body: { action: "ack" },
+					},
+					{
+						id: "retry-message",
+						timestamp: new Date(1_700_000_400_000),
+						attempts: 1,
+						body: { action: "retry" },
+					},
+					{
+						id: "ack-all-message",
+						timestamp: new Date(1_700_000_500_000),
+						attempts: 1,
+						body: { action: "ackAll" },
+					},
+					{
+						id: "retry-all-message",
+						timestamp: new Date(1_700_000_600_000),
+						attempts: 1,
+						body: { action: "retryAll" },
+					},
+				],
+				{
+					metrics: {
+						backlogCount: 10,
+						backlogBytes: 1024,
+						oldestMessageTimestamp: new Date(1_700_000_250_000),
+					},
+				}
+			)
+		).resolves.toEqual({
+			outcome: "ok",
+			ackAll: true,
+			retryBatch: { retry: true },
+			retryMessages: [{ msgId: "retry-message" }],
+			explicitAcks: ["ack-message"],
+		});
+
+		const actionResponse = await worker.fetch("/");
+
+		await expect(actionResponse.json()).resolves.toEqual({
+			queue: "email-jobs",
+			messages: [
+				{
+					id: "ack-message",
+					timestamp: 1_700_000_300_000,
+					attempts: 1,
+					body: { action: "ack" },
+				},
+				{
+					id: "retry-message",
+					timestamp: 1_700_000_400_000,
+					attempts: 1,
+					body: { action: "retry" },
+				},
+				{
+					id: "ack-all-message",
+					timestamp: 1_700_000_500_000,
+					attempts: 1,
+					body: { action: "ackAll" },
+				},
+				{
+					id: "retry-all-message",
+					timestamp: 1_700_000_600_000,
+					attempts: 1,
+					body: { action: "retryAll" },
+				},
+			],
+			metadata: {
+				metrics: {
+					backlogCount: 10,
+					backlogBytes: 1024,
+					oldestMessageTimestamp: new Date(1_700_000_250_000),
+				},
+			},
+		});
+
+		await expect(
+			worker.queue("email-jobs", [
+				{
+					id: "ack-all-message",
+					timestamp: new Date(1_700_000_500_000),
+					attempts: 1,
+					body: { action: "ackAll" },
+				},
+				{
+					id: "throw-message",
+					timestamp: new Date(1_700_000_800_000),
+					attempts: 1,
+					body: { action: "throw" },
+				},
+			])
+		).resolves.toEqual({
+			outcome: "exception",
+			ackAll: true,
+			retryBatch: { retry: false },
+			retryMessages: [],
+			explicitAcks: [],
+		});
 	});
 
 	it("lists Durable Object ids", async ({ expect }) => {

@@ -39,8 +39,11 @@ import type {
 	Workflow,
 } from "@cloudflare/workers-types";
 import type {
+	FetcherQueueResult,
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
+	MessageBatchMetadata,
+	ServiceBindingQueueMessage,
 } from "@cloudflare/workers-types/experimental";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type {
@@ -125,6 +128,26 @@ export type WorkerHandle<
 	 * ```
 	 */
 	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
+	/**
+	 * Dispatches a queue event directly to this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * const result = await worker.queue("emails", [
+	 *   {
+	 *     id: "af3c9e8b-1d2f-4a5e-9c3b-2f1e4d5a6b7c",
+	 *     timestamp: new Date("2026-01-02T03:00:00Z"),
+	 *     attempts: 1,
+	 *     body: { userId: "123" },
+	 *   },
+	 * ]);
+	 * ```
+	 */
+	queue<Body = unknown>(
+		queueName: string,
+		messages: ServiceBindingQueueMessage<Body>[],
+		metadata?: MessageBatchMetadata
+	): Promise<FetcherQueueResult>;
 	/**
 	 * Returns the full environment object configured on this Worker, including
 	 * vars, secrets, and bindings.
@@ -869,6 +892,27 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const result = await response.json();
 
 					return result as FetcherScheduledResult;
+				},
+				async queue(queueName, messages, metadata) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const context = `queue - ${queueName}`;
+
+					try {
+						debugLog(`${context} - started`, workerName);
+						const entrypoint = await miniflare.getWorker(workerName);
+						const result = await entrypoint.queue(
+							queueName,
+							messages,
+							metadata
+						);
+						debugLog(`${context} - ${result.outcome}`, workerName);
+						return result;
+					} catch (error) {
+						debugLog(`${context} - failed`, workerName);
+						throw error;
+					}
 				},
 				async listDurableObjectIds(bindingName) {
 					const session = await resolveSession();
