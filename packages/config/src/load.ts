@@ -9,7 +9,7 @@
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { registerHooks } from "node:module";
+import * as nodeModule from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { LoadHookContext } from "node:module";
 
@@ -88,6 +88,9 @@ export function registerConfigHooks(): () => void {
 				"Please use Node.js v22.18.0 or higher."
 		);
 	}
+	// Read `registerHooks` lazily rather than via a top-level named import.
+	// This avoids a load-time crash on Node.js versions where it's unsupported.
+	const registerHooks = nodeModule.registerHooks;
 	if (typeof registerHooks !== "function") {
 		throw new Error(
 			"cloudflare.config.ts loading requires Node.js v22.18.0 or higher."
