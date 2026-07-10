@@ -120,7 +120,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		content: string | ArrayBuffer | ArrayBufferView,
 		extension: string,
 		prefix: string,
-		location: "system" | "project" = "system"
+		location: "system" | "project" = "system",
+		messageUUID?: string
 	): Promise<string> {
 		let body: string | Uint8Array;
 		if (typeof content === "string") {
@@ -136,7 +137,9 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			);
 		}
 
-		const fileName = `${crypto.randomUUID()}.${extension}`;
+		const fileName = messageUUID
+			? `${messageUUID}.${extension}`
+			: `${crypto.randomUUID()}.${extension}`;
 		const url = new URL(`${prefix}/${fileName}`, "http://placeholder/");
 
 		// Find the disk service config for the requested location.
@@ -221,6 +224,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		emailMessageOrBuilder: EmailMessage | MessageBuilder
 	): Promise<EmailSendResult> {
 		// Check if this is an EmailMessage (has RAW_EMAIL symbol) or MessageBuilder
+		const messageUUID: string = crypto.randomUUID();
 		if (this.isEmailMessage(emailMessageOrBuilder)) {
 			// Original EmailMessage API - validate and parse MIME
 			const emailMessage = emailMessageOrBuilder;
@@ -266,7 +270,13 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const locations: Array<"system" | "project"> = ["system", "project"];
 			const filePaths = await Promise.all(
 				locations.map((location) =>
-					this.storeTempFile(rawEmailBuffer, "eml", "email", location)
+					this.storeTempFile(
+						rawEmailBuffer,
+						"eml",
+						"email",
+						location,
+						messageUUID
+					)
 				)
 			);
 
@@ -296,7 +306,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 							builder.text!,
 							"txt",
 							"email-text",
-							location
+							location,
+							messageUUID
 						).then((filePath) => {
 							files.push(`Text (${location}): ${filePath}`);
 							return filePath;
@@ -312,7 +323,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 							builder.html!,
 							"html",
 							"email-html",
-							location
+							location,
+							messageUUID
 						).then((filePath) => {
 							files.push(`HTML (${location}): ${filePath}`);
 							return filePath;
