@@ -147,11 +147,11 @@ import type {
 	Worker_Module,
 } from "./runtime";
 import type { Log } from "./shared";
-import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	DevControl,
 	DurableObjectEvictionOptions,
-} from "./workers/core/dev-control";
+} from "./shared/dev-control";
+import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
 	D1Database,
@@ -3394,6 +3394,10 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export type {
+	DurableObjectIdentifier,
+	DurableObjectEvictionOptions,
+} from "./shared/dev-control";
 export type {
 	WorkerRegistry,
 	WorkerDefinition,

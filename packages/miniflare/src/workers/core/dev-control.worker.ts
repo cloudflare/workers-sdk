@@ -4,7 +4,7 @@ import {
 	type DevControl as DevControlInterface,
 	type DurableObjectEvictionOptions,
 	getDevControlDurableObjectBindingName,
-} from "./dev-control";
+} from "../../shared/dev-control";
 import type { DurableObjectNamespace } from "@cloudflare/workers-types/experimental";
 
 function getDurableObjectNamespace(

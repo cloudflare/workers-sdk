@@ -23,8 +23,8 @@ import { z } from "zod";
 import { fetch } from "../../http";
 import { kVoid } from "../../runtime";
 import { JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
+import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
-import { getDevControlDurableObjectBindingName } from "../../workers/core/dev-control";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import {
