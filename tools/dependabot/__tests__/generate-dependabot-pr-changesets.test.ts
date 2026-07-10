@@ -126,10 +126,9 @@ describe("parseDiffForChanges()", () => {
 	it("should capture an unquoted catalog key even when no package.json bumps it", ({
 		expect,
 	}) => {
-		// Reproduces cloudflare/workers-sdk#14642: Dependabot bumped workerd only
-		// in the pnpm-workspace.yaml catalog (an unquoted YAML key), leaving the
-		// package.json pins untouched. workerd must still make it into the
-		// changeset.
+		// When Dependabot bumps workerd only in the pnpm-workspace.yaml catalog
+		// (an unquoted YAML key), leaving the package.json pins untouched, workerd
+		// must still make it into the changeset.
 		const changes = parseDiffForChanges([
 			`-  "@cloudflare/workers-types": "^5.20260708.1"`,
 			`+  "@cloudflare/workers-types": "^5.20260710.1"`,

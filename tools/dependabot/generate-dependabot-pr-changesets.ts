@@ -113,9 +113,7 @@ export function parseDiffForChanges(
 	// Matches a dependency line in either a package.json diff (JSON, so the key
 	// is always quoted, e.g. `"workerd": "1.2.3"`) or a pnpm-workspace.yaml
 	// catalog diff (YAML, where the key may be unquoted, e.g. `workerd: "1.2.3"`).
-	// The quotes around the key are therefore optional — earlier this regex
-	// required them, which silently dropped unquoted catalog keys such as
-	// `workerd` when only the catalog (and not a package.json) was bumped.
+	// The quotes around the key are therefore optional.
 	const diffLineRegex = new RegExp(`^[+-]\\s*"?([^":]+?)"?:\\s"(.*)",?`);
 	const changes = new Map<string, Change>();
 	for (const line of diffLines) {
