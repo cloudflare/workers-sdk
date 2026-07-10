@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import { validate } from "../../pages/validate";
@@ -69,6 +69,28 @@ describe("pages project validate", () => {
 		const fileMap = await validate({ directory: ".", fileCountLimit: 20 });
 		expect(fileMap.size).toBe(11);
 	});
+
+	it.skipIf(process.platform === "win32")(
+		"should skip symlinked files and directories",
+		async ({ expect }) => {
+			// Real entries that must be included.
+			writeFileSync("real.png", "foobar");
+			mkdirSync("dir");
+			writeFileSync("dir/nested.png", "foobar");
+
+			// A symlink to a file and a symlink to a directory: both must be
+			// skipped and not followed (relies on lstat so isSymbolicLink() works).
+			symlinkSync("real.png", "link.png");
+			symlinkSync("dir", "linkdir");
+
+			const fileMap = await validate({ directory: "." });
+
+			expect([...fileMap.keys()].sort()).toEqual([
+				"dir/nested.png",
+				"real.png",
+			]);
+		}
+	);
 
 	it("should error with custom fileCountLimit when exceeding custom limit", async ({
 		expect,
