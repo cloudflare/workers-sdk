@@ -1,4 +1,9 @@
-import type { CacheOptions, Exports, Observability, Route } from "./config/environment";
+import type {
+	CacheOptions,
+	Exports,
+	Observability,
+	Route,
+} from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
