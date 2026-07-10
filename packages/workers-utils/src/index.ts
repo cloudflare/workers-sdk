@@ -89,6 +89,12 @@ export type { ResolveConfigPathOptions } from "./config/config-helpers";
 export * from "./errors";
 export { assertNever } from "./assert-never";
 
+export {
+	getPackagePath,
+	isPackageInstalled,
+	getInstalledPackageVersion,
+} from "./package-resolution";
+
 export * from "./constants";
 
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";

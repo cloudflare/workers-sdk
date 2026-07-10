@@ -207,7 +207,6 @@ export async function unstable_dev(
 		jsxFragment: undefined,
 		tsconfig: undefined,
 		minify: undefined,
-		legacyEnv: undefined,
 		...options,
 		logLevel: options?.logLevel,
 		port: options?.port ?? 0,

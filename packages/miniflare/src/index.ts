@@ -37,6 +37,7 @@ import {
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
+	getDurableObjectUniqueKey,
 	getGlobalServices,
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -146,6 +147,10 @@ import type {
 	Worker_Module,
 } from "./runtime";
 import type { Log } from "./shared";
+import type {
+	DevControl,
+	DurableObjectEvictionOptions,
+} from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
@@ -3100,6 +3105,131 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
 		return this.#getProxy(DURABLE_OBJECTS_PLUGIN_NAME, bindingName, workerName);
 	}
+	async #getDevControl(): Promise<DevControl> {
+		const proxyClient = await this._getProxyClient();
+		const control = proxyClient.env[CoreBindings.SERVICE_DEV_CONTROL] as
+			| DevControl
+			| undefined;
+		assert(control !== undefined, "Expected dev control service");
+
+		return control;
+	}
+	async unsafeEvictDurableObject(
+		scriptName: string,
+		className: string,
+		options: DurableObjectEvictionOptions
+	): Promise<void> {
+		this.#checkDisposed();
+		await this.ready;
+
+		const durableObjectExists = this.#workerOpts.some((workerOpts) => {
+			const workerName = workerOpts.core.name ?? "";
+			return [
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].some((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					(durableObject.scriptName ?? workerName) === scriptName &&
+					durableObject.className === className
+				);
+			});
+		});
+
+		if (!durableObjectExists) {
+			throw new TypeError(
+				`No Durable Object class named ${JSON.stringify(className)} found in ${JSON.stringify(scriptName)} worker.`
+			);
+		}
+
+		const control = await this.#getDevControl();
+		await control.evictDurableObject(scriptName, className, options);
+	}
+	async listDurableObjectIds(
+		classNameOrBindingName: string,
+		workerName?: string
+	): Promise<string[]> {
+		this.#checkDisposed();
+		await this.ready;
+
+		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
+		const workerOpts = this.#workerOpts[workerIndex];
+		const resolvedWorkerName = workerOpts.core.name ?? "";
+		const durableObject =
+			[
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].find((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					durableObject.className === classNameOrBindingName &&
+					(durableObject.scriptName === undefined ||
+						durableObject.scriptName === resolvedWorkerName)
+				);
+			}) ?? workerOpts.do.durableObjects?.[classNameOrBindingName];
+
+		if (durableObject === undefined) {
+			const friendlyWorkerName = resolvedWorkerName
+				? `${JSON.stringify(resolvedWorkerName)} worker`
+				: "the worker";
+			throw new TypeError(
+				`No Durable Object class or namespace binding named ${JSON.stringify(classNameOrBindingName)} found in ${friendlyWorkerName}.`
+			);
+		}
+
+		const { className, scriptName } = normaliseDurableObject(durableObject);
+		const serviceName = getUserServiceName(scriptName ?? resolvedWorkerName);
+		const classConfig = getDurableObjectClassNames(this.#workerOpts)
+			.get(serviceName)
+			?.get(className);
+		const unsafeUniqueKey = classConfig?.unsafeUniqueKey;
+
+		const namespaceKey = getDurableObjectUniqueKey(
+			className,
+			scriptName ?? resolvedWorkerName,
+			unsafeUniqueKey
+		);
+
+		if (namespaceKey === undefined) {
+			throw new TypeError(
+				`Cannot list Durable Object ids for ${JSON.stringify(classNameOrBindingName)} because the namespace uses ephemeral local storage.`
+			);
+		}
+
+		const durableObjectsPersistPath = getPersistPath(
+			DURABLE_OBJECTS_PLUGIN_NAME,
+			this.#tmpPath,
+			this.#sharedOpts.core.defaultPersistRoot,
+			this.#sharedOpts.do.durableObjectsPersist
+		);
+
+		try {
+			const entries = await fs.promises.readdir(
+				path.join(durableObjectsPersistPath, namespaceKey),
+				{ withFileTypes: true }
+			);
+
+			const ids: string[] = [];
+			for (const entry of entries) {
+				const objectId = path.basename(entry.name, ".sqlite");
+				if (
+					entry.isFile() &&
+					path.extname(entry.name) === ".sqlite" &&
+					objectId !== "metadata"
+				) {
+					ids.push(objectId);
+				}
+			}
+
+			return ids.sort();
+		} catch (error) {
+			if (isFileNotFoundError(error)) {
+				return [];
+			}
+
+			throw error;
+		}
+	}
 	getKVNamespace(
 		bindingName: string,
 		workerName?: string
@@ -3266,6 +3396,10 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export type {
+	DurableObjectIdentifier,
+	DurableObjectEvictionOptions,
+} from "./shared/dev-control";
 export type {
 	WorkerRegistry,
 	WorkerDefinition,

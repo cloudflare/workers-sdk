@@ -261,6 +261,7 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		};
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, forwards deprecated `pipeline` field alongside `stream`
 	for (const { binding, stream, pipeline } of previews?.pipelines ?? []) {
 		env[binding] = {
 			type: "pipelines",

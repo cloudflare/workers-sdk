@@ -683,7 +683,7 @@ function directoryContainsAnySkill(
 async function computeTelemetryCurrentAgentSkillsInstalled(): Promise<AgentSkillsInstallStatus> {
 	let agentId: string | null = null;
 	try {
-		const detection = detectAgenticEnvironment(process.env, []);
+		const detection = detectAgenticEnvironment();
 		agentId = detection.id;
 	} catch {
 		return null;

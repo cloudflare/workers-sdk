@@ -467,6 +467,15 @@ import { tunnelInfoCommand } from "./tunnel/info";
 import { tunnelListCommand } from "./tunnel/list";
 import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
+import { turnstileWidgetCreateCommand } from "./turnstile/create";
+import { turnstileWidgetDeleteCommand } from "./turnstile/delete";
+import { turnstileWidgetGetCommand } from "./turnstile/get";
+import {
+	turnstileNamespace,
+	turnstileWidgetNamespace,
+} from "./turnstile/index";
+import { turnstileWidgetListCommand } from "./turnstile/list";
+import { turnstileWidgetUpdateCommand } from "./turnstile/update";
 import { typesCommand } from "./type-generation";
 import {
 	authKeyringCommand,
@@ -1675,6 +1684,36 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("flagship");
+
+	// turnstile
+	registry.define([
+		{ command: "wrangler turnstile", definition: turnstileNamespace },
+		{
+			command: "wrangler turnstile widget",
+			definition: turnstileWidgetNamespace,
+		},
+		{
+			command: "wrangler turnstile widget create",
+			definition: turnstileWidgetCreateCommand,
+		},
+		{
+			command: "wrangler turnstile widget delete",
+			definition: turnstileWidgetDeleteCommand,
+		},
+		{
+			command: "wrangler turnstile widget get",
+			definition: turnstileWidgetGetCommand,
+		},
+		{
+			command: "wrangler turnstile widget list",
+			definition: turnstileWidgetListCommand,
+		},
+		{
+			command: "wrangler turnstile widget update",
+			definition: turnstileWidgetUpdateCommand,
+		},
+	]);
+	registry.registerNamespace("turnstile");
 
 	// tunnel
 	registry.define([

@@ -15,7 +15,6 @@ import {
 	select,
 } from "../../shared/context";
 import { printBindings } from "./print-bindings";
-import { useServiceEnvironments } from "./use-service-environments";
 import type {
 	Binding,
 	CfAgentMemory,
@@ -759,12 +758,6 @@ export async function provisionBindings(
 			"Provisioning resources is not possible without a config file"
 		);
 
-		if (useServiceEnvironments(config)) {
-			throw new UserError(
-				"Provisioning resources is not supported with a service environment",
-				{ telemetryMessage: "provision resources with service environment" }
-			);
-		}
 		logger.log();
 
 		printBindings(

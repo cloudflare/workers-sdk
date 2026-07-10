@@ -283,8 +283,7 @@ export async function preUploadApiChecks(
 	const remoteSecretsCheck = await checkRemoteSecretsOverride(
 		config,
 		name,
-		accountId,
-		props.env
+		accountId
 	);
 
 	if (remoteSecretsCheck?.override) {

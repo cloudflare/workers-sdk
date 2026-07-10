@@ -12,7 +12,10 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import { maybeDelegatePagesToWorkers } from "./delegate-to-workers";
+import {
+	logPagesToWorkersForceOptOutNotice,
+	maybeDelegatePagesToWorkers,
+} from "./delegate-to-workers";
 import { runPagesToWorkersDeploy } from "./run-workers-deploy";
 import type { PagesConfigCache, Project } from "./types";
 
@@ -264,6 +267,12 @@ export const pagesProjectCreateCommand = createCommand({
 			`To deploy a folder of assets, run 'wrangler pages deploy [directory]'.`
 		);
 		metrics.sendMetricsEvent("create pages project");
+
+		// If the agent opted this create out of delegation with `--force`, tell it
+		// (at the end, on success) that `--force` is a one-time action.
+		if (delegation.forcedOptOut) {
+			logPagesToWorkersForceOptOutNotice("create");
+		}
 	},
 });
 

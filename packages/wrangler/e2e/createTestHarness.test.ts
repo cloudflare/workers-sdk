@@ -20,9 +20,10 @@ import type {
 	CloudflareWorkersModule,
 	D1Database,
 	DurableObjectNamespace,
+	ExportedHandler,
 	KVNamespace,
 	R2Bucket,
-} from "@cloudflare/workers-types/experimental";
+} from "@cloudflare/workers-types";
 
 const { createTestHarness } = await importWrangler();
 
@@ -365,6 +366,96 @@ describe("createTestHarness", () => {
 		const adminStub = adminEnv.OBJECT.get(adminEnv.OBJECT.idFromName("shared"));
 		const adminResponse = await adminStub.fetch("http://example.com/");
 		await expect(adminResponse.text()).resolves.toBe("2");
+	});
+
+	it("evicts Durable Objects by class name or binding name", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "do-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"exports": {
+						"Counter": {
+							"type": "durable-object",
+							"storage": "sqlite"
+						}
+					},
+					"durable_objects": {
+						"bindings": [
+							{ "name": "COUNTER", "class_name": "Counter" }
+						]
+					}
+				}
+			`,
+			"src/index.ts": dedent`
+				import { DurableObject } from "cloudflare:workers";
+
+				export class Counter extends DurableObject {
+					memoryCount = 0;
+
+					async fetch() {
+						this.memoryCount += 1;
+						const storageCount = ((await this.ctx.storage.get("count")) ?? 0) + 1;
+						await this.ctx.storage.put("count", storageCount);
+						return Response.json({
+							memoryCount: this.memoryCount,
+							storageCount,
+						});
+					}
+				}
+
+				export default {
+					fetch(_request, _env, ctx) {
+						const id = ctx.exports.Counter.idFromName("user-123");
+						return ctx.exports.Counter.get(id).fetch("http://counter");
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<
+			{ COUNTER: DurableObjectNamespace },
+			{
+				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
+			}
+		>("do-worker");
+
+		const response1 = await worker.fetch("/");
+		expect(await response1.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 1,
+		});
+
+		// Evict by class name
+		await worker.evictDurableObject("Counter", { name: "user-123" });
+
+		const response2 = await worker.fetch("/");
+		expect(await response2.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 2,
+		});
+
+		// Evict by binding name
+		await worker.evictDurableObject("COUNTER", { name: "user-123" });
+
+		const response3 = await worker.fetch("/");
+		expect(await response3.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 3,
+		});
 	});
 
 	it("introspects Workflow instances by binding name", async ({ expect }) => {
@@ -1597,6 +1688,86 @@ describe("createTestHarness", () => {
 			<timestamp> [server] fetch - GET / - started
 			<timestamp> [server] fetch - GET / - 200"
 		`);
+	});
+
+	it("lists Durable Object ids by class name or binding name", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "durable-object-list-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"durable_objects": {
+						"bindings": [
+							{ "name": "COUNTER", "class_name": "Counter" }
+						]
+					},
+					"migrations": [
+						{ "tag": "v1", "new_sqlite_classes": ["Counter"] }
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				export class Counter {
+					constructor(ctx) {
+						this.ctx = ctx;
+					}
+
+					async fetch() {
+						await this.ctx.storage.put("count", 1);
+						return new Response("stored");
+					}
+				}
+
+				export default {
+					fetch(request, env) {
+						const name = new URL(request.url).searchParams.get("name") ?? "default";
+						const id = env.COUNTER.idFromName(name);
+						return env.COUNTER.get(id).fetch("https://counter.example");
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<
+			{ COUNTER: DurableObjectNamespace },
+			{
+				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
+			}
+		>();
+		const env = await worker.getEnv();
+		const firstId = env.COUNTER.idFromName("first").toString();
+		const secondId = env.COUNTER.idFromName("second").toString();
+
+		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual([]);
+
+		await expect(server.fetch("/?name=first")).resolves.toHaveProperty(
+			"status",
+			200
+		);
+		await expect(server.fetch("/?name=second")).resolves.toHaveProperty(
+			"status",
+			200
+		);
+
+		await expect(worker.listDurableObjectIds("Counter")).resolves.toEqual(
+			[firstId, secondId].sort()
+		);
+		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual(
+			[firstId, secondId].sort()
+		);
 	});
 
 	it("does not reload on source changes by default", async ({ expect }) => {

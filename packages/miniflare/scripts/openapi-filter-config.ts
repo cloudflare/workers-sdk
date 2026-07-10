@@ -1169,6 +1169,11 @@ const config = {
 												},
 											},
 										},
+										rollback: {
+											type: "boolean",
+											description:
+												"The option to trigger rollbacks when terminating the workflow instance.",
+										},
 									},
 								},
 							},

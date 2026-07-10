@@ -1,4 +1,5 @@
 import {
+	APIError,
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
 	retryOnAPIFailure,
@@ -6,6 +7,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
+import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-codes";
 import {
 	fetchListResult,
 	fetchResult,
@@ -40,13 +42,9 @@ export async function triggersDeploy(
 		}
 	}
 
-	const envName = props.env ?? "production";
-
 	const start = Date.now();
 
-	const workerUrl = props.useServiceEnvironments
-		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
+	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<TriggerDeployment>[] = [];
@@ -58,7 +56,6 @@ export async function triggersDeploy(
 		props,
 		accountId,
 		scriptName,
-		envName,
 		workerUrl,
 		routes,
 		deployments,
@@ -174,7 +171,6 @@ export async function triggersDeploy(
 			publishRoutes(config, routesOnly, {
 				workerUrl,
 				scriptName,
-				useServiceEnvironments: props.useServiceEnvironments,
 				accountId,
 			}).then(
 				() => {
@@ -296,7 +292,28 @@ export async function triggersDeploy(
 					}
 				).then(
 					() => ({ targets: [`workflow: ${workflow.name}`] }),
-					(error) => ({ targets: [], error })
+					(error) => {
+						if (
+							error instanceof APIError &&
+							error.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE &&
+							workflow.schedules
+						) {
+							error.preventReport();
+							return {
+								targets: [],
+								error: new UserError(
+									`Workflow "${workflow.name}" has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
+									{
+										cause: error,
+										telemetryMessage:
+											"triggers deploy workflow cron requires paid plan",
+									}
+								),
+							};
+						}
+
+						return { targets: [], error };
+					}
 				)
 			);
 		}
@@ -305,9 +322,7 @@ export async function triggersDeploy(
 	const completedDeployments = await Promise.all(deployments);
 	const deployMs = Date.now() - start - uploadMs;
 
-	const workerName = props.useServiceEnvironments
-		? `${scriptName} (${envName})`
-		: scriptName;
+	const workerName = scriptName;
 
 	const targets = completedDeployments
 		.flatMap((deployment) => deployment.targets)
@@ -481,7 +496,6 @@ async function subdomainDeploy(
 	props: TriggerProps,
 	accountId: string,
 	scriptName: string,
-	envName: string,
 	workerUrl: string,
 	routes: Route[],
 	deployments: Promise<TriggerDeployment>[],
@@ -499,10 +513,7 @@ async function subdomainDeploy(
 		const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
 			configPath: config.configPath,
 		});
-		const workersDevURL =
-			!props.useServiceEnvironments || !props.env
-				? `${scriptName}.${userSubdomain}`
-				: `${envName}.${scriptName}.${userSubdomain}`;
+		const workersDevURL = `${scriptName}.${userSubdomain}`;
 		deployments.push(Promise.resolve({ targets: [workersDevURL] }));
 	}
 

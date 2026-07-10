@@ -143,9 +143,14 @@ export async function updateLocalInstanceStatus(
 	workflowName: string,
 	instanceId: string,
 	action: "pause" | "resume" | "restart" | "terminate",
-	from?: WorkflowInstanceRestartFrom
+	from?: WorkflowInstanceRestartFrom,
+	rollback?: boolean
 ): Promise<void> {
-	const body = from ? { action, from } : { action };
+	const body = {
+		action,
+		...(from ? { from } : {}),
+		...(action === "terminate" && rollback === true ? { rollback: true } : {}),
+	};
 
 	await fetchLocalResult<{ success: boolean }>(
 		port,

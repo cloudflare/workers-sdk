@@ -790,7 +790,7 @@ describe("deploy", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -923,7 +923,7 @@ describe("deploy", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -1721,7 +1721,6 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "some-env",
-				useServiceEnvironments: false,
 			});
 
 			await runWrangler("deploy index.js --env some-env");
@@ -1747,11 +1746,9 @@ describe("deploy", () => {
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					useServiceEnvironments: false,
-				});
+				mockUploadWorkerRequest({});
 
-				await runWrangler("deploy index.js --legacy-env true");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -1775,10 +1772,9 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					env: "some-env",
-					useServiceEnvironments: false,
 				});
 
-				await runWrangler("deploy index.js --env some-env --legacy-env true");
+				await runWrangler("deploy index.js --env some-env");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -1802,10 +1798,9 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					env: "some-env",
-					useServiceEnvironments: false,
 				});
 
-				await runWrangler("deploy index.js --env some-env --legacy-env true");
+				await runWrangler("deploy index.js --env some-env");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -1841,9 +1836,8 @@ describe("deploy", () => {
 				writeWranglerConfig({ env: { "other-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
-				await expect(
-					runWrangler("deploy index.js --env some-env --legacy-env true")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`
+				await expect(runWrangler("deploy index.js --env some-env")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Processing wrangler.toml configuration:
 					  - No environment found in configuration with name "some-env".
 					    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
@@ -1864,80 +1858,8 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({
 					env: "some-env",
 					expectedScriptName: "voyager",
-					useServiceEnvironments: false,
 				});
-				await runWrangler(
-					"deploy index.js --name voyager --env some-env --legacy-env true"
-				);
-			});
-		});
-
-		describe("services", () => {
-			it("uses the script name when no environment is specified", async ({
-				expect,
-			}) => {
-				writeWranglerConfig();
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					useServiceEnvironments: true,
-				});
-
-				await runWrangler("deploy index.js --legacy-env false");
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
-			});
-
-			it("publishes as an environment when provided", async ({ expect }) => {
-				writeWranglerConfig({ env: { "some-env": {} } });
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					env: "some-env",
-					useServiceEnvironments: true,
-					useOldUploadApi: true,
-				});
-
-				await runWrangler("deploy index.js --env some-env --legacy-env false");
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (some-env) (TIMINGS)
-					Deployed test-name (some-env) triggers (TIMINGS)
-					  https://some-env.test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
+				await runWrangler("deploy index.js --name voyager --env some-env");
 			});
 		});
 	});

@@ -87,7 +87,6 @@ async function expectedHostAndZone(
 				}
 			}),
 		env: undefined,
-		useServiceEnvironments: undefined,
 		sendMetrics: undefined,
 		configPath: config.config,
 	});
@@ -2976,6 +2975,8 @@ describe.sequential("wrangler dev", () => {
 				);
 				expect(typesContent).not.toContain("old-hash-value");
 				expect(typesContent).toContain("NEW_VAR");
+				expect(typesContent).toContain("// Begin runtime types");
+				expect(typesContent).toContain("/* eslint-disable */");
 			});
 
 			it("should not warn about types if the types file does not exist", async ({

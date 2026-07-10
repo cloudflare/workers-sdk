@@ -61,11 +61,6 @@ export const deployCommand = createCommand({
 			type: "string",
 			coerce: (v: string) => (!v ? true : v),
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 		logpush: {
 			type: "boolean",
 			describe:
@@ -125,23 +120,21 @@ export async function runDeployCommandHandler(
 	// Capture whether this project can prove it owns the target Worker name,
 	// BEFORE autoconfig generates or rewrites the config. Ownership is proven by
 	// a config file that names the Worker; without one a same-named remote Worker
-	// is a probable collision rather than a redeploy. We only guard
-	// non-interactive deploys (agents, CI, the Pages-to-Workers delegation):
-	// there we cannot prompt to resolve the collision, and silently overwriting
-	// an unrelated Worker is the worst outcome. Interactive users pick the name
-	// at a prompt and keep the existing confirmation flow.
+	// could be a collision rather than a redeploy.
 	//
-	// For the Pages-to-Workers delegation we guard even when a name was passed:
-	// the name is a Pages project name carried across, and an existing Worker of
-	// the same name is a different resource we must not clobber. Repeat
-	// delegations are unaffected because the first one writes a config file
-	// (so `configPath` is then set). Outside the delegation, an explicit `--name`
-	// is treated as deliberate ownership so plain `wrangler deploy --name foo`
-	// keeps working in CI. See `failIfWorkerNameTaken` in preUploadApiChecks.
+	// We only guard the Pages-to-Workers delegation: there the name is a Pages
+	// project name carried across (or auto-generated), so an existing Worker of
+	// the same name is a different resource we must not clobber, and being
+	// non-interactive there is no prompt to resolve it. Repeat delegations are
+	// unaffected because the first one writes a config file (so `configPath` is
+	// then set).
+	//
+	// Plain `wrangler deploy` is NOT guarded, even in CI with an autoconfigured
+	// name: autoconfigured projects are routinely redeployed in CI (e.g. when the
+	// auto-generated config PR has not been merged), and blocking that regressed
+	// those workflows. See `failIfWorkerNameTaken` in preUploadApiChecks.
 	const nameOwnershipUnverified =
-		!config.configPath &&
-		isNonInteractiveOrCI() &&
-		(pagesToWorkersDelegation || !args.name);
+		!config.configPath && isNonInteractiveOrCI() && pagesToWorkersDelegation;
 
 	// --- Step 0. Auto-config --- //
 	const autoConfigResult = await maybeRunAutoConfig(args, config, {
