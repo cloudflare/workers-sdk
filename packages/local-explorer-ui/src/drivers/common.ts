@@ -11,6 +11,7 @@ import type {
 	StudioTableSchemaChange,
 } from "../types/studio";
 import type { Icon } from "@phosphor-icons/react";
+import type { JSX } from "react";
 
 /**
  * Common SQL driver implementation for databases that use SQL with slight dialect differences.

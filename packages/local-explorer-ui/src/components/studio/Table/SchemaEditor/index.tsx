@@ -16,7 +16,7 @@ import type {
 	StudioTableSchemaChange,
 } from "../../../../types/studio";
 import type { StudioCodeMirrorReference } from "../../Code/Mirror";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, JSX, SetStateAction } from "react";
 
 interface StudioTableSchemaEditorProps {
 	disabledAddColumn?: boolean;

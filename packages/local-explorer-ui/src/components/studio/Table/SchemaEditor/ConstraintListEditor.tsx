@@ -11,7 +11,7 @@ import { produce } from "immer";
 import { useCallback } from "react";
 import type { StudioTableSchemaChange } from "../../../../types/studio";
 import type { DragEndEvent } from "@dnd-kit/core";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, JSX, SetStateAction } from "react";
 
 interface StudioConstraintListEditorProps {
 	onChange: Dispatch<SetStateAction<StudioTableSchemaChange>>;

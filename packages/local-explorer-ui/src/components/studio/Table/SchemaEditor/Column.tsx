@@ -24,7 +24,7 @@ import type {
 	StudioTableSchemaChange,
 } from "../../../../types/studio";
 import type { Icon } from "@phosphor-icons/react";
-import type { Dispatch, PropsWithChildren, SetStateAction } from "react";
+import type { Dispatch, JSX, PropsWithChildren, SetStateAction } from "react";
 
 interface StudioColumnSchemaEditorProps {
 	columnIndex: number;

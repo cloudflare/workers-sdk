@@ -1,5 +1,6 @@
 import { Button } from "@cloudflare/kumo";
 import { Link, type NotFoundRouteProps } from "@tanstack/react-router";
+import type { JSX } from "react";
 
 export function NotFound(_props: NotFoundRouteProps): JSX.Element {
 	return (
