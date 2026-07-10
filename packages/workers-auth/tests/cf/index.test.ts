@@ -39,11 +39,14 @@ function createTestContext(): AuthContext {
 describe("cf auth layer", () => {
 	runInTempDir();
 
-	it("resolves its config directory under `cloudflare` (not `.wrangler`)", ({
+	it("resolves its config directory to `cloudflare` (no leading dot, not `.wrangler`)", ({
 		expect,
 	}) => {
 		const configPath = getCfConfigPath();
-		expect(configPath).toContain("cloudflare");
+		// The basename must be exactly `cloudflare` — no leading dot (unlike
+		// wrangler's `.wrangler`).
+		expect(path.basename(configPath)).toBe("cloudflare");
+		expect(configPath).not.toContain(".cloudflare");
 		expect(configPath).not.toContain(".wrangler");
 	});
 
