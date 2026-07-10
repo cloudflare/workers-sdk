@@ -522,7 +522,6 @@ describe("deploy", () => {
 			mockGetScriptWithTags(null);
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -572,7 +571,6 @@ describe("deploy", () => {
 			mockGetScriptWithTags(["some-tag"]);
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -602,7 +600,6 @@ describe("deploy", () => {
 			mockGetScriptWithTags(["some-tag", "cf:service=test-name"]);
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -659,7 +656,6 @@ describe("deploy", () => {
 			]);
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -720,7 +716,6 @@ describe("deploy", () => {
 			]);
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -777,7 +772,6 @@ describe("deploy", () => {
 			]);
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -827,7 +821,6 @@ describe("deploy", () => {
 			mockGetScriptWithTags(["some-tag", "cf:service=undefined"]);
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -863,7 +856,6 @@ describe("deploy", () => {
 			]);
 			mockUploadWorkerRequest({
 				env: "production",
-				useServiceEnvironments: false,
 			});
 
 			writeWranglerConfig({
@@ -982,7 +974,6 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "test",
-				useServiceEnvironments: false,
 			});
 
 			await runWrangler("deploy -e test");
@@ -1037,7 +1028,6 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "test",
-				useServiceEnvironments: false,
 			});
 
 			await runWrangler("deploy");

@@ -1152,39 +1152,6 @@ describe("deploy: interactive deploy config prompts", () => {
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
 
-	it("should include legacy_env in generated wrangler.jsonc when --legacy-env is passed", async ({
-		expect,
-	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
-		setIsTTY(true);
-		writeWorkerSource();
-		mockPrompt({
-			text: "What do you want to name your project?",
-			result: "test-worker",
-		});
-		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
-			result: true,
-		});
-		mockConfirm({
-			text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-			result: true,
-		});
-
-		await runWrangler("deploy ./index.js --legacy-env --dry-run");
-		expect(std.out).toContain("--dry-run: exiting now.");
-		const writtenConfig = JSON.parse(
-			fs.readFileSync("wrangler.jsonc", "utf-8")
-		);
-		expect(writtenConfig).toEqual({
-			name: "test-worker",
-			compatibility_date: "2024-06-15",
-			main: "./index.js",
-			legacy_env: true,
-		});
-		expect(std.out).toContain("Proceeding with deployment...");
-	});
-
 	it("should include --dispatch-namespace in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {

@@ -894,7 +894,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 			});
 
 			// Setup
@@ -931,7 +930,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 				env: "test",
 			});
 
@@ -981,7 +979,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 				env: "test",
 			});
 
@@ -1010,7 +1007,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 			});
 
 			// Setup

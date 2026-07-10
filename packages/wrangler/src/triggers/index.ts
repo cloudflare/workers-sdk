@@ -45,11 +45,6 @@ export const triggersDeployCommand = createCommand({
 			describe: "Don't actually deploy",
 			type: "boolean",
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 		"experimental-deploy-helpers": {
 			describe: "Experimental: Gates refactored deploy/upload path",
 			type: "boolean",

@@ -79,11 +79,6 @@ export type SharedDeployVersionsProps = {
 	keepVars: boolean;
 	/** Merged from --site arg and config.site. */
 	isWorkersSite: boolean;
-	/**
-	 * Whether to use the deprecated service environments API path.
-	 * True only when config opts in (legacy_env: false) AND --env is specified.
-	 */
-	useServiceEnvApiPath: boolean;
 	/** From --dry-run arg. */
 	dryRun: boolean;
 	/** From --env arg. */
@@ -170,6 +165,5 @@ export type TriggerProps = {
 	env: string | undefined;
 	crons: string[] | undefined;
 	routes: Route[];
-	useServiceEnvironments: boolean;
 	firstDeploy: boolean;
 };

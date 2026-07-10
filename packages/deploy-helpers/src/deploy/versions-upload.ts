@@ -38,7 +38,6 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
-import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
 import {
 	preUploadApiChecks,
 	validateWorkerProps,
@@ -120,8 +119,6 @@ export default async function versionsUpload(
 		isDryRun: props.dryRun,
 		accountId,
 		config,
-		useServiceEnvironments: useServiceEnvironmentsConfig(config),
-		env: props.env,
 		dispatchNamespace: undefined,
 	});
 
