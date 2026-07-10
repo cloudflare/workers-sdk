@@ -1,5 +1,56 @@
 # wrangler
 
+## 4.110.0
+
+### Minor Changes
+
+- [#14591](https://github.com/cloudflare/workers-sdk/pull/14591) [`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Send npm package dependency metadata with worker uploads
+
+  Wrangler now collects npm package dependency information from the project's `package.json` at deploy and version upload time, and includes it in the upload metadata sent to the Cloudflare API. This enables dependency analytics and future features like vulnerability alerting.
+
+  The collected data includes the package name, the version constraint from `package.json`, and the exact installed version from `node_modules`. Both `dependencies` and `devDependencies` are included, while workspace packages, local packages, and unresolvable packages are excluded. The list is capped at 200 entries per upload.
+
+  To opt out, set `dependencies_instrumentation.enabled` to `false` in your Wrangler configuration file:
+
+  ```json
+  {
+    "dependencies_instrumentation": {
+      "enabled": false
+    }
+  }
+  ```
+
+- [#14535](https://github.com/cloudflare/workers-sdk/pull/14535) [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f) Thanks [@Naapperas](https://github.com/Naapperas)! - Support dynamic retry delays for Workflow steps in local dev
+
+  A step's `retries.delay` can now be a function that computes the delay per failed attempt, in addition to a static duration. The function receives `{ ctx, error }` and returns a delay (a number of milliseconds or a duration string like `"30 seconds"`), and its result is fed into the configured `backoff`.
+
+  ```js
+  await step.do(
+    "call flaky API",
+    {
+      retries: {
+        limit: 5,
+        backoff: "constant",
+        delay: ({ ctx }) => ctx.attempt * 1000,
+      },
+    },
+    async () => {
+      /* ... */
+    }
+  );
+  ```
+
+  The function is invoked once per failed attempt with a 5 second timeout. If it throws, times out, or returns an invalid value, the step fails without further retries.
+
+### Patch Changes
+
+- [#14589](https://github.com/cloudflare/workers-sdk/pull/14589) [`7b28392`](https://github.com/cloudflare/workers-sdk/commit/7b2839290a707e7ee22dde17de68116e88f8a2dc) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix runtime type caching when `wrangler dev` auto-regenerates types
+
+  When `dev.generate_types` (or `wrangler dev --types`) regenerated an out-of-date `worker-configuration.d.ts`, the written file omitted the `// Begin runtime types` marker (and the `/* eslint-disable */` header) that `wrangler types` writes. As a result, later runs could not detect the cached runtime types and always regenerated them. The auto-regenerated file now matches `wrangler types` output, restoring the cache.
+
+- Updated dependencies [[`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f)]:
+  - miniflare@4.20260708.1
+
 ## 4.109.0
 
 ### Minor Changes
