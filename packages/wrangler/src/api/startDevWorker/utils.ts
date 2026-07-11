@@ -58,6 +58,47 @@ export function urlFromParts(
 	return url;
 }
 
+/**
+ * Rewrite the absolute URLs inside a single header value (e.g. `Location`,
+ * `Origin`, `Access-Control-Allow-Origin`), mapping only those whose host is
+ * exactly `from.host` onto `to`'s origin.
+ *
+ * The proxy previously replaced every substring occurrence of `from.host`,
+ * which corrupted unrelated hosts that merely *contained* the proxied host as a
+ * substring. For example, with a `example.com` route rewritten to a local
+ * `127.0.0.1:8788` dev address, `https://books.example.com/x` became
+ * `https://books.127.0.0.1:8788/x` and `https://myexample.com/x` became
+ * `https://my127.0.0.1:8788/x`. Matching on the parsed host and swapping the
+ * whole origin (scheme included) also avoids leaving a mismatched `https:`
+ * scheme on a plain-HTTP dev address.
+ */
+export function rewriteUrlInHeaderValue(
+	value: string,
+	from: URL,
+	to: URL
+): string {
+	// Split each absolute URL into its `scheme://authority` origin and the
+	// literal remainder (path/query/fragment). Keeping the remainder verbatim
+	// avoids URL normalization such as appending a trailing slash to a bare
+	// origin (which would corrupt an `Origin` header), and leaves host-like
+	// substrings inside query strings untouched.
+	return value.replace(
+		/(https?:\/\/[^/?#\s,;"']+)([^\s,;"']*)/gi,
+		(match, origin: string, rest: string) => {
+			let url: URL;
+			try {
+				url = new URL(origin);
+			} catch {
+				return match;
+			}
+			if (url.host !== from.host) {
+				return match;
+			}
+			return to.origin + rest;
+		}
+	);
+}
+
 type UnwrapHook<
 	T extends HookValues | Promise<HookValues>,
 	Args extends unknown[],
