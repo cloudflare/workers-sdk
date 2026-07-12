@@ -44,6 +44,7 @@ import {
 import {
 	createFetchResult,
 	msw,
+	mswFailAccountsHandler,
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
@@ -2078,10 +2079,12 @@ describe("User", () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
 		});
 
-		it("should return env var without making API calls", async ({ expect }) => {
+		it("should return env var without prompting", async ({ expect }) => {
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id");
 
-			// No getMswSuccessMembershipHandlers — if an API call is made, it will fail
+			// The env-var account is resolved directly and only the lightweight
+			// reachability probe (`GET /accounts/:id`, served by the default
+			// handler) runs — no interactive account selection prompt.
 			const accountId = await getOrSelectAccountId({});
 			expect(accountId).toBe("env-account-id");
 		});
@@ -2138,6 +2141,101 @@ describe("User", () => {
 				id: "api-account",
 				name: "API Account",
 			});
+		});
+	});
+
+	describe("getOrSelectAccountId account reachability", () => {
+		// The outer `describe("User")` beforeEach registers the default
+		// membership handlers, which report `account-1`/`account-2`/`account-3`
+		// as the accounts the login can access.
+		beforeEach(() => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
+		});
+
+		// Force the single-account reachability probe (`GET /accounts/:id`) to
+		// fail so the confirmation step (the account list) is exercised.
+		function failAccountProbe() {
+			msw.use(
+				http.get("*/accounts/:accountId", () =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10000, message: "Authentication error" },
+						])
+					)
+				)
+			);
+		}
+
+		it("throws a profile-aware error when config account_id is not accessible", async ({
+			expect,
+		}) => {
+			failAccountProbe();
+			await expect(
+				getOrSelectAccountId({ account_id: "unreachable-account-id" })
+			).rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The account ID \`unreachable-account-id\` (set as \`account_id\` in your Wrangler configuration file) is not accessible with your current login.
+				Accounts this login can access (\`<name>\`: \`<account_id>\`):
+				  \`Account One\`: \`account-1\`
+				  \`Account Two\`: \`account-2\`
+				  \`Account Three\`: \`account-3\`
+				To use one of these accounts, set \`account_id\` to its ID (or remove \`account_id\` to be prompted).
+				To use \`unreachable-account-id\`, log in with an account that can access it. If you work across multiple accounts, create an auth profile scoped to it and activate it in this directory:
+				  wrangler auth create <name>
+				  wrangler auth activate <name>
+				Learn more: https://developers.cloudflare.com/workers/wrangler/profiles/]
+			`);
+		});
+
+		it("throws when CLOUDFLARE_ACCOUNT_ID is not accessible", async ({
+			expect,
+		}) => {
+			failAccountProbe();
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "unreachable-account-id");
+			await expect(getOrSelectAccountId({})).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The account ID \`unreachable-account-id\` (set via the CLOUDFLARE_ACCOUNT_ID environment variable) is not accessible with your current login.
+				Accounts this login can access (\`<name>\`: \`<account_id>\`):
+				  \`Account One\`: \`account-1\`
+				  \`Account Two\`: \`account-2\`
+				  \`Account Three\`: \`account-3\`
+				To use one of these accounts, set \`account_id\` to its ID (or remove \`account_id\` to be prompted).
+				To use \`unreachable-account-id\`, log in with an account that can access it. If you work across multiple accounts, create an auth profile scoped to it and activate it in this directory:
+				  wrangler auth create <name>
+				  wrangler auth activate <name>
+				Learn more: https://developers.cloudflare.com/workers/wrangler/profiles/]
+			`);
+		});
+
+		it("throws a UserError (not a reportable bug)", async ({ expect }) => {
+			failAccountProbe();
+			await expect(
+				getOrSelectAccountId({ account_id: "unreachable-account-id" })
+			).rejects.toBeInstanceOf(UserError);
+		});
+
+		it("does not throw when the config account_id is accessible", async ({
+			expect,
+		}) => {
+			// The default single-account probe handler reports the account as
+			// reachable, so no confirmation step or error is needed.
+			const accountId = await getOrSelectAccountId({
+				account_id: "account-2",
+			});
+			expect(accountId).toBe("account-2");
+		});
+
+		it("proceeds when the set of reachable accounts cannot be determined", async ({
+			expect,
+		}) => {
+			// Probe fails AND the account list can't be fetched, so the
+			// best-effort check degrades and lets the id through rather than
+			// blocking.
+			failAccountProbe();
+			msw.use(mswFailAccountsHandler);
+			const accountId = await getOrSelectAccountId({
+				account_id: "unreachable-account-id",
+			});
+			expect(accountId).toBe("unreachable-account-id");
 		});
 	});
 });

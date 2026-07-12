@@ -27,6 +27,7 @@ import {
 import ci from "ci-info";
 import { formatDistanceToNowStrict } from "date-fns";
 import { dedent } from "ts-dedent";
+import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { purgeConfigCaches } from "../config-cache";
 import { NoDefaultValueProvided, select } from "../dialogs";
@@ -453,10 +454,131 @@ export function getActiveAccountId(config: {
 }
 
 /**
+ * Describes where a resolved account ID came from, for use in error messages.
+ */
+function describeAccountIdSource(
+	config: { account_id?: string },
+	accountId: string
+): string {
+	if (config.account_id === accountId) {
+		return `set as \`account_id\` in your ${configFileName(undefined)} file`;
+	}
+	if (getCloudflareAccountIdFromEnv() === accountId) {
+		return "set via the CLOUDFLARE_ACCOUNT_ID environment variable";
+	}
+	return "remembered from a previous account selection";
+}
+
+/**
+ * Fails fast when an account ID resolved from a non-interactive source
+ * (`account_id` in the Wrangler configuration file, the `CLOUDFLARE_ACCOUNT_ID`
+ * environment variable, or the per-profile account cache) is not one of the
+ * accounts the current login can reach.
+ *
+ * Without this check the request continues and the Cloudflare API rejects it
+ * with a generic `Authentication error [code: 10000]`, which does not explain
+ * that the real problem is an account the current login cannot access. Here we
+ * surface a message that names the account, the active auth profile, and the
+ * accounts this login can reach, and points at auth profiles as the way to work
+ * across multiple accounts.
+ *
+ * The check runs in two steps so the common case is cheap:
+ *  1. A direct `GET /accounts/<id>` probe. When the login can reach the
+ *     account this is a single request and we return immediately.
+ *  2. Only if the probe fails do we list the reachable accounts (via
+ *     {@link fetchAllAccounts}) to build the rich error — and to guard against
+ *     false positives where the probe failed for an unrelated reason (e.g. a
+ *     token without account-read scope), in which case we let it proceed.
+ *
+ * The check is best-effort. If reachability cannot be determined — offline, a
+ * token without permission to list accounts, or a temporary preview account —
+ * it does nothing and lets the request proceed as it did before.
+ *
+ * @throws {UserError} If the account is definitively not reachable by the
+ *   current login.
+ */
+async function assertAccountIsReachable(
+	config: ComplianceConfig & { account_id?: string },
+	accountId: string
+): Promise<void> {
+	// A temporary preview account's id is its whole identity; there is no
+	// account list to validate it against.
+	if (oauthFlow.getActiveTemporaryAccount()) {
+		return;
+	}
+
+	// Fast path: look the account up directly. When the current login can
+	// reach it this is a single request and we're done. Any failure (not
+	// accessible, offline, missing scope, ...) drops through to the slower
+	// confirmation step rather than being treated as proof of inaccessibility
+	// on its own.
+	try {
+		await fetchResult<Account>(config, `/accounts/${accountId}`);
+		return;
+	} catch (probeError) {
+		logger.debug(
+			`Could not directly access account \`${accountId}\`; confirming against the account list:`,
+			probeError
+		);
+	}
+
+	// Confirmation: list the accounts this login can reach. Only reached when
+	// the direct lookup failed, so the extra request cost is paid on the error
+	// path, not the happy path.
+	let accounts: Account[];
+	try {
+		accounts = await fetchAllAccounts(config, { throwOnEmpty: false });
+	} catch (e) {
+		// If we can't list the reachable accounts (offline, insufficient token
+		// permissions, ...) fall back to the previous behaviour and let the
+		// upcoming API request surface any error.
+		logger.debug("Could not verify account access; skipping check:", e);
+		return;
+	}
+
+	// An empty list means we couldn't determine access — don't block. If the
+	// account turns out to be in the list after all (i.e. the direct lookup
+	// failed for an unrelated reason such as a missing account-read scope),
+	// also let it proceed.
+	if (accounts.length === 0 || accounts.some((a) => a.id === accountId)) {
+		return;
+	}
+
+	const activeProfile = getActiveProfile();
+	const profileSuffix =
+		activeProfile === "default" ? "" : ` (profile "${activeProfile}")`;
+	// Account names may contain email addresses; redact them in CI logs.
+	const redactAccountName = ci.isCI;
+	const accountList = accounts
+		.map(
+			(account) =>
+				`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
+		)
+		.join("\n");
+
+	throw new UserError(
+		`The account ID \`${accountId}\` (${describeAccountIdSource(
+			config,
+			accountId
+		)}) is not accessible with your current login${profileSuffix}.
+Accounts this login can access (\`<name>\`: \`<account_id>\`):
+${accountList}
+To use one of these accounts, set \`account_id\` to its ID (or remove \`account_id\` to be prompted).
+To use \`${accountId}\`, log in with an account that can access it. If you work across multiple accounts, create an auth profile scoped to it and activate it in this directory:
+  wrangler auth create <name>
+  wrangler auth activate <name>
+Learn more: https://developers.cloudflare.com/workers/wrangler/profiles/`,
+		{ telemetryMessage: "account id not accessible with current login" }
+	);
+}
+
+/**
  * Resolves the account ID to use for API requests.
  *
  * First tries static sources via {@link getActiveAccountId} (config, env var,
- * cache). If none are available, falls back to fetching accounts from the API:
+ * cache). When an account is resolved this way, it is checked against the
+ * accounts the current login can reach (see {@link assertAccountIsReachable}).
+ * If none are available, falls back to fetching accounts from the API:
  * - Auto-selects if only one account is available
  * - Prompts the user to select an account interactively if multiple are available
  *
@@ -465,6 +587,8 @@ export function getActiveAccountId(config: {
  *
  * @param config - Configuration containing an optional `account_id` and compliance settings
  * @returns The resolved account ID
+ * @throws {UserError} If a statically-resolved `account_id` is not one of the
+ *   accounts the current login can access
  * @throws {UserError} If in a non-interactive environment and multiple accounts are
  *   available (the user must set `account_id` in config or `CLOUDFLARE_ACCOUNT_ID` env var)
  * @throws {UserError} If no accounts are found for the authenticated user
@@ -476,6 +600,7 @@ export async function getOrSelectAccountId(
 	// for consistency with other env vars.
 	const activeAccountId = getActiveAccountId(config);
 	if (activeAccountId) {
+		await assertAccountIsReachable(config, activeAccountId);
 		return activeAccountId;
 	}
 
