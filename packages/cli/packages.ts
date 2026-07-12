@@ -39,6 +39,7 @@ export const installPackages = async (
 				break;
 			case "npm":
 			case "pnpm":
+			case "nub":
 			default:
 				cmd = "install";
 				break;
@@ -49,7 +50,9 @@ export const installPackages = async (
 				packageManager,
 				...(cmd ? [cmd] : []),
 				...packages,
-				...(packageManager === "pnpm" ? ["--no-frozen-lockfile"] : []),
+				...(packageManager === "pnpm" || packageManager === "nub"
+					? ["--no-frozen-lockfile"]
+					: []),
 				...(force === true ? ["--force"] : []),
 				...getWorkspaceInstallRootFlag(packageManager, isWorkspaceRoot),
 			],
@@ -76,6 +79,7 @@ export const installPackages = async (
 			break;
 		case "npm":
 		case "pnpm":
+		case "nub":
 		default:
 			cmd = "install";
 			saveFlag = dev ? "--save-dev" : "";
