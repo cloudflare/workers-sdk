@@ -5,7 +5,7 @@
 		"@tanstack/cli": "0.69.5",
 		"create-analog": "2.6.2",
 		"create-astro": "5.2.2",
-		"create-docusaurus": "3.10.1",
+		"create-docusaurus": "3.10.2",
 		"create-hono": "0.19.4",
 		"create-next-app": "16.2.10",
 		"create-qwik": "1.20.0",
