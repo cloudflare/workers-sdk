@@ -136,6 +136,15 @@ function isDifferentIOContextError(e: unknown) {
 	);
 }
 
+function isUserConsoleLogResponse(response: unknown): boolean {
+	return (
+		typeof response === "object" &&
+		response !== null &&
+		"m" in response &&
+		response.m === "onUserConsoleLog"
+	);
+}
+
 let patchedFunction = false;
 function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	if (patchedFunction) {
@@ -196,10 +205,25 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			await import("vitest/worker");
 
 		poolSocket.accept();
+		// Sending over the runner's WebSocket from another Durable Object requires
+		// I/O that cannot complete if that object's input gate breaks. Buffer console
+		// messages and flush them on the next successful post from the runner's
+		// context instead. In practice Vitest always sends further RPC messages
+		// (e.g. task updates/results) from the runner once execution returns to it,
+		// so buffered logs are flushed; there's no guarantee for logs emitted with
+		// nothing following, but dropping them is preferable to hanging teardown.
+		const pendingConsoleLogs: unknown[] = [];
+		const sendPendingConsoleLogs = () => {
+			while (pendingConsoleLogs.length > 0) {
+				poolSocket.send(structuredSerializableStringify(pendingConsoleLogs[0]));
+				pendingConsoleLogs.shift();
+			}
+		};
 
 		init({
 			post: (response) => {
 				try {
+					sendPendingConsoleLogs();
 					poolSocket.send(structuredSerializableStringify(response));
 				} catch (error) {
 					// If the user called `console.log()` or similar from inside an
@@ -211,6 +235,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					// (Dynamic `import()` cross-DO errors are handled separately by the
 					// onModuleRunner transport patch below — see #12924.)
 					if (isDifferentIOContextError(error)) {
+						if (isUserConsoleLogResponse(response)) {
+							pendingConsoleLogs.push(response);
+							return;
+						}
 						const promise = runInRunnerObject(() => {
 							poolSocket.send(structuredSerializableStringify(response));
 						}).catch((e) => {
