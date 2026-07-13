@@ -1,28 +1,22 @@
-import { readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import path from "node:path";
-import { getBindings, syncAssets } from "@cloudflare/deploy-helpers";
+import {
+	getBindings,
+	moduleTypeMimeType,
+	syncAssets,
+} from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	getBindingTypeFriendlyName,
+	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { getAssetsOptions } from "../assets";
-import { bundleWorker } from "../deployment-bundle/bundle";
-import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
 import { getEntry } from "../deployment-bundle/entry";
-import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
-import {
-	createModuleCollector,
-	getWrangler1xLegacyModuleReferences,
-} from "../deployment-bundle/module-collection";
-import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
-import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { loadSourceMaps } from "../deployment-bundle/source-maps";
+import { buildWorker } from "../deployment-bundle/maybe-build-worker";
+import { cleanupDestination } from "../deployment-bundle/merge-config-args";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
-import { isNavigatorDefined } from "../navigator-user-agent";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import {
@@ -31,7 +25,6 @@ import {
 	padToVisibleWidth,
 	visibleLength,
 } from "../utils/box";
-import { getRules } from "../utils/getRules";
 import { parseConfigPlacement } from "../utils/placement";
 import {
 	createPreview,
@@ -59,11 +52,8 @@ import type {
 	DeploymentResource,
 	PreviewResource,
 } from "./api";
-import type {
-	CfModule,
-	Config,
-	PreviewsConfig,
-} from "@cloudflare/workers-utils";
+import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
+import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 type PreviewDeploymentModule = {
 	name: string;
@@ -169,97 +159,20 @@ function getPreviewMigrationsToUpload(
 	};
 }
 
-async function getDeploymentModules(
-	config: Config,
-	scriptPath: string | undefined,
+function buildResultToDeploymentModules(
+	buildResult: WorkerBuildResult,
 	assetFiles?: { _headers?: string; _redirects?: string }
-): Promise<{ main_module: string; modules: PreviewDeploymentModule[] }> {
-	const entry = await getEntry({ script: scriptPath }, config, "deploy");
-	const entryDirectory = path.dirname(entry.file);
-	const moduleCollector = createModuleCollector({
-		wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
-			entryDirectory,
-			entry.file
-		),
-		entry,
-		findAdditionalModules: config.find_additional_modules ?? false,
-		rules: getRules(config),
-		preserveFileNames: config.preserve_file_names ?? false,
-	});
-
-	const compatibilityDate = config.compatibility_date;
-	const compatibilityFlags = config.compatibility_flags;
-	const nodejsCompatMode = validateNodeCompatMode(
-		compatibilityDate,
-		compatibilityFlags,
-		{ noBundle: config.no_bundle }
-	);
-
-	const destination = path.join(tmpdir(), `wrangler-preview-${Date.now()}`);
-	const bundleResult = config.no_bundle
-		? await noBundleWorker(
-				entry,
-				getRules(config),
-				destination,
-				config.python_modules.exclude,
-				config.find_additional_modules !== false
-			)
-		: await bundleWorker(entry, destination, {
-				bundle: true,
-				additionalModules: [],
-				moduleCollector,
-				doBindings: config.previews?.durable_objects?.bindings ?? [],
-				workflowBindings: config.previews?.workflows ?? [],
-				jsxFactory: config.jsx_factory,
-				jsxFragment: config.jsx_fragment,
-				tsconfig: config.tsconfig,
-				minify: config.minify,
-				keepNames: config.keep_names ?? true,
-				sourcemap: config.upload_source_maps ?? false,
-				nodejsCompatMode,
-				compatibilityDate,
-				compatibilityFlags,
-				alias: config.alias,
-				define: config.previews?.define ?? {},
-				checkFetch: false,
-				targetConsumer: "deploy",
-				watch: undefined,
-				testScheduled: undefined,
-				inject: undefined,
-				plugins: [logBuildOutput(nodejsCompatMode)],
-				isOutfile: undefined,
-				local: false,
-				projectRoot:
-					config.userConfigPath !== undefined
-						? path.dirname(config.userConfigPath)
-						: undefined,
-				defineNavigatorUserAgent: isNavigatorDefined(
-					compatibilityDate,
-					compatibilityFlags
-				),
-				external: undefined,
-				entryName: undefined,
-				metafile: undefined,
-			});
-	const { modules, resolvedEntryPointPath, bundleType } = bundleResult;
-
-	const mainModuleName = path.basename(resolvedEntryPointPath);
-	const mainModuleContent = readFileSync(resolvedEntryPointPath, "utf-8");
-	const mainModule: CfModule = {
-		name: mainModuleName,
-		filePath: resolvedEntryPointPath,
-		content: mainModuleContent,
-		type: bundleType,
-	};
+): { main_module: string; modules: PreviewDeploymentModule[] } {
+	const mainModuleName = path.basename(buildResult.resolvedEntryPointPath);
 	const mainContentType =
-		moduleTypeMimeType[bundleType] ?? "application/octet-stream";
+		moduleTypeMimeType[buildResult.bundleType] ?? "application/octet-stream";
 	const deploymentModules: PreviewDeploymentModule[] = [
 		{
-			name: mainModule.name,
+			name: mainModuleName,
 			content_type: mainContentType,
-			content_base64: toBase64(mainModule.content),
+			content_base64: toBase64(buildResult.content),
 		},
-		...modules.map((mod) => {
+		...buildResult.modules.map((mod) => {
 			const contentType =
 				moduleTypeMimeType[mod.type ?? "text"] ?? "application/octet-stream";
 			return {
@@ -270,9 +183,9 @@ async function getDeploymentModules(
 		}),
 	];
 
-	if (config.upload_source_maps) {
+	if (buildResult.sourceMaps) {
 		deploymentModules.push(
-			...loadSourceMaps(mainModule, modules, bundleResult).map((sourceMap) => ({
+			...buildResult.sourceMaps.map((sourceMap) => ({
 				name: sourceMap.name,
 				content_type: "application/source-map",
 				content_base64: toBase64(sourceMap.content),
@@ -301,19 +214,19 @@ async function getDeploymentModules(
 
 async function assemblePreviewDeploymentSettings(
 	config: Config,
-	scriptPath: string | undefined,
+	buildResult: WorkerBuildResult,
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	options: { message?: string; tag?: string }
+	options: { message?: string; tag?: string; script?: string }
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
 	const request: CreatePreviewDeploymentRequestParams = {};
 	const assetsOptions = getAssetsOptions({
-		args: { assets: undefined, script: scriptPath },
+		args: { assets: undefined, script: options.script },
 		config,
 	});
-	const deploymentModules = await getDeploymentModules(config, scriptPath, {
+	const deploymentModules = buildResultToDeploymentModules(buildResult, {
 		_headers: assetsOptions?._headers,
 		_redirects: assetsOptions?._redirects,
 	});
@@ -791,6 +704,34 @@ export async function handlePreviewCommand(
 ) {
 	const workerName = resolveWorkerName(args, config);
 
+	const entry = await getEntry({ script: args.script }, config, "deploy");
+	const destination = getWranglerTmpDir(entry.projectRoot, "preview");
+	const buildResult = await buildWorker(
+		{
+			entry,
+			name: config.name,
+			compatibilityDate: config.compatibility_date,
+			compatibilityFlags: config.compatibility_flags,
+			uploadSourceMaps: config.upload_source_maps,
+			jsxFactory: config.jsx_factory,
+			jsxFragment: config.jsx_fragment,
+			tsconfig: config.tsconfig,
+			minify: config.minify,
+			noBundle: config.no_bundle ?? false,
+			defines: config.previews?.define ?? {},
+			alias: { ...config.alias },
+			doBindings: config.previews?.durable_objects?.bindings ?? [],
+			workflowBindings: config.previews?.workflows ?? [],
+			destination,
+			outdir: undefined,
+			metafile: undefined,
+		},
+		config
+	);
+
+	const accountId = await requireAuth(config);
+
+	// below will be shared with cf via deploy-helpers
 	let previewName = args.name;
 	if (!previewName) {
 		previewName = getBranchName();
@@ -811,7 +752,6 @@ export async function handlePreviewCommand(
 		!args.message && shouldUseCIMetadataFallback()
 			? getHeadCommitMessage()
 			: undefined;
-	const accountId = await requireAuth(config);
 
 	let existingPreview: PreviewResource | null = null;
 	try {
@@ -855,12 +795,17 @@ export async function handlePreviewCommand(
 
 	const deploymentRequest = await assemblePreviewDeploymentSettings(
 		config,
-		args.script,
+		buildResult,
 		accountId,
 		workerName,
 		preview.id,
-		{ message: args.message ?? fallbackMessage, tag: args.tag ?? fallbackTag }
+		{
+			message: args.message ?? fallbackMessage,
+			tag: args.tag ?? fallbackTag,
+			script: args.script,
+		}
 	);
+	cleanupDestination(destination);
 	const deployment = await createPreviewDeployment(
 		config,
 		accountId,
