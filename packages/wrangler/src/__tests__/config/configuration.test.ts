@@ -55,12 +55,14 @@ describe("readConfig() upgrade hint", () => {
 			status: "update-available",
 			latest: "9.9.9",
 		});
-		// legacy_env: false produces a "Service environments are deprecated" warning
-		// but does NOT trigger validateAdditionalProperties, so no upgrade hint
-		writeWranglerConfig({ legacy_env: false });
-		readConfig({ config: "wrangler.toml", "legacy-env": false });
+		// An experimental field like `unsafe` produces a warning but does NOT
+		// trigger validateAdditionalProperties, so there is no upgrade hint
+		writeWranglerConfig({ unsafe: { bindings: [], metadata: undefined } });
+		readConfig({ config: "wrangler.toml" });
 		await endEventLoop();
-		expect(std.warn).toContain("Service environments are deprecated");
+		expect(std.warn).toContain(
+			`"unsafe" fields are experimental and may change or break at any time.`
+		);
 		expect(std.out).not.toContain("newer version of Wrangler");
 	});
 });

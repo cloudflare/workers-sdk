@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 import {
 	getRuntimeHeader,
 	RUNTIME_HEADER_COMMENT_PREFIX,
@@ -164,7 +164,7 @@ export const checkTypesUpToDate = async (
 ): Promise<boolean> => {
 	let typesFileLines = new Array<string>();
 	try {
-		typesFileLines = readFileSync(typesPath, "utf-8").split("\n");
+		typesFileLines = (await readFile(typesPath, "utf-8")).split("\n");
 	} catch (e) {
 		if ((e as NodeJS.ErrnoException).code === "ENOENT") {
 			throw new UserError(`Types file not found at ${typesPath}.`, {
@@ -292,16 +292,17 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 		return;
 	}
 
-	let maybeExistingTypesFileLines: string[];
+	let existingTypesFileContent: string;
 	try {
 		// Checking the default location only
-		maybeExistingTypesFileLines = readFileSync(
+		existingTypesFileContent = await readFile(
 			DEFAULT_WORKERS_TYPES_FILE_PATH,
 			"utf-8"
-		).split("\n");
+		);
 	} catch {
 		return;
 	}
+	const maybeExistingTypesFileLines = existingTypesFileContent.split("\n");
 
 	const existingEnvHeader = maybeExistingTypesFileLines.find((line) =>
 		line.startsWith(ENV_HEADER_COMMENT_PREFIX)
@@ -367,7 +368,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 
 	const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
 		config,
-		outFile: DEFAULT_WORKERS_TYPES_FILE_PATH,
+		existingContent: existingTypesFileContent,
 	});
 	const newTypesFile = [
 		"/* eslint-disable */",
@@ -377,7 +378,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 		`${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`,
 	].join("\n");
 	try {
-		writeFileSync(DEFAULT_WORKERS_TYPES_FILE_PATH, newTypesFile);
+		await writeFile(DEFAULT_WORKERS_TYPES_FILE_PATH, newTypesFile);
 		logger.log(
 			`❓ Your types looked out of date. We've re-run \`wrangler types\` for you and updated ${DEFAULT_WORKERS_TYPES_FILE_PATH}`
 		);

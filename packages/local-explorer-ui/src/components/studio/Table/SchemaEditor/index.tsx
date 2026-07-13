@@ -3,7 +3,7 @@ import { SplitPane } from "@cloudflare/workers-editor-shared";
 import { KeyIcon } from "@phosphor-icons/react";
 import { produce } from "immer";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { isEqual } from "../../../../utils/is-equal";
+import { getIsSchemaDirty } from "../../../../utils/studio";
 import { useModal } from "../../Modal";
 import { StudioCommitConfirmation } from "../../Modal/CommitConfirmation";
 import { StudioSQLEditor } from "../../SQLEditor";
@@ -16,7 +16,7 @@ import type {
 	StudioTableSchemaChange,
 } from "../../../../types/studio";
 import type { StudioCodeMirrorReference } from "../../Code/Mirror";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, JSX, SetStateAction } from "react";
 
 interface StudioTableSchemaEditorProps {
 	disabledAddColumn?: boolean;
@@ -53,10 +53,7 @@ export function StudioTableSchemaEditor({
 	);
 
 	const isSchemaDirty = useMemo(
-		(): boolean =>
-			value.name.new !== value.name.old ||
-			value.columns.some((change) => !isEqual(change.new, change.old)) ||
-			value.constraints.some((change) => !isEqual(change.new, change.old)),
+		(): boolean => getIsSchemaDirty(value),
 		[value]
 	);
 

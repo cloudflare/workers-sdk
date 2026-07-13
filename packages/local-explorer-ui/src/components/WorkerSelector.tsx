@@ -5,7 +5,7 @@ import {
 	CheckIcon,
 	TerminalIcon,
 } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import type { LocalExplorerWorker } from "../api";
 
 // Re-export the type for convenience

@@ -12,7 +12,6 @@ export * from "./triggers/publish-routes";
 export * from "./triggers/queue-consumers";
 export * from "./deploy/helpers/placement";
 export * from "./deploy/helpers/worker-not-found-error";
-export * from "./deploy/helpers/use-service-environments";
 export * from "./deploy/helpers/error-codes";
 export * from "./deploy/helpers/secrets-validation";
 export * from "./deploy/helpers/diff-json";

@@ -275,6 +275,7 @@ export async function getDevMiniflareOptions(
 												name: worker.config.name,
 												bindings: bindings ?? {},
 												account_id: worker.config.account_id,
+												profileDir: resolvedViteConfig.root,
 											},
 											preExistingRemoteProxySession ?? null
 										);
@@ -666,6 +667,7 @@ export async function getPreviewMiniflareOptions(
 								name: workerConfig.name,
 								bindings: bindings ?? {},
 								account_id: workerConfig.account_id,
+								profileDir: resolvedViteConfig.root,
 							},
 							preExistingRemoteProxySessionData ?? null
 						);

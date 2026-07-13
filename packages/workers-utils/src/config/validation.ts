@@ -16,7 +16,6 @@ import {
 	getBindingNames,
 	hasProperty,
 	inheritable,
-	inheritableInWranglerEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
 	isOneOf,
@@ -227,7 +226,6 @@ export function getBindingTypeFriendlyName(
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
 	env?: string;
-	"legacy-env"?: boolean;
 	// This is not relevant in dev. It's only purpose is loosening Worker name validation when deploying to a dispatch namespace
 	"dispatch-namespace"?: string;
 	remote?: boolean;
@@ -286,13 +284,17 @@ export function normalizeAndValidateConfig(
 		} configuration:`
 	);
 
-	validateOptionalProperty(
-		diagnostics,
-		"",
-		"legacy_env",
-		rawConfig.legacy_env,
-		"boolean"
-	);
+	if ("legacy_env" in rawConfig) {
+		diagnostics.errors.push(
+			dedent`
+				The "legacy_env" field is no longer supported, so please remove it from your configuration file.
+				Service environments have been removed, and each environment is now deployed as its own Worker named "<name>-<environment>". This matches the behaviour of "legacy_env = true", which was the default, so removing the field will not change how your Worker is deployed.
+				Refer to https://developers.cloudflare.com/workers/wrangler/environments/ for more information.
+			`
+		);
+		// Remove the field so it is not also reported as an unexpected top-level field.
+		delete (rawConfig as Record<string, unknown>).legacy_env;
+	}
 
 	validateOptionalProperty(
 		diagnostics,
@@ -355,25 +357,6 @@ export function normalizeAndValidateConfig(
 		rawConfig.$schema,
 		"string"
 	);
-
-	/**
-	 * Legacy env refers to wrangler environments, which are not actually legacy in any way.
-	 * This is opposed to service environments, which are deprecated.
-	 * Unfortunately legacy-env is a public facing arg and config option, so we have to leave the name.
-	 * However we can change the internal handling to be less confusing.
-	 */
-
-	const useServiceEnvironments = !(
-		args["legacy-env"] ??
-		rawConfig.legacy_env ??
-		true
-	);
-
-	if (useServiceEnvironments) {
-		diagnostics.warnings.push(
-			"Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-		);
-	}
 
 	const isDispatchNamespace =
 		typeof args["dispatch-namespace"] === "string" &&
@@ -467,7 +450,6 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					useServiceEnvironments,
 					rawConfig
 				);
 				diagnostics.addChild(envDiagnostics);
@@ -480,7 +462,6 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					useServiceEnvironments,
 					rawConfig
 				);
 				const envNames = rawConfig.env
@@ -522,8 +503,6 @@ export function normalizeAndValidateConfig(
 			configPath,
 			rawConfig.pages_build_output_dir
 		),
-		/** Legacy_env is wrangler environments, as opposed to service environments. Wrangler environments is not legacy.  */
-		legacy_env: !useServiceEnvironments,
 		send_metrics: rawConfig.send_metrics,
 		dependencies_instrumentation: rawConfig.dependencies_instrumentation,
 		keep_vars: rawConfig.keep_vars,
@@ -1467,7 +1446,6 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName: string,
 	topLevelEnv: Environment,
-	useServiceEnvironments: boolean,
 	rawConfig: RawConfig
 ): Environment;
 function normalizeAndValidateEnvironment(
@@ -1478,7 +1456,6 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
-	useServiceEnvironments?: boolean,
 	rawConfig?: RawConfig | undefined
 ): Environment {
 	deprecated(
@@ -1498,14 +1475,12 @@ function normalizeAndValidateEnvironment(
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
-	const account_id = inheritableInWranglerEnvironments(
+	const account_id = inheritable(
 		diagnostics,
-		useServiceEnvironments,
 		topLevelEnv,
 		mutateEmptyStringAccountIDValue(diagnostics, rawEnv),
 		"account_id",
 		isString,
-		undefined,
 		undefined
 	);
 
@@ -1583,15 +1558,14 @@ function normalizeAndValidateEnvironment(
 			configPath
 		),
 		rules: validateAndNormalizeRules(diagnostics, topLevelEnv, rawEnv, envName),
-		name: inheritableInWranglerEnvironments(
+		name: inheritable(
 			diagnostics,
-			useServiceEnvironments,
 			topLevelEnv,
 			rawEnv,
 			"name",
 			isDispatchNamespace ? isString : isValidName,
-			appendEnvName(envName),
-			undefined
+			undefined,
+			appendEnvName(envName)
 		),
 		main: preserveOriginalMain
 			? inheritable(

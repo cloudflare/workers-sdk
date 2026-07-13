@@ -16,18 +16,21 @@ import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
 import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
+import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
 import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
 import { fetch } from "../../http";
 import { kVoid } from "../../runtime";
 import { JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
+import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import {
 	DURABLE_OBJECTS_STORAGE_SERVICE_NAME,
 	getDurableObjectUniqueKey,
+	normaliseDurableObject,
 } from "../do";
 import { IMAGES_PLUGIN_NAME } from "../images";
 import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
@@ -541,6 +544,42 @@ function buildBindings(bindings: Record<string, Json>): Worker_Binding[] {
 			};
 		}
 	});
+}
+
+function getDevControlBindings(
+	allWorkerOpts: PluginWorkerOptions[] | undefined
+): Worker_Binding[] {
+	const bindings = new Map<string, Worker_Binding>();
+	for (const worker of allWorkerOpts ?? []) {
+		const workerName = worker.core.name ?? "";
+		const userServiceName = getUserServiceName(workerName);
+		const durableObjects = [
+			...Object.values(worker.do.durableObjects ?? {}),
+			...(worker.do.additionalUnboundDurableObjects ?? []),
+		];
+
+		for (const designator of durableObjects) {
+			const { className, scriptName, serviceName } =
+				normaliseDurableObject(designator);
+			if (serviceName !== undefined && serviceName !== userServiceName) {
+				continue;
+			}
+
+			const bindingName = getDevControlDurableObjectBindingName(
+				scriptName ?? workerName,
+				className
+			);
+			bindings.set(bindingName, {
+				name: bindingName,
+				durableObjectNamespace: {
+					serviceName: userServiceName,
+					className,
+				},
+			});
+		}
+	}
+
+	return Array.from(bindings.values());
 }
 
 const WRAPPED_MODULE_PREFIX = "miniflare-internal:wrapped:";
@@ -1086,6 +1125,10 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_CACHE,
 			service: { name: getCacheServiceName(0) },
 		},
+		{
+			name: CoreBindings.SERVICE_DEV_CONTROL,
+			service: { name: CoreBindings.SERVICE_DEV_CONTROL },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
@@ -1182,6 +1225,17 @@ export function getGlobalServices({
 				// means if the entrypoint disables caching, proxied cache operations
 				// will be no-ops. Note we always require at least one worker to be set.
 				cacheApiOutbound: { name: "cache:0" },
+			},
+		},
+		{
+			name: CoreBindings.SERVICE_DEV_CONTROL,
+			worker: {
+				modules: [
+					{ name: "dev-control.worker.js", esModule: SCRIPT_DEV_CONTROL() },
+				],
+				compatibilityDate: "2026-07-08",
+				compatibilityFlags: ["unsafe_module"],
+				bindings: getDevControlBindings(allWorkerOpts),
 			},
 		},
 		{

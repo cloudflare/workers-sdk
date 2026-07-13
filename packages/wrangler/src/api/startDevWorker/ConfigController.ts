@@ -38,7 +38,6 @@ import { getRules } from "../../utils/getRules";
 import { getScriptName } from "../../utils/getScriptName";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { printBindings } from "../../utils/print-bindings";
-import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -436,8 +435,6 @@ async function resolveConfig(
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
-			useServiceEnvironments:
-				input.legacy?.useServiceEnvironments ?? useServiceEnvironments(config),
 		},
 		unsafe: {
 			capnp: input.unsafe?.capnp ?? unsafe?.capnp,
@@ -660,7 +657,6 @@ export class ConfigController extends Controller {
 					config: input.config,
 					env: input.env,
 					"dispatch-namespace": undefined,
-					"legacy-env": !input.legacy?.useServiceEnvironments,
 					remote: !!input.dev?.remote,
 					upstreamProtocol:
 						input.dev?.origin?.secure === undefined
@@ -706,6 +702,7 @@ export class ConfigController extends Controller {
 			if (newConfig && fileConfig.configPath) {
 				await regenerateNewConfigTypes({
 					cloudflareConfigPath: fileConfig.configPath,
+					workerConfig: newConfig.parsedWorkerConfig,
 					types: newConfig.types,
 				});
 			}

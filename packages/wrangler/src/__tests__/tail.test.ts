@@ -313,27 +313,11 @@ describe("tail", () => {
 		});
 
 		it("creates and then delete tails: legacy envs", async ({ expect }) => {
-			api = mockWebsocketAPIs(expect, "some-env", false);
-			expect(api.requests.creation.length).toStrictEqual(0);
-
-			const { tailPromise } = await startTail(
-				"tail test-worker --env some-env --legacy-env true"
-			);
-
-			expect(api.requests.creation.length).toStrictEqual(1);
-			expect(api.requests.deletion.count).toStrictEqual(0);
-
-			await api.closeHelper();
-			await tailPromise;
-			expect(api.requests.deletion.count).toStrictEqual(1);
-		});
-
-		it("creates and then delete tails: service envs", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect, "some-env");
 			expect(api.requests.creation.length).toStrictEqual(0);
 
 			const { tailPromise } = await startTail(
-				"tail test-worker --env some-env --legacy-env false"
+				"tail test-worker --env some-env"
 			);
 
 			expect(api.requests.creation.length).toStrictEqual(1);
@@ -1551,30 +1535,20 @@ function mockCreateTailRequest(
 	expect: ExpectStatic,
 	websocketURL: string,
 	env?: string,
-	useServiceEnvironments = true,
-	expectedScriptName = !useServiceEnvironments && env
-		? `test-worker-${env}`
-		: "test-worker"
+	expectedScriptName = env ? `test-worker-${env}` : "test-worker"
 ): RequestInit[] {
 	const requests: RequestInit[] = [];
-	const servicesOrScripts =
-		env && useServiceEnvironments ? "services" : "scripts";
-	const environment =
-		env && useServiceEnvironments ? "/environments/:envName" : "";
 	msw.use(
 		http.post<
 			{ accountId: string; scriptName: string; envName: string },
 			RequestInit
 		>(
-			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails`,
+			`*/accounts/:accountId/workers/scripts/:scriptName/tails`,
 			async ({ params, request }) => {
 				const r = await request.json();
 				requests.push(r);
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(expectedScriptName);
-				if (useServiceEnvironments) {
-					expect(params.envName).toEqual(env);
-				}
 				return HttpResponse.json(
 					createFetchResult({
 						url: websocketURL,
@@ -1628,28 +1602,16 @@ const mockEmailEventSize = 45416;
 function mockDeleteTailRequest(
 	expect: ExpectStatic,
 	env?: string,
-	useServiceEnvironments = true,
-	expectedScriptName = !useServiceEnvironments && env
-		? `test-worker-${env}`
-		: "test-worker"
+	expectedScriptName = env ? `test-worker-${env}` : "test-worker"
 ): RequestCounter {
 	const requests = { count: 0 };
-	const servicesOrScripts =
-		env && useServiceEnvironments ? "services" : "scripts";
-	const environment =
-		env && useServiceEnvironments ? "/environments/:envName" : "";
 	msw.use(
 		http.delete(
-			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails/:tailId`,
+			`*/accounts/:accountId/workers/scripts/:scriptName/tails/:tailId`,
 			async ({ params }) => {
 				requests.count++;
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(expectedScriptName);
-				if (useServiceEnvironments) {
-					if (env) {
-						expect(params.tailId).toEqual("tail-id");
-					}
-				}
 				expect(params.tailId).toEqual("tail-id");
 				return HttpResponse.json(createFetchResult(null));
 			}
@@ -1671,7 +1633,6 @@ let mockWebSockets: MockWebSocketServer[] = [];
 function mockWebsocketAPIs(
 	expect: ExpectStatic,
 	env?: string,
-	useServiceEnvironments = true,
 	expectedScriptName?: string
 ): MockAPI {
 	const websocketURL = "ws://localhost:1234";
@@ -1714,13 +1675,11 @@ function mockWebsocketAPIs(
 		expect,
 		websocketURL,
 		env,
-		useServiceEnvironments,
 		expectedScriptName
 	);
 	api.requests.deletion = mockDeleteTailRequest(
 		expect,
 		env,
-		useServiceEnvironments,
 		expectedScriptName
 	);
 	api.ws = new MockWebSocketServer(websocketURL);

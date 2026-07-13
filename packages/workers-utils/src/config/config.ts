@@ -57,14 +57,6 @@ export interface ComputedFields {
 
 export interface ConfigFields<Dev extends RawDevConfig> {
 	/**
-	 * A boolean to enable "legacy" style wrangler environments (from Wrangler v1).
-	 * These have been superseded by Services, but there may be projects that won't
-	 * (or can't) use them. If you're using a legacy environment, you can set this
-	 * to `true` to enable it.
-	 */
-	legacy_env: boolean;
-
-	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
 	 *
 	 * When defined this will override any user settings.
@@ -380,7 +372,6 @@ export const defaultWranglerConfig: Config = {
 	/*           Fields supported by Workers only         */
 	/*====================================================*/
 	/* TOP-LEVEL ONLY FIELDS */
-	legacy_env: true,
 	site: undefined,
 	wasm_modules: undefined,
 	text_blobs: undefined,

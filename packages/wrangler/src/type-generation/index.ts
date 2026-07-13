@@ -524,9 +524,16 @@ async function generateTypesFromResolvedOptions(
 			logger.log("Generating runtime types...\n");
 		}
 
+		let existingContent: string | undefined;
+		try {
+			existingContent = await fs.promises.readFile(options.path, "utf8");
+		} catch {
+			// No existing types file — generate from scratch.
+		}
+
 		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
 			config: options.config,
-			outFile: options.path || undefined,
+			existingContent,
 		});
 		runtime = runtimeTypes;
 		header.push(runtimeHeader);

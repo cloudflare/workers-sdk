@@ -148,6 +148,10 @@ import type {
 	Worker_Module,
 } from "./runtime";
 import type { Log } from "./shared";
+import type {
+	DevControl,
+	DurableObjectEvictionOptions,
+} from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
@@ -3130,8 +3134,48 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
 		return this.#getProxy(DURABLE_OBJECTS_PLUGIN_NAME, bindingName, workerName);
 	}
+	async #getDevControl(): Promise<DevControl> {
+		const proxyClient = await this._getProxyClient();
+		const control = proxyClient.env[CoreBindings.SERVICE_DEV_CONTROL] as
+			| DevControl
+			| undefined;
+		assert(control !== undefined, "Expected dev control service");
+
+		return control;
+	}
+	async unsafeEvictDurableObject(
+		scriptName: string,
+		className: string,
+		options: DurableObjectEvictionOptions
+	): Promise<void> {
+		this.#checkDisposed();
+		await this.ready;
+
+		const durableObjectExists = this.#workerOpts.some((workerOpts) => {
+			const workerName = workerOpts.core.name ?? "";
+			return [
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].some((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					(durableObject.scriptName ?? workerName) === scriptName &&
+					durableObject.className === className
+				);
+			});
+		});
+
+		if (!durableObjectExists) {
+			throw new TypeError(
+				`No Durable Object class named ${JSON.stringify(className)} found in ${JSON.stringify(scriptName)} worker.`
+			);
+		}
+
+		const control = await this.#getDevControl();
+		await control.evictDurableObject(scriptName, className, options);
+	}
 	async listDurableObjectIds(
-		bindingName: string,
+		classNameOrBindingName: string,
 		workerName?: string
 	): Promise<string[]> {
 		this.#checkDisposed();
@@ -3140,14 +3184,25 @@ export class Miniflare {
 		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
 		const workerOpts = this.#workerOpts[workerIndex];
 		const resolvedWorkerName = workerOpts.core.name ?? "";
-		const durableObject = workerOpts.do.durableObjects?.[bindingName];
+		const durableObject =
+			[
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].find((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					durableObject.className === classNameOrBindingName &&
+					(durableObject.scriptName === undefined ||
+						durableObject.scriptName === resolvedWorkerName)
+				);
+			}) ?? workerOpts.do.durableObjects?.[classNameOrBindingName];
 
 		if (durableObject === undefined) {
 			const friendlyWorkerName = resolvedWorkerName
 				? `${JSON.stringify(resolvedWorkerName)} worker`
 				: "the worker";
 			throw new TypeError(
-				`No Durable Object namespace binding named ${JSON.stringify(bindingName)} found in ${friendlyWorkerName}.`
+				`No Durable Object class or namespace binding named ${JSON.stringify(classNameOrBindingName)} found in ${friendlyWorkerName}.`
 			);
 		}
 
@@ -3166,7 +3221,7 @@ export class Miniflare {
 
 		if (namespaceKey === undefined) {
 			throw new TypeError(
-				`Cannot list Durable Object ids for ${JSON.stringify(bindingName)} because the namespace uses ephemeral local storage.`
+				`Cannot list Durable Object ids for ${JSON.stringify(classNameOrBindingName)} because the namespace uses ephemeral local storage.`
 			);
 		}
 
@@ -3399,6 +3454,10 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export type {
+	DurableObjectIdentifier,
+	DurableObjectEvictionOptions,
+} from "./shared/dev-control";
 export type {
 	WorkerRegistry,
 	WorkerDefinition,
