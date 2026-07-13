@@ -81,8 +81,9 @@ function joinPath(base: string, ...segments: string[]): string {
 }
 
 interface DiskServiceConfig {
-	bindingName: string;
 	location: "system" | "project";
+	bindingName: string;
+	serviceName: string;
 	path: string;
 }
 
@@ -92,7 +93,7 @@ interface SendEmailEnv {
 	allowed_destination_addresses: string[] | undefined;
 	allowed_sender_addresses: string[] | undefined;
 	MINIFLARE_EMAIL_DISK_SYSTEM: Fetcher;
-	MINIFLARE_EMAIL_DISK_PROJECT: Fetcher;
+	MINIFLARE_EMAIL_DISK_PROJECT?: Fetcher;
 }
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
@@ -100,11 +101,15 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	 * Gets a disk service binding by name
 	 */
 	private getServiceBinding(bindingName: string): Fetcher {
-		return this.env[
+		const binding = this.env[
 			bindingName as
 				| "MINIFLARE_EMAIL_DISK_SYSTEM"
 				| "MINIFLARE_EMAIL_DISK_PROJECT"
 		];
+		if (!binding) {
+			throw new Error(`Disk service binding not found: ${bindingName}`);
+		}
+		return binding;
 	}
 
 	/**
@@ -267,7 +272,9 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				throw new Error("invalid headers set");
 			}
 
-			const locations: Array<"system" | "project"> = ["system", "project"];
+			const locations = this.env.email_disk_services.map(
+				(service) => service.location
+			);
 			const filePaths = await Promise.all(
 				locations.map((location) =>
 					this.storeTempFile(
@@ -280,9 +287,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				)
 			);
 
-			const fileInfo = locations
-				.map((location, i) => `Email (${location}): ${filePaths[i]}`)
-				.join("\n");
+			// Log only project location if it exists, otherwise system location
+			const projectIndex = locations.indexOf("project");
+			const logIndex = projectIndex !== -1 ? projectIndex : 0;
+			const fileInfo = `Email (${locations[logIndex]}): ${filePaths[logIndex]}`;
 			this.log(
 				`${blue("send_email binding called with the following message:")}\n${fileInfo}`
 			);
@@ -296,7 +304,9 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.validateMessageBuilder(builder);
 
 			// Store text, HTML content, and attachments to files for easy viewing
-			const locations: Array<"system" | "project"> = ["system", "project"];
+			const locations = this.env.email_disk_services.map(
+				(service) => service.location
+			);
 			const files: string[] = [];
 
 			if (builder.text) {
@@ -306,9 +316,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						this.storeTempFile(text, "txt", "email-text", location, messageUUID)
 					)
 				);
-				for (let i = 0; i < locations.length; i++) {
-					files.push(`Text (${locations[i]}): ${textResults[i]}`);
-				}
+				// Log only project location if it exists, otherwise system location
+				const projectIndex = locations.indexOf("project");
+				const logIndex = projectIndex !== -1 ? projectIndex : 0;
+				files.push(`Text (${locations[logIndex]}): ${textResults[logIndex]}`);
 			}
 
 			if (builder.html) {
@@ -324,9 +335,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						)
 					)
 				);
-				for (let i = 0; i < locations.length; i++) {
-					files.push(`HTML (${locations[i]}): ${htmlResults[i]}`);
-				}
+				// Log only project location if it exists, otherwise system location
+				const projectIndex = locations.indexOf("project");
+				const logIndex = projectIndex !== -1 ? projectIndex : 0;
+				files.push(`HTML (${locations[logIndex]}): ${htmlResults[logIndex]}`);
 			}
 
 			// Store attachments
@@ -348,11 +360,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 							)
 						)
 					);
-					for (let i = 0; i < locations.length; i++) {
-						files.push(
-							`Attachment (${attachment.disposition}) (${locations[i]}): ${attachment.filename} -> ${attachmentResults[i]}`
-						);
-					}
+					// Log only project location if it exists, otherwise system location
+					const projectIndex = locations.indexOf("project");
+					const logIndex = projectIndex !== -1 ? projectIndex : 0;
+					files.push(
+						`Attachment (${attachment.disposition}) (${locations[logIndex]}): ${attachment.filename} -> ${attachmentResults[logIndex]}`
+					);
 				}
 			}
 

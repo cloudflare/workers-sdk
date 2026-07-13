@@ -2158,6 +2158,85 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		expect(emailDiskServices[1].location).toBe("project");
 		expect(emailDiskServices[1].path).toBe(projectDisk.disk.path);
 	});
+
+	test("creates only system disk service when defaultProjectTmpPath is undefined", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+
+		const result = await EMAIL_PLUGIN.getServices({
+			options: {
+				email: { send_email: [{ name: "SEND_EMAIL" }] },
+			},
+			sharedOptions: {},
+			tmpPath: tmp,
+			defaultProjectTmpPath: undefined,
+			workerNames: ["default"],
+			workerIndex: 0,
+		} as unknown as Parameters<typeof EMAIL_PLUGIN.getServices>[0]);
+
+		if (!Array.isArray(result)) {
+			throw new Error("Expected getServices to return an array of services");
+		}
+		const services = result;
+
+		expect(services).toHaveLength(2);
+
+		const diskServices = services.filter((s) => "disk" in s) as Array<{
+			name: string;
+			disk: { path: string; writable?: boolean };
+		}>;
+		expect(diskServices).toHaveLength(1);
+
+		const systemTempDisk = diskServices.find(
+			(s) => s.name === "email:disk:system"
+		);
+		if (!systemTempDisk) {
+			throw new Error("Expected system disk service to be present");
+		}
+
+		expect(systemTempDisk.disk.path).toBe(path.join(tmp, "email"));
+		expect(existsSync(systemTempDisk.disk.path)).toBe(true);
+
+		const workerService = services.find(
+			(s) => s.name === "SEND-EMAIL-WORKER:SEND_EMAIL"
+		) as
+			| {
+					name: string;
+					worker: { bindings: { name: string; json?: string }[] };
+			  }
+			| undefined;
+		if (!workerService) {
+			throw new Error("Expected send_email worker service to be present");
+		}
+
+		const bindings = workerService.worker.bindings;
+
+		const systemServiceBinding = bindings.find(
+			(b) => b.name === "MINIFLARE_EMAIL_DISK_SYSTEM"
+		) as { name: string; service?: { name: string } } | undefined;
+		expect(systemServiceBinding?.service?.name).toBe("email:disk:system");
+
+		const projectServiceBinding = bindings.find(
+			(b) => b.name === "MINIFLARE_EMAIL_DISK_PROJECT"
+		);
+		expect(projectServiceBinding).toBeUndefined();
+
+		const emailDiskServicesBinding = bindings.find(
+			(b) => b.name === "email_disk_services"
+		);
+		if (!emailDiskServicesBinding?.json) {
+			throw new Error("Expected email_disk_services binding with JSON value");
+		}
+
+		const emailDiskServices = JSON.parse(emailDiskServicesBinding.json);
+		expect(emailDiskServices).toHaveLength(1);
+		expect(emailDiskServices[0].bindingName).toBe(
+			"MINIFLARE_EMAIL_DISK_SYSTEM"
+		);
+		expect(emailDiskServices[0].location).toBe("system");
+		expect(emailDiskServices[0].path).toBe(path.join(tmp, "email"));
+	});
 });
 
 describe("getEmailPathsToClean", () => {
@@ -2167,20 +2246,21 @@ describe("getEmailPathsToClean", () => {
 		const tmpPath = path.join("/tmp", "miniflare-abc123");
 		const projectTmpPath = path.join("/project", ".wrangler", "tmp");
 
-		expect(getEmailPathsToClean(projectTmpPath, tmpPath)).toEqual([
-			path.join(projectTmpPath, "email", "miniflare-abc123"),
-		]);
+		expect(getEmailPathsToClean(projectTmpPath, tmpPath)).toEqual({
+			sessionDir: path.join(projectTmpPath, "email", "miniflare-abc123"),
+			parentDir: path.join(projectTmpPath, "email"),
+		});
 	});
 
-	test("returns nothing when no project temp path is supplied", ({
+	test("returns undefined when no project temp path is supplied", ({
 		expect,
 	}) => {
 		const tmpPath = path.join("/tmp", "miniflare-abc123");
-		expect(getEmailPathsToClean(undefined, tmpPath)).toEqual([]);
+		expect(getEmailPathsToClean(undefined, tmpPath)).toBeUndefined();
 	});
 });
 
-test("MessageBuilder writes files to both system temp and project directories", async ({
+test("MessageBuilder writes files to system temp when defaultProjectTmpPath is unset", async ({
 	expect,
 }) => {
 	const log = new TestLog();
@@ -2204,8 +2284,8 @@ test("MessageBuilder writes files to both system temp and project directories", 
 		body: JSON.stringify({
 			from: "sender@example.com",
 			to: "recipient@example.com",
-			subject: "Dual Location Test",
-			text: "This should appear in both directories",
+			subject: "System Location Test",
+			text: "This should appear in system temp only",
 		}),
 	});
 
@@ -2227,25 +2307,19 @@ test("MessageBuilder writes files to both system temp and project directories", 
 			}
 			const message = entry[1];
 
+			// Should only log system location when defaultProjectTmpPath is unset
 			const systemTempMatch = message.match(/^Text \(system\): (.+)$/m);
 			const projectMatch = message.match(/^Text \(project\): (.+)$/m);
 			expect(systemTempMatch).not.toBeNull();
-			expect(projectMatch).not.toBeNull();
+			expect(projectMatch).toBeNull();
 
 			const systemTempPath = String(systemTempMatch?.[1]);
-			const projectPath = String(projectMatch?.[1]);
 
-			// Both files exist and hold identical content
+			// File exists in system temp
 			expect(existsSync(systemTempPath)).toBe(true);
-			expect(existsSync(projectPath)).toBe(true);
 			expect(await readFile(systemTempPath, "utf-8")).toBe(
-				"This should appear in both directories"
+				"This should appear in system temp only"
 			);
-			expect(await readFile(projectPath, "utf-8")).toBe(
-				"This should appear in both directories"
-			);
-
-			expect(projectPath).toMatch(/[/\\]tmp[/\\]email[/\\]/);
 		},
 		{ timeout: 5_000, interval: 100 }
 	);

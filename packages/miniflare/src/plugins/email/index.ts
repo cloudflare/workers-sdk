@@ -54,20 +54,33 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	}));
 }
 
-function getEmailProjectTmpPath(
+function getEmailProjectParentDirectory(
 	defaultProjectTmpPath: string | undefined,
 	tmpPath: string
-): string {
-	return defaultProjectTmpPath ?? path.join(tmpPath, "tmp");
+): string | undefined {
+	if (defaultProjectTmpPath === undefined) {
+		return undefined;
+	}
+	return path.join(
+		defaultProjectTmpPath ?? path.join(tmpPath, "tmp"),
+		EMAIL_PLUGIN_NAME
+	);
 }
 
+/**
+ * Returns the session directory for email files.
+ * Path: `<defaultProjectTmpPath>/email/<session-id>`
+ * Example: `/path/to/project/.wrangler/tmp/email/dev-abc123`
+ * When an email is logged, it is stored under this directory using a type indicator
+ * and a unique ID.
+ * Path: `<session-dir>/email-<type>/<message-id>.<ext>`
+ */
 function getEmailProjectSessionDirectory(
 	defaultProjectTmpPath: string | undefined,
 	tmpPath: string
 ): string {
 	return path.join(
-		getEmailProjectTmpPath(defaultProjectTmpPath, tmpPath),
-		EMAIL_PLUGIN_NAME,
+		getEmailProjectParentDirectory(defaultProjectTmpPath, tmpPath)!,
 		path.basename(tmpPath)
 	);
 }
@@ -75,11 +88,22 @@ function getEmailProjectSessionDirectory(
 export function getEmailPathsToClean(
 	defaultProjectTmpPath: string | undefined,
 	tmpPath: string
-): string[] {
+): { sessionDir: string; parentDir: string } | undefined {
 	if (defaultProjectTmpPath === undefined) {
-		return [];
+		return undefined;
 	}
-	return [getEmailProjectSessionDirectory(defaultProjectTmpPath, tmpPath)];
+	const sessionDir = getEmailProjectSessionDirectory(
+		defaultProjectTmpPath,
+		tmpPath
+	);
+	const parentDir = getEmailProjectParentDirectory(
+		defaultProjectTmpPath,
+		tmpPath
+	);
+	if (!parentDir) {
+		return undefined;
+	}
+	return { sessionDir, parentDir };
 }
 
 export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
@@ -116,32 +140,40 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			return [];
 		}
 
-		// Used to send email logs to the system's temp directory.
+		// Root directories for disk services - must exist before service creation
+		// Subdirectories (e.g., email-text/, email-html/) are created lazily on first write
 		const emailSystemDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
 		await mkdir(emailSystemDirectory, { recursive: true });
 
-		// Used to send email logs to the project's temporary directory.
-		const emailProjectSessionDirectory = getEmailProjectSessionDirectory(
-			args.defaultProjectTmpPath,
-			args.tmpPath
-		);
-		await mkdir(emailProjectSessionDirectory, { recursive: true });
-
 		// Map binding disk services to names and paths, for concise access when storing emails as files.
-		const diskServices = [
+		// When defaultProjectTmpPath is unset, only create system service to avoid duplicates
+		const diskServices: Array<{
+			location: "system" | "project";
+			bindingName: string;
+			serviceName: string;
+			path: string;
+		}> = [
 			{
 				location: "system",
 				bindingName: `${EMAIL_DISK_BINDING_NAME}_SYSTEM`,
 				serviceName: `${EMAIL_DISK_SERVICE_NAME}:system`,
 				path: emailSystemDirectory,
 			},
-			{
+		];
+
+		if (args.defaultProjectTmpPath) {
+			const emailProjectSessionDirectory = getEmailProjectSessionDirectory(
+				args.defaultProjectTmpPath,
+				args.tmpPath
+			);
+			await mkdir(emailProjectSessionDirectory, { recursive: true });
+			diskServices.push({
 				location: "project",
 				bindingName: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
 				serviceName: `${EMAIL_DISK_SERVICE_NAME}:project`,
 				path: emailProjectSessionDirectory,
-			},
-		] as const;
+			});
+		}
 
 		const services: Service[] = diskServices.map(({ serviceName, path }) => ({
 			name: serviceName,
@@ -173,13 +205,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 								})),
 								{
 									name: "email_disk_services",
-									json: JSON.stringify(
-										diskServices.map(({ bindingName, location, path }) => ({
-											bindingName,
-											location,
-											path,
-										}))
-									),
+									json: JSON.stringify(diskServices),
 								},
 							],
 						},
