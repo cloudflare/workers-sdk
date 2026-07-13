@@ -11,23 +11,7 @@ import { parseFile, stringifyFile } from "./file-format";
 import type { ConfigStorage } from "../config-file";
 import type { FileFormat } from "./file-format";
 
-/**
- * A file-on-disk storage backend, parameterised by the on-disk {@link FileFormat}
- * (TOML for wrangler, JSON for cf) and the path it reads and writes. Used by the
- * temporary-preview-account store and the plaintext auth-profile primitives.
- *
- * `read()` follows the `ConfigStorage<T>` contract: a missing file *or* a file
- * that exists but can't be parsed as `T` is the empty state and returns
- * `undefined`, so a corrupt store is treated as "nothing usable here" (e.g. a
- * stale temporary-account cache is re-minted instead of hard-erroring). Only
- * genuine I/O errors (`EACCES`, `EISDIR`, ...) propagate. This is deliberately
- * distinct from `FileCredentialStore`, which surfaces a corrupt *credential*
- * file as a throw so the user can fix it.
- *
- * Files are written with mode `0o600` on creation and re-`chmod`'d on every
- * save (the `mode` option only applies on creation) so other local users on
- * shared hosts can't read the stored credentials.
- */
+/** Adapter for reading and writing TOML or JSON files. */
 export function createFileStorage<T extends object>(
 	format: FileFormat,
 	getPath: () => string
@@ -58,6 +42,8 @@ export function createFileStorage<T extends object>(
 				encoding: "utf-8",
 				mode: 0o600,
 			});
+			// `mode` only applies when the file is created, so re-`chmod` on
+			// every save to keep 0o600 on shared hosts.
 			chmodSync(configPath, 0o600);
 		},
 		clear() {

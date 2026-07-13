@@ -99,6 +99,6 @@ export interface CliDescriptor {
 	 */
 	getConfigFileLabel: () => string;
 
-	/** The live default OAuth scope keys (a getter so `--experimental-scopes` mutation is observed). */
+	/** The live default OAuth scope keys (a getter so any reassignment of the mutable `DefaultScopeKeys` binding is observed). */
 	getDefaultScopeKeys: () => string[];
 }

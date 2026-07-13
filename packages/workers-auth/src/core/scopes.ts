@@ -1,8 +1,8 @@
 // The Cloudflare OAuth scope catalog, shared by every CLI built on this auth
-// layer (wrangler, cf, …). `DefaultScopeKeys` is a mutable live binding:
-// `setLoginScopeKeys` reassigns it (wrangler's `--experimental-scopes` / per-CLI
-// gating), and both the factory and each CLI's re-export observe the new
-// value via the `CliDescriptor.getDefaultScopeKeys` getter.
+// layer (wrangler, cf, …). `DefaultScopeKeys` is a mutable live binding that
+// `setLoginScopeKeys` can reassign; the factory and each CLI's re-export read
+// the current value via the `CliDescriptor.getDefaultScopeKeys` getter rather
+// than capturing it at wiring time.
 
 export const DefaultScopes = {
 	"account:read":

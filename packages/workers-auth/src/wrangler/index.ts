@@ -78,8 +78,8 @@ export const WRANGLER_CLI: CliDescriptor = {
 	fileFormat: "toml",
 	accountCachePrefix: "wrangler-account",
 	getConfigFileLabel: () => configFileName(undefined),
-	// A getter so wrangler's `--experimental-scopes` reassignment of the live
-	// `DefaultScopeKeys` binding is observed.
+	// A getter so any reassignment of the live `DefaultScopeKeys` binding is
+	// observed rather than captured at wiring time.
 	getDefaultScopeKeys: () => DefaultScopeKeys,
 };
 
