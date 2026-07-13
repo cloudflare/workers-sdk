@@ -1,5 +1,8 @@
 ---
 "wrangler": minor
+"miniflare": minor
+"@cloudflare/workers-utils": minor
+"@cloudflare/deploy-helpers": minor
 ---
 
 Add automatic provisioning for draft Flagship bindings
