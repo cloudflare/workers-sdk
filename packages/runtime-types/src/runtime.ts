@@ -20,8 +20,10 @@ const require = createRequire(import.meta.url);
  * build processes or development workflows. It handles the whole process of generating runtime
  * types, from spawning the workerd process (via Miniflare) to returning the generated types.
  *
- * If an `outFile` already contains runtime types generated for the same workerd version,
+ * If `existingContent` already contains runtime types generated for the same workerd version,
  * compatibility date and flags, the cached types are returned instead of regenerating them.
+ * The caller is responsible for reading the existing `.d.ts` file (if any) and passing its
+ * contents, so the file is read at most once per generation.
  *
  * @example
  * import { generateRuntimeTypes } from "@cloudflare/runtime-types";
@@ -29,7 +31,7 @@ const require = createRequire(import.meta.url);
  * const { runtimeHeader, runtimeTypes, isCached } = await generateRuntimeTypes({
  *   compatibilityDate: "2024-11-06",
  *   compatibilityFlags: ["nodejs_compat"],
- *   outFile: "worker-configuration.d.ts",
+ *   existingContent: await readFile("worker-configuration.d.ts", "utf8"),
  * });
  *
  * @remarks
@@ -39,11 +41,11 @@ const require = createRequire(import.meta.url);
 export async function generateRuntimeTypes({
 	compatibilityDate,
 	compatibilityFlags = [],
-	outFile,
+	existingContent,
 }: {
 	compatibilityDate: string;
 	compatibilityFlags?: string[];
-	outFile: string;
+	existingContent?: string;
 }): Promise<{
 	runtimeHeader: string;
 	runtimeTypes: string;
@@ -55,8 +57,8 @@ export async function generateRuntimeTypes({
 		compatibilityFlags
 	);
 
-	try {
-		const lines = (await fsp.readFile(outFile, "utf8")).split("\n");
+	if (existingContent !== undefined) {
+		const lines = existingContent.split("\n");
 		const existingHeader = lines.find((line) =>
 			line.startsWith(RUNTIME_HEADER_COMMENT_PREFIX)
 		);
@@ -69,10 +71,6 @@ export async function generateRuntimeTypes({
 				runtimeTypes: lines.slice(existingTypesStart + 1).join("\n"),
 				isCached: true,
 			};
-		}
-	} catch (e) {
-		if ((e as { code: string }).code !== "ENOENT") {
-			throw e;
 		}
 	}
 

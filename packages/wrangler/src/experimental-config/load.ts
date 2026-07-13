@@ -22,6 +22,7 @@ export const WRANGLER_CONFIG_FILENAME = "wrangler.config.ts";
 
 export interface NormalizedTypes {
 	generate: boolean;
+	includeRuntime: boolean;
 }
 
 export interface LoadNewConfigResult {
@@ -120,6 +121,8 @@ export async function loadNewConfig(options: {
 	// ── Normalised types ────────────────────────────────────────────────
 	const types: NormalizedTypes = {
 		generate: parsedWranglerConfig?.data.dev?.types?.generate ?? true,
+		includeRuntime:
+			parsedWranglerConfig?.data.dev?.types?.includeRuntime ?? true,
 	};
 
 	// ── Dependencies (union of both files) ──────────────────────────────

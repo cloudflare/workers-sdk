@@ -2638,6 +2638,9 @@ importers:
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
+      workerd:
+        specifier: catalog:default
+        version: 1.20260708.1
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -2654,6 +2657,9 @@ importers:
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
+      '@cloudflare/runtime-types':
+        specifier: workspace:*
+        version: link:../runtime-types
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
