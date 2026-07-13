@@ -3,6 +3,7 @@ import {
 	convertConfigBindingsToStartWorkerBindings,
 	convertStartDevOptionsToBindings,
 } from "../../../api/startDevWorker/binding-utils";
+import { rewriteUrlInHeaderValue } from "../../../api/startDevWorker/utils";
 
 describe("convertConfigBindingsToStartWorkerBindings", () => {
 	it("converts config bindings into startWorker bindings", async ({
@@ -230,5 +231,67 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 				type: "stream",
 			},
 		});
+	});
+});
+
+describe("rewriteUrlInHeaderValue", () => {
+	// Response path: map the proxied host (`example.com`, inferred from `routes`)
+	// back to the local dev address, matching the scenario in issue #14577.
+	const from = new URL("http://example.com");
+	const to = new URL("http://127.0.0.1:8788");
+
+	it("rewrites a URL whose host is exactly the proxied host", ({ expect }) => {
+		expect(
+			rewriteUrlInHeaderValue("https://example.com/somewhere", from, to)
+		).toBe(
+			// scheme is swapped too, so the value points at the plain-HTTP dev address
+			"http://127.0.0.1:8788/somewhere"
+		);
+	});
+
+	it("does not corrupt a subdomain of the proxied host", ({ expect }) => {
+		expect(
+			rewriteUrlInHeaderValue("https://books.example.com/read/ch01", from, to)
+		).toBe("https://books.example.com/read/ch01");
+	});
+
+	it("does not corrupt a host that merely contains the proxied host as a substring", ({
+		expect,
+	}) => {
+		expect(
+			rewriteUrlInHeaderValue("https://myexample.com/path", from, to)
+		).toBe("https://myexample.com/path");
+	});
+
+	it("leaves an unrelated host untouched", ({ expect }) => {
+		expect(
+			rewriteUrlInHeaderValue("https://unrelated-domain.org/path", from, to)
+		).toBe("https://unrelated-domain.org/path");
+	});
+
+	it("does not append a trailing slash to a bare origin (e.g. an Origin header)", ({
+		expect,
+	}) => {
+		expect(rewriteUrlInHeaderValue("https://example.com", from, to)).toBe(
+			"http://127.0.0.1:8788"
+		);
+	});
+
+	it("preserves host-like substrings inside the query string", ({ expect }) => {
+		expect(
+			rewriteUrlInHeaderValue(
+				"https://example.com/oauth?redirect_uri=https://example.com/next",
+				from,
+				to
+			)
+		).toBe("http://127.0.0.1:8788/oauth?redirect_uri=https://example.com/next");
+	});
+
+	it("maps the local dev address back to the proxied host (request path)", ({
+		expect,
+	}) => {
+		expect(rewriteUrlInHeaderValue("http://127.0.0.1:8788/cb", to, from)).toBe(
+			"http://example.com/cb"
+		);
 	});
 });
