@@ -59,18 +59,17 @@ export function urlFromParts(
 }
 
 /**
- * Rewrite the absolute URLs inside a single header value (e.g. `Location`,
- * `Origin`, `Access-Control-Allow-Origin`), mapping only those whose host is
- * exactly `from.host` onto `to`'s origin.
+ * Rewrites the absolute URLs inside a single header value (e.g. `Location`,
+ * `Origin`, `Access-Control-Allow-Origin`), mapping only those whose host
+ * that match the target host.
  *
- * The proxy previously replaced every substring occurrence of `from.host`,
- * which corrupted unrelated hosts that merely *contained* the proxied host as a
- * substring. For example, with a `example.com` route rewritten to a local
- * `127.0.0.1:8788` dev address, `https://books.example.com/x` became
- * `https://books.127.0.0.1:8788/x` and `https://myexample.com/x` became
- * `https://my127.0.0.1:8788/x`. Matching on the parsed host and swapping the
- * whole origin (scheme included) also avoids leaving a mismatched `https:`
- * scheme on a plain-HTTP dev address.
+ * This function ensures that the host is replaced in a robust manner avoiding
+ * corruptions (that can happen for example if a naive replacement was used).
+ *
+ * @param value - The raw header value string that may contain absolute URLs to rewrite.
+ * @param from - The URL whose host should be matched against URLs found in the header value.
+ * @param to - The URL whose origin will replace the matched origin in the header value.
+ * @returns The header value string with all matching absolute URLs rewritten to use the target origin.
  */
 export function rewriteUrlInHeaderValue(
 	value: string,
