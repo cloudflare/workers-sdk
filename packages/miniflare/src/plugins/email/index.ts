@@ -73,7 +73,7 @@ function getEmailProjectParentDirectory(
  * Example: `/path/to/project/.wrangler/tmp/email/dev-abc123`
  * When an email is logged, it is stored under this directory using a type indicator
  * and a unique ID.
- * Path: `<session-dir>/email-<type>/<message-id>.<ext>`
+ * Path: `<session-dir>/<email-type>/<message-id>.<ext>`
  */
 function getEmailProjectSessionDirectory(
 	defaultProjectTmpPath: string | undefined,

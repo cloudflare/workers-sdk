@@ -477,6 +477,7 @@ export async function getDevMiniflareOptions(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
+			defaultProjectTmpPath: path.resolve(resolvedViteConfig.root, ".vite/tmp"),
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
 				const parsed = await parseModuleFallbackRequest(request);
@@ -756,6 +757,7 @@ export async function getPreviewMiniflareOptions(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
+			defaultProjectTmpPath: path.resolve(resolvedViteConfig.root, ".vite/tmp"),
 			workers,
 		},
 		containerTagToOptionsMap,
