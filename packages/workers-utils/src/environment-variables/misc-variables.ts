@@ -360,14 +360,13 @@ export const getLocalExplorerEnabledFromEnv =
  * `unsafeObservability` Miniflare option; Miniflare core then auto-injects the
  * trace collector as a streaming-tail consumer of the user's worker(s).
  *
- * Defaults to `false` (off) while the feature is experimental. Once the full
- * stack has landed, this default flips to `true` so capture is on by default in
- * local dev (the env var is then only needed to opt out).
+ * Defaults to `true`: with the full stack landed, capture is on by default in
+ * local dev. Set `X_LOCAL_OBSERVABILITY=false` to opt out.
  */
 export const getLocalObservabilityEnabledFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "X_LOCAL_OBSERVABILITY",
-		defaultValue: false,
+		defaultValue: true,
 	});
 
 /**
