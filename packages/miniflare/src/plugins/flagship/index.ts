@@ -8,7 +8,7 @@ import type { Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const FlagshipSchema = z.object({
-	app_id: z.string().optional(),
+	app_id: z.string(),
 	remoteProxyConnectionString: z
 		.custom<RemoteProxyConnectionString>()
 		.optional(),

@@ -23,6 +23,20 @@ describe("errors during dev with remote bindings", () => {
 		msw.use(...mswSuccessUserHandlers);
 	});
 
+	it("explains how to provision a draft Flagship binding", async ({
+		expect,
+	}) => {
+		await expect(
+			startRemoteProxySession({
+				FLAGS: {
+					type: "flagship",
+				},
+			})
+		).rejects.toThrow(
+			'Flagship binding "FLAGS" has no app_id. Run `wrangler deploy` to provision it, or add `app_id` to your config.'
+		);
+	});
+
 	it("errors triggered when creating the remote proxy session are surfaced", async ({
 		expect,
 	}) => {

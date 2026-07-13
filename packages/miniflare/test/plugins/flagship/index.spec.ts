@@ -31,7 +31,7 @@ test("FlagshipOptionsSchema: accepts empty flagship", ({ expect }) => {
 	expect(result.success).toBe(true);
 });
 
-test("FlagshipOptionsSchema: accepts a draft flagship binding without app_id", ({
+test("FlagshipOptionsSchema: rejects a flagship binding without app_id", ({
 	expect,
 }) => {
 	const result = FlagshipOptionsSchema.safeParse({
@@ -39,5 +39,5 @@ test("FlagshipOptionsSchema: accepts a draft flagship binding without app_id", (
 			FLAGS: {},
 		},
 	});
-	expect(result.success).toBe(true);
+	expect(result.success).toBe(false);
 });
