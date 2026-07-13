@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ObservabilityIndexRouteImport } from './routes/observability/index'
 import { Route as WorkflowsWorkflowNameRouteImport } from './routes/workflows/$workflowName'
 import { Route as R2BucketNameRouteImport } from './routes/r2/$bucketName'
+import { Route as ObservabilityLogsRouteImport } from './routes/observability/logs'
 import { Route as KvNamespaceIdRouteImport } from './routes/kv/$namespaceId'
 import { Route as DoClassNameRouteImport } from './routes/do/$className'
 import { Route as D1DatabaseIdRouteImport } from './routes/d1/$databaseId'
@@ -41,6 +42,11 @@ const WorkflowsWorkflowNameRoute = WorkflowsWorkflowNameRouteImport.update({
 const R2BucketNameRoute = R2BucketNameRouteImport.update({
   id: '/r2/$bucketName',
   path: '/r2/$bucketName',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObservabilityLogsRoute = ObservabilityLogsRouteImport.update({
+  id: '/observability/logs',
+  path: '/observability/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KvNamespaceIdRoute = KvNamespaceIdRouteImport.update({
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/do/$className': typeof DoClassNameRouteWithChildren
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
+  '/observability/logs': typeof ObservabilityLogsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
   '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
   '/observability/': typeof ObservabilityIndexRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
+  '/observability/logs': typeof ObservabilityLogsRoute
   '/observability': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
   '/workflows/$workflowName/$instanceId': typeof WorkflowsWorkflowNameInstanceIdRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/do/$className': typeof DoClassNameRouteWithChildren
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
+  '/observability/logs': typeof ObservabilityLogsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
   '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
   '/observability/': typeof ObservabilityIndexRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/d1/$databaseId'
     | '/do/$className'
     | '/kv/$namespaceId'
+    | '/observability/logs'
     | '/r2/$bucketName'
     | '/workflows/$workflowName'
     | '/observability/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/'
     | '/d1/$databaseId'
     | '/kv/$namespaceId'
+    | '/observability/logs'
     | '/observability'
     | '/do/$className/$objectId'
     | '/workflows/$workflowName/$instanceId'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/d1/$databaseId'
     | '/do/$className'
     | '/kv/$namespaceId'
+    | '/observability/logs'
     | '/r2/$bucketName'
     | '/workflows/$workflowName'
     | '/observability/'
@@ -184,6 +196,7 @@ export interface RootRouteChildren {
   D1DatabaseIdRoute: typeof D1DatabaseIdRoute
   DoClassNameRoute: typeof DoClassNameRouteWithChildren
   KvNamespaceIdRoute: typeof KvNamespaceIdRoute
+  ObservabilityLogsRoute: typeof ObservabilityLogsRoute
   R2BucketNameRoute: typeof R2BucketNameRouteWithChildren
   WorkflowsWorkflowNameRoute: typeof WorkflowsWorkflowNameRouteWithChildren
   ObservabilityIndexRoute: typeof ObservabilityIndexRoute
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       path: '/r2/$bucketName'
       fullPath: '/r2/$bucketName'
       preLoaderRoute: typeof R2BucketNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/observability/logs': {
+      id: '/observability/logs'
+      path: '/observability/logs'
+      fullPath: '/observability/logs'
+      preLoaderRoute: typeof ObservabilityLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kv/$namespaceId': {
@@ -333,6 +353,7 @@ const rootRouteChildren: RootRouteChildren = {
   D1DatabaseIdRoute: D1DatabaseIdRoute,
   DoClassNameRoute: DoClassNameRouteWithChildren,
   KvNamespaceIdRoute: KvNamespaceIdRoute,
+  ObservabilityLogsRoute: ObservabilityLogsRoute,
   R2BucketNameRoute: R2BucketNameRouteWithChildren,
   WorkflowsWorkflowNameRoute: WorkflowsWorkflowNameRouteWithChildren,
   ObservabilityIndexRoute: ObservabilityIndexRoute,

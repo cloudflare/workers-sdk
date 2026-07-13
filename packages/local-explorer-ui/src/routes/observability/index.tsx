@@ -8,6 +8,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { FilterSelect } from "../../components/observability/FilterSelect";
+import { ObservabilityViewSwitcher } from "../../components/observability/ObservabilityViewSwitcher";
 import { TraceWaterfall } from "../../components/observability/TraceWaterfall";
 import { ResourceError } from "../../components/ResourceError";
 import {
@@ -17,8 +18,8 @@ import {
 	getTagKeys,
 	listTraces,
 } from "../../utils/observability";
-import type { Span, TraceRow } from "../../utils/observability";
 import { parseTraceQuery } from "../../utils/observability-query";
+import type { Span, TraceRow } from "../../utils/observability";
 
 const HIDE_DEV_RUNNER_KEY = "wobs-hide-dev-runner";
 
@@ -28,7 +29,9 @@ export const Route = createFileRoute("/observability/")({
 });
 
 function isError(t: TraceRow): boolean {
-	return !!t.error || (!!t.outcome && t.outcome !== "ok") || (t.error_count ?? 0) > 0;
+	return (
+		!!t.error || (!!t.outcome && t.outcome !== "ok") || (t.error_count ?? 0) > 0
+	);
 }
 
 /**
@@ -168,13 +171,11 @@ function ObservabilityView(): JSX.Element {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="border-kumo-fill flex min-h-14 items-center gap-2.5 border-b px-4">
+			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<span className="text-kumo-default pl-1 text-sm leading-tight font-semibold">
-						Traces
-					</span>
-					<span className="text-kumo-subtle pl-1 text-[11px] leading-tight">
+					<ObservabilityViewSwitcher current="traces" />
+					<span className="pl-1 text-[11px] leading-tight text-kumo-subtle">
 						{traces.length} trace{traces.length === 1 ? "" : "s"}
 					</span>
 				</div>
@@ -196,7 +197,7 @@ function ObservabilityView(): JSX.Element {
 				<button
 					type="button"
 					onClick={() => void refresh()}
-					className="text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default flex items-center gap-1.5 rounded px-2 py-1 text-xs"
+					className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
 				>
 					<ArrowsCounterClockwiseIcon
 						size={13}
@@ -207,20 +208,23 @@ function ObservabilityView(): JSX.Element {
 			</header>
 
 			{/* filter bar — a simpler version of the dashboard query builder */}
-			<div className="border-kumo-fill flex items-center gap-2 border-b px-4 py-2">
-				<div className="border-kumo-fill bg-kumo-base flex flex-1 items-center gap-2 rounded-md border px-2.5 py-1.5">
-					<MagnifyingGlassIcon size={14} className="text-kumo-subtle shrink-0" />
+			<div className="flex items-center gap-2 border-b border-kumo-fill px-4 py-2">
+				<div className="flex flex-1 items-center gap-2 rounded-md border border-kumo-fill bg-kumo-base px-2.5 py-1.5">
+					<MagnifyingGlassIcon
+						size={14}
+						className="shrink-0 text-kumo-subtle"
+					/>
 					<input
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder="Search, or query e.g. status:error kind:d1 dur:>100 db.query.text:orders"
-						className="text-kumo-default placeholder:text-kumo-subtle w-full bg-transparent text-xs outline-none"
+						className="w-full bg-transparent text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
 					/>
 					{search ? (
 						<button
 							type="button"
 							onClick={() => setSearch("")}
-							className="text-kumo-subtle hover:text-kumo-default text-xs"
+							className="text-xs text-kumo-subtle hover:text-kumo-default"
 						>
 							✕
 						</button>
@@ -266,7 +270,7 @@ function ObservabilityView(): JSX.Element {
 						value={tagValue}
 						onChange={(e) => setTagValue(e.target.value)}
 						placeholder={`${tagKey} value…`}
-						className="border-kumo-fill bg-kumo-base text-kumo-default placeholder:text-kumo-subtle w-40 rounded-md border px-2 py-1.5 text-xs outline-none"
+						className="w-40 rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
 					/>
 				) : null}
 			</div>
@@ -287,7 +291,7 @@ function ObservabilityView(): JSX.Element {
 				) : (
 					<table className="w-full border-collapse text-sm">
 						<thead>
-							<tr className="text-kumo-subtle border-kumo-fill border-y text-left text-xs">
+							<tr className="border-y border-kumo-fill text-left text-xs text-kumo-subtle">
 								<th className="py-2 pr-3 pl-4 font-medium">
 									<span className="inline-flex items-center gap-1">
 										Timestamp <span className="text-blue-500">↓</span>
@@ -311,7 +315,7 @@ function ObservabilityView(): JSX.Element {
 										<tr
 											onClick={() => void toggleTrace(t)}
 											className={cn(
-												"border-kumo-fill cursor-pointer border-b hover:bg-black/[0.03] dark:hover:bg-white/5",
+												"cursor-pointer border-b border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5",
 												isSel && "bg-blue-100 dark:bg-blue-900/30"
 											)}
 										>
@@ -323,13 +327,13 @@ function ObservabilityView(): JSX.Element {
 															err ? "bg-red-500" : "bg-blue-500"
 														)}
 													/>
-													<span className="text-kumo-default decoration-kumo-line font-mono text-xs underline decoration-dotted underline-offset-2">
+													<span className="font-mono text-xs text-kumo-default underline decoration-kumo-line decoration-dotted underline-offset-2">
 														{t.created_at ?? ""}
 														<span className="text-kumo-subtle"> UTC</span>
 													</span>
 												</div>
 											</td>
-											<td className="text-kumo-default py-2.5 pr-3 font-mono text-xs">
+											<td className="py-2.5 pr-3 font-mono text-xs text-kumo-default">
 												{t.name ?? t.trace_id.slice(0, 16)}
 											</td>
 											<td className="py-2.5 pr-3">
@@ -337,7 +341,7 @@ function ObservabilityView(): JSX.Element {
 													<div className="text-sm tabular-nums">
 														{formatDuration(dur)}
 													</div>
-													<div className="bg-kumo-fill h-1 w-24 overflow-hidden rounded-full">
+													<div className="h-1 w-24 overflow-hidden rounded-full bg-kumo-fill">
 														<div
 															className="h-full rounded-full bg-blue-500"
 															style={{
@@ -347,7 +351,7 @@ function ObservabilityView(): JSX.Element {
 													</div>
 												</div>
 											</td>
-											<td className="text-kumo-default py-2.5 pr-3 text-xs tabular-nums">
+											<td className="py-2.5 pr-3 text-xs text-kumo-default tabular-nums">
 												{t.span_count ?? "-"}
 											</td>
 											<td className="py-2.5 pr-3 text-xs tabular-nums">
@@ -360,15 +364,18 @@ function ObservabilityView(): JSX.Element {
 										</tr>
 										{isSel && spans.length > 0 ? (
 											<tr className="bg-black/[0.02] dark:bg-white/[0.02]">
-												<td colSpan={5} className="border-kumo-fill border-b p-4">
+												<td
+													colSpan={5}
+													className="border-b border-kumo-fill p-4"
+												>
 													<div className="mb-2 flex items-baseline gap-2">
-														<span className="text-kumo-default font-mono text-sm font-semibold">
+														<span className="font-mono text-sm font-semibold text-kumo-default">
 															{t.name ?? t.trace_id}
 														</span>
-														<span className="text-kumo-subtle font-mono text-[11px]">
+														<span className="font-mono text-[11px] text-kumo-subtle">
 															{t.trace_id.slice(0, 16)}
 														</span>
-														<span className="text-kumo-subtle text-[11px]">
+														<span className="text-[11px] text-kumo-subtle">
 															· {formatDuration(dur)} ·{" "}
 															{t.span_count ?? spans.length} spans
 														</span>
@@ -411,9 +418,9 @@ function EmptyState({
 				inline ? "py-16" : "h-full"
 			)}
 		>
-			<PulseIcon size={28} className="text-kumo-subtle mb-2" />
-			<h3 className="text-kumo-default text-sm font-semibold">{title}</h3>
-			<p className="text-kumo-subtle mt-1 max-w-md text-xs">{body}</p>
+			<PulseIcon size={28} className="mb-2 text-kumo-subtle" />
+			<h3 className="text-sm font-semibold text-kumo-default">{title}</h3>
+			<p className="mt-1 max-w-md text-xs text-kumo-subtle">{body}</p>
 		</div>
 	);
 }
