@@ -1,5 +1,5 @@
 // cf's OAuth scope catalog — the exact scope set the `cf` CLI registers. This
-// is deliberately separate from wrangler's smaller catalog (`../product/scopes`):
+// is deliberately separate from wrangler's smaller catalog (`../core/scopes`):
 // cf requests the full Cloudflare product surface, so it carries its own list
 // rather than reusing wrangler's.
 //

@@ -10,10 +10,10 @@ import {
 	getCloudflareApiEnvironmentFromEnv,
 	readFileSync,
 } from "@cloudflare/workers-utils";
-import { TOML_FILE_FORMAT } from "../file-format";
+import { parseFile, stringifyFile } from "../core/file-format";
 import { validateProfileName } from "../profiles";
 import type { UserAuthConfig } from "../config-file/auth";
-import type { FileFormat } from "../file-format";
+import type { FileFormat } from "../core/file-format";
 import type { CredentialStore } from "./interface";
 
 /**
@@ -64,7 +64,7 @@ export function resolveAuthProfileBaseName(profile?: string): string {
 export function getAuthConfigFilePath(
 	configPath: string,
 	profile?: string,
-	extension: string = TOML_FILE_FORMAT.extension
+	extension: string = "toml"
 ): string {
 	return path.join(
 		configPath,
@@ -94,15 +94,11 @@ export class FileCredentialStore implements CredentialStore {
 	constructor(
 		private readonly configPath: string,
 		private readonly profile?: string,
-		private readonly format: FileFormat = TOML_FILE_FORMAT
+		private readonly format: FileFormat = "toml"
 	) {}
 
 	private filePath(): string {
-		return getAuthConfigFilePath(
-			this.configPath,
-			this.profile,
-			this.format.extension
-		);
+		return getAuthConfigFilePath(this.configPath, this.profile, this.format);
 	}
 
 	read(): UserAuthConfig | undefined {
@@ -112,7 +108,7 @@ export class FileCredentialStore implements CredentialStore {
 		}
 		// If the parse throws we propagate the error so the user sees
 		// the corruption rather than silently being treated as logged out.
-		return this.format.parse(readFileSync(filePath)) as UserAuthConfig;
+		return parseFile(this.format, readFileSync(filePath)) as UserAuthConfig;
 	}
 
 	write(config: UserAuthConfig): void {
@@ -121,7 +117,7 @@ export class FileCredentialStore implements CredentialStore {
 		// Mode `0o600` only applies on file creation, so we also re-chmod
 		// every write to tighten any pre-existing file left behind by an
 		// older Wrangler version that wrote with the process umask.
-		writeFileSync(filePath, this.format.stringify(config), {
+		writeFileSync(filePath, stringifyFile(this.format, config), {
 			encoding: "utf-8",
 			mode: 0o600,
 		});

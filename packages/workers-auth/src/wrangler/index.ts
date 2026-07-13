@@ -1,6 +1,6 @@
-// Wrangler's auth layer: the wrangler {@link AuthProduct} descriptor plus
-// `createWranglerAuth`, a thin binding of the product-agnostic
-// `createCloudflareAuth` factory (`../product/factory`) to wrangler's identity
+// Wrangler's auth layer: the wrangler {@link CliDescriptor} descriptor plus
+// `createWranglerAuth`, a thin binding of the CLI-agnostic
+// `createCloudflareAuth` factory (`../core/factory`) to wrangler's identity
 // (client id, consent pages, keyring service name), config paths, TOML file
 // format, and user-facing copy.
 //
@@ -9,12 +9,11 @@
 // (and the test mocks/spies) keep working unchanged.
 
 import { configFileName, getGlobalConfigPath } from "@cloudflare/workers-utils";
-import { TOML_FILE_FORMAT } from "../file-format";
-import { createCloudflareAuth } from "../product/factory";
-import { createKeyringPreference } from "../product/keyring-preference";
-import { createPreferences } from "../product/preferences";
-import { createCloudflareProfileStore } from "../product/profile-store";
-import { DefaultScopeKeys } from "../product/scopes";
+import { createCloudflareAuth } from "../core/factory";
+import { createKeyringPreference } from "../core/keyring-preference";
+import { createPreferences } from "../core/preferences";
+import { createCloudflareProfileStore } from "../core/profile-store";
+import { DefaultScopeKeys } from "../core/scopes";
 import {
 	OAUTH_CALLBACK_URL,
 	WRANGLER_CLI_NAME,
@@ -24,12 +23,12 @@ import {
 import { getClientIdFromEnv } from "./env";
 import { getTemporaryPreviewAccountConfigPath } from "./temporary-account-path";
 import type { OAuthFlowContext } from "../context";
-import type { CloudflareAuth, CloudflareLoginProps } from "../product/factory";
+import type { CloudflareAuth, CloudflareLoginProps } from "../core/factory";
 import type {
 	KeyringPreferenceContext,
 	SetKeyringPreferenceResult,
-} from "../product/keyring-preference";
-import type { AuthContext, AuthProduct } from "../product/types";
+} from "../core/keyring-preference";
+import type { AuthContext, CliDescriptor } from "../core/types";
 import type { ProfileStore } from "../profiles";
 
 // --- Re-exports for wrangler's `src/user/*` consumers -----------------------
@@ -48,10 +47,10 @@ export {
 	setLoginScopeKeys,
 	validateScopeKeys,
 	type Scope,
-} from "../product/scopes";
+} from "../core/scopes";
 export { getClientIdFromEnv } from "./env";
 export { OAUTH_CALLBACK_URL, WRANGLER_KEYRING_SERVICE_NAME } from "./constants";
-export type { SetKeyringPreferenceResult } from "../product/keyring-preference";
+export type { SetKeyringPreferenceResult } from "../core/keyring-preference";
 
 /** @deprecated Use {@link AuthContext}. Kept as an alias for wrangler's historical name. */
 export type WranglerAuthContext = AuthContext;
@@ -60,14 +59,14 @@ export type WranglerAuth = CloudflareAuth;
 /** @deprecated Use {@link CloudflareLoginProps}. */
 export type WranglerLoginProps = CloudflareLoginProps;
 
-// --- Wrangler product descriptor --------------------------------------------
+// --- Wrangler CLI descriptor --------------------------------------------
 
 /**
- * The wrangler {@link AuthProduct}: TOML files under wrangler's global config
+ * The wrangler {@link CliDescriptor}: TOML files under wrangler's global config
  * directory, wrangler's OAuth app / consent pages, the `"wrangler"` keyring
  * service, and wrangler-worded copy.
  */
-export const WRANGLER_PRODUCT: AuthProduct = {
+export const WRANGLER_CLI: CliDescriptor = {
 	cliName: WRANGLER_CLI_NAME,
 	keyringServiceName: WRANGLER_KEYRING_SERVICE_NAME,
 	clientId: getClientIdFromEnv,
@@ -76,7 +75,7 @@ export const WRANGLER_PRODUCT: AuthProduct = {
 	allowGlobalAuthKey: true,
 	getConfigPath: getGlobalConfigPath,
 	getTemporaryAccountConfigPath: getTemporaryPreviewAccountConfigPath,
-	fileFormat: TOML_FILE_FORMAT,
+	fileFormat: "toml",
 	accountCachePrefix: "wrangler-account",
 	getConfigFileLabel: () => configFileName(undefined),
 	// A getter so wrangler's `--experimental-scopes` reassignment of the live
@@ -89,7 +88,7 @@ export const WRANGLER_PRODUCT: AuthProduct = {
 const wranglerPreferences = createPreferences(getGlobalConfigPath);
 export const { readUserPreferences, updateUserPreferences } =
 	wranglerPreferences;
-export type { UserPreferences } from "../product/preferences";
+export type { UserPreferences } from "../core/preferences";
 
 /**
  * Build wrangler's auth layer, injecting the few consumer primitives that can't
@@ -97,7 +96,7 @@ export type { UserPreferences } from "../product/preferences";
  * the User-Agent string).
  */
 export function createWranglerAuth(ctx: AuthContext): CloudflareAuth {
-	return createCloudflareAuth(WRANGLER_PRODUCT, ctx);
+	return createCloudflareAuth(WRANGLER_CLI, ctx);
 }
 
 // --- Wrangler-bound profile store + keyring preference ----------------------
@@ -119,7 +118,7 @@ export function createWranglerProfileStore(
 		logger: ctx.logger,
 		getConfigPath: getGlobalConfigPath,
 		keyringServiceName: WRANGLER_KEYRING_SERVICE_NAME,
-		format: TOML_FILE_FORMAT,
+		format: "toml",
 	});
 }
 
@@ -127,7 +126,7 @@ const wranglerKeyringPreference = createKeyringPreference({
 	cliName: WRANGLER_CLI_NAME,
 	keyringServiceName: WRANGLER_KEYRING_SERVICE_NAME,
 	getConfigPath: getGlobalConfigPath,
-	format: TOML_FILE_FORMAT,
+	format: "toml",
 	preferences: wranglerPreferences,
 });
 
@@ -143,4 +142,4 @@ export function setKeyringPreference(
 	return wranglerKeyringPreference.setKeyringPreference(enabled, ctx);
 }
 
-export type { KeyringPreferenceContext } from "../product/keyring-preference";
+export type { KeyringPreferenceContext } from "../core/keyring-preference";

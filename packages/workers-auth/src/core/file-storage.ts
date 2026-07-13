@@ -7,8 +7,9 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { readFileSync } from "@cloudflare/workers-utils";
+import { parseFile, stringifyFile } from "./file-format";
 import type { ConfigStorage } from "../config-file";
-import type { FileFormat } from "../file-format";
+import type { FileFormat } from "./file-format";
 
 /**
  * A file-on-disk storage backend, parameterised by the on-disk {@link FileFormat}
@@ -45,7 +46,7 @@ export function createFileStorage<T extends object>(
 			}
 			const contents = readFileSync(filePath);
 			try {
-				return format.parse(contents) as T;
+				return parseFile(format, contents) as T;
 			} catch {
 				return undefined;
 			}
@@ -53,7 +54,7 @@ export function createFileStorage<T extends object>(
 		write(config) {
 			const configPath = getPath();
 			mkdirSync(path.dirname(configPath), { recursive: true });
-			writeFileSync(configPath, format.stringify(config), {
+			writeFileSync(configPath, stringifyFile(format, config), {
 				encoding: "utf-8",
 				mode: 0o600,
 			});

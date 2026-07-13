@@ -8,7 +8,7 @@ import { validateProfileName } from "../profiles";
 import { createCloudflareProfileStore } from "./profile-store";
 import type { OAuthFlowContext } from "../context";
 import type { CredentialStore } from "../credential-store";
-import type { FileFormat } from "../file-format";
+import type { FileFormat } from "./file-format";
 import type { Preferences } from "./preferences";
 
 /**
@@ -44,7 +44,7 @@ export interface KeyringPreference {
 }
 
 /**
- * Build the keyring-storage preference manager for a product.
+ * Build the keyring-storage preference manager for a CLI.
  *
  * The returned `setKeyringPreference` is shared by `<cli> auth keyring
  * enable|disable` and the `<cli> login --use-keyring` / `--no-use-keyring`

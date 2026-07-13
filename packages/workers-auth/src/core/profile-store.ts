@@ -15,12 +15,12 @@ import { createProfileStore } from "../profiles";
 import { createFileStorage } from "./file-storage";
 import type { UserAuthConfig } from "../config-file/auth";
 import type { OAuthFlowContext } from "../context";
-import type { FileFormat } from "../file-format";
 import type {
 	DirectoryBindingsStorage,
 	ProfileConfigOperations,
 	ProfileStore,
 } from "../profiles";
+import type { FileFormat } from "./file-format";
 
 const DIRECTORY_BINDINGS_FILE = "profiles/directory-bindings.json";
 const ENCRYPTED_PROFILE_CONFIG_EXTENSION = ".enc";
@@ -46,10 +46,10 @@ export function createCloudflareProfileStore(
 	ctx: CloudflareProfileStoreContext
 ): ProfileStore {
 	const { logger, getConfigPath, keyringServiceName, format } = ctx;
-	const plaintextExtension = `.${format.extension}`;
+	const plaintextExtension = `.${format}`;
 
 	function plaintextPath(profile?: string): string {
-		return getAuthConfigFilePath(getConfigPath(), profile, format.extension);
+		return getAuthConfigFilePath(getConfigPath(), profile, format);
 	}
 
 	function encryptedPath(profile?: string): string {

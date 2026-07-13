@@ -1,5 +1,5 @@
 import type { OAuthConsentPages, OAuthFlowContext } from "../context";
-import type { FileFormat } from "../file-format";
+import type { FileFormat } from "./file-format";
 
 /** Minimal shape of the interactive `select` prompt's options for account selection. */
 export interface AccountSelectOptions {
@@ -13,7 +13,7 @@ export interface AccountSelectOptions {
  * package: the logger, the interactive prompts (`prompt` / `select`, whose
  * implementations live in the consuming CLI, e.g. wrangler's `dialogs.ts`), and
  * the User-Agent string. All the auth *logic* lives in the package and is
- * parameterised by the {@link AuthProduct} descriptor instead.
+ * parameterised by the {@link CliDescriptor} descriptor instead.
  */
 export interface AuthContext {
 	/** The consumer's logger (drop-in for wrangler's logger singleton). */
@@ -40,11 +40,11 @@ export interface AuthContext {
 
 /**
  * Everything that varies between the Cloudflare CLIs that share this auth layer
- * (wrangler, cf, …). The product-agnostic {@link createCloudflareAuth} factory
+ * (wrangler, cf, …). The CLI-agnostic {@link createCloudflareAuth} factory
  * reads every consumer-specific value from here, so a new CLI is a descriptor
  * rather than a fork of the factory.
  */
-export interface AuthProduct {
+export interface CliDescriptor {
 	/** CLI name used in user-facing messaging and keyring install-dir scoping (e.g. `"wrangler"`). */
 	cliName: string;
 

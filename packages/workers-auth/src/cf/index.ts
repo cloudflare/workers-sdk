@@ -1,17 +1,16 @@
-// The `cf` CLI's auth layer: the cf {@link AuthProduct} descriptor plus
-// `createCfAuth`, a thin binding of the product-agnostic `createCloudflareAuth`
-// factory (`../product/factory`) to cf's identity (client id, consent pages,
+// The `cf` CLI's auth layer: the cf {@link CliDescriptor} descriptor plus
+// `createCfAuth`, a thin binding of the CLI-agnostic `createCloudflareAuth`
+// factory (`../core/factory`) to cf's identity (client id, consent pages,
 // keyring service name), config paths (`~/.config/cloudflare`), JSON file
 // format, and cf-worded copy.
 //
 // This is the exact same auth machinery wrangler uses (`@cloudflare/workers-auth/wrangler`),
 // differing only in the descriptor below.
 
-import { JSON_FILE_FORMAT } from "../file-format";
-import { createCloudflareAuth } from "../product/factory";
-import { createKeyringPreference } from "../product/keyring-preference";
-import { createPreferences } from "../product/preferences";
-import { createCloudflareProfileStore } from "../product/profile-store";
+import { createCloudflareAuth } from "../core/factory";
+import { createKeyringPreference } from "../core/keyring-preference";
+import { createPreferences } from "../core/preferences";
+import { createCloudflareProfileStore } from "../core/profile-store";
 import {
 	CF_CLI_NAME,
 	CF_CONSENT_PAGES,
@@ -23,12 +22,12 @@ import { getCfConfigPath } from "./paths";
 import { DefaultScopeKeys } from "./scopes";
 import { getCfTemporaryAccountConfigPath } from "./temporary-account-path";
 import type { OAuthFlowContext } from "../context";
-import type { CloudflareAuth } from "../product/factory";
+import type { CloudflareAuth } from "../core/factory";
 import type {
 	KeyringPreferenceContext,
 	SetKeyringPreferenceResult,
-} from "../product/keyring-preference";
-import type { AuthContext, AuthProduct } from "../product/types";
+} from "../core/keyring-preference";
+import type { AuthContext, CliDescriptor } from "../core/types";
 import type { ProfileStore } from "../profiles";
 
 // --- Re-exports for cf consumers --------------------------------------------
@@ -50,22 +49,22 @@ export {
 export { getClientIdFromEnv } from "./env";
 export { CF_OAUTH_CALLBACK_URL, CF_KEYRING_SERVICE_NAME } from "./constants";
 export { getCfConfigPath } from "./paths";
-export type { AuthContext, AuthProduct } from "../product/types";
-export type { CloudflareAuth, CloudflareLoginProps } from "../product/factory";
+export type { AuthContext, CliDescriptor } from "../core/types";
+export type { CloudflareAuth, CloudflareLoginProps } from "../core/factory";
 export type {
 	KeyringPreferenceContext,
 	SetKeyringPreferenceResult,
-} from "../product/keyring-preference";
-export type { UserPreferences } from "../product/preferences";
+} from "../core/keyring-preference";
+export type { UserPreferences } from "../core/preferences";
 
-// --- cf product descriptor --------------------------------------------------
+// --- cf CLI descriptor --------------------------------------------------
 
 /**
- * The cf {@link AuthProduct}: JSON files under `~/.config/cloudflare`, cf's
+ * The cf {@link CliDescriptor}: JSON files under `~/.config/cloudflare`, cf's
  * OAuth app / consent pages, the `"cloudflare"` keyring service, and cf-worded
  * copy.
  */
-export const CF_PRODUCT: AuthProduct = {
+export const CF_CLI: CliDescriptor = {
 	cliName: CF_CLI_NAME,
 	keyringServiceName: CF_KEYRING_SERVICE_NAME,
 	clientId: getClientIdFromEnv,
@@ -76,7 +75,7 @@ export const CF_PRODUCT: AuthProduct = {
 	allowGlobalAuthKey: false,
 	getConfigPath: getCfConfigPath,
 	getTemporaryAccountConfigPath: getCfTemporaryAccountConfigPath,
-	fileFormat: JSON_FILE_FORMAT,
+	fileFormat: "json",
 	accountCachePrefix: "cloudflare-account",
 	// cf gets its own cache dir (`.cache/cloudflare` / `.cloudflare/cache`) so
 	// `cf login`/`logout` never purges wrangler's shared cache.
@@ -97,7 +96,7 @@ export const { readUserPreferences, updateUserPreferences } = cfPreferences;
  * User-Agent string).
  */
 export function createCfAuth(ctx: AuthContext): CloudflareAuth {
-	return createCloudflareAuth(CF_PRODUCT, ctx);
+	return createCloudflareAuth(CF_CLI, ctx);
 }
 
 // --- cf-bound profile store + keyring preference ----------------------------
@@ -113,7 +112,7 @@ export function createCfProfileStore(ctx: CfProfileStoreContext): ProfileStore {
 		logger: ctx.logger,
 		getConfigPath: getCfConfigPath,
 		keyringServiceName: CF_KEYRING_SERVICE_NAME,
-		format: JSON_FILE_FORMAT,
+		format: "json",
 	});
 }
 
@@ -121,7 +120,7 @@ const cfKeyringPreference = createKeyringPreference({
 	cliName: CF_CLI_NAME,
 	keyringServiceName: CF_KEYRING_SERVICE_NAME,
 	getConfigPath: getCfConfigPath,
-	format: JSON_FILE_FORMAT,
+	format: "json",
 	preferences: cfPreferences,
 });
 

@@ -7,7 +7,7 @@ import {
  * `WRANGLER_CLIENT_ID` is the UUID of Wrangler's registered OAuth app, used to
  * identify Wrangler to the Cloudflare OAuth server.
  *
- * This is wrangler product config (the app UUIDs and the `WRANGLER_*` variable
+ * This is wrangler CLI config (the app UUIDs and the `WRANGLER_*` variable
  * name are Wrangler's), so it lives in the `/wrangler` layer rather than the
  * shared core — a future `/cf` entrypoint has its own OAuth app.
  *

@@ -90,7 +90,7 @@ describe("cf auth layer", () => {
 		// CLOUDFLARE_EMAIL pair (with no CLOUDFLARE_API_TOKEN) must NOT count as
 		// "logged in via env". Otherwise logout/login would wrongly bail with
 		// "You are logged in with an API Token" even though cf ignores those creds.
-		vi.stubEnv("CLOUDFLARE_API_KEY", "deadbeef");
+		vi.stubEnv("CLOUDFLARE_API_KEY", "1234567890abcdef1234567890abcdef");
 		vi.stubEnv("CLOUDFLARE_EMAIL", "user@example.com");
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
 

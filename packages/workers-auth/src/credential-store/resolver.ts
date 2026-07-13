@@ -1,7 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
 import { UserError } from "@cloudflare/workers-utils";
 import { getCloudflareAuthUseKeyringFromEnv } from "../env-vars";
-import { TOML_FILE_FORMAT } from "../file-format";
 import {
 	EncryptedFileCredentialStore,
 	getEncryptedAuthConfigFilePath,
@@ -12,7 +11,7 @@ import { PINNED_KEYRING_VERSION } from "./key-providers/lazy-installer";
 import { getResolverSessionFlags } from "./state";
 import type { AuthConfigStorage } from "../config-file/auth";
 import type { OAuthFlowLogger } from "../context";
-import type { FileFormat } from "../file-format";
+import type { FileFormat } from "../core/file-format";
 import type { PlaintextMigrationResult } from "./encrypted-file-store";
 import type { CredentialStore } from "./interface";
 
@@ -123,7 +122,7 @@ export function createCredentialStorageContext(
 	const config = {
 		...context,
 		cliName: context.cliName ?? "your CLI",
-		format: context.format ?? TOML_FILE_FORMAT,
+		format: context.format ?? "toml",
 	};
 
 	function getActiveStore(profile?: string): CredentialStore {
@@ -421,7 +420,7 @@ export function scrubEncryptedCredentials(options: {
 			resolution.provider,
 			undefined,
 			options.profile,
-			options.format ?? TOML_FILE_FORMAT
+			options.format ?? "toml"
 		).clear();
 		return { backendAvailable: true, encryptedFileExisted };
 	}

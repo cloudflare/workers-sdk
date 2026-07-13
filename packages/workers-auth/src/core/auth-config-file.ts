@@ -1,20 +1,20 @@
 import {
-	getAuthConfigFilePath as getAuthConfigFilePathForConfig,
+	getAuthConfigFilePath as getAuthConfigFilePathInternal,
 	getEncryptedAuthConfigFilePath as getEncryptedAuthConfigFilePathForConfig,
 } from "../credential-store";
 import { createFileStorage } from "./file-storage";
 import type { AuthConfigStorage, UserAuthConfig } from "../config-file/auth";
-import type { FileFormat } from "../file-format";
+import type { FileFormat } from "./file-format";
 
 /**
- * The per-product auth-config-file helpers: the profile → on-disk path layout
+ * The per-CLI auth-config-file helpers: the profile → on-disk path layout
  * (plaintext `<profile>.<ext>` + its sibling `.enc`) plus the plaintext
- * profile-file storage primitives, bound to a product's global config directory
+ * profile-file storage primitives, bound to a CLI's global config directory
  * and {@link FileFormat}.
  *
  * The credential-store layer owns the layout but takes the config directory as
  * an argument (the CLI owns where its config lives); this binds it to a
- * specific product and exposes the ergonomic `(profile)` signature. The dir is
+ * specific CLI and exposes the ergonomic `(profile)` signature. The dir is
  * re-resolved on each call so tests re-stubbing `HOME` / `XDG_CONFIG_HOME`
  * point at the right place.
  */
@@ -42,11 +42,7 @@ export function createAuthConfigFileHelpers(deps: {
 	const { getConfigPath, format } = deps;
 
 	function getAuthConfigFilePath(profile?: string): string {
-		return getAuthConfigFilePathForConfig(
-			getConfigPath(),
-			profile,
-			format.extension
-		);
+		return getAuthConfigFilePathInternal(getConfigPath(), profile, format);
 	}
 
 	function getEncryptedAuthConfigFilePath(profile?: string): string {

@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { readFileSync } from "@cloudflare/workers-utils";
-import { TOML_FILE_FORMAT } from "../file-format";
+import { parseFile, stringifyFile } from "../core/file-format";
 import {
 	decryptString,
 	encryptString,
@@ -19,7 +19,7 @@ import {
 	resolveAuthProfileBaseName,
 } from "./file-store";
 import type { UserAuthConfig } from "../config-file/auth";
-import type { FileFormat } from "../file-format";
+import type { FileFormat } from "../core/file-format";
 import type { CredentialStore } from "./interface";
 import type { KeyProvider } from "./key-providers/interface";
 
@@ -102,15 +102,11 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		private readonly keyProvider: KeyProvider,
 		private readonly onPlaintextMigration?: OnPlaintextMigration,
 		private readonly profile?: string,
-		private readonly format: FileFormat = TOML_FILE_FORMAT
+		private readonly format: FileFormat = "toml"
 	) {}
 
 	private plaintextPath(): string {
-		return getAuthConfigFilePath(
-			this.configPath,
-			this.profile,
-			this.format.extension
-		);
+		return getAuthConfigFilePath(this.configPath, this.profile, this.format);
 	}
 
 	read(): UserAuthConfig | undefined {
@@ -134,7 +130,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 
 	write(config: UserAuthConfig): void {
 		const key = this.ensureKey();
-		const plaintext = this.format.stringify(config);
+		const plaintext = stringifyFile(this.format, config);
 		const envelope = encryptString(plaintext, key);
 		const encryptedPath = getEncryptedAuthConfigFilePath(
 			this.configPath,
@@ -234,7 +230,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			return undefined;
 		}
 		try {
-			return this.format.parse(plaintext) as UserAuthConfig;
+			return parseFile(this.format, plaintext) as UserAuthConfig;
 		} catch {
 			// Plaintext decrypted but is not parseable in the expected
 			// format — corrupted.
@@ -253,7 +249,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		const raw = readFileSync(plaintextPath);
 		let plaintext: UserAuthConfig;
 		try {
-			plaintext = this.format.parse(raw) as UserAuthConfig;
+			plaintext = parseFile(this.format, raw) as UserAuthConfig;
 		} catch {
 			// Plaintext file parsed unsuccessfully — bail out rather than
 			// partially migrate. The caller treats this as "not logged

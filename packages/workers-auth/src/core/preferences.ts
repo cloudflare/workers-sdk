@@ -5,7 +5,7 @@ import path from "node:path";
  * Persistent, user-level preferences for the authentication subsystem.
  *
  * Stored as `<global-config-path>/preferences.json` (always JSON, regardless of
- * the product's credential file format). The preference is only consulted when
+ * the CLI's credential file format). The preference is only consulted when
  * the `CLOUDFLARE_AUTH_USE_KEYRING` environment variable is unset.
  */
 export interface UserPreferences {
@@ -24,7 +24,7 @@ export interface Preferences {
 }
 
 /**
- * Build the preferences accessor for a product, bound to its global config
+ * Build the preferences accessor for a CLI, bound to its global config
  * directory. The path is resolved lazily on every call so `runInTempDir()`
  * fixtures (which re-stub `HOME` / `XDG_CONFIG_HOME`) isolate preferences.
  */

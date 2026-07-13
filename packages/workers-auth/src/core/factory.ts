@@ -1,13 +1,13 @@
-// The product-agnostic Cloudflare CLI auth layer.
+// The CLI-agnostic Cloudflare CLI auth layer.
 //
 // This is the auth machinery that previously lived, wrangler-specific, in
-// `packages/wrangler/src/user/user.ts`: OAuth flow wiring (with the product's
+// `packages/wrangler/src/user/user.ts`: OAuth flow wiring (with the CLI's
 // branded consent pages / keyring service name / credential storage), login /
 // logout / refresh, credential resolution, account selection, and the
 // `requireAuth` / `requireApiToken` entry points.
 //
 // Everything that varies between CLIs (wrangler, cf, …) is read from the
-// injected {@link AuthProduct} descriptor — config paths, file format, client
+// injected {@link CliDescriptor} descriptor — config paths, file format, client
 // id, consent pages, redirect URI, keyring service name, CLI name, and copy —
 // so a new CLI is a descriptor rather than a fork of this factory. The only
 // genuine consumer primitives (logger, interactive `prompt` / `select`, and the
@@ -42,7 +42,7 @@ import type {
 	LoginOrRefreshResult,
 	LoginProps,
 } from "../flow";
-import type { AuthContext, AuthProduct } from "./types";
+import type { AuthContext, CliDescriptor } from "./types";
 import type {
 	ApiCredentials,
 	ComplianceConfig,
@@ -169,21 +169,21 @@ function logTemporaryPreviewAccount(
 
 /**
  * Build a Cloudflare CLI's auth layer ({@link CloudflareAuth}) for the given
- * product descriptor and context.
+ * CLI descriptor and context.
  *
  * Creates the credential-storage bundle and the single OAuth flow instance
  * internally, then returns every high-level helper the CLI's commands use.
  */
 export function createCloudflareAuth(
-	product: AuthProduct,
+	descriptor: CliDescriptor,
 	ctx: AuthContext
 ): CloudflareAuth {
 	const { logger } = ctx;
-	const cliName = product.cliName;
+	const cliName = descriptor.cliName;
 	const NOT_LOGGED_IN_ERROR_BODIES = notLoggedInErrorBodies(cliName);
 	const NOT_LOGGED_IN_WHOAMI_TIP = `\nRun \`${cliName} whoami\` to check your current authentication status.`;
 
-	const preferences = createPreferences(product.getConfigPath);
+	const preferences = createPreferences(descriptor.getConfigPath);
 
 	// The config cache is generic file-backed storage owned by
 	// `@cloudflare/workers-utils`; build our own instance bound to the injected
@@ -191,36 +191,38 @@ export function createCloudflareAuth(
 	// login/logout purge (`purgeConfigCaches`) never deletes another's.
 	const configCache = createConfigCache(
 		logger,
-		product.cacheNamespace ? { namespace: product.cacheNamespace } : undefined
+		descriptor.cacheNamespace
+			? { namespace: descriptor.cacheNamespace }
+			: undefined
 	);
 
-	// The product's credential-storage bundle. Plumbs the user-level keyring
+	// The CLI's credential-storage bundle. Plumbs the user-level keyring
 	// opt-in preference into the storage resolver so the OAuth flow's
 	// reads/writes go through whichever store (plaintext or
 	// encrypted-file-with-keyring-key) the user has chosen. Each resolved store
 	// re-resolves the active backend per call, so both profile switches and
 	// runtime preference flips take effect immediately.
 	const credentialStorage = createCredentialStorageContext({
-		serviceName: product.keyringServiceName,
-		getConfigPath: product.getConfigPath,
+		serviceName: descriptor.keyringServiceName,
+		getConfigPath: descriptor.getConfigPath,
 		isKeyringEnabled: () =>
 			preferences.readUserPreferences().keyring_enabled === true,
 		logger,
 		isNonInteractiveOrCI,
 		cliName,
-		format: product.fileFormat,
+		format: descriptor.fileFormat,
 	});
 
-	// The single product-wide OAuth flow instance. `generateAuthUrl` /
+	// The single CLI-wide OAuth flow instance. `generateAuthUrl` /
 	// `generateRandomState` are left to the flow's own defaults (from the shared
 	// core); tests keep deterministic snapshot URLs by normalising the random
 	// `state` / `code_challenge` values rather than mocking these.
 	// Resolved once so the env-credential *presence* check and the env-credential
-	// *resolution* agree. Otherwise a product that disables the global API key
+	// *resolution* agree. Otherwise a CLI that disables the global API key
 	// (e.g. cf) would still treat a bare `CLOUDFLARE_API_KEY`/`CLOUDFLARE_EMAIL`
 	// pair as "logged in via env" and block login/logout, even though its token
 	// resolution ignores those creds.
-	const allowGlobalAuthKey = product.allowGlobalAuthKey ?? true;
+	const allowGlobalAuthKey = descriptor.allowGlobalAuthKey ?? true;
 
 	const oauthFlow = createOAuthFlow({
 		logger,
@@ -229,18 +231,18 @@ export function createCloudflareAuth(
 		hasEnvCredentials: () =>
 			getAuthFromEnv({ allowGlobalAuthKey }) !== undefined,
 		purgeOnLoginOrLogout: configCache.purgeConfigCaches,
-		clientId: product.clientId,
-		consent: product.consent,
-		redirectUri: product.redirectUri,
+		clientId: descriptor.clientId,
+		consent: descriptor.consent,
+		redirectUri: descriptor.redirectUri,
 		storageFactory: credentialStorage.storageFactory,
 		allowGlobalAuthKey,
 		temporary: {
-			// The temporary-preview-account cache is product-owned storage (a
+			// The temporary-preview-account cache is CLI-owned storage (a
 			// file under the global config dir, scoped to the Cloudflare API
 			// environment), so it's built here rather than injected.
 			storage: createFileStorage<TemporaryPreviewAccount>(
-				product.fileFormat,
-				product.getTemporaryAccountConfigPath
+				descriptor.fileFormat,
+				descriptor.getTemporaryAccountConfigPath
 			),
 			prompt: createTemporaryTermsPrompt({ logger, prompt: ctx.prompt }),
 		},
@@ -276,7 +278,7 @@ export function createCloudflareAuth(
 	): LoginProps {
 		return {
 			complianceConfig,
-			scopes: props?.scopes ?? product.getDefaultScopeKeys(),
+			scopes: props?.scopes ?? descriptor.getDefaultScopeKeys(),
 			browser: props?.browser ?? true,
 			callbackHost: props?.callbackHost,
 			callbackPort: props?.callbackPort,
@@ -327,9 +329,9 @@ export function createCloudflareAuth(
 	function getAccountCacheFileName(): string {
 		const profile = oauthFlow.getActiveProfile();
 		if (profile === "default") {
-			return `${product.accountCachePrefix}.json`;
+			return `${descriptor.accountCachePrefix}.json`;
 		}
-		return `${product.accountCachePrefix}-${profile}.json`;
+		return `${descriptor.accountCachePrefix}-${profile}.json`;
 	}
 
 	function saveAccountToCache(account: Account): void {
@@ -431,13 +433,13 @@ export function createCloudflareAuth(
 						`Failed to automatically retrieve account IDs for the logged in user.
 You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
 Check your environment and unset or correct any Cloudflare credential variables, or run \`${cliName} login\` to re-authenticate.
-You can also skip this account check by adding an \`account_id\` in your ${product.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+You can also skip this account check by adding an \`account_id\` in your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 						{ telemetryMessage: "user account fetch permission denied" }
 					);
 				}
 				throw new UserError(
 					`Failed to automatically retrieve account IDs for the logged in user.
-You may have incorrect permissions on your API token, or your authentication may have expired. Try running \`${cliName} login\` to re-authenticate. You can also skip this account check by adding an \`account_id\` in your ${product.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+You may have incorrect permissions on your API token, or your authentication may have expired. Try running \`${cliName} login\` to re-authenticate. You can also skip this account check by adding an \`account_id\` in your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 					{ telemetryMessage: "user account fetch permission denied" }
 				);
 			} else {
@@ -455,7 +457,7 @@ You may have incorrect permissions on your API token, or your authentication may
 		if (usableAccounts.length === 0 && throwOnEmpty) {
 			throw new UserError(
 				`Failed to automatically retrieve account IDs for the logged in user.
-In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${product.getConfigFileLabel()} file.
+In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${descriptor.getConfigFileLabel()} file.
 Alternatively, try running \`${cliName} login\` to re-authenticate.`,
 				{ telemetryMessage: "user account fetch empty" }
 			);
@@ -523,7 +525,7 @@ Alternatively, try running \`${cliName} login\` to re-authenticate.`,
 				const redactAccountName = isCI();
 				throw new UserError(
 					`More than one account available but unable to select one in non-interactive mode.
-Please set the appropriate \`account_id\` in your ${product.getConfigFileLabel()} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
+Please set the appropriate \`account_id\` in your ${descriptor.getConfigFileLabel()} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map(
