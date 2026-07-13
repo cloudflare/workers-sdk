@@ -4,11 +4,7 @@ import {
 	type DevEnvOptions,
 	type ErrorEvent,
 } from "@cloudflare/remote-bindings/internal";
-import {
-	isNonInteractiveOrCI,
-	ParseError,
-	UserError,
-} from "@cloudflare/workers-utils";
+import { ParseError, UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
 import {
 	fetchKVGetValue,
@@ -60,7 +56,6 @@ function initializeDeployHelpers(): void {
 		confirm,
 		prompt,
 		select,
-		isNonInteractiveOrCI,
 	});
 }
 
