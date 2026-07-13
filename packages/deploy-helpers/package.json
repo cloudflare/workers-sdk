@@ -59,6 +59,7 @@
 		"@types/node": "catalog:default",
 		"concurrently": "^8.2.2",
 		"devtools-protocol": "^0.0.1182435",
+		"empathic": "^2.0.0",
 		"esbuild": "catalog:default",
 		"json-diff": "^1.0.6",
 		"ts-dedent": "^2.2.0",

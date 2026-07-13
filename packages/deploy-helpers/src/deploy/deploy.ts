@@ -328,7 +328,9 @@ export default async function deploy(
 		cache: config.cache,
 		package_dependencies:
 			config.dependencies_instrumentation?.enabled !== false && projectRoot
-				? await collectPackageDependencies(projectRoot)
+				? await collectPackageDependencies(projectRoot, {
+						cacheDir: props.cacheDir,
+					})
 				: undefined,
 	};
 

@@ -1,8 +1,10 @@
+import path from "node:path";
 import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
 import {
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
 	getTodaysCompatDate,
+	getWranglerHiddenDirPath,
 	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -92,6 +94,7 @@ async function mergeSharedConfigArgs(
 		experimentalAutoCreate: args.experimentalAutoCreate,
 		accountId,
 		sendMetrics,
+		cacheDir: path.join(getWranglerHiddenDirPath(entry.projectRoot), "cache"),
 		resourcesProvision: getFlag("RESOURCES_PROVISION") ?? false,
 		skipProvisioningConfigWriteback: false,
 		strict: args.strict ?? false,
