@@ -2640,7 +2640,7 @@ importers:
         version: 2.0.0-rc.24
       workerd:
         specifier: catalog:default
-        version: 1.20260708.1
+        version: 1.20260710.1
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
