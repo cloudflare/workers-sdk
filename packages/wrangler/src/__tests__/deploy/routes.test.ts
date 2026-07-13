@@ -1476,7 +1476,8 @@ Update them to point to this script instead?`,
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Some triggers failed to deploy for test-name:
 				  - Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again
-				  - A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/schedules) failed.]
+				  - A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/schedules) failed.
+				    Schedules API failed [code: 10005]]
 			`);
 			// The successful workers.dev subdomain target should still have been
 			// logged before the aggregated error was thrown.

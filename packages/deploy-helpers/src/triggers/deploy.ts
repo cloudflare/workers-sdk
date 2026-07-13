@@ -2,6 +2,7 @@ import {
 	APIError,
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
+	ParseError,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -346,7 +347,7 @@ export async function triggersDeploy(
 	if (errors.length > 0) {
 		throw new UserError(
 			`Some triggers failed to deploy for ${workerName}:\n` +
-				errors.map((error) => `  - ${error.message}`).join("\n"),
+				errors.map((error) => formatTriggerError(error)).join("\n"),
 			{
 				// Preserve the original errors (with stacks and subclass info) for
 				// debugging, while still presenting a single aggregated message.
@@ -360,6 +361,21 @@ export async function triggersDeploy(
 	}
 
 	return targets;
+}
+
+/** Format a single trigger deployment error for the aggregated message. */
+function formatTriggerError(error: Error): string {
+	const base = `  - ${error.message}`;
+	if (error instanceof ParseError && error.notes.length > 0) {
+		// API errors reach this point after fetchResult() has called
+		// throwFetchError(), so notes already include the full API error details.
+		const noteLines = error.notes
+			.flatMap((note) => note.text.split("\n"))
+			.map((line) => `    ${line}`)
+			.join("\n");
+		return `${base}\n${noteLines}`;
+	}
+	return base;
 }
 
 /**
