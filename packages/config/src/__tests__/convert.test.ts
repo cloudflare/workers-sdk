@@ -1,4 +1,5 @@
 import { describe, it } from "vitest";
+import { bindings } from "../bindings";
 import { convertToWranglerConfig } from "../convert";
 import { exports as exportConfig } from "../exports";
 
@@ -207,6 +208,23 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 
+	it("creates draft provisionable bindings with the binding factories", ({
+		expect,
+	}) => {
+		const result = convertToWranglerConfig({
+			...baseConfig,
+			env: {
+				QUEUE: bindings.queue(),
+				DISPATCH: bindings.dispatchNamespace(),
+				FLAGS: bindings.flagship(),
+			},
+		});
+
+		expect(result.queues?.producers).toEqual([{ binding: "QUEUE" }]);
+		expect(result.dispatch_namespaces).toEqual([{ binding: "DISPATCH" }]);
+		expect(result.flagship).toEqual([{ binding: "FLAGS" }]);
+	});
+
 	describe("array bindings", () => {
 		it("maps kv with id", ({ expect }) => {
 			const result = convertToWranglerConfig({
@@ -316,6 +334,14 @@ describe("convertToWranglerConfig", () => {
 			expect(result.flagship).toEqual([{ binding: "F", app_id: "app-1" }]);
 		});
 
+		it("preserves a draft flagship binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { F: { type: "flagship" } },
+			});
+			expect(result.flagship).toEqual([{ binding: "F" }]);
+		});
+
 		it("maps ai-search.name to instance_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
@@ -398,6 +424,14 @@ describe("convertToWranglerConfig", () => {
 					outbound: { service: "out-worker", parameters: ["p1", "p2"] },
 				},
 			]);
+		});
+
+		it("preserves a draft dispatch namespace binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { DN: { type: "dispatch-namespace" } },
+			});
+			expect(result.dispatch_namespaces).toEqual([{ binding: "DN" }]);
 		});
 
 		it("maps secrets-store-secret to store_id + secret_name", ({ expect }) => {
@@ -532,6 +566,14 @@ describe("convertToWranglerConfig", () => {
 			expect(result.queues).toEqual({
 				producers: [{ binding: "Q", queue: "q-1", delivery_delay: 5 }],
 			});
+		});
+
+		it("preserves a draft queue binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { Q: { type: "queue" } },
+			});
+			expect(result.queues).toEqual({ producers: [{ binding: "Q" }] });
 		});
 
 		it("maps durable-object binding to durable_objects.bindings", ({

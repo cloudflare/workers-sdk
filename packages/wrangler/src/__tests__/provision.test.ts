@@ -122,6 +122,320 @@ describe("resource provisioning", () => {
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
 
+	it("auto-provisions Queue, Dispatch Namespace, and Flagship bindings", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			queues: { producers: [{ binding: "QUEUE" }] },
+			dispatch_namespaces: [{ binding: "DISPATCH" }],
+			flagship: [{ binding: "FLAGS" }],
+		});
+		mockGetSettings();
+		msw.use(
+			http.get("*/accounts/:accountId/queues", () =>
+				HttpResponse.json(createFetchResult([]))
+			),
+			http.post("*/accounts/:accountId/queues", async ({ request }) => {
+				expect(await request.json()).toEqual({ queue_name: "test-name-queue" });
+				return HttpResponse.json(
+					createFetchResult({ queue_name: "test-name-queue" })
+				);
+			}),
+			http.get("*/accounts/:accountId/workers/dispatch/namespaces", () =>
+				HttpResponse.json(createFetchResult([]))
+			),
+			http.post(
+				"*/accounts/:accountId/workers/dispatch/namespaces",
+				async ({ request }) => {
+					expect(await request.json()).toEqual({ name: "test-name-dispatch" });
+					return HttpResponse.json(
+						createFetchResult({
+							namespace_id: "dispatch-id",
+							namespace_name: "test-name-dispatch",
+						})
+					);
+				}
+			),
+			http.get("*/accounts/:accountId/flagship/apps", () =>
+				HttpResponse.json(createFetchResult([]))
+			),
+			http.post("*/accounts/:accountId/flagship/apps", async ({ request }) => {
+				expect(await request.json()).toEqual({ name: "test-name-flags" });
+				return HttpResponse.json(
+					createFetchResult({ id: "flagship-id", name: "test-name-flags" })
+				);
+			})
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "QUEUE", type: "queue", queue_name: "test-name-queue" },
+				{
+					name: "DISPATCH",
+					type: "dispatch_namespace",
+					namespace: "test-name-dispatch",
+				},
+				{ name: "FLAGS", type: "flagship", app_id: "flagship-id" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(std.err).toBe("");
+	});
+
+	it("provisions a Queue used by both a producer and consumer", async ({
+		expect,
+	}) => {
+		const queueName = "test-name-queue";
+		let queueCreated = false;
+		writeWranglerConfig({
+			main: "index.js",
+			queues: {
+				producers: [{ binding: "QUEUE" }],
+				consumers: [{ queue: queueName }],
+			},
+		});
+		mockGetSettings();
+		msw.use(
+			http.get("*/accounts/:accountId/queues", () =>
+				HttpResponse.json(
+					createFetchResult(
+						queueCreated
+							? [
+									{
+										queue_id: "queue-id",
+										queue_name: queueName,
+										producers: [],
+										consumers: [],
+										producers_total_count: 0,
+										consumers_total_count: 0,
+										created_on: "",
+										modified_on: "",
+									},
+								]
+							: []
+					)
+				)
+			),
+			http.post("*/accounts/:accountId/queues", () => {
+				queueCreated = true;
+				return HttpResponse.json(
+					createFetchResult({ queue_id: "queue-id", queue_name: queueName })
+				);
+			}),
+			http.post("*/accounts/:accountId/queues/:queueId/consumers", () =>
+				HttpResponse.json(createFetchResult({ consumer_id: "consumer-id" }))
+			)
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "QUEUE", type: "queue", queue_name: queueName },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(queueCreated).toBe(true);
+		expect(std.out).toContain("Producer for test-name-queue");
+		expect(std.out).not.toContain("Producer for undefined");
+		expect(std.err).toBe("");
+	});
+
+	it("can select Queue, Dispatch Namespace, and Flagship resources from later pages", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			queues: { producers: [{ binding: "QUEUE" }] },
+			dispatch_namespaces: [{ binding: "DISPATCH" }],
+			flagship: [{ binding: "FLAGS" }],
+		});
+		mockGetSettings();
+		msw.use(
+			http.get("*/accounts/:accountId/queues", ({ request }) => {
+				const page = new URL(request.url).searchParams.get("page");
+				return HttpResponse.json(
+					createFetchResult(
+						[
+							{
+								queue_name: page === "2" ? "second-queue" : "first-queue",
+							},
+						],
+						true,
+						[],
+						[],
+						{ page: Number(page), per_page: 1, count: 1, total_count: 2 }
+					)
+				);
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/dispatch/namespaces",
+				({ request }) => {
+					const page = new URL(request.url).searchParams.get("page");
+					const name = page === "2" ? "second-dispatch" : "first-dispatch";
+					return HttpResponse.json(
+						createFetchResult(
+							[{ namespace_id: `${name}-id`, namespace_name: name }],
+							true,
+							[],
+							[],
+							{ page: Number(page), per_page: 1, count: 1, total_count: 2 }
+						)
+					);
+				}
+			),
+			http.get("*/accounts/:accountId/flagship/apps", ({ request }) => {
+				const cursor = new URL(request.url).searchParams.get("cursor");
+				const app = cursor
+					? { id: "second-app-id", name: "second-app" }
+					: { id: "first-app-id", name: "first-app" };
+				return HttpResponse.json(
+					createFetchResult(
+						[app],
+						true,
+						[],
+						[],
+						cursor ? { count: 1 } : { count: 1, cursor: "next" }
+					)
+				);
+			})
+		);
+		mockSelect(
+			{
+				text: "Would you like to connect an existing Queue or create a new one?",
+				result: "second-queue",
+			},
+			{
+				text: "Would you like to connect an existing Dispatch Namespace or create a new one?",
+				result: "second-dispatch",
+			},
+			{
+				text: "Would you like to connect an existing Flagship App or create a new one?",
+				result: "second-app-id",
+			}
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "QUEUE", type: "queue", queue_name: "second-queue" },
+				{
+					name: "DISPATCH",
+					type: "dispatch_namespace",
+					namespace: "second-dispatch",
+				},
+				{ name: "FLAGS", type: "flagship", app_id: "second-app-id" },
+			],
+		});
+
+		await runWrangler("deploy --x-auto-create=false");
+
+		expect(std.err).toBe("");
+	});
+
+	it("inherits Queue, Dispatch Namespace, and Flagship bindings", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			queues: { producers: [{ binding: "QUEUE" }] },
+			dispatch_namespaces: [{ binding: "DISPATCH" }],
+			flagship: [{ binding: "FLAGS" }],
+		});
+		mockGetSettings({
+			result: {
+				bindings: [
+					{ type: "queue", name: "QUEUE", queue_name: "existing-queue" },
+					{
+						type: "dispatch_namespace",
+						name: "DISPATCH",
+						namespace: "existing-dispatch",
+					},
+					{ type: "flagship", name: "FLAGS", app_id: "existing-app" },
+				],
+			},
+		});
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "QUEUE", type: "inherit" },
+				{ name: "DISPATCH", type: "inherit" },
+				{ name: "FLAGS", type: "inherit" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(std.err).toBe("");
+	});
+
+	it("preserves Queue and Dispatch Namespace options when reusing deployed resources", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			queues: {
+				producers: [{ binding: "QUEUE", delivery_delay: 5 }],
+			},
+			dispatch_namespaces: [
+				{
+					binding: "DISPATCH",
+					outbound: { service: "outbound-worker", parameters: ["context"] },
+				},
+			],
+		});
+		mockGetSettings({
+			result: {
+				bindings: [
+					{ type: "queue", name: "QUEUE", queue_name: "existing-queue" },
+					{
+						type: "dispatch_namespace",
+						name: "DISPATCH",
+						namespace: "existing-dispatch",
+					},
+				],
+			},
+		});
+		msw.use(
+			http.get("*/accounts/:accountId/queues", () =>
+				HttpResponse.json(createFetchResult([{ queue_name: "existing-queue" }]))
+			),
+			http.get("*/accounts/:accountId/workers/dispatch/namespaces", () =>
+				HttpResponse.json(
+					createFetchResult([
+						{
+							namespace_id: "dispatch-id",
+							namespace_name: "existing-dispatch",
+						},
+					])
+				)
+			)
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					name: "QUEUE",
+					type: "queue",
+					queue_name: "existing-queue",
+					delivery_delay: 5,
+				},
+				{
+					name: "DISPATCH",
+					type: "dispatch_namespace",
+					namespace: "existing-dispatch",
+					outbound: {
+						worker: {
+							service: "outbound-worker",
+						},
+						params: [{ name: "context" }],
+					},
+				},
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(std.err).toBe("");
+	});
+
 	describe("provisions KV, R2 and D1 bindings if not found in worker settings", () => {
 		it("can provision KV, R2 and D1 bindings with existing resources", async ({
 			expect,
@@ -828,6 +1142,53 @@ describe("resource provisioning", () => {
 				"
 			`);
 
+			rmSync(".wrangler/deploy/config.json");
+		});
+
+		it("does not write an injected binding with a cross-type name collision back to redirected config", async ({
+			expect,
+		}) => {
+			writeRedirectedWranglerConfig({
+				main: "../index.js",
+				kv_namespaces: [],
+				r2_buckets: [{ binding: "R2" }],
+				d1_databases: [{ binding: "D1" }],
+				queues: { producers: [{ binding: "KV" }] },
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{ type: "r2_bucket", name: "R2", bucket_name: "r2-name" },
+						{ type: "d1", name: "D1", id: "d1-id" },
+					],
+				},
+			});
+			msw.use(
+				http.get("*/accounts/:accountId/queues", () =>
+					HttpResponse.json(createFetchResult([]))
+				),
+				http.post("*/accounts/:accountId/queues", () =>
+					HttpResponse.json(
+						createFetchResult({
+							queue_id: "queue-id",
+							queue_name: "test-name-kv",
+						})
+					)
+				)
+			);
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{ name: "KV", type: "queue", queue_name: "test-name-kv" },
+					{ name: "R2", type: "inherit" },
+					{ name: "D1", type: "inherit" },
+				],
+			});
+
+			await runWrangler("deploy");
+
+			const userConfig = await readFile("wrangler.toml", "utf-8");
+			expect(userConfig).not.toContain("[queues]");
+			expect(userConfig).not.toContain('binding = "KV"\nqueue');
 			rmSync(".wrangler/deploy/config.json");
 		});
 

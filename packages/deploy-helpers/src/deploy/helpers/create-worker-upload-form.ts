@@ -262,13 +262,26 @@ export function createWorkerUploadForm(
 	});
 
 	queues.forEach(({ binding, queue_name, delivery_delay, raw }) => {
-		metadataBindings.push({
-			type: "queue",
-			name: binding,
-			queue_name,
-			delivery_delay,
-			raw,
-		});
+		if (options?.dryRun) {
+			queue_name ??= INHERIT_SYMBOL;
+		}
+		if (queue_name === undefined) {
+			throw new UserError(`${binding} bindings must have a "queue" field`, {
+				telemetryMessage: "queue binding missing name",
+			});
+		}
+
+		if (queue_name === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				type: "queue",
+				name: binding,
+				queue_name,
+				delivery_delay,
+				raw,
+			});
+		}
 	});
 
 	r2_buckets.forEach(({ binding, bucket_name, jurisdiction, raw }) => {
@@ -433,11 +446,20 @@ export function createWorkerUploadForm(
 	});
 
 	flagship.forEach(({ binding, app_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "flagship",
-			app_id,
-		});
+		if (options?.dryRun) {
+			app_id ??= INHERIT_SYMBOL;
+		}
+		if (app_id === undefined) {
+			throw new UserError(`${binding} bindings must have an "app_id" field`, {
+				telemetryMessage: "flagship binding missing app id",
+			});
+		}
+
+		metadataBindings.push(
+			app_id === INHERIT_SYMBOL
+				? { name: binding, type: "inherit" }
+				: { name: binding, type: "flagship", app_id }
+		);
 	});
 
 	ratelimits.forEach(({ name, namespace_id, simple }) => {
@@ -495,20 +517,33 @@ export function createWorkerUploadForm(
 	});
 
 	dispatch_namespaces.forEach(({ binding, namespace, outbound }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "dispatch_namespace",
-			namespace,
-			...(outbound && {
-				outbound: {
-					worker: {
-						service: outbound.service,
-						environment: outbound.environment,
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`, {
+				telemetryMessage: "dispatch namespace binding missing namespace",
+			});
+		}
+
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "dispatch_namespace",
+				namespace,
+				...(outbound && {
+					outbound: {
+						worker: {
+							service: outbound.service,
+							environment: outbound.environment,
+						},
+						params: outbound.parameters?.map((p) => ({ name: p })),
 					},
-					params: outbound.parameters?.map((p) => ({ name: p })),
-				},
-			}),
-		});
+				}),
+			});
+		}
 	});
 
 	mtls_certificates.forEach(({ binding, certificate_id }) => {
