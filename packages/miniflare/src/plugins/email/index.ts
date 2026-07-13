@@ -3,7 +3,6 @@ import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
-import { CoreSharedOptionsSchema } from "../core";
 import {
 	getUserBindingServiceName,
 	remoteProxyClientWorker,
@@ -83,12 +82,8 @@ export function getEmailPathsToClean(
 	return [getEmailProjectSessionDirectory(defaultProjectTmpPath, tmpPath)];
 }
 
-export const EMAIL_PLUGIN: Plugin<
-	typeof EmailOptionsSchema,
-	typeof CoreSharedOptionsSchema
-> = {
+export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 	options: EmailOptionsSchema,
-	sharedOptions: CoreSharedOptionsSchema,
 	bindingTypeDescription: "Email",
 	getBindings(options): Worker_Binding[] {
 		if (!options.email?.send_email) {
