@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { getBindings } from "@cloudflare/deploy-helpers";
+import { getBindings, syncAssets } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	getBindingTypeFriendlyName,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { getAssetsOptions, syncAssets } from "../assets";
+import { getAssetsOptions } from "../assets";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
 import { getEntry } from "../deployment-bundle/entry";
