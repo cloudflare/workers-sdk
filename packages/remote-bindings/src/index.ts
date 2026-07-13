@@ -1,3 +1,9 @@
+import type { StartDevWorkerInput } from "./internal/dev-env/types";
+import type {
+	RemoteProxySession,
+	StartRemoteProxySessionOptions,
+} from "./session/start-remote-proxy-session";
+
 export {
 	maybeStartOrUpdateRemoteProxySession,
 	pickRemoteBindings,
@@ -6,9 +12,17 @@ export type {
 	MaybeStartOrUpdateRemoteProxySessionOptions,
 	RemoteProxyWorker,
 } from "./session/maybe-start-or-update-session";
-export { startRemoteProxySession } from "./session/start-remote-proxy-session";
 export type {
 	RemoteProxySession,
 	StartRemoteProxySessionOptions,
 } from "./session/start-remote-proxy-session";
 export type { RemoteBindingsLogger } from "./logger";
+
+export async function startRemoteProxySession(
+	bindings: StartDevWorkerInput["bindings"],
+	options?: StartRemoteProxySessionOptions
+): Promise<RemoteProxySession> {
+	const { startRemoteProxySession: startSession } =
+		await import("./session/start-remote-proxy-session");
+	return startSession(bindings, options);
+}

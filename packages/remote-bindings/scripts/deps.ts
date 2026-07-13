@@ -15,4 +15,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Has optional native bindings for performance; externalise it to preserve
 	// the standard runtime resolution used by Wrangler, Vite, and Miniflare.
 	"ws",
+	// Runtime dependency of externalised @cloudflare/deploy-helpers; keep it
+	// resolvable for installed consumers without bundling deploy-helpers.
+	"zod",
 ];

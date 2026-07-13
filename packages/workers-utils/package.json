@@ -38,6 +38,10 @@
 		"./global-wrangler-config-path": {
 			"import": "./dist/global-wrangler-config-path.mjs",
 			"types": "./dist/global-wrangler-config-path.d.mts"
+		},
+		"./binding-local-support": {
+			"import": "./dist/binding-local-support.mjs",
+			"types": "./dist/binding-local-support.d.mts"
 		}
 	},
 	"scripts": {

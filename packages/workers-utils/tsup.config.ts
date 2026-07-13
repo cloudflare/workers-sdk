@@ -14,6 +14,7 @@ export default defineConfig(() => [
 			// pulling in the barrel's CommonJS dependencies.
 			"src/fs-helpers.ts",
 			"src/global-wrangler-config-path.ts",
+			"src/binding-local-support.ts",
 		],
 		platform: "node",
 		format: "esm",

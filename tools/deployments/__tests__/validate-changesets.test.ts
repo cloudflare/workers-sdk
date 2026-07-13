@@ -37,6 +37,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/pages-shared",
 				"@cloudflare/playground-preview-worker",
 				"@cloudflare/quick-edit",
+				"@cloudflare/remote-bindings",
 				"@cloudflare/turbo-r2-archive",
 				"@cloudflare/unenv-preset",
 				"@cloudflare/vite-plugin",

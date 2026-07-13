@@ -45,7 +45,8 @@
 		"@cloudflare/workers-utils": "workspace:*",
 		"devtools-protocol": "0.0.1182435",
 		"undici": "catalog:default",
-		"ws": "catalog:default"
+		"ws": "catalog:default",
+		"zod": "4.4.3"
 	},
 	"devDependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",

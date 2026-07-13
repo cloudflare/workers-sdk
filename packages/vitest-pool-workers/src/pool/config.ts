@@ -1,5 +1,4 @@
 import path from "node:path";
-import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import {
 	formatZodError,
 	getRootPath,
@@ -280,7 +279,7 @@ async function parseCustomPoolOptions(
 							wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 								wranglerConfig
 							) ?? {},
-						complianceRegion: getCloudflareComplianceRegion(wranglerConfig),
+						complianceRegion: wranglerConfig.compliance_region,
 						accountId: wranglerConfig.account_id,
 					},
 					preExistingRemoteProxySessionData ?? null

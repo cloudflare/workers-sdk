@@ -1,6 +1,5 @@
 import assert from "node:assert";
-import { getBindingLocalSupport } from "@cloudflare/workers-utils";
-import { startRemoteProxySession } from "./start-remote-proxy-session";
+import { getBindingLocalSupport } from "@cloudflare/workers-utils/binding-local-support";
 import type { RemoteBindingsLogger } from "../logger";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
 import type {
@@ -9,8 +8,6 @@ import type {
 	CfAccount,
 	Config,
 } from "@cloudflare/workers-utils";
-
-export * from "./start-remote-proxy-session";
 
 export function pickRemoteBindings(
 	bindings: Record<string, Binding>
@@ -57,6 +54,11 @@ export async function maybeStartOrUpdateRemoteProxySession(
 } | null> {
 	const { auth, logger } = options;
 	const remoteBindings = pickRemoteBindings(worker.bindings);
+	const hasRemoteBindings = Object.keys(remoteBindings).length > 0;
+	if (!hasRemoteBindings && !preExistingRemoteProxySessionData?.session) {
+		return null;
+	}
+
 	const authSameAsBefore = deepStrictEqual(
 		auth,
 		preExistingRemoteProxySessionData?.auth
@@ -79,7 +81,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	) {
 		if (remoteProxySession) {
 			await remoteProxySession.updateBindings(remoteBindings);
-		} else if (Object.keys(remoteBindings).length > 0) {
+		} else if (hasRemoteBindings) {
 			remoteProxySession = await startWorkerRemoteProxySession(
 				remoteBindings,
 				worker,
@@ -102,6 +104,8 @@ async function startWorkerRemoteProxySession(
 	auth: AsyncHook<CfAccount> | undefined,
 	logger: RemoteBindingsLogger | undefined
 ): Promise<RemoteProxySession> {
+	const { startRemoteProxySession } =
+		await import("./start-remote-proxy-session");
 	return startRemoteProxySession(remoteBindings, {
 		workerName: worker.name,
 		complianceRegion: worker.complianceRegion,
