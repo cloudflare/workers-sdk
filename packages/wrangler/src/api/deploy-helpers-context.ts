@@ -1,5 +1,4 @@
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
-import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import {
 	fetchKVGetValue,
 	fetchListResult,
@@ -19,6 +18,5 @@ export function initApiDeployHelpersContext(): void {
 		confirm,
 		prompt,
 		select,
-		isNonInteractiveOrCI,
 	});
 }

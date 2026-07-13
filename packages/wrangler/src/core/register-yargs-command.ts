@@ -322,7 +322,6 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						confirm,
 						prompt,
 						select,
-						isNonInteractiveOrCI,
 					});
 
 					const result = await def.handler(args, {

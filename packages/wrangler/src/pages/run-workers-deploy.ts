@@ -1,5 +1,4 @@
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
-import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import {
 	fetchKVGetValue,
 	fetchListResult,
@@ -106,7 +105,6 @@ export async function runPagesToWorkersDeploy(
 				confirm,
 				prompt,
 				select,
-				isNonInteractiveOrCI,
 			});
 
 			await runDeployCommandHandler(deployArgs, {

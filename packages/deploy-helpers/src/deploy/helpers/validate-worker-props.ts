@@ -4,14 +4,10 @@ import {
 	experimental_patchConfig,
 	formatConfigSnippet,
 	getTodaysCompatDate,
+	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
-import {
-	confirm,
-	fetchResult,
-	isNonInteractiveOrCI,
-	logger,
-} from "../../shared/context";
+import { confirm, fetchResult, logger } from "../../shared/context";
 import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";

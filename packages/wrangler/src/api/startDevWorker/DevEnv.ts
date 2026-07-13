@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
 import { ParseError, UserError } from "@cloudflare/workers-utils";
-import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
 import {
 	fetchKVGetValue,
@@ -48,7 +47,6 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			confirm,
 			prompt,
 			select,
-			isNonInteractiveOrCI,
 		});
 
 		const worker = createWorkerObject(this);

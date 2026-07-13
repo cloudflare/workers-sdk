@@ -2,18 +2,14 @@ import {
 	APIError,
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
+	isNonInteractiveOrCI,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-codes";
-import {
-	fetchListResult,
-	fetchResult,
-	isNonInteractiveOrCI,
-	logger,
-} from "../shared/context";
+import { fetchListResult, fetchResult, logger } from "../shared/context";
 import {
 	publishCustomDomains,
 	publishRoutes,

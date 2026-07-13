@@ -1,6 +1,5 @@
 import { PassThrough } from "node:stream";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
-import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { passthrough } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
@@ -26,7 +25,6 @@ initDeployHelpersContext({
 	confirm,
 	prompt,
 	select,
-	isNonInteractiveOrCI,
 });
 
 // In general we don't want the ConfigController to watch the config files
@@ -184,15 +182,16 @@ afterAll(() => msw.close());
 //
 // 2. `isNonInteractiveOrCI` / `isCI` → their CI flag is read from the mockable
 //    `ci-info` below. These live in workers-utils and read `ci-info`, but
-//    workers-utils (and `@cloudflare/workers-auth`, which imports `isCI` from
-//    it) is consumed here as a *bundled* distributable, so its inlined `ci-info`
+//    workers-utils (and the bundled `@cloudflare/workers-auth` /
+//    `@cloudflare/deploy-helpers`, which import these directly from it) is
+//    consumed here as a *bundled* distributable, so its inlined `ci-info`
 //    copy is a separate, unmockable instance that reads the real environment —
 //    in CI that defaults `isNonInteractiveOrCI()` to `true`, silently flipping
 //    every prompt to non-interactive. Overriding these two exports (reusing the
 //    real `isInteractive` for the TTY half) lets the existing
 //    `vi.mocked(ci).isCI = ...` convention keep controlling CI-gated behaviour
-//    for every consumer — wrangler source *and* the bundled workers-auth (since
-//    `@cloudflare/*` is external in its bundle).
+//    for every consumer — wrangler source *and* the bundled workers-auth /
+//    deploy-helpers (since `@cloudflare/*` is external in their bundles).
 vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
 	const actual =
 		await importOriginal<typeof import("@cloudflare/workers-utils")>();

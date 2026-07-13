@@ -1,4 +1,5 @@
-import { confirm, isNonInteractiveOrCI, logger } from "../../shared/context";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { confirm, logger } from "../../shared/context";
 
 export function getDeployConfirmFunction(options: {
 	strictMode?: boolean;
