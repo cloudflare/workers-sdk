@@ -22,7 +22,7 @@ import {
 	staticRedirectsMatcher,
 } from "./utils/rules-engine";
 import type { AssetConfig } from "../../utils/types";
-import type { Analytics } from "./analytics";
+import type { Analytics, ServedBy } from "./analytics";
 import type EntrypointType from "./worker";
 import type { Env } from "./worker";
 
@@ -40,7 +40,8 @@ const getResponseOrAssetIntent = async (
 	request: Request,
 	env: Env,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.unstable_exists
+	exists: typeof EntrypointType.prototype.unstable_exists,
+	analytics?: Analytics
 ): Promise<Response | AssetIntentWithResolver> => {
 	const url = new URL(request.url);
 	const { search } = url;
@@ -54,6 +55,7 @@ const getResponseOrAssetIntent = async (
 		search
 	);
 	if (redirectResult instanceof Response) {
+		analytics?.setData({ servedBy: "redirect" });
 		return redirectResult;
 	}
 	const { proxied, pathname } = redirectResult;
@@ -70,6 +72,7 @@ const getResponseOrAssetIntent = async (
 	if (!intent) {
 		const response = proxied ? new NotFoundResponse() : new NoIntentResponse();
 
+		analytics?.setData({ servedBy: "none" });
 		return env.JAEGER.enterSpan("no_intent", (span) => {
 			span.setTags({
 				decodedPathname,
@@ -84,6 +87,7 @@ const getResponseOrAssetIntent = async (
 
 	const method = request.method.toUpperCase();
 	if (!["GET", "HEAD"].includes(method)) {
+		analytics?.setData({ servedBy: "method-not-allowed" });
 		return env.JAEGER.enterSpan("method_not_allowed", (span) => {
 			span.setTags({
 				method,
@@ -103,6 +107,7 @@ const getResponseOrAssetIntent = async (
 	 * We combine this with other redirects (e.g. for html_handling) to avoid multiple redirects.
 	 */
 	if ((encodedDestination !== pathname && intent.asset) || intent.redirect) {
+		analytics?.setData({ servedBy: "redirect" });
 		return env.JAEGER.enterSpan("redirect", (span) => {
 			span.setTags({
 				originalPath: pathname,
@@ -118,6 +123,7 @@ const getResponseOrAssetIntent = async (
 	}
 
 	if (!intent.asset) {
+		analytics?.setData({ servedBy: "error" });
 		return env.JAEGER.enterSpan("unknown_action", (span) => {
 			span.setTags({
 				pathname,
@@ -165,6 +171,7 @@ const resolveAssetIntentToResponse = async (
 	const weakETag = `W/${strongETag}`;
 	const ifNoneMatch = request.headers.get("If-None-Match") || "";
 	if ([weakETag, strongETag].includes(ifNoneMatch)) {
+		analytics.setData({ servedBy: "not-modified" });
 		return env.JAEGER.enterSpan("matched_etag", (span) => {
 			span.setTags({
 				matchedEtag: ifNoneMatch,
@@ -175,6 +182,9 @@ const resolveAssetIntentToResponse = async (
 		});
 	}
 
+	analytics.setData({
+		servedBy: servedByForResolver(assetIntent.resolver, configuration),
+	});
 	return env.JAEGER.enterSpan("response", (span) => {
 		span.setTags({
 			etag: assetIntent.eTag,
@@ -238,7 +248,8 @@ export const handleRequest = async (
 		request,
 		env,
 		configuration,
-		exists
+		exists,
+		analytics
 	);
 
 	const response =
@@ -257,6 +268,28 @@ export const handleRequest = async (
 };
 
 type Resolver = "html-handling" | "not-found";
+
+function servedByForResolver(
+	resolver: Resolver,
+	configuration: Required<AssetConfig>
+): ServedBy {
+	if (resolver === "html-handling") {
+		return "asset";
+	}
+
+	switch (configuration.not_found_handling) {
+		case "single-page-application":
+			return "spa";
+		case "404-page":
+			return "404-page";
+		case "none":
+			return "none";
+		default:
+			configuration.not_found_handling satisfies never;
+			return "error";
+	}
+}
+
 type Intent =
 	| {
 			asset: AssetIntent;
