@@ -48,7 +48,7 @@ import type {
 	WorkflowBinding,
 	WorkflowInstanceIntrospector,
 	WorkflowIntrospector,
-} from "@cloudflare/workflows-shared/src/types";
+} from "./workflows-introspection-types";
 import type {
 	DispatchFetch,
 	Json,

@@ -1,6 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-
 /**
  * Dependencies that _are not_ bundled along with wrangler
  */
@@ -60,16 +57,14 @@ export const IGNORED_DIST_IMPORTS = [
 	// crypto implementation if installed; falls back to a JS implementation
 	// when missing.
 	"@aws-sdk/signature-v4-crt",
+
+	// ws (bundled transitive dependency) optionally uses these native
+	// acceleration modules if installed; each require is guarded by a
+	// try/catch (and an env flag) and falls back to a JS implementation.
+	"bufferutil",
+	"utf-8-validate",
+
+	// @blitz/internal/env is optionally required inside a try/catch by a
+	// bundled dependency; the failure is swallowed when it is not installed.
+	"@blitz/internal",
 ];
-
-const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
-const packageJson = fs.readFileSync(pathToPackageJson, { encoding: "utf-8" });
-const { dependencies, devDependencies } = JSON.parse(packageJson);
-
-/**
- * Dependencies that _are_ bundled along with wrangler
- */
-export const BUNDLED_DEPENDENCIES = Object.keys({
-	...dependencies,
-	...devDependencies,
-}).filter((dep) => !EXTERNAL_DEPENDENCIES.includes(dep));

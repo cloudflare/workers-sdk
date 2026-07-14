@@ -1,12 +1,6 @@
 import * as mime from "mime";
-import {
-	CacheControl,
-	InternalError,
-	MethodNotAllowedError,
-	NotFoundError,
-	Options,
-} from "./types";
-import type { AssetManifestType } from "./types";
+import { InternalError, MethodNotAllowedError, NotFoundError } from "./types";
+import type { AssetManifestType, CacheControl, Options } from "./types";
 
 const defaultCacheControl: CacheControl = {
 	browserTTL: null,
@@ -344,10 +338,5 @@ const getAssetFromKV = async (
 };
 
 export { getAssetFromKV, mapRequestToAsset, serveSinglePageApp };
-export {
-	Options,
-	CacheControl,
-	MethodNotAllowedError,
-	NotFoundError,
-	InternalError,
-};
+export { MethodNotAllowedError, NotFoundError, InternalError };
+export type { Options, CacheControl };

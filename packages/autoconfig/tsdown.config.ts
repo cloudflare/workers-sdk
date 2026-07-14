@@ -1,0 +1,22 @@
+import { defineConfig } from "tsdown";
+import { EXTERNAL_DEPENDENCIES } from "./scripts/deps.ts";
+
+export default defineConfig({
+	entry: ["src/index.ts"],
+	platform: "node",
+	format: ["esm"],
+	dts: true,
+	outDir: "dist",
+	tsconfig: "tsconfig.json",
+	// This is a `type: module` package whose entry points are published as
+	// `.js`/`.d.ts` (not tsdown's default `.mjs`/`.d.mts`).
+	outExtensions: () => ({ js: ".js", dts: ".d.ts" }),
+	sourcemap: process.env.SOURCEMAPS !== "false",
+	define: {
+		"process.env.NODE_ENV": `'${"production"}'`,
+	},
+	// Enable `__dirname`/`__filename` shims so any inlined CommonJS dependencies
+	// (e.g. `recast`, bundled from `@cloudflare/codemod`) work in the ESM output.
+	shims: true,
+	external: EXTERNAL_DEPENDENCIES,
+});

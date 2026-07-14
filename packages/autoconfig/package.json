@@ -22,9 +22,9 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
-		"dev": "tsup --watch",
+		"dev": "tsdown --watch",
 		"test": "vitest",
 		"test:ci": "vitest run"
 	},
@@ -44,7 +44,7 @@
 		"recast": "0.23.11",
 		"semiver": "^1.1.0",
 		"ts-dedent": "^2.2.0",
-		"tsup": "8.3.0",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},

@@ -78,7 +78,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/cross-spawn": "^6.0.2",
-		"tsdown": "^0.15.9"
+		"tsdown": "catalog:default"
 	},
 	"volta": {
 		"extends": "../../package.json"

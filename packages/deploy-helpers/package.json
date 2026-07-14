@@ -28,10 +28,10 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
-		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
+		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"test": "vitest",
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
@@ -62,7 +62,7 @@
 		"esbuild": "catalog:default",
 		"json-diff": "^1.0.6",
 		"ts-dedent": "^2.2.0",
-		"tsup": "8.3.0",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"zod": "^4.4.3"

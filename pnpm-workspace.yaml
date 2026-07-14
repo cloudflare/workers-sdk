@@ -117,6 +117,7 @@ catalog:
   vite: "8.0.13"
   "ws": "8.21.0"
   esbuild: "0.28.1"
+  tsdown: "0.22.3"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
   "@cloudflare/workers-types": "^5.20260710.1"
