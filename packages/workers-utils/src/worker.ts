@@ -188,7 +188,8 @@ export interface CfDurableObject {
 }
 
 export interface CfWorkflow {
-	name: string;
+	/** The Workflow resource name. Omitted for an export-based cross-script binding. */
+	name?: string;
 	class_name: string;
 	binding: string;
 	script_name?: string;

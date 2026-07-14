@@ -1387,7 +1387,7 @@ async function generatePerEnvironmentTypes(
 
 	function getWorkflowType(workflow: {
 		binding: string;
-		name: string;
+		name?: string;
 		class_name: string;
 		script_name?: string;
 	}): string {
@@ -2740,7 +2740,7 @@ function collectAllWorkflows(
 	args: Partial<(typeof typesCommand)["args"]>
 ): Array<{
 	binding: string;
-	name: string;
+	name?: string;
 	class_name: string;
 	script_name?: string;
 }> {
@@ -2748,7 +2748,7 @@ function collectAllWorkflows(
 		string,
 		{
 			binding: string;
-			name: string;
+			name?: string;
 			class_name: string;
 			script_name?: string;
 		}
@@ -3892,7 +3892,7 @@ function collectWorkflowsPerEnvironment(
 	Array<{
 		binding: string;
 		class_name: string;
-		name: string;
+		name?: string;
 		script_name?: string;
 	}>
 > {
@@ -3901,7 +3901,7 @@ function collectWorkflowsPerEnvironment(
 		Array<{
 			binding: string;
 			class_name: string;
-			name: string;
+			name?: string;
 			script_name?: string;
 		}>
 	>();
@@ -3912,13 +3912,13 @@ function collectWorkflowsPerEnvironment(
 	): Array<{
 		binding: string;
 		class_name: string;
-		name: string;
+		name?: string;
 		script_name?: string;
 	}> {
 		const workflows = new Array<{
 			binding: string;
 			class_name: string;
-			name: string;
+			name?: string;
 			script_name?: string;
 		}>();
 

@@ -2,9 +2,11 @@ import type {
 	Bindings,
 	TypedDurableObjectBinding,
 	TypedWorkerBinding,
+	TypedWorkflowBinding,
 } from "./bindings";
 import type {
 	InferDurableNamespaces,
+	InferExportsByType,
 	InferWorkerName,
 	InferWorkerEntrypointExports,
 } from "./inference";
@@ -31,7 +33,7 @@ const CONFIG = Symbol.for("@cloudflare/config:worker-config");
  */
 export interface WorkerDefinition<
 	TConfig extends UserConfig = UserConfig,
-> extends Pick<Bindings, "durableObject" | "worker"> {
+> extends Pick<Bindings, "durableObject" | "worker" | "workflow"> {
 	[CONFIG]:
 		| TConfig
 		| Promise<TConfig>
@@ -74,14 +76,13 @@ export interface TypedWorkerDefinition<
 		TConfig,
 		TExportName extends string ? TExportName : "default"
 	>;
-	// TODO: re-enable when workflow bindings return.
-	// workflow<
-	// 	TExportName extends InferExportsByType<TConfig, "workflow">,
-	// >(options: {
-	// 	workerName: TWorkerName;
-	// 	exportName: TExportName;
-	// 	remote?: boolean;
-	// }): TypedWorkflowBinding<TConfig, TExportName>;
+	workflow<
+		TExportName extends InferExportsByType<TConfig, "workflow">,
+	>(options: {
+		workerName: TWorkerName;
+		exportName: TExportName;
+		remote?: boolean;
+	}): TypedWorkflowBinding<TConfig, TExportName>;
 }
 
 export type UserConfigExport<T extends UserConfig = UserConfig> =
@@ -104,10 +105,9 @@ export function defineWorker(config: UserConfigExport): WorkerDefinition {
 		worker(options) {
 			return { type: "worker", ...options };
 		},
-		// TODO: re-enable when workflow bindings return.
-		// workflow(options) {
-		// 	return { type: "workflow", ...options };
-		// },
+		workflow(options) {
+			return { type: "workflow", ...options };
+		},
 	};
 }
 

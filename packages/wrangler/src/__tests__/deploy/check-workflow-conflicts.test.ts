@@ -136,6 +136,36 @@ describe("checkWorkflowConflicts", () => {
 		expect(message).toContain("my-worker");
 	});
 
+	it("detects conflicts for declarative Workflow exports", async ({
+		expect,
+	}) => {
+		mockWorkflowGet({
+			"my-workflow": {
+				id: "1",
+				name: "my-workflow",
+				script_name: "other-worker",
+				class_name: "MyWorkflow",
+				created_on: "",
+				modified_on: "",
+			},
+		});
+
+		const result = await checkWorkflowConflicts(
+			{
+				exports: {
+					MyWorkflow: { type: "workflow", name: "my-workflow" },
+				},
+			} as unknown as Config,
+			"some-account-id",
+			"my-worker"
+		);
+
+		expect(result).toMatchObject({
+			hasConflicts: true,
+			conflicts: [{ name: "my-workflow", currentOwner: "other-worker" }],
+		});
+	});
+
 	it("should detect multiple conflicts", async ({ expect }) => {
 		mockWorkflowGet({
 			"workflow-a": {

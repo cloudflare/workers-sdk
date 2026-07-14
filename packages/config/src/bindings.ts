@@ -828,13 +828,12 @@ export interface Bindings {
 	worker(options: WorkerBindingOptions): WorkerBinding;
 	/** Binding to a Worker Loader. */
 	workerLoader(): WorkerLoaderBinding;
-	// TODO: re-enable when workflow bindings return.
-	// /**
-	//  * Create a Workflow binding.
-	//  * `workerName` must match a known config's name (or any `string` for untyped bindings).
-	//  * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
-	//  */
-	// workflow(options: WorkflowBindingOptions): WorkflowBinding;
+	/**
+	 * Create a Workflow binding.
+	 * `workerName` must match a known config's name (or any `string` for untyped bindings).
+	 * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
+	 */
+	workflow(options: WorkflowBindingOptions): WorkflowBinding;
 }
 
 export const bindings = {
@@ -885,6 +884,5 @@ export const bindings = {
 	webSearch: (options) => ({ type: "web-search", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),
 	workerLoader: () => ({ type: "worker-loader" }),
-	// TODO: re-enable when workflow bindings return.
-	// workflow: (options) => ({ type: "workflow", ...options }),
+	workflow: (options) => ({ type: "workflow", ...options }),
 } as Bindings;

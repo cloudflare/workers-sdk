@@ -1,4 +1,4 @@
-import { APIError } from "@cloudflare/workers-utils";
+import { APIError, getWorkflowExports } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../shared/context";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -53,9 +53,18 @@ export async function checkWorkflowConflicts(
 	| { hasConflicts: false }
 	| { hasConflicts: true; conflicts: WorkflowConflict[]; message: string }
 > {
-	const workflowsToDeploy = config.workflows?.filter(
-		(w) => w.script_name === undefined || w.script_name === scriptName
-	);
+	const workflowsToDeploy = [
+		...(config.workflows ?? []).flatMap((workflow) =>
+			(workflow.script_name === undefined ||
+				workflow.script_name === scriptName) &&
+			workflow.name !== undefined
+				? [{ name: workflow.name }]
+				: []
+		),
+		...Object.values(getWorkflowExports(config.exports)).map(({ name }) => ({
+			name,
+		})),
+	];
 
 	if (!workflowsToDeploy?.length) {
 		return { hasConflicts: false };

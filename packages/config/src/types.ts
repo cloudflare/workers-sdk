@@ -43,8 +43,7 @@ import type {
 	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
-	// TODO: re-enable when workflow bindings return.
-	// WorkflowBinding,
+	WorkflowBinding,
 } from "./bindings";
 import type {
 	DurableObjectDeletedExport,
@@ -53,6 +52,7 @@ import type {
 	DurableObjectRenamedExport,
 	DurableObjectTransferredExport,
 	WorkerEntrypointExport,
+	WorkflowExport,
 } from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
@@ -100,9 +100,8 @@ type Binding =
 	| VpcServiceBinding
 	| WebSearchBinding
 	| WorkerBinding
-	| WorkerLoaderBinding;
-// TODO: re-enable when workflow bindings return.
-// | WorkflowBinding;
+	| WorkerLoaderBinding
+	| WorkflowBinding;
 
 /**
  * Union of all trigger definitions accepted in `triggers`.
@@ -120,8 +119,8 @@ type Export =
 	| DurableObjectRenamedExport
 	| DurableObjectTransferredExport
 	| DurableObjectExpectingTransferExport
-	| WorkerEntrypointExport;
-// TODO: support Workflows
+	| WorkerEntrypointExport
+	| WorkflowExport;
 
 /**
  * Worker configuration. This is the input shape passed to

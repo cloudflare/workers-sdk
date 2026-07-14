@@ -2721,6 +2721,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	let isValid = true;
+	const workflowName = hasProperty(value, "name") ? value.name : undefined;
 
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
@@ -2731,14 +2732,18 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (!isRequiredProperty(value, "name", "string")) {
+	const isExportBasedReference =
+		workflowName === undefined &&
+		isRequiredProperty(value, "script_name", "string");
+	if (!isExportBasedReference && !isRequiredProperty(value, "name", "string")) {
 		diagnostics.errors.push(
-			`"${field}" bindings should have a string "name" field but got ${JSON.stringify(
-				value
-			)}.`
+			`"${field}" bindings should have a string "name" field, unless they reference a Workflow export in another Worker with "script_name", but got ${JSON.stringify(value)}.`
 		);
 		isValid = false;
-	} else if (!isValidWorkflowName(value.name)) {
+	} else if (
+		isRequiredProperty(value, "name", "string") &&
+		!isValidWorkflowName(value.name)
+	) {
 		diagnostics.errors.push(
 			`"${field}" binding "name" field is invalid. ${workflowNameFormatMessage}`
 		);
@@ -2773,6 +2778,12 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	if (hasProperty(value, "schedules") && value.schedules !== undefined) {
+		if (isExportBasedReference) {
+			diagnostics.errors.push(
+				`"${field}" export-based bindings cannot configure "schedules". Configure schedules on the owning Workflow export.`
+			);
+			isValid = false;
+		}
 		if (typeof value.schedules === "string") {
 			if (value.schedules.length === 0) {
 				diagnostics.errors.push(
@@ -2812,6 +2823,12 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	if (hasProperty(value, "limits") && value.limits !== undefined) {
+		if (isExportBasedReference) {
+			diagnostics.errors.push(
+				`"${field}" export-based bindings cannot configure "limits". Configure limits on the owning Workflow export.`
+			);
+			isValid = false;
+		}
 		if (
 			typeof value.limits !== "object" ||
 			value.limits === null ||
@@ -6093,6 +6110,92 @@ function validateWorkerExport(
 	return valid;
 }
 
+function validateWorkflowExport(
+	diagnostics: Diagnostics,
+	exportName: string,
+	workflowExport: Record<string, unknown>
+): boolean {
+	let valid = true;
+
+	valid =
+		validateRequiredProperty(
+			diagnostics,
+			`exports.${exportName}`,
+			"name",
+			workflowExport.name,
+			"string"
+		) && valid;
+	if (
+		typeof workflowExport.name === "string" &&
+		!isValidWorkflowName(workflowExport.name)
+	) {
+		diagnostics.errors.push(
+			`"exports.${exportName}.name" is invalid. ${workflowNameFormatMessage}`
+		);
+		valid = false;
+	}
+
+	if (workflowExport.limits !== undefined) {
+		if (
+			typeof workflowExport.limits !== "object" ||
+			workflowExport.limits === null ||
+			Array.isArray(workflowExport.limits)
+		) {
+			diagnostics.errors.push(
+				`"exports.${exportName}.limits" should be an object.`
+			);
+			valid = false;
+		} else {
+			const limits = workflowExport.limits as Record<string, unknown>;
+			if (
+				limits.steps !== undefined &&
+				(typeof limits.steps !== "number" ||
+					!Number.isInteger(limits.steps) ||
+					limits.steps < 1 ||
+					limits.steps > 25_000)
+			) {
+				diagnostics.errors.push(
+					`"exports.${exportName}.limits.steps" must be an integer between 1 and 25000.`
+				);
+				valid = false;
+			}
+			valid =
+				validateAdditionalProperties(
+					diagnostics,
+					`exports.${exportName}.limits`,
+					Object.keys(limits),
+					["steps"]
+				) && valid;
+		}
+	}
+
+	if (workflowExport.schedules !== undefined) {
+		if (
+			!Array.isArray(workflowExport.schedules) ||
+			workflowExport.schedules.length === 0 ||
+			workflowExport.schedules.length > 100 ||
+			!workflowExport.schedules.every(
+				(schedule) => typeof schedule === "string" && schedule.length > 0
+			)
+		) {
+			diagnostics.errors.push(
+				`"exports.${exportName}.schedules" must be an array of 1 to 100 non-empty strings.`
+			);
+			valid = false;
+		}
+	}
+
+	valid =
+		validateAdditionalProperties(
+			diagnostics,
+			`exports.${exportName}`,
+			Object.keys(workflowExport),
+			["type", "name", "limits", "schedules"]
+		) && valid;
+
+	return valid;
+}
+
 function validateWorkerExportCache(
 	diagnostics: Diagnostics,
 	field: string,
@@ -6160,10 +6263,13 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 		} else if (exportConfig.type === "worker") {
 			valid =
 				validateWorkerExport(diagnostics, exportName, exportConfig) && valid;
+		} else if (exportConfig.type === "workflow") {
+			valid =
+				validateWorkflowExport(diagnostics, exportName, exportConfig) && valid;
 		} else {
 			valid = false;
 			diagnostics.errors.push(
-				`"exports.${exportName}.type" must be "durable-object" or "worker", but got ${JSON.stringify(exportConfig.type)}.`
+				`"exports.${exportName}.type" must be "durable-object", "worker", or "workflow", but got ${JSON.stringify(exportConfig.type)}.`
 			);
 		}
 	}

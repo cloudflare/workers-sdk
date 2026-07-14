@@ -8,6 +8,39 @@ import { unstable_getMiniflareWorkerOptions } from "../api";
 describe("unstable_getMiniflareWorkerOptions", () => {
 	runInTempDir();
 
+	it("creates local Workflow options from declarative exports", ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "workflow-worker",
+				main: "./index.js",
+				compatibility_date: "2026-07-14",
+				exports: {
+					MyWorkflow: {
+						type: "workflow",
+						name: "my-workflow",
+						limits: { steps: 25_000 },
+					},
+				},
+			},
+			"./wrangler.json"
+		);
+
+		const { workerOptions } =
+			unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+		expect(workerOptions.workflows).toEqual({
+			MyWorkflow: {
+				name: "my-workflow",
+				className: "MyWorkflow",
+				scriptName: undefined,
+				stepLimit: 25_000,
+				compatibilityFlags: undefined,
+			},
+		});
+	});
+
 	describe("zone derivation (used for the outbound CF-Worker header)", () => {
 		it("derives the zone from a single `route` string", ({ expect }) => {
 			writeWranglerConfig(

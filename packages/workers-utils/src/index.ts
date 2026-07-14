@@ -10,6 +10,10 @@ export * from "./config/environment";
 export { partitionExports } from "./config/exports";
 export type { ExportType, PartitionedExports } from "./config/exports";
 export {
+	getWorkflowExports,
+	hasWorkflowExports,
+} from "./config/workflow-exports";
+export {
 	getDurableObjectExports,
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";

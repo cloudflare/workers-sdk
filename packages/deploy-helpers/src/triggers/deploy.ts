@@ -2,6 +2,7 @@ import {
 	APIError,
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
+	getWorkflowExports,
 	isNonInteractiveOrCI,
 	retryOnAPIFailure,
 	UserError,
@@ -264,6 +265,9 @@ export async function triggersDeploy(
 				}
 				continue;
 			}
+			if (workflow.name === undefined) {
+				continue;
+			}
 
 			deployments.push(
 				fetchResult(
@@ -313,6 +317,48 @@ export async function triggersDeploy(
 				)
 			);
 		}
+	}
+
+	for (const [className, workflow] of Object.entries(
+		getWorkflowExports(config.exports)
+	)) {
+		deployments.push(
+			fetchResult(config, `/accounts/${accountId}/workflows/${workflow.name}`, {
+				method: "PUT",
+				body: JSON.stringify({
+					script_name: scriptName,
+					class_name: className,
+					...(workflow.limits && { limits: workflow.limits }),
+					...(workflow.schedules && {
+						schedules: workflow.schedules.map((cron) => ({ cron })),
+					}),
+				}),
+				headers: { "Content-Type": "application/json" },
+			}).then(
+				() => ({ targets: [`workflow: ${workflow.name}`] }),
+				(error) => {
+					if (
+						error instanceof APIError &&
+						error.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE &&
+						workflow.schedules
+					) {
+						error.preventReport();
+						return {
+							targets: [],
+							error: new UserError(
+								`Workflow "${workflow.name}" has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
+								{
+									cause: error,
+									telemetryMessage:
+										"triggers deploy workflow cron requires paid plan",
+								}
+							),
+						};
+					}
+					return { targets: [], error };
+				}
+			)
+		);
 	}
 
 	const completedDeployments = await Promise.all(deployments);

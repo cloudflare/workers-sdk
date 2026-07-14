@@ -75,7 +75,15 @@ function getWorkerNameToWorkflowEntrypointExportsMap(
 	workers: Worker[]
 ): Map<string, Set<string>> {
 	const workerNameToWorkflowEntrypointExportsMap = new Map(
-		workers.map((worker) => [worker.config.name, new Set<string>()])
+		workers.map((worker) => [
+			worker.config.name,
+			new Set(
+				Object.entries(worker.config.exports ?? {}).flatMap(
+					([exportName, value]) =>
+						value.type === "workflow" ? [exportName] : []
+				)
+			),
+		])
 	);
 
 	for (const worker of workers) {

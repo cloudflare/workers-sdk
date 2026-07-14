@@ -254,7 +254,7 @@ export function createWorkerUploadForm(
 		metadataBindings.push({
 			type: "workflow",
 			name: binding,
-			workflow_name: name,
+			...(name !== undefined && { workflow_name: name }),
 			class_name,
 			script_name,
 			raw,

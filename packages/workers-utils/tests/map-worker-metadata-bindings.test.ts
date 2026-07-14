@@ -550,6 +550,25 @@ describe("mapWorkerMetadataBindings", () => {
 				},
 			]);
 		});
+
+		it("maps an export-based workflow binding", ({ expect }) => {
+			const bindings: WorkerMetadataBinding[] = [
+				{
+					type: "workflow",
+					name: "MY_WORKFLOW",
+					class_name: "MyWorkflow",
+					script_name: "wf-worker",
+				},
+			];
+			const result = mapWorkerMetadataBindings(bindings);
+			expect(result.workflows).toEqual([
+				{
+					binding: "MY_WORKFLOW",
+					class_name: "MyWorkflow",
+					script_name: "wf-worker",
+				},
+			]);
+		});
 	});
 
 	describe("worker_loaders", () => {

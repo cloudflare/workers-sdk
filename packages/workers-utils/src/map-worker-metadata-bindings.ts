@@ -365,7 +365,9 @@ export function mapWorkerMetadataBindings(
 								...(configObj.workflows ?? []),
 								{
 									binding: binding.name,
-									name: binding.workflow_name,
+									...(binding.workflow_name !== undefined && {
+										name: binding.workflow_name,
+									}),
 									class_name: binding.class_name,
 									script_name: binding.script_name,
 								},

@@ -186,13 +186,12 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({ type: z.literal("worker-loader") }),
-	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	workerName: z.string(),
-	// 	exportName: z.string(),
-	// 	remote: z.boolean().optional(),
-	// }),
+	z.strictObject({
+		type: z.literal("workflow"),
+		workerName: z.string(),
+		exportName: z.string(),
+		remote: z.boolean().optional(),
+	}),
 ]);
 
 const UnsafeBindingSchema = z.looseObject({
@@ -321,12 +320,14 @@ const ExportSchema = z.union([
 		type: z.literal("worker"),
 		cache: z.strictObject({ enabled: z.boolean() }).optional(),
 	}),
-	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	name: z.string(),
-	// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	// }),
+	z.strictObject({
+		type: z.literal("workflow"),
+		name: z.string().min(1),
+		limits: z
+			.strictObject({ steps: z.number().int().min(1).max(25_000).optional() })
+			.optional(),
+		schedules: z.array(z.string().min(1)).min(1).max(100).optional(),
+	}),
 ]);
 
 const LimitsSchema = z.strictObject({

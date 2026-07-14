@@ -19,6 +19,7 @@ export async function resolveExportsUploadPayload(
 	// either path, but not both.
 	const exports = {
 		...partitionedExports.worker,
+		...partitionedExports.workflow,
 		...(durableObjectExports ?? {}),
 	};
 

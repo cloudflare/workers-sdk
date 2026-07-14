@@ -543,18 +543,17 @@ function convertBindingsAndAssets(
 				workerLoaders.push({ binding: name });
 				break;
 			}
-			// TODO: re-enable when workflow bindings return.
-			// case "workflow": {
-			// 	workflows.push(
-			// 		omitUndefined({
-			// 			binding: name,
-			// 			class_name: binding.exportName,
-			// 			script_name: binding.workerName,
-			// 			remote: binding.remote,
-			// 		})
-			// 	);
-			// 	break;
-			// }
+			case "workflow": {
+				workflows.push(
+					omitUndefined({
+						binding: name,
+						class_name: binding.exportName,
+						script_name: binding.workerName,
+						remote: binding.remote,
+					})
+				);
+				break;
+			}
 		}
 	}
 
@@ -680,6 +679,10 @@ function convertExports(
 	const unknownExports: typeof exports = {};
 	for (const [exportName, value] of Object.entries(exports)) {
 		if (value.type === "worker") {
+			converted[exportName] = value;
+			continue;
+		}
+		if (value.type === "workflow") {
 			converted[exportName] = value;
 			continue;
 		}
