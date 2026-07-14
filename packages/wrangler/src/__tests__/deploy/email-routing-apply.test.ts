@@ -155,6 +155,28 @@ describe("applyEmailRoutingAddresses", () => {
 		expect(std.err).toBe("");
 	});
 
+	it("reports apply progress in non-interactive output", async ({ expect }) => {
+		setIsTTY(false);
+		mockPlan({
+			zones: [
+				{
+					zone_id: "zone1",
+					zone_name: "example.com",
+					changes: [
+						{ type: "added", target: "one@example.com" },
+						{ type: "added", target: "two@example.com" },
+					],
+				},
+			],
+		});
+		mockRuleWrites(emptyWrites());
+
+		await apply(["one@example.com", "two@example.com"]);
+
+		expect(std.out).toContain("Applying Email Routing changes (0/2, 0%)");
+		expect(std.out).toContain("Applying Email Routing changes (2/2, 100%)");
+	});
+
 	it("resolves the Worker tag from the API when not provided", async ({
 		expect,
 	}) => {
@@ -173,7 +195,7 @@ describe("applyEmailRoutingAddresses", () => {
 		await apply(["support@example.com"], null);
 
 		expect(planBody.body).toMatchObject({ owner_worker_tag: WORKER_TAG });
-		expect(std.out).toContain("Email Routing addresses already up to date.");
+		expect(std.out).toContain("Email Routing rules are up to date.");
 	});
 
 	it("reports when addresses are already up to date", async ({ expect }) => {
@@ -181,7 +203,7 @@ describe("applyEmailRoutingAddresses", () => {
 
 		await apply(["support@example.com"]);
 
-		expect(std.out).toContain("Email Routing addresses already up to date.");
+		expect(std.out).toContain("Email Routing rules are up to date.");
 	});
 
 	it("applies a destructive plan after interactive confirmation", async ({

@@ -1,8 +1,9 @@
 import assert from "node:assert";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { confirm } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
 	createEmailRoutingRule,
@@ -34,6 +35,39 @@ import type { Config } from "@cloudflare/workers-utils";
 const PLAN_RETRY_WORKER_NOT_FOUND_CODE = 2016;
 const PLAN_RETRY_TIMEOUT_MS = 30_000;
 const PLAN_RETRY_DELAY_MS = 3_000;
+const NON_INTERACTIVE_PROGRESS_INTERVAL = 10;
+
+function applyProgressMessage(done: number, total: number): string {
+	return `Applying Email Routing changes (${done}/${total}, ${Math.floor(
+		(done * 100) / total
+	)}%)`;
+}
+
+function startApplyProgress(total: number): {
+	update(done: number): void;
+	stop(): void;
+} {
+	if (isInteractive()) {
+		const progress = spinner();
+		progress.start(applyProgressMessage(0, total));
+
+		return {
+			update: (done) => progress.update(applyProgressMessage(done, total)),
+			stop: () => progress.stop(),
+		};
+	}
+
+	logger.log(applyProgressMessage(0, total));
+
+	return {
+		update(done) {
+			if (done === total || done % NON_INTERACTIVE_PROGRESS_INTERVAL === 0) {
+				logger.log(applyProgressMessage(done, total));
+			}
+		},
+		stop() {},
+	};
+}
 
 function postJson(body: unknown): RequestInit {
 	return {
@@ -208,7 +242,7 @@ export async function applyEmailRoutingAddresses({
 	const plan = await fetchEmailRoutingPlan(config, accountId, request);
 
 	if (!planHasChanges(plan)) {
-		logger.log("Email Routing addresses already up to date.");
+		logger.log("Email Routing rules are up to date.");
 		return;
 	}
 
@@ -242,22 +276,36 @@ export async function applyEmailRoutingAddresses({
 	}
 
 	const failures: string[] = [];
-	for (const zone of plan.zones) {
-		for (const change of zone.changes) {
-			try {
-				await applyChange(
-					config,
-					zone.zone_id,
-					change,
-					scriptName,
-					ownerWorkerTag
-				);
-			} catch (e) {
-				failures.push(
-					`${change.target}: ${e instanceof Error ? e.message : String(e)}`
-				);
+	const totalChanges = plan.zones.reduce(
+		(total, zone) => total + zone.changes.length,
+		0
+	);
+	const progress = startApplyProgress(totalChanges);
+	let completedChanges = 0;
+
+	try {
+		for (const zone of plan.zones) {
+			for (const change of zone.changes) {
+				try {
+					await applyChange(
+						config,
+						zone.zone_id,
+						change,
+						scriptName,
+						ownerWorkerTag
+					);
+				} catch (e) {
+					failures.push(
+						`${change.target}: ${e instanceof Error ? e.message : String(e)}`
+					);
+				} finally {
+					completedChanges++;
+					progress.update(completedChanges);
+				}
 			}
 		}
+	} finally {
+		progress.stop();
 	}
 
 	if (failures.length > 0) {
