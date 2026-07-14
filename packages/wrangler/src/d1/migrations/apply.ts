@@ -1,8 +1,8 @@
 import { configFileName, UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
-import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";

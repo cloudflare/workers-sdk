@@ -105,7 +105,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
@@ -193,7 +193,7 @@ describe("User", () => {
 				Temporary login server listening on 0.0.0.0:8976
 				Note that the OAuth login page will always redirect to \`http://localhost:8976/oauth/callback\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
@@ -239,7 +239,7 @@ describe("User", () => {
 				Temporary login server listening on mylocalhost.local:8976
 				Note that the OAuth login page will always redirect to \`http://localhost:8976/oauth/callback\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
@@ -285,7 +285,7 @@ describe("User", () => {
 				Temporary login server listening on localhost:8787
 				Note that the OAuth login page will always redirect to \`http://localhost:8976/oauth/callback\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthCredentials()).toEqual<UserAuthConfig>({
@@ -327,7 +327,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in."
 			`);
 
@@ -508,7 +508,7 @@ describe("User", () => {
 			// encrypted credential blob lives in a `.enc` file on disk.
 			// (Cleanup of the seam runs in the describe-level `afterEach`.)
 			const { getEncryptedAuthConfigFilePath } =
-				await import("../user/auth-config-file");
+				await import("@cloudflare/workers-auth/wrangler");
 			const keyringStore = new Map<string, Uint8Array>();
 			setKeyProviderFactoryForTesting((serviceName) => ({
 				getKey: () => keyringStore.get(`${serviceName}::default`),
@@ -563,8 +563,9 @@ describe("User", () => {
 			expect,
 		}) => {
 			const { getEncryptedAuthConfigFilePath } =
-				await import("../user/auth-config-file");
-			const { updateUserPreferences } = await import("../user/preferences");
+				await import("@cloudflare/workers-auth/wrangler");
+			const { updateUserPreferences } =
+				await import("@cloudflare/workers-auth/wrangler");
 			const keyringStore = new Map<string, Uint8Array>();
 			setKeyProviderFactoryForTesting((serviceName) => ({
 				getKey: () => keyringStore.get(`${serviceName}::default`),
@@ -646,8 +647,9 @@ describe("User", () => {
 			// and a later session has CLOUDFLARE_AUTH_USE_KEYRING=false in
 			// the shell when running `wrangler login --no-use-keyring`.
 			const { getEncryptedAuthConfigFilePath } =
-				await import("../user/auth-config-file");
-			const { updateUserPreferences } = await import("../user/preferences");
+				await import("@cloudflare/workers-auth/wrangler");
+			const { updateUserPreferences } =
+				await import("@cloudflare/workers-auth/wrangler");
 			const keyringStore = new Map<string, Uint8Array>();
 			setKeyProviderFactoryForTesting((serviceName) => ({
 				getKey: () => keyringStore.get(`${serviceName}::default`),
@@ -726,7 +728,8 @@ describe("User", () => {
 			// command until the user explicitly ran `--no-use-keyring`.
 			// The opt-in path must roll back the persisted preference when
 			// the eager validation surfaces a failure.
-			const { readUserPreferences } = await import("../user/preferences");
+			const { readUserPreferences } =
+				await import("@cloudflare/workers-auth/wrangler");
 
 			// Force the eager validation to throw by giving the test seam
 			// a factory that itself throws when `resolveKeyProvider` calls
@@ -767,7 +770,8 @@ describe("User", () => {
 			// soft-falls-back again, and re-emits the one-time warning
 			// latch until the user runs `--no-use-keyring`. The opt-in
 			// path must detect "got a file store back" and roll back too.
-			const { readUserPreferences } = await import("../user/preferences");
+			const { readUserPreferences } =
+				await import("@cloudflare/workers-auth/wrangler");
 
 			// Force the resolver onto the `unsupported` arm by stubbing
 			// the platform. Unsupported-without-force returns a
@@ -835,8 +839,9 @@ describe("User", () => {
 			// must not appear, and this command's credentials must still
 			// land in the plaintext file (env-var precedence is unchanged).
 			const { getEncryptedAuthConfigFilePath } =
-				await import("../user/auth-config-file");
-			const { readUserPreferences } = await import("../user/preferences");
+				await import("@cloudflare/workers-auth/wrangler");
+			const { readUserPreferences } =
+				await import("@cloudflare/workers-auth/wrangler");
 
 			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "false");
 
@@ -919,7 +924,8 @@ describe("User", () => {
 		it("`auth keyring enable` persists the preference without requiring a login", async ({
 			expect,
 		}) => {
-			const { readUserPreferences } = await import("../user/preferences");
+			const { readUserPreferences } =
+				await import("@cloudflare/workers-auth/wrangler");
 			stubInMemoryKeyring();
 
 			// No OAuth handler is registered for this test: enabling keyring
@@ -936,7 +942,8 @@ describe("User", () => {
 		it("`auth keyring enable` rolls the preference back when the keyring backend is unavailable", async ({
 			expect,
 		}) => {
-			const { readUserPreferences } = await import("../user/preferences");
+			const { readUserPreferences } =
+				await import("@cloudflare/workers-auth/wrangler");
 			// No stub → real resolver; force the unsupported arm.
 			const ORIGINAL_PLATFORM = process.platform;
 			Object.defineProperty(process, "platform", {
@@ -960,9 +967,9 @@ describe("User", () => {
 			expect,
 		}) => {
 			const { getEncryptedAuthConfigFilePath } =
-				await import("../user/auth-config-file");
+				await import("@cloudflare/workers-auth/wrangler");
 			const { readUserPreferences, updateUserPreferences } =
-				await import("../user/preferences");
+				await import("@cloudflare/workers-auth/wrangler");
 			const keyringStore = stubInMemoryKeyring();
 
 			// Seed an encrypted default profile.
@@ -991,8 +998,9 @@ describe("User", () => {
 			// gating the scrub on the persisted preference, otherwise the `.enc`
 			// file + keyring entry are orphaned on disk.
 			const { getEncryptedAuthConfigFilePath } =
-				await import("../user/auth-config-file");
-			const { readUserPreferences } = await import("../user/preferences");
+				await import("@cloudflare/workers-auth/wrangler");
+			const { readUserPreferences } =
+				await import("@cloudflare/workers-auth/wrangler");
 			const keyringStore = stubInMemoryKeyring();
 
 			// Opt in via the env var only — write encrypted credentials without
@@ -1020,7 +1028,8 @@ describe("User", () => {
 		it("`auth keyring` with no action reports the current setting without changing it", async ({
 			expect,
 		}) => {
-			const { readUserPreferences } = await import("../user/preferences");
+			const { readUserPreferences } =
+				await import("@cloudflare/workers-auth/wrangler");
 
 			await runWrangler("auth keyring");
 
@@ -1297,7 +1306,7 @@ describe("User", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 			Successfully logged in."
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);

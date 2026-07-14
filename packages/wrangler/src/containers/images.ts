@@ -3,6 +3,7 @@ import {
 	getCloudflareContainerRegistry,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import {
 	fillOpenAPIConfiguration,
@@ -10,7 +11,6 @@ import {
 } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getOrSelectAccountId } from "../user";
 import { containersScope } from ".";

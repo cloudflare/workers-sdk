@@ -11,6 +11,7 @@ import { PINNED_KEYRING_VERSION } from "./key-providers/lazy-installer";
 import { getResolverSessionFlags } from "./state";
 import type { AuthConfigStorage } from "../config-file/auth";
 import type { OAuthFlowLogger } from "../context";
+import type { FileFormat } from "../core/file-format";
 import type { PlaintextMigrationResult } from "./encrypted-file-store";
 import type { CredentialStore } from "./interface";
 
@@ -59,11 +60,19 @@ export interface CredentialStorageContext {
 	isNonInteractiveOrCI: () => boolean;
 
 	/**
-	 * Consumer's CLI name for error-message templating, e.g. `"wrangler"`.
-	 * Used in hints like ``Run `<cliName> login --use-keyring` …``.
-	 * Defaults to `"your CLI"` when omitted.
+	 * Login command for error-message templating, e.g. `"wrangler login"`.
+	 * Defaults to `"your CLI login"` when omitted.
 	 */
-	cliName?: string;
+	loginCommand?: string;
+
+	/**
+	 * On-disk format of the plaintext credentials file (`.toml` / `.json`).
+	 * Defaults to TOML for wrangler; cf and other CLIs pass JSON. The encrypted
+	 * `.enc` sibling is format-independent (its payload is opaque ciphertext),
+	 * but the format still governs the plaintext file extension and the
+	 * plaintext→encrypted migration read.
+	 */
+	format?: FileFormat;
 }
 
 /**
@@ -111,7 +120,8 @@ export function createCredentialStorageContext(
 ): CredentialStorageBundle {
 	const config = {
 		...context,
-		cliName: context.cliName ?? "your CLI",
+		loginCommand: context.loginCommand ?? "your CLI login",
+		format: context.format ?? "toml",
 	};
 
 	function getActiveStore(profile?: string): CredentialStore {
@@ -143,14 +153,14 @@ function resolveActiveCredentialStore(
 	const configPath = config.getConfigPath();
 
 	if (envOverride === false) {
-		return new FileCredentialStore(configPath, profile);
+		return new FileCredentialStore(configPath, profile, config.format);
 	}
 
 	const forcedByEnvVar = envOverride === true;
 	const wantsKeyring = envOverride ?? config.isKeyringEnabled() ?? false;
 
 	if (!wantsKeyring) {
-		return new FileCredentialStore(configPath, profile);
+		return new FileCredentialStore(configPath, profile, config.format);
 	}
 
 	const resolution = resolveKeyProvider(
@@ -165,7 +175,8 @@ function resolveActiveCredentialStore(
 				configPath,
 				resolution.provider,
 				buildMigrationLogger(config),
-				profile
+				profile,
+				config.format
 			);
 
 		case "needs-install":
@@ -220,7 +231,7 @@ function handleNeedsInstall(
 	}
 
 	if (config.isNonInteractiveOrCI()) {
-		throw new UserError(windowsBindingMissingMessage(config.cliName), {
+		throw new UserError(windowsBindingMissingMessage(config.loginCommand), {
 			telemetryMessage: "workers-auth keyring binding not installed",
 		});
 	}
@@ -249,7 +260,8 @@ function handleNeedsInstall(
 		config.getConfigPath(),
 		resolution.afterInstall(),
 		buildMigrationLogger(config),
-		profile
+		profile,
+		config.format
 	);
 }
 
@@ -265,7 +277,7 @@ function handleUnsupported(
 	// genuinely unsupported platforms (FreeBSD, etc.).
 	const linuxMissingTool = platform === "linux";
 	const message = linuxMissingTool
-		? secretToolMissingMessage(config.cliName)
+		? secretToolMissingMessage(config.loginCommand)
 		: `OS keyring storage is not supported on \`${platform}\`; falling back to the plaintext credentials file.`;
 
 	if (forcedByEnvVar) {
@@ -295,7 +307,11 @@ function handleUnsupported(
 				`${message}\n\nFalling back to the plaintext credentials file for this session.`
 			);
 		}
-		return new FileCredentialStore(config.getConfigPath(), profile);
+		return new FileCredentialStore(
+			config.getConfigPath(),
+			profile,
+			config.format
+		);
 	}
 
 	return fallbackToFileWithWarning(message, config, profile);
@@ -311,10 +327,14 @@ function fallbackToFileWithWarning(
 		flags.hasWarnedAboutKeyringFallback = true;
 		config.logger.warn(message);
 	}
-	return new FileCredentialStore(config.getConfigPath(), profile);
+	return new FileCredentialStore(
+		config.getConfigPath(),
+		profile,
+		config.format
+	);
 }
 
-function secretToolMissingMessage(cliName: string): string {
+function secretToolMissingMessage(loginCommand: string): string {
 	return `\`secret-tool\` is required for OS keyring storage on Linux but is not installed.
 
 Install it via your package manager:
@@ -323,17 +343,17 @@ Install it via your package manager:
   Arch:           sudo pacman -S libsecret
   Alpine:         apk add libsecret
 
-Or disable keyring storage: \`${cliName} login --no-use-keyring\`.`;
+Or disable keyring storage: \`${loginCommand} --no-use-keyring\`.`;
 }
 
-function windowsBindingMissingMessage(cliName: string): string {
+function windowsBindingMissingMessage(loginCommand: string): string {
 	return `\`@napi-rs/keyring\` is required for OS keyring storage on Windows but is not installed.
 
-Run \`${cliName} login --use-keyring\` interactively to install it automatically, or install it globally for CI:
+Run \`${loginCommand} --use-keyring\` interactively to install it automatically, or install it globally for CI:
 
   npm install -g @napi-rs/keyring@${PINNED_KEYRING_VERSION}
 
-Or disable keyring storage: \`${cliName} login --no-use-keyring\`.`;
+Or disable keyring storage: \`${loginCommand} --no-use-keyring\`.`;
 }
 
 /**
@@ -380,6 +400,7 @@ export function scrubEncryptedCredentials(options: {
 	serviceName: string;
 	configPath: string;
 	profile?: string;
+	format?: FileFormat;
 }): ScrubEncryptedCredentialsResult {
 	const encryptedPath = getEncryptedAuthConfigFilePath(
 		options.configPath,
@@ -397,7 +418,8 @@ export function scrubEncryptedCredentials(options: {
 			options.configPath,
 			resolution.provider,
 			undefined,
-			options.profile
+			options.profile,
+			options.format ?? "toml"
 		).clear();
 		return { backendAvailable: true, encryptedFileExisted };
 	}

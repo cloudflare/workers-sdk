@@ -1,11 +1,12 @@
 import assert from "node:assert";
+import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import {
 	getBindingLocalSupport,
 	getCloudflareComplianceRegion,
 } from "@cloudflare/workers-utils";
 import { readConfig } from "../../config";
+import { logger } from "../../logger";
 import { requireApiToken, requireAuth, setProfile } from "../../user";
-import { createWranglerProfileStore } from "../../user/profile-store";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { CfAccount } from "../../dev/create-worker-preview";
@@ -190,7 +191,7 @@ function getAuthHook(
 	config: Pick<Config, "account_id"> | undefined,
 	profileDir: string | undefined
 ): AsyncHook<CfAccount> | undefined {
-	const profile = createWranglerProfileStore().resolve({
+	const profile = createWranglerProfileStore({ logger }).resolve({
 		cwd: profileDir ?? process.cwd(),
 	});
 	setProfile(profile);

@@ -1,4 +1,5 @@
 import { deploy } from "@cloudflare/deploy-helpers";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { analyseBundle } from "../check/commands";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -14,7 +15,6 @@ import {
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { syncWorkersSite } from "../sites";

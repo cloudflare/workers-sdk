@@ -1,3 +1,4 @@
+import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	configFileName,
@@ -5,18 +6,17 @@ import {
 	findWranglerConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { isInteractive } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
 import { readPagesConfig } from "../../config";
 import { getConfigCache } from "../../config-cache";
 import { createCommand, createNamespace } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
-import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import * as metrics from "../../metrics";
 import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
-import { getCloudflareAccountIdFromEnv } from "../../user/auth-variables";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../errors";
