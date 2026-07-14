@@ -1,15 +1,18 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getGlobalConfigPath, parseJSONC } from "@cloudflare/workers-utils";
-import { isInteractive } from "@cloudflare/workers-utils";
-import { detectAgenticEnvironment } from "am-i-vibing";
+import {
+	getGlobalConfigPath,
+	parseJSONC,
+	isInteractive,
+} from "@cloudflare/workers-utils";
 import ci from "ci-info";
 import { install as rosieInstall, agents as rosieAgents } from "rosie-skills";
 import { fetch } from "undici";
 import { confirm } from "./dialogs";
 import { logger } from "./logger";
 import { sendMetricsEvent } from "./metrics";
+import { detectAgent } from "./utils/detect-agent";
 
 /**
  * Options for {@link runSkillsInstallFlow}.
@@ -513,14 +516,14 @@ async function fetchSkillNamesFromGitHub(): Promise<string[] | undefined> {
 type AgentSkillsInstallStatus = "automatic" | "manual" | false | null;
 
 /**
- * Maps an `am-i-vibing` agent ID to its global skills paths (both the rosie
- * install path and any alternative paths the agent natively reads from).
- * This is used by the telemetry function to check whether skills exist on
- * disk without calling `rosie.agents()`, which loads WASM and is too slow
- * for process-startup telemetry.
+ * Maps a detected agent ID (from {@link detectAgent}) to its global skills
+ * paths (both the rosie install path and any alternative paths the agent
+ * natively reads from). This is used by the telemetry function to check
+ * whether skills exist on disk without calling `rosie.agents()`, which
+ * loads WASM and is too slow for process-startup telemetry.
  */
 interface AmIVibingDataMappingEntry {
-	/** `am-i-vibing` provider ID(s) that identify this agent. */
+	/** Agent provider ID(s) as returned by {@link detectAgent}. */
 	amIVibingIds: string[];
 	/**
 	 * Rosie agent metadata.
@@ -543,11 +546,10 @@ interface AmIVibingDataMappingEntry {
 }
 
 /**
- * Static mapping from `am-i-vibing` agent IDs to their global skills paths,
+ * Static mapping from detected agent IDs to their global skills paths,
  * used only for telemetry.
  *
- * The `amIVibingIds` are the provider IDs returned by the `am-i-vibing`
- * package's `detectAgenticEnvironment()` function.
+ * The `amIVibingIds` are the provider IDs returned by {@link detectAgent}.
  *
  * The `rosie.globalPath` values correspond to the `global_path` field from
  * rosie's agent registry, constructed as absolute paths via
@@ -681,13 +683,7 @@ function directoryContainsAnySkill(
  * @returns The {@link AgentSkillsInstallStatus} for the current agent.
  */
 async function computeTelemetryCurrentAgentSkillsInstalled(): Promise<AgentSkillsInstallStatus> {
-	let agentId: string | null = null;
-	try {
-		const detection = detectAgenticEnvironment();
-		agentId = detection.id;
-	} catch {
-		return null;
-	}
+	const agentId = detectAgent().id;
 	if (!agentId) {
 		return null;
 	}
