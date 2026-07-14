@@ -51,7 +51,6 @@ export async function runPagesToWorkersDeploy(
 		routes: undefined,
 		domains: undefined,
 		metafile: undefined,
-		legacyEnv: undefined,
 		logpush: undefined,
 		oldAssetTtl: undefined,
 		dispatchNamespace: undefined,

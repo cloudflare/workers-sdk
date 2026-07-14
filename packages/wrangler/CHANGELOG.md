@@ -1,5 +1,112 @@
 # wrangler
 
+## 4.110.0
+
+### Minor Changes
+
+- [#14591](https://github.com/cloudflare/workers-sdk/pull/14591) [`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Send npm package dependency metadata with worker uploads
+
+  Wrangler now collects npm package dependency information from the project's `package.json` at deploy and version upload time, and includes it in the upload metadata sent to the Cloudflare API. This enables dependency analytics and future features like vulnerability alerting.
+
+  The collected data includes the package name, the version constraint from `package.json`, and the exact installed version from `node_modules`. Both `dependencies` and `devDependencies` are included, while workspace packages, local packages, and unresolvable packages are excluded. The list is capped at 200 entries per upload.
+
+  To opt out, set `dependencies_instrumentation.enabled` to `false` in your Wrangler configuration file:
+
+  ```json
+  {
+    "dependencies_instrumentation": {
+      "enabled": false
+    }
+  }
+  ```
+
+- [#14535](https://github.com/cloudflare/workers-sdk/pull/14535) [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f) Thanks [@Naapperas](https://github.com/Naapperas)! - Support dynamic retry delays for Workflow steps in local dev
+
+  A step's `retries.delay` can now be a function that computes the delay per failed attempt, in addition to a static duration. The function receives `{ ctx, error }` and returns a delay (a number of milliseconds or a duration string like `"30 seconds"`), and its result is fed into the configured `backoff`.
+
+  ```js
+  await step.do(
+    "call flaky API",
+    {
+      retries: {
+        limit: 5,
+        backoff: "constant",
+        delay: ({ ctx }) => ctx.attempt * 1000,
+      },
+    },
+    async () => {
+      /* ... */
+    }
+  );
+  ```
+
+  The function is invoked once per failed attempt with a 5 second timeout. If it throws, times out, or returns an invalid value, the step fails without further retries.
+
+### Patch Changes
+
+- [#14589](https://github.com/cloudflare/workers-sdk/pull/14589) [`7b28392`](https://github.com/cloudflare/workers-sdk/commit/7b2839290a707e7ee22dde17de68116e88f8a2dc) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix runtime type caching when `wrangler dev` auto-regenerates types
+
+  When `dev.generate_types` (or `wrangler dev --types`) regenerated an out-of-date `worker-configuration.d.ts`, the written file omitted the `// Begin runtime types` marker (and the `/* eslint-disable */` header) that `wrangler types` writes. As a result, later runs could not detect the cached runtime types and always regenerated them. The auto-regenerated file now matches `wrangler types` output, restoring the cache.
+
+- Updated dependencies [[`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f)]:
+  - miniflare@4.20260708.1
+
+## 4.109.0
+
+### Minor Changes
+
+- [#14489](https://github.com/cloudflare/workers-sdk/pull/14489) [`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `listDurableObjectIds()` to `createTestHarness` Worker handles
+
+  Tests using `createTestHarness` can now list persisted Durable Object instance IDs for a Durable Object binding. This helps integration tests discover objects created by app behavior without adding test-only endpoints.
+
+- [#14465](https://github.com/cloudflare/workers-sdk/pull/14465) [`2fedb1f`](https://github.com/cloudflare/workers-sdk/commit/2fedb1fc811efb3f7544c569e57383cabd4f14f8) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add rollback support when terminating Workflow instances
+
+  `WorkflowInstance.terminate({ rollback: true })` now runs registered rollback handlers before marking a local Workflow instance as terminated. Wrangler also supports this via `wrangler workflows instances terminate --rollback`, including local mode.
+
+  The rollback option is only sent for terminate operations and is rejected by the Local Explorer API for pause, resume, and restart actions.
+
+- [#14511](https://github.com/cloudflare/workers-sdk/pull/14511) [`17d2fc1`](https://github.com/cloudflare/workers-sdk/commit/17d2fc12989f72a2fcd42e62fb152f270d61ab38) Thanks [@juleslemee](https://github.com/juleslemee)! - Add `wrangler turnstile widget` commands for managing Turnstile widgets
+
+  You can now create, list, inspect, update, and delete Turnstile widgets from the CLI:
+
+  ```
+  wrangler turnstile widget create <name> --domain example.com --mode managed
+  wrangler turnstile widget list
+  wrangler turnstile widget get <sitekey>
+  wrangler turnstile widget update <sitekey> --name "Renamed"
+  wrangler turnstile widget delete <sitekey>
+  ```
+
+  All five subcommands accept `--json` for machine-readable output (`get` prints a formatted view by default; the rest print a short human summary). `--domain` accepts comma-separated values, e.g. `--domain a.com,b.com`. `delete --json` requires `--skip-confirmation`/`-y` to keep output pipeable.
+
+  `create` prints the sitekey, the secret, and the canonical `challenges.cloudflare.com/turnstile/v0/siteverify` endpoint for backend verification. The hint is backend-agnostic; it doesn't assume Workers. The secret is redacted from `list` and `update` output but remains available via `get` for retrieval later. `delete` prompts for confirmation; pass `--skip-confirmation`/`-y` to bypass.
+
+  The OAuth flow now requests the `challenge-widgets.write` scope (the existing Bach-derived scope for Turnstile widget CRUD). Existing OAuth sessions need to run `wrangler login` again to pick it up. API token users need a token with the `Account.Turnstile:Edit` permission.
+
+### Patch Changes
+
+- [#14596](https://github.com/cloudflare/workers-sdk/pull/14596) [`8511ddf`](https://github.com/cloudflare/workers-sdk/commit/8511ddf769a603f49576b8cf632ea330c353001f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20260706.1  | 1.20260708.1  |
+  | @cloudflare/workers-types | ^5.20260706.1 | ^5.20260708.1 |
+
+- [#14604](https://github.com/cloudflare/workers-sdk/pull/14604) [`9f74a5f`](https://github.com/cloudflare/workers-sdk/commit/9f74a5ff4a89e3bf2103e51fa2d66752f26f8217) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Improve the deploy error for cron-triggered Workflows on free plans
+
+  Wrangler now explains that Workflow schedules require a paid Workers plan instead of showing only the generic Workflows API request failure.
+
+- [#14616](https://github.com/cloudflare/workers-sdk/pull/14616) [`c782e2a`](https://github.com/cloudflare/workers-sdk/commit/c782e2a7282bfa27064f62408b691e4936c5f33a) Thanks [@penalosa](https://github.com/penalosa)! - Fix `wrangler deploy` aborting in CI for autoconfigured projects
+
+  A recent change guarded non-interactive deploys against overwriting a same-named Worker whenever there was no config file naming it. This was too broad: a plain `wrangler deploy` run in CI without a config file (for example an autoconfigured project whose generated config PR has not been merged) would fail with "A Worker named ... already exists in your account", even though re-deploying to that Worker is the intended behaviour.
+
+  The guard is now limited to the Pages-to-Workers delegation, where the target name is a Pages project name that must not clobber an unrelated Worker. Plain deploys once again deploy normally.
+
+- Updated dependencies [[`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`8511ddf`](https://github.com/cloudflare/workers-sdk/commit/8511ddf769a603f49576b8cf632ea330c353001f), [`2fedb1f`](https://github.com/cloudflare/workers-sdk/commit/2fedb1fc811efb3f7544c569e57383cabd4f14f8)]:
+  - miniflare@4.20260708.0
+
 ## 4.108.0
 
 ### Minor Changes

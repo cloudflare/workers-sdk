@@ -18,7 +18,6 @@ import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getScriptName } from "../utils/getScriptName";
-import { useServiceEnvironmentApi } from "../utils/useServiceEnvironments";
 import { getEntry } from "./entry";
 import type { HandlerArgs } from "../core/types";
 import type { DeployArgs } from "../deploy/index";
@@ -83,7 +82,6 @@ async function mergeSharedConfigArgs(
 		main: args.script ?? config.main,
 		keepVars: Boolean(args.keepVars || config.keep_vars),
 		isWorkersSite: Boolean(args.site || config.site),
-		useServiceEnvApiPath: useServiceEnvironmentApi(args, config),
 		dryRun,
 		env: args.env,
 		outfile: args.outfile,

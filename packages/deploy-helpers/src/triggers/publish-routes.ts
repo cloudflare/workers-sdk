@@ -94,12 +94,10 @@ export async function publishRoutes(
 	{
 		workerUrl,
 		scriptName,
-		useServiceEnvironments,
 		accountId,
 	}: {
 		workerUrl: string;
 		scriptName: string;
-		useServiceEnvironments: boolean;
 		accountId: string;
 	}
 ): Promise<string[]> {
@@ -122,7 +120,6 @@ export async function publishRoutes(
 			// where the user is logged in via an API token that does not have "All Zones".
 			return await publishRoutesFallback(complianceConfig, routes, {
 				scriptName,
-				useServiceEnvironments,
 				accountId,
 			});
 		} else {
@@ -138,22 +135,8 @@ export async function publishRoutes(
 async function publishRoutesFallback(
 	complianceConfig: ComplianceConfig,
 	routes: Route[],
-	{
-		scriptName,
-		useServiceEnvironments,
-		accountId,
-	}: { scriptName: string; useServiceEnvironments: boolean; accountId: string }
+	{ scriptName, accountId }: { scriptName: string; accountId: string }
 ) {
-	if (useServiceEnvironments) {
-		throw new UserError(
-			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
-				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth",
-			{
-				telemetryMessage:
-					"deploy service environments require all zones permission",
-			}
-		);
-	}
 	logger.info(
 		"The current authentication token does not have 'All Zones' permissions.\n" +
 			"Falling back to using the zone-based API endpoint to update each route individually.\n" +

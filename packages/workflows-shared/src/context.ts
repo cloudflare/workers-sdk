@@ -3,8 +3,14 @@ import { ms } from "itty-time";
 import { INSTANCE_METADATA, InstanceEvent, InstanceStatus } from "./instance";
 import { computeHash } from "./lib/cache";
 import {
+	DEFAULT_RETRY_DELAY_MS,
+	DELAY_FUNCTION_TIMEOUT_MS,
+	invokeDelayFunction,
+} from "./lib/delay";
+import {
 	ABORT_REASONS,
 	InvalidStepReadableStreamError,
+	NonRetryableDelayError,
 	OversizedStreamChunkError,
 	PreservedNonRetryableError,
 	shouldPreserveNonRetryableError,
@@ -14,7 +20,7 @@ import {
 	WorkflowInternalError,
 	WorkflowTimeoutError,
 } from "./lib/errors";
-import { calcRetryDuration } from "./lib/retries";
+import { calcRetryDuration, DelayFunctionError } from "./lib/retries";
 import {
 	parseRollbackOptions,
 	ROLLBACK_CACHE_KEY_PREFIX,
@@ -40,9 +46,14 @@ import type { InstanceMetadata } from "./instance";
 import type { RollbackFn, WorkflowStepRollbackOptions } from "./lib/rollback";
 import type { StreamOutputMeta } from "./lib/streams";
 import type {
+	WorkflowBackoff,
+	WorkflowDelayDuration,
+	WorkflowDelayFunction,
 	WorkflowSleepDuration,
 	WorkflowStepConfig,
 	WorkflowStepEvent,
+	WorkflowStepSensitivity,
+	WorkflowTimeoutDuration,
 } from "cloudflare:workers";
 
 export type Event = {
@@ -51,10 +62,72 @@ export type Event = {
 	type: string;
 };
 
-export type ResolvedStepConfig = Required<
-	Pick<WorkflowStepConfig, "retries" | "timeout">
-> &
-	Pick<WorkflowStepConfig, "sensitive">;
+// Persisted in place of a dynamic delay function (functions can't be
+// serialized); the live function is re-read from the user's step config on each
+// execution.
+const SERIALIZABLE_DELAY_MARKER = "[dynamic]";
+type SerializableDelayMarker = typeof SERIALIZABLE_DELAY_MARKER;
+
+// The persisted, fully-merged config. A dynamic delay is stored as the marker.
+export type ResolvedStepConfig = {
+	retries: {
+		limit: number;
+		delay: WorkflowDelayDuration | SerializableDelayMarker;
+		backoff?: WorkflowBackoff;
+	};
+	timeout: WorkflowTimeoutDuration;
+	sensitive?: WorkflowStepSensitivity;
+};
+
+// The user-facing config (passed to step callbacks). The dynamic-delay marker is
+// never exposed: `delay` is omitted entirely when the delay is a function.
+export type EngineStepConfig = {
+	retries: {
+		limit: number;
+		delay?: WorkflowDelayDuration;
+		backoff?: WorkflowBackoff;
+	};
+	timeout: WorkflowTimeoutDuration;
+	sensitive?: WorkflowStepSensitivity;
+};
+
+export function toEngineStepConfig(
+	config: ResolvedStepConfig
+): EngineStepConfig {
+	const { delay, ...retries } = config.retries;
+	if (
+		typeof delay === "number" ||
+		(typeof delay === "string" && delay !== SERIALIZABLE_DELAY_MARKER)
+	) {
+		return { ...config, retries: { ...retries, delay } };
+	}
+	return { ...config, retries };
+}
+
+// Signal-aware wrapper around the global `scheduler.wait`. `scheduler.wait`
+// can't itself be cancelled, so an aborted signal resolves the returned promise
+// early and the dangling timer becomes a no-op.
+function schedulerWait(
+	durationMs: number,
+	opts?: { signal?: AbortSignal }
+): Promise<void> {
+	return new Promise<void>((resolve) => {
+		const signal = opts?.signal;
+		if (signal?.aborted) {
+			resolve();
+			return;
+		}
+		let done = false;
+		const finish = (): void => {
+			if (!done) {
+				done = true;
+				resolve();
+			}
+		};
+		void scheduler.wait(durationMs).then(finish);
+		signal?.addEventListener("abort", finish, { once: true });
+	});
+}
 
 const defaultConfig: ResolvedStepConfig = {
 	retries: {
@@ -176,7 +249,7 @@ export type WorkflowStepContext = {
 		count: number;
 	};
 	attempt: number;
-	config: ResolvedStepConfig;
+	config: EngineStepConfig;
 };
 
 const PAUSE_DATETIME = "PAUSE_DATETIME";
@@ -351,12 +424,19 @@ export class Context extends RpcTarget {
 			throw error;
 		}
 
+		let liveDelay: WorkflowDelayDuration | WorkflowDelayFunction =
+			stepConfig.retries?.delay ?? DEFAULT_RETRY_DELAY_MS;
+
 		let config: ResolvedStepConfig = {
 			...defaultConfig,
 			...stepConfig,
 			retries: {
 				...defaultConfig.retries,
 				...stepConfig.retries,
+				delay:
+					typeof liveDelay === "function"
+						? SERIALIZABLE_DELAY_MARKER
+						: liveDelay,
 			},
 		};
 
@@ -422,7 +502,7 @@ export class Context extends RpcTarget {
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
-					config: cachedConfig ?? config,
+					config: toEngineStepConfig(cachedConfig ?? config),
 				},
 				output: result,
 				rollbackConfig,
@@ -446,7 +526,7 @@ export class Context extends RpcTarget {
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
-					config: cachedConfig ?? config,
+					config: toEngineStepConfig(cachedConfig ?? config),
 				},
 				output: result,
 				rollbackConfig,
@@ -466,7 +546,7 @@ export class Context extends RpcTarget {
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
-					config: cachedConfig ?? config,
+					config: toEngineStepConfig(cachedConfig ?? config),
 				},
 				rollbackConfig,
 			});
@@ -479,6 +559,14 @@ export class Context extends RpcTarget {
 			await this.#state.storage.put(configKey, config);
 		} else {
 			config = cachedConfig;
+			// Recover the live delay from the (non-serializable) user config: a
+			// persisted marker means the user passed a function, so re-read it.
+			liveDelay =
+				config.retries.delay === SERIALIZABLE_DELAY_MARKER
+					? typeof stepConfig.retries?.delay === "function"
+						? stepConfig.retries.delay
+						: DEFAULT_RETRY_DELAY_MS
+					: config.retries.delay;
 		}
 
 		if (this.#engine.rollbackPhase === "replay" && !isRollback) {
@@ -489,7 +577,7 @@ export class Context extends RpcTarget {
 				stepContext: {
 					step: { name, count },
 					attempt: cachedState?.attemptedCount ?? 1,
-					config,
+					config: toEngineStepConfig(config),
 				},
 				rollbackConfig,
 			});
@@ -556,7 +644,7 @@ export class Context extends RpcTarget {
 			const forwardStepContext = (): WorkflowStepContext => ({
 				step: { name, count },
 				attempt: stepState.attemptedCount,
-				config,
+				config: toEngineStepConfig(config),
 			});
 
 			// NOTE(caio): this might be a stream returning step - if so cleanup stale data from previous lifetimes
@@ -568,7 +656,7 @@ export class Context extends RpcTarget {
 
 			if (stepState.attemptedCount == 0) {
 				this.#engine.writeLog(events.start, cacheKey, stepNameWithCounter, {
-					config,
+					config: toEngineStepConfig(config),
 					...(!isRollback && rollbackFn ? { hasRollback: true } : {}),
 				});
 			} else {
@@ -771,7 +859,7 @@ export class Context extends RpcTarget {
 						doWrapperClosure({
 							step: { name, count },
 							attempt: stepState.attemptedCount,
-							config: structuredClone(config),
+							config: toEngineStepConfig(config),
 						}),
 						timeoutTask,
 					]);
@@ -987,6 +1075,68 @@ export class Context extends RpcTarget {
 					throw error;
 				}
 
+				await this.#state.storage.put(stepStateKey, stepState);
+
+				const willRetry = stepState.attemptedCount <= config.retries.limit;
+				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
+
+				// Resolve the delay once per attempt. A broken delay function turns
+				// the retry into a non-retryable failure.
+				let retryDelayMs: number | undefined;
+				let delayFailure: (Error & UserErrorField) | undefined;
+				if (willRetry) {
+					try {
+						let resolvedDelay: unknown;
+						if (typeof liveDelay === "function") {
+							// Park a default-delayed retry before invoking the user's
+							// delay function so a crash while the function is in flight
+							// still reschedules the step. The PQ table is append-only
+							// with a UNIQUE(action, entryType, hash) constraint, so this
+							// exact entry is reused as the retry entry below — it is
+							// never removed and re-added (that would violate UNIQUE).
+							// @ts-expect-error priorityQueue is initiated in init
+							await this.#engine.priorityQueue.add({
+								hash: priorityQueueHash,
+								targetTimestamp: Date.now() + DEFAULT_RETRY_DELAY_MS,
+								type: "retry",
+							});
+
+							const stepCtx: WorkflowStepContext = {
+								step: { name, count },
+								attempt: stepState.attemptedCount,
+								config: toEngineStepConfig(config),
+							};
+
+							resolvedDelay = await invokeDelayFunction(
+								liveDelay,
+								{ ctx: stepCtx, error },
+								{
+									timeoutMs: DELAY_FUNCTION_TIMEOUT_MS,
+									wait: schedulerWait,
+									signal: this.#engine.engineAbortController.signal,
+								}
+							);
+						} else {
+							resolvedDelay = liveDelay;
+						}
+						retryDelayMs = calcRetryDuration(config, stepState, resolvedDelay);
+					} catch (delayErr) {
+						if (!(delayErr instanceof DelayFunctionError)) {
+							throw delayErr;
+						}
+						// @ts-expect-error priorityQueue is initiated in init
+						this.#engine.priorityQueue.remove({
+							hash: priorityQueueHash,
+							type: "retry",
+						});
+						const userError = new NonRetryableDelayError(
+							`The delay function for step "${stepNameWithCounter}" ${delayErr.message}`
+						) as Error & UserErrorField;
+						userError.isUserError = true;
+						delayFailure = userError;
+					}
+				}
+
 				this.#engine.writeLog(
 					events.attemptFailure,
 					cacheKey,
@@ -999,14 +1149,13 @@ export class Context extends RpcTarget {
 							// TODO (WOR-79): Stacks are all incorrect over RPC and need work
 							// stack: error.stack,
 						},
+						...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
 					}
 				);
 
-				await this.#state.storage.put(stepStateKey, stepState);
-
-				if (stepState.attemptedCount <= config.retries.limit) {
+				if (willRetry && delayFailure === undefined) {
 					// TODO (WOR-71): Think through if every Error should transition
-					const durationMs = calcRetryDuration(config, stepState);
+					const durationMs = retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
 					const disableAllRetryDelays = await this.#state.storage.get(
 						MODIFIER_KEYS.DISABLE_ALL_RETRY_DELAYS
 					);
@@ -1016,13 +1165,29 @@ export class Context extends RpcTarget {
 						disableAllRetryDelays || disableThisRetryDelay;
 					const effectiveDuration = disableRetryDelay ? 0 : durationMs;
 
-					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
-					// @ts-expect-error priorityQueue is initiated in init
-					await this.#engine.priorityQueue.add({
-						hash: priorityQueueHash,
-						targetTimestamp: Date.now() + effectiveDuration,
-						type: "retry",
-					});
+					// A dynamic delay already parked its retry entry under this hash
+					// above (the append-only PQ rejects re-adding the same hash), so
+					// only static delays add here. The live wait below uses
+					// effectiveDuration regardless; the parked entry's timestamp only
+					// drives crash recovery.
+					//
+					// Known trade-off: for a dynamic delay the parked entry keeps the
+					// DEFAULT_RETRY_DELAY_MS placeholder timestamp set before the delay
+					// function ran (see the add above) — the UNIQUE(action, entryType,
+					// hash) constraint means it can't be overwritten in place with the
+					// computed value without a remove+re-add that would violate the
+					// constraint. So if the engine crashes mid-wait, recovery resumes
+					// the step at the placeholder delay rather than the computed one.
+					// This is accepted for local dev: the step still retries with the
+					// correct semantics, only the post-crash wait can be shorter.
+					if (typeof liveDelay !== "function") {
+						// @ts-expect-error priorityQueue is initiated in init
+						await this.#engine.priorityQueue.add({
+							hash: priorityQueueHash,
+							targetTimestamp: Date.now() + effectiveDuration,
+							type: "retry",
+						});
+					}
 					await this.#engine.timeoutHandler.release(this.#engine);
 					// Race retry wait against the pause signal so pause
 					// takes effect immediately during retries
@@ -1086,8 +1251,9 @@ export class Context extends RpcTarget {
 						rollbackConfig,
 					});
 
-					await this.#state.storage.put(errorKey, error);
-					throw error;
+					const finalError = delayFailure ?? error;
+					await this.#state.storage.put(errorKey, finalError);
+					throw finalError;
 				}
 			}
 

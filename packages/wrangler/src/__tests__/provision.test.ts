@@ -1398,18 +1398,6 @@ describe("resource provisioning", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
-
-	it("should error if used with a service environment", async ({ expect }) => {
-		writeWorkerSource();
-		writeWranglerConfig({
-			main: "index.js",
-			legacy_env: false,
-			kv_namespaces: [{ binding: "KV" }],
-		});
-		await expect(runWrangler("deploy --x-auto-create=false")).rejects.toThrow(
-			"Provisioning resources is not supported with a service environment"
-		);
-	});
 });
 
 function mockCreateD1Database(

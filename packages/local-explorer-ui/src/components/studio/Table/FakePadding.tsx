@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from "react";
+import type { JSX, PropsWithChildren } from "react";
 
 type StudioTableFakeBodyPaddingProps = PropsWithChildren<{
 	colCount: number;

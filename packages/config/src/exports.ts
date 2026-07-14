@@ -166,6 +166,16 @@ export interface Exports {
 	durableObject(
 		options: DurableObjectExpectingTransferExportOptions
 	): DurableObjectExpectingTransferExport;
+	// Fallback overload. TypeScript only reaches this when none of the precise
+	// overloads above match, and it reports the last overload's error. Typing the
+	// parameter as the full discriminated union means the reported error keys off
+	// `state` and flags the offending property directly (e.g. "'storage' does not
+	// exist in type 'DurableObjectRenamedExportOptions'"), rather than the
+	// confusing "'renamed' is not assignable to 'expecting-transfer'" you get when
+	// the last precise overload happens to be the storage-bearing one. Valid calls
+	// still resolve to a precise overload above, preserving the literal return
+	// types that downstream inference (e.g. `InferDurableNamespaces`) relies on.
+	durableObject(options: DurableObjectExportOptions): DurableObjectExports;
 
 	/** Declares a WorkerEntrypoint export defined by this Worker. */
 	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
@@ -186,6 +196,11 @@ function durableObject(
 function durableObject(
 	options: DurableObjectExpectingTransferExportOptions
 ): DurableObjectExpectingTransferExport;
+// Fallback overload; see the matching comment in the `Exports` interface for why
+// this union-typed signature exists.
+function durableObject(
+	options: DurableObjectExportOptions
+): DurableObjectExports;
 function durableObject(
 	options: DurableObjectExportOptions
 ): DurableObjectExports {

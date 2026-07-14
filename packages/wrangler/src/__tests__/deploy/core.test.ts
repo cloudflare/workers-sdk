@@ -1721,7 +1721,6 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "some-env",
-				useServiceEnvironments: false,
 			});
 
 			await runWrangler("deploy index.js --env some-env");
@@ -1747,11 +1746,9 @@ describe("deploy", () => {
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					useServiceEnvironments: false,
-				});
+				mockUploadWorkerRequest({});
 
-				await runWrangler("deploy index.js --legacy-env true");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -1775,10 +1772,9 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					env: "some-env",
-					useServiceEnvironments: false,
 				});
 
-				await runWrangler("deploy index.js --env some-env --legacy-env true");
+				await runWrangler("deploy index.js --env some-env");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -1802,10 +1798,9 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					env: "some-env",
-					useServiceEnvironments: false,
 				});
 
-				await runWrangler("deploy index.js --env some-env --legacy-env true");
+				await runWrangler("deploy index.js --env some-env");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -1841,9 +1836,8 @@ describe("deploy", () => {
 				writeWranglerConfig({ env: { "other-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
-				await expect(
-					runWrangler("deploy index.js --env some-env --legacy-env true")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`
+				await expect(runWrangler("deploy index.js --env some-env")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Processing wrangler.toml configuration:
 					  - No environment found in configuration with name "some-env".
 					    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
@@ -1864,80 +1858,8 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({
 					env: "some-env",
 					expectedScriptName: "voyager",
-					useServiceEnvironments: false,
 				});
-				await runWrangler(
-					"deploy index.js --name voyager --env some-env --legacy-env true"
-				);
-			});
-		});
-
-		describe("services", () => {
-			it("uses the script name when no environment is specified", async ({
-				expect,
-			}) => {
-				writeWranglerConfig();
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					useServiceEnvironments: true,
-				});
-
-				await runWrangler("deploy index.js --legacy-env false");
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
-			});
-
-			it("publishes as an environment when provided", async ({ expect }) => {
-				writeWranglerConfig({ env: { "some-env": {} } });
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					env: "some-env",
-					useServiceEnvironments: true,
-					useOldUploadApi: true,
-				});
-
-				await runWrangler("deploy index.js --env some-env --legacy-env false");
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (some-env) (TIMINGS)
-					Deployed test-name (some-env) triggers (TIMINGS)
-					  https://some-env.test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
+				await runWrangler("deploy index.js --name voyager --env some-env");
 			});
 		});
 	});

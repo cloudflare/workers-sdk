@@ -186,7 +186,12 @@ const embedWorkersPlugin = {
 					sourcemap: true,
 					sourcesContent: true,
 					// These virtual modules are provided by workerd at runtime
-					external: ["miniflare:shared", "miniflare:zod", "cloudflare:workers"],
+					external: [
+						"miniflare:shared",
+						"miniflare:zod",
+						"cloudflare:workers",
+						"workerd:unsafe",
+					],
 					metafile: true,
 					entryPoints: [args.path],
 					minifySyntax: true,

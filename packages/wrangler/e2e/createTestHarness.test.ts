@@ -20,6 +20,7 @@ import type {
 	CloudflareWorkersModule,
 	D1Database,
 	DurableObjectNamespace,
+	ExportedHandler,
 	KVNamespace,
 	R2Bucket,
 } from "@cloudflare/workers-types";
@@ -365,6 +366,96 @@ describe("createTestHarness", () => {
 		const adminStub = adminEnv.OBJECT.get(adminEnv.OBJECT.idFromName("shared"));
 		const adminResponse = await adminStub.fetch("http://example.com/");
 		await expect(adminResponse.text()).resolves.toBe("2");
+	});
+
+	it("evicts Durable Objects by class name or binding name", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "do-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"exports": {
+						"Counter": {
+							"type": "durable-object",
+							"storage": "sqlite"
+						}
+					},
+					"durable_objects": {
+						"bindings": [
+							{ "name": "COUNTER", "class_name": "Counter" }
+						]
+					}
+				}
+			`,
+			"src/index.ts": dedent`
+				import { DurableObject } from "cloudflare:workers";
+
+				export class Counter extends DurableObject {
+					memoryCount = 0;
+
+					async fetch() {
+						this.memoryCount += 1;
+						const storageCount = ((await this.ctx.storage.get("count")) ?? 0) + 1;
+						await this.ctx.storage.put("count", storageCount);
+						return Response.json({
+							memoryCount: this.memoryCount,
+							storageCount,
+						});
+					}
+				}
+
+				export default {
+					fetch(_request, _env, ctx) {
+						const id = ctx.exports.Counter.idFromName("user-123");
+						return ctx.exports.Counter.get(id).fetch("http://counter");
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<
+			{ COUNTER: DurableObjectNamespace },
+			{
+				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
+			}
+		>("do-worker");
+
+		const response1 = await worker.fetch("/");
+		expect(await response1.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 1,
+		});
+
+		// Evict by class name
+		await worker.evictDurableObject("Counter", { name: "user-123" });
+
+		const response2 = await worker.fetch("/");
+		expect(await response2.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 2,
+		});
+
+		// Evict by binding name
+		await worker.evictDurableObject("COUNTER", { name: "user-123" });
+
+		const response3 = await worker.fetch("/");
+		expect(await response3.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 3,
+		});
 	});
 
 	it("introspects Workflow instances by binding name", async ({ expect }) => {
@@ -1599,7 +1690,9 @@ describe("createTestHarness", () => {
 		`);
 	});
 
-	it("lists Durable Object ids", async ({ expect }) => {
+	it("lists Durable Object ids by class name or binding name", async ({
+		expect,
+	}) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`
 				{
@@ -1646,9 +1739,14 @@ describe("createTestHarness", () => {
 
 		await server.listen();
 
-		const worker = server.getWorker<{
-			COUNTER: DurableObjectNamespace;
-		}>();
+		const worker = server.getWorker<
+			{ COUNTER: DurableObjectNamespace },
+			{
+				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
+			}
+		>();
 		const env = await worker.getEnv();
 		const firstId = env.COUNTER.idFromName("first").toString();
 		const secondId = env.COUNTER.idFromName("second").toString();
@@ -1664,6 +1762,9 @@ describe("createTestHarness", () => {
 			200
 		);
 
+		await expect(worker.listDurableObjectIds("Counter")).resolves.toEqual(
+			[firstId, secondId].sort()
+		);
 		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual(
 			[firstId, secondId].sort()
 		);

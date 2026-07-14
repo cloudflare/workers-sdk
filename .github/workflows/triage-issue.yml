@@ -1,8 +1,10 @@
-name: Triage New Issue
+name: Triage Issue
 
 on:
   issues:
     types: [opened]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       issue-number:
@@ -12,6 +14,9 @@ on:
 
 permissions:
   contents: read
+  # Writes (comment + labels) are performed with GH_ACCESS_TOKEN (the
+  # workers-devprod bot) so they are attributed to that identity, not
+  # github-actions[bot]. Only read access is needed from the default token.
   issues: read
 
 # Cancel in-progress runs for the same issue
@@ -22,11 +27,19 @@ concurrency:
 jobs:
   triage:
     runs-on: ubuntu-latest
-    # For issue events: skip PRs and bot-created issues. Always run for workflow_dispatch.
+    # Always run for manual dispatch. For issue events, skip PRs and
+    # bot-created issues. For comment events, skip PRs, bot comments, and the
+    # triage bot's own report comment (identified by its marker) to avoid
+    # infinite re-triage loops.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (!github.event.issue.pull_request &&
-      github.event.issue.user.type != 'Bot')
+      (github.event_name == 'issues' &&
+        !github.event.issue.pull_request &&
+        github.event.issue.user.type != 'Bot') ||
+      (github.event_name == 'issue_comment' &&
+        !github.event.issue.pull_request &&
+        github.event.comment.user.type != 'Bot' &&
+        !contains(github.event.comment.body, '<!-- workers-sdk-triage-report -->'))
     timeout-minutes: 60
     steps:
       - name: Resolve issue number
@@ -51,8 +64,12 @@ jobs:
             .github/opencode.json
 
       - name: Install OpenCode
+        # Pin to a known-good version (matches the Bonk workflow). Newer
+        # versions (e.g. 1.17.x) changed the default model to ones that are not
+        # provisioned in our AI Gateway, which surfaced as "Invalid Anthropic
+        # API Key" errors.
         run: |
-          npm install -g opencode-ai
+          npm install -g opencode-ai@1.15.13
           cp .github/opencode.json ./opencode.json
 
       - name: Fetch issue data
@@ -76,7 +93,9 @@ jobs:
           ISSUE: ${{ steps.issue.outputs.number }}
           REPO: ${{ github.repository }}
         run: |
-          opencode run \
+          opencode \
+            --model "cloudflare-ai-gateway/anthropic/claude-opus-4-8" \
+            run \
             --print-logs \
             "Analyze GitHub issue ${REPO}#${ISSUE} using the skill at .github/skills/issue-review.md.
 
@@ -84,8 +103,8 @@ jobs:
           Read it with the read tool and follow the triage process.
 
           Create:
-          - data/${ISSUE}/report.md (full report)
-          - data/${ISSUE}/summary.md (single tab-separated summary line)
+          - data/${ISSUE}/report.md (full markdown report)
+          - data/${ISSUE}/summary.json (structured JSON summary)
           "
 
       - name: Upload report to dashboard
@@ -101,41 +120,32 @@ jobs:
             echo "::error::report.md was not generated"
             exit 1
           fi
-          if [ ! -f "data/${ISSUE}/summary.md" ]; then
-            echo "::error::summary.md was not generated"
+          if [ ! -f "data/${ISSUE}/summary.json" ]; then
+            echo "::error::summary.json was not generated"
             exit 1
           fi
 
-          # Parse the tab-separated summary.md into variables
-          SUMMARY=$(cat "data/${ISSUE}/summary.md")
-          TITLE=$(echo "$SUMMARY" | cut -f2)
-          RECOMMENDATION=$(echo "$SUMMARY" | cut -f3)
-          DIFFICULTY=$(echo "$SUMMARY" | cut -f4)
-          REASONING=$(echo "$SUMMARY" | cut -f5)
-          SUGGESTED_ACTION=$(echo "$SUMMARY" | cut -f6)
-          SUGGESTED_COMMENT=$(echo "$SUMMARY" | cut -f7)
-          REPORT=$(cat "data/${ISSUE}/report.md")
+          # Validate the summary is parseable JSON before doing anything with it.
+          if ! jq empty "data/${ISSUE}/summary.json" 2>/dev/null; then
+            echo "::error::summary.json is not valid JSON"
+            exit 1
+          fi
 
-          # Build JSON payload
-          PAYLOAD=$(jq -n \
-            --arg title "$TITLE" \
+          # Build the dashboard payload from the structured summary + markdown report.
+          # suggestedComment is kept as a "Yes"/"No" string for dashboard compatibility.
+          PAYLOAD=$(jq \
             --arg githubUrl "https://github.com/${REPO}/issues/${ISSUE}" \
-            --arg recommendation "$RECOMMENDATION" \
-            --arg difficulty "$DIFFICULTY" \
-            --arg reasoning "$REASONING" \
-            --arg suggestedAction "$SUGGESTED_ACTION" \
-            --arg suggestedComment "$SUGGESTED_COMMENT" \
-            --arg reportMarkdown "$REPORT" \
+            --rawfile reportMarkdown "data/${ISSUE}/report.md" \
             '{
-              title: $title,
+              title: .title,
               githubUrl: $githubUrl,
-              recommendation: $recommendation,
-              difficulty: $difficulty,
-              reasoning: $reasoning,
-              suggestedAction: $suggestedAction,
-              suggestedComment: $suggestedComment,
+              recommendation: .recommendation,
+              difficulty: .difficulty,
+              reasoning: .reasoning,
+              suggestedAction: .suggestedAction,
+              suggestedComment: (if .hasSuggestedComment then "Yes" else "No" end),
               reportMarkdown: $reportMarkdown
-            }')
+            }' "data/${ISSUE}/summary.json")
 
           # POST to dashboard API
           HTTP_STATUS=$(curl -L --post302 -s -o response.json -w "%{http_code}" \
@@ -154,3 +164,96 @@ jobs:
           fi
 
           echo "Report uploaded for issue #${ISSUE}"
+
+      - name: Build triage comment
+        env:
+          ISSUE: ${{ steps.issue.outputs.number }}
+        run: |
+          {
+            echo "<!-- workers-sdk-triage-report -->"
+            echo "> [!NOTE]"
+            echo "> This is an automated, advisory triage report generated by workers-devprod. It is not an official maintainer response — a maintainer will follow up."
+            echo ""
+            echo "<details>"
+            echo "<summary>🤖 Automated triage report</summary>"
+            echo ""
+            cat "data/${ISSUE}/report.md"
+            echo ""
+            echo "</details>"
+            echo ""
+            echo "<details>"
+            echo "<summary>Structured summary (JSON)</summary>"
+            echo ""
+            echo '```json'
+            cat "data/${ISSUE}/summary.json"
+            echo ""
+            echo '```'
+            echo ""
+            echo "</details>"
+          } > "data/${ISSUE}/comment.md"
+
+      # marocchino/sticky-pull-request-comment only supports PRs (it resolves
+      # the number as a PullRequest), so for issues we implement a "sticky"
+      # upsert with gh: find our previous comment by its marker and edit it,
+      # otherwise create a new one. gh is already used throughout this workflow.
+      - name: Post triage comment
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          ISSUE: ${{ steps.issue.outputs.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          MARKER="<!-- workers-sdk-triage-report -->"
+          BODY_FILE="data/${ISSUE}/comment.md"
+
+          COMMENT_ID=$(gh api --paginate "/repos/${REPO}/issues/${ISSUE}/comments" \
+            --jq "map(select(.body | contains(\"${MARKER}\"))) | .[0].id // empty")
+
+          if [ -n "$COMMENT_ID" ]; then
+            jq -n --rawfile body "$BODY_FILE" '{body: $body}' \
+              | gh api --method PATCH "/repos/${REPO}/issues/comments/${COMMENT_ID}" --input - > /dev/null
+            echo "Updated existing triage comment ${COMMENT_ID}"
+          else
+            gh issue comment "$ISSUE" --repo "$REPO" --body-file "$BODY_FILE"
+            echo "Created new triage comment"
+          fi
+
+      - name: Apply suggested labels
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          ISSUE: ${{ steps.issue.outputs.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          SUMMARY_PATH="data/${ISSUE}/summary.json"
+          if [ ! -f "$SUMMARY_PATH" ]; then
+            echo "No summary.json; skipping label application"
+            exit 0
+          fi
+
+          # suggestedLabels is a JSON array; emit one label per line.
+          jq -r '.suggestedLabels // [] | .[]' "$SUMMARY_PATH" > suggested-labels.txt
+          if [ ! -s suggested-labels.txt ]; then
+            echo "No suggested labels"
+            exit 0
+          fi
+
+          # Only apply labels that actually exist in the repo.
+          gh label list --repo "$REPO" --limit 500 --json name --jq '.[].name' > repo-labels.txt
+
+          ARGS=()
+          while IFS= read -r label; do
+            if [ -z "$label" ]; then
+              continue
+            fi
+            if grep -Fxq "$label" repo-labels.txt; then
+              ARGS+=(--add-label "$label")
+            else
+              echo "Skipping unknown label: ${label}"
+            fi
+          done < suggested-labels.txt
+
+          if [ ${#ARGS[@]} -eq 0 ]; then
+            echo "No valid labels to apply"
+            exit 0
+          fi
+
+          gh issue edit "$ISSUE" --repo "$REPO" "${ARGS[@]}"

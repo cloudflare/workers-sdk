@@ -61,11 +61,6 @@ export const deployCommand = createCommand({
 			type: "string",
 			coerce: (v: string) => (!v ? true : v),
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 		logpush: {
 			type: "boolean",
 			describe:

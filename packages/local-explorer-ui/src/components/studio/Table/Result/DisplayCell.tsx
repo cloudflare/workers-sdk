@@ -1,5 +1,5 @@
 import { cn } from "@cloudflare/kumo";
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useMemo, type JSX } from "react";
 import { createStudioEditableCell } from "./EditableCell";
 import type { StudioTableHeaderProps } from "../BaseTable";
 import type { StudioResultHeaderMetadata } from "../State/Helpers";
