@@ -8,6 +8,8 @@ import {
 } from "@cloudflare/workers-utils";
 import { getHostFromRoute } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
+import chalk from "chalk";
+import dedent from "ts-dedent";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deployment-bundle/resolve-config-args";
@@ -15,6 +17,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
 import { logger } from "./logger";
+import { detectAgent } from "./utils/detect-agent";
 import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -27,6 +30,50 @@ import type {
 } from "@cloudflare/workers-utils";
 import type { EventName } from "chokidar/handler.js";
 import type { Json } from "miniflare";
+
+/**
+ * Builds the epilogue for `wrangler dev --help` when invoked by an AI coding
+ * agent. Describes the Local Explorer REST API endpoints that agents can use
+ * to inspect and modify local dev resources (KV, D1, R2, Durable Objects,
+ * Workflows).
+ *
+ * @returns The epilogue string if an agentic environment is detected, otherwise `undefined`.
+ */
+function getAgentEpilogue(): string | undefined {
+	const detection = detectAgent();
+
+	if (!detection.isAgent) {
+		return undefined;
+	}
+
+	// The epilogue is rendered by yargs at the same indentation level as
+	// OPTIONS and GLOBAL FLAGS, so the lines here must be flush-left after
+	// dedent strips the template's leading whitespace.
+	return (
+		"\n" +
+		chalk.bold("LOCAL EXPLORER API") +
+		"\n" +
+		dedent`
+		Inspect & modify local dev resources via REST.
+		Base URL: http://localhost:<PORT>/cdn-cgi/explorer/api
+		(<PORT> is the dev server's port, usually 8787)
+
+		GET  /api                                        OpenAPI spec (full endpoint reference)
+		GET  /api/local/workers                          List workers and their bindings
+
+		KV:        GET    /api/storage/kv/namespaces              List namespaces
+		           GET    /api/storage/kv/namespaces/:id/keys     List keys
+		D1:        GET    /api/d1/database                        List databases
+		           POST   /api/d1/database/:id/raw                Execute SQL
+		R2:        GET    /api/r2/buckets                         List buckets
+		DO:        GET    /api/workers/durable_objects/namespaces  List namespaces
+		Workflows: GET    /api/workflows                          List workflows
+
+		All responses use the Cloudflare API envelope: { success, errors, messages, result }
+		Retrieve the full OpenAPI spec at GET /cdn-cgi/explorer/api for complete endpoint details.
+	`
+	);
+}
 
 export const dev = createCommand({
 	behaviour: {
@@ -43,6 +90,9 @@ export const dev = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Compute & AI",
+		get epilogue() {
+			return getAgentEpilogue();
+		},
 	},
 	positionalArgs: ["script"],
 	args: {
