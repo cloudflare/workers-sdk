@@ -4,6 +4,7 @@ import {
 	BunPackageManager,
 	FatalError,
 	NpmPackageManager,
+	NubPackageManager,
 	PnpmPackageManager,
 	UserError,
 	YarnPackageManager,
@@ -82,7 +83,10 @@ export async function detectFramework(
 
 	// Convert the package manager detected by @netlify/build-info to our PackageManager type.
 	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
-	const packageManager = convertDetectedPackageManager(project.packageManager);
+	// @netlify/build-info doesn't recognise nub, so prefer its nub.lock when present.
+	const packageManager = existsSync(join(projectPath, "nub.lock"))
+		? NubPackageManager
+		: convertDetectedPackageManager(project.packageManager);
 
 	const lockFileExists = packageManager.lockFiles.some((lockFile) =>
 		existsSync(join(projectPath, lockFile))

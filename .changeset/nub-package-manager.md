@@ -1,8 +1,10 @@
 ---
 "@cloudflare/workers-utils": patch
+"@cloudflare/autoconfig": patch
 "@cloudflare/cli-shared-helpers": patch
+"wrangler": patch
 ---
 
-Add nub to the list of recognised package managers
+Recognise nub as a package manager
 
-Projects using nub can now be automatically detected by their `nub.lock` file, and package installation helpers now support nub alongside npm, pnpm, yarn, and bun.
+wrangler now detects nub — from its `npm_config_user_agent` and an installed `nub` binary — and autoconfig detects nub projects by their `nub.lock`, alongside npm, pnpm, yarn, and bun. Package installation helpers use `nub`/`nubx` accordingly.
