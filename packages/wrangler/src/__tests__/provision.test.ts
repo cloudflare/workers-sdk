@@ -1680,6 +1680,36 @@ describe("resource provisioning", () => {
 		});
 	});
 
+	describe("provisions ai_search_namespace bindings", () => {
+		it("should create an AI Search namespace if it does not exist", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				ai_search_namespaces: [
+					{ binding: "AI_SEARCH", namespace: "my-ai-search-namespace" },
+				],
+			});
+			mockGetSettings();
+			mockGetAISearchNamespace(expect, "my-ai-search-namespace", true);
+			mockCreateAISearchNamespace(expect, "my-ai-search-namespace");
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "AI_SEARCH",
+						type: "ai_search_namespace",
+						namespace: "my-ai-search-namespace",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.out).toContain("env.AI_SEARCH");
+			expect(std.err).toBe("");
+		});
+	});
+
 	describe("provisions agent_memory bindings", () => {
 		beforeEach(() => {
 			writeWranglerConfig({
@@ -1887,6 +1917,47 @@ function mockGetAgentMemoryNamespace(
 						name: namespaceName,
 					})
 				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGetAISearchNamespace(
+	expect: ExpectStatic,
+	namespaceName: string,
+	missing: boolean = false
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/ai-search/namespaces/:namespaceName",
+			({ params }) => {
+				expect(params.namespaceName).toEqual(namespaceName);
+				if (missing) {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10006, message: "namespace not found" },
+						]),
+						{ status: 404 }
+					);
+				}
+				return HttpResponse.json(createFetchResult({ name: namespaceName }));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockCreateAISearchNamespace(
+	expect: ExpectStatic,
+	namespaceName: string
+) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/ai-search/namespaces",
+			async ({ request }) => {
+				expect(await request.json()).toEqual({ name: namespaceName });
+				return HttpResponse.json(createFetchResult({ name: namespaceName }));
 			},
 			{ once: true }
 		)
