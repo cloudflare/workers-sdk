@@ -78,6 +78,7 @@ export interface PluginServicesOptions<
 	additionalModules: Worker_Module[];
 	tmpPath: string;
 	defaultPersistRoot: string | undefined;
+	defaultProjectTmpPath: string | undefined;
 	workerNames: string[];
 	loopbackHost: string;
 	loopbackPort: number;
