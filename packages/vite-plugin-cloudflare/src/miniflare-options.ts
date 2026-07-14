@@ -482,6 +482,10 @@ export async function getDevMiniflareOptions(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
+			defaultProjectTmpPath: path.resolve(
+				resolvedViteConfig.root,
+				".wrangler/tmp"
+			),
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
 				const parsed = await parseModuleFallbackRequest(request);
@@ -764,6 +768,10 @@ export async function getPreviewMiniflareOptions(
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
+			),
+			defaultProjectTmpPath: path.resolve(
+				resolvedViteConfig.root,
+				".wrangler/tmp"
 			),
 			workers,
 		},

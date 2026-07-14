@@ -1,3 +1,4 @@
+import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
@@ -16,6 +17,7 @@ import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
+	getDefaultProjectTmpPath,
 } from "../../../dev/miniflare";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
@@ -320,6 +322,10 @@ async function getMiniflareOptionsFromConfig(args: {
 		: {};
 
 	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
+	const projectRoot = config.userConfigPath
+		? path.dirname(config.userConfigPath)
+		: process.cwd();
+	const defaultProjectTmpPath = getDefaultProjectTmpPath(projectRoot);
 
 	const miniflareOptions: MiniflareOptions = {
 		workers: [
@@ -334,6 +340,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			...externalWorkers,
 		],
 		defaultPersistRoot,
+		defaultProjectTmpPath,
 	};
 
 	return {

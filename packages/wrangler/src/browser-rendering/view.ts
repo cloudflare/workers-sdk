@@ -1,9 +1,9 @@
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { openInBrowser } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
 import { fetchBrowserRendering } from "./utils";
 import type { BrowserSession, BrowserTarget } from "./types";
@@ -236,7 +236,7 @@ export const browserViewCommand = createCommand({
 		} else if (selectedTarget.devtoolsFrontendUrl) {
 			if (shouldOpen) {
 				logger.log(`Opening live browser session "${sessionId}"...`);
-				await openInBrowser(selectedTarget.devtoolsFrontendUrl);
+				await openInBrowser(selectedTarget.devtoolsFrontendUrl, logger);
 			} else {
 				// Print raw URL for piping/scripting
 				logger.log(selectedTarget.devtoolsFrontendUrl);

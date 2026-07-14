@@ -2587,7 +2587,7 @@ This is a random email body.
 		);
 
 		const pathRegexp = new RegExp(
-			"send_email binding called with the following message:\\s*(\\S*)"
+			"send_email binding called with the following message:\\s*\\nEmail: (\\S+)"
 		);
 
 		const maybeReplyPath = await vi.waitUntil(

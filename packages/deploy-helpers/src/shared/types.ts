@@ -44,7 +44,6 @@ export type DeployHelpersContext = {
 			fallbackOption?: number;
 		}
 	) => Promise<Values>;
-	isNonInteractiveOrCI: () => boolean;
 };
 
 /**

@@ -9,6 +9,7 @@ import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
+	getWranglerHiddenDirPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
@@ -69,6 +70,7 @@ type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
 export interface ConfigBundle {
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
+	projectRoot: string;
 	bundle: EsbuildBundle;
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string | undefined;
@@ -1083,6 +1085,10 @@ export function buildMiniflareBindingOptions(
 	};
 }
 
+export function getDefaultProjectTmpPath(projectRoot: string): string {
+	return path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
+}
+
 export function getDefaultPersistRoot(
 	localPersistencePath: ConfigBundle["localPersistencePath"]
 ): string | undefined {
@@ -1143,6 +1149,7 @@ export async function buildMiniflareOptions(
 	}
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
+	const defaultProjectTmpPath = getDefaultProjectTmpPath(config.projectRoot);
 	const assetOptions = buildAssetOptions(config);
 
 	const options: MiniflareOptions = {
@@ -1173,6 +1180,7 @@ export async function buildMiniflareOptions(
 		verbose: logger.loggerLevel === "debug",
 		handleStructuredLogs: config.structuredLogsHandler ?? handleStructuredLogs,
 		defaultPersistRoot,
+		defaultProjectTmpPath,
 		workers: [
 			{
 				name: getName(config),

@@ -1,5 +1,5 @@
+import { drawBox } from "@cloudflare/deploy-helpers";
 import { logger } from "../logger";
-import { drawBox } from "./box";
 import { levenshteinDistance } from "./levenshtein";
 
 /**

@@ -4,16 +4,11 @@ import {
 	experimental_patchConfig,
 	experimental_readRawConfig,
 	INHERIT_SYMBOL,
+	isNonInteractiveOrCI,
 	PatchConfigError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import {
-	fetchResult,
-	isNonInteractiveOrCI,
-	logger,
-	prompt,
-	select,
-} from "../../shared/context";
+import { fetchResult, logger, prompt, select } from "../../shared/context";
 import { printBindings } from "./print-bindings";
 import type {
 	Binding,

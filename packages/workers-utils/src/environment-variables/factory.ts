@@ -90,6 +90,8 @@ type VariableNames =
 	| "WRANGLER_AUTH_URL"
 	/** Custom OAuth client ID (usually auto-configured). */
 	| "WRANGLER_CLIENT_ID"
+	/** Custom OAuth client ID for the `cf` CLI's OAuth app (usually auto-configured). */
+	| "CLOUDFLARE_CLIENT_ID"
 	/** Custom token URL (usually auto-configured). */
 	| "WRANGLER_TOKEN_URL"
 	/** Custom token revocation URL (usually auto-configured). */

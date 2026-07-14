@@ -1,11 +1,11 @@
-import { describe, it } from "vitest";
 import {
 	drawBox,
 	drawConnectedChildBox,
 	stripAnsi,
 	visibleLength,
 	padToVisibleWidth,
-} from "../../utils/box";
+} from "@cloudflare/deploy-helpers";
+import { describe, it } from "vitest";
 
 describe("stripAnsi", () => {
 	it("strips ANSI escape codes", ({ expect }) => {

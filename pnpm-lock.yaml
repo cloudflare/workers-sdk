@@ -1756,6 +1756,10 @@ importers:
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
 
   packages/config:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
@@ -1778,9 +1782,6 @@ importers:
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
 
   packages/containers-shared:
     devDependencies:
@@ -1986,9 +1987,6 @@ importers:
         specifier: catalog:default
         version: 7.28.0
     devDependencies:
-      '@cloudflare/config':
-        specifier: workspace:*
-        version: link:../config
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
@@ -3986,6 +3984,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       msw:
         specifier: catalog:default
         version: 2.12.4(@types/node@22.15.17)(typescript@5.8.3)
@@ -4222,6 +4223,9 @@ importers:
       '@vitest/ui':
         specifier: catalog:default
         version: 4.1.0(vitest@4.1.0)
+      ci-info:
+        specifier: catalog:default
+        version: 4.4.0
       cloudflare:
         specifier: ^5.2.0
         version: 5.2.0(encoding@0.1.13)
@@ -4237,6 +4241,9 @@ importers:
       jsonc-parser:
         specifier: catalog:default
         version: 3.2.0
+      open:
+        specifier: catalog:default
+        version: 11.0.0
       signal-exit:
         specifier: catalog:default
         version: 4.1.0

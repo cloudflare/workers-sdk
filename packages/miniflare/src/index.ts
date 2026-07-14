@@ -38,6 +38,7 @@ import {
 	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
 	getDurableObjectUniqueKey,
+	getEmailPathsToClean,
 	getGlobalServices,
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -1145,6 +1146,33 @@ export class Miniflare {
 			} catch (e) {
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
 			}
+			// Clean up email session directories in the project temp path. When no
+			// project temp path is supplied, these live inside `#tmpPath` and are
+			// already removed above.
+			const emailPaths = getEmailPathsToClean(
+				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#tmpPath
+			);
+			if (emailPaths) {
+				try {
+					removeDirSync(emailPaths.sessionDir);
+				} catch (e) {
+					this.#log.debug(
+						`Unable to remove email session directory: ${String(e)}`
+					);
+				}
+				// Check if parent directory is now empty and remove it
+				try {
+					const entries = fs.readdirSync(emailPaths.parentDir);
+					if (entries.length === 0) {
+						removeDirSync(emailPaths.parentDir);
+					}
+				} catch (e) {
+					this.#log.debug(
+						`Unable to check/remove email parent directory: ${String(e)}`
+					);
+				}
+			}
 			// Unregister all workers from the dev registry. Note that dispose()
 			// does synchronous cleanup (unregistering workers) then returns a
 			// Promise for async cleanup (closing watcher, terminating proxy).
@@ -2149,6 +2177,7 @@ export class Miniflare {
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				defaultPersistRoot: sharedOpts.core.defaultPersistRoot,
+				defaultProjectTmpPath: sharedOpts.core.defaultProjectTmpPath,
 				workerNames,
 				loopbackHost,
 				loopbackPort,
@@ -3362,6 +3391,35 @@ export class Miniflare {
 			// immediately after disposal, causing EBUSY errors. The temp directory
 			// lives in os.tmpdir() so the OS will clean it up eventually.
 			removeDir(this.#tmpPath, { fireAndForget: true });
+			// Clean up email session directories in the project temp path. When no
+			// project temp path is supplied, these live inside `#tmpPath` and are
+			// already removed above.
+			const emailPaths = getEmailPathsToClean(
+				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#tmpPath
+			);
+			if (emailPaths) {
+				// Remove session directory and wait for completion before checking parent
+				try {
+					await removeDir(emailPaths.sessionDir);
+				} catch (e) {
+					this.#log.debug(
+						`Unable to remove email session directory: ${String(e)}`
+					);
+				}
+				// Check if parent directory is now empty and remove it
+				try {
+					const entries = await fs.promises.readdir(emailPaths.parentDir);
+					if (entries.length === 0) {
+						await removeDir(emailPaths.parentDir);
+					}
+				} catch (e) {
+					// Parent directory doesn't exist or can't be read, ignore
+					this.#log.debug(
+						`Unable to check/remove email parent directory: ${String(e)}`
+					);
+				}
+			}
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();

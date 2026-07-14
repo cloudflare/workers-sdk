@@ -49,7 +49,6 @@
 		"undici": "catalog:default"
 	},
 	"devDependencies": {
-		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",

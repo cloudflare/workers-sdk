@@ -1,69 +1,43 @@
-import { readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import path from "node:path";
-import { getBindings } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	getBindingTypeFriendlyName,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { getAssetsOptions, syncAssets } from "../assets";
-import { bundleWorker } from "../deployment-bundle/bundle";
-import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
-import { getEntry } from "../deployment-bundle/entry";
-import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
-import {
-	createModuleCollector,
-	getWrangler1xLegacyModuleReferences,
-} from "../deployment-bundle/module-collection";
-import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
-import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { loadSourceMaps } from "../deployment-bundle/source-maps";
-import { confirm } from "../dialogs";
-import { logger } from "../logger";
-import { isNavigatorDefined } from "../navigator-user-agent";
-import { writeOutput } from "../output";
-import { requireAuth } from "../user";
-import {
-	drawBox,
-	drawConnectedChildBox,
-	padToVisibleWidth,
-	visibleLength,
-} from "../utils/box";
-import { getRules } from "../utils/getRules";
-import { parseConfigPlacement } from "../utils/placement";
+import { syncAssets } from "../deploy/helpers/assets";
+import { getBindings } from "../deploy/helpers/binding-utils";
+import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
+import { parseConfigPlacement } from "../deploy/helpers/placement";
+import { confirm, logger } from "../shared/context";
 import {
 	createPreview,
 	createPreviewDeployment,
 	deletePreview,
 	editPreview,
-	getPreviewDeployment,
 	getPreview,
+	getPreviewDeployment,
 	getWorkerPreviewDefaults,
 } from "./api";
+import { drawBox, drawConnectedChildBox } from "./box";
+import { formatAlignedRows, formatBindings } from "./format";
 import {
 	assemblePreviewScriptSettings,
 	extractConfigBindings,
-	getBindingValue,
 	getBranchName,
 	getHeadCommitMessage,
 	getHeadCommitRef,
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
 } from "./shared";
-import type { StartDevWorkerInput } from "../api/startDevWorker/types";
+import type { WorkerBuildResult } from "../shared/types";
 import type {
 	Binding,
 	CreatePreviewDeploymentRequestParams,
 	DeploymentResource,
 	PreviewResource,
 } from "./api";
-import type {
-	CfModule,
-	Config,
-	PreviewsConfig,
-} from "@cloudflare/workers-utils";
+import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 type PreviewDeploymentModule = {
 	name: string;
@@ -120,6 +94,41 @@ type MergedVersionLevel = {
 	env: Record<string, MergedBinding>;
 };
 
+export type PreviewArgs = {
+	script?: string;
+	name?: string;
+	tag?: string;
+	message?: string;
+	json?: boolean;
+	ignoreDefaults: boolean;
+	workerName?: string;
+	"worker-name"?: string;
+};
+
+export type PreviewAssetsOptions = {
+	directory: string;
+	assetConfig: {
+		html_handling?: string;
+		not_found_handling?: string;
+	};
+	run_worker_first?: string[] | boolean;
+	_headers?: string;
+	_redirects?: string;
+};
+
+export type PreviewDeleteArgs = {
+	name?: string;
+	skipConfirmation?: boolean;
+	workerName?: string;
+	"worker-name"?: string;
+};
+
+export type PreviewResult = {
+	preview: PreviewResource;
+	deployment: DeploymentResource;
+	isNewPreview: boolean;
+};
+
 function toBase64(content: string | Uint8Array): string {
 	return Buffer.from(content).toString("base64");
 }
@@ -169,97 +178,20 @@ function getPreviewMigrationsToUpload(
 	};
 }
 
-async function getDeploymentModules(
-	config: Config,
-	scriptPath: string | undefined,
+function buildResultToDeploymentModules(
+	buildResult: WorkerBuildResult,
 	assetFiles?: { _headers?: string; _redirects?: string }
-): Promise<{ main_module: string; modules: PreviewDeploymentModule[] }> {
-	const entry = await getEntry({ script: scriptPath }, config, "deploy");
-	const entryDirectory = path.dirname(entry.file);
-	const moduleCollector = createModuleCollector({
-		wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
-			entryDirectory,
-			entry.file
-		),
-		entry,
-		findAdditionalModules: config.find_additional_modules ?? false,
-		rules: getRules(config),
-		preserveFileNames: config.preserve_file_names ?? false,
-	});
-
-	const compatibilityDate = config.compatibility_date;
-	const compatibilityFlags = config.compatibility_flags;
-	const nodejsCompatMode = validateNodeCompatMode(
-		compatibilityDate,
-		compatibilityFlags,
-		{ noBundle: config.no_bundle }
-	);
-
-	const destination = path.join(tmpdir(), `wrangler-preview-${Date.now()}`);
-	const bundleResult = config.no_bundle
-		? await noBundleWorker(
-				entry,
-				getRules(config),
-				destination,
-				config.python_modules.exclude,
-				config.find_additional_modules !== false
-			)
-		: await bundleWorker(entry, destination, {
-				bundle: true,
-				additionalModules: [],
-				moduleCollector,
-				doBindings: config.previews?.durable_objects?.bindings ?? [],
-				workflowBindings: config.previews?.workflows ?? [],
-				jsxFactory: config.jsx_factory,
-				jsxFragment: config.jsx_fragment,
-				tsconfig: config.tsconfig,
-				minify: config.minify,
-				keepNames: config.keep_names ?? true,
-				sourcemap: config.upload_source_maps ?? false,
-				nodejsCompatMode,
-				compatibilityDate,
-				compatibilityFlags,
-				alias: config.alias,
-				define: config.previews?.define ?? {},
-				checkFetch: false,
-				targetConsumer: "deploy",
-				watch: undefined,
-				testScheduled: undefined,
-				inject: undefined,
-				plugins: [logBuildOutput(nodejsCompatMode)],
-				isOutfile: undefined,
-				local: false,
-				projectRoot:
-					config.userConfigPath !== undefined
-						? path.dirname(config.userConfigPath)
-						: undefined,
-				defineNavigatorUserAgent: isNavigatorDefined(
-					compatibilityDate,
-					compatibilityFlags
-				),
-				external: undefined,
-				entryName: undefined,
-				metafile: undefined,
-			});
-	const { modules, resolvedEntryPointPath, bundleType } = bundleResult;
-
-	const mainModuleName = path.basename(resolvedEntryPointPath);
-	const mainModuleContent = readFileSync(resolvedEntryPointPath, "utf-8");
-	const mainModule: CfModule = {
-		name: mainModuleName,
-		filePath: resolvedEntryPointPath,
-		content: mainModuleContent,
-		type: bundleType,
-	};
+): { main_module: string; modules: PreviewDeploymentModule[] } {
+	const mainModuleName = path.basename(buildResult.resolvedEntryPointPath);
 	const mainContentType =
-		moduleTypeMimeType[bundleType] ?? "application/octet-stream";
+		moduleTypeMimeType[buildResult.bundleType] ?? "application/octet-stream";
 	const deploymentModules: PreviewDeploymentModule[] = [
 		{
-			name: mainModule.name,
+			name: mainModuleName,
 			content_type: mainContentType,
-			content_base64: toBase64(mainModule.content),
+			content_base64: toBase64(buildResult.content),
 		},
-		...modules.map((mod) => {
+		...buildResult.modules.map((mod) => {
 			const contentType =
 				moduleTypeMimeType[mod.type ?? "text"] ?? "application/octet-stream";
 			return {
@@ -270,9 +202,9 @@ async function getDeploymentModules(
 		}),
 	];
 
-	if (config.upload_source_maps) {
+	if (buildResult.sourceMaps) {
 		deploymentModules.push(
-			...loadSourceMaps(mainModule, modules, bundleResult).map((sourceMap) => ({
+			...buildResult.sourceMaps.map((sourceMap) => ({
 				name: sourceMap.name,
 				content_type: "application/source-map",
 				content_base64: toBase64(sourceMap.content),
@@ -301,38 +233,39 @@ async function getDeploymentModules(
 
 async function assemblePreviewDeploymentSettings(
 	config: Config,
-	scriptPath: string | undefined,
+	buildResult: WorkerBuildResult,
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	options: { message?: string; tag?: string }
+	options: {
+		message?: string;
+		tag?: string;
+		assetsOptions?: PreviewAssetsOptions;
+	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
 	const request: CreatePreviewDeploymentRequestParams = {};
-	const assetsOptions = getAssetsOptions({
-		args: { assets: undefined, script: scriptPath },
-		config,
-	});
-	const deploymentModules = await getDeploymentModules(config, scriptPath, {
-		_headers: assetsOptions?._headers,
-		_redirects: assetsOptions?._redirects,
+	const deploymentModules = buildResultToDeploymentModules(buildResult, {
+		_headers: options.assetsOptions?._headers,
+		_redirects: options.assetsOptions?._redirects,
 	});
 	request.main_module = deploymentModules.main_module;
 	request.modules = deploymentModules.modules;
 
-	if (assetsOptions) {
+	if (options.assetsOptions) {
 		const assetsUploadResult = await syncAssets(
 			config,
 			accountId,
-			assetsOptions.directory,
+			options.assetsOptions.directory,
 			workerName
 		);
 		request.assets = {
 			jwt: assetsUploadResult.jwt,
 			config: {
-				html_handling: assetsOptions.assetConfig.html_handling,
-				not_found_handling: assetsOptions.assetConfig.not_found_handling,
-				run_worker_first: assetsOptions.run_worker_first,
+				html_handling: options.assetsOptions.assetConfig.html_handling,
+				not_found_handling:
+					options.assetsOptions.assetConfig.not_found_handling,
+				run_worker_first: options.assetsOptions.run_worker_first,
 			},
 		};
 	}
@@ -405,7 +338,7 @@ async function assemblePreviewDeploymentSettings(
 
 function buildMergedScriptLevel(
 	config: Config,
-	preview: PreviewResource
+	previewResource: PreviewResource
 ): MergedScriptLevel {
 	const previews = config.previews as PreviewsConfig | undefined;
 	const result: MergedScriptLevel = {};
@@ -414,23 +347,26 @@ function buildMergedScriptLevel(
 	const configHasLogpush =
 		previews?.logpush !== undefined || config.logpush !== undefined;
 
-	if (preview.observability !== undefined) {
+	if (previewResource.observability !== undefined) {
 		result.observability = {
-			enabled: preview.observability.enabled,
-			head_sampling_rate: preview.observability.head_sampling_rate,
+			enabled: previewResource.observability.enabled,
+			head_sampling_rate: previewResource.observability.head_sampling_rate,
 			fromConfig: configHasObservability,
 		};
 	}
 
-	if (preview.logpush !== undefined) {
+	if (previewResource.logpush !== undefined) {
 		result.logpush = {
-			value: preview.logpush,
+			value: previewResource.logpush,
 			fromConfig: configHasLogpush,
 		};
 	}
 
-	if (preview.tail_consumers && preview.tail_consumers.length > 0) {
-		result.tail_consumers = preview.tail_consumers;
+	if (
+		previewResource.tail_consumers &&
+		previewResource.tail_consumers.length > 0
+	) {
+		result.tail_consumers = previewResource.tail_consumers;
 	}
 
 	return result;
@@ -512,73 +448,8 @@ function buildMergedVersionLevel(
 	return result;
 }
 
-const CONFIG_MARKER = chalk.hex("#FFA500")("◆");
-
-function getFriendlyBindingType(bindingType: string): string {
-	return getBindingTypeFriendlyName(
-		bindingType as Parameters<typeof getBindingTypeFriendlyName>[0]
-	);
-}
-
-function formatAlignedRows(
-	rows: Array<[string, string, boolean]>,
-	indent: string = "  "
-): string[] {
-	const labelWidth = Math.max(...rows.map(([label]) => label.length));
-	const valueWidth = Math.max(...rows.map(([, value]) => value.length));
-
-	return rows.map(([label, value, fromConfig]) => {
-		const marker = fromConfig ? CONFIG_MARKER : " ";
-		const coloredLabel = chalk.cyan(padToVisibleWidth(label, labelWidth));
-		return `${indent}${coloredLabel}   ${padToVisibleWidth(
-			value,
-			valueWidth
-		)}  ${marker}`;
-	});
-}
-
-function formatBindings(
-	env: Record<string, MergedBinding>,
-	indent: string = "  ",
-	options: { showSourceMarker?: boolean } = {}
-): string[] {
-	const showSourceMarker = options.showSourceMarker ?? true;
-	const entries = Object.entries(env);
-	if (entries.length === 0) {
-		return [`${indent}${chalk.dim("(none)")}`];
-	}
-
-	const nameWidth = Math.max(...entries.map(([name]) => name.length));
-	const typeWidth = Math.max(
-		...entries.map(([, binding]) =>
-			visibleLength(getFriendlyBindingType(binding.type))
-		)
-	);
-	const valueWidth = Math.max(
-		...entries.map(([, binding]) => getBindingValue(binding).length)
-	);
-
-	return entries.map(([name, binding]) => {
-		const value = getBindingValue(binding);
-		const friendlyType = getFriendlyBindingType(binding.type);
-		const coloredName = chalk.cyan(padToVisibleWidth(name, nameWidth));
-		const dimType = chalk.dim(padToVisibleWidth(friendlyType, typeWidth));
-		if (showSourceMarker) {
-			const marker = binding.fromConfig ? CONFIG_MARKER : " ";
-			return `${indent}${coloredName}   ${dimType}   ${padToVisibleWidth(
-				value,
-				valueWidth
-			)}  ${marker}`;
-		}
-		return `${indent}${coloredName}   ${dimType}   ${padToVisibleWidth(
-			value,
-			valueWidth
-		)}`;
-	});
-}
-
 function formatPreviewResource(
-	preview: PreviewResource,
+	previewResource: PreviewResource,
 	scriptLevel: MergedScriptLevel,
 	isNew: boolean,
 	configName: string
@@ -594,9 +465,11 @@ function formatPreviewResource(
 		: "disabled";
 
 	const lines: string[] = [
-		`${chalk.bold("Preview:")} ${preview.name} ${statusLabel}`,
+		`${chalk.bold("Preview:")} ${previewResource.name} ${statusLabel}`,
 		"",
-		...(preview.urls ?? []).map((url) => `  ${chalk.bold.underline(url)}`),
+		...(previewResource.urls ?? []).map(
+			(url) => `  ${chalk.bold.underline(url)}`
+		),
 	];
 
 	const settingsRows: Array<[string, string, boolean]> = [];
@@ -745,7 +618,7 @@ function formatDeploymentResource(
 }
 
 function logMissingPreviewsBindingsWarning(
-	topLevelBindings: StartDevWorkerInput["bindings"],
+	topLevelBindings: Record<string, { type: string }>,
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
 	localPreviewBindings: Record<string, Binding>
 ) {
@@ -754,7 +627,7 @@ function logMissingPreviewsBindingsWarning(
 		...Object.keys(localPreviewBindings),
 	]);
 	const missingBindings = Object.fromEntries(
-		Object.entries(topLevelBindings ?? {}).filter(
+		Object.entries(topLevelBindings).filter(
 			([name]) => !availableBindingNames.has(name)
 		)
 	);
@@ -769,26 +642,24 @@ The following bindings are configured at the top level of your Wrangler config f
 ${Object.entries(missingBindings)
 	.map(
 		([name, binding]) =>
-			`  ${chalk.cyan(name)}  ${chalk.dim(getBindingTypeFriendlyName(binding.type))}`
+			`  ${chalk.cyan(name)}  ${chalk.dim(getBindingTypeFriendlyName(binding.type as Parameters<typeof getBindingTypeFriendlyName>[0]))}`
 	)
 	.join("\n")}
 
 Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your Wrangler config or update the Previews settings of your Worker in the Cloudflare dashboard.`);
 }
 
-export async function handlePreviewCommand(
-	args: {
-		script?: string;
-		name?: string;
-		tag?: string;
-		message?: string;
-		json?: boolean;
-		ignoreDefaults: boolean;
-		workerName?: string;
-		"worker-name"?: string;
-	},
-	{ config }: { config: Config }
-) {
+/**
+ * Full preview create/update + deployment orchestration.
+ * The wrangler handler calls this after auth + build.
+ */
+export async function preview(
+	accountId: string,
+	args: PreviewArgs,
+	config: Config,
+	buildResult: WorkerBuildResult,
+	assetsOptions: PreviewAssetsOptions | undefined
+): Promise<PreviewResult> {
 	const workerName = resolveWorkerName(args, config);
 
 	let previewName = args.name;
@@ -811,7 +682,6 @@ export async function handlePreviewCommand(
 		!args.message && shouldUseCIMetadataFallback()
 			? getHeadCommitMessage()
 			: undefined;
-	const accountId = await requireAuth(config);
 
 	let existingPreview: PreviewResource | null = null;
 	try {
@@ -828,9 +698,9 @@ export async function handlePreviewCommand(
 	}
 	const isNewPreview = !existingPreview;
 
-	let preview: PreviewResource;
+	let previewResource: PreviewResource;
 	if (isNewPreview) {
-		preview = await createPreview(
+		previewResource = await createPreview(
 			config,
 			accountId,
 			workerName,
@@ -840,7 +710,7 @@ export async function handlePreviewCommand(
 	} else {
 		const previewRequest = assemblePreviewScriptSettings(config);
 		if (Object.keys(previewRequest).length > 0) {
-			preview = await editPreview(
+			previewResource = await editPreview(
 				config,
 				accountId,
 				workerName,
@@ -849,76 +719,75 @@ export async function handlePreviewCommand(
 				{ ignoreDefaults }
 			);
 		} else {
-			preview = existingPreview as PreviewResource;
+			previewResource = existingPreview as PreviewResource;
 		}
 	}
 
 	const deploymentRequest = await assemblePreviewDeploymentSettings(
 		config,
-		args.script,
+		buildResult,
 		accountId,
 		workerName,
-		preview.id,
-		{ message: args.message ?? fallbackMessage, tag: args.tag ?? fallbackTag }
+		previewResource.id,
+		{
+			message: args.message ?? fallbackMessage,
+			tag: args.tag ?? fallbackTag,
+			assetsOptions,
+		}
 	);
 	const deployment = await createPreviewDeployment(
 		config,
 		accountId,
 		workerName,
-		preview.id,
+		previewResource.id,
 		deploymentRequest,
 		{ ignoreDefaults }
 	);
 
-	writeOutput({
-		type: "preview",
-		version: 1,
-		worker_name: workerName,
-		preview_id: preview.id,
-		preview_name: preview.name,
-		preview_slug: preview.slug,
-		preview_urls: preview.urls,
-		deployment_id: deployment.id,
-		deployment_urls: deployment.urls,
-	});
-
 	if (args.json) {
-		logger.log(JSON.stringify({ preview, deployment }, null, 2));
-		return;
+		logger.log(
+			JSON.stringify({ preview: previewResource, deployment }, null, 2)
+		);
+	} else {
+		const scriptLevel = buildMergedScriptLevel(config, previewResource);
+		const versionLevel = buildMergedVersionLevel(config, deployment);
+		const configName = configFileName(config.configPath);
+		logger.log(
+			formatPreviewResource(
+				previewResource,
+				scriptLevel,
+				isNewPreview,
+				configName
+			)
+		);
+		logger.log(formatDeploymentResource(deployment, versionLevel, configName));
+
+		const topLevelBindings = getBindings(config);
+		if (Object.keys(topLevelBindings).length > 0) {
+			const previewDefaults = await getWorkerPreviewDefaults(
+				config,
+				accountId,
+				workerName
+			);
+			logMissingPreviewsBindingsWarning(
+				topLevelBindings,
+				previewDefaults.env,
+				extractConfigBindings(config)
+			);
+		}
 	}
 
-	const scriptLevel = buildMergedScriptLevel(config, preview);
-	const versionLevel = buildMergedVersionLevel(config, deployment);
-	const configName = configFileName(config.configPath);
-	logger.log(
-		formatPreviewResource(preview, scriptLevel, isNewPreview, configName)
-	);
-	logger.log(formatDeploymentResource(deployment, versionLevel, configName));
-
-	const topLevelBindings = getBindings(config);
-	if (Object.keys(topLevelBindings).length > 0) {
-		const previewDefaults = await getWorkerPreviewDefaults(
-			config,
-			accountId,
-			workerName
-		);
-		logMissingPreviewsBindingsWarning(
-			topLevelBindings,
-			previewDefaults.env,
-			extractConfigBindings(config)
-		);
-	}
+	return { preview: previewResource, deployment, isNewPreview };
 }
 
-export async function handlePreviewDeleteCommand(
-	args: {
-		name?: string;
-		skipConfirmation?: boolean;
-		workerName?: string;
-		"worker-name"?: string;
-	},
-	{ config }: { config: Config }
-) {
+/**
+ * Delete a preview and all its deployments.
+ */
+export async function previewDelete(
+	accountId: string,
+	args: PreviewDeleteArgs,
+	config: Config
+): Promise<void> {
 	const workerName = resolveWorkerName(args, config);
 	let previewName = args.name;
 	if (!previewName) {
@@ -944,7 +813,6 @@ export async function handlePreviewDeleteCommand(
 		}
 	}
 
-	const accountId = await requireAuth(config);
 	await deletePreview(config, accountId, workerName, previewName);
 	logger.log(`\n✨ Preview "${previewName}" deleted successfully.`);
 }
