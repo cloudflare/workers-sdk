@@ -13,6 +13,7 @@ import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
+import { LOCAL_EXPLORER_BASE_PATH } from "../constants";
 import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
 import { getNextThemeMode } from "../utils/theme-state";
 import { SidebarGroupPopup } from "./SidebarGroupPopup";
@@ -198,7 +199,7 @@ export function AppSidebar({
 				<div className="flex w-full items-center justify-between">
 					<a
 						className="box-border flex items-center gap-2.5 px-1"
-						href="/cdn-cgi/explorer/"
+						href={`${LOCAL_EXPLORER_BASE_PATH}/`}
 					>
 						<CloudflareLogo
 							className={cn(

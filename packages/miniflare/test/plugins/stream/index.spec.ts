@@ -211,7 +211,7 @@ describe("Stream videos", () => {
 		expect(video.hlsPlaybackUrl).toContain(video.id);
 		expect(video.dashPlaybackUrl).toContain(video.id);
 		expect(video.preview).toMatch(
-			new RegExp(`^http://.*?/cdn-cgi/mf/stream/${video.id}/watch$`)
+			new RegExp(`^http://.*?/__cf_local/stream/${video.id}/watch$`)
 		);
 
 		const details = (await sendCmdToWorker(mf, "video.details", {
@@ -646,7 +646,7 @@ describe("Stream videos list", () => {
 });
 
 describe("Stream video serving", () => {
-	test("serve video via /cdn-cgi/mf/stream/:id/watch", async ({ expect }) => {
+	test("serve video via /__cf_local/stream/:id/watch", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);
 		const { http: videoUrl } = await useServer(
@@ -659,7 +659,7 @@ describe("Stream video serving", () => {
 
 		// Fetch the video via the preview URL path and consume body immediately
 		const resp = await mf.dispatchFetch(
-			`http://placeholder/cdn-cgi/mf/stream/${video.id}/watch`
+			`http://placeholder/__cf_local/stream/${video.id}/watch`
 		);
 		const bytes = new Uint8Array(await resp.arrayBuffer());
 		expect(resp.status).toBe(200);
@@ -671,7 +671,7 @@ describe("Stream video serving", () => {
 		useDispose(mf);
 
 		const resp = await mf.dispatchFetch(
-			"http://placeholder/cdn-cgi/mf/stream/00000000-0000-0000-0000-000000000000/watch"
+			"http://placeholder/__cf_local/stream/00000000-0000-0000-0000-000000000000/watch"
 		);
 		await resp.arrayBuffer(); // consume body to avoid dispatchFetch error
 		expect(resp.status).toBe(404);
@@ -1626,7 +1626,7 @@ describe("Stream publicUrl", () => {
 		})) as Video;
 
 		expect(video.preview).toBe(
-			`http://my-proxy.example.com:8080/cdn-cgi/mf/stream/${video.id}/watch`
+			`http://my-proxy.example.com:8080/__cf_local/stream/${video.id}/watch`
 		);
 	});
 
@@ -1647,7 +1647,7 @@ describe("Stream publicUrl", () => {
 		// (http://127.0.0.1:<port>) rather than any external proxy URL
 		expect(video.preview).toMatch(
 			new RegExp(
-				`^http://127\\.0\\.0\\.1:\\d+/cdn-cgi/mf/stream/${video.id}/watch$`
+				`^http://127\\.0\\.0\\.1:\\d+/__cf_local/stream/${video.id}/watch$`
 			)
 		);
 	});

@@ -478,7 +478,7 @@ test("reply validation: x-auto-response-suppress", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -518,7 +518,7 @@ test("reply validation: Auto-Submitted", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -558,7 +558,7 @@ test("reply validation: only In-Reply-To", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -598,7 +598,7 @@ test("reply validation: only References", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -639,7 +639,7 @@ test("reply validation: >100 References", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -682,7 +682,7 @@ test("reply: mismatched From: header", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -722,7 +722,7 @@ test("reply: unparseable", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -770,7 +770,7 @@ test("reply: no message id", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -820,7 +820,7 @@ test("reply: disallowed header", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -869,7 +869,7 @@ test("reply: missing In-Reply-To", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -921,7 +921,7 @@ test("reply: wrong In-Reply-To", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -976,7 +976,7 @@ test("reply: invalid references", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -1025,7 +1025,7 @@ test("reply: references generated correctly", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
