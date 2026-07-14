@@ -1,4 +1,4 @@
-import type { StartDevWorkerInput } from "@cloudflare/remote-bindings/internal";
+import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { CfWorkerInit } from "@cloudflare/workers-utils";
 
 /**

@@ -7,32 +7,32 @@ import {
 	prepareContainerImagesForDev,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
-import {
-	castErrorCause,
-	getBinaryFileContents,
-	RuntimeController,
-} from "@cloudflare/remote-bindings/internal";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { buildPublicUrl, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
+import { RuntimeController } from "./BaseController";
+import { castErrorCause } from "./events";
+import { getBinaryFileContents } from "./utils";
 import type { CfAccount } from "../../dev/preview";
-import type { RemoteProxySession } from "../remote-bindings";
-import type { ContainerDevOptions } from "@cloudflare/containers-shared";
+import type { RemoteProxySession } from "../remoteBindings";
 import type {
-	AsyncHook,
-	Binding,
 	BundleCompleteEvent,
 	BundleStartEvent,
 	DevRegistryUpdateEvent,
-	File,
 	PreviewTokenExpiredEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
+} from "./events";
+import type {
+	AsyncHook,
+	Binding,
+	File,
 	StartDevWorkerOptions,
 	Trigger,
-} from "@cloudflare/remote-bindings/internal";
+} from "./types";
+import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
 async function getTextFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
@@ -291,7 +291,7 @@ export class LocalRuntimeController extends RuntimeController {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
 				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =
-					await import("../remote-bindings");
+					await import("../remoteBindings");
 
 				const remoteBindings = pickRemoteBindings(configBundle.bindings ?? {});
 

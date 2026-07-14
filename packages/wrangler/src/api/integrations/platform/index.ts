@@ -21,7 +21,7 @@ import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { getZoneFromRoute } from "../../../zones";
-import { maybeStartOrUpdateRemoteProxySession } from "../../remote-bindings";
+import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 // TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
@@ -32,7 +32,7 @@ import type {
 	RawConfig,
 	RawEnvironment,
 } from "../../../../../workers-utils/src";
-import type { RemoteProxySession } from "../../remote-bindings";
+import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	MiniflareOptions,

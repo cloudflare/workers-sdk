@@ -1,14 +1,44 @@
-import {
-	createDeferred,
-	rewriteUrlInHeaderValue,
-	urlFromParts,
-} from "../../src/internal/dev-env/utils";
 import type {
 	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
-} from "../../src/internal/dev-env/events";
-import type { DeferredPromise } from "../../src/internal/dev-env/utils";
+} from "../../src/session/proxy-types";
+
+class DeferredPromise<T> {
+	readonly promise: Promise<T>;
+	resolve: (value: T) => void = () => {};
+	reject: (reason?: unknown) => void = () => {};
+
+	constructor() {
+		this.promise = new Promise<T>((resolve, reject) => {
+			this.resolve = resolve;
+			this.reject = reject;
+		});
+	}
+}
+
+function createDeferred<T>(): DeferredPromise<T> {
+	return new DeferredPromise<T>();
+}
+
+function urlFromParts(parts: Partial<URL>, originalUrl?: string): URL {
+	const url = new URL(originalUrl ?? "http://placeholder");
+	Object.assign(url, parts);
+	return url;
+}
+
+function rewriteUrlInHeaderValue(value: string, from: URL, to: URL): string {
+	return value.replace(
+		/(https?:\/\/[^/?#\s,;"']+)([^\s,;"']*)/gi,
+		(match, origin: string, rest: string) => {
+			try {
+				return new URL(origin).host === from.host ? to.origin + rest : match;
+			} catch {
+				return match;
+			}
+		}
+	);
+}
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;

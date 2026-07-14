@@ -19,9 +19,9 @@ import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
+import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
-import type { StartDevWorkerInput } from "@cloudflare/remote-bindings/internal";
 import type {
 	AssetsOptions,
 	Binding,

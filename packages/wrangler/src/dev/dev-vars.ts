@@ -7,7 +7,7 @@ import {
 import dotenv from "dotenv";
 import { getDefaultEnvFiles, loadDotEnv } from "../config/dot-env";
 import { logger } from "../logger";
-import type { Binding } from "@cloudflare/remote-bindings/internal";
+import type { Binding } from "../api/startDevWorker/types";
 import type { Config } from "@cloudflare/workers-utils";
 import type { Json } from "miniflare";
 

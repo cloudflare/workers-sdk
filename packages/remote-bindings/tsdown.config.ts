@@ -40,7 +40,7 @@ const embedWorkersPlugin: Plugin = {
 export default defineConfig({
 	entry: {
 		index: "src/index.ts",
-		internal: "src/internal.ts",
+		"internal/proxy-worker": "src/proxy-worker.ts",
 		"preview/create-worker-preview": "src/preview/create-worker-preview.ts",
 	},
 	platform: "node",
@@ -48,5 +48,9 @@ export default defineConfig({
 	dts: true,
 	tsconfig: "tsconfig.json",
 	external: EXTERNAL_DEPENDENCIES,
+	noExternal: [
+		/^@cloudflare\/deploy-helpers(\/.*)?$/,
+		/^@cloudflare\/workers-utils(\/.*)?$/,
+	],
 	plugins: [embedWorkersPlugin],
 });

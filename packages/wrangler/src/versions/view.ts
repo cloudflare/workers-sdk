@@ -1,6 +1,6 @@
 import { logRaw } from "@cloudflare/cli-shared-helpers";
-import { convertWorkerMetadataBindingsToFlatBindings } from "@cloudflare/remote-bindings/internal";
 import { UserError } from "@cloudflare/workers-utils";
+import { convertWorkerMetadataBindingsToFlatBindings } from "../api/startDevWorker/utils";
 import { createCommand } from "../core/create-command";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";

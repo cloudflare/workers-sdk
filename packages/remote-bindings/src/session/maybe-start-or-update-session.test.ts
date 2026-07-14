@@ -54,6 +54,12 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 					KV: { type: "kv_namespace", id: "old", remote: true },
 				},
 				auth,
+				worker: {
+					name: undefined,
+					accountId: undefined,
+					complianceRegion: undefined,
+					profileDir: undefined,
+				},
 			},
 			{ auth }
 		);
@@ -93,5 +99,39 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			expect.objectContaining({ auth: nextAuth, workerName: "worker" })
 		);
 		expect(result?.session).toBe(nextSession);
+		expect(
+			vi.mocked(startRemoteProxySession).mock.invocationCallOrder[0]
+		).toBeLessThan(
+			vi.mocked(previousSession.dispose).mock.invocationCallOrder[0]
+		);
+	});
+
+	it("restarts when the worker identity changes", async ({ expect }) => {
+		const previousSession = createSession();
+		const nextSession = createSession();
+		vi.mocked(startRemoteProxySession).mockResolvedValue(nextSession);
+
+		await maybeStartOrUpdateRemoteProxySession(
+			{ name: "new", bindings: { AI: { type: "ai" } } },
+			{
+				session: previousSession,
+				remoteBindings: { AI: { type: "ai" } },
+				worker: { name: "old" },
+			}
+		);
+
+		expect(startRemoteProxySession).toHaveBeenCalledOnce();
+		expect(previousSession.dispose).toHaveBeenCalledOnce();
+	});
+
+	it("does not start an empty session when auth is provided", async ({
+		expect,
+	}) => {
+		await expect(
+			maybeStartOrUpdateRemoteProxySession({ bindings: {} }, undefined, {
+				auth: vi.fn(),
+			})
+		).resolves.toBeNull();
+		expect(startRemoteProxySession).not.toHaveBeenCalled();
 	});
 });

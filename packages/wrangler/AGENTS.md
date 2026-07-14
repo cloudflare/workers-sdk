@@ -15,8 +15,6 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 - `bin/cf-wrangler.js` — `cf-wrangler` delegate entrypoint. Owns verb dispatch, argv parsing (`parseCfWranglerArgs`), and the `StartDevOptions` literal; hands off to `runCfWranglerDev` from `wrangler-dist/cli.js` in-process (no re-spawn — the parent tool owns the Node runtime)
 - `src/cf-wrangler/` — The `cf-wrangler` delegate entrypoint (see below)
 - `templates/` — Worker templates
-- `src/api/startDevWorker/WranglerDevEnv.ts` — Wrangler adapter for the DevEnv kernel owned by `@cloudflare/remote-bindings/internal`
-- `src/api/startDevWorker/WranglerProxyController.ts` / `WranglerRemoteRuntimeController.ts` — Wrangler-specific logging, inspector, bundle and preview adapters for the shared controllers
 
 ## Entry Points
 

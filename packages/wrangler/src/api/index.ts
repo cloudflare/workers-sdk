@@ -21,8 +21,8 @@ export {
 } from "./mtls-certificate";
 
 // Exports from ./startDevWorker
-export { convertConfigBindingsToStartWorkerBindings } from "./startDevWorker/config-binding-utils";
-export { WranglerDevEnv as DevEnv } from "./startDevWorker/WranglerDevEnv";
+export { convertConfigBindingsToStartWorkerBindings } from "./startDevWorker/binding-utils";
+export { DevEnv } from "./startDevWorker/DevEnv";
 export { startWorker } from "./startDevWorker";
 export type {
 	Worker,
@@ -38,11 +38,8 @@ export type {
 	Trigger,
 	Binding,
 	ServiceFetch,
-} from "@cloudflare/remote-bindings/internal";
-export {
-	castErrorCause,
-	serialiseError,
-} from "@cloudflare/remote-bindings/internal";
+} from "./startDevWorker/types";
+export { castErrorCause, serialiseError } from "./startDevWorker/events";
 export type {
 	ErrorEvent,
 	ConfigUpdateEvent,
@@ -62,8 +59,8 @@ export type {
 	UrlOriginParts,
 	UrlOriginAndPathnameParts,
 	ProxyData,
-} from "@cloudflare/remote-bindings/internal";
-export type { DevToolsEvent } from "@cloudflare/remote-bindings/internal";
+} from "./startDevWorker/events";
+export type { DevToolsEvent } from "./startDevWorker/devtools";
 
 // Exports from ./server
 export { createTestHarness } from "./test-harness";
@@ -93,13 +90,13 @@ export type {
 	Unstable_MiniflareWorkerOptions,
 } from "./integrations";
 
-// Exports from ./remote-bindings
+// Exports from ./remoteBindings
 export {
 	startRemoteProxySession,
 	pickRemoteBindings,
 	maybeStartOrUpdateRemoteProxySession,
-} from "./remote-bindings";
+} from "./remoteBindings";
 export type {
 	StartRemoteProxySessionOptions,
 	RemoteProxySession,
-} from "./remote-bindings";
+} from "./remoteBindings";

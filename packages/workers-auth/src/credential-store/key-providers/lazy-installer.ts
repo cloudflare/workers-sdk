@@ -263,7 +263,7 @@ interface KeyringModule {
 // of `require(...)`. The anchor `__filename` is provided in both the
 // bundled CJS output and the source-loaded test environment.
 // eslint-disable-next-line no-restricted-globals -- runtime resolution requires a CJS anchor
-const dynamicRequire = createRequire(__filename);
+const dynamicRequire = createRequire(import.meta.url);
 
 /**
  * Resolve the active keyring entry factory, loading the lazy-installed

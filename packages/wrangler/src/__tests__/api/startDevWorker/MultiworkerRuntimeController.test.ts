@@ -1,9 +1,9 @@
-import { urlFromParts } from "@cloudflare/remote-bindings/internal";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { describe, it } from "vitest";
 import { MultiworkerRuntimeController } from "../../../api/startDevWorker/MultiworkerRuntimeController";
+import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useTeardown } from "../../helpers/teardown";

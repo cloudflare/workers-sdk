@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { unwrapHook } from "@cloudflare/remote-bindings/internal";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
 import {
@@ -12,6 +11,7 @@ import {
 	onTestFailed,
 	vi,
 } from "vitest";
+import { unwrapHook } from "../../api/startDevWorker/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import {
@@ -21,11 +21,7 @@ import {
 	mswZoneHandlers,
 } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
-import type {
-	Binding,
-	RemoteProxySession,
-	StartRemoteProxySessionOptions,
-} from "../../api";
+import type { Binding, StartRemoteProxySessionOptions } from "../../api";
 import type { StartDevOptions } from "../../dev";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
@@ -57,59 +53,25 @@ const remoteProxyConnectionString = new URL(
 let proxyWorkerBindings: Record<string, Binding> | undefined;
 let sessionOptions: StartRemoteProxySessionOptions | undefined;
 let startRemoteProxySessionCallCount = 0;
-vi.mock("../../api/remote-bindings", async () => {
+vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 	const actual = await vi.importActual<
-		typeof import("../../api/remote-bindings")
-	>("../../api/remote-bindings");
-	async function startRemoteProxySession(
-		remoteBindings: Record<string, Binding>,
-		options: StartRemoteProxySessionOptions
-	): Promise<RemoteProxySession> {
-		proxyWorkerBindings = remoteBindings;
-		sessionOptions = options;
-		startRemoteProxySessionCallCount++;
-		return {
-			ready: Promise.resolve(),
-			async dispose() {},
-			async updateBindings() {},
-			remoteProxyConnectionString,
-		};
-	}
+		typeof import("../../api/remoteBindings/start-remote-proxy-session")
+	>("../../api/remoteBindings/start-remote-proxy-session");
 	return {
 		...actual,
-		startRemoteProxySession,
-		async maybeStartOrUpdateRemoteProxySession(
-			worker: {
-				name?: string;
-				bindings: Record<string, Binding>;
-				complianceRegion?: StartRemoteProxySessionOptions["complianceRegion"];
-			},
-			previous?: {
-				session: RemoteProxySession;
-				remoteBindings: Record<string, Binding>;
-				auth?: StartRemoteProxySessionOptions["auth"];
-			} | null,
-			auth?: StartRemoteProxySessionOptions["auth"]
+		async startRemoteProxySession(
+			remoteBindings: Record<string, Binding>,
+			options: StartRemoteProxySessionOptions
 		) {
-			const remoteBindings = actual.pickRemoteBindings(worker.bindings);
-			if (previous && previous.auth === auth) {
-				if (
-					JSON.stringify(previous.remoteBindings) !==
-					JSON.stringify(remoteBindings)
-				) {
-					await previous.session.updateBindings(remoteBindings);
-				}
-				return { session: previous.session, remoteBindings, auth };
-			}
-			if (Object.keys(remoteBindings).length === 0) {
-				return null;
-			}
-			const session = await startRemoteProxySession(remoteBindings, {
-				workerName: worker.name,
-				complianceRegion: worker.complianceRegion,
-				auth,
-			});
-			return { session, remoteBindings, auth };
+			proxyWorkerBindings = remoteBindings;
+			sessionOptions = options;
+			startRemoteProxySessionCallCount++;
+			return {
+				ready: Promise.resolve(),
+				async dispose() {},
+				async updateBindings() {},
+				remoteProxyConnectionString,
+			};
 		},
 	};
 });
@@ -650,7 +612,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 
 	it("should not recreate the remote proxy session on reload when auth has not changed", async () => {
 		const { maybeStartOrUpdateRemoteProxySession } =
-			await import("../../api/remote-bindings");
+			await import("../../api/remoteBindings");
 
 		const remoteBindings: Record<string, Binding> = {
 			REMOTE_WORKER: {

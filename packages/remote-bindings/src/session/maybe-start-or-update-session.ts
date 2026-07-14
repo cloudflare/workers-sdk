@@ -39,18 +39,22 @@ export interface MaybeStartOrUpdateRemoteProxySessionOptions {
 	logger?: RemoteBindingsLogger;
 }
 
+type RemoteProxyWorkerIdentity = Omit<RemoteProxyWorker, "bindings">;
+
 export async function maybeStartOrUpdateRemoteProxySession(
 	worker: RemoteProxyWorker,
 	preExistingRemoteProxySessionData?: {
 		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
 		auth?: AsyncHook<CfAccount>;
+		worker?: RemoteProxyWorkerIdentity;
 	} | null,
 	options: MaybeStartOrUpdateRemoteProxySessionOptions = {}
 ): Promise<{
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
 	auth?: AsyncHook<CfAccount>;
+	worker: RemoteProxyWorkerIdentity;
 } | null> {
 	const { auth, logger } = options;
 	const remoteBindings = pickRemoteBindings(worker.bindings);
@@ -63,16 +67,27 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		auth,
 		preExistingRemoteProxySessionData?.auth
 	);
+	const workerIdentity: RemoteProxyWorkerIdentity = {
+		name: worker.name,
+		complianceRegion: worker.complianceRegion,
+		accountId: worker.accountId,
+		profileDir: worker.profileDir,
+	};
+	const workerSameAsBefore = deepStrictEqual(
+		workerIdentity,
+		preExistingRemoteProxySessionData?.worker
+	);
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
-	if (!authSameAsBefore) {
-		await preExistingRemoteProxySessionData?.session.dispose();
-		remoteProxySession = await startWorkerRemoteProxySession(
+	if (!authSameAsBefore || !workerSameAsBefore) {
+		const replacement = await startWorkerRemoteProxySession(
 			remoteBindings,
 			worker,
 			auth,
 			logger
 		);
+		await preExistingRemoteProxySessionData?.session.dispose();
+		remoteProxySession = replacement;
 	} else if (
 		!deepStrictEqual(
 			remoteBindings,
@@ -95,7 +110,12 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	if (!remoteProxySession) {
 		return null;
 	}
-	return { session: remoteProxySession, remoteBindings, auth };
+	return {
+		session: remoteProxySession,
+		remoteBindings,
+		auth,
+		worker: workerIdentity,
+	};
 }
 
 async function startWorkerRemoteProxySession(

@@ -4,24 +4,23 @@ Package-specific context only. See the repository `AGENTS.md` for shared convent
 
 ## Overview
 
-`@cloudflare/remote-bindings` owns remote-binding session lifecycle and the host-agnostic DevEnv kernel shared with Wrangler. It must not import Wrangler.
+`@cloudflare/remote-bindings` owns the remote-binding proxy session lifecycle shared by Wrangler, Vite, and Vitest. It must not import Wrangler.
 
 ## Structure
 
 - `src/index.ts` - public session API
 - `src/auth.ts` - workers-auth product selection
-- `src/session/` - remote proxy session composition and static config/bundle controllers
+- `src/session/` - remote preview upload and local proxy session lifecycle
 - `src/preview/` - edge-preview session and upload primitives
-- `src/internal/dev-env/` - shared controller bus, DevEnv, proxy, remote runtime, events and types
-- `templates/` - embedded local proxy, inspector proxy and remote binding proxy Workers
+- `templates/` - embedded local proxy and remote binding proxy Workers
 
 ## Boundaries
 
 - Public consumers use the package root.
-- Wrangler consumes `@cloudflare/remote-bindings/internal` to configure the shared DevEnv kernel with Wrangler-specific adapters.
-- Keep config parsing, bundling, local runtime, assets, Wrangler logging and user-facing error policy in Wrangler.
+- Wrangler retains its DevEnv and exposes a compatibility adapter over the package session API.
+- Keep config parsing, bundling, local runtime, inspectors, assets, and Wrangler-specific error policy in Wrangler.
 - Keep Miniflare external as a peer dependency so runtime classes preserve object identity.
-- Do not add a separate HTTP/WebSocket proxy or custom credential parser.
+- Reuse the embedded ProxyWorker for HTTP and WebSocket forwarding; do not add a Node.js proxy or custom credential parser.
 
 ## Authentication
 

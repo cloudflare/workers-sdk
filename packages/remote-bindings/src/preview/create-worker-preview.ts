@@ -1,10 +1,11 @@
 import crypto from "node:crypto";
-import { URL } from "node:url";
+import { URL, type URLSearchParams } from "node:url";
 import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import type {
 	ApiCredentials,
-	CfWorkerInitWithName,
+	Binding,
 	CfWorkerContext,
+	CfWorkerInit,
 	ComplianceConfig,
 	Logger,
 } from "@cloudflare/workers-utils";
@@ -36,6 +37,11 @@ export interface CreateWorkerPreviewContext {
 export interface CreateWorkerPreviewOptions {
 	context: CreateWorkerPreviewContext;
 }
+
+export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
+	Omit<CfWorkerInit, "bindings"> & {
+		bindings: Record<string, Binding> | undefined;
+	};
 
 /**
  * Maximum time (ms) to wait for an individual preview API request before

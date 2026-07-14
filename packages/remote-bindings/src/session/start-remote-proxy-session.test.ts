@@ -1,56 +1,62 @@
-import { EventEmitter } from "node:events";
 import { describe, it, vi } from "vitest";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
-import type { Worker } from "../internal/dev-env/types";
+import type { MiniflareOptions } from "miniflare";
 
 const mocks = vi.hoisted(() => ({
-	startWorker: vi.fn(),
 	createDefaultAuthHook: vi.fn(() => vi.fn()),
+	createPreviewSession: vi.fn(async () => ({
+		value: "session-token",
+		host: "proxy.example.com",
+		name: "proxy",
+	})),
+	createWorkerPreview: vi.fn(async () => ({
+		value: "preview-token",
+		host: "proxy.example.com",
+	})),
+	dispatchFetch: vi.fn(async () => new Response()),
+	dispose: vi.fn(async () => {}),
 }));
 
 vi.mock("../auth", () => ({
 	createDefaultAuthHook: mocks.createDefaultAuthHook,
 }));
 
-vi.mock("./RemoteProxyDevEnv", () => ({
-	RemoteProxyDevEnv: class {
-		startWorker = mocks.startWorker;
-	},
-	RemoteSessionAuthenticationError: class extends Error {},
+vi.mock("../preview/create-worker-preview", () => ({
+	createPreviewSession: mocks.createPreviewSession,
+	createWorkerPreview: mocks.createWorkerPreview,
 }));
 
-function createWorker() {
-	const raw = new EventEmitter() as Worker["raw"];
-	const drained = vi.fn(async () => {});
-	const patchConfig = vi.fn(async () => {
-		raw.emit("reloadComplete", {});
-	});
-	const dispose = vi.fn(async () => {});
-	Object.assign(raw, {
-		proxy: {
-			localServerReady: { promise: Promise.resolve() },
-			runtimeMessageMutex: { drained },
+vi.mock("./worker-scripts", () => ({
+	proxyWorkerContents: "export default {}",
+	proxyServerWorkerContents: "export default {}",
+}));
+
+vi.mock("@cloudflare/workers-auth", () => ({
+	getAccessHeaders: vi.fn(async () => ({ "cf-access-token": "access" })),
+	getAuthFromEnv: vi.fn(),
+}));
+
+vi.mock("miniflare", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("miniflare")>();
+	return {
+		...actual,
+		Miniflare: class {
+			ready = Promise.resolve(new URL("http://127.0.0.1:8787"));
+			constructor(_options: MiniflareOptions) {}
+			dispatchFetch = mocks.dispatchFetch;
+			dispose = mocks.dispose;
 		},
-	});
-
-	const worker = {
-		ready: Promise.resolve(),
-		url: Promise.resolve(new URL("http://127.0.0.1:8787")),
-		patchConfig,
-		dispose,
-		raw,
-	} as unknown as Worker;
-
-	return { worker, raw, drained, patchConfig };
-}
+	};
+});
 
 describe("startRemoteProxySession", () => {
-	it("starts the existing DevEnv remote-minimal flow", async ({ expect }) => {
-		const { worker } = createWorker();
-		mocks.startWorker.mockResolvedValue(worker);
-		const auth = vi.fn();
+	it("uploads raw bindings and starts the local proxy", async ({ expect }) => {
+		const auth = {
+			accountId: "account-id",
+			apiToken: { apiToken: "api-token" },
+		};
 
-		await startRemoteProxySession(
+		const session = await startRemoteProxySession(
 			{
 				KV: {
 					type: "kv_namespace",
@@ -61,92 +67,183 @@ describe("startRemoteProxySession", () => {
 			{ workerName: "proxy", auth }
 		);
 
-		expect(mocks.startWorker).toHaveBeenCalledWith({
-			name: "proxy",
-			entrypoint: "ProxyServerWorker.mjs",
-			compatibilityDate: "2025-04-28",
-			complianceRegion: undefined,
-			dev: {
-				remote: "minimal",
-				auth,
-				server: { port: 0 },
-				inspector: false,
-				logLevel: "error",
-			},
-			bindings: {
-				KV: {
-					type: "kv_namespace",
-					id: "namespace-id",
-					remote: true,
-					raw: true,
+		expect(session.remoteProxyConnectionString.href).toBe(
+			"http://127.0.0.1:8787/"
+		);
+		expect(mocks.createWorkerPreview).toHaveBeenCalledWith(
+			{ compliance_region: undefined },
+			expect.objectContaining({
+				name: "proxy",
+				bindings: {
+					KV: expect.objectContaining({
+						id: "namespace-id",
+						raw: true,
+					}),
 				},
-			},
-		});
+			}),
+			auth,
+			expect.anything(),
+			expect.anything(),
+			expect.any(AbortSignal),
+			true,
+			expect.anything()
+		);
+		expect(proxyMessages()).toEqual(["pause", "play"]);
 		expect(mocks.createDefaultAuthHook).not.toHaveBeenCalled();
 	});
 
-	it("subscribes before patching and waits for the proxy to resume", async ({
+	it("pauses, uploads, and resumes before resolving an update", async ({
 		expect,
 	}) => {
-		const { worker, raw, drained, patchConfig } = createWorker();
-		let reloadListenerCount = 0;
-		patchConfig.mockImplementation(async () => {
-			reloadListenerCount = raw.listenerCount("reloadComplete");
-			raw.emit("reloadComplete", {});
-		});
-		mocks.startWorker.mockResolvedValue(worker);
+		const session = await startRemoteProxySession(
+			{ KV: { type: "kv_namespace", id: "old", remote: true } },
+			{
+				auth: {
+					accountId: "account-id",
+					apiToken: { apiToken: "api-token" },
+				},
+			}
+		);
+		mocks.dispatchFetch.mockClear();
 
-		const session = await startRemoteProxySession({
-			KV: { type: "kv_namespace", id: "old", remote: true },
-		});
 		await session.updateBindings({
 			KV: { type: "kv_namespace", id: "new", remote: true },
 		});
 
-		expect(reloadListenerCount).toBe(1);
-		expect(patchConfig).toHaveBeenCalledWith({
-			bindings: {
-				KV: {
-					type: "kv_namespace",
-					id: "new",
-					remote: true,
-					raw: true,
+		expect(proxyMessages()).toEqual(["pause", "play"]);
+		expect(mocks.createWorkerPreview).toHaveBeenLastCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				bindings: {
+					KV: expect.objectContaining({ id: "new", raw: true }),
 				},
-			},
-		});
-		expect(drained).toHaveBeenCalledOnce();
-		expect(patchConfig.mock.invocationCallOrder[0]).toBeLessThan(
-			drained.mock.invocationCallOrder[0]
+			}),
+			expect.anything(),
+			expect.anything(),
+			expect.anything(),
+			expect.anything(),
+			true,
+			expect.anything()
 		);
 	});
 
-	it("surfaces errors emitted while establishing the session", async ({
-		expect,
-	}) => {
-		const { worker, raw } = createWorker();
-		Object.assign(raw.proxy, {
-			localServerReady: { promise: new Promise<void>(() => {}) },
-		});
-		mocks.startWorker.mockImplementation(async () => {
-			setTimeout(() => {
-				raw.emit("error", {
-					type: "error",
-					reason: "Failed to obtain a preview token",
-					cause: new Error("The remote worker preview failed."),
-					source: "RemoteRuntimeController",
-					data: undefined,
-				});
-			}, 0);
-			return worker;
-		});
+	it("disposes preview and local proxy resources", async ({ expect }) => {
+		const session = await startRemoteProxySession(
+			{},
+			{
+				auth: {
+					accountId: "account-id",
+					apiToken: { apiToken: "api-token" },
+				},
+			}
+		);
+
+		await session.dispose();
+
+		expect(mocks.dispose).toHaveBeenCalledOnce();
+	});
+
+	it("surfaces preview upload errors", async ({ expect }) => {
+		mocks.createWorkerPreview.mockRejectedValueOnce(
+			new Error("The remote worker preview failed.")
+		);
 
 		await expect(
 			startRemoteProxySession(
 				{},
-				{ auth: { accountId: "id", apiToken: { apiToken: "token" } } }
+				{
+					auth: {
+						accountId: "account-id",
+						apiToken: { apiToken: "api-token" },
+					},
+				}
 			)
 		).rejects.toThrow(
-			"Failed to start the remote proxy session. Failed to obtain a preview token: The remote worker preview failed."
+			"Failed to start the remote proxy session: The remote worker preview failed."
+		);
+	});
+
+	it("resumes the previous proxy target when an update fails", async ({
+		expect,
+	}) => {
+		const session = await startRemoteProxySession(
+			{ KV: { type: "kv_namespace", id: "old", remote: true } },
+			{
+				auth: {
+					accountId: "account-id",
+					apiToken: { apiToken: "api-token" },
+				},
+			}
+		);
+		mocks.dispatchFetch.mockClear();
+		mocks.createWorkerPreview.mockRejectedValueOnce(new Error("upload failed"));
+
+		await expect(
+			session.updateBindings({
+				KV: { type: "kv_namespace", id: "new", remote: true },
+			})
+		).rejects.toThrow("upload failed");
+
+		expect(proxyMessages()).toEqual(["pause", "play"]);
+	});
+
+	it("captures bindings for concurrent updates", async ({ expect }) => {
+		const session = await startRemoteProxySession(
+			{ KV: { type: "kv_namespace", id: "initial", remote: true } },
+			{
+				auth: {
+					accountId: "account-id",
+					apiToken: { apiToken: "api-token" },
+				},
+			}
+		);
+		const pendingUpload = Promise.withResolvers<{
+			value: string;
+			host: string;
+		}>();
+		mocks.createWorkerPreview.mockImplementationOnce(
+			async () => pendingUpload.promise
+		);
+
+		const first = session.updateBindings({
+			KV: { type: "kv_namespace", id: "first", remote: true },
+		});
+		await vi.waitFor(() =>
+			expect(mocks.createWorkerPreview).toHaveBeenCalledTimes(2)
+		);
+		const second = session.updateBindings({
+			KV: { type: "kv_namespace", id: "second", remote: true },
+		});
+		pendingUpload.resolve({ value: "first-token", host: "proxy.example.com" });
+		await Promise.all([first, second]);
+
+		const uploadedIds = mocks.createWorkerPreview.mock.calls
+			.slice(-2)
+			.map(([, worker]) => worker.bindings.KV?.id);
+		expect(uploadedIds).toEqual(["first", "second"]);
+	});
+
+	it("rejects updates after disposal", async ({ expect }) => {
+		const session = await startRemoteProxySession(
+			{},
+			{
+				auth: {
+					accountId: "account-id",
+					apiToken: { apiToken: "api-token" },
+				},
+			}
+		);
+		await session.dispose();
+
+		await expect(session.updateBindings({})).rejects.toThrow(
+			"Cannot update a disposed remote proxy session"
 		);
 	});
 });
+
+function proxyMessages(): unknown[] {
+	return mocks.dispatchFetch.mock.calls.map(
+		([, init]) =>
+			(init as { cf: { hostMetadata: { type: string } } }).cf.hostMetadata.type
+	);
+}

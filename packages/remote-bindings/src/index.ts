@@ -1,8 +1,8 @@
-import type { StartDevWorkerInput } from "./internal/dev-env/types";
 import type {
 	RemoteProxySession,
 	StartRemoteProxySessionOptions,
 } from "./session/start-remote-proxy-session";
+import type { Binding } from "@cloudflare/workers-utils";
 
 export {
 	maybeStartOrUpdateRemoteProxySession,
@@ -19,7 +19,7 @@ export type {
 export type { RemoteBindingsLogger } from "./logger";
 
 export async function startRemoteProxySession(
-	bindings: StartDevWorkerInput["bindings"],
+	bindings: Record<string, Binding> | undefined,
 	options?: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
 	const { startRemoteProxySession: startSession } =

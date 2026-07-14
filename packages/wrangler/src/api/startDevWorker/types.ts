@@ -1,4 +1,7 @@
+import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ConfigController } from "./ConfigController";
 import type { DevEnv } from "./DevEnv";
+import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	AsyncHook,
 	AssetsOptions,
@@ -6,10 +9,8 @@ import type {
 	Binding,
 	CfAccount,
 	CfModule,
-	CfModuleType,
 	CfScriptFormat,
 	Config,
-	Entry,
 	File,
 	Hook,
 	HookValues,
@@ -24,15 +25,6 @@ import type { DispatchFetch, Miniflare, WorkerdStructuredLog } from "miniflare";
 import type * as undici from "undici";
 
 type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
-
-type ContainerDevConfig = { class_name: string } & (
-	| { image_uri: string }
-	| {
-			dockerfile: string;
-			image_build_context: string;
-			image_vars?: Record<string, string>;
-	  }
-);
 
 /**
  * Extended StartDevWorkerInput with wrangler-specific fields that depend on miniflare types.
@@ -52,13 +44,8 @@ export interface Worker {
 	url: Promise<URL>;
 	inspectorUrl: Promise<URL | undefined>;
 	config: StartDevWorkerOptions;
-	setConfig(
-		input: StartDevWorkerInput,
-		throwErrors?: boolean
-	): Promise<StartDevWorkerOptions | undefined>;
-	patchConfig(
-		input: Partial<StartDevWorkerInput>
-	): Promise<StartDevWorkerOptions | undefined>;
+	setConfig: ConfigController["set"];
+	patchConfig: ConfigController["patch"];
 	fetch: DispatchFetch;
 	scheduled: MiniflareWorker["scheduled"];
 	queue: MiniflareWorker["queue"];
@@ -98,27 +85,12 @@ export type StartDevWorkerOptions = Omit<
 	};
 	entrypoint: string;
 	assets?: AssetsOptions;
-	containers?: ContainerDevConfig[];
+	containers?: ContainerNormalizedConfig[];
 	name: string;
 	complianceRegion: Config["compliance_region"];
 };
 
-export interface SourceMapMetadata {
-	tmpDir: string;
-	entryDirectory: string;
-}
-
-export type Bundle = {
-	id: number;
-	path: string;
-	entrypointSource: string;
-	entry: Entry;
-	type: CfModuleType;
-	modules: CfModule[];
-	dependencies: Record<string, { bytesInOutput: number }>;
-	sourceMapPath: string | undefined;
-	sourceMapMetadata: SourceMapMetadata | undefined;
-};
+export type Bundle = EsbuildBundle;
 
 export type {
 	StartDevWorkerInput,

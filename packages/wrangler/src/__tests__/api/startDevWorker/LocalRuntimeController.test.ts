@@ -3,7 +3,6 @@ import fs, { readFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import util from "node:util";
-import { urlFromParts } from "@cloudflare/remote-bindings/internal";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { DeferredPromise, Response } from "miniflare";
@@ -16,6 +15,7 @@ import {
 	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
 } from "../../../api/startDevWorker/LocalRuntimeController";
+import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
 import { usingLocalSecretsStoreSecretAPI } from "../../../secrets-store/commands";
 import { FakeBus } from "../../helpers/fake-bus";

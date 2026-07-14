@@ -12,11 +12,11 @@ import type {
 	CfAccount,
 	CfPreviewSession,
 	CfPreviewToken,
+	CfWorkerInitWithName,
 	CreateWorkerPreviewOptions,
 } from "@cloudflare/remote-bindings/preview/create-worker-preview";
 import type {
 	CfWorkerContext,
-	CfWorkerInitWithName,
 	ComplianceConfig,
 } from "@cloudflare/workers-utils";
 

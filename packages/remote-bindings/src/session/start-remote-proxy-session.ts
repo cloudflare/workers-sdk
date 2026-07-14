@@ -1,22 +1,55 @@
-import events from "node:events";
-import { UserError } from "@cloudflare/workers-utils";
+import { randomUUID } from "node:crypto";
+import { createWorkerUploadForm } from "@cloudflare/deploy-helpers/create-worker-upload-form";
+import { getAccessHeaders, getAuthFromEnv } from "@cloudflare/workers-auth";
+import {
+	APIError,
+	fetchResultBase,
+	getComplianceRegionSubdomain,
+	isNonInteractiveOrCI,
+	retryOnAPIFailure,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { DeferredPromise } from "miniflare";
+import { Log, LogLevel, Miniflare, Mutex, Response } from "miniflare";
+import { fetch } from "undici";
+import { version as packageVersion } from "../../package.json";
 import { createDefaultAuthHook } from "../auth";
 import { createRemoteBindingsLogger } from "../logger";
 import {
-	RemoteProxyDevEnv,
-	RemoteSessionAuthenticationError,
-} from "./RemoteProxyDevEnv";
-import type { ErrorEvent } from "../internal/dev-env/events";
-import type { StartDevWorkerInput, Worker } from "../internal/dev-env/types";
+	createPreviewSession,
+	createWorkerPreview,
+} from "../preview/create-worker-preview";
+import {
+	proxyServerWorkerContents,
+	proxyWorkerContents,
+} from "./worker-scripts";
 import type { RemoteBindingsLogger } from "../logger";
-import type { Config, LoggerLevel } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerInitWithName,
+	CfPreviewSession,
+	CreateWorkerPreviewOptions,
+} from "../preview/create-worker-preview";
+import type {
+	ProxyData,
+	ProxyWorkerIncomingRequestBody,
+	ProxyWorkerOutgoingRequestBody,
+} from "./proxy-types";
+import type {
+	ApiCredentials,
+	AsyncHook,
+	Binding,
+	CfAccount,
+	CfWorkerContext,
+	Config,
+	LoggerLevel,
+} from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
+
+const PREVIEW_TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
 
 export type StartRemoteProxySessionOptions = {
 	workerName?: string;
-	auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
+	auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>;
 	accountId?: string;
 	/** Directory used to resolve auth profile directory bindings. */
 	profileDir?: string;
@@ -26,14 +59,526 @@ export type StartRemoteProxySessionOptions = {
 	logger?: RemoteBindingsLogger;
 };
 
-function isErrorEvent(error: unknown): error is ErrorEvent {
+export type RemoteProxySession = {
+	ready: Promise<void>;
+	updateBindings(bindings: Record<string, Binding>): Promise<void>;
+	dispose(): Promise<void>;
+	remoteProxyConnectionString: RemoteProxyConnectionString;
+};
+
+export async function startRemoteProxySession(
+	bindings: Record<string, Binding> | undefined,
+	options: StartRemoteProxySessionOptions = {}
+): Promise<RemoteProxySession> {
+	const logger = options.logger ?? createRemoteBindingsLogger();
+	logger.log(chalk.dim("⎔ Establishing remote connection..."));
+
+	const auth =
+		options.auth ??
+		createDefaultAuthHook(
+			logger,
+			options.accountId,
+			options.complianceRegion,
+			options.profileDir
+		);
+	const workerName = options.workerName ?? randomUUID();
+	const proxy = new LocalProxy(logger);
+	const preview = new RemotePreview({
+		auth,
+		accountId: options.accountId,
+		complianceRegion: options.complianceRegion,
+		logger,
+		workerName,
+	});
+	const updateMutex = new Mutex();
+	let disposed = false;
+	let latestBindings = bindings ?? {};
+	let activeProxyData: ProxyData | undefined;
+
+	async function update(
+		nextBindings: Record<string, Binding>,
+		resetSession = false
+	): Promise<void> {
+		if (disposed) {
+			throw new Error("Cannot update a disposed remote proxy session");
+		}
+		await proxy.send({ type: "pause" });
+		try {
+			const proxyData = await preview.upload(
+				toRawBindings(nextBindings),
+				resetSession
+			);
+			await proxy.send({ type: "play", proxyData });
+			activeProxyData = proxyData;
+			latestBindings = nextBindings;
+		} catch (error) {
+			if (activeProxyData) {
+				await proxy.send({ type: "play", proxyData: activeProxyData });
+				preview.scheduleRefresh();
+			}
+			throw error;
+		}
+	}
+
+	function refresh(expiredProxyData?: ProxyData): void {
+		logger.log(chalk.dim("⎔ Refreshing preview token..."));
+		void updateMutex
+			.runWith(async () => {
+				if (
+					expiredProxyData &&
+					expiredProxyData.headers["cf-workers-preview-token"] !==
+						activeProxyData?.headers["cf-workers-preview-token"]
+				) {
+					return;
+				}
+				await update(latestBindings, true);
+				logger.log(chalk.green("✔ Preview token refreshed successfully"));
+			})
+			.catch((error) => logger.error("Failed to refresh preview token", error));
+	}
+
+	proxy.onPreviewTokenExpired = (proxyData) => refresh(proxyData);
+	preview.onRefreshRequired = () => refresh(activeProxyData);
+
+	try {
+		await updateMutex.runWith(() => update(latestBindings));
+	} catch (error) {
+		await Promise.allSettled([preview.dispose(), proxy.dispose()]);
+		if (error instanceof UserError) {
+			throw error;
+		}
+		const message = getErrorMessage(error);
+		throw new Error(
+			`Failed to start the remote proxy session${message ? `: ${message}` : ""}`,
+			{ cause: error }
+		);
+	}
+
+	const remoteProxyConnectionString =
+		(await proxy.ready) as RemoteProxyConnectionString;
+
+	return {
+		ready: Promise.resolve(),
+		remoteProxyConnectionString,
+		async updateBindings(newBindings) {
+			await updateMutex.runWith(() => update(newBindings));
+		},
+		async dispose() {
+			disposed = true;
+			await updateMutex.drained();
+			await Promise.all([preview.dispose(), proxy.dispose()]);
+		},
+	};
+}
+
+class RemotePreview {
+	readonly #abortController = new AbortController();
+	readonly #auth: NonNullable<StartRemoteProxySessionOptions["auth"]>;
+	readonly #accountId: string | undefined;
+	readonly #complianceRegion: Config["compliance_region"];
+	readonly #logger: RemoteBindingsLogger;
+	readonly #workerName: string;
+	readonly #previewOptions: CreateWorkerPreviewOptions;
+	#credentials: ApiCredentials | undefined;
+	#session: CfPreviewSession | undefined;
+	#refreshTimer: ReturnType<typeof setTimeout> | undefined;
+	onRefreshRequired: () => void = () => {};
+
+	constructor(options: {
+		auth: NonNullable<StartRemoteProxySessionOptions["auth"]>;
+		accountId: string | undefined;
+		complianceRegion: Config["compliance_region"];
+		logger: RemoteBindingsLogger;
+		workerName: string;
+	}) {
+		this.#auth = options.auth;
+		this.#accountId = options.accountId;
+		this.#complianceRegion = options.complianceRegion;
+		this.#logger = options.logger;
+		this.#workerName = options.workerName;
+		this.#previewOptions = this.#createPreviewOptions();
+	}
+
+	async upload(
+		bindings: Record<string, Binding>,
+		resetSession: boolean
+	): Promise<ProxyData> {
+		clearTimeout(this.#refreshTimer);
+		const account = await this.#resolveAuth();
+		this.#credentials = account.apiToken;
+		const context: CfWorkerContext = {
+			env: undefined,
+			zone: undefined,
+			host: undefined,
+			routes: undefined,
+			sendMetrics: undefined,
+		};
+
+		if (resetSession) {
+			this.#session = undefined;
+		}
+		this.#session ??= await this.#createSession(account, context);
+
+		let token;
+		try {
+			token = await this.#uploadWorker(account, context, bindings);
+		} catch (error) {
+			if (isAuthenticationError(error)) {
+				throw new RemoteSessionAuthenticationError(error);
+			}
+			if (!(error instanceof APIError) || error.code !== 10049) {
+				throw error;
+			}
+			this.#session = await this.#createSession(account, context);
+			try {
+				token = await this.#uploadWorker(account, context, bindings);
+			} catch (retryError) {
+				if (isAuthenticationError(retryError)) {
+					throw new RemoteSessionAuthenticationError(retryError);
+				}
+				throw retryError;
+			}
+		}
+
+		const accessHeaders = await getAccessHeaders(token.host, {
+			logger: this.#logger,
+			isNonInteractiveOrCI,
+		});
+		this.scheduleRefresh();
+
+		return {
+			userWorkerUrl: {
+				protocol: "https:",
+				hostname: token.host,
+				port: "443",
+			},
+			headers: {
+				"cf-workers-preview-token": token.value,
+				...accessHeaders,
+				"cf-connecting-ip": "",
+			},
+		};
+	}
+
+	async dispose(): Promise<void> {
+		clearTimeout(this.#refreshTimer);
+		this.#abortController.abort();
+		this.#session = undefined;
+	}
+
+	scheduleRefresh(): void {
+		clearTimeout(this.#refreshTimer);
+		this.#refreshTimer = setTimeout(
+			() => this.onRefreshRequired(),
+			PREVIEW_TOKEN_REFRESH_INTERVAL
+		);
+	}
+
+	async #resolveAuth(): Promise<CfAccount> {
+		return await (typeof this.#auth === "function"
+			? this.#auth({ account_id: this.#accountId })
+			: this.#auth);
+	}
+
+	async #createSession(
+		account: CfAccount,
+		context: CfWorkerContext
+	): Promise<CfPreviewSession> {
+		this.#logger.log(chalk.dim("⎔ Starting remote preview..."));
+		try {
+			return await retryOnAPIFailure(
+				() =>
+					createPreviewSession(
+						{ compliance_region: this.#complianceRegion },
+						account,
+						context,
+						this.#abortController.signal,
+						this.#workerName,
+						this.#previewOptions
+					),
+				this.#logger,
+				undefined,
+				undefined,
+				this.#abortController.signal
+			);
+		} catch (error) {
+			if (isAuthenticationError(error)) {
+				throw new RemoteSessionAuthenticationError(error);
+			}
+			throw error;
+		}
+	}
+
+	async #uploadWorker(
+		account: CfAccount,
+		context: CfWorkerContext,
+		bindings: Record<string, Binding>
+	) {
+		const session = this.#session;
+		if (!session) {
+			throw new Error("Missing remote preview session");
+		}
+		return retryOnAPIFailure(
+			() =>
+				createWorkerPreview(
+					{ compliance_region: this.#complianceRegion },
+					createProxyWorkerInit(this.#workerName, bindings),
+					account,
+					context,
+					session,
+					this.#abortController.signal,
+					true,
+					this.#previewOptions
+				),
+			this.#logger,
+			undefined,
+			undefined,
+			this.#abortController.signal
+		);
+	}
+
+	#createPreviewOptions(): CreateWorkerPreviewOptions {
+		return {
+			context: {
+				fetch,
+				fetchResult: (complianceConfig, resource, init, query, signal, token) =>
+					fetchResultBase(
+						complianceConfig,
+						resource,
+						init,
+						`remote-bindings/${packageVersion}`,
+						this.#logger,
+						query,
+						signal,
+						token ?? this.#credentials
+					),
+				createWorkerUploadForm,
+				getWorkersDevSubdomain: async (
+					complianceConfig,
+					accountId,
+					options
+				) => {
+					const { subdomain } = await fetchResultBase<{ subdomain: string }>(
+						complianceConfig,
+						`/accounts/${accountId}/workers/subdomain`,
+						undefined,
+						`remote-bindings/${packageVersion}`,
+						this.#logger,
+						undefined,
+						options.abortSignal,
+						this.#credentials
+					);
+					return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
+				},
+				getAccessHeaders: (hostname) =>
+					getAccessHeaders(hostname, {
+						logger: this.#logger,
+						isNonInteractiveOrCI,
+					}),
+				logger: this.#logger,
+			},
+		};
+	}
+}
+
+class LocalProxy {
+	readonly #logger: RemoteBindingsLogger;
+	readonly #miniflare: Miniflare;
+	readonly #mutex = new Mutex();
+	readonly #secret = randomUUID();
+	readonly ready: Promise<URL>;
+	onPreviewTokenExpired: (proxyData: ProxyData) => void = () => {};
+
+	constructor(logger: RemoteBindingsLogger) {
+		this.#logger = logger;
+		this.#miniflare = new Miniflare({
+			port: 0,
+			stripDisablePrettyError: false,
+			unsafeLocalExplorer: false,
+			workers: [
+				{
+					name: "ProxyWorker",
+					compatibilityDate: "2023-12-18",
+					compatibilityFlags: ["nodejs_compat"],
+					modules: [
+						{
+							type: "ESModule",
+							path: "ProxyWorker.mjs",
+							contents: proxyWorkerContents,
+						},
+					],
+					durableObjects: {
+						DURABLE_OBJECT: {
+							className: "ProxyWorker",
+							unsafePreventEviction: true,
+						},
+					},
+					stripCfConnectingIp: false,
+					serviceBindings: {
+						PROXY_CONTROLLER: async (request): Promise<Response> => {
+							this.#handleMessage(
+								(await request.json()) as ProxyWorkerOutgoingRequestBody
+							);
+							return new Response(null, { status: 204 });
+						},
+					},
+					bindings: { PROXY_CONTROLLER_AUTH_SECRET: this.#secret },
+					cache: false,
+					unsafeEphemeralDurableObjects: true,
+				},
+			],
+			verbose: logger.loggerLevel === "debug",
+			log: new RemoteProxyLog(toMiniflareLogLevel(logger.loggerLevel), logger),
+			liveReload: false,
+		});
+		this.ready = this.#miniflare.ready;
+	}
+
+	async send(
+		message: ProxyWorkerIncomingRequestBody,
+		retries = 3
+	): Promise<void> {
+		try {
+			await this.#mutex.runWith(async () => {
+				await this.ready;
+				await this.#miniflare.dispatchFetch(
+					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
+					{
+						headers: { Authorization: this.#secret },
+						cf: { hostMetadata: message },
+					}
+				);
+			});
+		} catch (error) {
+			if (retries > 0) {
+				return this.send(message, retries - 1);
+			}
+			throw error;
+		}
+	}
+
+	async dispose(): Promise<void> {
+		await this.#mutex.drained();
+		await this.#miniflare.dispose();
+	}
+
+	#handleMessage(message: ProxyWorkerOutgoingRequestBody): void {
+		switch (message.type) {
+			case "previewTokenExpired":
+				this.onPreviewTokenExpired(message.proxyData);
+				break;
+			case "error":
+				this.#logger.error("Error inside ProxyWorker", message.error);
+				break;
+			case "debug-log":
+				this.#logger.debug("[ProxyWorker]", ...message.args);
+				break;
+			case "sseResponseDetected":
+				break;
+		}
+	}
+}
+
+class RemoteProxyLog extends Log {
+	constructor(
+		level: LogLevel,
+		private readonly logger: RemoteBindingsLogger
+	) {
+		super(level, { prefix: "remote-bindings" });
+	}
+
+	protected log(message: string): void {
+		this.logger.debug(message);
+	}
+}
+
+class RemoteSessionAuthenticationError extends UserError {
+	constructor(cause: unknown) {
+		const envAuth = getAuthFromEnv();
+		let errorMessage =
+			"Failed to establish remote session due to an authentication issue.\n";
+		if (envAuth !== undefined) {
+			const method =
+				"apiToken" in envAuth
+					? "a custom API token (`CLOUDFLARE_API_TOKEN`)"
+					: "a Global API Key (`CLOUDFLARE_API_KEY`)";
+			errorMessage +=
+				`It looks like you are authenticating via ${method} set in an environment variable.\n` +
+				"The token may be invalid or lack the required permissions for this operation.\n\n" +
+				"To fix this, verify that your token is valid and has the correct permissions.\n" +
+				"You can also run `wrangler whoami` to check your current authentication status.";
+		} else {
+			errorMessage +=
+				"Your credentials may have expired or been revoked.\n\n" +
+				"To fix this, try to:\n" +
+				"  - Run `wrangler whoami` to check your current authentication status.\n" +
+				"  - Run `wrangler logout` and then `wrangler login` to re-authenticate.";
+		}
+		super(errorMessage, {
+			cause,
+			telemetryMessage: "remote dev authentication error",
+		});
+	}
+}
+
+function createProxyWorkerInit(
+	name: string,
+	bindings: Record<string, Binding>
+): CfWorkerInitWithName {
+	return {
+		name,
+		main: {
+			name: "ProxyServerWorker.mjs",
+			filePath: "ProxyServerWorker.mjs",
+			type: "esm",
+			content: proxyServerWorkerContents,
+		},
+		modules: [],
+		bindings,
+		migrations: undefined,
+		exports: undefined,
+		compatibility_date: "2025-04-28",
+		compatibility_flags: undefined,
+		keepVars: true,
+		keepSecrets: true,
+		logpush: false,
+		sourceMaps: undefined,
+		containers: undefined,
+		assets: undefined,
+		placement: undefined,
+		tail_consumers: undefined,
+		streaming_tail_consumers: undefined,
+		limits: undefined,
+		observability: undefined,
+		cache: undefined,
+	};
+}
+
+function toRawBindings(
+	bindings: Record<string, Binding>
+): Record<string, Binding> {
+	return Object.fromEntries(
+		Object.entries(bindings).map(([key, binding]) => [
+			key,
+			{ ...binding, raw: true },
+		])
+	);
+}
+
+function toMiniflareLogLevel(level: LoggerLevel): LogLevel {
+	switch (level) {
+		case "debug":
+			return LogLevel.DEBUG;
+		case "none":
+			return LogLevel.NONE;
+		default:
+			return LogLevel.ERROR;
+	}
+}
+
+function isAuthenticationError(error: unknown): boolean {
 	return (
-		typeof error === "object" &&
-		error !== null &&
-		"type" in error &&
-		(error as { type?: string }).type === "error" &&
-		"reason" in error &&
-		"cause" in error
+		error instanceof APIError && (error.code === 9106 || error.code === 10000)
 	);
 }
 
@@ -41,218 +586,8 @@ function getErrorMessage(error: unknown): string | undefined {
 	if (error instanceof Error) {
 		return getErrorMessage(error.cause) ?? error.message;
 	}
-
 	if (typeof error === "string") {
 		return error;
 	}
-
-	if (typeof error === "object" && error !== null) {
-		const maybeMessage = (error as { message?: unknown }).message;
-		if (typeof maybeMessage === "string") {
-			const maybeCause = (error as { cause?: unknown }).cause;
-			return getErrorMessage(maybeCause) ?? maybeMessage;
-		}
-	}
-
 	return undefined;
-}
-
-/**
- * Walks the cause chain of an error (including {@link ErrorEvent} wrappers)
- * looking for a {@link RemoteSessionAuthenticationError}.
- *
- * @param error - the error or ErrorEvent to inspect
- * @returns the first {@link RemoteSessionAuthenticationError} found, or
- *   `undefined` if none exists in the chain
- */
-function findRemoteSessionAuthError(
-	error: unknown
-): RemoteSessionAuthenticationError | undefined {
-	if (error instanceof RemoteSessionAuthenticationError) {
-		return error;
-	}
-
-	if (isErrorEvent(error) || (error instanceof Error && error.cause)) {
-		return findRemoteSessionAuthError(error.cause);
-	}
-
-	return undefined;
-}
-
-function formatRemoteProxySessionError(error: unknown): string | undefined {
-	if (isErrorEvent(error)) {
-		const causeMessage = getErrorMessage(error.cause);
-		return causeMessage ? `${error.reason}: ${causeMessage}` : error.reason;
-	}
-
-	return getErrorMessage(error);
-}
-
-export async function startRemoteProxySession(
-	bindings: StartDevWorkerInput["bindings"],
-	options?: StartRemoteProxySessionOptions
-): Promise<RemoteProxySession> {
-	const logger = options?.logger ?? createRemoteBindingsLogger();
-	logger.log(chalk.dim("⎔ Establishing remote connection..."));
-	// Transform all bindings to use "raw" mode
-	const rawBindings = Object.fromEntries(
-		Object.entries(bindings ?? {}).map(([key, binding]) => [
-			key,
-			{ ...binding, raw: true },
-		])
-	);
-
-	const auth =
-		options?.auth ??
-		createDefaultAuthHook(
-			logger,
-			options?.accountId,
-			options?.complianceRegion,
-			options?.profileDir
-		);
-	const worker = await new RemoteProxyDevEnv(logger, options?.accountId)
-		.startWorker({
-			name: options?.workerName,
-			entrypoint: "ProxyServerWorker.mjs",
-			compatibilityDate: "2025-04-28",
-			complianceRegion: options?.complianceRegion,
-			dev: {
-				remote: "minimal",
-				auth,
-				server: {
-					port: 0,
-				},
-				inspector: false,
-				logLevel: getStartWorkerLogLevel(logger.loggerLevel),
-			},
-			bindings: rawBindings,
-		})
-		.catch((startWorkerError) => {
-			// If the error is already a UserError (e.g. an auth failure from
-			// ConfigController), re-throw it directly so the top-level error
-			// handler can display the original, actionable message without
-			// wrapping it in a generic "Failed to start" envelope.
-			if (startWorkerError instanceof UserError) {
-				throw startWorkerError;
-			}
-			let errorMessage = startWorkerError;
-			if (startWorkerError instanceof Error) {
-				if (startWorkerError.cause instanceof Error) {
-					errorMessage = startWorkerError.cause.message;
-				} else {
-					errorMessage = startWorkerError.message;
-				}
-			}
-			throw new Error(
-				`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
-			);
-		});
-
-	const maybeErrorPromise = new DeferredPromise<{ error: unknown }>();
-
-	worker.raw.addListener("error", (e) =>
-		maybeErrorPromise.resolve({ error: e })
-	);
-
-	const maybeError = await Promise.race([
-		maybeErrorPromise,
-		worker.raw.proxy.localServerReady.promise,
-	]);
-
-	if (maybeError && maybeError.error) {
-		const authError = findRemoteSessionAuthError(maybeError.error);
-		if (authError) {
-			throw authError;
-		}
-
-		const details = formatRemoteProxySessionError(maybeError.error);
-		throw new Error(
-			details
-				? `Failed to start the remote proxy session. ${details}`
-				: "Failed to start the remote proxy session. There is likely additional logging output above.",
-			{
-				cause: maybeError.error,
-			}
-		);
-	}
-
-	const remoteProxyConnectionString =
-		(await worker.url) as RemoteProxyConnectionString;
-
-	const updateBindings = async (
-		newBindings: StartDevWorkerInput["bindings"]
-	) => {
-		// Transform all new bindings to use "raw" mode
-		const rawNewBindings = Object.fromEntries(
-			Object.entries(newBindings ?? {}).map(([key, binding]) => [
-				key,
-				{ ...binding, raw: true },
-			])
-		);
-
-		// `worker.patchConfig` returns as soon as the config update is dispatched
-		// — long before the remote worker has actually been re-uploaded with the
-		// new bindings and the local proxy worker has unpaused. If we returned
-		// here, callers issuing requests immediately afterwards would race the
-		// reload window, often surfacing as "WebSocket connection failed" for
-		// JSRPC bindings.
-		//
-		// Subscribe BEFORE patchConfig so we don't miss either event.
-		// `events.once()` resolves on `reloadComplete` and rejects if `error`
-		// is emitted first (with the event payload as the rejection value).
-		const reloadComplete = events.once(worker.raw, "reloadComplete");
-		await worker.patchConfig({ bindings: rawNewBindings });
-		try {
-			await reloadComplete;
-		} catch (errOrEvent) {
-			throw errOrEvent instanceof Error
-				? errOrEvent
-				: new Error(
-						`RemoteProxySession.updateBindings failed during reload: ${
-							(errOrEvent as { reason?: string })?.reason ?? "unknown"
-						}`,
-						{ cause: errOrEvent }
-					);
-		}
-		// The "play" message that resumes the local proxy worker is enqueued on
-		// this mutex during onReloadComplete. Wait for it to drain so the proxy
-		// actually unpauses before we return — matches what `worker.fetch` does.
-		await worker.raw.proxy.runtimeMessageMutex.drained();
-	};
-
-	return {
-		ready: worker.ready,
-		remoteProxyConnectionString,
-		updateBindings,
-		dispose: worker.dispose,
-	};
-}
-
-export type RemoteProxySession = Pick<Worker, "ready" | "dispose"> & {
-	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
-	remoteProxyConnectionString: RemoteProxyConnectionString;
-};
-
-/**
- * Gets the log level to use for the remote worker.
- *
- * @param wranglerLogLevel The log level set for the Wrangler process.
- * @returns The log level to use for the remove worker.
- */
-function getStartWorkerLogLevel(wranglerLogLevel: LoggerLevel): LoggerLevel {
-	switch (wranglerLogLevel) {
-		case "debug":
-			// If the `logLevel` is "debug" it means that the user is likely trying to debug some issue,
-			// so we should respect that here as well for the remote proxy session.
-			return "debug";
-
-		case "none":
-			// If the `logLevel` is "none" it means that the user is trying to silence all output,
-			// so we should respect that here as well for the remote proxy session.
-			return "none";
-
-		default:
-			// In any other case we want to default to "error" to avoid noisy logs
-			return "error";
-	}
 }

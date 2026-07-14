@@ -5,6 +5,7 @@ import { createRemoteBindingsLogger } from "./logger";
 const mocks = vi.hoisted(() => ({
 	createCfAuth: vi.fn(),
 	createWranglerAuth: vi.fn(),
+	resolveProfile: vi.fn(() => "profile"),
 }));
 
 vi.mock("@cloudflare/workers-auth/cf", () => ({
@@ -12,6 +13,9 @@ vi.mock("@cloudflare/workers-auth/cf", () => ({
 }));
 vi.mock("@cloudflare/workers-auth/wrangler", () => ({
 	createWranglerAuth: mocks.createWranglerAuth,
+	createWranglerProfileStore: vi.fn(() => ({
+		resolve: mocks.resolveProfile,
+	})),
 }));
 
 afterEach(() => {
@@ -51,15 +55,19 @@ describe("default auth selection", () => {
 
 	it("uses Wrangler auth when CLOUDFLARE_JSON_AUTH is absent", ({ expect }) => {
 		delete process.env.CLOUDFLARE_JSON_AUTH;
-		mocks.createWranglerAuth.mockReturnValue({});
+		const setProfile = vi.fn();
+		mocks.createWranglerAuth.mockReturnValue({ setProfile });
 
 		createDefaultAuthHook(
 			createRemoteBindingsLogger("none"),
 			"account-id",
-			undefined
+			undefined,
+			"/project"
 		);
 
 		expect(mocks.createWranglerAuth).toHaveBeenCalledOnce();
 		expect(mocks.createCfAuth).not.toHaveBeenCalled();
+		expect(mocks.resolveProfile).toHaveBeenCalledWith({ cwd: "/project" });
+		expect(setProfile).toHaveBeenCalledWith("profile");
 	});
 });

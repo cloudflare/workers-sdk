@@ -1,6 +1,6 @@
 import { APIError } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { WranglerRemoteRuntimeController } from "../../../api/startDevWorker/WranglerRemoteRuntimeController";
+import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
 // Import the mocked functions so we can set their behavior
 import {
 	createPreviewSession,
@@ -95,7 +95,7 @@ describe("RemoteRuntimeController", () => {
 
 	function setup() {
 		const bus = new FakeBus();
-		const controller = new WranglerRemoteRuntimeController(bus);
+		const controller = new RemoteRuntimeController(bus);
 		teardown(() => controller.teardown());
 		return { controller, bus };
 	}

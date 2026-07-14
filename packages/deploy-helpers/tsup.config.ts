@@ -11,6 +11,7 @@ export default defineConfig(() => [
 		entry: {
 			index: "src/index.ts",
 			context: "src/shared/context.ts",
+			"create-worker-upload-form": "src/create-worker-upload-form.ts",
 		},
 		platform: "node",
 		format: "esm",

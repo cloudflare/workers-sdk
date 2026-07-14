@@ -1,7 +1,7 @@
 import type {
 	ControllerBus,
 	ControllerEvent,
-} from "@cloudflare/remote-bindings/internal";
+} from "../../api/startDevWorker/BaseController";
 
 type EventType = ControllerEvent["type"];
 type EventFor<T extends EventType> = Extract<ControllerEvent, { type: T }>;

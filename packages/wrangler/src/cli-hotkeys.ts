@@ -1,6 +1,6 @@
 import { stripVTControlCharacters } from "node:util";
 import { dim } from "@cloudflare/cli-shared-helpers/colors";
-import { unwrapHook } from "@cloudflare/remote-bindings/internal";
+import { unwrapHook } from "./api/startDevWorker/utils";
 import { logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";
 import type { Hook } from "./api";

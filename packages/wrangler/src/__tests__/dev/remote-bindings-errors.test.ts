@@ -4,6 +4,7 @@ import { startRemoteProxySession } from "../../api";
 import { mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw, mswSuccessUserHandlers } from "../helpers/msw";
+
 mockConsoleMethods();
 
 describe("errors during dev with remote bindings", () => {

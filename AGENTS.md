@@ -50,7 +50,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - `packages/pages-shared/` - Code shared between Wrangler and Cloudflare Pages
 - `packages/workers-shared/` - Code shared between Wrangler and Workers Assets
 - `packages/workers-utils/` - Utility package for common Worker operations
-- `packages/remote-bindings/` - Remote binding sessions and the shared DevEnv kernel
+- `packages/remote-bindings/` - Remote binding proxy sessions for local development
 - `packages/workflows-shared/` - Internal Cloudflare Workflows functionality
 - `packages/containers-shared/` - Shared container functionality
 - `packages/unenv-preset/` - Cloudflare preset for unenv (Node.js polyfills)

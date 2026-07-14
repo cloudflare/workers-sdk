@@ -52,13 +52,13 @@ import {
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
 } from "./shared";
+import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
 	Binding,
 	CreatePreviewDeploymentRequestParams,
 	DeploymentResource,
 	PreviewResource,
 } from "./api";
-import type { StartDevWorkerInput } from "@cloudflare/remote-bindings/internal";
 import type {
 	CfModule,
 	Config,

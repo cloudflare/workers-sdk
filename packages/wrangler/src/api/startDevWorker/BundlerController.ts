@@ -2,10 +2,6 @@ import assert from "node:assert";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
-import {
-	castErrorCause,
-	Controller,
-} from "@cloudflare/remote-bindings/internal";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { BuildFailure } from "../../deployment-bundle/build-failures";
@@ -23,12 +19,12 @@ import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
 import { debounce } from "../../utils/debounce";
 import { isAbortError } from "../../utils/isAbortError";
+import { Controller } from "./BaseController";
+import { castErrorCause } from "./events";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type {
-	ConfigUpdateEvent,
-	StartDevWorkerOptions,
-} from "@cloudflare/remote-bindings/internal";
+import type { ConfigUpdateEvent } from "./events";
+import type { StartDevWorkerOptions } from "./types";
 import type { EphemeralDirectory, Entry } from "@cloudflare/workers-utils";
 
 export class BundlerController extends Controller {

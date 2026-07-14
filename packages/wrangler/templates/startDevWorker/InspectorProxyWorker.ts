@@ -1,25 +1,25 @@
 import assert from "node:assert";
-import { serialiseError } from "../../src/internal/dev-env/events";
 import {
-	assertNever,
-	createDeferred,
-	urlFromParts,
-} from "../../src/internal/dev-env/utils";
-import type {
 	DevToolsCommandRequest,
 	DevToolsCommandRequests,
 	DevToolsCommandResponses,
 	DevToolsEvent,
 	DevToolsEvents,
+	serialiseError,
+} from "../../src/api/startDevWorker/events";
+import {
+	createDeferred,
+	DeferredPromise,
+	MaybePromise,
+	urlFromParts,
+} from "../../src/api/startDevWorker/utils";
+import { assertNever } from "../../src/utils/assert-never";
+import type {
 	InspectorProxyWorkerIncomingWebSocketMessage,
 	InspectorProxyWorkerOutgoingRequestBody,
 	InspectorProxyWorkerOutgoingWebsocketMessage,
 	ProxyData,
-} from "../../src/internal/dev-env/events";
-import type {
-	DeferredPromise,
-	MaybePromise,
-} from "../../src/internal/dev-env/utils";
+} from "../../src/api/startDevWorker/events";
 
 const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 const ALLOWED_ORIGIN_HOSTNAMES = [
@@ -215,7 +215,7 @@ export class InspectorProxyWorker implements DurableObject {
 	}
 
 	sendDebugLog: typeof console.debug = (...args) => {
-		void this.sendProxyControllerRequest({ type: "debug-log", args });
+		this.sendProxyControllerRequest({ type: "debug-log", args });
 	};
 
 	// ***************
@@ -269,9 +269,7 @@ export class InspectorProxyWorker implements DurableObject {
 
 	tryDrainRuntimeMessageBuffer = () => {
 		// If we don't have a DevTools WebSocket, try again later
-		if (this.websockets.devtools === undefined) {
-			return;
-		}
+		if (this.websockets.devtools === undefined) return;
 
 		// clear the buffer and replay each message to devtools
 		for (const msg of this.runtimeMessageBuffer.splice(0)) {
@@ -284,7 +282,7 @@ export class InspectorProxyWorker implements DurableObject {
 	};
 
 	runtimeAbortController = new AbortController(); // will abort the in-flight websocket upgrade request to the remote runtime
-	runtimeKeepAliveInterval: ReturnType<typeof setInterval> | null = null;
+	runtimeKeepAliveInterval: number | null = null;
 	async reconnectRuntimeWebSocket() {
 		assert(this.proxyData, "Expected this.proxyData to be defined");
 
@@ -339,7 +337,7 @@ export class InspectorProxyWorker implements DurableObject {
 			}
 
 			this.websockets.runtimeDeferred.reject(error);
-			void this.sendProxyControllerRequest({
+			this.sendProxyControllerRequest({
 				type: "runtime-websocket-error",
 				error: serialiseError(error),
 			});
@@ -375,7 +373,7 @@ export class InspectorProxyWorker implements DurableObject {
 				this.websockets.runtime = undefined;
 			}
 
-			void this.sendProxyControllerRequest({
+			this.sendProxyControllerRequest({
 				type: "runtime-websocket-error",
 				error,
 			});
@@ -400,7 +398,7 @@ export class InspectorProxyWorker implements DurableObject {
 		this.sendDebugLog("RUNTIME WEBSOCKET OPENED");
 		this.reconnectionsRemaining = 3;
 
-		void this.sendRuntimeMessage(
+		this.sendRuntimeMessage(
 			{ method: "Runtime.enable", id: this.nextCounter() },
 			runtime
 		);
@@ -411,7 +409,7 @@ export class InspectorProxyWorker implements DurableObject {
 		// Without this, Debugger.scriptParsed events won't be emitted on the new
 		// runtime connection, breaking source maps, breakpoints, and debugger pausing.
 		if (this.websockets.devtools !== undefined) {
-			void this.sendRuntimeMessage(
+			this.sendRuntimeMessage(
 				{ method: "Debugger.enable", id: this.nextCounter() },
 				runtime
 			);
@@ -421,7 +419,7 @@ export class InspectorProxyWorker implements DurableObject {
 		// buffer that is never drained without a client (headless `wrangler dev`),
 		// flooding the inspector until the dev server stops accepting connections.
 		if (this.websockets.devtools !== undefined) {
-			void this.sendRuntimeMessage(
+			this.sendRuntimeMessage(
 				{ method: "Network.enable", id: this.nextCounter() },
 				runtime
 			);
@@ -429,11 +427,11 @@ export class InspectorProxyWorker implements DurableObject {
 
 		clearInterval(this.runtimeKeepAliveInterval);
 		this.runtimeKeepAliveInterval = setInterval(() => {
-			void this.sendRuntimeMessage(
+			this.sendRuntimeMessage(
 				{ method: "Runtime.getIsolateId", id: this.nextCounter() },
 				runtime
 			);
-		}, 10_000);
+		}, 10_000) as any;
 
 		this.websockets.runtimeDeferred.resolve(runtime);
 	}
@@ -445,7 +443,7 @@ export class InspectorProxyWorker implements DurableObject {
 		// then we risk clearing logs that have occurred since we scheduled it too
 		// which is worse than leaving logs from the previous version on screen
 		if (this.websockets.runtime) {
-			void this.sendRuntimeMessage(
+			this.sendRuntimeMessage(
 				{
 					method: "Runtime.discardConsoleEntries",
 					id: this.nextCounter(),
@@ -510,10 +508,8 @@ export class InspectorProxyWorker implements DurableObject {
 
 	async handleDevToolsWebSocketUpgradeRequest(req: Request) {
 		// Validate `Host` header
-		const hostHeader = req.headers.get("Host");
-		if (hostHeader == null) {
-			return new Response(null, { status: 400 });
-		}
+		let hostHeader = req.headers.get("Host");
+		if (hostHeader == null) return new Response(null, { status: 400 });
 		try {
 			const host = new URL(`http://${hostHeader}`);
 			if (!ALLOWED_HOST_HOSTNAMES.includes(host.hostname)) {
@@ -535,11 +531,8 @@ export class InspectorProxyWorker implements DurableObject {
 		try {
 			const origin = new URL(originHeader);
 			const allowed = ALLOWED_ORIGIN_HOSTNAMES.some((rule) => {
-				if (typeof rule === "string") {
-					return origin.hostname === rule;
-				} else {
-					return rule.test(origin.hostname);
-				}
+				if (typeof rule === "string") return origin.hostname === rule;
+				else return rule.test(origin.hostname);
 			});
 			if (!allowed) {
 				return new Response("Disallowed `Origin` header", { status: 401 });
@@ -582,11 +575,11 @@ export class InspectorProxyWorker implements DurableObject {
 					// longer drained once devtools is undefined, reintroducing the same
 					// headless flood this proxy otherwise avoids.
 					if (this.websockets.runtime) {
-						void this.sendRuntimeMessage({
+						this.sendRuntimeMessage({
 							id: this.nextCounter(),
 							method: "Debugger.disable",
 						});
-						void this.sendRuntimeMessage({
+						this.sendRuntimeMessage({
 							id: this.nextCounter(),
 							method: "Network.disable",
 						});
@@ -611,7 +604,7 @@ export class InspectorProxyWorker implements DurableObject {
 			// This sends a `Debugger.disable` message to the remote when a new WebSocket connection is initialised,
 			// with the assumption that the new connection will shortly send a `Debugger.enable` event and trigger re-initialisation.
 			// The key initialisation messages that are needed are the `Debugger.scriptParsed events`.
-			void this.sendRuntimeMessage({
+			this.sendRuntimeMessage({
 				id: this.nextCounter(),
 				method: "Debugger.disable",
 			});
@@ -679,7 +672,7 @@ export class InspectorProxyWorker implements DurableObject {
 			return void this.handleDevToolsLoadNetworkResource(message);
 		}
 
-		void this.sendRuntimeMessage(JSON.stringify(message));
+		this.sendRuntimeMessage(JSON.stringify(message));
 	};
 
 	async handleDevToolsLoadNetworkResource(
@@ -695,7 +688,7 @@ export class InspectorProxyWorker implements DurableObject {
 			);
 
 			// When the ProxyController cannot resolve a resource, let the runtime handle the request
-			void this.sendRuntimeMessage(JSON.stringify(message));
+			this.sendRuntimeMessage(JSON.stringify(message));
 		} else {
 			// this.websockets.devtools can be undefined here
 			// the incoming message implies we have a devtools connection, but after
