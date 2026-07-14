@@ -251,7 +251,7 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 
-		// Serve image bytes at /cdn-cgi/mf/imagedelivery/<id>/<variant>
+		// Serve image bytes at /__cf_local/imagedelivery/<id>/<variant>
 		if (url.pathname.startsWith(`${CorePaths.IMAGE_DELIVERY}/`)) {
 			const parts = url.pathname
 				.slice(CorePaths.IMAGE_DELIVERY.length + 1)

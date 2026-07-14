@@ -345,7 +345,7 @@ export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/explorer.
+ * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/local/explorer.
  */
 export const getLocalExplorerEnabledFromEnv =
 	getBooleanEnvironmentVariableFactory({

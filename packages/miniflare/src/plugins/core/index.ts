@@ -311,8 +311,6 @@ export const CoreSharedOptionsSchema = z
 		// TODO: add back validation of cf object
 		cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
 
-		liveReload: z.boolean().optional(),
-
 		// Enable auto service / durable objects discovery with the dev registry
 		unsafeDevRegistryPath: z.string().optional(),
 		// Called when external workers this instance depends on are updated in the dev registry
@@ -326,14 +324,14 @@ export const CoreSharedOptionsSchema = z
 		unsafeModuleFallbackService: CustomFetchServiceSchema.optional(),
 		// Keep blobs when deleting/overwriting keys, required for stacked storage
 		unsafeStickyBlobs: z.boolean().optional(),
-		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
+		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/local/scheduled`
 		unsafeTriggerHandlers: z.boolean().optional(),
 		// Extra environment variables to set on the spawned `workerd` subprocess.
 		// Merged on top of `process.env` and Miniflare's own defaults
 		// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
 		// (for example, to test timezone-dependent behaviour).
 		unsafeRuntimeEnv: z.record(z.string()).optional(),
-		// Enable the local explorer at /cdn-cgi/explorer
+		// Enable the local explorer at /cdn-cgi/local/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
 		// Enable RPC-based Durable Object introspection APIs
 		unsafeInspectDurableObjects: z.boolean().optional(),
@@ -382,26 +380,6 @@ export const CoreSharedOptionsSchema = z
 	);
 
 export const CORE_PLUGIN_NAME = "core";
-
-const LIVE_RELOAD_SCRIPT_TEMPLATE = (
-	port: number
-) => `<script defer type="application/javascript">
-(function () {
-  // Miniflare Live Reload
-  var url = new URL("/cdn-cgi/mf/reload", location.origin);
-  url.protocol = url.protocol.replace("http", "ws");
-  url.port = ${port};
-  function reload() { location.reload(); }
-  function connect(reconnected) {
-    var ws = new WebSocket(url);
-    if (reconnected) ws.onopen = reload;
-    ws.onclose = function(e) {
-      e.code === 1012 ? reload() : e.code === 1000 || e.code === 1001 || setTimeout(connect, 1000, true);
-    }
-  }
-  connect();
-})();
-</script>`;
 
 export const SCRIPT_CUSTOM_FETCH_SERVICE = `addEventListener("fetch", (event) => {
   const request = new Request(event.request);
@@ -1072,7 +1050,6 @@ export interface GlobalServicesOptions {
 	sharedOptions: z.infer<typeof CoreSharedOptionsSchema>;
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
-	loopbackPort: number;
 	tmpPath: string;
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
@@ -1088,7 +1065,6 @@ export function getGlobalServices({
 	sharedOptions,
 	allWorkerRoutes,
 	fallbackWorkerName,
-	loopbackPort,
 	tmpPath,
 	log,
 	proxyBindings,
@@ -1203,14 +1179,6 @@ export function getGlobalServices({
 			data: encoder.encode(sharedOptions.unsafeProxySharedSecret),
 		});
 	}
-	if (sharedOptions.liveReload) {
-		const liveReloadScript = LIVE_RELOAD_SCRIPT_TEMPLATE(loopbackPort);
-		serviceEntryBindings.push({
-			name: CoreBindings.DATA_LIVE_RELOAD_SCRIPT,
-			data: encoder.encode(liveReloadScript),
-		});
-	}
-
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,

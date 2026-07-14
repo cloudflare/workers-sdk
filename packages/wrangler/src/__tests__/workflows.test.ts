@@ -1364,12 +1364,12 @@ describe("wrangler workflows", () => {
 	});
 
 	// =========================================================================
-	// Local commands (--local) — hitting /cdn-cgi/explorer/api/workflows/...
+	// Local commands (--local) — hitting /cdn-cgi/local/explorer/api/workflows/...
 	// =========================================================================
 
 	describe("local", () => {
 		const LOCAL_PORT = 8787;
-		const LOCAL_BASE = `http://localhost:${LOCAL_PORT}/cdn-cgi/explorer/api`;
+		const LOCAL_BASE = `http://localhost:${LOCAL_PORT}/cdn-cgi/local/explorer/api`;
 
 		describe("workflows list --local", () => {
 			it("should list workflows from local dev session", async ({ expect }) => {

@@ -110,7 +110,6 @@ import {
 	CacheHeaders,
 	CoreBindings,
 	CoreHeaders,
-	CorePaths,
 	LogLevel,
 	Mutex,
 	SharedHeaders,
@@ -1025,7 +1024,6 @@ export class Miniflare {
 	readonly #disposeController: AbortController;
 	#loopbackServer?: StoppableServer;
 	#loopbackHost?: string;
-	readonly #liveReloadServer: WebSocketServer;
 	readonly #webSocketServer: WebSocketServer;
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
 	readonly #devRegistry: DevRegistry;
@@ -1099,7 +1097,6 @@ export class Miniflare {
 			);
 		}
 
-		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#webSocketServer = new WebSocketServer({
 			noServer: true,
 			// Disable automatic handling of `Sec-WebSocket-Protocol` header,
@@ -1200,10 +1197,6 @@ export class Miniflare {
 	}
 
 	#handleReload() {
-		// Reload all connected live reload clients
-		for (const ws of this.#liveReloadServer.clients) {
-			ws.close(1012, "Service Restart");
-		}
 		// Close all existing web sockets on reload
 		for (const ws of this.#webSocketServer.clients) {
 			ws.close(1012, "Service Restart");
@@ -1759,18 +1752,7 @@ export class Miniflare {
 		socket: Duplex,
 		head: Buffer
 	) => {
-		// Only interested in pathname so base URL doesn't matter
-		const { pathname } = new URL(req.url ?? "", "http://localhost");
-
-		// If this is the path for live-reload, handle the request
-		if (pathname === CorePaths.LIVE_RELOAD) {
-			this.#liveReloadServer.handleUpgrade(req, socket, head, (ws) => {
-				this.#liveReloadServer.emit("connection", ws, req);
-			});
-			return;
-		}
-
-		// Otherwise, try handle the request in a worker
+		// Try handle the request in a worker
 		const response = await this.#handleLoopback(req);
 
 		// Check web socket response was returned
@@ -1871,8 +1853,7 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 
 		// Start loopback server (how the runtime accesses Node.js) using the same
-		// host as the main runtime server. This means we can use the loopback
-		// server for live reload updates too.
+		// host as the main runtime server.
 		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
 		const loopbackHost = resolveLocalhost(configuredHost) ?? configuredHost;
 		// If we've already started the loopback server...
@@ -2396,7 +2377,6 @@ export class Miniflare {
 				)
 					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
-			loopbackPort,
 			tmpPath: this.#tmpPath,
 			log: this.#log,
 			proxyBindings,
@@ -3410,11 +3390,10 @@ export class Miniflare {
 			} catch {}
 
 			await this.#stopLoopbackServer();
-			// Close WebSocket servers so any connected clients are disconnected
-			// and their sockets don't keep the event loop alive. These use
-			// `noServer: true` so they don't own an HTTP server, but connected
+			// Close the WebSocket server so any connected clients are disconnected
+			// and their sockets don't keep the event loop alive. It uses
+			// `noServer: true` so it doesn't own an HTTP server, but connected
 			// WebSocket clients still hold open sockets.
-			this.#liveReloadServer.close();
 			this.#webSocketServer.close();
 			// Best-effort cleanup: on Windows, workerd may not release file handles
 			// immediately after disposal, causing EBUSY errors. The temp directory
