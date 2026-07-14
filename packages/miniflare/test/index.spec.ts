@@ -2029,9 +2029,9 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 						new Headers({ "X-Test": mode })
 					);
 					await message.reply(new EmailMessage(
-						\`reply-\${mode}@example.com\`,
+						message.to,
 						message.from,
-						\`From: reply-\${mode}@example.com\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
+						\`From: \${message.to}\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
 					));
 
 					if (mode === "exception") {
@@ -2046,7 +2046,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 
 	async function dispatchEmail(mode: string) {
 		const response = await mf.dispatchFetch(
-			`http://localhost/cdn-cgi/local/email?format=json&from=sender@example.com&to=${mode}@example.com`,
+			`http://localhost/cdn-cgi/handler/email?format=json&from=sender@example.com&to=${mode}@example.com`,
 			{
 				method: "POST",
 				body: `From: sender <sender@example.com>\r\nTo: ${mode} <${mode}@example.com>\r\nMessage-ID: <${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nMessage for ${mode}\r\n`,
@@ -2058,100 +2058,58 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 
 		return result as {
 			outcome: string;
-			rejectReason?: string;
 			forwards: {
-				recipient: string;
+				rcptTo: string;
 				headers: [string, string][];
 				messageId: string;
 			}[];
-			replies: { messageId: string; sender: string; raw: string }[];
-			events: (
-				| {
-						type: "forward" | "reply";
-						timestamp: string;
-						messageId: string;
-				  }
-				| { type: "reject"; timestamp: string }
-			)[];
+			replies: { messageId: string; raw: string }[];
 		};
 	}
 
-	const okResult = await dispatchEmail("ok");
-	expect(okResult).toMatchObject({
+	await expect(dispatchEmail("ok")).resolves.toMatchObject({
 		outcome: "ok",
 		forwards: [
 			{
-				recipient: "archive@example.com",
+				rcptTo: "archive@example.com",
 				headers: [["x-test", "ok"]],
 				messageId: expect.any(String),
 			},
 		],
 		replies: [
 			{
-				sender: "reply-ok@example.com",
 				messageId: expect.any(String),
 				raw: expect.stringContaining("Reply for ok"),
 			},
 		],
 	});
-	expect(okResult.events).toEqual([
-		{
-			type: "forward",
-			timestamp: expect.any(String),
-			messageId: okResult.forwards[0]?.messageId,
-		},
-		{
-			type: "reply",
-			timestamp: expect.any(String),
-			messageId: okResult.replies[0]?.messageId,
-		},
-	]);
 
-	const rejectedResult = await dispatchEmail("rejected");
-	expect(rejectedResult).toMatchObject({
+	await expect(dispatchEmail("rejected")).resolves.toEqual({
 		outcome: "ok",
 		rejectReason: "blocked sender",
 		forwards: [],
 		replies: [],
 	});
-	expect(rejectedResult.events).toEqual([
-		{ type: "reject", timestamp: expect.any(String) },
-	]);
 
-	const exceptionResult = await dispatchEmail("exception");
-	expect(exceptionResult).toMatchObject({
+	await expect(dispatchEmail("exception")).resolves.toMatchObject({
 		outcome: "exception",
 		rejectReason: "triggered exception",
 		forwards: [
 			{
-				recipient: "archive@example.com",
+				rcptTo: "archive@example.com",
 				headers: [["x-test", "exception"]],
 			},
 		],
 		replies: [
 			{
 				messageId: expect.any(String),
-				sender: "reply-exception@example.com",
 				raw: expect.stringContaining("Reply for exception"),
 			},
 		],
 	});
-	expect(exceptionResult.events).toEqual([
-		{
-			type: "forward",
-			timestamp: expect.any(String),
-			messageId: exceptionResult.forwards[0]?.messageId,
-		},
-		{
-			type: "reply",
-			timestamp: expect.any(String),
-			messageId: exceptionResult.replies[0]?.messageId,
-		},
-		{ type: "reject", timestamp: expect.any(String) },
-	]);
 });
 
-test("Miniflare: unrecognised /cdn-cgi/local/ routes fall through to user worker", async ({
+test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
