@@ -46,8 +46,13 @@ const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent /* javascript */ `
 	};
 `;
 
+async function useProjectTmpPath(): Promise<string> {
+	return path.join(await useTmp(), "project-tmp");
+}
+
 test("Unbound send_email binding works", async ({ expect }) => {
 	const log = new TestLog();
+	const projectTmpPath = await useProjectTmpPath();
 	const mf = new Miniflare({
 		log,
 		handleStructuredLogs({ message }: { message: string }) {
@@ -58,6 +63,7 @@ test("Unbound send_email binding works", async ({ expect }) => {
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
+		defaultProjectTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -101,7 +107,7 @@ test("Unbound send_email binding works", async ({ expect }) => {
 				);
 			}
 			const message = entry[1];
-			const fileMatch = message.match(/^Email \(system\): (.+)$/m);
+			const fileMatch = message.match(/^Email: (.+)$/m);
 			expect(fileMatch).not.toBeNull();
 			const file = fileMatch?.[1];
 			expect(file).toBeDefined();
@@ -143,6 +149,7 @@ test("Single allowed destination send_email binding works", async ({
 	expect,
 }) => {
 	const log = new TestLog();
+	const projectTmpPath = await useProjectTmpPath();
 
 	const mf = new Miniflare({
 		log,
@@ -156,6 +163,7 @@ test("Single allowed destination send_email binding works", async ({
 				{ name: "SEND_EMAIL", destination_address: "someone-else@example.com" },
 			],
 		},
+		defaultProjectTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -202,7 +210,7 @@ test("Single allowed destination send_email binding works", async ({
 				);
 			}
 			const message = entry[1];
-			const fileMatch = message.match(/^Email \(system\): (.+)$/m);
+			const fileMatch = message.match(/^Email: (.+)$/m);
 			expect(fileMatch).not.toBeNull();
 			const file = fileMatch?.[1];
 			expect(file).toBeDefined();
@@ -1060,6 +1068,7 @@ const MESSAGE_BUILDER_WORKER = dedent /* javascript */ `
 
 test("MessageBuilder with text only", async ({ expect }) => {
 	const log = new TestLog();
+	const projectTmpPath = await useProjectTmpPath();
 	const mf = new Miniflare({
 		log,
 		handleStructuredLogs({ message }: { message: string }) {
@@ -1070,6 +1079,7 @@ test("MessageBuilder with text only", async ({ expect }) => {
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
+		defaultProjectTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -1107,8 +1117,8 @@ test("MessageBuilder with text only", async ({ expect }) => {
 			expect(message).toContain("From: sender@example.com");
 			expect(message).toContain("To: recipient@example.com");
 			expect(message).toContain("Subject: Test Email");
-			expect(message).toContain("Text (system): ");
-			const textFile = message.match(/^Text \(system\): (.+)$/m)?.[1];
+			expect(message).toContain("Text: ");
+			const textFile = message.match(/^Text: (.+)$/m)?.[1];
 			expect(textFile).toBeDefined();
 			expect(await readFile(String(textFile), "utf-8")).toBe(
 				"Hello, this is a test email!"
@@ -1173,6 +1183,7 @@ test("MessageBuilder with both text and HTML", async ({ expect }) => {
 
 test("MessageBuilder with attachments", async ({ expect }) => {
 	const log = new TestLog();
+	const projectTmpPath = await useProjectTmpPath();
 	const mf = new Miniflare({
 		log,
 		handleStructuredLogs({ message }: { message: string }) {
@@ -1183,6 +1194,7 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
+		defaultProjectTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -1222,11 +1234,9 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 			const message = entry[1];
 
 			// Verify attachment file path is logged
-			expect(message).toContain(
-				"Attachment (attachment) (system): test.txt ->"
-			);
+			expect(message).toContain("Attachment (attachment): test.txt ->");
 			const attachmentFile = message.match(
-				/^Attachment \(attachment\) \(system\): test\.txt -> (.+)$/m
+				/^Attachment \(attachment\): test\.txt -> (.+)$/m
 			)?.[1];
 			expect(attachmentFile).toBeDefined();
 			expect(await readFile(String(attachmentFile), "utf-8")).toBe(
@@ -1239,6 +1249,7 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 
 test("MessageBuilder log output format snapshot", async ({ expect }) => {
 	const log = new TestLog();
+	const projectTmpPath = await useProjectTmpPath();
 	const mf = new Miniflare({
 		log,
 		handleStructuredLogs({ message }: { message: string }) {
@@ -1249,6 +1260,7 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
+		defaultProjectTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -1306,7 +1318,9 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 					"/$1/[FILE].$2"
 				);
 
-			// Snapshot the entire formatted output
+			// Snapshot the entire formatted output. Because a project temp path is
+			// configured, the binding logs the "project" location in preference to
+			// the "system" one.
 			expect(cleanMessage).toMatchInlineSnapshot(`
 				"send_email binding called with MessageBuilder:
 				From: "Alice Sender" <alice@example.com>
@@ -1315,14 +1329,10 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 				Bcc: boss@example.com
 				Subject: Quarterly Report
 
-				Text (system): /email-text/[FILE].txt
-				Text (project): /email-text/[FILE].txt
-				HTML (system): /email-html/[FILE].html
-				HTML (project): /email-html/[FILE].html
-				Attachment (inline) (system): logo.png -> /email-attachment/[FILE].png
-				Attachment (inline) (project): logo.png -> /email-attachment/[FILE].png
-				Attachment (attachment) (system): report.pdf -> /email-attachment/[FILE].pdf
-				Attachment (attachment) (project): report.pdf -> /email-attachment/[FILE].pdf"
+				Text: /email-text/[FILE].txt
+				HTML: /email-html/[FILE].html
+				Attachment (inline): logo.png -> /email-attachment/[FILE].png
+				Attachment (attachment): report.pdf -> /email-attachment/[FILE].pdf"
 			`);
 		},
 		{ timeout: 5_000, interval: 100 }
@@ -2307,17 +2317,15 @@ test("MessageBuilder writes files to system temp when defaultProjectTmpPath is u
 			}
 			const message = entry[1];
 
-			// Should only log system location when defaultProjectTmpPath is unset
-			const systemTempMatch = message.match(/^Text \(system\): (.+)$/m);
-			const projectMatch = message.match(/^Text \(project\): (.+)$/m);
-			expect(systemTempMatch).not.toBeNull();
-			expect(projectMatch).toBeNull();
+			// Should log text file path
+			const textMatch = message.match(/^Text: (.+)$/m);
+			expect(textMatch).not.toBeNull();
 
-			const systemTempPath = String(systemTempMatch?.[1]);
+			const textPath = String(textMatch?.[1]);
 
 			// File exists in system temp
-			expect(existsSync(systemTempPath)).toBe(true);
-			expect(await readFile(systemTempPath, "utf-8")).toBe(
+			expect(existsSync(textPath)).toBe(true);
+			expect(await readFile(textPath, "utf-8")).toBe(
 				"This should appear in system temp only"
 			);
 		},

@@ -101,11 +101,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	 * Gets a disk service binding by name
 	 */
 	private getServiceBinding(bindingName: string): Fetcher {
-		const binding = this.env[
-			bindingName as
-				| "MINIFLARE_EMAIL_DISK_SYSTEM"
-				| "MINIFLARE_EMAIL_DISK_PROJECT"
-		];
+		const binding =
+			this.env[
+				bindingName as
+					| "MINIFLARE_EMAIL_DISK_SYSTEM"
+					| "MINIFLARE_EMAIL_DISK_PROJECT"
+			];
 		if (!binding) {
 			throw new Error(`Disk service binding not found: ${bindingName}`);
 		}
@@ -290,7 +291,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			// Log only project location if it exists, otherwise system location
 			const projectIndex = locations.indexOf("project");
 			const logIndex = projectIndex !== -1 ? projectIndex : 0;
-			const fileInfo = `Email (${locations[logIndex]}): ${filePaths[logIndex]}`;
+			const fileInfo = `Email: ${filePaths[logIndex]}`;
 			this.log(
 				`${blue("send_email binding called with the following message:")}\n${fileInfo}`
 			);
@@ -319,7 +320,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				// Log only project location if it exists, otherwise system location
 				const projectIndex = locations.indexOf("project");
 				const logIndex = projectIndex !== -1 ? projectIndex : 0;
-				files.push(`Text (${locations[logIndex]}): ${textResults[logIndex]}`);
+				files.push(`Text: ${textResults[logIndex]}`);
 			}
 
 			if (builder.html) {
@@ -338,7 +339,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				// Log only project location if it exists, otherwise system location
 				const projectIndex = locations.indexOf("project");
 				const logIndex = projectIndex !== -1 ? projectIndex : 0;
-				files.push(`HTML (${locations[logIndex]}): ${htmlResults[logIndex]}`);
+				files.push(`HTML: ${htmlResults[logIndex]}`);
 			}
 
 			// Store attachments
@@ -364,7 +365,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					const projectIndex = locations.indexOf("project");
 					const logIndex = projectIndex !== -1 ? projectIndex : 0;
 					files.push(
-						`Attachment (${attachment.disposition}) (${locations[logIndex]}): ${attachment.filename} -> ${attachmentResults[logIndex]}`
+						`Attachment (${attachment.disposition}): ${attachment.filename} -> ${attachmentResults[logIndex]}`
 					);
 				}
 			}

@@ -55,16 +55,12 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 }
 
 function getEmailProjectParentDirectory(
-	defaultProjectTmpPath: string | undefined,
-	tmpPath: string
+	defaultProjectTmpPath: string | undefined
 ): string | undefined {
 	if (defaultProjectTmpPath === undefined) {
 		return undefined;
 	}
-	return path.join(
-		defaultProjectTmpPath ?? path.join(tmpPath, "tmp"),
-		EMAIL_PLUGIN_NAME
-	);
+	return path.join(defaultProjectTmpPath, EMAIL_PLUGIN_NAME);
 }
 
 /**
@@ -78,11 +74,12 @@ function getEmailProjectParentDirectory(
 function getEmailProjectSessionDirectory(
 	defaultProjectTmpPath: string | undefined,
 	tmpPath: string
-): string {
-	return path.join(
-		getEmailProjectParentDirectory(defaultProjectTmpPath, tmpPath)!,
-		path.basename(tmpPath)
-	);
+): string | undefined {
+	const parentDir = getEmailProjectParentDirectory(defaultProjectTmpPath);
+	if (parentDir === undefined) {
+		return undefined;
+	}
+	return path.join(parentDir, path.basename(tmpPath));
 }
 
 export function getEmailPathsToClean(
@@ -96,11 +93,8 @@ export function getEmailPathsToClean(
 		defaultProjectTmpPath,
 		tmpPath
 	);
-	const parentDir = getEmailProjectParentDirectory(
-		defaultProjectTmpPath,
-		tmpPath
-	);
-	if (!parentDir) {
+	const parentDir = getEmailProjectParentDirectory(defaultProjectTmpPath);
+	if (sessionDir === undefined || parentDir === undefined) {
 		return undefined;
 	}
 	return { sessionDir, parentDir };
@@ -166,13 +160,15 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 				args.defaultProjectTmpPath,
 				args.tmpPath
 			);
-			await mkdir(emailProjectSessionDirectory, { recursive: true });
-			diskServices.push({
-				location: "project",
-				bindingName: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
-				serviceName: `${EMAIL_DISK_SERVICE_NAME}:project`,
-				path: emailProjectSessionDirectory,
-			});
+			if (emailProjectSessionDirectory !== undefined) {
+				await mkdir(emailProjectSessionDirectory, { recursive: true });
+				diskServices.push({
+					location: "project",
+					bindingName: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
+					serviceName: `${EMAIL_DISK_SERVICE_NAME}:project`,
+					path: emailProjectSessionDirectory,
+				});
+			}
 		}
 
 		const services: Service[] = diskServices.map(({ serviceName, path }) => ({
