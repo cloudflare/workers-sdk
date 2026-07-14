@@ -95,6 +95,26 @@ export type DurableObjectIdentifier =
 	| { name: string; id?: never }
 	| { id: string; name?: never };
 
+export type FetcherEmailOptions = {
+	from: string;
+	to: string;
+	raw: string | ReadableStream<Uint8Array>;
+};
+
+export type FetcherEmailResult = {
+	outcome: "ok" | "exception";
+	rejectReason?: string;
+	forwards: Array<{
+		rcptTo: string;
+		headers: [string, string][];
+		messageId: string;
+	}>;
+	replies: Array<{
+		messageId: string;
+		raw: string;
+	}>;
+};
+
 export type WorkerDefaultExport =
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.
 	| (new (...args: any[]) => Rpc.WorkerEntrypointBranded)
@@ -130,6 +150,19 @@ export type WorkerHandle<
 	 * ```
 	 */
 	fetch: DispatchFetch;
+	/**
+	 * Dispatches an email event directly to this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * const result = await worker.email({
+	 *   from: "sender@example.com",
+	 *   to: "recipient@example.com",
+	 *   raw: "From: sender@example.com\\r\\n...",
+	 * });
+	 * ```
+	 */
+	email(options: FetcherEmailOptions): Promise<FetcherEmailResult>;
 	/**
 	 * Dispatches a scheduled event directly to this Worker.
 	 *
@@ -939,6 +972,33 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const workerName = resolveWorkerName(session, name);
 
 					return dispatchFetch(miniflare, input, init, workerName);
+				},
+				async email(emailOptions) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const searchParams = new URLSearchParams({
+						format: "json",
+						from: emailOptions.from,
+						to: emailOptions.to,
+					});
+					const requestInit: RequestInit & { duplex?: "half" } = {
+						method: "POST",
+						body: emailOptions.raw,
+					};
+					if (typeof emailOptions.raw !== "string") {
+						requestInit.duplex = "half";
+					}
+					const response = await dispatchFetch(
+						miniflare,
+						`/cdn-cgi/handler/email?${searchParams.toString()}`,
+						requestInit,
+						workerName,
+						"email"
+					);
+					const result = await response.json();
+
+					return result as FetcherEmailResult;
 				},
 				async scheduled(scheduledOptions) {
 					const session = await resolveSession();

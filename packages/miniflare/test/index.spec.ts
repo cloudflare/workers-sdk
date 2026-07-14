@@ -2070,6 +2070,107 @@ This is a random email body.
 	expect(await res.text()).toBe("true");
 });
 
+test("Miniflare: manually triggered email handler - structured result", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+			import { EmailMessage } from "cloudflare:email";
+
+			export default {
+				async email(message) {
+					const mode = message.to.split("@")[0];
+					if (mode === "rejected") {
+						message.setReject("blocked sender");
+						return;
+					}
+
+					await message.forward(
+						"archive@example.com",
+						new Headers({ "X-Test": mode })
+					);
+					await message.reply(new EmailMessage(
+						message.to,
+						message.from,
+						\`From: \${message.to}\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
+					));
+
+					if (mode === "exception") {
+						message.setReject("triggered exception");
+						throw new Error("sensitive handler error");
+					}
+				}
+			}`,
+		unsafeTriggerHandlers: true,
+	});
+	useDispose(mf);
+
+	async function dispatchEmail(mode: string) {
+		const response = await mf.dispatchFetch(
+			`http://localhost/cdn-cgi/handler/email?format=json&from=sender@example.com&to=${mode}@example.com`,
+			{
+				method: "POST",
+				body: `From: sender <sender@example.com>\r\nTo: ${mode} <${mode}@example.com>\r\nMessage-ID: <${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nMessage for ${mode}\r\n`,
+			}
+		);
+		const result = await response.json();
+
+		expect(response.status).toBe(mode === "exception" ? 500 : 200);
+
+		return result as {
+			outcome: string;
+			forwards: {
+				rcptTo: string;
+				headers: [string, string][];
+				messageId: string;
+			}[];
+			replies: { messageId: string; raw: string }[];
+		};
+	}
+
+	await expect(dispatchEmail("ok")).resolves.toMatchObject({
+		outcome: "ok",
+		forwards: [
+			{
+				rcptTo: "archive@example.com",
+				headers: [["x-test", "ok"]],
+				messageId: expect.any(String),
+			},
+		],
+		replies: [
+			{
+				messageId: expect.any(String),
+				raw: expect.stringContaining("Reply for ok"),
+			},
+		],
+	});
+
+	await expect(dispatchEmail("rejected")).resolves.toEqual({
+		outcome: "ok",
+		rejectReason: "blocked sender",
+		forwards: [],
+		replies: [],
+	});
+
+	await expect(dispatchEmail("exception")).resolves.toMatchObject({
+		outcome: "exception",
+		rejectReason: "triggered exception",
+		forwards: [
+			{
+				rcptTo: "archive@example.com",
+				headers: [["x-test", "exception"]],
+			},
+		],
+		replies: [
+			{
+				messageId: expect.any(String),
+				raw: expect.stringContaining("Reply for exception"),
+			},
+		],
+	});
+});
+
 test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async ({
 	expect,
 }) => {

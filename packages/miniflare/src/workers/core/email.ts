@@ -29,6 +29,13 @@ export async function handleEmail(
 	env: Env,
 	ctx: ExecutionContext
 ): Promise<Response> {
+	const forwards: Array<{
+		rcptTo: string;
+		headers: [string, string][];
+		messageId: string;
+	}> = [];
+	const replies: Array<{ messageId: string; raw: string }> = [];
+
 	// Turn an HTTP request into an EmailMessage, using:
 	//  - `from` and `to` from the URL
 	//    - These refer to the SMTP envelope addresses: https://datatracker.ietf.org/doc/html/rfc5321#section-3
@@ -120,10 +127,10 @@ export async function handleEmail(
 	);
 
 	// Propogate `.setReject()` reasons to the caller
-	let maybeClientError: string | undefined = undefined;
+	let rejectReason: string | undefined = undefined;
 
 	// @ts-expect-error .email is not in the `Fetcher` but it's a valid RPC call.
-	await service.email(
+	const emailEvent = service.email(
 		// Construct a ForwardableEmailMessage-like object. We need
 		// - ForwardableEmailMessage to be able to be passed across JSRPC (to support e.g. userWorker.email(ForwardableEmailMessage))
 		// - ForwardableEmailMessage properties to be synchronously available (to match production). This rules out a class extending `RpcStub`
@@ -145,7 +152,7 @@ export async function handleEmail(
 						}
 					)
 				);
-				maybeClientError = reason;
+				rejectReason = reason;
 			},
 			forward: async (
 				rcptTo: string,
@@ -165,7 +172,15 @@ export async function handleEmail(
 				 * so instead we make a dummy message ID that matches the production format (36 characters followed by a domain)
 				 */
 				const uuid = crypto.randomUUID().replaceAll("-", "");
-				return { messageId: `${uuid}@example.com` };
+				const result = { messageId: `${uuid}@example.com` };
+
+				forwards.push({
+					rcptTo,
+					headers: headers ? [...headers.entries()] : [],
+					messageId: result.messageId,
+				});
+
+				return result;
 			},
 			reply: async (replyMessage): Promise<EmailSendResult> => {
 				assert(
@@ -221,19 +236,50 @@ export async function handleEmail(
 				 * so instead we make a dummy message ID that matches the production format (36 characters followed by a domain)
 				 */
 				const uuid = crypto.randomUUID().replaceAll("-", "");
-				return { messageId: `${uuid}@example.com` };
+				const result = { messageId: `${uuid}@example.com` };
+				replies.push({
+					messageId: result.messageId,
+					raw: new TextDecoder().decode(finalReply),
+				});
+				return result;
 			},
 		} satisfies ForwardableEmailMessage
 	);
 
-	if (maybeClientError !== undefined) {
-		return new Response(
-			`Worker rejected email with the following reason: ${maybeClientError}`,
-			{ status: 400 }
-		);
+	if (params.get("format") !== "json") {
+		await emailEvent;
+
+		if (rejectReason !== undefined) {
+			return new Response(
+				`Worker rejected email with the following reason: ${rejectReason}`,
+				{ status: 400 }
+			);
+		}
+
+		return new Response("Worker successfully processed email", {
+			status: 200,
+		});
 	}
 
-	return new Response("Worker successfully processed email", {
-		status: 200,
-	});
+	let outcome: "ok" | "exception";
+
+	try {
+		await emailEvent;
+		outcome = "ok";
+	} catch {
+		outcome = "exception";
+	}
+
+	// Give an un-awaited `setReject()` call time to cross JSRPC.
+	await scheduler.wait(0);
+
+	return Response.json(
+		{
+			outcome,
+			rejectReason,
+			forwards,
+			replies,
+		},
+		{ status: outcome === "ok" ? 200 : 500 }
+	);
 }
