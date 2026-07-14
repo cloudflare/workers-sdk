@@ -1,10 +1,10 @@
-import { fetchResult } from "../cfetch";
+import { fetchResult } from "../shared/context";
 import type {
 	CfWorkerInit,
-	Config,
 	CacheOptions,
 	CfPlacement,
 	CfUserLimits,
+	Config,
 	Observability,
 } from "@cloudflare/workers-utils";
 

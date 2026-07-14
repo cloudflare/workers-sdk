@@ -23,7 +23,11 @@ export * from "./deploy/helpers/create-worker-upload-form";
 export * from "./deploy/helpers/workers-sites-bindings";
 export * from "./deploy/helpers/deploy-wfp";
 export * from "./deploy/helpers/deploy-confirm";
-export * from "./deploy/helpers/preview-alias";
+export {
+	sanitizeBranchName,
+	createTruncatedAlias,
+	generatePreviewAlias,
+} from "./deploy/helpers/preview-alias";
 export * from "./deploy/helpers/sourcemap";
 export * from "./deploy/helpers/bundle-reporter";
 export * from "./deploy/helpers/node-compat";
@@ -48,3 +52,10 @@ export * from "./deploy/helpers/hash";
 export * from "./deploy/helpers/jwt";
 export * from "./deploy/helpers/package-dependencies";
 export * from "./deploy/helpers/provision-bindings";
+export * from "./preview/api";
+export * from "./preview/shared";
+export * from "./preview/preview";
+export * from "./preview/format";
+export * from "./preview/merge-deep";
+export * from "./preview/settings";
+export * from "./preview/box";
