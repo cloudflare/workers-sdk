@@ -1,27 +1,38 @@
 {
 	"name": "@cloudflare/codemod",
 	"version": "1.1.0",
-	"private": true,
-	"description": "Internal codemod utilities",
-	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
+	"description": "Codemods for upgrading Cloudflare developer projects",
+	"keywords": [
+		"cloudflare",
+		"codemod",
+		"migration",
+		"workers"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/codemod#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
 	"license": "MIT OR Apache-2.0",
-	"author": "workers-devprod@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/codemod"
 	},
+	"bin": {
+		"cloudflare-codemod": "./dist/bin.mjs"
+	},
 	"files": [
 		"dist"
 	],
+	"type": "module",
 	"exports": {
 		".": {
 			"import": "./dist/index.mjs",
-			"types": "./dist/index.d.mts"
+			"types": "./dist/index.d.ts"
 		}
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"scripts": {
 		"build": "tsup",
@@ -36,10 +47,13 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/esprima": "^4.0.3",
+		"@types/jscodeshift": "^17.3.0",
 		"@types/node": "catalog:default",
 		"@vitest/ui": "catalog:default",
 		"concurrently": "^8.2.2",
+		"jscodeshift": "^17.3.0",
 		"recast": "^0.23.11",
+		"tinyglobby": "catalog:default",
 		"tsup": "8.3.0",
 		"tsx": "^3.12.8",
 		"typescript": "catalog:default",

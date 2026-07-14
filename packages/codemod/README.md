@@ -1,6 +1,21 @@
-# @cloudflare/codemod
+# `@cloudflare/codemod`
 
-Internal codemod utilities for the Cloudflare Workers SDK.
+Codemods for upgrading Cloudflare developer projects.
+
+Run a specific codemod:
+
+```sh
+npx @cloudflare/codemod vitest vitest-v3-to-v4
+```
+
+Run every relevant codemod in a category to bring a project up to date:
+
+```sh
+npx @cloudflare/codemod vitest
+```
+
+Use `--dry-run` to list changes without writing them, `--cwd <path>` to target
+another project, or repeat `--files <glob>` to restrict the files considered.
 
 ## Developing Codemods
 
@@ -15,49 +30,8 @@ Writing codemods often requires trial and error. The package ships a dedicated d
 
 ### Workflow
 
-1. **Edit `dev-snippets/test.ts`** — put whatever source code you want to transform into this file. It is the default input used by the dev script. You can add more files under `dev-snippets/` and reference them from `src/dev.ts`.
+1. Edit `dev-snippets/test.ts` with the source code to transform.
+2. Edit `testCodemod()` in `src/dev.ts` with a [`recast`](https://github.com/benjamn/recast) visitor.
+3. Run `pnpm dev`; output is printed and written under `dev-snippets-outputs/`.
 
-2. **Edit `testCodemod()` in `src/dev.ts`** — this is your sandbox. Call `testTransform()` with the path to your snippet and a [`recast` visitor](https://github.com/benjamn/recast) that describes the transform:
-
-   ```ts
-   const testCodemod = () => {
-   	testTransform("../dev-snippets/test.ts", {
-   		visitIdentifier(n) {
-   			n.node.name = "MyNewName";
-   			return false;
-   		},
-   	});
-   };
-   ```
-
-3. **Run `pnpm dev`** — the transformed code is printed to the console and written to `dev-snippets-outputs/test.ts` (gitignored). Inspect the output file to verify the transform behaves as expected.
-
-### Key Files
-
-| File                    | Purpose                                                                                      |
-| ----------------------- | -------------------------------------------------------------------------------------------- |
-| `src/dev.ts`            | Dev entry point; exports `testTransform()` and contains the editable `testCodemod()` sandbox |
-| `dev-snippets/test.ts`  | Default sample input — replace its contents freely                                           |
-| `dev-snippets-outputs/` | Auto-generated transform output, gitignored — safe to inspect, never committed               |
-
-### `testTransform(filePath, methods)`
-
-Mirrors the production `transformFile()` API but instead of silently writing in place it:
-
-- Prints the transformed source to the console
-- Writes the result to the corresponding path under `dev-snippets-outputs/`
-
-The `filePath` argument must point to a file inside `dev-snippets/`; paths outside that directory are rejected.
-
-### Inspecting the AST
-
-`src/dev.ts` includes a commented-out `_printSnippet()` helper. Uncomment its call at the bottom of the file to log the AST of an arbitrary snippet to the console — useful when you need to know the exact node shape to target in a visitor:
-
-```ts
-const _printSnippet = () => {
-	const snippet = `if (true) { console.log("potato"); }`;
-	const program = parseTs(snippet).program;
-	console.log(program.body[0]);
-};
-_printSnippet(); // uncomment to run
-```
+`testTransform(filePath, methods)` mirrors the production `transformFile()` API, but writes transformed output to the development output directory. The input must be inside `dev-snippets/`.
