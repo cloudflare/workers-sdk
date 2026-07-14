@@ -299,7 +299,10 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
-		const devInstance = await startDev(args);
+		const devInstance = await startDev({
+			...args,
+			showLocalExplorerAgentHint: true,
+		});
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
@@ -358,6 +361,7 @@ export type AdditionalDevProps = {
 	moduleRoot?: string;
 	rules?: Rule[];
 	showInteractiveDevSession?: boolean;
+	showLocalExplorerAgentHint?: boolean;
 };
 
 type DevArguments = Omit<(typeof dev)["args"], "installSkills" | "profile">;
