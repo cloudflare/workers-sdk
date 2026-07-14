@@ -68,6 +68,11 @@ export type WranglerLoginProps = CloudflareLoginProps;
  */
 export const WRANGLER_CLI: CliDescriptor = {
 	cliName: WRANGLER_CLI_NAME,
+	commands: {
+		login: "wrangler login",
+		whoami: "wrangler whoami",
+		createProfile: "wrangler auth create",
+	},
 	keyringServiceName: WRANGLER_KEYRING_SERVICE_NAME,
 	clientId: getClientIdFromEnv,
 	consent: WRANGLER_CONSENT_PAGES,
@@ -123,7 +128,8 @@ export function createWranglerProfileStore(
 }
 
 const wranglerKeyringPreference = createKeyringPreference({
-	cliName: WRANGLER_CLI_NAME,
+	loginCommand: WRANGLER_CLI.commands.login,
+	createProfileCommand: WRANGLER_CLI.commands.createProfile,
 	keyringServiceName: WRANGLER_KEYRING_SERVICE_NAME,
 	getConfigPath: getGlobalConfigPath,
 	format: "toml",

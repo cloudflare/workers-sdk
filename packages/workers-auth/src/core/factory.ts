@@ -141,13 +141,13 @@ function isMembershipsInaccessible(err: unknown): boolean {
 // Maps a `loginOrRefreshIfRequired` failure reason to the user-facing body of
 // the "Not logged in" error thrown before the account/membership REST calls.
 function notLoggedInErrorBodies(
-	cliName: string
+	loginCommand: string
 ): Record<LoginOrRefreshFailureReason, string> {
 	return {
-		"no-credentials-non-interactive": `Could not authenticate because no credentials were found and the environment is non-interactive. Set a CLOUDFLARE_API_TOKEN environment variable or run \`${cliName} login\` in an interactive terminal first.`,
-		"no-credentials-login-failed": `No credentials were found and the login attempt was unsuccessful. Run \`${cliName} login\` to try again.`,
-		"token-expired-non-interactive": `Your auth token has expired and could not be refreshed, and the environment is non-interactive. Run \`${cliName} login\` in an interactive terminal or set a CLOUDFLARE_API_TOKEN.`,
-		"token-expired-login-failed": `Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful. Run \`${cliName} login\` to try again.`,
+		"no-credentials-non-interactive": `Could not authenticate because no credentials were found and the environment is non-interactive. Set a CLOUDFLARE_API_TOKEN environment variable or run \`${loginCommand}\` in an interactive terminal first.`,
+		"no-credentials-login-failed": `No credentials were found and the login attempt was unsuccessful. Run \`${loginCommand}\` to try again.`,
+		"token-expired-non-interactive": `Your auth token has expired and could not be refreshed, and the environment is non-interactive. Run \`${loginCommand}\` in an interactive terminal or set a CLOUDFLARE_API_TOKEN.`,
+		"token-expired-login-failed": `Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful. Run \`${loginCommand}\` to try again.`,
 	};
 }
 
@@ -180,8 +180,10 @@ export function createCloudflareAuth(
 ): CloudflareAuth {
 	const { logger } = ctx;
 	const cliName = descriptor.cliName;
-	const NOT_LOGGED_IN_ERROR_BODIES = notLoggedInErrorBodies(cliName);
-	const NOT_LOGGED_IN_WHOAMI_TIP = `\nRun \`${cliName} whoami\` to check your current authentication status.`;
+	const NOT_LOGGED_IN_ERROR_BODIES = notLoggedInErrorBodies(
+		descriptor.commands.login
+	);
+	const NOT_LOGGED_IN_WHOAMI_TIP = `\nRun \`${descriptor.commands.whoami}\` to check your current authentication status.`;
 
 	const preferences = createPreferences(descriptor.getConfigPath);
 
@@ -209,7 +211,7 @@ export function createCloudflareAuth(
 			preferences.readUserPreferences().keyring_enabled === true,
 		logger,
 		isNonInteractiveOrCI,
-		cliName,
+		loginCommand: descriptor.commands.login,
 		format: descriptor.fileFormat,
 	});
 
@@ -432,14 +434,14 @@ export function createCloudflareAuth(
 					throw new UserError(
 						`Failed to automatically retrieve account IDs for the logged in user.
 You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
-Check your environment and unset or correct any Cloudflare credential variables, or run \`${cliName} login\` to re-authenticate.
+Check your environment and unset or correct any Cloudflare credential variables, or run \`${descriptor.commands.login}\` to re-authenticate.
 You can also skip this account check by adding an \`account_id\` in your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 						{ telemetryMessage: "user account fetch permission denied" }
 					);
 				}
 				throw new UserError(
 					`Failed to automatically retrieve account IDs for the logged in user.
-You may have incorrect permissions on your API token, or your authentication may have expired. Try running \`${cliName} login\` to re-authenticate. You can also skip this account check by adding an \`account_id\` in your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+You may have incorrect permissions on your API token, or your authentication may have expired. Try running \`${descriptor.commands.login}\` to re-authenticate. You can also skip this account check by adding an \`account_id\` in your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 					{ telemetryMessage: "user account fetch permission denied" }
 				);
 			} else {
@@ -458,7 +460,7 @@ You may have incorrect permissions on your API token, or your authentication may
 			throw new UserError(
 				`Failed to automatically retrieve account IDs for the logged in user.
 In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${descriptor.getConfigFileLabel()} file.
-Alternatively, try running \`${cliName} login\` to re-authenticate.`,
+Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`,
 				{ telemetryMessage: "user account fetch empty" }
 			);
 		}

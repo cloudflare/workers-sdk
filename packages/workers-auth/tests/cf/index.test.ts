@@ -3,6 +3,7 @@ import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import {
+	CF_CLI,
 	createCfAuth,
 	createCfProfileStore,
 	getAuthConfigFilePath,
@@ -38,6 +39,13 @@ function createTestContext(): AuthContext {
 
 describe("cf auth layer", () => {
 	runInTempDir();
+
+	it("uses cf's auth subcommands in user guidance", ({ expect }) => {
+		expect(CF_CLI.commands).toEqual({
+			login: "cf auth login",
+			whoami: "cf auth whoami",
+		});
+	});
 
 	it("resolves its config directory to `cloudflare` (no leading dot, not `.wrangler`)", ({
 		expect,

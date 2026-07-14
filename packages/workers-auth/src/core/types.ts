@@ -48,6 +48,13 @@ export interface CliDescriptor {
 	/** CLI name used in user-facing messaging and keyring install-dir scoping (e.g. `"wrangler"`). */
 	cliName: string;
 
+	/** Commands surfaced in auth guidance. */
+	commands: {
+		login: string;
+		whoami: string;
+		createProfile?: string;
+	};
+
 	/**
 	 * OS-keyring service identifier. Becomes the `-s` arg to macOS `security`,
 	 * the `service` attribute for Linux `secret-tool`, and the `service` arg to

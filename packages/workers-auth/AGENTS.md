@@ -98,7 +98,7 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   only `@cloudflare/workers-utils`.
 - `types.ts` — `AuthContext` (the injected primitives: `logger`, `userAgent`,
   interactive `prompt` / `select`, `isNoDefaultValueProvidedError`) and
-  `CliDescriptor` (everything that varies per CLI: `cliName`, `keyringServiceName`,
+  `CliDescriptor` (everything that varies per CLI: `cliName`, auth command names, `keyringServiceName`,
   `clientId`, `consent`, `redirectUri`, `getConfigPath`, `fileFormat`,
   `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
   `getDefaultScopeKeys`, …).
@@ -181,7 +181,7 @@ Each CLI is a thin **descriptor + entrypoint**:
   `getKeyringInstallDir`) and store constructors all take it explicitly.
 - The consumer's `createCredentialStorageContext` call captures `serviceName`,
   `getConfigPath`, `isKeyringEnabled`, `logger`, `isNonInteractiveOrCI`, and
-  `cliName` in a closure. The returned `storageFactory(profile)` re-resolves
+  `loginCommand` in a closure. The returned `storageFactory(profile)` re-resolves
   the active store on every call so the active profile, `--use-keyring` /
   `--no-use-keyring`, and the `CLOUDFLARE_AUTH_USE_KEYRING` env var all take
   effect without rebuilding the OAuth flow. Per-session memoization flags

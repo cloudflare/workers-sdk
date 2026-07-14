@@ -29,7 +29,8 @@ export interface KeyringPreferenceContext {
 
 /** Product deps for {@link createKeyringPreference}. */
 export interface KeyringPreferenceDeps {
-	cliName: string;
+	loginCommand: string;
+	createProfileCommand?: string;
 	keyringServiceName: string;
 	getConfigPath: () => string;
 	format: FileFormat;
@@ -53,8 +54,14 @@ export interface KeyringPreference {
 export function createKeyringPreference(
 	deps: KeyringPreferenceDeps
 ): KeyringPreference {
-	const { cliName, keyringServiceName, getConfigPath, format, preferences } =
-		deps;
+	const {
+		loginCommand,
+		createProfileCommand,
+		keyringServiceName,
+		getConfigPath,
+		format,
+		preferences,
+	} = deps;
 	const { readUserPreferences, updateUserPreferences } = preferences;
 
 	function describeProfile(profile: string | undefined): string {
@@ -130,12 +137,13 @@ export function createKeyringPreference(
 		}
 
 		if (cleared.length > 0) {
+			const reauthenticate = createProfileCommand
+				? `Re-authenticate with \`${loginCommand}\` (default profile) or \`${createProfileCommand} <name>\` (named profiles).`
+				: `Re-authenticate with \`${loginCommand}\`.`;
 			logger.log(
 				`Removed encrypted credentials for ${cleared
 					.map((p) => `"${p}"`)
-					.join(
-						", "
-					)}. Re-authenticate with \`${cliName} login\` (default profile) or \`${cliName} auth create <name>\` (named profiles).`
+					.join(", ")}. ${reauthenticate}`
 			);
 		}
 		if (unreachable.length > 0) {

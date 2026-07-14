@@ -66,6 +66,10 @@ export type { UserPreferences } from "../core/preferences";
  */
 export const CF_CLI: CliDescriptor = {
 	cliName: CF_CLI_NAME,
+	commands: {
+		login: "cf auth login",
+		whoami: "cf auth whoami",
+	},
 	keyringServiceName: CF_KEYRING_SERVICE_NAME,
 	clientId: getClientIdFromEnv,
 	consent: CF_CONSENT_PAGES,
@@ -78,7 +82,7 @@ export const CF_CLI: CliDescriptor = {
 	fileFormat: "json",
 	accountCachePrefix: "cloudflare-account",
 	// cf gets its own cache dir (`.cache/cloudflare` / `.cloudflare/cache`) so
-	// `cf login`/`logout` never purges wrangler's shared cache.
+	// `cf auth login`/`logout` never purges wrangler's shared cache.
 	cacheNamespace: "cloudflare",
 	// cf persists its default account in `config.json` (`defaults.accountId`);
 	// this label is surfaced in the "set account_id in your <file>" hint.
@@ -117,7 +121,8 @@ export function createCfProfileStore(ctx: CfProfileStoreContext): ProfileStore {
 }
 
 const cfKeyringPreference = createKeyringPreference({
-	cliName: CF_CLI_NAME,
+	loginCommand: CF_CLI.commands.login,
+	createProfileCommand: CF_CLI.commands.createProfile,
 	keyringServiceName: CF_KEYRING_SERVICE_NAME,
 	getConfigPath: getCfConfigPath,
 	format: "json",

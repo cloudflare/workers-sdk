@@ -60,11 +60,10 @@ export interface CredentialStorageContext {
 	isNonInteractiveOrCI: () => boolean;
 
 	/**
-	 * Consumer's CLI name for error-message templating, e.g. `"wrangler"`.
-	 * Used in hints like ``Run `<cliName> login --use-keyring` …``.
-	 * Defaults to `"your CLI"` when omitted.
+	 * Login command for error-message templating, e.g. `"wrangler login"`.
+	 * Defaults to `"your CLI login"` when omitted.
 	 */
-	cliName?: string;
+	loginCommand?: string;
 
 	/**
 	 * On-disk format of the plaintext credentials file (`.toml` / `.json`).
@@ -121,7 +120,7 @@ export function createCredentialStorageContext(
 ): CredentialStorageBundle {
 	const config = {
 		...context,
-		cliName: context.cliName ?? "your CLI",
+		loginCommand: context.loginCommand ?? "your CLI login",
 		format: context.format ?? "toml",
 	};
 
@@ -232,7 +231,7 @@ function handleNeedsInstall(
 	}
 
 	if (config.isNonInteractiveOrCI()) {
-		throw new UserError(windowsBindingMissingMessage(config.cliName), {
+		throw new UserError(windowsBindingMissingMessage(config.loginCommand), {
 			telemetryMessage: "workers-auth keyring binding not installed",
 		});
 	}
@@ -278,7 +277,7 @@ function handleUnsupported(
 	// genuinely unsupported platforms (FreeBSD, etc.).
 	const linuxMissingTool = platform === "linux";
 	const message = linuxMissingTool
-		? secretToolMissingMessage(config.cliName)
+		? secretToolMissingMessage(config.loginCommand)
 		: `OS keyring storage is not supported on \`${platform}\`; falling back to the plaintext credentials file.`;
 
 	if (forcedByEnvVar) {
@@ -335,7 +334,7 @@ function fallbackToFileWithWarning(
 	);
 }
 
-function secretToolMissingMessage(cliName: string): string {
+function secretToolMissingMessage(loginCommand: string): string {
 	return `\`secret-tool\` is required for OS keyring storage on Linux but is not installed.
 
 Install it via your package manager:
@@ -344,17 +343,17 @@ Install it via your package manager:
   Arch:           sudo pacman -S libsecret
   Alpine:         apk add libsecret
 
-Or disable keyring storage: \`${cliName} login --no-use-keyring\`.`;
+Or disable keyring storage: \`${loginCommand} --no-use-keyring\`.`;
 }
 
-function windowsBindingMissingMessage(cliName: string): string {
+function windowsBindingMissingMessage(loginCommand: string): string {
 	return `\`@napi-rs/keyring\` is required for OS keyring storage on Windows but is not installed.
 
-Run \`${cliName} login --use-keyring\` interactively to install it automatically, or install it globally for CI:
+Run \`${loginCommand} --use-keyring\` interactively to install it automatically, or install it globally for CI:
 
   npm install -g @napi-rs/keyring@${PINNED_KEYRING_VERSION}
 
-Or disable keyring storage: \`${cliName} login --no-use-keyring\`.`;
+Or disable keyring storage: \`${loginCommand} --no-use-keyring\`.`;
 }
 
 /**
