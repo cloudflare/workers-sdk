@@ -1,10 +1,11 @@
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { describe, it, vitest } from "vitest";
 import {
 	buildCommands,
 	buildDependantsGraph,
 	checkNpmLogin,
 	getRequiredDependants,
+	main,
 	parseArgs,
 	resolveVersion,
 } from "../deprecate";
@@ -470,5 +471,45 @@ describe("checkNpmLogin()", () => {
 			throw new Error("ENEEDAUTH");
 		});
 		expect(checkNpmLogin()).toBeNull();
+	});
+});
+
+describe("main()", () => {
+	const mockRegistryInfo = {
+		"dist-tags": { latest: "2.0.0" },
+		time: {
+			created: "2024-01-01T00:00:00.000Z",
+			modified: "2025-01-02T00:00:00.000Z",
+			"1.0.0": "2025-01-01T10:00:00.000Z",
+			"2.0.0": "2025-01-02T10:00:00.000Z",
+		},
+		versions: {
+			"1.0.0": {},
+			"2.0.0": {},
+		},
+	};
+
+	it("should not call execSync or spawnSync in dry-run mode", async ({
+		expect,
+	}) => {
+		(execSync as Mock).mockClear();
+		(spawnSync as Mock).mockClear();
+		vitest.spyOn(console, "log").mockImplementation(() => {});
+		vitest.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(JSON.stringify(mockRegistryInfo), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			})
+		);
+
+		await main([
+			"--dry-run",
+			"--reason",
+			"test regression",
+			"create-cloudflare@latest",
+		]);
+
+		expect(execSync).not.toHaveBeenCalled();
+		expect(spawnSync).not.toHaveBeenCalled();
 	});
 });
