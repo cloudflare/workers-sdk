@@ -3,7 +3,55 @@ import {
 	convertConfigBindingsToStartWorkerBindings,
 	convertStartDevOptionsToBindings,
 } from "../../../api/startDevWorker/binding-utils";
-import { rewriteUrlInHeaderValue } from "../../../api/startDevWorker/utils";
+import {
+	isSameUserWorkerOrigin,
+	rewriteUrlInHeaderValue,
+} from "../../../api/startDevWorker/utils";
+
+describe("isSameUserWorkerOrigin", () => {
+	const userWorker = { protocol: "http:", hostname: "localhost", port: "8787" };
+
+	it("matches same-origin requests regardless of path or query", () => {
+		// Regression guard for the ProxyWorker origin-vs-href fix: a request to a
+		// non-root path (or with a query string) must still resolve to the same
+		// UserWorker. An href comparison would fail all but "/" here, because
+		// urlFromParts() yields an origin-only URL.
+		assert(
+			isSameUserWorkerOrigin(new URL("http://localhost:8787/"), userWorker)
+		);
+		assert(
+			isSameUserWorkerOrigin(
+				new URL("http://localhost:8787/users/1/accessible-locks"),
+				userWorker
+			)
+		);
+		assert(
+			isSameUserWorkerOrigin(new URL("http://localhost:8787/x?a=1"), userWorker)
+		);
+	});
+
+	it("does not match when the UserWorker origin changed (e.g. new port)", () => {
+		assert(
+			!isSameUserWorkerOrigin(new URL("http://localhost:8788/"), userWorker)
+		);
+		assert(
+			!isSameUserWorkerOrigin(new URL("http://localhost:8787/some/path"), {
+				protocol: "http:",
+				hostname: "localhost",
+				port: "8788",
+			})
+		);
+	});
+
+	it("does not match when there is no proxyData (UserWorker torn down)", () => {
+		assert(
+			!isSameUserWorkerOrigin(
+				new URL("http://localhost:8787/some/path"),
+				undefined
+			)
+		);
+	});
+});
 
 describe("convertConfigBindingsToStartWorkerBindings", () => {
 	it("converts config bindings into startWorker bindings", async ({

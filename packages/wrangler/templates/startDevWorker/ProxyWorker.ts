@@ -1,6 +1,7 @@
 import {
 	createDeferred,
 	type DeferredPromise,
+	isSameUserWorkerOrigin,
 	rewriteUrlInHeaderValue,
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
@@ -182,15 +183,13 @@ export class ProxyWorker implements DurableObject {
 					// we have crossed an async boundary, so proxyData may have changed
 					// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
 					// and that this error is stale since it was for a request to the old UserWorker
-					// so here we construct a newUserWorkerUrl so we can compare it to the (old) userWorkerUrl
-					// compare .origin, not .href: userWorkerUrl carries the request's
-					// path+query while urlFromParts() is origin-only, so an href check
-					// would only match "/" and misclassify errors on other paths.
-					const newUserWorkerUrl =
-						this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
-
-					// only report errors if the downstream proxy has NOT changed
-					if (userWorkerUrl.origin === newUserWorkerUrl?.origin) {
+					// only report the error if the request still targets the current
+					// UserWorker. isSameUserWorkerOrigin compares origin (not href) so a
+					// genuine error on a non-root path isn't misread as a reload — see
+					// its docs.
+					if (
+						isSameUserWorkerOrigin(userWorkerUrl, this.proxyData?.userWorkerUrl)
+					) {
 						void sendMessageToProxyController(this.env, {
 							type: "error",
 							error: {
