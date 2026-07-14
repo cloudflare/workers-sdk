@@ -2559,15 +2559,39 @@ importers:
 
   packages/remote-bindings:
     devDependencies:
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
+      '@cloudflare/workers-auth':
+        specifier: workspace:*
+        version: link:../workers-auth
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20260710.1
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
+      capnweb:
+        specifier: catalog:default
+        version: 0.5.0
+      chalk:
+        specifier: catalog:default
+        version: 5.3.0
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
       tsdown:
         specifier: 0.16.3
         version: 0.16.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/runtime-types:
     dependencies:
@@ -4375,6 +4399,9 @@ importers:
       '@cloudflare/pages-shared':
         specifier: workspace:^
         version: link:../pages-shared
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
       '@cloudflare/runtime-types':
         specifier: workspace:*
         version: link:../runtime-types

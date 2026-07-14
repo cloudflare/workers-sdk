@@ -1,11 +1,23 @@
 import { defineConfig } from "tsdown";
 
-export default defineConfig({
-	entry: {
-		index: "src/index.ts",
+export default defineConfig([
+	{
+		entry: {
+			index: "src/index.ts",
+		},
+		platform: "node",
+		outDir: "dist",
+		dts: true,
+		tsconfig: "tsconfig.json",
+		external: ["miniflare", /^@cloudflare\/workers-utils/],
 	},
-	platform: "node",
-	outDir: "dist",
-	dts: true,
-	tsconfig: "tsconfig.json",
-});
+	{
+		entry: {
+			"proxy-worker": "templates/remoteBindings/ProxyServerWorker.ts",
+		},
+		platform: "neutral",
+		outDir: "dist",
+		dts: false,
+		external: ["cloudflare:email", "cloudflare:workers"],
+	},
+]);
