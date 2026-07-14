@@ -6,6 +6,7 @@ import {
 	UserError,
 	type Config,
 } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	runAutoConfigDetection,
@@ -16,7 +17,6 @@ import {
 import { createWranglerAutoConfigContext } from "../autoconfig-context";
 import { readConfig } from "../config";
 import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
 import { collectKeyValues } from "../utils/collectKeyValues";

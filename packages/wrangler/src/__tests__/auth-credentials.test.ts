@@ -1,5 +1,6 @@
 import { chmodSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { createTomlFileStorage } from "@cloudflare/workers-auth/wrangler";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
@@ -7,7 +8,6 @@ import {
 	readAuthCredentials,
 	writeAuthCredentials,
 } from "../user";
-import { createTomlFileStorage } from "../user/auth-config-file";
 import type { UserAuthConfig } from "../user";
 
 const SAMPLE_CONFIG: UserAuthConfig = {

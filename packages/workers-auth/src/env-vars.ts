@@ -60,6 +60,18 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
+ * `CLOUDFLARE_ACCOUNT_ID` overrides the account inferred from the current user.
+ *
+ * This is a Cloudflare-wide variable (not wrangler-specific), so it lives in the
+ * shared core rather than a consumer layer. `CF_ACCOUNT_ID` is the deprecated
+ * spelling.
+ */
+export const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ACCOUNT_ID",
+	deprecatedName: "CF_ACCOUNT_ID",
+});
+
+/**
  * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID of a Cloudflare Access Service Token.
  * Used together with `CLOUDFLARE_ACCESS_CLIENT_SECRET` to authenticate with
  * Access-protected domains in non-interactive environments (e.g. CI).

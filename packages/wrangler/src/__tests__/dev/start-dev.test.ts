@@ -34,8 +34,10 @@ vi.mock("../../dev/hotkeys", () => ({
 	default: vi.fn(),
 }));
 
-vi.mock("../../is-interactive", () => ({
-	default: vi.fn(() => true),
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/workers-utils")>()),
+	isInteractive: vi.fn(() => true),
+	openInBrowser: vi.fn(),
 }));
 
 vi.mock("../../utils/detect-agent", () => ({

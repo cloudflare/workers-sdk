@@ -1,4 +1,4 @@
-import {
+import React, {
 	useCallback,
 	useRef,
 	type JSX,
@@ -7,6 +7,7 @@ import {
 } from "react";
 import { StudioBaseTable } from "./BaseTable";
 import type { StudioTableProps } from "./BaseTable";
+import type { StudioTableState } from "./State";
 
 export function StudioTable<T = unknown>(
 	props: StudioTableProps<T>
@@ -79,89 +80,12 @@ export function StudioTable<T = unknown>(
 
 	// Provide key navigation
 	const onKeyDown = useCallback(
-		(e: KeyboardEvent): void => {
-			if (state.isInEditMode()) {
-				return;
-			}
-
-			if (customKeyDownHandler) {
-				customKeyDownHandler(e);
-			}
-
-			if (e.defaultPrevented) {
-				return;
-			}
-
-			if (e.key === "ArrowRight") {
-				if (e.shiftKey) {
-					onShiftKeyDownCallBack(e);
-				} else {
-					const focus = state.getFocus();
-					if (focus && focus.x + 1 < state.getHeaderCount()) {
-						state.setFocus(focus.y, focus.x + 1);
-						state.scrollToCell("right", "top", { y: focus.y, x: focus.x + 1 });
-					}
-				}
-			} else if (e.key === "ArrowLeft") {
-				if (e.shiftKey) {
-					onShiftKeyDownCallBack(e);
-				} else {
-					const focus = state.getFocus();
-					if (focus && focus.x - 1 >= 0) {
-						state.setFocus(focus.y, focus.x - 1);
-						state.scrollToCell("left", "top", { y: focus.y, x: focus.x - 1 });
-					}
-				}
-			} else if (e.key === "ArrowUp") {
-				if (e.shiftKey) {
-					onShiftKeyDownCallBack(e);
-				} else {
-					const focus = state.getFocus();
-					if (focus && focus.y - 1 >= 0) {
-						state.setFocus(focus.y - 1, focus.x);
-						state.scrollToCell("left", "top", { y: focus.y - 1, x: focus.x });
-					}
-				}
-			} else if (e.key === "ArrowDown") {
-				if (e.shiftKey) {
-					onShiftKeyDownCallBack(e);
-				} else {
-					const focus = state.getFocus();
-					if (focus && focus.y + 1 < state.getRowsCount()) {
-						state.setFocus(focus.y + 1, focus.x);
-						state.scrollToCell("left", "bottom", {
-							y: focus.y + 1,
-							x: focus.x,
-						});
-					}
-				}
-			} else if (e.key === "Tab") {
-				const direction = e.shiftKey ? -1 : 1;
-				const focus = state.getFocus();
-
-				if (focus) {
-					const colCount = state.getHeaderCount();
-					const n = focus.y * colCount + focus.x + direction;
-					const x = n % colCount;
-					const y = Math.floor(n / colCount);
-					if (y >= state.getRowsCount() || y < 0) {
-						return;
-					}
-					state.setFocus(y, x);
-					state.scrollToCell(
-						x === 0 || (e.shiftKey && x < colCount - 1) ? "left" : "right",
-						e.shiftKey ? "top" : "bottom",
-						{
-							y: y,
-							x: x,
-						}
-					);
-				}
-			} else if (e.key === "Enter") {
-				state.enterEditMode();
-			}
-
-			e.preventDefault();
+		(e: React.KeyboardEvent): void => {
+			handleStudioTableKeyDown(e, {
+				customKeyDownHandler,
+				onShiftKeyDownCallBack,
+				state,
+			});
 		},
 		[onShiftKeyDownCallBack, customKeyDownHandler, state]
 	);
@@ -230,4 +154,102 @@ export function StudioTable<T = unknown>(
 			onKeyUp={onKeyUp}
 		/>
 	);
+}
+
+export function handleStudioTableKeyDown<HeaderMetadata = unknown>(
+	e: React.KeyboardEvent,
+	{
+		customKeyDownHandler,
+		onShiftKeyDownCallBack,
+		state,
+	}: {
+		customKeyDownHandler?: (e: React.KeyboardEvent) => void;
+		onShiftKeyDownCallBack: (e: React.KeyboardEvent) => void;
+		state: StudioTableState<HeaderMetadata>;
+	}
+): void {
+	if (state.isInEditMode()) {
+		return;
+	}
+
+	if (customKeyDownHandler) {
+		customKeyDownHandler(e);
+	}
+
+	if (e.defaultPrevented) {
+		return;
+	}
+
+	if (e.key === "ArrowRight") {
+		if (e.shiftKey) {
+			onShiftKeyDownCallBack(e);
+		} else {
+			const focus = state.getFocus();
+			if (focus && focus.x + 1 < state.getHeaderCount()) {
+				state.setFocus(focus.y, focus.x + 1);
+				state.scrollToCell("right", "top", { y: focus.y, x: focus.x + 1 });
+			}
+		}
+	} else if (e.key === "ArrowLeft") {
+		if (e.shiftKey) {
+			onShiftKeyDownCallBack(e);
+		} else {
+			const focus = state.getFocus();
+			if (focus && focus.x - 1 >= 0) {
+				state.setFocus(focus.y, focus.x - 1);
+				state.scrollToCell("left", "top", { y: focus.y, x: focus.x - 1 });
+			}
+		}
+	} else if (e.key === "ArrowUp") {
+		if (e.shiftKey) {
+			onShiftKeyDownCallBack(e);
+		} else {
+			const focus = state.getFocus();
+			if (focus && focus.y - 1 >= 0) {
+				state.setFocus(focus.y - 1, focus.x);
+				state.scrollToCell("left", "top", { y: focus.y - 1, x: focus.x });
+			}
+		}
+	} else if (e.key === "ArrowDown") {
+		if (e.shiftKey) {
+			onShiftKeyDownCallBack(e);
+		} else {
+			const focus = state.getFocus();
+			if (focus && focus.y + 1 < state.getRowsCount()) {
+				state.setFocus(focus.y + 1, focus.x);
+				state.scrollToCell("left", "bottom", {
+					y: focus.y + 1,
+					x: focus.x,
+				});
+			}
+		}
+	} else if (e.key === "Tab") {
+		const direction = e.shiftKey ? -1 : 1;
+		const focus = state.getFocus();
+
+		if (focus) {
+			const colCount = state.getHeaderCount();
+			const n = focus.y * colCount + focus.x + direction;
+			const x = n % colCount;
+			const y = Math.floor(n / colCount);
+			if (y >= state.getRowsCount() || y < 0) {
+				return;
+			}
+			state.setFocus(y, x);
+			state.scrollToCell(
+				x === 0 || (e.shiftKey && x < colCount - 1) ? "left" : "right",
+				e.shiftKey ? "top" : "bottom",
+				{
+					y: y,
+					x: x,
+				}
+			);
+		}
+	} else if (e.key === "Enter") {
+		state.enterEditMode();
+	} else {
+		return;
+	}
+
+	e.preventDefault();
 }

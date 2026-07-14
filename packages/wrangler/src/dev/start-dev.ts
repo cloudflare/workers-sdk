@@ -5,6 +5,7 @@ import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import {
 	getLocalExplorerEnabledFromEnv,
 	getRegistryPath,
+	isInteractive,
 } from "@cloudflare/workers-utils";
 import { CorePaths } from "miniflare";
 import dedent from "ts-dedent";
@@ -14,7 +15,6 @@ import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerR
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
-import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
 import { TunnelManager } from "../tunnel/dev";

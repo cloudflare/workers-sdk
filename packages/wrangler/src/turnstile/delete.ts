@@ -1,7 +1,7 @@
 import { JsonFriendlyFatalError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { deleteWidget } from "./client";
 
