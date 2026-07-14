@@ -899,7 +899,6 @@ describe.skipIf(skipContainersTest)("containers", () => {
 						class_name = "MyDurableObject"
 						image = "./Dockerfile"
 						max_instances = 1
-						unsafe = { configuration = { experimental_flags = ["experimental_enable_snapshots"] } }
 
 						[[migrations]]
 						tag = "v1"
@@ -976,7 +975,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
 	}, 30_000);
 
 	it(
-		"can deploy a snapshot-enabled Dockerfile container and skip unchanged rebuilds",
+		"can deploy a digest-pinned Dockerfile container and skip unchanged rebuilds",
 		{ timeout: 60 * 2 * 1000 },
 		async ({ expect }) => {
 			const outputOne = await helper.run(`wrangler deploy`);
@@ -996,13 +995,9 @@ describe.skipIf(skipContainersTest)("containers", () => {
 			);
 			const application = JSON.parse(containerInfo.stdout) as {
 				configuration?: {
-					experimental_flags?: unknown;
 					image?: unknown;
 				};
 			};
-			expect(application.configuration?.experimental_flags).toContain(
-				"experimental_enable_snapshots"
-			);
 			const image = application.configuration?.image;
 			assert(typeof image === "string");
 			const expectedImagePrefix = `registry.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/e2e-test-${workerName}@sha256:`;
