@@ -83,6 +83,10 @@
 						"importNames": ["expect"],
 						"message": "Import 'expect' from the test context instead of 'vitest' for concurrency safety. Use: test('name', ({ expect }) => { ... })",
 					},
+					{
+						"name": "am-i-vibing",
+						"message": "Use `detectAgent()` from `src/utils/detect-agent` instead.",
+					},
 				],
 			},
 		],
