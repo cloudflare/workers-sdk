@@ -5,13 +5,14 @@ import {
 } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { UserError } from "@cloudflare/workers-utils";
-import { buildPublicUrl } from "miniflare";
+import { buildPublicUrl, Request as MiniflareRequest } from "miniflare";
 import colors from "picocolors";
 import { getDockerPath } from "../containers";
 import { assertIsPreview } from "../context";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
+import { rewriteLegacyMiniflarePath } from "./trigger-handlers";
 
 let exitCallback = () => {};
 
@@ -121,6 +122,12 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 			// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 			vitePreviewServer.middlewares.use(
 				createRequestHandler((request) => {
+					const url = new URL(request.url);
+					const rewritten = rewriteLegacyMiniflarePath(url.pathname);
+					if (rewritten !== url.pathname) {
+						url.pathname = rewritten;
+						request = new MiniflareRequest(url, request);
+					}
 					return ctx.miniflare.dispatchFetch(request, { redirect: "manual" });
 				})
 			);

@@ -36,8 +36,8 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
  * Strips IDs and converts to dot notation.
  */
 export function getRouteName(path: string): string {
-	// Remove /cdn-cgi/explorer/api prefix
-	const apiPath = path.replace(/^\/cdn-cgi\/explorer\/api/, "");
+	// Remove /cdn-cgi/local/explorer/api prefix
+	const apiPath = path.replace(/^\/cdn-cgi\/local\/explorer\/api/, "");
 
 	for (const [pattern, name] of ROUTE_PATTERNS) {
 		if (pattern.test(apiPath)) {
