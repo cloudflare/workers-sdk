@@ -1,3 +1,4 @@
+import { readFile, writeFile } from "node:fs/promises";
 import { vitestCodemods } from "./codemods/vitest";
 import type { Codemod, CodemodContext, CodemodResult } from "./types";
 
@@ -41,15 +42,22 @@ export async function runCodemods(
 		throw new Error(`Unknown ${category} codemod: ${name}`);
 	}
 
-	if (!context.dryRun) {
-		for (const codemod of selected) {
-			await codemod.run({ ...context, dryRun: true });
-		}
-	}
-
+	const stagedFiles = new Map<string, string>();
 	const results = [];
 	for (const codemod of selected) {
-		results.push({ codemod, result: await codemod.run(context) });
+		results.push({
+			codemod,
+			result: await codemod.run({ ...context, stagedFiles }),
+		});
+	}
+	if (!context.dryRun) {
+		await Promise.all(
+			[...stagedFiles].map(async ([filePath, output]) => {
+				if ((await readFile(filePath, "utf8")) !== output) {
+					await writeFile(filePath, output);
+				}
+			})
+		);
 	}
 	return results;
 }

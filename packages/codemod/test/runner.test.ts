@@ -9,7 +9,8 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "vitest";
-import { runCodemods } from "../src/runner";
+import { transformFiles } from "../src/files";
+import { codemods, runCodemods } from "../src/runner";
 
 const temporaryDirectories: string[] = [];
 
@@ -149,5 +150,69 @@ export default defineWorkersProject({
 		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
 			config
 		);
+	});
+
+	it("exposes staged outputs without writing partial changes", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({ "input.txt": "before" });
+		const initialLength = codemods.length;
+		codemods.push(
+			{
+				category: "transaction-test",
+				name: "first",
+				description: "stage a change",
+				async run(context) {
+					return {
+						changedFiles: await transformFiles(
+							context,
+							["input.txt"],
+							(source) => source.replace("before", "after")
+						),
+					};
+				},
+			},
+			{
+				category: "transaction-test",
+				name: "second",
+				description: "reject the staged change",
+				async run(context) {
+					await transformFiles(context, ["input.txt"], (source) => {
+						if (source === "after") {
+							throw new Error("staged output rejected");
+						}
+						return source;
+					});
+					return { changedFiles: [] };
+				},
+			}
+		);
+
+		try {
+			await expect(
+				runCodemods("transaction-test", undefined, { cwd, dryRun: false })
+			).rejects.toThrow("staged output rejected");
+			expect(await readFile(path.join(cwd, "input.txt"), "utf8")).toBe(
+				"before"
+			);
+		} finally {
+			codemods.splice(initialLength);
+		}
+	});
+
+	it("intersects file restrictions with each codemod's scope", async ({
+		expect,
+	}) => {
+		const source = "@cloudflare/vitest-pool-workers";
+		const cwd = await createProject({ "notes.txt": source });
+
+		const [result] = await runCodemods("vitest", "vitest v1", {
+			cwd,
+			dryRun: false,
+			files: ["**/*.txt"],
+		});
+
+		expect(result?.result.changedFiles).toEqual([]);
+		expect(await readFile(path.join(cwd, "notes.txt"), "utf8")).toBe(source);
 	});
 });

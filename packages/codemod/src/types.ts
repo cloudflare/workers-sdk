@@ -2,6 +2,8 @@ export interface CodemodContext {
 	cwd: string;
 	dryRun: boolean;
 	files?: string[];
+	/** In-memory writes shared by an ordered codemod run. */
+	stagedFiles?: Map<string, string>;
 }
 
 export interface CodemodResult {

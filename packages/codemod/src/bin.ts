@@ -74,4 +74,9 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 	);
 }
 
-await main();
+try {
+	await main();
+} catch (error) {
+	console.error(error instanceof Error ? error.message : error);
+	process.exitCode = 1;
+}

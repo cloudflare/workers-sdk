@@ -18,16 +18,23 @@ export async function transformFiles(
 	patterns: string[],
 	transform: (source: string, filePath: string) => string
 ): Promise<string[]> {
-	const filePaths = await glob(context.files ?? patterns, {
+	const globOptions = {
 		cwd: context.cwd,
 		absolute: true,
 		dot: true,
 		ignore: DEFAULT_IGNORES,
-	});
+	} as const;
+	const filePaths = await glob(patterns, globOptions);
+	const restrictedPaths = context.files
+		? new Set(await glob(context.files, globOptions))
+		: undefined;
 	const changes: Array<{ filePath: string; output: string }> = [];
 
-	for (const filePath of filePaths.sort()) {
-		const source = await readFile(filePath, "utf8");
+	for (const filePath of filePaths
+		.filter((candidate) => !restrictedPaths || restrictedPaths.has(candidate))
+		.sort()) {
+		const source =
+			context.stagedFiles?.get(filePath) ?? (await readFile(filePath, "utf8"));
 		const output = transform(source, filePath);
 		if (output === source) {
 			continue;
@@ -36,7 +43,11 @@ export async function transformFiles(
 		changes.push({ filePath, output });
 	}
 
-	if (!context.dryRun) {
+	if (context.stagedFiles) {
+		for (const { filePath, output } of changes) {
+			context.stagedFiles.set(filePath, output);
+		}
+	} else if (!context.dryRun) {
 		await Promise.all(
 			changes.map(({ filePath, output }) => writeFile(filePath, output))
 		);
