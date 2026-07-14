@@ -202,13 +202,9 @@
 				"workers-sdk/no-wrangler-named-imports": "error",
 			},
 		},
-		// Gradually rolling out @typescript-eslint/no-deprecated.
-		// TODO: Remove the following overrides, one package at a time.
+		// TODO: Remove the following override.
 		{
-			"files": [
-				"packages/vite-plugin-cloudflare/**",
-				"packages/workflows-shared/**",
-			],
+			"files": ["packages/vite-plugin-cloudflare/**"],
 			"rules": {
 				"@typescript-eslint/no-deprecated": "off",
 			},
