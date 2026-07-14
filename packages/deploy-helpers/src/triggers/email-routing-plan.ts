@@ -1,9 +1,18 @@
-import type { EmailRoutingAction, EmailRoutingMatcher } from "./index";
-
 /**
  * Pure plan logic for the `addresses` config field: build the plan request and
- * render the plan response. No network access — see `apply.ts`.
+ * render the plan response. No network access.
  */
+
+interface EmailRoutingAction {
+	type: string;
+	value?: string[];
+}
+
+interface EmailRoutingMatcher {
+	type: string;
+	field?: string;
+	value?: string;
+}
 
 /** A `*@domain` catch-all target (e.g. `"*@example.com"`), not a literal recipient. */
 export function isCatchAllAddress(address: string): boolean {

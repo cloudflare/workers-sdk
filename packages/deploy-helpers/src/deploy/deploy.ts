@@ -747,6 +747,7 @@ export default async function deploy(
 		config,
 		accountId,
 		scriptName,
+		workerTag,
 		env: props.env,
 		crons: props.triggers,
 		firstDeploy: !workerExists,

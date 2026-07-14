@@ -1,16 +1,12 @@
-import assert from "node:assert";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
-import { confirm } from "../dialogs";
-import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
-import { logger } from "../logger";
+import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
 import {
-	createEmailRoutingRule,
-	deleteEmailRoutingRule,
-	updateEmailRoutingCatchAll,
-	updateEmailRoutingRule,
-} from "./client";
+	confirm,
+	fetchResult,
+	isNonInteractiveOrCI,
+	logger,
+} from "../shared/context";
 import {
 	buildEmailRoutingPlanRequest,
 	isCatchAllAddress,
@@ -18,18 +14,17 @@ import {
 	planHasDestructiveChanges,
 	renderEmailRoutingPlan,
 	ruleShapeForTarget,
-} from "./plan";
+} from "./email-routing-plan";
 import type {
 	EmailRoutingPlanChange,
 	EmailRoutingPlanRequest,
 	EmailRoutingPlanResponse,
-} from "./plan";
+} from "./email-routing-plan";
 import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * Network side of the `addresses` config field: plan the change set via the
- * account-level endpoint, then apply it through the rule client. Pure logic
- * lives in `plan.ts`.
+ * account-level endpoint, then apply it through the per-zone rule endpoints.
  */
 
 const PLAN_RETRY_WORKER_NOT_FOUND_CODE = 2016;
@@ -47,7 +42,7 @@ function startApplyProgress(total: number): {
 	update(done: number): void;
 	stop(): void;
 } {
-	if (isInteractive()) {
+	if (!isNonInteractiveOrCI()) {
 		const progress = spinner();
 		progress.start(applyProgressMessage(0, total));
 
@@ -106,10 +101,26 @@ async function resolveOwnerWorkerTag(
 	accountId: string,
 	scriptName: string
 ): Promise<string> {
-	const { default_environment } = await fetchResult<{
-		default_environment: { script: { tag: string } };
-	}>(config, `/accounts/${accountId}/workers/services/${scriptName}`);
-	return default_environment.script.tag;
+	const deadline = Date.now() + PLAN_RETRY_TIMEOUT_MS;
+	for (;;) {
+		try {
+			const { default_environment } = await fetchResult<{
+				default_environment: { script: { tag: string } };
+			}>(config, `/accounts/${accountId}/workers/services/${scriptName}`);
+			return default_environment.script.tag;
+		} catch (error) {
+			if (!isWorkerNotFoundError(error)) {
+				throw error;
+			}
+			if (Date.now() + PLAN_RETRY_DELAY_MS >= deadline) {
+				throw new UserError(
+					"Email Routing could not find the deployed Worker yet. Re-run the deployment.",
+					{ telemetryMessage: "email routing worker metadata not found" }
+				);
+			}
+			await new Promise((resolve) => setTimeout(resolve, PLAN_RETRY_DELAY_MS));
+		}
+	}
 }
 
 /**
@@ -137,7 +148,7 @@ async function fetchEmailRoutingPlan(
 			}
 			if (Date.now() + PLAN_RETRY_DELAY_MS >= deadline) {
 				throw new UserError(
-					"Email Routing could not find the deployed Worker yet (it may still be propagating). Re-run `wrangler deploy`.",
+					"Email Routing could not find the deployed Worker yet. Re-run the deployment.",
 					{ telemetryMessage: "email routing plan worker not found" }
 				);
 			}
@@ -146,7 +157,19 @@ async function fetchEmailRoutingPlan(
 	}
 }
 
-/** Apply a single plan change through the canonical per-zone rule client. */
+function putJson(
+	config: Config,
+	path: string,
+	body: unknown
+): Promise<unknown> {
+	return fetchResult(config, path, {
+		method: "PUT",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	});
+}
+
+/** Apply a single plan change through the per-zone rule endpoints. */
 async function applyChange(
 	config: Config,
 	zoneId: string,
@@ -156,9 +179,9 @@ async function applyChange(
 ): Promise<void> {
 	if (isCatchAllAddress(change.target)) {
 		// Catch-all has no DELETE endpoint: a delete is a reset to the default.
-		await updateEmailRoutingCatchAll(
+		await putJson(
 			config,
-			zoneId,
+			`/zones/${zoneId}/email/routing/rules/catch_all`,
 			change.type === "deleted"
 				? RESET_CATCH_ALL_BODY
 				: desiredRuleBody(change.target, workerName, ownerWorkerTag)
@@ -168,27 +191,26 @@ async function applyChange(
 
 	switch (change.type) {
 		case "added":
-			await createEmailRoutingRule(
+			await fetchResult(
 				config,
-				zoneId,
-				desiredRuleBody(change.target, workerName, ownerWorkerTag)
+				`/zones/${zoneId}/email/routing/rules`,
+				postJson(desiredRuleBody(change.target, workerName, ownerWorkerTag))
 			);
 			return;
 		// `conflict` only reaches here once the user accepted the takeover; it is
-		// applied the same way as an update — overwrite the existing rule.
+		// applied the same way as an update: overwrite the existing rule.
 		case "updated":
 		case "conflict": {
 			const id = change.remote?.id;
 			if (!id) {
 				throw new UserError(
-					`Email Routing plan was missing the rule id for "${change.target}"; re-run \`wrangler deploy\`.`,
+					`Email Routing plan was missing the rule id for "${change.target}"; re-run the deployment.`,
 					{ telemetryMessage: "email routing plan missing rule id" }
 				);
 			}
-			await updateEmailRoutingRule(
+			await putJson(
 				config,
-				zoneId,
-				id,
+				`/zones/${zoneId}/email/routing/rules/${id}`,
 				desiredRuleBody(change.target, workerName, ownerWorkerTag)
 			);
 			return;
@@ -197,21 +219,22 @@ async function applyChange(
 			const id = change.remote?.id;
 			if (!id) {
 				throw new UserError(
-					`Email Routing plan was missing the rule id for "${change.target}"; re-run \`wrangler deploy\`.`,
+					`Email Routing plan was missing the rule id for "${change.target}"; re-run the deployment.`,
 					{ telemetryMessage: "email routing plan missing rule id" }
 				);
 			}
-			await deleteEmailRoutingRule(config, zoneId, id);
+			await fetchResult(config, `/zones/${zoneId}/email/routing/rules/${id}`, {
+				method: "DELETE",
+			});
 			return;
 		}
 	}
 }
 
 /**
- * Reconcile the Worker's Email Routing rules with the `addresses` config during
- * `wrangler deploy`. No-op when `addresses` is absent. Runs after upload, so a
- * failure leaves the Worker deployed but reports partial success. Prompts once
- * for destructive changes and hard-fails non-interactively.
+ * Reconcile the Worker's Email Routing rules with the `addresses` config after
+ * its triggers deploy. No-op when `addresses` is absent. Prompts once for
+ * destructive changes and hard-fails non-interactively.
  */
 export async function applyEmailRoutingAddresses({
 	config,
@@ -220,17 +243,14 @@ export async function applyEmailRoutingAddresses({
 	workerTag,
 }: {
 	config: Config;
-	accountId: string | undefined;
-	scriptName: string | undefined;
-	workerTag: string | null;
+	accountId: string;
+	scriptName: string;
+	workerTag?: string | null;
 }): Promise<void> {
 	const { addresses } = config;
 	if (addresses === undefined) {
 		return;
 	}
-
-	assert(accountId, "Missing accountId");
-	assert(scriptName, "Missing Worker name");
 
 	const ownerWorkerTag =
 		workerTag ?? (await resolveOwnerWorkerTag(config, accountId, scriptName));
@@ -255,8 +275,8 @@ export async function applyEmailRoutingAddresses({
 	if (planHasDestructiveChanges(plan)) {
 		if (isNonInteractiveOrCI()) {
 			throw new UserError(
-				"Worker deployed, but Email Routing has destructive changes (deletes or takeover conflicts) that need confirmation. " +
-					"Re-run `wrangler deploy` interactively, or remove the conflicting entries from `addresses`.",
+				"The Worker is deployed, but Email Routing has destructive changes (deletes or takeover conflicts) that need confirmation. " +
+					"Re-run the deployment interactively, or remove the conflicting entries from `addresses`.",
 				{
 					telemetryMessage:
 						"email routing destructive changes need confirmation",
@@ -269,7 +289,7 @@ export async function applyEmailRoutingAddresses({
 		);
 		if (!accepted) {
 			throw new UserError(
-				"Worker deployed, but the Email Routing changes were declined; no rules were modified.",
+				"The Worker is deployed, but the Email Routing changes were declined; no rules were modified.",
 				{ telemetryMessage: "email routing changes declined" }
 			);
 		}
@@ -310,10 +330,10 @@ export async function applyEmailRoutingAddresses({
 
 	if (failures.length > 0) {
 		for (const failure of failures) {
-			logger.error(`Email Routing change failed — ${failure}`);
+			logger.error(`Email Routing change failed: ${failure}`);
 		}
 		throw new UserError(
-			`Worker deployed, but Email Routing was not fully applied (${failures.length} change(s) failed). Re-run \`wrangler deploy\` to retry.`,
+			`The Worker is deployed, but Email Routing was not fully applied (${failures.length} change(s) failed). Re-run the deployment to retry.`,
 			{ telemetryMessage: "email routing apply partial failure" }
 		);
 	}

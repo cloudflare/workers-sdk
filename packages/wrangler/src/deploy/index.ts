@@ -14,7 +14,6 @@ import {
 	cleanupDestination,
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
-import { applyEmailRoutingAddresses } from "../email-routing/apply";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
@@ -184,15 +183,6 @@ export async function runDeployCommandHandler(
 				deployContainers,
 				analyseBundle,
 			});
-
-		if (!props.dryRun) {
-			await applyEmailRoutingAddresses({
-				config,
-				accountId: props.accountId,
-				scriptName: props.name,
-				workerTag,
-			});
-		}
 
 		writeOutput({
 			type: "deploy",

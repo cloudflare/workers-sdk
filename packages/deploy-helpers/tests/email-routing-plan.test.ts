@@ -5,8 +5,8 @@ import {
 	planHasChanges,
 	planHasDestructiveChanges,
 	renderEmailRoutingPlan,
-} from "../../email-routing/plan";
-import type { EmailRoutingPlanResponse } from "../../email-routing/plan";
+} from "../src/triggers/email-routing-plan";
+import type { EmailRoutingPlanResponse } from "../src/triggers/email-routing-plan";
 
 describe("buildEmailRoutingPlanRequest", () => {
 	it("compiles literal addresses into normal rules targeting the worker", ({
