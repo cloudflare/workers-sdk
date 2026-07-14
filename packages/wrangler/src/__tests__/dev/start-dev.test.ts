@@ -1,8 +1,8 @@
 import assert from "node:assert";
+import { isInteractive } from "@cloudflare/workers-utils";
 import { beforeEach, describe, it, vi } from "vitest";
 import registerDevHotKeys from "../../dev/hotkeys";
 import { startDev } from "../../dev/start-dev";
-import isInteractive from "../../is-interactive";
 import { requireAuth } from "../../user";
 import { detectAgent } from "../../utils/detect-agent";
 import { mockConsoleMethods } from "../helpers/mock-console";
