@@ -14,7 +14,7 @@ describe("defineWorker", () => {
 });
 
 function validateWorkflowExportKeyTypes() {
-	const MyWorkflow = class {} as new () => Rpc.WorkflowEntrypointBranded;
+	const MyWorkflow = class {};
 	const entrypoint = { MyWorkflow };
 
 	defineWorker({

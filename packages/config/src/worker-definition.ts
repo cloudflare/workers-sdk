@@ -9,7 +9,6 @@ import type {
 	InferExportsByType,
 	InferWorkerName,
 	InferWorkerEntrypointExports,
-	InferWorkflowEntrypointExports,
 } from "./inference";
 import type { UserConfig } from "./types";
 
@@ -92,13 +91,13 @@ export type UserConfigExport<T extends UserConfig = UserConfig> =
 	| ((ctx: ConfigContext) => T | Promise<T>);
 
 type ValidateWorkflowExportKeys<T extends UserConfig> = T extends {
-	entrypoint: infer _TEntrypoint extends Record<string, unknown>;
+	entrypoint: infer TEntrypoint extends Record<string, unknown>;
 	exports: infer TExports extends Record<string, { type: string }>;
 }
 	? {
 			exports: {
 				[K in keyof TExports]: TExports[K] extends { type: "workflow" }
-					? K extends InferWorkflowEntrypointExports<T>
+					? K extends Exclude<keyof TEntrypoint, "default">
 						? TExports[K]
 						: never
 					: TExports[K];

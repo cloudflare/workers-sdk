@@ -225,16 +225,6 @@ export type InferExportsByType<
 		}[keyof TExports]
 	: never;
 
-/** Infer named `WorkflowEntrypoint` class exports from a Worker's entry module. */
-export type InferWorkflowEntrypointExports<TUnwrappedConfig> =
-	InferMainModule<TUnwrappedConfig> extends infer TModule extends WorkerModule
-		? {
-				[K in keyof TModule]: TModule[K] extends Constructor<Rpc.WorkflowEntrypointBranded>
-					? K & string
-					: never;
-			}[keyof TModule]
-		: never;
-
 /**
  * Infer `WorkerEntrypoint` export names from a config.
  * Returns named module exports that are not declared as type `"durable-object"` or `"workflow"` in `exports`.
