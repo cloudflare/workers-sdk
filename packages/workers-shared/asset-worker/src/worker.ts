@@ -527,19 +527,19 @@ export class AssetWorkerInner<TEnv extends Env = Env>
 		const loopbackCtx = this.ctx as AssetWorkerContext;
 		const traceContext = loopbackCtx.props?.traceContext ?? null;
 		const cohort = this.ctx.version?.cohort;
+		const runRequest = () =>
+			runFetchRequest(
+				request,
+				this.env,
+				this.ctx,
+				this.unstable_exists.bind(this),
+				this.unstable_getByETag.bind(this),
+				cohort
+			);
 
-		const response = await this.env.JAEGER.runWithSpanContext(
-			traceContext,
-			() =>
-				runFetchRequest(
-					request,
-					this.env,
-					this.ctx,
-					this.unstable_exists.bind(this),
-					this.unstable_getByETag.bind(this),
-					cohort
-				)
-		);
+		const response = traceContext
+			? await this.env.JAEGER.runWithSpanContext(traceContext, runRequest)
+			: await runRequest();
 
 		if (response instanceof Response) {
 			return response;

@@ -3,6 +3,6 @@
 "miniflare": patch
 ---
 
-Bypass the Asset Worker loopback on normal request and RPC paths
+Improve asset serving performance by removing an unnecessary internal dispatch hop
 
-The inner asset entrypoint is now the default, avoiding the latency added by forwarding every call through `ctx.exports`. The outer loopback entrypoint and its cohort-routing infrastructure remain available as named exports in the Asset Worker and Miniflare bundles so the boundary can be re-enabled later.
+Asset requests and RPC calls now avoid an extra internal forwarding layer, reducing latency. The forwarding infrastructure is preserved for future use by cohort-based deployments.
