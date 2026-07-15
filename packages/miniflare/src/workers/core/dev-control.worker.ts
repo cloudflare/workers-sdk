@@ -11,8 +11,13 @@ import type {
 } from "../../shared/dev-control";
 import type {
 	DurableObjectNamespace,
+	DurableObjectStub,
 	SqlStorageValue,
 } from "@cloudflare/workers-types/experimental";
+
+type IntrospectableDurableObjectStub = DurableObjectStub & {
+	[INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod;
+};
 
 function isDurableObjectNamespace(
 	binding: unknown
@@ -29,21 +34,12 @@ function isDurableObjectNamespace(
 	);
 }
 
-function hasIntrospectSqliteMethod(
-	stub: unknown
-): stub is { [INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod } {
-	return (
-		INTROSPECT_SQLITE_METHOD in (stub as object) &&
-		typeof (stub as any)[INTROSPECT_SQLITE_METHOD] === "function"
-	);
-}
-
 function getDurableObjectStub(
 	env: Record<string, unknown>,
 	scriptName: string,
 	className: string,
 	identifier: DurableObjectIdentifier
-) {
+): IntrospectableDurableObjectStub {
 	const bindingName = getDevControlDurableObjectBindingName(
 		scriptName,
 		className
@@ -61,7 +57,7 @@ function getDurableObjectStub(
 			? namespace.idFromName(identifier.name)
 			: namespace.idFromString(identifier.id);
 
-	return namespace.get(id);
+	return namespace.get(id) as IntrospectableDurableObjectStub;
 }
 
 export default class DevControl
@@ -86,12 +82,6 @@ export default class DevControl
 		options: DurableObjectStorageOperationOptions
 	): Promise<Row[]> {
 		const stub = getDurableObjectStub(this.env, scriptName, className, options);
-
-		if (!hasIntrospectSqliteMethod(stub)) {
-			throw new TypeError(
-				`Durable Object ${scriptName}:${className} does not support SQLite introspection.`
-			);
-		}
 
 		const [result] = await stub[INTROSPECT_SQLITE_METHOD]([
 			{ sql: options.query, params: options.bindings },
