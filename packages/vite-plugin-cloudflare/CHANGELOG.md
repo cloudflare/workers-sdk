@@ -1,5 +1,31 @@
 # @cloudflare/vite-plugin
 
+## 1.45.0
+
+### Minor Changes
+
+- [#14652](https://github.com/cloudflare/workers-sdk/pull/14652) [`317ce1f`](https://github.com/cloudflare/workers-sdk/commit/317ce1f32511a0e0b52b8bd81ea5a163e0821646) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Append Workers runtime types to the generated types when using `experimental.newConfig`, with a new `types.includeRuntime` option
+
+  When using the experimental new config (`cloudflare.config.ts`), the plugin now appends the Workers runtime types (generated from your compatibility date and flags) to `worker-configuration.d.ts`, alongside the types inferred from your config. This is controlled by a new `experimental.newConfig.types.includeRuntime` option, which defaults to `true`.
+
+  As part of this change, types are now generated only during `vite dev` (not `vite build`), since compatibility settings are resolved from the active dev session. This affects the experimental new config path only.
+
+### Patch Changes
+
+- [#14588](https://github.com/cloudflare/workers-sdk/pull/14588) [`eb99ab1`](https://github.com/cloudflare/workers-sdk/commit/eb99ab10c83de2599a7a234bbcc57bc739864288) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: Respect auth profiles when using remote bindings in the Vite plugin
+
+  Auth profiles (configured via `wrangler auth create` and `wrangler auth activate`) were previously being ignored when using remote bindings with the Vite plugin. This is now fixed.
+
+  Note that the profile directory is resolved based on the [Vite project root](https://vite.dev/config/shared-options.html#root).
+
+- [#14645](https://github.com/cloudflare/workers-sdk/pull/14645) [`cbdd107`](https://github.com/cloudflare/workers-sdk/commit/cbdd10777650ceb659e9e41ec858cb313a3dd47a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix load time crash on Node.js versions earlier than 22.15
+
+  The plugin eagerly imported `registerHooks` from `node:module`, which only exists on Node.js v22.15.0+. `registerHooks` is now read lazily, meaning that missing support is only surfaced when using `experimental.newConfig`.
+
+- Updated dependencies [[`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`ed33326`](https://github.com/cloudflare/workers-sdk/commit/ed3332620a15dff35b0875eb9ded87086104b2f0), [`018574b`](https://github.com/cloudflare/workers-sdk/commit/018574b5ab22cc0e3141d1f09c2c383d76d59b2c), [`eb99ab1`](https://github.com/cloudflare/workers-sdk/commit/eb99ab10c83de2599a7a234bbcc57bc739864288), [`cdf3148`](https://github.com/cloudflare/workers-sdk/commit/cdf3148976e274ef834e82ccc98eee3af30ef373), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`3015320`](https://github.com/cloudflare/workers-sdk/commit/3015320cf32d7bfe6f63121e19c9b469d028a9a8), [`899c297`](https://github.com/cloudflare/workers-sdk/commit/899c29763aa64c2a0c954105d7ff85c368d63f6d), [`9da77ac`](https://github.com/cloudflare/workers-sdk/commit/9da77ace05e3e63d491e39e672d91f4dd7e31e7a), [`317ce1f`](https://github.com/cloudflare/workers-sdk/commit/317ce1f32511a0e0b52b8bd81ea5a163e0821646)]:
+  - miniflare@4.20260710.0
+  - wrangler@4.111.0
+
 ## 1.44.0
 
 ### Minor Changes
