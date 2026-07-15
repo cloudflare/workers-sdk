@@ -1,6 +1,15 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import dedent from "ts-dedent";
-import { test } from "vitest";
-import { getTextResponse, serverLogs, viteTestUrl } from "../../__test-utils__";
+import { test, vi } from "vitest";
+import {
+	getTextResponse,
+	rootDir,
+	serverLogs,
+	slash,
+	viteTestUrl,
+	WAIT_FOR_OPTIONS,
+} from "../../__test-utils__";
 
 test("Supports sending email via the email binding", async ({ expect }) => {
 	const sendEmailResponse = await getTextResponse("/send");
@@ -41,4 +50,33 @@ test("Supports testing Email Workers at '/cdn-cgi/handler/scheduled' route", asy
 		`Received email from sender@example.com on ${new Date(" 27 Aug 2024 08:49:44 -0700").toISOString()} with following message:`
 	);
 	expect(emailStdout).toContain("Hi there");
+});
+
+test("logs sent emails to a directory within the project directory", async ({
+	expect,
+}) => {
+	const sendEmailResponse = await getTextResponse("/send");
+	expect(sendEmailResponse).toBe("Email message sent successfully!");
+
+	// The send_email binding writes the raw email to disk and logs the path.
+	const loggedPath = await vi.waitFor(() => {
+		const logs = serverLogs.info.join("\n");
+		expect(logs).toContain(
+			"send_email binding called with the following message:"
+		);
+		const match = logs.match(/^Email: (.+)$/m);
+		const emailPath = match?.[1]?.trim();
+		expect(emailPath).toBeTruthy();
+		return emailPath as string;
+	}, WAIT_FOR_OPTIONS);
+
+	const projectEmailDir = slash(
+		path.join(rootDir, ".wrangler", "tmp", "email")
+	);
+	expect(slash(loggedPath).startsWith(projectEmailDir)).toBe(true);
+
+	const fileContents = readFileSync(loggedPath, "utf-8");
+	expect(fileContents).toContain(
+		"Congratulations, you just sent an email from a Worker."
+	);
 });

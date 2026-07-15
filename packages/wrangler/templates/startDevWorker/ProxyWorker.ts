@@ -1,6 +1,7 @@
 import {
 	createDeferred,
 	DeferredPromise,
+	rewriteUrlInHeaderValue,
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
 import type {
@@ -350,10 +351,7 @@ function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
 	headers.delete("Set-Cookie");
 	headers.forEach((value, key) => {
 		if (typeof value === "string" && value.includes(from.host)) {
-			headers.set(
-				key,
-				value.replaceAll(from.origin, to.origin).replaceAll(from.host, to.host)
-			);
+			headers.set(key, rewriteUrlInHeaderValue(value, from, to));
 		}
 	});
 	for (const cookie of setCookie) {

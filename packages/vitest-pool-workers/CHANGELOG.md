@@ -1,5 +1,55 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.18.5
+
+### Patch Changes
+
+- Updated dependencies [[`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`ed33326`](https://github.com/cloudflare/workers-sdk/commit/ed3332620a15dff35b0875eb9ded87086104b2f0), [`018574b`](https://github.com/cloudflare/workers-sdk/commit/018574b5ab22cc0e3141d1f09c2c383d76d59b2c), [`eb99ab1`](https://github.com/cloudflare/workers-sdk/commit/eb99ab10c83de2599a7a234bbcc57bc739864288), [`cdf3148`](https://github.com/cloudflare/workers-sdk/commit/cdf3148976e274ef834e82ccc98eee3af30ef373), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`3015320`](https://github.com/cloudflare/workers-sdk/commit/3015320cf32d7bfe6f63121e19c9b469d028a9a8), [`899c297`](https://github.com/cloudflare/workers-sdk/commit/899c29763aa64c2a0c954105d7ff85c368d63f6d), [`9da77ac`](https://github.com/cloudflare/workers-sdk/commit/9da77ace05e3e63d491e39e672d91f4dd7e31e7a), [`317ce1f`](https://github.com/cloudflare/workers-sdk/commit/317ce1f32511a0e0b52b8bd81ea5a163e0821646)]:
+  - miniflare@4.20260710.0
+  - wrangler@4.111.0
+
+## 0.18.4
+
+### Patch Changes
+
+- [#14535](https://github.com/cloudflare/workers-sdk/pull/14535) [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f) Thanks [@Naapperas](https://github.com/Naapperas)! - Support dynamic retry delays for Workflow steps in local dev
+
+  A step's `retries.delay` can now be a function that computes the delay per failed attempt, in addition to a static duration. The function receives `{ ctx, error }` and returns a delay (a number of milliseconds or a duration string like `"30 seconds"`), and its result is fed into the configured `backoff`.
+
+  ```js
+  await step.do(
+    "call flaky API",
+    {
+      retries: {
+        limit: 5,
+        backoff: "constant",
+        delay: ({ ctx }) => ctx.attempt * 1000,
+      },
+    },
+    async () => {
+      /* ... */
+    }
+  );
+  ```
+
+  The function is invoked once per failed attempt with a 5 second timeout. If it throws, times out, or returns an invalid value, the step fails without further retries.
+
+- Updated dependencies [[`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3), [`7b28392`](https://github.com/cloudflare/workers-sdk/commit/7b2839290a707e7ee22dde17de68116e88f8a2dc), [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f)]:
+  - wrangler@4.110.0
+  - miniflare@4.20260708.1
+
+## 0.18.3
+
+### Patch Changes
+
+- [#14489](https://github.com/cloudflare/workers-sdk/pull/14489) [`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `listDurableObjectIds()` to Miniflare
+
+  Miniflare now exposes `listDurableObjectIds()` for listing persisted Durable Object instance IDs by binding name. The Vitest pool now uses this shared Miniflare API internally instead of duplicating Miniflare's storage listing logic.
+
+- Updated dependencies [[`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`8511ddf`](https://github.com/cloudflare/workers-sdk/commit/8511ddf769a603f49576b8cf632ea330c353001f), [`9f74a5f`](https://github.com/cloudflare/workers-sdk/commit/9f74a5ff4a89e3bf2103e51fa2d66752f26f8217), [`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`c782e2a`](https://github.com/cloudflare/workers-sdk/commit/c782e2a7282bfa27064f62408b691e4936c5f33a), [`2fedb1f`](https://github.com/cloudflare/workers-sdk/commit/2fedb1fc811efb3f7544c569e57383cabd4f14f8), [`17d2fc1`](https://github.com/cloudflare/workers-sdk/commit/17d2fc12989f72a2fcd42e62fb152f270d61ab38)]:
+  - miniflare@4.20260708.0
+  - wrangler@4.109.0
+
 ## 0.18.2
 
 ### Patch Changes

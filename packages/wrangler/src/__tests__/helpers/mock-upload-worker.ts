@@ -54,7 +54,6 @@ export function mockUploadWorkerRequest(
 		expectedCapnpSchema?: string;
 		expectedLimits?: CfWorkerInit["limits"];
 		env?: string;
-		useServiceEnvironments?: boolean;
 		keepVars?: boolean;
 		keepSecrets?: boolean;
 		tag?: string;
@@ -86,9 +85,6 @@ export function mockUploadWorkerRequest(
 			);
 		}
 		expect(params.scriptName).toEqual(expectedScriptName);
-		if (useServiceEnvironments) {
-			expect(params.envName).toEqual(env);
-		}
 		if (useOldUploadApi) {
 			expect(url.searchParams.get("excludeScript")).toEqual("true");
 		}
@@ -96,6 +92,7 @@ export function mockUploadWorkerRequest(
 			expect(params.dispatchNamespace).toEqual(expectedDispatchNamespace);
 		}
 
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 		const formBody = await request.formData();
 		if (typeof expectedEntry === "string" || expectedEntry instanceof RegExp) {
 			expect(await serialize(formBody.get("index.js"))).toMatch(expectedEntry);
@@ -230,7 +227,6 @@ export function mockUploadWorkerRequest(
 		expectedCompatibilityDate,
 		expectedCompatibilityFlags,
 		env = undefined,
-		useServiceEnvironments = true,
 		expectedMigrations,
 		expectedExports,
 		mockUploadReturnsExportsReconciliation,
@@ -250,17 +246,9 @@ export function mockUploadWorkerRequest(
 	} = options;
 
 	const expectedScriptName =
-		options.expectedScriptName ??
-		"test-name" + (!useServiceEnvironments && env ? `-${env}` : "");
+		options.expectedScriptName ?? "test-name" + (env ? `-${env}` : "");
 
-	if (env && useServiceEnvironments) {
-		msw.use(
-			http.put(
-				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-				handleUpload
-			)
-		);
-	} else if (expectedDispatchNamespace) {
+	if (expectedDispatchNamespace) {
 		msw.use(
 			http.put(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:dispatchNamespace/scripts/:scriptName",
@@ -333,7 +321,6 @@ export function mockUploadWorkerRequest(
 		enabled: subdomainDefaults.workers_dev,
 		previews_enabled: subdomainDefaults.preview_urls,
 		env,
-		useServiceEnvironments,
 		expectedAccountId: options.expectedAccountId,
 		expectedScriptName,
 	});
@@ -350,7 +337,6 @@ export function mockUploadWorkerRequest(
 			previews_enabled: subdomainDefaults.preview_urls,
 		},
 		env,
-		useServiceEnvironments,
 		expectedAccountId: options.expectedAccountId,
 		expectedScriptName,
 	});

@@ -89,6 +89,12 @@ export type { ResolveConfigPathOptions } from "./config/config-helpers";
 export * from "./errors";
 export { assertNever } from "./assert-never";
 
+export {
+	getPackagePath,
+	isPackageInstalled,
+	getInstalledPackageVersion,
+} from "./package-resolution";
+
 export * from "./constants";
 
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
@@ -114,6 +120,9 @@ export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
 
+export { createConfigCache } from "./config-cache";
+export type { ConfigCache, ConfigCacheOptions } from "./config-cache";
+
 export {
 	type EphemeralDirectory,
 	getWranglerHiddenDirPath,
@@ -135,6 +144,9 @@ export type { NpmVersionCheckResult } from "./update-check";
 
 export { LOGGER_LEVELS } from "./logger";
 export type { Logger, LoggerLevel } from "./logger";
+
+export { isCI, isInteractive, isNonInteractiveOrCI } from "./is-interactive";
+export { openInBrowser } from "./open-in-browser";
 
 export { retryOnAPIFailure } from "./retry";
 export { formatTime } from "./format-time";

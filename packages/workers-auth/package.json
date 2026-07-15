@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-auth",
-	"version": "0.4.1",
+	"version": "0.5.0",
 	"description": "Internal OAuth 2.0 + PKCE flow for Cloudflare CLIs. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-auth#readme",
 	"bugs": {
@@ -21,6 +21,14 @@
 		".": {
 			"import": "./dist/index.mjs",
 			"types": "./dist/index.d.mts"
+		},
+		"./wrangler": {
+			"import": "./dist/wrangler/index.mjs",
+			"types": "./dist/wrangler/index.d.mts"
+		},
+		"./cf": {
+			"import": "./dist/cf/index.mjs",
+			"types": "./dist/cf/index.d.mts"
 		},
 		"./test-helpers": {
 			"import": "./dist/test-helpers/index.mjs",
@@ -44,6 +52,7 @@
 		"@types/node": "catalog:default",
 		"@vitest/ui": "catalog:default",
 		"concurrently": "^8.2.2",
+		"date-fns": "^4.1.0",
 		"msw": "catalog:default",
 		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",

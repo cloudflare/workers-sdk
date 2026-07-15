@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { readFileSync } from "@cloudflare/workers-utils";
-import TOML from "smol-toml";
+import { parseFile, stringifyFile } from "../core/file-format";
 import {
 	decryptString,
 	encryptString,
@@ -19,6 +19,7 @@ import {
 	resolveAuthProfileBaseName,
 } from "./file-store";
 import type { UserAuthConfig } from "../config-file/auth";
+import type { FileFormat } from "../core/file-format";
 import type { CredentialStore } from "./interface";
 import type { KeyProvider } from "./key-providers/interface";
 
@@ -90,16 +91,23 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 	 * owns where its config lives, so workers-auth never resolves it itself).
 	 * @param keyProvider the OS-keyring backend holding the encryption key.
 	 * @param onPlaintextMigration optional callback invoked when a plaintext
-	 * TOML file is migrated into the encrypted layout on first read.
+	 * file is migrated into the encrypted layout on first read.
 	 * @param profile the auth profile (defaults to the active environment's
 	 * default profile).
+	 * @param format on-disk format of the plaintext sibling file and the
+	 * encrypted payload (defaults to TOML for wrangler).
 	 */
 	constructor(
 		private readonly configPath: string,
 		private readonly keyProvider: KeyProvider,
 		private readonly onPlaintextMigration?: OnPlaintextMigration,
-		private readonly profile?: string
+		private readonly profile?: string,
+		private readonly format: FileFormat = "toml"
 	) {}
+
+	private plaintextPath(): string {
+		return getAuthConfigFilePath(this.configPath, this.profile, this.format);
+	}
 
 	read(): UserAuthConfig | undefined {
 		const encryptedPath = getEncryptedAuthConfigFilePath(
@@ -113,7 +121,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		// should migrate into the encrypted layout. This makes opt-in
 		// transparent: the next `read()` after the user runs
 		// `wrangler login --use-keyring` returns the migrated credentials.
-		const plaintextPath = getAuthConfigFilePath(this.configPath, this.profile);
+		const plaintextPath = this.plaintextPath();
 		if (existsSync(plaintextPath)) {
 			return this.migrateFromPlaintext(plaintextPath, encryptedPath);
 		}
@@ -122,7 +130,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 
 	write(config: UserAuthConfig): void {
 		const key = this.ensureKey();
-		const plaintext = TOML.stringify(config);
+		const plaintext = stringifyFile(this.format, config);
 		const envelope = encryptString(plaintext, key);
 		const encryptedPath = getEncryptedAuthConfigFilePath(
 			this.configPath,
@@ -138,7 +146,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		// the encrypted version. Skipping this would leave plaintext
 		// credentials on disk indefinitely after the very first
 		// `--use-keyring` login.
-		const plaintextPath = getAuthConfigFilePath(this.configPath, this.profile);
+		const plaintextPath = this.plaintextPath();
 		if (existsSync(plaintextPath)) {
 			rmSync(plaintextPath);
 		}
@@ -149,7 +157,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			this.configPath,
 			this.profile
 		);
-		const plaintextPath = getAuthConfigFilePath(this.configPath, this.profile);
+		const plaintextPath = this.plaintextPath();
 		let existed = false;
 		if (existsSync(encryptedPath)) {
 			rmSync(encryptedPath);
@@ -222,9 +230,10 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			return undefined;
 		}
 		try {
-			return TOML.parse(plaintext) as unknown as UserAuthConfig;
+			return parseFile(this.format, plaintext) as UserAuthConfig;
 		} catch {
-			// Plaintext decrypted but is not valid TOML — corrupted.
+			// Plaintext decrypted but is not parseable in the expected
+			// format — corrupted.
 			return undefined;
 		}
 	}
@@ -240,7 +249,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		const raw = readFileSync(plaintextPath);
 		let plaintext: UserAuthConfig;
 		try {
-			plaintext = TOML.parse(raw) as unknown as UserAuthConfig;
+			plaintext = parseFile(this.format, raw) as UserAuthConfig;
 		} catch {
 			// Plaintext file parsed unsuccessfully — bail out rather than
 			// partially migrate. The caller treats this as "not logged

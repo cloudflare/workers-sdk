@@ -25,6 +25,7 @@ import {
 import { ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE } from "./helpers/error-codes";
 import { resolveExportsUploadPayload } from "./helpers/exports";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
@@ -37,7 +38,6 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
-import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
 import {
 	preUploadApiChecks,
 	validateWorkerProps,
@@ -119,8 +119,6 @@ export default async function versionsUpload(
 		isDryRun: props.dryRun,
 		accountId,
 		config,
-		useServiceEnvironments: useServiceEnvironmentsConfig(config),
-		env: props.env,
 		dispatchNamespace: undefined,
 	});
 
@@ -192,6 +190,10 @@ export default async function versionsUpload(
 		logpush: undefined, // logpush and observability are non-versioned settings
 		observability: undefined,
 		cache: config.cache, // cache is a versioned setting
+		package_dependencies:
+			config.dependencies_instrumentation?.enabled !== false && projectRoot
+				? await collectPackageDependencies(projectRoot)
+				: undefined,
 	};
 
 	await printBundleSize(

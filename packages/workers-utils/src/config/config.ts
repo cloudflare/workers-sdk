@@ -57,20 +57,33 @@ export interface ComputedFields {
 
 export interface ConfigFields<Dev extends RawDevConfig> {
 	/**
-	 * A boolean to enable "legacy" style wrangler environments (from Wrangler v1).
-	 * These have been superseded by Services, but there may be projects that won't
-	 * (or can't) use them. If you're using a legacy environment, you can set this
-	 * to `true` to enable it.
-	 */
-	legacy_env: boolean;
-
-	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
 	 *
 	 * When defined this will override any user settings.
 	 * Otherwise, Wrangler will use the user's preference.
 	 */
 	send_metrics: boolean | undefined;
+
+	/**
+	 * Configuration for npm package dependency instrumentation.
+	 *
+	 * Controls whether Wrangler should collect and send npm package dependency
+	 * metadata when deploying or uploading a Worker version.
+	 *
+	 * When `enabled` is set to `false`, Wrangler will not include
+	 * `package_dependencies` in the upload payload. Defaults to enabled when
+	 * not specified.
+	 *
+	 * Note: This is considered build metadata, so managed separately from the
+	 *       telemetry one and not disabled when
+	 *       `send_metrics`/`WRANGLER_SEND_METRICS` is set to `false`
+	 */
+	dependencies_instrumentation:
+		| {
+				/** Whether dependency instrumentation is enabled. Defaults to `true`. */
+				enabled: boolean;
+		  }
+		| undefined;
 
 	/**
 	 * Options to configure the development server that your worker will use.
@@ -302,6 +315,7 @@ export const defaultWranglerConfig: Config = {
 	/* TOP-LEVEL ONLY FIELDS */
 	pages_build_output_dir: undefined,
 	send_metrics: undefined,
+	dependencies_instrumentation: undefined,
 	dev: {
 		ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
 		port: undefined, // the default of 8787 is set at runtime
@@ -358,7 +372,6 @@ export const defaultWranglerConfig: Config = {
 	/*           Fields supported by Workers only         */
 	/*====================================================*/
 	/* TOP-LEVEL ONLY FIELDS */
-	legacy_env: true,
 	site: undefined,
 	wasm_modules: undefined,
 	text_blobs: undefined,

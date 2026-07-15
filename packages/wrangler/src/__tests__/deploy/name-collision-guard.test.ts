@@ -7,6 +7,8 @@ import { run } from "../../experimental-flags";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
+import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
+import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 
@@ -121,5 +123,40 @@ describe("deploy name-collision guard (non-interactive)", () => {
 		).rejects.toThrow(
 			'A Worker named "existing-worker" already exists in your account.'
 		);
+	});
+
+	it("does not guard a plain non-interactive deploy (no delegation)", async ({
+		expect,
+	}) => {
+		// Regression test for #14312: a plain `wrangler deploy` in CI with no
+		// config file and no --name (e.g. an autoconfigured project whose
+		// generated config PR has not been merged) is routinely re-run against
+		// the same, already-deployed Worker. Only the Pages-to-Workers delegation
+		// guards name ownership, so this must deploy normally instead of aborting.
+		const args = delegatedDeployArgs({});
+		const config = readConfig(args, { useRedirectIfAvailable: true });
+		config.name = "existing-worker";
+		config.main = "index.js";
+		config.compatibility_date = "2024-01-01";
+		mockExistingWorker();
+		mockSubDomainRequest();
+		mockUploadWorkerRequest({ expectedScriptName: "existing-worker" });
+		// The existing Worker means deploy checks its latest deployment before
+		// overwriting; an empty list means there is nothing to confirm.
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+				() => HttpResponse.json(createFetchResult({ deployments: [] }))
+			)
+		);
+
+		await expect(
+			run(experimentalFlags, () =>
+				runDeployCommandHandler(args, {
+					config,
+					// pagesToWorkersDelegation defaults to false
+				})
+			)
+		).resolves.toBeUndefined();
 	});
 });

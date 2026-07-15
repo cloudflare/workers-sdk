@@ -1,5 +1,17 @@
 # @cloudflare/local-explorer-ui
 
+## 0.14.1
+
+### Patch Changes
+
+- [#14531](https://github.com/cloudflare/workers-sdk/pull/14531) [`ad8d4b2`](https://github.com/cloudflare/workers-sdk/commit/ad8d4b242cdaf9f128e40de0c1921bbd7008522e) Thanks [@matingathani](https://github.com/matingathani)! - Don't swallow unhandled keydown events (e.g. `Cmd/Ctrl+<number>` tab-switch shortcuts) when a data studio table cell is focused but not being edited
+
+- [#14629](https://github.com/cloudflare/workers-sdk/pull/14629) [`c5647dd`](https://github.com/cloudflare/workers-sdk/commit/c5647dd76c299836ac4032af2ffcefc7a5d45a87) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix D1 schema editor tab not tracking unsaved changes
+
+  The schema editor tab (edit table / create table) now correctly marks the tab as dirty when there are unsaved schema changes. This shows the unsaved changes indicator on the tab, triggers the browser's leave guard when navigating away, and prompts for confirmation when closing the tab.
+
+  Additionally, column and constraint deletions now properly mark the schema as dirty. Previously, removing a column or constraint would filter the entry out of the state array entirely, causing the dirty-state check to miss the change.
+
 ## 0.14.0
 
 ### Minor Changes

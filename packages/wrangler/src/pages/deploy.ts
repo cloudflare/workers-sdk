@@ -1,6 +1,7 @@
 import { execFileSync, execSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	configFileName,
@@ -20,13 +21,15 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { getAccountFromCache, requireAuth } from "../user";
-import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { diagnoseStartupError } from "../utils/friendly-validator-errors";
 import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
 	PAGES_CONFIG_CACHE_FILENAME,
 } from "./constants";
-import { maybeDelegatePagesToWorkers } from "./delegate-to-workers";
+import {
+	logPagesToWorkersForceOptOutNotice,
+	maybeDelegatePagesToWorkers,
+} from "./delegate-to-workers";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
@@ -634,6 +637,12 @@ export const pagesDeployCommand = createCommand({
 		});
 
 		metrics.sendMetricsEvent("create pages deployment");
+
+		// If the agent opted this deploy out of delegation with `--force`, tell it
+		// (at the end, on success) that `--force` is a one-time action.
+		if (delegation.forcedOptOut) {
+			logPagesToWorkersForceOptOutNotice("deploy");
+		}
 	},
 });
 

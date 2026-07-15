@@ -26,6 +26,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli-shared-helpers",
 				"@cloudflare/codemod",
+				"@cloudflare/config",
 				"@cloudflare/containers-shared",
 				"@cloudflare/deploy-helpers",
 				"@cloudflare/devprod-status-bot",

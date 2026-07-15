@@ -51,7 +51,7 @@ const STEP_CONFIG_SCHEMA = z
 	.object({
 		retries: z
 			.object({
-				delay: z.number().gte(0).or(z.string()),
+				delay: z.number().gte(0).or(z.string()).or(z.function()),
 				limit: z.number().gte(0),
 				backoff: z.enum(["constant", "linear", "exponential"]).optional(),
 			})
@@ -70,6 +70,7 @@ export function isValidStepConfig(stepConfig: unknown): boolean {
 
 	if (
 		config.data.retries !== undefined &&
+		typeof config.data.retries.delay !== "function" &&
 		Number.isNaN(ms(config.data.retries.delay))
 	) {
 		return false;

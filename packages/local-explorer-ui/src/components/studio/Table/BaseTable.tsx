@@ -8,7 +8,13 @@ import {
 import { StudioTableHeaderList } from "./HeaderList";
 import { useStudioTableVisibility } from "./useVisibilityCalculation";
 import type { StudioTableHeaderInput, StudioTableState } from "./State";
-import type { ReactElement } from "react";
+import type {
+	CSSProperties,
+	JSX,
+	KeyboardEvent,
+	MouseEvent,
+	ReactElement,
+} from "react";
 
 /**
  * A flexible and efficient table component designed for handling large datasets.
@@ -163,21 +169,18 @@ export interface StudioTableCellRendererProps<MetadataType = unknown> {
 }
 
 interface TableCellListCommonProps<MetadataType = unknown> {
-	onCellMouseDown?: (
-		event: React.MouseEvent,
-		data: { x: number; y: number }
-	) => void;
+	onCellMouseDown?: (event: MouseEvent, data: { x: number; y: number }) => void;
 	onContextMenu?: (props: {
 		state: StudioTableState<MetadataType>;
-		event: React.MouseEvent;
+		event: MouseEvent;
 	}) => void;
-	onGutterClick?: (event: React.MouseEvent, rowNumber: number) => void;
+	onGutterClick?: (event: MouseEvent, rowNumber: number) => void;
 	onHeaderContextMenu?: (
-		e: React.MouseEvent,
+		e: MouseEvent,
 		header: StudioTableHeaderProps<MetadataType>
 	) => void;
-	onKeyDown?: (event: React.KeyboardEvent) => void;
-	onKeyUp?: (event: React.KeyboardEvent) => void;
+	onKeyDown?: (event: KeyboardEvent) => void;
+	onKeyUp?: (event: KeyboardEvent) => void;
 	renderCell: (
 		props: StudioTableCellRendererProps<MetadataType>
 	) => ReactElement;
@@ -199,7 +202,7 @@ interface RenderCellListProps<
 > extends TableCellListCommonProps<HeaderMetadata> {
 	colEnd: number;
 	colStart: number;
-	customStyles?: React.CSSProperties;
+	customStyles?: CSSProperties;
 	hasSticky: boolean;
 	headers: StudioTableHeaderProps<HeaderMetadata>[];
 	onHeaderResize: (idx: number, newWidth: number) => void;

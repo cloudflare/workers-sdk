@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.19.8
+
+### Patch Changes
+
+- [#14677](https://github.com/cloudflare/workers-sdk/pull/14677) [`205a260`](https://github.com/cloudflare/workers-sdk/commit/205a260b44c1ae0fcc4089b7ae3f6defd3c16d4a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Emit `servedBy` and `requestKind` analytics from the Workers Assets asset worker
+
+  Real asset hits and SPA or 404 fallbacks previously logged the same fields. The asset worker now records what served the response and whether the request was a navigation or subresource.
+
 ## 0.19.7
 
 ### Patch Changes

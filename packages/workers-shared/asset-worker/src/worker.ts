@@ -2,7 +2,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
-import { Analytics, EntrypointType } from "./analytics";
+import { Analytics, EntrypointType, getRequestKind } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
 import { normalizeConfiguration } from "./configuration";
 import { ExperimentAnalytics } from "./experiment-analytics";
@@ -310,6 +310,7 @@ async function runFetchRequest(
 				userAgent: userAgent,
 				entrypoint: EntrypointType.Inner,
 				cohort: cohort ?? "unknown",
+				requestKind: getRequestKind(request),
 			});
 		}
 
@@ -427,6 +428,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 					hostname: url.hostname,
 					version: this.env.VERSION_METADATA.tag,
 					entrypoint: EntrypointType.Outer,
+					requestKind: getRequestKind(request),
 				});
 			}
 			sentry = setupSentry(
@@ -447,7 +449,10 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 			const response = await this.getInnerEntrypoint(cohort).fetch(request);
 			analytics.setData({ status: response.status });
 			if (response.status >= 500) {
-				analytics.setData({ error: "inner entrypoint error" });
+				analytics.setData({
+					error: "inner entrypoint error",
+					servedBy: "error",
+				});
 			}
 			return response;
 		} catch (err) {

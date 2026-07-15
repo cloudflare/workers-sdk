@@ -62,11 +62,11 @@ describe("normalizeAndValidateConfig()", () => {
 			tsconfig: undefined,
 			kv_namespaces: [],
 			send_email: [],
-			legacy_env: true,
 			logfwdr: {
 				bindings: [],
 			},
 			send_metrics: undefined,
+			dependencies_instrumentation: undefined,
 			main: undefined,
 			migrations: [],
 			exports: {},
@@ -148,7 +148,6 @@ describe("normalizeAndValidateConfig()", () => {
 	describe("top-level non-environment configuration", () => {
 		it("should override config defaults with provided values", ({ expect }) => {
 			const expectedConfig: Partial<ConfigFields<RawDevConfig>> = {
-				legacy_env: true,
 				send_metrics: false,
 				dev: {
 					ip: "255.255.255.255",
@@ -174,8 +173,8 @@ describe("normalizeAndValidateConfig()", () => {
 
 		it("should error on invalid top level fields", ({ expect }) => {
 			const expectedConfig = {
-				legacy_env: "FOO",
 				send_metrics: "BAD",
+				dependencies_instrumentation: "NOPE" as unknown,
 				keep_vars: "NEVER",
 				dev: {
 					ip: 222,
@@ -199,19 +198,37 @@ describe("normalizeAndValidateConfig()", () => {
 				expect.objectContaining({
 					...expectedConfig,
 					main: undefined,
-					legacy_env: true,
 				})
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - Expected "legacy_env" to be of type boolean but got "FOO".
 				  - Expected "send_metrics" to be of type boolean but got "BAD".
+				  - Expected "dependencies_instrumentation" to be of type object but got "NOPE".
 				  - Expected "keep_vars" to be of type boolean but got "NEVER".
 				  - Expected "dev.ip" to be of type string but got 222.
 				  - Expected "dev.port" to be of type number but got "FOO".
 				  - Expected "dev.local_protocol" field to be one of ["http","https"] but got "wss".
 				  - Expected "dev.upstream_protocol" field to be one of ["http","https"] but got "ws"."
+			`);
+		});
+
+		it("should error if the deprecated `legacy_env` field is present", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{ legacy_env: true } as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - The "legacy_env" field is no longer supported, so please remove it from your configuration file.
+				    Service environments have been removed, and each environment is now deployed as its own Worker named "<name>-<environment>". This matches the behaviour of "legacy_env = true", which was the default, so removing the field will not change how your Worker is deployed.
+				    Refer to https://developers.cloudflare.com/workers/wrangler/environments/ for more information."
 			`);
 		});
 
@@ -7903,173 +7920,6 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(false);
-		});
-
-		describe("non-legacy", () => {
-			it("should use top-level `name` field", ({ expect }) => {
-				const rawConfig: RawConfig = {
-					name: "mock-name",
-					legacy_env: false,
-					env: { DEV: {} },
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(config.name).toEqual("mock-name");
-				expect(config.topLevelName).toEqual("mock-name");
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-			});
-
-			it("should error if named environment contains a `name` field, even if there is no top-level name", ({
-				expect,
-			}) => {
-				const rawConfig: RawConfig = {
-					legacy_env: false,
-					env: {
-						DEV: {
-							name: "mock-env-name",
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(config.name).toBeUndefined();
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.DEV" environment configuration
-					    - The "name" field is not allowed in named service environments.
-					      Please remove the field from this environment."
-				`);
-			});
-
-			it("should error if top-level config and a named environment both contain a `name` field", ({
-				expect,
-			}) => {
-				const rawConfig: RawConfig = {
-					name: "mock-name",
-					legacy_env: false,
-					env: {
-						DEV: {
-							name: "mock-env-name",
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(config.name).toEqual("mock-name");
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.DEV" environment configuration
-					    - The "name" field is not allowed in named service environments.
-					      Please remove the field from this environment."
-				`);
-			});
-
-			it("should error if named environment contains a `account_id` field, even if there is no top-level name", ({
-				expect,
-			}) => {
-				const rawConfig: RawConfig = {
-					legacy_env: false,
-					env: {
-						DEV: {
-							account_id: "some_account_id",
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(config.account_id).toBeUndefined();
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.DEV" environment configuration
-					    - The "account_id" field is not allowed in named service environments.
-					      Please remove the field from this environment."
-				`);
-			});
-
-			it("should error if top-level config and a named environment both contain a `account_id` field", ({
-				expect,
-			}) => {
-				const rawConfig: RawConfig = {
-					account_id: "ACCOUNT_ID",
-					legacy_env: false,
-					env: {
-						DEV: {
-							account_id: "ENV_ACCOUNT_ID",
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(config.account_id).toEqual("ACCOUNT_ID");
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.DEV" environment configuration
-					    - The "account_id" field is not allowed in named service environments.
-					      Please remove the field from this environment."
-				`);
-			});
 		});
 
 		it("should warn for non-inherited fields that are missing in environments", ({

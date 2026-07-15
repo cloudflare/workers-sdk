@@ -83,6 +83,18 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
 - Actions
   - Add the issue to a GitHub project.
 
+### Triage Issue (triage-issue.yml)
+
+- Triggers
+  - A new issue is opened (skips PRs and bot-authored issues).
+  - A new comment is created on an issue — re-triages with the latest context. Skips PRs, bot comments, and the triage bot's own report comment (matched by a marker) to avoid re-triage loops.
+  - Manual `workflow_dispatch` with an `issue-number` input.
+- Actions
+  - Runs an OpenCode agent with the `.github/skills/issue-review.md` skill against the pre-fetched issue data (including existing comments) to produce a markdown triage report (`report.md`) and a structured JSON summary (`summary.json`).
+  - Uploads the report to the triage dashboard.
+  - Posts the report and structured summary as a maintainer-facing comment on the issue and applies the suggested labels (validated against existing repo labels). The comment carries a hidden marker so that re-triage updates the existing comment (via `gh`) rather than posting a duplicate. Comments and labels are attributed to the workers-devprod bot via `GH_ACCESS_TOKEN`.
+  - The AI agent itself runs sandboxed (no shell or network access); all GitHub writes happen in workflow steps from the generated files.
+
 ### Generate changesets for dependabot PRs (c3-dependabot-versioning-prs.yml and miniflare-dependabot-versioning-prs.yml)
 
 - Triggers

@@ -1,5 +1,61 @@
 # create-cloudflare
 
+## 2.70.11
+
+### Patch Changes
+
+- [#14660](https://github.com/cloudflare/workers-sdk/pull/14660) [`a6abca6`](https://github.com/cloudflare/workers-sdk/commit/a6abca6d7e7e80d39488a6d5c4d67a34b684fbe7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.6.2 | 2.6.3 |
+
+- [#14662](https://github.com/cloudflare/workers-sdk/pull/14662) [`03c7b5f`](https://github.com/cloudflare/workers-sdk/commit/03c7b5f2cae58ee0a237b24f839a936ecd977906) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.0.5 | 22.0.6 |
+
+- [#14663](https://github.com/cloudflare/workers-sdk/pull/14663) [`092b1b4`](https://github.com/cloudflare/workers-sdk/commit/092b1b4c5c686ef62d8f10049d84b0f8db3b7dae) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.16.1 | 0.16.2 |
+
+- [#14664](https://github.com/cloudflare/workers-sdk/pull/14664) [`0aa62ab`](https://github.com/cloudflare/workers-sdk/commit/0aa62ab4a284474130a7b14136e8fe3e17b302a5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.660 | 0.0.662 |
+
+- [#14653](https://github.com/cloudflare/workers-sdk/pull/14653) [`e812d2e`](https://github.com/cloudflare/workers-sdk/commit/e812d2e351b568d90f29a154f713467a02a8f141) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Pass `--no-install` to `@tanstack/cli create` during scaffolding
+
+  Previously, the TanStack Start template did not pass `--no-install` to the framework CLI, causing dependencies to be installed twice: once by `@tanstack/cli create` and again by C3's own install step. This aligns the TanStack Start template with other framework templates that already skip the framework CLI's install.
+
+## 2.70.10
+
+### Patch Changes
+
+- [#14292](https://github.com/cloudflare/workers-sdk/pull/14292) [`21d048f`](https://github.com/cloudflare/workers-sdk/commit/21d048f3efa9aec85822ed7a06e6b11bfa31c624) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.15.4 | 0.16.1 |
+
+- [#14292](https://github.com/cloudflare/workers-sdk/pull/14292) [`21d048f`](https://github.com/cloudflare/workers-sdk/commit/21d048f3efa9aec85822ed7a06e6b11bfa31c624) Thanks [@dependabot](https://github.com/apps/dependabot)! - Fix SvelteKit project creation failing with "Error parsing file: svelte.config.js"
+
+  As of `sv` 0.16, newly scaffolded SvelteKit projects no longer include a `svelte.config.js` file, and the adapter is configured in the Vite config instead. C3 now updates the adapter import in `vite.config.ts`/`vite.config.js` rather than `svelte.config.js`, so creating a SvelteKit project succeeds again.
+
 ## 2.70.9
 
 ### Patch Changes

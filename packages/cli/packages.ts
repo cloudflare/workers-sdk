@@ -39,6 +39,7 @@ export const installPackages = async (
 				break;
 			case "npm":
 			case "pnpm":
+			case "nub":
 			default:
 				cmd = "install";
 				break;
@@ -78,6 +79,7 @@ export const installPackages = async (
 			break;
 		case "npm":
 		case "pnpm":
+		case "nub":
 		default:
 			cmd = "install";
 			saveFlag = dev ? "--save-dev" : "";
@@ -141,6 +143,7 @@ function getWorkspaceInstallRootFlag(
 	switch (packageManager) {
 		case "nub":
 		case "pnpm":
+		case "nub":
 			return ["--workspace-root"];
 		case "yarn":
 			return ["-W"];

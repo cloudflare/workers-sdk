@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports -- This is the canonical wrapper around am-i-vibing all other code should use detectAgent() from this module
 import { detectAgenticEnvironment } from "am-i-vibing";
 
 // Pass an empty array for processAncestry to skip process tree checks entirely.
@@ -34,10 +35,10 @@ export interface DetectedAgent {
  */
 export function detectAgent(): DetectedAgent {
 	try {
-		const detection = detectAgenticEnvironment(
-			process.env,
-			NO_PROCESS_ANCESTRY
-		);
+		const detection = detectAgenticEnvironment({
+			env: process.env,
+			processAncestry: NO_PROCESS_ANCESTRY,
+		});
 		return { isAgent: detection.type === "agent", id: detection.id };
 	} catch {
 		// Silent failure - assume we are not being run by an agent.
