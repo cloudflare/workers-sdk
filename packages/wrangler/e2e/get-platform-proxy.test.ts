@@ -357,7 +357,7 @@ describe("getPlatformProxy()", () => {
 							const helloWorldFn = await env.WORKER.getHelloWorldFn();
 							const helloFn = await env.WORKER.getHelloFn();
 							return JSON.stringify([
-								helloWorldFn(),
+								await helloWorldFn(),
 								await helloFn("hi", "world"),
 								await helloFn("hi", "world", {
 									capitalize: true,

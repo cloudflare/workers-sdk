@@ -1019,7 +1019,70 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 
 	const bindings = await mf.getBindings<{ RPC_SERVICE: any }>();
 	const rpcTarget = await bindings.RPC_SERVICE.getRpcTarget();
-	expect(rpcTarget.id).toEqual("test-id");
+	expect(await rpcTarget.id).toEqual("test-id");
+});
+
+test("Miniflare: experimental capnweb service binding supports callbacks and RpcTarget stubs", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "a",
+				serviceBindings: {
+					RPC_SERVICE: { name: "b", entrypoint: "RpcEntrypoint" },
+				},
+				compatibilityFlags: ["rpc"],
+				modules: true,
+				script: `export default { fetch() { return new Response("ok"); } }`,
+			},
+			{
+				name: "b",
+				modules: true,
+				script: `
+					import { WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
+
+					export class RpcEntrypoint extends WorkerEntrypoint {
+						getRpcTarget() {
+							return new SubService("test-id");
+						}
+
+						callCallback(callback) {
+							return callback("from-worker");
+						}
+					}
+
+					class SubService extends RpcTarget {
+						#id;
+
+						constructor(id) {
+							super();
+							this.#id = id;
+						}
+
+						get id() {
+							return this.#id;
+						}
+
+						ping() {
+							return "sub-pong";
+						}
+					}
+				`,
+			},
+		],
+	});
+	useDispose(mf);
+
+	const bindings = await mf.getBindings<{ RPC_SERVICE: any }>("a");
+	const rpcTarget = await bindings.RPC_SERVICE.getRpcTarget();
+	expect(await rpcTarget.id).toEqual("test-id");
+	expect(await rpcTarget.ping()).toEqual("sub-pong");
+	expect(
+		await bindings.RPC_SERVICE.callCallback(
+			(value: string) => `callback:${value}`
+		)
+	).toEqual("callback:from-worker");
 });
 
 test("Miniflare: tail consumer called", async ({ expect }) => {

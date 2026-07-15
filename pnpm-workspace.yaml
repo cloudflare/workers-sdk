@@ -127,7 +127,7 @@ catalog:
   tinyglobby: "0.2.16"
   "tree-kill": "1.2.2"
   "capnp-es": "0.0.14"
-  "capnweb": "0.5.0"
+  "capnweb": "0.8.0"
   "ci-info": "4.4.0"
   "open": "11.0.0"
   "signal-exit": "4.1.0"

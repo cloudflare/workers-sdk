@@ -33,6 +33,7 @@ import {
 } from "./http";
 import {
 	BROWSER_RENDERING_PLUGIN_NAME,
+	CORE_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	FLAGSHIP_PLUGIN_NAME,
@@ -45,6 +46,7 @@ import {
 	HOST_CAPNP_CONNECT,
 	IMAGES_PLUGIN_NAME,
 	KV_PLUGIN_NAME,
+	kCurrentWorker,
 	launchBrowser,
 	loadExternalPlugins,
 	namespaceKeys,
@@ -78,6 +80,7 @@ import {
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
+import { CapnwebProxyClient } from "./plugins/core/proxy";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import {
 	cfImageLocalFetcher,
@@ -994,6 +997,7 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
+	#capnwebProxyClient?: CapnwebProxyClient;
 
 	#structuredWorkerdLogs: boolean;
 
@@ -2627,6 +2631,9 @@ export class Miniflare {
 			// Existing proxies will already have been poisoned in `setOptions()`.
 			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
+		if (this.#capnwebProxyClient !== undefined) {
+			this.#capnwebProxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
+		}
 
 		await this.#registerWorkers();
 
@@ -2883,6 +2890,7 @@ export class Miniflare {
 		// The `ProxyServer` "heap" will be destroyed when `workerd` restarts,
 		// invalidating all existing native references. Mark all proxies as invalid.
 		this.#proxyClient?.poisonProxies();
+		this.#capnwebProxyClient?.poisonProxies();
 		// Wait for initial initialisation and other setOptions to complete before
 		// changing options
 		return this.#runtimeMutex.runWith(() => this.#setOptions(opts));
@@ -2973,6 +2981,71 @@ export class Miniflare {
 		assert(this.#proxyClient !== undefined);
 		return this.#proxyClient;
 	}
+	async #getCapnwebProxyClient(): Promise<CapnwebProxyClient> {
+		this.#checkDisposed();
+		await this.ready;
+		if (this.#capnwebProxyClient === undefined) {
+			assert(this.#runtimeEntryURL !== undefined);
+			this.#capnwebProxyClient = new CapnwebProxyClient(this.#runtimeEntryURL);
+		}
+		return this.#capnwebProxyClient;
+	}
+	#useCapnwebProxy(): boolean {
+		return this.#sharedOpts.core.unsafeCapnwebRpcProxy;
+	}
+	#isCapnwebProxyBinding(
+		pluginName: string,
+		bindingName: string,
+		workerOpts: PluginWorkerOptions
+	): boolean {
+		const service = workerOpts.core.serviceBindings?.[bindingName];
+		return (
+			this.#useCapnwebProxy() &&
+			pluginName === CORE_PLUGIN_NAME &&
+			(service === kCurrentWorker ||
+				typeof service === "string" ||
+				(typeof service === "object" &&
+					service !== null &&
+					"name" in service &&
+					service.remoteProxyConnectionString === undefined))
+		);
+	}
+	async #getHybridJsRpcBinding(
+		fetchProxy: unknown,
+		proxyBindingName: string
+	): Promise<unknown> {
+		const rpcProxy = await (
+			await this.#getCapnwebProxyClient()
+		).getEnvBinding(proxyBindingName);
+		const target: (() => void) & {
+			[util.inspect.custom]?: (
+				depth: number,
+				options: util.InspectOptions
+			) => unknown;
+		} = function () {};
+		target[util.inspect.custom] = (
+			depth: number,
+			options: util.InspectOptions
+		) => {
+			const customInspect = Object(fetchProxy)[util.inspect.custom];
+			if (typeof customInspect === "function") {
+				return customInspect.call(fetchProxy, depth, options);
+			}
+			return util.inspect(fetchProxy, options);
+		};
+		return new Proxy(target, {
+			apply(_target, thisArg, argArray) {
+				// oxlint-disable-next-line typescript/no-unsafe-function-type -- TODO
+				return Reflect.apply(Object(rpcProxy) as Function, thisArg, argArray);
+			},
+			get(_target, prop, receiver) {
+				if (prop === "fetch" || prop === util.inspect.custom) {
+					return Reflect.get(Object(fetchProxy), prop, receiver);
+				}
+				return Reflect.get(Object(rpcProxy), prop, receiver);
+			},
+		});
+	}
 
 	#findAndAssertWorkerIndex(workerName?: string): number {
 		if (workerName === undefined) {
@@ -3007,7 +3080,17 @@ export class Miniflare {
 			for (const [name, binding] of Object.entries(pluginBindings)) {
 				if (binding instanceof ProxyNodeBinding) {
 					const proxyBindingName = getProxyBindingName(key, workerName, name);
-					let proxy = proxyClient.env[proxyBindingName];
+					const fetchProxy = proxyClient.env[proxyBindingName];
+					let proxy: unknown = fetchProxy;
+					if (
+						fetchProxy !== undefined &&
+						this.#isCapnwebProxyBinding(key, name, workerOpts)
+					) {
+						proxy = await this.#getHybridJsRpcBinding(
+							fetchProxy,
+							proxyBindingName
+						);
+					}
 					assert(
 						proxy !== undefined,
 						`Expected ${proxyBindingName} to be bound`
@@ -3036,7 +3119,11 @@ export class Miniflare {
 		// shares its `env` with Miniflare's entry worker, so has access to routes)
 		const bindingName = CoreBindings.SERVICE_USER_ROUTE_PREFIX + workerName;
 
-		const fetcher = proxyClient.env[bindingName];
+		const fetchProxy = proxyClient.env[bindingName];
+		const fetcher =
+			fetchProxy !== undefined && this.#useCapnwebProxy()
+				? await this.#getHybridJsRpcBinding(fetchProxy, bindingName)
+				: fetchProxy;
 		if (fetcher === undefined) {
 			// `#findAndAssertWorkerIndex()` will throw if a "worker" doesn't exist
 			// with the specified name. If this "worker" was used as a wrapped binding
@@ -3063,7 +3150,20 @@ export class Miniflare {
 			resolvedWorkerName,
 			bindingName
 		);
-		const proxy = proxyClient.env[proxyBindingName];
+		const fetchProxy = proxyClient.env[proxyBindingName];
+		const useCapnwebProxy =
+			fetchProxy !== undefined &&
+			pluginName === CORE_PLUGIN_NAME &&
+			this.#isCapnwebProxyBinding(
+				pluginName,
+				bindingName,
+				this.#workerOpts[this.#findAndAssertWorkerIndex(workerName)]
+			);
+		const proxy = useCapnwebProxy
+			? await (
+					await this.#getCapnwebProxyClient()
+				).getEnvBinding(proxyBindingName)
+			: fetchProxy;
 		if (proxy === undefined) {
 			// If the user specified an invalid binding/worker name, throw
 			const friendlyWorkerName = resolvedWorkerName
@@ -3356,6 +3456,7 @@ export class Miniflare {
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
 		// we'd like them to be poisoned synchronously here.
 		this.#proxyClient?.poisonProxies();
+		this.#capnwebProxyClient?.poisonProxies();
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
@@ -3366,6 +3467,7 @@ export class Miniflare {
 
 			// Cleanup as much as possible even if `#init()` threw
 			await this.#proxyClient?.dispose();
+			await this.#capnwebProxyClient?.dispose();
 			await this.#runtime?.dispose();
 			// Close the undici Pool used for dispatching fetch requests to the
 			// runtime. This must happen after the runtime is disposed, so that
