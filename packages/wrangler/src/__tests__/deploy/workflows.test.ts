@@ -226,14 +226,7 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedBindings: [],
-				expectedExports: {
-					MyWorkflow: {
-						type: "workflow",
-						name: "my-workflow",
-						limits: { steps: 25_000 },
-						schedules: ["0 * * * *"],
-					},
-				},
+				expectedExports: undefined,
 			});
 
 			await runWrangler("deploy --experimental-new-config");

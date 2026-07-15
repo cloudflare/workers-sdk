@@ -16,10 +16,11 @@ export async function resolveExportsUploadPayload(
 	const { migrations, exports: durableObjectExports } =
 		await resolveDoLifecyclePayload(props);
 	// Durable Object exports replace migrations. Worker exports can upload with
-	// either path, but not both.
+	// either path, but not both. Workflow exports are provisioned through the
+	// Workflows API after the Worker module is uploaded; the Worker upload API
+	// does not accept `workflow` entries in its `exports` metadata.
 	const exports = {
 		...partitionedExports.worker,
-		...partitionedExports.workflow,
 		...(durableObjectExports ?? {}),
 	};
 
