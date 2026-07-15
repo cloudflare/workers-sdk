@@ -986,9 +986,11 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						method: "POST",
 						body: emailOptions.raw,
 					};
+
 					if (typeof emailOptions.raw !== "string") {
 						requestInit.duplex = "half";
 					}
+
 					const response = await dispatchFetch(
 						miniflare,
 						`/cdn-cgi/handler/email?${searchParams.toString()}`,
@@ -996,6 +998,13 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						workerName,
 						"email"
 					);
+
+					if (response.status >= 400 && response.status < 500) {
+						throw new Error(
+							`Failed to dispatch email event: ${await response.text()}`
+						);
+					}
+
 					const result = await response.json();
 
 					return result as FetcherEmailResult;

@@ -1806,7 +1806,9 @@ describe("createTestHarness", () => {
 				to: "invalid@example.com",
 				raw: "From: sender@example.com\r\nTo: invalid@example.com\r\n\r\nInvalid",
 			})
-		).rejects.toThrow(SyntaxError);
+		).rejects.toThrow(
+			"Failed to dispatch email event: Email could not be parsed: invalid or no message id provided"
+		);
 
 		await expect(
 			worker.email({
