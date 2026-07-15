@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { getAccessHeaders } from "@cloudflare/workers-auth";
 import {
 	MissingConfigError,
 	retryOnAPIFailure,
@@ -7,7 +8,6 @@ import chalk from "chalk";
 import { Mutex, type Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { version as packageVersion } from "../../package.json";
-import { getAccessHeaders } from "../../user/access";
 import { logger } from "../logger";
 import { TRACE_VERSION } from "../utils/constants";
 import {
@@ -322,7 +322,9 @@ export class RemoteRuntimeController extends RuntimeController {
 			return false;
 		}
 
-		const accessHeaders = await getAccessHeaders(token.host);
+		const accessHeaders = getAccessHeaders(token.host, {
+			logger,
+		});
 
 		const proxyData: ProxyData = {
 			userWorkerUrl: {

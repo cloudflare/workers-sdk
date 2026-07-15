@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI, UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import {
 	getAccessClientIdFromEnv,
@@ -89,11 +89,9 @@ export async function getAccessHeaders(
 	domain: string,
 	options: {
 		logger: OAuthFlowLogger;
-		isNonInteractiveOrCI: () => boolean;
 	}
 ): Promise<Record<string, string>> {
 	const logger = options.logger;
-	const isNonInteractiveOrCI = options.isNonInteractiveOrCI;
 
 	// 1. If Access Service Token credentials are provided, use them directly.
 	//
