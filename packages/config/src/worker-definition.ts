@@ -90,32 +90,11 @@ export type UserConfigExport<T extends UserConfig = UserConfig> =
 	| Promise<T>
 	| ((ctx: ConfigContext) => T | Promise<T>);
 
-type ValidateWorkflowExportKeys<T extends UserConfig> = T extends {
-	entrypoint: infer TEntrypoint extends Record<string, unknown>;
-	exports: infer TExports extends Record<string, { type: string }>;
-}
-	? {
-			exports: {
-				[K in keyof TExports]: TExports[K] extends { type: "workflow" }
-					? K extends Exclude<keyof TEntrypoint, "default">
-						? TExports[K]
-						: never
-					: TExports[K];
-			};
-		}
-	: unknown;
-
 export function defineWorker<const T extends UserConfig>(
-	config: (
-		ctx: ConfigContext
-	) =>
-		| (UserConfig & T & ValidateWorkflowExportKeys<T>)
-		| Promise<UserConfig & T & ValidateWorkflowExportKeys<T>>
+	config: (ctx: ConfigContext) => (UserConfig & T) | Promise<UserConfig & T>
 ): TypedWorkerDefinition<T>;
 export function defineWorker<const T extends UserConfig>(
-	config:
-		| (UserConfig & T & ValidateWorkflowExportKeys<T>)
-		| Promise<UserConfig & T & ValidateWorkflowExportKeys<T>>
+	config: (UserConfig & T) | Promise<UserConfig & T>
 ): TypedWorkerDefinition<T>;
 export function defineWorker(config: UserConfigExport): WorkerDefinition {
 	return {
