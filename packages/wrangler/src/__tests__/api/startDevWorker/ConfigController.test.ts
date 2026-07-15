@@ -3,13 +3,13 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
-import type * as StartDevWorkerApi from "../../../api/startDevWorker";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { logger } from "../../../logger";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runWrangler } from "../../helpers/run-wrangler";
+import type * as StartDevWorkerApi from "../../../api/startDevWorker";
 
 // Declaration-level pins for the exported input chain: a fresh object
 // literal gets excess-property checking, which fails to compile if any of
@@ -17,9 +17,7 @@ import { runWrangler } from "../../helpers/run-wrangler";
 // runtime test below exercises only `ConfigController.set`). Never
 // executed.
 type StartWorkerInput = Parameters<typeof StartDevWorkerApi.startWorker>[0];
-type DevEnvStartInput = Parameters<
-	StartDevWorkerApi.DevEnv["startWorker"]
->[0];
+type DevEnvStartInput = Parameters<StartDevWorkerApi.DevEnv["startWorker"]>[0];
 type SetConfigInput = Parameters<StartDevWorkerApi.Worker["setConfig"]>[0];
 type PatchConfigInput = Parameters<StartDevWorkerApi.Worker["patchConfig"]>[0];
 const _publicInputPins: [
