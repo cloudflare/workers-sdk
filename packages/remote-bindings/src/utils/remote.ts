@@ -1,0 +1,345 @@
+import assert from "node:assert";
+import path from "node:path";
+import { APIError, UserError } from "@cloudflare/workers-utils";
+import { syncAssets } from "../assets";
+import { isAuthenticationError } from "../core/handle-errors";
+import { printBundleSize } from "../deployment-bundle/bundle-reporter";
+import { getBundleType } from "../deployment-bundle/bundle-type";
+import { withSourceURLs } from "../deployment-bundle/source-url";
+import { getInferredHost } from "../dev";
+import { logger } from "../logger";
+import { syncWorkersSite } from "../sites";
+import { getAuthFromEnv, requireApiToken } from "../user";
+import { isAbortError } from "../utils/isAbortError";
+import { getZoneIdForPreview } from "../zones";
+import type { StartDevWorkerInput } from "../api";
+import type { CfAccount } from "./create-worker-preview";
+import type { EsbuildBundle } from "./use-esbuild";
+import type { ApiCredentials } from "@cloudflare/workers-utils";
+import type {
+	AssetsOptions,
+	CfModule,
+	CfScriptFormat,
+	CfWorkerContext,
+	CfWorkerInit,
+	ComplianceConfig,
+	LegacyAssetPaths,
+	Route,
+} from "@cloudflare/workers-utils";
+
+/**
+ * Error thrown when a remote dev session fails due to an authentication
+ * problem.  The error message is a user-friendly description with actionable
+ * guidance, tailored to the caller's authentication method (environment
+ * variable token vs. OAuth).  The original API error is preserved as the
+ * error's {@link Error.cause | cause}.
+ *
+ * Consumers that catch this error can display {@link Error.message | message}
+ * directly — no additional logging helper is needed.
+ */
+export class RemoteSessionAuthenticationError extends UserError {
+	/**
+	 * @param cause - The original error that triggered the authentication
+	 *   failure (e.g. an {@link APIError} with code 9106 or 10000).
+	 */
+	constructor(cause: unknown) {
+		const envAuth = getAuthFromEnv();
+
+		let errorMessage =
+			"Failed to establish remote session due to an authentication issue.\n";
+		if (envAuth !== undefined) {
+			// The user is authenticating via an environment variable
+			const method =
+				"apiToken" in envAuth
+					? "a custom API token (`CLOUDFLARE_API_TOKEN`)"
+					: "a Global API Key (`CLOUDFLARE_API_KEY`)";
+
+			errorMessage +=
+				`It looks like you are authenticating via ${method} set in an environment variable.\n` +
+				"The token may be invalid or lack the required permissions for this operation.\n\n" +
+				"To fix this, verify that your token is valid and has the correct permissions.\n" +
+				"You can also run `wrangler whoami` to check your current authentication status.";
+		} else {
+			// The user is authenticating via OAuth (wrangler login)
+			errorMessage +=
+				"Your credentials may have expired or been revoked.\n\n" +
+				"To fix this, try to:\n" +
+				"  - Run `wrangler whoami` to check your current authentication status.\n" +
+				"  - Run `wrangler logout` and then `wrangler login` to re-authenticate.";
+		}
+
+		super(errorMessage, {
+			cause,
+			telemetryMessage: "remote dev authentication error",
+		});
+	}
+}
+
+export function handlePreviewSessionUploadError(
+	err: unknown,
+	accountId: string
+): boolean {
+	assert(err && typeof err === "object");
+	// we want to log the error, but not end the process
+	// since it could recover after the developer fixes whatever's wrong
+	// instead of logging the raw API error to the user,
+	// give them friendly instructions
+	if (!isAbortError(err)) {
+		// code 10049 happens when the preview token expires
+		if ("code" in err && err.code === 10049) {
+			logger.log("Preview token expired, fetching a new one");
+
+			// since we want a new preview token when this happens,
+			// lets increment the counter, and trigger a rerun of
+			// the useEffect above
+			return true;
+		} else if (!handleUserFriendlyError(err, accountId)) {
+			logger.error("Error on remote worker:", err);
+		}
+	}
+	return false;
+}
+
+export function handlePreviewSessionCreationError(
+	err: unknown,
+	accountId: string
+) {
+	assert(err && typeof err === "object");
+	// instead of logging the raw API error to the user,
+	// give them friendly instructions
+	if (isAuthenticationError(err)) {
+		throw new RemoteSessionAuthenticationError(err);
+	}
+	// for error 10063 (workers.dev subdomain required)
+	else if ("code" in err && err.code === 10063) {
+		logger.error(
+			`You need to register a workers.dev subdomain before running the dev command in remote mode. You can either enable local mode by pressing l, or register a workers.dev subdomain here: https://dash.cloudflare.com/${accountId}/workers/onboarding`
+		);
+	} else if (
+		"cause" in err &&
+		(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
+	) {
+		logger.error(
+			`Could not access \`${(err.cause as { code: string; hostname: string }).hostname}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+		);
+	} else if (err instanceof UserError) {
+		logger.error(err.message);
+	}
+	// we want to log the error, but not end the process
+	// since it could recover after the developer fixes whatever's wrong
+	else if (!isAbortError(err)) {
+		logger.error("Error while creating remote dev session:", err);
+	}
+}
+
+export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
+	Omit<CfWorkerInit, "bindings"> & {
+		bindings: StartDevWorkerInput["bindings"];
+	};
+
+/**
+ * Create remote worker init from StartDevWorkerInput["bindings"] format
+ * (flat Record<string, Binding>).
+ */
+export async function createRemoteWorkerInit(props: {
+	bundle: EsbuildBundle;
+	modules: CfModule[];
+	complianceConfig: ComplianceConfig;
+	accountId: string;
+	name: string;
+	env: string | undefined;
+	isWorkersSite: boolean;
+	assets: AssetsOptions | undefined;
+	legacyAssetPaths: LegacyAssetPaths | undefined;
+	format: CfScriptFormat;
+	bindings: StartDevWorkerInput["bindings"];
+	compatibilityDate: string | undefined;
+	compatibilityFlags: string[] | undefined;
+	minimal_mode?: boolean;
+}) {
+	const { entrypointSource: content, modules } = withSourceURLs(
+		props.bundle.path,
+		props.bundle.entrypointSource,
+		props.modules
+	);
+
+	// TODO: For Dev we could show the reporter message in the interactive box.
+	void printBundleSize(
+		{
+			name: path.basename(props.bundle.path),
+			content,
+		},
+		props.modules
+	);
+
+	const workersSitesAssets = await syncWorkersSite(
+		props.complianceConfig,
+		props.accountId,
+		props.name,
+		props.isWorkersSite ? props.legacyAssetPaths : undefined,
+		true,
+		false,
+		undefined
+	); // TODO: cancellable?
+
+	if (workersSitesAssets.manifest) {
+		modules.push({
+			name: "__STATIC_CONTENT_MANIFEST",
+			filePath: undefined,
+			content: JSON.stringify(workersSitesAssets.manifest),
+			type: "text",
+		});
+	}
+
+	const assetsUploadResult = props.assets
+		? await syncAssets(
+				props.complianceConfig,
+				props.accountId,
+				props.assets.directory,
+				props.name
+			)
+		: undefined;
+	const assetsJwt = assetsUploadResult?.jwt;
+
+	const bindings = { ...props.bindings };
+
+	if (workersSitesAssets.namespace) {
+		bindings["__STATIC_CONTENT"] = {
+			type: "kv_namespace",
+			id: workersSitesAssets.namespace,
+		};
+	}
+
+	if (workersSitesAssets.manifest && props.format === "service-worker") {
+		bindings["__STATIC_CONTENT_MANIFEST"] = {
+			type: "text_blob",
+			source: { contents: "__STATIC_CONTENT_MANIFEST" },
+		};
+	}
+
+	const init: CfWorkerInitWithName = {
+		name: props.name,
+		main: {
+			name: path.basename(props.bundle.path),
+			filePath: props.bundle.path,
+			type: getBundleType(props.format, path.basename(props.bundle.path)),
+			content,
+		},
+		modules,
+		bindings,
+		migrations: undefined, // no migrations in dev
+		exports: undefined,
+		compatibility_date: props.compatibilityDate,
+		compatibility_flags: props.compatibilityFlags,
+		keepVars: true,
+		keepSecrets: true,
+		logpush: false,
+		sourceMaps: undefined,
+		containers: undefined, // Containers are not supported in remote dev mode
+		assets:
+			props.assets && assetsJwt
+				? {
+						jwt: assetsJwt,
+						routerConfig: props.assets.routerConfig,
+						assetConfig: props.assets.assetConfig,
+						_redirects: props.assets._redirects,
+						_headers: props.assets._headers,
+						run_worker_first: props.assets.run_worker_first,
+					}
+				: undefined,
+		placement: undefined, // no placement in dev
+		tail_consumers: undefined,
+		streaming_tail_consumers: undefined,
+		limits: undefined, // no limits in preview - not supported yet but can be added
+		observability: undefined, // no observability in dev,
+		cache: undefined, // no cache in dev
+	};
+
+	return init;
+}
+
+export async function getWorkerAccountAndContext(props: {
+	complianceConfig: ComplianceConfig;
+	accountId: string;
+	apiToken?: ApiCredentials | undefined;
+	env: string | undefined;
+	host: string | undefined;
+	routes: Route[] | undefined;
+	sendMetrics: boolean | undefined;
+	configPath: string | undefined;
+}): Promise<{ workerAccount: CfAccount; workerContext: CfWorkerContext }> {
+	const workerAccount: CfAccount = {
+		accountId: props.accountId,
+		apiToken: props.apiToken ?? requireApiToken(),
+	};
+
+	// What zone should the realish preview for this Worker run on?
+	const zoneId = await getZoneIdForPreview(props.complianceConfig, {
+		host: props.host,
+		routes: props.routes,
+		accountId: props.accountId,
+	});
+
+	const workerContext: CfWorkerContext = {
+		env: props.env,
+		zone: zoneId,
+		host: props.host ?? getInferredHost(props.routes, props.configPath),
+		routes: props.routes,
+		sendMetrics: props.sendMetrics,
+	};
+
+	return { workerAccount, workerContext };
+}
+
+/**
+ * A switch for handling thrown error mappings to user friendly
+ * messages, does not perform any logic other than logging errors.
+ * @returns if the error was handled or not
+ */
+function handleUserFriendlyError(error: unknown, accountId?: string) {
+	if (error instanceof APIError) {
+		switch (error.code) {
+			// code 9106 and 10000 are authentication errors
+			case 9106:
+			case 10000: {
+				throw new RemoteSessionAuthenticationError(error);
+			}
+
+			// code 10021 is a validation error
+			case 10021: {
+				// if it is the following message, give a more user friendly
+				// error, otherwise do not handle this error in this function
+				if (
+					error.notes[0].text ===
+					"binding DB of type d1 must have a valid `id` specified [code: 10021]"
+				) {
+					logger.error(
+						`You must use a real database in the preview_database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development`
+					);
+
+					return true;
+				}
+
+				return false;
+			}
+
+			// for error 10063 (workers.dev subdomain required)
+			case 10063: {
+				const onboardingLink = accountId
+					? `https://dash.cloudflare.com/${accountId}/workers/onboarding`
+					: "https://dash.cloudflare.com/?to=/:account/workers/onboarding";
+
+				logger.error(
+					`You need to register a workers.dev subdomain before running the dev command in remote mode. You can either enable local mode by pressing l, or register a workers.dev subdomain here: ${onboardingLink}`
+				);
+
+				return true;
+			}
+
+			default: {
+				logger.error(error);
+				return true;
+			}
+		}
+	}
+}
