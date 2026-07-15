@@ -14,7 +14,7 @@ export default defineConfig({
 			inspectorPort: false,
 			persistState: false,
 			experimental: {
-				newConfig: { cfBuildOutput: true },
+				newConfig: { cfBuildOutput: true, types: { includeRuntime: false } },
 			},
 		}),
 	],

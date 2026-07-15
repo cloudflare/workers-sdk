@@ -79,6 +79,7 @@ const silentLogger: OAuthFlowLogger = {
 interface StateOptions {
 	isKeyringEnabled?: boolean;
 	isNonInteractiveOrCI?: boolean;
+	loginCommand?: string;
 }
 
 function resolveStore(opts: StateOptions = {}): CredentialStore {
@@ -88,7 +89,7 @@ function resolveStore(opts: StateOptions = {}): CredentialStore {
 		isKeyringEnabled: () => opts.isKeyringEnabled ?? true,
 		logger: silentLogger,
 		isNonInteractiveOrCI: () => opts.isNonInteractiveOrCI ?? false,
-		cliName: "wrangler",
+		loginCommand: opts.loginCommand ?? "wrangler login",
 	});
 	return getActiveStore();
 }
@@ -215,6 +216,23 @@ describe("createCredentialStorageContext — resolver", () => {
 			).toThrow(/`secret-tool` is required for OS keyring storage on Linux/);
 		});
 
+		it("uses the consumer's login command in keyring guidance", ({
+			expect,
+		}) => {
+			stubPlatform("linux");
+			setLinuxSecretToolRunner(() => {
+				throw new Error("ENOENT");
+			});
+
+			expect(() =>
+				resolveStore({
+					isKeyringEnabled: true,
+					isNonInteractiveOrCI: true,
+					loginCommand: "cf auth login",
+				})
+			).toThrow(/cf auth login --no-use-keyring/);
+		});
+
 		it("hard-errors with the CLOUDFLARE_AUTH_USE_KEYRING-prefixed message when forced and missing", ({
 			expect,
 		}) => {
@@ -241,7 +259,7 @@ describe("createCredentialStorageContext — resolver", () => {
 				isKeyringEnabled: () => true,
 				logger: silentLogger,
 				isNonInteractiveOrCI: () => false,
-				cliName: "wrangler",
+				loginCommand: "wrangler login",
 			});
 			getActiveStore();
 			getActiveStore();
@@ -354,7 +372,7 @@ describe("createCredentialStorageContext — resolver", () => {
 				isKeyringEnabled: () => true,
 				logger: silentLogger,
 				isNonInteractiveOrCI: () => false,
-				cliName: "wrangler",
+				loginCommand: "wrangler login",
 			});
 			expect(getActiveStore().kind).toBe("file");
 			expect(getActiveStore().kind).toBe("file");

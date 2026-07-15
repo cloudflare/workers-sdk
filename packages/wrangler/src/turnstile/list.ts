@@ -1,5 +1,5 @@
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { listWidgets, type Widget } from "./client";
 

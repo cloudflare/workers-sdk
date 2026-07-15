@@ -1,11 +1,14 @@
-import { detectAgenticEnvironment } from "am-i-vibing";
 import { beforeEach, describe, it, vi } from "vitest";
 import { detectAgent } from "../../utils/detect-agent";
 
-vi.mock("am-i-vibing");
+// Undo the global no-op mock from vitest.setup.ts so we test the real implementation
+vi.unmock("../../utils/detect-agent");
 
-// eslint-disable-next-line @typescript-eslint/no-deprecated -- the function has a deprecated overload; we only reference it here for mocking
-const mockDetectAgenticEnvironment = vi.mocked(detectAgenticEnvironment);
+const mockDetectAgenticEnvironment = vi.hoisted(() => vi.fn());
+
+vi.mock("am-i-vibing", () => ({
+	detectAgenticEnvironment: mockDetectAgenticEnvironment,
+}));
 
 describe("detect-agent", () => {
 	beforeEach(() => {

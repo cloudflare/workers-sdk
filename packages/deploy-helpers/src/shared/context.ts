@@ -27,7 +27,6 @@ export let fetchKVGetValue: FetchKVGetValueFetcher;
 export let confirm: DeployHelpersContext["confirm"];
 export let prompt: DeployHelpersContext["prompt"];
 export let select: DeployHelpersContext["select"];
-export let isNonInteractiveOrCI: () => boolean;
 
 /**
  * Set the global context for deploy-helpers. Must be called once at
@@ -42,5 +41,4 @@ export function initDeployHelpersContext(ctx: DeployHelpersContext): void {
 	confirm = ctx.confirm;
 	prompt = ctx.prompt;
 	select = ctx.select;
-	isNonInteractiveOrCI = ctx.isNonInteractiveOrCI;
 }

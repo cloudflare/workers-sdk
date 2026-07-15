@@ -110,6 +110,8 @@ async function mergeSharedConfigArgs(
 		noBundle,
 		defines: { ...config.define, ...collectKeyValues(args.define) },
 		alias: { ...config.alias, ...collectKeyValues(args.alias) },
+		doBindings: config.durable_objects.bindings,
+		workflowBindings: config.workflows ?? [],
 		destination: args.outdir ?? getWranglerTmpDir(entry.projectRoot, "deploy"),
 		outdir: args.outdir,
 		// Deploy-only; set by mergeDeployConfigArgs.
@@ -232,6 +234,8 @@ export async function mergeBuildOutputProps(config: Config): Promise<{
 		noBundle: config.no_bundle ?? false,
 		defines: { ...config.define },
 		alias: { ...config.alias },
+		doBindings: config.durable_objects.bindings,
+		workflowBindings: config.workflows ?? [],
 		destination: getWranglerTmpDir(entry.projectRoot, "build"),
 		outdir: undefined,
 		metafile: undefined,

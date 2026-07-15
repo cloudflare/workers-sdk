@@ -1,6 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getWidget, updateWidget } from "./client";
 import { sharedWidgetOptions } from ".";

@@ -749,7 +749,7 @@ function convertExports(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRIGGERS (scheduled + fetch + queue consumer)
+// TRIGGERS (scheduled + fetch + queue consumer + email)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertTriggers(
@@ -768,9 +768,14 @@ function convertTriggers(
 	const queueConsumers: NonNullable<
 		NonNullable<RawConfig["queues"]>["consumers"]
 	> = result.queues?.consumers ? [...result.queues.consumers] : [];
+	const addresses: string[] = result.addresses ? [...result.addresses] : [];
 
 	for (const trigger of triggers) {
 		switch (trigger.type) {
+			case "email": {
+				addresses.push(...trigger.addresses);
+				break;
+			}
 			case "scheduled": {
 				crons.push(trigger.schedule);
 				break;
@@ -811,6 +816,9 @@ function convertTriggers(
 	}
 	if (queueConsumers.length) {
 		result.queues = { ...(result.queues ?? {}), consumers: queueConsumers };
+	}
+	if (addresses.length) {
+		result.addresses = addresses;
 	}
 }
 

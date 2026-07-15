@@ -1,5 +1,26 @@
 # @cloudflare/deploy-helpers
 
+## 0.5.0
+
+### Minor Changes
+
+- [#14689](https://github.com/cloudflare/workers-sdk/pull/14689) [`2cd84d4`](https://github.com/cloudflare/workers-sdk/commit/2cd84d455cfa174ff7264e94e678b6d2eb2a25e4) Thanks [@emily-shen](https://github.com/emily-shen)! - Publish `@cloudflare/config` package
+
+  `@cloudflare/config` is now published as a standalone package. Previously, its exports (`InputWorkerSchema`, `OutputWorkerSchema`, `convertToWranglerConfig`, and related types) were re-exported through `@cloudflare/deploy-helpers`. Consumers should import directly from `@cloudflare/config` instead.
+
+  `@cloudflare/deploy-helpers` no longer re-exports `@cloudflare/config` symbols.
+
+### Patch Changes
+
+- [#14681](https://github.com/cloudflare/workers-sdk/pull/14681) [`8e29318`](https://github.com/cloudflare/workers-sdk/commit/8e29318b568299e0da3e44d17af62ea2d6b80911) Thanks [@emily-shen](https://github.com/emily-shen)! - Move preview command logic from wrangler into `@cloudflare/deploy-helpers`
+
+  Preview orchestration, API calls, formatting, and settings management now live in `@cloudflare/deploy-helpers`.
+
+- Updated dependencies [[`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`ed33326`](https://github.com/cloudflare/workers-sdk/commit/ed3332620a15dff35b0875eb9ded87086104b2f0), [`018574b`](https://github.com/cloudflare/workers-sdk/commit/018574b5ab22cc0e3141d1f09c2c383d76d59b2c), [`42df9bb`](https://github.com/cloudflare/workers-sdk/commit/42df9bbf07e37032a3e61027e33d504d74a25ccd), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36)]:
+  - miniflare@4.20260710.0
+  - @cloudflare/workers-utils@0.27.0
+  - @cloudflare/cli-shared-helpers@0.1.14
+
 ## 0.4.0
 
 ### Minor Changes

@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
+import { syncAssets } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { syncAssets } from "../assets";
 import { isAuthenticationError } from "../core/handle-errors";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
