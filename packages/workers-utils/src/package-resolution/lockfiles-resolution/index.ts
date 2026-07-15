@@ -1,0 +1,1 @@
+export { getInstalledVersionsFromLockfile } from "./resolve";
