@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
+import { initLogger } from "./logger";
 import { startWorker } from "./start-worker";
 import type { RemoteBindingsLogger } from "./logger";
 import type { Worker } from "./start-worker";
@@ -67,6 +68,9 @@ export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options?: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
+	if (options?.logger) {
+		initLogger(options.logger);
+	}
 	options?.logger?.log(chalk.dim("⎔ Establishing remote connection..."));
 	const rawBindings = toRawBindings(bindings);
 	const proxyServerWorkerWranglerConfig = fileURLToPath(

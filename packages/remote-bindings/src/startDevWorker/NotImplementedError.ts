@@ -1,4 +1,4 @@
-import { logger } from "../../logger";
+import { logger } from "../logger";
 
 class NotImplementedError extends Error {
 	constructor(func: string, namespace?: string) {
