@@ -3,12 +3,37 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
+import type * as StartDevWorkerApi from "../../../api/startDevWorker";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { logger } from "../../../logger";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runWrangler } from "../../helpers/run-wrangler";
+
+// Declaration-level pins for the exported input chain: a fresh object
+// literal gets excess-property checking, which fails to compile if any of
+// these signatures regresses to the base `StartDevWorkerInput` (the
+// runtime test below exercises only `ConfigController.set`). Never
+// executed.
+type StartWorkerInput = Parameters<typeof StartDevWorkerApi.startWorker>[0];
+type DevEnvStartInput = Parameters<
+	StartDevWorkerApi.DevEnv["startWorker"]
+>[0];
+type SetConfigInput = Parameters<StartDevWorkerApi.Worker["setConfig"]>[0];
+type PatchConfigInput = Parameters<StartDevWorkerApi.Worker["patchConfig"]>[0];
+const _publicInputPins: [
+	StartWorkerInput,
+	DevEnvStartInput,
+	SetConfigInput,
+	PatchConfigInput,
+] = [
+	{ entrypoint: "pin.ts", dev: { structuredLogsHandler: () => {} } },
+	{ entrypoint: "pin.ts", dev: { structuredLogsHandler: () => {} } },
+	{ entrypoint: "pin.ts", dev: { structuredLogsHandler: () => {} } },
+	{ dev: { structuredLogsHandler: () => {} } },
+];
+void _publicInputPins;
 
 describe("ConfigController", () => {
 	runInTempDir();
@@ -139,6 +164,33 @@ describe("ConfigController", () => {
 				entrypoint: path.join(process.cwd(), "src/index.ts"),
 			},
 		});
+	});
+
+	it("should accept wrangler-specific dev fields through the public input", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
+		});
+
+		// Would not compile against the base `StartDevWorkerInput`: the
+		// wrangler-specific dev fields live on `WranglerStartDevWorkerInput`,
+		// which is the public input type `set()` (and `startWorker`) accept.
+		const structuredLogsHandler = () => {};
+		await controller.set({
+			entrypoint: "src/index.ts",
+			dev: { structuredLogsHandler },
+		});
+
+		const { config } = await event;
+		expect(config.dev?.structuredLogsHandler).toBe(structuredLogsHandler);
 	});
 
 	it("should apply module root to parent if main is nested from base_dir", async ({

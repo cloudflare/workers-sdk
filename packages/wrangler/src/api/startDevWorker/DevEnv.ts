@@ -27,7 +27,7 @@ import type {
 	RuntimeController,
 } from "./BaseController";
 import type { ErrorEvent } from "./events";
-import type { StartDevWorkerInput, Worker } from "./types";
+import type { Worker, WranglerStartDevWorkerInput } from "./types";
 
 type ControllerFactory<C extends Controller> = (devEnv: DevEnv) => C;
 
@@ -37,7 +37,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
+	async startWorker(options: WranglerStartDevWorkerInput): Promise<Worker> {
 		initDeployHelpersContext({
 			logger,
 			fetchResult,
