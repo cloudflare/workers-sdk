@@ -1,4 +1,3 @@
-import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
 import type { Miniflare, WorkerRegistry } from "miniflare";
 
@@ -102,28 +101,6 @@ export type ProxyWorkerOutgoingRequestBody =
 	| { type: "sseResponseDetected" }
 	| { type: "previewTokenExpired"; proxyData: ProxyData }
 	| { type: "debug-log"; args: Parameters<typeof console.debug> };
-
-// InspectorProxyWorker
-export * from "./devtools";
-export type InspectorProxyWorkerIncomingWebSocketMessage =
-	| {
-			type: ReloadStartEvent["type"];
-	  }
-	| {
-			type: ReloadCompleteEvent["type"];
-			proxyData: ProxyData;
-	  };
-export type InspectorProxyWorkerOutgoingWebsocketMessage =
-	// Relayed Chrome DevTools Protocol Messages
-	| DevToolsEvent<"Runtime.consoleAPICalled">
-	| DevToolsEvent<"Runtime.exceptionThrown">;
-
-export type InspectorProxyWorkerOutgoingRequestBody =
-	| { type: "error"; error: SerializedError }
-	| { type: "runtime-websocket-error"; error: SerializedError }
-	| { type: "debug-log"; args: Parameters<typeof console.debug> }
-	// Intercepted Chrome DevTools Protocol Messages
-	| { type: "load-network-resource"; url: string }; // responds with `url`'s contents
 
 export type SerializedError = {
 	message: string;

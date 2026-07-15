@@ -1,4 +1,4 @@
-import { DevEnv } from "./startDevWorker";
+import { DevEnv } from "./startDevWorker/DevEnv";
 import type { Binding, StartDevWorkerInput } from "@cloudflare/workers-utils";
 import type { EventEmitter } from "node:events";
 
