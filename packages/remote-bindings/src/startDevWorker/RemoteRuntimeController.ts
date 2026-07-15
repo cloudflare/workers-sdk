@@ -1,11 +1,13 @@
 import assert from "node:assert";
-import { MissingConfigError } from "@cloudflare/workers-utils";
+import {
+	MissingConfigError,
+	retryOnAPIFailure,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex, type Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { version as packageVersion } from "../../package.json";
 import { getAccessHeaders } from "../../user/access";
-import { retryOnAPIFailure } from "../../utils/retry";
 import { logger } from "../logger";
 import { TRACE_VERSION } from "../utils/constants";
 import {
@@ -76,6 +78,7 @@ export class RemoteRuntimeController extends RuntimeController {
 						this.#abortController.signal,
 						props.name
 					),
+				logger,
 				undefined,
 				undefined,
 				this.#abortController.signal
@@ -175,6 +178,7 @@ export class RemoteRuntimeController extends RuntimeController {
 						this.#abortController.signal,
 						props.minimal_mode
 					),
+				logger,
 				undefined,
 				undefined,
 				this.#abortController.signal
