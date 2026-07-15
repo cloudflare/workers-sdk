@@ -342,6 +342,20 @@ export async function triggersDeploy(
 		.map((deployment) => deployment.error)
 		.filter((error): error is Error => error !== undefined);
 
+	try {
+		await applyEmailRoutingAddresses({
+			config,
+			accountId,
+			scriptName,
+			workerTag: props.workerTag,
+		});
+	} catch (error) {
+		if (errors.length === 0) {
+			throw error;
+		}
+		errors.push(error instanceof Error ? error : new Error(String(error)));
+	}
+
 	if (errors.length > 0) {
 		throw new UserError(
 			`Some triggers failed to deploy for ${workerName}:\n` +
@@ -357,13 +371,6 @@ export async function triggersDeploy(
 			}
 		);
 	}
-
-	await applyEmailRoutingAddresses({
-		config,
-		accountId,
-		scriptName,
-		workerTag: props.workerTag,
-	});
 
 	return targets;
 }

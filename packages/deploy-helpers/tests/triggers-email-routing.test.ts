@@ -40,6 +40,9 @@ describe("triggersDeploy Email Routing integration", () => {
 					metadataRequests++;
 					return { default_environment: { script: { tag: WORKER_TAG } } };
 				}
+				if (path.endsWith("/schedules")) {
+					throw new Error("trigger deployment failed");
+				}
 				if (
 					init?.method === "POST" &&
 					path.endsWith("/email/routing/rules/plan")
@@ -101,5 +104,22 @@ describe("triggersDeploy Email Routing integration", () => {
 
 		expect(planRequests).toBe(1);
 		expect(metadataRequests).toBe(1);
+	});
+
+	it("reconciles when another trigger deployment fails", async ({ expect }) => {
+		await expect(
+			triggersDeploy({
+				config: config(),
+				accountId: ACCOUNT_ID,
+				scriptName: WORKER_NAME,
+				workerTag: WORKER_TAG,
+				env: undefined,
+				crons: ["* * * * *"],
+				routes: [],
+				firstDeploy: false,
+			})
+		).rejects.toThrow("trigger deployment failed");
+
+		expect(planRequests).toBe(1);
 	});
 });
