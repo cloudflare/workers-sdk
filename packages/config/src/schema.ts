@@ -381,8 +381,10 @@ const TailConsumerSchema = z.strictObject({
 });
 
 const TriggerSchema = z.discriminatedUnion("type", [
-	// TODO: email triggers not yet implemented
-	// z.strictObject({ type: z.literal("email") }),
+	z.strictObject({
+		type: z.literal("email"),
+		addresses: z.array(z.string()),
+	}),
 	z.strictObject({
 		type: z.literal("fetch"),
 		pattern: z.string(),
