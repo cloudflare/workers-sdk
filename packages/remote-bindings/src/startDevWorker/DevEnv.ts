@@ -1,15 +1,7 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
-import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
 import { UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
-import {
-	fetchKVGetValue,
-	fetchListResult,
-	fetchPagedListResult,
-	fetchResult,
-} from "../../cfetch";
-import { confirm, prompt, select } from "../../dialogs";
 import { logger } from "../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
@@ -22,7 +14,7 @@ import type {
 	RuntimeController,
 } from "./BaseController";
 import type { ErrorEvent } from "./events";
-import type { StartDevWorkerInput, Worker } from "./types";
+import type { StartDevWorkerOptions, Worker } from "./types";
 
 type ControllerFactory<C extends Controller> = (devEnv: DevEnv) => C;
 
@@ -32,18 +24,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
-		initDeployHelpersContext({
-			logger,
-			fetchResult,
-			fetchListResult,
-			fetchPagedListResult,
-			fetchKVGetValue,
-			confirm,
-			prompt,
-			select,
-		});
-
+	async startWorker(options: StartDevWorkerOptions): Promise<Worker> {
 		const worker = createWorkerObject(this);
 
 		try {
@@ -140,13 +121,6 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 					runtime.onPreviewTokenExpired(event);
 				});
 				break;
-
-			default: {
-				const _exhaustive: never = event;
-				logger.warn(
-					`Unknown event type: ${(_exhaustive as ControllerEvent).type}`
-				);
-			}
 		}
 	}
 
