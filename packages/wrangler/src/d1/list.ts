@@ -2,7 +2,7 @@ import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import type { Database } from "./types";
+import type { ConcreteDatabase, Database } from "./types";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export const d1ListCommand = createCommand({
@@ -41,25 +41,26 @@ export const d1ListCommand = createCommand({
 	},
 });
 
+// Keep in sync with the local provisioning copy in
+// packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
 export const listDatabases = async (
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	limitCalls: boolean = false,
 	pageSize: number = 10
-): Promise<Array<Omit<Database, "name"> & { name: string }>> => {
+): Promise<Array<ConcreteDatabase>> => {
 	let page = 1;
 	const results = [];
 	while (results.length % pageSize === 0) {
-		const json: Array<Omit<Database, "name"> & { name: string }> =
-			await fetchResult(
-				complianceConfig,
-				`/accounts/${accountId}/d1/database`,
-				{},
-				new URLSearchParams({
-					per_page: pageSize.toString(),
-					page: page.toString(),
-				})
-			);
+		const json: Array<ConcreteDatabase> = await fetchResult(
+			complianceConfig,
+			`/accounts/${accountId}/d1/database`,
+			{},
+			new URLSearchParams({
+				per_page: pageSize.toString(),
+				page: page.toString(),
+			})
+		);
 		page++;
 		results.push(...json);
 		if (limitCalls && page > 3) {

@@ -21,7 +21,6 @@ import {
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
 	unstable_getMiniflareWorkerOptions,
 	unstable_getVarsForDev,
-	unstable_getWorkerNameFromProject,
 	unstable_pages,
 	unstable_readConfig,
 } from "./api";
@@ -76,8 +75,8 @@ export {
 	unstable_readConfig,
 	experimental_generateTypes,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- re-exporting deprecated public API for backward compatibility
 	unstable_getDevCompatibilityDate,
-	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
 };
@@ -104,9 +103,11 @@ export { resolveNamedTunnel as unstable_resolveNamedTunnel } from "./tunnel/clie
 
 // Entries for the `cf-wrangler` delegate binary (see `bin/cf-wrangler.js`),
 // which calls these in-process. Not a stable public API.
+export { runCfWranglerBuild } from "./cf-wrangler/build";
 export { runCfWranglerDev } from "./cf-wrangler/dev";
 export {
 	ArgParseError,
+	parseBuildArgs as parseCfWranglerBuildArgs,
 	parseArgs as parseCfWranglerArgs,
 } from "./cf-wrangler/args";
 
@@ -149,9 +150,5 @@ export {
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 };
 export type { StartRemoteProxySessionOptions, Binding, RemoteProxySession };
-
-export { getDetailsForAutoConfig as experimental_getDetailsForAutoConfig } from "./autoconfig/details";
-export { runAutoConfig as experimental_runAutoConfig } from "./autoconfig/run";
-export { Framework as experimental_AutoConfigFramework } from "./autoconfig/frameworks/framework-class";
 
 export { experimental_getWranglerCommands } from "./experimental-commands-api";

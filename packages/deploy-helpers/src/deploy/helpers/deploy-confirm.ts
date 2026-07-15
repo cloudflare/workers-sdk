@@ -1,4 +1,5 @@
-import { confirm, isNonInteractiveOrCI, logger } from "../../shared/context";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { confirm, logger } from "../../shared/context";
 
 export function getDeployConfirmFunction(options: {
 	strictMode?: boolean;
@@ -9,7 +10,7 @@ export function getDeployConfirmFunction(options: {
 	if (nonInteractive && strictMode) {
 		return async () => {
 			logger.error(
-				"Aborting the deployment operation because of conflicts. To override and deploy anyway remove the `--strict` flag"
+				"Aborting the upload operation because of conflicts. To override and upload anyway, remove the `--strict` flag"
 			);
 			process.exitCode = 1;
 			return false;

@@ -9,10 +9,11 @@ import type {
 function memoryStorage(initial?: UserAuthConfig): AuthConfigStorage {
 	let value = initial;
 	return {
+		// Per the `ConfigStorage<T>.read()` contract, "no usable config
+		// stored yet" is represented as `undefined`, not a thrown
+		// exception. Throws are reserved for genuine errors (filesystem
+		// permission failures, etc.).
 		read() {
-			if (value === undefined) {
-				throw new Error("not logged in");
-			}
 			return value;
 		},
 		write(config) {

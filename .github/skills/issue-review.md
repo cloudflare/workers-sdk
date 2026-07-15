@@ -274,12 +274,17 @@ For **feature requests**, evaluate:
 
 ## Output Format
 
+**How the output is used:** `report.md` is posted verbatim as a maintainer-facing triage comment on the issue (attributed to an automated bot), and the labels in `summary.json` are applied automatically. Because of this:
+
+- Write `report.md` for maintainers, not the reporter. The **Suggested Comment** section is a _draft_ for a maintainer to send to the reporter — it is **not** posted automatically, so do not phrase the surrounding report as though a reply has already been made.
+- Only put labels in the **Suggested Labels** fields that already exist in the repository. If unsure whether a label exists, omit it rather than guess — non-existent labels are dropped before applying, so inventing labels only weakens the report's accuracy.
+
 ### Report Directory Structure
 
 ```
 ./data/<issue_number>/
 ├── report.md          # Full detailed report
-└── summary.md         # Single-line tab-separated summary
+└── summary.json       # Structured JSON summary
 ```
 
 ### Output Step 1: Write Full Report
@@ -340,20 +345,32 @@ duplicate candidates. Only include what's relevant.>
 
 ### Output Step 2: Write Summary File
 
-Write a single tab-separated line to `./data/<issue_number>/summary.md` with these 7 fields:
+Write a machine-readable summary as **JSON** to `./data/<issue_number>/summary.json`. This file is parsed by the triage workflow (to build the dashboard payload and apply labels), so it must be valid JSON with exactly these keys:
 
+```json
+{
+  "issueNumber": <issue_number as a number>,
+  "title": "<issue title, with emoji/template prefixes like 'Bug:' removed>",
+  "githubUrl": "https://github.com/<owner>/<repo>/issues/<issue_number>",
+  "recommendation": "<CLOSE | KEEP OPEN | NEEDS MORE INFO | NEEDS VERIFICATION>",
+  "difficulty": "<easy | medium | hard | n/a>",
+  "reasoning": "<brief reasoning, 1-2 sentences>",
+  "suggestedAction": "<brief description of next steps>",
+  "hasSuggestedComment": <true if a Suggested Comment section is present in the report, false otherwise>,
+  "suggestedLabels": ["<label>", "..."]
+}
 ```
-[<issue_number>](https://github.com/<owner>/<repo>/issues/<issue_number>)	<title>	<CLOSE|KEEP OPEN|NEEDS MORE INFO|NEEDS VERIFICATION>	<easy|medium|hard|n/a>	<brief reasoning>	<brief suggested action>	<Yes|No>
-```
 
-**Column definitions:**
+**Key definitions:**
 
-- **Issue #**: Link to the issue in markdown format `[number](url)`
-- **Title**: Issue title (remove any emoji prefixes like "Bug:" or template prefixes)
-- **Recommendation**: One of CLOSE, KEEP OPEN, NEEDS MORE INFO, NEEDS VERIFICATION
-- **Difficulty**: Estimated fix difficulty - `easy`, `medium`, `hard`, or `n/a` (for feature requests or closures)
-- **Reasoning**: Brief summary of why (1-2 sentences)
-- **Suggested Action**: Brief description of next steps
-- **Suggested Comment**: "Yes" if a comment template is provided, "No" otherwise
+- **issueNumber**: The issue number as a JSON number (not a string).
+- **title**: Issue title with any emoji prefixes (e.g. "🐛 Bug:") or template prefixes removed.
+- **githubUrl**: Full URL to the issue.
+- **recommendation**: One of `CLOSE`, `KEEP OPEN`, `NEEDS MORE INFO`, `NEEDS VERIFICATION`.
+- **difficulty**: Estimated fix difficulty — `easy`, `medium`, `hard`, or `n/a` (for feature requests or closures).
+- **reasoning**: Brief summary of why (1-2 sentences).
+- **suggestedAction**: Brief description of next steps.
+- **hasSuggestedComment**: Boolean — `true` if the report includes a Suggested Comment, `false` otherwise.
+- **suggestedLabels**: JSON array of labels to apply, matching the **Suggested Labels** field in the report. Use existing repo labels only (see above). Use an empty array `[]` if there are no labels to apply.
 
-**CRITICAL:** Use actual tab characters (`\t`) as column delimiters. Write only the single data line, no header.
+**CRITICAL:** Write valid, parseable JSON only (no trailing commas, no comments, no surrounding markdown fences). Because JSON strings are escaped, `reasoning`/`suggestedAction` may safely contain any punctuation.

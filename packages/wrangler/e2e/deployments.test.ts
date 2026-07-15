@@ -975,7 +975,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
 	}, 30_000);
 
 	it(
-		"won't rebuild unchanged containers",
+		"can deploy a digest-pinned Dockerfile container and skip unchanged rebuilds",
 		{ timeout: 60 * 2 * 1000 },
 		async ({ expect }) => {
 			const outputOne = await helper.run(`wrangler deploy`);
@@ -987,6 +987,22 @@ describe.skipIf(skipContainersTest)("containers", () => {
 			);
 			applicationId = matchApplicationId?.groups?.applicationId;
 			assert(matchApplicationId?.groups);
+			assert(applicationId);
+			assert(CLOUDFLARE_ACCOUNT_ID);
+
+			const containerInfo = await helper.run(
+				`wrangler containers info ${applicationId}`
+			);
+			const application = JSON.parse(containerInfo.stdout) as {
+				configuration?: {
+					image?: unknown;
+				};
+			};
+			const image = application.configuration?.image;
+			assert(typeof image === "string");
+			const expectedImagePrefix = `registry.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/e2e-test-${workerName}@sha256:`;
+			expect(image.startsWith(expectedImagePrefix)).toBe(true);
+			expect(image).toMatch(/@sha256:[a-f0-9]{64}$/);
 
 			const outputTwo = await helper.run(`wrangler deploy`);
 			expect(outputTwo.stdout).toContain(`No changes to be made`);

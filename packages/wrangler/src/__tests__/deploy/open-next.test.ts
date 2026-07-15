@@ -1,13 +1,17 @@
 import * as fs from "node:fs";
 import {
+	getDetailsForAutoConfig,
+	getInstalledPackageVersion,
+} from "@cloudflare/autoconfig";
+import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getDetailsForAutoConfig } from "../../autoconfig/details";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
+import { readConfig } from "../../config";
+import { runDeployCommandHandler, type DeployArgs } from "../../deploy";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -57,9 +61,12 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/details");
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	getDetailsForAutoConfig: vi.fn(),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -423,6 +430,37 @@ describe("deploy", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not delegate to open-next deploy when Pages-to-Workers delegation is running", async ({
+			expect,
+		}) => {
+			const runCommandSpy = (
+				await import("@cloudflare/cli-shared-helpers/command")
+			).runCommand;
+			const args = {
+				_: ["deploy"],
+				$0: "wrangler",
+				autoconfig: true,
+				experimentalAutoCreate: true,
+				experimentalDeployHelpers: false,
+				experimentalNewConfig: false,
+				latest: false,
+				keepVars: false,
+				name: "test-name",
+				noBundle: false,
+				strict: false,
+			} as DeployArgs;
+
+			await mockOpenNextLikeProject();
+
+			const config = readConfig(args, { useRedirectIfAvailable: true });
+			await runDeployCommandHandler(args, {
+				config,
+				pagesToWorkersDelegation: true,
+			});
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 		});
 	});
 });

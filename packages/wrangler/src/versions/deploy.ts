@@ -7,8 +7,13 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
-import { type ApiVersion, printVersions } from "@cloudflare/deploy-helpers";
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	type ApiVersion,
+	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
+	printVersions,
+	renderInconsistentExportsAcrossVersionsError,
+} from "@cloudflare/deploy-helpers";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
@@ -114,7 +119,7 @@ export const versionsDeployCommand = createCommand({
 
 		if (workerName === undefined) {
 			throw new UserError(
-				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+				"You need to provide a name for your Worker. Either pass it as a CLI arg with `--name <name>` or set the `name` field in your Wrangler configuration file (e.g. wrangler.json).",
 				{ telemetryMessage: "versions deploy missing worker name" }
 			);
 		}
@@ -160,15 +165,18 @@ export const versionsDeployCommand = createCommand({
 
 		// validate we have at least 1 version
 		if (confirmedVersionsToDeploy.length === 0) {
-			throw new UserError("You must select at least 1 version to deploy.", {
-				telemetryMessage: "versions deploy missing selected versions",
-			});
+			throw new UserError(
+				"You must select at least 1 version to deploy. Provide a version using positional args (e.g. `wrangler versions deploy <version-id>`), --version-id, or --version-tag.",
+				{
+					telemetryMessage: "versions deploy missing selected versions",
+				}
+			);
 		}
 
 		// validate we have at most experimentalMaxVersions (default: 2)
 		if (confirmedVersionsToDeploy.length > args.maxVersions) {
 			throw new UserError(
-				`You must select at most ${args.maxVersions} versions to deploy.`,
+				`Too many versions selected. You can deploy at most ${args.maxVersions} version(s) at a time. Please remove some versions and try again.`,
 				{ telemetryMessage: "versions deploy too many selected versions" }
 			);
 		}
@@ -197,18 +205,47 @@ export const versionsDeployCommand = createCommand({
 
 		const start = Date.now();
 
-		const { id: deploymentId } = await spinnerWhile({
-			startMessage: `Deploying ${confirmedVersionsToDeploy.length} version(s)`,
-			promise() {
-				return createDeployment(
-					config,
-					accountId,
-					workerName,
-					confirmedVersionTraffic,
-					message
+		let deploymentId: string;
+		try {
+			const result = await spinnerWhile({
+				startMessage: `Deploying ${confirmedVersionsToDeploy.length} version(s)`,
+				promise() {
+					return createDeployment(
+						config,
+						accountId,
+						workerName,
+						confirmedVersionTraffic,
+						message
+					);
+				},
+			});
+			deploymentId = result.id;
+		} catch (e) {
+			if (
+				e instanceof APIError &&
+				e.code === INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE
+			) {
+				e.preventReport();
+				// Strip the trailing ` [code: N]` suffix that the cfetch layer
+				// appended to the note so we can re-render with our own framing.
+				const serverMessage =
+					e.notes[0]?.text
+						.replace(
+							` [code: ${INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE}]`,
+							""
+						)
+						.trim() ??
+					"All versions in a multi-version deployment must declare identical `exports`.";
+				throw new UserError(
+					renderInconsistentExportsAcrossVersionsError(serverMessage),
+					{
+						telemetryMessage:
+							"versions deploy inconsistent exports across versions",
+					}
 				);
-			},
-		});
+			}
+			throw e;
+		}
 
 		await maybePatchSettings(config, accountId, workerName);
 
@@ -356,7 +393,7 @@ ${ZERO_WIDTH_SPACE}       Message:  ${
 		acceptDefault,
 		validate(versionIds) {
 			if (versionIds === undefined) {
-				return `You must select at least 1 version to deploy.`;
+				return "You must select at least 1 version to deploy. Provide a version using positional args (e.g. `wrangler versions deploy <version-id>`), --version-id, or --version-tag.";
 			}
 		},
 		renderers: {
@@ -596,14 +633,14 @@ function parseOptionalPercentage(
 
 	if (isNaN(percentage)) {
 		throw new UserError(
-			`Could not parse percentage value from ${specLabel} "${spec}"`,
+			`Could not parse percentage value from ${specLabel} "${spec}". Expected format: <version-id>@<percentage> (e.g. \`<version-id>@50%\`).`,
 			{ telemetryMessage: "versions deploy percentage parse failed" }
 		);
 	}
 
 	if (percentage < 0 || percentage > 100) {
 		throw new UserError(
-			`Percentage value (${percentage}%) parsed from ${specLabel} "${spec}" must be between 0 and 100.`,
+			`Percentage value ${percentage}% (from ${specLabel} "${spec}") is out of range. Percentages must be between 0 and 100.`,
 			{
 				telemetryMessage: "versions deploy positional percentage out of range",
 			}
@@ -644,9 +681,12 @@ export function parseVersionSpecs(
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 	for (const versionId of args.versionId ?? []) {
 		if (!UUID_REGEX.test(versionId)) {
-			throw new UserError(`Version ID must be a valid UUID (${versionId}).`, {
-				telemetryMessage: "versions deploy invalid version id",
-			});
+			throw new UserError(
+				`"${versionId}" is not a valid Version ID. Version IDs must be UUIDs (e.g. \`12345678-1234-1234-1234-123456789abc\`). Run \`wrangler versions list\` to see available versions.`,
+				{
+					telemetryMessage: "versions deploy invalid version id",
+				}
+			);
 		}
 
 		versionIds.push(versionId);
@@ -655,7 +695,7 @@ export function parseVersionSpecs(
 	for (const percentage of args.percentage ?? []) {
 		if (percentage < 0 || percentage > 100) {
 			throw new UserError(
-				`Percentage value (${percentage}%) must be between 0 and 100.`,
+				`The --percentage value ${percentage}% is out of range. Percentages must be between 0 and 100.`,
 				{ telemetryMessage: "versions deploy percentage out of range" }
 			);
 		}
@@ -874,13 +914,13 @@ export function validateTrafficSubtotal(
 
 	if (max === min && (isAbove || isBelow)) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be ${max}%`,
+			`The specified traffic percentages add up to ${subtotal}%, but must total exactly ${max}%. Adjust the --percentage values or version-spec percentages so they sum to ${max}%.`,
 			{ telemetryMessage: "versions deploy traffic subtotal mismatch" }
 		);
 	}
 	if (isAbove) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be at most ${max}%`,
+			`The specified traffic percentages add up to ${subtotal}%, which exceeds the maximum of ${max}%. Reduce one or more percentages so they sum to at most ${max}%.`,
 			{
 				telemetryMessage: "versions deploy traffic subtotal above maximum",
 			}
@@ -888,7 +928,7 @@ export function validateTrafficSubtotal(
 	}
 	if (isBelow) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be at least ${min}%`,
+			`The specified traffic percentages add up to ${subtotal}%, which is below the minimum of ${min}%. Increase one or more percentages so they sum to at least ${min}%.`,
 			{
 				telemetryMessage: "versions deploy traffic subtotal below minimum",
 			}

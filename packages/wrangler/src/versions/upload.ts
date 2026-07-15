@@ -1,7 +1,9 @@
-import { versionsUpload } from "@cloudflare/deploy-helpers";
+import {
+	versionsUpload,
+	type AssetUploadStats,
+} from "@cloudflare/deploy-helpers";
 import { analyseBundle } from "../check/commands";
 import { createCommand } from "../core/create-command";
-import { provisionBindings } from "../deployment-bundle/bindings";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -52,18 +54,9 @@ export const versionsUploadCommand = createCommand({
 			args,
 			config
 		);
+		let assetUploadStats: AssetUploadStats | undefined;
 
 		try {
-			metrics.sendMetricsEvent(
-				"upload worker version",
-				{
-					usesTypeScript: /\.tsx?$/.test(props.entry.file),
-				},
-				{
-					sendMetrics: config.send_metrics,
-				}
-			);
-
 			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 			const preMergeName = getScriptName(args, config);
 			const workerNameOverridden =
@@ -74,12 +67,13 @@ export const versionsUploadCommand = createCommand({
 			const {
 				versionId,
 				workerTag,
+				assetUploadStats: uploadStats,
 				versionPreviewUrl,
 				versionPreviewAliasUrl,
 			} = await versionsUpload(props, config, buildResult, {
-				provisionBindings: provisionBindings,
 				analyseBundle: analyseBundle,
 			});
+			assetUploadStats = uploadStats;
 
 			writeOutput({
 				type: "version-upload",
@@ -93,6 +87,16 @@ export const versionsUploadCommand = createCommand({
 				worker_name_overridden: workerNameOverridden,
 			});
 		} finally {
+			metrics.sendMetricsEvent(
+				"upload worker version",
+				{
+					usesTypeScript: /\.tsx?$/.test(props.entry.file),
+					...assetUploadStats,
+				},
+				{
+					sendMetrics: config.send_metrics,
+				}
+			);
 			cleanupDestination(buildProps.destination);
 		}
 	},

@@ -1,0 +1,5 @@
+{
+	"name": "cjs-wasm-module-dep",
+	"main": "index.js",
+	"types": "index.d.ts"
+}

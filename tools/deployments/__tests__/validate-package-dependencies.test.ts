@@ -724,6 +724,7 @@ describe("getPublicPackages()", () => {
 		expect(packageNames).toContain("wrangler");
 		expect(packageNames).toContain("miniflare");
 		expect(packageNames).toContain("create-cloudflare");
+		expect(packageNames).toContain("@cloudflare/autoconfig");
 	});
 
 	it("should not include private packages", async ({ expect }) => {

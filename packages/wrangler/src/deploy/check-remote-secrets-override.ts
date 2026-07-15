@@ -4,8 +4,8 @@ import type { Config } from "@cloudflare/workers-utils";
 
 export async function checkRemoteSecretsOverride(
 	config: Config,
-	targetEnv?: string
+	scriptName: string
 ) {
 	const accountId = await requireAuth(config);
-	return checkRemoteSecretsOverrideBase(config, accountId, targetEnv);
+	return checkRemoteSecretsOverrideBase(config, scriptName, accountId);
 }

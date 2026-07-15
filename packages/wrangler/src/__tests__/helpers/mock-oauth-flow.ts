@@ -1,6 +1,6 @@
+import { openInBrowser } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { Request } from "undici";
-import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
 import { msw } from "./msw";
 import type { Mock } from "vitest";

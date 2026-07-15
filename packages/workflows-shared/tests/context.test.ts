@@ -1,4 +1,5 @@
-import { env, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { afterEach, describe, it, vi } from "vitest";
 import workerdUnsafe from "workerd:unsafe";
 import { InstanceEvent } from "../src";
@@ -1232,5 +1233,222 @@ describe("Context - ReadableStream step outputs", () => {
 			const meta = await state.storage.get(metaKey);
 			expect(meta).toBeUndefined();
 		});
+	});
+});
+
+describe("Context - typed-array step outputs (issue #14101)", () => {
+	it("should persist a 200KB Uint8Array step output on a tight backing buffer", async ({
+		expect,
+	}) => {
+		// Baseline: a 200KB view sized exactly to its backing buffer must
+		// succeed. This case worked on `main` too — anchors the regression test
+		// suite to "small enough to fit, regardless of normalisation".
+		const engineStub = await runWorkflow(
+			"UINT8-TIGHT-200K",
+			async (_event, step) => {
+				return await step.do("emit-tight-bytes", async () => {
+					return new Uint8Array(200_000);
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
+	it("should persist a 200KB Uint8Array view sliced from an 800KB backing buffer (regression #14101)", async ({
+		expect,
+	}) => {
+		// The exact reporter's repro: a Uint8Array view sized 200KB but
+		// sliced from a much larger backing ArrayBuffer (800KB here). Prior
+		// to the fix, workerd's v8::ValueSerializer would serialise the
+		// entire 800KB backing buffer along with the view, blowing past the
+		// 1MiB SQL blob limit and surfacing a raw `SQLITE_TOOBIG` error.
+		const engineStub = await runWorkflow(
+			"UINT8-SLICED-200K-OF-800K",
+			async (_event, step) => {
+				return await step.do("emit-sliced-bytes", async () => {
+					const backing = new ArrayBuffer(800_000);
+					return new Uint8Array(backing, 0, 200_000);
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
+	it("should return the original Uint8Array to the next step in the live execution path", async ({
+		expect,
+	}) => {
+		// The persisted form preserves the view type (`Uint8Array` stays
+		// `Uint8Array`) so the live execution path and cached replays observe
+		// the same shape — downstream user code that branches on
+		// `value instanceof Uint8Array` works either way.
+		let observedInNext: unknown = "not-seen";
+		const engineStub = await runWorkflow(
+			"UINT8-ROUND-TRIP",
+			async (_event, step) => {
+				const bytes = await step.do("emit-bytes", async () => {
+					return new Uint8Array([1, 2, 3, 4, 5]);
+				});
+				await step.do("read-bytes", async () => {
+					observedInNext = bytes;
+					return "ok";
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		expect(observedInNext).toBeInstanceOf(Uint8Array);
+		expect(Array.from(observedInNext as Uint8Array)).toEqual([1, 2, 3, 4, 5]);
+	});
+
+	it("should preserve typed-array view types other than Uint8Array on the live execution path", async ({
+		expect,
+	}) => {
+		// Persisting must preserve the constructor type (`Int16Array` stays
+		// `Int16Array`, etc.) so downstream `instanceof` checks behave the
+		// same whether the step ran live or via cached replay.
+		let observedInNext: unknown = "not-seen";
+		const engineStub = await runWorkflow(
+			"INT16-ROUND-TRIP",
+			async (_event, step) => {
+				const bytes = await step.do("emit-int16", async () => {
+					return new Int16Array([1, 2, 3, 4, 5]);
+				});
+				await step.do("read-int16", async () => {
+					observedInNext = bytes;
+					return "ok";
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		expect(observedInNext).toBeInstanceOf(Int16Array);
+		expect(Array.from(observedInNext as Int16Array)).toEqual([1, 2, 3, 4, 5]);
+	});
+
+	it("should compact typed-array views nested inside an object (deep-walk regression)", async ({
+		expect,
+	}) => {
+		// A view sliced from a much larger backing buffer would bloat past
+		// SQLITE_TOOBIG if nested-level normalisation were missing. Recurses
+		// into plain objects.
+		const engineStub = await runWorkflow(
+			"NESTED-UINT8-SLICED",
+			async (_event, step) => {
+				return await step.do("emit-nested-sliced-bytes", async () => {
+					const backing = new ArrayBuffer(800_000);
+					return {
+						image: new Uint8Array(backing, 0, 200_000),
+						meta: { width: 100, height: 100 },
+					};
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
+	it("should compact typed-array views nested deep inside arrays of objects", async ({
+		expect,
+	}) => {
+		// Two levels of nesting (array of object of view). Confirms the
+		// walker descends through both arrays and plain objects.
+		const engineStub = await runWorkflow(
+			"ARRAY-OF-OBJECTS-WITH-SLICED-VIEWS",
+			async (_event, step) => {
+				return await step.do("emit-array-of-objects", async () => {
+					const backing = new ArrayBuffer(800_000);
+					return [
+						{ data: new Uint8Array(backing, 0, 100_000) },
+						{ data: new Uint8Array(backing, 100_000, 100_000) },
+					];
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
 	});
 });

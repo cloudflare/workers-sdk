@@ -277,7 +277,7 @@ describe("checkWorkflowConflicts", () => {
 		expect(message).toBe(
 			`The following workflow(s) already exist and belong to different workers:\n` +
 				`  - "my-workflow" (currently belongs to "other-worker")\n\n` +
-				`Deploying will reassign these workflows to "my-worker".`
+				`Deploying will reassign these workflows to "my-worker". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in the Wrangler config.`
 		);
 	});
 });

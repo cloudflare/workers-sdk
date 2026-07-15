@@ -275,6 +275,7 @@ export async function getDevMiniflareOptions(
 												name: worker.config.name,
 												bindings: bindings ?? {},
 												account_id: worker.config.account_id,
+												profileDir: resolvedViteConfig.root,
 											},
 											preExistingRemoteProxySession ?? null
 										);
@@ -476,6 +477,10 @@ export async function getDevMiniflareOptions(
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
+			),
+			defaultProjectTmpPath: path.resolve(
+				resolvedViteConfig.root,
+				".wrangler/tmp"
 			),
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
@@ -696,7 +701,7 @@ function toMiniflareModuleType(type: ModuleType): ModuleRuleType | null {
 			return "Data";
 		case "python":
 			return "PythonModule";
-		case "pythonRequirement":
+		case "python-requirement":
 			return null;
 		case "sourcemap":
 			return null;
@@ -780,6 +785,7 @@ export async function getPreviewMiniflareOptions(
 								name: workerConfig.name,
 								bindings: bindings ?? {},
 								account_id: workerConfig.account_id,
+								profileDir: resolvedViteConfig.root,
 							},
 							preExistingRemoteProxySessionData ?? null
 						);
@@ -881,6 +887,10 @@ export async function getPreviewMiniflareOptions(
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
+			),
+			defaultProjectTmpPath: path.resolve(
+				resolvedViteConfig.root,
+				".wrangler/tmp"
 			),
 			workers,
 		},

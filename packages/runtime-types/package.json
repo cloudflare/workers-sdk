@@ -1,0 +1,45 @@
+{
+	"name": "@cloudflare/runtime-types",
+	"version": "0.0.2",
+	"private": true,
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/runtime-types#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/runtime-types"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check:type": "tsc",
+		"dev": "tsdown --watch",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"miniflare": "workspace:*",
+		"workerd": "catalog:default"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"@types/node": "catalog:default",
+		"tsdown": "0.16.3",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	}
+}

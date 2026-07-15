@@ -242,6 +242,7 @@ export function isParsedUnsafeBinding(
 
 const CacheSchema = z.strictObject({
 	enabled: z.boolean(),
+	crossVersionCache: z.boolean().optional(),
 });
 
 /**
@@ -287,10 +288,38 @@ const EnvSchema = z
 	})
 	.optional();
 
-const ExportSchema = z.discriminatedUnion("type", [
+// `state` defaults to `"created"` (live) when omitted. Tombstones use one of
+// `"deleted"`, `"renamed"`, `"transferred"`; `"expecting-transfer"` is a live
+// entry awaiting incoming data via the two-phase cross-script transfer flow.
+const ExportSchema = z.union([
 	z.strictObject({
 		type: z.literal("durable-object"),
+		state: z.literal("created").optional(),
 		storage: z.enum(["sqlite", "legacy-kv"]),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("deleted"),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("renamed"),
+		renamedTo: z.string(),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("transferred"),
+		transferredTo: z.string(),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("expecting-transfer"),
+		storage: z.enum(["sqlite", "legacy-kv"]),
+		transferFrom: z.string(),
+	}),
+	z.strictObject({
+		type: z.literal("worker"),
+		cache: z.strictObject({ enabled: z.boolean() }).optional(),
 	}),
 	// TODO: support Workflows
 	// z.strictObject({
@@ -352,8 +381,10 @@ const TailConsumerSchema = z.strictObject({
 });
 
 const TriggerSchema = z.discriminatedUnion("type", [
-	// TODO: email triggers not yet implemented
-	// z.strictObject({ type: z.literal("email") }),
+	z.strictObject({
+		type: z.literal("email"),
+		addresses: z.array(z.string()),
+	}),
 	z.strictObject({
 		type: z.literal("fetch"),
 		pattern: z.string(),
@@ -440,7 +471,7 @@ export const ModuleTypeSchema = z.enum([
 	"esm",
 	"cjs",
 	"python",
-	"pythonRequirement",
+	"python-requirement",
 	"wasm",
 	"text",
 	"data",

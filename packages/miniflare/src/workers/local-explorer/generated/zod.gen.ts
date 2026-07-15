@@ -1090,6 +1090,7 @@ export const zWorkflowsChangeInstanceStatusData = z.object({
 				type: z.enum(["do", "sleep", "waitForEvent"]).optional(),
 			})
 			.optional(),
+		rollback: z.boolean().optional(),
 	}),
 	path: z.object({
 		workflow_name: zWorkflowsWorkflowName,

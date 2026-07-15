@@ -11,6 +11,7 @@ import type {
 	RawEnvironment,
 } from "../../../src/config";
 import type { RedirectedRawConfig } from "../../../src/config/config";
+import type { DurableObjectExport } from "../../../src/config/environment";
 
 describe("normalizeAndValidateConfig()", () => {
 	it("should use defaults for empty configuration", ({ expect }) => {
@@ -61,13 +62,14 @@ describe("normalizeAndValidateConfig()", () => {
 			tsconfig: undefined,
 			kv_namespaces: [],
 			send_email: [],
-			legacy_env: true,
 			logfwdr: {
 				bindings: [],
 			},
 			send_metrics: undefined,
+			dependencies_instrumentation: undefined,
 			main: undefined,
 			migrations: [],
+			exports: {},
 			name: undefined,
 			queues: {
 				consumers: [],
@@ -114,6 +116,7 @@ describe("normalizeAndValidateConfig()", () => {
 			minify: undefined,
 			first_party_worker: undefined,
 			keep_vars: undefined,
+			addresses: undefined,
 			logpush: undefined,
 			upload_source_maps: undefined,
 			placement: undefined,
@@ -146,7 +149,6 @@ describe("normalizeAndValidateConfig()", () => {
 	describe("top-level non-environment configuration", () => {
 		it("should override config defaults with provided values", ({ expect }) => {
 			const expectedConfig: Partial<ConfigFields<RawDevConfig>> = {
-				legacy_env: true,
 				send_metrics: false,
 				dev: {
 					ip: "255.255.255.255",
@@ -172,8 +174,8 @@ describe("normalizeAndValidateConfig()", () => {
 
 		it("should error on invalid top level fields", ({ expect }) => {
 			const expectedConfig = {
-				legacy_env: "FOO",
 				send_metrics: "BAD",
+				dependencies_instrumentation: "NOPE" as unknown,
 				keep_vars: "NEVER",
 				dev: {
 					ip: 222,
@@ -197,19 +199,37 @@ describe("normalizeAndValidateConfig()", () => {
 				expect.objectContaining({
 					...expectedConfig,
 					main: undefined,
-					legacy_env: true,
 				})
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - Expected "legacy_env" to be of type boolean but got "FOO".
 				  - Expected "send_metrics" to be of type boolean but got "BAD".
+				  - Expected "dependencies_instrumentation" to be of type object but got "NOPE".
 				  - Expected "keep_vars" to be of type boolean but got "NEVER".
 				  - Expected "dev.ip" to be of type string but got 222.
 				  - Expected "dev.port" to be of type number but got "FOO".
 				  - Expected "dev.local_protocol" field to be one of ["http","https"] but got "wss".
 				  - Expected "dev.upstream_protocol" field to be one of ["http","https"] but got "ws"."
+			`);
+		});
+
+		it("should error if the deprecated `legacy_env` field is present", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{ legacy_env: true } as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - The "legacy_env" field is no longer supported, so please remove it from your configuration file.
+				    Service environments have been removed, and each environment is now deployed as its own Worker named "<name>-<environment>". This matches the behaviour of "legacy_env = true", which was the default, so removing the field will not change how your Worker is deployed.
+				    Refer to https://developers.cloudflare.com/workers/wrangler/environments/ for more information."
 			`);
 		});
 
@@ -1080,16 +1100,14 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler.toml configuration:
 				  - "unsafe" fields are experimental and may change or break at any time.
-				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your wrangler.toml file. Add the following configuration:
+				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
 
 				    \`\`\`
-				    [[migrations]]
-				    tag = "v1"
-				    new_sqlite_classes = [ "CLASS1" ]
+				    [exports.CLASS1]
+				    type = "durable-object"
+				    storage = "sqlite"
 
-				    \`\`\`
-
-				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
+				    \`\`\`"
 			`);
 		});
 
@@ -1831,6 +1849,516 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected "migrations[0].renamed_classes" to be an array of "{from: string, to: string}" objects but got [{"from":"FROM_CLASS","to":"TO_CLASS"},{"a":"something","b":"someone"}].
 					  - Expected "migrations[0].transferred_classes" to be an array of "{from: string, from_script: string, to: string}" objects but got [{"from":"FROM_CLASS","from_script":"FROM_SCRIPT","to":"TO_CLASS"},{"from":"FROM_CLASS","to":"TO_CLASS"}]."
 				`);
+			});
+		});
+
+		describe("[exports]", () => {
+			it("accepts a live durable-object entry with sqlite storage and no explicit state", ({
+				expect,
+			}) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						MyDO: { type: "durable-object", storage: "sqlite" },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it('accepts a live durable-object entry with an explicit state of "created"', ({
+				expect,
+			}) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						MyDO: {
+							type: "durable-object",
+							state: "created",
+							storage: "sqlite",
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("accepts all tombstone states and expecting-transfer alongside a live entry", ({
+				expect,
+			}) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						NewName: { type: "durable-object", storage: "sqlite" },
+						OldGone: { type: "durable-object", state: "deleted" },
+						OldName: {
+							type: "durable-object",
+							state: "renamed",
+							renamed_to: "NewName",
+						},
+						Movee: {
+							type: "durable-object",
+							state: "transferred",
+							transferred_to: "target-worker",
+						},
+						Incoming: {
+							type: "durable-object",
+							state: "expecting-transfer",
+							storage: "sqlite",
+							transfer_from: "source-worker",
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("accepts worker entries with cache config", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						default: { type: "worker", cache: { enabled: false } },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("accepts mixed Durable Object and worker entries", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Admin: {
+								type: "worker",
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+								cache: { enabled: "true" } as any,
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "exports.Admin.cache.enabled" to be of type boolean'
+				);
+			});
+
+			it("warns when worker entries include unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Admin: {
+								type: "worker",
+								storage: "sqlite",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in exports.Admin field: "storage"'
+				);
+			});
+
+			it("errors when storage is missing on a live entry", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							MyDO: { type: "durable-object" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.MyDO.storage" is required for state "created"'
+				);
+			});
+
+			it("errors when storage uses an unknown value", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							MyDO: { type: "durable-object", storage: "kv" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain('"exports.MyDO.storage"');
+			});
+
+			it("errors when renamed_to equals the source class name", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Same: {
+								type: "durable-object",
+								state: "renamed",
+								renamed_to: "Same",
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"cannot equal the source class name"
+				);
+			});
+
+			it("errors when a deleted tombstone carries forbidden fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Bad: {
+								type: "durable-object",
+								state: "deleted",
+								storage: "sqlite",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Bad.storage" is forbidden on state "deleted"'
+				);
+			});
+
+			it("errors when a transferred tombstone omits transferred_to", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Movee: {
+								type: "durable-object",
+								state: "transferred",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Movee.transferred_to" is required'
+				);
+			});
+
+			it("errors when an expecting-transfer entry omits transfer_from", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Incoming: {
+								type: "durable-object",
+								state: "expecting-transfer",
+								storage: "sqlite",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Incoming.transfer_from" is required'
+				);
+			});
+
+			it("errors when an expecting-transfer entry omits storage", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Incoming: {
+								type: "durable-object",
+								state: "expecting-transfer",
+								transfer_from: "source-worker",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Incoming.storage" is required for state "expecting-transfer"'
+				);
+			});
+
+			it("errors when transfer_from is set on a live `created` entry", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							MyDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								transfer_from: "source-worker",
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.MyDO.transfer_from" is forbidden on state "created".
+					  - Allowed properties are: type, state, and storage."
+				`);
+			});
+
+			it("errors when the type is unknown", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							Weird: { type: "container" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.Weird.type" must be "durable-object" or "worker", but got "container"."
+				`);
+			});
+
+			it("errors when the state is unknown", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							Weird: { type: "durable-object", state: "rebooted" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.Weird.state" must be one of "created", "deleted", "renamed", "transferred", or "expecting-transfer" but got "rebooted"."
+				`);
+			});
+
+			it("errors when `migrations` and `exports` are both non-empty", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						migrations: [{ tag: "v1", new_sqlite_classes: ["MyDO"] }],
+						exports: {
+							MyDO: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both."
+				`);
+			});
+
+			it("does not warn about missing migrations when exports covers the bound class", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "DO", class_name: "MyDO" }],
+						},
+						exports: {
+							MyDO: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("warns and suggests an `exports` entry when the only entry for a bound class is a tombstone", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "DO", class_name: "MyDO" }],
+						},
+						exports: {
+							MyDO: { type: "durable-object", state: "deleted" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				const rendered = diagnostics.renderWarnings();
+				expect(rendered).toContain("no live `exports` entry for them");
+				expect(rendered).toContain('"type": "durable-object"');
+				expect(rendered).toContain('"storage": "sqlite"');
+				expect(rendered).not.toContain("new_sqlite_classes");
+			});
+
+			it("warns and suggests an `exports` entry when `exports` is in use but the bound class is missing", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "DO", class_name: "MyDO" }],
+						},
+						exports: {
+							// User is already on the `exports` path (unrelated
+							// tombstone present) but forgot to add a live entry
+							// for `MyDO`.
+							OldGone: { type: "durable-object", state: "deleted" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				const rendered = diagnostics.renderWarnings();
+				expect(rendered).toContain("no live `exports` entry for them");
+				expect(rendered).toContain('"MyDO"');
+				expect(rendered).not.toContain("new_sqlite_classes");
+			});
+
+			it("warns and suggests an `exports` entry when neither lifecycle is declared", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "DO", class_name: "MyDO" }],
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				const rendered = diagnostics.renderWarnings();
+				expect(rendered).toContain("no live `exports` entry for them");
+				expect(rendered).toContain('"type": "durable-object"');
+				expect(rendered).toContain('"storage": "sqlite"');
+				expect(rendered).not.toContain("new_sqlite_classes");
 			});
 		});
 
@@ -3700,6 +4228,106 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
+
+			it("should error if D1 database database_name has incorrect type", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{
+								binding: "DB",
+								database_name: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "d1_databases[0]" bindings should, optionally, have a string "database_name" field but got {"binding":"DB","database_name":true}."
+				`);
+			});
+
+			it("should error if D1 database migrations_dir has incorrect type", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{
+								binding: "DB",
+								migrations_dir: 123,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "d1_databases[0]" bindings should, optionally, have a string "migrations_dir" field but got {"binding":"DB","migrations_dir":123}."
+				`);
+			});
+
+			it("should error if D1 database migrations_table has incorrect type", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{
+								binding: "DB",
+								migrations_table: {},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "d1_databases[0]" bindings should, optionally, have a string "migrations_table" field but got {"binding":"DB","migrations_table":{}}."
+				`);
+			});
+
+			it("should error if D1 database database_internal_env has incorrect type", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{
+								binding: "DB",
+								database_internal_env: false,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "d1_databases[0]" bindings should, optionally, have a string "database_internal_env" field but got {"binding":"DB","database_internal_env":false}."
+				`);
+			});
 		});
 
 		describe("[hyperdrive]", () => {
@@ -4251,6 +4879,120 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "services[6]" bindings should have a string "service" field but got {"binding":123,"service":456,"environment":"SERVICE_BINDING_ENVIRONMENT_1"}.
 					  - "services[7]" bindings should have a string "entrypoint" field but got {"binding":"SERVICE_BINDING_1","service":"SERVICE_BINDING_SERVICE_1","environment":"SERVICE_BINDING_ENVIRONMENT_1","entrypoint":123}.
 					  - "services[8]" bindings should have a string "entrypoint" field but got {"binding":"SERVICE_BINDING_1","service":"SERVICE_BINDING_SERVICE_1","entrypoint":123}."
+				`);
+			});
+
+			it("should accept a valid `dev` local-plugin configuration", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [
+							{
+								binding: "ENTITLEMENTS",
+								service: "edge-entitlements",
+								dev: {
+									plugin: {
+										package: "@cloudflare/workers-toolbox-plugins",
+										name: "entitlements",
+									},
+									options: { entitlements: [], mapping: {} },
+								},
+							},
+							{
+								binding: "ENTITLEMENTS_NO_OPTS",
+								service: "edge-entitlements",
+								dev: {
+									plugin: {
+										package: "@cloudflare/workers-toolbox-plugins",
+										name: "entitlements",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error on a malformed service binding `dev` field", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [
+							{
+								binding: "BAD_DEV_NOT_OBJECT",
+								service: "svc",
+								dev: "nope",
+							},
+							{
+								binding: "BAD_DEV_MISSING_PLUGIN",
+								service: "svc",
+								dev: {},
+							},
+							{
+								binding: "BAD_DEV_PLUGIN_WRONG_SHAPE",
+								service: "svc",
+								dev: { plugin: { package: 1, name: 2 } },
+							},
+							{
+								binding: "BAD_DEV_OPTIONS_NOT_OBJECT",
+								service: "svc",
+								dev: {
+									plugin: { package: "p", name: "n" },
+									options: "should-be-object",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "services[0]" bindings should have an object "dev" field but got "nope".
+					  - "services[1].dev" should have an object "plugin" field but got undefined.
+					  - "services[2].dev.plugin" should have a string "package" field but got 1.
+					  - "services[2].dev.plugin" should have a string "name" field but got 2.
+					  - "services[3].dev.options" should be an object but got "should-be-object"."
+				`);
+			});
+
+			it("should warn when both `dev` and `remote: true` are set", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [
+							{
+								binding: "SERVICE",
+								service: "svc",
+								remote: true,
+								dev: {
+									plugin: { package: "p", name: "n" },
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "services[0]" binding has both "dev" and "remote" set; "remote" is ignored when "dev" is present and the binding is routed through the local Miniflare plugin."
 				`);
 			});
 		});
@@ -7181,173 +7923,6 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		describe("non-legacy", () => {
-			it("should use top-level `name` field", ({ expect }) => {
-				const rawConfig: RawConfig = {
-					name: "mock-name",
-					legacy_env: false,
-					env: { DEV: {} },
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(config.name).toEqual("mock-name");
-				expect(config.topLevelName).toEqual("mock-name");
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-			});
-
-			it("should error if named environment contains a `name` field, even if there is no top-level name", ({
-				expect,
-			}) => {
-				const rawConfig: RawConfig = {
-					legacy_env: false,
-					env: {
-						DEV: {
-							name: "mock-env-name",
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(config.name).toBeUndefined();
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.DEV" environment configuration
-					    - The "name" field is not allowed in named service environments.
-					      Please remove the field from this environment."
-				`);
-			});
-
-			it("should error if top-level config and a named environment both contain a `name` field", ({
-				expect,
-			}) => {
-				const rawConfig: RawConfig = {
-					name: "mock-name",
-					legacy_env: false,
-					env: {
-						DEV: {
-							name: "mock-env-name",
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(config.name).toEqual("mock-name");
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.DEV" environment configuration
-					    - The "name" field is not allowed in named service environments.
-					      Please remove the field from this environment."
-				`);
-			});
-
-			it("should error if named environment contains a `account_id` field, even if there is no top-level name", ({
-				expect,
-			}) => {
-				const rawConfig: RawConfig = {
-					legacy_env: false,
-					env: {
-						DEV: {
-							account_id: "some_account_id",
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(config.account_id).toBeUndefined();
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.DEV" environment configuration
-					    - The "account_id" field is not allowed in named service environments.
-					      Please remove the field from this environment."
-				`);
-			});
-
-			it("should error if top-level config and a named environment both contain a `account_id` field", ({
-				expect,
-			}) => {
-				const rawConfig: RawConfig = {
-					account_id: "ACCOUNT_ID",
-					legacy_env: false,
-					env: {
-						DEV: {
-							account_id: "ENV_ACCOUNT_ID",
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "DEV" }
-				);
-
-				expect(config.account_id).toEqual("ACCOUNT_ID");
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.DEV" environment configuration
-					    - The "account_id" field is not allowed in named service environments.
-					      Please remove the field from this environment."
-				`);
-			});
-		});
-
 		it("should warn for non-inherited fields that are missing in environments", ({
 			expect,
 		}) => {
@@ -9548,6 +10123,52 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.cache).toEqual({ enabled: false });
 			});
 
+			it("should not error when cross_version_cache is true and cache is disabled", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: false,
+							cross_version_cache: true,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({
+					enabled: false,
+					cross_version_cache: true,
+				});
+			});
+
+			it("should error when cache.cross_version_cache is not a boolean", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+							cross_version_cache: "true",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "cache.cross_version_cache" to be of type boolean but got "true"."
+				`);
+			});
+
 			it("should warn on unexpected fields in cache config", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -10160,3 +10781,67 @@ function normalizePath(text: string): string {
 		.replace("src\\index.ts", "src/index.ts")
 		.replace("path\\to\\tsconfig", "path/to/tsconfig");
 }
+
+describe("normalizeAndValidateConfig() - addresses (Email Routing)", () => {
+	function validate(rawConfig: RawConfig) {
+		return normalizeAndValidateConfig(rawConfig, undefined, undefined, {
+			env: undefined,
+		});
+	}
+
+	it("defaults to undefined when not present", ({ expect }) => {
+		const { config, diagnostics } = validate({});
+		expect(config.addresses).toBeUndefined();
+		expect(diagnostics.hasErrors()).toBe(false);
+	});
+
+	it("accepts an array of literal and catch-all addresses", ({ expect }) => {
+		const { config, diagnostics } = validate({
+			addresses: ["support@example.com", "*@example.com"],
+		});
+		expect(diagnostics.hasErrors()).toBe(false);
+		expect(config.addresses).toEqual(["support@example.com", "*@example.com"]);
+	});
+
+	it("errors when addresses is not an array", ({ expect }) => {
+		// @ts-expect-error intentionally invalid type
+		const { diagnostics } = validate({ addresses: "support@example.com" });
+		expect(diagnostics.hasErrors()).toBe(true);
+		expect(diagnostics.errors).toContain(
+			`Expected "addresses" to be an array of strings but got "support@example.com"`
+		);
+	});
+
+	it("errors on a non-string entry", ({ expect }) => {
+		// @ts-expect-error intentionally invalid entry type
+		const { diagnostics } = validate({ addresses: ["ok@example.com", 123] });
+		expect(diagnostics.hasErrors()).toBe(true);
+		expect(diagnostics.errors).toContain(
+			`Expected "addresses.[1]" to be of type string but got 123.`
+		);
+	});
+
+	it("warns and ignores addresses set under an active env.* (top-level only)", ({
+		expect,
+	}) => {
+		const { config, diagnostics } = normalizeAndValidateConfig(
+			{
+				env: {
+					staging: {
+						// @ts-expect-error addresses is top-level only, not a per-env field
+						addresses: ["support@example.com"],
+					},
+				},
+			},
+			undefined,
+			undefined,
+			{ env: "staging" }
+		);
+		expect(diagnostics.hasWarnings()).toBe(true);
+		expect(diagnostics.renderWarnings()).toContain(
+			`Unexpected fields found in env.staging field: "addresses"`
+		);
+		// Like other top-level-only fields, it is ignored rather than promoted.
+		expect(config.addresses).toBeUndefined();
+	});
+});

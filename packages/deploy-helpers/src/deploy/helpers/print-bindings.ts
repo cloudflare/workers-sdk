@@ -513,7 +513,7 @@ export function printBindings(
 
 	if (services.length > 0) {
 		output.push(
-			...services.map(({ binding, service, entrypoint, remote }) => {
+			...services.map(({ binding, service, entrypoint, remote, dev }) => {
 				let value = service;
 				let mode = undefined;
 
@@ -521,7 +521,9 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (remote) {
+				if (dev !== undefined && context.local) {
+					mode = getMode({ isSimulatedLocally: true });
+				} else if (remote) {
 					mode = getMode({ isSimulatedLocally: false });
 				} else if (context.local && context.registry !== null) {
 					const isSelfBinding = service === context.name;
@@ -729,8 +731,11 @@ export function printBindings(
 			...vars.map((variable) => {
 				const { binding, type: varType, value: varValue } = variable;
 				let parsedValue;
-				/**
-				 * @see packages/workers-utils/src/types.ts for details on the hidden property
+				/* eslint-disable-next-line @typescript-eslint/no-deprecated --
+				 *    hidden is a deprecated property, but still needs to be supported for backwards compatibility
+				 *    so we need to handle appropriately here
+				 *
+				 *    see packages/workers-utils/src/types.ts for details on the hidden property
 				 */
 				if (varType === "plain_text" && variable.hidden !== true) {
 					parsedValue = `"${truncate(varValue)}"`;

@@ -1,5 +1,21 @@
 # @cloudflare/workers-shared
 
+## 0.19.8
+
+### Patch Changes
+
+- [#14677](https://github.com/cloudflare/workers-sdk/pull/14677) [`205a260`](https://github.com/cloudflare/workers-sdk/commit/205a260b44c1ae0fcc4089b7ae3f6defd3c16d4a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Emit `servedBy` and `requestKind` analytics from the Workers Assets asset worker
+
+  Real asset hits and SPA or 404 fallbacks previously logged the same fields. The asset worker now records what served the response and whether the request was a navigation or subresource.
+
+## 0.19.7
+
+### Patch Changes
+
+- [#14314](https://github.com/cloudflare/workers-sdk/pull/14314) [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6) Thanks [@harryzcy](https://github.com/harryzcy)! - Bump esbuild to 0.28.1
+
+  This update includes several bug fixes from esbuild versions 0.27.3 through 0.28.1. See the [esbuild changelog](https://github.com/evanw/esbuild/blob/v0.28.1/CHANGELOG.md) for details.
+
 ## 0.19.6
 
 ### Patch Changes

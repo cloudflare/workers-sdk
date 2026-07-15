@@ -5,8 +5,7 @@ import {
 	fetchPagedListResult,
 	fetchResult,
 } from "../cfetch";
-import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { confirm, prompt, select } from "../dialogs";
 import { logger } from "../logger";
 
 export function initApiDeployHelpersContext(): void {
@@ -18,6 +17,6 @@ export function initApiDeployHelpersContext(): void {
 		fetchKVGetValue,
 		confirm,
 		prompt,
-		isNonInteractiveOrCI,
+		select,
 	});
 }

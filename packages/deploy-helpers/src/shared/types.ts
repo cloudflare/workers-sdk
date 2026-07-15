@@ -32,7 +32,18 @@ export type DeployHelpersContext = {
 		text: string,
 		options?: { defaultValue?: string }
 	) => Promise<string>;
-	isNonInteractiveOrCI: () => boolean;
+	select: <Values extends string>(
+		text: string,
+		options: {
+			choices: {
+				title: string;
+				description?: string;
+				value: Values;
+			}[];
+			defaultOption?: number;
+			fallbackOption?: number;
+		}
+	) => Promise<Values>;
 };
 
 /**
@@ -67,11 +78,6 @@ export type SharedDeployVersionsProps = {
 	keepVars: boolean;
 	/** Merged from --site arg and config.site. */
 	isWorkersSite: boolean;
-	/**
-	 * Whether to use the deprecated service environments API path.
-	 * True only when config opts in (legacy_env: false) AND --env is specified.
-	 */
-	useServiceEnvApiPath: boolean;
 	/** From --dry-run arg. */
 	dryRun: boolean;
 	/** From --env arg. */
@@ -94,6 +100,10 @@ export type SharedDeployVersionsProps = {
 	sendMetrics: boolean;
 	/** Resolved from getFlag("RESOURCES_PROVISION"). Controls whether bindings are auto-provisioned before upload. */
 	resourcesProvision: boolean;
+	/** Controls whether provisioned resource IDs are written back to the config file. */
+	skipProvisioningConfigWriteback: boolean;
+	/** From --strict arg. In strict mode, conflicting pre-upload checks abort instead of auto-continuing. */
+	strict: boolean;
 };
 
 export type DeployProps = SharedDeployVersionsProps & {
@@ -109,12 +119,21 @@ export type DeployProps = SharedDeployVersionsProps & {
 	logpush: boolean | undefined;
 	/** From --dispatch-namespace arg. Deploy-only (Workers for Platforms). */
 	dispatchNamespace: string | undefined;
-	/** From --strict arg. Deploy-only. */
-	strict: boolean;
 	/** From --old-asset-ttl arg. Deploy-only. */
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
 	containersRollout: "immediate" | "gradual" | "none" | undefined;
+	/**
+	 * When true, an existing Worker with the same name aborts the deploy instead
+	 * of updating it, because this run cannot confirm the local project owns the
+	 * remote Worker. Set for non-interactive deploys with no pre-existing config
+	 * file when either the name was generated automatically (no user-supplied
+	 * name) or the deploy is the Pages-to-Workers delegation (where the name is a
+	 * Pages project name carried across, not proof of Worker ownership). Deploys
+	 * that carry a config file naming the Worker leave this false and update it as
+	 * normal.
+	 */
+	failIfWorkerNameTaken?: boolean;
 };
 
 export type VersionsUploadProps = SharedDeployVersionsProps & {
@@ -145,6 +164,5 @@ export type TriggerProps = {
 	env: string | undefined;
 	crons: string[] | undefined;
 	routes: Route[];
-	useServiceEnvironments: boolean;
 	firstDeploy: boolean;
 };

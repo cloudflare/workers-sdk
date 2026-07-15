@@ -13,8 +13,7 @@ import {
 	isBuildFailure,
 	isBuildFailureFromCause,
 } from "../../deployment-bundle/build-failures";
-import { confirm, prompt } from "../../dialogs";
-import { isNonInteractiveOrCI } from "../../is-interactive";
+import { confirm, prompt, select } from "../../dialogs";
 import { logBuildFailure, logger, runWithLogLevel } from "../../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
@@ -47,7 +46,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			fetchKVGetValue,
 			confirm,
 			prompt,
-			isNonInteractiveOrCI,
+			select,
 		});
 
 		const worker = createWorkerObject(this);

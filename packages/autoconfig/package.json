@@ -1,0 +1,57 @@
+{
+	"name": "@cloudflare/autoconfig",
+	"version": "0.1.5",
+	"description": "Framework autoconfig detection and configuration for Cloudflare Workers",
+	"license": "MIT OR Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/autoconfig"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"check:type": "tsc -p ./tsconfig.json",
+		"dev": "tsup --watch",
+		"test": "vitest",
+		"test:ci": "vitest run"
+	},
+	"dependencies": {
+		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/codemod": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@netlify/build-info": "^10.5.1",
+		"@types/esprima": "^4.0.3",
+		"@types/node": "catalog:default",
+		"chalk": "catalog:default",
+		"empathic": "^2.0.0",
+		"esprima": "4.0.1",
+		"recast": "0.23.11",
+		"semiver": "^1.1.0",
+		"ts-dedent": "^2.2.0",
+		"tsup": "8.3.0",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}

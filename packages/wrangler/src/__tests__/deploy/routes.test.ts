@@ -1,10 +1,10 @@
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -66,8 +66,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -335,124 +338,6 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async ({
-			expect,
-		}) => {
-			writeWranglerConfig({
-				env: {
-					staging: {
-						routes: [
-							"some-example.com/some-route/*",
-							{
-								pattern: "*a-boring-website.com",
-								zone_id: "a-boring-website-id",
-							},
-							{
-								pattern: "*another-boring-website.com",
-								zone_name: "some-zone.com",
-							},
-							{
-								pattern: "example.com/some-route/*",
-								zone_id: "example-com-id",
-							},
-							"more-examples.com/*",
-						],
-					},
-				},
-			});
-			mockSubDomainRequest();
-			writeWorkerSource();
-			mockUpdateWorkerSubdomain({
-				enabled: false,
-				env: "staging",
-				useServiceEnvironments: true,
-			});
-			mockUploadWorkerRequest({
-				expectedType: "esm",
-				env: "staging",
-				useServiceEnvironments: true,
-				useOldUploadApi: true,
-			});
-			// These run during route conflict resolution.
-			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti(expect, {
-				"some-example.com": {
-					accountId: "some-account-id",
-					zones: [{ id: "some-example-com-id" }],
-				},
-				"a-boring-website.com": {
-					accountId: "some-account-id",
-					zones: [{ id: "a-boring-website-id" }],
-				},
-				"another-boring-website.com": {
-					accountId: "some-account-id",
-					zones: [{ id: "another-boring-website-id" }],
-				},
-				"some-zone.com": {
-					accountId: "some-account-id",
-					zones: [{ id: "some-zone-id" }],
-				},
-				"example.com": {
-					accountId: "some-account-id",
-					zones: [{ id: "example-com-id" }],
-				},
-				"more-examples.com": {
-					accountId: "some-account-id",
-					zones: [{ id: "more-examples-id" }],
-				},
-			});
-			mockGetZoneWorkerRoutesMulti(expect, {
-				"some-example-com-id": [],
-				"a-boring-website-id": [],
-				"another-boring-website-id": [],
-				"some-zone-id": [],
-				"example-com-id": [],
-				"more-examples-id": [],
-			});
-			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-			mockPublishRoutesRequest({
-				routes: [
-					"some-example.com/some-route/*",
-					{ pattern: "*a-boring-website.com", zone_id: "a-boring-website-id" },
-					{
-						pattern: "*another-boring-website.com",
-						zone_name: "some-zone.com",
-					},
-					{ pattern: "example.com/some-route/*", zone_id: "example-com-id" },
-					"more-examples.com/*",
-				],
-				env: "staging",
-				useServiceEnvironments: true,
-			});
-			await runWrangler("deploy ./index --legacy-env false --env staging");
-			expect(std).toMatchInlineSnapshot(`
-				{
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (staging) (TIMINGS)
-				Deployed test-name (staging) triggers (TIMINGS)
-				  some-example.com/some-route/*
-				  *a-boring-website.com (zone id: a-boring-website-id)
-				  *another-boring-website.com (zone name: some-zone.com)
-				  example.com/some-route/* (zone id: example-com-id)
-				  more-examples.com/*
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-				  PRODUCTION.
-
-				",
-				}
-			`);
-		});
-
 		it("should deploy to legacy environment specific routes", async ({
 			expect,
 		}) => {
@@ -467,52 +352,8 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUpdateWorkerSubdomain({
 				enabled: false,
-				useServiceEnvironments: false,
 				env: "dev",
 			});
-			mockUploadWorkerRequest({
-				expectedType: "esm",
-				useServiceEnvironments: false,
-				env: "dev",
-			});
-			// These run during route conflict resolution.
-			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti(expect, {
-				"example.com": {
-					accountId: "some-account-id",
-					zones: [{ id: "example-com-id" }],
-				},
-				"dev-example.com": {
-					accountId: "some-account-id",
-					zones: [{ id: "dev-example-com-id" }],
-				},
-			});
-			mockGetZoneWorkerRoutesMulti(expect, {
-				"example-com-id": [],
-				"dev-example-com-id": [],
-			});
-			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-			mockPublishRoutesRequest({
-				routes: ["dev-example.com/some-route/*"],
-				useServiceEnvironments: false,
-				env: "dev",
-			});
-			await runWrangler("deploy ./index --env dev --legacy-env true");
-		});
-
-		it("services: should deploy to service environment specific routes", async ({
-			expect,
-		}) => {
-			writeWranglerConfig({
-				routes: ["example.com/some-route/*"],
-				env: {
-					dev: {
-						routes: ["dev-example.com/some-route/*"],
-					},
-				},
-			});
-			writeWorkerSource();
-			mockUpdateWorkerSubdomain({ enabled: false, env: "dev" });
 			mockUploadWorkerRequest({
 				expectedType: "esm",
 				env: "dev",
@@ -538,7 +379,7 @@ describe("deploy", () => {
 				routes: ["dev-example.com/some-route/*"],
 				env: "dev",
 			});
-			await runWrangler("deploy ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev");
 		});
 
 		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async ({
@@ -595,41 +436,6 @@ describe("deploy", () => {
 				Deployed test-name triggers (TIMINGS)
 				  example.com/some-route/*
 				Current Version ID: Galaxy-Class"
-			`);
-		});
-
-		it("should error if the bulk-routes API fails and trying to push to a non-production environment", async ({
-			expect,
-		}) => {
-			writeWranglerConfig({
-				routes: ["example.com/some-route/*"],
-				legacy_env: false,
-			});
-			writeWorkerSource();
-			mockUploadWorkerRequest({ env: "staging", expectedType: "esm" });
-			mockUpdateWorkerSubdomain({ env: "staging", enabled: false });
-			// These run during route conflict resolution.
-			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
-			mockGetZoneWorkerRoutes(expect, "example-com-id", [
-				// Simulate that the worker has already been deployed to another route.
-				{
-					pattern: "foo.example.com/other-route",
-					script: "test-name",
-				},
-			]);
-			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-			// Simulate the bulk-routes API failing with a not authorized error.
-			mockUnauthorizedPublishRoutesRequest({ env: "staging" });
-			mockPublishRoutesFallbackRequest({
-				pattern: "example.com/some-route/*",
-				script: "test-name",
-			});
-			await expect(runWrangler("deploy ./index --env=staging")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Some triggers failed to deploy for test-name (staging):
-				  - Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
-				Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth]
 			`);
 		});
 

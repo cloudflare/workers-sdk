@@ -17,7 +17,7 @@ describe("context singleton", () => {
 			fetchKVGetValue: (() => {}) as never,
 			confirm: (() => {}) as never,
 			prompt: (() => {}) as never,
-			isNonInteractiveOrCI: () => false,
+			select: (() => {}) as never,
 		});
 
 		expect(logger).toBe(mockLogger);

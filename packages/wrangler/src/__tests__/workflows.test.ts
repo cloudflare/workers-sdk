@@ -49,13 +49,17 @@ describe("wrangler workflows", () => {
 
 	const mockChangeStatusRequest = async (
 		expect: ExpectStatic,
-		expectedInstance: string
+		expectedInstance: string,
+		expectedBody?: Record<string, unknown>
 	) => {
 		msw.use(
 			http.patch(
 				`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId/status`,
-				async ({ params }) => {
+				async ({ params, request }) => {
 					expect(params.instanceId).toEqual(expectedInstance);
+					if (expectedBody) {
+						expect(await request.json()).toEqual(expectedBody);
+					}
 					return HttpResponse.json({
 						success: true,
 						errors: [],
@@ -166,6 +170,7 @@ describe("wrangler workflows", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`
 			);
@@ -202,6 +207,7 @@ describe("wrangler workflows", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -654,9 +660,27 @@ describe("wrangler workflows", () => {
 		}) => {
 			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
-			await mockChangeStatusRequest(expect, "bar");
+			await mockChangeStatusRequest(expect, "bar", {
+				status: "terminate",
+			});
 
 			await runWrangler(`workflows instances terminate some-workflow bar`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 The instance "bar" from some-workflow was terminated successfully"`
+			);
+		});
+
+		it("should pass rollback when requested", async ({ expect }) => {
+			writeWranglerConfig();
+			await mockGetInstances(mockInstances);
+			await mockChangeStatusRequest(expect, "bar", {
+				status: "terminate",
+				rollback: true,
+			});
+
+			await runWrangler(
+				`workflows instances terminate some-workflow bar --rollback`
+			);
 			expect(std.info).toMatchInlineSnapshot(
 				`"🥷 The instance "bar" from some-workflow was terminated successfully"`
 			);
@@ -1731,8 +1755,9 @@ describe("wrangler workflows", () => {
 						async ({ params, request }) => {
 							expect(params.workflowName).toEqual("my-workflow");
 							expect(params.instanceId).toEqual("instance-123");
-							const body = (await request.json()) as Record<string, unknown>;
-							expect(body.action).toEqual("terminate");
+							expect(await request.json()).toEqual({
+								action: "terminate",
+							});
 							return HttpResponse.json({
 								success: true,
 								errors: [],
@@ -1745,6 +1770,37 @@ describe("wrangler workflows", () => {
 
 				await runWrangler(
 					"workflows instances terminate my-workflow instance-123 --local"
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"🥷 The instance "instance-123" from my-workflow was terminated successfully"`
+				);
+			});
+
+			it("should pass rollback in local dev session", async ({ expect }) => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.patch(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/status`,
+						async ({ params, request }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							expect(await request.json()).toEqual({
+								action: "terminate",
+								rollback: true,
+							});
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances terminate my-workflow instance-123 --local --rollback"
 				);
 				expect(std.info).toMatchInlineSnapshot(
 					`"🥷 The instance "instance-123" from my-workflow was terminated successfully"`

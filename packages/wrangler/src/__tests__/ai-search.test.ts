@@ -97,6 +97,29 @@ const MOCK_STATS = {
 	error: 2,
 };
 
+const MOCK_JOB = {
+	id: "job-001",
+	source: "user",
+	description: "Manual reindex",
+	started_at: "2025-03-01T00:00:00Z",
+	ended_at: "2025-03-01T00:05:00Z",
+	end_reason: "completed",
+	last_seen_at: "2025-03-01T00:05:00Z",
+};
+
+const MOCK_JOB_2 = {
+	id: "job-002",
+	source: "schedule",
+	started_at: "2025-03-02T00:00:00Z",
+};
+
+const MOCK_JOB_LOG = {
+	id: 1,
+	created_at: 1700000000,
+	message: "Indexing started",
+	message_type: 0,
+};
+
 // ── Help / Namespace ──────────────────────────────────────────────────────────
 
 describe("ai-search help", () => {
@@ -117,6 +140,7 @@ describe("ai-search help", () => {
 		expect(std.out).toContain("wrangler ai-search stats");
 		expect(std.out).toContain("wrangler ai-search search");
 		expect(std.out).toContain("wrangler ai-search namespace");
+		expect(std.out).toContain("wrangler ai-search jobs");
 	});
 
 	it("should show help when an invalid argument is passed", async ({
@@ -142,6 +166,19 @@ describe("ai-search help", () => {
 		expect(std.out).toContain("wrangler ai-search namespace get");
 		expect(std.out).toContain("wrangler ai-search namespace update");
 		expect(std.out).toContain("wrangler ai-search namespace delete");
+	});
+
+	it("should show jobs subcommand help", async ({ expect }) => {
+		await runWrangler("ai-search jobs");
+		await endEventLoop();
+
+		expect(std.out).toContain("wrangler ai-search jobs");
+		expect(std.out).toContain("AI Search indexing jobs");
+		expect(std.out).toContain("wrangler ai-search jobs list");
+		expect(std.out).toContain("wrangler ai-search jobs create");
+		expect(std.out).toContain("wrangler ai-search jobs get");
+		expect(std.out).toContain("wrangler ai-search jobs cancel");
+		expect(std.out).toContain("wrangler ai-search jobs logs");
 	});
 });
 
@@ -598,6 +635,206 @@ describe("ai-search commands", () => {
 			});
 		});
 
+		it("should send source_params.r2_jurisdiction for an R2 source", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --source-jurisdiction eu"
+			);
+			expect(capturedBody).toMatchObject({
+				source: "my-bucket",
+				type: "r2",
+				source_params: { r2_jurisdiction: "eu" },
+			});
+		});
+
+		it("should omit r2_jurisdiction when --source-jurisdiction is not provided", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket"
+			);
+			expect(capturedBody?.source_params).toBeUndefined();
+		});
+
+		it("should forward an arbitrary --source-jurisdiction value (server-side validated)", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --source-jurisdiction apac"
+			);
+			expect(capturedBody).toMatchObject({
+				source_params: { r2_jurisdiction: "apac" },
+			});
+		});
+
+		it("should error when --source-jurisdiction is used with --type builtin", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type builtin --source-jurisdiction eu"
+				)
+			).rejects.toThrow(
+				/--source-jurisdiction is only supported with --type r2/
+			);
+		});
+
+		it("should error when --source-jurisdiction is used with --type web-crawler", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type web-crawler --source https://example.com --source-jurisdiction eu"
+				)
+			).rejects.toThrow(
+				/--source-jurisdiction is only supported with --type r2/
+			);
+		});
+
+		it("should list buckets in the chosen jurisdiction and forward r2_jurisdiction (interactive)", async ({
+			expect,
+		}) => {
+			let listJurisdiction: string | null = null;
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockSelect({ text: "Select the source type:", result: "r2" });
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "eu",
+			});
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/r2/buckets",
+					({ request }) => {
+						listJurisdiction = request.headers.get("cf-r2-jurisdiction");
+						return HttpResponse.json(
+							createFetchResult({
+								buckets: [{ name: "eu-bucket", creation_date: "01-01-2001" }],
+							})
+						);
+					},
+					{ once: true }
+				)
+			);
+			mockSelect({ text: "Select an R2 bucket:", result: "eu-bucket" });
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult({ ...MOCK_INSTANCE, source: "eu-bucket" }, true)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler("ai-search create my-instance --namespace default");
+			expect(listJurisdiction).toBe("eu");
+			expect(capturedBody).toMatchObject({
+				source: "eu-bucket",
+				type: "r2",
+				source_params: { r2_jurisdiction: "eu" },
+			});
+		});
+
+		it("should create a new bucket in the chosen jurisdiction (interactive)", async ({
+			expect,
+		}) => {
+			let createJurisdiction: string | null = null;
+			mockListTokens([MOCK_TOKEN]);
+			mockSelect({ text: "Select the source type:", result: "r2" });
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "eu",
+			});
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/r2/buckets",
+					() => HttpResponse.json(createFetchResult({ buckets: [] })),
+					{ once: true }
+				)
+			);
+			mockSelect({ text: "Select an R2 bucket:", result: "__create_new__" });
+			mockPrompt({
+				text: "Enter a name for the new R2 bucket:",
+				result: "eu-bucket",
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/r2/buckets",
+					({ request }) => {
+						createJurisdiction = request.headers.get("cf-r2-jurisdiction");
+						return HttpResponse.json(createFetchResult({}));
+					},
+					{ once: true }
+				)
+			);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			mockCreateInstance({ ...MOCK_INSTANCE, source: "eu-bucket" });
+			await runWrangler("ai-search create my-instance --namespace default");
+			expect(createJurisdiction).toBe("eu");
+			expect(std.out).toContain('Creating R2 bucket "eu-bucket"...');
+		});
+
 		it("should error in non-interactive mode when no tokens exist", async ({
 			expect,
 		}) => {
@@ -607,7 +844,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket"
 				)
-			).rejects.toThrowError(/No AI Search API token found/);
+			).rejects.toThrow(/No AI Search API token found/);
 		});
 
 		it("should abort when user declines to create a token", async ({
@@ -622,7 +859,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket"
 				)
-			).rejects.toThrowError(/AI Search instance creation cancelled/);
+			).rejects.toThrow(/AI Search instance creation cancelled/);
 		});
 
 		it("should proceed after user creates a token on retry", async ({
@@ -660,7 +897,12 @@ describe("ai-search commands", () => {
 				text: "Select the source type:",
 				result: "r2",
 			});
-			// 2. Select an existing R2 bucket from the list
+			// 2. Enter the R2 jurisdiction (blank = no jurisdiction)
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "",
+			});
+			// 3. Select an existing R2 bucket from the list
 			msw.use(
 				http.get(
 					"*/accounts/:accountId/r2/buckets",
@@ -694,6 +936,10 @@ describe("ai-search commands", () => {
 		}) => {
 			mockListTokens([MOCK_TOKEN]);
 			mockSelect({ text: "Select the source type:", result: "r2" });
+			mockPrompt({
+				text: "R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):",
+				result: "",
+			});
 			msw.use(
 				http.get(
 					"*/accounts/:accountId/r2/buckets",
@@ -822,7 +1068,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --source my-bucket"
 				)
-			).rejects.toThrowError(/Missing required flag.*--type/);
+			).rejects.toThrow(/Missing required flag.*--type/);
 		});
 
 		it("should error in non-interactive mode when --source is missing for r2", async ({
@@ -834,7 +1080,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2"
 				)
-			).rejects.toThrowError(/Missing required flag.*--source/);
+			).rejects.toThrow(/Missing required flag.*--source/);
 		});
 
 		it("should error in non-interactive mode when --source is missing for web-crawler", async ({
@@ -846,7 +1092,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type web-crawler"
 				)
-			).rejects.toThrowError(/Missing required flag.*--source/);
+			).rejects.toThrow(/Missing required flag.*--source/);
 		});
 
 		it("should create a builtin instance and omit type/source from the request body", async ({
@@ -901,7 +1147,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type builtin --source my-bucket"
 				)
-			).rejects.toThrowError(/not supported with --type builtin.*--source/);
+			).rejects.toThrow(/not supported with --type builtin.*--source/);
 		});
 
 		it("should error when source_params flags are passed with --type builtin", async ({
@@ -912,7 +1158,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					'ai-search create my-instance --namespace default --type builtin --prefix docs/ --include-items "*.md" --exclude-items "*.tmp"'
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/not supported with --type builtin.*--prefix.*--include-items.*--exclude-items/
 			);
 		});
@@ -1017,7 +1263,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title:bogus"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/data_type must be one of text, number, boolean, datetime/
 			);
 		});
@@ -1030,7 +1276,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title"
 				)
-			).rejects.toThrowError(/Expected format: field_name:data_type/);
+			).rejects.toThrow(/Expected format: field_name:data_type/);
 		});
 
 		it("should reject --custom-metadata with a reserved field name", async ({
@@ -1041,7 +1287,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata timestamp:number"
 				)
-			).rejects.toThrowError(/reserved field name/);
+			).rejects.toThrow(/reserved field name/);
 		});
 
 		it("should interactively configure custom_metadata when the flag is omitted", async ({
@@ -1182,7 +1428,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/Expected an array of \{ field_name, data_type \} objects/
 			);
 		});
@@ -1229,7 +1475,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 
 		it("should reject --custom-metadata-schema with an unsupported shape", async ({
@@ -1244,7 +1490,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/Expected an array of \{ field_name, data_type \} objects/
 			);
 		});
@@ -1261,7 +1507,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/"data_type" must be one of text, number, boolean, datetime/
 			);
 		});
@@ -1278,7 +1524,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(/reserved field name/);
+			).rejects.toThrow(/reserved field name/);
 		});
 
 		it("should reject combining --custom-metadata and --custom-metadata-schema", async ({
@@ -1293,7 +1539,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title:text --custom-metadata-schema schema.json"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/custom-metadata and custom-metadata-schema are mutually exclusive/
 			);
 		});
@@ -1930,6 +2176,242 @@ describe("ai-search commands", () => {
 			});
 		});
 	});
+
+	// ── jobs ────────────────────────────────────────────────────────────────────
+
+	describe("jobs", () => {
+		describe("list", () => {
+			it("should list jobs for an instance", async ({ expect }) => {
+				mockListJobs([MOCK_JOB, MOCK_JOB_2]);
+				await runWrangler("ai-search jobs list my-instance");
+				expect(std.out).toContain(MOCK_JOB.id);
+				expect(std.out).toContain(MOCK_JOB_2.id);
+				expect(std.out).toContain("user");
+				expect(std.out).toContain("schedule");
+			});
+
+			it("should list jobs as JSON", async ({ expect }) => {
+				mockListJobs([MOCK_JOB]);
+				await runWrangler("ai-search jobs list my-instance --json");
+				const parsed = JSON.parse(std.out);
+				expect(parsed).toEqual([MOCK_JOB]);
+			});
+
+			it("should route through the instance and namespace", async ({
+				expect,
+			}) => {
+				let capturedNamespace: string | undefined;
+				let capturedName: string | undefined;
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+						({ params }) => {
+							capturedNamespace = params.namespace as string;
+							capturedName = params.name as string;
+							return HttpResponse.json(createFetchResult([], true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler("ai-search jobs list my-instance --namespace blog");
+				expect(capturedNamespace).toBe("blog");
+				expect(capturedName).toBe("my-instance");
+			});
+
+			it("should warn when no jobs exist", async ({ expect }) => {
+				mockListJobs([]);
+				await runWrangler("ai-search jobs list my-instance");
+				expect(std.warn).toContain(
+					'No indexing jobs found for AI Search instance "my-instance" in namespace "default".'
+				);
+			});
+
+			it("should pass pagination params", async ({ expect }) => {
+				let capturedUrl: URL | undefined;
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+						({ request }) => {
+							capturedUrl = new URL(request.url);
+							return HttpResponse.json(createFetchResult([], true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler(
+					"ai-search jobs list my-instance --page 2 --per-page 5"
+				);
+				expect(capturedUrl?.searchParams.get("page")).toBe("2");
+				expect(capturedUrl?.searchParams.get("per_page")).toBe("5");
+			});
+		});
+
+		describe("create", () => {
+			it("should create a job with a description", async ({ expect }) => {
+				let capturedBody: Record<string, unknown> | undefined;
+				let capturedNamespace: string | undefined;
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+						async ({ request, params }) => {
+							capturedBody = (await request.json()) as Record<string, unknown>;
+							capturedNamespace = params.namespace as string;
+							return HttpResponse.json(createFetchResult(MOCK_JOB, true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler(
+					'ai-search jobs create my-instance --description "Manual reindex"'
+				);
+				expect(capturedNamespace).toBe("default");
+				expect(capturedBody).toEqual({ description: "Manual reindex" });
+				expect(std.out).toContain(
+					'Successfully created indexing job "job-001"'
+				);
+			});
+
+			it("should create a job without a description", async ({ expect }) => {
+				let capturedBody: Record<string, unknown> | undefined;
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+						async ({ request }) => {
+							capturedBody = (await request.json()) as Record<string, unknown>;
+							return HttpResponse.json(createFetchResult(MOCK_JOB, true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler("ai-search jobs create my-instance");
+				expect(capturedBody).toEqual({});
+			});
+
+			it("should create a job as JSON", async ({ expect }) => {
+				mockCreateJob(MOCK_JOB);
+				await runWrangler("ai-search jobs create my-instance --json");
+				const parsed = JSON.parse(std.out);
+				expect(parsed.id).toBe("job-001");
+			});
+		});
+
+		describe("get", () => {
+			it("should get job details", async ({ expect }) => {
+				mockGetJob(MOCK_JOB);
+				await runWrangler("ai-search jobs get my-instance job-001");
+				expect(std.out).toContain("job-001");
+				expect(std.out).toContain("user");
+				expect(std.out).toContain("completed");
+			});
+
+			it("should get a job as JSON", async ({ expect }) => {
+				mockGetJob(MOCK_JOB);
+				await runWrangler("ai-search jobs get my-instance job-001 --json");
+				const parsed = JSON.parse(std.out);
+				expect(parsed.id).toBe("job-001");
+			});
+
+			it("should route through the job id in the URL", async ({ expect }) => {
+				let capturedJobId: string | undefined;
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId",
+						({ params }) => {
+							capturedJobId = params.jobId as string;
+							return HttpResponse.json(createFetchResult(MOCK_JOB, true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler("ai-search jobs get my-instance job-xyz");
+				expect(capturedJobId).toBe("job-xyz");
+			});
+
+			it("should error when job id is missing", async ({ expect }) => {
+				await expect(() =>
+					runWrangler("ai-search jobs get my-instance")
+				).rejects.toThrow("Not enough non-option arguments");
+			});
+		});
+
+		describe("cancel", () => {
+			it("should cancel with confirmation", async ({ expect }) => {
+				mockConfirm({
+					text: 'OK to cancel the indexing job "job-001" on AI Search instance "my-instance"?',
+					result: true,
+				});
+				const requests = mockCancelJob(MOCK_JOB);
+				await runWrangler("ai-search jobs cancel my-instance job-001");
+				expect(requests.count).toBe(1);
+				expect(std.out).toContain(
+					'Successfully cancelled indexing job "job-001"'
+				);
+			});
+
+			it("should send action=cancel in the PATCH body", async ({ expect }) => {
+				let capturedBody: Record<string, unknown> | undefined;
+				mockConfirm({
+					text: 'OK to cancel the indexing job "job-001" on AI Search instance "my-instance"?',
+					result: true,
+				});
+				msw.use(
+					http.patch(
+						"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId",
+						async ({ request }) => {
+							capturedBody = (await request.json()) as Record<string, unknown>;
+							return HttpResponse.json(createFetchResult(MOCK_JOB, true));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler("ai-search jobs cancel my-instance job-001");
+				expect(capturedBody).toEqual({ action: "cancel" });
+			});
+
+			it("should abort when not confirmed", async ({ expect }) => {
+				mockConfirm({
+					text: 'OK to cancel the indexing job "job-001" on AI Search instance "my-instance"?',
+					result: false,
+				});
+				const requests = mockCancelJob(MOCK_JOB);
+				await runWrangler("ai-search jobs cancel my-instance job-001");
+				expect(std.out).toContain("Cancellation aborted.");
+				expect(requests.count).toBe(0);
+			});
+
+			it("should cancel with --force flag", async ({ expect }) => {
+				const requests = mockCancelJob(MOCK_JOB);
+				await runWrangler("ai-search jobs cancel my-instance job-001 --force");
+				expect(requests.count).toBe(1);
+				expect(std.out).toContain(
+					'Successfully cancelled indexing job "job-001"'
+				);
+			});
+		});
+
+		describe("logs", () => {
+			it("should list job logs", async ({ expect }) => {
+				mockListJobLogs([MOCK_JOB_LOG]);
+				await runWrangler("ai-search jobs logs my-instance job-001");
+				expect(std.out).toContain("Indexing started");
+			});
+
+			it("should list job logs as JSON", async ({ expect }) => {
+				mockListJobLogs([MOCK_JOB_LOG]);
+				await runWrangler("ai-search jobs logs my-instance job-001 --json");
+				const parsed = JSON.parse(std.out);
+				expect(parsed).toEqual([MOCK_JOB_LOG]);
+			});
+
+			it("should warn when no logs exist", async ({ expect }) => {
+				mockListJobLogs([]);
+				await runWrangler("ai-search jobs logs my-instance job-001");
+				expect(std.warn).toContain(
+					'No log entries found for indexing job "job-001".'
+				);
+			});
+		});
+	});
 });
 
 // ── MSW Mock Handlers ─────────────────────────────────────────────────────────
@@ -2058,6 +2540,83 @@ function mockListNamespaces(namespaces: unknown[]) {
 						per_page: 20,
 						count: namespaces.length,
 						total_count: namespaces.length,
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockListJobs(jobs: unknown[]) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(jobs, true, [], [], {
+						page: 1,
+						per_page: 20,
+						count: jobs.length,
+						total_count: jobs.length,
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockCreateJob(job: unknown) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs",
+			() => {
+				return HttpResponse.json(createFetchResult(job, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGetJob(job: unknown) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId",
+			() => {
+				return HttpResponse.json(createFetchResult(job, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockCancelJob(job: unknown) {
+	const requests = { count: 0 };
+	msw.use(
+		http.patch(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId",
+			() => {
+				requests.count++;
+				return HttpResponse.json(createFetchResult(job, true));
+			},
+			{ once: true }
+		)
+	);
+	return requests;
+}
+
+function mockListJobLogs(logs: unknown[]) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/jobs/:jobId/logs",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(logs, true, [], [], {
+						page: 1,
+						per_page: 20,
+						count: logs.length,
+						total_count: logs.length,
 					})
 				);
 			},

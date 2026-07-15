@@ -1,11 +1,12 @@
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
+import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { WORKFLOW_NOT_FOUND_CODE } from "../../deploy/check-workflow-conflicts";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -46,8 +47,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -342,6 +346,61 @@ describe("deploy", () => {
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.out).toContain("workflow: my-workflow");
+		});
+
+		it("should explain that cron-triggered workflows require a paid plan", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						schedules: "0 * * * *",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			msw.use(
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+								message: "Cron-triggered workflows require a paid plan",
+							},
+						]),
+						{ status: 403 }
+					);
+				})
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Some triggers failed to deploy for test-name:
+				  - Workflow "my-workflow" has "schedules" configured, but scheduled Workflows require a paid Workers plan.]
+			`);
 		});
 
 		it("should deploy a workflow with schedules as an array of cron expressions", async ({
@@ -984,6 +1043,12 @@ describe("deploy", () => {
 				expect(std.warn).toContain(
 					'Deploying will reassign these workflows to "test-name".'
 				);
+				expect(std.warn).toContain(
+					"Workflow names must be unique per account."
+				);
+				expect(std.warn).toContain(
+					"If this reassignment is unintended, rename the workflow(s) in the Wrangler config."
+				);
 			});
 
 			it("should abort deploy when user declines the workflow conflict confirmation", async ({
@@ -1256,12 +1321,21 @@ describe("deploy", () => {
 
 				await runWrangler("deploy --strict");
 
-				expect(std.warn).toContain(
-					"already exist and belong to different workers"
-				);
-				expect(std.err).toContain(
-					"Aborting the deployment operation because of conflicts"
-				);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe following workflow(s) already exist and belong to different workers:[0m
+
+					    - "my-workflow" (currently belongs to "other-worker")
+
+					  Deploying will reassign these workflows to "test-name". Workflow names must be unique per account.
+					  If this reassignment is unintended, rename the workflow(s) in the Wrangler config.
+
+					"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the upload operation because of conflicts. To override and upload anyway, remove the \`--strict\` flag[0m
+
+					"
+				`);
 				expect(std.out).not.toContain("Uploaded");
 				expect(process.exitCode).not.toBe(0);
 			});

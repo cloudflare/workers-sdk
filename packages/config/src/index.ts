@@ -1,5 +1,16 @@
 export * from "./public";
 export {
+	BUILD_OUTPUT_ROOT,
+	BUILD_OUTPUT_VERSION,
+	cleanBuildOutputDir,
+	getWorkerAssetsDir,
+	getWorkerBundleDir,
+	getWorkerConfigPath,
+	getWorkersDir,
+	WORKER_CONFIG_FILENAME,
+	writeOutputWorkerConfig,
+} from "./build-output";
+export {
 	InputWorkerSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,

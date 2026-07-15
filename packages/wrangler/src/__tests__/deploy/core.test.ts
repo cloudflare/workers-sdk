@@ -2,10 +2,14 @@ import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import {
+	getInstalledPackageVersion,
+	runAutoConfig,
+} from "@cloudflare/autoconfig";
+import {
 	TEMPORARY_TERMS_NOTICE,
 	TEMPORARY_TERMS_PROMPT,
 } from "@cloudflare/workers-auth";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -15,12 +19,9 @@ import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { Static } from "../../autoconfig/frameworks/static";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
-import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
-import { writeAuthConfigFile } from "../../user";
+import { writeAuthCredentials } from "../../user";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -55,8 +56,8 @@ import {
 	mockPublishRoutesRequest,
 	mockServiceScriptData,
 } from "./helpers";
-import type { Framework } from "../../autoconfig/frameworks";
 import type { OutputEntry } from "../../output";
+import type { Framework } from "@cloudflare/autoconfig";
 
 vi.mock("command-exists");
 vi.mock("../../check/commands", async (importOriginal) => {
@@ -79,8 +80,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -595,7 +599,7 @@ describe("deploy", () => {
 			pages_build_output_dir: "public",
 			name: "test-name",
 		});
-		await expect(runWrangler("deploy")).rejects.toThrowError();
+		await expect(runWrangler("deploy")).rejects.toThrow();
 		expect(std.warn).toContain(
 			"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead."
 		);
@@ -610,10 +614,7 @@ describe("deploy", () => {
 		});
 
 		const getDetailsForAutoConfigSpy = vi
-			.spyOn(
-				await import("../../autoconfig/details"),
-				"getDetailsForAutoConfig"
-			)
+			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
@@ -653,10 +654,7 @@ describe("deploy", () => {
 		});
 
 		const getDetailsForAutoConfigSpy = vi
-			.spyOn(
-				await import("../../autoconfig/details"),
-				"getDetailsForAutoConfig"
-			)
+			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
@@ -689,7 +687,7 @@ describe("deploy", () => {
 		expect,
 	}) => {
 		const getDetailsForAutoConfigSpy = vi.spyOn(
-			await import("../../autoconfig/details"),
+			await import("@cloudflare/autoconfig"),
 			"getDetailsForAutoConfig"
 		);
 
@@ -792,7 +790,7 @@ describe("deploy", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -885,9 +883,7 @@ describe("deploy", () => {
 				})
 			);
 
-			await expect(
-				runWrangler("deploy index.js --temporary")
-			).rejects.toThrowError(
+			await expect(runWrangler("deploy index.js --temporary")).rejects.toThrow(
 				/You must accept Cloudflare's Terms of Service .* to use --temporary\./
 			);
 
@@ -927,7 +923,7 @@ describe("deploy", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -948,7 +944,7 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			writeAuthConfigFile({
+			writeAuthCredentials({
 				api_token: "some-api-token",
 			});
 
@@ -987,7 +983,7 @@ describe("deploy", () => {
 			expect,
 		}) => {
 			setIsTTY(false);
-			writeAuthConfigFile({ api_token: "cached-api-token" });
+			writeAuthCredentials({ api_token: "cached-api-token" });
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -1001,9 +997,7 @@ describe("deploy", () => {
 				})
 			);
 
-			await expect(
-				runWrangler("deploy index.js --temporary")
-			).rejects.toThrowError(
+			await expect(runWrangler("deploy index.js --temporary")).rejects.toThrow(
 				/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
 			);
 
@@ -1070,7 +1064,7 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				const globalTemporaryAccountPath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.toml"
 				);
 				const localTemporaryAccountPath = path.join(
@@ -1129,7 +1123,7 @@ describe("deploy", () => {
 				// expired — it would be refreshed on the next deploy — so
 				// `--temporary` must refuse rather than provision a throwaway
 				// account alongside it.
-				writeAuthConfigFile({
+				writeAuthCredentials({
 					oauth_token: "expired-token",
 					refresh_token: "expired-refresh-token",
 					expiration_time: new Date(Date.now() - 1000).toISOString(),
@@ -1147,7 +1141,7 @@ describe("deploy", () => {
 
 				await expect(
 					runWrangler("deploy index.js --temporary")
-				).rejects.toThrowError(
+				).rejects.toThrow(
 					/You're already authenticated with Cloudflare, so `--temporary` can't be used\./
 				);
 
@@ -1219,11 +1213,11 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				const stagingTemporaryAccountPath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.staging.toml"
 				);
 				const productionTemporaryAccountPath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.toml"
 				);
 
@@ -1338,7 +1332,7 @@ describe("deploy", () => {
 				// the optional-chaining fix this crashed with a TypeError when
 				// reading `.account.expiresAt`.
 				const cachePath = path.join(
-					getGlobalWranglerConfigPath(),
+					getGlobalConfigPath(),
 					"wrangler-temporary-account.toml"
 				);
 				fs.mkdirSync(path.dirname(cachePath), { recursive: true });
@@ -1540,7 +1534,7 @@ describe("deploy", () => {
 					])
 				);
 
-				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrow();
 
 				expect(std.err).toContain(
 					"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable"
@@ -1623,7 +1617,7 @@ describe("deploy", () => {
 				mockOAuthServerCallback();
 				msw.use(...getMswSuccessMembershipHandlers([]));
 
-				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrow();
 
 				expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to automatically retrieve account IDs for the logged in user.[0m
@@ -1654,7 +1648,7 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to upload a Worker that was last updated via the script API.[0m
 
 			  Edits that have been made via the script API will be overridden by your local code and config.
 
@@ -1727,7 +1721,6 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				env: "some-env",
-				useServiceEnvironments: false,
 			});
 
 			await runWrangler("deploy index.js --env some-env");
@@ -1753,11 +1746,9 @@ describe("deploy", () => {
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					useServiceEnvironments: false,
-				});
+				mockUploadWorkerRequest({});
 
-				await runWrangler("deploy index.js --legacy-env true");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -1781,10 +1772,9 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					env: "some-env",
-					useServiceEnvironments: false,
 				});
 
-				await runWrangler("deploy index.js --env some-env --legacy-env true");
+				await runWrangler("deploy index.js --env some-env");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -1808,10 +1798,9 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					env: "some-env",
-					useServiceEnvironments: false,
 				});
 
-				await runWrangler("deploy index.js --env some-env --legacy-env true");
+				await runWrangler("deploy index.js --env some-env");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -1847,9 +1836,8 @@ describe("deploy", () => {
 				writeWranglerConfig({ env: { "other-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
-				await expect(
-					runWrangler("deploy index.js --env some-env --legacy-env true")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`
+				await expect(runWrangler("deploy index.js --env some-env")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Processing wrangler.toml configuration:
 					  - No environment found in configuration with name "some-env".
 					    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
@@ -1870,80 +1858,8 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({
 					env: "some-env",
 					expectedScriptName: "voyager",
-					useServiceEnvironments: false,
 				});
-				await runWrangler(
-					"deploy index.js --name voyager --env some-env --legacy-env true"
-				);
-			});
-		});
-
-		describe("services", () => {
-			it("uses the script name when no environment is specified", async ({
-				expect,
-			}) => {
-				writeWranglerConfig();
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					useServiceEnvironments: true,
-				});
-
-				await runWrangler("deploy index.js --legacy-env false");
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
-			});
-
-			it("publishes as an environment when provided", async ({ expect }) => {
-				writeWranglerConfig({ env: { "some-env": {} } });
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					env: "some-env",
-					useServiceEnvironments: true,
-					useOldUploadApi: true,
-				});
-
-				await runWrangler("deploy index.js --env some-env --legacy-env false");
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (some-env) (TIMINGS)
-					Deployed test-name (some-env) triggers (TIMINGS)
-					  https://some-env.test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
+				await runWrangler("deploy index.js --name voyager --env some-env");
 			});
 		});
 	});
@@ -1998,11 +1914,11 @@ describe("deploy", () => {
 		const outputFile = "./output.json";
 
 		vi.spyOn(
-			await import("../../autoconfig/details"),
+			await import("@cloudflare/autoconfig"),
 			"getDetailsForAutoConfig"
 		).mockResolvedValueOnce({
 			configured: false,
-			framework: new Static({ id: "static", name: "Static" }),
+			framework: { id: "static", name: "Static" } as Framework,
 			workerName: "my-site",
 			projectPath: ".",
 			outputDir: "./public",

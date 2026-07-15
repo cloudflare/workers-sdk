@@ -65,6 +65,7 @@ describe("wrangler", () => {
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
+				  wrangler flagship               🚩 Manage Flagship apps and feature flags [open beta]
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
@@ -94,6 +95,7 @@ describe("wrangler", () => {
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
 				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
+				  wrangler turnstile              🛡️ Manage Turnstile widgets [alpha]
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]
@@ -102,6 +104,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -123,7 +126,7 @@ describe("wrangler", () => {
 
 	describe("--temporary", () => {
 		it("is rejected on commands that don't opt in", async ({ expect }) => {
-			await expect(runWrangler("whoami --temporary")).rejects.toThrowError(
+			await expect(runWrangler("whoami --temporary")).rejects.toThrow(
 				/Unknown argument: temporary/
 			);
 		});
@@ -164,6 +167,7 @@ describe("wrangler", () => {
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
+				  wrangler flagship               🚩 Manage Flagship apps and feature flags [open beta]
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
@@ -193,6 +197,7 @@ describe("wrangler", () => {
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
 				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
+				  wrangler turnstile              🛡️ Manage Turnstile widgets [alpha]
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]
@@ -201,6 +206,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -225,6 +231,141 @@ describe("wrangler", () => {
 			expect(std.out).toContain("wrangler");
 			expect(std.out).toContain("COMMANDS");
 			expect(std.out).toContain("ACCOUNT");
+		});
+	});
+
+	describe("command typo suggestions", () => {
+		it("should suggest 'whoami' when user types 'whoamio'", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("whoamio")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: whoamio]`
+			);
+
+			expect(std.err).toContain("Unknown argument: whoamio");
+			expect(std.info).toContain('Did you mean "wrangler whoami"?');
+		});
+
+		it("should suggest 'deploy' when user types 'delpoy'", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("delpoy")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: delpoy]`
+			);
+
+			expect(std.err).toContain("Unknown argument: delpoy");
+			expect(std.info).toContain('Did you mean "wrangler deploy"?');
+		});
+
+		it("should not suggest anything for a completely unrelated command", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("xyzzy")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: xyzzy]`
+			);
+
+			expect(std.err).toContain("Unknown argument: xyzzy");
+			expect(std.info).not.toContain("Did you mean");
+		});
+
+		it("should suggest a command even with --help flag", async ({ expect }) => {
+			await expect(
+				runWrangler("whoamio --help")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: whoamio]`
+			);
+
+			expect(std.err).toContain("Unknown argument: whoamio");
+			expect(std.info).toContain('Did you mean "wrangler whoami"?');
+
+			// The suggestion should appear exactly once (not duplicated between
+			// the --help path in index.ts and the error handler)
+			expect(std.info.match(/Did you mean/g)).toHaveLength(1);
+		});
+
+		it("should suggest a subcommand for 'kv namespase'", async ({ expect }) => {
+			await expect(runWrangler("kv namespase")).rejects.toThrow(
+				/Unknown argument/
+			);
+
+			expect(std.info).toContain('Did you mean "wrangler kv namespace"?');
+		});
+
+		it("should suggest a nested subcommand for 'kv namespace craete'", async ({
+			expect,
+		}) => {
+			await expect(runWrangler("kv namespace craete")).rejects.toThrow(
+				/Unknown argument/
+			);
+
+			expect(std.info).toContain(
+				'Did you mean "wrangler kv namespace create"?'
+			);
+		});
+
+		it("should preserve trailing args in suggestion for 'kv namespase create'", async ({
+			expect,
+		}) => {
+			await expect(runWrangler("kv namespase create")).rejects.toThrow(
+				/Unknown argument/
+			);
+
+			expect(std.info).toContain(
+				'Did you mean "wrangler kv namespace create"?'
+			);
+		});
+
+		it("should not suggest a subcommand for a completely unrelated subcommand", async ({
+			expect,
+		}) => {
+			await expect(runWrangler("kv xyzzy")).rejects.toThrow(/Unknown argument/);
+
+			expect(std.info).not.toContain("Did you mean");
+		});
+
+		it("should suggest 'whoami' when user types 'who-am-i'", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("who-am-i")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: who-am-i]`
+			);
+
+			expect(std.err).toContain("Unknown argument: who-am-i");
+			expect(std.info).toContain('Did you mean "wrangler whoami"?');
+		});
+
+		it("should suggest 'login' when user types 'log-in'", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("log-in")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: log-in]`
+			);
+
+			expect(std.err).toContain("Unknown argument: log-in");
+			expect(std.info).toContain('Did you mean "wrangler login"?');
+		});
+
+		it("should suggest 'logout' when user types 'log-out'", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("log-out")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: log-out]`
+			);
+
+			expect(std.err).toContain("Unknown argument: log-out");
+			expect(std.info).toContain('Did you mean "wrangler logout"?');
 		});
 	});
 
@@ -299,6 +440,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -326,6 +468,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -353,6 +496,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -379,6 +523,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});
@@ -405,6 +550,7 @@ describe("wrangler", () => {
 				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help            Show help  [boolean]
 				      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+				      --profile         Use a specific auth profile  [string]
 				  -v, --version         Show version number  [boolean]"
 			`);
 		});

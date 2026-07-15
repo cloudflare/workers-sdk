@@ -1,6 +1,6 @@
 import { Button, DropdownMenu } from "@cloudflare/kumo";
 import { CopyIcon, TableIcon, TextTIcon } from "@phosphor-icons/react";
-import { useCallback } from "react";
+import { useCallback, type JSX } from "react";
 import type { IStudioDriver } from "../../../types/studio";
 
 export interface TableTarget {

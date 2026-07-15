@@ -76,4 +76,5 @@ export type UserDeploymentConfiguration = {
 	checks?: Array<DeploymentCheckRequestBody>;
 	provisioner?: ProvisionerConfiguration;
 	observability?: Observability;
+	experimental_flags?: Array<string>;
 };

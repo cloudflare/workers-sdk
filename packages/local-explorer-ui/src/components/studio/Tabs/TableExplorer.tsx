@@ -8,7 +8,14 @@ import {
 	SpinnerIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+	type FocusEvent,
+	type JSX,
+} from "react";
 import {
 	buildStudioMutationPlans,
 	commitStudioTableChanges,
@@ -245,7 +252,7 @@ export function StudioTableExplorerTab({
 	);
 
 	const onOffsetBlur = useCallback(
-		(e: React.FocusEvent<HTMLInputElement>): void => {
+		(e: FocusEvent<HTMLInputElement>): void => {
 			const raw = e.currentTarget.value.trim();
 			const offsetValue = Number(raw);
 			const clampedOffset = Math.max(
@@ -271,7 +278,7 @@ export function StudioTableExplorerTab({
 	);
 
 	const onLimitBlur = useCallback(
-		(e: React.FocusEvent<HTMLInputElement>): void => {
+		(e: FocusEvent<HTMLInputElement>): void => {
 			const raw = e.currentTarget.value.trim();
 			const limitValue = Number(raw);
 			const clampedLimit = Math.max(

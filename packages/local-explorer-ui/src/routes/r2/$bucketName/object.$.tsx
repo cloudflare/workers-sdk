@@ -6,7 +6,7 @@ import {
 	notFound,
 	useNavigate,
 } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import { r2BucketDeleteObjects, r2BucketGetObject } from "../../../api";
 import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";

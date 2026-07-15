@@ -65,7 +65,7 @@ describe("loadConfig", () => {
 		expect(result.config).toEqual({ name: "my-worker" });
 	});
 
-	it("passes cf-worker specifiers through verbatim without resolving or executing them", async ({
+	it("anchors relative cf-worker specifiers to an absolute path without executing them", async ({
 		expect,
 	}) => {
 		await seed({
@@ -81,14 +81,41 @@ describe("loadConfig", () => {
 			configPath: "./cloudflare.config.ts",
 		});
 
+		// The relative specifier is anchored to the importing module and
+		// emitted as an absolute path, but the entrypoint is never loaded or
+		// executed.
 		expect(
 			(result.config as { entrypoint: { default: string } }).entrypoint
-		).toEqual({ default: "./src/index.ts" });
+		).toEqual({ default: path.resolve("src/index.ts") });
 		// The entrypoint is referenced for its specifier only; changes to
 		// its source must not trigger a config reload, so it is not tracked.
 		expect(result.dependencies).not.toContain(path.resolve("src/index.ts"));
 		// The config file itself is still tracked.
 		expect(result.dependencies).toContain(path.resolve("cloudflare.config.ts"));
+	});
+
+	it("anchors relative cf-worker specifiers to the importing module, not the top-level config", async ({
+		expect,
+	}) => {
+		await seed({
+			"nested/src/index.ts": `throw new Error("entrypoint must not be executed at config load time");`,
+			"nested/sub.config.ts": `
+				import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+				export default { name: "w", entrypoint };
+			`,
+			"cloudflare.config.ts": `export { default } from "./nested/sub.config.ts";`,
+		});
+
+		const result = runLoadConfigInSubprocess({
+			cwd: process.cwd(),
+			configPath: "./cloudflare.config.ts",
+		});
+
+		// `./src/index.ts` is written in `nested/sub.config.ts`, so it must
+		// resolve relative to that file — not the top-level config file.
+		expect(
+			(result.config as { entrypoint: { default: string } }).entrypoint
+		).toEqual({ default: path.resolve("nested/src/index.ts") });
 	});
 
 	it("passes bare and virtual cf-worker specifiers through verbatim", async ({
@@ -135,7 +162,7 @@ describe("loadConfig", () => {
 		});
 		const parsed = InputWorkerSchema.parse(result.config);
 
-		expect(parsed.entrypoint).toBe("./src/index.ts");
+		expect(parsed.entrypoint).toBe(path.resolve("src/index.ts"));
 	});
 
 	it("reloads the config when the file changes between calls in the same process", async ({

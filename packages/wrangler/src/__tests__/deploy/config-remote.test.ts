@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import {
 	normalizeString,
 	runInTempDir,
@@ -6,7 +7,6 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -59,7 +59,10 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -191,7 +194,7 @@ describe("deploy", () => {
 				   }
 
 
-				  Deploying the Worker will override the remote configuration with your local one.
+				  Uploading the Worker will override the remote configuration with your local one.
 
 				"
 			`);
@@ -290,7 +293,7 @@ describe("deploy", () => {
 				   }
 
 
-				  Deploying the Worker will override the remote configuration with your local one.
+				  Uploading the Worker will override the remote configuration with your local one.
 
 				"
 			`);
@@ -371,7 +374,7 @@ describe("deploy", () => {
 				   }
 
 
-				  Deploying the Worker will override the remote configuration with your local one.
+				  Uploading the Worker will override the remote configuration with your local one.
 
 				"
 			`);
@@ -451,13 +454,13 @@ describe("deploy", () => {
 					   }
 
 
-					  Deploying the Worker will override the remote configuration with your local one.
+					  Uploading the Worker will override the remote configuration with your local one.
 
 					"
 				`);
 
 				expect(std.err).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the upload operation because of conflicts. To override and upload anyway, remove the \`--strict\` flag[0m
 
 					"
 				`);
@@ -480,14 +483,14 @@ describe("deploy", () => {
 				await runWrangler("deploy ./index --strict");
 
 				expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to upload a Worker that was last updated via the script API.[0m
 
-				  Edits that have been made via the script API will be overridden by your local code and config.
+					  Edits that have been made via the script API will be overridden by your local code and config.
 
-				"
+					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the upload operation because of conflicts. To override and upload anyway, remove the \`--strict\` flag[0m
 
 					"
 				`);
@@ -702,7 +705,7 @@ describe("deploy", () => {
 			`);
 
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the upload operation because of conflicts. To override and upload anyway, remove the \`--strict\` flag[0m
 
 				"
 			`);

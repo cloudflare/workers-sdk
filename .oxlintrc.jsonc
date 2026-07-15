@@ -52,6 +52,7 @@
 		"workers-sdk/no-unsafe-command-execution": "error",
 		"workers-sdk/no-direct-recursive-rm": "error",
 		"workers-sdk/require-description-when-disabling": "error",
+		"@typescript-eslint/no-deprecated": "error",
 
 		"no-unused-vars": [
 			"error",
@@ -81,6 +82,10 @@
 						"name": "vitest",
 						"importNames": ["expect"],
 						"message": "Import 'expect' from the test context instead of 'vitest' for concurrency safety. Use: test('name', ({ expect }) => { ... })",
+					},
+					{
+						"name": "am-i-vibing",
+						"message": "Use `detectAgent()` from `src/utils/detect-agent` instead.",
 					},
 				],
 			},
@@ -199,6 +204,13 @@
 			"files": ["packages/vite-plugin-cloudflare/**"],
 			"rules": {
 				"workers-sdk/no-wrangler-named-imports": "error",
+			},
+		},
+		// TODO: Remove the following override.
+		{
+			"files": ["packages/vite-plugin-cloudflare/**"],
+			"rules": {
+				"@typescript-eslint/no-deprecated": "off",
 			},
 		},
 	],

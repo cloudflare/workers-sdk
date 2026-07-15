@@ -1,10 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { loadConfig, resolveWorkerDefinition } from "@cloudflare/config";
 import {
 	InputWorkerSchema,
 	convertToWranglerConfig,
-} from "@cloudflare/deploy-helpers";
+	loadConfig,
+	resolveWorkerDefinition,
+} from "@cloudflare/config";
 import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
 import { convertToolingConfig } from "./convert";
 import {
@@ -14,6 +15,7 @@ import {
 } from "./schema";
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
+import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export const CLOUDFLARE_CONFIG_FILENAME = "cloudflare.config.ts";
@@ -21,11 +23,14 @@ export const WRANGLER_CONFIG_FILENAME = "wrangler.config.ts";
 
 export interface NormalizedTypes {
 	generate: boolean;
+	includeRuntime: boolean;
 }
 
 export interface LoadNewConfigResult {
 	/** Merged result: `cloudflare.config.ts` runtime + `wrangler.config.ts` tooling. */
 	rawConfig: Omit<RawConfig, "env">;
+	/**  The validated `cloudflare.config.ts` shape. */
+	parsedWorkerConfig: ParsedInputWorkerConfig;
 	/** Resolved absolute path to `cloudflare.config.ts`. */
 	cloudflareConfigPath: string;
 	/** Resolved absolute path to `wrangler.config.ts`, if present. */
@@ -117,6 +122,8 @@ export async function loadNewConfig(options: {
 	// ── Normalised types ────────────────────────────────────────────────
 	const types: NormalizedTypes = {
 		generate: parsedWranglerConfig?.data.dev?.types?.generate ?? true,
+		includeRuntime:
+			parsedWranglerConfig?.data.dev?.types?.includeRuntime ?? true,
 	};
 
 	// ── Dependencies (union of both files) ──────────────────────────────
@@ -129,6 +136,7 @@ export async function loadNewConfig(options: {
 
 	return {
 		rawConfig,
+		parsedWorkerConfig: parsedWorkerConfig.data,
 		cloudflareConfigPath,
 		wranglerConfigPath,
 		dependencies,

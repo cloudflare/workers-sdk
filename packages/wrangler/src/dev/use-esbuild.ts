@@ -20,7 +20,7 @@ import type {
 	Config,
 	Entry,
 } from "@cloudflare/workers-utils";
-import type { Metafile } from "esbuild";
+import type { Metafile, Message } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
@@ -62,6 +62,7 @@ export function runBuild(
 		watch,
 		projectRoot,
 		onStart,
+		onRebuildError,
 		defineNavigatorUserAgent,
 		checkFetch,
 		pythonModulesExcludes,
@@ -91,6 +92,7 @@ export function runBuild(
 		watch: boolean;
 		projectRoot: string | undefined;
 		onStart: () => void;
+		onRebuildError?: (errors: Message[], warnings: Message[]) => void;
 		defineNavigatorUserAgent: boolean;
 		checkFetch: boolean;
 		pythonModulesExcludes?: string[];
@@ -118,12 +120,14 @@ export function runBuild(
 	async function getAdditionalModules() {
 		return noBundle
 			? dedupeModulesByName([
-					...((await doFindAdditionalModules(
-						entry,
-						rules,
-						false,
-						pythonModulesExcludes ?? []
-					)) ?? []),
+					...(findAdditionalModules !== false
+						? ((await doFindAdditionalModules(
+								entry,
+								rules,
+								false,
+								pythonModulesExcludes ?? []
+							)) ?? [])
+						: []),
 					...additionalModules,
 				])
 			: additionalModules;
@@ -187,7 +191,14 @@ export function runBuild(
 						define,
 						targetConsumer,
 						testScheduled,
-						plugins: [logBuildOutput(nodejsCompatMode, onStart, updateBundle)],
+						plugins: [
+							logBuildOutput(
+								nodejsCompatMode,
+								onStart,
+								updateBundle,
+								onRebuildError
+							),
+						],
 						local,
 						projectRoot,
 						defineNavigatorUserAgent,
