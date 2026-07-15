@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import events from "node:events";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -73,41 +75,61 @@ export async function startRemoteProxySession(
 	}
 	options?.logger?.log(chalk.dim("⎔ Establishing remote connection..."));
 	const rawBindings = toRawBindings(bindings);
-	const proxyServerWorkerWranglerConfig = fileURLToPath(
-		new URL("../templates/remoteBindings/wrangler.jsonc", import.meta.url)
-	);
 	const remoteBindingsWorkerPath = fileURLToPath(
 		new URL("./proxy-worker.js", import.meta.url)
 	);
-
-	const worker = await startWorker({
-		name: options?.workerName,
+	const moduleRoot = path.dirname(remoteBindingsWorkerPath);
+	const workerConfig = {
+		name: options?.workerName ?? randomUUID(),
 		entrypoint: remoteBindingsWorkerPath,
-		config: proxyServerWorkerWranglerConfig,
+		projectRoot: moduleRoot,
 		compatibilityDate: "2025-04-28",
-		dev: {
-			remote: "minimal",
-			auth: options?.auth,
-			server: { port: 0 },
-			inspector: false,
-			logLevel: getStartWorkerLogLevel(options?.logger?.loggerLevel ?? "error"),
-		},
+		compatibilityFlags: [],
+		complianceRegion: options?.complianceRegion,
 		bindings: rawBindings,
-	}).catch((startWorkerError: unknown) => {
-		if (startWorkerError instanceof UserError) {
-			throw startWorkerError;
+		triggers: [],
+		build: {
+			bundle: false,
+			additionalModules: [],
+			processEntrypoint: false,
+			findAdditionalModules: false,
+			moduleRoot,
+			moduleRules: [],
+			define: {},
+			format: "modules" as const,
+			nodejsCompatMode: null,
+			exports: [],
+		},
+		legacy: {},
+		dev: {
+			remote: "minimal" as const,
+			auth: options?.auth,
+			server: { port: 0, secure: false },
+			inspector: false as const,
+			logLevel: getStartWorkerLogLevel(options?.logger?.loggerLevel ?? "error"),
+			persist: false as const,
+			origin: {},
+			liveReload: false,
+		},
+	};
+
+	const worker = await startWorker(workerConfig).catch(
+		(startWorkerError: unknown) => {
+			if (startWorkerError instanceof UserError) {
+				throw startWorkerError;
+			}
+			let errorMessage = startWorkerError;
+			if (startWorkerError instanceof Error) {
+				errorMessage =
+					startWorkerError.cause instanceof Error
+						? startWorkerError.cause.message
+						: startWorkerError.message;
+			}
+			throw new Error(
+				`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
+			);
 		}
-		let errorMessage = startWorkerError;
-		if (startWorkerError instanceof Error) {
-			errorMessage =
-				startWorkerError.cause instanceof Error
-					? startWorkerError.cause.message
-					: startWorkerError.message;
-		}
-		throw new Error(
-			`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
-		);
-	});
+	);
 
 	const maybeErrorPromise = new DeferredPromise<{ error: unknown }>();
 	worker.raw.addListener("error", (error) => {
@@ -134,7 +156,10 @@ export async function startRemoteProxySession(
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
 		const reloadComplete = events.once(worker.raw, "reloadComplete");
-		await worker.patchConfig({ bindings: toRawBindings(newBindings) });
+		await worker.patchConfig({
+			...workerConfig,
+			bindings: toRawBindings(newBindings),
+		});
 		try {
 			await reloadComplete;
 		} catch (errorOrEvent) {
