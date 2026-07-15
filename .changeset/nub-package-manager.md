@@ -1,8 +1,8 @@
 ---
-"@cloudflare/workers-utils": patch
-"@cloudflare/autoconfig": patch
-"@cloudflare/cli-shared-helpers": patch
-"wrangler": patch
+"@cloudflare/workers-utils": minor
+"@cloudflare/autoconfig": minor
+"@cloudflare/cli-shared-helpers": minor
+"wrangler": minor
 ---
 
 Recognise nub as a package manager

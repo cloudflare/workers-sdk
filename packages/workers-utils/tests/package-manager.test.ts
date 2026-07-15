@@ -43,5 +43,19 @@ describe("package managers", () => {
 			await seed({ "nub.lock": "" });
 			expect(findByLockFile(process.cwd())).toBe(NubPackageManager);
 		});
+
+		it("does not detect nub when nub.lock is absent", async ({ expect }) => {
+			await seed({
+				"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+			});
+			expect(findByLockFile(process.cwd())).toBe(NpmPackageManager);
+		});
+
+		it("still detects nub from a malformed nub.lock", async ({ expect }) => {
+			// Detection is presence-based and never parses lock file contents, so a
+			// corrupt or truncated nub.lock resolves to nub just like a valid one.
+			await seed({ "nub.lock": "\0not-a-valid-lockfile\0" });
+			expect(findByLockFile(process.cwd())).toBe(NubPackageManager);
+		});
 	});
 });

@@ -141,7 +141,6 @@ function getWorkspaceInstallRootFlag(
 	}
 
 	switch (packageManager) {
-		case "nub":
 		case "pnpm":
 		case "nub":
 			return ["--workspace-root"];

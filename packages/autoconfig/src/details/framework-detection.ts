@@ -83,10 +83,10 @@ export async function detectFramework(
 
 	// Convert the package manager detected by @netlify/build-info to our PackageManager type.
 	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
-	// @netlify/build-info doesn't recognise nub, so prefer its nub.lock when present.
-	const packageManager = existsSync(join(projectPath, "nub.lock"))
-		? NubPackageManager
-		: convertDetectedPackageManager(project.packageManager);
+	const packageManager = convertDetectedPackageManager(
+		project.packageManager,
+		projectPath
+	);
 
 	const lockFileExists = packageManager.lockFiles.some((lockFile) =>
 		existsSync(join(projectPath, lockFile))
@@ -149,11 +149,20 @@ export async function detectFramework(
  * Falls back to npm if no package manager was detected.
  *
  * @param pkgManager The package manager detected by @netlify/build-info (from project.packageManager)
+ * @param projectPath Path to the project root, used to detect nub via its lock file
  * @returns A PackageManager object compatible with wrangler's package manager utilities
  */
 function convertDetectedPackageManager(
-	pkgManager: { name: string } | null
+	pkgManager: { name: string } | null,
+	projectPath: string
 ): PackageManager {
+	// TODO: Remove this nub.lock check once netlify/build#7124 is merged and
+	// released, after which @netlify/build-info recognises nub directly.
+	// https://github.com/netlify/build/pull/7124
+	if (existsSync(join(projectPath, "nub.lock"))) {
+		return NubPackageManager;
+	}
+
 	if (!pkgManager) {
 		return NpmPackageManager;
 	}
