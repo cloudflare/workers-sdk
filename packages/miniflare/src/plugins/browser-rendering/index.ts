@@ -331,7 +331,11 @@ async function waitForBrowserReady(
 	wsEndpoint: string,
 	log: Log
 ): Promise<void> {
-	const timeoutMs = 5000;
+	// Windows CI runners are significantly slower to make Chrome's listening
+	// socket accept connections after the DevTools URL is printed. Use a
+	// larger timeout there to avoid spurious "Chrome readiness probe timed
+	// out" failures that would otherwise force a full test-level retry.
+	const timeoutMs = process.platform === "win32" ? 15_000 : 5_000;
 	const initialDelayMs = 25;
 	const maxDelayMs = 250;
 	const perRequestTimeoutMs = 500;
