@@ -29,10 +29,8 @@ import { MiniflareCoreError, type Log } from "../../shared";
 import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { getCacheServiceName } from "../cache";
-import {
-	DURABLE_OBJECTS_STORAGE_SERVICE_NAME,
-	getDurableObjectUniqueKey,
-} from "../do";
+import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
+import { getDurableObjectNamespaces } from "../do/namespaces";
 import { IMAGES_PLUGIN_NAME } from "../images";
 import {
 	getR2PublicService,
@@ -86,7 +84,6 @@ import type {
 	ServiceDesignator,
 	Worker_Binding,
 	Worker_ContainerEngine,
-	Worker_DurableObjectNamespace,
 	Worker_Module,
 } from "../../runtime";
 import type { Awaitable } from "../../workers";
@@ -483,6 +480,7 @@ export const CORE_PLUGIN: Plugin = {
 		workerBindings,
 		workerIndex,
 		durableObjectClassNames,
+		containerPrivilegesCache,
 		additionalModules,
 		loopbackHost,
 		loopbackPort,
@@ -523,6 +521,14 @@ export const CORE_PLUGIN: Plugin = {
 		const serviceName = getUserServiceName(config.name);
 		const classNames = durableObjectClassNames.get(serviceName);
 		const classNamesEntries = Array.from(classNames ?? []);
+		const containerEngine = getContainerEngine(sharedOptions.containerEngine);
+		containerPrivilegesCache.setEngine(containerEngine);
+		const hasContainers = classNamesEntries.some(
+			([, { container }]) => container !== undefined
+		);
+		const containerPrivileges = hasContainers
+			? await containerPrivilegesCache.get(containerEngine)
+			: undefined;
 
 		// Wrap Durable Object classes for the local explorer
 		// This injects a method onto user defined DO classes to allow
@@ -604,40 +610,11 @@ export const CORE_PLUGIN: Plugin = {
 				compatibilityDate,
 				compatibilityFlags,
 				bindings: workerBindings,
-				durableObjectNamespaces:
-					classNamesEntries.map<Worker_DurableObjectNamespace>(
-						([
-							className,
-							{
-								enableSql,
-								unsafeUniqueKey,
-								unsafePreventEviction: preventEviction,
-								container,
-							},
-						]) => {
-							const uniqueKey = getDurableObjectUniqueKey(
-								className,
-								config.name,
-								unsafeUniqueKey
-							);
-
-							return uniqueKey === undefined
-								? {
-										className,
-										enableSql,
-										ephemeralLocal: kVoid,
-										preventEviction,
-										container,
-									}
-								: {
-										className,
-										enableSql,
-										uniqueKey,
-										preventEviction,
-										container,
-									};
-						}
-					),
+				durableObjectNamespaces: getDurableObjectNamespaces(
+					classNames,
+					config.name,
+					containerPrivileges
+				),
 				durableObjectStorage:
 					classNamesEntries.length === 0
 						? undefined
@@ -657,7 +634,7 @@ export const CORE_PLUGIN: Plugin = {
 				streamingTails: tailConsumers
 					.filter((consumer) => consumer.streaming)
 					.map<ServiceDesignator>(getTailServiceDesignator),
-				containerEngine: getContainerEngine(sharedOptions.containerEngine),
+				containerEngine,
 				...(dev?.access
 					? {
 							accessBlobHeader: CoreHeaders.ACCESS_BLOB,
