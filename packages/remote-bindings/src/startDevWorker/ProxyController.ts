@@ -4,17 +4,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertNever } from "@cloudflare/workers-utils";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
+import { logger } from "../logger";
 import {
 	castLogLevel,
 	handleStructuredLogs,
 	WranglerLog,
-} from "../../dev/miniflare";
-import { validateHttpsOptions } from "../../https-options";
-import { logger } from "../logger";
+} from "../utils/miniflare";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
-import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { EsbuildBundle } from "../utils/use-esbuild";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
@@ -53,19 +52,10 @@ export class ProxyController extends Controller {
 		}
 		assert(this.latestConfig !== undefined);
 
-		const cert = this.latestConfig.dev?.server?.secure
-			? validateHttpsOptions(
-					this.latestConfig.dev.server.httpsKeyPath,
-					this.latestConfig.dev.server.httpsCertPath
-				)
-			: undefined;
-
 		const proxyWorkerOptions: MiniflareOptions = {
 			host: this.latestConfig.dev?.server?.hostname,
 			port: this.latestConfig.dev?.server?.port,
 			https: this.latestConfig.dev?.server?.secure,
-			httpsCert: cert?.cert,
-			httpsKey: cert?.key,
 			stripDisablePrettyError: false,
 			unsafeLocalExplorer: false,
 			workers: [
