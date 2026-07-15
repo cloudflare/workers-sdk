@@ -83,7 +83,7 @@ export default {
 
 // We need to run browser rendering tests in a serial manner to avoid a race condition installing the browser.
 // We set the timeout quite high here as one of these tests will need to download the Chrome headless browser.
-describe.sequential("browser rendering", { timeout: 20_000 }, () => {
+describe.sequential("browser rendering", { timeout: 120_000 }, () => {
 	// The CLI spinner outputs to stdout, so we mute it during tests
 	beforeEach(() => {
 		vi.spyOn(process.stdout, "write").mockImplementation(() => true);
