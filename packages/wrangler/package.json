@@ -182,7 +182,7 @@
 		"xxhash-wasm": "^1.0.1",
 		"yaml": "^2.8.1",
 		"yargs": "^17.7.2",
-		"zod": "^4.4.3"
+		"zod": "catalog:default"
 	},
 	"peerDependencies": {
 		"@cloudflare/workers-types": "catalog:default"

@@ -35,7 +35,7 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"zod": "4.4.3"
+		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
