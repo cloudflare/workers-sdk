@@ -71,19 +71,8 @@ export function constructRedirects({
 	);
 
 	if (num_invalid > 0) {
-		let invalidRedirectRulesList = ``;
-
-		for (const { line, lineNumber, message } of redirects.invalid) {
-			invalidRedirectRulesList += `▶︎ ${message}\n`;
-
-			if (line) {
-				invalidRedirectRulesList += `    at ${redirectsRelativePath}${lineNumber ? `:${lineNumber}` : ""} | ${line}\n\n`;
-			}
-		}
-
 		logger.warn(
-			`Found ${num_invalid} invalid redirect rule${num_invalid === 1 ? "" : "s"}:\n` +
-				`${invalidRedirectRulesList}`
+			formatInvalidRedirectsWarning(redirects.invalid, redirectsRelativePath)
 		);
 	}
 
