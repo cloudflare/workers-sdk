@@ -7,6 +7,12 @@ export type {
 	ConfigBindingOptions,
 } from "./config";
 export * from "./config/environment";
+export { partitionExports } from "./config/exports";
+export type { ExportType, PartitionedExports } from "./config/exports";
+export {
+	getDurableObjectExports,
+	hasDurableObjectExports,
+} from "./config/durable-object-exports";
 export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,
@@ -83,6 +89,12 @@ export type { ResolveConfigPathOptions } from "./config/config-helpers";
 export * from "./errors";
 export { assertNever } from "./assert-never";
 
+export {
+	getPackagePath,
+	isPackageInstalled,
+	getInstalledPackageVersion,
+} from "./package-resolution";
+
 export * from "./constants";
 
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
@@ -95,9 +107,10 @@ export {
 
 export * from "./environment-variables/misc-variables";
 
-export { getGlobalConfigPath } from "./global-wrangler-config-path";
-// eslint-disable-next-line @typescript-eslint/no-deprecated -- re-exporting deprecated symbol for backward compatibility
-export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+export {
+	getGlobalConfigPath,
+	getGlobalWranglerCachePath,
+} from "./global-wrangler-config-path";
 export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";
 
 export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
@@ -106,6 +119,9 @@ export type { CompatDate } from "./compatibility-date";
 export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
+
+export { createConfigCache } from "./config-cache";
+export type { ConfigCache, ConfigCacheOptions } from "./config-cache";
 
 export {
 	type EphemeralDirectory,
@@ -128,6 +144,9 @@ export type { NpmVersionCheckResult } from "./update-check";
 
 export { LOGGER_LEVELS } from "./logger";
 export type { Logger, LoggerLevel } from "./logger";
+
+export { isCI, isInteractive, isNonInteractiveOrCI } from "./is-interactive";
+export { openInBrowser } from "./open-in-browser";
 
 export { retryOnAPIFailure } from "./retry";
 export { formatTime } from "./format-time";

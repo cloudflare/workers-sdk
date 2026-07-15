@@ -8,6 +8,7 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getWranglerHiddenDirPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
@@ -68,6 +69,7 @@ type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
 export interface ConfigBundle {
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
+	projectRoot: string;
 	bundle: EsbuildBundle;
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string | undefined;
@@ -75,6 +77,7 @@ export interface ConfigBundle {
 	complianceRegion: Config["compliance_region"] | undefined;
 	bindings: StartDevWorkerInput["bindings"];
 	migrations: Config["migrations"] | undefined;
+	exports: Config["exports"] | undefined;
 	devRegistry: string | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	assets: AssetsOptions | undefined;
@@ -406,8 +409,16 @@ function dispatchNamespaceEntry(
 	}
 	return [binding, { namespace, remoteProxyConnectionString }];
 }
-function ratelimitEntry<T extends { name: string }>(ratelimit: T): [string, T] {
-	return [ratelimit.name, ratelimit];
+function ratelimitEntry<T extends { name: string; namespace_id?: string }>(
+	ratelimit: T
+): [string, T & { namespace_id: string }] {
+	// Miniflare keys rate-limit counters by namespace_id. Regular `ratelimit`
+	// bindings always carry one; freeform `unsafe_ratelimit` bindings may not,
+	// so fall back to the binding name to preserve per-binding isolation.
+	return [
+		ratelimit.name,
+		{ ...ratelimit, namespace_id: ratelimit.namespace_id ?? ratelimit.name },
+	];
 }
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 function queueConsumerEntry(consumer: QueueConsumer) {
@@ -471,6 +482,7 @@ type MiniflareBindingsConfig = Pick<
 	ConfigBundle,
 	| "bindings"
 	| "migrations"
+	| "exports"
 	| "queueConsumers"
 	| "name"
 	| "tails"
@@ -666,7 +678,8 @@ export function buildMiniflareBindingOptions(
 	}
 
 	const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
-		config.migrations
+		config.migrations,
+		config.exports
 	);
 
 	const externalWorkers: WorkerOptions[] = [];
@@ -1071,6 +1084,10 @@ export function buildMiniflareBindingOptions(
 	};
 }
 
+export function getDefaultProjectTmpPath(projectRoot: string): string {
+	return path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
+}
+
 export function getDefaultPersistRoot(
 	localPersistencePath: ConfigBundle["localPersistencePath"]
 ): string | undefined {
@@ -1131,6 +1148,7 @@ export async function buildMiniflareOptions(
 	}
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
+	const defaultProjectTmpPath = getDefaultProjectTmpPath(config.projectRoot);
 	const assetOptions = buildAssetOptions(config);
 
 	const options: MiniflareOptions = {
@@ -1158,6 +1176,7 @@ export async function buildMiniflareOptions(
 		verbose: logger.loggerLevel === "debug",
 		handleStructuredLogs: config.structuredLogsHandler ?? handleStructuredLogs,
 		defaultPersistRoot,
+		defaultProjectTmpPath,
 		workers: [
 			{
 				name: getName(config),

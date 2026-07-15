@@ -1,5 +1,6 @@
 import path from "node:path";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
+import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import {
 	defaultWranglerConfig,
 	FatalError,
@@ -8,6 +9,7 @@ import {
 	experimental_readRawConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	runSkillsInstallFlow,
@@ -23,7 +25,6 @@ import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig, readNewConfig } from "../config";
 import { confirm, prompt, select } from "../dialogs";
 import { run } from "../experimental-flags";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
 import {
@@ -35,7 +36,6 @@ import {
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
 import { setProfile, setTemporaryAllowed } from "../user";
-import { createWranglerProfileStore } from "../user/profile-store";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
@@ -154,7 +154,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 			const cwd = firstConfigPath
 				? path.dirname(path.resolve(firstConfigPath))
 				: process.cwd();
-			const profile = createWranglerProfileStore().resolve({
+			const profile = createWranglerProfileStore({ logger }).resolve({
 				profile: args.profile,
 				cwd,
 			});
@@ -322,7 +322,6 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						confirm,
 						prompt,
 						select,
-						isNonInteractiveOrCI,
 					});
 
 					const result = await def.handler(args, {

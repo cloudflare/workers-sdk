@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
@@ -24,7 +25,7 @@ type InstallConfig = {
  * @param config.force - Whether to install with `--force` or not
  */
 export const installPackages = async (
-	packageManager: "npm" | "pnpm" | "yarn" | "bun",
+	packageManager: "npm" | "pnpm" | "yarn" | "bun" | "nub",
 	packages: string[],
 	config: InstallConfig = {}
 ) => {
@@ -38,6 +39,7 @@ export const installPackages = async (
 				break;
 			case "npm":
 			case "pnpm":
+			case "nub":
 			default:
 				cmd = "install";
 				break;
@@ -48,7 +50,9 @@ export const installPackages = async (
 				packageManager,
 				...(cmd ? [cmd] : []),
 				...packages,
-				...(packageManager === "pnpm" ? ["--no-frozen-lockfile"] : []),
+				...(packageManager === "pnpm" || packageManager === "nub"
+					? ["--no-frozen-lockfile"]
+					: []),
 				...(force === true ? ["--force"] : []),
 				...getWorkspaceInstallRootFlag(packageManager, isWorkspaceRoot),
 			],
@@ -75,6 +79,7 @@ export const installPackages = async (
 			break;
 		case "npm":
 		case "pnpm":
+		case "nub":
 		default:
 			cmd = "install";
 			saveFlag = dev ? "--save-dev" : "";
@@ -128,7 +133,7 @@ export const installPackages = async (
  * @returns an array containing the flag(/s) to use, or an empty array if not supported or not running in the workspace root.
  */
 function getWorkspaceInstallRootFlag(
-	packageManager: "npm" | "pnpm" | "yarn" | "bun",
+	packageManager: "npm" | "pnpm" | "yarn" | "bun" | "nub",
 	isWorkspaceRoot: boolean
 ): string[] {
 	if (!isWorkspaceRoot) {
@@ -137,6 +142,7 @@ function getWorkspaceInstallRootFlag(
 
 	switch (packageManager) {
 		case "pnpm":
+		case "nub":
 			return ["--workspace-root"];
 		case "yarn":
 			return ["-W"];
@@ -151,11 +157,16 @@ function getWorkspaceInstallRootFlag(
  *  Installs the latest version of wrangler in the project directory if it isn't already.
  */
 export async function installWrangler(
-	packageManager: "npm" | "pnpm" | "yarn" | "bun",
+	packageManager: "npm" | "pnpm" | "yarn" | "bun" | "nub",
 	isWorkspaceRoot: boolean
 ) {
+	const packages = [`wrangler@latest`] satisfies string[];
+	if (hasDependency("@cloudflare/workers-types")) {
+		packages.push("@cloudflare/workers-types@latest");
+	}
+
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
-	await installPackages(packageManager, [`wrangler@latest`], {
+	await installPackages(packageManager, packages, {
 		dev: true,
 		isWorkspaceRoot,
 		startText: `Installing wrangler ${dim(
@@ -165,4 +176,17 @@ export async function installWrangler(
 			`via \`${packageManager} install wrangler --save-dev\``
 		)}`,
 	});
+}
+
+function hasDependency(packageName: string): boolean {
+	const pkgJsonPath = path.join(process.cwd(), "package.json");
+	if (!existsSync(pkgJsonPath)) {
+		return false;
+	}
+
+	const pkgJson = parsePackageJSON(readFileSync(pkgJsonPath), pkgJsonPath);
+	return Boolean(
+		pkgJson.dependencies?.[packageName] ||
+		pkgJson.devDependencies?.[packageName]
+	);
 }

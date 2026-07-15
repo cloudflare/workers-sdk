@@ -11,7 +11,7 @@ import { produce } from "immer";
 import { useCallback } from "react";
 import type { StudioTableSchemaChange } from "../../../../types/studio";
 import type { DragEndEvent } from "@dnd-kit/core";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, JSX, SetStateAction } from "react";
 
 interface StudioConstraintListEditorProps {
 	onChange: Dispatch<SetStateAction<StudioTableSchemaChange>>;
@@ -22,7 +22,9 @@ export function StudioConstraintListEditor({
 	onChange,
 	value,
 }: StudioConstraintListEditorProps): JSX.Element | null {
-	if (value.constraints.length === 0) {
+	const visibleConstraints = value.constraints.filter((c) => c.new !== null);
+
+	if (visibleConstraints.length === 0) {
 		return null;
 	}
 
@@ -41,9 +43,9 @@ export function StudioConstraintListEditor({
 				</thead>
 
 				<tbody>
-					{(value.constraints ?? []).map(
+					{visibleConstraints.map(
 						(constraintChange, constriantIndex): JSX.Element | null => {
-							const constraint = constraintChange.new || constraintChange.old;
+							const constraint = constraintChange.new;
 							if (!constraint) {
 								return null;
 							}

@@ -78,7 +78,7 @@ describe("loadNewConfig", () => {
 				path.resolve("cloudflare.config.ts")
 			);
 			expect(result.wranglerConfigPath).toBeUndefined();
-			expect(result.types).toEqual({ generate: true });
+			expect(result.types).toEqual({ generate: true, includeRuntime: true });
 			expect(
 				result.dependencies.has(path.resolve("cloudflare.config.ts"))
 			).toBe(true);
@@ -317,6 +317,35 @@ describe("loadNewConfig", () => {
 		});
 	});
 
+	describe("Email Routing", () => {
+		it("loads email triggers as Wrangler addresses", async ({ expect }) => {
+			await seed({
+				"cloudflare.config.ts": `
+					export default {
+						name: "email-worker",
+						compatibilityDate: "2026-05-18",
+						triggers: [
+							{
+								type: "email",
+								addresses: ["support@example.com", "*@example.com"],
+							},
+						],
+					};
+				`,
+			});
+
+			const result = await loadNewConfig({
+				cwd: process.cwd(),
+				args: {},
+			});
+
+			expect(result.rawConfig.addresses).toEqual([
+				"support@example.com",
+				"*@example.com",
+			]);
+		});
+	});
+
 	describe("types.generate", () => {
 		it("defaults to true when wrangler.config.ts is absent", async ({
 			expect,
@@ -331,7 +360,7 @@ describe("loadNewConfig", () => {
 				args: {},
 			});
 
-			expect(result.types).toEqual({ generate: true });
+			expect(result.types).toEqual({ generate: true, includeRuntime: true });
 		});
 
 		it("defaults to true when wrangler.config.ts is present but does not set it", async ({
@@ -348,7 +377,7 @@ describe("loadNewConfig", () => {
 				args: {},
 			});
 
-			expect(result.types).toEqual({ generate: true });
+			expect(result.types).toEqual({ generate: true, includeRuntime: true });
 		});
 
 		it("honors `dev.types.generate: false`", async ({ expect }) => {
@@ -364,7 +393,23 @@ describe("loadNewConfig", () => {
 				args: {},
 			});
 
-			expect(result.types).toEqual({ generate: false });
+			expect(result.types).toEqual({ generate: false, includeRuntime: true });
+		});
+
+		it("honors `dev.types.includeRuntime: false`", async ({ expect }) => {
+			await seed({
+				"cloudflare.config.ts":
+					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+				"wrangler.config.ts":
+					"export default { dev: { types: { includeRuntime: false } } };",
+			});
+
+			const result = await loadNewConfig({
+				cwd: process.cwd(),
+				args: {},
+			});
+
+			expect(result.types).toEqual({ generate: true, includeRuntime: false });
 		});
 
 		it("is not threaded into the merged rawConfig.dev", async ({ expect }) => {

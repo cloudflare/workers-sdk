@@ -108,3 +108,53 @@ test("console.logs() inside `export default`ed handlers with SELF", async ({
 		"stdout | index.test.ts > sends request\none\ntwo"
 	);
 });
+
+test("does not hang after logging from a rejected Durable Object input gate", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			main: "./index.ts",
+			miniflare: {
+				compatibilityDate: "2025-12-02",
+				compatibilityFlags: ["nodejs_compat"],
+				durableObjects: { BROKEN: "BrokenDurableObject" },
+			},
+		}),
+		"index.ts": dedent`
+			import { DurableObject } from "cloudflare:workers";
+
+			export class BrokenDurableObject extends DurableObject {
+				constructor(ctx, env) {
+					super(ctx, env);
+					ctx.blockConcurrencyWhile(async () => {
+						console.log("before rejection 1");
+						console.log("before rejection 2");
+						throw new Error("intentional rejection");
+					});
+				}
+
+				fetch() {
+					return new Response("unreachable");
+				}
+			}
+		`,
+		"index.test.ts": dedent`
+			import { env } from "cloudflare:test";
+			import { expect, it } from "vitest";
+
+			it("rejects the request", async () => {
+				const stub = env.BROKEN.getByName("broken");
+				await expect(stub.fetch("https://example.com")).rejects.toThrow(
+					"intentional rejection"
+				);
+			});
+		`,
+	});
+	const result = await vitestRun();
+	expect(await result.exitCode).toBe(0);
+	expect(result.stdout).toMatch(/before rejection 1[\s\S]*before rejection 2/);
+	expect(result.stdout.match(/before rejection/g)).toHaveLength(2);
+});

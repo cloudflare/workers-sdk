@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
+import { syncAssets } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { syncAssets } from "../assets";
 import { isAuthenticationError } from "../core/handle-errors";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
@@ -147,7 +147,6 @@ export async function createRemoteWorkerInit(props: {
 	complianceConfig: ComplianceConfig;
 	accountId: string;
 	name: string;
-	useServiceEnvironments: boolean | undefined;
 	env: string | undefined;
 	isWorkersSite: boolean;
 	assets: AssetsOptions | undefined;
@@ -176,12 +175,7 @@ export async function createRemoteWorkerInit(props: {
 	const workersSitesAssets = await syncWorkersSite(
 		props.complianceConfig,
 		props.accountId,
-		// When we're using the newer service environments, we wouldn't
-		// have added the env name on to the script name. However, we must
-		// include it in the kv namespace name regardless (since there's no
-		// concept of service environments for kv namespaces yet).
-		props.name +
-			(props.useServiceEnvironments && props.env ? `-${props.env}` : ""),
+		props.name,
 		props.isWorkersSite ? props.legacyAssetPaths : undefined,
 		true,
 		false,
@@ -197,7 +191,7 @@ export async function createRemoteWorkerInit(props: {
 		});
 	}
 
-	const assetsJwt = props.assets
+	const assetsUploadResult = props.assets
 		? await syncAssets(
 				props.complianceConfig,
 				props.accountId,
@@ -205,6 +199,7 @@ export async function createRemoteWorkerInit(props: {
 				props.name
 			)
 		: undefined;
+	const assetsJwt = assetsUploadResult?.jwt;
 
 	const bindings = { ...props.bindings };
 
@@ -233,6 +228,7 @@ export async function createRemoteWorkerInit(props: {
 		modules,
 		bindings,
 		migrations: undefined, // no migrations in dev
+		exports: undefined,
 		compatibility_date: props.compatibilityDate,
 		compatibility_flags: props.compatibilityFlags,
 		keepVars: true,
@@ -267,7 +263,6 @@ export async function getWorkerAccountAndContext(props: {
 	accountId: string;
 	apiToken?: ApiCredentials | undefined;
 	env: string | undefined;
-	useServiceEnvironments: boolean | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	sendMetrics: boolean | undefined;
@@ -287,7 +282,6 @@ export async function getWorkerAccountAndContext(props: {
 
 	const workerContext: CfWorkerContext = {
 		env: props.env,
-		useServiceEnvironments: props.useServiceEnvironments,
 		zone: zoneId,
 		host: props.host ?? getInferredHost(props.routes, props.configPath),
 		routes: props.routes,

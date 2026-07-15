@@ -1,4 +1,5 @@
 import {
+	getBooleanEnvironmentVariableFactory,
 	getCloudflareApiEnvironmentFromEnv,
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
@@ -59,6 +60,18 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
+ * `CLOUDFLARE_ACCOUNT_ID` overrides the account inferred from the current user.
+ *
+ * This is a Cloudflare-wide variable (not wrangler-specific), so it lives in the
+ * shared core rather than a consumer layer. `CF_ACCOUNT_ID` is the deprecated
+ * spelling.
+ */
+export const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ACCOUNT_ID",
+	deprecatedName: "CF_ACCOUNT_ID",
+});
+
+/**
  * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID of a Cloudflare Access Service Token.
  * Used together with `CLOUDFLARE_ACCESS_CLIENT_SECRET` to authenticate with
  * Access-protected domains in non-interactive environments (e.g. CI).
@@ -89,3 +102,21 @@ export const getAccessClientSecretFromEnv = getEnvironmentVariableFactory({
 export const getCfAuthorizationTokenFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CF_AUTHORIZATION_TOKEN",
 });
+
+/**
+ * `CLOUDFLARE_AUTH_USE_KEYRING` overrides where OAuth credentials are stored.
+ *
+ * - `true`  — force-store credentials in the OS keychain. If the keychain
+ *             cannot be reached, the resolver throws rather than silently
+ *             falling back, so security-sensitive callers know their
+ *             explicit opt-in did not take effect.
+ * - `false` — force-store credentials in the plaintext TOML file,
+ *             even if the consumer's persistent `keyring_enabled` preference
+ *             is set.
+ * - unset   — fall back to the consumer's persistent preference (e.g. the
+ *             one written by `wrangler login --use-keyring`).
+ */
+export const getCloudflareAuthUseKeyringFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "CLOUDFLARE_AUTH_USE_KEYRING",
+	});

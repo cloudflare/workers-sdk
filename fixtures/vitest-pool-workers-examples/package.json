@@ -13,6 +13,7 @@
 		"typegen:container-app": "wrangler types ./container-app/src/env.d.ts -c ./container-app/wrangler.jsonc --no-include-runtime",
 		"typegen:d1": "wrangler types ./d1/src/env.d.ts -c ./d1/wrangler.jsonc --no-include-runtime",
 		"typegen:durable-objects": "wrangler types ./durable-objects/src/env.d.ts -c ./durable-objects/wrangler.jsonc --no-include-runtime",
+		"typegen:durable-objects-exports": "wrangler types ./durable-objects-exports/src/env.d.ts -c ./durable-objects-exports/wrangler.jsonc --no-include-runtime",
 		"typegen:dynamic-import": "wrangler types ./dynamic-import/src/worker-configuration.d.ts -c ./dynamic-import/wrangler.jsonc --no-include-runtime",
 		"typegen:hyperdrive": "wrangler types ./hyperdrive/src/env.d.ts -c ./hyperdrive/wrangler.jsonc --no-include-runtime",
 		"typegen:images": "wrangler types ./images/src/env.d.ts -c ./images/wrangler.jsonc --no-include-runtime",

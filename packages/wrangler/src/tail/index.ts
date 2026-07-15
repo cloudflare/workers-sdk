@@ -8,7 +8,6 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
-import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { printWranglerBanner } from "../wrangler-banner";
 import { getWorkerForZone } from "../zones";
 import {
@@ -107,11 +106,6 @@ export const tailCommand = createCommand({
 			describe:
 				"If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	behaviour: {
 		supportTemporary: true,
@@ -176,9 +170,7 @@ export const tailCommand = createCommand({
 
 		const filters = translateCLICommandToFilterMessage(cliFilters);
 
-		const scriptDisplayName = `${scriptName}${
-			useServiceEnvironments(config) && args.env ? ` (${args.env})` : ""
-		}`;
+		const scriptDisplayName = scriptName;
 
 		const printLog: (data: WebSocket.RawData) => void =
 			args.format === "pretty" ? prettyPrintLogs : jsonPrintLogs;
@@ -227,8 +219,7 @@ export const tailCommand = createCommand({
 				accountId,
 				workerName,
 				filters,
-				args.debug,
-				useServiceEnvironments(config) ? args.env : undefined
+				args.debug
 			);
 
 			// We may have started shutting down (Ctrl-C / SIGTERM, or a clean

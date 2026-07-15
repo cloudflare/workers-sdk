@@ -83,6 +83,10 @@
 						"importNames": ["expect"],
 						"message": "Import 'expect' from the test context instead of 'vitest' for concurrency safety. Use: test('name', ({ expect }) => { ... })",
 					},
+					{
+						"name": "am-i-vibing",
+						"message": "Use `detectAgent()` from `src/utils/detect-agent` instead.",
+					},
 				],
 			},
 		],
@@ -202,18 +206,9 @@
 				"workers-sdk/no-wrangler-named-imports": "error",
 			},
 		},
-		// Gradually rolling out @typescript-eslint/no-deprecated.
-		// TODO: Remove the following overrides, one package at a time.
+		// TODO: Remove the following override.
 		{
-			"files": [
-				"packages/edge-preview-authenticated-proxy/**",
-				"packages/local-explorer-ui/**",
-				"packages/miniflare/**",
-				"packages/vite-plugin-cloudflare/**",
-				"packages/vitest-pool-workers/**",
-				"packages/workflows-shared/**",
-				"packages/wrangler/**",
-			],
+			"files": ["packages/vite-plugin-cloudflare/**"],
 			"rules": {
 				"@typescript-eslint/no-deprecated": "off",
 			},

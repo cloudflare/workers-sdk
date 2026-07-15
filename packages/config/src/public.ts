@@ -53,12 +53,22 @@ export type {
 export { bindings } from "./bindings";
 export type {
 	Triggers,
+	EmailTrigger,
 	FetchTrigger,
 	QueueConsumerTrigger,
 	ScheduledTrigger,
 } from "./triggers";
 export { triggers } from "./triggers";
-export type { Exports, DurableObjectExport, WorkflowExport } from "./exports";
+export type {
+	Exports,
+	DurableObjectCreatedExport,
+	DurableObjectDeletedExport,
+	DurableObjectRenamedExport,
+	DurableObjectTransferredExport,
+	DurableObjectExpectingTransferExport,
+	WorkerEntrypointExport,
+	WorkerEntrypointExportOptions,
+} from "./exports";
 export { exports } from "./exports";
 export type {
 	InferEnv,

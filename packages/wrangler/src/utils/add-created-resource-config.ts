@@ -45,7 +45,6 @@ type ValidKeys = Exclude<
 	| "secrets_store_secrets"
 	| "artifacts"
 	| "unsafe_hello_world"
-	| "flagship"
 >;
 
 export const sharedResourceCreationArgs = {
@@ -84,8 +83,10 @@ export async function createdResourceConfig<K extends ValidKeys>(
 	}
 ) {
 	const envString = env ? ` in the "${env}" environment` : "";
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- friendlyBindingNames is keyed by config field name; getBindingTypeFriendlyName uses a different key space
+	const resourceName = friendlyBindingNames[resource];
 	logger.log(
-		`To access your new ${friendlyBindingNames[resource]} in your Worker, add the following snippet to your configuration file${envString}:`
+		`To access your new ${resourceName} in your Worker, add the following snippet to your configuration file${envString}:`
 	);
 
 	logger.log(
