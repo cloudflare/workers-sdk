@@ -51,7 +51,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 		const worker = createWorkerObject(this);
 
 		try {
-			await this.config.set(options, true);
+			await this.config.set(options);
 		} catch (e) {
 			const error = new Error("An error occurred when starting the server", {
 				cause: e,
@@ -137,10 +137,6 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			case "reloadComplete":
 				this.proxy.onReloadComplete(event);
 				this.emit("reloadComplete", event);
-				break;
-
-			case "devRegistryUpdate":
-				this.config.onDevRegistryUpdate(event);
 				break;
 
 			case "previewTokenExpired":
@@ -233,12 +229,8 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 		get inspectorUrl() {
 			return devEnv.proxy.ready.promise.then((ev) => ev.inspectorUrl);
 		},
-		get config() {
-			assert(devEnv.config.latestConfig);
-			return devEnv.config.latestConfig;
-		},
-		async setConfig(config, throwErrors) {
-			return devEnv.config.set(config, throwErrors);
+		async setConfig(config) {
+			return devEnv.config.set(config);
 		},
 		patchConfig(config) {
 			return devEnv.config.patch(config);
