@@ -39,6 +39,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
+		"@types/ws": "^8.5.13",
 		"capnweb": "catalog:default",
 		"chalk": "catalog:default",
 		"miniflare": "workspace:*",

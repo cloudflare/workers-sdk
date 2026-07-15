@@ -2586,6 +2586,9 @@ importers:
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
+      '@types/ws':
+        specifier: ^8.5.13
+        version: 8.5.13
       capnweb:
         specifier: catalog:default
         version: 0.5.0
