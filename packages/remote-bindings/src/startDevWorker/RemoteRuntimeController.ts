@@ -4,15 +4,15 @@ import chalk from "chalk";
 import { Mutex, type Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { version as packageVersion } from "../../package.json";
-import { TRACE_VERSION } from "../../tail/createTail";
-import { realishPrintLogs } from "../../tail/printing";
 import { getAccessHeaders } from "../../user/access";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { logger } from "../logger";
+import { TRACE_VERSION } from "../utils/constants";
 import {
 	createPreviewSession,
 	createWorkerPreview,
 } from "../utils/create-worker-preview";
+import { realishPrintLogs } from "../utils/printing";
 import {
 	createRemoteWorkerInit,
 	getWorkerAccountAndContext,
