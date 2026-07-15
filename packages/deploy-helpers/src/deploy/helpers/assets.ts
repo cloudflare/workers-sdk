@@ -565,7 +565,9 @@ export function resolveAssetOptions(
 	// changes what gets uploaded -- the raw file content is still uploaded as-is
 	// below, unchanged.
 	if (_redirects) {
-		const parsedRedirects = parseRedirects(_redirects);
+		const parsedRedirects = parseRedirects(_redirects, {
+			htmlHandling: config.assets?.html_handling,
+		});
 		if (parsedRedirects.invalid.length > 0) {
 			logger.warn(
 				formatInvalidRedirectsWarning(
