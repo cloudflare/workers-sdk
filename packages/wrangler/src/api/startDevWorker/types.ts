@@ -1,7 +1,10 @@
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
 import type { DevEnv } from "./DevEnv";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
+import type {
+	ContainerNormalizedConfig,
+	ContainerPrivileges,
+} from "@cloudflare/containers-shared";
 import type {
 	AsyncHook,
 	AssetsOptions,
@@ -77,6 +80,7 @@ export type StartDevWorkerOptions = Omit<
 	};
 	dev: StartDevWorkerInput["dev"] & {
 		persist: string | false;
+		containerPrivileges?: ContainerPrivileges | undefined;
 		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to the Wrangler configuration file, not by other controllers eg RemoteRuntimeContoller)
 		/** Handles structured runtime logs. */
 		structuredLogsHandler?: (log: WorkerdStructuredLog) => void;

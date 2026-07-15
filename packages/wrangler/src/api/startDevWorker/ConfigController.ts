@@ -1,6 +1,11 @@
 import assert from "node:assert";
 import path from "node:path";
-import { resolveDockerHost } from "@cloudflare/containers-shared";
+import {
+	containerPrivilegesAllowed,
+	FUSE_CONTAINER_PRIVILEGES,
+	getDockerDaemonInfo,
+	resolveDockerHost,
+} from "@cloudflare/containers-shared";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
@@ -51,6 +56,7 @@ import type {
 	Trigger,
 	WranglerStartDevWorkerInput,
 } from "./types";
+import type { ContainerPrivileges } from "@cloudflare/containers-shared";
 import type { LoginOrRefreshFailureReason } from "@cloudflare/workers-auth";
 import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
@@ -137,8 +143,13 @@ async function resolveDevConfig(
 
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
 
-	const useContainers =
-		config.dev.enable_containers && config.containers?.length;
+	const enableContainers =
+		input.dev?.enableContainers ?? config.dev.enable_containers;
+	const useContainers = enableContainers && config.containers?.length;
+	const dockerPath = input.dev?.dockerPath ?? getDockerPath();
+	const containerPrivileges = useContainers
+		? getContainerPrivilegesForLocalDev(dockerPath)
+		: undefined;
 
 	return {
 		auth,
@@ -177,16 +188,43 @@ async function resolveDevConfig(
 		routeRequestsByRoutes: input.dev?.routeRequestsByRoutes ?? false,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
-		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
+		dockerPath,
+		containerPrivileges,
 		containerEngine: useContainers
 			? (input.dev?.containerEngine ??
 				config.dev.container_engine ??
-				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath()))
+				resolveDockerHost(dockerPath))
 			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
 		generateTypes: input.dev?.generateTypes ?? config.dev.generate_types,
 		tunnel: input.dev?.tunnel,
 	} satisfies StartDevWorkerOptions["dev"];
+}
+
+function getContainerPrivilegesForLocalDev(
+	dockerPath: string
+): ContainerPrivileges | undefined {
+	if (process.platform !== "linux") {
+		// Docker runs Linux containers inside a VM on macOS and Windows, so these
+		// privileges do not apply directly to the host kernel.
+		return FUSE_CONTAINER_PRIVILEGES;
+	}
+
+	try {
+		if (containerPrivilegesAllowed(getDockerDaemonInfo(dockerPath))) {
+			// Rootless Docker confines SYS_ADMIN to the daemon's user namespace
+			// instead of granting root-level access to the host.
+			return FUSE_CONTAINER_PRIVILEGES;
+		}
+	} catch {
+		// Docker startup reports daemon availability errors separately. Treat a
+		// failed safety check as "no privileges" rather than adding another warning.
+		return undefined;
+	}
+
+	logger.once.warn(
+		"Privileged container features are disabled on native rootful Docker for Linux. Use rootless Docker or a VM-based Docker setup to enable container features that require privileges, such as FUSE."
+	);
 }
 
 /**

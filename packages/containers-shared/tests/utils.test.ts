@@ -4,6 +4,8 @@ import { beforeEach, describe, it, vi } from "vitest";
 import {
 	checkExposedPorts,
 	cleanupDuplicateImageTags,
+	containerPrivilegesAllowed,
+	getDockerDaemonInfo,
 	verifyDockerInstalled,
 } from "./../src/utils";
 import type { ContainerDevOptions } from "../src/types";
@@ -93,6 +95,51 @@ describe("cleanupDuplicateImageTags", () => {
 			"docker",
 			["rmi", "cloudflare-dev/egresstestcontainer:build-122"],
 			{ encoding: "utf8" }
+		);
+	});
+});
+
+describe("getDockerDaemonInfo", () => {
+	beforeEach(() => {
+		vi.mocked(execFileSync).mockReset();
+	});
+
+	it("detects rootless Docker", ({ expect }) => {
+		vi.mocked(execFileSync).mockReturnValue(
+			JSON.stringify({ SecurityOptions: ["name=rootless"] })
+		);
+
+		expect(getDockerDaemonInfo("docker")).toEqual({ rootless: true });
+		expect(execFileSync).toHaveBeenCalledWith(
+			"docker",
+			["info", "--format", "{{json .}}"],
+			{ encoding: "utf8" }
+		);
+	});
+
+	it("treats rootful Docker as not rootless", ({ expect }) => {
+		vi.mocked(execFileSync).mockReturnValue(
+			JSON.stringify({ SecurityOptions: ["name=seccomp"] })
+		);
+
+		expect(getDockerDaemonInfo("docker")).toEqual({ rootless: false });
+	});
+});
+
+describe("containerPrivilegesAllowed", () => {
+	it("allows privileges on non-Linux hosts", ({ expect }) => {
+		expect(containerPrivilegesAllowed({ rootless: false }, "darwin")).toBe(
+			true
+		);
+	});
+
+	it("allows privileges with rootless Docker on Linux", ({ expect }) => {
+		expect(containerPrivilegesAllowed({ rootless: true }, "linux")).toBe(true);
+	});
+
+	it("blocks privileges with rootful Docker on Linux", ({ expect }) => {
+		expect(containerPrivilegesAllowed({ rootless: false }, "linux")).toBe(
+			false
 		);
 	});
 });

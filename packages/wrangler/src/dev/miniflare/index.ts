@@ -24,6 +24,7 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
+import type { ContainerPrivileges } from "@cloudflare/containers-shared";
 import type {
 	AssetsOptions,
 	Binding,
@@ -66,6 +67,9 @@ type SpecificPort = Exclude<number, 0>;
 type RandomConsistentPort = 0; // random port, but consistent across reloads
 type RandomDifferentPort = undefined; // random port, but different across reloads
 type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
+type DOContainerOptionsWithPrivileges = DOContainerOptions & {
+	privileges?: ContainerPrivileges;
+};
 
 export interface ConfigBundle {
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
@@ -104,6 +108,7 @@ export interface ConfigBundle {
 	testScheduled: boolean;
 	containerDOClassNames: Set<string> | undefined;
 	containerBuildId: string | undefined;
+	containerPrivileges?: ContainerPrivileges | undefined;
 	containerEngine: ContainerEngine | undefined;
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
@@ -503,6 +508,7 @@ type MiniflareBindingsConfig = Pick<
 	| "complianceRegion"
 	| "containerDOClassNames"
 	| "containerBuildId"
+	| "containerPrivileges"
 	| "enableContainers"
 > &
 	Partial<
@@ -786,6 +792,7 @@ export function buildMiniflareBindingOptions(
 								doClassName: className,
 								containerDOClassNames: config.containerDOClassNames,
 								containerBuildId: config.containerBuildId,
+								containerPrivileges: config.containerPrivileges,
 							})
 						: undefined,
 			});
@@ -1059,6 +1066,7 @@ export function buildMiniflareBindingOptions(
 											doClassName: className,
 											containerDOClassNames: config.containerDOClassNames,
 											containerBuildId: config.containerBuildId,
+											containerPrivileges: config.containerPrivileges,
 										})
 									: undefined,
 						},
@@ -1223,19 +1231,26 @@ export function getImageNameFromDOClassName(options: {
 	doClassName: string;
 	containerDOClassNames: Set<string>;
 	containerBuildId: string | undefined;
-}): DOContainerOptions | undefined {
+	containerPrivileges?: ContainerPrivileges | undefined;
+}): DOContainerOptionsWithPrivileges | undefined {
 	assert(
 		options.containerBuildId,
 		"Build ID should be set if containers are defined and enabled"
 	);
 
 	if (options.containerDOClassNames.has(options.doClassName)) {
-		return {
+		const containerOptions: DOContainerOptionsWithPrivileges = {
 			imageName: getDevContainerImageName(
 				options.doClassName,
 				options.containerBuildId
 			),
 		};
+
+		if (options.containerPrivileges !== undefined) {
+			containerOptions.privileges = options.containerPrivileges;
+		}
+
+		return containerOptions;
 	}
 }
 

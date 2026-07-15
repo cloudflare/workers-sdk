@@ -211,6 +211,7 @@ export async function convertToConfigBundle(
 			event.config.containers?.map((c) => c.class_name)
 		),
 		containerBuildId: event.config.dev?.containerBuildId,
+		containerPrivileges: event.config.dev?.containerPrivileges,
 		containerEngine: event.config.dev.containerEngine,
 		enableContainers: event.config.dev.enableContainers ?? true,
 		zone: getZoneForCfWorkerHeader(event.config),

@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { FUSE_CONTAINER_PRIVILEGES } from "@cloudflare/containers-shared";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	FatalError,
@@ -1712,7 +1713,25 @@ describe.sequential("wrangler dev", () => {
 			const childProcess = await import("node:child_process");
 			mockExecFileSync = vi.mocked(childProcess.execFileSync);
 
-			mockExecFileSync.mockReturnValue(mockedDockerContextLsOutput);
+			mockExecFileSync.mockImplementation((_dockerPath, args) => {
+				if (Array.isArray(args) && args[0] === "info") {
+					return JSON.stringify({ SecurityOptions: ["name=rootless"] });
+				}
+
+				return mockedDockerContextLsOutput;
+			});
+		});
+		it("does not inspect Docker when no containers are configured", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({ main: "index.js" });
+			fs.writeFileSync("index.js", `export default {};`);
+
+			const config = await runWranglerUntilConfig("dev");
+
+			expect(config.dev.containerPrivileges).toBeUndefined();
+			expect(config.dev.containerEngine).toBeUndefined();
+			expect(mockExecFileSync).not.toHaveBeenCalled();
 		});
 		it("should default to socket of current docker context", async ({
 			expect,
@@ -1726,6 +1745,12 @@ describe.sequential("wrangler dev", () => {
 			expect(config.dev.containerEngine).toEqual(
 				"unix:///current/run/docker.sock"
 			);
+			expect(config.dev.containerPrivileges).toEqual(FUSE_CONTAINER_PRIVILEGES);
+			expect(
+				mockExecFileSync.mock.calls.some(
+					([, args]) => Array.isArray(args) && args[0] === "info"
+				)
+			).toBe(false);
 		});
 
 		it("should be able to be set by config", async ({ expect }) => {

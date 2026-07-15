@@ -1,9 +1,12 @@
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, type StdioOptions } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { UserError } from "@cloudflare/workers-utils";
 import { dockerImageInspect } from "./inspect";
 import type { ContainerDevOptions } from "./types";
-import type { StdioOptions } from "node:child_process";
+
+export type DockerDaemonInfo = {
+	rootless: boolean;
+};
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -91,6 +94,66 @@ export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 		);
 	}
 };
+
+/**
+ * Reads daemon security options instead of inferring rootless mode from its
+ * socket path, which can be configured arbitrarily.
+ */
+export function getDockerDaemonInfo(dockerPath: string): DockerDaemonInfo {
+	const output = runDockerCmdWithOutput(dockerPath, [
+		"info",
+		"--format",
+		"{{json .}}",
+	]);
+	let info: unknown;
+	try {
+		info = JSON.parse(output);
+	} catch (error) {
+		throw new UserError(
+			`Failed parsing docker info output: ${(error as Error).message}`,
+			{ telemetryMessage: false }
+		);
+	}
+
+	const securityOptions = getDockerSecurityOptions(info);
+	return {
+		// Docker reports `name=rootless`; compatible engines may omit the prefix.
+		rootless: securityOptions.some(
+			(option) => option === "name=rootless" || option === "rootless"
+		),
+	};
+}
+
+/**
+ * Permit elevated container options only when Docker adds an isolation
+ * boundary. Non-Linux hosts run Linux containers in a VM, while rootless
+ * Docker limits `SYS_ADMIN` to its user namespace. Native rootful Linux has
+ * neither boundary, so granting these options there would affect the host
+ * kernel directly.
+ */
+export function containerPrivilegesAllowed(
+	daemonInfo: DockerDaemonInfo,
+	platform = process.platform
+): boolean {
+	return daemonInfo.rootless || platform !== "linux";
+}
+
+function getDockerSecurityOptions(info: unknown): string[] {
+	if (
+		typeof info !== "object" ||
+		info === null ||
+		!("SecurityOptions" in info)
+	) {
+		return [];
+	}
+
+	const securityOptions = info.SecurityOptions;
+	return Array.isArray(securityOptions)
+		? securityOptions.filter(
+				(option): option is string => typeof option === "string"
+			)
+		: [];
+}
 
 /** Checks whether docker is running on the system */
 export const isDockerRunning = async (dockerPath: string) => {

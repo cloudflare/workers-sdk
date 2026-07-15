@@ -101,3 +101,15 @@ export type ContainerDevOptions = {
 	/** container's DO class name */
 	class_name: string;
 } & (DockerfileConfig | ImageURIConfig);
+
+export type ContainerPrivileges = {
+	capabilities: string[];
+	devices: ContainerPrivilegeDevice[];
+	securityOpt: string[];
+};
+
+export type ContainerPrivilegeDevice = {
+	pathOnHost: string;
+	pathInContainer: string;
+	cgroupPermissions: string;
+};
