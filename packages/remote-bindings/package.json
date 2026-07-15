@@ -44,6 +44,8 @@
 		"miniflare": "workspace:*",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"ws": "catalog:default"
 	}
 }
