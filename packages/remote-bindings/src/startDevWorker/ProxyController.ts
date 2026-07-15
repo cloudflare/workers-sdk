@@ -10,7 +10,7 @@ import {
 	WranglerLog,
 } from "../../dev/miniflare";
 import { validateHttpsOptions } from "../../https-options";
-import { logger } from "../../logger";
+import { logger } from "../logger";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";

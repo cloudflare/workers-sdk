@@ -14,11 +14,11 @@ import {
 	handlePreviewSessionCreationError,
 	handlePreviewSessionUploadError,
 } from "../../dev/remote";
-import { logger } from "../../logger";
 import { TRACE_VERSION } from "../../tail/createTail";
 import { realishPrintLogs } from "../../tail/printing";
 import { getAccessHeaders } from "../../user/access";
 import { retryOnAPIFailure } from "../../utils/retry";
+import { logger } from "../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";

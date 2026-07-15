@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
-import { ParseError, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
 import {
 	fetchKVGetValue,
@@ -9,12 +9,8 @@ import {
 	fetchPagedListResult,
 	fetchResult,
 } from "../../cfetch";
-import {
-	isBuildFailure,
-	isBuildFailureFromCause,
-} from "../../deployment-bundle/build-failures";
 import { confirm, prompt, select } from "../../dialogs";
-import { logBuildFailure, logger, runWithLogLevel } from "../../logger";
+import { logger } from "../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
 import { ProxyController } from "./ProxyController";
@@ -173,26 +169,6 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			logger.debug("=> Error contextual data:", event.data);
 		}
-		// Parse errors are recoverable by changing your Wrangler configuration file and saving
-		// All other errors from the ConfigController are non-recoverable
-		else if (
-			event.source === "ConfigController" &&
-			event.cause instanceof ParseError
-		) {
-			logger.error(event.cause);
-			this.emit("buildFailed", event);
-		}
-		// Build errors are recoverable by fixing the code and saving
-		else if (event.source === "BundlerController") {
-			if (isBuildFailure(event.cause)) {
-				logBuildFailure(event.cause.errors, event.cause.warnings);
-			} else if (isBuildFailureFromCause(event.cause)) {
-				logBuildFailure(event.cause.cause.errors, event.cause.cause.warnings);
-			} else {
-				logger.error(event.cause.message);
-			}
-			this.emit("buildFailed", event);
-		}
 		// if other knowable + recoverable errors occur, handle them here
 		else {
 			// otherwise, re-emit the unknowable errors to the top-level
@@ -201,20 +177,18 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	}
 
 	async teardown() {
-		await runWithLogLevel(this.config.latestInput?.dev?.logLevel, async () => {
-			logger.debug("DevEnv teardown beginning...");
+		logger.debug("DevEnv teardown beginning...");
 
-			await Promise.all([
-				this.config.teardown(),
-				this.bundler.teardown(),
-				...this.runtimes.map((runtime) => runtime.teardown()),
-				this.proxy.teardown(),
-			]);
+		await Promise.all([
+			this.config.teardown(),
+			this.bundler.teardown(),
+			...this.runtimes.map((runtime) => runtime.teardown()),
+			this.proxy.teardown(),
+		]);
 
-			this.emit("teardown");
+		this.emit("teardown");
 
-			logger.debug("DevEnv teardown complete");
-		});
+		logger.debug("DevEnv teardown complete");
 	}
 }
 
