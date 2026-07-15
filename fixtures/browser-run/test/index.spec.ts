@@ -6,7 +6,8 @@ import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 const BROWSER_RENDERING_RETRY = {
 	retry: {
-		condition: /Chrome readiness probe .* timed out|Test timed out/i,
+		condition:
+			/Chrome readiness probe .* timed out|Test timed out|connection refused|ConnectEx|WSARecv|ECONNRESET|EPIPE|network connection lost|disconnected/i,
 		count: 3,
 		delay: 1_000,
 	},

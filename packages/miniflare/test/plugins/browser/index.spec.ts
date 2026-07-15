@@ -64,7 +64,8 @@ async function waitForClosedConnection(ws: WebSocket): Promise<void> {
 
 const BROWSER_RENDERING_RETRY = {
 	retry: {
-		condition: /Chrome readiness probe .* timed out|Test timed out/i,
+		condition:
+			/Chrome readiness probe .* timed out|Test timed out|connection refused|ConnectEx|WSARecv|ECONNRESET|EPIPE|network connection lost|disconnected/i,
 		count: 3,
 		delay: 1_000,
 	},
