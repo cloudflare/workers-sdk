@@ -3,22 +3,22 @@ import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex, type Miniflare } from "miniflare";
 import { WebSocket } from "ws";
-import { version as packageVersion } from "../../../package.json";
-import {
-	createPreviewSession,
-	createWorkerPreview,
-} from "../../dev/create-worker-preview";
-import {
-	createRemoteWorkerInit,
-	getWorkerAccountAndContext,
-	handlePreviewSessionCreationError,
-	handlePreviewSessionUploadError,
-} from "../../dev/remote";
+import { version as packageVersion } from "../../package.json";
 import { TRACE_VERSION } from "../../tail/createTail";
 import { realishPrintLogs } from "../../tail/printing";
 import { getAccessHeaders } from "../../user/access";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { logger } from "../logger";
+import {
+	createPreviewSession,
+	createWorkerPreview,
+} from "../utils/create-worker-preview";
+import {
+	createRemoteWorkerInit,
+	getWorkerAccountAndContext,
+	handlePreviewSessionCreationError,
+	handlePreviewSessionUploadError,
+} from "../utils/remote";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
@@ -26,7 +26,7 @@ import type {
 	CfAccount,
 	CfPreviewSession,
 	CfPreviewToken,
-} from "../../dev/create-worker-preview";
+} from "../utils/create-worker-preview";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
