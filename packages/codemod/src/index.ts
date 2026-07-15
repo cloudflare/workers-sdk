@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as recast from "recast";
-import * as esprimaParser from "recast/parsers/esprima";
+import * as babelParser from "recast/parsers/babel";
 import * as typescriptParser from "recast/parsers/typescript";
 import type { Program } from "esprima";
 
@@ -28,9 +28,9 @@ import type { Program } from "esprima";
 export function parseJs(src: string) {
 	src = src.trim();
 	try {
-		return recast.parse(src, { parser: esprimaParser });
-	} catch {
-		throw new Error("Error parsing js template.");
+		return recast.parse(src, { parser: babelParser });
+	} catch (e) {
+		throw new Error(`Error parsing JavaScript code: ${(e as Error).toString()}`);
 	}
 }
 
@@ -39,8 +39,8 @@ export function parseTs(src: string) {
 	src = src.trim();
 	try {
 		return recast.parse(src, { parser: typescriptParser });
-	} catch {
-		throw new Error("Error parsing ts template.");
+	} catch (e) {
+		throw new Error(`Error parsing TypeScript code: ${(e as Error).toString()}`);
 	}
 }
 
@@ -48,16 +48,16 @@ export function parseTs(src: string) {
 // Selects the correct parser based on the file extension
 export function parseFile(filePath: string) {
 	const lang = path.extname(filePath).slice(1);
-	const parser = lang === "js" ? esprimaParser : typescriptParser;
-
+	const parser = lang === "js" ? parseJs : parseTs;
+	let fileContents: string
 	try {
-		const fileContents = readFileSync(path.resolve(filePath), "utf-8");
-
-		if (fileContents) {
-			return recast.parse(fileContents, { parser }).program as Program;
-		}
+		fileContents = readFileSync(path.resolve(filePath), "utf-8");
 	} catch {
-		throw new Error(`Error parsing file: ${filePath}`);
+		throw new Error(`Error reading file ${filePath} for parsing`);
+	}
+
+	if (fileContents) {
+		return parser(fileContents).program as Program;
 	}
 
 	return null;
