@@ -294,6 +294,19 @@ export const CoreSharedOptionsSchema = z
 			.returns(z.void())
 			.optional(),
 
+		// Deliberately not `z.function()`: parsing that schema replaces the
+		// callback with a validating wrapper. When the callback is `async`
+		// (assignable to a `void` return), the wrapper calls it, rejects the
+		// returned promise as an invalid `void` return value, and drops that
+		// promise un-awaited — so if the callback later rejects, no caller
+		// holds the promise and the rejection crashes the process as an
+		// unhandled rejection. `z.custom()` passes the function through
+		// unwrapped; the call site in `handlePrettyErrorRequest` contains
+		// both throwing and rejecting callbacks.
+		handleUncaughtError: z
+			.custom<(error: Error) => void>((value) => typeof value === "function")
+			.optional(),
+
 		upstream: z.string().optional(),
 		// TODO: add back validation of cf object
 		cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),

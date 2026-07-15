@@ -226,6 +226,12 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				}
 			);
 
+			// `handleUncaughtError` is a shared Miniflare option, and the
+			// merged options spread the primary worker's shared options —
+			// install the hook on every worker's options rather than assuming
+			// which one is primary.
+			options.handleUncaughtError = this.dispatchRuntimeError;
+
 			this.#options.set(data.config.name, {
 				options,
 				primary: Boolean(data.config.dev.multiworkerPrimary),
