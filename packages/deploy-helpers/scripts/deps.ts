@@ -13,7 +13,6 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// These are externalized to avoid duplication in wrangler's bundle,
 	// which already bundles these packages itself.
-	"blake3-wasm",
 	"chalk",
 	"command-exists",
 	"dotenv",
