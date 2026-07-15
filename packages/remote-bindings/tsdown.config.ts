@@ -20,4 +20,12 @@ export default defineConfig([
 		dts: false,
 		external: ["cloudflare:email", "cloudflare:workers"],
 	},
+	{
+		entry: {
+			"dev-proxy-worker": "templates/startDevWorker/ProxyWorker.ts",
+		},
+		platform: "node",
+		outDir: "dist",
+		dts: false,
+	},
 ]);

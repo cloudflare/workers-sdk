@@ -3,12 +3,12 @@ import {
 	type DeferredPromise,
 	rewriteUrlInHeaderValue,
 	urlFromParts,
-} from "../../src/api/startDevWorker/utils";
+} from "../../src/startDevWorker/utils";
 import type {
 	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
-} from "../../src/api/startDevWorker/events";
+} from "../../src/startDevWorker/events";
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;

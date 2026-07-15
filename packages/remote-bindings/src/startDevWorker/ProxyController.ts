@@ -1,9 +1,9 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { assertNever } from "@cloudflare/workers-utils";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
-import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import {
 	castLogLevel,
 	handleStructuredLogs,
@@ -29,6 +29,10 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 import type { LogOptions, MiniflareOptions } from "miniflare";
+
+const proxyWorkerPath = fileURLToPath(
+	new URL("./dev-proxy-worker.mjs", import.meta.url)
+);
 
 export class ProxyController extends Controller {
 	public ready = createDeferred<ReadyEvent>();
