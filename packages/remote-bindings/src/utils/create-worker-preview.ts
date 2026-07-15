@@ -1,19 +1,26 @@
 import crypto from "node:crypto";
 import { URL } from "node:url";
-import { getWorkersDevSubdomain } from "@cloudflare/deploy-helpers";
-import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
+import {
+	createWorkerUploadForm,
+	getWorkersDevSubdomain,
+} from "@cloudflare/deploy-helpers";
+import { getAccessHeaders } from "@cloudflare/workers-auth";
+import {
+	fetchResultBase,
+	ParseError,
+	parseJSON,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { fetch } from "undici";
-import { fetchResult } from "../cfetch";
-import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { version as packageVersion } from "../../package.json";
 import { logger } from "../logger";
-import { getAccessHeaders } from "../user/access";
 import type { CfWorkerInitWithName } from "./remote";
 import type {
 	ApiCredentials,
 	CfWorkerContext,
 	ComplianceConfig,
 } from "@cloudflare/workers-utils";
-import type { HeadersInit } from "undici";
+import type { HeadersInit, RequestInit } from "undici";
 
 /**
  * Maximum time (ms) to wait for an individual preview API request before
@@ -21,6 +28,25 @@ import type { HeadersInit } from "undici";
  * entire dev-session reload indefinitely.
  */
 const PREVIEW_API_TIMEOUT_MS = 30_000;
+
+function fetchResult<ResponseType>(
+	complianceConfig: ComplianceConfig,
+	account: CfAccount,
+	resource: string,
+	init: RequestInit = {},
+	abortSignal?: AbortSignal
+): Promise<ResponseType> {
+	return fetchResultBase(
+		complianceConfig,
+		resource,
+		init,
+		`remote-bindings/${packageVersion}`,
+		logger,
+		undefined,
+		abortSignal,
+		account.apiToken
+	);
+}
 
 /**
  * Combine the caller's abort signal with a per-request timeout so that a
@@ -138,13 +164,12 @@ async function tryExpandToken(
 	try {
 		const switchedExchangeUrl = switchHost(exchangeUrl, ctx.host, !!ctx.zone);
 
-		const accessHeaders = await getAccessHeaders(switchedExchangeUrl.hostname);
+		const accessHeaders = await getAccessHeaders(switchedExchangeUrl.hostname, {
+			logger,
+		});
 		const headers: HeadersInit = { ...accessHeaders };
 
-		logger.debugWithSanitization(
-			"-- START EXCHANGE API REQUEST:",
-			` GET ${switchedExchangeUrl.href}`
-		);
+		logger.debug("-- START EXCHANGE API REQUEST:");
 
 		logger.debug("-- END EXCHANGE API REQUEST");
 		const exchangeResponse = await fetch(switchedExchangeUrl, {
@@ -158,7 +183,6 @@ async function tryExpandToken(
 			exchangeResponse.status
 		);
 		logger.debug("HEADERS:", JSON.stringify(exchangeResponse.headers, null, 2));
-		logger.debugWithSanitization("RESPONSE:", bodyText);
 
 		logger.debug("-- END EXCHANGE API RESPONSE");
 
@@ -190,7 +214,7 @@ export async function createPreviewSession(
 	abortSignal: AbortSignal,
 	name: string | undefined
 ): Promise<CfPreviewSession> {
-	const { accountId, apiToken } = account;
+	const { accountId } = account;
 	const initUrl = ctx.zone
 		? `/zones/${ctx.zone}/workers/edge-preview`
 		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
@@ -198,14 +222,7 @@ export async function createPreviewSession(
 	const { token, exchange_url } = await fetchResult<{
 		token: string;
 		exchange_url?: string;
-	}>(
-		complianceConfig,
-		initUrl,
-		undefined,
-		undefined,
-		withTimeout(abortSignal),
-		apiToken
-	);
+	}>(complianceConfig, account, initUrl, undefined, withTimeout(abortSignal));
 
 	const previewSessionToken = exchange_url
 		? ((await tryExpandToken(exchange_url, ctx, withTimeout(abortSignal))) ??
@@ -289,6 +306,7 @@ async function createPreviewToken(
 		tail_url: string;
 	}>(
 		complianceConfig,
+		account,
 		url,
 		{
 			method: "POST",
@@ -297,7 +315,6 @@ async function createPreviewToken(
 				"cf-preview-upload-config-token": value,
 			},
 		},
-		undefined,
 		withTimeout(abortSignal)
 	);
 

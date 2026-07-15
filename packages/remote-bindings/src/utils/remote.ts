@@ -1,31 +1,14 @@
 import assert from "node:assert";
 import path from "node:path";
+import { getAuthFromEnv } from "@cloudflare/workers-auth";
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { syncAssets } from "../assets";
-import { isAuthenticationError } from "../core/handle-errors";
-import { printBundleSize } from "../deployment-bundle/bundle-reporter";
-import { getBundleType } from "../deployment-bundle/bundle-type";
-import { withSourceURLs } from "../deployment-bundle/source-url";
-import { getInferredHost } from "../dev";
 import { logger } from "../logger";
-import { syncWorkersSite } from "../sites";
-import { getAuthFromEnv, requireApiToken } from "../user";
-import { isAbortError } from "../utils/isAbortError";
-import { getZoneIdForPreview } from "../zones";
-import type { StartDevWorkerInput } from "../api";
+import { isAbortError } from "./isAbortError";
+import type { StartDevWorkerInput } from "../startDevWorker/types";
 import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { ApiCredentials } from "@cloudflare/workers-utils";
-import type {
-	AssetsOptions,
-	CfModule,
-	CfScriptFormat,
-	CfWorkerContext,
-	CfWorkerInit,
-	ComplianceConfig,
-	LegacyAssetPaths,
-	Route,
-} from "@cloudflare/workers-utils";
+import type { CfWorkerContext, CfWorkerInit } from "@cloudflare/workers-utils";
 
 /**
  * Error thrown when a remote dev session fails due to an authentication
@@ -105,17 +88,10 @@ export function handlePreviewSessionCreationError(
 	accountId: string
 ) {
 	assert(err && typeof err === "object");
-	// instead of logging the raw API error to the user,
-	// give them friendly instructions
-	if (isAuthenticationError(err)) {
-		throw new RemoteSessionAuthenticationError(err);
+	if (handleUserFriendlyError(err, accountId)) {
+		return;
 	}
-	// for error 10063 (workers.dev subdomain required)
-	else if ("code" in err && err.code === 10063) {
-		logger.error(
-			`You need to register a workers.dev subdomain before running the dev command in remote mode. You can either enable local mode by pressing l, or register a workers.dev subdomain here: https://dash.cloudflare.com/${accountId}/workers/onboarding`
-		);
-	} else if (
+	if (
 		"cause" in err &&
 		(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
 	) {
@@ -141,91 +117,24 @@ export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
  * Create remote worker init from StartDevWorkerInput["bindings"] format
  * (flat Record<string, Binding>).
  */
-export async function createRemoteWorkerInit(props: {
+export function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
-	modules: CfModule[];
-	complianceConfig: ComplianceConfig;
-	accountId: string;
 	name: string;
-	env: string | undefined;
-	isWorkersSite: boolean;
-	assets: AssetsOptions | undefined;
-	legacyAssetPaths: LegacyAssetPaths | undefined;
-	format: CfScriptFormat;
 	bindings: StartDevWorkerInput["bindings"];
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	minimal_mode?: boolean;
 }) {
-	const { entrypointSource: content, modules } = withSourceURLs(
-		props.bundle.path,
-		props.bundle.entrypointSource,
-		props.modules
-	);
-
-	// TODO: For Dev we could show the reporter message in the interactive box.
-	void printBundleSize(
-		{
-			name: path.basename(props.bundle.path),
-			content,
-		},
-		props.modules
-	);
-
-	const workersSitesAssets = await syncWorkersSite(
-		props.complianceConfig,
-		props.accountId,
-		props.name,
-		props.isWorkersSite ? props.legacyAssetPaths : undefined,
-		true,
-		false,
-		undefined
-	); // TODO: cancellable?
-
-	if (workersSitesAssets.manifest) {
-		modules.push({
-			name: "__STATIC_CONTENT_MANIFEST",
-			filePath: undefined,
-			content: JSON.stringify(workersSitesAssets.manifest),
-			type: "text",
-		});
-	}
-
-	const assetsUploadResult = props.assets
-		? await syncAssets(
-				props.complianceConfig,
-				props.accountId,
-				props.assets.directory,
-				props.name
-			)
-		: undefined;
-	const assetsJwt = assetsUploadResult?.jwt;
-
 	const bindings = { ...props.bindings };
-
-	if (workersSitesAssets.namespace) {
-		bindings["__STATIC_CONTENT"] = {
-			type: "kv_namespace",
-			id: workersSitesAssets.namespace,
-		};
-	}
-
-	if (workersSitesAssets.manifest && props.format === "service-worker") {
-		bindings["__STATIC_CONTENT_MANIFEST"] = {
-			type: "text_blob",
-			source: { contents: "__STATIC_CONTENT_MANIFEST" },
-		};
-	}
 
 	const init: CfWorkerInitWithName = {
 		name: props.name,
 		main: {
 			name: path.basename(props.bundle.path),
 			filePath: props.bundle.path,
-			type: getBundleType(props.format, path.basename(props.bundle.path)),
-			content,
+			type: props.bundle.type,
+			content: props.bundle.entrypointSource,
 		},
-		modules,
+		modules: props.bundle.modules,
 		bindings,
 		migrations: undefined, // no migrations in dev
 		exports: undefined,
@@ -236,17 +145,7 @@ export async function createRemoteWorkerInit(props: {
 		logpush: false,
 		sourceMaps: undefined,
 		containers: undefined, // Containers are not supported in remote dev mode
-		assets:
-			props.assets && assetsJwt
-				? {
-						jwt: assetsJwt,
-						routerConfig: props.assets.routerConfig,
-						assetConfig: props.assets.assetConfig,
-						_redirects: props.assets._redirects,
-						_headers: props.assets._headers,
-						run_worker_first: props.assets.run_worker_first,
-					}
-				: undefined,
+		assets: undefined,
 		placement: undefined, // no placement in dev
 		tail_consumers: undefined,
 		streaming_tail_consumers: undefined,
@@ -258,34 +157,21 @@ export async function createRemoteWorkerInit(props: {
 	return init;
 }
 
-export async function getWorkerAccountAndContext(props: {
-	complianceConfig: ComplianceConfig;
+export function getWorkerAccountAndContext(props: {
 	accountId: string;
-	apiToken?: ApiCredentials | undefined;
-	env: string | undefined;
-	host: string | undefined;
-	routes: Route[] | undefined;
-	sendMetrics: boolean | undefined;
-	configPath: string | undefined;
-}): Promise<{ workerAccount: CfAccount; workerContext: CfWorkerContext }> {
+	apiToken: ApiCredentials;
+}): { workerAccount: CfAccount; workerContext: CfWorkerContext } {
 	const workerAccount: CfAccount = {
 		accountId: props.accountId,
-		apiToken: props.apiToken ?? requireApiToken(),
+		apiToken: props.apiToken,
 	};
 
-	// What zone should the realish preview for this Worker run on?
-	const zoneId = await getZoneIdForPreview(props.complianceConfig, {
-		host: props.host,
-		routes: props.routes,
-		accountId: props.accountId,
-	});
-
 	const workerContext: CfWorkerContext = {
-		env: props.env,
-		zone: zoneId,
-		host: props.host ?? getInferredHost(props.routes, props.configPath),
-		routes: props.routes,
-		sendMetrics: props.sendMetrics,
+		env: undefined,
+		zone: undefined,
+		host: undefined,
+		routes: undefined,
+		sendMetrics: undefined,
 	};
 
 	return { workerAccount, workerContext };
@@ -303,24 +189,6 @@ function handleUserFriendlyError(error: unknown, accountId?: string) {
 			case 9106:
 			case 10000: {
 				throw new RemoteSessionAuthenticationError(error);
-			}
-
-			// code 10021 is a validation error
-			case 10021: {
-				// if it is the following message, give a more user friendly
-				// error, otherwise do not handle this error in this function
-				if (
-					error.notes[0].text ===
-					"binding DB of type d1 must have a valid `id` specified [code: 10021]"
-				) {
-					logger.error(
-						`You must use a real database in the preview_database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development`
-					);
-
-					return true;
-				}
-
-				return false;
 			}
 
 			// for error 10063 (workers.dev subdomain required)
