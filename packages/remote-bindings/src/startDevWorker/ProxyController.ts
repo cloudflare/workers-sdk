@@ -1,17 +1,9 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import events from "node:events";
 import path from "node:path";
 import { assertNever } from "@cloudflare/workers-utils";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
-import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
-import WebSocket from "ws";
-import { version as packageVersion } from "../../../package.json";
-import {
-	logConsoleMessage,
-	maybeHandleNetworkLoadResource,
-} from "../../dev/inspect";
 import {
 	castLogLevel,
 	handleStructuredLogs,
@@ -19,7 +11,6 @@ import {
 } from "../../dev/miniflare";
 import { validateHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
-import { getSourceMappedStack } from "../../sourcemap";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
@@ -28,9 +19,6 @@ import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
 	ErrorEvent,
-	InspectorProxyWorkerIncomingWebSocketMessage,
-	InspectorProxyWorkerOutgoingRequestBody,
-	InspectorProxyWorkerOutgoingWebsocketMessage,
 	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
@@ -40,7 +28,6 @@ import type {
 	SerializedError,
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
-import type { DeferredPromise } from "./utils";
 import type { LogOptions, MiniflareOptions } from "miniflare";
 
 export class ProxyController extends Controller {
@@ -50,7 +37,6 @@ export class ProxyController extends Controller {
 
 	public proxyWorker?: Miniflare;
 	proxyWorkerOptions?: MiniflareOptions;
-	private inspectorProxyWorkerWebSocket?: DeferredPromise<WebSocket>;
 
 	protected latestConfig?: StartDevWorkerOptions;
 	protected latestBundle?: EsbuildBundle;
@@ -63,16 +49,12 @@ export class ProxyController extends Controller {
 		}
 		assert(this.latestConfig !== undefined);
 
-		const cert =
-			this.latestConfig.dev?.server?.secure ||
-			(this.inspectorEnabled &&
-				this.latestConfig.dev?.inspector &&
-				this.latestConfig.dev?.inspector?.secure)
-				? validateHttpsOptions(
-						this.latestConfig.dev.server?.httpsKeyPath,
-						this.latestConfig.dev.server?.httpsCertPath
-					)
-				: undefined;
+		const cert = this.latestConfig.dev?.server?.secure
+			? validateHttpsOptions(
+					this.latestConfig.dev.server.httpsKeyPath,
+					this.latestConfig.dev.server.httpsCertPath
+				)
+			: undefined;
 
 		const proxyWorkerOptions: MiniflareOptions = {
 			host: this.latestConfig.dev?.server?.hostname,
@@ -136,48 +118,6 @@ export class ProxyController extends Controller {
 			liveReload: false,
 		};
 
-		if (this.inspectorEnabled) {
-			assert(this.latestConfig.dev?.inspector);
-			proxyWorkerOptions.workers.push({
-				name: "InspectorProxyWorker",
-				compatibilityDate: "2023-12-18",
-				compatibilityFlags: [
-					"nodejs_compat",
-					"increase_websocket_message_size",
-				],
-				modulesRoot: path.dirname(inspectorProxyWorkerPath),
-				modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
-				durableObjects: {
-					DURABLE_OBJECT: {
-						className: "InspectorProxyWorker",
-						unsafePreventEviction: true,
-					},
-				},
-				serviceBindings: {
-					PROXY_CONTROLLER: async (req): Promise<Response> => {
-						const body =
-							(await req.json()) as InspectorProxyWorkerOutgoingRequestBody;
-
-						return this.onInspectorProxyWorkerRequest(body);
-					},
-				},
-				bindings: {
-					PROXY_CONTROLLER_AUTH_SECRET: this.secret,
-					WRANGLER_VERSION: packageVersion,
-				},
-
-				unsafeDirectSockets: [
-					{
-						host: this.latestConfig.dev?.inspector?.hostname,
-						port: this.latestConfig.dev?.inspector?.port ?? 0,
-					},
-				],
-				// no need to use file-system, so don't
-				cache: false,
-				unsafeEphemeralDurableObjects: true,
-			});
-		}
-
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
 			this.proxyWorkerOptions,
 			proxyWorkerOptions
@@ -204,118 +144,18 @@ export class ProxyController extends Controller {
 		const { proxyWorker } = this;
 
 		if (willInstantiateMiniflareInstance) {
-			void Promise.all([
-				proxyWorker.ready,
-				!this.inspectorEnabled
-					? Promise.resolve(undefined)
-					: proxyWorker.unsafeGetDirectURL("InspectorProxyWorker"),
-			])
-				.then(([url, inspectorUrl]) => {
-					if (!this.inspectorEnabled) {
-						return [url, undefined];
-					}
-					// Don't connect the inspector proxy worker until we have a valid ready Miniflare instance.
-					// Otherwise, tearing down the ProxyController immediately after setting it up
-					// will result in proxyWorker.ready throwing, but reconnectInspectorProxyWorker hanging for ever,
-					// preventing teardown
-					return this.reconnectInspectorProxyWorker().then(() => [
-						url,
-						inspectorUrl,
-					]);
-				})
-				.then(([url, inspectorUrl]) => {
+			void proxyWorker.ready
+				.then((url) => {
 					assert(url);
-					this.emitReadyEvent(proxyWorker, url, inspectorUrl);
+					this.emitReadyEvent(proxyWorker, url, undefined);
 				})
 				.catch((error) => {
 					if (this._torndown) {
 						return;
 					}
-					this.emitErrorEvent(
-						"Failed to start ProxyWorker or InspectorProxyWorker",
-						error
-					);
+					this.emitErrorEvent("Failed to start ProxyWorker", error);
 				});
 		}
-	}
-
-	private async reconnectInspectorProxyWorker(): Promise<
-		WebSocket | undefined
-	> {
-		if (this._torndown) {
-			return;
-		}
-
-		assert(
-			this.latestConfig?.dev.inspector !== false,
-			"Trying to reconnect with inspector proxy worker when inspector is disabled"
-		);
-
-		const existingWebSocket = await this.inspectorProxyWorkerWebSocket?.promise;
-		if (existingWebSocket?.readyState === WebSocket.OPEN) {
-			return existingWebSocket;
-		}
-
-		this.inspectorProxyWorkerWebSocket = createDeferred<WebSocket>();
-
-		let webSocket: WebSocket | null = null;
-
-		try {
-			assert(this.proxyWorker);
-
-			const inspectorProxyWorkerUrl = await this.proxyWorker.unsafeGetDirectURL(
-				"InspectorProxyWorker"
-			);
-
-			inspectorProxyWorkerUrl.pathname =
-				"/cdn-cgi/InspectorProxyWorker/websocket";
-
-			webSocket = new WebSocket(inspectorProxyWorkerUrl, {
-				headers: { Authorization: this.secret },
-				// If compression is on, we sometimes get race conditions with MockHttpSocket closing down
-				// while the deflate extension is still trying to send decompressed chunks.
-				perMessageDeflate: false,
-			});
-		} catch (cause) {
-			if (this._torndown) {
-				return;
-			}
-
-			const error = castErrorCause(cause);
-
-			this.inspectorProxyWorkerWebSocket?.reject(error);
-			this.emitErrorEvent("Could not connect to InspectorProxyWorker", error);
-			return;
-		}
-
-		assert(
-			webSocket,
-			"Expected webSocket on response from inspectorProxyWorker"
-		);
-
-		webSocket.addEventListener("message", (event) => {
-			assert(typeof event.data === "string");
-
-			this.onInspectorProxyWorkerMessage(JSON.parse(event.data));
-		});
-		webSocket.addEventListener("close", () => {
-			// don't reconnect
-		});
-		webSocket.addEventListener("error", () => {
-			if (this._torndown) {
-				return;
-			}
-
-			if (this.latestConfig?.dev.inspector !== false) {
-				void this.reconnectInspectorProxyWorker();
-			}
-		});
-
-		await events.once(webSocket, "open");
-
-		this.inspectorProxyWorkerWebSocket?.resolve(webSocket);
-
-		return webSocket;
 	}
 
 	runtimeMessageMutex = new Mutex();
@@ -363,61 +203,6 @@ export class ProxyController extends Controller {
 			);
 		}
 	}
-	async sendMessageToInspectorProxyWorker(
-		message: InspectorProxyWorkerIncomingWebSocketMessage,
-		retries = 3
-	): Promise<void> {
-		if (this._torndown) {
-			return;
-		}
-
-		assert(
-			this.latestConfig?.dev.inspector !== false,
-			"Trying to send message to inspector proxy worker when inspector is disabled"
-		);
-
-		try {
-			// returns the existing websocket, if already connected
-			const websocket = await this.reconnectInspectorProxyWorker();
-			assert(websocket);
-
-			websocket.send(JSON.stringify(message));
-		} catch (cause) {
-			if (this._torndown) {
-				return;
-			}
-
-			const error = castErrorCause(cause);
-
-			if (retries > 0) {
-				return this.sendMessageToInspectorProxyWorker(message, retries - 1);
-			}
-
-			this.emitErrorEvent(
-				`Failed to send message to InspectorProxyWorker: ${JSON.stringify(
-					message
-				)}`,
-				error
-			);
-		}
-	}
-
-	get inspectorEnabled() {
-		// In remote mode, there's no inspector URL available — logs use tail_url instead
-		if (this.latestConfig?.dev.remote) {
-			return false;
-		}
-
-		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
-		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
-		// inspector endpoint.
-		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
-
-		return (
-			this.latestConfig?.dev.inspector !== false && !inVscodeJsDebugTerminal
-		);
-	}
-
 	// ******************
 	//   Event Handlers
 	// ******************
@@ -437,9 +222,6 @@ export class ProxyController extends Controller {
 		this.latestConfig = data.config;
 
 		void this.sendMessageToProxyWorker({ type: "pause" });
-		if (this.inspectorEnabled) {
-			void this.sendMessageToInspectorProxyWorker({ type: "reloadStart" });
-		}
 	}
 	onReloadComplete(data: ReloadCompleteEvent) {
 		this.localServerReady.resolve();
@@ -451,13 +233,6 @@ export class ProxyController extends Controller {
 			type: "play",
 			proxyData: data.proxyData,
 		});
-
-		if (this.inspectorEnabled) {
-			void this.sendMessageToInspectorProxyWorker({
-				type: "reloadComplete",
-				proxyData: data.proxyData,
-			});
-		}
 	}
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
 		switch (message.type) {
@@ -489,94 +264,6 @@ export class ProxyController extends Controller {
 				assertNever(message);
 		}
 	}
-	onInspectorProxyWorkerMessage(
-		message: InspectorProxyWorkerOutgoingWebsocketMessage
-	) {
-		assert(
-			this.latestConfig?.dev.inspector !== false,
-			"Trying to handle inspector message when inspector is disabled"
-		);
-
-		switch (message.method) {
-			case "Runtime.consoleAPICalled": {
-				if (this._torndown) {
-					return;
-				}
-
-				logConsoleMessage(message.params);
-
-				break;
-			}
-			case "Runtime.exceptionThrown": {
-				if (this._torndown) {
-					return;
-				}
-
-				const stack = getSourceMappedStack(message.params.exceptionDetails);
-				logger.error(message.params.exceptionDetails.text, stack);
-				break;
-			}
-			default: {
-				assertNever(message);
-			}
-		}
-	}
-	async onInspectorProxyWorkerRequest(
-		message: InspectorProxyWorkerOutgoingRequestBody
-	) {
-		assert(
-			this.latestConfig?.dev.inspector !== false,
-			"Trying to handle inspector request when inspector is disabled"
-		);
-
-		switch (message.type) {
-			case "runtime-websocket-error":
-				// TODO: consider sending proxyData again to trigger the InspectorProxyWorker to reconnect to the runtime
-				logger.debug(
-					"[InspectorProxyWorker] 'runtime websocket' error",
-					message.error
-				);
-
-				break;
-			case "error":
-				this.emitErrorEvent("Error inside InspectorProxyWorker", message.error);
-
-				break;
-			case "debug-log":
-				if (this._torndown) {
-					break;
-				}
-
-				logger.debug("[InspectorProxyWorker]", ...message.args);
-
-				break;
-			case "load-network-resource": {
-				assert(this.latestConfig !== undefined);
-				assert(this.latestBundle !== undefined);
-
-				let maybeContents: string | undefined;
-				if (message.url.startsWith("wrangler-file:")) {
-					maybeContents = maybeHandleNetworkLoadResource(
-						message.url.replace("wrangler-file:", "file:"),
-						this.latestBundle,
-						this.latestBundle.sourceMapMetadata?.tmpDir
-					);
-				}
-
-				if (maybeContents === undefined) {
-					return new Response(null, { status: 404 });
-				}
-
-				return new Response(maybeContents);
-			}
-			default:
-				assertNever(message);
-				return new Response(null, { status: 404 });
-		}
-
-		return new Response(null, { status: 204 });
-	}
-
 	_torndown = false;
 	override async teardown() {
 		await super.teardown();
@@ -586,14 +273,7 @@ export class ProxyController extends Controller {
 		const { proxyWorker } = this;
 		this.proxyWorker = undefined;
 
-		await Promise.all([
-			proxyWorker?.dispose(),
-			this.inspectorProxyWorkerWebSocket?.promise
-				.then((ws) => ws.close())
-				.catch(() => {
-					/* ignore */
-				}),
-		]);
+		await proxyWorker?.dispose();
 
 		logger.debug("ProxyController teardown complete");
 	}
