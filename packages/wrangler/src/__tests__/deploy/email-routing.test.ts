@@ -52,7 +52,7 @@ describe("deploy --dry-run (Email Routing addresses)", () => {
 		});
 		fs.writeFileSync("index.js", "export default {};");
 
-		await expect(runWrangler("deploy index.js --dry-run")).rejects.toThrowError(
+		await expect(runWrangler("deploy index.js --dry-run")).rejects.toThrow(
 			/to be of type string/
 		);
 	});
