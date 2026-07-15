@@ -913,13 +913,16 @@ export function buildMiniflareBindingOptions(
 			helloWorldBindings.map((binding) => [binding.binding, binding])
 		),
 		flagship: Object.fromEntries(
-			flagshipBindings.map((binding) => [
-				binding.binding,
-				{
-					app_id: binding.app_id,
-					remoteProxyConnectionString,
-				},
-			])
+			flagshipBindings.map((binding) => {
+				assert(binding.app_id !== undefined);
+				return [
+					binding.binding,
+					{
+						app_id: binding.app_id,
+						remoteProxyConnectionString,
+					},
+				];
+			})
 		),
 		artifacts: Object.fromEntries(
 			artifactsBindings.map((binding) => [
