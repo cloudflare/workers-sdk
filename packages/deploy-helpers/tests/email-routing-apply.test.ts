@@ -5,6 +5,15 @@ import { applyEmailRoutingAddresses } from "../src/triggers/email-routing";
 import type { EmailRoutingPlanResponse } from "../src/triggers/email-routing-plan";
 import type { Config } from "@cloudflare/workers-utils";
 
+const { isNonInteractiveOrCI } = vi.hoisted(() => ({
+	isNonInteractiveOrCI: vi.fn(() => true),
+}));
+
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/workers-utils")>()),
+	isNonInteractiveOrCI,
+}));
+
 const ACCOUNT_ID = "some-account-id";
 const WORKER_TAG = "a7e6fb77503c41d8a7f3113c6918f10c";
 const WORKER_NAME = "test-name";
@@ -43,6 +52,7 @@ describe("applyEmailRoutingAddresses", () => {
 		confirmResult = true;
 		confirmRequests = 0;
 		nonInteractive = true;
+		isNonInteractiveOrCI.mockImplementation(() => nonInteractive);
 		failTarget = undefined;
 		metadataRequests = 0;
 		metadataFailures = [];
@@ -67,7 +77,6 @@ describe("applyEmailRoutingAddresses", () => {
 			},
 			prompt: (() => {}) as never,
 			select: (() => {}) as never,
-			isNonInteractiveOrCI: () => nonInteractive,
 		});
 	});
 

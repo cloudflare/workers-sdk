@@ -1,12 +1,11 @@
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { APIError, UserError } from "@cloudflare/workers-utils";
-import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
 import {
-	confirm,
-	fetchResult,
+	APIError,
 	isNonInteractiveOrCI,
-	logger,
-} from "../shared/context";
+	UserError,
+} from "@cloudflare/workers-utils";
+import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
+import { confirm, fetchResult, logger } from "../shared/context";
 import {
 	buildEmailRoutingPlanRequest,
 	isCatchAllAddress,

@@ -1,7 +1,12 @@
-import { beforeEach, describe, it } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { initDeployHelpersContext } from "../src/shared/context";
 import { triggersDeploy } from "../src/triggers/deploy";
 import type { Config } from "@cloudflare/workers-utils";
+
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/workers-utils")>()),
+	isNonInteractiveOrCI: () => true,
+}));
 
 const ACCOUNT_ID = "some-account-id";
 const WORKER_NAME = "test-name";
@@ -50,7 +55,6 @@ describe("triggersDeploy Email Routing integration", () => {
 			confirm: (() => {}) as never,
 			prompt: (() => {}) as never,
 			select: (() => {}) as never,
-			isNonInteractiveOrCI: () => true,
 		});
 	});
 
@@ -75,7 +79,6 @@ describe("triggersDeploy Email Routing integration", () => {
 			env: undefined,
 			crons: undefined,
 			routes: [],
-			useServiceEnvironments: false,
 			firstDeploy: false,
 		});
 
@@ -93,7 +96,6 @@ describe("triggersDeploy Email Routing integration", () => {
 			env: undefined,
 			crons: undefined,
 			routes: [],
-			useServiceEnvironments: false,
 			firstDeploy: false,
 		});
 
