@@ -9,6 +9,7 @@ import type {
 	InferExportsByType,
 	InferWorkerName,
 	InferWorkerEntrypointExports,
+	InferWorkflowEntrypointExports,
 } from "./inference";
 import type { UserConfig } from "./types";
 
@@ -90,11 +91,32 @@ export type UserConfigExport<T extends UserConfig = UserConfig> =
 	| Promise<T>
 	| ((ctx: ConfigContext) => T | Promise<T>);
 
+type ValidateWorkflowExportKeys<T extends UserConfig> = T extends {
+	entrypoint: infer _TEntrypoint extends Record<string, unknown>;
+	exports: infer TExports extends Record<string, { type: string }>;
+}
+	? {
+			exports: {
+				[K in keyof TExports]: TExports[K] extends { type: "workflow" }
+					? K extends InferWorkflowEntrypointExports<T>
+						? TExports[K]
+						: never
+					: TExports[K];
+			};
+		}
+	: unknown;
+
 export function defineWorker<const T extends UserConfig>(
-	config: (ctx: ConfigContext) => (UserConfig & T) | Promise<UserConfig & T>
+	config: (
+		ctx: ConfigContext
+	) =>
+		| (UserConfig & T & ValidateWorkflowExportKeys<T>)
+		| Promise<UserConfig & T & ValidateWorkflowExportKeys<T>>
 ): TypedWorkerDefinition<T>;
 export function defineWorker<const T extends UserConfig>(
-	config: (UserConfig & T) | Promise<UserConfig & T>
+	config:
+		| (UserConfig & T & ValidateWorkflowExportKeys<T>)
+		| Promise<UserConfig & T & ValidateWorkflowExportKeys<T>>
 ): TypedWorkerDefinition<T>;
 export function defineWorker(config: UserConfigExport): WorkerDefinition {
 	return {
