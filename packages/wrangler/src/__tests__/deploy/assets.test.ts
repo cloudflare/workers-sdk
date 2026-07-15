@@ -858,6 +858,41 @@ describe("deploy", () => {
 				  },
 				}
 			`);
+			// A valid _redirects file should not produce any deploy-time warning.
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should warn about invalid _redirects rules at deploy time without altering what is uploaded (#14694)", async ({
+			expect,
+		}) => {
+			// A duplicate rule for the same path is invalid and should be flagged,
+			// but until now this warning only ever surfaced in `wrangler dev`.
+			const redirectsContent = "/foo /bar\n/foo /baz";
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "index.html", content: "<html></html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					// The raw (unparsed, unmodified) _redirects file is still uploaded
+					// as-is -- the deploy-time validation is warning-only.
+					config: {
+						_redirects: redirectsContent,
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(std.warn).toContain("Found 1 invalid redirect rule");
+			expect(std.warn).toContain("Ignoring duplicate rule for path /foo.");
 		});
 
 		it("should resolve assets directory relative to cwd if using cli", async ({
