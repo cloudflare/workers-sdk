@@ -18,7 +18,6 @@ import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getScriptName } from "../utils/getScriptName";
-import { useServiceEnvironmentApi } from "../utils/useServiceEnvironments";
 import { getEntry } from "./entry";
 import type { HandlerArgs } from "../core/types";
 import type { DeployArgs } from "../deploy/index";
@@ -83,7 +82,6 @@ async function mergeSharedConfigArgs(
 		main: args.script ?? config.main,
 		keepVars: Boolean(args.keepVars || config.keep_vars),
 		isWorkersSite: Boolean(args.site || config.site),
-		useServiceEnvApiPath: useServiceEnvironmentApi(args, config),
 		dryRun,
 		env: args.env,
 		outfile: args.outfile,
@@ -96,7 +94,7 @@ async function mergeSharedConfigArgs(
 		sendMetrics,
 		resourcesProvision: getFlag("RESOURCES_PROVISION") ?? false,
 		skipProvisioningConfigWriteback: false,
-		skipLastDeployedFromApiCheck: false,
+		strict: args.strict ?? false,
 	};
 
 	const buildProps: BuildProps = {
@@ -112,6 +110,8 @@ async function mergeSharedConfigArgs(
 		noBundle,
 		defines: { ...config.define, ...collectKeyValues(args.define) },
 		alias: { ...config.alias, ...collectKeyValues(args.alias) },
+		doBindings: config.durable_objects.bindings,
+		workflowBindings: config.workflows ?? [],
 		destination: args.outdir ?? getWranglerTmpDir(entry.projectRoot, "deploy"),
 		outdir: args.outdir,
 		// Deploy-only; set by mergeDeployConfigArgs.
@@ -152,7 +152,6 @@ export async function mergeDeployConfigArgs(
 			routes: [...routes, ...domainRoutes],
 			logpush: args.logpush !== undefined ? args.logpush : config.logpush,
 			dispatchNamespace: args.dispatchNamespace,
-			strict: args.strict ?? false,
 			oldAssetTtl: args.oldAssetTtl,
 			containersRollout: args.containersRollout,
 		},
@@ -235,6 +234,8 @@ export async function mergeBuildOutputProps(config: Config): Promise<{
 		noBundle: config.no_bundle ?? false,
 		defines: { ...config.define },
 		alias: { ...config.alias },
+		doBindings: config.durable_objects.bindings,
+		workflowBindings: config.workflows ?? [],
 		destination: getWranglerTmpDir(entry.projectRoot, "build"),
 		outdir: undefined,
 		metafile: undefined,

@@ -15,6 +15,7 @@ export interface EventDestination {
 }
 
 export enum EventSourceType {
+	IMAGES = "images",
 	KV = "kv",
 	R2 = "r2",
 	SUPER_SLURPER = "superSlurper",
@@ -27,6 +28,7 @@ export enum EventSourceType {
 export const EVENT_SOURCE_TYPES = Object.values(EventSourceType);
 
 export type EventSource =
+	| ImagesEventSource
 	| KvEventSource
 	| R2EventSource
 	| SuperSlurperEventSource
@@ -34,6 +36,10 @@ export type EventSource =
 	| WorkersAiModelEventSource
 	| WorkersBuildsWorkerEventSource
 	| WorkflowsWorkflowEventSource;
+
+export interface ImagesEventSource {
+	type: EventSourceType.IMAGES;
+}
 
 export interface KvEventSource {
 	type: EventSourceType.KV;

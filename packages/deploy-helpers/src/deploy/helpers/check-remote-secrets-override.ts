@@ -1,28 +1,21 @@
 import { fetchResult } from "../../shared/context";
-import { useServiceEnvironments } from "./use-service-environments";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type { Config } from "@cloudflare/workers-utils";
 
 export async function fetchSecrets(
 	config: Config,
-	accountId: string,
-	environment: string | undefined
+	scriptName: string,
+	accountId: string
 ): Promise<{ name: string; type: string }[]> {
-	const isServiceEnv = environment && useServiceEnvironments(config);
-
-	const scriptName = config.name;
-
-	const url = isServiceEnv
-		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${environment}/secrets`
-		: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
+	const url = `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
 	return fetchResult<{ name: string; type: string }[]>(config, url);
 }
 
 export async function checkRemoteSecretsOverride(
 	config: Config,
-	accountId: string,
-	targetEnv: string | undefined
+	scriptName: string,
+	accountId: string
 ): Promise<
 	| {
 			override: false;
@@ -39,7 +32,7 @@ export async function checkRemoteSecretsOverride(
 		const secretNames = new Set<string>();
 
 		try {
-			const secrets = await fetchSecrets(config, accountId, targetEnv);
+			const secrets = await fetchSecrets(config, scriptName, accountId);
 
 			for (const secret of secrets) {
 				secretNames.add(secret.name);

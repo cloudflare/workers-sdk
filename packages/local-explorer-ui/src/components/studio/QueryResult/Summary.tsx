@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { CodeBlock } from "../Code/Block";
 import { StudioQueryResultStats } from "./Stats";
 import type {

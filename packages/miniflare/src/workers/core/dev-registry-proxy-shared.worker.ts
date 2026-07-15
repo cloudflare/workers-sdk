@@ -32,6 +32,8 @@ export interface RegistryEntry {
 	debugPortAddress: string;
 	defaultEntrypointService: string;
 	userWorkerService: string;
+	/** Queue names consumed by this worker, if any. */
+	queueConsumers?: string[];
 }
 
 let registry = new Map<string, RegistryEntry>();
@@ -53,6 +55,26 @@ export function resolveTarget(service: string): RegistryEntry | undefined {
 		return undefined;
 	}
 	return entry;
+}
+
+/**
+ * Find the registry entry of a worker that consumes the given queue, if any
+ * dev session advertises one. Each queue has at most one consumer, so the
+ * first match wins.
+ */
+export function findQueueConsumer(
+	queueName: string
+): RegistryEntry | undefined {
+	for (const entry of registry.values()) {
+		if (
+			Array.isArray(entry.queueConsumers) &&
+			entry.queueConsumers.includes(queueName) &&
+			entry.debugPortAddress
+		) {
+			return entry;
+		}
+	}
+	return undefined;
 }
 
 /**

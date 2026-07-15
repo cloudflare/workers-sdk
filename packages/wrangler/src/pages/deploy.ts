@@ -1,6 +1,7 @@
 import { execFileSync, execSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	configFileName,
@@ -19,16 +20,20 @@ import { prompt, select } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
-import { requireAuth } from "../user";
-import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
+import { getAccountFromCache, requireAuth } from "../user";
 import { diagnoseStartupError } from "../utils/friendly-validator-errors";
 import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
 	PAGES_CONFIG_CACHE_FILENAME,
 } from "./constants";
+import {
+	logPagesToWorkersForceOptOutNotice,
+	maybeDelegatePagesToWorkers,
+} from "./delegate-to-workers";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
+import { runPagesToWorkersDeploy } from "./run-workers-deploy";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
 import type { PagesConfigCache } from "./types";
 import type {
@@ -113,6 +118,13 @@ export const pagesDeployCommand = createCommand({
 			description:
 				"Whether to upload any server-side sourcemaps with this deployment",
 		},
+		force: {
+			type: "boolean",
+			default: false,
+			hidden: true,
+			description:
+				"Deploy directly to Cloudflare Pages, bypassing the automatic delegation to Cloudflare Workers for new static projects",
+		},
 	},
 	positionalArgs: ["directory"],
 	async handler(args) {
@@ -163,22 +175,9 @@ export const pagesDeployCommand = createCommand({
 			}
 		}
 
-		/*
-		 * If we found a `wrangler.toml` config file that doesn't specify
-		 * `pages_build_output_dir`, we'll ignore the file, but inform users
-		 * that we did find one, just not valid for Pages.
-		 */
-		if (configPath && config === undefined) {
-			logger.warn(
-				`Pages now has ${configFileName(configPath)} support.\n` +
-					`We detected a configuration file at ${configPath} but it is missing the "pages_build_output_dir" field, required by Pages.\n` +
-					`If you would like to use this configuration file to deploy your project, please use "pages_build_output_dir" to specify the directory of static files to upload.\n` +
-					`Ignoring configuration file for now, and proceeding with project deploy.`
-			);
-		}
-
 		const directory = args.directory ?? config?.pages_build_output_dir;
 		if (!directory) {
+			maybeWarnAboutIgnoredConfigFile(configPath, config);
 			throw new FatalError(
 				`Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your ${configFileName(configPath)} file.`,
 				{ code: 1, telemetryMessage: "pages deploy missing directory" }
@@ -207,11 +206,30 @@ export const pagesDeployCommand = createCommand({
 			} catch (err) {
 				// code `8000007` corresponds to project not found
 				if ((err as { code: number }).code !== 8000007) {
+					maybeWarnAboutIgnoredConfigFile(configPath, config);
 					throw err;
 				} else {
 					isExistingProject = false;
 				}
 			}
+		}
+
+		// When run by an AI agent, delegate brand-new static Pages deploys to a
+		// Workers static-assets deploy. Existing projects, projects using
+		// unsupported Pages features, and `--force` are never delegated.
+		const delegation = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			assetsDirectory: directory,
+			accountHasPagesProjects: async () =>
+				(await listProjects({ accountId })).length > 0,
+			force: args.force,
+			projectName,
+			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),
+		});
+		if (delegation.delegate) {
+			await runPagesToWorkersDeploy(delegation);
+			return;
 		}
 
 		const isInteractive = process.stdin.isTTY;
@@ -280,6 +298,7 @@ export const pagesDeployCommand = createCommand({
 						projectName = await prompt("Enter the name of your new project:");
 
 						if (!projectName) {
+							maybeWarnAboutIgnoredConfigFile(configPath, config);
 							throw new UserError(
 								"Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.",
 								{
@@ -328,6 +347,7 @@ export const pagesDeployCommand = createCommand({
 					});
 
 					if (!productionBranch) {
+						maybeWarnAboutIgnoredConfigFile(configPath, config);
 						throw new UserError(
 							"Missing production branch. Specify the production branch for your new Pages project when prompted, or re-run with the required information.",
 							{
@@ -360,12 +380,36 @@ export const pagesDeployCommand = createCommand({
 			}
 		}
 
+		if (projectName && !isExistingProject && !isInteractive) {
+			let message = `The Pages project "${projectName}" does not exist.`;
+			if (configPath && config === undefined) {
+				message += `\nA configuration file was found at ${configPath} that does not appear to be for a Pages project (missing "pages_build_output_dir"). Did you mean to run \`wrangler deploy\` (to deploy a Worker) instead?`;
+			} else {
+				message += `\nMaybe you intended to deploy a Worker project instead? Workers are the recommended way to deploy all new projects. If so, run \`wrangler deploy\`.`;
+			}
+
+			const accountName = getAccountFromCache()?.name;
+			const accountDescription = accountName
+				? `the account in use is "${accountName}" with id ${accountId}`
+				: `the account in use has id ${accountId}`;
+			message += `\n\nIf you are targeting an existing Pages project, verify that the project name is correct and that it exists in your account (${accountDescription}).`;
+			message += `\n\nOtherwise, if you are trying to create a new Pages project, start by running: \`wrangler pages project create\``;
+			message += ` (though we strongly recommend using Workers instead).`;
+
+			throw new UserError(message, {
+				telemetryMessage: "pages deploy project not found non interactive",
+			});
+		}
+
 		if (!projectName) {
+			maybeWarnAboutIgnoredConfigFile(configPath, config);
 			throw new UserError(
 				"Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.",
 				{ telemetryMessage: "pages deploy missing project name" }
 			);
 		}
+
+		maybeWarnAboutIgnoredConfigFile(configPath, config);
 
 		// We infer git info by default is not passed in
 		logger.debug("pages deploy: Detecting git repository information...");
@@ -593,8 +637,28 @@ export const pagesDeployCommand = createCommand({
 		});
 
 		metrics.sendMetricsEvent("create pages deployment");
+
+		// If the agent opted this deploy out of delegation with `--force`, tell it
+		// (at the end, on success) that `--force` is a one-time action.
+		if (delegation.forcedOptOut) {
+			logPagesToWorkersForceOptOutNotice("deploy");
+		}
 	},
 });
+
+function getUnsupportedDeployDelegateArgs(
+	args: (typeof pagesDeployCommand)["args"]
+): string[] {
+	return [
+		["--branch", args.branch],
+		["--commit-hash", args.commitHash],
+		["--commit-message", args.commitMessage],
+		["--commit-dirty", args.commitDirty],
+		["--skip-caching", args.skipCaching],
+	]
+		.filter(([, value]) => value !== undefined && value !== false)
+		.map(([flag]) => flag as string);
+}
 
 type NewOrExistingItem = {
 	key: string;
@@ -609,4 +673,30 @@ function promptSelectExistingOrNewProject(
 	return select(message, {
 		choices: items.map((i) => ({ title: i.label, value: i.value })),
 	});
+}
+
+/**
+ * Logs a warning that a config file was found but is missing `pages_build_output_dir`,
+ * so it was ignored by `pages deploy`.
+ *
+ * The warning is only emitted when a config file exists at {@link configPath} but
+ * {@link config} is `undefined`, indicating the file was detected yet not parsed
+ * into a valid Pages configuration.
+ *
+ * @param configPath - The path to the detected config file, or `undefined` if none was found.
+ * @param config - The parsed configuration object, or `undefined` if the config file
+ *   was not usable (e.g. missing `pages_build_output_dir`).
+ */
+function maybeWarnAboutIgnoredConfigFile(
+	configPath: string | undefined,
+	config: Config | undefined
+) {
+	if (configPath && config === undefined) {
+		logger.warn(
+			`Pages now has ${configFileName(configPath)} support.\n` +
+				`We detected a configuration file at ${configPath} but it is missing the "pages_build_output_dir" field, required by Pages.\n` +
+				`If you would like to use this configuration file to deploy your project, please use "pages_build_output_dir" to specify the directory of static files to upload.\n` +
+				`Ignoring configuration file for now, and proceeding with project deploy.`
+		);
+	}
 }

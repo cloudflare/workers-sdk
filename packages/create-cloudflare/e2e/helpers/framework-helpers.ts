@@ -367,13 +367,13 @@ export async function verifyTypes(
 		return;
 	}
 
-	const tsconfigTypes = tsconfig.compilerOptions?.types;
+	const tsconfigTypes: string[] = tsconfig.compilerOptions?.types ?? [];
 	if (workersTypes === "generated") {
 		expect(tsconfigTypes).toContain(typesPath);
 	}
 	if (workersTypes === "installed") {
 		expect(
-			tsconfigTypes.some((x: string) => x.includes("@cloudflare/workers-types"))
+			tsconfigTypes.some((x) => x.includes("@cloudflare/workers-types"))
 		).toBe(true);
 	}
 	if (nodeCompat) {

@@ -100,9 +100,7 @@ describe("createWorkerUploadForm — basic structure", () => {
 				}),
 				{}
 			)
-		).toThrowError(
-			"More than one module can only be specified when type = 'esm'"
-		);
+		).toThrow("More than one module can only be specified when type = 'esm'");
 	});
 });
 
@@ -194,6 +192,40 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 			overrides: { cache: { enabled: true } },
 			key: "cache_options",
 			expected: { enabled: true },
+		},
+		{
+			label: "cache with cross version cache",
+			overrides: { cache: { enabled: false, cross_version_cache: true } },
+			key: "cache_options",
+			expected: { enabled: false, cross_version_cache: true },
+		},
+		{
+			label: "exports",
+			overrides: {
+				exports: {
+					default: { type: "worker", cache: { enabled: false } },
+					Admin: { type: "worker", cache: { enabled: true } },
+				},
+			},
+			key: "exports",
+			expected: {
+				default: { type: "worker", cache: { enabled: false } },
+				Admin: { type: "worker", cache: { enabled: true } },
+			},
+		},
+		{
+			label: "mixed exports",
+			overrides: {
+				exports: {
+					Counter: { type: "durable-object", storage: "sqlite" },
+					Admin: { type: "worker", cache: { enabled: true } },
+				},
+			},
+			key: "exports",
+			expected: {
+				Counter: { type: "durable-object", storage: "sqlite" },
+				Admin: { type: "worker", cache: { enabled: true } },
+			},
 		},
 		{
 			label: "annotations",

@@ -6,20 +6,16 @@ import { cancel } from "@cloudflare/cli-shared-helpers";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
-	configFileName,
-	experimental_patchConfig,
-	formatConfigSnippet,
 	formatTime,
 	getDockerPath,
-	getTodaysCompatDate,
+	hasDurableObjectExports,
 	parseNonHyphenedUuid,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import { confirm, fetchResult, logger } from "../shared/context";
+import { fetchResult, logger } from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
-import { ensureQueuesExistByConfig } from "../triggers/queue-consumers";
 import {
 	buildAssetManifest,
 	resolveAssetOptions,
@@ -27,22 +23,23 @@ import {
 } from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
-import { checkRemoteSecretsOverride } from "./helpers/check-remote-secrets-override";
-import { checkWorkflowConflicts } from "./helpers/check-workflow-conflicts";
-import { getConfigPatch, getRemoteConfigDiff } from "./helpers/config-diffs";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
-import { getDeployConfirmFunction } from "./helpers/deploy-confirm";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
-import { downloadWorkerConfig } from "./helpers/download-worker-config";
-import { getMigrationsToUpload } from "./helpers/durable";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
+import { EXPORTS_RECONCILIATION_ERROR_CODE } from "./helpers/error-codes";
+import { resolveExportsUploadPayload } from "./helpers/exports";
+import {
+	isExportsReconciliationErrorDetails,
+	renderExportsReconciliationError,
+	renderExportsReconciliationSuccess,
+} from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
-import { verifyWorkerMatchesCITag } from "./helpers/match-tag";
+import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
@@ -55,15 +52,17 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
-import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
-import { validateRoutes } from "./helpers/validate-routes";
+import {
+	preUploadApiChecks,
+	validateWorkerProps,
+} from "./helpers/validate-worker-props";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
 } from "./helpers/versions-api";
-import { isWorkerNotFoundError } from "./helpers/worker-not-found-error";
 import { addWorkersSitesBindings } from "./helpers/workers-sites-bindings";
 import type { DeployProps, WorkerBuildResult } from "../shared/types";
+import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type {
 	ApiVersion,
@@ -79,8 +78,8 @@ import type {
 	CfWorkerInit,
 	ComplianceConfig,
 	Config,
+	ExportsReconciliationResult,
 	LegacyAssetPaths,
-	RawConfig,
 } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
@@ -118,7 +117,8 @@ export type DeployCallbacks = {
 				containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
 				imageTag: string,
 				dryRun: boolean,
-				pathToDocker: string
+				pathToDocker: string,
+				verifyDockerIsRunning: boolean
 		  ) => Promise<unknown>)
 		| undefined;
 	deployContainers:
@@ -142,205 +142,40 @@ export default async function deploy(
 	sourceMapSize?: number;
 	versionId: string | null;
 	workerTag: string | null;
+	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
 }> {
-	if (!props.name) {
-		throw new UserError(
-			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-			{ telemetryMessage: "deploy command missing worker name" }
-		);
-	}
-
-	const {
-		entry,
-		name,
-		compatibilityDate,
-		compatibilityFlags,
-		keepVars,
-		accountId,
-	} = props;
+	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
+		props;
 
 	const assetsOptions = resolveAssetOptions(props, config);
 
-	if (!props.dryRun) {
-		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
-	}
+	// Any validation that does not require API calls should go in validateWorkerProps()
+	const { name } = validateWorkerProps({ ...props, assetsOptions }, config);
 
-	const deployConfirm = getDeployConfirmFunction({
-		strictMode: props.strict,
-	});
-
-	// TODO: warn if git/hg has uncommitted changes
-	let workerTag: string | null = null;
-	let versionId: string | null = null;
-	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
-
-	let workerExists: boolean = true;
-
-	const allDeploymentRoutes = props.routes;
-
-	if (!props.dispatchNamespace && accountId) {
-		try {
-			const serviceMetaData = await fetchResult<{
-				default_environment: {
-					environment: string;
-					script: {
-						tag: string;
-						tags: string[] | null;
-						last_deployed_from: "dash" | "wrangler" | "api";
-					};
-				};
-			}>(config, `/accounts/${accountId}/workers/services/${name}`);
-			const {
-				default_environment: { script },
-			} = serviceMetaData;
-			workerTag = script.tag;
-			tags = script.tags ?? tags;
-
-			if (script.last_deployed_from === "dash") {
-				const remoteWorkerConfig = await downloadWorkerConfig(
-					name,
-					serviceMetaData.default_environment.environment,
-					entry.file,
-					accountId
-				);
-
-				const configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
-					...config,
-					// We also want to include all the routes used for deployment
-					routes: allDeploymentRoutes,
-				});
-
-				// If there are only additive changes (or no changes at all) there should be no problem,
-				// just using the local config (and override the remote one) should be totally fine
-				if (!configDiff.nonDestructive) {
-					logger.warn(
-						"The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
-							`\n${configDiff.diff}\n\n` +
-							"Deploying the Worker will override the remote configuration with your local one."
-					);
-					if (!(await deployConfirm("Would you like to continue?"))) {
-						if (
-							config.userConfigPath &&
-							/\.jsonc?$/.test(config.userConfigPath)
-						) {
-							if (
-								await confirm(
-									"Would you like to update the local config file with the remote values?",
-									{
-										defaultValue: true,
-										fallbackValue: true,
-									}
-								)
-							) {
-								const patchObj: RawConfig = getConfigPatch(
-									configDiff.diff,
-									props.env
-								);
-
-								experimental_patchConfig(
-									config.userConfigPath,
-									patchObj,
-									false
-								);
-							}
-						}
-
-						return { versionId, workerTag };
-					}
-				}
-			} else if (
-				script.last_deployed_from === "api" &&
-				!props.skipLastDeployedFromApiCheck
-			) {
-				logger.warn(
-					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
-				);
-				if (!(await deployConfirm("Would you like to continue?"))) {
-					return { versionId, workerTag };
-				}
-			}
-		} catch (e) {
-			if (isWorkerNotFoundError(e)) {
-				workerExists = false;
-			} else {
-				throw e;
-			}
-		}
-	}
-
-	if (accountId) {
-		const remoteSecretsCheck = await checkRemoteSecretsOverride(
-			config,
-			accountId,
-			props.env
-		);
-
-		if (remoteSecretsCheck?.override) {
-			logger.warn(remoteSecretsCheck.deployErrorMessage);
-			if (!(await deployConfirm("Would you like to continue?"))) {
-				return { versionId, workerTag };
-			}
-		}
-	}
-
-	if (accountId && config.workflows?.length) {
-		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
-
-		if (workflowCheck.hasConflicts) {
-			logger.warn(workflowCheck.message);
-			if (!(await deployConfirm("Do you want to continue?"))) {
-				return { versionId, workerTag };
-			}
-		}
-	}
-
-	if (!compatibilityDate) {
-		const compatibilityDateStr = getTodaysCompatDate();
-
-		throw new UserError(
-			`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
-    \`\`\`
-    ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
-    \`\`\`
-    Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
-See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
-			{ telemetryMessage: "missing compatibility date when deploying" }
-		);
-	}
-
-	validateRoutes(allDeploymentRoutes, assetsOptions);
-
-	const scriptName = name;
-
-	assert(
-		!config.site || config.site.bucket,
-		"A [site] definition requires a `bucket` field with a path to the site's assets directory."
+	// any validation that DOES require API calls should go in preUploadApiChecks()
+	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
+		props,
+		config
 	);
 
-	const envName = props.env ?? "production";
+	if (aborted) {
+		return { versionId: null, workerTag };
+	}
+
+	let versionId: string | null = null;
+	const scriptName = name;
 
 	const start = Date.now();
-	const useServiceEnvironments = props.useServiceEnvApiPath;
-	const workerName = useServiceEnvironments
-		? `${scriptName} (${envName})`
-		: scriptName;
+	const workerName = scriptName;
 	const workerUrl = props.dispatchNamespace
 		? `/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
-		: useServiceEnvironments
-			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-			: `/accounts/${accountId}/workers/scripts/${scriptName}`;
+		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	const { format } = entry;
 	const { projectRoot } = entry;
 
-	if (
-		!props.dispatchNamespace &&
-		!useServiceEnvironments &&
-		accountId &&
-		scriptName
-	) {
+	if (!props.dispatchNamespace && accountId && scriptName) {
 		const yes = await confirmLatestDeploymentOverwrite(
 			config,
 			accountId,
@@ -350,38 +185,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			cancel("Aborting deploy...");
 			return { versionId, workerTag };
 		}
-	}
-
-	if (
-		!props.isWorkersSite &&
-		Boolean(props.legacyAssetPaths) &&
-		format === "service-worker"
-	) {
-		throw new UserError(
-			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/",
-			{ telemetryMessage: "deploy service worker assets unsupported" }
-		);
-	}
-
-	if (config.wasm_modules && format === "modules") {
-		throw new UserError(
-			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
-			{ telemetryMessage: "deploy wasm modules with es module worker" }
-		);
-	}
-
-	if (config.text_blobs && format === "modules") {
-		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
-			{ telemetryMessage: "[text_blobs] with an ES module worker" }
-		);
-	}
-
-	if (config.data_blobs && format === "modules") {
-		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
-			{ telemetryMessage: "[data_blobs] with an ES module worker" }
-		);
 	}
 
 	const isDryRun = props.dryRun;
@@ -397,19 +200,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		content,
 		sourceMaps,
 	} = buildResult;
-	// durable object migrations
-	const migrations = !isDryRun
-		? await getMigrationsToUpload(scriptName, {
-				accountId,
-				config,
-				useServiceEnvironments: useServiceEnvironmentsConfig(config),
-				env: props.env,
-				dispatchNamespace: props.dispatchNamespace,
-			})
-		: undefined;
+	// Durable Object lifecycle is expressed through either legacy `migrations`
+	// or the declarative `exports` map. Only one is sent on each upload.
+	const { migrations, exports } = await resolveExportsUploadPayload({
+		scriptName,
+		isDryRun,
+		accountId,
+		config,
+		dispatchNamespace: props.dispatchNamespace,
+	});
 
 	// Upload assets if assets is being used
-	const assetsJwt =
+	const assetsUploadResult =
 		assetsOptions && !isDryRun
 			? await syncAssets(
 					config,
@@ -419,6 +221,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.dispatchNamespace
 				)
 			: undefined;
+	const assetsJwt = assetsUploadResult?.jwt;
+	const assetUploadStats = assetsUploadResult?.assetUploadStats;
 
 	// validate asset directory
 	if (assetsOptions && isDryRun) {
@@ -429,11 +233,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		? await callbacks.syncWorkersSite(
 				config,
 				accountId,
-				// When we're using the newer service environments, we wouldn't
-				// have added the env name on to the script name. However, we must
-				// include it in the kv namespace name regardless (since there's no
-				// concept of service environments for kv namespaces yet).
-				scriptName + (useServiceEnvironments ? `-${props.env}` : ""),
+				scriptName,
 				props.legacyAssetPaths,
 				false,
 				isDryRun,
@@ -493,6 +293,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		name: scriptName,
 		main,
 		migrations,
+		exports,
 		modules,
 		containers: config.containers,
 		sourceMaps,
@@ -525,6 +326,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				: undefined,
 		observability: config.observability,
 		cache: config.cache,
+		package_dependencies:
+			config.dependencies_instrumentation?.enabled !== false && projectRoot
+				? await collectPackageDependencies(projectRoot)
+				: undefined,
 	};
 
 	const sourceMapSize = worker.sourceMaps?.reduce(
@@ -540,17 +345,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// We can use the new versions/deployments APIs if we:
 	// * are uploading a worker that already exists
 	// * aren't a dispatch namespace deploy
-	// * aren't a service env deploy
 	// * aren't a service Worker
-	// * we don't have DO migrations
+	// * we don't have DO migrations or Durable Object `exports`.
+	//   Worker exports do not apply lifecycle changes, so they can use this path.
 	// * we aren't an fpw
 	// * not a container worker
 	const canUseNewVersionsDeploymentsApi =
 		workerExists &&
 		props.dispatchNamespace === undefined &&
-		!useServiceEnvironments &&
 		format === "modules" &&
 		migrations === undefined &&
+		!hasDurableObjectExports(config.exports) &&
 		!config.first_party_worker &&
 		config.containers === undefined;
 
@@ -569,9 +374,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (containersWithDockerfile.length > 0) {
 			await verifyDockerInstalled({
 				dockerPath,
-				isDev: false,
-				isDryRun,
-				numberOfContainers: containersWithDockerfile.length,
+				operation: `deploying${isDryRun ? " (even in dry-run mode)" : ""}`,
+				imageNoun:
+					containersWithDockerfile.length !== 1
+						? "the configured images"
+						: "the configured image",
+				hint: "If you cannot run Docker locally, you can still deploy your Worker by passing --containers-rollout=none. This will not deploy or update your Container.",
 			});
 		}
 	}
@@ -588,7 +396,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						container,
 						workerTag ?? "worker-tag",
 						isDryRun,
-						dockerPath
+						dockerPath,
+						false
 					);
 				}
 			}
@@ -646,7 +455,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 		);
 
-		await ensureQueuesExistByConfig(config, accountId);
 		let bindingsPrinted = false;
 
 		// Upload the script so it has time to propagate.
@@ -719,7 +527,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					startup_time_ms: versionResult.startup_time_ms,
 				};
 			} else {
-				result = await retryOnAPIFailure(
+				const uploadResult = await retryOnAPIFailure(
 					async () =>
 						fetchResult<{
 							id: string | null;
@@ -728,6 +536,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							mutable_pipeline_id: string | null;
 							deployment_id: string | null;
 							startup_time_ms: number;
+							exports_reconciliation?: ExportsReconciliationResult;
 						}>(
 							config,
 							workerUrl,
@@ -747,6 +556,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						),
 					logger
 				);
+				result = uploadResult;
+				if (uploadResult.exports_reconciliation) {
+					renderExportsReconciliationSuccess(
+						uploadResult.exports_reconciliation
+					);
+				}
 
 				// Update service and environment tags when using environments
 				const nextTags = applyServiceAndEnvironmentTags(config, tags);
@@ -811,6 +626,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					{ unsafeMetadata: config.unsafe?.metadata }
 				);
 			}
+
+			// Reconciliation errors include structured per-class details.
+			if (
+				err instanceof APIError &&
+				err.code === EXPORTS_RECONCILIATION_ERROR_CODE &&
+				isExportsReconciliationErrorDetails(err.meta?.details)
+			) {
+				err.preventReport();
+				throw new UserError(
+					renderExportsReconciliationError(err.meta.details),
+					{ telemetryMessage: "deploy do exports reconciliation failed" }
+				);
+			}
+
 			const message = await helpIfErrorIsSizeOrScriptStartup(
 				err,
 				dependencies,
@@ -910,7 +739,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag };
+		return { versionId, workerTag, assetUploadStats };
 	}
 	assert(accountId);
 	// deploy triggers
@@ -920,9 +749,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		scriptName,
 		env: props.env,
 		crons: props.triggers,
-		useServiceEnvironments,
 		firstDeploy: !workerExists,
-		routes: allDeploymentRoutes,
+		routes: props.routes,
 	});
 
 	logger.log("Current Version ID:", versionId);
@@ -931,6 +759,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		sourceMapSize,
 		versionId,
 		workerTag,
+		assetUploadStats,
 		targets: targets ?? [],
 	};
 }

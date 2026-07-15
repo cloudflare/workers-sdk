@@ -15,6 +15,11 @@ import type {
 	EngineLogs,
 } from "./engine";
 import type { InstanceStatus as EngineInstanceStatus } from "./instance";
+import type {
+	WorkflowInstanceModifier,
+	WorkflowIntrospectionOperation,
+	WorkflowIntrospectionStreamResult,
+} from "./types";
 
 type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;
@@ -22,11 +27,108 @@ type Env = {
 	WORKFLOW_NAME: string;
 };
 
+type WorkflowIntrospectionSession = {
+	id: string;
+	operations: WorkflowIntrospectionOperation[];
+	instanceIds: string[];
+};
+
+// workerd may construct a fresh WorkflowBinding object for each RPC call. Store
+// sessions at module scope so start/modify/get/dispose calls, and later
+// WorkflowBinding.create() calls, all see the same active Workflow session.
+const workflowIntrospectionSessions = new Map<
+	string,
+	WorkflowIntrospectionSession
+>();
+
+function getWorkflowIntrospectionSession(
+	workflowName: string,
+	sessionId: string
+): WorkflowIntrospectionSession {
+	const session = workflowIntrospectionSessions.get(workflowName);
+	if (session?.id !== sessionId) {
+		throw new Error(
+			`Workflow ${JSON.stringify(workflowName)} does not have an active introspection session for this introspector.`
+		);
+	}
+	return session;
+}
+
+function isWorkflowIntrospectionStreamResult(
+	value: unknown
+): value is WorkflowIntrospectionStreamResult {
+	return (
+		value !== null &&
+		typeof value === "object" &&
+		"__workflowIntrospectionStreamResult" in value &&
+		"chunks" in value &&
+		value.__workflowIntrospectionStreamResult === true &&
+		Array.isArray(value.chunks)
+	);
+}
+
+function createWorkflowIntrospectionReadableStream(
+	result: WorkflowIntrospectionStreamResult
+): ReadableStream<Uint8Array> {
+	return new ReadableStream<Uint8Array>({
+		start(controller) {
+			for (const chunk of result.chunks) {
+				controller.enqueue(chunk.slice());
+			}
+			controller.close();
+		},
+	});
+}
+
+async function applyWorkflowIntrospectionOperation(
+	modifier: WorkflowInstanceModifier,
+	operation: WorkflowIntrospectionOperation
+) {
+	switch (operation.type) {
+		case "disableSleeps":
+			await modifier.disableSleeps(operation.steps);
+			break;
+		case "disableRetryDelays":
+			await modifier.disableRetryDelays(operation.steps);
+			break;
+		case "mockStepResult":
+			await modifier.mockStepResult(
+				operation.step,
+				isWorkflowIntrospectionStreamResult(operation.stepResult)
+					? createWorkflowIntrospectionReadableStream(operation.stepResult)
+					: operation.stepResult
+			);
+			break;
+		case "mockStepError": {
+			const error = new Error(operation.error.message);
+			error.name = operation.error.name;
+			await modifier.mockStepError(operation.step, error, operation.times);
+			break;
+		}
+		case "forceStepTimeout":
+			await modifier.forceStepTimeout(operation.step, operation.times);
+			break;
+		case "mockEvent":
+			await modifier.mockEvent(operation.event);
+			break;
+		case "forceEventTimeout":
+			await modifier.forceEventTimeout(operation.step);
+			break;
+	}
+}
+
 // TODO(vaish): import from @cloudflare/workers-types once restart options are published
 export interface RestartFromStep {
 	name: string;
 	count?: number;
 	type?: "do" | "sleep" | "waitForEvent";
+}
+
+export interface WorkflowInstanceTerminateOptions {
+	/**
+	 * If true, run registered rollback handlers before terminating the instance.
+	 */
+	rollback?: boolean;
 }
 
 export interface WorkflowInstanceRestartOptions {
@@ -51,6 +153,17 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
+		const introspectionSession = workflowIntrospectionSessions.get(
+			this.env.WORKFLOW_NAME
+		);
+
+		if (introspectionSession !== undefined) {
+			const modifier = stub.getInstanceModifier();
+			introspectionSession.instanceIds.push(id);
+			for (const operation of introspectionSession.operations) {
+				await applyWorkflowIntrospectionOperation(modifier, operation);
+			}
+		}
 
 		const now = new Date().toISOString();
 		const initPromise = stub
@@ -132,6 +245,47 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		return this.env.BINDING_NAME;
 	}
 
+	public async unsafeStartIntrospection(): Promise<string> {
+		if (workflowIntrospectionSessions.has(this.env.WORKFLOW_NAME)) {
+			throw new Error(
+				`Workflow ${JSON.stringify(this.env.WORKFLOW_NAME)} already has an active introspection session for binding ${JSON.stringify(this.env.BINDING_NAME)}.`
+			);
+		}
+
+		const sessionId = crypto.randomUUID();
+		workflowIntrospectionSessions.set(this.env.WORKFLOW_NAME, {
+			id: sessionId,
+			operations: [],
+			instanceIds: [],
+		});
+		return sessionId;
+	}
+
+	public async unsafeStopIntrospection(sessionId: string): Promise<void> {
+		const session = workflowIntrospectionSessions.get(this.env.WORKFLOW_NAME);
+		if (session?.id === sessionId) {
+			workflowIntrospectionSessions.delete(this.env.WORKFLOW_NAME);
+		}
+	}
+
+	public async unsafeSetIntrospectionOperations(
+		sessionId: string,
+		operations: WorkflowIntrospectionOperation[]
+	): Promise<void> {
+		const session = getWorkflowIntrospectionSession(
+			this.env.WORKFLOW_NAME,
+			sessionId
+		);
+		session.operations = operations;
+	}
+
+	public async unsafeGetIntrospectionInstances(
+		sessionId: string
+	): Promise<string[]> {
+		return getWorkflowIntrospectionSession(this.env.WORKFLOW_NAME, sessionId)
+			.instanceIds;
+	}
+
 	public async unsafeGetInstanceModifier(instanceId: string): Promise<unknown> {
 		// async because of rpc
 		const stubId = this.env.ENGINE.idFromName(instanceId);
@@ -210,9 +364,11 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		await this.stub.changeInstanceStatus("resume");
 	}
 
-	public async terminate(): Promise<void> {
+	public async terminate(
+		options?: WorkflowInstanceTerminateOptions
+	): Promise<void> {
 		try {
-			await this.stub.changeInstanceStatus("terminate");
+			await this.stub.changeInstanceStatus("terminate", undefined, options);
 		} catch (e) {
 			// terminate causes instance abortion
 			if (!isUserTriggeredTerminate(e)) {

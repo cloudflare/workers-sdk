@@ -23,6 +23,40 @@ import {
 	upsertR2CatalogCredential,
 } from "./helpers/catalog";
 
+/**
+ * Validates that namespace and table positional args are either both provided or both omitted.
+ * Throws a {@link UserError} if only one of the two is given.
+ *
+ * @param namespace The namespace argument value
+ * @param table The table argument value
+ * @param bucket The bucket name (used in the retry hint)
+ * @param subcommand The subcommand path after "wrangler r2 bucket catalog" (e.g. "compaction enable")
+ */
+function validateNamespaceAndTable(
+	namespace: string | undefined,
+	table: string | undefined,
+	bucket: string,
+	subcommand: string
+): void {
+	const telemetryBase = `r2 catalog ${subcommand.replace("-", " ")}`;
+	if (namespace && !table) {
+		throw new UserError(
+			`Both namespace and table must be provided together. You specified namespace without table. Retry by running:\n  wrangler r2 bucket catalog ${subcommand} ${bucket} <namespace> <table>`,
+			{
+				telemetryMessage: `${telemetryBase} missing table`,
+			}
+		);
+	}
+	if (!namespace && table) {
+		throw new UserError(
+			`Both namespace and table must be provided together. You specified table without namespace. Retry by running:\n  wrangler r2 bucket catalog ${subcommand} ${bucket} <namespace> <table>`,
+			{
+				telemetryMessage: `${telemetryBase} missing namespace`,
+			}
+		);
+	}
+}
+
 export const r2BucketCatalogNamespace = createNamespace({
 	metadata: {
 		description:
@@ -219,20 +253,12 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		// Validate namespace and table are provided together
-		if (args.namespace && !args.table) {
-			throw new UserError(
-				"Table name is required when namespace is specified",
-				{
-					telemetryMessage: "r2 catalog compaction enable missing table",
-				}
-			);
-		}
-		if (!args.namespace && args.table) {
-			throw new UserError("Namespace is required when table is specified", {
-				telemetryMessage: "r2 catalog compaction enable missing namespace",
-			});
-		}
+		validateNamespaceAndTable(
+			args.namespace,
+			args.table,
+			args.bucket,
+			"compaction enable"
+		);
 
 		if (args.namespace && args.table) {
 			// Table-level compaction
@@ -312,20 +338,12 @@ export const r2BucketCatalogCompactionDisableCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		// Validate namespace and table are provided together
-		if (args.namespace && !args.table) {
-			throw new UserError(
-				"Table name is required when namespace is specified",
-				{
-					telemetryMessage: "r2 catalog compaction disable missing table",
-				}
-			);
-		}
-		if (!args.namespace && args.table) {
-			throw new UserError("Namespace is required when table is specified", {
-				telemetryMessage: "r2 catalog compaction disable missing namespace",
-			});
-		}
+		validateNamespaceAndTable(
+			args.namespace,
+			args.table,
+			args.bucket,
+			"compaction disable"
+		);
 
 		if (args.namespace && args.table) {
 			// Table-level compaction
@@ -422,22 +440,12 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		// Validate namespace and table are provided together
-		if (args.namespace && !args.table) {
-			throw new UserError(
-				"Table name is required when namespace is specified",
-				{
-					telemetryMessage:
-						"r2 catalog snapshot expiration enable missing table",
-				}
-			);
-		}
-		if (!args.namespace && args.table) {
-			throw new UserError("Namespace is required when table is specified", {
-				telemetryMessage:
-					"r2 catalog snapshot expiration enable missing namespace",
-			});
-		}
+		validateNamespaceAndTable(
+			args.namespace,
+			args.table,
+			args.bucket,
+			"snapshot-expiration enable"
+		);
 
 		if (args.namespace && args.table) {
 			// Table-level snapshot expiration
@@ -526,22 +534,12 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		// Validate namespace and table are provided together
-		if (args.namespace && !args.table) {
-			throw new UserError(
-				"Table name is required when namespace is specified",
-				{
-					telemetryMessage:
-						"r2 catalog snapshot expiration disable missing table",
-				}
-			);
-		}
-		if (!args.namespace && args.table) {
-			throw new UserError("Namespace is required when table is specified", {
-				telemetryMessage:
-					"r2 catalog snapshot expiration disable missing namespace",
-			});
-		}
+		validateNamespaceAndTable(
+			args.namespace,
+			args.table,
+			args.bucket,
+			"snapshot-expiration disable"
+		);
 
 		if (args.namespace && args.table) {
 			// Table-level snapshot expiration

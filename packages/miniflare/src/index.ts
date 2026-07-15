@@ -37,6 +37,8 @@ import {
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
+	getDurableObjectUniqueKey,
+	getEmailPathsToClean,
 	getGlobalServices,
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -45,6 +47,7 @@ import {
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	loadExternalPlugins,
+	namespaceKeys,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
 	ProxyClient,
@@ -145,6 +148,10 @@ import type {
 	Worker_Module,
 } from "./runtime";
 import type { Log } from "./shared";
+import type {
+	DevControl,
+	DurableObjectEvictionOptions,
+} from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
@@ -1139,6 +1146,33 @@ export class Miniflare {
 			} catch (e) {
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
 			}
+			// Clean up email session directories in the project temp path. When no
+			// project temp path is supplied, these live inside `#tmpPath` and are
+			// already removed above.
+			const emailPaths = getEmailPathsToClean(
+				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#tmpPath
+			);
+			if (emailPaths) {
+				try {
+					removeDirSync(emailPaths.sessionDir);
+				} catch (e) {
+					this.#log.debug(
+						`Unable to remove email session directory: ${String(e)}`
+					);
+				}
+				// Check if parent directory is now empty and remove it
+				try {
+					const entries = fs.readdirSync(emailPaths.parentDir);
+					if (entries.length === 0) {
+						removeDirSync(emailPaths.parentDir);
+					}
+				} catch (e) {
+					this.#log.debug(
+						`Unable to check/remove email parent directory: ${String(e)}`
+					);
+				}
+			}
 			// Unregister all workers from the dev registry. Note that dispose()
 			// does synchronous cleanup (unregistering workers) then returns a
 			// Promise for async cleanup (closing watcher, terminating proxy).
@@ -1967,6 +2001,11 @@ export class Miniflare {
 		);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
+		// When the dev registry is enabled, queue brokers bind to the dev-registry
+		// proxy so they can deliver to consumers in other `wrangler dev` processes
+		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever
+		// there are queues.
+		const hasQueues = queueProducers.size > 0 || queueConsumers.size > 0;
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
 		const workerNames = [...allWorkerRoutes.keys()];
 
@@ -2138,6 +2177,7 @@ export class Miniflare {
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				defaultPersistRoot: sharedOpts.core.defaultPersistRoot,
+				defaultProjectTmpPath: sharedOpts.core.defaultProjectTmpPath,
 				workerNames,
 				loopbackHost,
 				loopbackPort,
@@ -2148,6 +2188,7 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
+				devRegistryEnabled,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -2232,9 +2273,9 @@ export class Miniflare {
 		if (
 			this.#devRegistry.isEnabled() &&
 			externalServices &&
-			externalServices.size > 0
+			(externalServices.size > 0 || hasQueues)
 		) {
-			await this.#devRegistry.watch(externalServices);
+			await this.#devRegistry.watch(externalServices, hasQueues);
 
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
@@ -2248,8 +2289,8 @@ export class Miniflare {
 			// worker has the correct registry from the moment workerd loads it.
 			const initialRegistry = this.#devRegistry.getRegistry();
 			const mainModuleSource = [
-				`import { ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
-				`export { ExternalServiceProxy };`,
+				`import { ExternalQueueProxy, ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
+				`export { ExternalQueueProxy, ExternalServiceProxy };`,
 				`setRegistry(${JSON.stringify(initialRegistry)});`,
 				`export default {`,
 				`  async fetch(request, env) {`,
@@ -2438,9 +2479,9 @@ export class Miniflare {
 		if (this.#devRegistry.isEnabled()) {
 			requiredSockets.push(SOCKET_DEBUG_PORT);
 			// SOCKET_DEV_REGISTRY is already in config.sockets (and therefore
-			// requiredSockets) when external services are configured. Don't add
-			// it unconditionally — if no external services exist, the socket
-			// isn't defined and waiting for it would hang.
+			// requiredSockets) when external services or queues are configured.
+			// Don't add it unconditionally — if neither exists, the socket isn't
+			// defined and waiting for it would hang.
 		}
 
 		// Reload runtime
@@ -2706,12 +2747,18 @@ export class Miniflare {
 				defaultEntrypointService = getUserServiceName(workerOpts.core.name);
 			}
 
+			// Advertise consumed queues so producers in other dev sessions can
+			// route messages for them to this process's queue broker (see
+			// `ExternalQueueProxy`).
+			const queueConsumers = namespaceKeys(workerOpts.queues.queueConsumers);
+
 			entries.push([
 				workerOpts.core.name,
 				{
 					debugPortAddress,
 					defaultEntrypointService,
 					userWorkerService: getUserServiceName(workerOpts.core.name),
+					...(queueConsumers.length > 0 ? { queueConsumers } : {}),
 				},
 			]);
 		}
@@ -3087,6 +3134,131 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
 		return this.#getProxy(DURABLE_OBJECTS_PLUGIN_NAME, bindingName, workerName);
 	}
+	async #getDevControl(): Promise<DevControl> {
+		const proxyClient = await this._getProxyClient();
+		const control = proxyClient.env[CoreBindings.SERVICE_DEV_CONTROL] as
+			| DevControl
+			| undefined;
+		assert(control !== undefined, "Expected dev control service");
+
+		return control;
+	}
+	async unsafeEvictDurableObject(
+		scriptName: string,
+		className: string,
+		options: DurableObjectEvictionOptions
+	): Promise<void> {
+		this.#checkDisposed();
+		await this.ready;
+
+		const durableObjectExists = this.#workerOpts.some((workerOpts) => {
+			const workerName = workerOpts.core.name ?? "";
+			return [
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].some((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					(durableObject.scriptName ?? workerName) === scriptName &&
+					durableObject.className === className
+				);
+			});
+		});
+
+		if (!durableObjectExists) {
+			throw new TypeError(
+				`No Durable Object class named ${JSON.stringify(className)} found in ${JSON.stringify(scriptName)} worker.`
+			);
+		}
+
+		const control = await this.#getDevControl();
+		await control.evictDurableObject(scriptName, className, options);
+	}
+	async listDurableObjectIds(
+		classNameOrBindingName: string,
+		workerName?: string
+	): Promise<string[]> {
+		this.#checkDisposed();
+		await this.ready;
+
+		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
+		const workerOpts = this.#workerOpts[workerIndex];
+		const resolvedWorkerName = workerOpts.core.name ?? "";
+		const durableObject =
+			[
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].find((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					durableObject.className === classNameOrBindingName &&
+					(durableObject.scriptName === undefined ||
+						durableObject.scriptName === resolvedWorkerName)
+				);
+			}) ?? workerOpts.do.durableObjects?.[classNameOrBindingName];
+
+		if (durableObject === undefined) {
+			const friendlyWorkerName = resolvedWorkerName
+				? `${JSON.stringify(resolvedWorkerName)} worker`
+				: "the worker";
+			throw new TypeError(
+				`No Durable Object class or namespace binding named ${JSON.stringify(classNameOrBindingName)} found in ${friendlyWorkerName}.`
+			);
+		}
+
+		const { className, scriptName } = normaliseDurableObject(durableObject);
+		const serviceName = getUserServiceName(scriptName ?? resolvedWorkerName);
+		const classConfig = getDurableObjectClassNames(this.#workerOpts)
+			.get(serviceName)
+			?.get(className);
+		const unsafeUniqueKey = classConfig?.unsafeUniqueKey;
+
+		const namespaceKey = getDurableObjectUniqueKey(
+			className,
+			scriptName ?? resolvedWorkerName,
+			unsafeUniqueKey
+		);
+
+		if (namespaceKey === undefined) {
+			throw new TypeError(
+				`Cannot list Durable Object ids for ${JSON.stringify(classNameOrBindingName)} because the namespace uses ephemeral local storage.`
+			);
+		}
+
+		const durableObjectsPersistPath = getPersistPath(
+			DURABLE_OBJECTS_PLUGIN_NAME,
+			this.#tmpPath,
+			this.#sharedOpts.core.defaultPersistRoot,
+			this.#sharedOpts.do.durableObjectsPersist
+		);
+
+		try {
+			const entries = await fs.promises.readdir(
+				path.join(durableObjectsPersistPath, namespaceKey),
+				{ withFileTypes: true }
+			);
+
+			const ids: string[] = [];
+			for (const entry of entries) {
+				const objectId = path.basename(entry.name, ".sqlite");
+				if (
+					entry.isFile() &&
+					path.extname(entry.name) === ".sqlite" &&
+					objectId !== "metadata"
+				) {
+					ids.push(objectId);
+				}
+			}
+
+			return ids.sort();
+		} catch (error) {
+			if (isFileNotFoundError(error)) {
+				return [];
+			}
+
+			throw error;
+		}
+	}
 	getKVNamespace(
 		bindingName: string,
 		workerName?: string
@@ -3219,6 +3391,35 @@ export class Miniflare {
 			// immediately after disposal, causing EBUSY errors. The temp directory
 			// lives in os.tmpdir() so the OS will clean it up eventually.
 			removeDir(this.#tmpPath, { fireAndForget: true });
+			// Clean up email session directories in the project temp path. When no
+			// project temp path is supplied, these live inside `#tmpPath` and are
+			// already removed above.
+			const emailPaths = getEmailPathsToClean(
+				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#tmpPath
+			);
+			if (emailPaths) {
+				// Remove session directory and wait for completion before checking parent
+				try {
+					await removeDir(emailPaths.sessionDir);
+				} catch (e) {
+					this.#log.debug(
+						`Unable to remove email session directory: ${String(e)}`
+					);
+				}
+				// Check if parent directory is now empty and remove it
+				try {
+					const entries = await fs.promises.readdir(emailPaths.parentDir);
+					if (entries.length === 0) {
+						await removeDir(emailPaths.parentDir);
+					}
+				} catch (e) {
+					// Parent directory doesn't exist or can't be read, ignore
+					this.#log.debug(
+						`Unable to check/remove email parent directory: ${String(e)}`
+					);
+				}
+			}
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();
@@ -3253,6 +3454,10 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export type {
+	DurableObjectIdentifier,
+	DurableObjectEvictionOptions,
+} from "./shared/dev-control";
 export type {
 	WorkerRegistry,
 	WorkerDefinition,

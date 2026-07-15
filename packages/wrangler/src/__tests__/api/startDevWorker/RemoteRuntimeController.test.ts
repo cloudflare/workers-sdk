@@ -108,7 +108,6 @@ describe("RemoteRuntimeController", () => {
 			},
 			workerContext: {
 				env: undefined,
-				useServiceEnvironments: undefined,
 				zone: undefined,
 				host: undefined,
 				routes: undefined,
@@ -133,6 +132,7 @@ describe("RemoteRuntimeController", () => {
 			modules: [],
 			bindings: {},
 			migrations: undefined,
+			exports: undefined,
 			compatibility_date: "2025-11-11",
 			compatibility_flags: [],
 			keepVars: true,

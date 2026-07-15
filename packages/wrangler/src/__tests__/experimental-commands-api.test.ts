@@ -52,6 +52,11 @@ describe("experimental_getWranglerCommands", () => {
 			    "describe": "Install Cloudflare skills for detected AI coding agents before running the command",
 			    "type": "boolean",
 			  },
+			  "profile": {
+			    "describe": "Use a specific auth profile",
+			    "requiresArg": true,
+			    "type": "string",
+			  },
 			  "v": {
 			    "alias": "version",
 			    "describe": "Show version number",
@@ -218,6 +223,11 @@ describe("experimental_getWranglerCommands", () => {
 			  "wrangler secret put",
 			  "wrangler tail",
 			  "wrangler triggers deploy",
+			  "wrangler turnstile widget create",
+			  "wrangler turnstile widget delete",
+			  "wrangler turnstile widget get",
+			  "wrangler turnstile widget list",
+			  "wrangler turnstile widget update",
 			  "wrangler versions deploy",
 			  "wrangler versions list",
 			  "wrangler versions secret bulk",

@@ -1,4 +1,9 @@
-import type { CacheOptions, Observability, Route } from "./config/environment";
+import type {
+	CacheOptions,
+	Exports,
+	Observability,
+	Route,
+} from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
@@ -424,6 +429,13 @@ export interface CfDurableObjectMigrations {
 	}[];
 }
 
+/**
+ * The declarative `exports` map keyed by class name.
+ *
+ * Durable Objects can only be configured by `exports` or `migrations`, not both.
+ */
+export type CfExports = Exports;
+
 export type CfPlacement =
 	| { mode: "smart"; hint?: string }
 	| { mode?: "targeted"; region: string }
@@ -464,6 +476,11 @@ export interface CfWorkerInit {
 	containers: { class_name: string }[] | undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
+	/**
+	 * Declarative exports configuration. Durable Object entries are sent instead
+	 * of `migrations`.
+	 */
+	exports: CfExports | undefined;
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
 	keepVars: boolean | undefined;
@@ -488,11 +505,21 @@ export interface CfWorkerInit {
 		| undefined;
 	observability: Observability | undefined;
 	cache: CacheOptions | undefined;
+	/**
+	 * The list of npm package dependencies collected from the project's package.json.
+	 * Sent to the API for instrumentation and analytics purposes.
+	 */
+	package_dependencies?:
+		| Array<{
+				name: string;
+				packageJsonVersion: string;
+				installedVersion: string;
+		  }>
+		| undefined;
 }
 
 export interface CfWorkerContext {
 	env: string | undefined;
-	useServiceEnvironments: boolean | undefined;
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;

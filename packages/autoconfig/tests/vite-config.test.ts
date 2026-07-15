@@ -260,7 +260,7 @@ export default defineConfig({
 `
 			);
 
-			expect(() => transformViteConfig(".")).toThrowError(
+			expect(() => transformViteConfig(".")).toThrow(
 				/Cannot modify Vite config: could not find a valid plugins array/
 			);
 		});
@@ -279,7 +279,7 @@ export default defineConfig(() => ({
 `
 			);
 
-			expect(() => transformViteConfig(".")).toThrowError(
+			expect(() => transformViteConfig(".")).toThrow(
 				/Cannot modify Vite config: could not find a valid plugins array/
 			);
 		});

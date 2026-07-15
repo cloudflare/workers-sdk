@@ -1,7 +1,7 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import prompts from "prompts";
-import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
 import type { TelemetryMessage } from "@cloudflare/workers-utils";
 

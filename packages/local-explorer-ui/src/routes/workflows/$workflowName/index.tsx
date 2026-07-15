@@ -24,6 +24,7 @@ import {
 	useRef,
 	useState,
 	type MouseEvent,
+	type JSX,
 } from "react";
 import {
 	workflowsChangeInstanceStatus,

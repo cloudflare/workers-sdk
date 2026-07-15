@@ -10,7 +10,6 @@ import {
 	fetchPagedListResult,
 } from "../cfetch";
 import { confirm, prompt, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { msw } from "./helpers/msw";
 
@@ -26,7 +25,6 @@ initDeployHelpersContext({
 	confirm,
 	prompt,
 	select,
-	isNonInteractiveOrCI,
 });
 
 // In general we don't want the ConfigController to watch the config files
@@ -175,37 +173,44 @@ afterEach(() => {
 });
 afterAll(() => msw.close());
 
-// Make sure that we don't accidentally try to open a browser window when running tests.
-// We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
-vi.mock("../open-in-browser");
-
-// Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
-vi.mock("../user/generate-auth-url", async (importOriginal) => {
-	const OAUTH_CALLBACK_URL = (
-		await importOriginal<typeof import("../user/generate-auth-url")>()
-	).OAUTH_CALLBACK_URL;
+// Partial-mock `@cloudflare/workers-utils`, leaving every other export intact.
+//
+// 1. `openInBrowser` → a spy, so tests never actually open a browser. Used both
+//    by wrangler's own consumers (docs, pipelines, browser-rendering, hotkeys)
+//    and by the OAuth flow in `@cloudflare/workers-auth`; the OAuth harness
+//    (`mock-oauth-flow.ts`) and the browser tests drive it via `mockImplementation`.
+//
+// 2. `isNonInteractiveOrCI` / `isCI` → their CI flag is read from the mockable
+//    `ci-info` below. These live in workers-utils and read `ci-info`, but
+//    workers-utils (and the bundled `@cloudflare/workers-auth` /
+//    `@cloudflare/deploy-helpers`, which import these directly from it) is
+//    consumed here as a *bundled* distributable, so its inlined `ci-info`
+//    copy is a separate, unmockable instance that reads the real environment —
+//    in CI that defaults `isNonInteractiveOrCI()` to `true`, silently flipping
+//    every prompt to non-interactive. Overriding these two exports (reusing the
+//    real `isInteractive` for the TTY half) lets the existing
+//    `vi.mocked(ci).isCI = ...` convention keep controlling CI-gated behaviour
+//    for every consumer — wrangler source *and* the bundled workers-auth /
+//    deploy-helpers (since `@cloudflare/*` is external in their bundles).
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@cloudflare/workers-utils")>();
+	// The mocked `ci-info` default export is a stable object that tests mutate
+	// in place (`vi.mocked(ci).isCI = true`), so reading `isCI` at call time
+	// reflects each test's override.
+	const ci = (await import("ci-info")).default;
 	return {
-		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
-		OAUTH_CALLBACK_URL,
-		generateAuthUrl: vi
-			.fn()
-			.mockImplementation(({ authUrl, clientId, scopes }) => {
-				return (
-					authUrl +
-					`?response_type=code&` +
-					`client_id=${encodeURIComponent(clientId)}&` +
-					`redirect_uri=${encodeURIComponent(OAUTH_CALLBACK_URL)}&` +
-					// we add offline_access manually for every request
-					`scope=${encodeURIComponent(
-						[...scopes, "offline_access"].join(" ")
-					)}&` +
-					`state=MOCK_STATE_PARAM&` +
-					`code_challenge=${encodeURIComponent("MOCK_CODE_CHALLENGE")}&` +
-					`code_challenge_method=S256`
-				);
-			}),
+		...actual,
+		openInBrowser: vi.fn(),
+		isNonInteractiveOrCI: () => !actual.isInteractive() || ci.isCI,
+		isCI: () => ci.isCI,
 	};
 });
+
+// The OAuth authorize URL contains a random `state` and PKCE `code_challenge`
+// on every run. Rather than mocking the URL builder, we let the real
+// `generateAuthUrl` run and scrub those two values in `normalizeString()` so
+// snapshots stay deterministic.
 
 // Mock `ci-info` globally so tests run with CI detection disabled by default.
 //
@@ -229,11 +234,18 @@ afterEach(() => {
 	vi.mocked(_ci.default).CLOUDFLARE_WORKERS = false;
 });
 
-vi.mock("../user/generate-random-state", () => {
-	return {
-		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
-	};
-});
+// Mock `detectAgent` globally so AI-agent detection is disabled by default,
+// regardless of the environment the tests run in (e.g. inside an AI agent shell
+// such as Claude Code or Cursor, where the relevant env vars would otherwise be
+// present). This keeps agent-gated behaviour (e.g. the Pages-to-Workers delegation)
+// deterministically off. Tests that need to exercise agent behaviour mock
+// `../utils/detect-agent` themselves, which takes precedence.
+vi.mock("../utils/detect-agent", () => ({
+	detectAgent: vi.fn(() => ({
+		isAgent: false,
+		id: null,
+	})),
+}));
 
 vi.mock("../metrics/metrics-config", async (importOriginal) => {
 	const realModule =

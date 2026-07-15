@@ -16,21 +16,26 @@ import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
 import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
+import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
 import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
 import { fetch } from "../../http";
 import { kVoid } from "../../runtime";
 import { JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
+import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
-import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
+import {
+	DURABLE_OBJECTS_STORAGE_SERVICE_NAME,
+	getDurableObjectUniqueKey,
+	normaliseDurableObject,
+} from "../do";
 import { IMAGES_PLUGIN_NAME } from "../images";
 import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
 import {
 	getUserBindingServiceName,
-	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -323,6 +328,9 @@ export const CoreSharedOptionsSchema = z
 		// Path to the root directory for persisting data
 		// Used as the default for all plugins with the plugin name as the subdirectory name
 		defaultPersistRoot: z.string().optional(),
+		// Path to the project temporary directory for plugins that need it
+		// (e.g. email logs). Falls back to a subdirectory of tmpPath if not set.
+		defaultProjectTmpPath: z.string().optional(),
 		// Strip the MF-DISABLE_PRETTY_ERROR header from user request
 		stripDisablePrettyError: z.boolean().default(true),
 
@@ -536,6 +544,42 @@ function buildBindings(bindings: Record<string, Json>): Worker_Binding[] {
 			};
 		}
 	});
+}
+
+function getDevControlBindings(
+	allWorkerOpts: PluginWorkerOptions[] | undefined
+): Worker_Binding[] {
+	const bindings = new Map<string, Worker_Binding>();
+	for (const worker of allWorkerOpts ?? []) {
+		const workerName = worker.core.name ?? "";
+		const userServiceName = getUserServiceName(workerName);
+		const durableObjects = [
+			...Object.values(worker.do.durableObjects ?? {}),
+			...(worker.do.additionalUnboundDurableObjects ?? []),
+		];
+
+		for (const designator of durableObjects) {
+			const { className, scriptName, serviceName } =
+				normaliseDurableObject(designator);
+			if (serviceName !== undefined && serviceName !== userServiceName) {
+				continue;
+			}
+
+			const bindingName = getDevControlDurableObjectBindingName(
+				scriptName ?? workerName,
+				className
+			);
+			bindings.set(bindingName, {
+				name: bindingName,
+				durableObjectNamespace: {
+					serviceName: userServiceName,
+					className,
+				},
+			});
+		}
+	}
+
+	return Array.from(bindings.values());
 }
 
 const WRAPPED_MODULE_PREFIX = "miniflare-internal:wrapped:";
@@ -866,8 +910,14 @@ export const CORE_PLUGIN: Plugin<
 									unsafePreventEviction: preventEviction,
 									container,
 								},
-							]) =>
-								unsafeUniqueKey === kUnsafeEphemeralUniqueKey
+							]) => {
+								const uniqueKey = getDurableObjectUniqueKey(
+									className,
+									options.name,
+									unsafeUniqueKey
+								);
+
+								return uniqueKey === undefined
 									? {
 											className,
 											enableSql,
@@ -878,14 +928,11 @@ export const CORE_PLUGIN: Plugin<
 									: {
 											className,
 											enableSql,
-											// This `uniqueKey` will (among other things) be used as part of the
-											// path when persisting to the file-system. `-` is invalid in
-											// JavaScript class names, but safe on filesystems (incl. Windows).
-											uniqueKey:
-												unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
+											uniqueKey,
 											preventEviction,
 											container,
-										}
+										};
+							}
 						),
 					durableObjectStorage:
 						classNamesEntries.length === 0
@@ -1078,6 +1125,10 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_CACHE,
 			service: { name: getCacheServiceName(0) },
 		},
+		{
+			name: CoreBindings.SERVICE_DEV_CONTROL,
+			service: { name: CoreBindings.SERVICE_DEV_CONTROL },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
@@ -1174,6 +1225,17 @@ export function getGlobalServices({
 				// means if the entrypoint disables caching, proxied cache operations
 				// will be no-ops. Note we always require at least one worker to be set.
 				cacheApiOutbound: { name: "cache:0" },
+			},
+		},
+		{
+			name: CoreBindings.SERVICE_DEV_CONTROL,
+			worker: {
+				modules: [
+					{ name: "dev-control.worker.js", esModule: SCRIPT_DEV_CONTROL() },
+				],
+				compatibilityDate: "2026-07-08",
+				compatibilityFlags: ["unsafe_module"],
+				bindings: getDevControlBindings(allWorkerOpts),
 			},
 		},
 		{

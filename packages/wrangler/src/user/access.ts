@@ -6,7 +6,7 @@ import {
 	domainUsesAccess as packageDomainUsesAccess,
 	getAccessHeaders as packageGetAccessHeaders,
 } from "@cloudflare/workers-auth";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 
 export function clearAccessCaches(): void {

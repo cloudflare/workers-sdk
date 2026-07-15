@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-	getGlobalWranglerConfigPath,
+	getGlobalConfigPath,
 	getWranglerSendMetricsFromEnv,
 } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
@@ -149,7 +149,7 @@ export function updateMetricsPermission(enabled: boolean) {
  * Get the path to the metrics config file.
  */
 function getMetricsConfigPath(): string {
-	return path.resolve(getGlobalWranglerConfigPath(), "metrics.json");
+	return path.resolve(getGlobalConfigPath(), "metrics.json");
 }
 
 /**

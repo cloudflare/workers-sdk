@@ -407,7 +407,6 @@ describe("deploy", () => {
 		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
-				legacy_env: false,
 				env: {
 					testEnv: {
 						minify: true,
@@ -428,7 +427,6 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({
 				env: "testEnv",
 				expectedType: "esm",
-				useServiceEnvironments: true,
 				expectedEntry: `fetch(){return new Response("hello Cpt Picard")`,
 			});
 
@@ -440,10 +438,10 @@ describe("deploy", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Uploaded test-name (testEnv) (TIMINGS)
-				Deployed test-name (testEnv) triggers (TIMINGS)
-				  https://testEnv.test-name.test-sub-domain.workers.dev
-				Current Version ID: undefined"
+				Uploaded test-name-testEnv (TIMINGS)
+				Deployed test-name-testEnv triggers (TIMINGS)
+				  https://test-name-testEnv.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -453,7 +451,6 @@ describe("deploy", () => {
 		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
-				legacy_env: false,
 				env: {
 					testEnv: {},
 				},
@@ -478,7 +475,6 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({
 				env: "testEnv",
 				expectedType: "esm",
-				useServiceEnvironments: true,
 				expectedEntry: (str) => {
 					expect(str).toMatch(underscoreUnderscoreNameRegex);
 				},
@@ -493,7 +489,6 @@ describe("deploy", () => {
 		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
-				legacy_env: false,
 				env: {
 					testEnv: {
 						keep_names: false,
@@ -520,7 +515,6 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({
 				env: "testEnv",
 				expectedType: "esm",
-				useServiceEnvironments: true,
 				expectedEntry: (str) => {
 					expect(str).not.toMatch(underscoreUnderscoreNameRegex);
 				},
@@ -1077,7 +1071,7 @@ export default { fetch() { return new Response(foo); } }`
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toThrowError();
+			await expect(runWrangler("deploy")).rejects.toThrow();
 			expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",

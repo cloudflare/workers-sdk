@@ -1402,7 +1402,7 @@ describe("wrangler pipelines setup", () => {
 				{
 				  "pipelines": [
 				    {
-				      "pipeline": "stream_123",
+				      "stream": "stream_123",
 				      "binding": "TEST_PIPELINE_STREAM"
 				    }
 				  ]

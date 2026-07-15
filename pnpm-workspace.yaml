@@ -117,9 +117,10 @@ catalog:
   vite: "8.0.13"
   "ws": "8.21.0"
   esbuild: "0.28.1"
+  "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^4.20260617.1"
-  workerd: "1.20260617.1"
+  "@cloudflare/workers-types": "^5.20260710.1"
+  workerd: "1.20260710.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
   msw: 2.12.4
@@ -129,7 +130,7 @@ catalog:
   "capnweb": "0.5.0"
   "ci-info": "4.4.0"
   "open": "11.0.0"
-  "signal-exit": "3.0.7"
+  "signal-exit": "4.1.0"
   # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this monorepo should use workspace:* instead of this catalog version
   # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
   # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.

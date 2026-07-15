@@ -80,39 +80,6 @@ export function inheritable<K extends keyof Environment>(
 }
 
 /**
- * Get an inheritable environment field, but only if we are in legacy environments
- */
-export function inheritableInWranglerEnvironments<K extends keyof Environment>(
-	diagnostics: Diagnostics,
-	useServiceEnvironments: boolean | undefined,
-	topLevelEnv: Environment | undefined,
-	rawEnv: RawEnvironment,
-	field: K,
-	validate: ValidatorFn,
-	transformFn: TransformFn<Environment[K]> = (v) => v,
-	defaultValue: Environment[K]
-): Environment[K] {
-	const usingServiceEnvironments =
-		useServiceEnvironments && topLevelEnv !== undefined;
-	return usingServiceEnvironments
-		? notAllowedInNamedServiceEnvironment(
-				diagnostics,
-				topLevelEnv,
-				rawEnv,
-				field
-			)
-		: inheritable(
-				diagnostics,
-				topLevelEnv,
-				rawEnv,
-				field,
-				validate,
-				defaultValue,
-				transformFn
-			);
-}
-
-/**
  * Type of function that is used to transform an inheritable environment field.
  */
 type TransformFn<T> = (fieldValue: T | undefined) => T | undefined;
@@ -124,25 +91,6 @@ export const appendEnvName =
 	(envName: string): TransformFn<string | undefined> =>
 	(fieldValue) =>
 		fieldValue ? `${fieldValue}-${envName}` : undefined;
-
-/**
- * Log an error if this named environment is trying to override the value in the top-level
- * environment, which is not allow for this field.
- */
-function notAllowedInNamedServiceEnvironment<K extends keyof Environment>(
-	diagnostics: Diagnostics,
-	topLevelEnv: Environment,
-	rawEnv: RawEnvironment,
-	field: K
-): Environment[K] {
-	if (field in rawEnv) {
-		diagnostics.errors.push(
-			`The "${field}" field is not allowed in named service environments.\n` +
-				`Please remove the field from this environment.`
-		);
-	}
-	return topLevelEnv[field];
-}
 
 /**
  * Get a not inheritable environment field, after computing and validating its value.

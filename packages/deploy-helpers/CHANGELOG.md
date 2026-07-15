@@ -1,5 +1,141 @@
 # @cloudflare/deploy-helpers
 
+## 0.5.0
+
+### Minor Changes
+
+- [#14689](https://github.com/cloudflare/workers-sdk/pull/14689) [`2cd84d4`](https://github.com/cloudflare/workers-sdk/commit/2cd84d455cfa174ff7264e94e678b6d2eb2a25e4) Thanks [@emily-shen](https://github.com/emily-shen)! - Publish `@cloudflare/config` package
+
+  `@cloudflare/config` is now published as a standalone package. Previously, its exports (`InputWorkerSchema`, `OutputWorkerSchema`, `convertToWranglerConfig`, and related types) were re-exported through `@cloudflare/deploy-helpers`. Consumers should import directly from `@cloudflare/config` instead.
+
+  `@cloudflare/deploy-helpers` no longer re-exports `@cloudflare/config` symbols.
+
+### Patch Changes
+
+- [#14681](https://github.com/cloudflare/workers-sdk/pull/14681) [`8e29318`](https://github.com/cloudflare/workers-sdk/commit/8e29318b568299e0da3e44d17af62ea2d6b80911) Thanks [@emily-shen](https://github.com/emily-shen)! - Move preview command logic from wrangler into `@cloudflare/deploy-helpers`
+
+  Preview orchestration, API calls, formatting, and settings management now live in `@cloudflare/deploy-helpers`.
+
+- Updated dependencies [[`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`ed33326`](https://github.com/cloudflare/workers-sdk/commit/ed3332620a15dff35b0875eb9ded87086104b2f0), [`018574b`](https://github.com/cloudflare/workers-sdk/commit/018574b5ab22cc0e3141d1f09c2c383d76d59b2c), [`42df9bb`](https://github.com/cloudflare/workers-sdk/commit/42df9bbf07e37032a3e61027e33d504d74a25ccd), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36)]:
+  - miniflare@4.20260710.0
+  - @cloudflare/workers-utils@0.27.0
+  - @cloudflare/cli-shared-helpers@0.1.14
+
+## 0.4.0
+
+### Minor Changes
+
+- [#14591](https://github.com/cloudflare/workers-sdk/pull/14591) [`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Export `collectPackageDependencies` for npm dependency metadata collection
+
+  The package dependency discovery logic (collecting installed npm package names and versions from a project's `package.json`) is now owned by `deploy-helpers` and called internally during deploy and version uploads, rather than being pre-computed in wrangler and passed through as a prop.
+
+### Patch Changes
+
+- Updated dependencies [[`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3), [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f)]:
+  - @cloudflare/workers-utils@0.26.0
+  - miniflare@4.20260708.1
+  - @cloudflare/cli-shared-helpers@0.1.13
+
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`8511ddf`](https://github.com/cloudflare/workers-sdk/commit/8511ddf769a603f49576b8cf632ea330c353001f), [`2fedb1f`](https://github.com/cloudflare/workers-sdk/commit/2fedb1fc811efb3f7544c569e57383cabd4f14f8)]:
+  - miniflare@4.20260708.0
+  - @cloudflare/workers-utils@0.25.1
+
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [[`0852346`](https://github.com/cloudflare/workers-sdk/commit/08523467752daa79f0f8950a01f35797aa6f3052)]:
+  - miniflare@4.20260706.0
+
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`e7e5780`](https://github.com/cloudflare/workers-sdk/commit/e7e5780ea2db48fe43233ecedf01979db6c5ce9d), [`aad35b7`](https://github.com/cloudflare/workers-sdk/commit/aad35b79d07df1bb764a4a5912d6b4328a34474b), [`d88555e`](https://github.com/cloudflare/workers-sdk/commit/d88555edb671668ed7f73e587af9effe6e782f53), [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5), [`f416dd9`](https://github.com/cloudflare/workers-sdk/commit/f416dd983e9c6e4d292317e077dfbe839d2f30c8), [`1ca8d8f`](https://github.com/cloudflare/workers-sdk/commit/1ca8d8f0bbd012a1d65cabadf7b6987b252775e9), [`16fbf81`](https://github.com/cloudflare/workers-sdk/commit/16fbf81d923760d295c7f05b0bd660b7be510e5d)]:
+  - miniflare@4.20260702.0
+  - @cloudflare/workers-utils@0.25.1
+  - @cloudflare/cli-shared-helpers@0.1.12
+
+## 0.3.0
+
+### Minor Changes
+
+- [#14474](https://github.com/cloudflare/workers-sdk/pull/14474) [`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add cache options for WorkerEntrypoint exports
+
+  You can now set cache options on `WorkerEntrypoint` exports and configure cross-version cache behavior globally:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "cache": { "enabled": true, "cross_version_cache": true },
+    "exports": {
+      "default": {
+        "type": "worker",
+        "cache": { "enabled": false }
+      },
+      "Admin": {
+        "type": "worker",
+        "cache": { "enabled": true }
+      }
+    }
+  }
+  ```
+
+  Wrangler sends the `exports` config to the deploy and version upload APIs alongside the global `cache.enabled` and `cache.cross_version_cache` settings. The platform resolves those global settings plus cache overrides on exports and validates which entrypoint names are cacheable.
+
+### Patch Changes
+
+- [#14305](https://github.com/cloudflare/workers-sdk/pull/14305) [`98793d8`](https://github.com/cloudflare/workers-sdk/commit/98793d8e00567462518d983d974e0e89b6a474c3) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Improve asset upload performance with single-file uploads
+
+  Asset uploads now use a more efficient per-file upload path when the platform enables it. This is rolled out server-side and requires no configuration changes. Existing upload behavior is unchanged when the new path is not enabled.
+
+- Updated dependencies [[`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933), [`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1)]:
+  - @cloudflare/workers-utils@0.25.0
+  - miniflare@4.20260701.0
+  - @cloudflare/cli-shared-helpers@0.1.11
+
+## 0.2.5
+
+### Patch Changes
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - remove skipLastDeployedFromApiCheck
+
+  This was a temporary option to bypass an API issue, which has been fixed API side.
+
+- Updated dependencies [[`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`f10d4ad`](https://github.com/cloudflare/workers-sdk/commit/f10d4ad99a3e67e04c16425fe25b6c61ec0c54db), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a)]:
+  - miniflare@4.20260630.0
+
+## 0.2.4
+
+### Patch Changes
+
+- Updated dependencies [[`3b743c1`](https://github.com/cloudflare/workers-sdk/commit/3b743c1b86ad80c40fd9d2d678cd5a8cb66e86fa)]:
+  - miniflare@4.20260625.0
+
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`a085dec`](https://github.com/cloudflare/workers-sdk/commit/a085deca12d7126c21e500b3dd4298edfd13f8cd), [`9a0de8f`](https://github.com/cloudflare/workers-sdk/commit/9a0de8f71f50bb7d1884288e376259082084a315), [`fab565f`](https://github.com/cloudflare/workers-sdk/commit/fab565fdb1a912c73232d72ccdf1963fd96f9ad5)]:
+  - miniflare@4.20260623.0
+
+## 0.2.2
+
+### Patch Changes
+
+- [#14354](https://github.com/cloudflare/workers-sdk/pull/14354) [`7649895`](https://github.com/cloudflare/workers-sdk/commit/764989568ecbfadd111fc399c83d71dd9ce6cf1b) Thanks [@emily-shen](https://github.com/emily-shen)! - Move resource provisioning into deploy helpers
+
+  Worker deploy and versions upload now share the deploy helpers implementation for provisioning bindings, reducing Wrangler-specific callback wiring while preserving existing behavior.
+
+- Updated dependencies [[`b38823f`](https://github.com/cloudflare/workers-sdk/commit/b38823fb35a8bdcd00004e74404ab18d7b070dbf), [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359), [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359)]:
+  - miniflare@4.20260617.1
+  - @cloudflare/workers-utils@0.24.0
+  - @cloudflare/cli-shared-helpers@0.1.10
+
 ## 0.2.1
 
 ### Patch Changes
