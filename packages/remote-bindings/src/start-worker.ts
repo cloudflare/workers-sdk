@@ -1,3 +1,4 @@
+import { DevEnv } from "./startDevWorker";
 import type { Binding, StartDevWorkerInput } from "@cloudflare/workers-utils";
 import type { EventEmitter } from "node:events";
 
@@ -14,6 +15,10 @@ export type Worker = {
 	};
 };
 
-export function startWorker(_input: StartDevWorkerInput): Promise<Worker> {
-	throw new Error("startWorker() is not implemented");
+export async function startWorker(
+	options: StartDevWorkerInput
+): Promise<Worker> {
+	const devEnv = new DevEnv();
+
+	return devEnv.startWorker(options);
 }

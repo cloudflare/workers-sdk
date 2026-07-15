@@ -33,6 +33,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
