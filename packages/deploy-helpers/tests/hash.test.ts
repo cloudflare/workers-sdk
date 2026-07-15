@@ -37,11 +37,13 @@ const GOLDEN_VALUES: Array<{
 		hash: "b41bdcbc16962c4e5d7e14d7c9103695",
 	},
 	{
-		label: "Hello World! (png)",
-		content: Buffer.from("Hello World!"),
+		label: "1x1 PNG",
+		content: Buffer.from(
+			"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+			"base64"
+		),
 		ext: ".png",
-		// base64("Hello World!") + "png" = "SGVsbG8gV29ybGQhpng"
-		hash: "e7eb728129ffbae300b54a927c95b0d5",
+		hash: "226c49eec5fdea01c6810b84ccceb008",
 	},
 ];
 
