@@ -322,6 +322,8 @@ export const CoreSharedOptionsSchema = z
 		unsafeRuntimeEnv: z.record(z.string()).optional(),
 		// Enable the local explorer at /cdn-cgi/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
+		// Enable RPC-based Durable Object introspection APIs
+		unsafeInspectDurableObjects: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
 
@@ -819,7 +821,8 @@ export const CORE_PLUGIN: Plugin<
 			([, { enableSql }]) => enableSql
 		);
 		if (
-			sharedOptions.unsafeLocalExplorer &&
+			(sharedOptions.unsafeLocalExplorer ||
+				sharedOptions.unsafeInspectDurableObjects) &&
 			// service-format workers are not supported
 			"modules" in workerScript &&
 			sqliteClasses.length > 0 &&
