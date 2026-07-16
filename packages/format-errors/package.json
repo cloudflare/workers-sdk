@@ -17,7 +17,7 @@
 		"tsconfig": "*",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*",
-		"zod": "^3.22.3"
+		"zod": "catalog:default"
 	},
 	"volta": {
 		"extends": "../../package.json"
