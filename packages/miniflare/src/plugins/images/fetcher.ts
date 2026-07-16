@@ -11,6 +11,9 @@ type Transform = {
 	rotate?: number;
 	width?: number;
 	height?: number;
+	fit?: RequestInitCfPropertiesImage["fit"];
+	gravity?: RequestInitCfPropertiesImage["gravity"];
+	background?: string;
 };
 
 function validateTransforms(inputTransforms: unknown): Transform[] | null {
@@ -173,8 +176,14 @@ async function runTransform(
 		}
 
 		if (transform.width !== undefined || transform.height !== undefined) {
+			const { fit, withoutEnlargement } = resolveFit(transform.fit);
 			transformer.resize(transform.width || null, transform.height || null, {
-				fit: "contain",
+				fit,
+				withoutEnlargement,
+				position: resolveGravity(transform.gravity),
+				background:
+					transform.background ??
+					(transform.fit === "pad" ? "#ffffff" : undefined),
 			});
 		}
 	}
