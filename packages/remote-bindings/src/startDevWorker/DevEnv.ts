@@ -1,45 +1,53 @@
 import { EventEmitter } from "node:events";
+import { readFileSync } from "node:fs";
 import { UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
 import { logger } from "../logger";
-import { BundlerController } from "./BundlerController";
-import { ConfigController } from "./ConfigController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type { ControllerBus, ControllerEvent } from "./BaseController";
-import type { ErrorEvent } from "./events";
-import type { StartDevWorkerOptions, Worker } from "./types";
+import type { ErrorEvent, ReloadCompleteEvent } from "./events";
+import type { Bundle, StartDevWorkerOptions } from "./types";
 
-export class DevEnv extends EventEmitter implements ControllerBus {
-	config: ConfigController;
-	bundler: BundlerController;
+export class DevEnv extends EventEmitter {
 	runtime: RemoteRuntimeController;
 	proxy: ProxyController;
+	#bundle: Bundle;
+	#config: StartDevWorkerOptions;
 
-	async startWorker(options: StartDevWorkerOptions): Promise<Worker> {
-		const worker = createWorkerObject(this);
-
-		try {
-			await this.config.set(options);
-		} catch (e) {
-			const error = new Error("An error occurred when starting the server", {
-				cause: e,
-			});
-			this.proxy.ready.reject(error);
-			await worker.dispose();
-			throw e;
-		}
-
-		return worker;
+	start() {
+		this.proxy.start(this.#config);
+		this.update(this.#config);
 	}
 
-	constructor() {
+	update(config: StartDevWorkerOptions) {
+		this.#config = config;
+		this.proxy.pause(config);
+		this.runtime.onUpdateStart();
+		this.runtime.onBundleComplete({
+			type: "bundleComplete",
+			config,
+			bundle: this.#bundle,
+		});
+	}
+
+	constructor(config: StartDevWorkerOptions) {
 		super();
 
-		this.config = new ConfigController(this);
-		this.bundler = new BundlerController(this);
-		this.runtime = new RemoteRuntimeController(this);
-		this.proxy = new ProxyController(this);
+		this.#config = config;
+		this.#bundle = {
+			path: config.entrypoint,
+			entrypointSource: readFileSync(config.entrypoint, "utf8"),
+			type: "esm",
+			modules: [],
+		};
+		this.proxy = new ProxyController(
+			(event) => this.handleErrorEvent(event),
+			() => this.runtime.onPreviewTokenExpired()
+		);
+		this.runtime = new RemoteRuntimeController(
+			(event) => this.handleErrorEvent(event),
+			(event) => this.handleReloadComplete(event)
+		);
 
 		this.on("error", (event: ErrorEvent) => {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
@@ -47,56 +55,9 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 		});
 	}
 
-	/**
-	 * Central message bus dispatch method.
-	 * All events from controllers flow through here, making the event routing explicit and traceable.
-	 *
-	 * Event flow:
-	 * - ConfigController emits configUpdate → BundlerController, ProxyController
-	 * - BundlerController emits bundleStart → ProxyController, RuntimeControllers
-	 * - BundlerController emits bundleComplete → RuntimeControllers
-	 * - RuntimeController emits reloadStart → ProxyController
-	 * - RuntimeController emits reloadComplete → ProxyController
-	 * - ProxyController emits previewTokenExpired → RuntimeControllers
-	 * - Any controller emits error → DevEnv error handler
-	 *
-	 * `reloadComplete` is also re-emitted as an external EventEmitter event
-	 * (`devEnv.on("reloadComplete", ...)`) so callers like
-	 * `RemoteProxySession.updateBindings` can wait for the reload to finish.
-	 */
-	dispatch(event: ControllerEvent): void {
-		switch (event.type) {
-			case "error":
-				this.handleErrorEvent(event);
-				break;
-
-			case "configUpdate":
-				this.bundler.onConfigUpdate(event);
-				this.proxy.onConfigUpdate(event);
-				break;
-
-			case "bundleStart":
-				this.proxy.onBundleStart(event);
-				this.runtime.onBundleStart(event);
-				break;
-
-			case "bundleComplete":
-				this.runtime.onBundleComplete(event);
-				break;
-
-			case "reloadStart":
-				this.proxy.onReloadStart(event);
-				break;
-
-			case "reloadComplete":
-				this.proxy.onReloadComplete(event);
-				this.emit("reloadComplete", event);
-				break;
-
-			case "previewTokenExpired":
-				this.runtime.onPreviewTokenExpired(event);
-				break;
-		}
+	private handleReloadComplete(event: ReloadCompleteEvent) {
+		this.proxy.play(event);
+		this.emit("reloadComplete", event);
 	}
 
 	private handleErrorEvent(event: ErrorEvent): void {
@@ -127,31 +88,8 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	async teardown() {
 		logger.debug("DevEnv teardown beginning...");
 
-		await Promise.all([
-			this.config.teardown(),
-			this.bundler.teardown(),
-			this.runtime.teardown(),
-			this.proxy.teardown(),
-		]);
+		await Promise.all([this.runtime.teardown(), this.proxy.teardown()]);
 
 		logger.debug("DevEnv teardown complete");
 	}
-}
-
-function createWorkerObject(devEnv: DevEnv): Worker {
-	return {
-		get ready() {
-			return devEnv.proxy.ready.promise.then(() => undefined);
-		},
-		get url() {
-			return devEnv.proxy.ready.promise.then((ev) => ev.url);
-		},
-		patchConfig(config) {
-			return devEnv.config.patch(config);
-		},
-		async dispose() {
-			await devEnv.teardown();
-		},
-		raw: devEnv,
-	};
 }

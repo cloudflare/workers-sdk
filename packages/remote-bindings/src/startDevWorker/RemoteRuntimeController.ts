@@ -1,9 +1,5 @@
-import assert from "node:assert";
 import { getAccessHeaders } from "@cloudflare/workers-auth";
-import {
-	MissingConfigError,
-	retryOnAPIFailure,
-} from "@cloudflare/workers-utils";
+import { retryOnAPIFailure } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
 import { WebSocket } from "ws";
@@ -17,11 +13,9 @@ import {
 import { realishPrintLogs } from "../utils/printing";
 import {
 	createRemoteWorkerInit,
-	getWorkerAccountAndContext,
 	handlePreviewSessionCreationError,
 	handlePreviewSessionUploadError,
 } from "../utils/remote";
-import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
 import type {
@@ -31,18 +25,16 @@ import type {
 } from "../utils/create-worker-preview";
 import type {
 	BundleCompleteEvent,
-	BundleStartEvent,
-	PreviewTokenExpiredEvent,
+	ErrorEvent,
 	ProxyData,
 	ReloadCompleteEvent,
-	ReloadStartEvent,
 } from "./events";
 import type { Bundle, StartDevWorkerOptions } from "./types";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 type CreateRemoteWorkerInitProps = Parameters<typeof createRemoteWorkerInit>[0];
 
-export class RemoteRuntimeController extends RuntimeController {
+export class RemoteRuntimeController {
 	#abortController = new AbortController();
 
 	#currentBundleId = 0;
@@ -58,6 +50,12 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	// Timer for proactive token refresh before the 1-hour expiry
 	#refreshTimer?: ReturnType<typeof setTimeout>;
+	#tearingDown = false;
+
+	constructor(
+		private onError: (event: ErrorEvent) => void,
+		private onReloadComplete: (event: ReloadCompleteEvent) => void
+	) {}
 
 	async #previewSession(
 		props: CfAccount & {
@@ -66,15 +64,11 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
-			const { workerAccount, workerContext } =
-				getWorkerAccountAndContext(props);
-
 			return await retryOnAPIFailure(
 				() =>
 					createPreviewSession(
 						props.complianceConfig,
-						workerAccount,
-						workerContext,
+						props,
 						this.#abortController.signal,
 						props.name
 					),
@@ -99,7 +93,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			CfAccount & {
 				complianceConfig: ComplianceConfig;
 				bundleId: number;
-				minimal_mode?: boolean;
 			}
 	): Promise<CfPreviewToken | undefined> {
 		if (!this.#session) {
@@ -119,10 +112,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			this.#activeTail?.removeAllListeners("error");
 			this.#activeTail?.on("error", () => {});
 			this.#activeTail?.terminate();
-			const { workerAccount, workerContext } = getWorkerAccountAndContext({
-				accountId: props.accountId,
-				apiToken: props.apiToken,
-			});
 			const init = createRemoteWorkerInit({
 				bundle: props.bundle,
 				name: props.name,
@@ -136,11 +125,9 @@ export class RemoteRuntimeController extends RuntimeController {
 					createWorkerPreview(
 						props.complianceConfig,
 						init,
-						workerAccount,
-						workerContext,
+						props,
 						session,
-						this.#abortController.signal,
-						props.minimal_mode
+						this.#abortController.signal
 					),
 				logger,
 				undefined,
@@ -164,7 +151,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				this.#activeTail.on("message", realishPrintLogs);
 				// Best-effort log streaming: ignore errors instead of letting them
 				// propagate as unhandled exceptions. The signal we pass to the `ws`
-				// constructor is shared with `onBundleStart`'s abort, which destroys
+				// constructor is shared with update cancellation, which destroys
 				// the underlying upgrade request with `AbortError` every time a new
 				// bundle starts. The existing `terminate` paths in `#previewToken`
 				// and `teardown()` re-install no-op listeners before shutting the
@@ -231,7 +218,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			compatibilityDate: config.compatibilityDate,
 			compatibilityFlags: config.compatibilityFlags,
 			bundleId,
-			minimal_mode: config.dev.remote === "minimal",
 		});
 		// If we received a new `bundleComplete` event before we were able to
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
@@ -259,7 +245,7 @@ export class RemoteRuntimeController extends RuntimeController {
 
 		this.#latestProxyData = proxyData;
 
-		this.emitReloadCompleteEvent({
+		this.onReloadComplete({
 			type: "reloadComplete",
 			bundle,
 			config,
@@ -274,10 +260,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		clearTimeout(this.#refreshTimer);
 		this.#refreshTimer = setTimeout(() => {
 			if (this.#latestProxyData) {
-				this.onPreviewTokenExpired({
-					type: "previewTokenExpired",
-					proxyData: this.#latestProxyData,
-				});
+				this.onPreviewTokenExpired();
 			}
 		}, interval);
 	}
@@ -291,24 +274,13 @@ export class RemoteRuntimeController extends RuntimeController {
 		logger.log(chalk.dim("⎔ Starting remote preview..."));
 
 		try {
-			if (!config.dev?.auth) {
-				throw new MissingConfigError("config.dev.auth");
-			}
-
-			assert(config.dev.auth);
-			const auth = await unwrapHook(config.dev.auth);
+			const auth = await unwrapHook(config.auth);
 
 			this.#latestConfig = config;
 			this.#latestBundle = bundle;
 
 			if (this.#session) {
 				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
-			}
-
-			// Recreate session if the worker name changed, since the session
-			// host bakes in the name from creation time.
-			if (this.#session && config.name !== this.#session.name) {
-				this.#session = undefined;
 			}
 
 			this.#session ??= await this.#getPreviewSession(config, auth);
@@ -337,8 +309,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 
 		try {
-			assert(this.#latestConfig.dev.auth);
-			const auth = await unwrapHook(this.#latestConfig.dev.auth);
+			const auth = await unwrapHook(this.#latestConfig.auth);
 
 			this.#session = await this.#getPreviewSession(this.#latestConfig, auth);
 
@@ -371,7 +342,7 @@ export class RemoteRuntimeController extends RuntimeController {
 	//   Event Handlers
 	// ******************
 
-	onBundleStart(_: BundleStartEvent) {
+	onUpdateStart() {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();
@@ -380,26 +351,15 @@ export class RemoteRuntimeController extends RuntimeController {
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;
 
-		if (!ev.config.dev?.remote) {
-			void this.#mutex.runWith(() => this.teardown());
-			return;
-		}
-
-		this.emitReloadStartEvent({
-			type: "reloadStart",
-			config: ev.config,
-			bundle: ev.bundle,
-		});
-
 		void this.#mutex.runWith(() => this.#onBundleComplete(ev, id));
 	}
-	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
+	onPreviewTokenExpired(): void {
 		logger.log(chalk.dim("⎔ Refreshing preview token..."));
 		void this.#mutex.runWith(() => this.#refreshPreviewToken());
 	}
 
-	override async teardown() {
-		await super.teardown();
+	async teardown() {
+		this.#tearingDown = true;
 		if (this.#session) {
 			logger.log(chalk.dim("⎔ Shutting down remote preview..."));
 		}
@@ -414,14 +374,13 @@ export class RemoteRuntimeController extends RuntimeController {
 		logger.debug("RemoteRuntimeController teardown complete");
 	}
 
-	// *********************
-	//   Event Dispatchers
-	// *********************
-
-	override emitReloadStartEvent(data: ReloadStartEvent) {
-		this.bus.dispatch(data);
-	}
-	override emitReloadCompleteEvent(data: ReloadCompleteEvent) {
-		this.bus.dispatch(data);
+	private emitErrorEvent(event: ErrorEvent) {
+		if (this.#tearingDown) {
+			logger.debug("Suppressing error event during teardown");
+			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
+			logger.debug("=> Error contextual data:", event.data);
+			return;
+		}
+		this.onError(event);
 	}
 }

@@ -1,4 +1,3 @@
-import type { DevEnv } from "./DevEnv";
 import type {
 	AsyncHook,
 	CfAccount,
@@ -8,14 +7,6 @@ import type {
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
 
-export interface Worker {
-	ready: Promise<void>;
-	url: Promise<URL>;
-	patchConfig(config: StartDevWorkerOptions): void;
-	dispose(): Promise<void>;
-	raw: DevEnv;
-}
-
 export type StartDevWorkerOptions = {
 	name: string;
 	entrypoint: string;
@@ -23,14 +14,11 @@ export type StartDevWorkerOptions = {
 	compatibilityDate: StartDevWorkerInput["compatibilityDate"];
 	compatibilityFlags: StartDevWorkerInput["compatibilityFlags"];
 	complianceRegion: Config["compliance_region"];
-	dev: {
-		remote: "minimal";
-		auth?: AsyncHook<CfAccount>;
-		server: {
-			hostname?: string;
-			port: number;
-			secure: boolean;
-		};
+	auth: AsyncHook<CfAccount>;
+	server: {
+		hostname?: string;
+		port: number;
+		secure: boolean;
 	};
 };
 

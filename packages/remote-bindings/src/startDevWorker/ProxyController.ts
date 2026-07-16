@@ -10,19 +10,14 @@ import {
 	handleStructuredLogs,
 	WranglerLog,
 } from "../utils/miniflare";
-import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
 import type {
-	BundleStartEvent,
-	ConfigUpdateEvent,
 	ErrorEvent,
-	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
 	ReadyEvent,
 	ReloadCompleteEvent,
-	ReloadStartEvent,
 	SerializedError,
 } from "./events";
 import type { Bundle, StartDevWorkerOptions } from "./types";
@@ -32,7 +27,7 @@ const proxyWorkerPath = fileURLToPath(
 	new URL("./dev-proxy-worker.mjs", import.meta.url)
 );
 
-export class ProxyController extends Controller {
+export class ProxyController {
 	public ready = createDeferred<ReadyEvent>();
 
 	public localServerReady = createDeferred<void>();
@@ -44,6 +39,11 @@ export class ProxyController extends Controller {
 
 	secret = randomUUID();
 
+	constructor(
+		private onError: (event: ErrorEvent) => void,
+		private onPreviewTokenExpired: () => void
+	) {}
+
 	protected createProxyWorker() {
 		if (this._torndown || this.proxyWorker) {
 			return;
@@ -51,9 +51,9 @@ export class ProxyController extends Controller {
 		assert(this.latestConfig !== undefined);
 
 		const proxyWorkerOptions: MiniflareOptions = {
-			host: this.latestConfig.dev?.server?.hostname,
-			port: this.latestConfig.dev?.server?.port,
-			https: this.latestConfig.dev?.server?.secure,
+			host: this.latestConfig.server.hostname,
+			port: this.latestConfig.server.port,
+			https: this.latestConfig.server.secure,
 			stripDisablePrettyError: false,
 			unsafeLocalExplorer: false,
 			workers: [
@@ -170,27 +170,15 @@ export class ProxyController extends Controller {
 			);
 		}
 	}
-	// ******************
-	//   Event Handlers
-	// ******************
-
-	onConfigUpdate(data: ConfigUpdateEvent) {
-		this.latestConfig = data.config;
+	start(config: StartDevWorkerOptions) {
+		this.latestConfig = config;
 		this.createProxyWorker();
-
+	}
+	pause(config: StartDevWorkerOptions) {
+		this.latestConfig = config;
 		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
-	onBundleStart(data: BundleStartEvent) {
-		this.latestConfig = data.config;
-
-		void this.sendMessageToProxyWorker({ type: "pause" });
-	}
-	onReloadStart(data: ReloadStartEvent) {
-		this.latestConfig = data.config;
-
-		void this.sendMessageToProxyWorker({ type: "pause" });
-	}
-	onReloadComplete(data: ReloadCompleteEvent) {
+	play(data: ReloadCompleteEvent) {
 		this.localServerReady.resolve();
 
 		this.latestConfig = data.config;
@@ -204,7 +192,7 @@ export class ProxyController extends Controller {
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
 		switch (message.type) {
 			case "previewTokenExpired":
-				this.emitPreviewTokenExpiredEvent(message.proxyData);
+				this.onPreviewTokenExpired();
 
 				break;
 			case "error":
@@ -216,8 +204,7 @@ export class ProxyController extends Controller {
 		}
 	}
 	_torndown = false;
-	override async teardown() {
-		await super.teardown();
+	async teardown() {
 		logger.debug("ProxyController teardown beginning...");
 		this._torndown = true;
 
@@ -242,22 +229,9 @@ export class ProxyController extends Controller {
 
 		this.ready.resolve(data);
 	}
-	emitPreviewTokenExpiredEvent(proxyData: ProxyData) {
-		this.bus.dispatch({
-			type: "previewTokenExpired",
-			proxyData,
-		});
-	}
-
-	override emitErrorEvent(data: ErrorEvent): void;
-	override emitErrorEvent(
-		reason: string,
-		cause?: Error | SerializedError
-	): void;
-	override emitErrorEvent(
-		data: string | ErrorEvent,
-		cause?: Error | SerializedError
-	) {
+	emitErrorEvent(data: ErrorEvent): void;
+	emitErrorEvent(reason: string, cause?: Error | SerializedError): void;
+	emitErrorEvent(data: string | ErrorEvent, cause?: Error | SerializedError) {
 		if (typeof data === "string") {
 			data = {
 				type: "error",
@@ -270,7 +244,13 @@ export class ProxyController extends Controller {
 				},
 			};
 		}
-		super.emitErrorEvent(data);
+		if (this._torndown) {
+			logger.debug("Suppressing error event during teardown");
+			logger.debug(`Error in ${data.source}: ${data.reason}\n`, data.cause);
+			logger.debug("=> Error contextual data:", data.data);
+			return;
+		}
+		this.onError(data);
 	}
 }
 

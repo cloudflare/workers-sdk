@@ -5,10 +5,7 @@ import { APIError, UserError } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { isAbortError } from "./isAbortError";
 import type { Bundle } from "../startDevWorker/types";
-import type { CfAccount } from "./create-worker-preview";
 import type {
-	ApiCredentials,
-	CfWorkerContext,
 	CfWorkerInit,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
@@ -158,26 +155,6 @@ export function createRemoteWorkerInit(props: {
 	};
 
 	return init;
-}
-
-export function getWorkerAccountAndContext(props: {
-	accountId: string;
-	apiToken: ApiCredentials;
-}): { workerAccount: CfAccount; workerContext: CfWorkerContext } {
-	const workerAccount: CfAccount = {
-		accountId: props.accountId,
-		apiToken: props.apiToken,
-	};
-
-	const workerContext: CfWorkerContext = {
-		env: undefined,
-		zone: undefined,
-		host: undefined,
-		routes: undefined,
-		sendMetrics: undefined,
-	};
-
-	return { workerAccount, workerContext };
 }
 
 /**
