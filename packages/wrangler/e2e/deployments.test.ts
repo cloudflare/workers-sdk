@@ -17,8 +17,9 @@ import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput, validateAssetUploadLogs } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
 import { waitForLong } from "./helpers/wait-for";
+import { waitForWorkersDev } from "./helpers/wait-for-workers-dev";
 
-const TIMEOUT = 50_000;
+const TIMEOUT = 90_000;
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"deployments",
@@ -61,13 +62,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const deployedUrl = getDeployedUrl(output);
 
-			await waitForLong(
-				async () => {
-					const response = await fetch(deployedUrl);
-					expect(await response.text()).toEqual("Hello World!");
-				},
-				{ timeout: 30_000 }
+			const response = await waitForWorkersDev(
+				deployedUrl,
+				async (candidate) => (await candidate.clone().text()) === "Hello World!"
 			);
+			expect(await response.text()).toEqual("Hello World!");
 		});
 
 		it("lists 1 deployment", async ({ expect }) => {
@@ -98,13 +97,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const deployedUrl = getDeployedUrl(output);
 
-			await waitForLong(
-				async () => {
-					const response = await fetch(deployedUrl);
-					expect(await response.text()).toEqual("Updated Worker!");
-				},
-				{ timeout: 30_000 }
+			const response = await waitForWorkersDev(
+				deployedUrl,
+				async (candidate) =>
+					(await candidate.clone().text()) === "Updated Worker!"
 			);
+			expect(await response.text()).toEqual("Updated Worker!");
 		});
 
 		it("lists 2 deployments", async ({ expect }) => {
