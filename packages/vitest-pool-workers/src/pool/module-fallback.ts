@@ -361,7 +361,15 @@ function ensureRootedPath(filePath: string) {
 function buildRedirectResponse(filePath: string) {
 	return new Response(null, {
 		status: 301,
-		headers: { Location: ensureRootedPath(filePath) },
+		// `Location` is an HTTP header, so it's restricted to the Latin-1/ASCII byte
+		// range. `filePath` may contain non-ASCII characters (e.g. a workspace path
+		// with CJK characters on Windows), which would otherwise throw when this
+		// `Response` is constructed ("Cannot convert argument to a ByteString...").
+		// `encodeURI()` (rather than `encodeURIComponent()`) leaves `/` and `:`
+		// intact, so Windows drive-letter paths like `/C:/a/b/c` still round-trip
+		// correctly; only the genuinely invalid header bytes get percent-encoded.
+		// See https://github.com/cloudflare/workers-sdk/issues/14655
+		headers: { Location: encodeURI(ensureRootedPath(filePath)) },
 	});
 }
 
