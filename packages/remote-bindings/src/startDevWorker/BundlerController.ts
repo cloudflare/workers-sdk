@@ -29,8 +29,6 @@ export class BundlerController extends Controller {
 				type: "esm",
 				modules: [],
 				dependencies: {},
-				sourceMapPath: undefined,
-				sourceMapMetadata: undefined,
 			},
 		});
 	}

@@ -163,10 +163,6 @@ export class ProxyWorker implements DurableObject {
 
 					await checkForPreviewTokenError(res, this.env, proxyData);
 
-					if (isHtmlResponse(res)) {
-						res = insertLiveReloadScript(request, res, this.env, proxyData);
-					}
-
 					if (isSseResponse(res)) {
 						void sendMessageToProxyController(this.env, {
 							type: "sseResponseDetected",
@@ -236,9 +232,6 @@ export class ProxyWorker implements DurableObject {
 function isRequestFromProxyController(req: Request, env: Env): boolean {
 	return req.headers.get("Authorization") === env.PROXY_CONTROLLER_AUTH_SECRET;
 }
-function isHtmlResponse(res: Response): boolean {
-	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
-}
 function isSseResponse(res: Response): boolean {
 	return (
 		res.headers.get("content-type")?.startsWith("text/event-stream") ?? false
@@ -293,53 +286,6 @@ async function checkForPreviewTokenError(
 		});
 	}
 }
-
-function insertLiveReloadScript(
-	request: Request,
-	response: Response,
-	env: Env,
-	proxyData: ProxyData
-) {
-	const htmlRewriter = new HTMLRewriter();
-
-	htmlRewriter.onDocument({
-		end(end) {
-			// if liveReload enabled, append a script tag
-			// TODO: compare to existing nodejs implementation
-			if (proxyData.liveReload) {
-				const websocketUrl = new URL(request.url);
-				websocketUrl.protocol =
-					websocketUrl.protocol === "http:" ? "ws:" : "wss:";
-
-				end.append(liveReloadScript, { html: true });
-			}
-		},
-	});
-
-	return htmlRewriter.transform(response);
-}
-
-const liveReloadScript = `
-<script defer type="application/javascript">
-	(function() {
-		var ws;
-		function recover() {
-			ws = null;
-			setTimeout(initLiveReload, 100);
-		}
-		function initLiveReload() {
-			if (ws) return;
-			var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
-			ws = new WebSocket(origin + "${LIVE_RELOAD_PATHNAME}", "${LIVE_RELOAD_PROTOCOL}");
-			ws.onclose = recover;
-			ws.onerror = recover;
-			ws.onmessage = location.reload.bind(location);
-		}
-		initLiveReload();
-	})();
-</script>
-`;
-
 /**
  * Rewrite references to URLs in request/response headers.
  *

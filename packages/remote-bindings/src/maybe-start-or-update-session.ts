@@ -56,12 +56,18 @@ export type RemoteBindingsContext = {
 /** Potentially starts or updates a remote proxy session. */
 export async function maybeStartOrUpdateRemoteProxySession(
 	workerConfigObject: WorkerConfigObject,
-	preExistingRemoteProxySessionData?: RemoteProxySessionData | null,
-	auth?: AsyncHook<CfAccount>,
-	context?: RemoteBindingsContext,
+	preExistingRemoteProxySessionData: RemoteProxySessionData | null | undefined,
+	auth: AsyncHook<CfAccount> | undefined,
+	context: RemoteBindingsContext,
 	startSession: typeof startRemoteProxySession = startRemoteProxySession
 ): Promise<RemoteProxySessionData | null> {
 	const remoteBindings = pickRemoteBindings(workerConfigObject.bindings);
+	if (
+		Object.keys(remoteBindings).length === 0 &&
+		!preExistingRemoteProxySessionData?.session
+	) {
+		return null;
+	}
 	const authSameAsBefore = deepStrictEqual(
 		auth,
 		preExistingRemoteProxySessionData?.auth
@@ -82,9 +88,9 @@ export async function maybeStartOrUpdateRemoteProxySession(
 					? { account_id: workerConfigObject.account_id }
 					: undefined,
 				workerConfigObject.profileDir,
-				context?.logger
+				context.logger
 			),
-			logger: context?.logger,
+			logger: context.logger,
 		});
 	} else {
 		const remoteBindingsAreSameAsBefore = deepStrictEqual(
@@ -104,9 +110,9 @@ export async function maybeStartOrUpdateRemoteProxySession(
 								? { account_id: workerConfigObject.account_id }
 								: undefined,
 							workerConfigObject.profileDir,
-							context?.logger
+							context.logger
 						),
-						logger: context?.logger,
+						logger: context.logger,
 					});
 				}
 			} else {
@@ -141,11 +147,8 @@ function getAuthHook(
 	auth: AsyncHook<CfAccount> | undefined,
 	config: Pick<Config, "account_id"> | undefined,
 	profileDir: string | undefined,
-	logger?: RemoteBindingsLogger
+	logger: RemoteBindingsLogger
 ): AsyncHook<CfAccount> | undefined {
-	if (!logger) {
-		throw new Error("A logger is required to resolve remote binding auth");
-	}
 	const { auth: remoteBindingsAuth, useCfAuth } =
 		createRemoteBindingsAuth(logger);
 	const profileStore = useCfAuth

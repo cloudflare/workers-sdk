@@ -9,7 +9,10 @@ export default defineConfig([
 		outDir: "dist",
 		dts: true,
 		tsconfig: "tsconfig.json",
-		external: ["miniflare", /^@cloudflare\/workers-utils/],
+		define: {
+			__filename: "import.meta.filename",
+		},
+		external: ["miniflare"],
 	},
 	{
 		entry: {
