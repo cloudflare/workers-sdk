@@ -11,7 +11,6 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import * as find from "empathic/find";
 import { getNodeCompat } from "miniflare";
 import yargs from "yargs";
 import { readConfig } from "../config";
