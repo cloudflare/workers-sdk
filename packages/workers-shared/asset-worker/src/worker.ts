@@ -311,6 +311,7 @@ async function runFetchRequest(
 				entrypoint: EntrypointType.Inner,
 				cohort: cohort ?? "unknown",
 				requestKind: getRequestKind(request),
+				scriptVersionId: config.script_version_id || undefined,
 			});
 		}
 
@@ -429,6 +430,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 					version: this.env.VERSION_METADATA.tag,
 					entrypoint: EntrypointType.Outer,
 					requestKind: getRequestKind(request),
+					scriptVersionId: this.env.CONFIG.script_version_id || undefined,
 				});
 			}
 			sentry = setupSentry(
