@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "tsdown";
 import { embedWorkersPlugin } from "./scripts/embed-workers.ts";
 
@@ -14,7 +15,7 @@ export default defineConfig({
 		return (
 			!unprefixedId.startsWith("worker:") &&
 			!unprefixedId.startsWith(".") &&
-			!unprefixedId.startsWith("/")
+			!path.isAbsolute(unprefixedId)
 		);
 	},
 	plugins: [embedWorkersPlugin()],
