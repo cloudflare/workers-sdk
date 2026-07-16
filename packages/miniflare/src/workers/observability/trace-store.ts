@@ -1,16 +1,16 @@
 /**
- * Local observability trace store (experimental).
+ * The local observability trace store: a SQLite-backed Durable Object that holds
+ * the captured traces. The collector writes to it and the Local Explorer's
+ * Observability API reads from it, both over RPC. The tables are created on first
+ * use. This data is local only: it is never exposed to the user's app or sent
+ * anywhere.
  *
- * An internal SQLite-backed Durable Object that owns the captured traces. The
- * collector writes here via RPC; the Local Explorer's Observability API reads via
- * RPC. The schema is created lazily. This is internal, local-only state — never
- * exposed to the user's app and never reported anywhere.
- *
- * A "trace" is the top-level root span (parent_id IS NULL) plus its descendants;
- * sub-invocations of a distributed trace share trace_id and hang off the calling
- * span via parent_id. Invocation-level data (HTTP status, cpu/wall time, trigger,
- * worker metadata) lives in `attributes` on the root span. Times are absolute
- * epoch ms; the read API re-bases them to the trace's earliest span.
+ * A "trace" is the root span (the one with no parent) plus everything below it.
+ * When a request calls other workers, those sub-invocations share its trace_id
+ * and attach to the calling span through parent_id. Request-level data (HTTP
+ * status, CPU/wall time, trigger, worker name) is stored on the root span's
+ * `attributes`. Times are absolute (epoch ms); the read API shifts them so each
+ * trace starts at zero.
  */
 import { DurableObject } from "cloudflare:workers";
 
@@ -236,30 +236,24 @@ export class TraceStore extends DurableObject {
 	}
 
 	/**
-	 * The store's sole read surface: a single read-only SQL query. Both the
-	 * Observability tab and coding agents read through here (the UI ships the
-	 * common views as canned queries; agents compose their own). The `spans`
-	 * and `logs` schema is the contract — it's published in the `/query`
-	 * endpoint's OpenAPI description so callers don't have to guess columns.
+	 * The only way to read the store: a single read-only SQL query. The
+	 * Observability tab and coding agents both go through here (the UI has a set of
+	 * built-in queries; agents write their own), so the `spans` and `logs` schema
+	 * acts as the contract and is documented in the `/query` endpoint's OpenAPI
+	 * description.
 	 *
-	 * Safety, since this runs caller-supplied SQL. There's no read-only cursor
-	 * mode to lean on here, and a leading-keyword check alone isn't enough: a
-	 * `WITH … DELETE/UPDATE/INSERT` CTE is a single statement that still starts
-	 * with `WITH`. So we validate against a copy with comments and quoted
-	 * literals/identifiers stripped out — so a value like `'…delete…'` can't
-	 * trip the guard, and a `;` inside a string can't hide a second statement —
-	 * then require that it:
-	 * - is a single statement (no `;` once literals are removed);
-	 * - starts with `SELECT` or `WITH`; and
-	 * - contains no data-/schema-modifying keyword anywhere (INSERT, UPDATE,
-	 *   DELETE, DROP, PRAGMA, ATTACH, …). None of these are column names in this
-	 *   schema, so genuine read queries never need them.
-	 * On top of that, `params` are bound (canned queries never string-
-	 * interpolate input) and at most `MAX_QUERY_ROWS` rows come back, so a broad
-	 * query can't drain the whole store into one response.
+	 * Because this runs SQL we did not write, and there is no built-in read-only
+	 * mode to rely on, we validate it ourselves. Checking only the first keyword is
+	 * not enough (`WITH … DELETE` is a single statement that still starts with
+	 * `WITH`), so we first remove comments and anything inside quotes — so a value
+	 * like `'…delete…'` or a `;` inside a string cannot trip the checks — then
+	 * require that it is a single statement (no `;`), starts with `SELECT` or
+	 * `WITH`, and contains no keyword that could change data or schema. Values are
+	 * always passed as bound `params`, and at most `MAX_QUERY_ROWS` rows are
+	 * returned.
 	 *
-	 * `attributes` is stored as JSONB; wrap it with `json(attributes)` to read
-	 * it back as JSON (the canned queries already do).
+	 * `attributes` is stored as JSONB; wrap it with `json(attributes)` to read it
+	 * back as JSON (the built-in queries already do).
 	 */
 	query(
 		sql: string,
@@ -267,10 +261,10 @@ export class TraceStore extends DurableObject {
 	): { columns: string[]; rows: unknown[][] } {
 		// Drop a single trailing `;` so the common "SELECT …;" form is allowed.
 		const statement = sql.trim().replace(/;\s*$/, "");
-		// Validate against a copy with comments and quoted literals/identifiers
-		// removed, so the keyword and `;` checks can't be fooled by (or falsely
-		// trip on) string contents. `REPLACE` is deliberately only matched as
-		// `REPLACE INTO`, since `replace()` is a common read-query function.
+		// Remove comments and anything inside quotes so the keyword and `;` checks
+		// can't be fooled by (or wrongly triggered by) text inside strings.
+		// `REPLACE` is only matched as `REPLACE INTO`, because `replace()` is a
+		// common function in read queries.
 		const stripped = statement
 			.replace(/--[^\n]*/g, " ")
 			.replace(/\/\*[\s\S]*?\*\//g, " ")
@@ -302,7 +296,7 @@ export class TraceStore extends DurableObject {
 		return { columns, rows };
 	}
 
-	/** Wipe all captured data (UI "Clear" / DELETE /traces). */
+	/** Delete all captured data. An RPC method; nothing calls it yet. */
 	clear(): void {
 		this.sql.exec("DELETE FROM logs");
 		this.sql.exec("DELETE FROM spans");

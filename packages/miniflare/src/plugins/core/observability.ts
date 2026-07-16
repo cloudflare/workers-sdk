@@ -8,14 +8,11 @@ import {
 } from "./constants";
 
 /**
- * Local observability (experimental).
- *
- * Builds the internal trace collector service. Miniflare core registers it as a
- * streaming-tail consumer of the user's worker(s) (see the `unsafeObservability`
- * wiring in this plugin), so it receives each invocation's tail. The same worker
- * also hosts the `TraceStore` Durable Object (an internal SQLite store) and binds
- * to it, so captured spans/logs are persisted there for the Local Explorer /
- * `wrangler observability` to read.
+ * Builds the trace collector service and the storage behind it. Miniflare core
+ * attaches the collector to the user's worker(s) as a tail consumer (see the
+ * `unsafeObservability` wiring in this plugin). The collector also hosts the
+ * `TraceStore` Durable Object and binds to it, so captured spans and logs are
+ * saved there for the Local Explorer / `wrangler observability` to read.
  */
 
 /** DO class name — must match the class exported by collector.worker.ts. */

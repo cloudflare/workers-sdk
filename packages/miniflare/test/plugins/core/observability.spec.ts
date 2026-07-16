@@ -4,17 +4,15 @@ import { describe, test } from "vitest";
 import { OBSERVABILITY_COLLECTOR_SERVICE_NAME } from "../../../src/plugins/core/constants";
 import { useDispose } from "../../test-shared";
 
-// Local observability (experimental).
+// Local observability wiring.
 //
-// When `unsafeObservability` is enabled, Miniflare core itself attaches the
-// internal collector as a streaming-tail consumer of each user worker (plus the
-// compat flags workerd needs to emit that tail). The caller wires nothing
-// per-worker — that's the whole point (wrangler and the Vite plugin just flip the
-// single option). Capture (folding the TailStream into spans/logs) is still a
-// no-op placeholder here; the wiring tests below assert the auto-wiring produces
-// a valid, working config, and the store tests exercise the internal `TraceStore`
-// Durable Object + the collector's read API directly (via RPC), independent of
-// capture.
+// When `unsafeObservability` is enabled, Miniflare core attaches the collector
+// to each user worker (as a tail consumer) and adds the compatibility flags
+// workerd needs to emit those tail events. The caller sets nothing per worker;
+// wrangler and the Vite plugin just turn on the one option. The wiring tests
+// below check that this produces a valid, working config. The store tests call
+// the `TraceStore` Durable Object and the collector's read API directly over
+// RPC, separately from tail capture.
 
 function plainWorker(script: string): WorkerOptions {
 	return {

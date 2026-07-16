@@ -1,13 +1,9 @@
 /**
- * Local observability collector (experimental).
- *
- * Registered by Miniflare core as a streaming-tail consumer of the user's
- * worker(s) when local observability is enabled (`X_LOCAL_OBSERVABILITY`).
- * workerd streams each invocation's TailStream events here; `TailToStoreHandler`
- * folds them straight into spans/logs (Workers Observability attribute shape) and
- * persists them to the internal `TraceStore` Durable Object (this same worker
- * hosts that DO and binds to it as `TRACE_STORE`). The read API over the store is
- * also exposed here.
+ * The local observability collector. Miniflare attaches it to the user's
+ * worker(s) as a tail consumer, so workerd delivers each invocation's tail events
+ * here. `TailToStoreHandler` converts them into spans and logs, which are stored
+ * in the `TraceStore` Durable Object hosted by this same worker. The endpoint for
+ * querying that store is also defined here.
  */
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { TailToStoreHandler } from "./tail-to-store";
@@ -34,11 +30,11 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 	}
 
 	/**
-	 * The read surface over the trace store: a single `POST /query` that runs
-	 * read-only SQL against the `spans`/`logs` tables. The Local Explorer's
-	 * Observability API proxies to here; the UI's common views and any coding
-	 * agent are all just canned/ad-hoc SQL over this one endpoint. Guardrails
-	 * (single read-only statement, row cap) live in `TraceStore.query`.
+	 * Reads from the trace store. A single `POST /query` runs read-only SQL against
+	 * the `spans` and `logs` tables. The Local Explorer's Observability API
+	 * forwards requests here, so the UI's built-in views and any coding agent all
+	 * go through this one endpoint. The query validation lives in
+	 * `TraceStore.query`.
 	 */
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);

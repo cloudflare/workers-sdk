@@ -1,21 +1,17 @@
 /**
- * TailStream → TraceStore mapping (local dev, no OpenTelemetry).
+ * Converts one invocation's workerd tail events into the spans and logs the
+ * store keeps. Spans are written as they happen: a span is created when it starts
+ * (with no duration yet), its attributes are added as they arrive, and it is
+ * finished when it closes. This way long-running work (agents, waits, streamed
+ * responses) shows up while it is still running, not only once the invocation
+ * ends.
  *
- * Folds one invocation's workerd streaming-tail events straight into the store's
- * `SpanInput` / `LogInput` shape. Capture is *write-through*: a span is opened
- * (duration NULL = still running) the moment it starts, its attributes are
- * merged as they stream in, and it is finalised when it closes — so long-running
- * work (agents, waits, streamed responses) shows up in the UI in-flight instead
- * of appearing only once the whole invocation ends. This is the whole capture
- * path — there is no intermediate OpenTelemetry object model.
- *
- * Why no OTEL: OTLP compliance buys interop with a real backend (matching the
- * production wire format). Local dev owns both the producer and the consumer, so
- * that compliance is dead weight. We keep the *attribute conventions* the
- * Workers Observability UI reads (`faas.trigger`, `http.request.method`,
- * `http.response.status_code`, `cloudflare.outcome`, `cpu_time_ms`, …) and drop
- * the SDK/transport entirely. No redaction: local dev URLs/headers are the
- * developer's own, so there is nothing to protect against here.
+ * There is no OpenTelemetry layer in between. Following the OTLP format would only
+ * matter for sending traces to a real backend, but here the same process both
+ * produces and reads them. So we keep just the attribute names the Workers
+ * Observability UI expects (`faas.trigger`, `http.request.method`,
+ * `cloudflare.outcome`, `cpu_time_ms`, …) and skip the SDK and wire format. The
+ * URLs and headers belong to the developer, so nothing is redacted.
  */
 import type { LogInput, SpanClose, SpanInput } from "./trace-store";
 
@@ -46,10 +42,11 @@ function toMs(timestamp: Date | number): number {
  * the event; `spanContext.spanId` is then its parent. For every other event the
  * `spanContext` already points at the span the event acts on.
  */
-function ids(
-	// A generic tail event — the concrete event type is narrowed by callers.
-	event: TailStream.TailEvent<TailStream.EventType>
-): { traceId: string; spanId?: string; parentId?: string } {
+function ids(event: TailStream.TailEvent<TailStream.EventType>): {
+	traceId: string;
+	spanId?: string;
+	parentId?: string;
+} {
 	if (event.event.type === "onset" || event.event.type === "spanOpen") {
 		return {
 			traceId: event.spanContext.traceId,
@@ -191,11 +188,9 @@ interface PendingSpan {
 }
 
 /**
- * Streaming-tail handler for one invocation. Writes each span through to the
- * store as it happens — opened when it starts, attributes merged as they arrive,
- * finalised when it closes — so the UI can render still-running spans. All store
- * writes are dispatched immediately (delivery to the DO is ordered by call order)
- * and awaited at `outcome` so nothing is lost when the invocation ends.
+ * Handles the tail events for a single invocation. Each store write is sent as
+ * soon as its event arrives (the Durable Object receives them in call order) and
+ * awaited when the invocation ends, so no write is dropped.
  */
 export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	#spans = new Map<string, PendingSpan>();
@@ -408,12 +403,12 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		await Promise.all(this.#writes);
 	}
 
-	/** Open a span in-flight (duration stays NULL until it closes). */
 	#open(input: SpanInput) {
 		this.#track(this.store.openSpan(input));
 	}
 
-	/** Finalise a span once, folding in its duration, outcome and any final attrs. */
+	/** Finish a span, setting its duration and outcome and adding any final
+	 * attributes. Runs at most once per span (guarded by `closed`). */
 	#close(
 		traceId: string,
 		spanId: string,

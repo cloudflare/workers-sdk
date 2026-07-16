@@ -354,14 +354,11 @@ export const getLocalExplorerEnabledFromEnv =
 	});
 
 /**
- * `X_LOCAL_OBSERVABILITY` (experimental) enables local-dev observability. It is
- * the single switch — there is no CLI flag or Vite plugin option. Both
- * `wrangler dev` and the Vite plugin read this env var and surface it as the one
- * `unsafeObservability` Miniflare option; Miniflare core then auto-injects the
- * trace collector as a streaming-tail consumer of the user's worker(s).
- *
- * Defaults to `true`: with the full stack landed, capture is on by default in
- * local dev. Set `X_LOCAL_OBSERVABILITY=false` to opt out.
+ * `X_LOCAL_OBSERVABILITY` turns on local-dev observability. It is the only
+ * switch; there is no CLI flag or Vite plugin option. Both `wrangler dev` and the
+ * Vite plugin read it and pass it through as the one `unsafeObservability`
+ * Miniflare option, which makes core attach the trace collector to each user
+ * worker. Defaults to `true`; set `X_LOCAL_OBSERVABILITY=false` to opt out.
  */
 export const getLocalObservabilityEnabledFromEnv =
 	getBooleanEnvironmentVariableFactory({

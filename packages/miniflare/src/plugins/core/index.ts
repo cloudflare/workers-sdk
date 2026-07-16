@@ -325,8 +325,8 @@ export const CoreSharedOptionsSchema = z
 		unsafeRuntimeEnv: z.record(z.string()).optional(),
 		// Enable the local explorer at /cdn-cgi/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
-		// Enable local-dev observability (experimental): inject the trace collector
-		// as a streaming-tail consumer of the user's worker(s).
+		// Turn on local-dev observability: attach the trace collector to the
+		// user's worker(s) so it receives their tail events.
 		unsafeObservability: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
@@ -846,11 +846,11 @@ export const CORE_PLUGIN: Plugin<
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
 
-		// Local observability (experimental): when enabled, Miniflare wires the
-		// internal collector onto every user worker as a streaming-tail consumer,
-		// plus the compat flags workerd needs to emit that tail. Centralised here
-		// so wrangler and the Vite plugin don't each duplicate it. Wrapped bindings
-		// aren't real workers (and reject compat flags), so they're excluded.
+		// When local observability is on, attach the collector to every user worker
+		// (as a tail consumer) and add the compatibility flags workerd needs to emit
+		// those tail events. This is done here so wrangler and the Vite plugin don't
+		// each have to repeat it. Wrapped bindings aren't real workers and reject
+		// compatibility flags, so they're skipped.
 		const observabilityEnabled =
 			sharedOptions.unsafeObservability === true && !isWrappedBinding;
 		const streamingTails = observabilityEnabled
@@ -1312,8 +1312,8 @@ export function getGlobalServices({
 		);
 	}
 
-	// Local observability (experimental): register the internal trace collector
-	// service. Core attaches it to each user worker's streaming tail above.
+	// Register the trace collector service. It's attached to each user worker's
+	// tail above.
 	if (sharedOptions.unsafeObservability) {
 		services.push(
 			...getObservabilityServices(tmpPath, sharedOptions.defaultPersistRoot)

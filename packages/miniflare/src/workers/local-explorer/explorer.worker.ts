@@ -355,7 +355,7 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 );
 
 // ============================================================================
-// Observability Endpoints (experimental)
+// Observability Endpoints
 // ============================================================================
 
 app.post(

@@ -1165,8 +1165,8 @@ export async function buildMiniflareOptions(
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
-		// Experimental local observability — the single switch (env var) that makes
-		// Miniflare core attach the trace collector to each user worker.
+		// The one switch for local observability: this env var tells Miniflare core
+		// to attach the trace collector to each user worker.
 		unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:

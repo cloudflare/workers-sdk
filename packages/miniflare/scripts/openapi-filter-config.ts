@@ -1289,9 +1289,9 @@ const config = {
 						tags: ["Workflows"],
 					},
 				},
-			// Observability endpoint (local-only, experimental). A single
-			// read-only SQL query surface over the trace store — see the
-			// description below for the schema the query runs against.
+			// Local-only observability endpoint. Runs a single read-only SQL query
+			// against the trace store; the schema it queries is in the description
+			// below.
 			"/local/observability/query": {
 				post: {
 					description: [
@@ -1820,7 +1820,7 @@ const config = {
 				},
 				required: ["id", "status"],
 			},
-			// Observability schema (local-only, experimental)
+			// Observability schema (local-only)
 			"observability_query-result": {
 				type: "object",
 				description: "Columns and rows for a read-only SQL query.",
