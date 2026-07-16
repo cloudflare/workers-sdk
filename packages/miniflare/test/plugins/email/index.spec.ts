@@ -2100,11 +2100,13 @@ test("disposing does not remove a concurrent email session", async ({
 	);
 	await mkdir(concurrentSessionPath);
 
-	// Simulate another instance creating its session after an empty-directory check.
-	vi.spyOn(fs.promises, "readdir").mockResolvedValueOnce([]);
+	// A separate emptiness check reintroduces the race. Return a stale result so
+	// regressing to read-then-remove would delete the concurrent session.
+	const readdirSpy = vi.spyOn(fs.promises, "readdir").mockResolvedValueOnce([]);
 
 	await mf.dispose();
 
+	expect(readdirSpy).not.toHaveBeenCalled();
 	expect(existsSync(concurrentSessionPath)).toBe(true);
 });
 
