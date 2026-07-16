@@ -1,7 +1,15 @@
 import { newWorkersRpcResponse } from "capnweb";
 import { EmailMessage } from "cloudflare:email";
 
-interface Env extends Record<string, unknown> {}
+type Env = Record<string, unknown>;
+
+type SendEmailInput =
+	| Parameters<SendEmail["send"]>[0]
+	| {
+			from: string;
+			to: string;
+			"EmailMessage::raw": ReadableStream<Uint8Array>;
+	  };
 
 class BindingNotFoundError extends Error {
 	constructor(name?: string) {
@@ -42,7 +50,7 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 
 	if (targetBinding.constructor.name === "SendEmail") {
 		return {
-			async send(e: any) {
+			async send(e: SendEmailInput) {
 				// Check if this is an EmailMessage (has EmailMessage::raw property) or MessageBuilder
 				if ("EmailMessage::raw" in e) {
 					// EmailMessage API - reconstruct the EmailMessage object
@@ -60,10 +68,11 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 		};
 	}
 
-	if (url.searchParams.has("MF-Dispatch-Namespace-Options")) {
-		const { name, args, options } = JSON.parse(
-			url.searchParams.get("MF-Dispatch-Namespace-Options")!
-		);
+	const dispatchNamespaceOptions = url.searchParams.get(
+		"MF-Dispatch-Namespace-Options"
+	);
+	if (dispatchNamespaceOptions) {
+		const { name, args, options } = JSON.parse(dispatchNamespaceOptions);
 		return (targetBinding as DispatchNamespace).get(name, args, options);
 	}
 

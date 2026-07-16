@@ -89,6 +89,7 @@ export async function getAccessHeaders(
 	domain: string,
 	options: {
 		logger: OAuthFlowLogger;
+		isNonInteractiveOrCI?: () => boolean;
 	}
 ): Promise<Record<string, string>> {
 	const logger = options.logger;
@@ -137,7 +138,7 @@ export async function getAccessHeaders(
 	}
 
 	// 2. If non-interactive (CI), error with actionable message
-	if (isNonInteractiveOrCI()) {
+	if ((options.isNonInteractiveOrCI ?? isNonInteractiveOrCI)()) {
 		throw new UserError(
 			`The domain "${domain}" is behind Cloudflare Access, but no Access Service Token credentials were found ` +
 				`and the current environment is non-interactive.\n` +

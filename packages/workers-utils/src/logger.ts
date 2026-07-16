@@ -23,7 +23,7 @@ export type Logger = {
 		warn: typeof console.warn;
 		error: typeof console.error;
 	};
-	console<M extends Exclude<keyof Console, "Console">>(
+	console?<M extends Exclude<keyof Console, "Console">>(
 		method: M,
 		...args: Parameters<Console[M]>
 	): void;

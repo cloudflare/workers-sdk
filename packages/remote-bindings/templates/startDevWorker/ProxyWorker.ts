@@ -87,7 +87,9 @@ export class ProxyWorker implements DurableObject {
 
 	processQueue() {
 		const { proxyData } = this; // store proxyData at the moment this function was called
-		if (proxyData === undefined) return;
+		if (proxyData === undefined) {
+			return;
+		}
 
 		for (const [request, deferredResponse] of this.getOrderedQueue()) {
 			this.requestRetryQueue.delete(request);
@@ -109,7 +111,9 @@ export class ProxyWorker implements DurableObject {
 			// Preserve client `Accept-Encoding`, rather than using Worker's default
 			// of `Accept-Encoding: br, gzip`
 			const encoding = request.cf?.clientAcceptEncoding;
-			if (encoding !== undefined) headers.set("Accept-Encoding", encoding);
+			if (encoding !== undefined) {
+				headers.set("Accept-Encoding", encoding);
+			}
 
 			rewriteUrlRelatedHeaders(headers, outerUrl, innerUrl);
 
@@ -120,7 +124,9 @@ export class ProxyWorker implements DurableObject {
 
 			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
-				if (value === undefined) continue;
+				if (value === undefined) {
+					continue;
+				}
 
 				if (key.toLowerCase() === "cookie") {
 					const existing = request.headers.get("cookie") ?? "";
