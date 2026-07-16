@@ -108,7 +108,6 @@ export async function startRemoteProxySession(
 			logLevel: getStartWorkerLogLevel(options.logger.loggerLevel),
 			persist: false as const,
 			origin: {},
-			liveReload: false,
 		},
 	};
 

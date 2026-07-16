@@ -109,7 +109,6 @@ export class ProxyController extends Controller {
 				this.localServerReady.promise
 			),
 			handleStructuredLogs,
-			liveReload: false,
 		};
 
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
@@ -236,22 +235,6 @@ export class ProxyController extends Controller {
 				break;
 			case "error":
 				this.emitErrorEvent("Error inside ProxyWorker", message.error);
-
-				break;
-			case "debug-log":
-				logger.debug("[ProxyWorker]", ...message.args);
-
-				break;
-			case "sseResponseDetected":
-				// Only warn about SSE if a quick tunnel is active
-				if (
-					this.latestConfig?.dev?.tunnel?.enabled &&
-					this.latestConfig.dev.tunnel.name === undefined
-				) {
-					logger.once.warn(
-						"Quick tunnels do not support Server-Sent Events (SSE). Use a named Cloudflare Tunnel if you need SSE over a public URL."
-					);
-				}
 
 				break;
 			default:

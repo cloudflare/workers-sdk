@@ -74,7 +74,6 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	 * - BundlerController emits bundleComplete → RuntimeControllers
 	 * - RuntimeController emits reloadStart → ProxyController
 	 * - RuntimeController emits reloadComplete → ProxyController
-	 * - RuntimeController emits devRegistryUpdate → ConfigController
 	 * - ProxyController emits previewTokenExpired → RuntimeControllers
 	 * - Any controller emits error → DevEnv error handler
 	 *

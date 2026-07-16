@@ -1,5 +1,5 @@
 import type { Bundle, StartDevWorkerOptions } from "./types";
-import type { Miniflare, WorkerRegistry } from "miniflare";
+import type { Miniflare } from "miniflare";
 
 export type ErrorEvent =
 	| BaseErrorEvent<
@@ -72,12 +72,6 @@ export type ReloadCompleteEvent = {
 	bundle: Bundle;
 	proxyData: ProxyData;
 };
-export type DevRegistryUpdateEvent = {
-	type: "devRegistryUpdate";
-
-	registry: WorkerRegistry;
-};
-
 // ProxyController
 export type PreviewTokenExpiredEvent = {
 	type: "previewTokenExpired";
@@ -98,9 +92,7 @@ export type ProxyWorkerIncomingRequestBody =
 	| { type: "pause" };
 export type ProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }
-	| { type: "sseResponseDetected" }
-	| { type: "previewTokenExpired"; proxyData: ProxyData }
-	| { type: "debug-log"; args: Parameters<typeof console.debug> };
+	| { type: "previewTokenExpired"; proxyData: ProxyData };
 
 export type SerializedError = {
 	message: string;
@@ -108,19 +100,6 @@ export type SerializedError = {
 	stack?: string | undefined;
 	cause?: unknown;
 };
-export function serialiseError(e: unknown): SerializedError {
-	if (e instanceof Error) {
-		return {
-			message: e.message,
-			name: e.name,
-			stack: e.stack,
-			cause: e.cause && serialiseError(e.cause),
-		};
-	} else {
-		return { message: String(e) };
-	}
-}
-
 export type UrlOriginParts = Pick<URL, "protocol" | "hostname" | "port">;
 export type UrlOriginAndPathnameParts = Pick<
 	URL,
@@ -132,6 +111,4 @@ export type ProxyData = {
 	userWorkerInspectorUrl?: UrlOriginAndPathnameParts;
 	userWorkerInnerUrlOverrides?: Partial<UrlOriginParts>;
 	headers: Record<string, string>;
-	liveReload?: boolean;
-	proxyLogsToController?: boolean;
 };
