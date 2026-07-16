@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
+import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
 import { startWorker } from "./start-worker";
 import type { RemoteBindingsLogger } from "./logger";
@@ -84,7 +85,12 @@ export async function startRemoteProxySession(
 		bindings: rawBindings,
 		dev: {
 			remote: "minimal" as const,
-			auth: options.auth,
+			auth: getRemoteBindingsAuthHook(
+				options.auth,
+				undefined,
+				undefined,
+				options.logger
+			),
 			server: { port: 0, secure: false },
 		},
 	};
