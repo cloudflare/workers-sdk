@@ -545,6 +545,16 @@ export async function handleModuleFallbackRequest(
 	let referrer = url.searchParams.get("referrer");
 	assert(target !== null, "Expected specifier search param");
 	assert(referrer !== null, "Expected referrer search param");
+	// `workerd` carries a previous redirect response's `Location` header value
+	// through verbatim as this request's `specifier`, rather than URI-decoding
+	// it. `buildRedirectResponse()` percent-encodes non-ASCII paths with
+	// `encodeURI()` before setting them as the `Location` header (required,
+	// since headers are restricted to the Latin-1/ASCII byte range), so we must
+	// undo that encoding here to recover the real filesystem path. This is a
+	// no-op for specifiers that were never percent-encoded (e.g. bare `cloudflare:*`
+	// specifiers on the initial request).
+	// See https://github.com/cloudflare/workers-sdk/issues/14655
+	target = decodeURI(target);
 	const referrerDir = posixPath.dirname(referrer);
 	let specifier = getApproximateSpecifier(target, referrerDir);
 
