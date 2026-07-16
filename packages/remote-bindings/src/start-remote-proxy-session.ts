@@ -7,6 +7,7 @@ import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker"
 import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
 import { DevEnv } from "./startDevWorker/DevEnv";
+import { RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
 import type {
 	AsyncHook,
@@ -70,8 +71,8 @@ export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
-	initLogger(options.logger);
 	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
+	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
 	const workerConfig = {
 		name: options.workerName ?? randomUUID(),
@@ -123,6 +124,12 @@ export async function startRemoteProxySession(
 		]);
 
 		if (maybeError && maybeError.error) {
+			if (
+				isErrorEvent(maybeError.error) &&
+				maybeError.error.cause instanceof RemoteSessionAuthenticationError
+			) {
+				throw maybeError.error.cause;
+			}
 			const details = formatRemoteProxySessionError(maybeError.error);
 			throw new Error(
 				details
@@ -185,4 +192,22 @@ function toRawBindings(bindings: StartDevWorkerInput["bindings"]) {
 			{ ...binding, raw: true },
 		])
 	);
+}
+
+function getInternalLogger(logger: RemoteBindingsLogger): RemoteBindingsLogger {
+	if (logger.loggerLevel === "debug") {
+		return logger;
+	}
+
+	const disabled = () => {};
+	const loggerLevel = logger.loggerLevel === "none" ? "none" : "error";
+	return {
+		loggerLevel,
+		debug: disabled,
+		log: disabled,
+		info: disabled,
+		warn: disabled,
+		error: loggerLevel === "none" ? disabled : logger.error.bind(logger),
+		console: disabled,
+	};
 }

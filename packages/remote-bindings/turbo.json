@@ -4,6 +4,9 @@
 	"tasks": {
 		"build": {
 			"outputs": ["dist/**"]
+		},
+		"test:ci": {
+			"env": ["CLOUDFLARE_CF_AUTH"]
 		}
 	}
 }

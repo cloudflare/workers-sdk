@@ -22,5 +22,6 @@ export async function getAccessHeaders(
 ): Promise<Record<string, string>> {
 	return packageGetAccessHeaders(domain, {
 		logger,
+		isNonInteractiveOrCI,
 	});
 }

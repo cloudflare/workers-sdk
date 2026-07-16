@@ -9,6 +9,13 @@ export default defineConfig({
 	outDir: "dist",
 	dts: true,
 	tsconfig: "tsconfig.json",
-	external: [/^(?!(?:\0)?worker:)[^./]/],
+	external: (id) => {
+		const unprefixedId = id.charCodeAt(0) === 0 ? id.slice(1) : id;
+		return (
+			!unprefixedId.startsWith("worker:") &&
+			!unprefixedId.startsWith(".") &&
+			!unprefixedId.startsWith("/")
+		);
+	},
 	plugins: [embedWorkersPlugin()],
 });
