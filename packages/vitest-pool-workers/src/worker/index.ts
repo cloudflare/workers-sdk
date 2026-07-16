@@ -194,7 +194,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		const workerDataHeader = request.headers.get("MF-Vitest-Worker-Data");
 		assert(workerDataHeader);
 
-		const wd = structuredSerializableParse(workerDataHeader);
+		// Undo the `encodeURIComponent()` applied on the pool side, since this
+		// header can contain a non-ASCII cwd.
+		// See https://github.com/cloudflare/workers-sdk/issues/14655
+		const wd = structuredSerializableParse(decodeURIComponent(workerDataHeader));
 		assert(
 			wd && typeof wd === "object" && "cwd" in wd && typeof wd.cwd === "string"
 		);
