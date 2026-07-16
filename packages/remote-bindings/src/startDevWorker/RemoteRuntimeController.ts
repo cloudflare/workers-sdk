@@ -5,7 +5,7 @@ import {
 	retryOnAPIFailure,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { Mutex, type Miniflare } from "miniflare";
+import { Mutex } from "miniflare";
 import { WebSocket } from "ws";
 import { version as packageVersion } from "../../package.json";
 import { logger } from "../logger";
@@ -255,8 +255,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				...accessHeaders,
 				"cf-connecting-ip": "",
 			},
-			liveReload: config.dev.liveReload,
-			proxyLogsToController: true,
 		};
 
 		this.#latestProxyData = proxyData;
@@ -398,10 +396,6 @@ export class RemoteRuntimeController extends RuntimeController {
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
 		logger.log(chalk.dim("⎔ Refreshing preview token..."));
 		void this.#mutex.runWith(() => this.#refreshPreviewToken());
-	}
-
-	override get mf(): Miniflare | undefined {
-		return undefined;
 	}
 
 	override async teardown() {

@@ -4,11 +4,14 @@ import { getAuthFromEnv } from "@cloudflare/workers-auth";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { isAbortError } from "./isAbortError";
-import type { StartDevWorkerInput } from "../startDevWorker/types";
 import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
-import type { ApiCredentials } from "@cloudflare/workers-utils";
-import type { CfWorkerContext, CfWorkerInit } from "@cloudflare/workers-utils";
+import type {
+	ApiCredentials,
+	CfWorkerContext,
+	CfWorkerInit,
+	StartDevWorkerInput,
+} from "@cloudflare/workers-utils";
 
 /**
  * Error thrown when a remote dev session fails due to an authentication

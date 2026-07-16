@@ -4,37 +4,16 @@ import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	AsyncHook,
 	AssetsOptions,
-	BinaryFile,
-	Binding,
 	CfAccount,
 	CfModule,
 	CfScriptFormat,
 	Config,
-	File,
-	Hook,
-	HookValues,
-	LogLevel,
 	NodeJSCompatMode,
 	Rule,
-	ServiceFetch,
 	StartDevWorkerInput,
-	Trigger,
 } from "@cloudflare/workers-utils";
 import type { WorkerdStructuredLog } from "miniflare";
 import type * as undici from "undici";
-
-/**
- * Extended StartDevWorkerInput with wrangler-specific fields that depend on miniflare types.
- * The base StartDevWorkerInput in workers-utils is kept dependency-free.
- */
-export type WranglerStartDevWorkerInput = Omit<StartDevWorkerInput, "dev"> & {
-	dev?: StartDevWorkerInput["dev"] & {
-		/** Handles structured runtime logs. */
-		structuredLogsHandler?: (log: WorkerdStructuredLog) => void;
-		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
-		mockFetch?: undici.MockAgent;
-	};
-};
 
 export interface Worker {
 	ready: Promise<void>;
@@ -82,16 +61,3 @@ export type StartDevWorkerOptions = Omit<
 };
 
 export type Bundle = EsbuildBundle;
-
-export type {
-	StartDevWorkerInput,
-	Trigger,
-	Binding,
-	File,
-	BinaryFile,
-	ServiceFetch,
-	HookValues,
-	Hook,
-	AsyncHook,
-	LogLevel,
-};

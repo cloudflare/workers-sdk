@@ -3,13 +3,11 @@ import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
 	ConfigUpdateEvent,
-	DevRegistryUpdateEvent,
 	ErrorEvent,
 	PreviewTokenExpiredEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { Miniflare } from "miniflare";
 
 export type ControllerEvent =
 	| ErrorEvent
@@ -18,7 +16,6 @@ export type ControllerEvent =
 	| BundleCompleteEvent
 	| ReloadStartEvent
 	| ReloadCompleteEvent
-	| DevRegistryUpdateEvent
 	| PreviewTokenExpiredEvent;
 
 export interface ControllerBus {
@@ -59,11 +56,6 @@ export abstract class RuntimeController extends Controller {
 	abstract onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void;
 
 	// *********************
-	//   Runtime Accessors
-	// *********************
-	abstract get mf(): Miniflare | undefined;
-
-	// *********************
 	//   Event Dispatchers
 	// *********************
 
@@ -72,10 +64,6 @@ export abstract class RuntimeController extends Controller {
 	}
 
 	protected emitReloadCompleteEvent(data: ReloadCompleteEvent): void {
-		this.bus.dispatch(data);
-	}
-
-	protected emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
 		this.bus.dispatch(data);
 	}
 }

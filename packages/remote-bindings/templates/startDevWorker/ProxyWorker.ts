@@ -23,8 +23,6 @@ type Request = Parameters<
 	>
 >[0];
 
-const LIVE_RELOAD_PROTOCOL = "WRANGLER_PROXYWORKER_LIVE_RELOAD_PROTOCOL";
-const LIVE_RELOAD_PATHNAME = "/cdn-cgi/live-reload";
 export default {
 	fetch(req, env) {
 		const singleton = env.DURABLE_OBJECT.idFromName("");
@@ -36,7 +34,7 @@ export default {
 
 export class ProxyWorker implements DurableObject {
 	constructor(
-		readonly state: DurableObjectState,
+		_state: DurableObjectState,
 		readonly env: Env
 	) {}
 
@@ -45,12 +43,6 @@ export class ProxyWorker implements DurableObject {
 	requestRetryQueue = new Map<Request, DeferredPromise<Response>>();
 
 	fetch(request: Request) {
-		if (isRequestForLiveReloadWebsocket(request)) {
-			// requests for live-reload websocket
-
-			return this.handleLiveReloadWebSocket(request);
-		}
-
 		if (isRequestFromProxyController(request, this.env)) {
 			// requests from ProxyController
 
@@ -66,20 +58,6 @@ export class ProxyWorker implements DurableObject {
 		return deferred.promise;
 	}
 
-	handleLiveReloadWebSocket(request: Request) {
-		const { 0: response, 1: liveReload } = new WebSocketPair();
-		const websocketProtocol =
-			request.headers.get("Sec-WebSocket-Protocol") ?? "";
-
-		this.state.acceptWebSocket(liveReload, ["live-reload"]);
-
-		return new Response(null, {
-			status: 101,
-			webSocket: response,
-			headers: { "Sec-WebSocket-Protocol": websocketProtocol },
-		});
-	}
-
 	processProxyControllerRequest(request: Request) {
 		const event = request.cf?.hostMetadata;
 		switch (event?.type) {
@@ -90,9 +68,6 @@ export class ProxyWorker implements DurableObject {
 			case "play":
 				this.proxyData = event.proxyData;
 				this.processQueue();
-				this.state
-					.getWebSockets("live-reload")
-					.forEach((ws) => ws.send("reload"));
 
 				break;
 		}
@@ -163,12 +138,6 @@ export class ProxyWorker implements DurableObject {
 
 					await checkForPreviewTokenError(res, this.env, proxyData);
 
-					if (isSseResponse(res)) {
-						void sendMessageToProxyController(this.env, {
-							type: "sseResponseDetected",
-						});
-					}
-
 					deferredResponse.resolve(res);
 				})
 				.catch((error: Error) => {
@@ -232,22 +201,6 @@ export class ProxyWorker implements DurableObject {
 function isRequestFromProxyController(req: Request, env: Env): boolean {
 	return req.headers.get("Authorization") === env.PROXY_CONTROLLER_AUTH_SECRET;
 }
-function isSseResponse(res: Response): boolean {
-	return (
-		res.headers.get("content-type")?.startsWith("text/event-stream") ?? false
-	);
-}
-function isRequestForLiveReloadWebsocket(req: Request): boolean {
-	if (new URL(req.url).pathname !== LIVE_RELOAD_PATHNAME) {
-		return false;
-	}
-
-	const websocketProtocol = req.headers.get("Sec-WebSocket-Protocol");
-	const isWebSocketUpgrade = req.headers.get("Upgrade") === "websocket";
-
-	return isWebSocketUpgrade && websocketProtocol === LIVE_RELOAD_PROTOCOL;
-}
-
 function sendMessageToProxyController(
 	env: Env,
 	message: ProxyWorkerOutgoingRequestBody
