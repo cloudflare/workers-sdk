@@ -1168,6 +1168,7 @@ export async function buildMiniflareOptions(
 		// The one switch for local observability: this env var tells Miniflare core
 		// to attach the trace collector to each user worker.
 		unsafeObservability: getLocalObservabilityEnabledFromEnv(),
+		unsafeInspectDurableObjects: true,
 		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,

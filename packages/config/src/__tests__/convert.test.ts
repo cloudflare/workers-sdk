@@ -802,6 +802,22 @@ describe("convertToWranglerConfig", () => {
 	});
 
 	describe("triggers", () => {
+		it("maps email triggers to addresses", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{
+						type: "email",
+						addresses: ["support@example.com", "*@example.com"],
+					},
+				],
+			});
+			expect(result.addresses).toEqual([
+				"support@example.com",
+				"*@example.com",
+			]);
+		});
+
 		it("maps scheduled triggers to triggers.crons", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,

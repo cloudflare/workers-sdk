@@ -113,7 +113,7 @@ export function WorkerSelector({
 					sideOffset={sidebar.open ? 4 : 8}
 				>
 					<Select.Popup className="max-h-72 min-w-48 overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
-						<Select.List className="p-1">
+						<Select.List className="max-h-72 overflow-y-auto p-1">
 							{workers.map((worker) => {
 								const isSelected = selectedWorker === worker.name;
 								const Icon = isSelected ? CheckIcon : TerminalIcon;

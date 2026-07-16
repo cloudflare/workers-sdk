@@ -14,7 +14,7 @@
 	},
 	"dependencies": {
 		"hono": "^4.12.5",
-		"zod": "^3.22.3"
+		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default",

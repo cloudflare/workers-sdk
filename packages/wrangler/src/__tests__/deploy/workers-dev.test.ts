@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { mockGetZones } from "../helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
@@ -921,6 +921,213 @@ describe("deploy", () => {
 				[Error: You can either deploy your worker to one or more routes by specifying them in your wrangler.toml file, or register a workers.dev subdomain here:
 				https://dash.cloudflare.com/some-account-id/workers/onboarding]
 			`);
+		});
+
+		describe("brand-new account / first deploy (no workers.dev subdomain yet)", () => {
+			// Pretend the Worker does not exist yet so `preUploadApiChecks` treats
+			// this as a first-ever upload. This is the scenario where the worker
+			// upload API rejects the request with error 10063 until a workers.dev
+			// subdomain has been registered for the account.
+			function mockWorkerDoesNotExist() {
+				msw.use(
+					http.get("*/accounts/:accountId/workers/services/:scriptName", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10090, message: "workers.api.error.service_not_found" },
+							])
+						)
+					)
+				);
+			}
+
+			it("registers a workers.dev subdomain before uploading a new Worker", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				// The account-level subdomain lookup reports "not registered" until we
+				// register one, then succeeds for the post-upload triggers lookup.
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockSubDomainRequest("test-sub-domain", false, true);
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+
+				mockConfirm({
+					text: "Would you like to register a workers.dev subdomain now?",
+					result: true,
+				});
+				mockPrompt({
+					text: "What would you like your workers.dev subdomain to be? It will be accessible at https://<subdomain>.workers.dev",
+					result: "test-sub-domain",
+				});
+				mockConfirm({
+					text: "Creating a workers.dev subdomain for your account at https://test-sub-domain.workers.dev. Ok to proceed?",
+					result: true,
+				});
+				msw.use(
+					// During registration wrangler checks subdomain availability; the
+					// API returns 10032 ("subdomain_unavailable") when the subdomain
+					// does not yet exist and so can be registered.
+					http.get(
+						"*/accounts/:accountId/workers/subdomains/:subdomain",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10032, message: "subdomain_unavailable" },
+								])
+							),
+						{ once: true }
+					),
+					http.put(
+						"*/accounts/:accountId/workers/subdomain",
+						async ({ request }) => {
+							expect(await request.json()).toEqual({
+								subdomain: "test-sub-domain",
+							});
+							return HttpResponse.json(
+								createFetchResult({ subdomain: "test-sub-domain" })
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler("deploy ./index");
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Success! It may take a few minutes for DNS records to update.
+					Visit https://dash.cloudflare.com/some-account-id/workers/subdomain to edit your workers.dev subdomain
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou need to register a workers.dev subdomain before publishing to workers.dev[0m
+
+					"
+				`);
+			});
+
+			it("fails before uploading when the user declines to register a subdomain", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				mockSubDomainRequest("does-not-exist", false);
+
+				mockConfirm({
+					text: "Would you like to register a workers.dev subdomain now?",
+					result: false,
+				});
+
+				// Note: the upload request is deliberately not mocked. The deploy must
+				// fail during pre-upload checks, before any upload is attempted
+				// (previously the upload request itself failed with a cryptic 10063
+				// "You need a workers.dev subdomain in order to proceed" error).
+				await expect(runWrangler("deploy ./index")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: You can either deploy your worker to one or more routes by specifying them in your wrangler.toml file, or register a workers.dev subdomain here:
+					https://dash.cloudflare.com/some-account-id/workers/onboarding]
+				`);
+			});
+
+			it("uploads a new Worker without prompting when the account already has a subdomain", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				// Fetched once before upload and once for the post-upload triggers.
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+
+				await runWrangler("deploy ./index");
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("does not check for a workers.dev subdomain when a new Worker only targets routes", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					routes: ["http://example.com/*"],
+				});
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				// A brand-new Worker is uploaded via the old upload API.
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+				mockGetWorkerSubdomain({ enabled: false });
+				mockGetZones(expect, "example.com", [{ id: "example-id" }]);
+				mockGetZoneWorkerRoutes(expect, "example-id");
+				mockPublishRoutesRequest({ routes: ["http://example.com/*"] });
+				// The account-level workers.dev subdomain endpoint is deliberately not
+				// mocked: a routes-only deploy does not publish to workers.dev, so the
+				// pre-upload check must be skipped entirely. MSW throws on any
+				// unhandled request, so a regression that reintroduced the original
+				// `!workerExists`-only gate (fetching the subdomain here) would fail.
+				await runWrangler("deploy index.js");
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  http://example.com/*
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("does not check for a workers.dev subdomain when a new Worker sets workers_dev = false", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					workers_dev: false,
+				});
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				// A brand-new Worker is uploaded via the old upload API.
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+				mockGetWorkerSubdomain({ enabled: false });
+				// As above, the account-level subdomain endpoint must never be hit
+				// when the deploy does not target workers.dev.
+				await runWrangler("deploy ./index");
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					No targets deployed for test-name (TIMINGS)
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 
 		it("should not deploy to workers.dev if there are any routes defined", async ({
