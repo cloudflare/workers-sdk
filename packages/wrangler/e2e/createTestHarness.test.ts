@@ -458,6 +458,118 @@ describe("createTestHarness", () => {
 		});
 	});
 
+	it("exposes Durable Object storage", async ({ expect, onTestFailed }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "do-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"durable_objects": {
+						"bindings": [
+							{ "name": "OBJECT", "class_name": "TestObject" }
+						]
+					},
+					"migrations": [
+						{ "tag": "v1", "new_sqlite_classes": ["TestObject"] }
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				import { DurableObject } from "cloudflare:workers";
+
+				export class TestObject extends DurableObject {
+					constructor(ctx, env) {
+						super(ctx, env);
+						this.ctx.storage.sql.exec(
+							"CREATE TABLE IF NOT EXISTS entries (id TEXT PRIMARY KEY, value TEXT)"
+						);
+					}
+
+					fetch(request) {
+						const url = new URL(request.url);
+						const sql = this.ctx.storage.sql;
+
+						if (url.pathname === "/write") {
+							sql.exec(
+								"INSERT OR REPLACE INTO entries (id, value) VALUES ('key', ?)",
+								url.searchParams.get("value")
+							);
+							return new Response("ok");
+						}
+
+						const row = sql.exec("SELECT value FROM entries WHERE id = 'key'").one();
+						return new Response(row?.value ?? "missing");
+					}
+				}
+
+				export default {
+					fetch(request, env) {
+						const url = new URL(request.url);
+						const id = env.OBJECT.idFromName(url.searchParams.get("name") ?? "user-123");
+						return env.OBJECT.get(id).fetch(request);
+					}
+				}
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+		onTestFailed(server.debug);
+
+		await server.listen();
+
+		const worker = server.getWorker<
+			{ OBJECT: DurableObjectNamespace },
+			{
+				default: ExportedHandler<{ OBJECT: DurableObjectNamespace }>;
+				TestObject: new (
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+					...args: any[]
+				) => CloudflareWorkersModule.DurableObject;
+			}
+		>();
+
+		const storageByClassName = await worker.getDurableObjectStorage(
+			"TestObject",
+			{
+				name: "by-class",
+			}
+		);
+		await storageByClassName.exec(
+			"INSERT INTO entries (id, value) VALUES ('key', ?)",
+			"seeded-by-class"
+		);
+
+		const response3 = await worker.fetch("/read?name=by-class");
+		await expect(response3.text()).resolves.toBe("seeded-by-class");
+
+		const storageByBindingName = await worker.getDurableObjectStorage(
+			"OBJECT",
+			{
+				name: "user-123",
+			}
+		);
+		await storageByBindingName.exec(
+			"INSERT INTO entries (id, value) VALUES ('key', ?)",
+			"seeded"
+		);
+
+		const response1 = await worker.fetch("/read?name=user-123");
+		await expect(response1.text()).resolves.toBe("seeded");
+
+		const response2 = await worker.fetch("/write?name=user-123&value=app");
+		await expect(response2.text()).resolves.toBe("ok");
+
+		const rows = await storageByBindingName.exec<{ value: string }>(
+			"SELECT value FROM entries WHERE id = 'key'"
+		);
+		expect(rows).toEqual([{ value: "app" }]);
+	});
+
 	it("introspects Workflow instances by binding name", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`

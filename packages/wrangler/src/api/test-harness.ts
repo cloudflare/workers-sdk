@@ -50,6 +50,8 @@ import type {
 	WorkflowIntrospector,
 } from "@cloudflare/workflows-shared/src/types";
 import type {
+	DurableObjectStorageHandle,
+	DurableObjectStorageOptions,
 	DispatchFetch,
 	Json,
 	Miniflare,
@@ -197,6 +199,30 @@ export type WorkerHandle<
 	 * ```
 	 */
 	applyD1Migrations(bindingName: BindingName<Env, D1Database>): Promise<void>;
+	/**
+	 * Returns remote storage access for a Durable Object instance.
+	 * Pass an exported Durable Object class name, or a Durable Object binding name.
+	 * Class names are resolved before binding names.
+	 *
+	 * Use this to seed state before sending requests to the object, or to inspect
+	 * state after awaited requests. Calling `exec()` runs SQL inside the target
+	 * Durable Object and returns all rows. It may start the object if it is not
+	 * already active.
+	 *
+	 * @example
+	 * ```ts
+	 * const sql = await worker.getDurableObjectStorage("COUNTER", {
+	 *   name: "user-123"
+	 * });
+	 * const rows = await sql.exec("SELECT count FROM counters WHERE id = ?", "user-123");
+	 * ```
+	 */
+	getDurableObjectStorage(
+		classNameOrBindingName:
+			| ExportName<Module, Rpc.DurableObjectBranded>
+			| BindingName<Env, DurableObjectNamespace>,
+		options: DurableObjectStorageOptions
+	): Promise<DurableObjectStorageHandle>;
 	/**
 	 * Creates an introspector for a specific Workflow instance.
 	 */
@@ -1111,6 +1137,22 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						scriptName,
 						className,
 						evictionOptions
+					);
+				},
+				async getDurableObjectStorage(classNameOrBindingName, storageOptions) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const { scriptName, className } = resolveDurableObjectTarget(
+						session,
+						workerName,
+						classNameOrBindingName
+					);
+
+					return miniflare.unsafeGetDurableObjectStorage(
+						scriptName,
+						className,
+						storageOptions
 					);
 				},
 				async getEnv() {
