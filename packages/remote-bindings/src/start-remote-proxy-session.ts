@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import events from "node:events";
-import { fileURLToPath } from "node:url";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
+import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker";
 import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
 import { DevEnv } from "./startDevWorker/DevEnv";
@@ -73,12 +73,9 @@ export async function startRemoteProxySession(
 	initLogger(options.logger);
 	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
 	const rawBindings = toRawBindings(bindings);
-	const remoteBindingsWorkerPath = fileURLToPath(
-		new URL("./proxy-worker.js", import.meta.url)
-	);
 	const workerConfig = {
 		name: options.workerName ?? randomUUID(),
-		entrypoint: remoteBindingsWorkerPath,
+		entrypointSource: remoteBindingsWorkerSource,
 		compatibilityDate: "2025-04-28",
 		compatibilityFlags: [],
 		complianceRegion: options.complianceRegion,

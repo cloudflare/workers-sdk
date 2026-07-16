@@ -64,6 +64,7 @@
 		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
+		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/runtime-types": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",

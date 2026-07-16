@@ -1,5 +1,4 @@
 import { EventEmitter } from "node:events";
-import { readFileSync } from "node:fs";
 import { UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
 import { logger } from "../logger";
@@ -35,8 +34,8 @@ export class DevEnv extends EventEmitter {
 
 		this.#config = config;
 		this.#bundle = {
-			path: config.entrypoint,
-			entrypointSource: readFileSync(config.entrypoint, "utf8"),
+			path: "proxy-worker.js",
+			entrypointSource: config.entrypointSource,
 			type: "esm",
 			modules: [],
 		};
