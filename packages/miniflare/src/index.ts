@@ -1164,15 +1164,13 @@ export class Miniflare {
 						`Unable to remove email session directory: ${String(e)}`
 					);
 				}
-				// Check if parent directory is now empty and remove it
+				// Only remove the shared parent if it is still empty. This must be atomic
+				// so another Miniflare instance's new session is never removed.
 				try {
-					const entries = fs.readdirSync(emailPaths.parentDir);
-					if (entries.length === 0) {
-						removeDirSync(emailPaths.parentDir);
-					}
+					fs.rmdirSync(emailPaths.parentDir);
 				} catch (e) {
 					this.#log.debug(
-						`Unable to check/remove email parent directory: ${String(e)}`
+						`Unable to remove empty email parent directory: ${String(e)}`
 					);
 				}
 			}
@@ -3439,16 +3437,13 @@ export class Miniflare {
 						`Unable to remove email session directory: ${String(e)}`
 					);
 				}
-				// Check if parent directory is now empty and remove it
+				// Only remove the shared parent if it is still empty. This must be atomic
+				// so another Miniflare instance's new session is never removed.
 				try {
-					const entries = await fs.promises.readdir(emailPaths.parentDir);
-					if (entries.length === 0) {
-						await removeDir(emailPaths.parentDir);
-					}
+					await fs.promises.rmdir(emailPaths.parentDir);
 				} catch (e) {
-					// Parent directory doesn't exist or can't be read, ignore
 					this.#log.debug(
-						`Unable to check/remove email parent directory: ${String(e)}`
+						`Unable to remove empty email parent directory: ${String(e)}`
 					);
 				}
 			}
