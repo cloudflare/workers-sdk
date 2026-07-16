@@ -1,0 +1,29 @@
+packages/workers-shared/asset-worker/src/worker.ts
+  s_e4b51853b557d5::t_9bd56c8327b94b 314,433
+packages/workers-shared/asset-worker/tests/analytics.test.ts
+  s_e4b51853b557d5::t_ca610bb521a919 62,89
+.changeset/assets-script-version-analytics.md
+  s_e4b51853b557d5::t_fe14836573f60b 1-7
+packages/workers-shared/asset-worker/src/analytics.ts
+  s_e4b51853b557d5::t_9fdd92894246c9 91-92,160
+packages/workers-shared/asset-worker/src/configuration.ts
+  s_e4b51853b557d5::t_1e1ff16abcb61e 26
+packages/workers-shared/utils/types.ts
+  s_e4b51853b557d5::t_8466fa0d9bfe8b 70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2eb173bb754edd44a3274c691938c6ab3ab577bc",
+  "prompts": {},
+  "sessions": {
+    "s_e4b51853b557d5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f67d6-caa1-7de1-8c9d-63c60d711931",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    }
+  }
+}
