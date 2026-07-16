@@ -5,6 +5,7 @@
  */
 import { spanKind } from "../../utils/observability";
 import type { LayoutSpan } from "../../utils/observability";
+import type { JSX } from "react";
 
 type IconProps = { size?: number; color?: string; className?: string };
 

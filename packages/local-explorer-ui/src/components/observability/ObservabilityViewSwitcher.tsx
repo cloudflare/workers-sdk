@@ -1,6 +1,7 @@
 import { DropdownMenu } from "@cloudflare/kumo";
 import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
+import type { JSX } from "react";
 
 type ObservabilityView = "traces" | "logs";
 

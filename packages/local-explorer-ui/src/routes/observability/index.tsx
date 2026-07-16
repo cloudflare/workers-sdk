@@ -21,6 +21,7 @@ import {
 } from "../../utils/observability";
 import { parseTraceQuery } from "../../utils/observability-query";
 import type { Span, TraceRow } from "../../utils/observability";
+import type { JSX } from "react";
 
 const HIDE_DEV_RUNNER_KEY = "wobs-hide-dev-runner";
 

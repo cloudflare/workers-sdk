@@ -13,6 +13,7 @@ import { ResourceError } from "../../components/ResourceError";
 import { listEvents } from "../../utils/observability";
 import { parseEventQuery } from "../../utils/observability-query";
 import type { LogEvent } from "../../utils/observability";
+import type { JSX } from "react";
 
 export const Route = createFileRoute("/observability/logs")({
 	component: LogsView,

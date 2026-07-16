@@ -882,8 +882,17 @@ export const CORE_PLUGIN: Plugin<
 					},
 				]
 			: options.streamingTails;
+		// Only add the flags the worker doesn't already declare. A worker that sets
+		// e.g. `streaming_tail_worker` itself (some do) would otherwise have it
+		// listed twice, which workerd rejects ("specified multiple times").
+		const existingFlags = options.compatibilityFlags ?? [];
 		const compatibilityFlags = observabilityEnabled
-			? [...(options.compatibilityFlags ?? []), ...OBSERVABILITY_COMPAT_FLAGS]
+			? [
+					...existingFlags,
+					...OBSERVABILITY_COMPAT_FLAGS.filter(
+						(flag) => !existingFlags.includes(flag)
+					),
+				]
 			: options.compatibilityFlags;
 
 		if (isWrappedBinding) {

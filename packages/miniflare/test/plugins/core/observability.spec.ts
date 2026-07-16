@@ -613,5 +613,27 @@ describe("unsafeObservability (multi-worker)", () => {
 				expect(ids.has(s.parent_id)).toBe(true);
 			}
 		}
+
+		// A worker handoff is a span whose service differs from its parent's (this
+		// is what the UI's getInvocationRootIds looks for). The downstream worker's
+		// root should be flagged; the upstream root should not.
+		const boundaries = (await queryStore(
+			mf,
+			`SELECT s.span_id FROM spans s
+				JOIN spans p ON p.trace_id = s.trace_id AND p.span_id = s.parent_id
+				WHERE s.trace_id = ? AND s.service IS NOT NULL AND s.service IS NOT p.service`,
+			[trace.trace_id]
+		)) as unknown as { span_id: string }[];
+		const boundaryIds = new Set(boundaries.map((b) => b.span_id));
+		const byId = new Map(spans.map((s) => [s.span_id, s]));
+		const downstreamRoot = spans.find(
+			(s) =>
+				s.service === "downstream" &&
+				s.parent_id !== null &&
+				byId.get(s.parent_id)?.service === "upstream"
+		);
+		assert(downstreamRoot, "expected the downstream worker's root span");
+		expect(boundaryIds.has(downstreamRoot.span_id)).toBe(true);
+		expect(boundaryIds.has(roots[0].span_id)).toBe(false);
 	});
 });

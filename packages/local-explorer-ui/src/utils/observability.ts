@@ -362,15 +362,20 @@ export async function getTagKeys(): Promise<string[]> {
 }
 
 /**
- * Span ids that begin a worker invocation within a (possibly multi-worker)
- * distributed trace: the parent-less root spans sharing the trace_id. The
- * waterfall marks these (other than the top-level root) as a new invocation.
- * Vite dev module-runner invocations are excluded so only real handoffs show.
+ * Span ids where execution crosses into another worker, within a (possibly
+ * multi-worker) distributed trace. These aren't parent-less: a downstream
+ * worker's root span carries the calling span as its parent_id, so the only
+ * parent-less span is the top-level root. Instead, a handoff is a span whose
+ * owning `service` differs from its parent's. The waterfall marks each of these
+ * as the start of a new invocation. Vite dev module-runner spans are excluded so
+ * only real handoffs show.
  */
 export async function getInvocationRootIds(traceId: string): Promise<string[]> {
 	const rows = await runQuery<{ span_id: string }>(
-		`SELECT span_id FROM spans WHERE trace_id = ? AND parent_id IS NULL
-			AND (attributes IS NULL OR json(attributes) NOT LIKE '%__VITE_RUNNER_OBJECT__%')`,
+		`SELECT s.span_id FROM spans s
+			JOIN spans p ON p.trace_id = s.trace_id AND p.span_id = s.parent_id
+			WHERE s.trace_id = ? AND s.service IS NOT NULL AND s.service IS NOT p.service
+			AND (s.attributes IS NULL OR json(s.attributes) NOT LIKE '%__VITE_RUNNER_OBJECT__%')`,
 		[traceId]
 	);
 	return rows.map((r) => String(r.span_id)).filter(Boolean);

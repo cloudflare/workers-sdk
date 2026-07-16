@@ -12,6 +12,7 @@ import {
 } from "../../utils/observability";
 import { getSpanIcon } from "./icons";
 import type { LayoutSpan, Span } from "../../utils/observability";
+import type { JSX } from "react";
 
 interface TraceWaterfallProps {
 	spans: Span[];

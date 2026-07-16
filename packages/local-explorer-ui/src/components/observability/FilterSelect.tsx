@@ -1,5 +1,6 @@
 import { DropdownMenu } from "@cloudflare/kumo";
 import { CaretUpDownIcon, CheckIcon } from "@phosphor-icons/react";
+import type { JSX } from "react";
 
 /** A Kumo DropdownMenu styled like the dashboard's filter dropdowns. */
 export function FilterSelect({
