@@ -62,7 +62,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const deployedUrl = getDeployedUrl(output);
 
-			const response = await waitForWorkersDev(deployedUrl);
+			const response = await waitForWorkersDev(
+				deployedUrl,
+				async (candidate) => (await candidate.clone().text()) === "Hello World!"
+			);
 			expect(await response.text()).toEqual("Hello World!");
 		});
 
@@ -94,7 +97,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const deployedUrl = getDeployedUrl(output);
 
-			const response = await waitForWorkersDev(deployedUrl);
+			const response = await waitForWorkersDev(
+				deployedUrl,
+				async (candidate) =>
+					(await candidate.clone().text()) === "Updated Worker!"
+			);
 			expect(await response.text()).toEqual("Updated Worker!");
 		});
 

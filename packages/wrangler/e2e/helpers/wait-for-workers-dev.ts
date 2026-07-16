@@ -1,11 +1,14 @@
 import { setTimeout } from "node:timers/promises";
-import { fetch } from "undici";
+import { fetch, type Response } from "undici";
 
 const WORKERS_DEV_PROPAGATION_TIMEOUT = 60_000;
 const INITIAL_RETRY_DELAY = 500;
 const MAX_RETRY_DELAY = 5_000;
 
-export async function waitForWorkersDev(url: string) {
+export async function waitForWorkersDev(
+	url: string,
+	isReady: (response: Response) => boolean | Promise<boolean> = () => true
+) {
 	const deadline = Date.now() + WORKERS_DEV_PROPAGATION_TIMEOUT;
 	let retryDelay = INITIAL_RETRY_DELAY;
 	let lastError: unknown;
@@ -15,11 +18,17 @@ export async function waitForWorkersDev(url: string) {
 			const response = await fetch(url, {
 				signal: AbortSignal.timeout(deadline - Date.now()),
 			});
-			if (response.status !== 404) {
+			if (
+				response.status !== 404 &&
+				response.status < 500 &&
+				(await isReady(response))
+			) {
 				return response;
 			}
 			await response.body?.cancel();
-			lastError = new Error(`Workers.dev returned 404 for ${url}`);
+			lastError = new Error(
+				`Workers.dev returned ${response.status} before it was ready for ${url}`
+			);
 		} catch (error) {
 			lastError = error;
 		}

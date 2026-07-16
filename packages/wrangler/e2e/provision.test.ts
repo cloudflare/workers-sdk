@@ -122,7 +122,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			assert(d1Match?.groups);
 			d1Id = d1Match.groups.d1;
 
-			const response = await waitForWorkersDev(deployedUrl);
+			const response = await waitForWorkersDev(
+				deployedUrl,
+				async (candidate) => (await candidate.clone().text()) === "Hello World!"
+			);
 			expect(await response.text()).toEqual("Hello World!");
 		});
 
@@ -146,7 +149,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				Current Version ID: 00000000-0000-0000-0000-000000000000"
 			`);
 
-			const response = await waitForWorkersDev(deployedUrl);
+			const response = await waitForWorkersDev(
+				deployedUrl,
+				async (candidate) => (await candidate.clone().text()) === "Hello World!"
+			);
 			expect(await response.text()).toEqual("Hello World!");
 		});
 		it("can inspect current bindings", async ({ expect }) => {

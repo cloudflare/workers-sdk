@@ -29,19 +29,48 @@ it("retries workers.dev 404 responses", async ({ expect }) => {
 	expect(requestCount).toBe(2);
 });
 
-it("returns non-404 application failures without retrying", async ({
+it("retries workers.dev 5xx responses", async ({ expect }) => {
+	let requestCount = 0;
+	const url = await listen((_request, response) => {
+		requestCount++;
+		response.writeHead(requestCount === 1 ? 503 : 200).end();
+	});
+
+	const response = await waitForWorkersDev(url);
+
+	expect(response.status).toBe(200);
+	expect(requestCount).toBe(2);
+});
+
+it("returns non-retryable application failures", async ({ expect }) => {
+	let requestCount = 0;
+	const url = await listen((_request, response) => {
+		requestCount++;
+		response.writeHead(400).end();
+	});
+
+	const response = await waitForWorkersDev(url);
+
+	expect(response.status).toBe(400);
+	expect(requestCount).toBe(1);
+});
+
+it("retries until the response satisfies the readiness predicate", async ({
 	expect,
 }) => {
 	let requestCount = 0;
 	const url = await listen((_request, response) => {
 		requestCount++;
-		response.writeHead(500).end();
+		response.end(requestCount === 1 ? "old" : "new");
 	});
 
-	const response = await waitForWorkersDev(url);
+	const response = await waitForWorkersDev(
+		url,
+		async (candidate) => (await candidate.clone().text()) === "new"
+	);
 
-	expect(response.status).toBe(500);
-	expect(requestCount).toBe(1);
+	expect(await response.text()).toBe("new");
+	expect(requestCount).toBe(2);
 });
 
 async function listen(handler: RequestListener): Promise<string> {
