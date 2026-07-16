@@ -6,21 +6,14 @@ import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type {
-	Controller,
-	ControllerBus,
-	ControllerEvent,
-	RuntimeController,
-} from "./BaseController";
+import type { ControllerBus, ControllerEvent } from "./BaseController";
 import type { ErrorEvent } from "./events";
 import type { StartDevWorkerOptions, Worker } from "./types";
-
-type ControllerFactory<C extends Controller> = (devEnv: DevEnv) => C;
 
 export class DevEnv extends EventEmitter implements ControllerBus {
 	config: ConfigController;
 	bundler: BundlerController;
-	runtimes: RuntimeController[];
+	runtime: RemoteRuntimeController;
 	proxy: ProxyController;
 
 	async startWorker(options: StartDevWorkerOptions): Promise<Worker> {
@@ -40,23 +33,13 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 		return worker;
 	}
 
-	constructor({
-		configFactory = (devEnv) => new ConfigController(devEnv),
-		bundlerFactory = (devEnv) => new BundlerController(devEnv),
-		runtimeFactories = [(devEnv) => new RemoteRuntimeController(devEnv)],
-		proxyFactory = (devEnv) => new ProxyController(devEnv),
-	}: {
-		configFactory?: ControllerFactory<ConfigController>;
-		bundlerFactory?: ControllerFactory<BundlerController>;
-		runtimeFactories?: ControllerFactory<RuntimeController>[];
-		proxyFactory?: ControllerFactory<ProxyController>;
-	} = {}) {
+	constructor() {
 		super();
 
-		this.config = configFactory(this);
-		this.bundler = bundlerFactory(this);
-		this.runtimes = runtimeFactories.map((factory) => factory(this));
-		this.proxy = proxyFactory(this);
+		this.config = new ConfigController(this);
+		this.bundler = new BundlerController(this);
+		this.runtime = new RemoteRuntimeController(this);
+		this.proxy = new ProxyController(this);
 
 		this.on("error", (event: ErrorEvent) => {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
@@ -94,15 +77,11 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 
 			case "bundleStart":
 				this.proxy.onBundleStart(event);
-				this.runtimes.forEach((runtime) => {
-					runtime.onBundleStart(event);
-				});
+				this.runtime.onBundleStart(event);
 				break;
 
 			case "bundleComplete":
-				this.runtimes.forEach((runtime) => {
-					runtime.onBundleComplete(event);
-				});
+				this.runtime.onBundleComplete(event);
 				break;
 
 			case "reloadStart":
@@ -115,9 +94,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 				break;
 
 			case "previewTokenExpired":
-				this.runtimes.forEach((runtime) => {
-					runtime.onPreviewTokenExpired(event);
-				});
+				this.runtime.onPreviewTokenExpired(event);
 				break;
 		}
 	}
@@ -135,8 +112,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			);
 		} else if (
 			event.source === "ProxyController" &&
-			(event.reason.startsWith("Failed to send message to") ||
-				event.reason.startsWith("Could not connect to InspectorProxyWorker"))
+			event.reason.startsWith("Failed to send message to")
 		) {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			logger.debug("=> Error contextual data:", event.data);
@@ -154,11 +130,9 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 		await Promise.all([
 			this.config.teardown(),
 			this.bundler.teardown(),
-			...this.runtimes.map((runtime) => runtime.teardown()),
+			this.runtime.teardown(),
 			this.proxy.teardown(),
 		]);
-
-		this.emit("teardown");
 
 		logger.debug("DevEnv teardown complete");
 	}

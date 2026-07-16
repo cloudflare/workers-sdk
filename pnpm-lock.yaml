@@ -2562,9 +2562,6 @@ importers:
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
         version: link:../cli
-      '@cloudflare/containers-shared':
-        specifier: workspace:*
-        version: link:../containers-shared
       '@cloudflare/deploy-helpers':
         specifier: workspace:*
         version: link:../deploy-helpers

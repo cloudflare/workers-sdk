@@ -2,22 +2,10 @@ import type { Bundle, StartDevWorkerOptions } from "./types";
 import type { Miniflare } from "miniflare";
 
 export type ErrorEvent =
-	| BaseErrorEvent<
-			| "ConfigController"
-			| "BundlerController"
-			| "LocalRuntimeController"
-			| "RemoteRuntimeController"
-			| "ProxyWorker"
-			| "InspectorProxyWorker"
-			| "MultiworkerRuntimeController"
-	  >
+	| BaseErrorEvent<"RemoteRuntimeController">
 	| BaseErrorEvent<
 			"ProxyController",
 			{ config?: StartDevWorkerOptions; bundle?: Bundle }
-	  >
-	| BaseErrorEvent<
-			"BundlerController",
-			{ config?: StartDevWorkerOptions; filePath?: string }
 	  >;
 type BaseErrorEvent<Source = string, Data = undefined> = {
 	type: "error";
@@ -83,7 +71,6 @@ export type ReadyEvent = {
 	type: "ready";
 	proxyWorker: Miniflare;
 	url: URL;
-	inspectorUrl: URL | undefined;
 };
 
 // ProxyWorker
@@ -101,14 +88,9 @@ export type SerializedError = {
 	cause?: unknown;
 };
 export type UrlOriginParts = Pick<URL, "protocol" | "hostname" | "port">;
-export type UrlOriginAndPathnameParts = Pick<
-	URL,
-	"protocol" | "hostname" | "port" | "pathname"
->;
 
 export type ProxyData = {
 	userWorkerUrl: UrlOriginParts;
-	userWorkerInspectorUrl?: UrlOriginAndPathnameParts;
 	userWorkerInnerUrlOverrides?: Partial<UrlOriginParts>;
 	headers: Record<string, string>;
 };

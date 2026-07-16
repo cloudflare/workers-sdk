@@ -4,8 +4,8 @@ import { getAuthFromEnv } from "@cloudflare/workers-auth";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { isAbortError } from "./isAbortError";
+import type { Bundle } from "../startDevWorker/types";
 import type { CfAccount } from "./create-worker-preview";
-import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	ApiCredentials,
 	CfWorkerContext,
@@ -121,7 +121,7 @@ export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
  * (flat Record<string, Binding>).
  */
 export function createRemoteWorkerInit(props: {
-	bundle: EsbuildBundle;
+	bundle: Bundle;
 	name: string;
 	bindings: StartDevWorkerInput["bindings"];
 	compatibilityDate: string | undefined;

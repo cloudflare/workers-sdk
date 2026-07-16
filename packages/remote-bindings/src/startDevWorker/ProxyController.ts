@@ -13,7 +13,6 @@ import {
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
-import type { EsbuildBundle } from "../utils/use-esbuild";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
@@ -26,7 +25,7 @@ import type {
 	ReloadStartEvent,
 	SerializedError,
 } from "./events";
-import type { StartDevWorkerOptions } from "./types";
+import type { Bundle, StartDevWorkerOptions } from "./types";
 import type { LogOptions, MiniflareOptions } from "miniflare";
 
 const proxyWorkerPath = fileURLToPath(
@@ -39,15 +38,14 @@ export class ProxyController extends Controller {
 	public localServerReady = createDeferred<void>();
 
 	public proxyWorker?: Miniflare;
-	proxyWorkerOptions?: MiniflareOptions;
 
 	protected latestConfig?: StartDevWorkerOptions;
-	protected latestBundle?: EsbuildBundle;
+	protected latestBundle?: Bundle;
 
 	secret = randomUUID();
 
 	protected createProxyWorker() {
-		if (this._torndown) {
+		if (this._torndown || this.proxyWorker) {
 			return;
 		}
 		assert(this.latestConfig !== undefined);
@@ -111,44 +109,20 @@ export class ProxyController extends Controller {
 			handleStructuredLogs,
 		};
 
-		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
-			this.proxyWorkerOptions,
-			proxyWorkerOptions
-		);
+		const proxyWorker = new Miniflare(proxyWorkerOptions);
+		this.proxyWorker = proxyWorker;
 
-		const willInstantiateMiniflareInstance =
-			!this.proxyWorker || proxyWorkerOptionsChanged;
-		this.proxyWorker ??= new Miniflare(proxyWorkerOptions);
-		this.proxyWorkerOptions = proxyWorkerOptions;
-
-		if (proxyWorkerOptionsChanged) {
-			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
-
-			void this.proxyWorker.setOptions(proxyWorkerOptions).catch((error) => {
+		void proxyWorker.ready
+			.then((url) => {
+				assert(url);
+				this.emitReadyEvent(proxyWorker, url);
+			})
+			.catch((error) => {
+				if (this._torndown) {
+					return;
+				}
 				this.emitErrorEvent("Failed to start ProxyWorker", error);
 			});
-
-			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
-			// it also respects any await-ers of the existing .ready promise
-			this.ready = createDeferred<ReadyEvent>(this.ready);
-		}
-
-		// store the non-null versions for callbacks
-		const { proxyWorker } = this;
-
-		if (willInstantiateMiniflareInstance) {
-			void proxyWorker.ready
-				.then((url) => {
-					assert(url);
-					this.emitReadyEvent(proxyWorker, url, undefined);
-				})
-				.catch((error) => {
-					if (this._torndown) {
-						return;
-					}
-					this.emitErrorEvent("Failed to start ProxyWorker", error);
-				});
-		}
 	}
 
 	runtimeMessageMutex = new Mutex();
@@ -259,16 +233,11 @@ export class ProxyController extends Controller {
 	//   Event Dispatchers
 	// *********************
 
-	emitReadyEvent(
-		proxyWorker: Miniflare,
-		url: URL,
-		inspectorUrl: URL | undefined
-	) {
+	emitReadyEvent(proxyWorker: Miniflare, url: URL) {
 		const data: ReadyEvent = {
 			type: "ready",
 			proxyWorker,
 			url,
-			inspectorUrl,
 		};
 
 		this.ready.resolve(data);
@@ -327,21 +296,4 @@ class ProxyControllerLogger extends WranglerLog {
 		}
 		super.log(message);
 	}
-}
-
-function deepEquality(a: unknown, b: unknown): boolean {
-	// could be more efficient, but this is fine for now
-	return JSON.stringify(a) === JSON.stringify(b);
-}
-
-function didMiniflareOptionsChange(
-	prev: MiniflareOptions | undefined,
-	next: MiniflareOptions
-) {
-	if (prev === undefined) {
-		return false;
-	} // first time, so 'no change'
-
-	// otherwise, if they're not deeply equal, they've changed
-	return !deepEquality(prev, next);
 }
