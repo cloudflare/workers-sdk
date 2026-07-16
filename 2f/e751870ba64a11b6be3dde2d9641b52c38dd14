@@ -1,0 +1,33 @@
+packages/wrangler/src/__tests__/deploy/core.test.ts
+  22baa37600d6ebd1 729,775
+packages/wrangler/src/__tests__/user.test.ts
+  22baa37600d6ebd1 83,129,175,221,263,392
+packages/wrangler/src/user/user.ts
+  22baa37600d6ebd1 372
+.changeset/add-web-search-binding.md
+  22baa37600d6ebd1 9,13,17,19
+packages/wrangler/src/__tests__/whoami.test.ts
+  22baa37600d6ebd1 341,411,527
+packages/miniflare/src/plugins/index.ts
+  22baa37600d6ebd1 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "2fe751870ba64a11b6be3dde2d9641b52c38dd14",
+  "prompts": {
+    "22baa37600d6ebd1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c49c2946ffez7W6VFJaYSJQFu",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "Gabriel Massadas",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 22,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    }
+  }
+}
