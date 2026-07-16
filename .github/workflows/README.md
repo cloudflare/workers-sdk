@@ -95,6 +95,16 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Posts the report and structured summary as a maintainer-facing comment on the issue and applies the suggested labels (validated against existing repo labels). The comment carries a hidden marker so that re-triage updates the existing comment (via `gh`) rather than posting a duplicate. Comments and labels are attributed to the workers-devprod bot via `GH_ACCESS_TOKEN`.
   - The AI agent itself runs sandboxed (no shell or network access); all GitHub writes happen in workflow steps from the generated files.
 
+### Analyze CI Failure (analyze-ci-failure.yml)
+
+- Triggers
+  - The `CI` workflow completes with a `failure` or `timed_out` conclusion on a PR.
+  - Manual `workflow_dispatch` with a failed workflow run ID and PR number.
+- Actions
+  - Downloads the failed workflow run logs with the read-only `GITHUB_TOKEN`.
+  - Runs the Flue `ci-log-analysis` workflow against the downloaded logs. The Flue agent uses the checked-out default branch and local CI log files for read-only analysis, with model access routed through the existing Cloudflare AI Gateway secrets.
+  - Posts or updates a hidden-marker PR comment with the analysis and structured JSON summary. Comments are attributed to the workers-devprod bot via `GH_ACCESS_TOKEN`.
+
 ### Generate changesets for dependabot PRs (c3-dependabot-versioning-prs.yml and miniflare-dependabot-versioning-prs.yml)
 
 - Triggers

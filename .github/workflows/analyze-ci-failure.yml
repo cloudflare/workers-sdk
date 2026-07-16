@@ -1,0 +1,178 @@
+name: Analyze CI Failure
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: "Failed CI workflow run ID to analyze"
+        required: true
+        type: string
+      pr-number:
+        description: "PR number to comment on"
+        required: true
+        type: number
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-log-analysis-${{ github.event.workflow_run.id || inputs.run-id }}
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      ((github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'timed_out') &&
+        github.event.workflow_run.pull_requests[0].number)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Resolve run context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          EVENT_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          EVENT_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+          EVENT_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          EVENT_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          INPUT_PR_NUMBER: ${{ inputs.pr-number }}
+          INPUT_RUN_ID: ${{ inputs.run-id }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "conclusion=failure" >> "$GITHUB_OUTPUT"
+            echo "pr-number=${INPUT_PR_NUMBER}" >> "$GITHUB_OUTPUT"
+            echo "run-attempt=1" >> "$GITHUB_OUTPUT"
+            echo "run-id=${INPUT_RUN_ID}" >> "$GITHUB_OUTPUT"
+            echo "run-url=https://github.com/${GITHUB_REPOSITORY}/actions/runs/${INPUT_RUN_ID}" >> "$GITHUB_OUTPUT"
+            echo "workflow-name=CI" >> "$GITHUB_OUTPUT"
+          else
+            echo "conclusion=${EVENT_CONCLUSION}" >> "$GITHUB_OUTPUT"
+            echo "pr-number=${EVENT_PR_NUMBER}" >> "$GITHUB_OUTPUT"
+            echo "run-attempt=${EVENT_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+            echo "run-id=${EVENT_RUN_ID}" >> "$GITHUB_OUTPUT"
+            echo "run-url=${EVENT_RUN_URL}" >> "$GITHUB_OUTPUT"
+            echo "workflow-name=${EVENT_WORKFLOW_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Download workflow logs
+        id: download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ steps.context.outputs.run-id }}
+        run: |
+          RUN_DIR="data/ci-failure/${RUN_ID}"
+          LOGS_DIR="${RUN_DIR}/logs"
+
+          mkdir -p "$LOGS_DIR"
+          gh run view "$RUN_ID" --repo "$REPO" --log > "${LOGS_DIR}/run.log"
+
+          echo "logs-dir=${LOGS_DIR}" >> "$GITHUB_OUTPUT"
+          find "$LOGS_DIR" -type f | sort
+
+      - name: Analyze logs with Flue
+        env:
+          CF_AI_GATEWAY_ACCOUNT_ID: ${{ secrets.CF_AI_GATEWAY_ACCOUNT_ID }}
+          CF_AI_GATEWAY_NAME: ${{ secrets.CF_AI_GATEWAY_NAME }}
+          CF_AI_GATEWAY_TOKEN: ${{ secrets.CF_AI_GATEWAY_TOKEN }}
+          CONCLUSION: ${{ steps.context.outputs.conclusion }}
+          LOGS_DIR: ${{ steps.download.outputs.logs-dir }}
+          PR_NUMBER: ${{ steps.context.outputs.pr-number }}
+          REPO: ${{ github.repository }}
+          RUN_ATTEMPT: ${{ steps.context.outputs.run-attempt }}
+          RUN_ID: ${{ steps.context.outputs.run-id }}
+          RUN_URL: ${{ steps.context.outputs.run-url }}
+          WORKFLOW_NAME: ${{ steps.context.outputs.workflow-name }}
+        run: |
+          RUN_DIR="data/ci-failure/${RUN_ID}"
+          INPUT_JSON=$(jq -n \
+            --arg conclusion "$CONCLUSION" \
+            --arg logsDirectory "$LOGS_DIR" \
+            --argjson prNumber "$PR_NUMBER" \
+            --arg repository "$REPO" \
+            --argjson runAttempt "$RUN_ATTEMPT" \
+            --arg runId "$RUN_ID" \
+            --arg runUrl "$RUN_URL" \
+            --arg workflowName "$WORKFLOW_NAME" \
+            '{
+              conclusion: $conclusion,
+              logsDirectory: $logsDirectory,
+              prNumber: $prNumber,
+              repository: $repository,
+              runAttempt: $runAttempt,
+              runId: $runId,
+              runUrl: $runUrl,
+              workflowName: $workflowName
+            }')
+
+          pnpm exec flue run ci-log-analysis --target node --input "$INPUT_JSON" > "${RUN_DIR}/analysis.json"
+          jq . "${RUN_DIR}/analysis.json"
+
+      - name: Build PR comment
+        env:
+          PR_NUMBER: ${{ steps.context.outputs.pr-number }}
+          RUN_ID: ${{ steps.context.outputs.run-id }}
+        run: |
+          RUN_DIR="data/ci-failure/${RUN_ID}"
+
+          {
+            echo "<!-- workers-sdk-ci-log-analysis -->"
+            echo "> [!NOTE]"
+            echo "> Automated CI failure analysis generated by workers-devprod. It is advisory; maintainers should confirm before applying fixes."
+            echo ""
+            jq -r ".commentMarkdown" "${RUN_DIR}/analysis.json"
+            echo ""
+            echo "<details>"
+            echo "<summary>Structured analysis (JSON)</summary>"
+            echo ""
+            echo '```json'
+            jq . "${RUN_DIR}/analysis.json"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } > "${RUN_DIR}/comment.md"
+
+          cat "${RUN_DIR}/comment.md"
+
+      - name: Post PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          PR_NUMBER: ${{ steps.context.outputs.pr-number }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ steps.context.outputs.run-id }}
+        run: |
+          MARKER="<!-- workers-sdk-ci-log-analysis -->"
+          BODY_FILE="data/ci-failure/${RUN_ID}/comment.md"
+
+          COMMENT_ID=$(gh api --paginate "/repos/${REPO}/issues/${PR_NUMBER}/comments" \
+            --jq "map(select(.body | contains(\"${MARKER}\"))) | .[0].id // empty")
+
+          if [ -n "$COMMENT_ID" ]; then
+            jq -n --rawfile body "$BODY_FILE" '{body: $body}' \
+              | gh api --method PATCH "/repos/${REPO}/issues/comments/${COMMENT_ID}" --input - > /dev/null
+            echo "Updated existing CI analysis comment ${COMMENT_ID}"
+          else
+            gh issue comment "$PR_NUMBER" --repo "$REPO" --body-file "$BODY_FILE"
+            echo "Created new CI analysis comment"
+          fi
