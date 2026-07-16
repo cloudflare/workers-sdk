@@ -330,41 +330,50 @@ function annotate(
 
 		// If this is an `invalid_union` error, make sure we include all sub-issues
 		if (issue.code === "invalid_union") {
-			const unionIssues = issue.errors.flat();
+			// In zod v4, `issue.errors` is `$ZodIssue[][]` where each inner
+			// array holds the issues for one union branch.
+			const allBranchIssues = issue.errors;
+			const unionIssues = allBranchIssues.flat();
 
-			// If the `input` is an object/array with multiple distinct messages,
-			// annotate it as a group
-			let newGroupId: number | undefined;
-			const multipleDistinct = hasMultipleDistinctMessages(
-				unionIssues,
-				// For this check, we only include messages that are deeper than our
-				// current level, so we don't include messages we'd ignore if we grouped
-				issue.path.length + 1
-			);
-			if (isRecord(input) && multipleDistinct) {
-				newGroupId = groupCounts.size;
-				groupCounts.set(newGroupId, 0);
-			}
+			// In zod v4, discriminated unions with an invalid discriminator
+			// produce an `invalid_union` issue with an empty `errors` array
+			// and the error message on the issue itself. Fall through to
+			// treat it as a regular annotation in that case.
+			if (unionIssues.length > 0) {
+				// If the `input` is an object/array with multiple distinct messages,
+				// annotate it as a group
+				// In zod v4, branch issue paths are already relative to the union
+				// issue, so use depth 1 (deeper than current level 0) rather than
+				// issue.path.length + 1.
+				const multipleDistinct = hasMultipleDistinctMessages(unionIssues, 1);
 
-			for (const unionIssue of unionIssues) {
-				const unionPath = unionIssue.path.slice(issue.path.length) as (
-					| string
-					| number
-				)[];
-				// If we have multiple distinct messages at deeper levels, and this
-				// issue is for the current path, skip it, so we don't end up annotating
-				// the current path and sub-paths
-				if (multipleDistinct && unionPath.length === 0) continue;
-				annotated = annotate(
-					groupCounts,
-					annotated,
-					input,
-					unionIssue,
-					unionPath,
-					newGroupId
-				);
+				let newGroupId: number | undefined;
+				if (isRecord(input) && multipleDistinct) {
+					newGroupId = groupCounts.size;
+					groupCounts.set(newGroupId, 0);
+				}
+
+				for (const branchIssues of allBranchIssues) {
+					for (const unionIssue of branchIssues) {
+						// In zod v4, branch issue paths are already relative to the
+						// union issue (not absolute), so use them directly.
+						const unionPath = unionIssue.path as (string | number)[];
+						// If we have multiple distinct messages at deeper levels, and this
+						// issue is for the current path, skip it, so we don't end up annotating
+						// the current path and sub-paths
+						if (multipleDistinct && unionPath.length === 0) continue;
+						annotated = annotate(
+							groupCounts,
+							annotated,
+							input,
+							unionIssue,
+							unionPath,
+							newGroupId
+						);
+					}
+				}
+				return annotated;
 			}
-			return annotated;
 		}
 
 		const message = issue.message;

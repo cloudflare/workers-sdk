@@ -246,7 +246,8 @@ describe("formatZodError:", () => {
 		});
 		expect(formatted).toMatchInlineSnapshot(`
 			"{
-			  ...,
+			  type: 'c',
+			        ^ Invalid discriminator value. Expected 'a' | 'b'
 			}"
 		`);
 	});
@@ -286,16 +287,25 @@ describe("formatZodError:", () => {
 			    /* [0] */ false,
 			              ^ Invalid input: expected object, received boolean
 			    ...,
-			    /* [2] */ {},
-			              ^ Invalid input: expected number, received undefined
-			                Invalid input: expected boolean, received undefined
-			                Invalid input: expected string, received undefined
+			    /* [2] */ {
+			      a: undefined,
+			         ^1 Invalid input: expected number, received undefined *or*
+			      b: undefined,
+			         ^1 Invalid input: expected boolean, received undefined *or*
+			      c: undefined,
+			         ^1 Invalid input: expected string, received undefined
+			    },
 			    /* [3] */ [],
 			              ^ Invalid input: expected object, received array
-			    /* [4] */ { d: '' },
-			              ^ Invalid input: expected number, received undefined
-			                Invalid input: expected boolean, received undefined
-			                Invalid input: expected string, received undefined
+			    /* [4] */ {
+			      ...,
+			      a: undefined,
+			         ^2 Invalid input: expected number, received undefined *or*
+			      b: undefined,
+			         ^2 Invalid input: expected boolean, received undefined *or*
+			      c: undefined,
+			         ^2 Invalid input: expected string, received undefined
+			    },
 			  ],
 			}"
 		`);
@@ -316,34 +326,62 @@ describe("formatZodError:", () => {
 			  [2mobjects: [[22m
 			    [2m/* [0] */ [22m[33mfalse[39m[2m,[22m
 			[31m              ^ Invalid input: expected object, received boolean[39m
-			    [2m/* [1] */ [22m{}[2m,[22m
-			[31m              ^ Invalid input: expected number, received undefined
-			                Invalid input: expected boolean, received undefined
-			                Invalid input: expected string, received undefined[39m
-			    [2m/* [2] */ [22m{}[2m,[22m
-			[31m              ^ Invalid input: expected number, received undefined
-			                Invalid input: expected boolean, received undefined
-			                Invalid input: expected string, received undefined[39m
-			    [2m/* [3] */ [22m{}[2m,[22m
-			[31m              ^ Invalid input: expected number, received undefined
-			                Invalid input: expected boolean, received undefined
-			                Invalid input: expected string, received undefined[39m
-			    [2m/* [4] */ [22m{}[2m,[22m
-			[31m              ^ Invalid input: expected number, received undefined
-			                Invalid input: expected boolean, received undefined
-			                Invalid input: expected string, received undefined[39m
-			    [2m/* [5] */ [22m{}[2m,[22m
-			[31m              ^ Invalid input: expected number, received undefined
-			                Invalid input: expected boolean, received undefined
-			                Invalid input: expected string, received undefined[39m
-			    [2m/* [6] */ [22m{}[2m,[22m
-			[31m              ^ Invalid input: expected number, received undefined
-			                Invalid input: expected boolean, received undefined
-			                Invalid input: expected string, received undefined[39m
-			    [2m/* [7] */ [22m{}[2m,[22m
-			[31m              ^ Invalid input: expected number, received undefined
-			                Invalid input: expected boolean, received undefined
-			                Invalid input: expected string, received undefined[39m
+			    [2m/* [1] */ {[22m
+			      [2ma: [22m[90mundefined[39m[2m,[22m
+			[33m         ^1 Invalid input: expected number, received undefined *or*[39m
+			      [2mb: [22m[90mundefined[39m[2m,[22m
+			[33m         ^1 Invalid input: expected boolean, received undefined *or*[39m
+			      [2mc: [22m[90mundefined[39m[2m,[22m
+			[33m         ^1 Invalid input: expected string, received undefined[39m
+			    [2m},[22m
+			    [2m/* [2] */ {[22m
+			      [2ma: [22m[90mundefined[39m[2m,[22m
+			[36m         ^2 Invalid input: expected number, received undefined *or*[39m
+			      [2mb: [22m[90mundefined[39m[2m,[22m
+			[36m         ^2 Invalid input: expected boolean, received undefined *or*[39m
+			      [2mc: [22m[90mundefined[39m[2m,[22m
+			[36m         ^2 Invalid input: expected string, received undefined[39m
+			    [2m},[22m
+			    [2m/* [3] */ {[22m
+			      [2ma: [22m[90mundefined[39m[2m,[22m
+			[34m         ^3 Invalid input: expected number, received undefined *or*[39m
+			      [2mb: [22m[90mundefined[39m[2m,[22m
+			[34m         ^3 Invalid input: expected boolean, received undefined *or*[39m
+			      [2mc: [22m[90mundefined[39m[2m,[22m
+			[34m         ^3 Invalid input: expected string, received undefined[39m
+			    [2m},[22m
+			    [2m/* [4] */ {[22m
+			      [2ma: [22m[90mundefined[39m[2m,[22m
+			[35m         ^4 Invalid input: expected number, received undefined *or*[39m
+			      [2mb: [22m[90mundefined[39m[2m,[22m
+			[35m         ^4 Invalid input: expected boolean, received undefined *or*[39m
+			      [2mc: [22m[90mundefined[39m[2m,[22m
+			[35m         ^4 Invalid input: expected string, received undefined[39m
+			    [2m},[22m
+			    [2m/* [5] */ {[22m
+			      [2ma: [22m[90mundefined[39m[2m,[22m
+			[32m         ^5 Invalid input: expected number, received undefined *or*[39m
+			      [2mb: [22m[90mundefined[39m[2m,[22m
+			[32m         ^5 Invalid input: expected boolean, received undefined *or*[39m
+			      [2mc: [22m[90mundefined[39m[2m,[22m
+			[32m         ^5 Invalid input: expected string, received undefined[39m
+			    [2m},[22m
+			    [2m/* [6] */ {[22m
+			      [2ma: [22m[90mundefined[39m[2m,[22m
+			[33m         ^6 Invalid input: expected number, received undefined *or*[39m
+			      [2mb: [22m[90mundefined[39m[2m,[22m
+			[33m         ^6 Invalid input: expected boolean, received undefined *or*[39m
+			      [2mc: [22m[90mundefined[39m[2m,[22m
+			[33m         ^6 Invalid input: expected string, received undefined[39m
+			    [2m},[22m
+			    [2m/* [7] */ {[22m
+			      [2ma: [22m[90mundefined[39m[2m,[22m
+			[36m         ^7 Invalid input: expected number, received undefined *or*[39m
+			      [2mb: [22m[90mundefined[39m[2m,[22m
+			[36m         ^7 Invalid input: expected boolean, received undefined *or*[39m
+			      [2mc: [22m[90mundefined[39m[2m,[22m
+			[36m         ^7 Invalid input: expected string, received undefined[39m
+			    [2m},[22m
 			  [2m],[22m
 			[2m}[22m"
 		`);
@@ -373,17 +411,27 @@ describe("formatZodError:", () => {
 			    /* [2] */ [],
 			              ^ Too small: expected array to have >=2 items
 			                Too small: expected array to have >=3 items
-			    /* [3] */ [ '2', '3' ],
-			              ^ Invalid input: expected number, received string
-			                Too small: expected array to have >=3 items
-			    /* [4] */ [ 4, 5, 6 ],
-			              ^ Too big: expected array to have <=2 items
-			                Invalid input: expected string, received number
-			                Invalid input: expected boolean, received number
-			    /* [5] */ [ true, 7, false ],
-			              ^ Too big: expected array to have <=2 items
-			                Invalid input: expected string, received boolean
-			                Invalid input: expected boolean, received number
+			    /* [3] */ [
+			      ...,
+			      /* [1] */ '3',
+			                ^ Invalid input: expected number, received string
+			    ],
+			    /* [4] */ [
+			      /* [0] */ 4,
+			                ^1 Invalid input: expected string, received number
+			                   Invalid input: expected boolean, received number *or*
+			      /* [1] */ 5,
+			                ^1 Invalid input: expected boolean, received number *or*
+			      /* [2] */ 6,
+			                ^1 Invalid input: expected boolean, received number
+			    ],
+			    /* [5] */ [
+			      /* [0] */ true,
+			                ^2 Invalid input: expected string, received boolean *or*
+			      /* [1] */ 7,
+			                ^2 Invalid input: expected boolean, received number
+			      ...,
+			    ],
 			  ],
 			}"
 		`);
