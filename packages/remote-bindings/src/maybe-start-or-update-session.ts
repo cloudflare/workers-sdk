@@ -1,8 +1,6 @@
 import assert from "node:assert";
-import { createCfProfileStore } from "@cloudflare/workers-auth/cf";
-import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import { getBindingLocalSupport } from "@cloudflare/workers-utils";
-import { createRemoteBindingsAuth } from "./auth";
+import { getRemoteBindingsAuthHook } from "./auth";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { RemoteBindingsLogger } from "./logger";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
@@ -82,11 +80,9 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		remoteProxySession = await startSession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
-			auth: getAuthHook(
+			auth: getRemoteBindingsAuthHook(
 				auth,
-				workerConfigObject.account_id
-					? { account_id: workerConfigObject.account_id }
-					: undefined,
+				workerConfigObject.account_id,
 				workerConfigObject.profileDir,
 				context.logger
 			),
@@ -104,11 +100,9 @@ export async function maybeStartOrUpdateRemoteProxySession(
 					remoteProxySession = await startSession(remoteBindings, {
 						workerName: workerConfigObject.name,
 						complianceRegion: workerConfigObject.complianceRegion,
-						auth: getAuthHook(
+						auth: getRemoteBindingsAuthHook(
 							auth,
-							workerConfigObject.account_id
-								? { account_id: workerConfigObject.account_id }
-								: undefined,
+							workerConfigObject.account_id,
 							workerConfigObject.profileDir,
 							context.logger
 						),
@@ -130,48 +124,6 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		remoteBindings,
 		auth,
 	};
-}
-
-/**
- * Gets the auth hook to use for the remote proxy session, this is either the user provided auth
- * hook if there is one, or an ad-hoc hook created using the account_id from the user's wrangler
- * config file otherwise.
- *
- * @param auth the auth hook provided by the user if any
- * @param config the user's wrangler config if any
- * @param profileDir working directory used to resolve the auth profile from directory bindings,
- *            falls back to `process.cwd()` when not provided
- * @returns the auth hook to pass to the startRemoteProxy session function if any
- */
-function getAuthHook(
-	auth: AsyncHook<CfAccount> | undefined,
-	config: Pick<Config, "account_id"> | undefined,
-	profileDir: string | undefined,
-	logger: RemoteBindingsLogger
-): AsyncHook<CfAccount> | undefined {
-	const { auth: remoteBindingsAuth, useCfAuth } =
-		createRemoteBindingsAuth(logger);
-	const profileStore = useCfAuth
-		? createCfProfileStore({ logger })
-		: createWranglerProfileStore({ logger });
-	const profile = profileStore.resolve({
-		cwd: profileDir ?? process.cwd(),
-	});
-	remoteBindingsAuth.setProfile(profile);
-	if (auth) {
-		return auth;
-	}
-
-	if (config?.account_id) {
-		return async () => {
-			return {
-				accountId: await remoteBindingsAuth.requireAuth(config),
-				apiToken: remoteBindingsAuth.requireApiToken(),
-			};
-		};
-	}
-
-	return undefined;
 }
 
 function deepStrictEqual(source: unknown, target: unknown): boolean {

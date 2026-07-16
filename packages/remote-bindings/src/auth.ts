@@ -1,9 +1,16 @@
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
-import { createCfAuth } from "@cloudflare/workers-auth/cf";
-import { createWranglerAuth } from "@cloudflare/workers-auth/wrangler";
+import {
+	createCfAuth,
+	createCfProfileStore,
+} from "@cloudflare/workers-auth/cf";
+import {
+	createWranglerAuth,
+	createWranglerProfileStore,
+} from "@cloudflare/workers-auth/wrangler";
 import { isNonInteractiveOrCI, UserError } from "@cloudflare/workers-utils";
 import { version as packageVersion } from "../package.json";
 import type { RemoteBindingsLogger } from "./logger";
+import type { AsyncHook, CfAccount, Config } from "@cloudflare/workers-utils";
 
 class NoDefaultValueProvided extends UserError {
 	constructor() {
@@ -54,4 +61,32 @@ export function createRemoteBindingsAuth(logger: RemoteBindingsLogger) {
 		auth: useCfAuth ? createCfAuth(context) : createWranglerAuth(context),
 		useCfAuth,
 	};
+}
+
+export function getRemoteBindingsAuthHook(
+	auth: AsyncHook<CfAccount> | undefined,
+	accountId: Config["account_id"] | undefined,
+	profileDir: string | undefined,
+	logger: RemoteBindingsLogger
+): AsyncHook<CfAccount> {
+	if (auth) {
+		return auth;
+	}
+
+	const { auth: remoteBindingsAuth, useCfAuth } =
+		createRemoteBindingsAuth(logger);
+	const profileStore = useCfAuth
+		? createCfProfileStore({ logger })
+		: createWranglerProfileStore({ logger });
+	const profile = profileStore.resolve({
+		cwd: profileDir ?? process.cwd(),
+	});
+	remoteBindingsAuth.setProfile(profile);
+
+	return async () => ({
+		accountId: await remoteBindingsAuth.requireAuth(
+			accountId ? { account_id: accountId } : {}
+		),
+		apiToken: remoteBindingsAuth.requireApiToken(),
+	});
 }
