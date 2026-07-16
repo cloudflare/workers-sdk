@@ -1164,15 +1164,6 @@ export class Miniflare {
 						`Unable to remove email session directory: ${String(e)}`
 					);
 				}
-				// Only remove the shared parent if it is still empty. This must be atomic
-				// so another Miniflare instance's new session is never removed.
-				try {
-					fs.rmdirSync(emailPaths.parentDir);
-				} catch (e) {
-					this.#log.debug(
-						`Unable to remove empty email parent directory: ${String(e)}`
-					);
-				}
 			}
 			// Unregister all workers from the dev registry. Note that dispose()
 			// does synchronous cleanup (unregistering workers) then returns a
@@ -3429,21 +3420,11 @@ export class Miniflare {
 				this.#tmpPath
 			);
 			if (emailPaths) {
-				// Remove session directory and wait for completion before checking parent
 				try {
 					await removeDir(emailPaths.sessionDir);
 				} catch (e) {
 					this.#log.debug(
 						`Unable to remove email session directory: ${String(e)}`
-					);
-				}
-				// Only remove the shared parent if it is still empty. This must be atomic
-				// so another Miniflare instance's new session is never removed.
-				try {
-					await fs.promises.rmdir(emailPaths.parentDir);
-				} catch (e) {
-					this.#log.debug(
-						`Unable to remove empty email parent directory: ${String(e)}`
 					);
 				}
 			}
