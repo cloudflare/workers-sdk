@@ -100,7 +100,7 @@
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"which": "^2.0.2",
-		"zod": "^3.25.76"
+		"zod": "catalog:default"
 	},
 	"engines": {
 		"node": ">=22.0.0"

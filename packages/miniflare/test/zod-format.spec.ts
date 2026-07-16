@@ -4,7 +4,7 @@ import { describe, test } from "vitest";
 import { z } from "zod";
 
 function formatZodErrorForTest(
-	schema: z.ZodTypeAny,
+	schema: z.ZodType,
 	input: unknown,
 	colour?: boolean
 ) {
@@ -19,9 +19,9 @@ describe("formatZodError:", () => {
 	test("formats primitive schema with primitive input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.number(), false);
 		expect(formatted).toMatchInlineSnapshot(`
-		"false
-		^ Expected number, received boolean"
-	`);
+			"false
+			^ Invalid input: expected number, received boolean"
+		`);
 	});
 	test("formats primitive schema with object input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.string(), {
@@ -29,17 +29,17 @@ describe("formatZodError:", () => {
 			b: { c: 1 },
 		});
 		expect(formatted).toMatchInlineSnapshot(`
-		"{ a: 1, b: [Object] }
-		^ Expected string, received object"
-	`);
+			"{ a: 1, b: [Object] }
+			^ Invalid input: expected string, received object"
+		`);
 	});
 
 	test("formats object schema with primitive input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.object({ a: z.number() }), true);
 		expect(formatted).toMatchInlineSnapshot(`
-		"true
-		^ Expected object, received boolean"
-	`);
+			"true
+			^ Invalid input: expected object, received boolean"
+		`);
 	});
 	test("formats object schema with object input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
@@ -63,17 +63,17 @@ describe("formatZodError:", () => {
 			}
 		);
 		expect(formatted).toMatchInlineSnapshot(`
-		"{
-		  ...,
-		  b: '2',
-		     ^ Expected number, received string
-		  ...,
-		  g: '7',
-		     ^ Expected boolean, received string
-		  f: undefined,
-		     ^ Required
-		}"
-	`);
+			"{
+			  ...,
+			  b: '2',
+			     ^ Invalid input: expected number, received string
+			  ...,
+			  g: '7',
+			     ^ Invalid input: expected boolean, received string
+			  f: undefined,
+			     ^ Invalid input: expected boolean, received undefined
+			}"
+		`);
 	});
 	test("formats object schema with additional options", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
@@ -81,17 +81,17 @@ describe("formatZodError:", () => {
 			{ a: 1, b: 2 }
 		);
 		expect(formatted).toMatchInlineSnapshot(`
-		"{ a: 1, b: 2 }
-		^ Unrecognized key(s) in object: 'b'"
-	`);
+			"{ a: 1, b: 2 }
+			^ Unrecognized key: "b""
+		`);
 	});
 
 	test("formats array schema with primitive input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.array(z.boolean()), 1);
 		expect(formatted).toMatchInlineSnapshot(`
-		"1
-		^ Expected array, received number"
-	`);
+			"1
+			^ Invalid input: expected array, received number"
+		`);
 	});
 	test("formats array schema with array input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.array(z.number()), [
@@ -103,15 +103,15 @@ describe("formatZodError:", () => {
 			false,
 		]);
 		expect(formatted).toMatchInlineSnapshot(`
-		"[
-		  ...,
-		  /* [2] */ '3',
-		            ^ Expected number, received string
-		  ...,
-		  /* [5] */ false,
-		            ^ Expected number, received boolean
-		]"
-	`);
+			"[
+			  ...,
+			  /* [2] */ '3',
+			            ^ Invalid input: expected number, received string
+			  ...,
+			  /* [5] */ false,
+			            ^ Invalid input: expected number, received boolean
+			]"
+		`);
 	});
 	test("formats array schema with additional options", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
@@ -119,9 +119,9 @@ describe("formatZodError:", () => {
 			[1, 2, 3, 4, 5]
 		);
 		expect(formatted).toMatchInlineSnapshot(`
-		"[ 1, 2, 3, 4, 5 ]
-		^ Array must contain at most 3 element(s)"
-	`);
+			"[ 1, 2, 3, 4, 5 ]
+			^ Too big: expected array to have <=3 items"
+		`);
 	});
 
 	test("formats deeply nested schema", ({ expect }) => {
@@ -145,32 +145,32 @@ describe("formatZodError:", () => {
 			}
 		);
 		expect(formatted).toMatchInlineSnapshot(`
-		"{
-		  a: '1',
-		     ^ Expected number, received string
-		  b: {
-		    c: 2,
-		       ^ Expected string, received number
-		    d: [
-		      ...,
-		      /* [1] */ {
-		        e: 42,
-		           ^ Expected boolean, received number
-		      },
-		      /* [2] */ false,
-		                ^ Expected object, received boolean
-		      /* [3] */ {
-		        e: undefined,
-		           ^ Required
-		      },
-		    ],
-		    f: [Function: f],
-		       ^ Expected array, received function
-		  },
-		  g: undefined,
-		     ^ Required
-		}"
-	`);
+			"{
+			  a: '1',
+			     ^ Invalid input: expected number, received string
+			  b: {
+			    c: 2,
+			       ^ Invalid input: expected string, received number
+			    d: [
+			      ...,
+			      /* [1] */ {
+			        e: 42,
+			           ^ Invalid input: expected boolean, received number
+			      },
+			      /* [2] */ false,
+			                ^ Invalid input: expected object, received boolean
+			      /* [3] */ {
+			        e: undefined,
+			           ^ Invalid input: expected boolean, received undefined
+			      },
+			    ],
+			    f: [Function: f],
+			       ^ Invalid input: expected array, received function
+			  },
+			  g: undefined,
+			     ^ Invalid input: expected string, received undefined
+			}"
+		`);
 	});
 
 	test("formats large actual values", ({ expect }) => {
@@ -188,19 +188,19 @@ describe("formatZodError:", () => {
 			}
 		);
 		expect(formatted).toMatchInlineSnapshot(`
-		"{
-		  a: {
-		    b: [
-		          0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,
-		         11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-		         22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-		         33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
-		         44, 45, 46, 47, 48, 49
-		       ],
-		       ^ Expected string, received array
-		  },
-		}"
-	`);
+			"{
+			  a: {
+			    b: [
+			          0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,
+			         11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+			         22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+			         33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
+			         44, 45, 46, 47, 48, 49
+			       ],
+			       ^ Invalid input: expected string, received array
+			  },
+			}"
+		`);
 	});
 
 	test("formats union schema", ({ expect }) => {
@@ -209,10 +209,10 @@ describe("formatZodError:", () => {
 			"a"
 		);
 		expect(formatted).toMatchInlineSnapshot(`
-		"'a'
-		^ Expected boolean, received string
-		  Invalid literal value, expected 1"
-	`);
+			"'a'
+			^ Invalid input: expected boolean, received string
+			  Invalid input: expected 1"
+		`);
 	});
 
 	const discriminatedUnionSchema = z.discriminatedUnion("type", [
@@ -231,12 +231,12 @@ describe("formatZodError:", () => {
 			a: false,
 		});
 		expect(formatted).toMatchInlineSnapshot(`
-		"{
-		  ...,
-		  a: false,
-		     ^ Expected number, received boolean
-		}"
-	`);
+			"{
+			  ...,
+			  a: false,
+			     ^ Invalid input: expected number, received boolean
+			}"
+		`);
 	});
 	test("formats discriminated union schema with invalid discriminator", ({
 		expect,
@@ -245,11 +245,10 @@ describe("formatZodError:", () => {
 			type: "c",
 		});
 		expect(formatted).toMatchInlineSnapshot(`
-		"{
-		  type: 'c',
-		        ^ Invalid discriminator value. Expected 'a' | 'b'
-		}"
-	`);
+			"{
+			  ...,
+			}"
+		`);
 	});
 
 	test("formats intersection schema", ({ expect }) => {
@@ -258,10 +257,10 @@ describe("formatZodError:", () => {
 			false
 		);
 		expect(formatted).toMatchInlineSnapshot(`
-		"false
-		^ Expected number, received boolean
-		  Invalid literal value, expected 2"
-	`);
+			"false
+			^ Invalid input: expected number, received boolean
+			  Invalid input: expected 2"
+		`);
 	});
 
 	const objectUnionSchema = z.object({
@@ -280,35 +279,26 @@ describe("formatZodError:", () => {
 			objects: [false, { a: 1 }, {}, [], { d: "" }],
 		});
 		expect(formatted).toMatchInlineSnapshot(`
-		"{
-		  key: false,
-		       ^ Expected string, received boolean
-		  objects: [
-		    /* [0] */ false,
-		              ^ Expected object, received boolean
-		    ...,
-		    /* [2] */ {
-		      a: undefined,
-		         ^1 Required *or*
-		      b: undefined,
-		         ^1 Required *or*
-		      c: undefined,
-		         ^1 Required
-		    },
-		    /* [3] */ [],
-		              ^ Expected object, received array
-		    /* [4] */ {
-		      ...,
-		      a: undefined,
-		         ^2 Required *or*
-		      b: undefined,
-		         ^2 Required *or*
-		      c: undefined,
-		         ^2 Required
-		    },
-		  ],
-		}"
-	`);
+			"{
+			  key: false,
+			       ^ Invalid input: expected string, received boolean
+			  objects: [
+			    /* [0] */ false,
+			              ^ Invalid input: expected object, received boolean
+			    ...,
+			    /* [2] */ {},
+			              ^ Invalid input: expected number, received undefined
+			                Invalid input: expected boolean, received undefined
+			                Invalid input: expected string, received undefined
+			    /* [3] */ [],
+			              ^ Invalid input: expected object, received array
+			    /* [4] */ { d: '' },
+			              ^ Invalid input: expected number, received undefined
+			                Invalid input: expected boolean, received undefined
+			                Invalid input: expected string, received undefined
+			  ],
+			}"
+		`);
 	});
 	test("formats object union schema in colour", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
@@ -320,71 +310,43 @@ describe("formatZodError:", () => {
 			/* colour */ true
 		);
 		expect(formatted).toMatchInlineSnapshot(`
-		"[2m{[22m
-		  [2mkey: [22m[33mfalse[39m[2m,[22m
-		[31m       ^ Expected string, received boolean[39m
-		  [2mobjects: [[22m
-		    [2m/* [0] */ [22m[33mfalse[39m[2m,[22m
-		[31m              ^ Expected object, received boolean[39m
-		    [2m/* [1] */ {[22m
-		      [2ma: [22m[90mundefined[39m[2m,[22m
-		[33m         ^1 Required *or*[39m
-		      [2mb: [22m[90mundefined[39m[2m,[22m
-		[33m         ^1 Required *or*[39m
-		      [2mc: [22m[90mundefined[39m[2m,[22m
-		[33m         ^1 Required[39m
-		    [2m},[22m
-		    [2m/* [2] */ {[22m
-		      [2ma: [22m[90mundefined[39m[2m,[22m
-		[36m         ^2 Required *or*[39m
-		      [2mb: [22m[90mundefined[39m[2m,[22m
-		[36m         ^2 Required *or*[39m
-		      [2mc: [22m[90mundefined[39m[2m,[22m
-		[36m         ^2 Required[39m
-		    [2m},[22m
-		    [2m/* [3] */ {[22m
-		      [2ma: [22m[90mundefined[39m[2m,[22m
-		[34m         ^3 Required *or*[39m
-		      [2mb: [22m[90mundefined[39m[2m,[22m
-		[34m         ^3 Required *or*[39m
-		      [2mc: [22m[90mundefined[39m[2m,[22m
-		[34m         ^3 Required[39m
-		    [2m},[22m
-		    [2m/* [4] */ {[22m
-		      [2ma: [22m[90mundefined[39m[2m,[22m
-		[35m         ^4 Required *or*[39m
-		      [2mb: [22m[90mundefined[39m[2m,[22m
-		[35m         ^4 Required *or*[39m
-		      [2mc: [22m[90mundefined[39m[2m,[22m
-		[35m         ^4 Required[39m
-		    [2m},[22m
-		    [2m/* [5] */ {[22m
-		      [2ma: [22m[90mundefined[39m[2m,[22m
-		[32m         ^5 Required *or*[39m
-		      [2mb: [22m[90mundefined[39m[2m,[22m
-		[32m         ^5 Required *or*[39m
-		      [2mc: [22m[90mundefined[39m[2m,[22m
-		[32m         ^5 Required[39m
-		    [2m},[22m
-		    [2m/* [6] */ {[22m
-		      [2ma: [22m[90mundefined[39m[2m,[22m
-		[33m         ^6 Required *or*[39m
-		      [2mb: [22m[90mundefined[39m[2m,[22m
-		[33m         ^6 Required *or*[39m
-		      [2mc: [22m[90mundefined[39m[2m,[22m
-		[33m         ^6 Required[39m
-		    [2m},[22m
-		    [2m/* [7] */ {[22m
-		      [2ma: [22m[90mundefined[39m[2m,[22m
-		[36m         ^7 Required *or*[39m
-		      [2mb: [22m[90mundefined[39m[2m,[22m
-		[36m         ^7 Required *or*[39m
-		      [2mc: [22m[90mundefined[39m[2m,[22m
-		[36m         ^7 Required[39m
-		    [2m},[22m
-		  [2m],[22m
-		[2m}[22m"
-	`);
+			"[2m{[22m
+			  [2mkey: [22m[33mfalse[39m[2m,[22m
+			[31m       ^ Invalid input: expected string, received boolean[39m
+			  [2mobjects: [[22m
+			    [2m/* [0] */ [22m[33mfalse[39m[2m,[22m
+			[31m              ^ Invalid input: expected object, received boolean[39m
+			    [2m/* [1] */ [22m{}[2m,[22m
+			[31m              ^ Invalid input: expected number, received undefined
+			                Invalid input: expected boolean, received undefined
+			                Invalid input: expected string, received undefined[39m
+			    [2m/* [2] */ [22m{}[2m,[22m
+			[31m              ^ Invalid input: expected number, received undefined
+			                Invalid input: expected boolean, received undefined
+			                Invalid input: expected string, received undefined[39m
+			    [2m/* [3] */ [22m{}[2m,[22m
+			[31m              ^ Invalid input: expected number, received undefined
+			                Invalid input: expected boolean, received undefined
+			                Invalid input: expected string, received undefined[39m
+			    [2m/* [4] */ [22m{}[2m,[22m
+			[31m              ^ Invalid input: expected number, received undefined
+			                Invalid input: expected boolean, received undefined
+			                Invalid input: expected string, received undefined[39m
+			    [2m/* [5] */ [22m{}[2m,[22m
+			[31m              ^ Invalid input: expected number, received undefined
+			                Invalid input: expected boolean, received undefined
+			                Invalid input: expected string, received undefined[39m
+			    [2m/* [6] */ [22m{}[2m,[22m
+			[31m              ^ Invalid input: expected number, received undefined
+			                Invalid input: expected boolean, received undefined
+			                Invalid input: expected string, received undefined[39m
+			    [2m/* [7] */ [22m{}[2m,[22m
+			[31m              ^ Invalid input: expected number, received undefined
+			                Invalid input: expected boolean, received undefined
+			                Invalid input: expected string, received undefined[39m
+			  [2m],[22m
+			[2m}[22m"
+		`);
 	});
 
 	test("formats tuple union schema", ({ expect }) => {
@@ -402,39 +364,29 @@ describe("formatZodError:", () => {
 			}
 		);
 		expect(formatted).toMatchInlineSnapshot(`
-		"{
-		  tuples: [
-		    /* [0] */ false,
-		              ^ Expected array, received boolean
-		    /* [1] */ { a: 1 },
-		              ^ Expected array, received object
-		    /* [2] */ [],
-		              ^ Array must contain at least 2 element(s)
-		                Array must contain at least 3 element(s)
-		    /* [3] */ [
-		      ...,
-		      /* [1] */ '3',
-		                ^ Expected number, received string
-		    ],
-		    /* [4] */ [
-		      /* [0] */ 4,
-		                ^1 Expected string, received number
-		                   Expected boolean, received number *or*
-		      /* [1] */ 5,
-		                ^1 Expected boolean, received number *or*
-		      /* [2] */ 6,
-		                ^1 Expected boolean, received number
-		    ],
-		    /* [5] */ [
-		      /* [0] */ true,
-		                ^2 Expected string, received boolean *or*
-		      /* [1] */ 7,
-		                ^2 Expected boolean, received number
-		      ...,
-		    ],
-		  ],
-		}"
-	`);
+			"{
+			  tuples: [
+			    /* [0] */ false,
+			              ^ Invalid input: expected tuple, received boolean
+			    /* [1] */ { a: 1 },
+			              ^ Invalid input: expected tuple, received object
+			    /* [2] */ [],
+			              ^ Too small: expected array to have >=2 items
+			                Too small: expected array to have >=3 items
+			    /* [3] */ [ '2', '3' ],
+			              ^ Invalid input: expected number, received string
+			                Too small: expected array to have >=3 items
+			    /* [4] */ [ 4, 5, 6 ],
+			              ^ Too big: expected array to have <=2 items
+			                Invalid input: expected string, received number
+			                Invalid input: expected boolean, received number
+			    /* [5] */ [ true, 7, false ],
+			              ^ Too big: expected array to have <=2 items
+			                Invalid input: expected string, received boolean
+			                Invalid input: expected boolean, received number
+			  ],
+			}"
+		`);
 	});
 
 	test("formats custom message schema", ({ expect }) => {

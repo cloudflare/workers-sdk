@@ -16,6 +16,7 @@ import type { Plugin, RemoteProxyConnectionString } from "../shared";
 export const WorkflowsOptionsSchema = z.object({
 	workflows: z
 		.record(
+			z.string(),
 			z.object({
 				name: z.string(),
 				className: z.string(),

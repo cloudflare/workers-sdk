@@ -15,8 +15,8 @@ const AISearchEntrySchema = z.object({
 });
 
 export const AISearchOptionsSchema = z.object({
-	aiSearchNamespaces: z.record(AISearchEntrySchema).optional(),
-	aiSearchInstances: z.record(AISearchEntrySchema).optional(),
+	aiSearchNamespaces: z.record(z.string(), AISearchEntrySchema).optional(),
+	aiSearchInstances: z.record(z.string(), AISearchEntrySchema).optional(),
 });
 
 export const AI_SEARCH_PLUGIN_NAME = "ai-search";

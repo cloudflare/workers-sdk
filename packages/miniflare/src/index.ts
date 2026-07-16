@@ -984,7 +984,7 @@ export class Miniflare {
 	 * externalPlugins is a list of external plugins that have been loaded
 	 * after being referenced by an unsafe binding
 	 */
-	#externalPlugins: Map<string, Plugin<z.ZodTypeAny>> = new Map();
+	#externalPlugins: Map<string, Plugin<z.ZodType>> = new Map();
 
 	// key is the browser session ID, value is the browser process
 	#browserProcesses: Map<string, Process> = new Map();
@@ -2074,6 +2074,8 @@ export class Miniflare {
 
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginBindings = await plugin.getBindings(
+					// @ts-expect-error dynamic plugin dispatch: external plugins return
+					// a different type than internal plugin options
 					this.#getWorkerOptsForPlugin(key, workerOpts),
 					i
 				);
@@ -2153,7 +2155,7 @@ export class Miniflare {
 			this.publicUrl = sharedOpts.core.publicUrl;
 
 			const pluginServicesOptionsBase: Omit<
-				PluginServicesOptions<z.ZodTypeAny, undefined>,
+				PluginServicesOptions<z.ZodType, undefined>,
 				"options" | "sharedOptions"
 			> = {
 				log: this.#log,
@@ -2985,6 +2987,8 @@ export class Miniflare {
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {
 			const pluginBindings = await plugin.getNodeBindings(
+				// @ts-expect-error dynamic plugin dispatch: external plugins return
+				// a different type than internal plugin options
 				this.#getWorkerOptsForPlugin(key, workerOpts)
 			);
 			for (const [name, binding] of Object.entries(pluginBindings)) {

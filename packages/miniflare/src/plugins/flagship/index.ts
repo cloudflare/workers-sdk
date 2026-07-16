@@ -15,7 +15,7 @@ const FlagshipSchema = z.object({
 });
 
 export const FlagshipOptionsSchema = z.object({
-	flagship: z.record(FlagshipSchema).optional(),
+	flagship: z.record(z.string(), FlagshipSchema).optional(),
 });
 
 export const FLAGSHIP_PLUGIN_NAME = "flagship";

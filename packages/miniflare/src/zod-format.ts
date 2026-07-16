@@ -297,15 +297,18 @@ function arrayShallowEqual<T>(a: T[], b: T[]) {
 	return true;
 }
 
-function issueEqual(a: z.ZodIssue, b: z.ZodIssue) {
+function issueEqual(a: z.core.$ZodIssue, b: z.core.$ZodIssue) {
 	// We consider issues to be equal if their messages and paths are
 	return a.message === b.message && arrayShallowEqual(a.path, b.path);
 }
 
-function hasMultipleDistinctMessages(issues: z.ZodIssue[], atDepth: number) {
+function hasMultipleDistinctMessages(
+	issues: z.core.$ZodIssue[],
+	atDepth: number
+) {
 	// Returns true iff `issues` has issues that aren't "the same" at the
 	// specified depth or below
-	let firstIssue: z.ZodIssue | undefined;
+	let firstIssue: z.core.$ZodIssue | undefined;
 	for (const issue of issues) {
 		if (issue.path.length < atDepth) continue;
 		if (firstIssue === undefined) firstIssue = issue;
@@ -318,7 +321,7 @@ function annotate(
 	groupCounts: GroupCountsMap,
 	annotated: Annotated,
 	input: unknown,
-	issue: z.ZodIssue,
+	issue: z.core.$ZodIssue,
 	path: (string | number)[],
 	groupId?: number
 ): Annotated {
@@ -327,7 +330,7 @@ function annotate(
 
 		// If this is an `invalid_union` error, make sure we include all sub-issues
 		if (issue.code === "invalid_union") {
-			const unionIssues = issue.unionErrors.flatMap(({ issues }) => issues);
+			const unionIssues = issue.errors.flat();
 
 			// If the `input` is an object/array with multiple distinct messages,
 			// annotate it as a group
@@ -344,7 +347,10 @@ function annotate(
 			}
 
 			for (const unionIssue of unionIssues) {
-				const unionPath = unionIssue.path.slice(issue.path.length);
+				const unionPath = unionIssue.path.slice(issue.path.length) as (
+					| string
+					| number
+				)[];
 				// If we have multiple distinct messages at deeper levels, and this
 				// issue is for the current path, skip it, so we don't end up annotating
 				// the current path and sub-paths
@@ -524,7 +530,13 @@ export function formatZodError(error: z.ZodError, input: unknown): string {
 	let annotated: Annotated;
 	const groupCounts = new GroupCountsMap();
 	for (const issue of sortedIssues) {
-		annotated = annotate(groupCounts, annotated, input, issue, issue.path);
+		annotated = annotate(
+			groupCounts,
+			annotated,
+			input,
+			issue,
+			issue.path as (string | number)[]
+		);
 	}
 
 	// Print to pretty string

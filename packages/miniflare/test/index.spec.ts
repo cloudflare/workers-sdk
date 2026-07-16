@@ -123,7 +123,7 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 		`Unexpected options passed to \`new Miniflare()\` constructor:
 {
   name: 42,
-        ^ Expected string, received number
+        ^ Invalid input: expected string, received number
   ...,
 }`
 	);
@@ -141,7 +141,7 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
 'addEventListener(...)'
-^ Expected object, received string`
+^ Invalid input: expected object, received string`
 	);
 });
 
