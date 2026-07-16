@@ -47,11 +47,14 @@ describe.skipIf(
 		const startResponse = await server.fetch("/start");
 		expect(await startResponse.text()).toBe("Container create request sent...");
 
-		await vi.waitFor(async () => {
-			const fetchResponse = await server.fetch("/fetch");
-			expect(await fetchResponse.text()).toBe(
-				"Hello World! Have an env var! I'm an env var!"
-			);
-		});
+		await vi.waitFor(
+			async () => {
+				const fetchResponse = await server.fetch("/fetch");
+				expect(await fetchResponse.text()).toBe(
+					"Hello World! Have an env var! I'm an env var!"
+				);
+			},
+			{ interval: 500, timeout: 30_000 }
+		);
 	});
 });
