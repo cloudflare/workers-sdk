@@ -414,10 +414,13 @@ function maybeGetForceTypeModuleContents(
 		}
 	}
 }
-function buildModuleResponse(target: string, contents: ModuleContents) {
-	let name = target;
+// `name` must exactly match the literal `specifier` string `workerd` sent for
+// this request (see the `rawTarget` comment in `handleModuleFallbackRequest()`
+// for why this can differ from the decoded `target` used for filesystem
+// resolution elsewhere in this file).
+function buildModuleResponse(name: string, contents: ModuleContents) {
 	if (!isWindows) {
-		name = posixPath.relative("/", target);
+		name = posixPath.relative("/", name);
 	}
 	assert(name[0] !== "/");
 	const result: Record<string, unknown> = { name };
@@ -434,6 +437,7 @@ async function load(
 	logBase: string,
 	method: ResolveMethod,
 	target: string,
+	rawTarget: string,
 	specifier: string,
 	filePath: string
 ): Promise<Response> {
@@ -448,7 +452,7 @@ async function load(
 	) {
 		const wrapper = `module.exports = { default: require(${JSON.stringify(ensureRootedPath(filePath))}) };`;
 		debuglog(logBase, "wasm-module-wrapper:", filePath);
-		return buildModuleResponse(target, { commonJsModule: wrapper });
+		return buildModuleResponse(rawTarget, { commonJsModule: wrapper });
 	}
 
 	if (target !== filePath) {
@@ -476,7 +480,7 @@ async function load(
 	const maybeContents = maybeGetForceTypeModuleContents(filePath);
 	if (maybeContents !== undefined) {
 		debuglog(logBase, "forced:", filePath);
-		return buildModuleResponse(target, maybeContents);
+		return buildModuleResponse(rawTarget, maybeContents);
 	}
 
 	// If we're importing from a shim module, don't shim again
@@ -496,7 +500,7 @@ async function load(
 	if (filePath.endsWith(".json")) {
 		const json = fs.readFileSync(filePath, "utf8");
 		debuglog(logBase, "json:", filePath);
-		return buildModuleResponse(target, { json });
+		return buildModuleResponse(rawTarget, { json });
 	}
 
 	let contents = fs.readFileSync(filePath, "utf8");
@@ -507,7 +511,7 @@ async function load(
 		// Respond with ES module
 		contents = withImportMetaUrl(contents, targetUrl);
 		debuglog(logBase, "esm:", filePath);
-		return buildModuleResponse(target, { esModule: contents });
+		return buildModuleResponse(rawTarget, { esModule: contents });
 	}
 
 	// Respond with CommonJS module
@@ -525,13 +529,13 @@ async function load(
 			esModule += ` export const ${name} = mod.${name};`;
 		}
 		debuglog(logBase, "cjs-esm-shim:", filePath);
-		return buildModuleResponse(target, { esModule });
+		return buildModuleResponse(rawTarget, { esModule });
 	}
 
 	// Otherwise, if we're `require`ing a non-`node:*` module, just return a
 	// CommonJS
 	debuglog(logBase, "cjs:", filePath);
-	return buildModuleResponse(target, { commonJsModule: contents });
+	return buildModuleResponse(rawTarget, { commonJsModule: contents });
 }
 
 export async function handleModuleFallbackRequest(
@@ -541,20 +545,27 @@ export async function handleModuleFallbackRequest(
 	const method = request.headers.get("X-Resolve-Method");
 	assert(method === "import" || method === "require");
 	const url = new URL(request.url);
-	let target = url.searchParams.get("specifier");
+	const rawSpecifierParam = url.searchParams.get("specifier");
 	let referrer = url.searchParams.get("referrer");
-	assert(target !== null, "Expected specifier search param");
+	assert(rawSpecifierParam !== null, "Expected specifier search param");
 	assert(referrer !== null, "Expected referrer search param");
 	// `workerd` carries a previous redirect response's `Location` header value
 	// through verbatim as this request's `specifier`, rather than URI-decoding
 	// it. `buildRedirectResponse()` percent-encodes non-ASCII paths with
 	// `encodeURI()` before setting them as the `Location` header (required,
 	// since headers are restricted to the Latin-1/ASCII byte range), so we must
-	// undo that encoding here to recover the real filesystem path. This is a
-	// no-op for specifiers that were never percent-encoded (e.g. bare `cloudflare:*`
-	// specifiers on the initial request).
+	// undo that encoding here to recover the real filesystem path for resolution.
+	// This is a no-op for specifiers that were never percent-encoded (e.g. bare
+	// `cloudflare:*` specifiers on the initial request).
 	// See https://github.com/cloudflare/workers-sdk/issues/14655
-	target = decodeURI(target);
+	let target = decodeURI(rawSpecifierParam);
+	// `workerd` also tracks this in-flight module request by the exact literal
+	// `specifier` string above (before decoding), and rejects our response if the
+	// JSON module's `name` field doesn't match that literal string exactly. So we
+	// keep this raw (still percent-encoded where applicable) value around
+	// separately, and use it only when building the response's `name` field,
+	// while `target` (decoded) is used for all actual filesystem resolution.
+	let rawTarget = rawSpecifierParam;
 	const referrerDir = posixPath.dirname(referrer);
 	let specifier = getApproximateSpecifier(target, referrerDir);
 
@@ -583,6 +594,9 @@ export async function handleModuleFallbackRequest(
 		if (target[0] === "/") {
 			target = target.substring(1);
 		}
+		if (rawTarget[0] === "/") {
+			rawTarget = rawTarget.substring(1);
+		}
 		if (referrer[0] === "/") {
 			referrer = referrer.substring(1);
 		}
@@ -594,7 +608,15 @@ export async function handleModuleFallbackRequest(
 	try {
 		const filePath = await resolve(vite, method, target, specifier, referrer);
 
-		return await load(vite, logBase, method, target, specifier, filePath);
+		return await load(
+			vite,
+			logBase,
+			method,
+			target,
+			rawTarget,
+			specifier,
+			filePath
+		);
 	} catch (e) {
 		debuglog(logBase, "error:", e);
 		console.error(
