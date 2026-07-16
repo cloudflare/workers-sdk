@@ -1,0 +1,23 @@
+packages/wrangler/src/index.ts
+  22baa37600d6ebd1 1079,1082,1095,1098,1111,1114,1522,1525-1526,1529-1530,1533-1534,1537-1538,1541-1542,1545
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "506aa0243dbec68718170a9cf30f03c0ad0dd2b5",
+  "prompts": {
+    "22baa37600d6ebd1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c49c2946ffez7W6VFJaYSJQFu",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "Gabriel Massadas",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 22,
+      "accepted_lines": 22,
+      "overriden_lines": 0
+    }
+  }
+}
