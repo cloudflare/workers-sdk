@@ -566,6 +566,11 @@ export async function handleModuleFallbackRequest(
 	// separately, and use it only when building the response's `name` field,
 	// while `target` (decoded) is used for all actual filesystem resolution.
 	let rawTarget = rawSpecifierParam;
+	// Since a module's `name` (above) must stay raw/encoded, that encoded value
+	// becomes the referrer workerd sends for every import statement inside that
+	// module, propagating the encoding forward indefinitely. Decode it the same
+	// way as `target` so filesystem resolution keeps working for those imports.
+	referrer = decodeURI(referrer);
 	const referrerDir = posixPath.dirname(referrer);
 	let specifier = getApproximateSpecifier(target, referrerDir);
 
