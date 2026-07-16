@@ -67,6 +67,7 @@ import {
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
+import { closeBrowserProcess } from "./plugins/browser-rendering/process";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -987,8 +988,11 @@ export class Miniflare {
 	 */
 	#externalPlugins: Map<string, Plugin<z.ZodTypeAny>> = new Map();
 
-	// key is the browser session ID, value is the browser process
-	#browserProcesses: Map<string, Process> = new Map();
+	// key is the browser session ID, value identifies the launched browser
+	#browserProcesses: Map<
+		string,
+		{ browserProcess: Process; wsEndpoint: string }
+	> = new Map();
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1664,22 +1668,28 @@ export class Miniflare {
 				browserProcess.nodeProcess.on("exit", () => {
 					this.#browserProcesses.delete(sessionId);
 				});
-				this.#browserProcesses.set(sessionId, browserProcess);
+				this.#browserProcesses.set(sessionId, {
+					browserProcess,
+					wsEndpoint,
+				});
 				response = Response.json({ wsEndpoint, sessionId, startTime });
 			} else if (url.pathname === "/browser/status") {
 				const sessionId = url.searchParams.get("sessionId");
 				assert(sessionId !== null, "Missing sessionId query parameter");
-				const process = this.#browserProcesses.get(sessionId);
-				response = new Response(null, { status: process ? 200 : 410 });
+				const browser = this.#browserProcesses.get(sessionId);
+				response = new Response(null, { status: browser ? 200 : 410 });
 			} else if (url.pathname === "/browser/close") {
 				const sessionId = url.searchParams.get("sessionId");
 				assert(sessionId !== null, "Missing sessionId query parameter");
-				const browserProcess = this.#browserProcesses.get(sessionId);
-				if (!browserProcess) {
+				const browser = this.#browserProcesses.get(sessionId);
+				if (!browser) {
 					response = new Response("Session not found", { status: 404 });
 				} else {
 					this.#browserProcesses.delete(sessionId);
-					await browserProcess.close().catch(() => {
+					await closeBrowserProcess(
+						browser.browserProcess,
+						browser.wsEndpoint
+					).catch(() => {
 						// oh well, process might already be dead
 					});
 					response = new Response(null, { status: 200 });
@@ -2677,14 +2687,12 @@ export class Miniflare {
 	}
 
 	async #closeBrowserProcesses() {
+		const browsers = Array.from(this.#browserProcesses.values());
+		this.#browserProcesses.clear();
 		await Promise.all(
-			Array.from(this.#browserProcesses.values()).map((process) =>
-				process.close()
+			browsers.map(({ browserProcess, wsEndpoint }) =>
+				closeBrowserProcess(browserProcess, wsEndpoint)
 			)
-		);
-		assert(
-			this.#browserProcesses.size === 0,
-			"Not all browser processes were closed"
 		);
 	}
 
