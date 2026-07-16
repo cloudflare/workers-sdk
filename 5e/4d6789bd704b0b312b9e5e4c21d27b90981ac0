@@ -1,0 +1,31 @@
+packages/wrangler/e2e/deployments.test.ts
+  s_12efda9119b75b::t_18b3ab13b70508 20,22,65-66,97-98
+packages/wrangler/e2e/helpers/wait-for-workers-dev.test.ts
+  s_cb191f541ec33d::t_9188100b22aade 1-56
+packages/wrangler/e2e/helpers/wait-for-workers-dev.ts
+  s_12efda9119b75b::t_d9f57e375564f5 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5e4d6789bd704b0b312b9e5e4c21d27b90981ac0",
+  "prompts": {},
+  "sessions": {
+    "s_12efda9119b75b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0948ca992ffeCdMtpS53gRbQA6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Matt Kane <mkane@cloudflare.com>"
+    },
+    "s_cb191f541ec33d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0948ca953ffevRNTzZc6kvNcB9",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Matt Kane <mkane@cloudflare.com>"
+    }
+  }
+}
