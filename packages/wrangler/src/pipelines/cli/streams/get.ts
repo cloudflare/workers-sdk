@@ -11,7 +11,7 @@ export const pipelinesStreamsGetCommand = createCommand({
 		status: "open beta",
 	},
 	behaviour: {
-		printBanner: (args) => !args.json,
+		printBanner: (args) => !args.json && !args.exportSchema,
 	},
 	positionalArgs: ["stream"],
 	args: {
@@ -25,11 +25,28 @@ export const pipelinesStreamsGetCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
+		"export-schema": {
+			describe:
+				"Output only the stream schema in a format compatible with --schema-file",
+			type: "boolean",
+			default: false,
+		},
 	},
 	async handler(args, { config }) {
 		await requireAuth(config);
 
 		const stream = await resolveStream(config, args.stream);
+
+		if (args.exportSchema) {
+			if (stream.schema) {
+				logger.json(stream.schema);
+			} else {
+				logger.log(
+					"This stream has no schema (unstructured JSON). There is no schema to export."
+				);
+			}
+			return;
+		}
 
 		if (args.json) {
 			logger.json(stream);
