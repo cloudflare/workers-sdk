@@ -1,7 +1,7 @@
 import assert from "node:assert";
-import { OBSERVABILITY_COLLECTOR_SERVICE_NAME } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, type ExpectStatic, test } from "vitest";
+import { OBSERVABILITY_COLLECTOR_SERVICE_NAME } from "../../../src/plugins/core/constants";
 import { CorePaths } from "../../../src/workers/core/constants";
 import {
 	zObservabilityQueryResponse,

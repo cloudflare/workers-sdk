@@ -1,7 +1,7 @@
 import assert from "node:assert";
-import { OBSERVABILITY_COLLECTOR_SERVICE_NAME } from "@cloudflare/workers-utils";
 import { Miniflare, type WorkerOptions } from "miniflare";
 import { describe, test } from "vitest";
+import { OBSERVABILITY_COLLECTOR_SERVICE_NAME } from "../../../src/plugins/core/constants";
 import { useDispose } from "../../test-shared";
 
 // Local observability (experimental).

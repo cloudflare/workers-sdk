@@ -5,7 +5,11 @@ import {
 	WarningIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildSpanTree, parseAttributes } from "../../utils/observability";
+import {
+	buildSpanTree,
+	operationLabel,
+	parseAttributes,
+} from "../../utils/observability";
 import { getSpanIcon } from "./icons";
 import type { LayoutSpan, Span } from "../../utils/observability";
 
@@ -335,7 +339,7 @@ function SpanLabel({
 					</span>
 				) : null}
 				<span className="min-w-0 overflow-hidden text-sm text-ellipsis whitespace-nowrap">
-					{span.name ?? "span"}
+					{operationLabel(span) || "span"}
 				</span>
 			</div>
 		</div>
@@ -432,7 +436,7 @@ function SpanDetail({ span }: { span: LayoutSpan }): JSX.Element {
 			<div className="mb-3 flex items-center gap-2">
 				<Icon size={16} />
 				<span className="font-mono text-sm font-semibold text-kumo-default">
-					{span.name}
+					{operationLabel(span) || "span"}
 				</span>
 				<span
 					className={cn(

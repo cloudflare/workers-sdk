@@ -370,24 +370,6 @@ export const getLocalObservabilityEnabledFromEnv =
 	});
 
 /**
- * Service name the local observability collector is registered under in
- * Miniflare, shared so user workers' `streamingTails` can point at it.
- */
-export const OBSERVABILITY_COLLECTOR_SERVICE_NAME =
-	"miniflare-observability-collector";
-
-/**
- * Compatibility flags a user worker needs so workerd streams a tail (including
- * user spans) to the observability collector. Applied to each user worker by
- * Miniflare core when `unsafeObservability` is enabled — a single source of
- * truth shared with the collector worker.
- */
-export const OBSERVABILITY_COMPAT_FLAGS = [
-	"streaming_tail_worker",
-	"tail_worker_user_spans",
-] as const;
-
-/**
  * `X_BROWSER_HEADFUL` opens the browser in headful (visible) mode when using the
  * Browser Run API in local development.
  *

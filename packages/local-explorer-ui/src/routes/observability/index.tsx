@@ -17,6 +17,7 @@ import {
 	getInvocationRootIds,
 	getTagKeys,
 	listTraces,
+	operationLabel,
 } from "../../utils/observability";
 import { parseTraceQuery } from "../../utils/observability-query";
 import type { Span, TraceRow } from "../../utils/observability";
@@ -32,6 +33,14 @@ function isError(t: TraceRow): boolean {
 	return (
 		!!t.error || (!!t.outcome && t.outcome !== "ok") || (t.error_count ?? 0) > 0
 	);
+}
+
+/** Duration split into its number and unit, so the unit can be rendered faded. */
+function splitDuration(ms: number): { value: string; unit: string } {
+	if (ms >= 1000) {
+		return { value: (ms / 1000).toFixed(2), unit: "s" };
+	}
+	return { value: String(Math.round(ms)), unit: "ms" };
 }
 
 /**
@@ -136,18 +145,22 @@ function ObservabilityView(): JSX.Element {
 	const toggleTrace = useCallback(
 		async (trace: TraceRow) => {
 			const key = traceKey(trace);
-			const isOpen = expanded.has(key);
+			// Toggle from the updater's `prev` (not a captured snapshot) so a rapid
+			// double-click toggles closed correctly. Keep the updater pure — under
+			// StrictMode it runs twice, so it must not touch outer state.
 			setExpanded((prev) => {
 				const next = new Set(prev);
-				if (isOpen) {
+				if (next.has(key)) {
 					next.delete(key);
 				} else {
 					next.add(key);
 				}
 				return next;
 			});
-			// Only fetch spans when opening, and only once per trace.
-			if (isOpen || spansByTrace[key]) {
+			// Fetch a trace's spans once, lazily, and cache them. This is
+			// idempotent (skipped once cached), so it doesn't matter whether this
+			// click is opening or closing — a closed trace was already fetched.
+			if (spansByTrace[key]) {
 				return;
 			}
 			try {
@@ -161,7 +174,7 @@ function ObservabilityView(): JSX.Element {
 				setError(e instanceof Error ? e.message : "Failed to load spans");
 			}
 		},
-		[expanded, spansByTrace]
+		[spansByTrace]
 	);
 
 	const maxDuration = useMemo(
@@ -334,12 +347,17 @@ function ObservabilityView(): JSX.Element {
 												</div>
 											</td>
 											<td className="py-2.5 pr-3 font-mono text-xs text-kumo-default">
-												{t.name ?? t.trace_id.slice(0, 16)}
+												{t.name ? operationLabel(t) : t.trace_id.slice(0, 16)}
 											</td>
 											<td className="py-2.5 pr-3">
 												<div className="flex flex-col gap-1">
 													<div className="text-sm tabular-nums">
-														{formatDuration(dur)}
+														<span className="text-kumo-default">
+															{splitDuration(dur).value}
+														</span>
+														<span className="text-kumo-subtle">
+															{splitDuration(dur).unit}
+														</span>
 													</div>
 													<div className="h-1 w-24 overflow-hidden rounded-full bg-kumo-fill">
 														<div
@@ -370,7 +388,7 @@ function ObservabilityView(): JSX.Element {
 												>
 													<div className="mb-2 flex items-baseline gap-2">
 														<span className="font-mono text-sm font-semibold text-kumo-default">
-															{t.name ?? t.trace_id}
+															{t.name ? operationLabel(t) : t.trace_id}
 														</span>
 														<span className="font-mono text-[11px] text-kumo-subtle">
 															{t.trace_id.slice(0, 16)}

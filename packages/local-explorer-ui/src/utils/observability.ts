@@ -245,6 +245,8 @@ export interface TraceRow {
 	error: string | null;
 	created_at: string | null;
 	start_ms: number | null;
+	/** JSON string of the root span's attributes (e.g. `url.full`). */
+	attributes: string | null;
 	duration_ms: number | null;
 	span_count: number | null;
 	error_count: number | null;
@@ -274,7 +276,7 @@ export interface TraceFilters {
 // 4xx/5xx request otherwise looks like a successful ("ok") invocation.
 const SPAN_IS_ERROR = `(error IS NOT NULL OR (outcome IS NOT NULL AND outcome != 'ok') OR CAST(json_extract(json(attributes), '$."http.response.status_code"') AS INTEGER) >= 400)`;
 
-const TRACE_LIST_HEAD = `SELECT s.trace_id, s.span_id AS root_span_id, s.name, s.kind, s.service, s.outcome, s.error, s.created_at, s.start_ms,
+const TRACE_LIST_HEAD = `SELECT s.trace_id, s.span_id AS root_span_id, s.name, s.kind, s.service, s.outcome, s.error, s.created_at, s.start_ms, json(s.attributes) AS attributes,
 		(SELECT ROUND(MAX(x.start_ms + COALESCE(x.duration_ms, 0)) - MIN(x.start_ms), 2) FROM spans x WHERE x.trace_id = s.trace_id) AS duration_ms,
 		(SELECT COUNT(*) FROM spans c WHERE c.trace_id = s.trace_id) AS span_count,
 		(SELECT COUNT(*) FROM spans e WHERE e.trace_id = s.trace_id AND ${SPAN_IS_ERROR}) AS error_count,
@@ -473,6 +475,22 @@ export function spanKind(span: Pick<Span, "kind" | "name">): string {
 		return "r2";
 	}
 	return "span";
+}
+
+/**
+ * Display label for a span's operation. Fetch spans store just the method as
+ * `name` (e.g. "POST") with the URL in the `url.full` attribute; combine them so
+ * the operation reads "POST https://…". Falls back to the raw name.
+ */
+export function operationLabel(
+	span: Pick<Span, "name" | "attributes">
+): string {
+	const name = span.name ?? "";
+	const url = parseAttributes(span.attributes)["url.full"];
+	if (typeof url === "string" && url && !name.includes(url)) {
+		return name ? `${name} ${url}` : url;
+	}
+	return name;
 }
 
 const VITE_RUNNER_MARKER = "__VITE_RUNNER_OBJECT__";

@@ -1,12 +1,11 @@
 import { mkdirSync } from "node:fs";
-import path from "node:path";
-import {
-	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
-	OBSERVABILITY_COMPAT_FLAGS,
-} from "@cloudflare/workers-utils";
 import SCRIPT_OBSERVABILITY_COLLECTOR from "worker:observability/collector";
 import { type Service } from "../../runtime";
-import { getUserServiceName } from "./constants";
+import { getPersistPath } from "../shared";
+import {
+	getUserServiceName,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+} from "./constants";
 
 /**
  * Local observability (experimental).
@@ -24,15 +23,22 @@ const TRACE_STORE_CLASS_NAME = "TraceStore";
 /** Binding name — must match the collector worker's `Env.TRACE_STORE`. */
 const TRACE_STORE_BINDING = "TRACE_STORE";
 /** Disk service backing the TraceStore DO's SQLite storage. */
-const OBSERVABILITY_STORAGE_SERVICE_NAME = "miniflare-observability-storage";
+const OBSERVABILITY_STORAGE_SERVICE_NAME = "obs:storage";
 
-export function getObservabilityServices(tmpPath: string): Service[] {
-	// The TraceStore DO is SQLite-backed, which requires disk-backed storage (the
-	// in-memory option doesn't support SQL). Keep it under the instance's temp dir
-	// for now — ephemeral per dev session; persisting to .wrangler/state so the
-	// CLI can read it across runs is a follow-up. workerd requires the path to
-	// exist before it starts.
-	const storagePath = path.join(tmpPath, "observability");
+export function getObservabilityServices(
+	tmpPath: string,
+	defaultPersistRoot: string | undefined
+): Service[] {
+	// The TraceStore DO is SQLite-backed, so it needs disk-backed storage (the
+	// in-memory option doesn't support SQL). Persist under `.wrangler/state` when
+	// a persist root is set (so it survives dev-server restarts), otherwise fall
+	// back to the instance temp dir. workerd requires the path to exist first.
+	const storagePath = getPersistPath(
+		"observability",
+		tmpPath,
+		defaultPersistRoot,
+		undefined
+	);
 	mkdirSync(storagePath, { recursive: true });
 
 	return [
@@ -47,7 +53,9 @@ export function getObservabilityServices(tmpPath: string): Service[] {
 			name: getUserServiceName(OBSERVABILITY_COLLECTOR_SERVICE_NAME),
 			worker: {
 				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat", ...OBSERVABILITY_COMPAT_FLAGS],
+				// The collector consumes tails; it isn't tailed itself, so it doesn't
+				// need OBSERVABILITY_COMPAT_FLAGS (those go on the user workers).
+				compatibilityFlags: ["nodejs_compat"],
 				modules: [
 					{
 						name: "collector.worker.js",

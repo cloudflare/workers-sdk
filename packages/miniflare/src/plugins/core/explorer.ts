@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { OBSERVABILITY_COLLECTOR_SERVICE_NAME } from "@cloudflare/workers-utils";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import {
@@ -18,6 +17,7 @@ import {
 import {
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
 import type { PluginWorkerOptions } from "..";

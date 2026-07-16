@@ -14,12 +14,7 @@ import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
-import {
-	getTodaysCompatDate,
-	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
-	OBSERVABILITY_COMPAT_FLAGS,
-	removeDirSync,
-} from "@cloudflare/workers-utils";
+import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
@@ -55,6 +50,8 @@ import {
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
 	getUserServiceName,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+	OBSERVABILITY_COMPAT_FLAGS,
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
@@ -1318,7 +1315,9 @@ export function getGlobalServices({
 	// Local observability (experimental): register the internal trace collector
 	// service. Core attaches it to each user worker's streaming tail above.
 	if (sharedOptions.unsafeObservability) {
-		services.push(...getObservabilityServices(tmpPath));
+		services.push(
+			...getObservabilityServices(tmpPath, sharedOptions.defaultPersistRoot)
+		);
 	}
 
 	return services;

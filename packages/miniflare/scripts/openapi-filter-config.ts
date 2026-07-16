@@ -1296,7 +1296,6 @@ const config = {
 				post: {
 					description: [
 						"Runs a single read-only SQL query against the local trace store and returns { columns, rows }.",
-						"This is the only observability read endpoint: the Observability tab and coding agents both read through it (the UI ships the common views as canned queries).",
 						"",
 						"Only one SELECT/WITH statement is allowed; writes, DDL, PRAGMA, ATTACH, and multiple statements are rejected, and at most 10000 rows are returned.",
 						"Bind values with `params` rather than string-interpolating them.",
