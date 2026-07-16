@@ -1,3 +1,4 @@
+/* eslint-disable turbo/no-undeclared-env-vars -- Flue reads runtime AI Gateway secrets provided by GitHub Actions, not Turborepo cache inputs */
 import { registerProvider } from "@flue/runtime";
 import { flue } from "@flue/runtime/routing";
 
