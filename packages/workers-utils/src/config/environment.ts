@@ -405,7 +405,23 @@ export interface WorkerEntrypointExport {
 	};
 }
 
-export type ConfiguredExport = DurableObjectExport | WorkerEntrypointExport;
+export interface WorkflowExport {
+	type: "workflow";
+	/** The account-unique name of the Workflow. */
+	name: string;
+	/** Optional limits for the Workflow. */
+	limits?: {
+		/** Maximum number of steps a Workflow instance can execute. */
+		steps?: number;
+	};
+	/** Optional cron schedules for automatically triggering Workflow instances. */
+	schedules?: string[];
+}
+
+export type ConfiguredExport =
+	| DurableObjectExport
+	| WorkerEntrypointExport
+	| WorkflowExport;
 
 /**
  * The declarative `exports` map keyed by export name. Durable Object exports
@@ -796,8 +812,8 @@ export type DurableObjectBindings = {
 export type WorkflowBinding = {
 	/** The name of the binding used to refer to the Workflow */
 	binding: string;
-	/** The name of the Workflow */
-	name: string;
+	/** The name of the Workflow. Omitted for an export-based cross-script binding. */
+	name?: string;
 	/** The exported class name of the Workflow */
 	class_name: string;
 	/** The script where the Workflow is defined (if it's external to this Worker) */

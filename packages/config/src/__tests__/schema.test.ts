@@ -237,6 +237,48 @@ describe("InputWorkerSchema", () => {
 		});
 	});
 
+	describe("Workflows", () => {
+		it("accepts Workflow exports and bindings", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: {
+					MY_WORKFLOW: {
+						type: "workflow",
+						workerName: "workflow-worker",
+						exportName: "MyWorkflow",
+						remote: true,
+					},
+				},
+				exports: {
+					MyWorkflow: {
+						type: "workflow",
+						name: "my-workflow",
+						limits: { steps: 25_000 },
+						schedules: ["0 * * * *"],
+					},
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects invalid Workflow export configuration", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				exports: {
+					MyWorkflow: {
+						type: "workflow",
+						name: "",
+						limits: { steps: 25_001 },
+						schedules: [],
+					},
+				},
+			});
+
+			expect(result.success).toBe(false);
+		});
+	});
+
 	describe("unknown property rejection", () => {
 		it("rejects unknown top-level keys (typo)", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({

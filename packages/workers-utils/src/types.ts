@@ -108,7 +108,7 @@ export type WorkerMetadataBinding =
 	| {
 			type: "workflow";
 			name: string;
-			workflow_name: string;
+			workflow_name?: string;
 			class_name: string;
 			script_name?: string;
 			raw?: boolean;

@@ -4,6 +4,7 @@ import {
 	experimental_patchConfig,
 	formatConfigSnippet,
 	getTodaysCompatDate,
+	hasWorkflowExports,
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -291,7 +292,7 @@ export async function preUploadApiChecks(
 		}
 	}
 
-	if (config.workflows?.length) {
+	if (config.workflows?.length || hasWorkflowExports(config.exports)) {
 		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
 
 		if (workflowCheck.hasConflicts) {

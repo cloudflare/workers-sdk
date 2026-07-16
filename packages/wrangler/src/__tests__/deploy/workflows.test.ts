@@ -181,6 +181,60 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("deploys a Workflow export from experimental config", async ({
+			expect,
+		}) => {
+			await fs.promises.writeFile(
+				"cloudflare.config.ts",
+				`export default {
+					name: "test-name",
+					entrypoint: "./index.js",
+					compatibilityDate: "2026-07-14",
+					exports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 25_000 },
+							schedules: ["0 * * * *"],
+						},
+					},
+				};`
+			);
+			await fs.promises.writeFile(
+				"index.js",
+				`export default {};
+				export class MyWorkflow {}`
+			);
+
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workflows/:workflowName",
+					async ({ params, request }) => {
+						expect(params.workflowName).toBe("my-workflow");
+						expect(await request.json()).toEqual({
+							script_name: "test-name",
+							class_name: "MyWorkflow",
+							limits: { steps: 25_000 },
+							schedules: [{ cron: "0 * * * *" }],
+						});
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-workflow-id" })
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+				expectedExports: undefined,
+			});
+
+			await runWrangler("deploy --experimental-new-config");
+
+			expect(std.warn).toBe("");
+			expect(std.out).toContain("workflow: my-workflow");
+		});
+
 		it("should prompt to create a workers.dev subdomain before deploying owned Workflows", async ({
 			expect,
 		}) => {

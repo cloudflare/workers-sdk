@@ -2220,7 +2220,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "exports.Weird.type" must be "durable-object" or "worker", but got "container"."
+					  - "exports.Weird.type" must be "durable-object", "worker", or "workflow", but got "container"."
 				`);
 			});
 
@@ -6218,10 +6218,10 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "workflows[0]" bindings should have a string "binding" field but got {}.
-					  - "workflows[0]" bindings should have a string "name" field but got {}.
+					  - "workflows[0]" bindings should have a string "name" field, unless they reference a Workflow export in another Worker with "script_name", but got {}.
 					  - "workflows[0]" bindings should have a string "class_name" field but got {}.
 					  - "workflows[2]" bindings should have a string "binding" field but got {"binding":2000,"name":2111,"class_name":3000}.
-					  - "workflows[2]" bindings should have a string "name" field but got {"binding":2000,"name":2111,"class_name":3000}.
+					  - "workflows[2]" bindings should have a string "name" field, unless they reference a Workflow export in another Worker with "script_name", but got {"binding":2000,"name":2111,"class_name":3000}.
 					  - "workflows[2]" bindings should have a string "class_name" field but got {"binding":2000,"name":2111,"class_name":3000}."
 				`);
 			});

@@ -1,6 +1,8 @@
 import { describe, it } from "vitest";
+import { bindings as bindingConfig } from "../bindings";
 import { convertToWranglerConfig } from "../convert";
 import { exports as exportConfig } from "../exports";
+import { defineWorker } from "../worker-definition";
 
 const baseConfig = { name: "worker", compatibilityDate: "2026-06-01" } as const;
 
@@ -782,6 +784,28 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("passes Workflow exports through", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					MyWorkflow: exportConfig.workflow({
+						name: "my-workflow",
+						limits: { steps: 25_000 },
+						schedules: ["0 * * * *"],
+					}),
+				},
+			});
+
+			expect(result.exports).toEqual({
+				MyWorkflow: {
+					type: "workflow",
+					name: "my-workflow",
+					limits: { steps: 25_000 },
+					schedules: ["0 * * * *"],
+				},
+			});
+		});
+
 		it("emits no exports key when the map is empty", ({ expect }) => {
 			const result = convertToWranglerConfig({ ...baseConfig, exports: {} });
 			expect("exports" in (result as object)).toBe(false);
@@ -791,13 +815,53 @@ describe("convertToWranglerConfig", () => {
 			const config = {
 				...baseConfig,
 				exports: {
-					FutureExport: { type: "workflow" },
+					FutureExport: { type: "container" },
 				},
 			} as unknown as Parameters<typeof convertToWranglerConfig>[0];
 
 			expect(() => convertToWranglerConfig(config)).toThrow(
-				/Unknown export types found: - FutureExport : workflow/
+				/Unknown export types found: - FutureExport : container/
 			);
+		});
+	});
+
+	describe("Workflow bindings", () => {
+		it("maps an export-based Workflow binding", ({ expect }) => {
+			const workflowWorker = defineWorker({
+				...baseConfig,
+				name: "workflow-worker",
+				exports: {
+					MyWorkflow: exportConfig.workflow({ name: "my-workflow" }),
+				},
+			});
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: {
+					MY_WORKFLOW: workflowWorker.workflow({
+						workerName: "workflow-worker",
+						exportName: "MyWorkflow",
+						remote: true,
+					}),
+					UNTYPED_WORKFLOW: bindingConfig.workflow({
+						workerName: "other-worker",
+						exportName: "OtherWorkflow",
+					}),
+				},
+			});
+
+			expect(result.workflows).toEqual([
+				{
+					binding: "MY_WORKFLOW",
+					class_name: "MyWorkflow",
+					script_name: "workflow-worker",
+					remote: true,
+				},
+				{
+					binding: "UNTYPED_WORKFLOW",
+					class_name: "OtherWorkflow",
+					script_name: "other-worker",
+				},
+			]);
 		});
 	});
 

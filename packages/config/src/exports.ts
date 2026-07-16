@@ -125,6 +125,23 @@ export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
 	type: "worker";
 }
 
+export interface WorkflowExportOptions {
+	/** The account-unique name of the Workflow. */
+	name: string;
+	/** Optional limits for the Workflow. */
+	limits?: {
+		/** Maximum number of steps a Workflow instance can execute. */
+		steps?: number;
+	};
+	/** Optional cron schedules for automatically triggering Workflow instances. */
+	schedules?: string[];
+}
+
+/** Declares a Workflow defined by this Worker. */
+export interface WorkflowExport extends WorkflowExportOptions {
+	type: "workflow";
+}
+
 /**
  * Configuration for named exports declared by the Worker. Each entry's
  * key is the exported class name; the value configures the export.
@@ -179,6 +196,9 @@ export interface Exports {
 
 	/** Declares a WorkerEntrypoint export defined by this Worker. */
 	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
+
+	/** Declares a WorkflowEntrypoint export defined by this Worker. */
+	workflow(options: WorkflowExportOptions): WorkflowExport;
 }
 
 function durableObject(
@@ -213,6 +233,10 @@ function worker(
 	return { type: "worker", ...options };
 }
 
+function workflow(options: WorkflowExportOptions): WorkflowExport {
+	return { type: "workflow", ...options };
+}
+
 /**
  * Exports builder for configuring Worker exports.
  *
@@ -234,4 +258,5 @@ function worker(
 export const exports: Exports = {
 	durableObject,
 	worker,
+	workflow,
 };

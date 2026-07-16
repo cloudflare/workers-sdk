@@ -274,6 +274,25 @@ describe("createWorkerUploadForm — bindings", () => {
 				script_name: "workflow-worker",
 			});
 		});
+
+		it("includes export-based workflow bindings without a resource name", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				MY_WORKFLOW: {
+					type: "workflow",
+					class_name: "MyWorkflow",
+					script_name: "workflow-worker",
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "MY_WORKFLOW",
+				type: "workflow",
+				class_name: "MyWorkflow",
+				script_name: "workflow-worker",
+			});
+		});
 	});
 
 	describe("pass-through binding types", () => {

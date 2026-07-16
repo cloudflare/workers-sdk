@@ -8,6 +8,7 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getWorkflowExports,
 	getWranglerHiddenDirPath,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -358,7 +359,7 @@ function workflowEntry(
 		return [
 			binding,
 			{
-				name,
+				name: name ?? className,
 				className,
 				scriptName,
 				...(stepLimit !== undefined && { stepLimit }),
@@ -370,7 +371,7 @@ function workflowEntry(
 	return [
 		binding,
 		{
-			name,
+			name: name ?? className,
 			className,
 			scriptName,
 			remoteProxyConnectionString,
@@ -519,7 +520,18 @@ export function buildMiniflareBindingOptions(
 	const queues = extractBindingsOfType("queue", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
 	const hyperdrives = extractBindingsOfType("hyperdrive", bindings);
-	const workflows = extractBindingsOfType("workflow", bindings);
+	const workflowBindings = extractBindingsOfType("workflow", bindings);
+	const workflows: CfWorkflow[] = [
+		...workflowBindings,
+		...Object.entries(getWorkflowExports(config.exports)).map(
+			([className, workflow]) => ({
+				binding: className,
+				name: workflow.name,
+				class_name: className,
+				limits: workflow.limits,
+			})
+		),
+	];
 	const durableObjects = extractBindingsOfType(
 		"durable_object_namespace",
 		bindings

@@ -68,6 +68,8 @@ export type {
 	DurableObjectExpectingTransferExport,
 	WorkerEntrypointExport,
 	WorkerEntrypointExportOptions,
+	WorkflowExport,
+	WorkflowExportOptions,
 } from "./exports";
 export { exports } from "./exports";
 export type {

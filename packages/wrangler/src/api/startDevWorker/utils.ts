@@ -215,7 +215,7 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				>;
 				output[name] = {
 					type: "workflow",
-					name: b.workflow_name,
+					...(b.workflow_name !== undefined && { name: b.workflow_name }),
 					class_name: b.class_name,
 					script_name: b.script_name,
 					raw: b.raw,
