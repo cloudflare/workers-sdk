@@ -13,8 +13,7 @@
 		"directory": "packages/remote-bindings"
 	},
 	"files": [
-		"dist",
-		"templates"
+		"dist"
 	],
 	"type": "module",
 	"sideEffects": false,
@@ -41,6 +40,7 @@
 		"@types/ws": "^8.5.13",
 		"capnweb": "catalog:default",
 		"chalk": "catalog:default",
+		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",

@@ -1,9 +1,8 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { assertNever } from "@cloudflare/workers-utils";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
+import proxyWorkerSource from "worker:startDevWorker/ProxyWorker";
 import { logger } from "../logger";
 import {
 	castLogLevel,
@@ -22,10 +21,6 @@ import type {
 } from "./events";
 import type { Bundle, StartDevWorkerOptions } from "./types";
 import type { LogOptions, MiniflareOptions } from "miniflare";
-
-const proxyWorkerPath = fileURLToPath(
-	new URL("./dev-proxy-worker.mjs", import.meta.url)
-);
 
 export class ProxyController {
 	public ready = createDeferred<ReadyEvent>();
@@ -61,8 +56,13 @@ export class ProxyController {
 					name: "ProxyWorker",
 					compatibilityDate: "2023-12-18",
 					compatibilityFlags: ["nodejs_compat"],
-					modulesRoot: path.dirname(proxyWorkerPath),
-					modules: [{ type: "ESModule", path: proxyWorkerPath }],
+					modules: [
+						{
+							type: "ESModule",
+							path: "dev-proxy-worker.mjs",
+							contents: proxyWorkerSource,
+						},
+					],
 					durableObjects: {
 						DURABLE_OBJECT: {
 							className: "ProxyWorker",

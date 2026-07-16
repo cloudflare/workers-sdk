@@ -9,7 +9,7 @@ import type {
 
 export type StartDevWorkerOptions = {
 	name: string;
-	entrypoint: string;
+	entrypointSource: string;
 	bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 	compatibilityDate: StartDevWorkerInput["compatibilityDate"];
 	compatibilityFlags: StartDevWorkerInput["compatibilityFlags"];

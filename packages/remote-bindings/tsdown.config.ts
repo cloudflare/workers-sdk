@@ -1,34 +1,14 @@
 import { defineConfig } from "tsdown";
+import { embedWorkersPlugin } from "./scripts/embed-workers.ts";
 
-export default defineConfig([
-	{
-		entry: {
-			index: "src/index.ts",
-		},
-		platform: "node",
-		outDir: "dist",
-		dts: true,
-		tsconfig: "tsconfig.json",
-		define: {
-			__filename: "import.meta.filename",
-		},
-		external: ["miniflare"],
+export default defineConfig({
+	entry: {
+		index: "src/index.ts",
 	},
-	{
-		entry: {
-			"proxy-worker": "templates/remoteBindings/ProxyServerWorker.ts",
-		},
-		platform: "neutral",
-		outDir: "dist",
-		dts: false,
-		external: ["cloudflare:email", "cloudflare:workers"],
-	},
-	{
-		entry: {
-			"dev-proxy-worker": "templates/startDevWorker/ProxyWorker.ts",
-		},
-		platform: "node",
-		outDir: "dist",
-		dts: false,
-	},
-]);
+	platform: "node",
+	outDir: "dist",
+	dts: true,
+	tsconfig: "tsconfig.json",
+	external: [/^(?!(?:\0)?worker:)[^./]/],
+	plugins: [embedWorkersPlugin()],
+});

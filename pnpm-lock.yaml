@@ -2592,6 +2592,9 @@ importers:
       chalk:
         specifier: catalog:default
         version: 5.3.0
+      esbuild:
+        specifier: catalog:default
+        version: 0.28.1
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
@@ -2709,6 +2712,9 @@ importers:
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
       '@cloudflare/runtime-types':
         specifier: workspace:*
         version: link:../runtime-types
@@ -3953,6 +3959,9 @@ importers:
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
