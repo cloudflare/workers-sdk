@@ -3,6 +3,7 @@ import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import { readConfig } from "../../config";
 import { logger } from "../../logger";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
+import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type {
 	RemoteProxySessionData,
 	WorkerConfigObject,
@@ -10,6 +11,8 @@ import type {
 import type { AsyncHook, CfAccount } from "@cloudflare/workers-utils";
 
 export * from "@cloudflare/remote-bindings";
+export { startRemoteProxySession } from "./start-remote-proxy-session";
+export type { StartRemoteProxySessionOptions } from "./start-remote-proxy-session";
 
 type WranglerConfigObject = {
 	path: string;
@@ -38,6 +41,7 @@ export function maybeStartOrUpdateRemoteProxySession(
 		wranglerOrWorkerConfigObject,
 		preExistingRemoteProxySessionData,
 		auth,
-		{ logger }
+		{ logger },
+		startRemoteProxySession
 	);
 }

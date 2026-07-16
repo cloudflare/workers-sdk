@@ -424,10 +424,10 @@ export class RemoteRuntimeController extends RuntimeController {
 	//   Event Dispatchers
 	// *********************
 
-	emitReloadStartEvent(data: ReloadStartEvent) {
+	override emitReloadStartEvent(data: ReloadStartEvent) {
 		this.bus.dispatch(data);
 	}
-	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
+	override emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.bus.dispatch(data);
 	}
 }

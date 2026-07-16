@@ -1,12 +1,11 @@
 import crypto from "node:crypto";
 import { URL } from "node:url";
-import {
-	createWorkerUploadForm,
-	getWorkersDevSubdomain,
-} from "@cloudflare/deploy-helpers";
+import { createWorkerUploadForm } from "@cloudflare/deploy-helpers/create-worker-upload-form";
 import { getAccessHeaders } from "@cloudflare/workers-auth";
 import {
+	APIError,
 	fetchResultBase,
+	getComplianceRegionSubdomain,
 	ParseError,
 	parseJSON,
 	UserError,
@@ -54,6 +53,41 @@ function fetchResult<ResponseType>(
  */
 function withTimeout(signal: AbortSignal): AbortSignal {
 	return AbortSignal.any([signal, AbortSignal.timeout(PREVIEW_API_TIMEOUT_MS)]);
+}
+
+async function getOrRegisterWorkersDevSubdomain(
+	complianceConfig: ComplianceConfig,
+	account: CfAccount,
+	abortSignal: AbortSignal
+): Promise<string> {
+	const resource = `/accounts/${account.accountId}/workers/subdomain`;
+	try {
+		const { subdomain } = await fetchResult<{ subdomain: string }>(
+			complianceConfig,
+			account,
+			resource,
+			undefined,
+			abortSignal
+		);
+		return subdomain;
+	} catch (error) {
+		if (!(error instanceof APIError) || error.code !== 10007) {
+			throw error;
+		}
+	}
+
+	const subdomain = crypto.randomBytes(4).toString("hex");
+	const result = await fetchResult<{ subdomain: string }>(
+		complianceConfig,
+		account,
+		resource,
+		{
+			method: "PUT",
+			body: JSON.stringify({ subdomain }),
+		},
+		abortSignal
+	);
+	return result.subdomain;
 }
 
 /**
@@ -232,14 +266,12 @@ export async function createPreviewSession(
 	try {
 		let host = ctx.host;
 		if (!host) {
-			const subdomain = await getWorkersDevSubdomain(
+			const subdomain = await getOrRegisterWorkersDevSubdomain(
 				complianceConfig,
-				account.accountId,
-				{
-					abortSignal: withTimeout(abortSignal),
-				}
+				account,
+				withTimeout(abortSignal)
 			);
-			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
+			host = `${name ?? crypto.randomUUID()}.${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 		}
 		return {
 			value: previewSessionToken,

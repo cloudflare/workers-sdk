@@ -1,22 +1,10 @@
 import { DevEnv } from "./startDevWorker/DevEnv";
-import type { Binding, StartDevWorkerInput } from "@cloudflare/workers-utils";
-import type { EventEmitter } from "node:events";
+import type { StartDevWorkerOptions, Worker } from "./startDevWorker/types";
 
-export type Worker = {
-	ready: Promise<void>;
-	url: Promise<URL>;
-	dispose(): Promise<void>;
-	patchConfig(config: { bindings: Record<string, Binding> }): Promise<void>;
-	raw: EventEmitter & {
-		proxy: {
-			localServerReady: { promise: Promise<void> };
-			runtimeMessageMutex: { drained(): Promise<void> };
-		};
-	};
-};
+export type { Worker };
 
 export async function startWorker(
-	options: StartDevWorkerInput
+	options: StartDevWorkerOptions
 ): Promise<Worker> {
 	const devEnv = new DevEnv();
 

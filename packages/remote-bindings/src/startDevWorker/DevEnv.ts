@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
@@ -174,41 +173,11 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 		get url() {
 			return devEnv.proxy.ready.promise.then((ev) => ev.url);
 		},
-		get inspectorUrl() {
-			return devEnv.proxy.ready.promise.then((ev) => ev.inspectorUrl);
-		},
-		async setConfig(config) {
-			return devEnv.config.set(config);
-		},
 		patchConfig(config) {
 			return devEnv.config.patch(config);
 		},
-		async fetch(...args) {
-			const { proxyWorker } = await devEnv.proxy.ready.promise;
-			await devEnv.proxy.runtimeMessageMutex.drained();
-
-			return proxyWorker.dispatchFetch(...args);
-		},
-		async queue(...args) {
-			assert(
-				this.config.name,
-				"Worker name must be defined to use `Worker.queue()`"
-			);
-			const { proxyWorker } = await devEnv.proxy.ready.promise;
-			const w = await proxyWorker.getWorker(this.config.name);
-			return w.queue(...args);
-		},
-		async scheduled(...args) {
-			assert(
-				this.config.name,
-				"Worker name must be defined to use `Worker.scheduled()`"
-			);
-			const { proxyWorker } = await devEnv.proxy.ready.promise;
-			const w = await proxyWorker.getWorker(this.config.name);
-			return w.scheduled(...args);
-		},
 		async dispose() {
-			await devEnv.proxy.ready.promise.finally(() => devEnv.teardown());
+			await devEnv.teardown();
 		},
 		raw: devEnv,
 	};

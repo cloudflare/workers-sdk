@@ -297,9 +297,15 @@ export class ProxyController extends Controller {
 		});
 	}
 
-	emitErrorEvent(data: ErrorEvent): void;
-	emitErrorEvent(reason: string, cause?: Error | SerializedError): void;
-	emitErrorEvent(data: string | ErrorEvent, cause?: Error | SerializedError) {
+	override emitErrorEvent(data: ErrorEvent): void;
+	override emitErrorEvent(
+		reason: string,
+		cause?: Error | SerializedError
+	): void;
+	override emitErrorEvent(
+		data: string | ErrorEvent,
+		cause?: Error | SerializedError
+	) {
 		if (typeof data === "string") {
 			data = {
 				type: "error",
@@ -325,11 +331,11 @@ class ProxyControllerLogger extends WranglerLog {
 		super(level, opts);
 	}
 
-	logReady(message: string): void {
+	override logReady(message: string): void {
 		this.localServerReady.then(() => super.logReady(message)).catch(() => {});
 	}
 
-	log(message: string) {
+	override log(message: string) {
 		// filter out request logs being handled by the ProxyWorker
 		// the requests log remaining are handled by the UserWorker
 		// keep the ProxyWorker request logs if we're in debug mode

@@ -29,6 +29,7 @@ function createTestLogger(): RemoteBindingsLogger {
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
+		console: vi.fn(),
 		once: {
 			info: vi.fn(),
 			log: vi.fn(),

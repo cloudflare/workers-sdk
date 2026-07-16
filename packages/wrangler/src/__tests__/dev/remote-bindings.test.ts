@@ -783,7 +783,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		});
 		expect(sessionOptions).toBeDefined();
 		assert(sessionOptions);
-		const { auth, ...rest1 } = sessionOptions;
+		const { auth, logger: _logger, ...rest1 } = sessionOptions;
 		expect(rest1).toEqual({
 			complianceRegion: undefined,
 			workerName: "worker",
@@ -827,7 +827,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 
 		expect(sessionOptions).toBeDefined();
 		assert(sessionOptions);
-		const { auth: auth2, ...rest2 } = sessionOptions;
+		const { auth: auth2, logger: _logger, ...rest2 } = sessionOptions;
 		expect(rest2).toEqual({
 			complianceRegion: undefined,
 			workerName: "worker",
