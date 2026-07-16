@@ -26,19 +26,6 @@ export function castErrorCause(cause: unknown) {
 	return error;
 }
 
-// ConfigController
-export type ConfigUpdateEvent = {
-	type: "configUpdate";
-
-	config: StartDevWorkerOptions;
-};
-
-// BundlerController
-export type BundleStartEvent = {
-	type: "bundleStart";
-
-	config: StartDevWorkerOptions;
-};
 export type BundleCompleteEvent = {
 	type: "bundleComplete";
 
@@ -46,26 +33,12 @@ export type BundleCompleteEvent = {
 	bundle: Bundle;
 };
 
-// RuntimeController
-export type ReloadStartEvent = {
-	type: "reloadStart";
-
-	config: StartDevWorkerOptions;
-	bundle: Bundle;
-};
 export type ReloadCompleteEvent = {
 	type: "reloadComplete";
 
 	config: StartDevWorkerOptions;
 	bundle: Bundle;
 	proxyData: ProxyData;
-};
-// ProxyController
-export type PreviewTokenExpiredEvent = {
-	type: "previewTokenExpired";
-
-	proxyData: ProxyData;
-	// ... other details of failed request/response
 };
 export type ReadyEvent = {
 	type: "ready";

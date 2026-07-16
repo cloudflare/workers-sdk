@@ -16,7 +16,6 @@ import { logger } from "../logger";
 import type { CfWorkerInitWithName } from "./remote";
 import type {
 	ApiCredentials,
-	CfWorkerContext,
 	ComplianceConfig,
 } from "@cloudflare/workers-utils";
 import type { HeadersInit, RequestInit } from "undici";
@@ -119,32 +118,7 @@ export interface CfPreviewSession {
 	 * The host where the session is available.
 	 */
 	host: string;
-	/**
-	 * The worker name used when the session was created.
-	 * Used to detect when the session needs to be recreated.
-	 */
-	name: string | undefined;
 }
-
-/**
- * Session configuration for realish preview. This is sent to the API as the
- * `wrangler-session-config` form data part.
- *
- * Only one of `workers_dev` and `routes` can be specified:
- * * If `workers_dev` is set, the preview will run using a `workers.dev` subdomain.
- * * If `routes` is set, the preview will run using the list of routes provided, which must be under a single zone
- *
- * `minimal_mode` is a flag to tell the API to enable "raw" mode bindings in this session
- */
-type CfPreviewMode =
-	| {
-			workers_dev: true;
-			minimal_mode?: boolean;
-	  }
-	| {
-			routes: string[];
-			minimal_mode?: boolean;
-	  };
 
 /**
  * A preview token.
@@ -170,21 +144,6 @@ export interface CfPreviewToken {
 	tailUrl?: string;
 }
 
-// URLs are often relative to the zone. Sometimes the base zone
-// will be grey-clouded, and so the host must be swapped out for
-// the worker route host, which is more likely to be orange-clouded.
-// However, this switching should only happen if we're running a zone preview
-// rather than a workers.dev preview
-function switchHost(
-	originalUrl: string,
-	host: string | undefined,
-	zonePreview: boolean
-): URL {
-	const url = new URL(originalUrl);
-	url.hostname = zonePreview ? (host ?? url.hostname) : url.hostname;
-	return url;
-}
-
 /**
  * Try and get a re-encoded token from the edge. Returns null if the exchange
  * fails for any reason (expected with particular zone settings).
@@ -192,11 +151,10 @@ function switchHost(
  */
 async function tryExpandToken(
 	exchangeUrl: string,
-	ctx: CfWorkerContext,
 	abortSignal: AbortSignal
 ): Promise<string | null> {
 	try {
-		const switchedExchangeUrl = switchHost(exchangeUrl, ctx.host, !!ctx.zone);
+		const switchedExchangeUrl = new URL(exchangeUrl);
 
 		const accessHeaders = await getAccessHeaders(switchedExchangeUrl.hostname, {
 			logger,
@@ -244,14 +202,11 @@ async function tryExpandToken(
 export async function createPreviewSession(
 	complianceConfig: ComplianceConfig,
 	account: CfAccount,
-	ctx: CfWorkerContext,
 	abortSignal: AbortSignal,
-	name: string | undefined
+	name: string
 ): Promise<CfPreviewSession> {
 	const { accountId } = account;
-	const initUrl = ctx.zone
-		? `/zones/${ctx.zone}/workers/edge-preview`
-		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
+	const initUrl = `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
 	const { token, exchange_url } = await fetchResult<{
 		token: string;
@@ -259,35 +214,26 @@ export async function createPreviewSession(
 	}>(complianceConfig, account, initUrl, undefined, withTimeout(abortSignal));
 
 	const previewSessionToken = exchange_url
-		? ((await tryExpandToken(exchange_url, ctx, withTimeout(abortSignal))) ??
-			token)
+		? ((await tryExpandToken(exchange_url, withTimeout(abortSignal))) ?? token)
 		: token;
 
 	try {
-		let host = ctx.host;
-		if (!host) {
-			const subdomain = await getOrRegisterWorkersDevSubdomain(
-				complianceConfig,
-				account,
-				withTimeout(abortSignal)
-			);
-			host = `${name ?? crypto.randomUUID()}.${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
-		}
+		const subdomain = await getOrRegisterWorkersDevSubdomain(
+			complianceConfig,
+			account,
+			withTimeout(abortSignal)
+		);
+		const host = `${name}.${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 		return {
 			value: previewSessionToken,
-			host: host,
-			name,
+			host,
 		};
 	} catch (e) {
 		if (!(e instanceof ParseError)) {
 			throw e;
 		} else {
 			throw new UserError(
-				`Could not create remote preview session on ${
-					ctx.zone
-						? ` host \`${ctx.host}\` on zone \`${ctx.zone}\``
-						: `your account`
-				}.`,
+				"Could not create remote preview session on your account.",
 				{ telemetryMessage: "remote preview session creation failed" }
 			);
 		}
@@ -297,41 +243,22 @@ export async function createPreviewSession(
 /**
  * Creates a preview token.
  */
-async function createPreviewToken(
+export async function createWorkerPreview(
 	complianceConfig: ComplianceConfig,
-	account: CfAccount,
 	worker: CfWorkerInitWithName,
-	ctx: CfWorkerContext,
+	account: CfAccount,
 	session: CfPreviewSession,
-	abortSignal: AbortSignal,
-	minimal_mode?: boolean
+	abortSignal: AbortSignal
 ): Promise<CfPreviewToken> {
 	const { value, host } = session;
 	const { accountId } = account;
 	const url = `/accounts/${accountId}/workers/scripts/${worker.name}/edge-preview`;
 
-	const mode: CfPreviewMode = ctx.zone
-		? {
-				routes:
-					ctx.routes && ctx.routes.length > 0
-						? // extract all the route patterns
-							ctx.routes.map((route) => {
-								if (typeof route === "string") {
-									return route;
-								}
-								if (route.custom_domain) {
-									return `${route.pattern}/*`;
-								}
-								return route.pattern;
-							})
-						: // if there aren't any patterns, then just match on all routes
-							["*/*"],
-				minimal_mode,
-			}
-		: { workers_dev: true, minimal_mode };
-
 	const formData = createWorkerUploadForm(worker, worker.bindings);
-	formData.set("wrangler-session-config", JSON.stringify(mode));
+	formData.set(
+		"wrangler-session-config",
+		JSON.stringify({ workers_dev: true, minimal_mode: true })
+	);
 
 	const { preview_token, tail_url } = await fetchResult<{
 		preview_token: string;
@@ -355,32 +282,4 @@ async function createPreviewToken(
 		host,
 		tailUrl: tail_url,
 	};
-}
-
-/**
- * A stub to create a Cloudflare Worker preview.
- *
- * @example
- * const {value, host} = await createWorker(init, acct);
- */
-export async function createWorkerPreview(
-	complianceConfig: ComplianceConfig,
-	init: CfWorkerInitWithName,
-	account: CfAccount,
-	ctx: CfWorkerContext,
-	session: CfPreviewSession,
-	abortSignal: AbortSignal,
-	minimal_mode?: boolean
-): Promise<CfPreviewToken> {
-	const token = await createPreviewToken(
-		complianceConfig,
-		account,
-		init,
-		ctx,
-		session,
-		abortSignal,
-		minimal_mode
-	);
-
-	return token;
 }

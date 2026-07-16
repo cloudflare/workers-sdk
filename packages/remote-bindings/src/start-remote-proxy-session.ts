@@ -6,7 +6,7 @@ import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
 import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
-import { startWorker } from "./start-worker";
+import { DevEnv } from "./startDevWorker/DevEnv";
 import type { RemoteBindingsLogger } from "./logger";
 import type {
 	AsyncHook,
@@ -83,46 +83,46 @@ export async function startRemoteProxySession(
 		compatibilityFlags: [],
 		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
-		dev: {
-			remote: "minimal" as const,
-			auth: getRemoteBindingsAuthHook(
-				options.auth,
-				undefined,
-				undefined,
-				options.logger
-			),
-			server: { port: 0, secure: false },
-		},
+		auth: getRemoteBindingsAuthHook(
+			options.auth,
+			undefined,
+			undefined,
+			options.logger
+		),
+		server: { port: 0, secure: false },
 	};
 
-	const worker = await startWorker(workerConfig).catch(
-		(startWorkerError: unknown) => {
-			if (startWorkerError instanceof UserError) {
-				throw startWorkerError;
-			}
-			let errorMessage = startWorkerError;
-			if (startWorkerError instanceof Error) {
-				errorMessage =
-					startWorkerError.cause instanceof Error
-						? startWorkerError.cause.message
-						: startWorkerError.message;
-			}
-			throw new Error(
-				`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
-			);
+	let devEnv: DevEnv | undefined;
+	try {
+		devEnv = new DevEnv(workerConfig);
+		devEnv.start();
+	} catch (startWorkerError: unknown) {
+		await devEnv?.teardown();
+		if (startWorkerError instanceof UserError) {
+			throw startWorkerError;
 		}
-	);
+		let errorMessage = startWorkerError;
+		if (startWorkerError instanceof Error) {
+			errorMessage =
+				startWorkerError.cause instanceof Error
+					? startWorkerError.cause.message
+					: startWorkerError.message;
+		}
+		throw new Error(
+			`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
+		);
+	}
 
 	const maybeErrorPromise = new DeferredPromise<{ error: unknown }>();
 	const onStartupError = (error: unknown) => {
 		maybeErrorPromise.resolve({ error });
 	};
-	worker.raw.addListener("error", onStartupError);
+	devEnv.addListener("error", onStartupError);
 	let remoteProxyConnectionString: RemoteProxyConnectionString;
 	try {
 		const maybeError = await Promise.race([
 			maybeErrorPromise,
-			worker.raw.proxy.localServerReady.promise,
+			devEnv.proxy.localServerReady.promise,
 		]);
 
 		if (maybeError && maybeError.error) {
@@ -135,19 +135,19 @@ export async function startRemoteProxySession(
 			);
 		}
 
-		remoteProxyConnectionString =
-			(await worker.url) as RemoteProxyConnectionString;
+		remoteProxyConnectionString = (await devEnv.proxy.ready.promise)
+			.url as RemoteProxyConnectionString;
 	} catch (error) {
-		await worker.dispose();
+		await devEnv.teardown();
 		throw error;
 	} finally {
-		worker.raw.removeListener("error", onStartupError);
+		devEnv.removeListener("error", onStartupError);
 	}
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
-		const reloadComplete = events.once(worker.raw, "reloadComplete");
-		await worker.patchConfig({
+		const reloadComplete = events.once(devEnv, "reloadComplete");
+		devEnv.update({
 			...workerConfig,
 			bindings: toRawBindings(newBindings),
 		});
@@ -163,14 +163,14 @@ export async function startRemoteProxySession(
 						{ cause: errorOrEvent }
 					);
 		}
-		await worker.raw.proxy.runtimeMessageMutex.drained();
+		await devEnv.proxy.runtimeMessageMutex.drained();
 	};
 
 	return {
-		ready: worker.ready,
+		ready: Promise.resolve(),
 		remoteProxyConnectionString,
 		updateBindings,
-		dispose: worker.dispose,
+		dispose: () => devEnv.teardown(),
 	};
 }
 
