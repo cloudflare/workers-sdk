@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import events from "node:events";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -12,7 +11,6 @@ import type {
 	AsyncHook,
 	CfAccount,
 	Config,
-	LoggerLevel,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
@@ -77,37 +75,17 @@ export async function startRemoteProxySession(
 	const remoteBindingsWorkerPath = fileURLToPath(
 		new URL("./proxy-worker.js", import.meta.url)
 	);
-	const moduleRoot = path.dirname(remoteBindingsWorkerPath);
 	const workerConfig = {
-		name: options?.workerName ?? randomUUID(),
+		name: options.workerName ?? randomUUID(),
 		entrypoint: remoteBindingsWorkerPath,
-		projectRoot: moduleRoot,
 		compatibilityDate: "2025-04-28",
 		compatibilityFlags: [],
-		complianceRegion: options?.complianceRegion,
+		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
-		triggers: [],
-		build: {
-			bundle: false,
-			additionalModules: [],
-			processEntrypoint: false,
-			findAdditionalModules: false,
-			moduleRoot,
-			moduleRules: [],
-			define: {},
-			format: "modules" as const,
-			nodejsCompatMode: null,
-			exports: [],
-		},
-		legacy: {},
 		dev: {
 			remote: "minimal" as const,
-			auth: options?.auth,
+			auth: options.auth,
 			server: { port: 0, secure: false },
-			inspector: false as const,
-			logLevel: getStartWorkerLogLevel(options.logger.loggerLevel),
-			persist: false as const,
-			origin: {},
 		},
 	};
 
@@ -204,15 +182,4 @@ function toRawBindings(bindings: StartDevWorkerInput["bindings"]) {
 			{ ...binding, raw: true },
 		])
 	);
-}
-
-function getStartWorkerLogLevel(wranglerLogLevel: LoggerLevel): LoggerLevel {
-	switch (wranglerLogLevel) {
-		case "debug":
-			return "debug";
-		case "none":
-			return "none";
-		default:
-			return "error";
-	}
 }
