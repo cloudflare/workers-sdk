@@ -15,6 +15,7 @@ export interface EventDestination {
 }
 
 export enum EventSourceType {
+	EMAIL_SENDING = "email.sending",
 	IMAGES = "images",
 	KV = "kv",
 	R2 = "r2",
@@ -28,6 +29,7 @@ export enum EventSourceType {
 export const EVENT_SOURCE_TYPES = Object.values(EventSourceType);
 
 export type EventSource =
+	| EmailSendingEventSource
 	| ImagesEventSource
 	| KvEventSource
 	| R2EventSource
@@ -36,6 +38,12 @@ export type EventSource =
 	| WorkersAiModelEventSource
 	| WorkersBuildsWorkerEventSource
 	| WorkflowsWorkflowEventSource;
+
+export interface EmailSendingEventSource {
+	type: EventSourceType.EMAIL_SENDING;
+	zone_id: string;
+	domain: string;
+}
 
 export interface ImagesEventSource {
 	type: EventSourceType.IMAGES;

@@ -61,6 +61,24 @@ describe("queues subscription", () => {
 		events: ["namespace.created"],
 	};
 
+	const mockSubscriptionEmail: EventSubscription = {
+		id: "sub-email",
+		created_at: "2024-01-01T00:00:00Z",
+		modified_at: "2024-01-01T00:00:00Z",
+		name: "Test Subscription Email",
+		enabled: true,
+		source: {
+			type: EventSourceType.EMAIL_SENDING,
+			zone_id: "zone-123",
+			domain: "example.com",
+		},
+		destination: {
+			type: "queues.queue",
+			queue_id: expectedQueueId,
+		},
+		events: ["message.delivered"],
+	};
+
 	describe("create", () => {
 		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues subscription create --help");
@@ -84,13 +102,15 @@ describe("queues subscription", () => {
 				  -v, --version         Show version number  [boolean]
 
 				OPTIONS
-				      --source         The event source type  [string] [required] [choices: "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
+				      --source         The event source type  [string] [required] [choices: "email.sending", "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
 				      --events         Comma-separated list of event types to subscribe to  [string] [required]
 				      --name           Name for the subscription (auto-generated if not provided)  [string]
 				      --enabled        Whether the subscription should be active  [boolean] [default: true]
 				      --model-name     Workers AI model name (required for workersAi.model source)  [string]
 				      --worker-name    Worker name (required for workersBuilds.worker source)  [string]
-				      --workflow-name  Workflow name (required for workflows.workflow source)  [string]"
+				      --workflow-name  Workflow name (required for workflows.workflow source)  [string]
+				      --zone-id        Zone ID (required for email.sending source)  [string]
+				      --domain         Sending domain — zone apex or verified subdomain (required for email.sending source)  [string]"
 			`);
 		});
 
@@ -187,6 +207,79 @@ describe("queues subscription", () => {
 			`);
 		});
 
+		it("should create a subscription for email.sending source", async ({
+			expect,
+		}) => {
+			const queueNameResolveRequest = mockGetQueueByNameRequest(
+				expectedQueueName,
+				{
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					producers: [],
+					consumers: [],
+					producers_total_count: 0,
+					consumers_total_count: 0,
+					modified_on: "",
+				}
+			);
+
+			const expectedRequest: Partial<CreateEventSubscriptionRequest> = {
+				name: "testQueue email.sending",
+				enabled: true,
+				source: {
+					type: EventSourceType.EMAIL_SENDING,
+					zone_id: "zone-123",
+					domain: "example.com",
+				},
+				events: ["message.delivered"],
+			};
+
+			const createRequest = mockCreateSubscriptionRequest(
+				expectedRequest,
+				expectedQueueId
+			);
+
+			await runWrangler(
+				"queues subscription create testQueue --source email.sending --events message.delivered --zone-id zone-123 --domain example.com"
+			);
+
+			expect(queueNameResolveRequest.count).toEqual(1);
+			expect(createRequest.count).toEqual(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Creating event subscription for queue 'testQueue'...
+				✨ Successfully created event subscription 'testQueue email.sending' with id 'sub-123'."
+			`);
+		});
+
+		it("should show error when zone-id is missing for email.sending source", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"queues subscription create testQueue --source email.sending --events message.delivered --domain example.com"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --zone-id is required when using source 'email.sending']`
+			);
+		});
+
+		it("should show error when domain is missing for email.sending source", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"queues subscription create testQueue --source email.sending --events message.delivered --zone-id zone-123"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --domain is required when using source 'email.sending']`
+			);
+		});
+
 		it("should create subscription with custom name and disabled state", async ({
 			expect,
 		}) => {
@@ -254,7 +347,7 @@ describe("queues subscription", () => {
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid values:
-				  Argument: source, Given: "invalid", Choices: "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
+				  Argument: source, Given: "invalid", Choices: "email.sending", "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
 			`);
 		});
 
@@ -522,6 +615,44 @@ describe("queues subscription", () => {
 				Resource:     my-worker
 				Queue ID:     queueId
 				Events:       build.completed, build.failed
+				Enabled:      Yes
+				Created At:   1/1/2024, 12:00:00 AM
+				Modified At:  1/1/2024, 12:00:00 AM"
+			`);
+		});
+
+		it("should render the sending domain as the resource for email.sending source", async ({
+			expect,
+		}) => {
+			mockGetQueueByNameRequest("testQueue", {
+				queue_id: expectedQueueId,
+				queue_name: "testQueue",
+				created_on: "",
+				modified_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+			});
+			const getRequest = mockGetSubscriptionRequest(
+				"sub-email",
+				mockSubscriptionEmail
+			);
+
+			await runWrangler("queues subscription get testQueue --id sub-email");
+
+			expect(getRequest.count).toEqual(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				ID:           sub-email
+				Name:         Test Subscription Email
+				Source:       email.sending
+				Resource:     example.com
+				Queue ID:     queueId
+				Events:       message.delivered
 				Enabled:      Yes
 				Created At:   1/1/2024, 12:00:00 AM
 				Modified At:  1/1/2024, 12:00:00 AM"
