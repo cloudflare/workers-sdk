@@ -116,7 +116,7 @@ export async function copyWorkerVersionWithNewSecrets({
 	);
 
 	// Naive implementation ahead, don't worry too much about it -- we will replace it
-	const { mainModule, modules, sourceMaps } = await parseModules(
+	const { mainModule, modules, sourceMaps, capnpSchema } = await parseModules(
 		config,
 		accountId,
 		scriptName,
@@ -200,7 +200,7 @@ export async function copyWorkerVersionWithNewSecrets({
 	};
 
 	const body = createWorkerUploadForm(worker, bindings, {
-		unsafe: { metadata: unsafeMetadata },
+		unsafe: { metadata: unsafeMetadata, capnpSchema },
 	});
 	const result = await fetchResult<{
 		available_on_subdomain: boolean;
@@ -235,6 +235,7 @@ async function parseModules(
 	mainModule: CfModule;
 	modules: CfModule[];
 	sourceMaps: CfWorkerSourceMap[];
+	capnpSchema?: { name: string; content: Buffer };
 }> {
 	// Pull the Worker content - https://developers.cloudflare.com/api/operations/worker-script-get-content
 	const contentRes = await performApiFetch(
@@ -277,12 +278,35 @@ async function parseModules(
 			type: fromMimeType(entrypointPart.type),
 		};
 
-		// Load all modules that are not the entrypoint or sourcemaps
+		// The compiled capnp schema is an internal upload-metadata concern referenced
+		// via `metadata.capnp_schema`, not a regular module. Pull it out so it can be
+		// re-attached as-is, and exclude it from `modules` so it isn't re-uploaded as a
+		// stray (orphaned) module that the new version's metadata wouldn't reference.
+		const capnpSchemaPart = contentRes.headers.get(
+			"cf-worker-capnp-schema-part"
+		);
+		let capnpSchema: { name: string; content: Buffer } | undefined;
+		if (capnpSchemaPart !== null) {
+			const capnpFile = formData.get(capnpSchemaPart) as File | null;
+			if (capnpFile === null) {
+				throw new FatalError("Could not find capnp schema part in form-data", {
+					telemetryMessage: "versions secrets modules missing capnp part",
+				});
+			}
+			capnpSchema = {
+				name: capnpSchemaPart,
+				content: Buffer.from(await capnpFile.arrayBuffer()),
+			};
+		}
+
+		// Load all modules that are not the entrypoint, sourcemaps, or capnp schema
 		const modules = await Promise.all(
 			Array.from(formData.entries() as SpecIterableIterator<[string, File]>)
 				.filter(
 					([name, file]) =>
-						name !== entrypoint && file.type !== "application/source-map"
+						name !== entrypoint &&
+						name !== capnpSchemaPart &&
+						file.type !== "application/source-map"
 				)
 				.map(
 					async ([name, file]) =>
@@ -308,7 +332,7 @@ async function parseModules(
 				)
 		);
 
-		return { mainModule, modules, sourceMaps };
+		return { mainModule, modules, sourceMaps, capnpSchema };
 	} else {
 		const contentType = contentRes.headers.get("content-type");
 		if (contentType === null) {

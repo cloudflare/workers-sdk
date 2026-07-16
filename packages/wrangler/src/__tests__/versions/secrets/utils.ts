@@ -88,7 +88,10 @@ export function mockGetVersion(
 	);
 }
 
-function mockGetVersionContent(expect: ExpectStatic) {
+function mockGetVersionContent(
+	expect: ExpectStatic,
+	options?: { capnpSchema?: { name: string; content: string } }
+) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/content/v2`,
@@ -109,9 +112,20 @@ function mockGetVersionContent(expect: ExpectStatic) {
 					"index.js"
 				);
 
-				return HttpResponse.formData(formData, {
-					headers: { "cf-entrypoint": "index.js" },
-				});
+				const headers: Record<string, string> = { "cf-entrypoint": "index.js" };
+
+				if (options?.capnpSchema) {
+					formData.set(
+						options.capnpSchema.name,
+						new File([options.capnpSchema.content], options.capnpSchema.name, {
+							type: "application/octet-stream",
+						}),
+						options.capnpSchema.name
+					);
+					headers["cf-worker-capnp-schema-part"] = options.capnpSchema.name;
+				}
+
+				return HttpResponse.formData(formData, { headers });
 			},
 			{ once: true }
 		)
@@ -172,9 +186,12 @@ export function mockPostVersion(
 	);
 }
 
-export function mockSetupApiCalls(expect: ExpectStatic) {
+export function mockSetupApiCalls(
+	expect: ExpectStatic,
+	options?: { capnpSchema?: { name: string; content: string } }
+) {
 	mockGetVersions(expect);
 	mockGetVersion(expect);
-	mockGetVersionContent(expect);
+	mockGetVersionContent(expect, options);
 	mockGetWorkerSettings(expect);
 }
