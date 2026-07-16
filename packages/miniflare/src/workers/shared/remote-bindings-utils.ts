@@ -175,6 +175,179 @@ export function makeFetch(
 }
 
 /**
+ * Clamp a WebSocket close reason to the protocol's 123-byte limit.
+ *
+ * `WebSocket.close(code, reason)` requires the reason to be at most 123 UTF-8
+ * bytes. Slicing by JavaScript string length (UTF-16 code units) can both
+ * overshoot the byte budget and split a multi-byte character, so truncate on a
+ * UTF-8 byte boundary instead.
+ */
+function truncateCloseReason(reason: string): string {
+	const bytes = new TextEncoder().encode(reason);
+	if (bytes.length <= 123) {
+		return reason;
+	}
+	// Back off to a UTF-8 character boundary: step left over any trailing
+	// continuation bytes (10xxxxxx) so we never cut a multi-byte sequence.
+	let end = 123;
+	while (end > 0 && ((bytes[end] ?? 0) & 0b1100_0000) === 0b1000_0000) {
+		end--;
+	}
+	return new TextDecoder().decode(bytes.subarray(0, end));
+}
+
+/**
+ * Relay raw TCP bytes between a `connect()` socket and a WebSocket, in both
+ * directions, propagating close and error state.
+ *
+ * Used to tunnel `binding.connect()` traffic through the remote-bindings proxy:
+ * the local proxy client pipes the caller's inbound socket over a WebSocket to
+ * the remote proxy server, which pipes it into the real binding's socket.
+ *
+ * The returned promise resolves once both directions have closed cleanly, and
+ * rejects if either side errors. Rejecting lets the caller's `connect()` handler
+ * surface the failure on its socket.
+ *
+ * Both directions are torn down together: when one side finishes — a WebSocket
+ * close/error, or the socket reaching EOF / erroring — the opposite direction is
+ * actively cancelled. The socket read is woken with `reader.cancel()` and the
+ * WebSocket wait is settled directly, so neither a parked `reader.read()` nor a
+ * never-arriving close event can leak the relay (and the underlying socket) for
+ * the lifetime of the process.
+ *
+ * Note: WebSockets have no backpressure signal, so `socket.readable` is drained
+ * as fast as it produces. Incoming WebSocket messages are written in order via a
+ * serialised write chain. There is no TCP half-close: when either direction ends
+ * the tunnel is torn down in full — the WebSocket is closed and the socket's
+ * writable side is closed — rather than closing a single direction.
+ */
+export async function pipeSocketOverWebSocket(
+	socket: Socket,
+	ws: WebSocket
+): Promise<void> {
+	const writer = socket.writable.getWriter();
+	const reader = socket.readable.getReader();
+
+	let wsClosed = false;
+	function closeWebSocket(code: number, reason?: string) {
+		if (wsClosed) {
+			return;
+		}
+		wsClosed = true;
+		try {
+			ws.close(
+				code,
+				reason === undefined ? undefined : truncateCloseReason(reason)
+			);
+		} catch {
+			// Already closing/closed.
+		}
+	}
+
+	// ws -> socket writes are serialised through this chain to preserve byte
+	// order. The writable side is closed exactly once (guarded by `writerClosed`)
+	// so both teardown paths below can invoke it idempotently.
+	let writeChain = Promise.resolve();
+	let writerClosed = false;
+	function closeWriter(): Promise<void> {
+		if (writerClosed) {
+			return Promise.resolve();
+		}
+		writerClosed = true;
+		return writeChain.then(() => writer.close());
+	}
+
+	// `fromWebSocket` settles from the ws close/error events, or is settled by the
+	// socket -> ws direction once it has closed the ws itself (in which case no
+	// inbound close event will arrive to settle it).
+	let resolveFromWs!: () => void;
+	let rejectFromWs!: (reason: unknown) => void;
+	const fromWebSocket = new Promise<void>((resolve, reject) => {
+		resolveFromWs = resolve;
+		rejectFromWs = reject;
+	});
+
+	// WebSocket -> socket. Message events aren't awaited by the runtime, so writes
+	// are serialised through the promise chain to preserve byte order.
+	ws.addEventListener("message", (event) => {
+		const chunk =
+			typeof event.data === "string"
+				? new TextEncoder().encode(event.data)
+				: new Uint8Array(event.data);
+		writeChain = writeChain
+			.then(() => writer.write(chunk))
+			.catch((error) => {
+				// A socket write failed: tear the tunnel down rather than leaving the
+				// rejection unhandled. Close the ws (1011), cancel the opposite read
+				// direction, and reject so the caller sees the failure.
+				closeWebSocket(
+					1011,
+					(error as Error)?.message ?? "socket write failed"
+				);
+				reader.cancel().catch(() => {});
+				rejectFromWs(error);
+			});
+	});
+	ws.addEventListener("close", (event) => {
+		wsClosed = true;
+		// Actively cancel the opposite direction so a parked `reader.read()` can't
+		// keep the socket -> ws relay (and this whole pipe) alive forever.
+		reader.cancel().catch(() => {});
+		// Close code 1011 signals the remote end errored.
+		if (event.code === 1011) {
+			rejectFromWs(
+				new Error(event.reason || "Remote tunnel closed with an error")
+			);
+			return;
+		}
+		// Flush any queued writes, then close the writable side so the caller sees
+		// EOF.
+		closeWriter().then(resolveFromWs, rejectFromWs);
+	});
+	ws.addEventListener("error", () => {
+		wsClosed = true;
+		reader.cancel().catch(() => {});
+		rejectFromWs(new Error("Tunnel WebSocket errored"));
+	});
+
+	// socket -> WebSocket. On EOF close cleanly (1000); on read error close with
+	// 1011 and reject so the caller sees the failure.
+	const toWebSocket = (async () => {
+		try {
+			for (;;) {
+				const { value, done } = await reader.read();
+				if (done) {
+					break;
+				}
+				// Re-check after the parked read: the ws may have closed while we were
+				// waiting. If so, terminate quietly instead of erroring on `send`.
+				if (wsClosed) {
+					break;
+				}
+				ws.send(
+					value.buffer.slice(
+						value.byteOffset,
+						value.byteOffset + value.byteLength
+					)
+				);
+			}
+			closeWebSocket(1000);
+		} catch (error) {
+			closeWebSocket(1011, (error as Error).message);
+			throw error;
+		} finally {
+			reader.releaseLock();
+			// We closed (or observed the close of) the ws on this side, so no inbound
+			// close event will arrive to settle `fromWebSocket`. Close the writable
+			// side and settle it here; idempotent with the ws `close` handler above.
+			closeWriter().then(resolveFromWs, rejectFromWs);
+		}
+	})();
+
+	await Promise.all([toWebSocket, fromWebSocket]);
+}
+
+/**
  * Create a remote proxy stub that proxies to a remote binding via capnweb.
  *
  * Intercepts `.fetch()` to use plain HTTP; forwards other accesses to capnweb.
