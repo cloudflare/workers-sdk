@@ -22,10 +22,10 @@ import type { UnsafeUniqueKey } from "./constants";
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
 export const PersistenceSchema = z
-	// Zod checks union types in order, both `z.string().url()` and `PathSchema`
+	// Zod checks union types in order, both `z.url()` and `PathSchema`
 	// will result in a `string`, but `PathSchema` gets resolved relative to the
 	// closest `rootPath`.
-	.union([z.boolean(), z.string().url(), PathSchema])
+	.union([z.boolean(), z.url(), PathSchema])
 	.optional();
 export type Persistence = z.infer<typeof PersistenceSchema>;
 
@@ -140,7 +140,7 @@ export type Plugin<
  */
 export async function loadExternalPlugins(
 	packageName: string
-): Promise<Record<string, Plugin<z.AnyZodObject>>> {
+): Promise<Record<string, Plugin<z.ZodType>>> {
 	let pluginModule;
 	try {
 		const pluginPath = require.resolve(packageName);

@@ -33,6 +33,7 @@ export const KVOptionsSchema = z.object({
 	kvNamespaces: z
 		.union([
 			z.record(
+				z.string(),
 				z.union([
 					z.string(),
 					z.object({

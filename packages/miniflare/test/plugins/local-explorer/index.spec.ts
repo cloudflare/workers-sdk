@@ -66,7 +66,7 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "limit: Number must be greater than or equal to 10",
+						message: "limit: Too small: expected number to be >=10",
 					},
 				],
 			});
@@ -83,7 +83,7 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "limit: Number must be less than or equal to 1000",
+						message: "limit: Too big: expected number to be <=1000",
 					},
 				],
 			});
@@ -107,7 +107,7 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "keys: Expected array, received string",
+						message: "keys: Invalid input: expected array, received string",
 					},
 				],
 			});
@@ -129,7 +129,7 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "keys: Required",
+						message: "keys: Invalid input: expected array, received undefined",
 					},
 				],
 			});

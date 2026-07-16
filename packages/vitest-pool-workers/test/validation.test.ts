@@ -23,9 +23,9 @@ test(
 			TypeError: Unexpected options in project ${path.join(tmpPathName, "vitest.config.mts")}:
 			{
 			  miniflare: [],
-			             ^ Expected object, received array
+			             ^ Invalid input: expected object, received array
 			  wrangler: './wrangler.toml',
-			            ^ Expected object, received string
+			            ^ Invalid input: expected object, received string
 			}
 		`;
 		expect(result.stderr).toMatch(expected);
@@ -46,7 +46,7 @@ test(
 			{
 			  miniflare: {
 			    compatibilityDate: { year: 2024, month: 1, day: 1 },
-			                       ^ Expected string, received object
+			                       ^ Invalid input: expected string, received object
 			  },
 			}
 		`;

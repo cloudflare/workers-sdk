@@ -407,6 +407,7 @@ export class LocalRuntimeController extends RuntimeController {
 					});
 				}
 			);
+			options.handleUncaughtError = this.dispatchRuntimeError;
 
 			// Bail out if a newer bundle arrived while we were building
 			// miniflare options — avoid a redundant local server reload.

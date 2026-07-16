@@ -27,6 +27,7 @@ export const D1OptionsSchema = z.object({
 	d1Databases: z
 		.union([
 			z.record(
+				z.string(),
 				z.union([
 					z.string(),
 					z.object({

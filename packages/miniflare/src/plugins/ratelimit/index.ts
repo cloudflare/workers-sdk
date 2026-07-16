@@ -32,11 +32,11 @@ export const RatelimitConfigSchema = z.object({
 		limit: z.number().gt(0),
 
 		// may relax this to be any number in the future
-		period: z.nativeEnum(PeriodType).optional().default(PeriodType.MINUTE),
+		period: z.enum(PeriodType).optional().default(PeriodType.MINUTE),
 	}),
 });
 export const RatelimitOptionsSchema = z.object({
-	ratelimits: z.record(RatelimitConfigSchema).optional(),
+	ratelimits: z.record(z.string(), RatelimitConfigSchema).optional(),
 });
 
 export const RATELIMIT_PLUGIN_NAME = "ratelimit";
