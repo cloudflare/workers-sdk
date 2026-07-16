@@ -1,4 +1,3 @@
-// TODO(someday): publish this as a separate package
 // noinspection JSUnusedAssignment
 // ^ WebStorm incorrectly thinks some variables might not have been initialised
 //   before use without this. TypeScript is better at catching these errors. :)
@@ -16,6 +15,15 @@ import {
 	yellow,
 } from "kleur/colors";
 import type { z } from "zod";
+
+const originalEnabled = $colors.enabled;
+
+// `kleur` is marked as a dev dependency, so will get bundled. We'd still like
+// to be able to control whether it's enabled in tests though. Therefore, export
+// a function that toggles the enabled state of our bundled version.
+export function _forceColour(enabled = originalEnabled) {
+	$colors.enabled = enabled;
+}
 
 // This file contains a `formatZodError(error, input)` function for formatting
 // a Zod `error` that came from parsing a specific `input`. This works by
@@ -292,8 +300,14 @@ function isRecord(value: unknown): value is Record<string | number, unknown> {
 }
 
 function arrayShallowEqual<T>(a: T[], b: T[]) {
-	if (a.length !== b.length) return false;
-	for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+	if (a.length !== b.length) {
+		return false;
+	}
+	for (let i = 0; i < a.length; i++) {
+		if (a[i] !== b[i]) {
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -310,9 +324,14 @@ function hasMultipleDistinctMessages(
 	// specified depth or below
 	let firstIssue: z.core.$ZodIssue | undefined;
 	for (const issue of issues) {
-		if (issue.path.length < atDepth) continue;
-		if (firstIssue === undefined) firstIssue = issue;
-		else if (!issueEqual(firstIssue, issue)) return true;
+		if (issue.path.length < atDepth) {
+			continue;
+		}
+		if (firstIssue === undefined) {
+			firstIssue = issue;
+		} else if (!issueEqual(firstIssue, issue)) {
+			return true;
+		}
 	}
 	return false;
 }
@@ -361,7 +380,9 @@ function annotate(
 						// If we have multiple distinct messages at deeper levels, and this
 						// issue is for the current path, skip it, so we don't end up annotating
 						// the current path and sub-paths
-						if (multipleDistinct && unionPath.length === 0) continue;
+						if (multipleDistinct && unionPath.length === 0) {
+							continue;
+						}
 						annotated = annotate(
 							groupCounts,
 							annotated,
@@ -464,7 +485,9 @@ function print(
 			messagePrefix += annotated[kGroupId] + 1;
 			const remaining = groupCounts.get(annotated[kGroupId]);
 			assert(remaining !== undefined);
-			if (remaining > 1) groupOr = " *or*";
+			if (remaining > 1) {
+				groupOr = " *or*";
+			}
 			groupCounts.set(annotated[kGroupId], remaining - 1);
 		}
 		messagePrefix += " ";
@@ -529,8 +552,12 @@ export function formatZodError(error: z.ZodError, input: unknown): string {
 	// annotate the input with an `invalid_type` error instead
 	const sortedIssues = Array.from(error.issues).sort((a, b) => {
 		if (a.code !== b.code) {
-			if (a.code === "invalid_union") return -1;
-			if (b.code === "invalid_union") return 1;
+			if (a.code === "invalid_union") {
+				return -1;
+			}
+			if (b.code === "invalid_union") {
+				return 1;
+			}
 		}
 		return 0;
 	});

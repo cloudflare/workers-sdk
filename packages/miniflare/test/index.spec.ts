@@ -12,8 +12,8 @@ import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import url from "node:url";
 import util from "node:util";
+import { _forceColour } from "@cloudflare/workers-utils";
 import {
-	_forceColour,
 	_transformsForContentEncodingAndContentType,
 	createFetchMock,
 	DeferredPromise,

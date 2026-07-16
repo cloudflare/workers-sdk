@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { _forceColour, formatZodError } from "miniflare";
+import { _forceColour, formatZodError } from "@cloudflare/workers-utils";
 import { describe, test } from "vitest";
 import { z } from "zod";
 

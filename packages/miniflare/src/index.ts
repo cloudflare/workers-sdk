@@ -115,7 +115,7 @@ import {
 	SiteBindings,
 } from "./workers";
 import { ADMIN_API } from "./workers/secrets-store/constants";
-import { formatZodError } from "./zod-format";
+import { formatZodError } from "@cloudflare/workers-utils";
 import type { DispatchFetch, RequestInit } from "./http";
 import type {
 	DurableObjectClassNames,
@@ -3468,7 +3468,6 @@ export * from "./runtime";
 export * from "./shared";
 export * from "./workers";
 export * from "./merge";
-export * from "./zod-format";
 export type {
 	DurableObjectIdentifier,
 	DurableObjectEvictionOptions,
