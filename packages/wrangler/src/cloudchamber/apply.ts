@@ -368,7 +368,7 @@ export async function apply(
 				id: ApplicationID;
 				name: ApplicationName;
 				rollout_step_percentage?: number | number[];
-				rollout_kind: CreateApplicationRolloutRequest.kind;
+				rollout_kind: CreateApplicationRolloutRequest.kind | "none";
 		  }
 	)[] = [];
 
@@ -463,25 +463,27 @@ export async function apply(
 
 			newline();
 
-			if (appConfigNoDefaults.rollout_kind !== "none") {
-				actions.push({
-					action: "modify",
-					application: createApplicationToModifyApplication(appConfig),
-					id: application.id,
-					name: application.name,
-					rollout_step_percentage:
-						application.durable_objects !== undefined
-							? (appConfigNoDefaults.rollout_step_percentage ?? 25)
-							: appConfigNoDefaults.rollout_step_percentage,
-					rollout_kind:
-						appConfigNoDefaults.rollout_kind == "full_manual"
-							? CreateApplicationRolloutRequest.kind.FULL_MANUAL
-							: CreateApplicationRolloutRequest.kind.FULL_AUTO,
-				});
-			} else {
+			if (appConfigNoDefaults.rollout_kind === "none") {
 				log("Skipping application rollout");
 				newline();
 			}
+
+			actions.push({
+				action: "modify",
+				application: createApplicationToModifyApplication(appConfig),
+				id: application.id,
+				name: application.name,
+				rollout_step_percentage:
+					application.durable_objects !== undefined
+						? (appConfigNoDefaults.rollout_step_percentage ?? 25)
+						: appConfigNoDefaults.rollout_step_percentage,
+				rollout_kind:
+					appConfigNoDefaults.rollout_kind === "none"
+						? "none"
+						: appConfigNoDefaults.rollout_kind == "full_manual"
+							? CreateApplicationRolloutRequest.kind.FULL_MANUAL
+							: CreateApplicationRolloutRequest.kind.FULL_AUTO,
+			});
 
 			continue;
 		}
@@ -636,7 +638,10 @@ export async function apply(
 				);
 			}
 
-			if (action.rollout_step_percentage !== undefined) {
+			if (
+				action.rollout_step_percentage !== undefined &&
+				action.rollout_kind !== "none"
+			) {
 				try {
 					await promiseSpinner(
 						RolloutsService.createApplicationRollout(action.id, {

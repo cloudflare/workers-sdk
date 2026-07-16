@@ -493,22 +493,24 @@ export async function apply(
 		diff.print();
 		newline();
 
-		if (containerConfig.rollout_kind !== "none") {
-			await doAction({
-				action: "modify",
-				application: modifyReq,
-				id: prevApp.id,
-				name: prevApp.name,
-				rollout_step_percentage: containerConfig.rollout_step_percentage,
-				rollout_kind:
-					containerConfig.rollout_kind == "full_manual"
-						? CreateApplicationRolloutRequest.kind.FULL_MANUAL
-						: CreateApplicationRolloutRequest.kind.FULL_AUTO,
-			});
-		} else {
+		if (containerConfig.rollout_kind === "none") {
 			log("Skipping application rollout");
 			newline();
 		}
+
+		await doAction({
+			action: "modify",
+			application: modifyReq,
+			id: prevApp.id,
+			name: prevApp.name,
+			rollout_step_percentage: containerConfig.rollout_step_percentage,
+			rollout_kind:
+				containerConfig.rollout_kind === "none"
+					? "none"
+					: containerConfig.rollout_kind == "full_manual"
+						? CreateApplicationRolloutRequest.kind.FULL_MANUAL
+						: CreateApplicationRolloutRequest.kind.FULL_AUTO,
+		});
 	} else {
 		// **************
 		// *** CREATE ***
@@ -591,7 +593,7 @@ const doAction = async (
 				id: ApplicationID;
 				name: ApplicationName;
 				rollout_step_percentage: number | number[];
-				rollout_kind: CreateApplicationRolloutRequest.kind;
+				rollout_kind: CreateApplicationRolloutRequest.kind | "none";
 		  }
 ) => {
 	if (action.action === "create") {
@@ -664,42 +666,44 @@ const doAction = async (
 			);
 		}
 
-		try {
-			await promiseSpinner(
-				RolloutsService.createApplicationRollout(action.id, {
-					description: "Progressive update",
-					strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
-					target_configuration: action.application.configuration ?? {},
-					...configRolloutStepsToAPI(action.rollout_step_percentage),
-					kind: action.rollout_kind,
-				}),
-				{
-					message: `rolling out container version ${action.name}`,
+		if (action.rollout_kind !== "none") {
+			try {
+				await promiseSpinner(
+					RolloutsService.createApplicationRollout(action.id, {
+						description: "Progressive update",
+						strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
+						target_configuration: action.application.configuration ?? {},
+						...configRolloutStepsToAPI(action.rollout_step_percentage),
+						kind: action.rollout_kind,
+					}),
+					{
+						message: `rolling out container version ${action.name}`,
+					}
+				);
+			} catch (err) {
+				if (!(err instanceof Error)) {
+					throw err;
 				}
-			);
-		} catch (err) {
-			if (!(err instanceof Error)) {
-				throw err;
-			}
 
-			if (!(err instanceof ApiError)) {
+				if (!(err instanceof ApiError)) {
+					throw new UserError(
+						`Unexpected error rolling out application "${action.name}":\n${err.message}`,
+						{ telemetryMessage: "containers deploy rollout unexpected error" }
+					);
+				}
+
+				if (err.status === 400) {
+					throw new UserError(
+						`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`,
+						{ telemetryMessage: "containers deploy rollout misconfiguration" }
+					);
+				}
+
 				throw new UserError(
-					`Unexpected error rolling out application "${action.name}":\n${err.message}`,
-					{ telemetryMessage: "containers deploy rollout unexpected error" }
+					`Error rolling out application "${action.name}":\n${formatError(err)}`,
+					{ telemetryMessage: "containers deploy rollout request failed" }
 				);
 			}
-
-			if (err.status === 400) {
-				throw new UserError(
-					`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`,
-					{ telemetryMessage: "containers deploy rollout misconfiguration" }
-				);
-			}
-
-			throw new UserError(
-				`Error rolling out application "${action.name}":\n${formatError(err)}`,
-				{ telemetryMessage: "containers deploy rollout request failed" }
-			);
 		}
 
 		success(
