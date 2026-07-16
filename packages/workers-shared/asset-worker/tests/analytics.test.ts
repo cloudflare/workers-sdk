@@ -59,7 +59,6 @@ describe("[Asset Worker] Analytics", () => {
 				cohort: "free",
 				servedBy: "asset",
 				requestKind: "navigation",
-				scriptVersionId: "01234567-89ab-cdef-0123-456789abcdef",
 			});
 			analytics.write();
 
@@ -86,7 +85,6 @@ describe("[Asset Worker] Analytics", () => {
 			expect(event?.blobs?.[8]).toBe("free"); // cohort
 			expect(event?.blobs?.[9]).toBe("asset"); // servedBy
 			expect(event?.blobs?.[10]).toBe("navigation"); // requestKind
-			expect(event?.blobs?.[11]).toBe("01234567-89ab-cdef-0123-456789abcdef"); // scriptVersionId
 
 			// Indexes
 			expect(event?.accountId).toBe(123);

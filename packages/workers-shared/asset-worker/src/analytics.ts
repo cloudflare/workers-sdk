@@ -88,8 +88,6 @@ type Data = {
 	servedBy?: ServedBy;
 	// blob11 - Whether the request was a navigation or a subresource
 	requestKind?: RequestKind;
-	// blob12 - The customer Worker version UUID associated with this asset pipeline
-	scriptVersionId?: string;
 };
 
 const COMPATIBILITY_FLAG_MASKS: Record<ENABLEMENT_COMPATIBILITY_FLAGS, number> =
@@ -157,7 +155,6 @@ export class Analytics {
 				this.data.cohort, // blob9
 				this.data.servedBy, // blob10
 				this.data.requestKind, // blob11
-				this.data.scriptVersionId, // blob12
 			],
 		});
 	}
