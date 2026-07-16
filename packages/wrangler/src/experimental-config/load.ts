@@ -1,10 +1,9 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import {
-	InputWorkerSchema,
 	convertToWranglerConfig,
+	loadAndValidateConfig,
 	loadConfig,
-	resolveWorkerDefinition,
 } from "@cloudflare/config";
 import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
 import { convertToolingConfig } from "./convert";
@@ -15,7 +14,10 @@ import {
 } from "./schema";
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
-import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type {
+	ParsedInputWorkerConfig,
+	ParsedSettingsConfig,
+} from "@cloudflare/config";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export const CLOUDFLARE_CONFIG_FILENAME = "cloudflare.config.ts";
@@ -29,8 +31,10 @@ export interface NormalizedTypes {
 export interface LoadNewConfigResult {
 	/** Merged result: `cloudflare.config.ts` runtime + `wrangler.config.ts` tooling. */
 	rawConfig: Omit<RawConfig, "env">;
-	/**  The validated `cloudflare.config.ts` shape. */
+	/**  The validated `cloudflare.config.ts` worker shape (default export). */
 	parsedWorkerConfig: ParsedInputWorkerConfig;
+	/** The validated `settings` export, if present. */
+	parsedSettingsConfig: ParsedSettingsConfig | undefined;
 	/** Resolved absolute path to `cloudflare.config.ts`. */
 	cloudflareConfigPath: string;
 	/** Resolved absolute path to `wrangler.config.ts`, if present. */
@@ -70,25 +74,38 @@ export async function loadNewConfig(options: {
 
 	const mode = options.args.env ?? getCloudflareEnv();
 
-	// ── Worker config ───────────────────────────────────────────────────
-	const workerConfigResult = await loadConfig(cloudflareConfigPath);
+	// ── Worker + settings config ────────────────────────────────────────
+	const workerConfigResult = await loadAndValidateConfig(cloudflareConfigPath, {
+		mode,
+	});
 
-	const resolvedWorkerConfig = await resolveWorkerDefinition(
-		workerConfigResult.config,
-		{ mode }
-	);
-
-	const parsedWorkerConfig = InputWorkerSchema.safeParse(resolvedWorkerConfig);
-	if (!parsedWorkerConfig.success) {
+	if (!workerConfigResult.result.success) {
 		throw new UserError(
-			`Invalid \`${CLOUDFLARE_CONFIG_FILENAME}\`:\n${formatZodError(parsedWorkerConfig.error)}`,
+			`Invalid \`${CLOUDFLARE_CONFIG_FILENAME}\`:\n${formatZodError(workerConfigResult.result.error)}`,
 			{ telemetryMessage: "new-config worker validation failed" }
 		);
 	}
 
+	const worker =
+		workerConfigResult.result.data.default?.type === "worker"
+			? workerConfigResult.result.data.default
+			: undefined;
+
+	if (worker === undefined) {
+		throw new UserError(
+			`\`${CLOUDFLARE_CONFIG_FILENAME}\` must have a default worker export.`,
+			{ telemetryMessage: "new-config worker default export missing" }
+		);
+	}
+
+	const settings =
+		workerConfigResult.result.data.settings?.type === "settings"
+			? workerConfigResult.result.data.settings
+			: undefined;
+
 	// ── Wrangler (tooling) config ───────────────────────────────────────
 	let wranglerConfigResult:
-		| { config: unknown; dependencies: Set<string> }
+		| { exports: Record<string, unknown>; dependencies: Set<string> }
 		| undefined;
 	let parsedWranglerConfig: { data: ParsedWranglerConfig } | undefined;
 
@@ -96,7 +113,7 @@ export async function loadNewConfig(options: {
 		wranglerConfigResult = await loadConfig(wranglerConfigPath);
 
 		const resolvedWranglerConfig = await resolveWranglerConfig(
-			wranglerConfigResult.config,
+			wranglerConfigResult.exports.default,
 			{ mode }
 		);
 
@@ -111,7 +128,7 @@ export async function loadNewConfig(options: {
 	}
 
 	// ── Conversion + merge ──────────────────────────────────────────────
-	const rawWorkerConfig = convertToWranglerConfig(parsedWorkerConfig.data);
+	const rawWorkerConfig: RawConfig = convertToWranglerConfig(worker, settings);
 
 	const rawWranglerConfig = convertToolingConfig(
 		parsedWranglerConfig?.data ?? {}
@@ -136,7 +153,8 @@ export async function loadNewConfig(options: {
 
 	return {
 		rawConfig,
-		parsedWorkerConfig: parsedWorkerConfig.data,
+		parsedWorkerConfig: worker,
+		parsedSettingsConfig: settings,
 		cloudflareConfigPath,
 		wranglerConfigPath,
 		dependencies,

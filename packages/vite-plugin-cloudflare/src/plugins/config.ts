@@ -382,10 +382,13 @@ function forceBuildOutputDirs(
 			if (!environment) {
 				continue;
 			}
-			assert(worker.parsedNewConfig, "Expected parsedNewConfig to be defined");
+			assert(
+				worker.parsedNewWorkerConfig,
+				"Expected parsedNewWorkerConfig to be defined"
+			);
 			environment.build.outDir = getWorkerBundleDir(
 				root,
-				worker.parsedNewConfig.name
+				worker.parsedNewWorkerConfig.name
 			);
 		}
 
@@ -394,16 +397,21 @@ function forceBuildOutputDirs(
 			resolvedPluginConfig.environmentNameToWorkerMap.get(entryName);
 		assert(entryWorker, `Expected entry worker for environment "${entryName}"`);
 		assert(
-			entryWorker.parsedNewConfig,
-			"Expected parsedNewConfig to be defined"
+			entryWorker.parsedNewWorkerConfig,
+			"Expected parsedNewWorkerConfig to be defined"
 		);
-		clientWorkerName = entryWorker.parsedNewConfig.name;
+		clientWorkerName = entryWorker.parsedNewWorkerConfig.name;
 	} else {
 		assert(
 			resolvedPluginConfig.parsedNewConfig,
 			"Expected parsedNewConfig to be defined"
 		);
-		clientWorkerName = resolvedPluginConfig.parsedNewConfig.name;
+		const defaultExport = resolvedPluginConfig.parsedNewConfig.default;
+		assert(
+			defaultExport?.type === "worker",
+			"Expected a default worker export"
+		);
+		clientWorkerName = defaultExport.name;
 	}
 
 	const clientEnvironment = resolvedViteConfig.environments.client;
