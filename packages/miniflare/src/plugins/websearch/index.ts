@@ -13,7 +13,7 @@ const WebsearchEntrySchema = z.object({
 });
 
 export const WebsearchOptionsSchema = z.object({
-	websearch: z.record(WebsearchEntrySchema).optional(),
+	websearch: z.record(z.string(), WebsearchEntrySchema).optional(),
 });
 
 export const WEBSEARCH_PLUGIN_NAME = "websearch";

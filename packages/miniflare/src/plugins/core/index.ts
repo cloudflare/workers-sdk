@@ -130,18 +130,18 @@ export function createFetchMock() {
 const WrappedBindingSchema = z.object({
 	scriptName: z.string(),
 	entrypoint: z.string().optional(),
-	bindings: z.record(JsonSchema).optional(),
+	bindings: z.record(z.string(), JsonSchema).optional(),
 });
 
 // Validate as string, but don't include in parsed output
 const UnusableStringSchema = z.string().transform(() => undefined);
 
 export const UnsafeDirectSocketSchema = z.object({
-	host: z.ostring(),
-	port: z.onumber(),
-	serviceName: z.ostring(),
-	entrypoint: z.ostring(),
-	proxy: z.oboolean(),
+	host: z.string().optional(),
+	port: z.number().optional(),
+	serviceName: z.string().optional(),
+	entrypoint: z.string().optional(),
+	proxy: z.boolean().optional(),
 });
 
 export const ExternalPluginSpecifier = z.object({
@@ -162,17 +162,17 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		routes: z.string().array().optional(),
 
-		bindings: z.record(JsonSchema).optional(),
+		bindings: z.record(z.string(), JsonSchema).optional(),
 		wasmBindings: z
-			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.record(z.string(), z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
-		textBlobBindings: z.record(PathSchema).optional(),
+		textBlobBindings: z.record(z.string(), PathSchema).optional(),
 		dataBlobBindings: z
-			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.record(z.string(), z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
-		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
+		serviceBindings: z.record(z.string(), ServiceDesignatorSchema).optional(),
 		wrappedBindings: z
-			.record(z.union([z.string(), WrappedBindingSchema]))
+			.record(z.string(), z.union([z.string(), WrappedBindingSchema]))
 			.optional(),
 
 		outboundService: ServiceDesignatorSchema.optional(),
@@ -234,7 +234,7 @@ const CoreOptionsSchemaInput = z.intersection(
 					name: z.string(),
 					type: z.string(),
 					plugin: ExternalPluginSpecifier,
-					options: z.record(JsonSchema),
+					options: z.record(z.string(), JsonSchema),
 				})
 			)
 			.optional(),
@@ -287,12 +287,16 @@ export const CoreSharedOptionsSchema = z
 
 		log: z.instanceof(Log).optional(),
 		handleRuntimeStdio: z
-			.function(z.tuple([z.instanceof(Readable), z.instanceof(Readable)]))
+			.function({
+				input: [z.instanceof(Readable), z.instanceof(Readable)],
+			})
 			.optional(),
 
 		handleStructuredLogs: z
-			.function(z.tuple([WorkerdStructuredLogSchema]))
-			.returns(z.void())
+			.function({
+				input: [WorkerdStructuredLogSchema],
+				output: z.void(),
+			})
 			.optional(),
 
 		// Deliberately not `z.function()`: parsing that schema replaces the
@@ -310,13 +314,17 @@ export const CoreSharedOptionsSchema = z
 
 		upstream: z.string().optional(),
 		// TODO: add back validation of cf object
-		cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
+		cf: z
+			.union([z.boolean(), z.string(), z.record(z.string(), z.any())])
+			.optional(),
 
 		// Enable auto service / durable objects discovery with the dev registry
 		unsafeDevRegistryPath: z.string().optional(),
 		// Called when external workers this instance depends on are updated in the dev registry
 		unsafeHandleDevRegistryUpdate: z
-			.function(z.tuple([z.custom<WorkerRegistry>()]))
+			.function({
+				input: [z.custom<WorkerRegistry>()],
+			})
 			.optional(),
 		// This is a shared secret between a proxy server and miniflare that can be
 		// passed in a header to prove that the request came from the proxy and not
@@ -331,7 +339,7 @@ export const CoreSharedOptionsSchema = z
 		// Merged on top of `process.env` and Miniflare's own defaults
 		// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
 		// (for example, to test timezone-dependent behaviour).
-		unsafeRuntimeEnv: z.record(z.string()).optional(),
+		unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
 		// Enable the local explorer at /cdn-cgi/local/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
 		// Enable RPC-based Durable Object introspection APIs
@@ -365,7 +373,7 @@ export const CoreSharedOptionsSchema = z
 		// (e.g. the Wrangler proxy URL or Vite dev server URL). Used by
 		// plugins like Stream to generate preview URLs that outlive runtime
 		// restarts. If not set, plugins fall back to the runtime entry URL.
-		publicUrl: z.string().url().optional(),
+		publicUrl: z.url().optional(),
 	})
 	.refine(
 		({ structuredWorkerdLogs, handleStructuredLogs }) => {

@@ -52,7 +52,7 @@
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
-		"zod": "^3.25.76"
+		"zod": "catalog:default"
 	},
 	"engines": {
 		"node": ">=22.0.0"

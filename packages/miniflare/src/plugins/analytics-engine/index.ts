@@ -5,6 +5,7 @@ import type { Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 const AnalyticsEngineSchema = z.record(
+	z.string(),
 	z.object({
 		dataset: z.string(),
 	})

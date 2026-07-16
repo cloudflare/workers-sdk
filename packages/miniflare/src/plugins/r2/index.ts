@@ -27,6 +27,7 @@ export const R2OptionsSchema = z.object({
 	r2Buckets: z
 		.union([
 			z.record(
+				z.string(),
 				z.union([
 					z.string(),
 					z.object({

@@ -12,12 +12,7 @@ const ROOT = resolve(__dirname, "../..");
 
 // Deps that are deliberately pinned outside the catalog (e.g. workerd is
 // bumped in coordinated PRs with its own automation).
-const IGNORED_DEPS = new Set([
-	"workerd",
-	// miniflare, vitest-pool-workers, and workers-shared still use zod v3
-	// and cannot adopt the v4 catalog version yet.
-	"zod",
-]);
+const IGNORED_DEPS = new Set(["workerd"]);
 
 /**
  * Parses the `catalog:` block of a pnpm-workspace.yaml into a map of

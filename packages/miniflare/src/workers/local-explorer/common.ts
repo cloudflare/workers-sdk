@@ -20,12 +20,14 @@ export type AppContext = Context<AppBindings>;
  *
  * If the whole query param is optional, you need to unwrap it before passing to this function.
  */
-export function validateQuery<T extends z.ZodTypeAny>(schema: T) {
+export function validateQuery<T extends z.ZodType>(schema: T) {
 	return validator("query", async (value, c) => {
-		let result: z.SafeParseReturnType<z.input<T>, z.output<T>>;
+		let result:
+			| { success: true; data: z.output<T> }
+			| { success: false; error: z.ZodError };
 		try {
 			const coerced = coerceValue(schema, value);
-			result = await schema.safeParseAsync(coerced);
+			result = (await schema.safeParseAsync(coerced)) as typeof result;
 		} catch (error) {
 			if (error instanceof z.ZodError) {
 				return validationHook({ success: false, error }, c);
@@ -42,7 +44,7 @@ export function validateQuery<T extends z.ZodTypeAny>(schema: T) {
 /**
  * validates request body according to openapi schema
  */
-export function validateRequestBody<T extends z.ZodTypeAny>(schema: T) {
+export function validateRequestBody<T extends z.ZodType>(schema: T) {
 	return validator("json", async (value, c) => {
 		const result = await schema.safeParseAsync(value);
 		if (!result.success) {
@@ -63,14 +65,14 @@ export function validateRequestBody<T extends z.ZodTypeAny>(schema: T) {
  * 3. Arrays/Objects: We need to recursively coerce nested values
  */
 export function coerceValue(
-	schema: z.ZodTypeAny,
+	schema: z.ZodType,
 	value: unknown,
 	path: (string | number)[] = []
 ): unknown {
 	// Unwrap optional/default to get inner type
 	if (schema instanceof z.ZodOptional || schema instanceof z.ZodDefault) {
 		if (value === undefined) return value;
-		return coerceValue(schema._def.innerType, value, path);
+		return coerceValue(schema._zod.def.innerType as z.ZodType, value, path);
 	}
 
 	if (schema instanceof z.ZodNumber && typeof value === "string") {
@@ -78,9 +80,8 @@ export function coerceValue(
 		if (isNaN(num)) {
 			throw new z.ZodError([
 				{
-					code: z.ZodIssueCode.invalid_type,
+					code: "invalid_type",
 					expected: "number",
-					received: "string",
 					path,
 					message: `Expected query param to be number but received "${value}"`,
 				},
@@ -94,9 +95,8 @@ export function coerceValue(
 		if (value === "false") return false;
 		throw new z.ZodError([
 			{
-				code: z.ZodIssueCode.invalid_type,
+				code: "invalid_type",
 				expected: "boolean",
-				received: "string",
 				path,
 				message: `Expected query param to be 'true' or 'false' but received "${value}"`,
 			},
@@ -105,7 +105,7 @@ export function coerceValue(
 
 	if (schema instanceof z.ZodArray && Array.isArray(value)) {
 		return value.map((item, index) =>
-			coerceValue(schema.element, item, [...path, index])
+			coerceValue(schema.element as z.ZodType, item, [...path, index])
 		);
 	}
 
@@ -118,7 +118,7 @@ export function coerceValue(
 		for (const [key, propSchema] of Object.entries(schema.shape)) {
 			if (key in value) {
 				result[key] = coerceValue(
-					propSchema as z.ZodTypeAny,
+					propSchema as z.ZodType,
 					(value as Record<string, unknown>)[key],
 					[...path, key]
 				);
@@ -136,7 +136,7 @@ export function validationHook(
 	result: { success: false; error: z.ZodError },
 	c: Context
 ): Response {
-	const errors = result.error.errors.map((e) => {
+	const errors = result.error.issues.map((e) => {
 		const message =
 			e.path.length > 0 ? `${e.path.join(".")}: ${e.message}` : e.message;
 
