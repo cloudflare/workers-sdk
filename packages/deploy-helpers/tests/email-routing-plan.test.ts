@@ -100,7 +100,7 @@ describe("renderEmailRoutingPlan", () => {
 		expect(lines).toEqual([
 			"example.com",
 			"  + support@example.com -> worker (my-worker)",
-			`  ! billing@example.com -> conflict: owned by source=api (forward to billing-team@example.net)`,
+			`  ! billing@example.com -> conflict: managed outside Wrangler (forward to billing-team@example.net)`,
 			"example.net",
 			"  - old@example.net (removed from config)",
 			`  ! *@example.net -> conflict: owned by worker "other-worker" (worker other-worker)`,

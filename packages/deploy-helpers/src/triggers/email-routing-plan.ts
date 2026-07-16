@@ -160,7 +160,7 @@ function describeConflictOwner(remote: PlanRemoteRule): string {
 			? `owned by worker "${remote.owner_worker_name}"`
 			: "owned by another Worker";
 	}
-	return "owned by source=api";
+	return "managed outside Wrangler";
 }
 
 /**
