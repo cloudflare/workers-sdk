@@ -22,7 +22,7 @@ const VpcNetworksSchema = z.union([
 ]);
 
 export const VpcNetworksOptionsSchema = z.object({
-	vpcNetworks: z.record(VpcNetworksSchema).optional(),
+	vpcNetworks: z.record(z.string(), VpcNetworksSchema).optional(),
 });
 
 export const VPC_NETWORKS_PLUGIN_NAME = "vpc-networks";

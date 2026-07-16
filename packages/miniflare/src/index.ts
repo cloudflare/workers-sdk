@@ -11,6 +11,7 @@ import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
 import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
+import { formatZodError } from "@cloudflare/workers-utils";
 import { $ as colors$, bold, dim, green, yellow } from "kleur/colors";
 import stoppable from "stoppable";
 import { getGlobalDispatcher, Pool } from "undici";
@@ -116,7 +117,6 @@ import {
 	SiteBindings,
 } from "./workers";
 import { ADMIN_API } from "./workers/secrets-store/constants";
-import { formatZodError } from "./zod-format";
 import type { DispatchFetch, RequestInit } from "./http";
 import type {
 	DurableObjectClassNames,
@@ -985,7 +985,7 @@ export class Miniflare {
 	 * externalPlugins is a list of external plugins that have been loaded
 	 * after being referenced by an unsafe binding
 	 */
-	#externalPlugins: Map<string, Plugin<z.ZodTypeAny>> = new Map();
+	#externalPlugins: Map<string, Plugin<z.ZodType>> = new Map();
 
 	// key is the browser session ID, value identifies the launched browser
 	#browserProcesses: Map<
@@ -2073,6 +2073,8 @@ export class Miniflare {
 
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginBindings = await plugin.getBindings(
+					// @ts-expect-error dynamic plugin dispatch: external plugins return
+					// a different type than internal plugin options
 					this.#getWorkerOptsForPlugin(key, workerOpts),
 					i
 				);
@@ -2152,7 +2154,7 @@ export class Miniflare {
 			this.publicUrl = sharedOpts.core.publicUrl;
 
 			const pluginServicesOptionsBase: Omit<
-				PluginServicesOptions<z.ZodTypeAny, undefined>,
+				PluginServicesOptions<z.ZodType, undefined>,
 				"options" | "sharedOptions"
 			> = {
 				log: this.#log,
@@ -2982,6 +2984,8 @@ export class Miniflare {
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {
 			const pluginBindings = await plugin.getNodeBindings(
+				// @ts-expect-error dynamic plugin dispatch: external plugins return
+				// a different type than internal plugin options
 				this.#getWorkerOptsForPlugin(key, workerOpts)
 			);
 			for (const [name, binding] of Object.entries(pluginBindings)) {
@@ -3448,7 +3452,6 @@ export * from "./runtime";
 export * from "./shared";
 export * from "./workers";
 export * from "./merge";
-export * from "./zod-format";
 export type {
 	DurableObjectIdentifier,
 	DurableObjectEvictionOptions,

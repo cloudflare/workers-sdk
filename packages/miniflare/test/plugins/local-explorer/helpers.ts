@@ -1,11 +1,11 @@
+import { z } from "zod";
 import type { ExpectStatic } from "vitest";
-import type { z } from "zod";
 
 /**
  * Validates a response body against a Zod schema and returns typed data.
  * Throws a descriptive error if validation fails.
  */
-export async function expectValidResponse<T extends z.ZodTypeAny>(
+export async function expectValidResponse<T extends z.ZodType>(
 	response: Response,
 	schema: T,
 	expect: ExpectStatic,
@@ -18,7 +18,7 @@ export async function expectValidResponse<T extends z.ZodTypeAny>(
 	if (!result.success) {
 		throw new Error(
 			`Response validation failed:\n${JSON.stringify(
-				result.error.format(),
+				z.treeifyError(result.error),
 				null,
 				2
 			)}\n\nActual response:\n${JSON.stringify(json, null, 2)}`

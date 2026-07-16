@@ -17,6 +17,7 @@ import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 const SecretsStoreSecretsSchema = z.record(
+	z.string(),
 	z.object({
 		store_id: z.string(),
 		secret_name: z.string(),
