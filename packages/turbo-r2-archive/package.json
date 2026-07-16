@@ -17,9 +17,9 @@
 		"type:check": "tsc"
 	},
 	"dependencies": {
-		"@hono/zod-validator": "^0.4.2",
+		"@hono/zod-validator": "^0.8.0",
 		"hono": "^4.12.5",
-		"zod": "^3.22.3"
+		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

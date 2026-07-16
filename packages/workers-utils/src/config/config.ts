@@ -194,6 +194,20 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 * @nonInheritable
 	 */
 	keep_vars?: boolean;
+
+	/**
+	 * The inbound email addresses handled by the Worker being deployed.
+	 *
+	 * Each entry is a literal recipient address (e.g. `"support@example.com"`)
+	 * or a `*@domain` catch-all (e.g. `"*@example.com"`). Every entry creates an
+	 * Email Routing rule whose action routes mail to this Worker.
+	 *
+	 * This field is top-level only and applies to every environment of the
+	 * Worker; it cannot be set under `env.*`.
+	 *
+	 * @nonInheritable
+	 */
+	addresses?: string[];
 }
 
 // Pages-specific configuration fields
@@ -378,6 +392,7 @@ export const defaultWranglerConfig: Config = {
 	data_blobs: undefined,
 	keep_vars: undefined,
 	alias: undefined,
+	addresses: undefined,
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
 	account_id: undefined,

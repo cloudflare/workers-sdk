@@ -113,8 +113,21 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			ctx.setHasShownWorkerConfigWarnings(false);
 		},
 		configureServer(viteDevServer) {
+			// This variable is used to guard against config changes triggering
+			// a restart while another restart is already in flight. Note that we are
+			// deliberately not calling `watcher.off` since on failed restarts
+			// (e.g. the changed config is invalid) vite would resolve without replacing
+			// the server, so a removed handler would never be re-registered and
+			// config changes, including the one that fixes the config, would be
+			// ignored for the rest of the session.
+			let restartInFlight = false;
+
 			const configChangedHandler = async (changedFilePath: string) => {
 				assertIsNotPreview(ctx);
+
+				if (restartInFlight) {
+					return;
+				}
 
 				if (
 					ctx.resolvedPluginConfig.configPaths.has(changedFilePath) ||
@@ -129,9 +142,13 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					)
 				) {
 					debuglog("Config changed: " + changedFilePath);
-					viteDevServer.watcher.off("change", configChangedHandler);
+					restartInFlight = true;
 					debuglog("Restarting dev server and aborting previous setup");
-					await viteDevServer.restart();
+					try {
+						await viteDevServer.restart();
+					} finally {
+						restartInFlight = false;
+					}
 				}
 			};
 

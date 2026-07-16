@@ -63,16 +63,7 @@
 		"ts-dedent": "^2.2.0",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default",
-		"zod": "^4.4.3"
-	},
-	"peerDependencies": {
-		"zod": "^4.4.3"
-	},
-	"peerDependenciesMeta": {
-		"zod": {
-			"optional": true
-		}
+		"vitest": "catalog:default"
 	},
 	"volta": {
 		"extends": "../../package.json"

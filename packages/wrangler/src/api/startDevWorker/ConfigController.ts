@@ -569,7 +569,7 @@ function getDevCompatibilityDate(
 }
 
 export class ConfigController extends Controller {
-	latestInput?: StartDevWorkerInput;
+	latestInput?: WranglerStartDevWorkerInput;
 	latestWranglerConfig?: Config;
 	latestConfig?: StartDevWorkerOptions;
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
@@ -611,20 +611,20 @@ export class ConfigController extends Controller {
 		});
 	}
 
-	public set(input: StartDevWorkerInput, throwErrors = false) {
+	public set(input: WranglerStartDevWorkerInput, throwErrors = false) {
 		logger.debug("setting config");
 		return runWithLogLevel(input.dev?.logLevel, () =>
 			this.#updateConfig(input, throwErrors)
 		);
 	}
-	public patch(input: Partial<StartDevWorkerInput>) {
+	public patch(input: Partial<WranglerStartDevWorkerInput>) {
 		logger.debug("patching config");
 		assert(
 			this.latestInput,
 			"Cannot call updateConfig without previously calling setConfig"
 		);
 
-		const config: StartDevWorkerInput = {
+		const config: WranglerStartDevWorkerInput = {
 			...this.latestInput,
 			...input,
 		};
@@ -634,7 +634,7 @@ export class ConfigController extends Controller {
 		);
 	}
 
-	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
+	async #updateConfig(input: WranglerStartDevWorkerInput, throwErrors = false) {
 		logger.debug(
 			"Updating config...",
 			this.#abortController?.signal,

@@ -98,6 +98,7 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
+import { createDurableObjectStorageHandle } from "./shared/dev-control";
 import { DevRegistry, getWorkerRegistry } from "./shared/dev-registry";
 import {
 	getOutboundDoProxyClassName,
@@ -151,6 +152,8 @@ import type { Log } from "./shared";
 import type {
 	DevControl,
 	DurableObjectEvictionOptions,
+	DurableObjectStorageHandle,
+	DurableObjectStorageOptions,
 } from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
@@ -1601,7 +1604,8 @@ export class Miniflare {
 				response = await handlePrettyErrorRequest(
 					this.#log,
 					this.#workerSrcOpts,
-					request
+					request,
+					this.#sharedOpts.core.handleUncaughtError
 				);
 			} else if (url.pathname === "/core/log") {
 				const level = parseInt(
@@ -3080,6 +3084,34 @@ export class Miniflare {
 		}
 		return proxy as T;
 	}
+
+	/**
+	 * Returns remote storage access for a Durable Object instance.
+	 *
+	 * Calling `exec()` runs SQL inside the target Durable Object and returns all
+	 * rows. It may start the object if it is not already active.
+	 */
+	async unsafeGetDurableObjectStorage(
+		scriptName: string,
+		className: string,
+		options: DurableObjectStorageOptions
+	): Promise<DurableObjectStorageHandle> {
+		if (!this.#sharedOpts.core.unsafeInspectDurableObjects) {
+			throw new TypeError(
+				"Durable Object storage inspection requires the `unsafeInspectDurableObjects` option."
+			);
+		}
+
+		const control = await this.#getDevControl();
+		const handle = createDurableObjectStorageHandle(
+			control,
+			scriptName,
+			className,
+			options
+		);
+
+		return handle;
+	}
 	// TODO(someday): would be nice to define these in plugins
 	async getCaches(): Promise<ReplaceWorkersTypes<CacheStorage>> {
 		const proxyClient = await this._getProxyClient();
@@ -3457,6 +3489,8 @@ export * from "./zod-format";
 export type {
 	DurableObjectIdentifier,
 	DurableObjectEvictionOptions,
+	DurableObjectStorageOptions,
+	DurableObjectStorageHandle,
 } from "./shared/dev-control";
 export type {
 	WorkerRegistry,
