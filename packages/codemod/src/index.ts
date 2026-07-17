@@ -139,10 +139,7 @@ function mergeArrayElements(
 ): void {
 	const existingStringValues = new Set(
 		existingArray.elements
-			.filter(
-				(el): el is recast.types.namedTypes.StringLiteral =>
-					el?.type === "StringLiteral"
-			)
+			.filter((el) => el?.type === "StringLiteral")
 			.map((el) => el.value)
 	);
 
