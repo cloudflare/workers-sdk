@@ -860,6 +860,14 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("preserves empty email trigger addresses", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [{ type: "email", addresses: [] }],
+			});
+			expect(result.addresses).toEqual([]);
+		});
+
 		it("maps scheduled triggers to triggers.crons", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
@@ -871,6 +879,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.triggers).toEqual({
 				crons: ["0 * * * *", "*/5 * * * *"],
 			});
+			expect(result.addresses).toBeUndefined();
 		});
 
 		it("maps fetch trigger with dot-zone to zone_name", ({ expect }) => {

@@ -10,6 +10,7 @@ import chalk from "chalk";
 import PQueue from "p-queue";
 import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-codes";
 import { fetchListResult, fetchResult, logger } from "../shared/context";
+import { applyEmailRoutingAddresses } from "./email-routing";
 import {
 	publishCustomDomains,
 	publishRoutes,
@@ -340,6 +341,20 @@ export async function triggersDeploy(
 	const errors = completedDeployments
 		.map((deployment) => deployment.error)
 		.filter((error): error is Error => error !== undefined);
+
+	try {
+		await applyEmailRoutingAddresses({
+			config,
+			accountId,
+			scriptName,
+			workerTag: props.workerTag,
+		});
+	} catch (error) {
+		if (errors.length === 0) {
+			throw error;
+		}
+		errors.push(error instanceof Error ? error : new Error(String(error)));
+	}
 
 	if (errors.length > 0) {
 		throw new UserError(
