@@ -45,30 +45,21 @@ import {
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
-	IMAGES_NS_DATA_SERVICE_NAME,
 	IMAGES_PLUGIN_NAME,
-	KV_LOCAL_ENTRY_SERVICE_NAME,
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	loadExternalPlugins,
-	namespaceEntries,
 	namespaceKeys,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
-	buildRemoteProxyProps,
-	D1_LOCAL_ENTRY_SERVICE_NAME,
 	ProxyClient,
 	ProxyNodeBinding,
 	QUEUES_PLUGIN_NAME,
 	QueuesError,
-	R2_LOCAL_ENTRY_SERVICE_NAME,
 	R2_PLUGIN_NAME,
-	getUserBindingServiceName,
 	remoteProxyClientWorker,
 	SECRET_STORE_PLUGIN_NAME,
-	SECRET_STORE_SECRET_ENTRYPOINT,
-	STREAM_BINDING_ENTRYPOINT,
-	STREAM_BINDING_SERVICE_NAME,
+	SERVICE_STORAGE_OWNER_PROXY,
 	STREAM_PLUGIN_NAME,
 	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_ENTRY,
@@ -135,7 +126,6 @@ import {
 	CorePaths,
 	LogLevel,
 	Mutex,
-	SharedBindings,
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
@@ -200,12 +190,10 @@ import type { Duplex, Transform, Writable } from "node:stream";
 import type { Dispatcher, Response as UndiciResponse } from "undici";
 
 const DEFAULT_HOST = "127.0.0.1";
-// Client-side service that proxies routed storage bindings to the owner over
-// HTTP. This reuses the remote-bindings ("mixed-mode") client worker: each
-// routed binding carries the owner's address + resource key via props.
-const SERVICE_STORAGE_OWNER_PROXY = "storage-owner-proxy";
 // Owner-side service + socket exposing the owner's local storage entry services
-// over HTTP (the remote-bindings proxy-server protocol).
+// over HTTP (the remote-bindings proxy-server protocol). The client-side proxy
+// service (`SERVICE_STORAGE_OWNER_PROXY`) is defined in `./plugins`, where the
+// storage plugins reference it when routing bindings to the owner.
 const SERVICE_STORAGE_OWNER_SERVER = "storage-owner-server";
 const SOCKET_STORAGE_OWNER = "storage-owner";
 
@@ -782,212 +770,6 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	}
 
 	return externalServices;
-}
-
-/**
- * Extracts the resource id carried in an object-entry binding's `props.json`
- * (written by `buildObjectEntryProps`), or `undefined` if the props don't carry
- * one (e.g. remote/mixed-mode bindings).
- */
-function extractObjectEntryId(
-	propsJson: string | undefined
-): string | undefined {
-	if (propsJson === undefined) {
-		return undefined;
-	}
-	try {
-		const parsed = JSON.parse(propsJson) as Record<string, unknown>;
-		const id = parsed[SharedBindings.TEXT_NAMESPACE];
-		return typeof id === "string" ? id : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
-// Resource keys advertised to the owner via `MF-Binding` (see
-// `storage-owner-server.worker.ts`). Type-prefixed so KV/R2/D1 ids can never
-// collide in the owner's binding namespace.
-function storageOwnerResourceKey(type: "kv" | "r2" | "d1", id: string): string {
-	return `${type}:${id}`;
-}
-
-/**
- * Builds a binding designator routing a storage op through the client-side
- * remote-proxy worker to the owner. The owner address + resource key travel via
- * props (read by `remote-proxy-client.worker.ts`).
- */
-function storageOwnerProxyDesignator(
-	conn: RemoteProxyConnectionString,
-	resourceKey: string
-) {
-	return {
-		name: SERVICE_STORAGE_OWNER_PROXY,
-		props: buildRemoteProxyProps(conn, resourceKey),
-	};
-}
-
-/**
- * If `binding` is a *local* storage binding pointing at a shared object-entry
- * service with a resource id in props, rewrite it to route through the
- * client-side storage-owner proxy (so the owner process performs the storage
- * I/O). Remote (mixed-mode) bindings — which carry no object-entry id — are
- * returned unchanged.
- */
-function rewriteStorageOwnerBinding(
-	binding: Worker_Binding,
-	conn: RemoteProxyConnectionString,
-	pluginKey: string
-): Worker_Binding {
-	// Streams: a single per-instance store accessed over RPC. Repoint the whole
-	// binding at the owner proxy (the remote-proxy client carries the RPC); the
-	// owner hosts the stream entrypoint + store.
-	if (
-		pluginKey === STREAM_PLUGIN_NAME &&
-		"service" in binding &&
-		binding.service?.name !== undefined
-	) {
-		return {
-			name: binding.name,
-			service: storageOwnerProxyDesignator(conn, "stream"),
-		};
-	}
-	// Secrets Store: per-secret RPC service. Repoint at the owner proxy, keyed by
-	// "secrets:<store_id>:<secret_name>" (extracted from the local service name).
-	if (
-		pluginKey === SECRET_STORE_PLUGIN_NAME &&
-		"service" in binding &&
-		binding.service?.name !== undefined
-	) {
-		const resource = binding.service.name.slice(
-			`${SECRET_STORE_PLUGIN_NAME}:`.length
-		);
-		return {
-			name: binding.name,
-			service: storageOwnerProxyDesignator(conn, `secrets:${resource}`),
-		};
-	}
-	// KV namespace bindings.
-	if ("kvNamespace" in binding && binding.kvNamespace?.name !== undefined) {
-		const id = extractObjectEntryId(binding.kvNamespace.props?.json);
-		if (id !== undefined) {
-			return {
-				name: binding.name,
-				kvNamespace: storageOwnerProxyDesignator(
-					conn,
-					storageOwnerResourceKey("kv", id)
-				),
-			};
-		}
-	}
-	// R2 bucket bindings.
-	if ("r2Bucket" in binding && binding.r2Bucket?.name !== undefined) {
-		const id = extractObjectEntryId(binding.r2Bucket.props?.json);
-		if (id !== undefined) {
-			return {
-				name: binding.name,
-				r2Bucket: storageOwnerProxyDesignator(
-					conn,
-					storageOwnerResourceKey("r2", id)
-				),
-			};
-		}
-	}
-	// D1 (pre-Wrangler-3.3 `__D1_BETA__`) service binding.
-	if ("service" in binding && binding.service?.name !== undefined) {
-		const id = extractObjectEntryId(binding.service.props?.json);
-		if (id !== undefined) {
-			return {
-				name: binding.name,
-				service: storageOwnerProxyDesignator(
-					conn,
-					storageOwnerResourceKey("d1", id)
-				),
-			};
-		}
-	}
-	// D1 (post-3.3) wrapped binding: rewrite the inner fetcher service designator.
-	if ("wrapped" in binding && binding.wrapped?.innerBindings !== undefined) {
-		let rewrote = false;
-		const innerBindings = binding.wrapped.innerBindings.map((inner) => {
-			if ("service" in inner && inner.service?.name !== undefined) {
-				const id = extractObjectEntryId(inner.service.props?.json);
-				if (id !== undefined) {
-					rewrote = true;
-					return {
-						...inner,
-						service: storageOwnerProxyDesignator(
-							conn,
-							storageOwnerResourceKey("d1", id)
-						),
-					};
-				}
-			}
-			return inner;
-		});
-		if (rewrote) {
-			return {
-				...binding,
-				wrapped: { ...binding.wrapped, innerBindings },
-			};
-		}
-	}
-	return binding;
-}
-
-/**
- * Collects the union of *local* (non-remote) KV/R2/D1 resource ids declared
- * across the given workers. Used both to tell a spawned owner which storage to
- * stand up and to bind those resources on the owner's HTTP storage server. The
- * entry services route by `idFromName`, so the owner additionally serves ids
- * declared only by other clients.
- */
-function collectLocalStorageIds(workerOpts: PluginWorkerOptions[]): {
-	kv: Set<string>;
-	r2: Set<string>;
-	d1: Set<string>;
-	stream: boolean;
-	images: boolean;
-	secrets: Map<string, { store_id: string; secret_name: string }>;
-} {
-	const kv = new Set<string>();
-	const r2 = new Set<string>();
-	const d1 = new Set<string>();
-	let stream = false;
-	let images = false;
-	const secrets = new Map<string, { store_id: string; secret_name: string }>();
-	for (const opts of workerOpts) {
-		for (const [, ns] of namespaceEntries(opts.kv.kvNamespaces)) {
-			if (!ns.remoteProxyConnectionString) {
-				kv.add(ns.id);
-			}
-		}
-		for (const [, bucket] of namespaceEntries(opts.r2.r2Buckets)) {
-			if (!bucket.remoteProxyConnectionString) {
-				r2.add(bucket.id);
-			}
-		}
-		for (const [, db] of namespaceEntries(opts.d1.d1Databases)) {
-			if (!db.remoteProxyConnectionString) {
-				d1.add(db.id);
-			}
-		}
-		if (opts.stream.stream && !opts.stream.stream.remoteProxyConnectionString) {
-			stream = true;
-		}
-		if (opts.images.images && !opts.images.images.remoteProxyConnectionString) {
-			images = true;
-		}
-		const secretsStoreSecrets =
-			opts[SECRET_STORE_PLUGIN_NAME]?.secretsStoreSecrets;
-		if (secretsStoreSecrets) {
-			for (const { store_id, secret_name } of Object.values(
-				secretsStoreSecrets
-			)) {
-				secrets.set(`${store_id}:${secret_name}`, { store_id, secret_name });
-			}
-		}
-	}
-	return { kv, r2, d1, stream, images, secrets };
 }
 
 function invalidWrappedAsBound(name: string, bindingType: string): never {
@@ -2480,16 +2262,16 @@ export class Miniflare {
 				);
 				if (pluginBindings !== undefined) {
 					for (const originalBinding of pluginBindings) {
-						// When routing this plugin's storage to a shared owner, repoint
-						// local storage bindings at the storage-owner proxy.
+						// When routing this plugin's storage to a shared owner, let the
+						// plugin repoint its local storage bindings at the storage-owner
+						// proxy (plugins own the knowledge of their binding shapes).
 						const binding =
 							storageOwnerRoutePlugins.has(key) &&
 							storageOwnerConn !== undefined
-								? rewriteStorageOwnerBinding(
+								? (plugin.routeBindingToStorageOwner?.(
 										originalBinding,
-										storageOwnerConn,
-										key
-									)
+										storageOwnerConn
+									) ?? originalBinding)
 								: originalBinding;
 						// If this is the Workers Sites manifest, we need to add it as a
 						// module for modules workers. For all other bindings, and in
@@ -2785,55 +2567,21 @@ export class Miniflare {
 			// Bind one generic entry service per storage type the owner stood up.
 			// The resource id travels per-request (via header), so these serve any
 			// id — including ones only declared by clients that join later.
-			const ids = collectLocalStorageIds(allWorkerOpts);
+			// Each storage plugin contributes the bindings exposing its local
+			// storage, keyed by the resource key clients route to. Fetch-type
+			// plugins (KV/R2/D1/Images) bind one generic entry service that serves
+			// any id via `idFromName` (the id travels per-request), so they serve
+			// ids declared only by clients that join later too.
 			const ownerBindings: Worker_Binding[] = [];
-			if (ids.kv.size > 0) {
-				ownerBindings.push({
-					name: "kv",
-					service: { name: KV_LOCAL_ENTRY_SERVICE_NAME },
-				});
-			}
-			if (ids.r2.size > 0) {
-				ownerBindings.push({
-					name: "r2",
-					service: { name: R2_LOCAL_ENTRY_SERVICE_NAME },
-				});
-			}
-			if (ids.d1.size > 0) {
-				ownerBindings.push({
-					name: "d1",
-					service: { name: D1_LOCAL_ENTRY_SERVICE_NAME },
-				});
-			}
-			// Images: single fixed store, served via the fetch path like KV.
-			if (ids.images) {
-				ownerBindings.push({
-					name: "images",
-					service: { name: IMAGES_NS_DATA_SERVICE_NAME },
-				});
-			}
-			// Streams: single RPC entrypoint (one store per owner), exposed under
-			// the "stream" key and dispatched via the JSRPC branch of the server.
-			if (ids.stream) {
-				ownerBindings.push({
-					name: "stream",
-					service: {
-						name: STREAM_BINDING_SERVICE_NAME,
-						entrypoint: STREAM_BINDING_ENTRYPOINT,
-					},
-				});
-			}
-			// Secrets Store: one RPC entrypoint per secret, exposed under
-			// "secrets:<store_id>:<secret_name>".
-			for (const { store_id, secret_name } of ids.secrets.values()) {
-				const resource = `${store_id}:${secret_name}`;
-				ownerBindings.push({
-					name: `secrets:${resource}`,
-					service: {
-						name: getUserBindingServiceName(SECRET_STORE_PLUGIN_NAME, resource),
-						entrypoint: SECRET_STORE_SECRET_ENTRYPOINT,
-					},
-				});
+			for (const [key, plugin] of this.#mergedPluginEntries) {
+				const hosting = plugin.getStorageOwnerHosting?.(
+					// @ts-expect-error each plugin narrows `options` to its own schema;
+					//  safe because `getStorageOwnerHosting` only reads its own options.
+					allWorkerOpts.map((o) => this.#getWorkerOptsForPlugin(key, o))
+				);
+				if (hosting !== undefined) {
+					ownerBindings.push(...hosting.ownerBindings);
+				}
 			}
 			services.set(SERVICE_STORAGE_OWNER_SERVER, {
 				name: SERVICE_STORAGE_OWNER_SERVER,
@@ -3313,39 +3061,28 @@ export class Miniflare {
 	 * {@link runStorageOwnerProcess}).
 	 */
 	#spawnStorageOwner(persistRoot: string): void {
-		// Union of local (non-remote) storage resource ids across all workers, so
-		// the owner stands up the corresponding storage services. The services are
-		// generic (keyed by `idFromName`), so they additionally serve ids declared
-		// only by other clients.
-		const ids = collectLocalStorageIds(this.#workerOpts);
-
-		const ownerOptions = {
+		// Each storage plugin describes the options a spawned owner needs to stand
+		// up its local storage (the union of local, non-remote resources across
+		// this instance's workers). The owner's entry services are generic (keyed
+		// by `idFromName`), so they additionally serve ids declared only by other
+		// clients.
+		const ownerOptions: Record<string, unknown> = {
 			defaultPersistRoot: persistRoot,
 			unsafeDevRegistryPath: this.#sharedOpts.core.unsafeDevRegistryPath,
 			modules: true,
 			script:
 				"export default { async fetch() { return new Response('miniflare storage owner', { status: 404 }); } }",
-			kvNamespaces: [...ids.kv],
-			r2Buckets: [...ids.r2],
-			d1Databases: [...ids.d1],
-			// One stream store per owner; the binding name is irrelevant (the
-			// owner exposes it under the canonical "stream" key).
-			...(ids.stream ? { stream: { binding: "stream" } } : {}),
-			// One images store per owner (binding name irrelevant).
-			...(ids.images ? { images: { binding: "images" } } : {}),
-			// Secrets Store: recreate each secret resource so the owner stands up
-			// the matching per-secret service (binding names are irrelevant).
-			...(ids.secrets.size > 0
-				? {
-						secretsStoreSecrets: Object.fromEntries(
-							[...ids.secrets.entries()].map(([resource, secret]) => [
-								`owner:${resource}`,
-								secret,
-							])
-						),
-					}
-				: {}),
 		};
+		for (const [key, plugin] of this.#mergedPluginEntries) {
+			const hosting = plugin.getStorageOwnerHosting?.(
+				// @ts-expect-error each plugin narrows `options` to its own schema;
+				//  safe because `getStorageOwnerHosting` only reads its own options.
+				this.#workerOpts.map((o) => this.#getWorkerOptsForPlugin(key, o))
+			);
+			if (hosting !== undefined) {
+				Object.assign(ownerOptions, hosting.ownerOptions);
+			}
+		}
 
 		const configPath = path.join(
 			persistRoot,

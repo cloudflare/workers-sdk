@@ -11,6 +11,7 @@ import {
 	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
+	storageOwnerProxyDesignator,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
@@ -188,6 +189,40 @@ export const STREAM_PLUGIN: Plugin<
 		} satisfies Service;
 
 		return [storageService, objectService, bindingService];
+	},
+	routeBindingToStorageOwner(binding, conn) {
+		// A single per-instance store accessed over RPC. Repoint the whole binding
+		// at the owner proxy (the remote-proxy client carries the RPC); the owner
+		// hosts the stream entrypoint + store under the canonical "stream" key.
+		if ("service" in binding && binding.service?.name !== undefined) {
+			return {
+				name: binding.name,
+				service: storageOwnerProxyDesignator(conn, "stream"),
+			};
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		const hasLocal = allOptions.some(
+			(options) => options.stream && !options.stream.remoteProxyConnectionString
+		);
+		if (!hasLocal) {
+			return undefined;
+		}
+		// One stream store per owner; the binding name is irrelevant (the owner
+		// exposes it under the canonical "stream" key, dispatched via JSRPC).
+		return {
+			ownerOptions: { stream: { binding: "stream" } },
+			ownerBindings: [
+				{
+					name: "stream",
+					service: {
+						name: STREAM_BINDING_SERVICE_NAME,
+						entrypoint: STREAM_BINDING_ENTRYPOINT,
+					},
+				},
+			],
+		};
 	},
 	getPersistPath({ streamPersist }, tmpPath) {
 		return getPersistPath(

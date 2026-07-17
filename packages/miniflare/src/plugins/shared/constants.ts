@@ -129,6 +129,45 @@ export function buildRemoteProxyProps(
 	};
 }
 
+// Inverse of `buildObjectEntryProps`: reads the resource id carried in an
+// object-entry binding's `props.json`, or `undefined` if the props don't carry
+// one (e.g. remote/mixed-mode bindings). Used by storage plugins to recognise
+// their own local bindings when routing them to a shared storage owner.
+export function extractObjectEntryId(
+	propsJson: string | undefined
+): string | undefined {
+	if (propsJson === undefined) {
+		return undefined;
+	}
+	try {
+		const parsed = JSON.parse(propsJson) as Record<string, unknown>;
+		const id = parsed[SharedBindings.TEXT_NAMESPACE];
+		return typeof id === "string" ? id : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+// Client-side service that proxies routed storage bindings to the shared storage
+// owner over HTTP. Reuses the remote-bindings ("mixed-mode") client worker: each
+// routed binding carries the owner's address + resource key via props. Stood up
+// by `Miniflare` when acting as a storage-owner client.
+export const SERVICE_STORAGE_OWNER_PROXY = "storage-owner-proxy";
+
+// Builds a binding designator routing a storage op through the client-side
+// storage-owner proxy to the owner. The owner address + resource key travel via
+// props (read by `remote-proxy-client.worker.ts`). The `resourceKey` is the key
+// the owner's storage server dispatches on (see `storage-owner-server.worker.ts`).
+export function storageOwnerProxyDesignator(
+	conn: RemoteProxyConnectionString,
+	resourceKey: string
+): { name: string; props: { json: string } } {
+	return {
+		name: SERVICE_STORAGE_OWNER_PROXY,
+		props: buildRemoteProxyProps(conn, resourceKey),
+	};
+}
+
 // Value of `unsafeUniqueKey` that forces the use of "colo local" ephemeral
 // namespaces. These namespaces only provide a `get(id: string): Fetcher` method
 // and construct objects without a `state` parameter. See the schema for details:

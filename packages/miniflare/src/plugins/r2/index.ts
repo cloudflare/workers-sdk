@@ -6,6 +6,7 @@ import { SharedBindings } from "../../workers";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
+	extractObjectEntryId,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
@@ -16,6 +17,7 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 } from "../shared";
 import type {
 	Service,
@@ -219,6 +221,37 @@ export const R2_PLUGIN: Plugin<
 		}
 
 		return services;
+	},
+	routeBindingToStorageOwner(binding, conn) {
+		if ("r2Bucket" in binding && binding.r2Bucket?.name !== undefined) {
+			const id = extractObjectEntryId(binding.r2Bucket.props?.json);
+			if (id !== undefined) {
+				return {
+					name: binding.name,
+					r2Bucket: storageOwnerProxyDesignator(conn, `r2:${id}`),
+				};
+			}
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		const ids = new Set<string>();
+		for (const options of allOptions) {
+			for (const [, bucket] of namespaceEntries(options.r2Buckets)) {
+				if (!bucket.remoteProxyConnectionString) {
+					ids.add(bucket.id);
+				}
+			}
+		}
+		if (ids.size === 0) {
+			return undefined;
+		}
+		return {
+			ownerOptions: { r2Buckets: [...ids] },
+			ownerBindings: [
+				{ name: "r2", service: { name: R2_LOCAL_ENTRY_SERVICE_NAME } },
+			],
+		};
 	},
 	getPersistPath({ r2Persist }, tmpPath) {
 		return getPersistPath(R2_PLUGIN_NAME, tmpPath, undefined, r2Persist);

@@ -236,6 +236,25 @@ export const IMAGES_PLUGIN: Plugin<
 
 		return [storageService, objectService, kvNamespaceService, imagesService];
 	},
+	getStorageOwnerHosting(allOptions) {
+		const hasLocal = allOptions.some(
+			(options) => options.images && !options.images.remoteProxyConnectionString
+		);
+		if (!hasLocal) {
+			return undefined;
+		}
+		// One images store per owner (binding name irrelevant). Served via the
+		// fetch path like KV, under the "images" key. Note the client side is
+		// handled in `getServices` (the transform worker stays local, only its
+		// backing KV store is repointed at the owner), so there is no
+		// `routeBindingToStorageOwner` hook.
+		return {
+			ownerOptions: { images: { binding: "images" } },
+			ownerBindings: [
+				{ name: "images", service: { name: IMAGES_NS_DATA_SERVICE_NAME } },
+			],
+		};
+	},
 	getPersistPath({ imagesPersist }, tmpPath) {
 		return getPersistPath(
 			IMAGES_PLUGIN_NAME,

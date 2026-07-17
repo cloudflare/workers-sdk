@@ -6,6 +6,7 @@ import { SharedBindings } from "../../workers";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
+	extractObjectEntryId,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
@@ -16,6 +17,7 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 } from "../shared";
 import type {
 	Service,
@@ -215,6 +217,61 @@ export const D1_PLUGIN: Plugin<
 		}
 
 		return services;
+	},
+	routeBindingToStorageOwner(binding, conn) {
+		// Pre-Wrangler-3.3 `__D1_BETA__` binding: a bare service designator.
+		if ("service" in binding && binding.service?.name !== undefined) {
+			const id = extractObjectEntryId(binding.service.props?.json);
+			if (id !== undefined) {
+				return {
+					name: binding.name,
+					service: storageOwnerProxyDesignator(conn, `d1:${id}`),
+				};
+			}
+		}
+		// Post-3.3 wrapped binding: rewrite the inner fetcher service designator.
+		if ("wrapped" in binding && binding.wrapped?.innerBindings !== undefined) {
+			let rewrote = false;
+			const innerBindings = binding.wrapped.innerBindings.map((inner) => {
+				if ("service" in inner && inner.service?.name !== undefined) {
+					const id = extractObjectEntryId(inner.service.props?.json);
+					if (id !== undefined) {
+						rewrote = true;
+						return {
+							...inner,
+							service: storageOwnerProxyDesignator(conn, `d1:${id}`),
+						};
+					}
+				}
+				return inner;
+			});
+			if (rewrote) {
+				return {
+					...binding,
+					wrapped: { ...binding.wrapped, innerBindings },
+				};
+			}
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		const ids = new Set<string>();
+		for (const options of allOptions) {
+			for (const [, db] of namespaceEntries(options.d1Databases)) {
+				if (!db.remoteProxyConnectionString) {
+					ids.add(db.id);
+				}
+			}
+		}
+		if (ids.size === 0) {
+			return undefined;
+		}
+		return {
+			ownerOptions: { d1Databases: [...ids] },
+			ownerBindings: [
+				{ name: "d1", service: { name: D1_LOCAL_ENTRY_SERVICE_NAME } },
+			],
+		};
 	},
 	getPersistPath({ d1Persist }, tmpPath) {
 		return getPersistPath(D1_PLUGIN_NAME, tmpPath, undefined, d1Persist);

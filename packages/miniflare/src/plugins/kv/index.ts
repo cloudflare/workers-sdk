@@ -6,6 +6,7 @@ import { SharedBindings } from "../../workers";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
+	extractObjectEntryId,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
@@ -16,6 +17,7 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
 import {
@@ -237,6 +239,41 @@ export const KV_PLUGIN: Plugin<
 		}
 
 		return services;
+	},
+
+	routeBindingToStorageOwner(binding, conn) {
+		if ("kvNamespace" in binding && binding.kvNamespace?.name !== undefined) {
+			const id = extractObjectEntryId(binding.kvNamespace.props?.json);
+			if (id !== undefined) {
+				return {
+					name: binding.name,
+					kvNamespace: storageOwnerProxyDesignator(conn, `kv:${id}`),
+				};
+			}
+		}
+		return undefined;
+	},
+
+	getStorageOwnerHosting(allOptions) {
+		const ids = new Set<string>();
+		for (const options of allOptions) {
+			for (const [, ns] of namespaceEntries(options.kvNamespaces)) {
+				if (!ns.remoteProxyConnectionString) {
+					ids.add(ns.id);
+				}
+			}
+		}
+		if (ids.size === 0) {
+			return undefined;
+		}
+		// One generic entry service serves any id (routed by `idFromName`), so a
+		// single binding keyed by type suffices — the id travels per-request.
+		return {
+			ownerOptions: { kvNamespaces: [...ids] },
+			ownerBindings: [
+				{ name: "kv", service: { name: KV_LOCAL_ENTRY_SERVICE_NAME } },
+			],
+		};
 	},
 
 	getPersistPath({ kvPersist }, tmpPath) {
