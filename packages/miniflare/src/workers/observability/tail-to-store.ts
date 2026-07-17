@@ -159,18 +159,15 @@ function describeTrigger(info: TailStream.Onset["info"]): {
 	}
 }
 
-const ERROR_OUTCOMES = new Set([
-	"canceled",
-	"exception",
-	"unknown",
-	"killSwitch",
-	"daemonDown",
-	"exceededCpu",
-	"exceededMemory",
-	"loadShed",
-	"responseStreamDisconnected",
-	"scriptNotFound",
-]);
+/**
+ * Every `EventOutcome` other than "ok" is a failure (canceled, exception,
+ * exceededCpu, exceededWallTime, internalError, …). Matching on "not ok" keeps
+ * capture in step with the read side (`SPAN_IS_ERROR` uses `outcome != 'ok'`) and
+ * covers any future outcomes without another allowlist to maintain.
+ */
+function isErrorOutcome(outcome: TailStream.EventOutcome): boolean {
+	return outcome !== "ok";
+}
 
 /**
  * Per-span bookkeeping kept between events so we can compute a duration and fold
@@ -214,7 +211,20 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		this.#traceId = traceId;
 		this.#startMs = toMs(onset.timestamp);
 
-		const { name, attributes } = describeTrigger(onset.event.info);
+		const { name, attributes: triggerAttributes } = describeTrigger(
+			onset.event.info
+		);
+		// Start from any attributes carried directly on the onset (not guaranteed
+		// to arrive later via the `attributes` callback), then let the canonical
+		// trigger-derived keys (`faas.trigger`, `http.request.method`, …) win since
+		// the UI keys off those.
+		const attributes: Record<string, unknown> = {};
+		// `attributes` is typed as required but isn't always populated on the onset
+		// in local dev (events come through a cf-to-otel shim), so guard the loop.
+		for (const attr of onset.event.attributes ?? []) {
+			attributes[attr.name] = normalizeAttr(attr.value);
+		}
+		Object.assign(attributes, triggerAttributes);
 		if (onset.invocationId) {
 			attributes["faas.invocation_id"] = onset.invocationId;
 		}
@@ -285,6 +295,13 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		const { traceId, spanId } = ids(event);
 		const pending = spanId ? this.#spans.get(spanId) : undefined;
 		if (spanId && pending) {
+			// A span can close with a failure outcome (exception, exceededCpu, …).
+			// Fold it in so the span isn't recorded as "ok". A preceding exception
+			// event already set a richer outcome/error, so don't overwrite that.
+			if (isErrorOutcome(event.event.outcome)) {
+				pending.errored = true;
+				pending.outcome ??= event.event.outcome;
+			}
 			this.#close(traceId, spanId, pending, toMs(event.timestamp), null);
 		}
 	}
@@ -366,7 +383,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			? this.#spans.get(this.#rootSpanId)
 			: undefined;
 		if (root && this.#rootSpanId) {
-			if (ERROR_OUTCOMES.has(event.event.outcome)) {
+			if (isErrorOutcome(event.event.outcome)) {
 				root.errored = true;
 			}
 			root.outcome = event.event.outcome;

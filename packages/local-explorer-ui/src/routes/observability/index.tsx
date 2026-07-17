@@ -6,7 +6,14 @@ import {
 	PulseIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import {
+	Fragment,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { FilterSelect } from "../../components/observability/FilterSelect";
 import { ObservabilityViewSwitcher } from "../../components/observability/ObservabilityViewSwitcher";
 import { TraceWaterfall } from "../../components/observability/TraceWaterfall";
@@ -16,6 +23,7 @@ import {
 	formatDuration,
 	getInvocationRootIds,
 	getTagKeys,
+	isRunning,
 	listTraces,
 	operationLabel,
 } from "../../utils/observability";
@@ -53,6 +61,23 @@ function traceKey(t: Pick<TraceRow, "trace_id" | "root_span_id">): string {
 	return `${t.trace_id}:${t.root_span_id}`;
 }
 
+/**
+ * Whether a trace is done changing, so its cached spans don't need re-fetching.
+ * A trace is settled once its root span has a final outcome, the list row's
+ * span_count matches the spans we've cached (nothing new was written), and no
+ * cached span is still running. Anything else is still being written by
+ * write-through capture and its open waterfall should keep refreshing.
+ */
+function traceSettled(row: TraceRow, cachedSpans: Span[]): boolean {
+	if (!row.outcome) {
+		return false;
+	}
+	if ((row.span_count ?? cachedSpans.length) !== cachedSpans.length) {
+		return false;
+	}
+	return !cachedSpans.some(isRunning);
+}
+
 function ObservabilityView(): JSX.Element {
 	const [traces, setTraces] = useState<TraceRow[]>([]);
 	// Traces can be expanded independently — multiple waterfalls open at once.
@@ -61,6 +86,12 @@ function ObservabilityView(): JSX.Element {
 	const [invocationRootsByTrace, setInvocationRootsByTrace] = useState<
 		Record<string, string[]>
 	>({});
+	// The auto-refresh effect below reads the current spans cache without taking
+	// it as a dependency — otherwise each re-fetch would immediately re-trigger
+	// the effect into a tight loop. Mirror it into a ref (kept current every
+	// render) so the effect can consult the latest cache on the list cadence.
+	const spansByTraceRef = useRef(spansByTrace);
+	spansByTraceRef.current = spansByTrace;
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	// Hide Vite dev module-runner plumbing spans (default on; persisted).
@@ -141,6 +172,21 @@ function ObservabilityView(): JSX.Element {
 		return () => clearInterval(id);
 	}, [refresh]);
 
+	// Fetch (or re-fetch) a trace's spans + invocation roots and cache them.
+	const loadSpans = useCallback(async (trace: TraceRow) => {
+		const key = traceKey(trace);
+		try {
+			const [rows, roots] = await Promise.all([
+				fetchTraceSpans(trace.trace_id),
+				getInvocationRootIds(trace.trace_id),
+			]);
+			setSpansByTrace((prev) => ({ ...prev, [key]: rows }));
+			setInvocationRootsByTrace((prev) => ({ ...prev, [key]: roots }));
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Failed to load spans");
+		}
+	}, []);
+
 	// Toggle a trace's waterfall open/closed. Multiple can be open at once and
 	// each stays open until clicked again.
 	const toggleTrace = useCallback(
@@ -158,25 +204,39 @@ function ObservabilityView(): JSX.Element {
 				}
 				return next;
 			});
-			// Fetch a trace's spans once, lazily, and cache them. This is
-			// idempotent (skipped once cached), so it doesn't matter whether this
-			// click is opening or closing — a closed trace was already fetched.
+			// Load a trace's spans lazily on first open. Later refreshes (while it
+			// stays open and is still being written) are driven by the effect below,
+			// so a click that's closing an already-loaded trace does nothing here.
 			if (spansByTrace[key]) {
 				return;
 			}
-			try {
-				const [rows, roots] = await Promise.all([
-					fetchTraceSpans(trace.trace_id),
-					getInvocationRootIds(trace.trace_id),
-				]);
-				setSpansByTrace((prev) => ({ ...prev, [key]: rows }));
-				setInvocationRootsByTrace((prev) => ({ ...prev, [key]: roots }));
-			} catch (e) {
-				setError(e instanceof Error ? e.message : "Failed to load spans");
-			}
+			await loadSpans(trace);
 		},
-		[spansByTrace]
+		[spansByTrace, loadSpans]
 	);
+
+	// Keep expanded waterfalls live. The 3s auto-refresh only reloads the trace
+	// list, but a trace opened while it's still running keeps gaining/updating
+	// spans in the store (write-through capture). On each list refresh, re-fetch
+	// spans for any expanded trace that isn't settled yet; settled traces are
+	// left alone so completed waterfalls aren't refetched needlessly.
+	useEffect(() => {
+		for (const trace of traces) {
+			const key = traceKey(trace);
+			if (!expanded.has(key)) {
+				continue;
+			}
+			const cached = spansByTraceRef.current[key];
+			// Not loaded yet — the initial lazy load in toggleTrace handles it.
+			if (!cached) {
+				continue;
+			}
+			if (traceSettled(trace, cached)) {
+				continue;
+			}
+			void loadSpans(trace);
+		}
+	}, [traces, expanded, loadSpans]);
 
 	const maxDuration = useMemo(
 		() => Math.max(1, ...traces.map((t) => t.duration_ms ?? 0)),

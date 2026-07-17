@@ -242,15 +242,18 @@ export class TraceStore extends DurableObject {
 	 * acts as the contract and is documented in the `/query` endpoint's OpenAPI
 	 * description.
 	 *
-	 * Because this runs SQL we did not write, and there is no built-in read-only
-	 * mode to rely on, we validate it ourselves. Checking only the first keyword is
-	 * not enough (`WITH … DELETE` is a single statement that still starts with
-	 * `WITH`), so we first remove comments and anything inside quotes — so a value
-	 * like `'…delete…'` or a `;` inside a string cannot trip the checks — then
-	 * require that it is a single statement (no `;`), starts with `SELECT` or
-	 * `WITH`, and contains no keyword that could change data or schema. Values are
-	 * always passed as bound `params`, and at most `MAX_QUERY_ROWS` rows are
-	 * returned.
+	 * Because this runs SQL we did not write, and workerd's DO SQLite has no
+	 * read-only execution mode to rely on (`PRAGMA query_only` is rejected with
+	 * SQLITE_AUTH), we guard it two ways. First a syntactic check: checking only
+	 * the first keyword is not enough (`WITH … DELETE` is a single statement that
+	 * still starts with `WITH`), so we remove comments and anything inside quotes —
+	 * so a value like `'…delete…'` or a `;` inside a string cannot trip the checks —
+	 * then require a single statement (no `;`) that starts with `SELECT`/`WITH` and
+	 * contains no data- or schema-changing keyword. Second, and not relying on that
+	 * regex, the statement runs inside a transaction that is always rolled back, so
+	 * any write or DDL that slipped past the checks is discarded rather than
+	 * persisted. Values are always passed as bound `params`, and at most
+	 * `MAX_QUERY_ROWS` rows are returned.
 	 *
 	 * `attributes` is stored as JSONB; wrap it with `json(attributes)` to read it
 	 * back as JSON (the built-in queries already do).
@@ -284,14 +287,31 @@ export class TraceStore extends DurableObject {
 		) {
 			throw new Error("Only read-only SELECT/WITH queries are allowed");
 		}
-		const cursor = this.sql.exec(statement, ...params);
-		const columns = cursor.columnNames;
+		// Run inside a transaction that always rolls back. The rows are collected
+		// first, then a sentinel is thrown to abort the transaction: a read-only
+		// SELECT/WITH is unaffected, but any write or DDL that got past the checks
+		// above is undone instead of committed. This is the real read-only barrier
+		// (the regex is just the first line); a statement that can't run in a
+		// transaction would throw here rather than take effect, so it fails safe.
+		const columns: string[] = [];
 		const rows: unknown[][] = [];
-		for (const row of cursor.raw()) {
-			if (rows.length >= MAX_QUERY_ROWS) {
-				break;
+		const rollback = Symbol("rollback");
+		try {
+			this.ctx.storage.transactionSync(() => {
+				const cursor = this.sql.exec(statement, ...params);
+				columns.push(...cursor.columnNames);
+				for (const row of cursor.raw()) {
+					if (rows.length >= MAX_QUERY_ROWS) {
+						break;
+					}
+					rows.push([...row]);
+				}
+				throw rollback;
+			});
+		} catch (e) {
+			if (e !== rollback) {
+				throw e;
 			}
-			rows.push([...row]);
 		}
 		return { columns, rows };
 	}
