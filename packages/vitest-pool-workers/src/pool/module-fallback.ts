@@ -358,6 +358,30 @@ function ensureRootedPath(filePath: string) {
 	return isWindows && filePath[0] !== "/" ? `/${filePath}` : filePath;
 }
 
+/**
+ * Redirect responses from this fallback service round-trip non-ASCII/reserved
+ * bytes through `encodeURI()` (see `buildRedirectResponse()`), so callers
+ * must `decodeURI()` them back to recover the real filesystem path. However,
+ * `workerd` also sends the *original*, never-encoded specifier/referrer on a
+ * request's first pass, and a workspace path can legitimately contain a
+ * literal `%` that was never produced by our own `encodeURI()` call (e.g.
+ * `50%off`). `decodeURI()` throws `URIError` on that kind of malformed
+ * escape sequence, so decode defensively here and fall back to the raw
+ * value on failure — this lets resolution continue (and fall through to the
+ * existing 404 response) instead of crashing the whole handler.
+ * See https://github.com/cloudflare/workers-sdk/issues/14655
+ */
+function safeDecodeURI(value: string): string {
+	try {
+		return decodeURI(value);
+	} catch (e) {
+		if (e instanceof URIError) {
+			return value;
+		}
+		throw e;
+	}
+}
+
 function buildRedirectResponse(filePath: string) {
 	return new Response(null, {
 		status: 301,
@@ -556,9 +580,11 @@ export async function handleModuleFallbackRequest(
 	// since headers are restricted to the Latin-1/ASCII byte range), so we must
 	// undo that encoding here to recover the real filesystem path for resolution.
 	// This is a no-op for specifiers that were never percent-encoded (e.g. bare
-	// `cloudflare:*` specifiers on the initial request).
+	// `cloudflare:*` specifiers on the initial request). Decoded defensively via
+	// `safeDecodeURI()`, since a workspace path can legitimately contain a
+	// literal `%` that isn't valid percent-encoding.
 	// See https://github.com/cloudflare/workers-sdk/issues/14655
-	let target = decodeURI(rawSpecifierParam);
+	let target = safeDecodeURI(rawSpecifierParam);
 	// `workerd` also tracks this in-flight module request by the exact literal
 	// `specifier` string above (before decoding), and rejects our response if the
 	// JSON module's `name` field doesn't match that literal string exactly. So we
@@ -570,7 +596,7 @@ export async function handleModuleFallbackRequest(
 	// becomes the referrer workerd sends for every import statement inside that
 	// module, propagating the encoding forward indefinitely. Decode it the same
 	// way as `target` so filesystem resolution keeps working for those imports.
-	referrer = decodeURI(referrer);
+	referrer = safeDecodeURI(referrer);
 	const referrerDir = posixPath.dirname(referrer);
 	let specifier = getApproximateSpecifier(target, referrerDir);
 
