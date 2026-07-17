@@ -9,4 +9,3 @@ Previously, invalid `_redirects` rules (e.g. a duplicate rule for the same path,
 
 `wrangler deploy` now parses `_redirects` for validation purposes and warns about any invalid rules, using the same messages already shown by `wrangler dev`. This does not change what gets uploaded — the raw file is still uploaded as-is, and the asset worker remains the authoritative parser at runtime.
 
-<!-- trigger fork CI -->
