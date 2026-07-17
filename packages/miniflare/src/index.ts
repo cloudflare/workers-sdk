@@ -3350,3 +3350,8 @@ export type {
 	V2ModuleFallbackRequest,
 	ParsedModuleFallbackRequest,
 } from "./plugins/core/module-fallback";
+export {
+	MiniflareOptionsSchema as MiniflareOptionsSchemaV5,
+	SharedOptionsSchema as SharedOptionsSchemaV5,
+	WorkerOptionsSchema as WorkerOptionsSchemaV5,
+} from "./plugins/core/schemas";
