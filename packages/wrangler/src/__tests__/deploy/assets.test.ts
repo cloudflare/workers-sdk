@@ -862,7 +862,7 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should warn about invalid _redirects rules at deploy time without altering what is uploaded (#14694)", async ({
+		it("should warn about invalid _redirects rules at deploy time without altering what is uploaded", async ({
 			expect,
 		}) => {
 			// A duplicate rule for the same path is invalid and should be flagged,
@@ -895,7 +895,7 @@ describe("deploy", () => {
 			expect(std.warn).toContain("Ignoring duplicate rule for path /foo.");
 		});
 
-		it("should not warn about a false infinite-loop when html_handling is 'none' (#14709 review)", async ({
+		it("should not warn about a false infinite-loop when html_handling is 'none'", async ({
 			expect,
 		}) => {
 			// `/ /index.html` looks like an infinite-loop redirect only when HTML
