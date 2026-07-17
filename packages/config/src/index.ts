@@ -14,11 +14,18 @@ export {
 	writeRootOutputConfig,
 } from "./build-output";
 export {
+	BindingSchema,
+	BrowserBindingSchema,
 	ConfigExportsSchema,
+	DurableObjectCreatedExportSchema,
+	ExportSchema,
 	InputWorkerSchema,
+	KnownBindingSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,
 	SettingsSchema,
+	UnsafeBindingSchema,
+	WorkerBindingSchema,
 } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";

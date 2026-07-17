@@ -16,7 +16,20 @@ const AssetsSchema = z.strictObject({
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
 });
 
-const KnownBindingSchema = z.discriminatedUnion("type", [
+export const BrowserBindingSchema = z.strictObject({
+	type: z.literal("browser"),
+	remote: z.boolean().optional(),
+});
+
+export const WorkerBindingSchema = z.strictObject({
+	type: z.literal("worker"),
+	workerName: z.string(),
+	exportName: z.string().optional(),
+	props: z.record(z.string(), z.unknown()).optional(),
+	remote: z.boolean().optional(),
+});
+
+export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("agent-memory"),
 		namespace: z.string(),
@@ -43,10 +56,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({ type: z.literal("assets") }),
-	z.strictObject({
-		type: z.literal("browser"),
-		remote: z.boolean().optional(),
-	}),
+	BrowserBindingSchema,
 	z.strictObject({
 		type: z.literal("d1"),
 		name: z.string().optional(),
@@ -178,13 +188,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		type: z.literal("web-search"),
 		remote: z.boolean().optional(),
 	}),
-	z.strictObject({
-		type: z.literal("worker"),
-		workerName: z.string(),
-		exportName: z.string().optional(),
-		props: z.record(z.string(), z.unknown()).optional(),
-		remote: z.boolean().optional(),
-	}),
+	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
 	// TODO: support Workflows
 	// z.strictObject({
@@ -195,7 +199,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 	// }),
 ]);
 
-const UnsafeBindingSchema = z.looseObject({
+export const UnsafeBindingSchema = z.looseObject({
 	type: z.templateLiteral(["unsafe:", z.string().min(1)]),
 	dev: z
 		.strictObject({
@@ -215,7 +219,7 @@ type BindingOutput =
 	| z.output<typeof KnownBindingSchema>
 	| z.output<typeof UnsafeBindingSchema>;
 
-const BindingSchema = z.unknown().transform((value, ctx) => {
+export const BindingSchema = z.unknown().transform((value, ctx) => {
 	const isUnsafe =
 		typeof value === "object" &&
 		value !== null &&
@@ -291,12 +295,14 @@ const EnvSchema = z
 // `state` defaults to `"created"` (live) when omitted. Tombstones use one of
 // `"deleted"`, `"renamed"`, `"transferred"`; `"expecting-transfer"` is a live
 // entry awaiting incoming data via the two-phase cross-script transfer flow.
-const ExportSchema = z.union([
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("created").optional(),
-		storage: z.enum(["sqlite", "legacy-kv"]),
-	}),
+export const DurableObjectCreatedExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("created").optional(),
+	storage: z.enum(["sqlite", "legacy-kv"]),
+});
+
+export const ExportSchema = z.union([
+	DurableObjectCreatedExportSchema,
 	z.strictObject({
 		type: z.literal("durable-object"),
 		state: z.literal("deleted"),
