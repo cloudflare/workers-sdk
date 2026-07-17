@@ -1,5 +1,21 @@
 # create-cloudflare
 
+## 2.70.12
+
+### Patch Changes
+
+- [#14661](https://github.com/cloudflare/workers-sdk/pull/14661) [`414ce87`](https://github.com/cloudflare/workers-sdk/commit/414ce87c63f5b014067866364aa42ffe13f4d1f8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 8.1.0 | 8.2.0 |
+
+- [#14499](https://github.com/cloudflare/workers-sdk/pull/14499) [`8cd805d`](https://github.com/cloudflare/workers-sdk/commit/8cd805db2f9901cba52d574b385577bafd595cb5) Thanks [@colinhacks](https://github.com/colinhacks)! - Detect the `nub` package manager
+
+  C3 resolves the invoking package manager with `which-pm-runs`, which already returns `nub`, but `detectPackageManager` had no `nub` case in its switch, so it fell through to the npm default and produced npm commands. `detectPackageManager` now maps `nub` to its `nub`/`nubx` executables, and `@cloudflare/cli-shared-helpers`'s package-install helpers accept `nub` as a package manager.
+
 ## 2.70.11
 
 ### Patch Changes

@@ -1,5 +1,74 @@
 # wrangler
 
+## 4.112.0
+
+### Minor Changes
+
+- [#14470](https://github.com/cloudflare/workers-sdk/pull/14470) [`3de70df`](https://github.com/cloudflare/workers-sdk/commit/3de70dfd32f823677a9d20311ee087fd7e69d51a) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Add a top-level `addresses` field to Wrangler configuration for Email Routing
+
+  You can now declare the inbound email addresses handled by your Worker directly in `wrangler.json`:
+
+  ```json
+  {
+    "name": "my-worker",
+    "main": "src/index.ts",
+    "compatibility_date": "2026-05-21",
+    "addresses": ["support@example.com", "*@example.com"]
+  }
+  ```
+
+- [#14706](https://github.com/cloudflare/workers-sdk/pull/14706) [`cb6c3f9`](https://github.com/cloudflare/workers-sdk/commit/cb6c3f9a5c6d67804cd0cb447cc0837a9f75848c) Thanks [@edmundhung](https://github.com/edmundhung)! - Add Durable Object storage access to `createTestHarness()`
+
+  You can now execute SQL against a SQLite-backed Durable Object to seed or assert the storage state.
+
+  ```ts
+  const server = createTestHarness({
+    workers: [{ configPath: "./wrangler.json" }],
+  });
+  await server.listen();
+
+  const worker = server.getWorker();
+  const storage = await worker.getDurableObjectStorage("COUNTER", {
+    name: "user-123",
+  });
+
+  await worker.fetch("/counter/user-123");
+
+  const rows = await storage.exec(
+    "SELECT value FROM counters WHERE id = ?",
+    "user-123"
+  );
+  expect(rows).toEqual([{ value: 1 }]);
+  ```
+
+- [#14562](https://github.com/cloudflare/workers-sdk/pull/14562) [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Emit a typed `runtimeError` event on the `unstable_startWorker` DevEnv for uncaught Worker exceptions
+
+  Uncaught Worker exceptions were only source-mapped and printed, so programmatic consumers had to scrape terminal output to observe them. The DevEnv now re-emits a `RuntimeErrorEvent` (like `reloadComplete`) carrying the exception text and source-mapped stack — fed from Miniflare's pretty-error seam via the new `handleUncaughtError` option for exceptions the runtime catches, and from the inspector for those it does not.
+
+### Patch Changes
+
+- [#14682](https://github.com/cloudflare/workers-sdk/pull/14682) [`d39ae01`](https://github.com/cloudflare/workers-sdk/commit/d39ae0131018088f8b4c31ba3f5506e224796cce) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260710.1 | ^5.20260714.1 |
+  | workerd                   | 1.20260710.1  | 1.20260714.1  |
+
+- [#14725](https://github.com/cloudflare/workers-sdk/pull/14725) [`c79504f`](https://github.com/cloudflare/workers-sdk/commit/c79504f90956405f5fab59448ba53dcf44b8d3a2) Thanks [@edmundhung](https://github.com/edmundhung)! - Support containers in `createTestHarness()`
+
+  Workers configured with containers can now be tested using `createTestHarness()`. The harness builds configured images and makes container-backed Durable Objects available during integration tests.
+
+- [#14696](https://github.com/cloudflare/workers-sdk/pull/14696) [`c7dbe1a`](https://github.com/cloudflare/workers-sdk/commit/c7dbe1a3d527d534d4069080c56e364d33d6a455) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Type `unstable_startWorker`, `DevEnv.startWorker`, and `ConfigController.set`/`patch` against `WranglerStartDevWorkerInput`, so the wrangler-specific `dev.structuredLogsHandler` field the runtime already honors is expressible through the public API. Previously the public signatures took the base `StartDevWorkerInput`, and callers passing the handler needed a cast while internal callers (the test harness) routed the wider type around the signature.
+
+- [#14494](https://github.com/cloudflare/workers-sdk/pull/14494) [`4e1a7a7`](https://github.com/cloudflare/workers-sdk/commit/4e1a7a7fe566774dca376c5d569cab56b14f34e3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Register a workers.dev subdomain before uploading a new Worker
+
+  Deploying a Worker for the first time on an account that has no workers.dev subdomain failed with an opaque API error raised by the upload request itself (code 10063, "You need a workers.dev subdomain in order to proceed"). Wrangler now checks for a workers.dev subdomain before uploading a brand-new Worker that publishes to workers.dev and prompts you to register one, so you get a clear, actionable message instead of a cryptic API failure. The check is skipped for deploys that don't target workers.dev (routes-only deploys, or `workers_dev: false`) and for existing Workers, since their account already has a subdomain.
+
+- Updated dependencies [[`34e696d`](https://github.com/cloudflare/workers-sdk/commit/34e696dc60dcd7ea04cdab8a6267d255efab9983), [`d39ae01`](https://github.com/cloudflare/workers-sdk/commit/d39ae0131018088f8b4c31ba3f5506e224796cce), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d), [`cb6c3f9`](https://github.com/cloudflare/workers-sdk/commit/cb6c3f9a5c6d67804cd0cb447cc0837a9f75848c), [`3f3afbb`](https://github.com/cloudflare/workers-sdk/commit/3f3afbbf136c404d26ee39d187a44adb06c1b6e8), [`e6fbc4e`](https://github.com/cloudflare/workers-sdk/commit/e6fbc4e67f76f9b78da3d9a2dd27c6e9786d2645)]:
+  - miniflare@4.20260714.0
+
 ## 4.111.0
 
 ### Minor Changes

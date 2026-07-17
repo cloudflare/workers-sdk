@@ -1,5 +1,23 @@
 # @cloudflare/vite-plugin
 
+## 1.45.1
+
+### Patch Changes
+
+- [#14610](https://github.com/cloudflare/workers-sdk/pull/14610) [`e727842`](https://github.com/cloudflare/workers-sdk/commit/e727842b2c7f64de9e06623f1df32df5488681e4) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Keep watching config changes after a failed dev server restart
+
+  Previously, when a config change made the dev server restart fail — for example because the updated Worker config was invalid — the plugin stopped watching config changes entirely: the change handler (covering the Worker config files, local dev vars, and the assets configuration) removed itself before restarting, and only a successfully created server would register a fresh one. Since Vite keeps the current server running when a restart fails, every subsequent config change (including the one that fixes the config) was silently ignored for the rest of the session.
+
+  The handler now stays registered and guards against re-entrant restarts instead, so fixing the config restarts the dev server as expected.
+
+- [#14418](https://github.com/cloudflare/workers-sdk/pull/14418) [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Improve routing performance for Workers with assets
+
+  Reduce request handling latency by streamlining the router Worker's request path. The loopback infrastructure remains available for future use.
+
+- Updated dependencies [[`34e696d`](https://github.com/cloudflare/workers-sdk/commit/34e696dc60dcd7ea04cdab8a6267d255efab9983), [`d39ae01`](https://github.com/cloudflare/workers-sdk/commit/d39ae0131018088f8b4c31ba3f5506e224796cce), [`3de70df`](https://github.com/cloudflare/workers-sdk/commit/3de70dfd32f823677a9d20311ee087fd7e69d51a), [`c79504f`](https://github.com/cloudflare/workers-sdk/commit/c79504f90956405f5fab59448ba53dcf44b8d3a2), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d), [`cb6c3f9`](https://github.com/cloudflare/workers-sdk/commit/cb6c3f9a5c6d67804cd0cb447cc0837a9f75848c), [`c7dbe1a`](https://github.com/cloudflare/workers-sdk/commit/c7dbe1a3d527d534d4069080c56e364d33d6a455), [`3f3afbb`](https://github.com/cloudflare/workers-sdk/commit/3f3afbbf136c404d26ee39d187a44adb06c1b6e8), [`e6fbc4e`](https://github.com/cloudflare/workers-sdk/commit/e6fbc4e67f76f9b78da3d9a2dd27c6e9786d2645), [`4e1a7a7`](https://github.com/cloudflare/workers-sdk/commit/4e1a7a7fe566774dca376c5d569cab56b14f34e3), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981)]:
+  - miniflare@4.20260714.0
+  - wrangler@4.112.0
+
 ## 1.45.0
 
 ### Minor Changes

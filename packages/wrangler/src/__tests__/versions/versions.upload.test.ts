@@ -1851,7 +1851,17 @@ describe("versions upload", () => {
 				}),
 				http.get("*/accounts/:accountId/r2/buckets/:bucketName", () => {
 					return HttpResponse.json(createFetchResult({ name: "my-bucket" }));
-				})
+				}),
+				http.get("*/accounts/:accountId/workers/dispatch/namespaces", () =>
+					HttpResponse.json(
+						createFetchResult([
+							{
+								namespace_id: "namespace-id",
+								namespace_name: "my-namespace",
+							},
+						])
+					)
+				)
 			);
 
 			writeWranglerConfig({
