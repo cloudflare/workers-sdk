@@ -80,7 +80,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const output = await worker.output;
 			expect(normalize(output)).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
-				Experimental: The following bindings need to be provisioned:
+				The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
 				env.D1         D1 Database
@@ -204,7 +204,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const output = await worker.output;
 			expect(normalize(output)).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
-				Experimental: The following bindings need to be provisioned:
+				The following bindings need to be provisioned:
 				Binding         Resource
 				env.KV2         KV Namespace
 				Provisioning KV2 (KV Namespace)...
