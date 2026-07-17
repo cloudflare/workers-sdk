@@ -358,42 +358,77 @@ function ensureRootedPath(filePath: string) {
 	return isWindows && filePath[0] !== "/" ? `/${filePath}` : filePath;
 }
 
+// Sentinel prepended to a redirect `Location` value whenever we had to
+// percent-encode it (see `encodeRedirectLocation()`). It lets us know
+// *deterministically* — rather than guessing — that a specifier/referrer
+// `workerd` later hands back to us is one of our own encoded values and must
+// be decoded again (see `decodeEncodedSpecifier()`).
+//
+// It is a *leading, rooted* segment on purpose. `workerd` derives the specifier
+// for a relative import by joining it onto the referring module's directory
+// (`kj::Path::eval`; see `ensureRootedPath()`), which drops the final path
+// segment but keeps the leading ones. A trailing marker would therefore be lost
+// for those derived imports, whereas a leading one propagates to every
+// descendant of an encoded module. The name is deliberately unlikely to collide
+// with a real path segment.
+// See https://github.com/cloudflare/workers-sdk/issues/14655
+export const ENCODED_PATH_PREFIX = "/__mf_vitest_encoded__";
+
+// Non-printable-ASCII detector. Anything outside the printable ASCII range
+// (`0x20`–`0x7E`) can't be represented in the Latin-1/ASCII byte range an HTTP
+// header value is restricted to, so it must be percent-encoded before being
+// used as a `Location`. The `u` flag makes the class match by code point, so
+// astral characters (e.g. emoji, CJK extension chars) are handled as a unit
+// rather than as lone surrogates.
+const nonHeaderSafeRegExp = /[^\x20-\x7E]/u;
+
 /**
- * Redirect responses from this fallback service round-trip non-ASCII/reserved
- * bytes through `encodeURI()` (see `buildRedirectResponse()`), so callers
- * must `decodeURI()` them back to recover the real filesystem path. However,
- * `workerd` also sends the *original*, never-encoded specifier/referrer on a
- * request's first pass, and a workspace path can legitimately contain a
- * literal `%` that was never produced by our own `encodeURI()` call (e.g.
- * `50%off`). `decodeURI()` throws `URIError` on that kind of malformed
- * escape sequence, so decode defensively here and fall back to the raw
- * value on failure — this lets resolution continue (and fall through to the
- * existing 404 response) instead of crashing the whole handler.
+ * Percent-encodes a redirect target so it's safe to use as a `Location` header
+ * value, but *only* when it actually contains bytes outside the printable ASCII
+ * range. Pure-ASCII paths — the overwhelmingly common case, including paths
+ * containing a literal `%` or spaces — are returned unchanged and never gain the
+ * sentinel prefix, so this is a no-op for them.
+ *
+ * When encoding is required, literal `%` is escaped first (to `%25`) so the
+ * transform is losslessly reversible by `decodeURIComponent()` even for real
+ * paths that already contain percent sequences (e.g. `…/開発/50%off/…`). `/` and
+ * `:` are left intact so Windows drive-letter paths like `/C:/a/b/c` still
+ * round-trip. `encodeURI()`/`decodeURI()` can't be used here because they don't
+ * escape a literal `%`, so a path mixing non-ASCII and `%` wouldn't round-trip.
  * See https://github.com/cloudflare/workers-sdk/issues/14655
  */
-function safeDecodeURI(value: string): string {
-	try {
-		return decodeURI(value);
-	} catch (e) {
-		if (e instanceof URIError) {
-			return value;
-		}
-		throw e;
+export function encodeRedirectLocation(filePath: string): string {
+	if (!nonHeaderSafeRegExp.test(filePath)) {
+		return filePath;
 	}
+	const encoded = filePath
+		.replace(/%/g, "%25")
+		.replace(/[^\x20-\x7E]/gu, (char) => encodeURIComponent(char));
+	return `${ENCODED_PATH_PREFIX}${encoded}`;
+}
+
+/**
+ * Inverts `encodeRedirectLocation()`. `workerd` echoes a redirect's `Location`
+ * value back to us verbatim as the next request's `specifier`/`referrer`, so
+ * this recovers the real filesystem path — but only for values we actually
+ * encoded, identified unambiguously by the sentinel prefix. Everything else
+ * (bare `cloudflare:*`/`node:*` specifiers, original file paths, and paths
+ * containing a literal `%` we never touched such as `50%off`) is returned
+ * untouched. Because we only ever decode our own output, `decodeURIComponent()`
+ * can't throw here and can't silently corrupt a real `%` in a workspace path.
+ * See https://github.com/cloudflare/workers-sdk/issues/14655
+ */
+export function decodeEncodedSpecifier(value: string): string {
+	if (!value.startsWith(ENCODED_PATH_PREFIX)) {
+		return value;
+	}
+	return decodeURIComponent(value.slice(ENCODED_PATH_PREFIX.length));
 }
 
 function buildRedirectResponse(filePath: string) {
 	return new Response(null, {
 		status: 301,
-		// `Location` is an HTTP header, so it's restricted to the Latin-1/ASCII byte
-		// range. `filePath` may contain non-ASCII characters (e.g. a workspace path
-		// with CJK characters on Windows), which would otherwise throw when this
-		// `Response` is constructed ("Cannot convert argument to a ByteString...").
-		// `encodeURI()` (rather than `encodeURIComponent()`) leaves `/` and `:`
-		// intact, so Windows drive-letter paths like `/C:/a/b/c` still round-trip
-		// correctly; only the genuinely invalid header bytes get percent-encoded.
-		// See https://github.com/cloudflare/workers-sdk/issues/14655
-		headers: { Location: encodeURI(ensureRootedPath(filePath)) },
+		headers: { Location: encodeRedirectLocation(ensureRootedPath(filePath)) },
 	});
 }
 
@@ -575,16 +610,14 @@ export async function handleModuleFallbackRequest(
 	assert(referrer !== null, "Expected referrer search param");
 	// `workerd` carries a previous redirect response's `Location` header value
 	// through verbatim as this request's `specifier`, rather than URI-decoding
-	// it. `buildRedirectResponse()` percent-encodes non-ASCII paths with
-	// `encodeURI()` before setting them as the `Location` header (required,
-	// since headers are restricted to the Latin-1/ASCII byte range), so we must
-	// undo that encoding here to recover the real filesystem path for resolution.
-	// This is a no-op for specifiers that were never percent-encoded (e.g. bare
-	// `cloudflare:*` specifiers on the initial request). Decoded defensively via
-	// `safeDecodeURI()`, since a workspace path can legitimately contain a
-	// literal `%` that isn't valid percent-encoding.
+	// it. `buildRedirectResponse()` percent-encodes paths that aren't header-safe
+	// (required, since headers are restricted to the Latin-1/ASCII byte range) and
+	// tags them with a sentinel prefix, so `decodeEncodedSpecifier()` recovers the
+	// real filesystem path for exactly those values and leaves everything else
+	// (bare `cloudflare:*` specifiers, untouched original paths, paths with a
+	// literal `%`) alone.
 	// See https://github.com/cloudflare/workers-sdk/issues/14655
-	let target = safeDecodeURI(rawSpecifierParam);
+	let target = decodeEncodedSpecifier(rawSpecifierParam);
 	// `workerd` also tracks this in-flight module request by the exact literal
 	// `specifier` string above (before decoding), and rejects our response if the
 	// JSON module's `name` field doesn't match that literal string exactly. So we
@@ -596,7 +629,7 @@ export async function handleModuleFallbackRequest(
 	// becomes the referrer workerd sends for every import statement inside that
 	// module, propagating the encoding forward indefinitely. Decode it the same
 	// way as `target` so filesystem resolution keeps working for those imports.
-	referrer = safeDecodeURI(referrer);
+	referrer = decodeEncodedSpecifier(referrer);
 	const referrerDir = posixPath.dirname(referrer);
 	let specifier = getApproximateSpecifier(target, referrerDir);
 
