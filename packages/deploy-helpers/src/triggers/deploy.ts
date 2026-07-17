@@ -221,7 +221,9 @@ export async function triggersDeploy(
 	if (config.queues.producers && config.queues.producers.length) {
 		deployments.push(
 			...config.queues.producers.map((producer) =>
-				Promise.resolve({ targets: [`Producer for ${producer.queue}`] })
+				Promise.resolve({
+					targets: [`Producer for ${producer.queue ?? producer.binding}`],
+				})
 			)
 		);
 	}

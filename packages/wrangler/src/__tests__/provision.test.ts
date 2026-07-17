@@ -364,6 +364,8 @@ describe("resource provisioning", () => {
 
 		await runWrangler("deploy");
 
+		expect(std.out).not.toContain("Producer for undefined");
+		expect(std.out).toContain("Producer for QUEUE");
 		expect(std.err).toBe("");
 	});
 

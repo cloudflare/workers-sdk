@@ -266,9 +266,12 @@ export function createWorkerUploadForm(
 			queue_name ??= INHERIT_SYMBOL;
 		}
 		if (queue_name === undefined) {
-			throw new UserError(`${binding} bindings must have a "queue" field`, {
-				telemetryMessage: "queue binding missing name",
-			});
+			throw new UserError(
+				`${binding} bindings must have a "queue" field. Add a "queue" field to the producer in your Wrangler configuration specifying the name of the Queue to bind to.`,
+				{
+					telemetryMessage: "queue binding missing name",
+				}
+			);
 		}
 
 		if (queue_name === INHERIT_SYMBOL) {
@@ -290,7 +293,7 @@ export function createWorkerUploadForm(
 		}
 		if (bucket_name === undefined) {
 			throw new UserError(
-				`${binding} bindings must have a "bucket_name" field`,
+				`${binding} bindings must have a "bucket_name" field. Add a "bucket_name" field to the binding in your Wrangler configuration specifying the name of the R2 bucket to bind to.`,
 				{ telemetryMessage: "r2 bucket binding missing bucket_name" }
 			);
 		}
@@ -318,7 +321,7 @@ export function createWorkerUploadForm(
 			}
 			if (database_id === undefined) {
 				throw new UserError(
-					`${binding} bindings must have a "database_id" field`,
+					`${binding} bindings must have a "database_id" field. Add a "database_id" field to the binding in your Wrangler configuration specifying the ID of the D1 database to bind to.`,
 					{ telemetryMessage: "d1 database binding missing database_id" }
 				);
 			}
@@ -354,9 +357,12 @@ export function createWorkerUploadForm(
 			namespace ??= INHERIT_SYMBOL;
 		}
 		if (namespace === undefined) {
-			throw new UserError(`${binding} bindings must have a "namespace" field`, {
-				telemetryMessage: "ai search namespace binding missing namespace",
-			});
+			throw new UserError(
+				`${binding} bindings must have a "namespace" field. Add a "namespace" field to the binding in your Wrangler configuration specifying the AI Search namespace to bind to.`,
+				{
+					telemetryMessage: "ai search namespace binding missing namespace",
+				}
+			);
 		}
 
 		if (namespace === INHERIT_SYMBOL) {
@@ -393,9 +399,12 @@ export function createWorkerUploadForm(
 			namespace ??= INHERIT_SYMBOL;
 		}
 		if (namespace === undefined) {
-			throw new UserError(`${binding} bindings must have a "namespace" field`, {
-				telemetryMessage: false,
-			});
+			throw new UserError(
+				`${binding} bindings must have a "namespace" field. Add a "namespace" field to the binding in your Wrangler configuration specifying the namespace to bind to.`,
+				{
+					telemetryMessage: false,
+				}
+			);
 		}
 
 		if (namespace === INHERIT_SYMBOL) {
@@ -450,9 +459,12 @@ export function createWorkerUploadForm(
 			app_id ??= INHERIT_SYMBOL;
 		}
 		if (app_id === undefined) {
-			throw new UserError(`${binding} bindings must have an "app_id" field`, {
-				telemetryMessage: "flagship binding missing app id",
-			});
+			throw new UserError(
+				`${binding} bindings must have an "app_id" field. Add an "app_id" field to the binding in your Wrangler configuration specifying the Flagship app to bind to.`,
+				{
+					telemetryMessage: "flagship binding missing app id",
+				}
+			);
 		}
 
 		metadataBindings.push(
@@ -521,9 +533,12 @@ export function createWorkerUploadForm(
 			namespace ??= INHERIT_SYMBOL;
 		}
 		if (namespace === undefined) {
-			throw new UserError(`${binding} bindings must have a "namespace" field`, {
-				telemetryMessage: "dispatch namespace binding missing namespace",
-			});
+			throw new UserError(
+				`${binding} bindings must have a "namespace" field. Add a "namespace" field to the binding in your Wrangler configuration specifying the dispatch namespace to bind to.`,
+				{
+					telemetryMessage: "dispatch namespace binding missing namespace",
+				}
+			);
 		}
 
 		if (namespace === INHERIT_SYMBOL) {
