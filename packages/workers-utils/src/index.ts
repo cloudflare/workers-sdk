@@ -95,6 +95,8 @@ export {
 	getInstalledPackageVersion,
 } from "./package-resolution";
 
+export type { LockfileCache } from "./package-resolution";
+
 export * from "./constants";
 
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";

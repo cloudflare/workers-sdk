@@ -8,15 +8,19 @@ import { parseYarnLockfile } from "./yarn";
 import type { LockfileName } from "./discovery";
 
 /**
- * Memoization cache for parsed lockfile version maps.
+ * A caller-owned memoization cache for parsed lockfile version maps.
+ *
  * Keyed by `lockfilePath + "\0" + projectPath` so that different workspace
  * packages sharing the same pnpm lockfile each get their own entry (pnpm
  * lockfiles use per-importer dependency maps). The null byte separator
  * cannot appear in file paths, so the composite key is unambiguous.
- * Lockfiles are not expected to change during a single process invocation
- * (e.g. a `wrangler deploy`), so a simple cache is sufficient.
+ *
+ * Create one at the call-site that makes repeated lookups (e.g. the loop
+ * in `collectPackageDependencies`) and pass it via `opts.cache`. The cache
+ * is then garbage-collected when the owning function returns, avoiding
+ * module-level mutable state.
  */
-const cache = new Map<string, Map<string, string>>();
+export type LockfileCache = Map<string, Map<string, string>>;
 
 /**
  * Resolves installed package versions from the nearest lockfile.
@@ -26,15 +30,17 @@ const cache = new Map<string, Map<string, string>>();
  * and returns a `Map<packageName, exactVersion>` for the project's
  * top-level dependencies.
  *
- * When caching is enabled (the default), results are memoized per lockfile
- * path and project path, so repeated per-package lookups within a single
- * process (e.g. inside `collectPackageDependencies`) are O(1) after the
- * initial parse.
+ * When a `cache` Map is provided, results are memoized per lockfile path
+ * and project path, so repeated per-package lookups within a single
+ * operation (e.g. inside `collectPackageDependencies`) are O(1) after the
+ * initial parse. The caller owns the cache lifetime.
  *
  * @param projectPath - Absolute path to the project directory
  * @param opts - Options
- * @param opts.cache - Whether to use the memoization cache (default: `true`).
- *                     Set to `false` to always re-read and re-parse the lockfile.
+ * @param opts.cache - A caller-owned {@link LockfileCache} for memoization.
+ *                     When provided, parsed results are stored and re-used
+ *                     from this map. When omitted, every call re-reads and
+ *                     re-parses the lockfile.
  * @param opts.stopAtProjectPath - If `true`, do not search for lockfiles
  *                                 above `projectPath`. Prevents a monorepo root
  *                                 lockfile from being used when only the
@@ -44,7 +50,7 @@ const cache = new Map<string, Map<string, string>>();
  */
 export function getInstalledVersionsFromLockfile(
 	projectPath: string,
-	opts: { cache?: boolean; stopAtProjectPath?: boolean } = {}
+	opts: { cache?: LockfileCache; stopAtProjectPath?: boolean } = {}
 ): Map<string, string> | undefined {
 	const found = findLockfile(projectPath, {
 		last: opts.stopAtProjectPath === true ? projectPath : undefined,
@@ -54,23 +60,23 @@ export function getInstalledVersionsFromLockfile(
 	}
 
 	const { lockfilePath, name } = found;
-	const useCache = opts.cache !== false;
-	const cacheKey = `${lockfilePath}\0${projectPath}`;
+	const cacheStore = opts.cache;
 
-	if (useCache) {
-		const cached = cache.get(cacheKey);
+	if (cacheStore) {
+		const cacheKey = `${lockfilePath}\0${projectPath}`;
+		const cached = cacheStore.get(cacheKey);
 		if (cached) {
 			return cached;
 		}
 
 		const versions = parseLockfile(lockfilePath, name, projectPath);
 		if (versions) {
-			cache.set(cacheKey, versions);
+			cacheStore.set(cacheKey, versions);
 		}
 		return versions;
 	}
 
-	// Caching disabled — parse fresh, skip cache entirely
+	// No cache provided — parse fresh every time
 	return parseLockfile(lockfilePath, name, projectPath);
 }
 

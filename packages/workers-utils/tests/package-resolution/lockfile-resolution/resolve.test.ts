@@ -150,7 +150,7 @@ describe("lockfile resolution — generic", () => {
 	// -----------------------------------------------------------------------
 
 	describe("memoization", () => {
-		it("returns the same map instance for repeated calls (cache hit)", ({
+		it("returns the same map instance for repeated calls with a shared cache", ({
 			expect,
 		}) => {
 			fs.writeFileSync(
@@ -164,9 +164,34 @@ describe("lockfile resolution — generic", () => {
 				})
 			);
 
+			const cache = new Map<string, Map<string, string>>();
+			const first = getInstalledVersionsFromLockfile(process.cwd(), {
+				cache,
+			});
+			const second = getInstalledVersionsFromLockfile(process.cwd(), {
+				cache,
+			});
+			expect(first).toBe(second);
+		});
+
+		it("re-parses when no cache is provided", ({ expect }) => {
+			fs.writeFileSync(
+				"package-lock.json",
+				JSON.stringify({
+					lockfileVersion: 3,
+					packages: {
+						"": { name: "test", version: "1.0.0" },
+						"node_modules/lodash": { version: "4.17.21" },
+					},
+				})
+			);
+
 			const first = getInstalledVersionsFromLockfile(process.cwd());
 			const second = getInstalledVersionsFromLockfile(process.cwd());
-			expect(first).toBe(second);
+			// Without a cache, each call returns a fresh map instance
+			expect(first).not.toBe(second);
+			// But the contents are equivalent
+			expect(first).toEqual(second);
 		});
 
 		it("returns distinct results for different projectPaths in a pnpm monorepo", ({
@@ -198,8 +223,13 @@ describe("lockfile resolution — generic", () => {
 			fs.mkdirSync(appADir, { recursive: true });
 			fs.mkdirSync(appBDir, { recursive: true });
 
-			const versionsA = getInstalledVersionsFromLockfile(appADir);
-			const versionsB = getInstalledVersionsFromLockfile(appBDir);
+			const cache = new Map<string, Map<string, string>>();
+			const versionsA = getInstalledVersionsFromLockfile(appADir, {
+				cache,
+			});
+			const versionsB = getInstalledVersionsFromLockfile(appBDir, {
+				cache,
+			});
 
 			assert(versionsA);
 			assert(versionsB);

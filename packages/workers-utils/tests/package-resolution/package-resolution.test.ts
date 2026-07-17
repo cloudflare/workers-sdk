@@ -5,18 +5,15 @@ import { getInstalledPackageVersion } from "../../src/package-resolution/package
 import { runInTempDir, seed } from "../../src/test-helpers";
 
 /**
- * Convenience wrapper that calls {@link getInstalledPackageVersion} with
- * caching disabled, so each test gets a fresh lockfile parse without
- * needing global cache teardown.
+ * Convenience wrapper that calls {@link getInstalledPackageVersion} without
+ * a cache, so each test gets a fresh lockfile parse.
  *
  * @param packageName - The name of the target package
  * @param projectPath - The path of the project to check
  * @returns The installed version string, or `undefined`
  */
 function resolvePackageVersion(packageName: string, projectPath: string) {
-	return getInstalledPackageVersion(packageName, projectPath, {
-		cache: false,
-	});
+	return getInstalledPackageVersion(packageName, projectPath);
 }
 
 describe("getInstalledPackageVersion", () => {
@@ -260,10 +257,7 @@ describe("getInstalledPackageVersion", () => {
 		// Without stopAtProjectPath, the ancestor lockfile is found
 		const versionWithoutStop = getInstalledPackageVersion(
 			"@opennextjs/cloudflare",
-			`${process.cwd()}/${subDir}`,
-			{
-				cache: false,
-			}
+			`${process.cwd()}/${subDir}`
 		);
 		expect(versionWithoutStop).toBe("1.14.4");
 
@@ -273,7 +267,6 @@ describe("getInstalledPackageVersion", () => {
 			`${process.cwd()}/${subDir}`,
 			{
 				stopAtProjectPath: true,
-				cache: false,
 			}
 		);
 		expect(versionWithStop).toBeUndefined();
