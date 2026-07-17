@@ -11,6 +11,7 @@ export class DevEnv extends EventEmitter {
 	runtime: RemoteRuntimeController;
 	proxy: ProxyController;
 	#bundle: Bundle;
+	#bundleVersion = 0;
 	#config: StartDevWorkerOptions;
 
 	start() {
@@ -25,7 +26,11 @@ export class DevEnv extends EventEmitter {
 		this.runtime.onBundleComplete({
 			type: "bundleComplete",
 			config,
-			bundle: this.#bundle,
+			bundle: {
+				...this.#bundle,
+				// Ensure binding-only updates cannot reuse the previous edge-preview artifact.
+				entrypointSource: `${this.#bundle.entrypointSource}\n// remote-bindings-update:${++this.#bundleVersion}`,
+			},
 		});
 	}
 
