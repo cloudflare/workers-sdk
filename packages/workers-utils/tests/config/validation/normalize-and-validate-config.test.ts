@@ -9828,6 +9828,22 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error if observability is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ observability: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability" should be an object but got null."
+				`);
+			});
+
 			it("should not warn on full observability config", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
