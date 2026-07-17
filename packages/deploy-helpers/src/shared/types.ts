@@ -161,6 +161,7 @@ export type TriggerProps = {
 	config: Config;
 	accountId: string;
 	scriptName: string;
+	workerTag?: string | null;
 	env: string | undefined;
 	crons: string[] | undefined;
 	routes: Route[];

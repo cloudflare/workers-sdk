@@ -283,6 +283,27 @@ const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
+function rewriteStreamingTailSelfReferences(
+	worker: WorkerOptions,
+	wranglerWorkerName: string,
+	runnerWorkerName: string
+) {
+	worker.streamingTails = worker.streamingTails?.map((tail) => {
+		if (tail === wranglerWorkerName) {
+			return runnerWorkerName;
+		}
+		if (
+			typeof tail === "object" &&
+			tail !== null &&
+			"name" in tail &&
+			tail.name === wranglerWorkerName
+		) {
+			return { ...tail, name: runnerWorkerName };
+		}
+		return tail;
+	});
+}
+
 async function buildProjectWorkerOptions(
 	project: TestProject,
 	customOptions: WorkersPoolOptionsWithDefines,
@@ -585,7 +606,15 @@ async function buildProjectWorkerOptions(
 			}
 
 			// Miniflare will validate these options
-			workers.push(worker as WorkerOptions);
+			const workerOptions = worker as WorkerOptions;
+			if (wranglerWorkerName) {
+				rewriteStreamingTailSelfReferences(
+					workerOptions,
+					wranglerWorkerName,
+					runnerWorker.name
+				);
+			}
+			workers.push(workerOptions);
 		}
 		delete runnerWorker.workers;
 	}

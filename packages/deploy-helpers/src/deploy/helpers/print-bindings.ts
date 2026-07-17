@@ -771,9 +771,12 @@ export function printBindings(
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("dispatch_namespace"),
-					value: outbound
-						? `${namespace} (outbound -> ${outbound.service})`
-						: namespace,
+					value:
+						typeof namespace === "symbol"
+							? namespace
+							: outbound
+								? `${namespace} (outbound -> ${outbound.service})`
+								: namespace,
 					mode: getMode({
 						isSimulatedLocally:
 							remote && !context.remoteBindingsDisabled ? false : undefined,

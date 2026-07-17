@@ -4488,11 +4488,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "queues.producers[0]" bindings should have a string "binding" field but got {}.
-					  - "queues.producers[0]" bindings should have a string "queue" field but got {}.
-					  - "queues.producers[1]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_1"}.
 					  - "queues.producers[2]" bindings should have a string "binding" field but got {"binding":2333,"queue":2444}.
-					  - "queues.producers[2]" bindings should have a string "queue" field but got {"binding":2333,"queue":2444}.
-					  - "queues.producers[3]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_3","queue":""}."
+					  - "queues.producers[2]" bindings should optionally have a non-empty string "queue" field but got {"binding":2333,"queue":2444}.
+					  - "queues.producers[3]" bindings should optionally have a non-empty string "queue" field but got {"binding":"QUEUE_BINDING_3","queue":""}."
 				`);
 			});
 
@@ -5157,11 +5155,10 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "dispatch_namespaces[0]" binding should be objects, but got "a string"
 					  - "dispatch_namespaces[1]" binding should be objects, but got 123
 					  - "dispatch_namespaces[2]" should have a string "binding" field but got {"binding":123,"namespace":456}.
-					  - "dispatch_namespaces[2]" should have a string "namespace" field but got {"binding":123,"namespace":456}.
-					  - "dispatch_namespaces[3]" should have a string "namespace" field but got {"binding":"DISPATCH_NAMESPACE_BINDING_1","namespace":456}.
+					  - "dispatch_namespaces[2]" should optionally have a string "namespace" field but got {"binding":123,"namespace":456}.
+					  - "dispatch_namespaces[3]" should optionally have a string "namespace" field but got {"binding":"DISPATCH_NAMESPACE_BINDING_1","namespace":456}.
 					  - "dispatch_namespaces[5]" should have a string "binding" field but got {"binding":123,"namespace":"DISPATCH_NAMESPACE_BINDING_SERVICE_1"}.
-					  - "dispatch_namespaces[6]" should have a string "binding" field but got {"binding":123,"service":456}.
-					  - "dispatch_namespaces[6]" should have a string "namespace" field but got {"binding":123,"service":456}."
+					  - "dispatch_namespaces[6]" should have a string "binding" field but got {"binding":123,"service":456}."
 				`);
 			});
 
@@ -5987,7 +5984,6 @@ describe("normalizeAndValidateConfig()", () => {
 						flagship: [
 							// @ts-expect-error purposely using an invalid value
 							{},
-							// @ts-expect-error purposely using an invalid value
 							{ binding: "VALID" },
 							// @ts-expect-error purposely using an invalid value
 							{ binding: 2000, app_id: 2111 },
@@ -6006,10 +6002,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "flagship[0]" bindings must have a string "binding" field but got {}.
-					  - "flagship[0]" bindings must have a string "app_id" field but got {}.
-					  - "flagship[1]" bindings must have a string "app_id" field but got {"binding":"VALID"}.
 					  - "flagship[2]" bindings must have a string "binding" field but got {"binding":2000,"app_id":2111}.
-					  - "flagship[2]" bindings must have a string "app_id" field but got {"binding":2000,"app_id":2111}."
+					  - "flagship[2]" bindings may have a string "app_id" field but got {"binding":2000,"app_id":2111}."
 				`);
 			});
 

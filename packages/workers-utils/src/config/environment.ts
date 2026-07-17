@@ -983,7 +983,7 @@ export interface EnvironmentNonInheritable {
 			binding: string;
 
 			/** The name of this Queue. */
-			queue: string;
+			queue?: string;
 
 			/** The number of seconds to wait before delivering a message */
 			delivery_delay?: number;
@@ -1461,7 +1461,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
 		/** The namespace to bind to. */
-		namespace: string;
+		namespace?: string;
 		/** Details about the outbound Worker which will handle outbound requests from your namespace */
 		outbound?: DispatchNamespaceOutbound;
 		/** Whether the Dispatch Namespace should be remote or not in local development */
@@ -1563,7 +1563,7 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 
 		/** The Flagship app ID to bind to. */
-		app_id: string;
+		app_id?: string;
 
 		/** Set to `true` to suppress the remote binding warning in local dev. Flagship bindings are always remote. */
 		remote?: boolean;

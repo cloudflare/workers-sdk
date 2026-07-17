@@ -202,7 +202,7 @@ export interface CfWorkflow {
 
 export interface CfQueue {
 	binding: string;
-	queue_name: string;
+	queue_name?: string | typeof INHERIT_SYMBOL;
 	delivery_delay?: number;
 	remote?: boolean;
 	raw?: boolean;
@@ -279,7 +279,7 @@ export interface CfHelloWorld {
 
 export interface CfFlagship {
 	binding: string;
-	app_id: string;
+	app_id?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 
@@ -353,7 +353,7 @@ export interface CfAnalyticsEngineDataset {
 
 export interface CfDispatchNamespace {
 	binding: string;
-	namespace: string;
+	namespace?: string | typeof INHERIT_SYMBOL;
 	outbound?: {
 		service: string;
 		environment?: string;
