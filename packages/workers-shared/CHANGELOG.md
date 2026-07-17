@@ -1,5 +1,29 @@
 # @cloudflare/workers-shared
 
+## 0.19.9
+
+### Patch Changes
+
+- [#14417](https://github.com/cloudflare/workers-sdk/pull/14417) [`34e696d`](https://github.com/cloudflare/workers-sdk/commit/34e696dc60dcd7ea04cdab8a6267d255efab9983) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Improve asset serving performance by removing an unnecessary internal dispatch hop
+
+  Asset requests and RPC calls now avoid an extra internal forwarding layer, reducing latency. The forwarding infrastructure is preserved for future use by cohort-based deployments.
+
+- [#14705](https://github.com/cloudflare/workers-sdk/pull/14705) [`00f41d6`](https://github.com/cloudflare/workers-sdk/commit/00f41d6dbdf7ba4943f2c4b5d338ae9c9d8fc9a0) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Retry asset reads from KV when they fail
+
+  The asset worker reads static assets from KV, and a read can occasionally fail with a transient error. It previously retried only once before giving up. It now retries a few times with exponential backoff, which reduces the chance of serving an error. A missing asset is not treated as a failure and is not retried.
+
+- [#14418](https://github.com/cloudflare/workers-sdk/pull/14418) [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Improve routing performance for Workers with assets
+
+  Reduce request handling latency by streamlining the router Worker's request path. The loopback infrastructure remains available for future use.
+
+## 0.19.8
+
+### Patch Changes
+
+- [#14677](https://github.com/cloudflare/workers-sdk/pull/14677) [`205a260`](https://github.com/cloudflare/workers-sdk/commit/205a260b44c1ae0fcc4089b7ae3f6defd3c16d4a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Emit `servedBy` and `requestKind` analytics from the Workers Assets asset worker
+
+  Real asset hits and SPA or 404 fallbacks previously logged the same fields. The asset worker now records what served the response and whether the request was a navigation or subresource.
+
 ## 0.19.7
 
 ### Patch Changes

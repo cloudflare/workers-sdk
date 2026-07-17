@@ -749,7 +749,7 @@ function convertExports(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRIGGERS (scheduled + fetch + queue consumer)
+// TRIGGERS (scheduled + fetch + queue consumer + email)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertTriggers(
@@ -768,9 +768,15 @@ function convertTriggers(
 	const queueConsumers: NonNullable<
 		NonNullable<RawConfig["queues"]>["consumers"]
 	> = result.queues?.consumers ? [...result.queues.consumers] : [];
+	let addresses: string[] | undefined;
 
 	for (const trigger of triggers) {
 		switch (trigger.type) {
+			case "email": {
+				addresses ??= [];
+				addresses.push(...trigger.addresses);
+				break;
+			}
 			case "scheduled": {
 				crons.push(trigger.schedule);
 				break;
@@ -811,6 +817,10 @@ function convertTriggers(
 	}
 	if (queueConsumers.length) {
 		result.queues = { ...(result.queues ?? {}), consumers: queueConsumers };
+	}
+	// An empty array removes managed addresses; undefined means no email trigger.
+	if (addresses !== undefined) {
+		result.addresses = addresses;
 	}
 }
 

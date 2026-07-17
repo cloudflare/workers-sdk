@@ -116,6 +116,7 @@ describe("normalizeAndValidateConfig()", () => {
 			minify: undefined,
 			first_party_worker: undefined,
 			keep_vars: undefined,
+			addresses: undefined,
 			logpush: undefined,
 			upload_source_maps: undefined,
 			placement: undefined,
@@ -4487,11 +4488,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "queues.producers[0]" bindings should have a string "binding" field but got {}.
-					  - "queues.producers[0]" bindings should have a string "queue" field but got {}.
-					  - "queues.producers[1]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_1"}.
 					  - "queues.producers[2]" bindings should have a string "binding" field but got {"binding":2333,"queue":2444}.
-					  - "queues.producers[2]" bindings should have a string "queue" field but got {"binding":2333,"queue":2444}.
-					  - "queues.producers[3]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_3","queue":""}."
+					  - "queues.producers[2]" bindings should optionally have a non-empty string "queue" field but got {"binding":2333,"queue":2444}.
+					  - "queues.producers[3]" bindings should optionally have a non-empty string "queue" field but got {"binding":"QUEUE_BINDING_3","queue":""}."
 				`);
 			});
 
@@ -5156,11 +5155,10 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "dispatch_namespaces[0]" binding should be objects, but got "a string"
 					  - "dispatch_namespaces[1]" binding should be objects, but got 123
 					  - "dispatch_namespaces[2]" should have a string "binding" field but got {"binding":123,"namespace":456}.
-					  - "dispatch_namespaces[2]" should have a string "namespace" field but got {"binding":123,"namespace":456}.
-					  - "dispatch_namespaces[3]" should have a string "namespace" field but got {"binding":"DISPATCH_NAMESPACE_BINDING_1","namespace":456}.
+					  - "dispatch_namespaces[2]" should optionally have a string "namespace" field but got {"binding":123,"namespace":456}.
+					  - "dispatch_namespaces[3]" should optionally have a string "namespace" field but got {"binding":"DISPATCH_NAMESPACE_BINDING_1","namespace":456}.
 					  - "dispatch_namespaces[5]" should have a string "binding" field but got {"binding":123,"namespace":"DISPATCH_NAMESPACE_BINDING_SERVICE_1"}.
-					  - "dispatch_namespaces[6]" should have a string "binding" field but got {"binding":123,"service":456}.
-					  - "dispatch_namespaces[6]" should have a string "namespace" field but got {"binding":123,"service":456}."
+					  - "dispatch_namespaces[6]" should have a string "binding" field but got {"binding":123,"service":456}."
 				`);
 			});
 
@@ -5986,7 +5984,6 @@ describe("normalizeAndValidateConfig()", () => {
 						flagship: [
 							// @ts-expect-error purposely using an invalid value
 							{},
-							// @ts-expect-error purposely using an invalid value
 							{ binding: "VALID" },
 							// @ts-expect-error purposely using an invalid value
 							{ binding: 2000, app_id: 2111 },
@@ -6005,10 +6002,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "flagship[0]" bindings must have a string "binding" field but got {}.
-					  - "flagship[0]" bindings must have a string "app_id" field but got {}.
-					  - "flagship[1]" bindings must have a string "app_id" field but got {"binding":"VALID"}.
 					  - "flagship[2]" bindings must have a string "binding" field but got {"binding":2000,"app_id":2111}.
-					  - "flagship[2]" bindings must have a string "app_id" field but got {"binding":2000,"app_id":2111}."
+					  - "flagship[2]" bindings may have a string "app_id" field but got {"binding":2000,"app_id":2111}."
 				`);
 			});
 
@@ -10780,3 +10775,67 @@ function normalizePath(text: string): string {
 		.replace("src\\index.ts", "src/index.ts")
 		.replace("path\\to\\tsconfig", "path/to/tsconfig");
 }
+
+describe("normalizeAndValidateConfig() - addresses (Email Routing)", () => {
+	function validate(rawConfig: RawConfig) {
+		return normalizeAndValidateConfig(rawConfig, undefined, undefined, {
+			env: undefined,
+		});
+	}
+
+	it("defaults to undefined when not present", ({ expect }) => {
+		const { config, diagnostics } = validate({});
+		expect(config.addresses).toBeUndefined();
+		expect(diagnostics.hasErrors()).toBe(false);
+	});
+
+	it("accepts an array of literal and catch-all addresses", ({ expect }) => {
+		const { config, diagnostics } = validate({
+			addresses: ["support@example.com", "*@example.com"],
+		});
+		expect(diagnostics.hasErrors()).toBe(false);
+		expect(config.addresses).toEqual(["support@example.com", "*@example.com"]);
+	});
+
+	it("errors when addresses is not an array", ({ expect }) => {
+		// @ts-expect-error intentionally invalid type
+		const { diagnostics } = validate({ addresses: "support@example.com" });
+		expect(diagnostics.hasErrors()).toBe(true);
+		expect(diagnostics.errors).toContain(
+			`Expected "addresses" to be an array of strings but got "support@example.com"`
+		);
+	});
+
+	it("errors on a non-string entry", ({ expect }) => {
+		// @ts-expect-error intentionally invalid entry type
+		const { diagnostics } = validate({ addresses: ["ok@example.com", 123] });
+		expect(diagnostics.hasErrors()).toBe(true);
+		expect(diagnostics.errors).toContain(
+			`Expected "addresses.[1]" to be of type string but got 123.`
+		);
+	});
+
+	it("warns and ignores addresses set under an active env.* (top-level only)", ({
+		expect,
+	}) => {
+		const { config, diagnostics } = normalizeAndValidateConfig(
+			{
+				env: {
+					staging: {
+						// @ts-expect-error addresses is top-level only, not a per-env field
+						addresses: ["support@example.com"],
+					},
+				},
+			},
+			undefined,
+			undefined,
+			{ env: "staging" }
+		);
+		expect(diagnostics.hasWarnings()).toBe(true);
+		expect(diagnostics.renderWarnings()).toContain(
+			`Unexpected fields found in env.staging field: "addresses"`
+		);
+		// Like other top-level-only fields, it is ignored rather than promoted.
+		expect(config.addresses).toBeUndefined();
+	});
+});

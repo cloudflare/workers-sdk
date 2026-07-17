@@ -514,6 +514,17 @@ export class ProxyController extends Controller {
 
 				const stack = getSourceMappedStack(message.params.exceptionDetails);
 				logger.error(message.params.exceptionDetails.text, stack);
+				// Also surface the exception as a typed event so programmatic
+				// startWorker consumers can observe runtime errors without
+				// scraping logs (re-emitted externally by DevEnv, like
+				// `reloadComplete`).
+				this.bus.dispatch({
+					type: "runtimeError",
+					source: "ProxyController",
+					text: message.params.exceptionDetails.text,
+					stack,
+					exceptionDetails: message.params.exceptionDetails,
+				});
 				break;
 			}
 			default: {

@@ -4,7 +4,7 @@ import {
 	getWorkersCIBranchName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { parseConfigPlacement } from "../utils/placement";
+import { parseConfigPlacement } from "../deploy/helpers/placement";
 import type { Binding, EnvBindings, PreviewDefaults } from "./api";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 

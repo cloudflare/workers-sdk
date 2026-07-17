@@ -1,5 +1,49 @@
 # @cloudflare/vite-plugin
 
+## 1.45.1
+
+### Patch Changes
+
+- [#14610](https://github.com/cloudflare/workers-sdk/pull/14610) [`e727842`](https://github.com/cloudflare/workers-sdk/commit/e727842b2c7f64de9e06623f1df32df5488681e4) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Keep watching config changes after a failed dev server restart
+
+  Previously, when a config change made the dev server restart fail — for example because the updated Worker config was invalid — the plugin stopped watching config changes entirely: the change handler (covering the Worker config files, local dev vars, and the assets configuration) removed itself before restarting, and only a successfully created server would register a fresh one. Since Vite keeps the current server running when a restart fails, every subsequent config change (including the one that fixes the config) was silently ignored for the rest of the session.
+
+  The handler now stays registered and guards against re-entrant restarts instead, so fixing the config restarts the dev server as expected.
+
+- [#14418](https://github.com/cloudflare/workers-sdk/pull/14418) [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Improve routing performance for Workers with assets
+
+  Reduce request handling latency by streamlining the router Worker's request path. The loopback infrastructure remains available for future use.
+
+- Updated dependencies [[`34e696d`](https://github.com/cloudflare/workers-sdk/commit/34e696dc60dcd7ea04cdab8a6267d255efab9983), [`d39ae01`](https://github.com/cloudflare/workers-sdk/commit/d39ae0131018088f8b4c31ba3f5506e224796cce), [`3de70df`](https://github.com/cloudflare/workers-sdk/commit/3de70dfd32f823677a9d20311ee087fd7e69d51a), [`c79504f`](https://github.com/cloudflare/workers-sdk/commit/c79504f90956405f5fab59448ba53dcf44b8d3a2), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d), [`cb6c3f9`](https://github.com/cloudflare/workers-sdk/commit/cb6c3f9a5c6d67804cd0cb447cc0837a9f75848c), [`c7dbe1a`](https://github.com/cloudflare/workers-sdk/commit/c7dbe1a3d527d534d4069080c56e364d33d6a455), [`3f3afbb`](https://github.com/cloudflare/workers-sdk/commit/3f3afbbf136c404d26ee39d187a44adb06c1b6e8), [`e6fbc4e`](https://github.com/cloudflare/workers-sdk/commit/e6fbc4e67f76f9b78da3d9a2dd27c6e9786d2645), [`4e1a7a7`](https://github.com/cloudflare/workers-sdk/commit/4e1a7a7fe566774dca376c5d569cab56b14f34e3), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981)]:
+  - miniflare@4.20260714.0
+  - wrangler@4.112.0
+
+## 1.45.0
+
+### Minor Changes
+
+- [#14652](https://github.com/cloudflare/workers-sdk/pull/14652) [`317ce1f`](https://github.com/cloudflare/workers-sdk/commit/317ce1f32511a0e0b52b8bd81ea5a163e0821646) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Append Workers runtime types to the generated types when using `experimental.newConfig`, with a new `types.includeRuntime` option
+
+  When using the experimental new config (`cloudflare.config.ts`), the plugin now appends the Workers runtime types (generated from your compatibility date and flags) to `worker-configuration.d.ts`, alongside the types inferred from your config. This is controlled by a new `experimental.newConfig.types.includeRuntime` option, which defaults to `true`.
+
+  As part of this change, types are now generated only during `vite dev` (not `vite build`), since compatibility settings are resolved from the active dev session. This affects the experimental new config path only.
+
+### Patch Changes
+
+- [#14588](https://github.com/cloudflare/workers-sdk/pull/14588) [`eb99ab1`](https://github.com/cloudflare/workers-sdk/commit/eb99ab10c83de2599a7a234bbcc57bc739864288) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: Respect auth profiles when using remote bindings in the Vite plugin
+
+  Auth profiles (configured via `wrangler auth create` and `wrangler auth activate`) were previously being ignored when using remote bindings with the Vite plugin. This is now fixed.
+
+  Note that the profile directory is resolved based on the [Vite project root](https://vite.dev/config/shared-options.html#root).
+
+- [#14645](https://github.com/cloudflare/workers-sdk/pull/14645) [`cbdd107`](https://github.com/cloudflare/workers-sdk/commit/cbdd10777650ceb659e9e41ec858cb313a3dd47a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix load time crash on Node.js versions earlier than 22.15
+
+  The plugin eagerly imported `registerHooks` from `node:module`, which only exists on Node.js v22.15.0+. `registerHooks` is now read lazily, meaning that missing support is only surfaced when using `experimental.newConfig`.
+
+- Updated dependencies [[`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`ed33326`](https://github.com/cloudflare/workers-sdk/commit/ed3332620a15dff35b0875eb9ded87086104b2f0), [`018574b`](https://github.com/cloudflare/workers-sdk/commit/018574b5ab22cc0e3141d1f09c2c383d76d59b2c), [`eb99ab1`](https://github.com/cloudflare/workers-sdk/commit/eb99ab10c83de2599a7a234bbcc57bc739864288), [`cdf3148`](https://github.com/cloudflare/workers-sdk/commit/cdf3148976e274ef834e82ccc98eee3af30ef373), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`3015320`](https://github.com/cloudflare/workers-sdk/commit/3015320cf32d7bfe6f63121e19c9b469d028a9a8), [`899c297`](https://github.com/cloudflare/workers-sdk/commit/899c29763aa64c2a0c954105d7ff85c368d63f6d), [`9da77ac`](https://github.com/cloudflare/workers-sdk/commit/9da77ace05e3e63d491e39e672d91f4dd7e31e7a), [`317ce1f`](https://github.com/cloudflare/workers-sdk/commit/317ce1f32511a0e0b52b8bd81ea5a163e0821646)]:
+  - miniflare@4.20260710.0
+  - wrangler@4.111.0
+
 ## 1.44.0
 
 ### Minor Changes

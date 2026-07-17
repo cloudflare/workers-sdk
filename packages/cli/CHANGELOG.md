@@ -1,5 +1,23 @@
 # @cloudflare/cli
 
+## 0.1.15
+
+### Patch Changes
+
+- [#14499](https://github.com/cloudflare/workers-sdk/pull/14499) [`8cd805d`](https://github.com/cloudflare/workers-sdk/commit/8cd805db2f9901cba52d574b385577bafd595cb5) Thanks [@colinhacks](https://github.com/colinhacks)! - Detect the `nub` package manager
+
+  C3 resolves the invoking package manager with `which-pm-runs`, which already returns `nub`, but `detectPackageManager` had no `nub` case in its switch, so it fell through to the npm default and produced npm commands. `detectPackageManager` now maps `nub` to its `nub`/`nubx` executables, and `@cloudflare/cli-shared-helpers`'s package-install helpers accept `nub` as a package manager.
+
+- Updated dependencies []:
+  - @cloudflare/workers-utils@0.27.0
+
+## 0.1.14
+
+### Patch Changes
+
+- Updated dependencies [[`42df9bb`](https://github.com/cloudflare/workers-sdk/commit/42df9bbf07e37032a3e61027e33d504d74a25ccd)]:
+  - @cloudflare/workers-utils@0.27.0
+
 ## 0.1.13
 
 ### Patch Changes
