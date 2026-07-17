@@ -1388,76 +1388,103 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			return (await (await mf.dispatchFetch(`http://x${path}`)).json()) as T;
 		}
 
-		test("stress: four instances concurrently write distinct KV keys via workers", async ({
-			expect,
-		}) => {
-			const root = await useTmp();
-			const names = ["a", "b", "c", "d"];
-			const mfs = names.map((n) => makeStress(root, n));
-			await Promise.all(mfs.map((mf) => mf.ready));
-
-			const PER = 25;
-			const statuses = await Promise.all(
-				mfs.flatMap((mf, idx) =>
-					Array.from({ length: PER }, (_unused, i) =>
-						fire(mf, `/kv/put?key=k-${idx}-${i}`, "v")
-					)
-				)
-			);
-			expect(statuses.filter((s) => s !== 200)).toEqual([]);
-
-			// A fresh reader sees every key written by all four instances.
-			const reader = makeStress(root, "reader");
-			await reader.ready;
-			const misses: string[] = [];
-			for (let idx = 0; idx < names.length; idx++) {
-				for (let i = 0; i < PER; i++) {
-					const key = `k-${idx}-${i}`;
-					if ((await bodyOf(reader, `/kv/get?key=${key}`)) !== "v") {
-						misses.push(key);
-					}
-				}
-			}
-			expect(misses).toEqual([]);
-		});
-
-		test("stress: concurrent writes to the SAME KV key never error and converge", async ({
-			expect,
-		}) => {
-			const root = await useTmp();
+		// Start two instances sharing `root` and wait for both to be ready.
+		async function startPair(root: string): Promise<[Miniflare, Miniflare]> {
 			const a = makeStress(root, "a");
 			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			await Promise.all([a.ready, b.ready]);
+			return [a, b];
+		}
 
-			const N = 50;
-			const ops: Promise<number>[] = [];
-			const candidates = new Set<string>();
-			for (let i = 0; i < N; i++) {
-				const va = `a-${i}`;
-				const vb = `b-${i}`;
-				candidates.add(va);
-				candidates.add(vb);
-				ops.push(fire(a, "/kv/put?key=hot", va));
-				ops.push(fire(b, "/kv/put?key=hot", vb));
+		// Start `count` instances sharing `root` (named p0..pN) and wait for ready.
+		async function startMany(
+			root: string,
+			count: number
+		): Promise<Miniflare[]> {
+			const mfs = Array.from({ length: count }, (_unused, i) =>
+				makeStress(root, `p${i}`)
+			);
+			await Promise.all(mfs.map((mf) => mf.ready));
+			return mfs;
+		}
+
+		describe.each([
+			{ instances: 4, per: 25 },
+			{ instances: 6, per: 20 },
+			{ instances: 10, per: 30 },
+		])(
+			"stress: $instances instances concurrently write distinct KV keys",
+			({ instances, per }) => {
+				test("all present with exact values", async ({ expect }) => {
+					const root = await useTmp();
+					const mfs = await startMany(root, instances);
+
+					const ops = mfs.flatMap((mf, idx) =>
+						Array.from({ length: per }, (_unused, i) =>
+							fire(mf, `/kv/put?key=dk-${idx}-${i}`, `val-${idx}-${i}`)
+						)
+					);
+					expect((await Promise.all(ops)).filter((s) => s !== 200)).toEqual([]);
+
+					// A fresh reader process sees every key with the exact value written.
+					const reader = makeStress(root, "reader");
+					await reader.ready;
+					const total = instances * per;
+					expect(
+						(
+							await jsonOf<{ count: number }>(
+								reader,
+								"/kv/listcount?prefix=dk-"
+							)
+						).count
+					).toBe(total);
+					const bad: string[] = [];
+					for (let idx = 0; idx < instances; idx++) {
+						for (let i = 0; i < per; i++) {
+							const v = await bodyOf(reader, `/kv/get?key=dk-${idx}-${i}`);
+							if (v !== `val-${idx}-${i}`) {
+								bad.push(`dk-${idx}-${i}=${v}`);
+							}
+						}
+					}
+					expect(bad).toEqual([]);
+				});
 			}
-			expect((await Promise.all(ops)).filter((s) => s !== 200)).toEqual([]);
+		);
 
-			// After writes settle, both processes read the SAME, valid final value.
-			const fromA = await bodyOf(a, "/kv/get?key=hot");
-			const fromB = await bodyOf(b, "/kv/get?key=hot");
-			expect(fromA).toBe(fromB);
-			expect(candidates.has(fromA)).toBe(true);
+		describe.each([
+			{ kind: "KV", put: "/kv/put", get: "/kv/get", n: 50 },
+			{ kind: "R2", put: "/r2/put", get: "/r2/get", n: 40 },
+		])("stress: concurrent writes to the SAME $kind key", ({ put, get, n }) => {
+			test("never error and converge", async ({ expect }) => {
+				const root = await useTmp();
+				const [a, b] = await startPair(root);
+
+				const ops: Promise<number>[] = [];
+				const candidates = new Set<string>();
+				for (let i = 0; i < n; i++) {
+					const va = `a-${i}`;
+					const vb = `b-${i}`;
+					candidates.add(va);
+					candidates.add(vb);
+					ops.push(fire(a, `${put}?key=hot`, va));
+					ops.push(fire(b, `${put}?key=hot`, vb));
+				}
+				expect((await Promise.all(ops)).filter((s) => s !== 200)).toEqual([]);
+
+				// After writes settle, both processes read the SAME, valid final value.
+				const fromA = await bodyOf(a, `${get}?key=hot`);
+				const fromB = await bodyOf(b, `${get}?key=hot`);
+				expect(fromA).toBe(fromB);
+				expect(candidates.has(fromA)).toBe(true);
+			});
 		});
 
 		test("correctness: concurrent atomic D1 increments across instances lose no updates", async ({
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 			await fire(
 				a,
 				"/d1/exec",
@@ -1486,10 +1513,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			const PER = 30;
 			const ops: Promise<number>[] = [];
@@ -1553,10 +1577,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			// Each instance bulk-writes 600 keys under a shared prefix.
 			expect(await fire(a, "/kv/bulkput?prefix=page:a-&n=600")).toBe(200);
@@ -1575,10 +1596,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			expect(await fire(a, "/kv/putbin?key=bin&len=4096")).toBe(200);
 			const got = await jsonOf<{ len: number; ok: boolean }>(
@@ -1593,10 +1611,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			await fire(a, "/kv/put?key=empty", "");
 			await fire(a, "/r2/put?key=empty", "");
@@ -1636,10 +1651,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 			await fire(
 				a,
 				"/d1/exec",
@@ -1672,10 +1684,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			const N = 40;
 			const ops: Promise<number>[] = [];
@@ -1697,10 +1706,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			const ddl =
 				"CREATE TABLE IF NOT EXISTS log (id INTEGER PRIMARY KEY AUTOINCREMENT, src TEXT)";
@@ -1720,10 +1726,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			const PER = 40;
 			const ops: Promise<number>[] = [];
@@ -1743,42 +1746,11 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect(misses).toEqual([]);
 		});
 
-		test("stress: concurrent R2 writes to the SAME key never error and converge", async ({
-			expect,
-		}) => {
-			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
-
-			const N = 40;
-			const candidates = new Set<string>();
-			const ops: Promise<number>[] = [];
-			for (let i = 0; i < N; i++) {
-				const va = `a-${i}`;
-				const vb = `b-${i}`;
-				candidates.add(va);
-				candidates.add(vb);
-				ops.push(fire(a, "/r2/put?key=hot", va));
-				ops.push(fire(b, "/r2/put?key=hot", vb));
-			}
-			expect((await Promise.all(ops)).filter((s) => s !== 200)).toEqual([]);
-
-			const fromA = await bodyOf(a, "/r2/get?key=hot");
-			const fromB = await bodyOf(b, "/r2/get?key=hot");
-			expect(fromA).toBe(fromB);
-			expect(candidates.has(fromA)).toBe(true);
-		});
-
 		test("stress: concurrent large R2 bodies (blob store) from both instances", async ({
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			const LEN = 256 * 1024; // 256 KiB each
 			const PER = 8;
@@ -1803,10 +1775,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			const PER = 40;
 			const ops: Promise<number>[] = [];
@@ -1839,10 +1808,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 			await fire(
 				a,
 				"/d1/exec",
@@ -1871,10 +1837,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 			await fire(
 				a,
 				"/d1/exec",
@@ -1906,10 +1869,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			// The very first thing both processes do is hit every binding type at
 			// once -- this maximises the cold-start open/transition races across all
@@ -1941,38 +1901,11 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			).toBe("v");
 		});
 
-		test("stress: six instances concurrently writing the same KV namespace", async ({
-			expect,
-		}) => {
-			const root = await useTmp();
-			const names = ["a", "b", "c", "d", "e", "f"];
-			const mfs = names.map((n) => makeStress(root, n));
-			await Promise.all(mfs.map((mf) => mf.ready));
-
-			const PER = 20;
-			const statuses = await Promise.all(
-				mfs.flatMap((mf, idx) =>
-					Array.from({ length: PER }, (_unused, i) =>
-						fire(mf, `/kv/put?key=six-${idx}-${i}`, "v")
-					)
-				)
-			);
-			expect(statuses.filter((s) => s !== 200)).toEqual([]);
-
-			expect(
-				(await jsonOf<{ count: number }>(mfs[0], "/kv/listcount?prefix=six-"))
-					.count
-			).toBe(names.length * PER);
-		});
-
 		test("stress: concurrent overlapping put/delete/get on a shared KV key space", async ({
 			expect,
 		}) => {
 			const root = await useTmp();
-			const a = makeStress(root, "a");
-			const b = makeStress(root, "b");
-			await a.ready;
-			await b.ready;
+			const [a, b] = await startPair(root);
 
 			// Both processes interleave puts, deletes and gets over the same small set
 			// of keys. Nothing may error and reads must always return a valid state.
@@ -2004,18 +1937,11 @@ describe.sequential("defaultPersistRoot sharing", () => {
 		// assert exact correctness, not just absence of errors.
 		// -------------------------------------------------------------------
 
-		function makeMany(root: string, count: number) {
-			return Array.from({ length: count }, (_unused, i) =>
-				makeStress(root, `p${i}`)
-			);
-		}
-
 		test("high concurrency: 8 processes increment one D1 counter, total is exact", async ({
 			expect,
 		}) => {
 			const root = await useTmp();
-			const mfs = makeMany(root, 8);
-			await Promise.all(mfs.map((mf) => mf.ready));
+			const mfs = await startMany(root, 8);
 			await fire(
 				mfs[0],
 				"/d1/exec",
@@ -2041,8 +1967,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const mfs = makeMany(root, 8);
-			await Promise.all(mfs.map((mf) => mf.ready));
+			const mfs = await startMany(root, 8);
 			await fire(
 				mfs[0],
 				"/d1/exec",
@@ -2070,8 +1995,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const mfs = makeMany(root, 6);
-			await Promise.all(mfs.map((mf) => mf.ready));
+			const mfs = await startMany(root, 6);
 			await fire(
 				mfs[0],
 				"/d1/exec",
@@ -2101,8 +2025,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const mfs = makeMany(root, 6);
-			await Promise.all(mfs.map((mf) => mf.ready));
+			const mfs = await startMany(root, 6);
 			await fire(mfs[0], "/bank/init");
 
 			const PER = 20;
@@ -2124,44 +2047,11 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			}
 		});
 
-		test("high concurrency: 10 processes write distinct KV keys, all present and correct", async ({
-			expect,
-		}) => {
-			const root = await useTmp();
-			const mfs = makeMany(root, 10);
-			await Promise.all(mfs.map((mf) => mf.ready));
-
-			const PER = 30;
-			const ops = mfs.flatMap((mf, idx) =>
-				Array.from({ length: PER }, (_unused, i) =>
-					fire(mf, `/kv/put?key=hc-${idx}-${i}`, `val-${idx}-${i}`)
-				)
-			);
-			expect((await Promise.all(ops)).filter((s) => s !== 200)).toEqual([]);
-
-			// A fresh reader process sees every key with the exact value written.
-			const reader = makeStress(root, "reader");
-			await reader.ready;
-			expect(
-				(await jsonOf<{ count: number }>(reader, "/kv/listcount?prefix=hc-"))
-					.count
-			).toBe(mfs.length * PER);
-			const bad: string[] = [];
-			for (let idx = 0; idx < mfs.length; idx++) {
-				for (let i = 0; i < PER; i++) {
-					const v = await bodyOf(reader, `/kv/get?key=hc-${idx}-${i}`);
-					if (v !== `val-${idx}-${i}`) bad.push(`hc-${idx}-${i}=${v}`);
-				}
-			}
-			expect(bad).toEqual([]);
-		});
-
 		test("high concurrency: many processes overwrite one KV key, all agree on a real final value", async ({
 			expect,
 		}) => {
 			const root = await useTmp();
-			const mfs = makeMany(root, 8);
-			await Promise.all(mfs.map((mf) => mf.ready));
+			const mfs = await startMany(root, 8);
 
 			const PER = 20;
 			const candidates = new Set<string>();
@@ -2226,8 +2116,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const mfs = makeMany(root, 6);
-			await Promise.all(mfs.map((mf) => mf.ready));
+			const mfs = await startMany(root, 6);
 
 			const PER = 10;
 			// First operation each process performs hits every binding type at once.
@@ -2252,8 +2141,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect,
 		}) => {
 			const root = await useTmp();
-			const mfs = makeMany(root, 6);
-			await Promise.all(mfs.map((mf) => mf.ready));
+			const mfs = await startMany(root, 6);
 
 			const KEYS = 6;
 			const ROUNDS = 15;

@@ -218,74 +218,6 @@ const STORAGE_OWNER_IDLE_CHECK_MS =
 	Number(process.env.MINIFLARE_STORAGE_OWNER_IDLE_CHECK_MS) || 1_000;
 const STORAGE_OWNER_IDLE_DEBOUNCE = 3;
 
-const PERSIST_ROOT_STARTUP_LOCK = ".miniflare-startup.lock";
-const PERSIST_ROOT_STARTUP_LOCK_STALE_MS = 30_000;
-const PERSIST_ROOT_STARTUP_LOCK_RETRY_MS = 50;
-
-async function wait(ms: number): Promise<void> {
-	await new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function withPersistRootStartupLock<T>(
-	persistRoot: string | undefined,
-	signal: AbortSignal,
-	callback: () => Promise<T>
-): Promise<T> {
-	if (persistRoot === undefined || signal.aborted) {
-		return callback();
-	}
-
-	await mkdir(persistRoot, { recursive: true });
-	const lockPath = path.join(persistRoot, PERSIST_ROOT_STARTUP_LOCK);
-	let lock: fs.promises.FileHandle | undefined;
-	let heartbeat: NodeJS.Timeout | undefined;
-
-	while (lock === undefined && !signal.aborted) {
-		try {
-			lock = await fs.promises.open(lockPath, "wx");
-			await lock.writeFile(`${process.pid}\n${Date.now()}\n`);
-			heartbeat = setInterval(() => {
-				fs.promises.utimes(lockPath, new Date(), new Date()).catch(() => {});
-			}, 1_000);
-			break;
-		} catch (e) {
-			if ((e as NodeJS.ErrnoException).code !== "EEXIST") {
-				throw e;
-			}
-
-			try {
-				const stats = await fs.promises.stat(lockPath);
-				if (
-					stats.mtime.getTime() <
-					Date.now() - PERSIST_ROOT_STARTUP_LOCK_STALE_MS
-				) {
-					await fs.promises.rm(lockPath, { force: true });
-					continue;
-				}
-			} catch (statError) {
-				if ((statError as NodeJS.ErrnoException).code !== "ENOENT") {
-					throw statError;
-				}
-			}
-
-			await wait(PERSIST_ROOT_STARTUP_LOCK_RETRY_MS);
-		}
-	}
-	if (lock === undefined) {
-		return callback();
-	}
-
-	try {
-		return await callback();
-	} finally {
-		if (heartbeat !== undefined) {
-			clearInterval(heartbeat);
-		}
-		await lock?.close();
-		await fs.promises.rm(lockPath, { force: true });
-	}
-}
-
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
 }
@@ -2776,16 +2708,11 @@ export class Miniflare {
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
 			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
-		const maybeSocketPorts = await withPersistRootStartupLock(
-			this.#sharedOpts.core.defaultPersistRoot,
-			this.#disposeController.signal,
-			() =>
-				runtime.updateConfig(
-					configBuffer,
-					runtimeOpts,
-					this.#workerOpts.flatMap((w) => w.core.name ?? []),
-					this.#disposeController.signal
-				)
+		const maybeSocketPorts = await runtime.updateConfig(
+			configBuffer,
+			runtimeOpts,
+			this.#workerOpts.flatMap((w) => w.core.name ?? []),
+			this.#disposeController.signal
 		);
 		if (this.#disposeController.signal.aborted) return;
 		if (maybeSocketPorts === undefined) {
@@ -3090,16 +3017,27 @@ export class Miniflare {
 		);
 		fs.writeFileSync(configPath, JSON.stringify(ownerOptions));
 
-		const child = spawn(process.execPath, ["-e", STORAGE_OWNER_BOOTSTRAP], {
-			detached: true,
-			stdio: "ignore",
-			env: {
-				...process.env,
-				[ENV_STORAGE_OWNER_MAIN]: __filename,
-				[ENV_STORAGE_OWNER_CONFIG]: configPath,
-			},
-		});
-		child.unref();
+		// The owner is detached and outlives us, so it can't share our stdio.
+		// Redirect its output to a log file in the persist root — otherwise a
+		// crashing or misconfigured owner is invisible and clients just silently
+		// fall back to local storage.
+		const logPath = path.join(persistRoot, ".miniflare-owner.log");
+		const logFd = fs.openSync(logPath, "a");
+		try {
+			const child = spawn(process.execPath, ["-e", STORAGE_OWNER_BOOTSTRAP], {
+				detached: true,
+				stdio: ["ignore", logFd, logFd],
+				env: {
+					...process.env,
+					[ENV_STORAGE_OWNER_MAIN]: __filename,
+					[ENV_STORAGE_OWNER_CONFIG]: configPath,
+				},
+			});
+			child.unref();
+		} finally {
+			// The child has dup'd the fd; close our copy.
+			fs.closeSync(logFd);
+		}
 	}
 
 	/**
@@ -3931,6 +3869,27 @@ export class Miniflare {
  * grace period), so storage processes don't linger.
  */
 export async function runStorageOwnerProcess(): Promise<void> {
+	// The owner is detached with its stdio redirected to `.miniflare-owner.log`
+	// in the persist root (see `#spawnStorageOwner`), so these lines are how a
+	// broken owner makes itself heard rather than failing silently. Writes go
+	// straight to the process's own stdout/stderr (there is no host `Log` here).
+	const tag = `[miniflare storage owner ${process.pid}]`;
+	const ownerLog = (message: string) =>
+		process.stdout.write(`${tag} ${message}\n`);
+	const ownerError = (message: string, e: unknown) =>
+		process.stderr.write(
+			`${tag} ${message} ${e instanceof Error ? (e.stack ?? e.message) : String(e)}\n`
+		);
+	// Surface anything that would otherwise kill the process silently.
+	process.on("uncaughtException", (e) => {
+		ownerError("uncaught:", e);
+		process.exit(1);
+	});
+	process.on("unhandledRejection", (e) => {
+		ownerError("unhandled:", e);
+		process.exit(1);
+	});
+
 	const configPath = process.env[ENV_STORAGE_OWNER_CONFIG];
 	assert(configPath !== undefined, `${ENV_STORAGE_OWNER_CONFIG} must be set`);
 	const options = JSON.parse(
@@ -3945,6 +3904,7 @@ export async function runStorageOwnerProcess(): Promise<void> {
 		persistRoot !== undefined,
 		"storage owner config must set `defaultPersistRoot`"
 	);
+	ownerLog(`starting for persist root ${persistRoot}`);
 
 	const mf = new Miniflare({
 		...options,
@@ -3955,11 +3915,12 @@ export async function runStorageOwnerProcess(): Promise<void> {
 	let disposing = false;
 	// Holder so `shutdown` (defined before the interval is created) can clear it.
 	const timers: { idle?: NodeJS.Timeout } = {};
-	const shutdown = async () => {
+	const shutdown = async (reason: string) => {
 		if (disposing) {
 			return;
 		}
 		disposing = true;
+		ownerLog(`shutting down (${reason})`);
 		if (timers.idle !== undefined) {
 			clearInterval(timers.idle);
 		}
@@ -3969,10 +3930,16 @@ export async function runStorageOwnerProcess(): Promise<void> {
 			process.exit(0);
 		}
 	};
-	process.on("SIGTERM", () => void shutdown());
-	process.on("SIGINT", () => void shutdown());
+	process.on("SIGTERM", () => void shutdown("SIGTERM"));
+	process.on("SIGINT", () => void shutdown("SIGINT"));
 
-	await mf.ready;
+	try {
+		await mf.ready;
+	} catch (e) {
+		ownerError("failed to start:", e);
+		process.exit(1);
+	}
+	ownerLog("ready");
 
 	// Self-teardown: once past the startup grace, exit after a debounced run of
 	// checks observing zero live clients.
@@ -3985,7 +3952,7 @@ export async function runStorageOwnerProcess(): Promise<void> {
 		if (countLiveStorageClients(persistRoot) === 0) {
 			idleChecks++;
 			if (idleChecks >= STORAGE_OWNER_IDLE_DEBOUNCE) {
-				void shutdown();
+				void shutdown("no live clients");
 			}
 		} else {
 			idleChecks = 0;
