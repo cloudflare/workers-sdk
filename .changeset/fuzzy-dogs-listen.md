@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 Support Artifacts sources when creating Queue event subscriptions
