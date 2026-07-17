@@ -129,6 +129,8 @@ export const testEnv = {
 	YARN_ENABLE_GLOBAL_CACHE: "false",
 	PNPM_HOME: "./.pnpm",
 	npm_config_cache: "./.npm/cache",
+	// Scaffolded projects intentionally test the latest framework releases.
+	npm_config_minimum_release_age: "0",
 	// unset the VITEST env variable as this causes e2e issues with some frameworks
 	VITEST: undefined,
 };

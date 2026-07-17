@@ -36,7 +36,7 @@
 		"heap-js": "^2.5.0",
 		"itty-time": "^2.0.2",
 		"mime": "^3.0.0",
-		"zod": "^3.22.3"
+		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "catalog:default",

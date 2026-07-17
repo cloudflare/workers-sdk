@@ -2,6 +2,26 @@ import { MetricsRegistry } from "@cloudflare/workers-utils/prometheus-metrics";
 import cookie from "cookie";
 import { Toucan } from "toucan-js";
 
+async function pushMetrics(env: Env, metrics: string) {
+	try {
+		const response = await env.WSHIM_SOCKET.fetch(
+			"https://workers-logging.cfdata.org/prometheus",
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
+				},
+				body: metrics,
+			}
+		);
+		if (!response.ok) {
+			console.error(`Failed to push metrics: ${response.status}`);
+		}
+	} catch (error) {
+		console.error("Failed to push metrics", error);
+	}
+}
+
 class HttpError extends Error {
 	constructor(
 		message: string,
@@ -439,15 +459,7 @@ export default {
 				);
 			}
 		} finally {
-			ctx.waitUntil(
-				fetch("https://workers-logging.cfdata.org/prometheus", {
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
-					},
-					body: registry.metrics(),
-				})
-			);
+			ctx.waitUntil(pushMetrics(env, registry.metrics()));
 		}
 	},
 };
