@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { PreviewError } from "./errors";
 
-const APIResponse = <T extends z.ZodTypeAny>(resultSchema: T) =>
+const APIResponse = <T extends z.ZodType>(resultSchema: T) =>
 	z.union([
 		z.object({
 			success: z.literal(true),

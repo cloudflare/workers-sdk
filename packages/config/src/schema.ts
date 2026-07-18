@@ -55,7 +55,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("dispatch-namespace"),
-		namespace: z.string(),
+		namespace: z.string().optional(),
 		outbound: z
 			.strictObject({
 				workerName: z.string(),
@@ -71,7 +71,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("flagship"),
-		id: z.string(),
+		id: z.string().optional(),
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({
@@ -108,7 +108,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("queue"),
-		name: z.string(),
+		name: z.string().optional(),
 		deliveryDelay: z.number().optional(),
 		remote: z.boolean().optional(),
 	}),
