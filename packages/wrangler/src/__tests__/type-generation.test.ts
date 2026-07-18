@@ -636,31 +636,37 @@ describe("generate types - CLI", () => {
 		);
 
 		await runWrangler("types");
-		expect(spy).toHaveBeenNthCalledWith(1, {
-			config: expect.objectContaining({
-				compatibility_date: "2022-01-12",
-				compatibility_flags: ["fake-compat-1"],
-			}),
-			outFile: "worker-configuration.d.ts",
-		});
+		expect(spy).toHaveBeenNthCalledWith(
+			1,
+			expect.objectContaining({
+				config: expect.objectContaining({
+					compatibility_date: "2022-01-12",
+					compatibility_flags: ["fake-compat-1"],
+				}),
+			})
+		);
 
 		await runWrangler("types --config ./my-wrangler-config-a.jsonc");
-		expect(spy).toHaveBeenNthCalledWith(2, {
-			config: expect.objectContaining({
-				compatibility_date: "2023-01-12",
-				compatibility_flags: ["fake-compat-2"],
-			}),
-			outFile: "worker-configuration.d.ts",
-		});
+		expect(spy).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({
+				config: expect.objectContaining({
+					compatibility_date: "2023-01-12",
+					compatibility_flags: ["fake-compat-2"],
+				}),
+			})
+		);
 
 		await runWrangler("types -c my-wrangler-config-b.jsonc");
-		expect(spy).toHaveBeenNthCalledWith(3, {
-			config: expect.objectContaining({
-				compatibility_date: "2024-01-12",
-				compatibility_flags: ["fake-compat-3"],
-			}),
-			outFile: "worker-configuration.d.ts",
-		});
+		expect(spy).toHaveBeenNthCalledWith(
+			3,
+			expect.objectContaining({
+				config: expect.objectContaining({
+					compatibility_date: "2024-01-12",
+					compatibility_flags: ["fake-compat-3"],
+				}),
+			})
+		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
@@ -3714,6 +3720,78 @@ describe("generate types - CLI", () => {
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
+	});
+
+	describe("declarative Durable Object `exports`", () => {
+		it("populates `durableNamespaces` from live `exports` entries (including unbound + `expecting-transfer`) and excludes tombstones", async ({
+			expect,
+		}) => {
+			// `UnboundDO` and `IncomingDO` are reachable only through `ctx.exports`.
+			fs.writeFileSync(
+				"./index.ts",
+				`import { DurableObject } from "cloudflare:workers";
+export class BoundDO extends DurableObject {}
+export class UnboundDO extends DurableObject {}
+export class IncomingDO extends DurableObject {}
+export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-exports-types",
+					main: "./index.ts",
+					durable_objects: {
+						bindings: [{ name: "BOUND_DO", class_name: "BoundDO" }],
+					},
+					exports: {
+						BoundDO: { type: "durable-object", storage: "sqlite" },
+						UnboundDO: { type: "durable-object", storage: "sqlite" },
+						IncomingDO: {
+							type: "durable-object",
+							state: "expecting-transfer",
+							storage: "sqlite",
+							transfer_from: "source-worker",
+						},
+						// Tombstones must not appear in `durableNamespaces`.
+						OldGone: { type: "durable-object", state: "deleted" },
+						LegacyName: {
+							type: "durable-object",
+							state: "renamed",
+							renamed_to: "BoundDO",
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				interface __BaseEnv_Env {
+					BOUND_DO: DurableObjectNamespace<import("./index").BoundDO>;
+				}
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						mainModule: typeof import("./index");
+						durableNamespaces: "BoundDO" | "UnboundDO" | "IncomingDO";
+					}
+					interface Env extends __BaseEnv_Env {}
+				}
+				interface Env extends __BaseEnv_Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
 	});
 });
 

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
@@ -16,6 +17,7 @@ import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
+	getDefaultProjectTmpPath,
 } from "../../../dev/miniflare";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
@@ -288,6 +290,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			bindings,
 			queueConsumers: undefined,
 			migrations: config.migrations,
+			exports: config.exports,
 			tails: [],
 			streamingTails: [],
 			containerDOClassNames: new Set(
@@ -319,6 +322,10 @@ async function getMiniflareOptionsFromConfig(args: {
 		: {};
 
 	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
+	const projectRoot = config.userConfigPath
+		? path.dirname(config.userConfigPath)
+		: process.cwd();
+	const defaultProjectTmpPath = getDefaultProjectTmpPath(projectRoot);
 
 	const miniflareOptions: MiniflareOptions = {
 		workers: [
@@ -333,6 +340,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			...externalWorkers,
 		],
 		defaultPersistRoot,
+		defaultProjectTmpPath,
 	};
 
 	return {
@@ -461,6 +469,7 @@ export function unstable_getMiniflareWorkerOptions(
 			bindings,
 			queueConsumers: config.queues.consumers,
 			migrations: config.migrations,
+			exports: config.exports,
 			tails: config.tail_consumers,
 			streamingTails: config.streaming_tail_consumers,
 			containerDOClassNames,

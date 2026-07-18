@@ -10,6 +10,8 @@ import {
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { readConfig } from "../../config";
+import { runDeployCommandHandler, type DeployArgs } from "../../deploy";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -428,6 +430,37 @@ describe("deploy", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not delegate to open-next deploy when Pages-to-Workers delegation is running", async ({
+			expect,
+		}) => {
+			const runCommandSpy = (
+				await import("@cloudflare/cli-shared-helpers/command")
+			).runCommand;
+			const args = {
+				_: ["deploy"],
+				$0: "wrangler",
+				autoconfig: true,
+				experimentalAutoCreate: true,
+				experimentalDeployHelpers: false,
+				experimentalNewConfig: false,
+				latest: false,
+				keepVars: false,
+				name: "test-name",
+				noBundle: false,
+				strict: false,
+			} as DeployArgs;
+
+			await mockOpenNextLikeProject();
+
+			const config = readConfig(args, { useRedirectIfAvailable: true });
+			await runDeployCommandHandler(args, {
+				config,
+				pagesToWorkersDelegation: true,
+			});
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 		});
 	});
 });

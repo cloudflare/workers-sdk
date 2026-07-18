@@ -87,7 +87,6 @@ async function expectedHostAndZone(
 				}
 			}),
 		env: undefined,
-		useServiceEnvironments: undefined,
 		sendMetrics: undefined,
 		configPath: config.config,
 	});
@@ -1688,7 +1687,7 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("durable_objects", () => {
-		it("should warn if there are remote Durable Objects, or missing migrations for local Durable Objects", async ({
+		it("should warn if there are remote Durable Objects, or a missing lifecycle for local Durable Objects", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -1735,22 +1734,41 @@ describe.sequential("wrangler dev", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker
-				  (CLASS_1, CLASS_3), but no \`migrations\` for them. This may not work as expected until you add a
-				  \`migrations\` section to your wrangler.toml file. Add the following configuration:
+				  (CLASS_1, CLASS_3), but no live \`exports\` entry for them. This may not work as expected until you
+				  add a live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
 
 				      \`\`\`
-				      [[migrations]]
-				      tag = "v1"
-				      new_sqlite_classes = [ "CLASS_1", "CLASS_3" ]
+				      [exports.CLASS_1]
+				      type = "durable-object"
+				      storage = "sqlite"
+
+				      [exports.CLASS_3]
+				      type = "durable-object"
+				      storage = "sqlite"
 
 				      \`\`\`
-
-				      Refer to
-				  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
-				  details.
 
 				"
 			`);
+		});
+
+		describe("declarative `exports`", () => {
+			it("starts dev when `exports` is set", async ({ expect }) => {
+				writeWranglerConfig({
+					name: "test-do-exports-dev",
+					main: "index.js",
+					durable_objects: {
+						bindings: [{ name: "DO", class_name: "MyDO" }],
+					},
+					exports: {
+						MyDO: { type: "durable-object", storage: "sqlite" },
+					},
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+
+				const config = await runWranglerUntilConfig("dev");
+				expect(config.name).toBe("test-do-exports-dev");
+			});
 		});
 	});
 
@@ -2957,6 +2975,8 @@ describe.sequential("wrangler dev", () => {
 				);
 				expect(typesContent).not.toContain("old-hash-value");
 				expect(typesContent).toContain("NEW_VAR");
+				expect(typesContent).toContain("// Begin runtime types");
+				expect(typesContent).toContain("/* eslint-disable */");
 			});
 
 			it("should not warn about types if the types file does not exist", async ({

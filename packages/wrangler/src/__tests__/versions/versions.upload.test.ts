@@ -1,6 +1,11 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- formData() is the standard Web API for parsing multipart bodies; only deprecated on undici's server-side types */
 import assert from "node:assert";
 import * as fs from "node:fs";
-import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
+import * as path from "node:path";
+import {
+	ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE,
+	generatePreviewAlias,
+} from "@cloudflare/deploy-helpers";
 import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
 import {
 	runInTempDir,
@@ -13,6 +18,7 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { beforeEach, describe, expect, it, test, vi } from "vitest";
+import * as metrics from "../../metrics";
 import { dedent } from "../../utils/dedent";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
@@ -888,7 +894,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 			});
 
 			// Setup
@@ -925,7 +930,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 				env: "test",
 			});
 
@@ -975,7 +979,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 				env: "test",
 			});
 
@@ -1004,7 +1007,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 			});
 
 			// Setup
@@ -1765,7 +1767,11 @@ describe("versions upload", () => {
 				compatibility_flags: ["nodejs_compat"],
 				placement: { mode: "smart" },
 				limits: { cpu_ms: 100 },
-				cache: { enabled: true },
+				cache: { enabled: true, cross_version_cache: true },
+				exports: {
+					default: { type: "worker", cache: { enabled: false } },
+					Admin: { type: "worker", cache: { enabled: true } },
+				},
 			});
 			writeWorkerSource();
 
@@ -1780,6 +1786,38 @@ describe("versions upload", () => {
 			// cache is serialized as cache_options in the upload form metadata
 			expect((metadata as Record<string, unknown>).cache_options).toEqual({
 				enabled: true,
+				cross_version_cache: true,
+			});
+			expect((metadata as Record<string, unknown>).exports).toEqual({
+				default: { type: "worker", cache: { enabled: false } },
+				Admin: { type: "worker", cache: { enabled: true } },
+			});
+		});
+
+		test("should include worker export cache config without top-level cache", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				compatibility_date: "2024-01-01",
+				exports: {
+					Admin: { type: "worker", cache: { enabled: true } },
+				},
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(
+				(metadata as Record<string, unknown>).cache_options
+			).toBeUndefined();
+			expect((metadata as Record<string, unknown>).exports).toEqual({
+				Admin: { type: "worker", cache: { enabled: true } },
 			});
 		});
 	});
@@ -1813,7 +1851,17 @@ describe("versions upload", () => {
 				}),
 				http.get("*/accounts/:accountId/r2/buckets/:bucketName", () => {
 					return HttpResponse.json(createFetchResult({ name: "my-bucket" }));
-				})
+				}),
+				http.get("*/accounts/:accountId/workers/dispatch/namespaces", () =>
+					HttpResponse.json(
+						createFetchResult([
+							{
+								namespace_id: "namespace-id",
+								namespace_name: "my-namespace",
+							},
+						])
+					)
+				)
 			);
 
 			writeWranglerConfig({
@@ -2064,9 +2112,12 @@ describe("versions upload", () => {
 			setIsTTY(false);
 		});
 
-		test("should upload assets and include jwt in metadata", async ({
+		test("should upload assets and include stats in upload metrics", async ({
 			expect,
 		}) => {
+			const sendMetricsEventSpy = vi
+				.spyOn(metrics, "sendMetricsEvent")
+				.mockImplementation(() => {});
 			mockGetScript();
 			const requests = mockUploadVersion(false, 0);
 
@@ -2074,13 +2125,34 @@ describe("versions upload", () => {
 			msw.use(
 				http.post(
 					`*/accounts/:accountId/workers/scripts/:scriptName/assets-upload-session`,
-					() => {
+					async ({ request }) => {
+						const { manifest } = (await request.json()) as {
+							manifest: Record<string, { hash: string; size: number }>;
+						};
 						return HttpResponse.json(
 							{
 								success: true,
 								errors: [],
 								messages: [],
-								result: { jwt: "test-assets-jwt", buckets: [[]] },
+								result: {
+									jwt: "test-assets-jwt",
+									buckets: [Object.values(manifest).map(({ hash }) => hash)],
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/assets/upload`,
+					async ({ request }) => {
+						expect(new URL(request.url).search).toBe("?base64=true");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "test-assets-completion-jwt" },
 							},
 							{ status: 201 }
 						);
@@ -2101,7 +2173,18 @@ describe("versions upload", () => {
 
 			const metadata = await getMetadata(requests[requests.length - 1]);
 			expect(metadata.assets).toBeDefined();
-			expect(metadata.assets?.jwt).toEqual("test-assets-jwt");
+			expect(metadata.assets?.jwt).toEqual("test-assets-completion-jwt");
+			expect(sendMetricsEventSpy).toHaveBeenCalledWith(
+				"upload worker version",
+				expect.objectContaining({
+					assetUploadDurationMs: expect.any(Number),
+					assetUploadIsBulk: true,
+					assetUploadFileCount: 1,
+					assetUploadTotalBytes: 14,
+				}),
+				expect.any(Object)
+			);
+			sendMetricsEventSpy.mockRestore();
 		});
 
 		test("should upload assets via --assets CLI flag", async ({ expect }) => {
@@ -2267,6 +2350,148 @@ describe("versions upload", () => {
 		});
 	});
 
+	describe("durable object exports (declarative)", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("sends the `exports` payload (and omits `migrations`)", async ({
+			expect,
+		}) => {
+			// The versions POST controller (EWC) accepts `exports` and
+			// persists it on the new script_version row with
+			// `SkipDeploy:true`; reconciliation runs at deploy time
+			// (`wrangler deploy` or `wrangler versions deploy <id>`).
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					durable_objects: {
+						bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+					},
+					exports: {
+						MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						Admin: { type: "worker", cache: { enabled: true } },
+					},
+				},
+				"./wrangler.json"
+			);
+			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+
+			await runWrangler("versions upload --config ./wrangler.json");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.exports).toEqual({
+				MyDurableObject: { type: "durable-object", storage: "sqlite" },
+				Admin: { type: "worker", cache: { enabled: true } },
+			});
+			expect(metadata.migrations).toBeUndefined();
+		});
+
+		test("surfaces a friendly error when EWC rejects a binding to a not-yet-provisioned `exports` class (code 100406)", async ({
+			expect,
+		}) => {
+			// EWC returns 100406 (ErrActorBindingDependsOnExport) when a
+			// `versions upload` payload binds to a DO class that is declared in
+			// `exports` but not yet provisioned — reconciliation defers to
+			// deploy, so the namespace can't exist at upload time. The message
+			// is already actionable, so wrangler surfaces it verbatim.
+			mockGetScript();
+
+			const serverMessage =
+				"Durable Object binding 'ANOTHER' references class 'AnotherClass', which is declared in `exports` but not yet provisioned. Declarative `exports` are reconciled when the version is deployed, so the namespace must exist before a binding can reference it. Deploy this version to provision the class, or remove the binding and access the Durable Object via `ctx.exports.AnotherClass` until then.";
+
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
+					() =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE,
+									message: serverMessage,
+								},
+							]),
+							{ status: 403 }
+						),
+					{ once: true }
+				)
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				durable_objects: {
+					bindings: [{ name: "ANOTHER", class_name: "AnotherClass" }],
+				},
+				exports: {
+					AnotherClass: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			writeWorkerSource({ durableObjects: ["AnotherClass"] });
+
+			const rejection = runWrangler("versions upload");
+
+			// The EWC message is surfaced verbatim (binding/class names + both
+			// remediations), not the generic "request to the Cloudflare API
+			// failed" envelope.
+			await expect(rejection).rejects.toThrow(
+				/declared in `exports` but not yet provisioned/
+			);
+			await expect(rejection).rejects.toThrow(/ctx\.exports\.AnotherClass/);
+			await expect(rejection).rejects.not.toThrow(
+				/A request to the Cloudflare API .* failed/
+			);
+		});
+
+		test("does not remap unrelated EWC errors on `versions upload`", async ({
+			expect,
+		}) => {
+			// A different EWC error code must pass through untransformed — the
+			// 100406 branch falls through and the original APIError surfaces.
+			mockGetScript();
+
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
+					() =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10001, message: "some other API error" },
+							]),
+							// 4xx so the upload isn't retried (retryOnAPIFailure
+							// only retries 5xx), keeping this test fast.
+							{ status: 400 }
+						),
+					{ once: true }
+				)
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				durable_objects: {
+					bindings: [{ name: "ANOTHER", class_name: "AnotherClass" }],
+				},
+				exports: {
+					AnotherClass: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			writeWorkerSource({ durableObjects: ["AnotherClass"] });
+
+			const rejection = runWrangler("versions upload");
+			await expect(rejection).rejects.toThrow(
+				/A request to the Cloudflare API .* failed/
+			);
+			await expect(rejection).rejects.not.toThrow(
+				/declared in `exports` but not yet provisioned/
+			);
+		});
+	});
+
 	describe("CI override", () => {
 		beforeEach(() => {
 			setIsTTY(false);
@@ -2346,6 +2571,92 @@ describe("versions upload", () => {
 			await runWrangler("versions upload");
 
 			expect(std.out).toContain("Uploaded test-name");
+		});
+	});
+
+	describe("package_dependencies", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("should include package_dependencies in upload metadata", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Create a resolvable public package in node_modules
+			const pkgPath = path.join(process.cwd(), "node_modules", "test-dep");
+			fs.mkdirSync(pkgPath, { recursive: true });
+			fs.writeFileSync(path.join(pkgPath, "index.js"), "module.exports = {}");
+			fs.writeFileSync(
+				path.join(pkgPath, "package.json"),
+				JSON.stringify({ name: "test-dep", version: "1.2.3" })
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			// Write package.json with the dependency
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						"test-dep": "^1.0.0",
+					},
+				})
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[0]);
+			expect(metadata.package_dependencies).toEqual([
+				{
+					name: "test-dep",
+					packageJsonVersion: "^1.0.0",
+					installedVersion: "1.2.3",
+				},
+			]);
+		});
+
+		test("should omit package_dependencies when dependencies_instrumentation.enabled is false", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Create a resolvable public package in node_modules
+			const pkgPath = path.join(process.cwd(), "node_modules", "test-dep");
+			fs.mkdirSync(pkgPath, { recursive: true });
+			fs.writeFileSync(path.join(pkgPath, "index.js"), "module.exports = {}");
+			fs.writeFileSync(
+				path.join(pkgPath, "package.json"),
+				JSON.stringify({ name: "test-dep", version: "1.2.3" })
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				dependencies_instrumentation: { enabled: false },
+			});
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						"test-dep": "^1.0.0",
+					},
+				})
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[0]);
+			expect(metadata.package_dependencies).toBeUndefined();
 		});
 	});
 });

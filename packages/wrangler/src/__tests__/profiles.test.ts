@@ -1,14 +1,27 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { validateProfileName } from "@cloudflare/workers-auth";
+import {
+	resetCredentialStorageState,
+	setKeyProviderFactoryForTesting,
+	validateProfileName,
+} from "@cloudflare/workers-auth";
+import {
+	createWranglerProfileStore,
+	updateUserPreferences,
+} from "@cloudflare/workers-auth/wrangler";
 import {
 	normalizeString,
 	runInTempDir,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, it } from "vitest";
-import { getAuthConfigFilePath, writeAuthConfigFile } from "../user";
-import { createWranglerProfileStore } from "../user/profile-store";
+import { afterEach, beforeEach, describe, it } from "vitest";
+import { logger } from "../logger";
+import {
+	getAuthConfigFilePath,
+	getEncryptedAuthConfigFilePath,
+	WRANGLER_KEYRING_SERVICE_NAME,
+	writeAuthConfigFile,
+} from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
@@ -19,7 +32,7 @@ function pathArg(filePath: string): string {
 }
 
 function profiles() {
-	return createWranglerProfileStore();
+	return createWranglerProfileStore({ logger });
 }
 
 function createProfileFile(name: string, token = `${name}-token`) {
@@ -207,7 +220,7 @@ describe("Profiles", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in.
 				Profile "client-a" created.
 				Run \`wrangler auth activate client-a\` to use this profile in a directory."
@@ -225,7 +238,7 @@ describe("Profiles", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in.
 				Profile "client-a" re-authenticated.
 				Run \`wrangler auth activate client-a\` to use this profile in a directory."
@@ -657,6 +670,140 @@ describe("Profiles", () => {
 			await runWrangler(`whoami --cwd ${pathArg(childDir)}`).catch(() => {});
 
 			expect(std.out).toContain("Active profile: inherited-profile");
+		});
+	});
+
+	describe("keyring-encrypted named profiles", () => {
+		// In-memory keyring shared across resolver calls within a test, keyed
+		// by service + profile so each profile gets its own encryption key —
+		// mirroring the real per-profile keyring account name. The factory
+		// receives the profile because `resolveKeyProvider`/the resolver are
+		// profile-aware.
+		let keyringStore: Map<string, Uint8Array>;
+
+		function keyringKey(profile: string): string {
+			return `${WRANGLER_KEYRING_SERVICE_NAME}::${profile}`;
+		}
+
+		beforeEach(() => {
+			keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName, profile) => {
+				const account = `${serviceName}::${profile ?? "default"}`;
+				return {
+					getKey: () => keyringStore.get(account),
+					setKey: (key) => {
+						keyringStore.set(account, key);
+					},
+					deleteKey: () => {
+						keyringStore.delete(account);
+					},
+					describe: () => `in-memory test keyring (${account})`,
+				};
+			});
+			// Opt into keyring storage globally; named profiles inherit it.
+			updateUserPreferences({ keyring_enabled: true });
+		});
+
+		afterEach(() => {
+			setKeyProviderFactoryForTesting(undefined);
+			resetCredentialStorageState();
+		});
+
+		it("`auth create` stores a named profile encrypted, not as plaintext", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+
+			await runWrangler("auth create client-a");
+
+			// Encrypted file present; plaintext TOML absent; keyring holds the
+			// per-profile key.
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-a"))).toBe(true);
+			expect(existsSync(getAuthConfigFilePath("client-a"))).toBe(false);
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(true);
+			// The on-disk ciphertext must not contain the cleartext token.
+			expect(
+				readFileSync(getEncryptedAuthConfigFilePath("client-a"), "utf8")
+			).not.toContain("test-access-token");
+		});
+
+		it("an encrypted named profile is visible to `exists()` and `auth list`", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+
+			expect(profiles().configs.exists("client-a")).toBe(true);
+			expect(profiles().configs.list()).toContain("client-a");
+		});
+
+		it("`auth activate` works for an encrypted named profile", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+
+			// Regression: `activate` previously only checked for a plaintext
+			// `.toml`, so an encrypted profile failed with "does not exist".
+			await runWrangler("auth activate client-a");
+
+			expect(std.out).toContain('Profile "client-a" activated');
+		});
+
+		it("`auth delete` removes the encrypted file and the profile's keyring entry", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(true);
+
+			await runWrangler("auth delete client-a");
+
+			expect(profiles().configs.exists("client-a")).toBe(false);
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-a"))).toBe(
+				false
+			);
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(false);
+		});
+
+		it("deleting one encrypted profile leaves another profile's keyring entry intact", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-b");
+
+			await runWrangler("auth delete client-a");
+
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(false);
+			expect(keyringStore.has(keyringKey("client-b"))).toBe(true);
+			expect(profiles().configs.exists("client-b")).toBe(true);
+		});
+
+		it("`auth keyring disable` scrubs encrypted named profiles globally", async ({
+			expect,
+		}) => {
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-a");
+			mockSuccessfulOAuth(mockOAuthServerCallback);
+			await runWrangler("auth create client-b");
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-a"))).toBe(true);
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-b"))).toBe(true);
+
+			await runWrangler("auth keyring disable");
+
+			// Disabling keyring storage is global: every named profile's
+			// encrypted file and keyring entry must be scrubbed so nothing is
+			// orphaned.
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-a"))).toBe(
+				false
+			);
+			expect(existsSync(getEncryptedAuthConfigFilePath("client-b"))).toBe(
+				false
+			);
+			expect(keyringStore.has(keyringKey("client-a"))).toBe(false);
+			expect(keyringStore.has(keyringKey("client-b"))).toBe(false);
 		});
 	});
 });

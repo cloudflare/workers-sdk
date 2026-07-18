@@ -14,7 +14,6 @@ import {
 	isBuildFailureFromCause,
 } from "../../deployment-bundle/build-failures";
 import { confirm, prompt, select } from "../../dialogs";
-import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logBuildFailure, logger, runWithLogLevel } from "../../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
@@ -28,7 +27,7 @@ import type {
 	RuntimeController,
 } from "./BaseController";
 import type { ErrorEvent } from "./events";
-import type { StartDevWorkerInput, Worker } from "./types";
+import type { Worker, WranglerStartDevWorkerInput } from "./types";
 
 type ControllerFactory<C extends Controller> = (devEnv: DevEnv) => C;
 
@@ -38,7 +37,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
+	async startWorker(options: WranglerStartDevWorkerInput): Promise<Worker> {
 		initDeployHelpersContext({
 			logger,
 			fetchResult,
@@ -48,7 +47,6 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			confirm,
 			prompt,
 			select,
-			isNonInteractiveOrCI,
 		});
 
 		const worker = createWorkerObject(this);
@@ -143,6 +141,12 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			case "reloadComplete":
 				this.proxy.onReloadComplete(event);
 				this.emit("reloadComplete", event);
+				break;
+
+			case "runtimeError":
+				// Re-emitted as an external EventEmitter event (like
+				// `reloadComplete`) so callers can observe runtime errors.
+				this.emit("runtimeError", event);
 				break;
 
 			case "devRegistryUpdate":

@@ -2,17 +2,17 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
-	getGlobalWranglerConfigPath,
+	getGlobalConfigPath,
 	parseJSONC,
+	isInteractive,
 } from "@cloudflare/workers-utils";
-import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
 import { install as rosieInstall, agents as rosieAgents } from "rosie-skills";
 import { fetch } from "undici";
 import { confirm } from "./dialogs";
-import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { sendMetricsEvent } from "./metrics";
+import { detectAgent } from "./utils/detect-agent";
 
 /**
  * Options for {@link runSkillsInstallFlow}.
@@ -315,20 +315,14 @@ const SKILLS_REPO_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  * Returns the absolute path to the skills install config file within the global wrangler config directory.
  */
 function getSkillsInstallMetadataFilePath(): string {
-	return path.resolve(
-		getGlobalWranglerConfigPath(),
-		SKILLS_INSTALL_METADATA_FILENAME
-	);
+	return path.resolve(getGlobalConfigPath(), SKILLS_INSTALL_METADATA_FILENAME);
 }
 
 /**
  * Returns the absolute path to the skills repo cache file within the global wrangler config directory.
  */
 function getSkillsRepoCachePath(): string {
-	return path.resolve(
-		getGlobalWranglerConfigPath(),
-		SKILLS_REPO_CACHE_FILENAME
-	);
+	return path.resolve(getGlobalConfigPath(), SKILLS_REPO_CACHE_FILENAME);
 }
 
 /**
@@ -522,14 +516,14 @@ async function fetchSkillNamesFromGitHub(): Promise<string[] | undefined> {
 type AgentSkillsInstallStatus = "automatic" | "manual" | false | null;
 
 /**
- * Maps an `am-i-vibing` agent ID to its global skills paths (both the rosie
- * install path and any alternative paths the agent natively reads from).
- * This is used by the telemetry function to check whether skills exist on
- * disk without calling `rosie.agents()`, which loads WASM and is too slow
- * for process-startup telemetry.
+ * Maps a detected agent ID (from {@link detectAgent}) to its global skills
+ * paths (both the rosie install path and any alternative paths the agent
+ * natively reads from). This is used by the telemetry function to check
+ * whether skills exist on disk without calling `rosie.agents()`, which
+ * loads WASM and is too slow for process-startup telemetry.
  */
 interface AmIVibingDataMappingEntry {
-	/** `am-i-vibing` provider ID(s) that identify this agent. */
+	/** Agent provider ID(s) as returned by {@link detectAgent}. */
 	amIVibingIds: string[];
 	/**
 	 * Rosie agent metadata.
@@ -552,11 +546,10 @@ interface AmIVibingDataMappingEntry {
 }
 
 /**
- * Static mapping from `am-i-vibing` agent IDs to their global skills paths,
+ * Static mapping from detected agent IDs to their global skills paths,
  * used only for telemetry.
  *
- * The `amIVibingIds` are the provider IDs returned by the `am-i-vibing`
- * package's `detectAgenticEnvironment()` function.
+ * The `amIVibingIds` are the provider IDs returned by {@link detectAgent}.
  *
  * The `rosie.globalPath` values correspond to the `global_path` field from
  * rosie's agent registry, constructed as absolute paths via
@@ -690,13 +683,7 @@ function directoryContainsAnySkill(
  * @returns The {@link AgentSkillsInstallStatus} for the current agent.
  */
 async function computeTelemetryCurrentAgentSkillsInstalled(): Promise<AgentSkillsInstallStatus> {
-	let agentId: string | null = null;
-	try {
-		const detection = detectAgenticEnvironment(process.env, []);
-		agentId = detection.id;
-	} catch {
-		return null;
-	}
+	const agentId = detectAgent().id;
 	if (!agentId) {
 		return null;
 	}

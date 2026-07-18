@@ -4,23 +4,27 @@ import {
 	experimental_patchConfig,
 	experimental_readRawConfig,
 	INHERIT_SYMBOL,
+	isNonInteractiveOrCI,
 	PatchConfigError,
 	UserError,
 } from "@cloudflare/workers-utils";
 import {
+	fetchListResult,
+	fetchPagedListResult,
 	fetchResult,
-	isNonInteractiveOrCI,
 	logger,
 	prompt,
 	select,
 } from "../../shared/context";
 import { printBindings } from "./print-bindings";
-import { useServiceEnvironments } from "./use-service-environments";
+import type { QueueResponse } from "../../triggers/queue-consumers";
 import type {
 	Binding,
 	CfAgentMemory,
 	CfAISearchNamespace,
 	CfD1Database,
+	CfDispatchNamespace,
+	CfFlagship,
 	CfKvNamespace,
 	CfR2Bucket,
 	ComplianceConfig,
@@ -73,6 +77,20 @@ type KVNamespaceInfo = {
 	title: string;
 	supports_url_encoding?: boolean;
 };
+
+type DispatchNamespaceInfo = {
+	namespace_id: string;
+	namespace_name: string;
+};
+
+type FlagshipAppInfo = {
+	id: string;
+	name: string;
+};
+
+type QueueProducer = NonNullable<
+	NonNullable<RawConfig["queues"]>["producers"]
+>[number];
 
 abstract class ProvisionResourceHandler<
 	T extends WorkerMetadataBinding["type"],
@@ -355,6 +373,200 @@ class AgentMemoryNamespaceHandler extends ProvisionResourceHandler<
 	}
 }
 
+class QueueHandler extends ProvisionResourceHandler<
+	"queue",
+	Extract<Binding, { type: "queue" }>
+> {
+	get name(): string | undefined {
+		return this.binding.queue_name as string;
+	}
+
+	async create(name: string) {
+		await fetchResult(
+			this.complianceConfig,
+			`/accounts/${this.accountId}/queues`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ queue_name: name }),
+			}
+		);
+		return name;
+	}
+
+	constructor(
+		bindingName: string,
+		binding: Extract<Binding, { type: "queue" }>,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super(
+			"queue",
+			bindingName,
+			binding,
+			"queue_name",
+			complianceConfig,
+			accountId
+		);
+	}
+
+	canInherit(settings: Settings | undefined): boolean {
+		const existing = settings?.bindings.find(
+			(candidate) =>
+				candidate.type === this.type &&
+				candidate.name === this.bindingName &&
+				(this.binding.queue_name
+					? this.binding.queue_name === candidate.queue_name
+					: true)
+		);
+		if (existing?.type !== this.type) {
+			return false;
+		}
+		if (
+			this.binding.delivery_delay !== undefined ||
+			this.binding.raw !== undefined
+		) {
+			this.connect(existing.queue_name);
+			return false;
+		}
+		return true;
+	}
+
+	async isConnectedToExistingResource(): Promise<boolean> {
+		assert(typeof this.binding.queue_name !== "symbol");
+		if (!this.binding.queue_name) {
+			return false;
+		}
+		const queues = await fetchPagedListResult<QueueResponse>(
+			this.complianceConfig,
+			`/accounts/${this.accountId}/queues`,
+			{},
+			new URLSearchParams({ name: this.binding.queue_name })
+		);
+		return queues.some((queue) => queue.queue_name === this.binding.queue_name);
+	}
+}
+
+class DispatchNamespaceHandler extends ProvisionResourceHandler<
+	"dispatch_namespace",
+	Extract<Binding, { type: "dispatch_namespace" }>
+> {
+	get name(): string | undefined {
+		return this.binding.namespace as string;
+	}
+
+	async create(name: string) {
+		await fetchResult(
+			this.complianceConfig,
+			`/accounts/${this.accountId}/workers/dispatch/namespaces`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ name }),
+			}
+		);
+		return name;
+	}
+
+	constructor(
+		bindingName: string,
+		binding: Extract<Binding, { type: "dispatch_namespace" }>,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super(
+			"dispatch_namespace",
+			bindingName,
+			binding,
+			"namespace",
+			complianceConfig,
+			accountId
+		);
+	}
+
+	canInherit(settings: Settings | undefined): boolean {
+		const existing = settings?.bindings.find(
+			(candidate) =>
+				candidate.type === this.type &&
+				candidate.name === this.bindingName &&
+				(this.binding.namespace
+					? this.binding.namespace === candidate.namespace
+					: true)
+		);
+		if (existing?.type !== this.type) {
+			return false;
+		}
+		if (this.binding.outbound !== undefined) {
+			this.connect(existing.namespace);
+			return false;
+		}
+		return true;
+	}
+
+	async isConnectedToExistingResource(): Promise<boolean> {
+		assert(typeof this.binding.namespace !== "symbol");
+		if (!this.binding.namespace) {
+			return false;
+		}
+		const namespaces = await listDispatchNamespaces(
+			this.complianceConfig,
+			this.accountId
+		);
+		return namespaces.some(
+			(namespace) => namespace.namespace_name === this.binding.namespace
+		);
+	}
+}
+
+class FlagshipHandler extends ProvisionResourceHandler<
+	"flagship",
+	Extract<Binding, { type: "flagship" }>
+> {
+	get name(): undefined {
+		return undefined;
+	}
+
+	async create(name: string) {
+		const app = await fetchResult<FlagshipAppInfo>(
+			this.complianceConfig,
+			`/accounts/${this.accountId}/flagship/apps`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ name }),
+			}
+		);
+		return app.id;
+	}
+
+	constructor(
+		bindingName: string,
+		binding: Extract<Binding, { type: "flagship" }>,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super(
+			"flagship",
+			bindingName,
+			binding,
+			"app_id",
+			complianceConfig,
+			accountId
+		);
+	}
+
+	canInherit(settings: Settings | undefined): boolean {
+		return !!settings?.bindings.find(
+			(existing) =>
+				existing.type === this.type && existing.name === this.bindingName
+		);
+	}
+
+	isFullySpecified(): boolean {
+		return !!this.binding.app_id;
+	}
+}
+
 class KVHandler extends ProvisionResourceHandler<
 	"kv_namespace",
 	Extract<Binding, { type: "kv_namespace" }>
@@ -482,7 +694,10 @@ type ProvisionableBinding =
 	| Extract<Binding, { type: "d1" }>
 	| Extract<Binding, { type: "r2_bucket" }>
 	| Extract<Binding, { type: "ai_search_namespace" }>
-	| Extract<Binding, { type: "agent_memory" }>;
+	| Extract<Binding, { type: "agent_memory" }>
+	| Extract<Binding, { type: "queue" }>
+	| Extract<Binding, { type: "dispatch_namespace" }>
+	| Extract<Binding, { type: "flagship" }>;
 
 const HANDLERS = {
 	kv_namespace: {
@@ -611,7 +826,113 @@ const HANDLERS = {
 			};
 		},
 	},
+	queue: {
+		Handler: QueueHandler,
+		sort: 5,
+		name: "Queue",
+		keyDescription: "name",
+		configField: "queues" as const,
+		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
+			const queues = await fetchPagedListResult<QueueResponse>(
+				complianceConfig,
+				`/accounts/${accountId}/queues`
+			);
+			return queues.map((queue) => ({
+				title: queue.queue_name,
+				value: queue.queue_name,
+			}));
+		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "queue" }>
+		): QueueProducer => ({
+			binding: bindingName,
+			queue:
+				typeof binding.queue_name === "string" ? binding.queue_name : undefined,
+			delivery_delay: binding.delivery_delay,
+			remote: binding.remote,
+		}),
+	},
+	dispatch_namespace: {
+		Handler: DispatchNamespaceHandler,
+		sort: 6,
+		name: "Dispatch Namespace",
+		keyDescription: "name",
+		configField: "dispatch_namespaces" as const,
+		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
+			const namespaces = await listDispatchNamespaces(
+				complianceConfig,
+				accountId
+			);
+			return namespaces.map((namespace) => ({
+				title: namespace.namespace_name,
+				value: namespace.namespace_name,
+			}));
+		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "dispatch_namespace" }>
+		): CfDispatchNamespace => {
+			const { type: _, ...rest } = binding;
+			return { ...rest, binding: bindingName };
+		},
+	},
+	flagship: {
+		Handler: FlagshipHandler,
+		sort: 7,
+		name: "Flagship App",
+		keyDescription: "name or id",
+		configField: "flagship" as const,
+		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
+			const apps = await listFlagshipApps(complianceConfig, accountId);
+			return apps.map((app) => ({ title: app.name, value: app.id }));
+		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "flagship" }>
+		): CfFlagship => {
+			const { type: _, ...rest } = binding;
+			return { ...rest, binding: bindingName };
+		},
+	},
 };
+
+function getRawConfigBindings(
+	config: RawConfig,
+	resourceType: keyof typeof HANDLERS
+): Array<{ binding: string }> {
+	if (resourceType === "queue") {
+		return config.queues?.producers ?? [];
+	}
+
+	const configField = HANDLERS[resourceType].configField;
+	return (config[configField] ?? []) as Array<{ binding: string }>;
+}
+
+function addBindingToPatch(
+	patch: RawConfig,
+	resourceType: ProvisionableBinding["type"],
+	binding: ReturnType<typeof toConfigBinding>
+): void {
+	const serialisableBinding = Object.fromEntries(
+		Object.entries(binding).filter(
+			([_, value]) => value !== undefined && typeof value !== "symbol"
+		)
+	);
+
+	if (resourceType === "queue") {
+		patch.queues ??= {};
+		patch.queues.producers ??= [];
+		patch.queues.producers.push(serialisableBinding as QueueProducer);
+		return;
+	}
+
+	const configField = HANDLERS[resourceType].configField;
+	patch[configField] ??= [];
+	(patch[configField] as unknown as Array<Record<string, unknown>>).push(
+		serialisableBinding
+	);
+}
 
 type PendingResource = {
 	binding: string;
@@ -620,13 +941,19 @@ type PendingResource = {
 		| "d1"
 		| "r2_bucket"
 		| "ai_search_namespace"
-		| "agent_memory";
+		| "agent_memory"
+		| "queue"
+		| "dispatch_namespace"
+		| "flagship";
 	handler:
 		| KVHandler
 		| D1Handler
 		| R2Handler
 		| AISearchNamespaceHandler
-		| AgentMemoryNamespaceHandler;
+		| AgentMemoryNamespaceHandler
+		| QueueHandler
+		| DispatchNamespaceHandler
+		| FlagshipHandler;
 };
 
 function isProvisionableBinding(
@@ -645,7 +972,10 @@ function createHandler(
 	| D1Handler
 	| R2Handler
 	| AISearchNamespaceHandler
-	| AgentMemoryNamespaceHandler {
+	| AgentMemoryNamespaceHandler
+	| QueueHandler
+	| DispatchNamespaceHandler
+	| FlagshipHandler {
 	switch (binding.type) {
 		case "kv_namespace":
 			return new KVHandler(bindingName, binding, complianceConfig, accountId);
@@ -667,6 +997,27 @@ function createHandler(
 				complianceConfig,
 				accountId
 			);
+		case "queue":
+			return new QueueHandler(
+				bindingName,
+				binding,
+				complianceConfig,
+				accountId
+			);
+		case "dispatch_namespace":
+			return new DispatchNamespaceHandler(
+				bindingName,
+				binding,
+				complianceConfig,
+				accountId
+			);
+		case "flagship":
+			return new FlagshipHandler(
+				bindingName,
+				binding,
+				complianceConfig,
+				accountId
+			);
 	}
 }
 
@@ -678,7 +1029,10 @@ function toConfigBinding(
 	| CfR2Bucket
 	| CfD1Database
 	| CfAISearchNamespace
-	| CfAgentMemory {
+	| CfAgentMemory
+	| QueueProducer
+	| CfDispatchNamespace
+	| CfFlagship {
 	switch (binding.type) {
 		case "kv_namespace":
 			return HANDLERS.kv_namespace.toConfig(bindingName, binding);
@@ -690,6 +1044,12 @@ function toConfigBinding(
 			return HANDLERS.ai_search_namespace.toConfig(bindingName, binding);
 		case "agent_memory":
 			return HANDLERS.agent_memory.toConfig(bindingName, binding);
+		case "queue":
+			return HANDLERS.queue.toConfig(bindingName, binding);
+		case "dispatch_namespace":
+			return HANDLERS.dispatch_namespace.toConfig(bindingName, binding);
+		case "flagship":
+			return HANDLERS.flagship.toConfig(bindingName, binding);
 	}
 }
 
@@ -759,12 +1119,6 @@ export async function provisionBindings(
 			"Provisioning resources is not possible without a config file"
 		);
 
-		if (useServiceEnvironments(config)) {
-			throw new UserError(
-				"Provisioning resources is not supported with a service environment",
-				{ telemetryMessage: "provision resources with service environment" }
-			);
-		}
 		logger.log();
 
 		printBindings(
@@ -797,9 +1151,20 @@ export async function provisionBindings(
 			);
 		}
 
+		for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
+			if (binding.type === "queue" && typeof binding.queue_name === "string") {
+				const producer = config.queues.producers?.find(
+					(candidate) => candidate.binding === bindingName
+				);
+				if (producer) {
+					producer.queue = binding.queue_name;
+				}
+			}
+		}
+
 		const patch: RawConfig = {};
 
-		const existingBindingNames = new Set<string>();
+		const existingBindingNames = new Map<keyof typeof HANDLERS, Set<string>>();
 
 		const isUsingRedirectedConfig =
 			config.userConfigPath && config.userConfigPath !== config.configPath;
@@ -816,10 +1181,14 @@ export async function provisionBindings(
 			for (const resourceType of Object.keys(
 				HANDLERS
 			) as (keyof typeof HANDLERS)[]) {
-				const configField = HANDLERS[resourceType].configField;
-				for (const binding of unredirectedConfig[configField] ?? []) {
-					existingBindingNames.add(binding.binding);
+				const bindingNames = new Set<string>();
+				for (const binding of getRawConfigBindings(
+					unredirectedConfig,
+					resourceType
+				)) {
+					bindingNames.add(binding.binding);
 				}
+				existingBindingNames.set(resourceType, bindingNames);
 			}
 		}
 
@@ -829,25 +1198,15 @@ export async function provisionBindings(
 			}
 
 			// See above for why we skip writing back some bindings to the config file.
-			if (isUsingRedirectedConfig && !existingBindingNames.has(bindingName)) {
+			if (
+				isUsingRedirectedConfig &&
+				!existingBindingNames.get(binding.type)?.has(bindingName)
+			) {
 				continue;
 			}
 
-			const resourceType = HANDLERS[binding.type].configField;
-
-			patch[resourceType] ??= [];
-
 			const bindingToWrite = toConfigBinding(bindingName, binding);
-
-			(patch[resourceType] as unknown as Array<Record<string, string>>).push(
-				Object.fromEntries(
-					Object.entries(bindingToWrite).filter(
-						// Make sure all the values are JSON serialisable.
-						// Otherwise we end up with "undefined" in the config.
-						([_, value]) => typeof value === "string"
-					)
-				)
-			);
+			addBindingToPatch(patch, binding.type, bindingToWrite);
 		}
 
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
@@ -1050,6 +1409,26 @@ async function listKVNamespaces(
 		}
 	}
 	return results;
+}
+
+async function listDispatchNamespaces(
+	complianceConfig: ComplianceConfig,
+	accountId: string
+): Promise<DispatchNamespaceInfo[]> {
+	return await fetchPagedListResult<DispatchNamespaceInfo>(
+		complianceConfig,
+		`/accounts/${accountId}/workers/dispatch/namespaces`
+	);
+}
+
+async function listFlagshipApps(
+	complianceConfig: ComplianceConfig,
+	accountId: string
+): Promise<FlagshipAppInfo[]> {
+	return await fetchListResult<FlagshipAppInfo>(
+		complianceConfig,
+		`/accounts/${accountId}/flagship/apps`
+	);
 }
 
 async function createD1Database(

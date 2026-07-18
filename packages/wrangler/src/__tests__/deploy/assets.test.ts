@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
+import { getEdgeKvUploadConcurrency } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -7,6 +8,7 @@ import {
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import * as metrics from "../../metrics";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -57,6 +59,10 @@ vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
 	getInstalledPackageVersion: vi.fn(),
 }));
 vi.mock("@cloudflare/cli-shared-helpers/command");
+
+function createJwt(payload: Record<string, unknown>) {
+	return `header.${Buffer.from(JSON.stringify(payload)).toString("base64")}.signature`;
+}
 
 describe("deploy", () => {
 	mockAccountId();
@@ -1054,6 +1060,198 @@ describe("deploy", () => {
 			});
 		});
 
+		describe.each([
+			{ name: "wrangler_single_asset_uploads is missing", jwt: createJwt({}) },
+			{
+				name: "wrangler_single_asset_uploads is false",
+				jwt: createJwt({ wrangler_single_asset_uploads: false }),
+			},
+			{ name: "the upload token cannot be decoded", jwt: "<<aus-token>>" },
+		])("when $name", (fallbackCase) => {
+			it("should use legacy base64 bucket upload", async ({ expect }) => {
+				const assets = [
+					{ filePath: "file-1.txt", content: "Content of file-1" },
+				];
+				writeAssets(assets);
+				writeWranglerConfig({ assets: { directory: "assets" } });
+
+				const mockBuckets = [["0de3dd5df907418e9730fd2bd747bd5e"]];
+				await mockAUSRequest([], mockBuckets, fallbackCase.jwt);
+				const uploadBodies: FormData[] = [];
+				const uploadContentTypeHeaders: (string | null)[] = [];
+				const uploadAuthHeaders: (string | null)[] = [];
+				const uploadUrls: string[] = [];
+				await mockAssetUploadRequest(
+					mockBuckets.length,
+					uploadBodies,
+					uploadContentTypeHeaders,
+					uploadAuthHeaders,
+					uploadUrls
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedAssets: { jwt: "<<aus-completion-token>>", config: {} },
+					expectedType: "none",
+				});
+
+				await runWrangler("deploy");
+
+				expect(uploadUrls).toHaveLength(1);
+				expect(new URL(uploadUrls[0]).pathname).toContain(
+					"/workers/assets/upload"
+				);
+				expect(new URL(uploadUrls[0]).search).toBe("?base64=true");
+			});
+		});
+
+		it("should upload each asset individually with raw bytes when wrangler_single_asset_uploads is true", async ({
+			expect,
+		}) => {
+			const sendMetricsEventSpy = vi
+				.spyOn(metrics, "sendMetricsEvent")
+				.mockImplementation(() => {});
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "foobar.greg", content: "something-binary" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({ assets: { directory: "assets" } });
+
+			const file1Hash = "0de3dd5df907418e9730fd2bd747bd5e";
+			const unknownHash = "80e40c1f2422528cb2fba3f9389ce315";
+			const mockBuckets = [[file1Hash, unknownHash]];
+			const edgeKvJwt = createJwt({ wrangler_single_asset_uploads: true });
+			await mockAUSRequest([], mockBuckets, edgeKvJwt);
+
+			const uploadedRequests: {
+				url: string;
+				contentType: string | null;
+				authorization: string | null;
+				body: ArrayBuffer;
+			}[] = [];
+			msw.use(
+				http.post(
+					"*/accounts/some-account-id/workers/assets/upload/:hash",
+					async ({ request }) => {
+						uploadedRequests.push({
+							url: request.url,
+							contentType: request.headers.get("Content-Type"),
+							authorization: request.headers.get("Authorization"),
+							body: await request.arrayBuffer(),
+						});
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result:
+									uploadedRequests.length === 2
+										? { jwt: "<<aus-completion-token>>" }
+										: {},
+							},
+							{ status: uploadedRequests.length === 2 ? 201 : 202 }
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: { jwt: "<<aus-completion-token>>", config: {} },
+				expectedType: "none",
+			});
+
+			await runWrangler("deploy");
+
+			expect(uploadedRequests).toHaveLength(2);
+
+			// Verify per-hash URLs with no query string
+			const paths = uploadedRequests.map((r) => new URL(r.url).pathname).sort();
+			expect(paths).toEqual([
+				expect.stringContaining(`/workers/assets/upload/${file1Hash}`),
+				expect.stringContaining(`/workers/assets/upload/${unknownHash}`),
+			]);
+			for (const req of uploadedRequests) {
+				expect(new URL(req.url).search).toBe("");
+			}
+
+			// Verify authorization
+			for (const req of uploadedRequests) {
+				expect(req.authorization).toBe(`Bearer ${edgeKvJwt}`);
+			}
+
+			// Verify raw bytes (not base64) for file-1.txt
+			const file1Req = uploadedRequests.find((r) => r.url.includes(file1Hash));
+			if (!file1Req) {
+				throw new Error("missing upload request for file1Hash");
+			}
+			expect(Buffer.from(file1Req.body).toString("utf-8")).toBe(
+				"Content of file-1"
+			);
+			expect(file1Req.contentType).toMatch(/text\/plain/);
+
+			// Verify unknown content type gets application/null sentinel
+			const unknownReq = uploadedRequests.find((r) =>
+				r.url.includes(unknownHash)
+			);
+			if (!unknownReq) {
+				throw new Error("missing upload request for unknownHash");
+			}
+			expect(Buffer.from(unknownReq.body).toString("utf-8")).toBe(
+				"something-binary"
+			);
+			expect(unknownReq.contentType).toBe("application/null");
+
+			expect(sendMetricsEventSpy).toHaveBeenCalledWith(
+				"deploy worker script",
+				expect.objectContaining({
+					assetUploadDurationMs: expect.any(Number),
+					assetUploadIsBulk: false,
+					assetUploadFileCount: 2,
+					assetUploadTotalBytes: 33,
+				}),
+				expect.any(Object)
+			);
+			sendMetricsEventSpy.mockRestore();
+		});
+
+		it("should send bulk asset upload stats with deploy metrics", async ({
+			expect,
+		}) => {
+			const sendMetricsEventSpy = vi
+				.spyOn(metrics, "sendMetricsEvent")
+				.mockImplementation(() => {});
+			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
+			writeAssets(assets);
+			writeWranglerConfig({ assets: { directory: "assets" } });
+
+			const mockBuckets = [["0de3dd5df907418e9730fd2bd747bd5e"]];
+			await mockAUSRequest(
+				[],
+				mockBuckets,
+				createJwt({ wrangler_single_asset_uploads: false })
+			);
+			await mockAssetUploadRequest(mockBuckets.length, [], [], []);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: { jwt: "<<aus-completion-token>>", config: {} },
+				expectedType: "none",
+			});
+
+			await runWrangler("deploy");
+
+			expect(sendMetricsEventSpy).toHaveBeenCalledWith(
+				"deploy worker script",
+				expect.objectContaining({
+					assetUploadDurationMs: expect.any(Number),
+					assetUploadIsBulk: true,
+					assetUploadFileCount: 1,
+					assetUploadTotalBytes: 17,
+				}),
+				expect.any(Object)
+			);
+			sendMetricsEventSpy.mockRestore();
+		});
+
 		it("should be able to upload a user worker with ASSETS binding and config", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -1375,26 +1573,37 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should retry asset uploads on failure and log a retry message including the attempt count", async ({
-			expect,
-		}) => {
-			vi.stubEnv("WRANGLER_LOG", "debug");
+		for (const retryCase of [
+			{
+				name: "legacy upload",
+				jwt: "<<aus-token>>",
+				urlPattern: "*/accounts/some-account-id/workers/assets/upload",
+			},
+			{
+				name: "edge KV upload",
+				jwt: createJwt({ wrangler_single_asset_uploads: true }),
+				urlPattern: "*/accounts/some-account-id/workers/assets/upload/:hash",
+			},
+		]) {
+			it(`should retry asset uploads on failure for ${retryCase.name}`, async ({
+				expect,
+			}) => {
+				vi.stubEnv("WRANGLER_LOG", "debug");
 
-			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
-			writeAssets(assets);
-			writeWranglerConfig({
-				assets: { directory: "assets" },
-			});
+				const assets = [
+					{ filePath: "file-1.txt", content: "Content of file-1" },
+				];
+				writeAssets(assets);
+				writeWranglerConfig({
+					assets: { directory: "assets" },
+				});
 
-			const mockBuckets = [["0de3dd5df907418e9730fd2bd747bd5e"]];
-			await mockAUSRequest([], mockBuckets, "<<aus-token>>");
+				const mockBuckets = [["0de3dd5df907418e9730fd2bd747bd5e"]];
+				await mockAUSRequest([], mockBuckets, retryCase.jwt);
 
-			// Fail the first upload attempt, succeed on the second.
-			const uploadAttempts: Request[] = [];
-			msw.use(
-				http.post(
-					"*/accounts/some-account-id/workers/assets/upload",
-					async ({ request }) => {
+				const uploadAttempts: Request[] = [];
+				msw.use(
+					http.post(retryCase.urlPattern, async ({ request }) => {
 						uploadAttempts.push(request);
 						if (uploadAttempts.length === 1) {
 							return HttpResponse.json(
@@ -1416,34 +1625,43 @@ describe("deploy", () => {
 							},
 							{ status: 201 }
 						);
-					}
-				)
-			);
+					})
+				);
 
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedAssets: {
-					jwt: "<<aus-completion-token>>",
-					config: {},
-				},
-				expectedType: "none",
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedAssets: {
+						jwt: "<<aus-completion-token>>",
+						config: {},
+					},
+					expectedType: "none",
+				});
+
+				await runWrangler("deploy");
+
+				expect(uploadAttempts.length).toBe(2);
+				expect(std.info).toContain(
+					"Asset upload failed. Retrying... 1 of 5 attempts."
+				);
+				expect(std.info).not.toContain("upload-boom-from-test");
+				expect(std.debug).toContain("upload-boom-from-test");
 			});
+		}
+	});
+});
 
-			await runWrangler("deploy");
+describe("getEdgeKvUploadConcurrency", () => {
+	it("returns value from JWT claim", ({ expect }) => {
+		const jwt = createJwt({ edge_kv_upload_concurrency: 42 });
+		expect(getEdgeKvUploadConcurrency(jwt)).toBe(42);
+	});
 
-			// The upload endpoint was hit twice: once failing, once succeeding.
-			expect(uploadAttempts.length).toBe(2);
+	it("returns default when claim is missing", ({ expect }) => {
+		const jwt = createJwt({});
+		expect(getEdgeKvUploadConcurrency(jwt)).toBe(50);
+	});
 
-			// The new info message includes the attempt count.
-			expect(std.info).toContain(
-				"Asset upload failed. Retrying... 1 of 5 attempts."
-			);
-
-			// The error details no longer leak into the user-facing info log.
-			expect(std.info).not.toContain("upload-boom-from-test");
-
-			// The error is now logged at debug level instead.
-			expect(std.debug).toContain("upload-boom-from-test");
-		});
+	it("returns default when JWT is undecodable", ({ expect }) => {
+		expect(getEdgeKvUploadConcurrency("garbage")).toBe(50);
 	});
 });

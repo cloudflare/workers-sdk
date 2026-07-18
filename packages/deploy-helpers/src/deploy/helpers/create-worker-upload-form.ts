@@ -64,6 +64,7 @@ export function createWorkerUploadForm(
 		main,
 		sourceMaps,
 		migrations,
+		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
 		keepVars,
@@ -79,6 +80,7 @@ export function createWorkerUploadForm(
 		assets,
 		observability,
 		cache,
+		package_dependencies,
 	} = worker;
 
 	const assetConfig: AssetConfigMetadata = {
@@ -260,13 +262,29 @@ export function createWorkerUploadForm(
 	});
 
 	queues.forEach(({ binding, queue_name, delivery_delay, raw }) => {
-		metadataBindings.push({
-			type: "queue",
-			name: binding,
-			queue_name,
-			delivery_delay,
-			raw,
-		});
+		if (options?.dryRun) {
+			queue_name ??= INHERIT_SYMBOL;
+		}
+		if (queue_name === undefined) {
+			throw new UserError(
+				`${binding} bindings must have a "queue" field. Add a "queue" field to the producer in your Worker configuration specifying the name of the Queue to bind to.`,
+				{
+					telemetryMessage: "queue binding missing name",
+				}
+			);
+		}
+
+		if (queue_name === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				type: "queue",
+				name: binding,
+				queue_name,
+				delivery_delay,
+				raw,
+			});
+		}
 	});
 
 	r2_buckets.forEach(({ binding, bucket_name, jurisdiction, raw }) => {
@@ -275,7 +293,7 @@ export function createWorkerUploadForm(
 		}
 		if (bucket_name === undefined) {
 			throw new UserError(
-				`${binding} bindings must have a "bucket_name" field`,
+				`${binding} bindings must have a "bucket_name" field. Add a "bucket_name" field to the binding in your Worker configuration specifying the name of the R2 bucket to bind to.`,
 				{ telemetryMessage: "r2 bucket binding missing bucket_name" }
 			);
 		}
@@ -303,7 +321,7 @@ export function createWorkerUploadForm(
 			}
 			if (database_id === undefined) {
 				throw new UserError(
-					`${binding} bindings must have a "database_id" field`,
+					`${binding} bindings must have a "database_id" field. Add a "database_id" field to the binding in your Worker configuration specifying the ID of the D1 database to bind to.`,
 					{ telemetryMessage: "d1 database binding missing database_id" }
 				);
 			}
@@ -339,9 +357,12 @@ export function createWorkerUploadForm(
 			namespace ??= INHERIT_SYMBOL;
 		}
 		if (namespace === undefined) {
-			throw new UserError(`${binding} bindings must have a "namespace" field`, {
-				telemetryMessage: "ai search namespace binding missing namespace",
-			});
+			throw new UserError(
+				`${binding} bindings must have a "namespace" field. Add a "namespace" field to the binding in your Worker configuration specifying the AI Search namespace to bind to.`,
+				{
+					telemetryMessage: "ai search namespace binding missing namespace",
+				}
+			);
 		}
 
 		if (namespace === INHERIT_SYMBOL) {
@@ -378,9 +399,12 @@ export function createWorkerUploadForm(
 			namespace ??= INHERIT_SYMBOL;
 		}
 		if (namespace === undefined) {
-			throw new UserError(`${binding} bindings must have a "namespace" field`, {
-				telemetryMessage: false,
-			});
+			throw new UserError(
+				`${binding} bindings must have a "namespace" field. Add a "namespace" field to the binding in your Worker configuration specifying the namespace to bind to.`,
+				{
+					telemetryMessage: false,
+				}
+			);
 		}
 
 		if (namespace === INHERIT_SYMBOL) {
@@ -431,11 +455,23 @@ export function createWorkerUploadForm(
 	});
 
 	flagship.forEach(({ binding, app_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "flagship",
-			app_id,
-		});
+		if (options?.dryRun) {
+			app_id ??= INHERIT_SYMBOL;
+		}
+		if (app_id === undefined) {
+			throw new UserError(
+				`${binding} bindings must have an "app_id" field. Add an "app_id" field to the binding in your Worker configuration specifying the Flagship app to bind to.`,
+				{
+					telemetryMessage: "flagship binding missing app id",
+				}
+			);
+		}
+
+		metadataBindings.push(
+			app_id === INHERIT_SYMBOL
+				? { name: binding, type: "inherit" }
+				: { name: binding, type: "flagship", app_id }
+		);
 	});
 
 	ratelimits.forEach(({ name, namespace_id, simple }) => {
@@ -493,20 +529,36 @@ export function createWorkerUploadForm(
 	});
 
 	dispatch_namespaces.forEach(({ binding, namespace, outbound }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "dispatch_namespace",
-			namespace,
-			...(outbound && {
-				outbound: {
-					worker: {
-						service: outbound.service,
-						environment: outbound.environment,
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(
+				`${binding} bindings must have a "namespace" field. Add a "namespace" field to the binding in your Worker configuration specifying the dispatch namespace to bind to.`,
+				{
+					telemetryMessage: "dispatch namespace binding missing namespace",
+				}
+			);
+		}
+
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "dispatch_namespace",
+				namespace,
+				...(outbound && {
+					outbound: {
+						worker: {
+							service: outbound.service,
+							environment: outbound.environment,
+						},
+						params: outbound.parameters?.map((p) => ({ name: p })),
 					},
-					params: outbound.parameters?.map((p) => ({ name: p })),
-				},
-			}),
-		});
+				}),
+			});
+		}
 	});
 
 	mtls_certificates.forEach(({ binding, certificate_id }) => {
@@ -827,6 +879,10 @@ export function createWorkerUploadForm(
 			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
+		...(configuredExports &&
+			Object.keys(configuredExports).length > 0 && {
+				exports: configuredExports,
+			}),
 		capnp_schema: capnpSchemaOutputFile,
 		...(keep_bindings && { keep_bindings }),
 		...(logpush !== undefined && { logpush }),
@@ -844,6 +900,7 @@ export function createWorkerUploadForm(
 		}),
 		...(observability && { observability }),
 		...(cache && { cache_options: cache }),
+		...(package_dependencies?.length && { package_dependencies }),
 	};
 
 	if (options?.unsafe?.metadata !== undefined) {

@@ -7,6 +7,7 @@ import {
 	StopIcon,
 	WarningCircleIcon,
 } from "@phosphor-icons/react";
+import type { JSX } from "react";
 
 export function StatusIcon({ status }: { status: string }): JSX.Element {
 	switch (status) {

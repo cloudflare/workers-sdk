@@ -1,5 +1,70 @@
 # @cloudflare/workers-utils
 
+## 0.27.0
+
+### Minor Changes
+
+- [#14630](https://github.com/cloudflare/workers-sdk/pull/14630) [`42df9bb`](https://github.com/cloudflare/workers-sdk/commit/42df9bbf07e37032a3e61027e33d504d74a25ccd) Thanks [@penalosa](https://github.com/penalosa)! - Extract the Cloudflare CLI auth layer into a product-agnostic `@cloudflare/workers-auth` core
+
+  The OAuth login/logout/refresh, credential storage, config cache, and account-selection machinery is now shared behind an `AuthProduct` descriptor, with a thin per-CLI entrypoint on top. `@cloudflare/workers-auth/wrangler` (`createWranglerAuth`) preserves wrangler's existing behaviour, and a new `@cloudflare/workers-auth/cf` (`createCfAuth`) adds the `cf` CLI: its own OAuth app registration (client id, callback port, branded consent pages, scoped-token-only auth), a dedicated scope catalog, JSON config files under `~/.config/cloudflare`, and an isolated config-cache namespace so `cf` login/logout never purges wrangler's cache.
+
+  As part of the extraction, `@cloudflare/workers-utils` now exports the shared `createConfigCache` (with a `namespace` option), `openInBrowser`, and the `isInteractive` / `isNonInteractiveOrCI` / `isCI` TTY-and-CI detection helpers (each taking the caller's logger as a parameter rather than relying on a singleton). These read a bundled `ci-info`, so consumers that need to fake CI in their tests should mock this package's helpers rather than `ci-info` directly.
+
+## 0.26.0
+
+### Minor Changes
+
+- [#14591](https://github.com/cloudflare/workers-sdk/pull/14591) [`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Export `getInstalledPackageVersion`, `getPackagePath`, and `isPackageInstalled` utilities
+
+  Package resolution helpers that were previously internal to `@cloudflare/autoconfig` are now exported from `@cloudflare/workers-utils` so they can be shared across packages without pulling in the full autoconfig dependency.
+
+  `getPackagePath` now also consistently returns a directory path. Previously the fallback resolution strategy could return a file path (the package entry point) instead of its containing directory.
+
+## 0.25.1
+
+### Patch Changes
+
+- [#14530](https://github.com/cloudflare/workers-sdk/pull/14530) [`aad35b7`](https://github.com/cloudflare/workers-sdk/commit/aad35b79d07df1bb764a4a5912d6b4328a34474b) Thanks [@Partha-Shankar](https://github.com/Partha-Shankar)! - Validate optional configuration fields for D1 database bindings
+
+  Enforce type checks for the optional D1 database properties `database_name`, `migrations_dir`, `migrations_table`, and `database_internal_env` to ensure consistency with other binding types.
+
+- [#14492](https://github.com/cloudflare/workers-sdk/pull/14492) [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5) Thanks [@penalosa](https://github.com/penalosa)! - Replace the CommonJS `xdg-app-paths` dependency with a vendored pure-ESM implementation
+
+  `xdg-app-paths` (and its `xdg-portable`/`os-paths` dependencies) are CommonJS only, which caused "Dynamic require of 'path' is not supported" errors when the surrounding code was bundled to ESM. The global config/cache directory resolution is now provided by a small, dependency-free pure-ESM module in `@cloudflare/workers-utils` that reproduces the previous path resolution exactly (verified against the real package in unit tests), so existing config and credential locations are unchanged. This also drops the transitive `fsevents` optional dependency that `xdg-app-paths` pulled in.
+
+  Miniflare and create-cloudflare now consume the shared helpers from `@cloudflare/workers-utils` instead of maintaining their own copies, importing node-only leaf entry points (`@cloudflare/workers-utils/fs-helpers`, `@cloudflare/workers-utils/global-wrangler-config-path`) where ESM bundling is required.
+
+- [#14570](https://github.com/cloudflare/workers-sdk/pull/14570) [`1ca8d8f`](https://github.com/cloudflare/workers-sdk/commit/1ca8d8f0bbd012a1d65cabadf7b6987b252775e9) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade `signal-exit` from v3 to v4
+
+  The bundled `signal-exit` dependency was CJS-only. Upgrading to v4 (which ships a dual ESM/CJS build) unblocks ESM output. Exit-cleanup behaviour is unchanged, though v4 no longer registers handlers for a few signals that are no longer supported by the OS (`SIGUNUSED` on Linux; `SIGABRT`/`SIGALRM` on Windows).
+
+## 0.25.0
+
+### Minor Changes
+
+- [#14474](https://github.com/cloudflare/workers-sdk/pull/14474) [`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add cache options for WorkerEntrypoint exports
+
+  You can now set cache options on `WorkerEntrypoint` exports and configure cross-version cache behavior globally:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "cache": { "enabled": true, "cross_version_cache": true },
+    "exports": {
+      "default": {
+        "type": "worker",
+        "cache": { "enabled": false }
+      },
+      "Admin": {
+        "type": "worker",
+        "cache": { "enabled": true }
+      }
+    }
+  }
+  ```
+
+  Wrangler sends the `exports` config to the deploy and version upload APIs alongside the global `cache.enabled` and `cache.cross_version_cache` settings. The platform resolves those global settings plus cache overrides on exports and validates which entrypoint names are cacheable.
+
 ## 0.24.0
 
 ### Minor Changes

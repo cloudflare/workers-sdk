@@ -2,7 +2,7 @@ import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
-import { writeAuthConfigFile } from "../user";
+import { writeAuthCredentials } from "../user";
 import { getUserInfo } from "../user/whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -34,7 +34,7 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 	it("should return undefined if there is an empty config file", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({});
+		writeAuthCredentials({});
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toBeUndefined();
 	});
@@ -197,7 +197,7 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 	it("should return the user's email and accounts if authenticated via config token", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
 		expect(userInfo).toEqual({
@@ -215,7 +215,7 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 	it("should display a warning message if the config file contains a legacy api_token field", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({ api_token: "API_TOKEN" });
+		writeAuthCredentials({ api_token: "API_TOKEN" });
 		await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
 		// The current working directory is replaced with `<cwd>` to make the snapshot consistent across environments
@@ -248,7 +248,7 @@ describe("whoami", () => {
 	it("should display a warning when account_id in config does not match authenticated accounts", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
 		const { whoami } = await import("../user/whoami");
 		await whoami(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
@@ -264,7 +264,7 @@ describe("whoami", () => {
 	it("should not display a warning when account_id matches an authenticated account", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
 		const { whoami } = await import("../user/whoami");
 		await whoami(COMPLIANCE_REGION_CONFIG_UNKNOWN, "account-1", "account-1");
 		expect(std.out).not.toContain(
@@ -275,7 +275,7 @@ describe("whoami", () => {
 	it("should not display a warning when accountFilter and configAccountId don't match", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
 		const { whoami } = await import("../user/whoami");
 		await whoami(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
@@ -290,7 +290,7 @@ describe("whoami", () => {
 	it("should display membership roles if --account flag is given", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
 		// `whoami` makes two calls to `/memberships`: one inside `fetchAllAccounts`
 		// (to filter accounts by what the current login auth can use) and one
 		// inside `fetchMembershipRoles`. Use a non-once handler so both calls
@@ -320,6 +320,7 @@ describe("whoami", () => {
 			──────────────────
 			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			🔐 Credentials are stored in: <cwd>/home/.config/.wrangler/config/default.toml
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
@@ -361,6 +362,7 @@ describe("whoami", () => {
 			  - email_routing:write
 			  - email_sending:write
 			  - browser:write
+			  - challenge-widgets.write
 
 
 			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
@@ -370,7 +372,7 @@ describe("whoami", () => {
 
 	it("should not redact in non-interactive mode", async ({ expect }) => {
 		setIsTTY(false);
-		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
 		msw.use(
 			http.get("*/memberships", () =>
 				HttpResponse.json(
@@ -396,6 +398,7 @@ describe("whoami", () => {
 			──────────────────
 			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			🔐 Credentials are stored in: <cwd>/home/.config/.wrangler/config/default.toml
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
@@ -437,6 +440,7 @@ describe("whoami", () => {
 			  - email_routing:write
 			  - email_sending:write
 			  - browser:write
+			  - challenge-widgets.write
 
 
 			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
@@ -447,7 +451,7 @@ describe("whoami", () => {
 	it("should output JSON with user info when --json flag is used and authenticated", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
 		await runWrangler("whoami --json");
 		let output;
 		expect(() => (output = JSON.parse(std.out))).not.toThrow();
@@ -504,7 +508,7 @@ describe("whoami", () => {
 	it("should display membership error on authentication error 10000", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
 		// `fetchAllAccounts` falls back to `/accounts` when `/memberships`
 		// fails with 9106 (Account API Token) or 10000 (Authentication
 		// error), so the accounts table still renders. The separate
@@ -526,6 +530,7 @@ describe("whoami", () => {
 			──────────────────
 			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			🔐 Credentials are stored in: <cwd>/home/.config/.wrangler/config/default.toml
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
@@ -567,6 +572,7 @@ describe("whoami", () => {
 			  - email_routing:write
 			  - email_sending:write
 			  - browser:write
+			  - challenge-widgets.write
 
 
 			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
@@ -576,7 +582,7 @@ describe("whoami", () => {
 	it("should fail when /memberships fails with a non-tolerated error", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials({ oauth_token: "some-oauth-token" });
 		// `fetchAllAccounts` only tolerates 9106 (Account API Token) and
 		// 10000 (Authentication error) on
 		// `/memberships`. Any other failure is propagated and `whoami` fails.

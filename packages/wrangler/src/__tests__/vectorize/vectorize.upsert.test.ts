@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- formData() is the standard Web API for parsing multipart bodies; only deprecated on undici's server-side types */
 import crypto from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";

@@ -1,7 +1,11 @@
+import {
+	UserError,
+	type RawConfig,
+	type Exports,
+} from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
 import type { ParsedInputWorkerConfig } from "./schema";
 import type { Json } from "./utils";
-import type { RawConfig } from "@cloudflare/workers-utils";
 
 /**
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
@@ -84,7 +88,14 @@ function convertTopLevel(
 		result.observability = convertObservability(config.observability);
 	}
 	if (config.cache !== undefined) {
-		result.cache = { enabled: config.cache.enabled };
+		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
+		const cache: RawCacheConfig = {
+			enabled: config.cache.enabled,
+		};
+		if (config.cache.crossVersionCache !== undefined) {
+			cache.cross_version_cache = config.cache.crossVersionCache;
+		}
+		result.cache = cache;
 	}
 	if (config.unsafe !== undefined) {
 		result.unsafe = convertUnsafeTopLevel(config.unsafe);
@@ -653,28 +664,92 @@ function convertBindingsAndAssets(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EXPORTS (Durable Objects + Workflows)
+// EXPORTS (Workers + Durable Objects)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertExports(
 	config: ParsedInputWorkerConfig,
-	_result: RawConfig
+	result: RawConfig
 ): void {
 	const exports = config.exports;
 	if (!exports) {
 		return;
 	}
 
-	for (const value of Object.values(exports)) {
-		if (value.type === "durable-object") {
-			throw new Error("Durable Object exports are not currently supported.");
+	const converted: Exports = {};
+	const unknownExports: typeof exports = {};
+	for (const [exportName, value] of Object.entries(exports)) {
+		if (value.type === "worker") {
+			converted[exportName] = value;
+			continue;
 		}
-		// TODO: support Workflows
+
+		if (value.type !== "durable-object") {
+			unknownExports[exportName] = value;
+			continue;
+		}
+		switch (value.state) {
+			case undefined:
+			case "created": {
+				converted[exportName] = {
+					type: "durable-object",
+					storage: value.storage,
+				};
+				break;
+			}
+			case "deleted": {
+				converted[exportName] = {
+					type: "durable-object",
+					state: "deleted",
+				};
+				break;
+			}
+			case "renamed": {
+				converted[exportName] = {
+					type: "durable-object",
+					state: "renamed",
+					renamed_to: value.renamedTo,
+				};
+				break;
+			}
+			case "transferred": {
+				converted[exportName] = {
+					type: "durable-object",
+					state: "transferred",
+					transferred_to: value.transferredTo,
+				};
+				break;
+			}
+			case "expecting-transfer": {
+				converted[exportName] = {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: value.storage,
+					transfer_from: value.transferFrom,
+				};
+				break;
+			}
+		}
+	}
+	if (Object.keys(unknownExports).length > 0) {
+		throw new UserError(
+			"Unknown export types found: " +
+				Object.entries(unknownExports)
+					.map(([exportName, { type }]) => `- ${exportName} : ${type}`)
+					.join("\n"),
+			{
+				telemetryMessage: "Unknown export types found",
+			}
+		);
+	}
+
+	if (Object.keys(converted).length > 0) {
+		result.exports = converted;
 	}
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRIGGERS (scheduled + fetch + queue consumer)
+// TRIGGERS (scheduled + fetch + queue consumer + email)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertTriggers(
@@ -693,9 +768,15 @@ function convertTriggers(
 	const queueConsumers: NonNullable<
 		NonNullable<RawConfig["queues"]>["consumers"]
 	> = result.queues?.consumers ? [...result.queues.consumers] : [];
+	let addresses: string[] | undefined;
 
 	for (const trigger of triggers) {
 		switch (trigger.type) {
+			case "email": {
+				addresses ??= [];
+				addresses.push(...trigger.addresses);
+				break;
+			}
 			case "scheduled": {
 				crons.push(trigger.schedule);
 				break;
@@ -736,6 +817,10 @@ function convertTriggers(
 	}
 	if (queueConsumers.length) {
 		result.queues = { ...(result.queues ?? {}), consumers: queueConsumers };
+	}
+	// An empty array removes managed addresses; undefined means no email trigger.
+	if (addresses !== undefined) {
+		result.addresses = addresses;
 	}
 }
 

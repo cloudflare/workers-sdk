@@ -3,24 +3,29 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
+	APIError,
 	formatTime,
 	ParseError,
 	retryOnAPIFailure,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
 import { getWorkersDevSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
+import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
-import { getMigrationsToUpload } from "./helpers/durable";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
+import { ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE } from "./helpers/error-codes";
+import { resolveExportsUploadPayload } from "./helpers/exports";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
 import { printBindings } from "./helpers/print-bindings";
@@ -33,7 +38,6 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "./helpers/sourcemap";
-import { useServiceEnvironments as useServiceEnvironmentsConfig } from "./helpers/use-service-environments";
 import {
 	preUploadApiChecks,
 	validateWorkerProps,
@@ -41,6 +45,7 @@ import {
 import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
 import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
+import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
@@ -55,6 +60,7 @@ export default async function versionsUpload(
 ): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
+	assetUploadStats?: AssetUploadStats;
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
 }> {
@@ -102,22 +108,26 @@ export default async function versionsUpload(
 		};
 	}
 
-	// durable object migrations
-	const migrations = !props.dryRun
-		? await getMigrationsToUpload(scriptName, {
-				accountId,
-				config,
-				useServiceEnvironments: useServiceEnvironmentsConfig(config),
-				env: props.env,
-				dispatchNamespace: undefined,
-			})
-		: undefined;
+	// Resolve which Durable Object lifecycle payload to forward — either
+	// the legacy `migrations` steps or the declarative `exports` map. The
+	// server's versions POST controller persists `exports` on the new
+	// script_version row with `SkipDeploy:true`, so reconciliation is
+	// deferred to the subsequent deploy (either `wrangler deploy` or
+	// `wrangler versions deploy <id>`).
+	const { migrations, exports } = await resolveExportsUploadPayload({
+		scriptName,
+		isDryRun: props.dryRun,
+		accountId,
+		config,
+		dispatchNamespace: undefined,
+	});
 
 	// Upload assets if assets is being used
-	const assetsJwt =
+	const assetsUploadResult =
 		assetsOptions && !props.dryRun
 			? await syncAssets(config, accountId, assetsOptions.directory, scriptName)
 			: undefined;
+	const assetsJwt = assetsUploadResult?.jwt;
 
 	if (props.secretsFile) {
 		const secretsResult = await parseBulkInputToObject(props.secretsFile);
@@ -148,6 +158,7 @@ export default async function versionsUpload(
 		name: scriptName,
 		main,
 		migrations,
+		exports,
 		modules,
 		containers: config.containers,
 		sourceMaps,
@@ -179,6 +190,10 @@ export default async function versionsUpload(
 		logpush: undefined, // logpush and observability are non-versioned settings
 		observability: undefined,
 		cache: config.cache, // cache is a versioned setting
+		package_dependencies:
+			config.dependencies_instrumentation?.enabled !== false && projectRoot
+				? await collectPackageDependencies(projectRoot)
+				: undefined,
 	};
 
 	await printBundleSize(
@@ -267,6 +282,27 @@ export default async function versionsUpload(
 					undefined,
 					{ unsafeMetadata: config.unsafe?.metadata }
 				);
+			}
+
+			// A binding references a DO class declared in `exports` but not yet
+			// provisioned. Declarative `exports` reconcile at deploy time, so
+			// the namespace can't exist when the version is merely uploaded.
+			// EWC's message already spells out the remediation, so surface it
+			// verbatim (stripping the trailing ` [code: N]` the cfetch layer
+			// appended) rather than the generic upload failure.
+			if (
+				err instanceof APIError &&
+				err.code === ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE
+			) {
+				err.preventReport();
+				const serverMessage =
+					err.notes[0]?.text
+						.replace(` [code: ${ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE}]`, "")
+						.trim() ?? "";
+				throw new UserError(renderBindingDependsOnExportError(serverMessage), {
+					telemetryMessage:
+						"versions upload binding depends on unprovisioned export",
+				});
 			}
 
 			const message = await helpIfErrorIsSizeOrScriptStartup(
@@ -388,5 +424,11 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 `)
 	);
 
-	return { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl };
+	return {
+		versionId,
+		workerTag,
+		assetUploadStats: assetsUploadResult?.assetUploadStats,
+		versionPreviewUrl,
+		versionPreviewAliasUrl,
+	};
 }

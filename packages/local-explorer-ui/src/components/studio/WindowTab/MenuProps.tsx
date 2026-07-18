@@ -1,4 +1,5 @@
 import { PlusIcon } from "@phosphor-icons/react";
+import type { JSX } from "react";
 
 interface StudioWindowTabMenuProps {
 	onClick: () => void;

@@ -1,7 +1,3 @@
-type Env = {
-	API: Service<typeof import("../api").default>;
-};
-
 /**
  * Web Worker: renders user profiles and reports by calling the API Worker over a service binding.
  */
@@ -22,11 +18,18 @@ export default {
 
 		const reportsPathPrefix = "/reports/";
 		if (url.pathname.startsWith(reportsPathPrefix)) {
-			const date = url.pathname.slice(reportsPathPrefix.length);
+			const date = url.pathname.slice(reportsPathPrefix.length).slice(0, 10); // YYYY-MM-DD
 			const report = await env.API.getDailyReport(date);
 
 			if (report === null) {
 				return new Response("No report", { status: 404 });
+			}
+
+			if (url.pathname.endsWith(".png")) {
+				return env.BROWSER.quickAction("screenshot", {
+					html: `<h1>Daily report (${date}): active users ${report.join(", ")}</h1>`,
+					viewport: { width: 600, height: 200 },
+				});
 			}
 
 			return new Response(
@@ -36,4 +39,4 @@ export default {
 
 		return new Response("Not Found", { status: 404 });
 	},
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<WebEnv>;

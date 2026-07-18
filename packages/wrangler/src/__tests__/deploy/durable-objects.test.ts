@@ -87,12 +87,13 @@ describe("deploy", () => {
 
 	afterEach(() => {
 		vi.unstubAllGlobals();
+		vi.unstubAllEnvs();
 		clearDialogs();
 		clearOutputFilePath();
 	});
 
 	describe("durable object migrations", () => {
-		it("should warn when you try to deploy durable objects without migrations", async ({
+		it("should warn when you try to deploy durable objects without a lifecycle declared", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -127,19 +128,15 @@ describe("deploy", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker
-				  (SomeClass), but no \`migrations\` for them. This may not work as expected until you add a
-				  \`migrations\` section to your wrangler.toml file. Add the following configuration:
+				  (SomeClass), but no live \`exports\` entry for them. This may not work as expected until you add a
+				  live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
 
 				      \`\`\`
-				      [[migrations]]
-				      tag = "v1"
-				      new_sqlite_classes = [ "SomeClass" ]
+				      [exports.SomeClass]
+				      type = "durable-object"
+				      storage = "sqlite"
 
 				      \`\`\`
-
-				      Refer to
-				  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
-				  details.
 
 				"
 			`);
@@ -350,301 +347,6 @@ describe("deploy", () => {
 			`);
 		});
 
-		describe("service environments", () => {
-			it("should deploy all migrations on first deploy", async ({ expect }) => {
-				writeWranglerConfig({
-					durable_objects: {
-						bindings: [
-							{ name: "SOMENAME", class_name: "SomeClass" },
-							{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
-						],
-					},
-					migrations: [
-						{ tag: "v1", new_classes: ["SomeClass"] },
-						{ tag: "v2", new_classes: ["SomeOtherClass"] },
-					],
-				});
-				fs.writeFileSync(
-					"index.js",
-					`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
-				);
-				mockSubDomainRequest();
-				mockServiceScriptData({}); // no scripts at all
-				mockUploadWorkerRequest({
-					useServiceEnvironments: true,
-					expectedMigrations: {
-						new_tag: "v2",
-						steps: [
-							{ new_classes: ["SomeClass"] },
-							{ new_classes: ["SomeOtherClass"] },
-						],
-					},
-					useOldUploadApi: true,
-				});
-
-				await runWrangler("deploy index.js --legacy-env false");
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Your Worker has access to the following bindings:
-					Binding                                 Resource
-					env.SOMENAME (SomeClass)                Durable Object
-					env.SOMEOTHERNAME (SomeOtherClass)      Durable Object
-
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
-			});
-
-			it("should deploy all migrations on first deploy (--env)", async ({
-				expect,
-			}) => {
-				writeWranglerConfig({
-					durable_objects: {
-						bindings: [
-							{ name: "SOMENAME", class_name: "SomeClass" },
-							{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
-						],
-					},
-					env: {
-						xyz: {
-							durable_objects: {
-								bindings: [
-									{ name: "SOMENAME", class_name: "SomeClass" },
-									{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
-								],
-							},
-						},
-					},
-					migrations: [
-						{ tag: "v1", new_classes: ["SomeClass"] },
-						{ tag: "v2", new_classes: ["SomeOtherClass"] },
-					],
-				});
-				fs.writeFileSync(
-					"index.js",
-					`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
-				);
-				msw.use(
-					http.get(
-						"*/accounts/:accountId/workers/services/:scriptName/environments/:envName/secrets",
-						() => HttpResponse.json(createFetchResult([]), { status: 200 })
-					)
-				);
-				mockSubDomainRequest();
-				mockServiceScriptData({ env: "xyz" }); // no scripts at all
-				mockUploadWorkerRequest({
-					useServiceEnvironments: true,
-					env: "xyz",
-					expectedMigrations: {
-						new_tag: "v2",
-						steps: [
-							{ new_classes: ["SomeClass"] },
-							{ new_classes: ["SomeOtherClass"] },
-						],
-					},
-					useOldUploadApi: true,
-				});
-
-				await runWrangler("deploy index.js --legacy-env false --env xyz");
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Your Worker has access to the following bindings:
-					Binding                                 Resource
-					env.SOMENAME (SomeClass)                Durable Object
-					env.SOMEOTHERNAME (SomeOtherClass)      Durable Object
-
-					Uploaded test-name (xyz) (TIMINGS)
-					Deployed test-name (xyz) triggers (TIMINGS)
-					  https://xyz.test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					"
-				`);
-			});
-
-			it("should use a script's current migration tag when publishing migrations", async ({
-				expect,
-			}) => {
-				writeWranglerConfig({
-					durable_objects: {
-						bindings: [
-							{ name: "SOMENAME", class_name: "SomeClass" },
-							{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
-						],
-					},
-					migrations: [
-						{ tag: "v1", new_classes: ["SomeClass"] },
-						{ tag: "v2", new_classes: ["SomeOtherClass"] },
-					],
-				});
-				fs.writeFileSync(
-					"index.js",
-					`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
-				);
-				mockSubDomainRequest();
-				mockServiceScriptData({
-					script: { id: "test-name", migration_tag: "v2" },
-				});
-				mockUploadWorkerRequest({
-					useServiceEnvironments: true,
-					expectedMigrations: {
-						new_tag: "v2",
-						steps: [
-							{
-								new_classes: ["SomeClass"],
-							},
-							{
-								new_classes: ["SomeOtherClass"],
-							},
-						],
-					},
-					useOldUploadApi: true,
-				});
-
-				await runWrangler("deploy index.js --legacy-env false");
-				expect(std).toMatchInlineSnapshot(`
-					{
-					  "debug": "",
-					  "err": "",
-					  "info": "",
-					  "out": "
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Your Worker has access to the following bindings:
-					Binding                                 Resource
-					env.SOMENAME (SomeClass)                Durable Object
-					env.SOMEOTHERNAME (SomeOtherClass)      Durable Object
-
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class",
-					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					",
-					}
-				`);
-			});
-
-			it("should use an environment's current migration tag when publishing migrations", async ({
-				expect,
-			}) => {
-				writeWranglerConfig({
-					durable_objects: {
-						bindings: [
-							{ name: "SOMENAME", class_name: "SomeClass" },
-							{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
-						],
-					},
-					env: {
-						xyz: {
-							durable_objects: {
-								bindings: [
-									{ name: "SOMENAME", class_name: "SomeClass" },
-									{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
-								],
-							},
-						},
-					},
-					migrations: [
-						{ tag: "v1", new_classes: ["SomeClass"] },
-						{ tag: "v2", new_classes: ["SomeOtherClass"] },
-					],
-				});
-				fs.writeFileSync(
-					"index.js",
-					`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
-				);
-				mockSubDomainRequest();
-				mockLastDeploymentRequest();
-				mockServiceScriptData({
-					script: { id: "test-name", migration_tag: "v1" },
-					env: "xyz",
-				});
-				msw.use(
-					http.get(
-						"*/accounts/:accountId/workers/services/:scriptName/environments/:envName/secrets",
-						() => HttpResponse.json(createFetchResult([]), { status: 200 }),
-						{ once: true }
-					)
-				);
-				mockUploadWorkerRequest({
-					useServiceEnvironments: true,
-					env: "xyz",
-					expectedMigrations: {
-						old_tag: "v1",
-						new_tag: "v2",
-						steps: [
-							{
-								new_classes: ["SomeOtherClass"],
-							},
-						],
-					},
-					useOldUploadApi: true,
-				});
-
-				await runWrangler("deploy index.js --legacy-env false --env xyz");
-				expect(std).toMatchInlineSnapshot(`
-					{
-					  "debug": "",
-					  "err": "",
-					  "info": "",
-					  "out": "
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Your Worker has access to the following bindings:
-					Binding                                 Resource
-					env.SOMENAME (SomeClass)                Durable Object
-					env.SOMEOTHERNAME (SomeOtherClass)      Durable Object
-
-					Uploaded test-name (xyz) (TIMINGS)
-					Deployed test-name (xyz) triggers (TIMINGS)
-					  https://xyz.test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class",
-					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-					    - Service environments are deprecated, and will be removed in the future. DO NOT USE IN
-					  PRODUCTION.
-
-					",
-					}
-				`);
-			});
-		});
-
 		describe("dispatch namespaces", () => {
 			it("should deploy all migrations on first deploy", async ({ expect }) => {
 				writeWranglerConfig({
@@ -758,6 +460,134 @@ describe("deploy", () => {
 			});
 		});
 	});
+
+	describe("durable object exports (declarative)", () => {
+		it("sends the `exports` payload (and omits `migrations`)", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [{ name: "DO", class_name: "MyDO" }],
+				},
+				exports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+				expectedMigrations: undefined,
+				useOldUploadApi: true,
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("renders the success-side reconciliation envelope", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [{ name: "DO", class_name: "MyDO" }],
+				},
+				exports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+					OldGone: { type: "durable-object", state: "deleted" },
+				},
+			});
+			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+					OldGone: { type: "durable-object", state: "deleted" },
+				},
+				useOldUploadApi: true,
+				mockUploadReturnsExportsReconciliation: {
+					created: ["MyDO"],
+					updated: [],
+					deleted: [],
+					renamed: [],
+					transferred: [],
+					transfer_pending: [],
+					warnings: [],
+					info: [
+						{
+							class: "OldGone",
+							scenario: "stale_tombstone",
+							message:
+								"Tombstone of state 'deleted' for class 'OldGone' has no effect.",
+						},
+					],
+					removable_entries: ["OldGone"],
+				},
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.out).toContain("Durable Object exports reconciliation:");
+			expect(std.out).toContain("Created: MyDO");
+			expect(std.out).toContain("[stale_tombstone] OldGone");
+			expect(std.out).toContain("Safe to remove from `exports`: OldGone");
+		});
+
+		it("renders the error-side reconciliation envelope with per-class detail", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [{ name: "DO", class_name: "MyDO" }],
+				},
+				exports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
+			mockSubDomainRequest();
+
+			// Override the upload handler with a structured reconciliation error.
+			msw.use(
+				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () =>
+					HttpResponse.json(
+						{
+							success: false,
+							errors: [
+								{
+									code: 100402,
+									message: "Durable Object exports reconciliation failed",
+									meta: {
+										details: [
+											{
+												class: "OrphanedClass",
+												scenario: "orphaned_provisioned_namespace",
+												message:
+													"Namespace exists but no config entry covers it.",
+												suggestion: "Add a tombstone entry for the class.",
+												referencing_scripts: ["worker-foo"],
+											},
+										],
+									},
+								},
+							],
+							messages: [],
+							result: null,
+						},
+						{ status: 400 }
+					)
+				)
+			);
+
+			await expect(runWrangler("deploy index.js")).rejects.toThrow(
+				/Durable Object exports reconciliation failed/
+			);
+		});
+	});
+
 	describe("tail consumers", () => {
 		it("should allow specifying workers as tail consumers", async ({
 			expect,

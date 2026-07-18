@@ -504,10 +504,11 @@ it.runIf(process.platform !== "win32")(
 
 		expect(exitCode).not.toBe(0);
 
-		const endProcesses = getStartedWorkerdProcesses(helper.tmpPath);
-
 		expect(beginProcesses.length).toBe(0);
-		expect(endProcesses.length).toBe(0);
+		// workerd shutdown can lag briefly after wrangler exits
+		await waitFor(() => {
+			expect(getStartedWorkerdProcesses(helper.tmpPath).length).toBe(0);
+		});
 	}
 );
 
@@ -758,8 +759,11 @@ describe.each([{ cmd: "wrangler dev" }])(
 // per-connection socket of the test's `nodeNet.Server`. Without an `error`
 // listener Node escalates it to `uncaughtException`, which Vitest catches as
 // an unhandled error and fails the run even though the test itself passed.
+// The same teardown race can also surface as EPIPE, if the server's initial
+// handshake write (e.g. `MYSQL_INITIAL_HANDSHAKE_PACKET`) lands after the
+// other end has already been torn down.
 function ignoreEconnreset(err: NodeJS.ErrnoException): void {
-	if (err.code !== "ECONNRESET") {
+	if (err.code !== "ECONNRESET" && err.code !== "EPIPE") {
 		throw err;
 	}
 }
@@ -2584,7 +2588,7 @@ This is a random email body.
 		);
 
 		const pathRegexp = new RegExp(
-			"send_email binding called with the following message:\\s*(\\S*)"
+			"send_email binding called with the following message:\\s*\\nEmail: (\\S+)"
 		);
 
 		const maybeReplyPath = await vi.waitUntil(

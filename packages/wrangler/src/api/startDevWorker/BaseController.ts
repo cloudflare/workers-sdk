@@ -6,6 +6,7 @@ import type {
 	DevRegistryUpdateEvent,
 	ErrorEvent,
 	PreviewTokenExpiredEvent,
+	RuntimeErrorEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
@@ -19,6 +20,7 @@ export type ControllerEvent =
 	| ReloadStartEvent
 	| ReloadCompleteEvent
 	| DevRegistryUpdateEvent
+	| RuntimeErrorEvent
 	| PreviewTokenExpiredEvent;
 
 export interface ControllerBus {

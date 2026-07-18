@@ -1,10 +1,12 @@
 import assert from "node:assert";
+import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import {
 	getBindingLocalSupport,
 	getCloudflareComplianceRegion,
 } from "@cloudflare/workers-utils";
 import { readConfig } from "../../config";
-import { requireApiToken, requireAuth } from "../../user";
+import { logger } from "../../logger";
+import { requireApiToken, requireAuth, setProfile } from "../../user";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { CfAccount } from "../../dev/create-worker-preview";
@@ -50,6 +52,11 @@ type WorkerConfigObject = {
 	complianceRegion?: Config["compliance_region"];
 	/** Id of the account owning the worker */
 	account_id?: Config["account_id"];
+	/**
+	 * directory used to resolve the auth profile from directory bindings.
+	 * Falls back to `process.cwd()` when not provided.
+	 */
+	profileDir?: string;
 };
 
 /**
@@ -118,7 +125,8 @@ export async function maybeStartOrUpdateRemoteProxySession(
 					? {
 							account_id: workerConfigObject.account_id,
 						}
-					: config
+					: config,
+				workerConfigObject.profileDir
 			),
 		});
 	} else {
@@ -142,7 +150,8 @@ export async function maybeStartOrUpdateRemoteProxySession(
 								? {
 										account_id: workerConfigObject.account_id,
 									}
-								: config
+								: config,
+							workerConfigObject.profileDir
 						),
 					});
 				}
@@ -173,12 +182,19 @@ export async function maybeStartOrUpdateRemoteProxySession(
  *
  * @param auth the auth hook provided by the user if any
  * @param config the user's wrangler config if any
+ * @param profileDir working directory used to resolve the auth profile from directory bindings,
+ *            falls back to `process.cwd()` when not provided
  * @returns the auth hook to pass to the startRemoteProxy session function if any
  */
 function getAuthHook(
 	auth: AsyncHook<CfAccount> | undefined,
-	config: Pick<Config, "account_id"> | undefined
+	config: Pick<Config, "account_id"> | undefined,
+	profileDir: string | undefined
 ): AsyncHook<CfAccount> | undefined {
+	const profile = createWranglerProfileStore({ logger }).resolve({
+		cwd: profileDir ?? process.cwd(),
+	});
+	setProfile(profile);
 	if (auth) {
 		return auth;
 	}

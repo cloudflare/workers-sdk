@@ -1,5 +1,8 @@
 import assert from "node:assert";
-import { configFileName } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	getDurableObjectExports,
+} from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
@@ -13,8 +16,6 @@ export async function getMigrationsToUpload(
 	props: {
 		accountId: string | undefined;
 		config: Config;
-		useServiceEnvironments: boolean | undefined;
-		env: string | undefined;
 		dispatchNamespace: string | undefined;
 	}
 ): Promise<CfWorkerInit["migrations"]> {
@@ -36,34 +37,11 @@ export async function getMigrationsToUpload(
 				suppressNotFoundError(err);
 			}
 		} else {
-			if (props.useServiceEnvironments) {
-				try {
-					if (props.env) {
-						const scriptData = await fetchResult<{
-							script: ScriptData;
-						}>(
-							config,
-							`/accounts/${accountId}/workers/services/${scriptName}/environments/${props.env}`
-						);
-						script = scriptData.script;
-					} else {
-						const scriptData = await fetchResult<{
-							default_environment: {
-								script: ScriptData;
-							};
-						}>(config, `/accounts/${accountId}/workers/services/${scriptName}`);
-						script = scriptData.default_environment.script;
-					}
-				} catch (err) {
-					suppressNotFoundError(err);
-				}
-			} else {
-				const scripts = await fetchResult<ScriptData[]>(
-					config,
-					`/accounts/${accountId}/workers/scripts`
-				);
-				script = scripts.find(({ id }) => id === scriptName);
-			}
+			const scripts = await fetchResult<ScriptData[]>(
+				config,
+				`/accounts/${accountId}/workers/scripts`
+			);
+			script = scripts.find(({ id }) => id === scriptName);
 		}
 
 		if (script?.migration_tag) {
@@ -106,3 +84,39 @@ const suppressNotFoundError = (err: unknown) => {
 		throw err;
 	}
 };
+
+/**
+ * Resolve which Durable Object lifecycle payload to send with the upload.
+ */
+export async function resolveDoLifecyclePayload(props: {
+	scriptName: string;
+	isDryRun: boolean | undefined;
+	accountId: string | undefined;
+	config: Config;
+	dispatchNamespace: string | undefined;
+}): Promise<{
+	migrations: CfWorkerInit["migrations"];
+	exports: CfWorkerInit["exports"];
+}> {
+	const durableObjectExports = getDurableObjectExports(props.config.exports);
+	const hasDurableObjectExports = Object.keys(durableObjectExports).length > 0;
+	if (hasDurableObjectExports) {
+		return {
+			migrations: undefined,
+			exports: durableObjectExports,
+		};
+	}
+
+	const migrations = !props.isDryRun
+		? await getMigrationsToUpload(props.scriptName, {
+				accountId: props.accountId,
+				config: props.config,
+				dispatchNamespace: props.dispatchNamespace,
+			})
+		: undefined;
+
+	return {
+		migrations,
+		exports: undefined,
+	};
+}

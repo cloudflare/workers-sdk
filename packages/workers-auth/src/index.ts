@@ -22,7 +22,13 @@ export {
 	getAccessHeaders,
 } from "./access";
 
-export { getAuthUrlFromEnv } from "./env-vars";
+export type { OAuthFlowContext, OAuthFlowLogger } from "./context";
+
+export {
+	getAuthUrlFromEnv,
+	getCloudflareAccountIdFromEnv,
+	getCloudflareAuthUseKeyringFromEnv,
+} from "./env-vars";
 
 export { createOAuthFlow } from "./flow";
 export type {
@@ -49,3 +55,53 @@ export type {
 export { readStoredAuthState } from "./state";
 
 export type { TemporaryPreviewAccount } from "./config-file/temporary";
+
+// Credential storage layer. Consumers (wrangler, future Cloudflare CLIs)
+// typically wire this up via `createCredentialStorageContext({ ... })`
+// and pass the returned `storage` to `createOAuthFlow(...)` as `ctx.storage`.
+// The lower-level pieces (concrete stores, key providers, test seams) are
+// exported for tests and for `whoami`-style consumers that want richer
+// reporting than the bare `AuthConfigStorage.path()` value.
+export {
+	clearCredentialStorageState,
+	createCredentialStorageContext,
+	EncryptedFileCredentialStore,
+	FileCredentialStore,
+	encryptString,
+	decryptString,
+	findKeyringBinding,
+	generateKey,
+	getAuthConfigFilePath,
+	getEncryptedAuthConfigFilePath,
+	getKeyringAccountName,
+	getKeyringInstallDir,
+	installKeyringBindingSync,
+	LinuxSecretToolKeyProvider,
+	MacSecurityKeyProvider,
+	NapiKeyringKeyProvider,
+	parseEncryptedEnvelope,
+	PINNED_KEYRING_VERSION,
+	probeSecretTool,
+	resetCredentialStorageState,
+	resolveKeyProvider,
+	scrubEncryptedCredentials,
+	setKeyProviderFactoryForTesting,
+	setKeyringEntryFactory,
+	setLinuxSecretToolRunner,
+	setMacSecurityCommandRunner,
+	setNpmRunner,
+} from "./credential-store";
+export type {
+	CredentialStorageBundle,
+	CredentialStorageContext,
+	CredentialStore,
+	EncryptedEnvelope,
+	KeyProvider,
+	KeyProviderResolution,
+	KeyringEntry,
+	KeyringEntryFactory,
+	LinuxSecretToolRunner,
+	MacSecurityCommandRunner,
+	NpmRunner,
+	ScrubEncryptedCredentialsResult,
+} from "./credential-store";

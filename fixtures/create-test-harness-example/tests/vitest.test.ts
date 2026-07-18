@@ -1,19 +1,40 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, test } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	test,
+} from "vitest";
 import { createTestHarness } from "wrangler";
 
 // Point each worker to the Wrangler config you want to test.
 const server = createTestHarness({
 	workers: [
-		{ configPath: "./workers/web/wrangler.jsonc" },
+		{
+			configPath: "./workers/web/wrangler.jsonc",
+			bindingOverrides: { BROWSER: "mock-browser" },
+		},
 		{ configPath: "./workers/api/wrangler.jsonc" },
+		{ configPath: "./workers/mock-browser/wrangler.jsonc" },
 	],
 });
 
 // server.getWorker() would return the first Worker, but naming it makes it explicit.
-const webWorker = server.getWorker("web-worker");
-const apiWorker = server.getWorker("api-worker");
+const webWorker = server.getWorker<
+	WebEnv,
+	typeof import("../workers/web/index")
+>("web-worker");
+const apiWorker = server.getWorker<
+	ApiEnv,
+	typeof import("../workers/api/index")
+>("api-worker");
+const mockBrowserWorker = server.getWorker<
+	unknown,
+	typeof import("../workers/mock-browser/index")
+>("mock-browser");
 
 // Workers started by createTestHarness route outbound fetches to globalThis.fetch().
 // You can use libraries like MSW to intercept those requests.
@@ -23,6 +44,10 @@ describe("createTestHarness: Vitest setup", () => {
 	beforeAll(async () => {
 		network.listen({ onUnhandledRequest: "error" });
 		await server.listen();
+	});
+
+	beforeEach(async () => {
+		await apiWorker.applyD1Migrations("DATABASE");
 	});
 
 	afterAll(async () => {
@@ -54,6 +79,27 @@ describe("createTestHarness: Vitest setup", () => {
 			id: "123",
 			name: "Ada",
 		});
+	});
+
+	test("overrides a platform binding with a mock Worker", async ({
+		expect,
+	}) => {
+		const apiEnv = await apiWorker.getEnv();
+		await apiEnv.DATABASE.prepare(
+			"INSERT INTO daily_reports (date, user_ids) VALUES (?, ?)"
+		)
+			.bind("2026-05-29", JSON.stringify(["123", "456"]))
+			.run();
+
+		const stubPng = Uint8Array.from([
+			137, 80, 78, 71, 13, 10, 26, 10, 109, 111, 99, 107,
+		]);
+		const mockBrowser = await mockBrowserWorker.getExport();
+		await mockBrowser.setScreenshot(Array.from(stubPng));
+
+		const response = await webWorker.fetch("/reports/2026-05-29.png");
+		expect(response.headers.get("content-type")).toBe("image/png");
+		expect(await response.bytes()).toEqual(stubPng);
 	});
 
 	test("dispatches requests using configured routes", async ({ expect }) => {

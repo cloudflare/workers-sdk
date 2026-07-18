@@ -3,6 +3,7 @@ import path from "node:path";
 import { bold, green } from "@cloudflare/cli-shared-helpers/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getRegistryPath } from "@cloudflare/workers-utils";
+import { isInteractive } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { convertStartDevOptionsToBindings } from "../api/startDevWorker/binding-utils";
@@ -10,7 +11,6 @@ import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerR
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
-import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
 import { TunnelManager } from "../tunnel/dev";
@@ -290,7 +290,6 @@ async function setupDevEnv(
 							}
 						: undefined;
 				},
-				useServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
 		} satisfies StartDevWorkerInput,
