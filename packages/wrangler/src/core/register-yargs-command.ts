@@ -28,6 +28,7 @@ import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
 import {
+	categoriseArgs,
 	COMMAND_ARG_ALLOW_LIST,
 	getAllowedArgs,
 	sanitizeArgKeys,
@@ -295,10 +296,12 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					sanitizedCommand
 				);
 				const argsWithSanitizedKeys = sanitizeArgKeys(args, argv);
-				const sanitizedArgs = sanitizeArgValues(
-					argsWithSanitizedKeys,
-					allowedArgs
-				);
+				const sanitizedArgs = {
+					...sanitizeArgValues(argsWithSanitizedKeys, allowedArgs),
+					// Categorised positional args (e.g. the deploy path) are added
+					// separately because positionals are excluded by sanitizeArgKeys.
+					...categoriseArgs(args, allowedArgs),
+				};
 				const argsUsed = Object.keys(argsWithSanitizedKeys).sort();
 
 				dispatcher.sendCommandEvent(
