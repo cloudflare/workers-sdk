@@ -330,8 +330,6 @@ export const CoreSharedOptionsSchema = z
 		// some malicious attacker.
 		unsafeProxySharedSecret: z.string().optional(),
 		unsafeModuleFallbackService: CustomFetchServiceSchema.optional(),
-		// Keep blobs when deleting/overwriting keys, required for stacked storage
-		unsafeStickyBlobs: z.boolean().optional(),
 		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/local/scheduled`
 		unsafeTriggerHandlers: z.boolean().optional(),
 		// Extra environment variables to set on the spawned `workerd` subprocess.

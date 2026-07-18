@@ -111,13 +111,7 @@ export const KV_PLUGIN: Plugin<
 		return bindings;
 	},
 
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
 		const persist = sharedOptions.kvPersist;
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(
@@ -172,7 +166,7 @@ export const KV_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};

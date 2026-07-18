@@ -57,12 +57,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 			options?.map((binding) => [binding.name, new ProxyNodeBinding()]) ?? []
 		);
 	},
-	async getServices({
-		options,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, tmpPath, defaultPersistRoot }) {
 		if (!options || options.length === 0) {
 			return [];
 		}
@@ -110,7 +105,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;

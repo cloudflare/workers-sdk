@@ -57,7 +57,6 @@ export const CACHE_PLUGIN: Plugin<
 		workerIndex,
 		tmpPath,
 		defaultPersistRoot,
-		unsafeStickyBlobs,
 	}) {
 		const cache = options.cache ?? true;
 		const cacheWarnUsage = options.cacheWarnUsage ?? false;
@@ -141,7 +140,7 @@ export const CACHE_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};

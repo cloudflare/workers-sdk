@@ -66,13 +66,7 @@ export const HELLO_WORLD_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
 		const configs = options.helloWorld ? Object.values(options.helloWorld) : [];
 
 		if (configs.length === 0) {
@@ -120,7 +114,7 @@ export const HELLO_WORLD_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;

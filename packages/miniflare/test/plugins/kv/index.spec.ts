@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import fs from "node:fs/promises";
-import consumers from "node:stream/consumers";
 import { KV_PLUGIN_NAME, MAX_BULK_GET_KEYS, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, test } from "vitest";
 import {
@@ -807,44 +806,4 @@ test("persists on file-system", async ({ expect }) => {
 	useDispose(mf);
 	kv = await mf.getKVNamespace("NAMESPACE");
 	expect(await kv.get("key")).toBe("value");
-});
-
-test("sticky blobs never deleted", async ({ expect }) => {
-	// Checking regular behaviour that old blobs deleted in `put: overrides
-	// existing keys` test. Only testing sticky blobs for KV, as the blob store
-	// should only be constructed in the shared `MiniflareDurableObject` ABC.
-
-	// Create instance with sticky blobs enabled (can't use `ctx.mf`)
-	const mf = new Miniflare({
-		script: "",
-		modules: true,
-		kvNamespaces: ["NAMESPACE"],
-		unsafeStickyBlobs: true,
-	});
-	useDispose(mf);
-
-	// Create control stub for newly created instance's namespace
-	const objectNamespace = await mf._getInternalDurableObjectNamespace(
-		KV_PLUGIN_NAME,
-		"kv:ns",
-		"KVNamespaceObject"
-	);
-	const objectId = objectNamespace.idFromName("NAMESPACE");
-	const objectStub = objectNamespace.get(objectId);
-	const object = new MiniflareDurableObjectControlStub(objectStub);
-	await object.enableFakeTimers(secondsToMillis(TIME_NOW));
-	const stmts = sqlStmts(object);
-
-	// Store something in the namespace and get the blob ID
-	const ns = await mf.getKVNamespace("NAMESPACE");
-	await ns.put("key", "value 1");
-	const blobId = await stmts.getBlobIdByKey("key");
-	assert(blobId !== undefined);
-
-	// Override key and check we can still access the old blob
-	await ns.put("key", "value 2");
-	await object.waitForFakeTasks();
-	const blob = await object.getBlob(blobId);
-	assert(blob !== null);
-	expect(await consumers.text(blob)).toBe("value 1");
 });

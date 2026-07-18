@@ -2145,7 +2145,6 @@ export class Miniflare {
 			}
 
 			// Collect all services required by this worker
-			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
 			// Store publicUrl so the /core/public-url loopback route can return it.
@@ -2168,7 +2167,6 @@ export class Miniflare {
 				loopbackHost,
 				loopbackPort,
 				publicUrl: sharedOpts.core.publicUrl,
-				unsafeStickyBlobs,
 				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,

@@ -73,13 +73,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
 		const configs = options.secretsStoreSecrets
 			? Object.values(options.secretsStoreSecrets)
 			: [];
@@ -130,7 +124,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;

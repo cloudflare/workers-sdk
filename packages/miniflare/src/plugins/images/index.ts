@@ -76,13 +76,7 @@ export const IMAGES_PLUGIN: Plugin<
 			[options.images.binding]: new ProxyNodeBinding(),
 		};
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
 		if (!options.images) {
 			return [];
 		}
@@ -146,7 +140,7 @@ export const IMAGES_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;

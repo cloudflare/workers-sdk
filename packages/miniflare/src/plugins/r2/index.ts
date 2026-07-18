@@ -112,13 +112,7 @@ export const R2_PLUGIN: Plugin<
 			buckets.map((name) => [name, new ProxyNodeBinding()])
 		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
 		const persist = sharedOptions.r2Persist;
 		const buckets = namespaceEntries(options.r2Buckets);
 		const services = buckets.map<Service>(
@@ -176,7 +170,7 @@ export const R2_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};

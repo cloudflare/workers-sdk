@@ -108,13 +108,7 @@ export const D1_PLUGIN: Plugin<
 			databases.map((name) => [name, new ProxyNodeBinding()])
 		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
 		const persist = sharedOptions.d1Persist;
 		const databases = namespaceEntries(options.d1Databases);
 		const services = databases.map<Service>(
@@ -173,7 +167,7 @@ export const D1_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};

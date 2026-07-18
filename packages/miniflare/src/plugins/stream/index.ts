@@ -73,13 +73,7 @@ export const STREAM_PLUGIN: Plugin<
 			[options.stream.binding]: new ProxyNodeBinding(),
 		};
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
 		if (!options.stream) {
 			return [];
 		}
@@ -141,7 +135,7 @@ export const STREAM_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_BLOBS,
 						service: { name: STREAM_STORAGE_SERVICE_NAME },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 				// Allow the DO to send outbound HTTP requests (fetching watermark images)
 				globalOutbound: { name: "internet" },
