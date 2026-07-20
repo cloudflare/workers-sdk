@@ -824,7 +824,7 @@ export function printBindings(
 	} else {
 		let title: string;
 		if (context.provisioning) {
-			title = `${chalk.red("Experimental:")} The following bindings need to be provisioned:`;
+			title = "The following bindings need to be provisioned:";
 		} else if (context.name && isMultiWorker) {
 			title = `${chalk.blue(context.name)} has access to the following bindings:`;
 		} else {
