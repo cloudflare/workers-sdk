@@ -209,6 +209,45 @@ describe("lockfile resolution — yarn.lock (Classic v1)", () => {
 		expect(versions.get("lodash")).toBe("4.17.21");
 	});
 
+	it("handles multiple descriptors resolving to the same package", ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"yarn.lock",
+			[
+				"# yarn lockfile v1",
+				"",
+				"",
+				'"lodash@^4.17.0, lodash@^4.17.21":',
+				'  version "4.17.21"',
+				'  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#..."',
+				"  integrity sha512-...",
+			].join("\n")
+		);
+
+		const versions = resolveFromLockFile(process.cwd());
+		assert(versions);
+		expect(versions.get("lodash")).toBe("4.17.21");
+	});
+
+	it("handles grouped scoped packages", ({ expect }) => {
+		fs.writeFileSync(
+			"yarn.lock",
+			[
+				"# yarn lockfile v1",
+				"",
+				"",
+				'"@types/node@^18.0.0, @types/node@^22.0.0":',
+				'  version "22.15.17"',
+				'  resolved "https://registry.yarnpkg.com/@types/node/-/node-22.15.17.tgz#..."',
+			].join("\n")
+		);
+
+		const versions = resolveFromLockFile(process.cwd());
+		assert(versions);
+		expect(versions.get("@types/node")).toBe("22.15.17");
+	});
+
 	it("returns an empty map for a merge-conflict lockfile", ({ expect }) => {
 		// @yarnpkg/lockfile returns type "conflict" for lockfiles with
 		// unresolved git merge markers

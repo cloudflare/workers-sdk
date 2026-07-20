@@ -112,15 +112,17 @@ function parseYarnClassicLockfile(content: string): Map<string, string> {
 		}
 
 		// Key format: "name@^1.0.0" or "@scope/name@^1.0.0"
-		// Multiple specifiers: "name@^1.0.0, name@^2.0.0" (but @yarnpkg/lockfile
-		// splits these into separate keys)
+		// Multiple specifiers are kept as a single grouped key by
+		// @yarnpkg/lockfile (e.g. "name@^1.0.0, name@^2.0.0"); they all
+		// resolve to the same package/version, so split and use the first.
 		//
 		// Alias format: "alias-name@npm:real-name@^1.0.0"
 		if (key.includes("@npm:")) {
 			continue;
 		}
 
-		const pkgName = extractYarnClassicPackageName(key);
+		const descriptor = key.split(", ")[0];
+		const pkgName = extractYarnClassicPackageName(descriptor);
 		if (pkgName && !versions.has(pkgName)) {
 			versions.set(pkgName, entry.version);
 		}
