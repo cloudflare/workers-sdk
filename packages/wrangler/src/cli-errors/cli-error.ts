@@ -74,6 +74,15 @@ export abstract class CLIError extends Error {
 	readonly exitCode: number | undefined;
 
 	/**
+	 * Alias for {@link exitCode}, exposed as `code` so the output-file
+	 * writer in `register-yargs-command.ts` (which checks `"code" in err`)
+	 * can read the failure code — matching the shape of `FatalError.code`.
+	 */
+	get code(): number | undefined {
+		return this.exitCode;
+	}
+
+	/**
 	 * Whether this error is caused by the user rather than an internal bug.
 	 * When `true`, Sentry reporting and "report a bug" messaging are
 	 * suppressed.
