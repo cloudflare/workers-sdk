@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import fs, { existsSync } from "node:fs";
+import { mkdir, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import {
 	EMAIL_PLUGIN,
@@ -2071,6 +2071,43 @@ test("send_email binding is available from getBindings", async ({ expect }) => {
 	expect(result).toEqual({
 		messageId: synthesizedMessageId(expect, "sender.domain"),
 	});
+});
+
+test("disposing does not remove a concurrent email session", async ({
+	expect,
+}) => {
+	const projectTmpPath = await useProjectTmpPath();
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		defaultProjectTmpPath: projectTmpPath,
+		compatibilityDate: "2025-03-17",
+	});
+
+	await mf.getBindings();
+
+	const emailParentPath = path.join(projectTmpPath, "email");
+	const [sessionName] = await readdir(emailParentPath);
+	if (sessionName === undefined) {
+		throw new Error("Expected an email session directory");
+	}
+	const concurrentSessionPath = path.join(
+		emailParentPath,
+		"concurrent-session"
+	);
+	await mkdir(concurrentSessionPath);
+
+	// A separate emptiness check reintroduces the race. Return a stale result so
+	// regressing to read-then-remove would delete the concurrent session.
+	const readdirSpy = vi.spyOn(fs.promises, "readdir").mockResolvedValueOnce([]);
+
+	await mf.dispose();
+
+	expect(readdirSpy).not.toHaveBeenCalled();
+	expect(existsSync(concurrentSessionPath)).toBe(true);
 });
 
 describe("EMAIL_PLUGIN.getServices", () => {

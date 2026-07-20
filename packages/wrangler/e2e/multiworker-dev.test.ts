@@ -189,7 +189,7 @@ describe("multiworker", () => {
 		it("can fetch b", async ({ expect }) => {
 			const worker = helper.runLongLived(`wrangler dev`, { cwd: b });
 
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
 				"hello world"
@@ -201,7 +201,7 @@ describe("multiworker", () => {
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
 				{ cwd: a }
 			);
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			await waitForLong(
 				async () => await expect(fetchText(url)).resolves.toBe("hello world")
@@ -215,7 +215,7 @@ describe("multiworker", () => {
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
 				{ cwd: a }
 			);
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			await waitForLong(
 				async () => await expect(fetchText(`${url}/count`)).resolves.toBe("6")
@@ -227,7 +227,7 @@ describe("multiworker", () => {
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
 				{ cwd: a }
 			);
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			await waitForLong(async () => {
 				const response = await fetch(`${url}/props`);
@@ -260,7 +260,7 @@ describe("multiworker", () => {
 				{ cwd: a }
 			);
 
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			await waitForLong(
 				async () =>
@@ -291,7 +291,7 @@ describe("multiworker", () => {
 				`wrangler dev -c wrangler.toml -c ${c}/wrangler.toml`,
 				{ cwd: a }
 			);
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			await waitForLong(
 				async () =>
@@ -328,7 +328,7 @@ describe("multiworker", () => {
 		it("can fetch DO through a", async ({ expect }) => {
 			const worker = helper.runLongLived(`wrangler dev`, { cwd: a });
 
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 
 			await expect(
 				fetchJson(`${url}/do`, {
@@ -344,7 +344,7 @@ describe("multiworker", () => {
 				`wrangler dev -c wrangler.toml -c ${a}/wrangler.toml`,
 				{ cwd: b }
 			);
-			const { url } = await workerB.waitForReady(5_000);
+			const { url } = await workerB.waitForReady();
 
 			await expect(
 				fetchJson(`${url}/do`, {
@@ -362,7 +362,7 @@ describe("multiworker", () => {
 				`wrangler dev -c wrangler.toml -c ${a}/wrangler.toml`,
 				{ cwd: b }
 			);
-			const { url } = await workerB.waitForReady(5_000);
+			const { url } = await workerB.waitForReady();
 
 			await waitForLong(
 				async () =>
@@ -414,7 +414,7 @@ describe("multiworker", () => {
 		it("can fetch a without b running", async ({ expect }) => {
 			const worker = helper.runLongLived(`wrangler dev`, { cwd: a });
 
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 
 			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
 		});
@@ -424,7 +424,7 @@ describe("multiworker", () => {
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
 				{ cwd: a }
 			);
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 
 			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
 
@@ -484,7 +484,7 @@ describe("multiworker", () => {
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
 				{ cwd: a }
 			);
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 
 			await waitForLong(() =>
 				expect(fetchText(`${url}`)).resolves.toBe("hello from a")
@@ -528,7 +528,7 @@ describe("multiworker", () => {
 				`wrangler pages dev -c wrangler.toml -c ${b}/wrangler.toml -c ${c}/wrangler.toml`,
 				{ cwd: a }
 			);
-			const { url } = await pages.waitForReady(5_000);
+			const { url } = await pages.waitForReady();
 
 			await waitForLong(
 				async () =>
@@ -543,7 +543,7 @@ describe("multiworker", () => {
 				`wrangler pages dev -c wrangler.toml -c ${b}/wrangler.toml -c ${c}/wrangler.toml`,
 				{ cwd: a }
 			);
-			const { url } = await pages.waitForReady(5_000);
+			const { url } = await pages.waitForReady();
 
 			await waitForLong(
 				async () =>
@@ -558,7 +558,7 @@ describe("multiworker", () => {
 				`wrangler pages dev -c wrangler.toml -c ${b}/wrangler.toml -c ${c}/wrangler.toml`,
 				{ cwd: a }
 			);
-			const { url } = await pages.waitForReady(5_000);
+			const { url } = await pages.waitForReady();
 
 			await waitForLong(
 				async () =>
@@ -634,7 +634,7 @@ describe("multiworker", () => {
 				{ cwd: a }
 			);
 
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 			const { hostname, port } = new URL(url);
 
 			await waitFor(() => {

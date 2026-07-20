@@ -11,7 +11,7 @@ import type {
 	TypedWorkerBinding,
 	TypedWorkflowBinding,
 } from "./bindings";
-import type { UserConfigExport, WorkerDefinition } from "./worker-definition";
+import type { WorkerConfigExport, WorkerDefinition } from "./worker-definition";
 import type { Pipeline } from "cloudflare:pipelines";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -248,7 +248,7 @@ export type InferWorkerEntrypointExports<TUnwrappedConfig> = Exclude<
 export type UnwrapConfig<TConfig> =
 	TConfig extends WorkerDefinition<infer TUnwrappedConfig>
 		? TUnwrappedConfig
-		: TConfig extends UserConfigExport<infer TUnwrappedConfig>
+		: TConfig extends WorkerConfigExport<infer TUnwrappedConfig>
 			? TUnwrappedConfig
 			: never;
 

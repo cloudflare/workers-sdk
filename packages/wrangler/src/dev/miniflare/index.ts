@@ -284,11 +284,19 @@ function queueProducerEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
+	const concreteQueueName = getRemoteId(queueName) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { queueName, deliveryDelay }];
+		return [binding, { queueName: concreteQueueName, deliveryDelay }];
 	}
 
-	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
+	return [
+		binding,
+		{
+			queueName: concreteQueueName,
+			deliveryDelay,
+			remoteProxyConnectionString,
+		},
+	];
 }
 function pipelineEntry(
 	{ binding, stream, pipeline, remote }: CfPipeline,
@@ -405,10 +413,14 @@ function dispatchNamespaceEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
+	const concreteNamespace = getRemoteId(namespace) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { namespace }];
+		return [binding, { namespace: concreteNamespace }];
 	}
-	return [binding, { namespace, remoteProxyConnectionString }];
+	return [
+		binding,
+		{ namespace: concreteNamespace, remoteProxyConnectionString },
+	];
 }
 function ratelimitEntry<T extends { name: string; namespace_id?: string }>(
 	ratelimit: T
@@ -917,7 +929,7 @@ export function buildMiniflareBindingOptions(
 			flagshipBindings.map((binding) => [
 				binding.binding,
 				{
-					app_id: binding.app_id,
+					app_id: getRemoteId(binding.app_id) ?? binding.binding,
 					remoteProxyConnectionString,
 				},
 			])

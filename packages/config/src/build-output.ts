@@ -4,6 +4,7 @@ import { removeDir } from "@cloudflare/workers-utils";
 import type {
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
+	ParsedSettingsConfig,
 } from "./schema";
 
 /**
@@ -19,6 +20,11 @@ export const BUILD_OUTPUT_VERSION = "v0";
 export const BUILD_OUTPUT_ROOT = ".cloudflare/output";
 
 /**
+ * Filename of the top-level (root) config holding shared settings.
+ */
+export const ROOT_CONFIG_FILENAME = "config.json";
+
+/**
  * Filename of the per-Worker config.
  */
 export const WORKER_CONFIG_FILENAME = "worker.config.json";
@@ -28,6 +34,17 @@ export const WORKER_CONFIG_FILENAME = "worker.config.json";
  */
 function getBuildOutputDir(root: string): string {
 	return path.resolve(root, BUILD_OUTPUT_ROOT);
+}
+
+/**
+ * Absolute path to the top-level `config.json` for the current project.
+ */
+export function getRootConfigPath(root: string): string {
+	return path.join(
+		getBuildOutputDir(root),
+		BUILD_OUTPUT_VERSION,
+		ROOT_CONFIG_FILENAME
+	);
 }
 
 /**
@@ -83,4 +100,17 @@ export async function writeOutputWorkerConfig(
 	await fsp.mkdir(workerOutputDir, { recursive: true });
 	const configPath = getWorkerConfigPath(root, outputConfig.name);
 	await fsp.writeFile(configPath, JSON.stringify(outputConfig));
+}
+
+/**
+ * Write the top-level `config.json` holding shared settings to the Build
+ * Output API tree.
+ */
+export async function writeRootOutputConfig(
+	root: string,
+	settings: ParsedSettingsConfig
+): Promise<void> {
+	const configPath = getRootConfigPath(root);
+	await fsp.mkdir(path.dirname(configPath), { recursive: true });
+	await fsp.writeFile(configPath, JSON.stringify(settings));
 }

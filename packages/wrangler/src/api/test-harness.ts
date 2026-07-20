@@ -2,6 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
 	normalizeAndValidateConfig,
@@ -506,6 +507,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				bindings,
 				dev: {
 					auth: serverAuthHook,
+					containerBuildId: generateContainerBuildId(),
 					server: { hostname: "127.0.0.1", port: 0 },
 					logLevel: "none",
 					watch: false,

@@ -504,10 +504,11 @@ it.runIf(process.platform !== "win32")(
 
 		expect(exitCode).not.toBe(0);
 
-		const endProcesses = getStartedWorkerdProcesses(helper.tmpPath);
-
 		expect(beginProcesses.length).toBe(0);
-		expect(endProcesses.length).toBe(0);
+		// workerd shutdown can lag briefly after wrangler exits
+		await waitFor(() => {
+			expect(getStartedWorkerdProcesses(helper.tmpPath).length).toBe(0);
+		});
 	}
 );
 
