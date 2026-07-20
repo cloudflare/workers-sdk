@@ -264,9 +264,7 @@ export const CoreSharedOptionsSchema = z.object({
 
 	https: z.boolean().optional(),
 	httpsKey: z.string().optional(),
-	httpsKeyPath: z.string().optional(),
 	httpsCert: z.string().optional(),
-	httpsCertPath: z.string().optional(),
 
 	inspectorPort: z.number().optional(),
 	inspectorHost: z.string().optional(),

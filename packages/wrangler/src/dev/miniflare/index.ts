@@ -91,8 +91,6 @@ export interface ConfigBundle {
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
-	httpsKeyPath: string | undefined;
-	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
