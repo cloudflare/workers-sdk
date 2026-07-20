@@ -322,13 +322,20 @@ export function normalizeAndValidateConfig(
 				"boolean"
 			);
 
+			validateOptionalTypedArray(
+				diagnostics,
+				"dependencies_instrumentation.exclude_packages",
+				rawConfig.dependencies_instrumentation.exclude_packages,
+				"string"
+			);
+
 			validateAdditionalProperties(
 				diagnostics,
 				"dependencies_instrumentation",
 				Object.keys(
 					rawConfig.dependencies_instrumentation as Record<string, unknown>
 				),
-				["enabled"]
+				["enabled", "exclude_packages"]
 			);
 		}
 	}

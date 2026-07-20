@@ -214,6 +214,89 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
+		it("should accept a valid dependencies_instrumentation with exclude_packages", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					dependencies_instrumentation: {
+						enabled: true,
+						exclude_packages: ["@internal/*", "secret-pkg"],
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(false);
+		});
+
+		it("should error on invalid dependencies_instrumentation.exclude_packages type", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					dependencies_instrumentation: {
+						exclude_packages: "not-an-array" as unknown,
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Expected "dependencies_instrumentation.exclude_packages" to be an array of strings but got "not-an-array""
+			`);
+		});
+
+		it("should error on non-string entries in dependencies_instrumentation.exclude_packages", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					dependencies_instrumentation: {
+						exclude_packages: ["valid", 123] as unknown,
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Expected "dependencies_instrumentation.exclude_packages.[1]" to be of type string but got 123."
+			`);
+		});
+
+		it("should warn on unknown properties in dependencies_instrumentation", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					dependencies_instrumentation: {
+						enabled: true,
+						unknown_field: "bad",
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Unexpected fields found in dependencies_instrumentation field: "unknown_field""
+			`);
+		});
+
 		it("should error if the deprecated `legacy_env` field is present", ({
 			expect,
 		}) => {
