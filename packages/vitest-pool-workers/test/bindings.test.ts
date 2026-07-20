@@ -107,9 +107,9 @@ test("Durable Objects may omit optional WebSocket handlers", async ({
 		`,
 		"index.test.ts": dedent /* javascript */ `
 			import { env } from "cloudflare:workers";
-			import { it, expect } from "vitest";
+			import { it, vi } from "vitest";
 
-			it("echoes a message and closes without a webSocketClose() handler", async () => {
+			it("echoes a message and closes without a webSocketClose() handler", async ({ expect }) => {
 				const stub = env.OPTIONAL_WS.get(env.OPTIONAL_WS.idFromName("ws"));
 				const response = await stub.fetch("https://example.com", {
 					headers: { Upgrade: "websocket" },
@@ -129,10 +129,10 @@ test("Durable Objects may omit optional WebSocket handlers", async ({
 
 				// Wait until the runtime has actually processed the close, so the
 				// dispatch has definitely happened before the run ends
-				for (let i = 0; i < 50 && (await stub.socketCount()) > 0; i++) {
-					await scheduler.wait(100);
-				}
-				expect(await stub.socketCount()).toBe(0);
+				await vi.waitUntil(async () => (await stub.socketCount()) === 0, {
+					timeout: 5_000,
+					interval: 100,
+				});
 			});
 		`,
 	});
