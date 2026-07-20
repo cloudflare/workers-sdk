@@ -8,6 +8,7 @@ import {
 	isViteWrapperSpan,
 	parseAttributes,
 	spanIsError,
+	stripDevRunnerSpans,
 	stripInternalSpans,
 } from "../../utils/observability";
 import type { Span } from "../../utils/observability";
@@ -212,6 +213,169 @@ describe("stripInternalSpans", () => {
 		];
 		const tree = buildSpanTree(spans, "root");
 		expect(tree.map((s) => s.span_id)).toEqual(["root"]);
+	});
+});
+
+describe("stripDevRunnerSpans", () => {
+	// Mirrors a real `vite dev` /kv capture: Vite's router/asset workers wrap the
+	// request, and inside the user worker an executeCallback dispatch chain loads
+	// modules. Only GET/kv_put/kv_get are the user's own spans.
+	function viteKvTrace(): Span[] {
+		return [
+			span({
+				span_id: "root",
+				parent_id: null,
+				service: "__router-worker__",
+				name: "GET",
+			}),
+			span({
+				span_id: "rpcSession",
+				parent_id: "root",
+				service: "__router-worker__",
+				name: "jsRpcSession",
+			}),
+			span({
+				span_id: "assetRpc",
+				parent_id: "rpcSession",
+				service: "__asset-worker__",
+				name: "jsrpc",
+			}),
+			span({
+				span_id: "mod1",
+				parent_id: "assetRpc",
+				service: "__asset-worker__",
+				name: "fetch",
+			}),
+			span({
+				span_id: "mod2",
+				parent_id: "assetRpc",
+				service: "__asset-worker__",
+				name: "fetch",
+			}),
+			span({
+				span_id: "routerFetch",
+				parent_id: "root",
+				service: "__router-worker__",
+				name: "fetch",
+			}),
+			span({
+				span_id: "userGet",
+				parent_id: "routerFetch",
+				service: "primary-worker",
+				name: "GET",
+			}),
+			span({
+				span_id: "doSub",
+				parent_id: "userGet",
+				service: "primary-worker",
+				name: "durable_object_subrequest",
+				attributes: `{"objectId":"singleton"}`,
+			}),
+			span({
+				span_id: "execRpc",
+				parent_id: "doSub",
+				service: "primary-worker",
+				name: "jsrpc",
+				attributes: `{"jsrpc.method":"executeCallback"}`,
+			}),
+			span({
+				span_id: "modInvoke",
+				parent_id: "execRpc",
+				service: "primary-worker",
+				name: "fetch",
+				attributes: `{"url.full":"http://localhost/"}`,
+			}),
+			span({
+				span_id: "kvPut",
+				parent_id: "userGet",
+				service: "primary-worker",
+				name: "kv_put",
+			}),
+			span({
+				span_id: "kvGet",
+				parent_id: "userGet",
+				service: "primary-worker",
+				name: "kv_get",
+			}),
+		];
+	}
+
+	test("collapses a vite dev trace to the user's own spans", ({ expect }) => {
+		const out = stripDevRunnerSpans(viteKvTrace());
+		expect(out.map((s) => s.span_id).sort()).toEqual([
+			"kvGet",
+			"kvPut",
+			"userGet",
+		]);
+		// The user invocation is re-parented to the root (its infra ancestors gone).
+		expect(out.find((s) => s.span_id === "userGet")?.parent_id).toBe(null);
+		expect(out.find((s) => s.span_id === "kvPut")?.parent_id).toBe("userGet");
+	});
+
+	test("buildSpanTree renders only GET -> kv_put, kv_get", ({ expect }) => {
+		const tree = buildSpanTree(viteKvTrace(), "root", /* hideDevRunner */ true);
+		expect(tree.map((s) => s.span_id)).toEqual(["userGet", "kvPut", "kvGet"]);
+		expect(tree[0]?.depth).toBe(0);
+		expect(tree[1]?.depth).toBe(1);
+	});
+
+	test("keeps a user's own http://localhost fetch (not under executeCallback)", ({
+		expect,
+	}) => {
+		const spans = viteKvTrace();
+		spans.push(
+			span({
+				span_id: "userFetch",
+				parent_id: "userGet",
+				service: "primary-worker",
+				name: "fetch",
+				attributes: `{"url.full":"http://localhost/"}`,
+			})
+		);
+		const out = stripDevRunnerSpans(spans);
+		expect(out.map((s) => s.span_id)).toContain("userFetch");
+		// but the module-invoke fetch under executeCallback is still removed
+		expect(out.map((s) => s.span_id)).not.toContain("modInvoke");
+	});
+
+	test("is a no-op for a plain wrangler dev trace (no vite infra workers)", ({
+		expect,
+	}) => {
+		const spans = [
+			span({
+				span_id: "root",
+				parent_id: null,
+				service: "my-worker",
+				name: "GET",
+			}),
+			// An executeCallback jsrpc with no vite infra present must NOT be hidden.
+			span({
+				span_id: "rpc",
+				parent_id: "root",
+				service: "my-worker",
+				name: "jsrpc",
+				attributes: `{"jsrpc.method":"executeCallback"}`,
+			}),
+			span({
+				span_id: "kv",
+				parent_id: "root",
+				service: "my-worker",
+				name: "kv_put",
+			}),
+		];
+		expect(stripDevRunnerSpans(spans)).toBe(spans);
+	});
+
+	test("never hides an errored plumbing span", ({ expect }) => {
+		const spans = viteKvTrace();
+		// Mark the asset-worker module fetch as failed.
+		const failed = spans.find((s) => s.span_id === "mod1");
+		if (failed) {
+			failed.outcome = "exception";
+			failed.error = "boom";
+		}
+		const out = stripDevRunnerSpans(spans);
+		expect(out.map((s) => s.span_id)).toContain("mod1");
 	});
 });
 

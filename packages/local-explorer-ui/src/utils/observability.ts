@@ -529,40 +529,105 @@ export function operationLabel(
 	return name;
 }
 
-const VITE_RUNNER_MARKER = "__VITE_RUNNER_OBJECT__";
+/**
+ * The Vite dev module-runner's jsrpc dispatch method. User code is evaluated
+ * inside the runner Durable Object via `stub.executeCallback(id)`, which shows
+ * up as a `jsrpc` span with this method (verified against a real `vite dev`
+ * capture — these spans do NOT carry the runner class name in their attributes,
+ * so we recognise them by shape rather than by a `__VITE_RUNNER_OBJECT__`
+ * string).
+ */
+const RUNNER_DISPATCH_METHOD = "executeCallback";
+
+/** True if a jsrpc span is the runner's "evaluate user code" dispatch. */
+function isRunnerDispatchJsrpc(span: Span): boolean {
+	if (span.name !== "jsrpc") {
+		return false;
+	}
+	return (
+		parseAttributes(span.attributes)["jsrpc.method"] === RUNNER_DISPATCH_METHOD
+	);
+}
 
 /**
- * Drop the Vite dev module-runner's internal plumbing spans and re-parent their
- * real children up. In `vite dev`, user code runs inside a runner Durable
- * Object, so every invocation is wrapped with a `durable_object_subrequest` →
- * `jsrpc (executeCallback on __VITE_RUNNER_OBJECT__)` chain that isn't the
- * user's code. No-op outside Vite dev.
+ * Drop the Vite dev module-runner's plumbing spans and re-parent their real
+ * children up to the nearest surviving ancestor, so a `vite dev` waterfall shows
+ * only the user's own spans. Two forms of plumbing are removed:
+ *
+ *  1. Whole spans owned by Vite's internal workers (router/asset/proxy workers
+ *     and the runner DO), matched by `service` via `isViteWrapperSpan`. These
+ *     wrap every request (asset routing, module-graph loads, RPC session) and
+ *     never run user code.
+ *  2. The dispatch chain that lives *inside* the user's own worker: the
+ *     `jsrpc {method: "executeCallback"}` that evaluates user code in the runner
+ *     DO, the `durable_object_subrequest` wrapping it, and the module-invoke
+ *     `fetch` nested directly beneath it. These carry the user worker's own
+ *     `service`, so they're recognised by shape.
+ *
+ * Safety: the shape-based rules (2) only fire when the trace also contains a
+ * Vite infra-worker span (1), so a plain `wrangler dev` trace — which has
+ * neither — is returned untouched. The module-invoke `fetch` is only hidden when
+ * it's a direct child of a dispatch jsrpc, so a user's own
+ * `fetch("http://localhost")` (a child of their handler) stays visible. An error
+ * span is never hidden, so a failure in the plumbing still surfaces.
  */
 export function stripDevRunnerSpans(spans: Span[]): Span[] {
-	const runnerIds = new Set<string>();
+	// (1) Vite's internal workers, by owning service.
+	const infraSpanIds = new Set<string>();
 	for (const s of spans) {
-		if ((s.attributes ?? "").includes(VITE_RUNNER_MARKER)) {
-			runnerIds.add(s.span_id);
+		if (isViteWrapperSpan(s)) {
+			infraSpanIds.add(s.span_id);
 		}
 	}
-	if (runnerIds.size === 0) {
-		return spans;
+	// The in-user-worker dispatch heuristics are only trustworthy once we know
+	// we're in Vite dev; an infra-worker span is that signal.
+	const inViteDev = infraSpanIds.size > 0;
+
+	const hidden = new Set<string>();
+	const dispatchJsrpcIds = new Set<string>();
+	for (const s of spans) {
+		if (spanIsError(s)) {
+			continue; // always surface failures
+		}
+		if (infraSpanIds.has(s.span_id)) {
+			hidden.add(s.span_id);
+		} else if (inViteDev && isRunnerDispatchJsrpc(s)) {
+			hidden.add(s.span_id);
+			dispatchJsrpcIds.add(s.span_id);
+		}
 	}
 
-	const dispatchParents = new Set<string>();
-	for (const s of spans) {
-		if (runnerIds.has(s.span_id) && s.parent_id) {
-			dispatchParents.add(s.parent_id);
+	// (2b/2c) The DO subrequest wrapping a dispatch jsrpc, and the module-invoke
+	// fetch nested directly under one.
+	if (dispatchJsrpcIds.size > 0) {
+		const dispatchParents = new Set<string>();
+		for (const s of spans) {
+			if (dispatchJsrpcIds.has(s.span_id) && s.parent_id) {
+				dispatchParents.add(s.parent_id);
+			}
+		}
+		for (const s of spans) {
+			if (spanIsError(s)) {
+				continue;
+			}
+			if (
+				dispatchParents.has(s.span_id) &&
+				s.name === "durable_object_subrequest"
+			) {
+				hidden.add(s.span_id);
+			}
+			if (
+				s.name === "fetch" &&
+				s.parent_id &&
+				dispatchJsrpcIds.has(s.parent_id)
+			) {
+				hidden.add(s.span_id);
+			}
 		}
 	}
-	const hidden = new Set(runnerIds);
-	for (const s of spans) {
-		if (
-			dispatchParents.has(s.span_id) &&
-			s.name === "durable_object_subrequest"
-		) {
-			hidden.add(s.span_id);
-		}
+
+	if (hidden.size === 0) {
+		return spans;
 	}
 
 	const byId = new Map(spans.map((s) => [s.span_id, s]));
