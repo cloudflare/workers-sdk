@@ -1,5 +1,5 @@
+import { drawBox } from "@cloudflare/deploy-helpers";
 import { isAgenticEnvironment } from "../environment-detection";
-import { drawBox } from "../utils/box";
 
 /**
  * Options for constructing a {@link CLIError}.

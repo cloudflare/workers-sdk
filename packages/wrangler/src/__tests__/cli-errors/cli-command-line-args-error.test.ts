@@ -2,7 +2,7 @@ import { describe, it, vi } from "vitest";
 import { CLICommandLineArgsError, CLIError } from "../../cli-errors";
 import type { CLIErrorOptions } from "../../cli-errors";
 
-vi.mock("../../utils/box", () => ({
+vi.mock("@cloudflare/deploy-helpers", () => ({
 	drawBox: vi.fn((lines: string[]) => `<box>${lines.join("\n")}</box>`),
 }));
 
@@ -53,7 +53,7 @@ describe("CLICommandLineArgsError", () => {
 	}) => {
 		vi.stubEnv("WRANGLER_OUTPUTS_FOR_AGENTS", "true");
 
-		const { drawBox } = vi.mocked(await import("../../utils/box"));
+		const { drawBox } = vi.mocked(await import("@cloudflare/deploy-helpers"));
 
 		const error = new TestCLICommandLineArgsError("human", "ai", {
 			telemetryMessage: false,
