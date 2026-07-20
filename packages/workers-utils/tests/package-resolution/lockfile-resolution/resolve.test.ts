@@ -2,7 +2,10 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, it } from "vitest";
-import { getInstalledVersionsFromLockfile } from "../../../src/package-resolution/lockfiles-resolution";
+import {
+	createLockfileCache,
+	getInstalledVersionsFromLockfile,
+} from "../../../src/package-resolution/lockfiles-resolution";
 import { runInTempDir } from "../../../src/test-helpers";
 import { resolveFromLockFile } from "./share";
 
@@ -164,7 +167,7 @@ describe("lockfile resolution — generic", () => {
 				})
 			);
 
-			const cache = new Map<string, Map<string, string>>();
+			const cache = createLockfileCache();
 			const first = getInstalledVersionsFromLockfile(process.cwd(), {
 				cache,
 			});
@@ -223,7 +226,7 @@ describe("lockfile resolution — generic", () => {
 			fs.mkdirSync(appADir, { recursive: true });
 			fs.mkdirSync(appBDir, { recursive: true });
 
-			const cache = new Map<string, Map<string, string>>();
+			const cache = createLockfileCache();
 			const versionsA = getInstalledVersionsFromLockfile(appADir, {
 				cache,
 			});

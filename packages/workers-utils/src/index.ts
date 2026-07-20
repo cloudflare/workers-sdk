@@ -90,6 +90,7 @@ export * from "./errors";
 export { assertNever } from "./assert-never";
 
 export {
+	createLockfileCache,
 	getPackagePath,
 	isPackageInstalled,
 	getInstalledPackageVersion,

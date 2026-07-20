@@ -1,11 +1,11 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
+	createLockfileCache,
 	getInstalledPackageVersion,
 	parsePackageJSON,
 } from "@cloudflare/workers-utils";
 import { logger } from "../../shared/context";
-import type { LockfileCache } from "@cloudflare/workers-utils";
 
 /**
  * A single npm package dependency entry, matching the upload API schema
@@ -68,7 +68,7 @@ export async function collectPackageDependencies(
 		// Create a function-scoped cache so the lockfile is parsed once and
 		// shared across all per-package lookups within this single collection
 		// pass. The cache is garbage-collected when this function returns.
-		const lockfileCache: LockfileCache = new Map();
+		const lockfileCache = createLockfileCache();
 
 		for (const [dependencyName, packageJsonVersion] of Object.entries(
 			allDependencies
