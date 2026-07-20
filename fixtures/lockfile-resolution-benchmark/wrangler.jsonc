@@ -1,0 +1,6 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "lockfile-resolution-benchmark",
+	"main": "src/index.js",
+	"compatibility_date": "2026-07-20",
+}

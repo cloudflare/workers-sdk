@@ -98,6 +98,10 @@ patchedDependencies:
 # Catalog
 # ──────────────────────────────────────────────────────────────────────────────
 
+catalogs:
+  lockfile-benchmark:
+    wrangler-pr: "https://pkg.pr.new/wrangler@14703"
+
 catalog:
   chalk: "5.3.0"
   command-exists: "1.2.9"

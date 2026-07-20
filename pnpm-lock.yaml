@@ -93,6 +93,10 @@ catalogs:
     zod:
       specifier: 4.4.3
       version: 4.4.3
+  lockfile-benchmark:
+    wrangler-pr:
+      specifier: https://pkg.pr.new/wrangler@14703
+      version: 4.112.0
 
 overrides:
   '@types/react-dom@18>@types/react': ^18
@@ -559,6 +563,19 @@ importers:
   fixtures/isomorphic-random-example: {}
 
   fixtures/legacy-site-app: {}
+
+  fixtures/lockfile-resolution-benchmark:
+    dependencies:
+      jsonc-parser:
+        specifier: 3.2.0
+        version: 3.2.0
+    devDependencies:
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+      wrangler-pr:
+        specifier: catalog:lockfile-benchmark
+        version: wrangler@https://pkg.pr.new/wrangler@14703(@cloudflare/workers-types@5.20260714.1)
 
   fixtures/miniflare-node-test:
     devDependencies:
@@ -5465,6 +5482,11 @@ packages:
     resolution: {integrity: sha512-SIOD2DxrRRwQ+jgzlXCqoEFiKOFqaPjhnNTGKXSRLvp1HiOvapLaFG2kEr9dYQTYe8rKrd9uvDUzmAITeNyaHQ==}
     engines: {node: '>=18.0.0'}
 
+  '@cloudflare/kv-asset-handler@https://pkg.pr.new/cloudflare/workers-sdk/@cloudflare/kv-asset-handler@be782c6':
+    resolution: {tarball: https://pkg.pr.new/cloudflare/workers-sdk/@cloudflare/kv-asset-handler@be782c6}
+    version: 0.5.0
+    engines: {node: '>=22.0.0'}
+
   '@cloudflare/playwright@1.0.0':
     resolution: {integrity: sha512-Z5LFFPJl1HxiI5+qJr+C3eoP8Lt5cv1xFesAWQG4ywL/Szx3b6S6ovJgOrPPZuZ6K9P5AFyqYEqFT3GjfVm/yA==}
 
@@ -5515,6 +5537,16 @@ packages:
     peerDependencies:
       unenv: 2.0.0-rc.24
       workerd: 1.20260301.1 || ~1.20260302.1 || ~1.20260303.1 || ~1.20260304.1 || >1.20260305.0 <2.0.0-0
+    peerDependenciesMeta:
+      workerd:
+        optional: true
+
+  '@cloudflare/unenv-preset@https://pkg.pr.new/cloudflare/workers-sdk/@cloudflare/unenv-preset@be782c6':
+    resolution: {tarball: https://pkg.pr.new/cloudflare/workers-sdk/@cloudflare/unenv-preset@be782c6}
+    version: 2.16.1
+    peerDependencies:
+      unenv: 2.0.0-rc.24
+      workerd: '>1.20260305.0 <2.0.0-0'
     peerDependenciesMeta:
       workerd:
         optional: true
@@ -12647,6 +12679,12 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
+  miniflare@https://pkg.pr.new/cloudflare/workers-sdk/miniflare@be782c6:
+    resolution: {tarball: https://pkg.pr.new/cloudflare/workers-sdk/miniflare@be782c6}
+    version: 4.20260714.0
+    engines: {node: '>=22.0.0'}
+    hasBin: true
+
   minimatch@10.2.5:
     resolution: {integrity: sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg==}
     engines: {node: 18 || 20 || >=22}
@@ -15532,6 +15570,17 @@ packages:
       '@cloudflare/workers-types':
         optional: true
 
+  wrangler@https://pkg.pr.new/wrangler@14703:
+    resolution: {tarball: https://pkg.pr.new/wrangler@14703}
+    version: 4.112.0
+    engines: {node: '>=22.0.0'}
+    hasBin: true
+    peerDependencies:
+      '@cloudflare/workers-types': ^5.20260714.1
+    peerDependenciesMeta:
+      '@cloudflare/workers-types':
+        optional: true
+
   wrap-ansi@6.2.0:
     resolution: {integrity: sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==}
     engines: {node: '>=8'}
@@ -17052,6 +17101,8 @@ snapshots:
 
   '@cloudflare/kv-asset-handler@0.4.2': {}
 
+  '@cloudflare/kv-asset-handler@https://pkg.pr.new/cloudflare/workers-sdk/@cloudflare/kv-asset-handler@be782c6': {}
+
   '@cloudflare/playwright@1.0.0': {}
 
   '@cloudflare/puppeteer@1.0.4':
@@ -17150,6 +17201,12 @@ snapshots:
       unenv: 2.0.0-rc.24
     optionalDependencies:
       workerd: 1.20260317.1
+
+  '@cloudflare/unenv-preset@https://pkg.pr.new/cloudflare/workers-sdk/@cloudflare/unenv-preset@be782c6(unenv@2.0.0-rc.24)(workerd@1.20260714.1)':
+    dependencies:
+      unenv: 2.0.0-rc.24
+    optionalDependencies:
+      workerd: 1.20260714.1
 
   '@cloudflare/util-en-garde@8.0.10':
     dependencies:
@@ -23910,6 +23967,18 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  miniflare@https://pkg.pr.new/cloudflare/workers-sdk/miniflare@be782c6:
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      sharp: 0.34.5
+      undici: 7.28.0
+      workerd: 1.20260714.1
+      ws: 8.21.0
+      youch: 4.1.0-beta.10(patch_hash=3e73fc48581841f22ea1d2cf5a3560bde280fdba04940253073fb121a70a9269)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   minimatch@10.2.5:
     dependencies:
       brace-expansion: 5.0.5
@@ -27286,6 +27355,23 @@ snapshots:
       path-to-regexp: 6.3.0
       unenv: 2.0.0-rc.24
       workerd: 1.20260317.1
+    optionalDependencies:
+      '@cloudflare/workers-types': 5.20260714.1
+      fsevents: 2.3.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  wrangler@https://pkg.pr.new/wrangler@14703(@cloudflare/workers-types@5.20260714.1):
+    dependencies:
+      '@cloudflare/kv-asset-handler': https://pkg.pr.new/cloudflare/workers-sdk/@cloudflare/kv-asset-handler@be782c6
+      '@cloudflare/unenv-preset': https://pkg.pr.new/cloudflare/workers-sdk/@cloudflare/unenv-preset@be782c6(unenv@2.0.0-rc.24)(workerd@1.20260714.1)
+      blake3-wasm: 2.1.5
+      esbuild: 0.28.1
+      miniflare: https://pkg.pr.new/cloudflare/workers-sdk/miniflare@be782c6
+      path-to-regexp: 6.3.0
+      unenv: 2.0.0-rc.24
+      workerd: 1.20260714.1
     optionalDependencies:
       '@cloudflare/workers-types': 5.20260714.1
       fsevents: 2.3.3
