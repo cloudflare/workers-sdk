@@ -1993,6 +1993,37 @@
 				"summary": "Query Observability Store",
 				"tags": ["Observability"]
 			}
+		},
+		"/local/observability/clear": {
+			"post": {
+				"description": "Deletes all captured spans and logs from the local trace store.",
+				"operationId": "observability-clear",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common"
+								}
+							}
+						},
+						"description": "Clear response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Clear response failure."
+					}
+				},
+				"summary": "Clear Observability Store",
+				"tags": ["Observability"]
+			}
 		}
 	},
 	"components": {

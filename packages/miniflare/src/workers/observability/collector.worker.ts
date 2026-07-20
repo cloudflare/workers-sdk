@@ -56,6 +56,12 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 				return Response.json({ error: message }, { status: 400 });
 			}
 		}
+		// Delete all captured spans and logs. Separate from the read-only `/query`
+		// path on purpose — this is the one mutation the store exposes.
+		if (url.pathname === "/clear" && request.method === "POST") {
+			await store.clear();
+			return Response.json({ success: true });
+		}
 		return new Response("not found", { status: 404 });
 	}
 }

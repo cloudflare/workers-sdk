@@ -67,3 +67,12 @@ export async function runQuery(
 		body: JSON.stringify({ sql: body.sql, params: body.params }),
 	});
 }
+
+/**
+ * POST /local/observability/clear — delete all captured spans and logs. Proxies
+ * to the collector's mutating `/clear` endpoint (the read-only guardrail only
+ * applies to `/query`).
+ */
+export async function clearTraces(c: AppContext): Promise<Response> {
+	return proxyToCollector(c.env, "/clear", { method: "POST" });
+}

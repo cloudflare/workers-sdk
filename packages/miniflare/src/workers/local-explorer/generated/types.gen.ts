@@ -1866,3 +1866,30 @@ export type ObservabilityQueryResponses = {
 
 export type ObservabilityQueryResponse =
 	ObservabilityQueryResponses[keyof ObservabilityQueryResponses];
+
+export type ObservabilityClearData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/local/observability/clear";
+};
+
+export type ObservabilityClearErrors = {
+	/**
+	 * Clear response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type ObservabilityClearError =
+	ObservabilityClearErrors[keyof ObservabilityClearErrors];
+
+export type ObservabilityClearResponses = {
+	/**
+	 * Clear response.
+	 */
+	200: WorkersApiResponseCommon;
+};
+
+export type ObservabilityClearResponse =
+	ObservabilityClearResponses[keyof ObservabilityClearResponses];

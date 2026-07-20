@@ -1,4 +1,4 @@
-import { observabilityQuery } from "../api";
+import { observabilityClear, observabilityQuery } from "../api";
 import type { QueryClause } from "./observability-query";
 
 /**
@@ -85,6 +85,63 @@ export function fetchTraceSpans(traceId: string): Promise<Span[]> {
 /** All logs for one trace, in order. */
 export function fetchTraceLogs(traceId: string): Promise<Log[]> {
 	return runQuery<Log>(TRACE_LOGS_SQL, [traceId]);
+}
+
+/**
+ * Error code the explorer worker returns when observability capture is off (no
+ * collector bound). Mirrors `OBSERVABILITY_NOT_ENABLED` in the worker's
+ * `resources/observability.ts`.
+ */
+const OBSERVABILITY_NOT_ENABLED_CODE = 10000;
+
+/**
+ * True when a thrown query error is "observability capture is disabled" (as
+ * opposed to a genuine failure). The API client throws the Cloudflare failure
+ * envelope, so we look for our sentinel code in `errors`.
+ */
+export function isObservabilityDisabledError(error: unknown): boolean {
+	if (error && typeof error === "object" && "errors" in error) {
+		const { errors } = error as {
+			errors?: Array<{ code?: number } | null>;
+		};
+		return (
+			Array.isArray(errors) &&
+			errors.some((e) => e?.code === OBSERVABILITY_NOT_ENABLED_CODE)
+		);
+	}
+	return false;
+}
+
+/** Delete all captured spans and logs from the trace store. */
+export async function clearTraces(): Promise<void> {
+	await observabilityClear({ throwOnError: true });
+}
+
+/** Raised when the runtime can't toggle capture on (e.g. outside Vite dev). */
+export class ObservabilityToggleUnsupportedError extends Error {}
+
+/**
+ * Ask the dev server to turn on observability capture and reload the runtime.
+ * This hits a Vite-dev Node middleware (not the user Worker), so it only works
+ * under `vite dev`; elsewhere the path 404s and we surface a clear error so the
+ * UI can fall back to env-var instructions. On success the runtime is
+ * reloading, so callers should reload the page shortly after.
+ */
+export async function enableObservabilityCapture(): Promise<void> {
+	let response: Response;
+	try {
+		response = await fetch("/cdn-cgi/observability/enable", { method: "POST" });
+	} catch (cause) {
+		throw new Error("Failed to reach the dev server", { cause });
+	}
+	if (response.status === 404) {
+		throw new ObservabilityToggleUnsupportedError(
+			"Enabling observability from the UI is only supported under `vite dev`."
+		);
+	}
+	if (!response.ok) {
+		throw new Error(`Failed to enable observability (HTTP ${response.status})`);
+	}
 }
 
 /** A span placed in the trace's waterfall: tree depth + timeline position. */

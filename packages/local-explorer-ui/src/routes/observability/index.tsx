@@ -10,6 +10,7 @@ import {
 	InfoIcon,
 	MagnifyingGlassIcon,
 	PulseIcon,
+	TrashIcon,
 	XIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -26,12 +27,16 @@ import { ObservabilityViewSwitcher } from "../../components/observability/Observ
 import { TraceWaterfall } from "../../components/observability/TraceWaterfall";
 import { ResourceError } from "../../components/ResourceError";
 import {
+	clearTraces,
+	enableObservabilityCapture,
 	fetchTraceSpans,
 	formatDuration,
 	getInvocationRootIds,
 	getTagKeys,
+	isObservabilityDisabledError,
 	isRunning,
 	listTraces,
+	ObservabilityToggleUnsupportedError,
 	operationLabel,
 	spanIsError,
 } from "../../utils/observability";
@@ -103,6 +108,12 @@ function ObservabilityView(): JSX.Element {
 	spansByTraceRef.current = spansByTrace;
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	// Capture is off (no collector bound). We show an enable panel instead of the
+	// trace list, and pause polling so we don't hammer a disabled endpoint.
+	const [disabled, setDisabled] = useState(false);
+	const [enabling, setEnabling] = useState(false);
+	const [enableError, setEnableError] = useState<string | null>(null);
+	const [clearing, setClearing] = useState(false);
 	// Hide Vite dev module-runner plumbing spans (default on; persisted).
 	const [hideDevRunner, setHideDevRunner] = useState(() => {
 		try {
@@ -164,22 +175,69 @@ function ObservabilityView(): JSX.Element {
 					clauses: parsed.clauses,
 				})
 			);
+			setDisabled(false);
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to load traces");
+			if (isObservabilityDisabledError(e)) {
+				// Capture is off — show the enable panel, not a scary error.
+				setDisabled(true);
+				setError(null);
+			} else {
+				setError(e instanceof Error ? e.message : "Failed to load traces");
+			}
 		} finally {
 			setLoading(false);
 		}
 	}, [debouncedSearch, status, kind, tagKey, debouncedTagValue]);
+
+	const handleEnable = useCallback(async () => {
+		setEnabling(true);
+		setEnableError(null);
+		try {
+			await enableObservabilityCapture();
+			// The runtime is reloading with capture on; give it a moment to come
+			// back before reloading the page so the first fetch sees the collector.
+			setTimeout(() => window.location.reload(), 1500);
+		} catch (e) {
+			setEnabling(false);
+			setEnableError(
+				e instanceof ObservabilityToggleUnsupportedError
+					? e.message
+					: e instanceof Error
+						? e.message
+						: "Failed to enable observability"
+			);
+		}
+	}, []);
+
+	const handleClear = useCallback(async () => {
+		setClearing(true);
+		try {
+			await clearTraces();
+			// Drop cached spans/waterfalls too, then reload the (now empty) list.
+			setExpanded(new Set());
+			setSpansByTrace({});
+			setInvocationRootsByTrace({});
+			await refresh();
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Failed to clear traces");
+		} finally {
+			setClearing(false);
+		}
+	}, [refresh]);
 
 	useEffect(() => {
 		void refresh();
 	}, [refresh]);
 
 	// Auto-refresh the trace list so new traces appear without clicking Refresh.
+	// Paused while capture is disabled to avoid polling a dead endpoint.
 	useEffect(() => {
+		if (disabled) {
+			return;
+		}
 		const id = setInterval(() => void refresh(), 3000);
 		return () => clearInterval(id);
-	}, [refresh]);
+	}, [refresh, disabled]);
 
 	// Fetch (or re-fetch) a trace's spans + invocation roots and cache them.
 	const loadSpans = useCallback(async (trace: TraceRow) => {
@@ -252,6 +310,16 @@ function ObservabilityView(): JSX.Element {
 		[traces]
 	);
 
+	if (disabled) {
+		return (
+			<ObservabilityDisabled
+				enabling={enabling}
+				enableError={enableError}
+				onEnable={handleEnable}
+			/>
+		);
+	}
+
 	return (
 		<div className="flex h-full flex-col">
 			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
@@ -272,6 +340,17 @@ function ObservabilityView(): JSX.Element {
 					onClick={toggleHideDevRunner}
 				>
 					Hide runner spans
+				</Button>
+				<Button
+					size="sm"
+					variant="ghost"
+					icon={TrashIcon}
+					title="Clear all captured traces and logs"
+					loading={clearing}
+					disabled={clearing || traces.length === 0}
+					onClick={() => void handleClear()}
+				>
+					Clear
 				</Button>
 				<RefreshButton
 					size="sm"
@@ -543,6 +622,63 @@ function QuerySyntaxHint(): JSX.Element {
 				</ul>
 			</Popover.Content>
 		</Popover>
+	);
+}
+
+/**
+ * Shown when observability capture is off (opt-in). The "Enable" button asks
+ * the dev server to reload the runtime with capture on (Vite dev only); if that
+ * isn't supported we surface how to enable it via the environment variable.
+ */
+function ObservabilityDisabled({
+	enabling,
+	enableError,
+	onEnable,
+}: {
+	enabling: boolean;
+	enableError: string | null;
+	onEnable: () => void;
+}): JSX.Element {
+	return (
+		<div className="flex h-full flex-col">
+			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
+				<PulseIcon size={18} className="text-kumo-subtle" />
+				<span className="text-sm font-semibold text-kumo-default">
+					Observability
+				</span>
+			</header>
+			<div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+				<PulseIcon size={28} className="mb-2 text-kumo-subtle" />
+				<h3 className="text-sm font-semibold text-kumo-default">
+					Observability capture is off
+				</h3>
+				<p className="mt-1 max-w-md text-xs text-kumo-subtle">
+					Turn on capture to record traces, spans, and logs from your Worker.
+					This reloads the local runtime so tracing can be attached.
+				</p>
+				<Button
+					className="mt-4"
+					variant="primary"
+					loading={enabling}
+					disabled={enabling}
+					onClick={onEnable}
+				>
+					{enabling ? "Enabling…" : "Enable observability"}
+				</Button>
+				{enableError ? (
+					<div className="mt-3 max-w-md text-xs">
+						<p className="text-red-500">{enableError}</p>
+						<p className="mt-2 text-kumo-subtle">
+							To turn on capture under{" "}
+							<code className="font-mono">wrangler dev</code>, restart it with:
+						</p>
+						<pre className="mt-1 overflow-x-auto rounded bg-kumo-tint px-2 py-1.5 text-left font-mono text-kumo-default">
+							X_LOCAL_OBSERVABILITY=true wrangler dev
+						</pre>
+					</div>
+				) : null}
+			</div>
+		</div>
 	);
 }
 

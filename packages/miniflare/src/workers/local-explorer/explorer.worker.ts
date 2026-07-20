@@ -32,7 +32,7 @@ import {
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
-import { runQuery } from "./resources/observability";
+import { clearTraces, runQuery } from "./resources/observability";
 import {
 	deleteR2Objects,
 	getR2Object,
@@ -363,6 +363,8 @@ app.post(
 	validateRequestBody(zObservabilityQueryData.shape.body),
 	(c) => runQuery(c, c.req.valid("json"))
 );
+
+app.post("/api/local/observability/clear", (c) => clearTraces(c));
 
 // ============================================================================
 // Local Workers / Dev Registry Endpoint

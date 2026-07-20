@@ -1153,3 +1153,14 @@ export const zObservabilityQueryResponse = zWorkersApiResponseCommon.and(
 		result: zObservabilityQueryResult.optional(),
 	})
 );
+
+export const zObservabilityClearData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * Clear response.
+ */
+export const zObservabilityClearResponse = zWorkersApiResponseCommon;

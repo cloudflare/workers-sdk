@@ -1388,6 +1388,40 @@ const config = {
 					tags: ["Observability"],
 				},
 			},
+			// Local-only observability endpoint. Deletes all captured spans and
+			// logs from the trace store.
+			"/local/observability/clear": {
+				post: {
+					description:
+						"Deletes all captured spans and logs from the local trace store.",
+					operationId: "observability-clear",
+					parameters: [],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common",
+									},
+								},
+							},
+							description: "Clear response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Clear response failure.",
+						},
+					},
+					summary: "Clear Observability Store",
+					tags: ["Observability"],
+				},
+			},
 		},
 		schemas: {
 			// R2 schemas - matches stratus dashboard API shapes
