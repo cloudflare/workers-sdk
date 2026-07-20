@@ -253,6 +253,60 @@ test("bulk get: check metadata as string", async ({ expect }) => {
 	expect(result).toEqual(expectedResult);
 });
 
+test("bulk get: check metadata for empty string value", async ({ expect }) => {
+	const { kv } = ctx;
+	await kv.put("key1", "", { metadata: { testing: true } });
+
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "", metadata: { testing: true } }],
+	]);
+	expect(result).toEqual(expectedResult);
+});
+
+test("bulk get: check metadata for falsy json values", async ({ expect }) => {
+	const { kv } = ctx;
+	await kv.put("key1", "0", { metadata: { testing: "zero" } });
+	await kv.put("key2", "false", { metadata: { testing: "false" } });
+	await kv.put("key3", "null", { metadata: { testing: "null" } });
+
+	const result: any = await kv.getWithMetadata(
+		["key1", "key2", "key3"],
+		"json"
+	);
+	const expectedResult: any = new Map([
+		["key1", { value: 0, metadata: { testing: "zero" } }],
+		["key2", { value: false, metadata: { testing: "false" } }],
+		["key3", { value: null, metadata: { testing: "null" } }],
+	]);
+	expect(result).toEqual(expectedResult);
+});
+
+test("bulk get: distinguishes falsy values from missing keys", async ({
+	expect,
+}) => {
+	const { kv } = ctx;
+	await kv.put("key1", "0", { metadata: { testing: true } });
+
+	// A present key holding a falsy value keeps its `{ value, metadata }`
+	// wrapper, while a missing key is still returned as a bare `null`
+	const result: any = await kv.getWithMetadata(["key1", "key2"], "json");
+	const expectedResult: any = new Map([
+		["key1", { value: 0, metadata: { testing: true } }],
+		["key2", null],
+	]);
+	expect(result).toEqual(expectedResult);
+});
+
+test("bulk get: returns falsy values without metadata", async ({ expect }) => {
+	const { kv } = ctx;
+	await kv.put("key1", "");
+	await kv.put("key2", "0");
+
+	expect(await kv.get(["key1"])).toEqual(new Map([["key1", ""]]));
+	expect(await kv.get(["key2"], "json")).toEqual(new Map([["key2", 0]]));
+});
+
 test("bulk get: get with metadata for 404", async ({ expect }) => {
 	const { kv } = ctx;
 
