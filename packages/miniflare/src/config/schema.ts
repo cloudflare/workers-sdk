@@ -228,6 +228,7 @@ const MiniflareWorkflowBindingSchema = WorkflowBindingSchema.extend({
 	// should declare them on exports instead.
 	unsafeConfig: z
 		.strictObject({
+			schedules: z.string().array().optional(),
 			limits: z.strictObject({ steps: z.number().optional() }).optional(),
 			events: z.array(ArtifactsEventSubscriptionSchema).optional(),
 		})

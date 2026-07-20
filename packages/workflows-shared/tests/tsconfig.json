@@ -4,5 +4,5 @@
 		"moduleResolution": "bundler",
 		"types": ["@cloudflare/workers-types", "@cloudflare/vitest-plugin/types"]
 	},
-	"include": ["./**/*.ts"]
+	"include": ["./**/*.ts", "../src/vendor/saffron/wasm.d.ts"]
 }

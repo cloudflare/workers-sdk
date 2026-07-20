@@ -1,5 +1,7 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
+import SCRIPT_WORKFLOWS_SAFFRON from "worker:workflows/saffron";
 import SCRIPT_WORKFLOWS_WRAPPED_BINDING from "worker:workflows/wrapped-binding";
 import { MiniflareCoreError } from "../../shared";
 import {
@@ -20,6 +22,13 @@ import type { ParsedWorkerOptions, Plugin, WorkflowExporters } from "../shared";
 
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
 export const WORKFLOWS_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:storage`;
+export const WORKFLOWS_SAFFRON_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:saffron`;
+
+// The vendored saffron wasm is static, so read it once and reuse across config
+// reloads. A watch-mode rebuild of the wasm isn't picked up until the dev process
+// restarts, which is fine since it effectively never changes.
+let saffronWasm: Buffer | undefined;
+
 const WORKFLOW_STORAGE_BINDING = "WORKFLOW_STORAGE";
 
 /** Service implementing the Workflow API for `env` and `ctx.exports`. */
@@ -210,9 +219,36 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 						],
 					}
 				: {};
+		// One shared, stateless saffron service; each engine binds it as SAFFRON.
+		// The entry's external `./saffron_bg.wasm` import resolves to the module
+		// below; the wasm is shipped to dist by the build (see copySaffron).
+		saffronWasm ??= await fs.readFile(
+			path.join(__dirname, "../saffron/saffron_bg.wasm")
+		);
+		const saffronService: Service = {
+			name: WORKFLOWS_SAFFRON_SERVICE_NAME,
+			worker: {
+				compatibilityDate: "2024-10-22",
+				compatibilityFlags: ["experimental"],
+				modules: [
+					{ name: "saffron.mjs", esModule: SCRIPT_WORKFLOWS_SAFFRON() },
+					{ name: "saffron_bg.wasm", wasm: saffronWasm },
+				],
+			},
+		};
+
 		const engineWorker = {
 			compatibilityDate: "2024-10-22",
 			compatibilityFlags: Array.from(new Set(engineCompatibilityFlags)),
+			bindings: [
+				{
+					name: "SAFFRON",
+					service: {
+						name: WORKFLOWS_SAFFRON_SERVICE_NAME,
+						entrypoint: "CronFetcher",
+					},
+				},
+			],
 			modules: [
 				{
 					name: "workflows.mjs",
@@ -243,6 +279,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 						localDisk: WORKFLOWS_STORAGE_SERVICE_NAME,
 					},
 					bindings: [
+						...engineWorker.bindings,
 						{
 							name: "ENGINE",
 							durableObjectNamespace: { className: "Engine" },
@@ -298,7 +335,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		});
 
 		if (exportedWorkflows.length === 0) {
-			return [storageService, ...services];
+			return [storageService, saffronService, ...services];
 		}
 
 		// workerd runs exported Workflows in the exporting Worker: it creates each
@@ -317,7 +354,10 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 			worker: {
 				...engineWorker,
 				...getStreamingTails(config.name),
-				bindings: [{ name: "STEP_LIMITS", json: JSON.stringify(stepLimits) }],
+				bindings: [
+					...engineWorker.bindings,
+					{ name: "STEP_LIMITS", json: JSON.stringify(stepLimits) },
+				],
 			},
 		};
 		const exportedBindingServices = exportedWorkflows.map<Service>(
@@ -330,6 +370,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 						localDisk: WORKFLOWS_STORAGE_SERVICE_NAME,
 					},
 					bindings: [
+						...engineWorker.bindings,
 						{
 							name: "ENGINE",
 							durableObjectNamespace: {
@@ -352,6 +393,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 
 		return [
 			storageService,
+			saffronService,
 			...services,
 			engineService,
 			...exportedBindingServices,

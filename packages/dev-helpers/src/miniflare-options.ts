@@ -243,6 +243,7 @@ function workflowEntry(
 		class_name: className,
 		script_name: scriptName,
 		limits,
+		schedules,
 	}: CfWorkflow,
 	events: ArtifactsEventSubscription[] | undefined
 ): [
@@ -253,9 +254,16 @@ function workflowEntry(
 		scriptName?: string;
 		events?: ArtifactsEventSubscription[];
 		stepLimit?: number;
+		schedules?: string[];
 	},
 ] {
 	const stepLimit = limits?.steps;
+	const normalizedSchedules =
+		schedules === undefined
+			? undefined
+			: Array.isArray(schedules)
+				? schedules
+				: [schedules];
 
 	return [
 		binding,
@@ -265,6 +273,9 @@ function workflowEntry(
 			scriptName,
 			events,
 			...(stepLimit !== undefined && { stepLimit }),
+			...(normalizedSchedules !== undefined && {
+				schedules: normalizedSchedules,
+			}),
 		},
 	];
 }
