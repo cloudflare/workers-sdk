@@ -1,12 +1,12 @@
 import { getBooleanEnvironmentVariableFactory } from "@cloudflare/workers-utils";
-import { detectAgenticEnvironment } from "am-i-vibing";
+import { detectAgent } from "./utils/detect-agent";
 
 /**
  * Reads the `WRANGLER_OUTPUTS_FOR_AGENTS` environment variable.
  *
  * - `true` — force AI-optimized (structured markdown) error output.
  * - `false` — force concise human error output, even inside an AI agent.
- * - `undefined` — fall back to automatic detection via `am-i-vibing`.
+ * - `undefined` — fall back to automatic detection via `detectAgent()`.
  *
  * Not memoized, so changes at runtime (e.g. via `vi.stubEnv` in tests)
  * take effect immediately.
@@ -23,18 +23,20 @@ const getOutputsForAgentsFromEnv = getBooleanEnvironmentVariableFactory({
  * 1. **`WRANGLER_OUTPUTS_FOR_AGENTS` env var** — checked on every call (no
  *    caching). Set to `"true"` to force AI output; set to `"false"` to
  *    force human output, even when an AI agent is driving the process.
- * 2. **`am-i-vibing` detection** — falls back to automatic agentic
- *    environment detection via `detectAgenticEnvironment()`. The result is
- *    cached for the lifetime of the process so the (potentially expensive)
- *    detection runs at most once.
+ * 2. **`detectAgent()` detection** — falls back to the canonical agentic
+ *    environment detection wrapper (which uses `am-i-vibing` internally
+ *    with `processAncestry: []` to skip slow process tree checks). Only
+ *    pure `"agent"` environments return `true`; hybrid terminals like
+ *    VS Code and Warp are intentionally excluded. The result is cached for
+ *    the lifetime of the process so the detection runs at most once.
  *
- * The `am-i-vibing` cache is encapsulated in a closure to avoid a bare
+ * The detection cache is encapsulated in a closure to avoid a bare
  * module-level mutable variable.
  *
  * @returns `true` when AI-optimized output should be used.
  */
 export const isAgenticEnvironment: () => boolean = (() => {
-	let cachedAmIVibingResult: boolean | null = null;
+	let cachedResult: boolean | null = null;
 
 	return () => {
 		// The override env var is read on every call (the factory is not
@@ -45,15 +47,11 @@ export const isAgenticEnvironment: () => boolean = (() => {
 			return override;
 		}
 
-		if (cachedAmIVibingResult !== null) {
-			return cachedAmIVibingResult;
+		if (cachedResult !== null) {
+			return cachedResult;
 		}
-		try {
-			const detection = detectAgenticEnvironment({ env: process.env });
-			cachedAmIVibingResult = detection.isAgentic;
-		} catch {
-			cachedAmIVibingResult = false;
-		}
-		return cachedAmIVibingResult;
+
+		cachedResult = detectAgent().isAgent;
+		return cachedResult;
 	};
 })();
