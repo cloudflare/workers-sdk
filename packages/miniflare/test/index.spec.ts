@@ -1010,7 +1010,7 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 
 test("Miniflare: tail consumer called", async ({ expect }) => {
 	const mf = new Miniflare({
-		handleRuntimeStdio: () => {},
+		handleStructuredLogs: () => {},
 		workers: [
 			{
 				name: "a",

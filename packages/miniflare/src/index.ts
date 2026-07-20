@@ -955,8 +955,6 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
 
-	#structuredWorkerdLogs: boolean;
-
 	#cfObject?: Record<string, any> = {};
 
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
@@ -1024,11 +1022,6 @@ export class Miniflare {
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 		this.#hyperdriveProxyController.log = this.#log;
-		this.#structuredWorkerdLogs =
-			this.#sharedOpts.core.structuredWorkerdLogs ??
-			// If there is a `handleStructuredLogs` set then `structuredWorkerdLogs` defaults
-			// to `true`, otherwise it defaults to `false`
-			(this.#sharedOpts.core.handleStructuredLogs ? true : false);
 
 		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
 		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
@@ -2320,7 +2313,10 @@ export class Miniflare {
 			services: servicesArray,
 			sockets,
 			extensions,
-			structuredLogging: this.#structuredWorkerdLogs,
+			// Structured logging is always enabled: workerd emits structured logs
+			// that Miniflare parses and either forwards to a `handleStructuredLogs`
+			// handler or writes to the console by default.
+			structuredLogging: true,
 			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
 				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
 				: [],
@@ -2409,7 +2405,6 @@ export class Miniflare {
 				? "127.0.0.1:0"
 				: undefined,
 			verbose: this.#sharedOpts.core.verbose,
-			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
 			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
@@ -2744,9 +2739,6 @@ export class Miniflare {
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
 		this.#hyperdriveProxyController.log = this.#log;
-		this.#structuredWorkerdLogs =
-			this.#sharedOpts.core.structuredWorkerdLogs ??
-			this.#structuredWorkerdLogs;
 
 		const newExternalOnUpdate = sharedOpts.core.unsafeHandleDevRegistryUpdate;
 		await this.#devRegistry.updateRegistryPath(

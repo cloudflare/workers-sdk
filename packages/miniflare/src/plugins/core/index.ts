@@ -10,7 +10,6 @@ import {
 } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
@@ -257,124 +256,101 @@ export const WorkerdStructuredLogSchema = z.object({
 	message: z.string(),
 });
 
-export const CoreSharedOptionsSchema = z
-	.object({
-		rootPath: UnusableStringSchema.optional(),
+export const CoreSharedOptionsSchema = z.object({
+	rootPath: UnusableStringSchema.optional(),
 
-		host: z.string().optional(),
-		port: z.number().optional(),
+	host: z.string().optional(),
+	port: z.number().optional(),
 
-		https: z.boolean().optional(),
-		httpsKey: z.string().optional(),
-		httpsKeyPath: z.string().optional(),
-		httpsCert: z.string().optional(),
-		httpsCertPath: z.string().optional(),
+	https: z.boolean().optional(),
+	httpsKey: z.string().optional(),
+	httpsKeyPath: z.string().optional(),
+	httpsCert: z.string().optional(),
+	httpsCertPath: z.string().optional(),
 
-		inspectorPort: z.number().optional(),
-		inspectorHost: z.string().optional(),
+	inspectorPort: z.number().optional(),
+	inspectorHost: z.string().optional(),
 
-		verbose: z.boolean().optional(),
+	verbose: z.boolean().optional(),
 
-		log: z.instanceof(Log).optional(),
-		handleRuntimeStdio: z
-			.function({
-				input: [z.instanceof(Readable), z.instanceof(Readable)],
-			})
-			.optional(),
+	log: z.instanceof(Log).optional(),
 
-		handleStructuredLogs: z
-			.function({
-				input: [WorkerdStructuredLogSchema],
-				output: z.void(),
-			})
-			.optional(),
+	handleStructuredLogs: z
+		.function({
+			input: [WorkerdStructuredLogSchema],
+			output: z.void(),
+		})
+		.optional(),
 
-		// Deliberately not `z.function()`: parsing that schema replaces the
-		// callback with a validating wrapper. When the callback is `async`
-		// (assignable to a `void` return), the wrapper calls it, rejects the
-		// returned promise as an invalid `void` return value, and drops that
-		// promise un-awaited — so if the callback later rejects, no caller
-		// holds the promise and the rejection crashes the process as an
-		// unhandled rejection. `z.custom()` passes the function through
-		// unwrapped; the call site in `handlePrettyErrorRequest` contains
-		// both throwing and rejecting callbacks.
-		handleUncaughtError: z
-			.custom<(error: Error) => void>((value) => typeof value === "function")
-			.optional(),
+	// Deliberately not `z.function()`: parsing that schema replaces the
+	// callback with a validating wrapper. When the callback is `async`
+	// (assignable to a `void` return), the wrapper calls it, rejects the
+	// returned promise as an invalid `void` return value, and drops that
+	// promise un-awaited — so if the callback later rejects, no caller
+	// holds the promise and the rejection crashes the process as an
+	// unhandled rejection. `z.custom()` passes the function through
+	// unwrapped; the call site in `handlePrettyErrorRequest` contains
+	// both throwing and rejecting callbacks.
+	handleUncaughtError: z
+		.custom<(error: Error) => void>((value) => typeof value === "function")
+		.optional(),
 
-		upstream: z.string().optional(),
-		// TODO: add back validation of cf object
-		cf: z
-			.union([z.boolean(), z.string(), z.record(z.string(), z.any())])
-			.optional(),
+	upstream: z.string().optional(),
+	// TODO: add back validation of cf object
+	cf: z
+		.union([z.boolean(), z.string(), z.record(z.string(), z.any())])
+		.optional(),
 
-		// Enable auto service / durable objects discovery with the dev registry
-		unsafeDevRegistryPath: z.string().optional(),
-		// Called when external workers this instance depends on are updated in the dev registry
-		unsafeHandleDevRegistryUpdate: z
-			.function({
-				input: [z.custom<WorkerRegistry>()],
-			})
-			.optional(),
-		// This is a shared secret between a proxy server and miniflare that can be
-		// passed in a header to prove that the request came from the proxy and not
-		// some malicious attacker.
-		unsafeProxySharedSecret: z.string().optional(),
-		unsafeModuleFallbackService: CustomFetchServiceSchema.optional(),
-		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/local/scheduled`
-		unsafeTriggerHandlers: z.boolean().optional(),
-		// Extra environment variables to set on the spawned `workerd` subprocess.
-		// Merged on top of `process.env` and Miniflare's own defaults
-		// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
-		// (for example, to test timezone-dependent behaviour).
-		unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
-		// Enable the local explorer at /cdn-cgi/local/explorer
-		unsafeLocalExplorer: z.boolean().optional(),
-		// Enable RPC-based Durable Object introspection APIs
-		unsafeInspectDurableObjects: z.boolean().optional(),
-		// Enable logging requests
-		logRequests: z.boolean().default(true),
+	// Enable auto service / durable objects discovery with the dev registry
+	unsafeDevRegistryPath: z.string().optional(),
+	// Called when external workers this instance depends on are updated in the dev registry
+	unsafeHandleDevRegistryUpdate: z
+		.function({
+			input: [z.custom<WorkerRegistry>()],
+		})
+		.optional(),
+	// This is a shared secret between a proxy server and miniflare that can be
+	// passed in a header to prove that the request came from the proxy and not
+	// some malicious attacker.
+	unsafeProxySharedSecret: z.string().optional(),
+	unsafeModuleFallbackService: CustomFetchServiceSchema.optional(),
+	// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/local/scheduled`
+	unsafeTriggerHandlers: z.boolean().optional(),
+	// Extra environment variables to set on the spawned `workerd` subprocess.
+	// Merged on top of `process.env` and Miniflare's own defaults
+	// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
+	// (for example, to test timezone-dependent behaviour).
+	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
+	// Enable the local explorer at /cdn-cgi/local/explorer
+	unsafeLocalExplorer: z.boolean().optional(),
+	// Enable RPC-based Durable Object introspection APIs
+	unsafeInspectDurableObjects: z.boolean().optional(),
+	// Enable logging requests
+	logRequests: z.boolean().default(true),
 
-		// Path to the root directory for persisting data
-		// Used as the default for all plugins with the plugin name as the subdirectory name
-		defaultPersistRoot: z.string().optional(),
-		// Path to the project temporary directory for plugins that need it
-		// (e.g. email logs). Falls back to a subdirectory of tmpPath if not set.
-		defaultProjectTmpPath: z.string().optional(),
-		// Strip the MF-DISABLE_PRETTY_ERROR header from user request
-		stripDisablePrettyError: z.boolean().default(true),
+	// Path to the root directory for persisting data
+	// Used as the default for all plugins with the plugin name as the subdirectory name
+	defaultPersistRoot: z.string().optional(),
+	// Path to the project temporary directory for plugins that need it
+	// (e.g. email logs). Falls back to a subdirectory of tmpPath if not set.
+	defaultProjectTmpPath: z.string().optional(),
+	// Strip the MF-DISABLE_PRETTY_ERROR header from user request
+	stripDisablePrettyError: z.boolean().default(true),
 
-		// Whether to get structured logs from workerd or not (defaults to `true` is a
-		// `handleStructuredLogs` is set, to `false` otherwise)
-		// This option is useful in combination with a custom handleRuntimeStdio.
-		structuredWorkerdLogs: z.boolean().optional(),
+	// Enable telemetry for the local explorer.
+	telemetry: z
+		.object({
+			enabled: z.boolean().default(false),
+			deviceId: z.string().optional(),
+		})
+		.default({ enabled: false }),
 
-		// Enable telemetry for the local explorer.
-		telemetry: z
-			.object({
-				enabled: z.boolean().default(false),
-				deviceId: z.string().optional(),
-			})
-			.default({ enabled: false }),
-
-		// The stable, externally-reachable URL for this Miniflare instance
-		// (e.g. the Wrangler proxy URL or Vite dev server URL). Used by
-		// plugins like Stream to generate preview URLs that outlive runtime
-		// restarts. If not set, plugins fall back to the runtime entry URL.
-		publicUrl: z.url().optional(),
-	})
-	.refine(
-		({ structuredWorkerdLogs, handleStructuredLogs }) => {
-			if (structuredWorkerdLogs === false && handleStructuredLogs) {
-				return false;
-			}
-			return true;
-		},
-		{
-			message:
-				"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`",
-		}
-	);
+	// The stable, externally-reachable URL for this Miniflare instance
+	// (e.g. the Wrangler proxy URL or Vite dev server URL). Used by
+	// plugins like Stream to generate preview URLs that outlive runtime
+	// restarts. If not set, plugins fall back to the runtime entry URL.
+	publicUrl: z.url().optional(),
+});
 
 export const CORE_PLUGIN_NAME = "core";
 
