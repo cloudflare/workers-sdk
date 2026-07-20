@@ -1,9 +1,16 @@
-import { cn } from "@cloudflare/kumo";
 import {
-	ArrowsCounterClockwiseIcon,
+	Button,
+	cn,
+	InputGroup,
+	Popover,
+	RefreshButton,
+} from "@cloudflare/kumo";
+import {
 	EyeSlashIcon,
+	InfoIcon,
 	MagnifyingGlassIcon,
 	PulseIcon,
+	XIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -26,6 +33,7 @@ import {
 	isRunning,
 	listTraces,
 	operationLabel,
+	spanIsError,
 } from "../../utils/observability";
 import { parseTraceQuery } from "../../utils/observability-query";
 import type { Span, TraceRow } from "../../utils/observability";
@@ -39,9 +47,10 @@ export const Route = createFileRoute("/observability/")({
 });
 
 function isError(t: TraceRow): boolean {
-	return (
-		!!t.error || (!!t.outcome && t.outcome !== "ok") || (t.error_count ?? 0) > 0
-	);
+	// The root row itself may be an error (including a 4xx/5xx response the
+	// handler returned without throwing), or any span in the trace may have
+	// failed (`error_count`, computed by the same rule in the trace-list query).
+	return spanIsError(t) || (t.error_count ?? 0) > 0;
 }
 
 /** Duration split into its number and unit, so the unit can be rendered faded. */
@@ -254,57 +263,51 @@ function ObservabilityView(): JSX.Element {
 					</span>
 				</div>
 				<div className="flex-1" />
-				<button
-					type="button"
-					onClick={toggleHideDevRunner}
+				<Button
+					size="sm"
+					variant={hideDevRunner ? "secondary" : "ghost"}
+					icon={EyeSlashIcon}
 					title="Hide Vite dev module-runner plumbing spans (vite dev only)"
-					className={cn(
-						"flex items-center gap-1.5 rounded px-2 py-1 text-xs",
-						hideDevRunner
-							? "bg-kumo-tint text-kumo-default"
-							: "text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
-					)}
+					aria-pressed={hideDevRunner}
+					onClick={toggleHideDevRunner}
 				>
-					<EyeSlashIcon size={13} />
 					Hide runner spans
-				</button>
-				<button
-					type="button"
+				</Button>
+				<RefreshButton
+					size="sm"
+					aria-label="Refresh traces"
+					loading={loading}
 					onClick={() => void refresh()}
-					className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
-				>
-					<ArrowsCounterClockwiseIcon
-						size={13}
-						className={loading ? "animate-spin" : undefined}
-					/>
-					Refresh
-				</button>
+				/>
 			</header>
 
 			{/* filter bar — a simpler version of the dashboard query builder */}
 			<div className="flex items-center gap-2 border-b border-kumo-fill px-4 py-2">
-				<div className="flex flex-1 items-center gap-2 rounded-md border border-kumo-fill bg-kumo-base px-2.5 py-1.5">
-					<MagnifyingGlassIcon
-						size={14}
-						className="shrink-0 text-kumo-subtle"
-					/>
+				<InputGroup size="sm" className="flex-1">
+					<div className="flex items-center justify-center pl-2 text-kumo-subtle">
+						<MagnifyingGlassIcon size={14} />
+					</div>
 					<input
+						aria-label="Search traces"
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(e) => setSearch(e.currentTarget.value)}
 						placeholder="Search, or query e.g. status:error kind:d1 dur:>100 db.query.text:orders"
-						className="w-full bg-transparent text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
+						className="w-full bg-transparent px-2 text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
 					/>
 					{search ? (
-						<button
-							type="button"
+						<InputGroup.Button
+							shape="square"
+							variant="ghost"
+							aria-label="Clear search"
 							onClick={() => setSearch("")}
-							className="text-xs text-kumo-subtle hover:text-kumo-default"
 						>
-							✕
-						</button>
+							<XIcon size={12} />
+						</InputGroup.Button>
 					) : null}
-				</div>
+				</InputGroup>
+				<QuerySyntaxHint />
 				<FilterSelect
+					label="Filter by status"
 					value={status}
 					onChange={(v) => setStatus(v as typeof status)}
 					options={[
@@ -314,6 +317,7 @@ function ObservabilityView(): JSX.Element {
 					]}
 				/>
 				<FilterSelect
+					label="Filter by type"
 					value={kind}
 					onChange={setKind}
 					options={[
@@ -327,6 +331,7 @@ function ObservabilityView(): JSX.Element {
 					]}
 				/>
 				<FilterSelect
+					label="Filter by tag"
 					value={tagKey}
 					onChange={(v) => {
 						setTagKey(v);
@@ -340,12 +345,15 @@ function ObservabilityView(): JSX.Element {
 					]}
 				/>
 				{tagKey !== "all" ? (
-					<input
-						value={tagValue}
-						onChange={(e) => setTagValue(e.target.value)}
-						placeholder={`${tagKey} value…`}
-						className="w-40 rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
-					/>
+					<InputGroup size="sm" className="w-40">
+						<input
+							aria-label={`${tagKey} value`}
+							value={tagValue}
+							onChange={(e) => setTagValue(e.currentTarget.value)}
+							placeholder={`${tagKey} value…`}
+							className="w-full bg-transparent px-2 text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
+						/>
+					</InputGroup>
 				) : null}
 			</div>
 
@@ -372,7 +380,15 @@ function ObservabilityView(): JSX.Element {
 									</span>
 								</th>
 								<th className="py-2 pr-3 font-medium">Operation</th>
-								<th className="w-48 py-2 pr-3 font-medium">Duration (ms)</th>
+								<th className="w-48 py-2 pr-3 font-medium">
+									<span
+										className="inline-flex cursor-help items-center gap-1"
+										title="Local durations are approximate — they reflect this machine and the local simulator, not production, and are not a basis for cost or billing estimates."
+									>
+										Duration (ms)
+										<InfoIcon size={12} className="text-kumo-subtle" />
+									</span>
+								</th>
 								<th className="w-20 py-2 pr-3 font-medium">Spans</th>
 								<th className="w-24 py-2 pr-3 font-medium">Errors</th>
 							</tr>
@@ -478,6 +494,55 @@ function ObservabilityView(): JSX.Element {
 				)}
 			</div>
 		</div>
+	);
+}
+
+/**
+ * A small "?" popover explaining the search bar's `key:value` query language.
+ * The syntax mirrors (a subset of) the Workers Observability dashboard's query
+ * builder — see utils/observability-query.ts for the parser.
+ */
+function QuerySyntaxHint(): JSX.Element {
+	return (
+		<Popover>
+			<Popover.Trigger
+				render={
+					<Button
+						size="sm"
+						shape="square"
+						variant="ghost"
+						icon={InfoIcon}
+						aria-label="Query syntax help"
+					/>
+				}
+			/>
+			<Popover.Content side="bottom" align="end" className="max-w-xs">
+				<div className="text-xs font-semibold text-kumo-default">
+					Query syntax
+				</div>
+				<p className="mt-1 text-xs text-kumo-subtle">
+					Combine <code>key:value</code> terms (matched with AND). This is a
+					subset of the Workers Observability dashboard syntax.
+				</p>
+				<ul className="mt-2 space-y-1 text-xs text-kumo-default">
+					<li>
+						<code>status:error</code> or <code>status:success</code>
+					</li>
+					<li>
+						<code>kind:</code>
+						{" http | fetch | d1 | kv | r2 | do"}
+					</li>
+					<li>
+						<code>dur:&gt;100</code> — duration in ms (
+						<code>&gt; &gt;= &lt; &lt;=</code>)
+					</li>
+					<li>
+						<code>db.query.text:orders</code> — any attribute key
+					</li>
+					<li>Bare words become free-text search.</li>
+				</ul>
+			</Popover.Content>
+		</Popover>
 	);
 }
 

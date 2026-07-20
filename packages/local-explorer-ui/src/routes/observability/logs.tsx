@@ -1,9 +1,9 @@
-import { cn } from "@cloudflare/kumo";
+import { cn, InputGroup, RefreshButton } from "@cloudflare/kumo";
 import {
-	ArrowsCounterClockwiseIcon,
 	CopyIcon,
 	MagnifyingGlassIcon,
 	PulseIcon,
+	XIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -104,42 +104,39 @@ function LogsView(): JSX.Element {
 					</span>
 				</div>
 				<div className="flex-1" />
-				<button
-					type="button"
+				<RefreshButton
+					size="sm"
+					aria-label="Refresh logs"
+					loading={loading}
 					onClick={() => void refresh()}
-					className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
-				>
-					<ArrowsCounterClockwiseIcon
-						size={13}
-						className={loading ? "animate-spin" : undefined}
-					/>
-					Refresh
-				</button>
+				/>
 			</header>
 
 			<div className="flex items-center gap-2 border-b border-kumo-fill px-4 py-2">
-				<div className="flex flex-1 items-center gap-2 rounded-md border border-kumo-fill bg-kumo-base px-2.5 py-1.5">
-					<MagnifyingGlassIcon
-						size={14}
-						className="shrink-0 text-kumo-subtle"
-					/>
+				<InputGroup size="sm" className="flex-1">
+					<div className="flex items-center justify-center pl-2 text-kumo-subtle">
+						<MagnifyingGlassIcon size={14} />
+					</div>
 					<input
+						aria-label="Search logs"
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(e) => setSearch(e.currentTarget.value)}
 						placeholder="Search, or query e.g. level:error op:/checkout timeout"
-						className="w-full bg-transparent text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
+						className="w-full bg-transparent px-2 text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
 					/>
 					{search ? (
-						<button
-							type="button"
+						<InputGroup.Button
+							shape="square"
+							variant="ghost"
+							aria-label="Clear search"
 							onClick={() => setSearch("")}
-							className="text-xs text-kumo-subtle hover:text-kumo-default"
 						>
-							✕
-						</button>
+							<XIcon size={12} />
+						</InputGroup.Button>
 					) : null}
-				</div>
+				</InputGroup>
 				<FilterSelect
+					label="Filter by level"
 					value={level}
 					onChange={setLevel}
 					options={[
