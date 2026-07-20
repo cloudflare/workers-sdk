@@ -177,13 +177,18 @@ export function constructExplorerBindingMap(
 			const databaseId = innerBinding.service?.name?.replace(/^d1:db:/, "");
 			assert(databaseId);
 
-			IDToBindingName.d1[databaseId] = binding.name;
+			// Remote databases share one proxy service ("d1:db:remote"). Remote
+			// resources aren't surfaced in the explorer, so skip them — otherwise
+			// they'd all collide under the literal id "remote".
+			if (databaseId !== "remote") {
+				IDToBindingName.d1[databaseId] = binding.name;
+			}
 		}
 
 		// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING".
 		// Local namespaces share one entry service ("kv:ns:entry") and carry their
-		// id in props; remote namespaces still encode the id in the service name
-		// ("kv:ns:ID[:remoteSuffix]").
+		// id in props; remote namespaces share one proxy service ("kv:ns:remote")
+		// and aren't surfaced in the explorer.
 		if (
 			binding.name?.startsWith(
 				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
@@ -203,7 +208,12 @@ export function constructExplorerBindingMap(
 			if (namespaceId === undefined) {
 				namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
 			}
-			IDToBindingName.kv[namespaceId] = binding.name;
+			// Remote namespaces share one proxy service ("kv:ns:remote"). Remote
+			// resources aren't surfaced in the explorer, so skip them — otherwise
+			// they'd all collide under the literal id "remote".
+			if (namespaceId !== "remote") {
+				IDToBindingName.kv[namespaceId] = binding.name;
+			}
 		}
 
 		// R2 bindings: name = "MINIFLARE_PROXY:r2:worker:BINDING", r2Bucket.name = "r2:bucket:ID"
@@ -216,7 +226,12 @@ export function constructExplorerBindingMap(
 		) {
 			// Extract bucket name from service name "r2:bucket:BUCKET_NAME"
 			const bucketName = binding.r2Bucket.name.replace(/^r2:bucket:/, "");
-			IDToBindingName.r2[bucketName] = binding.name;
+			// Remote buckets share one proxy service ("r2:bucket:remote"). Remote
+			// resources aren't surfaced in the explorer, so skip them — otherwise
+			// they'd all collide under the literal id "remote".
+			if (bucketName !== "remote") {
+				IDToBindingName.r2[bucketName] = binding.name;
+			}
 		}
 	}
 
