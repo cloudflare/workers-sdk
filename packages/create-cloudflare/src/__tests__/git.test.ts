@@ -315,6 +315,38 @@ describe("git helpers", () => {
 			expect(ctx.commitMessage).toBeDefined();
 		});
 
+		test("runs `git commit` without a silent/piped stdio or an active spinner", async ({
+			expect,
+		}) => {
+			// Regression test: `git commit` can transitively prompt for an
+			// interactive GPG passphrase (e.g. via `pinentry-curses`) when
+			// `commit.gpgsign` is configured. That prompt writes directly to the
+			// controlling terminal, so it must not be run with `silent: true`
+			// (which pipes stdio and spins up a second, nested spinner), and our
+			// own spinner must already be stopped before it runs - otherwise the
+			// prompt and the spinner(s) fight over the terminal and the user is
+			// unable to type their passphrase.
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.args.git = true;
+
+			await gitCommit(ctx);
+
+			const commitCall = vi
+				.mocked(runCommand)
+				.mock.calls.find(([command]) => command.includes("commit"));
+			expect(commitCall).toBeDefined();
+			const [, commitOpts] = commitCall!;
+			expect(commitOpts).not.toHaveProperty("silent");
+
+			const stopOrder = spinner.stop.mock.invocationCallOrder[0];
+			const commitCallOrder = vi
+				.mocked(runCommand)
+				.mock.invocationCallOrder[
+				vi.mocked(runCommand).mock.calls.indexOf(commitCall!)
+			];
+			expect(stopOrder).toBeLessThan(commitCallOrder);
+		});
+
 		test("git not selected", async ({ expect }) => {
 			const ctx = createTestContext("test", { projectName: "test" });
 			ctx.args.git = false;

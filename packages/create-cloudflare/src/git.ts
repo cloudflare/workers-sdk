@@ -87,17 +87,27 @@ export const gitCommit = async (ctx: C3Context) => {
 			cwd: ctx.project.path,
 		});
 
+		// Stop our own animated spinner (and avoid `silent`/piped stdio) before
+		// running the actual commit. `git commit` may transitively invoke an
+		// interactive GPG passphrase prompt (e.g. via `pinentry-curses`) when
+		// `commit.gpgsign` is configured. That prompt draws directly to the
+		// controlling terminal, and it will fight our spinner's own redraw loop
+		// (and the nested spinner that `runCommand` would otherwise create for a
+		// `silent` call) for control of the screen, making the prompt unusable.
+		// Running with inherited stdio and no spinner lets any such prompt behave
+		// exactly as it would for a normal, manually-run `git commit`.
+		s.stop();
+
 		await runCommand(
 			["git", "commit", "-m", ctx.commitMessage, "--no-verify"],
 			{
-				silent: true,
 				cwd: ctx.project.path,
 			}
 		);
 
-		s.stop(`${brandColor("git")} ${dim(`commit`)}`);
+		updateStatus(`${brandColor("git")} ${dim(`commit`)}`);
 	} catch {
-		s.stop(`${brandColor("git")} ${dim(`commit failed`)}`);
+		updateStatus(`${brandColor("git")} ${dim(`commit failed`)}`);
 		updateStatus(
 			"Failed to create initial commit. You can commit manually later."
 		);
