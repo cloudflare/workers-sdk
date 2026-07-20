@@ -3,7 +3,7 @@ import SCRIPT_CACHE_OBJECT from "worker:cache/cache";
 import SCRIPT_CACHE_ENTRY from "worker:cache/cache-entry";
 import SCRIPT_CACHE_ENTRY_NOOP from "worker:cache/cache-entry-noop";
 import { z } from "zod";
-import { CacheBindings, SharedBindings } from "../../workers";
+import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
@@ -18,8 +18,7 @@ import type {
 import type { Plugin } from "../shared";
 
 export const CacheOptionsSchema = z.object({
-	cache: z.boolean().optional(),
-	cacheWarnUsage: z.boolean().optional(),
+	cacheAPI: z.boolean().optional(),
 });
 export const CacheSharedOptionsSchema = z.object({
 	cachePersist: PersistenceSchema,
@@ -58,8 +57,7 @@ export const CACHE_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 	}) {
-		const cache = options.cache ?? true;
-		const cacheWarnUsage = options.cacheWarnUsage ?? false;
+		const cache = options.cacheAPI ?? true;
 
 		let entryWorker: Worker;
 		if (cache) {
@@ -73,10 +71,6 @@ export const CACHE_PLUGIN: Plugin<
 					{
 						name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
 						durableObjectNamespace: CACHE_OBJECT,
-					},
-					{
-						name: CacheBindings.MAYBE_JSON_CACHE_WARN_USAGE,
-						json: JSON.stringify(cacheWarnUsage),
 					},
 				],
 			};

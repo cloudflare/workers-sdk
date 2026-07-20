@@ -1,13 +1,7 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import {
-	CACHE_PLUGIN_NAME,
-	LogLevel,
-	Miniflare,
-	Request,
-	Response,
-} from "miniflare";
+import { CACHE_PLUGIN_NAME, Miniflare, Request, Response } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,
@@ -419,32 +413,6 @@ test("operations respect cf.cacheKey", async ({ expect }) => {
 	const deleted2 = await cache.delete(key2);
 	expect(deleted2).toBe(true);
 });
-test("operations log warning on workers.dev subdomain", async ({ expect }) => {
-	// Set option, then reset after test
-	await ctx.setOptions({ cacheWarnUsage: true });
-	onTestFinished(() => ctx.setOptions({}));
-	ctx.caches = await ctx.mf.getCaches();
-	const defaultObject = await getControlStub(ctx.mf);
-
-	const cache = ctx.caches.default;
-	const key = "http://localhost/cache-workers-dev-warning";
-
-	ctx.log.logs = [];
-	const resToCache = new Response("body", {
-		headers: { "Cache-Control": "max-age=3600" },
-	});
-	await cache.put(key, resToCache.clone());
-	await defaultObject.waitForFakeTasks();
-	expect(ctx.log.logsAtLevel(LogLevel.WARN)).toEqual([
-		"Cache operations will have no impact if you deploy to a workers.dev subdomain!",
-	]);
-
-	// Check only warns once
-	ctx.log.logs = [];
-	await cache.put(key, resToCache);
-	await defaultObject.waitForFakeTasks();
-	expect(ctx.log.logsAtLevel(LogLevel.WARN)).toEqual([]);
-});
 test("operations persist cached data", async ({ expect }) => {
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp();
@@ -486,7 +454,7 @@ test("operations persist cached data", async ({ expect }) => {
 });
 test("operations are no-ops when caching disabled", async ({ expect }) => {
 	// Set option, then reset after test
-	await ctx.setOptions({ cache: false });
+	await ctx.setOptions({ cacheAPI: false });
 	onTestFinished(() => ctx.setOptions({}));
 	ctx.caches = await ctx.mf.getCaches();
 
