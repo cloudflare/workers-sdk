@@ -211,6 +211,29 @@ export function parseAttributes(json?: string | null): Record<string, unknown> {
 	}
 }
 
+/**
+ * Client-side mirror of the SQL `SPAN_IS_ERROR` (see below): a span is an error
+ * if it failed outright (`error` set, or a non-"ok" `outcome`) or it's an HTTP
+ * span whose response status is >= 400. workerd reports the invocation `outcome`
+ * as "ok" for a handler that returns a 4xx/5xx `Response` without throwing, so
+ * the `http.response.status_code` attribute is the only error signal for those.
+ * Keeping this in step with the trace-list query means the waterfall marks the
+ * same spans red that the list counts as errors.
+ */
+export function spanIsError(
+	span: Pick<Span, "error" | "outcome" | "attributes">
+): boolean {
+	if (span.error) {
+		return true;
+	}
+	if (span.outcome && span.outcome !== "ok") {
+		return true;
+	}
+	const status = parseAttributes(span.attributes)["http.response.status_code"];
+	const code = typeof status === "number" ? status : Number(status);
+	return Number.isFinite(code) && code >= 400;
+}
+
 /** Parse a JSON-encoded log message back to a display string. */
 export function formatLogMessage(message?: string): string {
 	if (message === undefined) {
@@ -276,6 +299,14 @@ export interface TraceFilters {
 // 4xx/5xx request otherwise looks like a successful ("ok") invocation.
 const SPAN_IS_ERROR = `(error IS NOT NULL OR (outcome IS NOT NULL AND outcome != 'ok') OR CAST(json_extract(json(attributes), '$."http.response.status_code"') AS INTEGER) >= 400)`;
 
+// Chrome DevTools auto-probes this well-known path on every page load to look for
+// a workspace mapping; it's tooling traffic, not a request the developer made, so
+// keep it out of the trace list. Guard the NULL case so non-fetch roots (which
+// have no `url.full`) aren't filtered out. Favicon requests are intentionally
+// left in — they're at least driven by real navigation.
+const DEVTOOLS_PROBE_PATH = "/.well-known/appspecific/com.chrome.devtools.json";
+const HIDE_DEVTOOLS_PROBE = `(json_extract(json(s.attributes), '$."url.full"') IS NULL OR json_extract(json(s.attributes), '$."url.full"') NOT LIKE '%${DEVTOOLS_PROBE_PATH}')`;
+
 const TRACE_LIST_HEAD = `SELECT s.trace_id, s.span_id AS root_span_id, s.name, s.kind, s.service, s.outcome, s.error, s.created_at, s.start_ms, json(s.attributes) AS attributes,
 		(SELECT ROUND(MAX(x.start_ms + COALESCE(x.duration_ms, 0)) - MIN(x.start_ms), 2) FROM spans x WHERE x.trace_id = s.trace_id) AS duration_ms,
 		(SELECT COUNT(*) FROM spans c WHERE c.trace_id = s.trace_id) AS span_count,
@@ -286,7 +317,7 @@ const TRACE_LIST_HEAD = `SELECT s.trace_id, s.span_id AS root_span_id, s.name, s
 /** Recent traces (most recent first), applying simple filters. */
 export function listTraces(filters: TraceFilters = {}): Promise<TraceRow[]> {
 	const limit = Number(filters.limit ?? 100);
-	const where: string[] = ["s.parent_id IS NULL"];
+	const where: string[] = ["s.parent_id IS NULL", HIDE_DEVTOOLS_PROBE];
 	const params: unknown[] = [];
 
 	if (filters.status === "success") {
@@ -548,6 +579,51 @@ export function stripDevRunnerSpans(spans: Span[]): Span[] {
 }
 
 /**
+ * Substrings that identify miniflare's own internal spans (never user code), so
+ * they can be dropped from every waterfall unconditionally. The named-Durable
+ * Object wrapper persists the instance name on construction by running a
+ * `CREATE TABLE`/`INSERT OR REPLACE` against a private `__miniflare_do_name`
+ * table (see packages/miniflare/src/workers/core/do-wrapper.worker.ts); those
+ * `durable_object_storage_exec` spans carry the table name in their
+ * `db.query.text` attribute and would otherwise show up as noise in the trace.
+ */
+const INTERNAL_SPAN_MARKERS = ["__miniflare_do_name"];
+
+/** True if the span is miniflare-internal plumbing rather than user activity. */
+function isInternalSpan(span: Span): boolean {
+	const haystack = `${span.name ?? ""} ${span.attributes ?? ""}`;
+	return INTERNAL_SPAN_MARKERS.some((marker) => haystack.includes(marker));
+}
+
+/**
+ * Drop miniflare's internal plumbing spans and re-parent any real children up to
+ * the nearest surviving ancestor (so nothing user-visible is lost). Applied to
+ * every trace, unlike the Vite runner strip which is opt-in.
+ */
+export function stripInternalSpans(spans: Span[]): Span[] {
+	const hidden = new Set<string>();
+	for (const s of spans) {
+		if (isInternalSpan(s)) {
+			hidden.add(s.span_id);
+		}
+	}
+	if (hidden.size === 0) {
+		return spans;
+	}
+	const byId = new Map(spans.map((s) => [s.span_id, s]));
+	const resolveParent = (s: Span): string | null => {
+		let p = s.parent_id ?? null;
+		while (p && hidden.has(p)) {
+			p = byId.get(p)?.parent_id ?? null;
+		}
+		return p;
+	};
+	return spans
+		.filter((s) => !hidden.has(s.span_id))
+		.map((s) => ({ ...s, parent_id: resolveParent(s) }));
+}
+
+/**
  * Flatten spans into a depth-ordered list (DFS), mirroring the dashboard's
  * trace waterfall layout. Times are re-based to the earliest span start so the
  * waterfall renders offsets from the trace start; a still-running span (NULL
@@ -558,7 +634,8 @@ export function buildSpanTree(
 	rootSpanId: string,
 	hideDevRunner = false
 ): LayoutSpan[] {
-	const source = hideDevRunner ? stripDevRunnerSpans(spans) : spans;
+	const base = hideDevRunner ? stripDevRunnerSpans(spans) : spans;
+	const source = stripInternalSpans(base);
 	if (source.length === 0) {
 		return [];
 	}

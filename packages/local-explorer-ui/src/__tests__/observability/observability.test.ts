@@ -1,11 +1,14 @@
 import { describe, test } from "vitest";
 import {
+	buildSpanTree,
 	buildWaterfall,
 	formatDuration,
 	formatLogMessage,
 	isRunning,
 	isViteWrapperSpan,
 	parseAttributes,
+	spanIsError,
+	stripInternalSpans,
 } from "../../utils/observability";
 import type { Span } from "../../utils/observability";
 
@@ -129,6 +132,86 @@ describe("isViteWrapperSpan", () => {
 				span({ service: "my-worker", name: "GET", attributes: `{"a":1}` })
 			)
 		).toBe(false);
+	});
+});
+
+describe("spanIsError", () => {
+	test("flags an explicit error or non-ok outcome", ({ expect }) => {
+		expect(spanIsError(span({ error: "boom" }))).toBe(true);
+		expect(spanIsError(span({ outcome: "exception" }))).toBe(true);
+	});
+	test("flags an HTTP span with a >= 400 status even when outcome is ok", ({
+		expect,
+	}) => {
+		// workerd reports "ok" for a 4xx/5xx Response returned without throwing.
+		expect(
+			spanIsError(
+				span({
+					outcome: "ok",
+					attributes: `{"http.response.status_code":500}`,
+				})
+			)
+		).toBe(true);
+		expect(
+			spanIsError(
+				span({
+					outcome: "ok",
+					attributes: `{"http.response.status_code":404}`,
+				})
+			)
+		).toBe(true);
+	});
+	test("treats a successful ok span as not-an-error", ({ expect }) => {
+		expect(
+			spanIsError(
+				span({ outcome: "ok", attributes: `{"http.response.status_code":200}` })
+			)
+		).toBe(false);
+		expect(spanIsError(span({ outcome: "ok" }))).toBe(false);
+	});
+});
+
+describe("stripInternalSpans", () => {
+	test("drops __miniflare_do_name spans and re-parents their children", ({
+		expect,
+	}) => {
+		const spans = [
+			span({ span_id: "root", parent_id: null }),
+			span({
+				span_id: "internal",
+				parent_id: "root",
+				name: "durable_object_storage_exec",
+				attributes: `{"db.query.text":"CREATE TABLE IF NOT EXISTS __miniflare_do_name (id INTEGER PRIMARY KEY, name TEXT)"}`,
+			}),
+			span({ span_id: "child", parent_id: "internal" }),
+		];
+		const out = stripInternalSpans(spans);
+		expect(out.map((s) => s.span_id)).toEqual(["root", "child"]);
+		// The surviving child is re-parented up past the hidden internal span.
+		expect(out.find((s) => s.span_id === "child")?.parent_id).toBe("root");
+	});
+
+	test("returns the input unchanged when there are no internal spans", ({
+		expect,
+	}) => {
+		const spans = [span({ span_id: "root", parent_id: null })];
+		expect(stripInternalSpans(spans)).toBe(spans);
+	});
+
+	test("buildSpanTree hides internal DO-name spans unconditionally", ({
+		expect,
+	}) => {
+		const spans = [
+			span({ span_id: "root", parent_id: null, start_ms: 0 }),
+			span({
+				span_id: "internal",
+				parent_id: "root",
+				start_ms: 1,
+				attributes: `{"db.query.text":"INSERT OR REPLACE INTO __miniflare_do_name (id, name) VALUES (1, ?)"}`,
+			}),
+		];
+		const tree = buildSpanTree(spans, "root");
+		expect(tree.map((s) => s.span_id)).toEqual(["root"]);
 	});
 });
 

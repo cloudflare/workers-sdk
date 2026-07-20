@@ -9,6 +9,7 @@ import {
 	buildSpanTree,
 	operationLabel,
 	parseAttributes,
+	spanIsError,
 } from "../../utils/observability";
 import { getSpanIcon } from "./icons";
 import type { LayoutSpan, Span } from "../../utils/observability";
@@ -85,7 +86,7 @@ function useWidthObserver() {
 }
 
 function hasErr(span: LayoutSpan): boolean {
-	return !!span.error || (!!span.outcome && span.outcome !== "ok");
+	return spanIsError(span);
 }
 
 export function TraceWaterfall({
