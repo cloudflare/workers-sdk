@@ -391,10 +391,10 @@ function maybePrintLocalExplorerAgentHint(
 		The Local Explorer API is available at ${explorerApiUrl}
 		Useful routes:
 		  GET ${explorerApiUrl} - OpenAPI schema
-		  GET ${explorerApiUrl}/local/workers - local Workers and bindings
-		  GET ${explorerApiUrl}/storage/kv/namespaces - KV namespaces
-		  GET ${explorerApiUrl}/r2/buckets - R2 buckets
 		  GET ${explorerApiUrl}/d1/database - D1 databases
+		  GET ${explorerApiUrl}/local/workers - local Workers and bindings
+		  GET ${explorerApiUrl}/r2/buckets - R2 buckets
+		  GET ${explorerApiUrl}/storage/kv/namespaces - KV namespaces
 		  GET ${explorerApiUrl}/workers/durable_objects/namespaces - Durable Object namespaces
 		  GET ${explorerApiUrl}/workflows - Workflows`);
 }
