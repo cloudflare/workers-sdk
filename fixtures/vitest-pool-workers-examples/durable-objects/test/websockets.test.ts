@@ -49,6 +49,40 @@ function getResponseWebSocket(response: Response) {
 	return socket;
 }
 
+it("dispatches to a Durable Object that omits optional WebSocket handlers", async ({
+	expect,
+}) => {
+	const id = env.OPTIONAL_WS.idFromName(
+		`optional-websocket-handlers-${crypto.randomUUID()}`
+	);
+	const stub = env.OPTIONAL_WS.get(id);
+	const response = await stub.fetch("https://example.com/", {
+		headers: { Upgrade: "websocket" },
+	});
+	const socket = getResponseWebSocket(response);
+	const messagesPromise = waitForMessages(socket, 1);
+
+	socket.accept();
+	socket.send("hello");
+	expect(await messagesPromise).toEqual(["echo:hello"]);
+
+	// `OptionalWebSocketHandlers` defines no `webSocketClose()`. Closing used to
+	// throw "does not define a `webSocketClose()` method" inside the Durable
+	// Object; it must be a silent no-op, as it is on deployed Workers.
+	socket.close(1000, "done");
+	await scheduler.wait(1000);
+
+	// The Durable Object survived the close and still serves new connections.
+	const secondResponse = await stub.fetch("https://example.com/", {
+		headers: { Upgrade: "websocket" },
+	});
+	const secondSocket = getResponseWebSocket(secondResponse);
+	const secondMessages = waitForMessages(secondSocket, 1);
+	secondSocket.accept();
+	secondSocket.send("still-here");
+	expect(await secondMessages).toEqual(["echo:still-here"]);
+});
+
 it("preserves hibernatable WebSocket message order", async ({ expect }) => {
 	for (let attempt = 0; attempt < orderingAttempts; attempt++) {
 		const id = env.COUNTER.idFromName(

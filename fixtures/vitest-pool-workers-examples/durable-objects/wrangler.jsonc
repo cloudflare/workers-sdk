@@ -12,13 +12,20 @@
 				"name": "SQL",
 				"class_name": "SQLiteDurableObject",
 			},
+			{
+				"name": "OPTIONAL_WS",
+				"class_name": "OptionalWebSocketHandlers",
+			},
 		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
 			"new_classes": ["Counter"],
-			"new_sqlite_classes": ["SQLiteDurableObject"],
+			"new_sqlite_classes": [
+				"SQLiteDurableObject",
+				"OptionalWebSocketHandlers",
+			],
 		},
 	],
 }
