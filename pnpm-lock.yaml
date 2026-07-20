@@ -3905,6 +3905,9 @@ importers:
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
+      '@cloudflare/unenv-preset':
+        specifier: workspace:*
+        version: link:../unenv-preset
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig

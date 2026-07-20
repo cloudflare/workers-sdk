@@ -61,6 +61,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/mock-npm-registry": "workspace:*",
+		"@cloudflare/unenv-preset": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",

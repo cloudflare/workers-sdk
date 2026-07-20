@@ -8,9 +8,17 @@ import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
 import { ModuleRuleTypeSchema, Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
+import {
+	builtinModulesAlwaysEnabled,
+	createBuiltinModuleAvailability,
+} from "./builtin-module-availability";
 import { isFileNotFoundError } from "./helpers";
+import type { BuiltinModuleAvailability } from "./builtin-module-availability";
 import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
 import type { Vite } from "vitest/node";
+
+export { createBuiltinModuleAvailability };
+export type { BuiltinModuleAvailability };
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:module-fallback",
@@ -143,7 +151,8 @@ async function getCjsNamedExports(
 			vite,
 			reexport,
 			filePath,
-			/* isRequire */ true
+			/* isRequire */ true,
+			builtinModulesAlwaysEnabled
 		);
 		if (seen.has(resolved)) {
 			continue;
@@ -247,7 +256,8 @@ async function viteResolve(
 	vite: Vite.ViteDevServer,
 	specifier: string,
 	referrer: string,
-	isRequire: boolean
+	isRequire: boolean,
+	isBuiltinModuleEnabled: BuiltinModuleAvailability
 ): Promise<string> {
 	const resolved = await vite.pluginContainer.resolveId(specifier, referrer, {
 		ssr: true,
@@ -276,7 +286,10 @@ async function viteResolve(
 		// (e.g. https://github.com/sindresorhus/p-limit/blob/f53bdb5f464ae112b2859e834fdebedc0745199b/package.json#L20)
 		let { id } = resolved;
 		if (workerdBuiltinModules.has(id)) {
-			return `/${id}`;
+			if (isBuiltinModuleEnabled(id)) {
+				return `/${id}`;
+			}
+			throw new Error("Not found");
 		}
 		if (id.startsWith("node:")) {
 			throw new Error("Not found");
@@ -284,7 +297,10 @@ async function viteResolve(
 
 		id = `node:${id}`;
 		if (workerdBuiltinModules.has(id)) {
-			return `/${id}`;
+			if (isBuiltinModuleEnabled(id)) {
+				return `/${id}`;
+			}
+			throw new Error("Not found");
 		}
 
 		// If we get this far, we have something that:
@@ -305,6 +321,7 @@ const wasmModuleSuffix = ".wasm?module";
 type ResolveMethod = "import" | "require";
 async function resolve(
 	vite: Vite.ViteDevServer,
+	isBuiltinModuleEnabled: BuiltinModuleAvailability,
 	method: ResolveMethod,
 	target: string,
 	specifier: string,
@@ -324,15 +341,11 @@ async function resolve(
 		return filePath;
 	}
 
-	// `workerd` will always try to resolve modules relative to the referencing
-	// dir first. Built-in `node:*`/`cloudflare:*` imports only exist at the root.
-	// We need to ensure we only load a single copy of these modules, therefore,
-	// we return a redirect to the root here. Note `workerd` will automatically
-	// look in the root if we return 404 from the fallback service when
-	// *import*ing `node:*`/`cloudflare:*` modules, but not when *require()*ing
-	// them. For the sake of consistency (and a nice return type on this function)
-	// we return a redirect for `import`s too.
-	if (referrerDir !== "/" && workerdBuiltinModules.has(specifier)) {
+	if (
+		referrerDir !== "/" &&
+		workerdBuiltinModules.has(specifier) &&
+		isBuiltinModuleEnabled(specifier)
+	) {
 		return `/${specifier}`;
 	}
 
@@ -346,7 +359,13 @@ async function resolve(
 		return filePath;
 	}
 
-	return viteResolve(vite, specifier, referrer, method === "require");
+	return viteResolve(
+		vite,
+		specifier,
+		referrer,
+		method === "require",
+		isBuiltinModuleEnabled
+	);
 }
 
 // `workerd` resolves a non-prefixed specifier by joining it to the referrer's
@@ -528,6 +547,7 @@ async function load(
 
 export async function handleModuleFallbackRequest(
 	vite: Vite.ViteDevServer,
+	isBuiltinModuleEnabled: (specifier: string, referrer: string) => boolean,
 	request: Request
 ): Promise<Response> {
 	const method = request.headers.get("X-Resolve-Method");
@@ -574,7 +594,14 @@ export async function handleModuleFallbackRequest(
 	const logBase = `${method}(${quotedTarget}) relative to ${referrer}:`;
 
 	try {
-		const filePath = await resolve(vite, method, target, specifier, referrer);
+		const filePath = await resolve(
+			vite,
+			(builtinSpecifier) => isBuiltinModuleEnabled(builtinSpecifier, referrer),
+			method,
+			target,
+			specifier,
+			referrer
+		);
 
 		return await load(vite, logBase, method, target, specifier, filePath);
 	} catch (e) {
