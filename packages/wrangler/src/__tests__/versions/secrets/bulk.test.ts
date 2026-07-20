@@ -9,9 +9,11 @@ import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { mockGetVersion, mockPostVersion, mockSetupApiCalls } from "./utils";
-import type { VersionDetails } from "../../../versions/secrets";
-import type { CfPlacement } from "@cloudflare/workers-utils";
+import {
+	expectSecretPatch,
+	mockPatchLatestVersion,
+	mockPatchLatestVersionNoVersions,
+} from "./utils";
 import type { Interface } from "node:readline";
 
 function mockReadlineInput(input: string) {
@@ -63,19 +65,12 @@ describe("versions secret bulk", () => {
 			{ encoding: "utf8" }
 		);
 
-		mockSetupApiCalls(expect);
-		mockPostVersion(expect, (metadata) => {
-			expect(metadata.bindings).toStrictEqual([
-				{ type: "inherit", name: "do-binding" },
-				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
-				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
-				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
-			]);
-			expect(metadata.keep_bindings).toStrictEqual([
-				"secret_key",
-				"secret_text",
-			]);
-			expect(metadata.keep_assets).toBeTruthy();
+		mockPatchLatestVersion(expect, (patch) => {
+			expectSecretPatch(expect, patch, {
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			});
 		});
 
 		await runWrangler(`versions secret bulk secrets.json --name script-name`);
@@ -100,8 +95,13 @@ describe("versions secret bulk", () => {
 			".env",
 			"SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3"
 		);
-		mockSetupApiCalls(expect);
-		mockPostVersion(expect);
+		mockPatchLatestVersion(expect, (patch) => {
+			expectSecretPatch(expect, patch, {
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			});
+		});
 		await runWrangler(`versions secret bulk .env --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
@@ -122,8 +122,9 @@ describe("versions secret bulk", () => {
 	test("no wrangler configuration warnings shown", async ({ expect }) => {
 		await writeFile("secrets.json", JSON.stringify({ SECRET_1: "secret-1" }));
 		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
-		mockSetupApiCalls(expect);
-		mockPostVersion(expect);
+		mockPatchLatestVersion(expect, (patch) => {
+			expectSecretPatch(expect, patch, { SECRET_1: "secret-1" });
+		});
 		await runWrangler(`versions secret bulk secrets.json --name script-name`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -138,19 +139,12 @@ describe("versions secret bulk", () => {
 			})
 		);
 
-		mockSetupApiCalls(expect);
-		mockPostVersion(expect, (metadata) => {
-			expect(metadata.bindings).toStrictEqual([
-				{ type: "inherit", name: "do-binding" },
-				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
-				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
-				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
-			]);
-			expect(metadata.keep_bindings).toStrictEqual([
-				"secret_key",
-				"secret_text",
-			]);
-			expect(metadata.keep_assets).toBeTruthy();
+		mockPatchLatestVersion(expect, (patch) => {
+			expectSecretPatch(expect, patch, {
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			});
 		});
 
 		await runWrangler(`versions secret bulk --name script-name`);
@@ -175,19 +169,12 @@ describe("versions secret bulk", () => {
 			"SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3"
 		);
 
-		mockSetupApiCalls(expect);
-		mockPostVersion(expect, (metadata) => {
-			expect(metadata.bindings).toStrictEqual([
-				{ type: "inherit", name: "do-binding" },
-				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
-				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
-				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
-			]);
-			expect(metadata.keep_bindings).toStrictEqual([
-				"secret_key",
-				"secret_text",
-			]);
-			expect(metadata.keep_assets).toBeTruthy();
+		mockPatchLatestVersion(expect, (patch) => {
+			expectSecretPatch(expect, patch, {
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			});
 		});
 
 		await runWrangler(`versions secret bulk --name script-name`);
@@ -219,21 +206,6 @@ describe("versions secret bulk", () => {
 
 	test("should error on invalid json stdin", async ({ expect }) => {
 		mockReadlineInput("hello world");
-
-		mockSetupApiCalls(expect);
-		mockPostVersion(expect, (metadata) => {
-			expect(metadata.bindings).toStrictEqual([
-				{ type: "inherit", name: "do-binding" },
-				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
-				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
-				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
-			]);
-			expect(metadata.keep_bindings).toStrictEqual([
-				"secret_key",
-				"secret_text",
-			]);
-			expect(metadata.keep_assets).toBeTruthy();
-		});
 
 		await runWrangler(`versions secret bulk --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
@@ -267,103 +239,20 @@ describe("versions secret bulk", () => {
 		);
 	});
 
-	test("unsafe metadata is provided", async ({ expect }) => {
-		writeWranglerConfig({
-			name: "script-name",
-			unsafe: { metadata: { build_options: { stable_id: "foo/bar" } } },
-		});
-
-		await writeFile(
-			"secrets.json",
-			JSON.stringify({
-				SECRET_1: "secret-1",
-				SECRET_2: "secret-2",
-				SECRET_3: "secret-3",
-			}),
-			{ encoding: "utf8" }
-		);
-
-		mockSetupApiCalls(expect);
-		mockPostVersion(expect, (metadata) => {
-			expect(metadata.bindings).toStrictEqual([
-				{ type: "inherit", name: "do-binding" },
-				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
-				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
-				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
-			]);
-			expect(metadata.keep_bindings).toStrictEqual([
-				"secret_key",
-				"secret_text",
-			]);
-			expect(metadata.keep_assets).toBeTruthy();
-			expect(metadata["build_options"]).toStrictEqual({ stable_id: "foo/bar" });
-		});
-
-		await runWrangler(`versions secret bulk secrets.json --name script-name`);
-		expect(std.out).toMatchInlineSnapshot(
-			`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			🌀 Creating the secrets for the Worker "script-name"
-			✨ Successfully created secret for key: SECRET_1
-			✨ Successfully created secret for key: SECRET_2
-			✨ Successfully created secret for key: SECRET_3
-			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
-		`
-		);
-		expect(std.err).toMatchInlineSnapshot(`""`);
-	});
-
-	test("unsafe metadata not included if not in wrangler.toml", async ({
+	test("shows a nice error message when the Worker has no versions", async ({
 		expect,
 	}) => {
-		writeWranglerConfig({
-			name: "script-name",
+		await writeFile("secrets.json", JSON.stringify({ SECRET_1: "secret-1" }), {
+			encoding: "utf8",
 		});
 
-		await writeFile(
-			"secrets.json",
-			JSON.stringify({
-				SECRET_1: "secret-1",
-				SECRET_2: "secret-2",
-				SECRET_3: "secret-3",
-			}),
-			{ encoding: "utf8" }
-		);
+		mockPatchLatestVersionNoVersions(expect);
 
-		mockSetupApiCalls(expect);
-		mockPostVersion(expect, (metadata) => {
-			expect(metadata.bindings).toStrictEqual([
-				{ type: "inherit", name: "do-binding" },
-				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
-				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
-				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
-			]);
-			expect(metadata.keep_bindings).toStrictEqual([
-				"secret_key",
-				"secret_text",
-			]);
-			expect(metadata.keep_assets).toBeTruthy();
-			expect(metadata["build_options"]).toBeUndefined();
-		});
-
-		await runWrangler(`versions secret bulk secrets.json --name script-name`);
-		expect(std.out).toMatchInlineSnapshot(
-			`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			🌀 Creating the secrets for the Worker "script-name"
-			✨ Successfully created secret for key: SECRET_1
-			✨ Successfully created secret for key: SECRET_2
-			✨ Successfully created secret for key: SECRET_3
-			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
-		`
+		await expect(
+			runWrangler(`versions secret bulk secrets.json --name script-name`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: There are currently no uploaded versions of this Worker. Please upload a version before modifying a secret.]`
 		);
-		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
 	describe("multi-env warning", () => {
@@ -377,8 +266,9 @@ describe("versions secret bulk", () => {
 			);
 
 			writeWranglerConfig({ env: { test: {} } });
-			mockSetupApiCalls(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET_1: "secret-1" });
+			});
 
 			await runWrangler(`versions secret bulk --name script-name`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -403,8 +293,9 @@ describe("versions secret bulk", () => {
 			);
 
 			writeWranglerConfig({ env: { test: {} } });
-			mockSetupApiCalls(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET_1: "secret-1" });
+			});
 
 			await runWrangler(`versions secret bulk --name script-name --env test`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -420,8 +311,9 @@ describe("versions secret bulk", () => {
 			);
 
 			writeWranglerConfig();
-			mockSetupApiCalls(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET_1: "secret-1" });
+			});
 
 			await runWrangler(`versions secret bulk --name script-name`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -438,8 +330,9 @@ describe("versions secret bulk", () => {
 			);
 
 			writeWranglerConfig({ env: { test: {} } });
-			mockSetupApiCalls(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET_1: "secret-1" });
+			});
 
 			await runWrangler(`versions secret bulk --name script-name`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -455,97 +348,12 @@ describe("versions secret bulk", () => {
 			);
 
 			writeWranglerConfig({ env: { test: {} } });
-			mockSetupApiCalls(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET_1: "secret-1" });
+			});
 
 			await runWrangler(`versions secret bulk --name script-name --env=""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
-	});
-
-	describe("placement", () => {
-		function buildVersionInfo(placement: CfPlacement): VersionDetails {
-			return {
-				id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
-				metadata: {} as VersionDetails["metadata"],
-				number: 2,
-				resources: {
-					bindings: [],
-					script: {
-						etag: "etag",
-						handlers: ["fetch"],
-						last_deployed_from: "api",
-						placement,
-					},
-					script_runtime: {
-						usage_model: "standard",
-						limits: {},
-					},
-				},
-			};
-		}
-
-		async function runBulk() {
-			await writeFile(
-				"secrets.json",
-				JSON.stringify({ SECRET_1: "secret-1" }),
-				{ encoding: "utf8" }
-			);
-			await runWrangler(`versions secret bulk secrets.json --name script-name`);
-		}
-
-		test("preserves smart placement on the new version", async ({ expect }) => {
-			const placement: CfPlacement = { mode: "smart" };
-			mockSetupApiCalls(expect);
-			mockGetVersion(expect, buildVersionInfo(placement));
-			mockPostVersion(expect, (metadata) => {
-				expect(metadata.placement).toStrictEqual(placement);
-			});
-			await runBulk();
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		test("preserves targeted placement with service targets on the new version", async ({
-			expect,
-		}) => {
-			const placement = {
-				mode: "targeted",
-				target: [{ hostname: "example.com", id: 410, type: "http" }],
-			} as unknown as CfPlacement;
-			mockSetupApiCalls(expect);
-			mockGetVersion(expect, buildVersionInfo(placement));
-			mockPostVersion(expect, (metadata) => {
-				expect(metadata.placement).toStrictEqual(placement);
-			});
-			await runBulk();
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		test("preserves targeted placement with region targets on the new version", async ({
-			expect,
-		}) => {
-			const placement = {
-				mode: "targeted",
-				target: [{ id: 12, region: "aws:ap-northeast-1", type: "region" }],
-			} as unknown as CfPlacement;
-			mockSetupApiCalls(expect);
-			mockGetVersion(expect, buildVersionInfo(placement));
-			mockPostVersion(expect, (metadata) => {
-				expect(metadata.placement).toStrictEqual(placement);
-			});
-			await runBulk();
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		test("omits placement when the existing version has none", async ({
-			expect,
-		}) => {
-			mockSetupApiCalls(expect);
-			mockPostVersion(expect, (metadata) => {
-				expect(metadata.placement).toBeUndefined();
-			});
-			await runBulk();
-			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
 });
