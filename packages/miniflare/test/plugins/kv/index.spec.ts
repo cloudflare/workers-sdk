@@ -257,8 +257,8 @@ test("bulk get: check metadata for empty string value", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", "", { metadata: { testing: true } });
 
-	const result: any = await kv.getWithMetadata(["key1"]);
-	const expectedResult: any = new Map([
+	const result = await kv.getWithMetadata(["key1"]);
+	const expectedResult = new Map([
 		["key1", { value: "", metadata: { testing: true } }],
 	]);
 	expect(result).toEqual(expectedResult);
@@ -270,11 +270,8 @@ test("bulk get: check metadata for falsy json values", async ({ expect }) => {
 	await kv.put("key2", "false", { metadata: { testing: "false" } });
 	await kv.put("key3", "null", { metadata: { testing: "null" } });
 
-	const result: any = await kv.getWithMetadata(
-		["key1", "key2", "key3"],
-		"json"
-	);
-	const expectedResult: any = new Map([
+	const result = await kv.getWithMetadata(["key1", "key2", "key3"], "json");
+	const expectedResult = new Map([
 		["key1", { value: 0, metadata: { testing: "zero" } }],
 		["key2", { value: false, metadata: { testing: "false" } }],
 		["key3", { value: null, metadata: { testing: "null" } }],
@@ -290,8 +287,8 @@ test("bulk get: distinguishes falsy values from missing keys", async ({
 
 	// A present key holding a falsy value keeps its `{ value, metadata }`
 	// wrapper, while a missing key is still returned as a bare `null`
-	const result: any = await kv.getWithMetadata(["key1", "key2"], "json");
-	const expectedResult: any = new Map([
+	const result = await kv.getWithMetadata(["key1", "key2"], "json");
+	const expectedResult = new Map([
 		["key1", { value: 0, metadata: { testing: true } }],
 		["key2", null],
 	]);
