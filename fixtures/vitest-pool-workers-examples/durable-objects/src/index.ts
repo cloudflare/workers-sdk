@@ -50,22 +50,6 @@ export class Counter extends DurableObject {
 	}
 }
 
-// Defines `webSocketMessage()` but deliberately omits `webSocketClose()` and
-// `webSocketError()`, which `workerd` treats as optional handlers.
-export class OptionalWebSocketHandlers extends DurableObject {
-	fetch() {
-		const { 0: client, 1: server } = new WebSocketPair();
-		this.ctx.acceptWebSocket(server);
-		return new Response(null, { status: 101, webSocket: client });
-	}
-
-	webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
-		const value =
-			typeof message === "string" ? message : new TextDecoder().decode(message);
-		ws.send(`echo:${value}`);
-	}
-}
-
 export class SQLiteDurableObject extends DurableObject {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);

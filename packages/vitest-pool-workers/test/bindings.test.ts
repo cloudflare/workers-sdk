@@ -52,6 +52,101 @@ test("hello_world support", async ({ expect, seed, vitestRun }) => {
 	await expect(result.exitCode).resolves.toBe(0);
 });
 
+test("Durable Objects may omit optional WebSocket handlers", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			wrangler: { configPath: "./wrangler.jsonc" },
+		}),
+		"wrangler.jsonc": dedent`
+			{
+				"name": "test-worker",
+				"main": "./index.ts",
+				"compatibility_date": "2025-12-02",
+				"compatibility_flags": ["nodejs_compat"],
+				"durable_objects": {
+					"bindings": [
+						{ "name": "OPTIONAL_WS", "class_name": "OptionalWebSocketHandlers" }
+					]
+				},
+				"migrations": [
+					{ "tag": "v1", "new_sqlite_classes": ["OptionalWebSocketHandlers"] }
+				]
+			}
+		`,
+		"index.ts": dedent /* javascript */ `
+			import { DurableObject } from "cloudflare:workers";
+
+			// Defines webSocketMessage() but deliberately omits webSocketClose()
+			// and webSocketError(), which workerd treats as optional handlers.
+			export class OptionalWebSocketHandlers extends DurableObject {
+				fetch(request) {
+					if (request.headers.get("Upgrade") !== "websocket") {
+						return new Response("ok");
+					}
+					const { 0: client, 1: server } = new WebSocketPair();
+					this.ctx.acceptWebSocket(server);
+					return new Response(null, { status: 101, webSocket: client });
+				}
+
+				webSocketMessage(ws, message) {
+					ws.send("echo:" + message);
+				}
+
+				socketCount() {
+					return this.ctx.getWebSockets().length;
+				}
+			}
+
+			export default {
+				async fetch() { return new Response("ok"); },
+			};
+		`,
+		"index.test.ts": dedent /* javascript */ `
+			import { env } from "cloudflare:workers";
+			import { it, expect } from "vitest";
+
+			it("echoes a message and closes without a webSocketClose() handler", async () => {
+				const stub = env.OPTIONAL_WS.get(env.OPTIONAL_WS.idFromName("ws"));
+				const response = await stub.fetch("https://example.com", {
+					headers: { Upgrade: "websocket" },
+				});
+				const socket = response.webSocket;
+				if (!socket) { throw new Error("Expected WebSocket response"); }
+
+				const message = new Promise((resolve) => {
+					socket.addEventListener("message", (event) => resolve(event.data));
+				});
+				socket.accept();
+				socket.send("hello");
+				expect(await message).toBe("echo:hello");
+
+				// Dispatches webSocketClose() on the Durable Object, which doesn't define it
+				socket.close(1000, "done");
+
+				// Wait until the runtime has actually processed the close, so the
+				// dispatch has definitely happened before the run ends
+				for (let i = 0; i < 50 && (await stub.socketCount()) > 0; i++) {
+					await scheduler.wait(100);
+				}
+				expect(await stub.socketCount()).toBe(0);
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+
+	await expect(result.exitCode).resolves.toBe(0);
+	// Dispatching to the absent handlers must be a no-op. Previously the wrapper
+	// threw "<ClassName> exported by <path> does not define a `webSocketClose()`
+	// method", surfacing as an uncaught exception from the Durable Object.
+	expect(result.stderr).not.toMatch("does not define");
+	expect(result.stdout).not.toMatch("does not define");
+});
+
 test("adminSecretsStore seeds and reads secrets", async ({
 	expect,
 	seed,
