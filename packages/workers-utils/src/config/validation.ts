@@ -341,6 +341,13 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
+	validateOptionalTypedArray(
+		diagnostics,
+		"addresses",
+		rawConfig.addresses,
+		"string"
+	);
+
 	validateOptionalProperty(
 		diagnostics,
 		"",
@@ -506,6 +513,7 @@ export function normalizeAndValidateConfig(
 		send_metrics: rawConfig.send_metrics,
 		dependencies_instrumentation: rawConfig.dependencies_instrumentation,
 		keep_vars: rawConfig.keep_vars,
+		addresses: rawConfig.addresses,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
 		site: normalizeAndValidateSite(
@@ -3982,7 +3990,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 
-	// Queue bindings must have a binding and queue.
+	// Queue bindings must have a binding. The queue can be provisioned at deploy time.
 	let isValid = true;
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
@@ -3994,11 +4002,11 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	if (
-		!isRequiredProperty(value, "queue", "string") ||
-		(value as { queue: string }).queue.length === 0
+		!isOptionalProperty(value, "queue", "string") ||
+		(hasProperty(value, "queue") && value.queue === "")
 	) {
 		diagnostics.errors.push(
-			`"${field}" bindings should have a string "queue" field but got ${JSON.stringify(
+			`"${field}" bindings should optionally have a non-empty string "queue" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4771,7 +4779,7 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		return false;
 	}
 	let isValid = true;
-	// Worker namespace bindings must have a binding, and a namespace.
+	// Worker namespace bindings must have a binding. The namespace can be provisioned at deploy time.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" should have a string "binding" field but got ${JSON.stringify(
@@ -4780,9 +4788,9 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "namespace", "string")) {
+	if (!isOptionalProperty(value, "namespace", "string")) {
 		diagnostics.errors.push(
-			`"${field}" should have a string "namespace" field but got ${JSON.stringify(
+			`"${field}" should optionally have a string "namespace" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -5240,9 +5248,9 @@ const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "app_id", "string")) {
+	if (!isOptionalProperty(value, "app_id", "string")) {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a string "app_id" field but got ${JSON.stringify(
+			`"${field}" bindings may have a string "app_id" field but got ${JSON.stringify(
 				value
 			)}.`
 		);

@@ -18,6 +18,7 @@ import { readConfig, readNewConfig } from "../../config";
 import { containersScope } from "../../containers";
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
+import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { getBindings, getHostAndRoutes, getInferredHost } from "../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
@@ -365,7 +366,21 @@ async function resolveConfig(
 		"dev"
 	);
 
-	const nodejsCompatMode = unwrapHook(input.build?.nodejsCompatMode, config);
+	// Mirror the CLI: when the caller does not provide a mode (or a hook),
+	// derive it from the same effective values the CLI feeds
+	// validateNodeCompatMode — input-level overrides first, then the
+	// resolved config (the CLI passes `args.* ?? parsedConfig.*`; the
+	// programmatic spelling of no-bundle is `build.bundle: false`).
+	// Otherwise a dev worker's own `nodejs_compat` compatibility flag is
+	// silently ignored. An explicit null still disables.
+	const nodejsCompatMode =
+		input.build?.nodejsCompatMode === undefined
+			? validateNodeCompatMode(
+					input.compatibilityDate ?? config.compatibility_date,
+					input.compatibilityFlags ?? config.compatibility_flags ?? [],
+					{ noBundle: !(input.build?.bundle ?? !config.no_bundle) }
+				)
+			: unwrapHook(input.build.nodejsCompatMode, config);
 
 	const { bindings, unsafe, printCurrentBindings } = await resolveBindings(
 		config,
@@ -569,7 +584,7 @@ function getDevCompatibilityDate(
 }
 
 export class ConfigController extends Controller {
-	latestInput?: StartDevWorkerInput;
+	latestInput?: WranglerStartDevWorkerInput;
 	latestWranglerConfig?: Config;
 	latestConfig?: StartDevWorkerOptions;
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
@@ -611,20 +626,20 @@ export class ConfigController extends Controller {
 		});
 	}
 
-	public set(input: StartDevWorkerInput, throwErrors = false) {
+	public set(input: WranglerStartDevWorkerInput, throwErrors = false) {
 		logger.debug("setting config");
 		return runWithLogLevel(input.dev?.logLevel, () =>
 			this.#updateConfig(input, throwErrors)
 		);
 	}
-	public patch(input: Partial<StartDevWorkerInput>) {
+	public patch(input: Partial<WranglerStartDevWorkerInput>) {
 		logger.debug("patching config");
 		assert(
 			this.latestInput,
 			"Cannot call updateConfig without previously calling setConfig"
 		);
 
-		const config: StartDevWorkerInput = {
+		const config: WranglerStartDevWorkerInput = {
 			...this.latestInput,
 			...input,
 		};
@@ -634,7 +649,7 @@ export class ConfigController extends Controller {
 		);
 	}
 
-	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
+	async #updateConfig(input: WranglerStartDevWorkerInput, throwErrors = false) {
 		logger.debug(
 			"Updating config...",
 			this.#abortController?.signal,

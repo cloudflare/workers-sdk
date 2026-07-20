@@ -39,6 +39,7 @@ import {
 	isValidStepConfig,
 	isValidStepName,
 	MAX_STEP_NAME_LENGTH,
+	SENSITIVE_STEP_OUTPUT,
 } from "./lib/validators";
 import { MODIFIER_KEYS } from "./modifier";
 import type { Engine } from "./engine";
@@ -67,6 +68,8 @@ export type Event = {
 // execution.
 const SERIALIZABLE_DELAY_MARKER = "[dynamic]";
 type SerializableDelayMarker = typeof SERIALIZABLE_DELAY_MARKER;
+
+export const REDACTED_STEP_OUTPUT = "[REDACTED]";
 
 // The persisted, fully-merged config. A dynamic delay is stored as the marker.
 export type ResolvedStepConfig = {
@@ -1257,12 +1260,18 @@ export class Context extends RpcTarget {
 				}
 			}
 
+			const redactOutput = config.sensitive === SENSITIVE_STEP_OUTPUT;
 			this.#engine.writeLog(events.success, cacheKey, stepNameWithCounter, {
 				// TODO (WOR-86): Add limits, figure out serialization
-				result: lastStreamMeta ? undefined : result,
-				...(lastStreamMeta && {
-					streamOutput: { cacheKey, meta: lastStreamMeta },
-				}),
+				result: redactOutput
+					? REDACTED_STEP_OUTPUT
+					: lastStreamMeta
+						? undefined
+						: result,
+				...(!redactOutput &&
+					lastStreamMeta && {
+						streamOutput: { cacheKey, meta: lastStreamMeta },
+					}),
 				...(!isRollback && rollbackFn ? { hasRollback: true } : {}),
 			});
 			this.#registerRollback({
