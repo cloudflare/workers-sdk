@@ -318,14 +318,8 @@ describe("git helpers", () => {
 		test("runs `git commit` without a silent/piped stdio or an active spinner", async ({
 			expect,
 		}) => {
-			// Regression test: `git commit` can transitively prompt for an
-			// interactive GPG passphrase (e.g. via `pinentry-curses`) when
-			// `commit.gpgsign` is configured. That prompt writes directly to the
-			// controlling terminal, so it must not be run with `silent: true`
-			// (which pipes stdio and spins up a second, nested spinner), and our
-			// own spinner must already be stopped before it runs - otherwise the
-			// prompt and the spinner(s) fight over the terminal and the user is
-			// unable to type their passphrase.
+			// `git commit` may show an interactive GPG prompt, so it must not be
+			// silent/piped, and the spinner must be stopped before it runs.
 			const ctx = createTestContext("test", { projectName: "test" });
 			ctx.args.git = true;
 
@@ -403,6 +397,34 @@ describe("git helpers", () => {
 
 			expect(spinner.start).toHaveBeenCalledOnce();
 			expect(spinner.stop).toHaveBeenCalledOnce();
+			expect(updateStatus).toHaveBeenCalledWith(
+				expect.stringContaining("Failed to create initial commit")
+			);
+			expect(ctx.commitMessage).toBeDefined();
+		});
+
+		test("staging failure is handled gracefully and stops the spinner", async ({
+			expect,
+		}) => {
+			// If `git add .` throws, the spinner must still be stopped.
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.args.git = true;
+
+			// Note: beforeEach already sets up git --version mock via mockGitInstalled(true)
+			vi.mocked(runCommand).mockRejectedValueOnce(
+				new Error("fatal: unable to stage changes")
+			);
+
+			// Should not throw
+			await expect(gitCommit(ctx)).resolves.not.toThrow();
+
+			expect(spinner.start).toHaveBeenCalledOnce();
+			expect(spinner.stop).toHaveBeenCalledOnce();
+			// `git commit` should never have been attempted
+			expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
+				expect.arrayContaining(["git", "commit"]),
+				expect.any(Object)
+			);
 			expect(updateStatus).toHaveBeenCalledWith(
 				expect.stringContaining("Failed to create initial commit")
 			);
