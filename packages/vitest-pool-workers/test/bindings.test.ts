@@ -129,10 +129,12 @@ test("Durable Objects may omit optional WebSocket handlers", async ({
 
 				// Wait until the runtime has actually processed the close, so the
 				// dispatch has definitely happened before the run ends
-				await vi.waitUntil(async () => (await stub.socketCount()) === 0, {
-					timeout: 5_000,
-					interval: 100,
-				});
+				await vi.waitFor(
+					async () => {
+						expect(await stub.socketCount()).toBe(0);
+					},
+					{ timeout: 5_000, interval: 100 }
+				);
 			});
 		`,
 	});
