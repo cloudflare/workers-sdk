@@ -2,11 +2,13 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import {
 	convertToWranglerConfig,
+	getRootConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
 	getWorkersDir,
 	OutputWorkerSchema,
+	SettingsSchema,
 	WORKER_CONFIG_FILENAME,
 } from "@cloudflare/config";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
@@ -49,6 +51,13 @@ export async function readBuildOutputWorkers(
 		);
 	}
 
+	// Read the optional top-level `config.json` holding project-level
+	// settings (`account_id`, `compliance_region`) shared by every Worker.
+	const rootConfigPath = getRootConfigPath(root);
+	const settings = fs.existsSync(rootConfigPath)
+		? SettingsSchema.parse(JSON.parse(fs.readFileSync(rootConfigPath, "utf-8")))
+		: undefined;
+
 	return workerNames.map((workerName) => {
 		const configPath = getWorkerConfigPath(root, workerName);
 		assert(
@@ -59,7 +68,7 @@ export async function readBuildOutputWorkers(
 			JSON.parse(fs.readFileSync(configPath, "utf-8"))
 		);
 		const { manifest, ...inputShape } = outputConfig;
-		const rawConfig = convertToWranglerConfig(inputShape);
+		const rawConfig = convertToWranglerConfig(inputShape, settings);
 
 		const { config, diagnostics } = normalizeAndValidateConfig(
 			rawConfig,
