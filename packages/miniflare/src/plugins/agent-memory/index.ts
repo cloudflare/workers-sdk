@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
@@ -20,6 +20,7 @@ export const AgentMemoryOptionsSchema = z.object({
 export const AGENT_MEMORY_PLUGIN_NAME = "agent-memory";
 
 const AGENT_MEMORY_SCOPE = "agent-memory";
+const AGENT_MEMORY_REMOTE_SERVICE_NAME = `${AGENT_MEMORY_SCOPE}:remote`;
 
 export const AGENT_MEMORY_PLUGIN: Plugin<typeof AgentMemoryOptionsSchema> = {
 	options: AgentMemoryOptionsSchema,
@@ -32,10 +33,10 @@ export const AGENT_MEMORY_PLUGIN: Plugin<typeof AgentMemoryOptionsSchema> = {
 		return Object.entries(options.agentMemory).map(([bindingName, entry]) => ({
 			name: bindingName,
 			service: {
-				name: getUserBindingServiceName(
-					AGENT_MEMORY_SCOPE,
-					bindingName,
-					entry.remoteProxyConnectionString
+				name: AGENT_MEMORY_REMOTE_SERVICE_NAME,
+				props: buildRemoteProxyProps(
+					entry.remoteProxyConnectionString,
+					bindingName
 				),
 			},
 		}));
@@ -53,20 +54,15 @@ export const AGENT_MEMORY_PLUGIN: Plugin<typeof AgentMemoryOptionsSchema> = {
 		);
 	},
 	async getServices({ options }) {
-		if (!options.agentMemory) {
+		if (!options.agentMemory || Object.keys(options.agentMemory).length === 0) {
 			return [];
 		}
 
-		return Object.entries(options.agentMemory).map(([bindingName, entry]) => ({
-			name: getUserBindingServiceName(
-				AGENT_MEMORY_SCOPE,
-				bindingName,
-				entry.remoteProxyConnectionString
-			),
-			worker: remoteProxyClientWorker(
-				entry.remoteProxyConnectionString,
-				bindingName
-			),
-		}));
+		return [
+			{
+				name: AGENT_MEMORY_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			},
+		];
 	},
 };
