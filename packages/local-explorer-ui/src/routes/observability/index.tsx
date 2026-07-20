@@ -28,17 +28,18 @@ import { TraceWaterfall } from "../../components/observability/TraceWaterfall";
 import { ResourceError } from "../../components/ResourceError";
 import {
 	clearTraces,
-	enableObservabilityCapture,
 	fetchTraceSpans,
 	formatDuration,
 	getInvocationRootIds,
 	getTagKeys,
 	isObservabilityDisabledError,
 	isRunning,
+	isViteWrapperSpan,
 	listTraces,
-	ObservabilityToggleUnsupportedError,
 	operationLabel,
 	spanIsError,
+	traceExtentMs,
+	visibleTraceSpans,
 } from "../../utils/observability";
 import { parseTraceQuery } from "../../utils/observability-query";
 import type { Span, TraceRow } from "../../utils/observability";
@@ -108,11 +109,9 @@ function ObservabilityView(): JSX.Element {
 	spansByTraceRef.current = spansByTrace;
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	// Capture is off (no collector bound). We show an enable panel instead of the
+	// Capture is off (no collector bound). We show an "off" panel instead of the
 	// trace list, and pause polling so we don't hammer a disabled endpoint.
 	const [disabled, setDisabled] = useState(false);
-	const [enabling, setEnabling] = useState(false);
-	const [enableError, setEnableError] = useState<string | null>(null);
 	const [clearing, setClearing] = useState(false);
 	// Hide Vite dev module-runner plumbing spans (default on; persisted).
 	const [hideDevRunner, setHideDevRunner] = useState(() => {
@@ -133,6 +132,8 @@ function ObservabilityView(): JSX.Element {
 			return next;
 		});
 	}, []);
+	// Session-only dismissal of the "running under Vite dev" notice.
+	const [viteNoticeDismissed, setViteNoticeDismissed] = useState(false);
 
 	// filters (a simpler version of the dashboard query builder)
 	const [search, setSearch] = useState("");
@@ -178,7 +179,7 @@ function ObservabilityView(): JSX.Element {
 			setDisabled(false);
 		} catch (e) {
 			if (isObservabilityDisabledError(e)) {
-				// Capture is off — show the enable panel, not a scary error.
+				// Capture is off — show the "off" panel, not a scary error.
 				setDisabled(true);
 				setError(null);
 			} else {
@@ -188,26 +189,6 @@ function ObservabilityView(): JSX.Element {
 			setLoading(false);
 		}
 	}, [debouncedSearch, status, kind, tagKey, debouncedTagValue]);
-
-	const handleEnable = useCallback(async () => {
-		setEnabling(true);
-		setEnableError(null);
-		try {
-			await enableObservabilityCapture();
-			// The runtime is reloading with capture on; give it a moment to come
-			// back before reloading the page so the first fetch sees the collector.
-			setTimeout(() => window.location.reload(), 1500);
-		} catch (e) {
-			setEnabling(false);
-			setEnableError(
-				e instanceof ObservabilityToggleUnsupportedError
-					? e.message
-					: e instanceof Error
-						? e.message
-						: "Failed to enable observability"
-			);
-		}
-	}, []);
 
 	const handleClear = useCallback(async () => {
 		setClearing(true);
@@ -310,14 +291,18 @@ function ObservabilityView(): JSX.Element {
 		[traces]
 	);
 
+	// Detect a Vite dev session from the data: Vite routes every request through
+	// its router/asset workers, so any HTTP trace is rooted in an infra worker.
+	// (Internally-triggered traces — alarm/queue/cron — are rooted in the user
+	// worker, but a real session always has at least one request too.)
+	const isViteDev = useMemo(
+		() => traces.some((t) => isViteWrapperSpan(t)),
+		[traces]
+	);
+	const showViteNotice = isViteDev && !viteNoticeDismissed;
+
 	if (disabled) {
-		return (
-			<ObservabilityDisabled
-				enabling={enabling}
-				enableError={enableError}
-				onEnable={handleEnable}
-			/>
-		);
+		return <ObservabilityDisabled />;
 	}
 
 	return (
@@ -359,6 +344,27 @@ function ObservabilityView(): JSX.Element {
 					onClick={() => void refresh()}
 				/>
 			</header>
+
+			{showViteNotice ? (
+				<div className="flex items-center gap-2 border-b border-kumo-fill bg-blue-500/10 px-4 py-2 text-xs text-kumo-default">
+					<InfoIcon size={14} className="shrink-0 text-blue-500" />
+					<span className="flex-1">
+						{hideDevRunner
+							? "Running under Vite dev — some spans come from Vite's module runner (module loading, RPC dispatch) rather than your code. They're hidden by “Hide runner spans”."
+							: "Running under Vite dev — Vite module-runner spans (module loading, RPC dispatch) are shown and may add noise to your traces."}
+					</span>
+					<Button size="sm" variant="secondary" onClick={toggleHideDevRunner}>
+						{hideDevRunner ? "Show runner spans" : "Hide runner spans"}
+					</Button>
+					<Button
+						size="sm"
+						variant="ghost"
+						icon={XIcon}
+						aria-label="Dismiss notice"
+						onClick={() => setViteNoticeDismissed(true)}
+					/>
+				</div>
+			) : null}
 
 			{/* filter bar — a simpler version of the dashboard query builder */}
 			<div className="flex items-center gap-2 border-b border-kumo-fill px-4 py-2">
@@ -479,6 +485,19 @@ function ObservabilityView(): JSX.Element {
 								const spans = spansByTrace[key] ?? [];
 								const err = isError(t);
 								const dur = t.duration_ms ?? 0;
+								// For the expanded detail, count/time only the spans actually
+								// shown (runner plumbing hidden), so the header doesn't report
+								// e.g. an alarm's ~15s runner-dispatch span as its duration.
+								const shownSpans =
+									isSel && spans.length
+										? visibleTraceSpans(spans, hideDevRunner)
+										: spans;
+								const shownDur =
+									isSel && spans.length ? traceExtentMs(shownSpans) : dur;
+								const shownCount =
+									isSel && spans.length
+										? shownSpans.length
+										: (t.span_count ?? spans.length);
 								return (
 									<Fragment key={key}>
 										<tr
@@ -550,15 +569,14 @@ function ObservabilityView(): JSX.Element {
 															{t.trace_id.slice(0, 16)}
 														</span>
 														<span className="text-[11px] text-kumo-subtle">
-															· {formatDuration(dur)} ·{" "}
-															{t.span_count ?? spans.length} spans
+															· {formatDuration(shownDur)} · {shownCount} spans
 														</span>
 													</div>
 													<TraceWaterfall
 														key={key}
 														spans={spans}
 														rootSpanId={t.root_span_id}
-														traceDurationMs={dur}
+														traceDurationMs={shownDur}
 														invocationRootIds={invocationRootsByTrace[key]}
 														hideDevRunner={hideDevRunner}
 													/>
@@ -626,19 +644,11 @@ function QuerySyntaxHint(): JSX.Element {
 }
 
 /**
- * Shown when observability capture is off (opt-in). The "Enable" button asks
- * the dev server to reload the runtime with capture on (Vite dev only); if that
- * isn't supported we surface how to enable it via the environment variable.
+ * Shown when observability capture is off (opt-in). Capture is enabled by
+ * setting the `X_LOCAL_OBSERVABILITY=true` environment variable and restarting
+ * the dev server; there is no in-UI toggle while the feature is opt-in.
  */
-function ObservabilityDisabled({
-	enabling,
-	enableError,
-	onEnable,
-}: {
-	enabling: boolean;
-	enableError: string | null;
-	onEnable: () => void;
-}): JSX.Element {
+function ObservabilityDisabled(): JSX.Element {
 	return (
 		<div className="flex h-full flex-col">
 			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
@@ -653,30 +663,18 @@ function ObservabilityDisabled({
 					Observability capture is off
 				</h3>
 				<p className="mt-1 max-w-md text-xs text-kumo-subtle">
-					Turn on capture to record traces, spans, and logs from your Worker.
-					This reloads the local runtime so tracing can be attached.
+					Local observability is opt-in for now. To record traces, spans, and
+					logs from your Worker, restart your dev server with the{" "}
+					<code className="font-mono">X_LOCAL_OBSERVABILITY</code> environment
+					variable set:
 				</p>
-				<Button
-					className="mt-4"
-					variant="primary"
-					loading={enabling}
-					disabled={enabling}
-					onClick={onEnable}
-				>
-					{enabling ? "Enabling…" : "Enable observability"}
-				</Button>
-				{enableError ? (
-					<div className="mt-3 max-w-md text-xs">
-						<p className="text-red-500">{enableError}</p>
-						<p className="mt-2 text-kumo-subtle">
-							To turn on capture under{" "}
-							<code className="font-mono">wrangler dev</code>, restart it with:
-						</p>
-						<pre className="mt-1 overflow-x-auto rounded bg-kumo-tint px-2 py-1.5 text-left font-mono text-kumo-default">
-							X_LOCAL_OBSERVABILITY=true wrangler dev
-						</pre>
-					</div>
-				) : null}
+				<pre className="mt-3 max-w-md overflow-x-auto rounded bg-kumo-tint px-3 py-2 text-left font-mono text-xs text-kumo-default">
+					X_LOCAL_OBSERVABILITY=true wrangler dev
+				</pre>
+				<p className="mt-2 max-w-md text-xs text-kumo-subtle">
+					(or <code className="font-mono">X_LOCAL_OBSERVABILITY=true</code>{" "}
+					before <code className="font-mono">vite dev</code>)
+				</p>
 			</div>
 		</div>
 	);

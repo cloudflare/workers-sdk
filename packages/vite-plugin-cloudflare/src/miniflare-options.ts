@@ -474,12 +474,10 @@ export async function getDevMiniflareOptions(
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			// The switch for local observability capture: tells Miniflare core to
-			// attach the trace collector to each user worker. A runtime override
-			// (set when the user enables capture from the Local Explorer UI) wins
-			// over the `X_LOCAL_OBSERVABILITY` env default, so toggling it on can
-			// reload the runtime with capture enabled without restarting the CLI.
-			unsafeObservability:
-				ctx.observabilityOverride ?? getLocalObservabilityEnabledFromEnv(),
+			// attach the trace collector to each user worker. Opt-in via the
+			// `X_LOCAL_OBSERVABILITY` env var (defaults off); enabling it requires
+			// restarting the dev server.
+			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(

@@ -29,13 +29,6 @@ export interface SharedContext {
 	restartingDevServerCount: number;
 	/** Allowed hostnames for tunnel connections */
 	tunnelHostnames: Set<string>;
-	/**
-	 * Runtime override for local observability capture, set when the user turns
-	 * it on from the Local Explorer's Observability tab. `undefined` means "no
-	 * override, use the `X_LOCAL_OBSERVABILITY` env default". Stored here (rather
-	 * than derived from env each time) so it survives dev server restarts.
-	 */
-	observabilityOverride?: boolean;
 }
 
 /**
@@ -72,19 +65,6 @@ export class PluginContext {
 		assert(this.#sharedContext.miniflare, "Expected `miniflare` to be defined");
 
 		return this.#sharedContext.miniflare;
-	}
-
-	/**
-	 * Runtime override for local observability capture. `undefined` means "use
-	 * the `X_LOCAL_OBSERVABILITY` env default"; `true`/`false` is an explicit
-	 * user choice made from the Local Explorer UI that persists across restarts.
-	 */
-	get observabilityOverride(): boolean | undefined {
-		return this.#sharedContext.observabilityOverride;
-	}
-
-	setObservabilityOverride(enabled: boolean): void {
-		this.#sharedContext.observabilityOverride = enabled;
 	}
 
 	/**

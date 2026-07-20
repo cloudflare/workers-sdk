@@ -162,7 +162,13 @@ export function TraceWaterfall({
 		0
 	);
 	const traceAreaWidth = Math.max(0, width - LABEL_WIDTH);
-	const paddedDuration = Math.max(1, traceDurationMs, spansEnd) * 1.05;
+	// Prefer the extent of the laid-out (already-filtered) spans so the axis fits
+	// what's actually rendered; only fall back to the passed trace duration when
+	// there are no spans to measure. Using `max(traceDurationMs, spansEnd)` here
+	// would let a hidden runner-plumbing span's inflated duration (e.g. a ~15s
+	// alarm dispatch) stretch the axis and squash the real spans into a sliver.
+	const paddedDuration =
+		(spansEnd > 0 ? spansEnd : Math.max(1, traceDurationMs)) * 1.05;
 	const pxToMS = traceAreaWidth > 0 ? traceAreaWidth / paddedDuration : 0;
 
 	const interval = calculateOptimalInterval(paddedDuration, traceAreaWidth);

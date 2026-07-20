@@ -10,6 +10,8 @@ import {
 	spanIsError,
 	stripDevRunnerSpans,
 	stripInternalSpans,
+	traceExtentMs,
+	visibleTraceSpans,
 } from "../../utils/observability";
 import type { Span } from "../../utils/observability";
 
@@ -133,6 +135,95 @@ describe("isViteWrapperSpan", () => {
 				span({ service: "my-worker", name: "GET", attributes: `{"a":1}` })
 			)
 		).toBe(false);
+	});
+
+	test("accepts a trace-row shape (service/name/attributes only)", ({
+		expect,
+	}) => {
+		expect(
+			isViteWrapperSpan({
+				service: "__router-worker__",
+				name: "GET",
+				attributes: null,
+			})
+		).toBe(true);
+	});
+});
+
+describe("traceExtentMs", () => {
+	test("measures latest end minus earliest start", ({ expect }) => {
+		const spans = [
+			span({ span_id: "a", start_ms: 100, duration_ms: 4 }),
+			span({ span_id: "b", start_ms: 102, duration_ms: 1 }),
+		];
+		expect(traceExtentMs(spans)).toBe(4); // 104 - 100
+	});
+
+	test("is 0 for an empty set", ({ expect }) => {
+		expect(traceExtentMs([])).toBe(0);
+	});
+});
+
+describe("visibleTraceSpans", () => {
+	// alarm -> DO subrequest -> executeCallback jsrpc -> module fetch, plus the
+	// user's real storage read. This is the "no infra span" runner shape.
+	function alarmTrace(): Span[] {
+		return [
+			span({
+				span_id: "alarm",
+				parent_id: null,
+				name: "alarm",
+				start_ms: 0,
+				duration_ms: 4,
+			}),
+			span({
+				span_id: "doSub",
+				parent_id: "alarm",
+				name: "durable_object_subrequest",
+				start_ms: 0,
+				duration_ms: 3,
+			}),
+			span({
+				span_id: "execRpc",
+				parent_id: "doSub",
+				name: "jsrpc",
+				attributes: `{"jsrpc.method":"executeCallback"}`,
+				start_ms: 0,
+				duration_ms: 15624,
+			}),
+			span({
+				span_id: "modInvoke",
+				parent_id: "execRpc",
+				name: "fetch",
+				attributes: `{"url.full":"http://localhost/"}`,
+				start_ms: 0,
+				duration_ms: 1,
+			}),
+			span({
+				span_id: "storageGet",
+				parent_id: "alarm",
+				name: "durable_object_storage_get",
+				start_ms: 1,
+				duration_ms: 0,
+			}),
+		];
+	}
+
+	test("hideDevRunner strips plumbing so extent reflects real work, not 15s", ({
+		expect,
+	}) => {
+		const shown = visibleTraceSpans(alarmTrace(), true);
+		expect(shown.map((s) => s.span_id).sort()).toEqual(["alarm", "storageGet"]);
+		// ~4ms of real work, not the runner-dispatch span's 15624ms.
+		expect(traceExtentMs(shown)).toBe(4);
+	});
+
+	test("without hideDevRunner keeps the runner spans (extent is the 15s span)", ({
+		expect,
+	}) => {
+		const shown = visibleTraceSpans(alarmTrace(), false);
+		expect(shown).toHaveLength(5);
+		expect(traceExtentMs(shown)).toBe(15624);
 	});
 });
 
@@ -376,6 +467,62 @@ describe("stripDevRunnerSpans", () => {
 		}
 		const out = stripDevRunnerSpans(spans);
 		expect(out.map((s) => s.span_id)).toContain("mod1");
+	});
+
+	// A real `vite dev` alarm capture: the invocation is triggered internally by
+	// a timer, so it never flows through Vite's router/asset workers — the trace
+	// has NO infra-worker span. The runner dispatch still runs the user code
+	// though (executeCallback jsrpc wrapped by a DO subrequest, driving a
+	// module-invoke fetch), and that whole chain must still be stripped, leaving
+	// just the alarm invocation and the user's own DO storage read.
+	function viteAlarmTrace(): Span[] {
+		return [
+			span({ span_id: "alarm", parent_id: null, service: "w", name: "alarm" }),
+			span({
+				span_id: "doSub",
+				parent_id: "alarm",
+				service: "w",
+				name: "durable_object_subrequest",
+			}),
+			span({
+				span_id: "execRpc",
+				parent_id: "doSub",
+				service: "w",
+				name: "jsrpc",
+				attributes: `{"jsrpc.method":"executeCallback"}`,
+			}),
+			span({
+				span_id: "modInvoke",
+				parent_id: "execRpc",
+				service: "w",
+				name: "fetch",
+				attributes: `{"url.full":"http://localhost/"}`,
+			}),
+			span({
+				span_id: "storageGet",
+				parent_id: "alarm",
+				service: "w",
+				name: "durable_object_storage_get",
+			}),
+		];
+	}
+
+	test("strips runner plumbing for an alarm trace with no infra spans", ({
+		expect,
+	}) => {
+		const out = stripDevRunnerSpans(viteAlarmTrace());
+		expect(out.map((s) => s.span_id).sort()).toEqual(["alarm", "storageGet"]);
+		expect(out.find((s) => s.span_id === "storageGet")?.parent_id).toBe(
+			"alarm"
+		);
+	});
+
+	test("buildSpanTree collapses the alarm trace to alarm -> storage_get", ({
+		expect,
+	}) => {
+		const tree = buildSpanTree(viteAlarmTrace(), "alarm", true);
+		expect(tree.map((s) => s.span_id)).toEqual(["alarm", "storageGet"]);
+		expect(tree[1]?.depth).toBe(1);
 	});
 });
 

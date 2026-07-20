@@ -90,9 +90,11 @@ export function fetchTraceLogs(traceId: string): Promise<Log[]> {
 /**
  * Error code the explorer worker returns when observability capture is off (no
  * collector bound). Mirrors `OBSERVABILITY_NOT_ENABLED` in the worker's
- * `resources/observability.ts`.
+ * `resources/observability.ts` — kept in its own range, distinct from the
+ * generic 10000 the worker's `app.onError` uses, so a genuine internal failure
+ * isn't misread here as "capture is disabled".
  */
-const OBSERVABILITY_NOT_ENABLED_CODE = 10000;
+const OBSERVABILITY_NOT_ENABLED_CODE = 10130;
 
 /**
  * True when a thrown query error is "observability capture is disabled" (as
@@ -115,33 +117,6 @@ export function isObservabilityDisabledError(error: unknown): boolean {
 /** Delete all captured spans and logs from the trace store. */
 export async function clearTraces(): Promise<void> {
 	await observabilityClear({ throwOnError: true });
-}
-
-/** Raised when the runtime can't toggle capture on (e.g. outside Vite dev). */
-export class ObservabilityToggleUnsupportedError extends Error {}
-
-/**
- * Ask the dev server to turn on observability capture and reload the runtime.
- * This hits a Vite-dev Node middleware (not the user Worker), so it only works
- * under `vite dev`; elsewhere the path 404s and we surface a clear error so the
- * UI can fall back to env-var instructions. On success the runtime is
- * reloading, so callers should reload the page shortly after.
- */
-export async function enableObservabilityCapture(): Promise<void> {
-	let response: Response;
-	try {
-		response = await fetch("/cdn-cgi/observability/enable", { method: "POST" });
-	} catch (cause) {
-		throw new Error("Failed to reach the dev server", { cause });
-	}
-	if (response.status === 404) {
-		throw new ObservabilityToggleUnsupportedError(
-			"Enabling observability from the UI is only supported under `vite dev`."
-		);
-	}
-	if (!response.ok) {
-		throw new Error(`Failed to enable observability (HTTP ${response.status})`);
-	}
 }
 
 /** A span placed in the trace's waterfall: tree depth + timeline position. */
@@ -178,7 +153,9 @@ const VITE_WRAPPER_MARKERS = [
 ];
 
 /** True if the span comes from Vite's runner/wrapper plumbing, not user code. */
-export function isViteWrapperSpan(span: Span): boolean {
+export function isViteWrapperSpan(
+	span: Pick<Span, "service" | "name" | "attributes">
+): boolean {
 	const haystack = `${span.service ?? ""} ${span.name ?? ""} ${span.attributes ?? ""}`;
 	return VITE_WRAPPER_MARKERS.some((marker) => haystack.includes(marker));
 }
@@ -607,6 +584,35 @@ function isRunnerDispatchJsrpc(span: Span): boolean {
 }
 
 /**
+ * True when the trace contains the full Vite runner-dispatch *signature*: an
+ * `executeCallback` jsrpc that is wrapped by a `durable_object_subrequest`
+ * parent and drives a module-invoke `fetch` child. This is the shape the Vite
+ * module runner always produces when evaluating user code in the runner DO.
+ *
+ * It's used as a second "we're in Vite dev" signal alongside infra-worker spans:
+ * internally-triggered invocations (alarm, queue, cron) don't flow through
+ * Vite's router/asset/proxy workers, so their traces carry no infra span, but
+ * they still run user code through this dispatch. Requiring the whole signature
+ * (not just a bare `executeCallback` jsrpc) keeps a plain `wrangler dev` trace —
+ * where a user could coincidentally have their own `executeCallback` RPC method
+ * — untouched, since that lacks the DO-subrequest wrapper and module fetch.
+ */
+function hasRunnerDispatchSignature(spans: Span[]): boolean {
+	const byId = new Map(spans.map((s) => [s.span_id, s]));
+	return spans.some((s) => {
+		if (!isRunnerDispatchJsrpc(s)) {
+			return false;
+		}
+		const parent = s.parent_id ? byId.get(s.parent_id) : undefined;
+		const wrappedByDoSubrequest = parent?.name === "durable_object_subrequest";
+		const hasModuleInvokeFetch = spans.some(
+			(c) => c.parent_id === s.span_id && c.name === "fetch"
+		);
+		return wrappedByDoSubrequest && hasModuleInvokeFetch;
+	});
+}
+
+/**
  * Drop the Vite dev module-runner's plumbing spans and re-parent their real
  * children up to the nearest surviving ancestor, so a `vite dev` waterfall shows
  * only the user's own spans. Two forms of plumbing are removed:
@@ -621,12 +627,14 @@ function isRunnerDispatchJsrpc(span: Span): boolean {
  *     `fetch` nested directly beneath it. These carry the user worker's own
  *     `service`, so they're recognised by shape.
  *
- * Safety: the shape-based rules (2) only fire when the trace also contains a
- * Vite infra-worker span (1), so a plain `wrangler dev` trace — which has
- * neither — is returned untouched. The module-invoke `fetch` is only hidden when
- * it's a direct child of a dispatch jsrpc, so a user's own
- * `fetch("http://localhost")` (a child of their handler) stays visible. An error
- * span is never hidden, so a failure in the plumbing still surfaces.
+ * Safety: the shape-based rules (2) only fire once we've confirmed we're in Vite
+ * dev — either an infra-worker span (1) is present, or the full runner-dispatch
+ * signature is (see `hasRunnerDispatchSignature`, which covers alarm/queue/cron
+ * traces that have no infra span). A plain `wrangler dev` trace has neither and
+ * is returned untouched. The module-invoke `fetch` is only hidden when it's a
+ * direct child of a dispatch jsrpc, so a user's own `fetch("http://localhost")`
+ * (a child of their handler) stays visible. An error span is never hidden, so a
+ * failure in the plumbing still surfaces.
  */
 export function stripDevRunnerSpans(spans: Span[]): Span[] {
 	// (1) Vite's internal workers, by owning service.
@@ -637,8 +645,12 @@ export function stripDevRunnerSpans(spans: Span[]): Span[] {
 		}
 	}
 	// The in-user-worker dispatch heuristics are only trustworthy once we know
-	// we're in Vite dev; an infra-worker span is that signal.
-	const inViteDev = infraSpanIds.size > 0;
+	// we're in Vite dev. An infra-worker span is the clearest signal, but
+	// internally-triggered invocations (alarm, queue, cron) don't flow through
+	// Vite's router/asset/proxy workers, so they carry no infra span. The full
+	// runner-dispatch signature (see helper) is an equally reliable signal that
+	// also covers those non-HTTP traces.
+	const inViteDev = infraSpanIds.size > 0 || hasRunnerDispatchSignature(spans);
 
 	const hidden = new Set<string>();
 	const dispatchJsrpcIds = new Set<string>();
@@ -743,6 +755,41 @@ export function stripInternalSpans(spans: Span[]): Span[] {
 	return spans
 		.filter((s) => !hidden.has(s.span_id))
 		.map((s) => ({ ...s, parent_id: resolveParent(s) }));
+}
+
+/**
+ * The spans a trace actually shows in the waterfall: the internal strip always
+ * applies, and the dev-runner strip only when `hideDevRunner` is on. Mirrors the
+ * filtering `buildSpanTree` does internally, so callers can derive a consistent
+ * span count / duration for the trace header from the same visible set.
+ */
+export function visibleTraceSpans(
+	spans: Span[],
+	hideDevRunner: boolean
+): Span[] {
+	const base = hideDevRunner ? stripDevRunnerSpans(spans) : spans;
+	return stripInternalSpans(base);
+}
+
+/**
+ * Wall-clock extent (ms) covered by a set of spans: latest end minus earliest
+ * start. Used for the trace header duration so it reflects the *visible* spans
+ * rather than the raw trace aggregate (which includes hidden runner plumbing —
+ * e.g. an alarm whose only real work is ~4ms but whose runner-dispatch span
+ * stays open ~15s).
+ */
+export function traceExtentMs(spans: Span[]): number {
+	if (spans.length === 0) {
+		return 0;
+	}
+	let start = Infinity;
+	let end = -Infinity;
+	for (const s of spans) {
+		const st = s.start_ms ?? 0;
+		start = Math.min(start, st);
+		end = Math.max(end, st + (s.duration_ms ?? 0));
+	}
+	return Math.max(0, end - start);
 }
 
 /**

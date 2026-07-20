@@ -9,10 +9,16 @@ import type { z } from "zod";
 // Error codes
 // ============================================================================
 
+// These are deliberately in their own range, distinct from the generic 10000 /
+// 10001 codes used by `app.onError` and the other resource handlers. The UI
+// special-cases `OBSERVABILITY_NOT_ENABLED` to show the "enable capture" panel,
+// so it must not collide with the code a genuine internal failure would carry
+// (otherwise a real error is misread as "capture is off").
+
 /** Local observability isn't enabled, so there's no collector to read from. */
-const OBSERVABILITY_NOT_ENABLED = 10000;
+const OBSERVABILITY_NOT_ENABLED = 10130;
 /** The collector reported an error (e.g. a rejected read-only query). */
-const OBSERVABILITY_COLLECTOR_ERROR = 10001;
+const OBSERVABILITY_COLLECTOR_ERROR = 10131;
 
 type QueryBody = z.output<typeof zObservabilityQueryData.shape.body>;
 

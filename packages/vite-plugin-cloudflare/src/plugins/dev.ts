@@ -33,13 +33,6 @@ import {
 import { handleWebSocket } from "../websockets";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 
-/**
- * Node-side control path (handled by Vite middleware, not forwarded to the
- * user Worker) that turns on local observability capture and reloads the
- * runtime. Used by the Local Explorer's Observability tab.
- */
-const OBSERVABILITY_ENABLE_PATH = "/cdn-cgi/observability/enable";
-
 let exitCallback = () => {};
 
 process.on("exit", () => {
@@ -81,49 +74,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
-
-			// Control endpoint for the Local Explorer's "enable observability"
-			// button. Observability capture is baked into the workerd config at
-			// startup (compatibility flags + the collector/streaming-tail wiring),
-			// so it can't be flipped from inside the running worker — the Node
-			// side has to rebuild the Miniflare options and reload the runtime.
-			// Registered before the catch-all proxy middleware so the request is
-			// handled here instead of being forwarded to the user Worker.
-			viteDevServer.middlewares.use(
-				OBSERVABILITY_ENABLE_PATH,
-				async function cloudflareObservabilityEnable(req, res, next) {
-					if (req.method !== "POST") {
-						next();
-						return;
-					}
-					res.setHeader("content-type", "application/json");
-					try {
-						ctx.setObservabilityOverride(true);
-						const options = await getDevMiniflareOptions(ctx, viteDevServer);
-						await ctx.startOrUpdateMiniflare(options.miniflareOptions);
-						// Reloading via `setOptions` recreates the user Workers, so the
-						// Vite module runners need to be re-initialised against them.
-						if (ctx.resolvedPluginConfig.type === "workers") {
-							await initRunners(
-								ctx.resolvedPluginConfig,
-								viteDevServer,
-								ctx.miniflare
-							);
-						}
-						res.statusCode = 200;
-						res.end(JSON.stringify({ enabled: true }));
-					} catch (error) {
-						debuglog("Failed to enable local observability:", error);
-						res.statusCode = 500;
-						res.end(
-							JSON.stringify({
-								enabled: false,
-								error: error instanceof Error ? error.message : String(error),
-							})
-						);
-					}
-				}
-			);
 
 			// Once the HTTP server is listening, update Miniflare's publicUrl with
 			// the actual address. This ensures "Cloudflare Stream" preview URLs always reflect
