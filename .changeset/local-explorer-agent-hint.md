@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 Print Local Explorer API details for headless agent-driven `wrangler dev` sessions
