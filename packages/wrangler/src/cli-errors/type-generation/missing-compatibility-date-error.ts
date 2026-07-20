@@ -14,7 +14,7 @@ export class MissingCompatibilityDateError extends CLIError {
 
 			The Wrangler configuration does not include a "compatibility_date" field. The "wrangler types" command needs a "compatibility_date" to determine which Workers runtime APIs are available. Without it, runtime types cannot be generated.
 
-			To resolve this, add a "compatibility_date" field to wrangler.json set to the current date, e.g. "compatibility_date": "2025-01-01".
+			To resolve this, add a "compatibility_date" field to wrangler.json set to the current date, e.g. "compatibility_date": "2026-01-01".
 		`;
 
 		super(humanMessage, aiMessage, {

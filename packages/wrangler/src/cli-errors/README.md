@@ -1,7 +1,7 @@
 # CLI Errors
 
 Structured error classes for Wrangler CLI commands. Each error provides **two
-messages**: a concise one for humans and a verbose and one for AI coding agents.
+messages**: a concise one for humans and a verbose one for AI coding agents.
 The base class automatically selects the right variant at construction time by
 checking whether the process is running inside an agentic environment
 (via [`am-i-vibing`](https://www.npmjs.com/package/am-i-vibing)).

@@ -20,7 +20,7 @@ export class RuntimeTypesFetchError extends CLIError {
 
 			  ${responseText}
 
-			To resolve this, check whether the workerd binary is accessible and functioning correctly, and ensure the "compatibility_date" and "compatibility_flags" in wrangler.json are valid. You can also try running "wrangler types --include-runtime=false" to skip runtime types and still generate Env types, or update Wrangler to the latest version with npm install -g wrangler@latest.
+			To resolve this, check whether the workerd binary is accessible and functioning correctly, and ensure the "compatibility_date" and "compatibility_flags" in wrangler.json are valid. You can also try running "wrangler types --include-runtime=false" to skip runtime types and still generate Env types, or update Wrangler to the latest version with "npm install -g wrangler@latest".
 		`;
 
 		super(humanMessage, aiMessage, {
