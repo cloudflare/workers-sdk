@@ -16,7 +16,7 @@ export class IncompatibleServiceWorkerError extends CLIError {
 
 			A custom --env-interface was specified, but the Worker uses Service Worker syntax. The --env-interface option generates a named TypeScript interface for the Worker's environment bindings. This only works with the ES Modules (module) Worker format, where bindings are passed as the "env" parameter to the "fetch" handler. Service Worker syntax accesses bindings as global variables and does not use an environment interface.
 
-			To resolve this, either remove the --env-interface flag, or migrate the Worker to ES Modules syntax by changing `addEventListener('fetch', ...)` to `export default { fetch(request, env, ctx) { ... } }`. See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/ for migration guidance.
+			To resolve this, either remove the --env-interface flag, or migrate the Worker to ES Modules syntax by changing "addEventListener('fetch', ...)" to "export default { fetch(request, env, ctx) { ... } }". See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/ for migration guidance.
 
 			You may want to ask the human developer whether the Worker should be migrated to ES Modules or whether the --env-interface flag should be removed.
 		`;
