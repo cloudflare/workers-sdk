@@ -111,6 +111,7 @@ import {
 	CoreBindings,
 	CoreHeaders,
 	CorePaths,
+	decodeErrorPayload,
 	LogLevel,
 	Mutex,
 	SharedHeaders,
@@ -2929,7 +2930,14 @@ export class Miniflare {
 		// If the Worker threw an uncaught exception, propagate it to the caller
 		const stack = response.headers.get(CoreHeaders.ERROR_STACK);
 		if (response.status === 500 && stack !== null) {
-			const caught = JsonErrorSchema.parse(await response.json());
+			// `workerd` drops response bodies for `HEAD` requests, so fall back to
+			// the header copy of the serialised error
+			const serialised =
+				(await response.text()) || decodeErrorPayload(response);
+			if (serialised === null) {
+				throw new Error("Worker threw an uncaught exception");
+			}
+			const caught = JsonErrorSchema.parse(JSON.parse(serialised));
 			throw reviveError(this.#workerSrcOpts, caught);
 		}
 
