@@ -1,10 +1,9 @@
 import assert from "node:assert";
-import { isInteractive } from "@cloudflare/workers-utils";
 import { beforeEach, describe, it, vi } from "vitest";
 import registerDevHotKeys from "../../dev/hotkeys";
 import { startDev } from "../../dev/start-dev";
+import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { detectAgent } from "../../utils/detect-agent";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import type { StartDevWorkerInput } from "../../api";
 import type { StartDevOptions } from "../../dev";
@@ -40,10 +39,6 @@ vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
 	openInBrowser: vi.fn(),
 }));
 
-vi.mock("../../utils/detect-agent", () => ({
-	detectAgent: vi.fn(() => ({ isAgent: false, id: null })),
-}));
-
 vi.mock("../../user", () => ({
 	requireApiToken: vi.fn(() => "test-api-token"),
 	requireAuth: vi.fn(async () => "test-account-id"),
@@ -54,6 +49,7 @@ const std = mockConsoleMethods();
 describe("startDev", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		logger.clearHistory();
 		mocks.configSet.mockResolvedValue(undefined);
 		mocks.fakeDevEnv.proxy.ready.promise = new Promise(() => {});
 	});
@@ -89,15 +85,13 @@ describe("startDev", () => {
 		expect(unregisterHotKeys[1]).toHaveBeenCalledOnce();
 	});
 
-	it("prints the Local Explorer API hint for headless agent sessions", async ({
+	it("prints the Local Explorer API hint when the caller asks for it", async ({
 		expect,
 	}) => {
 		const readyPromise = Promise.resolve({
 			url: new URL("http://127.0.0.1:8787"),
 		});
 		mocks.fakeDevEnv.proxy.ready.promise = readyPromise;
-		vi.mocked(isInteractive).mockReturnValue(false);
-		vi.mocked(detectAgent).mockReturnValue({ isAgent: true, id: "test-agent" });
 
 		await startDev({
 			disableDevRegistry: true,
@@ -117,47 +111,6 @@ describe("startDev", () => {
 		);
 	});
 
-	it("does not print the Local Explorer API hint for interactive agent sessions", async ({
-		expect,
-	}) => {
-		const readyPromise = Promise.resolve({
-			url: new URL("http://127.0.0.1:8787"),
-		});
-		mocks.fakeDevEnv.proxy.ready.promise = readyPromise;
-		vi.mocked(isInteractive).mockReturnValue(true);
-		vi.mocked(detectAgent).mockReturnValue({ isAgent: true, id: "test-agent" });
-
-		await startDev({
-			disableDevRegistry: true,
-			showInteractiveDevSession: true,
-			showLocalExplorerAgentHint: true,
-		} as StartDevOptions);
-		await readyPromise;
-		await Promise.resolve();
-
-		expect(std.out).not.toContain("The Local Explorer API is available");
-	});
-
-	it("does not print the Local Explorer API hint for non-agent sessions", async ({
-		expect,
-	}) => {
-		const readyPromise = Promise.resolve({
-			url: new URL("http://127.0.0.1:8787"),
-		});
-		mocks.fakeDevEnv.proxy.ready.promise = readyPromise;
-		vi.mocked(isInteractive).mockReturnValue(false);
-		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
-
-		await startDev({
-			disableDevRegistry: true,
-			showLocalExplorerAgentHint: true,
-		} as StartDevOptions);
-		await readyPromise;
-		await Promise.resolve();
-
-		expect(std.out).not.toContain("The Local Explorer API is available");
-	});
-
 	it("does not print the Local Explorer API hint when the caller has not opted in", async ({
 		expect,
 	}) => {
@@ -165,8 +118,6 @@ describe("startDev", () => {
 			url: new URL("http://127.0.0.1:8787"),
 		});
 		mocks.fakeDevEnv.proxy.ready.promise = readyPromise;
-		vi.mocked(isInteractive).mockReturnValue(false);
-		vi.mocked(detectAgent).mockReturnValue({ isAgent: true, id: "test-agent" });
 
 		await startDev({
 			disableDevRegistry: true,

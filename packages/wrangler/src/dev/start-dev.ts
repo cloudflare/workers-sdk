@@ -2,11 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { bold, green } from "@cloudflare/cli-shared-helpers/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import {
-	getLocalExplorerEnabledFromEnv,
-	getRegistryPath,
-	isInteractive,
-} from "@cloudflare/workers-utils";
+import { getRegistryPath, isInteractive } from "@cloudflare/workers-utils";
 import { CorePaths } from "miniflare";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
@@ -23,7 +19,6 @@ import {
 	collectKeyValues,
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
-import { detectAgent } from "../utils/detect-agent";
 import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
 import type { StartDevOptionsBindings } from "../api/startDevWorker/binding-utils";
 import type { StartDevOptions } from "../dev";
@@ -163,7 +158,9 @@ export async function startDev(args: StartDevOptions) {
 					false
 			);
 			maybePrintScheduledWorkerWarning(hasCrons, !!args.testScheduled, url);
-			maybePrintLocalExplorerAgentHint(args, url, !interactiveDevSession);
+			if (args.showLocalExplorerAgentHint) {
+				printLocalExplorerAgentHint(url);
+			}
 		});
 
 		// Start tunnel early, before the proxy is ready.
@@ -370,21 +367,7 @@ function maybePrintScheduledWorkerWarning(
 	);
 }
 
-function maybePrintLocalExplorerAgentHint(
-	args: StartDevOptions,
-	url: URL,
-	isHeadless: boolean
-): void {
-	if (
-		!args.showLocalExplorerAgentHint ||
-		!isHeadless ||
-		args.remote ||
-		!getLocalExplorerEnabledFromEnv() ||
-		!detectAgent().isAgent
-	) {
-		return;
-	}
-
+function printLocalExplorerAgentHint(url: URL): void {
 	const explorerApiUrl = new URL(`${CorePaths.EXPLORER}/api`, url).href;
 	logger.once.log(dedent`
 		Wrangler detected this dev session is running in an AI agent.

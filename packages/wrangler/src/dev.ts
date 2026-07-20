@@ -4,6 +4,8 @@ import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	formatConfigSnippet,
+	getLocalExplorerEnabledFromEnv,
+	isInteractive,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { getHostFromRoute } from "@cloudflare/workers-utils";
@@ -15,6 +17,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
 import { logger } from "./logger";
+import { detectAgent } from "./utils/detect-agent";
 import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -299,9 +302,16 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
+		const interactiveDevSession =
+			isInteractive() && args.showInteractiveDevSession !== false;
+		const showLocalExplorerAgentHint =
+			!interactiveDevSession &&
+			!args.remote &&
+			getLocalExplorerEnabledFromEnv() &&
+			detectAgent().isAgent;
 		const devInstance = await startDev({
 			...args,
-			showLocalExplorerAgentHint: true,
+			showLocalExplorerAgentHint,
 		});
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
