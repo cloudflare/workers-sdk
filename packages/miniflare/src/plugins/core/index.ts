@@ -14,12 +14,10 @@ import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
 import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
-import { MockAgent } from "undici";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
 import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
-import { fetch } from "../../http";
 import { kVoid } from "../../runtime";
 import { JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
 import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
@@ -121,10 +119,6 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 
 const encoder = new TextEncoder();
 
-export function createFetchMock() {
-	return new MockAgent();
-}
-
 // Validate as string, but don't include in parsed output
 const UnusableStringSchema = z.string().transform(() => undefined);
 
@@ -165,7 +159,6 @@ const CoreOptionsSchemaInput = z.intersection(
 		serviceBindings: z.record(z.string(), ServiceDesignatorSchema).optional(),
 
 		outboundService: ServiceDesignatorSchema.optional(),
-		fetchMock: z.instanceof(MockAgent).optional(),
 
 		// TODO(soon): remove this in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
@@ -229,24 +222,7 @@ const CoreOptionsSchemaInput = z.intersection(
 			.optional(),
 	})
 );
-export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
-	const fetchMock = value.fetchMock;
-	if (fetchMock !== undefined) {
-		if (value.outboundService !== undefined) {
-			throw new MiniflareCoreError(
-				"ERR_MULTIPLE_OUTBOUNDS",
-				"Only one of `outboundService` or `fetchMock` may be specified per worker"
-			);
-		}
-
-		// The `fetchMock` option is used to construct the `outboundService` only
-		// Removing it from the output allows us to re-parse the options later
-		// This allows us to validate the options and then feed them into Miniflare without issue.
-		value.fetchMock = undefined;
-		value.outboundService = (req) => fetch(req, { dispatcher: fetchMock });
-	}
-	return value;
-});
+export const CoreOptionsSchema = CoreOptionsSchemaInput;
 
 export type WorkerdStructuredLog = z.infer<typeof WorkerdStructuredLogSchema>;
 

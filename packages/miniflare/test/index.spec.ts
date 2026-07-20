@@ -15,14 +15,11 @@ import util from "node:util";
 import { _forceColour } from "@cloudflare/workers-utils";
 import {
 	_transformsForContentEncodingAndContentType,
-	createFetchMock,
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
 	Miniflare,
 	MiniflareCoreError,
-	parseWithRootPath,
-	PLUGINS,
 	Response,
 	viewToBuffer,
 } from "miniflare";
@@ -1312,51 +1309,6 @@ test("Miniflare: handles redirect responses", async ({ expect }) => {
 	expect(await res.text()).toBe("end:https://custom.mf/external-redirected");
 });
 
-test("Miniflare: fetch mocking", async ({ expect }) => {
-	const fetchMock = createFetchMock();
-	fetchMock.disableNetConnect();
-	const origin = fetchMock.get("https://example.com");
-	origin.intercept({ method: "GET", path: "/" }).reply(200, "Mocked response!");
-
-	const mfOptions: MiniflareOptions = {
-		modules: true,
-		script: `export default {
-			async fetch() {
-				return fetch("https://example.com/");
-			}
-		}`,
-		fetchMock,
-	};
-	const resultOptions = {} as MiniflareOptions;
-
-	// Verify that options with `fetchMock` can be parsed first before passing to Miniflare
-	// Regression test for https://github.com/cloudflare/workers-sdk/issues/5486
-	for (const plugin of Object.values(PLUGINS)) {
-		Object.assign(
-			resultOptions,
-			parseWithRootPath("", plugin.options, mfOptions)
-		);
-	}
-
-	const mf = new Miniflare(resultOptions);
-	useDispose(mf);
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe("Mocked response!");
-
-	// Check `outboundService`and `fetchMock` mutually exclusive
-	await expect(
-		mf.setOptions({
-			script: "",
-			fetchMock,
-			outboundService: "",
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_MULTIPLE_OUTBOUNDS",
-			"Only one of `outboundService` or `fetchMock` may be specified per worker"
-		)
-	);
-});
 test("Miniflare: custom upstream as origin (with colons)", async ({
 	expect,
 }) => {
