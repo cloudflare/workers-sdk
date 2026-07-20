@@ -1,162 +1,56 @@
 import { http, HttpResponse } from "msw";
-import { FormData } from "undici";
 import { createFetchResult, msw } from "../../helpers/msw";
-import type { VersionDetails, WorkerVersion } from "../../../versions/secrets";
-import type { WorkerMetadata } from "@cloudflare/workers-utils";
 import type { ExpectStatic } from "vitest";
 
-function mockGetVersions(expect: ExpectStatic) {
-	msw.use(
-		http.get(
-			`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
-			async ({ params }) => {
-				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toMatch(/script-name(-test)?/);
+type PatchLatestVersionEnvBinding = { type: "secret_text"; text: string };
 
-				return HttpResponse.json(
-					createFetchResult({
-						items: [
-							{
-								id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
-								number: 2,
-							},
-							{
-								id: "ec5ea4f9-fe32-4301-bd73-6a86006ae8d4",
-								number: 1,
-							},
-						] as WorkerVersion[],
-					})
-				);
-			},
-			{ once: true }
-		)
-	);
+export interface PatchLatestVersionPatch {
+	annotations?: Record<string, string | undefined>;
+	env?: Record<string, PatchLatestVersionEnvBinding | null>;
+
+	// These fields should be inherited by PATCH/latest rather than resent.
+	build_options?: never;
+	keep_assets?: never;
+	keep_bindings?: never;
+	placement?: never;
 }
 
-export function mockGetVersion(
+export function expectSecretPatch(
 	expect: ExpectStatic,
-	versionInfo?: VersionDetails
+	patch: PatchLatestVersionPatch,
+	secrets: Record<string, string | null>
+) {
+	expect(patch).toMatchObject({
+		env: Object.fromEntries(
+			Object.entries(secrets).map(([name, value]) => [
+				name,
+				value === null ? null : { type: "secret_text", text: value },
+			])
+		),
+	});
+	expect(patch.keep_bindings).toBeUndefined();
+	expect(patch.keep_assets).toBeUndefined();
+	expect(patch.placement).toBeUndefined();
+	expect(patch).not.toHaveProperty("build_options");
+}
+
+export function mockPatchLatestVersion(
+	expect: ExpectStatic,
+	validate?: (patch: PatchLatestVersionPatch) => void
 ) {
 	msw.use(
-		http.get(
-			`*/accounts/:accountId/workers/scripts/:scriptName/versions/ce15c78b-cc43-4f60-b5a9-15ce4f298c2a`,
-			async ({ params }) => {
-				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toMatch(/script-name(-test)?/);
-
-				return HttpResponse.json(
-					createFetchResult(
-						versionInfo ?? {
-							id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
-							metadata: {},
-							number: 2,
-							resources: {
-								bindings: [
-									{ type: "secret_text", name: "SECRET", text: "Secret shhh" },
-									{
-										type: "secret_text",
-										name: "ANOTHER_SECRET",
-										text: "Another secret shhhh",
-									},
-									{
-										type: "secret_text",
-										name: "YET_ANOTHER_SECRET",
-										text: "Yet another secret shhhhh",
-									},
-									{
-										name: "do-binding",
-										type: "durable_object_namespace",
-										namespace_id: "some-namespace-id",
-									},
-								],
-								script: {
-									etag: "etag",
-									handlers: ["fetch"],
-									last_deployed_from: "api",
-								},
-								script_runtime: {
-									usage_model: "standard",
-									limits: {},
-								},
-							},
-						}
-					)
-				);
-			},
-			{ once: true }
-		)
-	);
-}
-
-function mockGetVersionContent(expect: ExpectStatic) {
-	msw.use(
-		http.get(
-			`*/accounts/:accountId/workers/scripts/:scriptName/content/v2`,
-			async ({ params, request }) => {
-				const url = new URL(request.url);
-				expect(url.searchParams.get("version")).toEqual(
-					"ce15c78b-cc43-4f60-b5a9-15ce4f298c2a"
-				);
-				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toMatch(/script-name(-test)?/);
-
-				const formData = new FormData();
-				formData.set(
-					"index.js",
-					new File(["export default {}"], "index.js", {
-						type: "application/javascript+module",
-					}),
-					"index.js"
-				);
-
-				return HttpResponse.formData(formData, {
-					headers: { "cf-entrypoint": "index.js" },
-				});
-			},
-			{ once: true }
-		)
-	);
-}
-
-function mockGetWorkerSettings(expect: ExpectStatic) {
-	msw.use(
-		http.get(
-			`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
-			async ({ params }) => {
-				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toMatch(/script-name(-test)?/);
-
-				return HttpResponse.json(
-					createFetchResult({
-						logpush: false,
-						tail_consumers: null,
-					})
-				);
-			},
-			{ once: true }
-		)
-	);
-}
-
-export function mockPostVersion(
-	expect: ExpectStatic,
-	validate?: (metadata: WorkerMetadata, formData: FormData) => void
-) {
-	msw.use(
-		http.post(
-			`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
+		http.patch(
+			`*/accounts/:accountId/workers/workers/:scriptName/versions/latest`,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toMatch(/script-name(-test)?/);
-
-				// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
-				const formData = await request.formData();
-				const metadata = JSON.parse(
-					formData.get("metadata") as string
-				) as WorkerMetadata;
+				expect(request.headers.get("content-type")).toEqual(
+					"application/merge-patch+json"
+				);
+				const patch = (await request.json()) as PatchLatestVersionPatch;
 
 				if (validate) {
-					validate(metadata, formData);
+					validate(patch);
 				}
 
 				return HttpResponse.json(
@@ -172,9 +66,29 @@ export function mockPostVersion(
 	);
 }
 
-export function mockSetupApiCalls(expect: ExpectStatic) {
-	mockGetVersions(expect);
-	mockGetVersion(expect);
-	mockGetVersionContent(expect);
-	mockGetWorkerSettings(expect);
+export function mockPatchLatestVersionNoVersions(expect: ExpectStatic) {
+	msw.use(
+		http.patch(
+			`*/accounts/:accountId/workers/workers/:scriptName/versions/latest`,
+			({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toMatch(/script-name(-test)?/);
+				expect(request.headers.get("content-type")).toEqual(
+					"application/merge-patch+json"
+				);
+
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{
+							code: 10222,
+							message:
+								"This Worker has no versions, which means this Worker has no content or versioned settings.",
+						},
+					]),
+					{ status: 404 }
+				);
+			},
+			{ once: true }
+		)
+	);
 }

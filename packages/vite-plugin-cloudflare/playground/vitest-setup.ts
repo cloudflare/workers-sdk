@@ -18,6 +18,7 @@ import type {
 	PluginOption,
 	PreviewServer,
 	ResolvedConfig,
+	Rolldown,
 	Rollup,
 	UserConfig,
 	ViteDevServer,
@@ -74,7 +75,7 @@ export let resolvedConfig: ResolvedConfig =
 export let page: Page = undefined as unknown as Page;
 export let browser: Browser = undefined as unknown as Browser;
 export let viteTestUrl: string = "";
-export const watcher: Rollup.RollupWatcher | undefined = undefined;
+export const watcher: Rolldown.RolldownWatcher | undefined = undefined;
 
 export function setViteUrl(url: string): void {
 	viteTestUrl = url;
@@ -350,10 +351,10 @@ export async function startDefaultServe(): Promise<
  * Send the rebuild complete message in build watch
  */
 export async function notifyRebuildComplete(
-	rollupWatcher: Rollup.RollupWatcher
-): Promise<Rollup.RollupWatcher> {
+	rollupWatcher: Rolldown.RolldownWatcher
+): Promise<Rolldown.RolldownWatcher> {
 	let resolveFn: undefined | (() => void);
-	const callback = (event: Rollup.RollupWatcherEvent): void => {
+	const callback = (event: Rolldown.RolldownWatcherEvent): void => {
 		if (event.code === "END") {
 			resolveFn?.();
 		}

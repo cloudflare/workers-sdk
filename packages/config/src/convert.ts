@@ -4,7 +4,7 @@ import {
 	type Exports,
 } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
-import type { ParsedInputWorkerConfig } from "./schema";
+import type { ParsedInputWorkerConfig, ParsedSettingsConfig } from "./schema";
 import type { Json } from "./utils";
 
 /**
@@ -13,22 +13,46 @@ import type { Json } from "./utils";
  * The caller is responsible for unwrapping any function/promise wrapper around
  * the config and validating it against `InputWorkerSchema` before passing it in.
  *
- * @param config The parsed (post-validation) config.
+ * @param workerConfig The parsed (post-validation) Worker config.
+ * @param settingsConfig The optional parsed settings config, whose fields
+ * are merged onto the result.
  * @returns The corresponding Wrangler `RawConfig`.
  */
 export function convertToWranglerConfig(
-	config: ParsedInputWorkerConfig
+	workerConfig: ParsedInputWorkerConfig,
+	settingsConfig?: ParsedSettingsConfig
 ): RawConfig {
 	const result: RawConfig = {};
 
-	convertTopLevel(config, result);
-	convertBindingsAndAssets(config, result);
-	convertExports(config, result);
-	convertDomains(config, result);
-	convertTriggers(config, result);
-	convertTailConsumers(config, result);
+	convertTopLevel(workerConfig, result);
+	convertBindingsAndAssets(workerConfig, result);
+	convertExports(workerConfig, result);
+	convertDomains(workerConfig, result);
+	convertTriggers(workerConfig, result);
+	convertTailConsumers(workerConfig, result);
+
+	if (settingsConfig !== undefined) {
+		convertSettings(settingsConfig, result);
+	}
 
 	return result;
+}
+
+/**
+ * Merge a parsed settings config's fields (`account_id`, `compliance_region`)
+ * onto an existing Wrangler `RawConfig`.
+ */
+function convertSettings(
+	settings: ParsedSettingsConfig,
+	result: RawConfig
+): void {
+	if (settings.accountId !== undefined) {
+		result.account_id = settings.accountId;
+	}
+	if (settings.complianceRegion !== undefined) {
+		result.compliance_region =
+			settings.complianceRegion === "fedramp-high" ? "fedramp_high" : "public";
+	}
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -45,9 +69,6 @@ function convertTopLevel(
 	if (typeof config.entrypoint === "string") {
 		result.main = config.entrypoint;
 	}
-	if (config.accountId !== undefined) {
-		result.account_id = config.accountId;
-	}
 	if (config.compatibilityDate !== undefined) {
 		result.compatibility_date = config.compatibilityDate;
 	}
@@ -62,10 +83,6 @@ function convertTopLevel(
 	}
 	if (config.logpush !== undefined) {
 		result.logpush = config.logpush;
-	}
-	if (config.complianceRegion !== undefined) {
-		result.compliance_region =
-			config.complianceRegion === "fedramp-high" ? "fedramp_high" : "public";
 	}
 	if (config.firstPartyWorker !== undefined) {
 		result.first_party_worker = config.firstPartyWorker;
@@ -768,11 +785,12 @@ function convertTriggers(
 	const queueConsumers: NonNullable<
 		NonNullable<RawConfig["queues"]>["consumers"]
 	> = result.queues?.consumers ? [...result.queues.consumers] : [];
-	const addresses: string[] = result.addresses ? [...result.addresses] : [];
+	let addresses: string[] | undefined;
 
 	for (const trigger of triggers) {
 		switch (trigger.type) {
 			case "email": {
+				addresses ??= [];
 				addresses.push(...trigger.addresses);
 				break;
 			}
@@ -817,7 +835,8 @@ function convertTriggers(
 	if (queueConsumers.length) {
 		result.queues = { ...(result.queues ?? {}), consumers: queueConsumers };
 	}
-	if (addresses.length) {
+	// An empty array removes managed addresses; undefined means no email trigger.
+	if (addresses !== undefined) {
 		result.addresses = addresses;
 	}
 }

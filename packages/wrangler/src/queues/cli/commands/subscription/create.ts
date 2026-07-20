@@ -20,6 +20,12 @@ function parseSourceArgument(
 	}
 ): EventSource {
 	switch (source as EventSourceType) {
+		case EventSourceType.ARTIFACTS:
+			return { type: EventSourceType.ARTIFACTS };
+
+		case EventSourceType.ARTIFACTS_REPO:
+			return { type: EventSourceType.ARTIFACTS_REPO };
+
 		case EventSourceType.IMAGES:
 			return { type: EventSourceType.IMAGES };
 

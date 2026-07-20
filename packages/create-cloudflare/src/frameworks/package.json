@@ -1,7 +1,7 @@
 {
 	"name": "frameworks_clis_info",
 	"dependencies": {
-		"@angular/create": "22.0.6",
+		"@angular/create": "22.0.7",
 		"@tanstack/cli": "0.69.5",
 		"create-analog": "2.6.3",
 		"create-astro": "5.2.2",
@@ -18,7 +18,7 @@
 		"create-waku": "0.12.5-1.0.0-alpha.10-0",
 		"gatsby": "5.16.1",
 		"nuxi": "3.36.1",
-		"sv": "0.16.2"
+		"sv": "0.16.3"
 	},
 	"info": [
 		"This package.json is only used to keep track of the frameworks cli dependencies",

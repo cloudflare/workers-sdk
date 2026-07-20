@@ -1,5 +1,13 @@
 # @cloudflare/local-explorer-ui
 
+## 0.14.2
+
+### Patch Changes
+
+- [#14668](https://github.com/cloudflare/workers-sdk/pull/14668) [`e93d27e`](https://github.com/cloudflare/workers-sdk/commit/e93d27eab1c54b08c5576cb50887429c1f45c40f) Thanks [@DebadityaHait](https://github.com/DebadityaHait)! - Make long worker selector lists scrollable
+
+  Workers beyond the visible selector limit can now be reached with a mouse, trackpad, or keyboard without scrolling the Local Explorer page.
+
 ## 0.14.1
 
 ### Patch Changes

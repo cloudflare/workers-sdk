@@ -4,6 +4,7 @@ import SCRIPT_R2_PUBLIC from "worker:r2/public";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	buildRemoteProxyProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
@@ -48,6 +49,8 @@ export const R2SharedOptionsSchema = z.object({
 export const R2_PLUGIN_NAME = "r2";
 const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
 const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
+// One shared remote-proxy service for all remote R2 buckets (config via props).
+const R2_REMOTE_SERVICE_NAME = `${R2_PLUGIN_NAME}:bucket:remote`;
 export const R2_PUBLIC_SERVICE_NAME = `${R2_PLUGIN_NAME}:public`;
 const R2_BUCKET_OBJECT_CLASS_NAME = "R2BucketObject";
 const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
@@ -97,13 +100,20 @@ export const R2_PLUGIN: Plugin<
 		const buckets = namespaceEntries(options.r2Buckets);
 		return buckets.map<Worker_Binding>(([name, bucket]) => ({
 			name,
-			r2Bucket: {
-				name: getUserBindingServiceName(
-					R2_BUCKET_SERVICE_PREFIX,
-					bucket.id,
-					bucket.remoteProxyConnectionString
-				),
-			},
+			r2Bucket: bucket.remoteProxyConnectionString
+				? {
+						name: R2_REMOTE_SERVICE_NAME,
+						props: buildRemoteProxyProps(
+							bucket.remoteProxyConnectionString,
+							name
+						),
+					}
+				: {
+						name: getUserBindingServiceName(
+							R2_BUCKET_SERVICE_PREFIX,
+							bucket.id
+						),
+					},
 		}));
 	},
 	getNodeBindings(options) {
@@ -122,20 +132,28 @@ export const R2_PLUGIN: Plugin<
 	}) {
 		const persist = sharedOptions.r2Persist;
 		const buckets = namespaceEntries(options.r2Buckets);
-		const services = buckets.map<Service>(
-			([name, { id, remoteProxyConnectionString }]) => ({
-				name: getUserBindingServiceName(
-					R2_BUCKET_SERVICE_PREFIX,
-					id,
-					remoteProxyConnectionString
-				),
-				worker: remoteProxyConnectionString
-					? remoteProxyClientWorker(remoteProxyConnectionString, name)
-					: objectEntryWorker(R2_BUCKET_OBJECT, id),
-			})
-		);
 
-		if (buckets.length > 0) {
+		const services: Service[] = [];
+		let hasRemote = false;
+		for (const [, { id, remoteProxyConnectionString }] of buckets) {
+			if (remoteProxyConnectionString) {
+				hasRemote = true;
+			} else {
+				services.push({
+					name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
+					worker: objectEntryWorker(R2_BUCKET_OBJECT, id),
+				});
+			}
+		}
+		if (hasRemote) {
+			services.push({
+				name: R2_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			});
+		}
+
+		const hasLocal = services.some((s) => s.name !== R2_REMOTE_SERVICE_NAME);
+		if (hasLocal) {
 			const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(
 				R2_PLUGIN_NAME,
@@ -183,8 +201,11 @@ export const R2_PLUGIN: Plugin<
 			};
 			services.push(storageService, objectService);
 
-			for (const bucket of buckets) {
-				await migrateDatabase(log, uniqueKey, persistPath, bucket[1].id);
+			for (const [, bucket] of buckets) {
+				if (bucket.remoteProxyConnectionString) {
+					continue;
+				}
+				await migrateDatabase(log, uniqueKey, persistPath, bucket.id);
 			}
 		}
 

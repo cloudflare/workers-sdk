@@ -328,7 +328,10 @@ export default async function deploy(
 		cache: config.cache,
 		package_dependencies:
 			config.dependencies_instrumentation?.enabled !== false && projectRoot
-				? await collectPackageDependencies(projectRoot)
+				? await collectPackageDependencies(
+						projectRoot,
+						config.dependencies_instrumentation?.exclude_packages
+					)
 				: undefined,
 	};
 
@@ -747,6 +750,7 @@ export default async function deploy(
 		config,
 		accountId,
 		scriptName,
+		workerTag,
 		env: props.env,
 		crons: props.triggers,
 		firstDeploy: !workerExists,
