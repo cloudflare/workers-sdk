@@ -109,6 +109,9 @@ describe("startDev", () => {
 		expect(std.out).toContain(
 			"GET http://127.0.0.1:8787/cdn-cgi/explorer/api/local/workers - local Workers and bindings"
 		);
+		expect(std.out).toContain(
+			"POST http://127.0.0.1:8787/cdn-cgi/explorer/api/local/observability/query - query captured traces and logs (read-only SQL)"
+		);
 	});
 
 	it("does not print the Local Explorer API hint when the caller has not opted in", async ({

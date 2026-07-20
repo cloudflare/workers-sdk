@@ -381,7 +381,9 @@ function printLocalExplorerAgentHint(url: URL): void {
 		  GET ${explorerApiUrl}/r2/buckets - R2 buckets
 		  GET ${explorerApiUrl}/storage/kv/namespaces - KV namespaces
 		  GET ${explorerApiUrl}/workers/durable_objects/namespaces - Durable Object namespaces
-		  GET ${explorerApiUrl}/workflows - Workflows`);
+		  GET ${explorerApiUrl}/workflows - Workflows
+		  POST ${explorerApiUrl}/local/observability/query - query captured traces and logs (read-only SQL)
+		  POST ${explorerApiUrl}/local/observability/clear - clear all captured traces and logs`);
 }
 
 export function formatHostname(hostname: string): string {
