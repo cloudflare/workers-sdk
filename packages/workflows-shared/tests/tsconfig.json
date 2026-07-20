@@ -7,5 +7,5 @@
 			"@cloudflare/vitest-pool-workers/types"
 		]
 	},
-	"include": ["./**/*.ts"]
+	"include": ["./**/*.ts", "../src/vendor/saffron/wasm.d.ts"]
 }

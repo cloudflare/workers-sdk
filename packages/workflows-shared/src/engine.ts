@@ -9,6 +9,7 @@ import {
 	toInstanceStatus,
 } from "./instance";
 import { computeHash } from "./lib/cache";
+import { getCronInstanceId, getNextCronOccurrence } from "./lib/cron";
 import {
 	ABORT_REASONS,
 	createWorkflowError,
@@ -50,6 +51,7 @@ import type {
 } from "./binding";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
+import type { CronMetadata, CronSeed, SaffronService } from "./lib/cron";
 import type {
 	RollbackRegistration,
 	RollbackRegistryEntry,
@@ -64,6 +66,7 @@ import type {
 interface Env {
 	ENGINE: DurableObjectNamespace<Engine>;
 	USER_WORKFLOW: WorkflowEntrypoint;
+	SAFFRON: SaffronService;
 	STEP_LIMIT?: string; // JSON-encoded number from miniflare binding
 }
 
@@ -119,6 +122,9 @@ const EVENT_MAP_PREFIX = "EVENT_MAP";
 export const DEFAULT_STEP_LIMIT = 10_000;
 
 const PAUSE_DATETIME = "PAUSE_DATETIME";
+
+const CRON_METADATA = "CRON_METADATA";
+const CRON_CHILD_SCHEDULED = "CRON_CHILD_SCHEDULED";
 
 export type RollbackPhase = "replay" | "rollback";
 
@@ -1184,6 +1190,153 @@ export class Engine extends DurableObject<Env> {
 		clearRollbackRegistry(this.rollbackRegistry);
 
 		void this.init(accountId, workflow, version, instance, event);
+	}
+
+	async initCron(seed: CronSeed, cron: CronMetadata): Promise<void> {
+		if ((await this.ctx.storage.get(INSTANCE_METADATA)) !== undefined) {
+			return;
+		}
+
+		const nowIso = new Date().toISOString();
+		const event: WorkflowEvent<unknown> = {
+			payload: seed.params,
+			timestamp: new Date(cron.scheduledTime),
+			instanceId: seed.instanceId,
+			workflowName: seed.workflowName,
+			schedule: {
+				cron: cron.expression,
+				scheduledTime: cron.scheduledTime,
+			},
+		};
+
+		const instanceMetadata: InstanceMetadata = {
+			accountId: seed.accountId,
+			// init() reads workflow.name into this.workflowName; the rest is unused here
+			workflow: { name: seed.workflowName } as DatabaseWorkflow,
+			version: {} as DatabaseVersion,
+			instance: {
+				id: seed.instanceId,
+				created_on: nowIso,
+				modified_on: nowIso,
+				workflow_id: "",
+				version_id: "",
+				status: InstanceStatus.Queued,
+				started_on: null,
+				ended_on: null,
+			},
+			event,
+		};
+
+		await this.ctx.storage.put({
+			[INSTANCE_METADATA]: instanceMetadata,
+			[CRON_METADATA]: cron,
+		});
+
+		this.accountId = seed.accountId;
+		this.instanceId = seed.instanceId;
+		this.workflowName = seed.workflowName;
+
+		this.writeLog(InstanceEvent.WORKFLOW_QUEUED, null, null, {
+			params: event.payload,
+			versionId: "",
+			trigger: {
+				source: InstanceTrigger.CRON,
+			},
+		});
+
+		await this.ctx.storage.setAlarm(cron.scheduledTime);
+	}
+
+	async alarm(): Promise<void> {
+		const stored = await this.ctx.storage.get<CronMetadata | InstanceMetadata>([
+			CRON_METADATA,
+			INSTANCE_METADATA,
+		]);
+
+		// Alarms are only ever armed by cron instances
+		const cron = stored.get(CRON_METADATA) as CronMetadata | undefined;
+		if (cron === undefined) {
+			return;
+		}
+
+		const metadata = stored.get(INSTANCE_METADATA) as
+			| InstanceMetadata
+			| undefined;
+		if (metadata === undefined) {
+			return;
+		}
+
+		// Recur only when opted in (autoSchedule), otherwise fire once and stop
+		const alreadyScheduled =
+			await this.ctx.storage.get<boolean>(CRON_CHILD_SCHEDULED);
+		if (cron.autoSchedule && !alreadyScheduled) {
+			try {
+				await this.scheduleNextCronFiring(metadata, cron);
+				await this.ctx.storage.put(CRON_CHILD_SCHEDULED, true);
+			} catch (e) {
+				// A chaining failure must not block this firing
+				console.error("Failed to schedule next cron occurrence:", e);
+			}
+		}
+
+		const startWritten = !this.ctx.storage.sql
+			.exec(
+				"SELECT 1 FROM states WHERE event = ? LIMIT 1",
+				InstanceEvent.WORKFLOW_START
+			)
+			.next().done;
+		if (!startWritten) {
+			this.writeLog(InstanceEvent.WORKFLOW_START, null, null, {});
+		}
+
+		// Run this firing; init() skips its queued/start logging since metadata is set
+		try {
+			await this.init(
+				metadata.accountId,
+				metadata.workflow,
+				metadata.version,
+				metadata.instance,
+				metadata.event
+			);
+		} catch (e) {
+			if (!isAbortError(e)) {
+				console.error("Cron firing failed:", e);
+			}
+		}
+	}
+
+	private async scheduleNextCronFiring(
+		metadata: InstanceMetadata,
+		cron: CronMetadata
+	): Promise<void> {
+		// Occurrences missed while the DO was down are intentionally not backfilled
+		const time = Math.max(Date.now(), cron.scheduledTime);
+		const nextScheduledTime = await getNextCronOccurrence(
+			this.env.SAFFRON,
+			cron.expression,
+			time
+		);
+		const nextInstanceId = getCronInstanceId(
+			cron.expression,
+			nextScheduledTime
+		);
+
+		const nextStub = this.env.ENGINE.get(
+			this.env.ENGINE.idFromName(nextInstanceId)
+		);
+		await nextStub.initCron(
+			{
+				accountId: metadata.accountId,
+				workflowName: metadata.event.workflowName,
+				instanceId: nextInstanceId,
+				params: metadata.event.payload,
+			},
+			{
+				expression: cron.expression,
+				scheduledTime: nextScheduledTime,
+				autoSchedule: true,
+			}
+		);
 	}
 
 	async init(
