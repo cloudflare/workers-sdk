@@ -368,7 +368,9 @@ function maybePrintScheduledWorkerWarning(
 }
 
 function printLocalExplorerAgentHint(url: URL): void {
-	const explorerApiUrl = new URL(`${CorePaths.EXPLORER}/api`, url).href;
+	const displayUrl = new URL(url.href);
+	displayUrl.hostname = formatHostname(url.hostname);
+	const explorerApiUrl = new URL(`${CorePaths.EXPLORER}/api`, displayUrl).href;
 	logger.once.log(dedent`
 		Wrangler detected this dev session is running in an AI agent.
 		The Local Explorer API is available at ${explorerApiUrl}
