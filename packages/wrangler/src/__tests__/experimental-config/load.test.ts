@@ -1,43 +1,11 @@
-import * as fs from "node:fs";
 import * as path from "node:path";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { loadNewConfig } from "../../experimental-config/load";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock `@cloudflare/config`
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// `loadNewConfig` calls into `@cloudflare/config`'s `loadConfig`, which uses
-// `module.registerHooks` to register hooks for `.ts` files and `cf-worker`
-// import attributes. That mechanism does not run inside vitest's module
-// runner, so we cannot invoke the real loader here.
-//
-// Mocking `loadConfig` lets us "load" arbitrary seeded files inside the temp
-// dir without going through Node's module hooks. We use `import("data:...")`
-// to evaluate the file as ESM so the function-form configs work naturally.
-// ─────────────────────────────────────────────────────────────────────────────
-
 vi.mock("@cloudflare/config", async (importOriginal) => {
-	const actual = (await importOriginal()) as Record<string, unknown>;
-
-	async function loadConfig(configPath: string) {
-		const source = await fs.promises.readFile(configPath, "utf8");
-		// Evaluate via a data URL — preserves ESM semantics (top-level await,
-		// default export, etc.) without triggering Node's `.ts` hooks.
-		const mod = (await import(
-			`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
-		)) as { default: unknown };
-		return {
-			config: mod.default,
-			dependencies: new Set<string>([path.resolve(configPath)]),
-		};
-	}
-
-	return {
-		...actual,
-		loadConfig,
-	};
+	const { createConfigMock } = await import("../helpers/mock-new-config");
+	return createConfigMock(importOriginal);
 });
 
 describe("loadNewConfig", () => {
@@ -62,7 +30,7 @@ describe("loadNewConfig", () => {
 		}) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "my-worker", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "my-worker", compatibilityDate: "2026-05-18" };',
 			});
 
 			const result = await loadNewConfig({
@@ -89,7 +57,7 @@ describe("loadNewConfig", () => {
 		}) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "merged-worker", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "merged-worker", compatibilityDate: "2026-05-18" };',
 				"wrangler.config.ts":
 					'export default { minify: true, assetsDirectory: "./public" };',
 			});
@@ -118,6 +86,7 @@ describe("loadNewConfig", () => {
 			await seed({
 				"cloudflare.config.ts": `
 					export default (ctx) => ({
+						type: "worker",
 						name: \`worker-\${ctx.mode}\`,
 						compatibilityDate: "2026-05-18",
 					});
@@ -139,6 +108,7 @@ describe("loadNewConfig", () => {
 			await seed({
 				"cloudflare.config.ts": `
 					export default (ctx) => ({
+						type: "worker",
 						name: \`worker-\${ctx.mode}\`,
 						compatibilityDate: "2026-05-18",
 					});
@@ -159,6 +129,7 @@ describe("loadNewConfig", () => {
 			await seed({
 				"cloudflare.config.ts": `
 					export default (ctx) => ({
+						type: "worker",
 						name: \`worker[\${ctx.mode}]\`,
 						compatibilityDate: "2026-05-18",
 					});
@@ -178,7 +149,7 @@ describe("loadNewConfig", () => {
 		}) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 				"wrangler.config.ts": `
 					export default (ctx) => ({
 						assetsDirectory: \`./\${ctx.mode}-public\`,
@@ -197,6 +168,87 @@ describe("loadNewConfig", () => {
 		});
 	});
 
+	describe("settings export", () => {
+		it("threads accountId and complianceRegion from the settings export", async ({
+			expect,
+		}) => {
+			await seed({
+				"cloudflare.config.ts": `
+					export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };
+					export const settings = { type: "settings", accountId: "acc-123", complianceRegion: "fedramp-high" };
+				`,
+			});
+
+			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
+
+			expect(result.rawConfig.account_id).toBe("acc-123");
+			expect(result.rawConfig.compliance_region).toBe("fedramp_high");
+			expect(result.parsedSettingsConfig).toEqual({
+				type: "settings",
+				accountId: "acc-123",
+				complianceRegion: "fedramp-high",
+			});
+		});
+
+		it("leaves settings undefined when there is no settings export", async ({
+			expect,
+		}) => {
+			await seed({
+				"cloudflare.config.ts":
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
+			});
+
+			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
+
+			expect(result.parsedSettingsConfig).toBeUndefined();
+			expect(result.rawConfig.account_id).toBeUndefined();
+		});
+	});
+
+	describe("default worker selection", () => {
+		it("consumes the default export and validates-then-ignores other workers", async ({
+			expect,
+		}) => {
+			await seed({
+				"cloudflare.config.ts": `
+					export default { type: "worker", name: "primary", compatibilityDate: "2026-05-18" };
+					export const other = { type: "worker", name: "other", compatibilityDate: "2026-05-18" };
+				`,
+			});
+
+			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
+
+			expect(result.rawConfig.name).toBe("primary");
+			expect(result.parsedWorkerConfig.name).toBe("primary");
+		});
+
+		it("still validates non-default worker exports", async ({ expect }) => {
+			await seed({
+				"cloudflare.config.ts": `
+					export default { type: "worker", name: "primary", compatibilityDate: "2026-05-18" };
+					export const other = { type: "worker", name: 42, compatibilityDate: "2026-05-18" };
+				`,
+			});
+
+			await expect(
+				loadNewConfig({ cwd: process.cwd(), args: {} })
+			).rejects.toThrow(/other\.name/);
+		});
+
+		it("throws when there is no default worker export", async ({ expect }) => {
+			await seed({
+				"cloudflare.config.ts": 'export const settings = { type: "settings" };',
+			});
+
+			await expect(
+				loadNewConfig({ cwd: process.cwd(), args: {} })
+			).rejects.toMatchObject({
+				message: expect.stringContaining("must have a default worker export"),
+				telemetryMessage: "new-config worker default export missing",
+			});
+		});
+	});
+
 	describe("worker schema validation", () => {
 		it("throws when cloudflare.config.ts has invalid types", async ({
 			expect,
@@ -204,7 +256,7 @@ describe("loadNewConfig", () => {
 			// `compatibilityDate` must be a string — number triggers a Zod error.
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "bad", compatibilityDate: 12345 };',
+					'export default { type: "worker", name: "bad", compatibilityDate: 12345 };',
 			});
 
 			await expect(
@@ -220,12 +272,12 @@ describe("loadNewConfig", () => {
 		}) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: 42, compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: 42, compatibilityDate: "2026-05-18" };',
 			});
 
 			await expect(
 				loadNewConfig({ cwd: process.cwd(), args: {} })
-			).rejects.toThrow(/\s*•\s+name:/);
+			).rejects.toThrow(/\s*•\s+default\.name:/);
 		});
 	});
 
@@ -235,7 +287,7 @@ describe("loadNewConfig", () => {
 		}) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 				// `name` is a worker-runtime field, not a tooling field; the
 				// `WORKER_CONFIG_FIELD_HINTS` set turns this into a hint.
 				"wrangler.config.ts":
@@ -257,7 +309,7 @@ describe("loadNewConfig", () => {
 		}) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 				"wrangler.config.ts": "export default { bogusField: true };",
 			});
 
@@ -271,7 +323,7 @@ describe("loadNewConfig", () => {
 		it("rejects wrong types for tooling fields", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 				"wrangler.config.ts": 'export default { minify: "yes-please" };',
 			});
 
@@ -291,6 +343,7 @@ describe("loadNewConfig", () => {
 			await seed({
 				"cloudflare.config.ts": `
 					export default {
+						type: "worker",
 						name: "w",
 						compatibilityDate: "2026-05-18",
 						env: { ASSETS: { type: "assets" } },
@@ -322,6 +375,7 @@ describe("loadNewConfig", () => {
 			await seed({
 				"cloudflare.config.ts": `
 					export default {
+						type: "worker",
 						name: "email-worker",
 						compatibilityDate: "2026-05-18",
 						triggers: [
@@ -352,7 +406,7 @@ describe("loadNewConfig", () => {
 		}) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 			});
 
 			const result = await loadNewConfig({
@@ -368,7 +422,7 @@ describe("loadNewConfig", () => {
 		}) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 				"wrangler.config.ts": "export default { minify: true };",
 			});
 
@@ -383,7 +437,7 @@ describe("loadNewConfig", () => {
 		it("honors `dev.types.generate: false`", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 				"wrangler.config.ts":
 					"export default { dev: { types: { generate: false } } };",
 			});
@@ -399,7 +453,7 @@ describe("loadNewConfig", () => {
 		it("honors `dev.types.includeRuntime: false`", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 				"wrangler.config.ts":
 					"export default { dev: { types: { includeRuntime: false } } };",
 			});
@@ -415,7 +469,7 @@ describe("loadNewConfig", () => {
 		it("is not threaded into the merged rawConfig.dev", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 				"wrangler.config.ts":
 					"export default { dev: { types: { generate: false }, port: 1234 } };",
 			});
@@ -437,7 +491,7 @@ describe("loadNewConfig", () => {
 		it("is the union of dependencies from both files", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
-					'export default { name: "w", compatibilityDate: "2026-05-18" };',
+					'export default { type: "worker", name: "w", compatibilityDate: "2026-05-18" };',
 				"wrangler.config.ts": "export default { minify: true };",
 			});
 

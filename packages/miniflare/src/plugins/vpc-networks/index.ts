@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
@@ -26,6 +26,7 @@ export const VpcNetworksOptionsSchema = z.object({
 });
 
 export const VPC_NETWORKS_PLUGIN_NAME = "vpc-networks";
+const VPC_NETWORKS_REMOTE_SERVICE_NAME = `${VPC_NETWORKS_PLUGIN_NAME}:remote`;
 
 export const VPC_NETWORKS_PLUGIN: Plugin<typeof VpcNetworksOptionsSchema> = {
 	options: VpcNetworksOptionsSchema,
@@ -36,16 +37,14 @@ export const VPC_NETWORKS_PLUGIN: Plugin<typeof VpcNetworksOptionsSchema> = {
 		}
 
 		return Object.entries(options.vpcNetworks).map(([name, binding]) => {
-			const identifier =
-				"tunnel_id" in binding ? binding.tunnel_id : binding.network_id;
 			return {
 				name,
 
 				service: {
-					name: getUserBindingServiceName(
-						VPC_NETWORKS_PLUGIN_NAME,
-						identifier,
-						binding.remoteProxyConnectionString
+					name: VPC_NETWORKS_REMOTE_SERVICE_NAME,
+					props: buildRemoteProxyProps(
+						binding.remoteProxyConnectionString,
+						name
 					),
 				},
 			};
@@ -63,24 +62,15 @@ export const VPC_NETWORKS_PLUGIN: Plugin<typeof VpcNetworksOptionsSchema> = {
 		);
 	},
 	async getServices({ options }) {
-		if (!options.vpcNetworks) {
+		if (!options.vpcNetworks || Object.keys(options.vpcNetworks).length === 0) {
 			return [];
 		}
 
-		return Object.entries(options.vpcNetworks).map(([name, binding]) => {
-			const identifier =
-				"tunnel_id" in binding ? binding.tunnel_id : binding.network_id;
-			return {
-				name: getUserBindingServiceName(
-					VPC_NETWORKS_PLUGIN_NAME,
-					identifier,
-					binding.remoteProxyConnectionString
-				),
-				worker: remoteProxyClientWorker(
-					binding.remoteProxyConnectionString,
-					name
-				),
-			};
-		});
+		return [
+			{
+				name: VPC_NETWORKS_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			},
+		];
 	},
 };

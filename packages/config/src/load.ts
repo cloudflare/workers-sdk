@@ -25,16 +25,20 @@ const depsStore = new AsyncLocalStorage<Set<string>>();
 /**
  * Dynamically import a worker config file from disk.
  *
- * Returns the module's default export, plus the set of file paths
- * imported during resolution. Callers are responsible for unwrapping
- * function/promise wrappers around the returned value and validating it
- * against `InputWorkerSchema`.
+ * Returns all of the module's exports (keyed by export name, including
+ * `default`), plus the set of file paths imported during resolution. Callers
+ * are responsible for unwrapping function/promise/definition wrappers around
+ * each export and validating them.
  *
  * @param configPath Filesystem path to the config file. Relative paths are
  *   resolved against `process.cwd()`.
+ * @param options.include When provided, only exports whose names are listed
+ *   survive into the returned `exports` map. Filtering happens before any
+ *   resolution or validation.
  */
 export async function loadConfig(
-	configPath: string
+	configPath: string,
+	options?: { include?: string[] }
 ): Promise<LoadConfigResult> {
 	registerConfigHooks();
 	const url = pathToFileURL(configPath).href;
@@ -43,12 +47,24 @@ export async function loadConfig(
 		dependencies,
 		() => import(url, { with: { [CF_ATTR]: CF_NO_CACHE_VALUE } })
 	);
-	return { config: mod.default, dependencies };
+
+	const exports: Record<string, unknown> = {};
+	for (const [name, value] of Object.entries(mod as Record<string, unknown>)) {
+		if (options?.include && !options.include.includes(name)) {
+			continue;
+		}
+		exports[name] = value;
+	}
+
+	return { exports, dependencies };
 }
 
 export interface LoadConfigResult {
-	/** The default export of the config module */
-	config: unknown;
+	/**
+	 * All exports of the config module, keyed by export name (including
+	 * `default`). Filtered by `options.include` when provided.
+	 */
+	exports: Record<string, unknown>;
 	/**
 	 * Absolute file paths imported while resolving the config.
 	 * `cf-worker` entrypoints are NOT included — they are

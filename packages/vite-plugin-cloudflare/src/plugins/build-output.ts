@@ -1,6 +1,9 @@
 import assert from "node:assert";
 import * as path from "node:path";
-import { writeOutputWorkerConfig } from "@cloudflare/config";
+import {
+	writeOutputWorkerConfig,
+	writeRootOutputConfig,
+} from "@cloudflare/config";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
@@ -20,15 +23,18 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				ctx.resolvedPluginConfig.type === "assets-only" &&
 				this.environment.name === "client"
 			) {
-				const workerNewConfig = ctx.resolvedPluginConfig.parsedNewConfig;
+				const defaultExport = ctx.resolvedPluginConfig.parsedNewConfig?.default;
+				const workerNewConfig =
+					defaultExport?.type === "worker" ? defaultExport : undefined;
 				assert(
 					workerNewConfig,
-					"Expected parsedNewConfig on assets-only resolved config"
+					"Expected a default worker export on assets-only resolved config"
 				);
 				await writeOutputWorkerConfig(
 					ctx.resolvedViteConfig.root,
 					workerNewConfig
 				);
+				await writeRootSettings();
 				return;
 			}
 
@@ -77,8 +83,22 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					modules,
 				}
 			);
+			await writeRootSettings();
 		},
 	};
+
+	async function writeRootSettings(): Promise<void> {
+		if (ctx.resolvedPluginConfig.type === "preview") {
+			return;
+		}
+		const settingsExport = ctx.resolvedPluginConfig.parsedNewConfig?.settings;
+		const settings =
+			settingsExport?.type === "settings" ? settingsExport : undefined;
+		if (!settings) {
+			return;
+		}
+		await writeRootOutputConfig(ctx.resolvedViteConfig.root, settings);
+	}
 });
 
 /**
