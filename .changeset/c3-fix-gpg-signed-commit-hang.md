@@ -2,8 +2,8 @@
 "create-cloudflare": patch
 ---
 
-Fix the initial `git commit` hanging when `commit.gpgsign` is enabled
+Fix `git commit` hanging when `commit.gpgsign` is enabled
 
-Previously, `gitCommit` kept its own animated spinner running (and ran `git commit` with piped stdio, which itself spun up a second, nested spinner) for the whole duration of the commit. When `commit.gpgsign` is configured, `git commit` invokes GPG, which may need to show an interactive passphrase prompt (e.g. via `pinentry-curses`) directly on the controlling terminal. That prompt would fight C3's own redraw loop(s) for control of the screen, making it impossible to enter the passphrase and leaving the process appearing to hang.
+If you have GPG commit signing configured with a passphrase-protected key, the initial commit created during project setup would appear to hang: the passphrase prompt couldn't get keyboard input because it had to compete with C3's own progress output for control of the terminal. The only way out was Ctrl+C, which also skipped the rest of setup, including the prompt to deploy your new project.
 
-The commit step now stops the spinner and runs `git commit` with inherited stdio, so any interactive prompt (GPG or otherwise) behaves exactly as it would for a normal, manually-run `git commit`.
+`git commit` now runs the same way it would if you ran it yourself, so passphrase-protected signing keys work as expected. A failure while staging files is also now reported correctly instead of leaving the progress indicator spinning indefinitely.
