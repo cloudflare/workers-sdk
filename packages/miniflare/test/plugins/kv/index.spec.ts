@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { KV_PLUGIN_NAME, MAX_BULK_GET_KEYS, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, test } from "vitest";
 import {
@@ -787,7 +788,7 @@ test("persists on file-system", async ({ expect }) => {
 		modules: true,
 		script: "",
 		kvNamespaces: { NAMESPACE: "namespace" },
-		kvPersist: tmp,
+		resourcePersistencePath: tmp,
 	};
 	let mf = new Miniflare(opts);
 	useDispose(mf);
@@ -796,8 +797,8 @@ test("persists on file-system", async ({ expect }) => {
 	await kv.put("key", "value");
 	expect(await kv.get("key")).toBe("value");
 
-	// Check directory created for namespace
-	const names = await fs.readdir(tmp);
+	// Check directory created for namespace under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, KV_PLUGIN_NAME));
 	expect(names.includes("miniflare-KVNamespaceObject")).toBe(true);
 
 	// Check "restarting" keeps persisted data

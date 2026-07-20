@@ -188,7 +188,7 @@ describe("Durable Objects API", () => {
 				}
 			`,
 				unsafeLocalExplorer: true,
-				defaultPersistRoot: persistPath,
+				resourcePersistencePath: persistPath,
 				durableObjects: {
 					TEST_DO: { className: "TestDO", useSQLite: true },
 				},

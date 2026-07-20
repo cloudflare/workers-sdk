@@ -119,7 +119,6 @@ import type { DispatchFetch, RequestInit } from "./http";
 import type {
 	DurableObjectClassNames,
 	Plugin,
-	Plugins,
 	PluginServicesOptions,
 	PluginSharedOptions,
 	PluginWorkerOptions,
@@ -1101,7 +1100,7 @@ export class Miniflare {
 			// project temp path is supplied, these live inside `#tmpPath` and are
 			// already removed above.
 			const emailPaths = getEmailPathsToClean(
-				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#sharedOpts.core.resourceTmpPath,
 				this.#tmpPath
 			);
 			if (emailPaths) {
@@ -1278,13 +1277,11 @@ export class Miniflare {
 		);
 		assert(namespaceId, "Namespace ID is required");
 
-		const doSharedOpts = this.#sharedOpts.do;
 		const coreSharedOpts = this.#sharedOpts.core;
 		const doPersistPath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			this.#tmpPath,
-			coreSharedOpts.defaultPersistRoot,
-			doSharedOpts.durableObjectsPersist
+			coreSharedOpts.resourcePersistencePath
 		);
 
 		const namespacePath = path.join(doPersistPath, namespaceId);
@@ -1327,13 +1324,11 @@ export class Miniflare {
 		);
 		assert(workflowName, "Workflow name is required");
 
-		const workflowsSharedOpts = this.#sharedOpts.workflows;
 		const coreSharedOpts = this.#sharedOpts.core;
 		const workflowsPersistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			this.#tmpPath,
-			coreSharedOpts.defaultPersistRoot,
-			workflowsSharedOpts.workflowsPersist
+			coreSharedOpts.resourcePersistencePath
 		);
 
 		// Engine DOs are stored under: <persistPath>/miniflare-workflows-<name>/<hexId>.sqlite
@@ -1408,13 +1403,11 @@ export class Miniflare {
 
 		assert(workflowName, "Workflow name is required");
 
-		const workflowsSharedOpts = this.#sharedOpts.workflows;
 		const coreSharedOpts = this.#sharedOpts.core;
 		const workflowsPersistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			this.#tmpPath,
-			coreSharedOpts.defaultPersistRoot,
-			workflowsSharedOpts.workflowsPersist
+			coreSharedOpts.resourcePersistencePath
 		);
 
 		const uniqueKey = `miniflare-workflows-${workflowName}`;
@@ -2079,8 +2072,8 @@ export class Miniflare {
 				workerIndex: i,
 				additionalModules,
 				tmpPath: this.#tmpPath,
-				defaultPersistRoot: sharedOpts.core.defaultPersistRoot,
-				defaultProjectTmpPath: sharedOpts.core.defaultProjectTmpPath,
+				resourcePersistencePath: sharedOpts.core.resourcePersistencePath,
+				resourceTmpPath: sharedOpts.core.resourceTmpPath,
 				workerNames,
 				loopbackHost,
 				loopbackPort,
@@ -3130,8 +3123,7 @@ export class Miniflare {
 		const durableObjectsPersistPath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			this.#tmpPath,
-			this.#sharedOpts.core.defaultPersistRoot,
-			this.#sharedOpts.do.durableObjectsPersist
+			this.#sharedOpts.core.resourcePersistencePath
 		);
 
 		try {
@@ -3235,17 +3227,6 @@ export class Miniflare {
 		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
 	}
 
-	unsafeGetPersistPaths(): Map<keyof Plugins, string> {
-		const result = new Map<keyof Plugins, string>();
-		for (const [key, plugin] of PLUGIN_ENTRIES) {
-			const sharedOpts = this.#sharedOpts[key];
-			// @ts-expect-error `sharedOptions` will match the plugin's type here
-			const maybePath = plugin.getPersistPath?.(sharedOpts, this.#tmpPath);
-			if (maybePath !== undefined) result.set(key, maybePath);
-		}
-		return result;
-	}
-
 	get #mergedPluginEntries() {
 		return [...PLUGIN_ENTRIES, ...this.#externalPlugins.entries()];
 	}
@@ -3296,7 +3277,7 @@ export class Miniflare {
 			// project temp path is supplied, these live inside `#tmpPath` and are
 			// already removed above.
 			const emailPaths = getEmailPathsToClean(
-				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#sharedOpts.core.resourceTmpPath,
 				this.#tmpPath
 			);
 			if (emailPaths) {

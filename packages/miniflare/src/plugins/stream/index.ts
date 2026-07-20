@@ -7,7 +7,6 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	WORKER_BINDING_SERVICE_LOOPBACK,
@@ -26,10 +25,6 @@ export const StreamOptionsSchema = z.object({
 	stream: StreamSchema.optional(),
 });
 
-export const StreamSharedOptionsSchema = z.object({
-	streamPersist: PersistenceSchema,
-});
-
 export const STREAM_PLUGIN_NAME = "stream";
 const STREAM_STORAGE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:storage`;
 const STREAM_OBJECT_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:object`;
@@ -37,12 +32,8 @@ export const STREAM_OBJECT_CLASS_NAME = "StreamObject";
 
 export const STREAM_COMPAT_DATE = "2026-03-23";
 
-export const STREAM_PLUGIN: Plugin<
-	typeof StreamOptionsSchema,
-	typeof StreamSharedOptionsSchema
-> = {
+export const STREAM_PLUGIN: Plugin<typeof StreamOptionsSchema> = {
 	options: StreamOptionsSchema,
-	sharedOptions: StreamSharedOptionsSchema,
 	bindingTypeDescription: "Stream",
 	async getBindings(options) {
 		if (!options.stream) {
@@ -73,7 +64,7 @@ export const STREAM_PLUGIN: Plugin<
 			[options.stream.binding]: new ProxyNodeBinding(),
 		};
 	},
-	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		if (!options.stream) {
 			return [];
 		}
@@ -99,8 +90,7 @@ export const STREAM_PLUGIN: Plugin<
 		const persistPath = getPersistPath(
 			STREAM_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.streamPersist
+			resourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
 
@@ -175,13 +165,5 @@ export const STREAM_PLUGIN: Plugin<
 		} satisfies Service;
 
 		return [storageService, objectService, bindingService];
-	},
-	getPersistPath({ streamPersist }, tmpPath) {
-		return getPersistPath(
-			STREAM_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			streamPersist
-		);
 	},
 };

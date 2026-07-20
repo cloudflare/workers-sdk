@@ -4,7 +4,6 @@ import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
 	kUnsafeEphemeralUniqueKey,
-	PersistenceSchema,
 	ProxyNodeBinding,
 } from "../shared";
 import type { Worker_Binding } from "../../runtime";
@@ -51,9 +50,6 @@ export const DurableObjectsOptionsSchema = z.object({
 	// Not all DOs are configured as bindings! Include these in a different key
 	// These might just be configured via migrations, but should still be allocated storage for e.g. ctx.exports support
 	additionalUnboundDurableObjects: z.array(DurableObject).optional(),
-});
-export const DurableObjectsSharedOptionsSchema = z.object({
-	durableObjectsPersist: PersistenceSchema,
 });
 
 export function normaliseDurableObject(
@@ -115,11 +111,9 @@ export const DURABLE_OBJECTS_PLUGIN_NAME = "do";
 export const DURABLE_OBJECTS_STORAGE_SERVICE_NAME = `${DURABLE_OBJECTS_PLUGIN_NAME}:storage`;
 
 export const DURABLE_OBJECTS_PLUGIN: Plugin<
-	typeof DurableObjectsOptionsSchema,
-	typeof DurableObjectsSharedOptionsSchema
+	typeof DurableObjectsOptionsSchema
 > = {
 	options: DurableObjectsOptionsSchema,
-	sharedOptions: DurableObjectsSharedOptionsSchema,
 	bindingTypeDescription: "Durable Object namespace",
 	getBindings(options) {
 		return Object.entries(options.durableObjects ?? {}).map<Worker_Binding>(
@@ -139,9 +133,8 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		);
 	},
 	async getServices({
-		sharedOptions,
 		tmpPath,
-		defaultPersistRoot,
+		resourcePersistencePath,
 		durableObjectClassNames,
 		unsafeEphemeralDurableObjects,
 	}) {
@@ -164,8 +157,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		const storagePath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.durableObjectsPersist
+			resourcePersistencePath
 		);
 		// `workerd` requires the `disk.path` to exist. Setting `recursive: true`
 		// is like `mkdir -p`: it won't fail if the directory already exists, and it
@@ -180,13 +172,5 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 				disk: { path: storagePath, writable: true },
 			},
 		];
-	},
-	getPersistPath({ durableObjectsPersist }, tmpPath) {
-		return getPersistPath(
-			DURABLE_OBJECTS_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			durableObjectsPersist
-		);
 	},
 };

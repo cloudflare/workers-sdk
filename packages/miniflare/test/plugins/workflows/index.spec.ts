@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
+import path from "node:path";
 import { scheduler } from "node:timers/promises";
-import { Miniflare } from "miniflare";
+import { Miniflare, WORKFLOWS_PLUGIN_NAME } from "miniflare";
 import { describe, test } from "vitest";
 import { useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
@@ -42,7 +43,7 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 				],
 			},
 		},
-		workflowsPersist: tmp,
+		resourcePersistencePath: tmp,
 	});
 	useDispose(mf);
 
@@ -67,7 +68,7 @@ test("persists Workflow data on file-system between runs", async ({
 				name: "MY_WORKFLOW",
 			},
 		},
-		workflowsPersist: tmp,
+		resourcePersistencePath: tmp,
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);
@@ -97,8 +98,8 @@ test("persists Workflow data on file-system between runs", async ({
 		true
 	);
 
-	// check if files were committed
-	const names = await fs.readdir(tmp);
+	// check if files were committed under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME));
 	expect(names).toEqual(["miniflare-workflows-MY_WORKFLOW"]);
 
 	// restart miniflare
@@ -191,7 +192,7 @@ function lifecycleMiniflareOpts(tmp: string): MiniflareOptions {
 				name: "LIFECYCLE_WORKFLOW",
 			},
 		},
-		workflowsPersist: tmp,
+		resourcePersistencePath: tmp,
 	};
 }
 

@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { z } from "zod";
-import { MiniflareCoreError, PathSchema } from "../../shared";
+import { pathToFileURL } from "node:url";
+import { MiniflareCoreError } from "../../shared";
 import type {
 	Extension,
 	Service,
@@ -18,16 +17,7 @@ import type {
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
 import type { UnsafeUniqueKey } from "./constants";
-
-export const DEFAULT_PERSIST_ROOT = ".mf";
-
-export const PersistenceSchema = z
-	// Zod checks union types in order, both `z.url()` and `PathSchema`
-	// will result in a `string`, but `PathSchema` gets resolved relative to the
-	// closest `rootPath`.
-	.union([z.boolean(), z.url(), PathSchema])
-	.optional();
-export type Persistence = z.infer<typeof PersistenceSchema>;
+import type { z } from "zod";
 
 // Maps workflow binding names to their workflow options
 export interface WorkflowOption {
@@ -70,8 +60,8 @@ export interface PluginServicesOptions<
 	workerIndex: number;
 	additionalModules: Worker_Module[];
 	tmpPath: string;
-	defaultPersistRoot: string | undefined;
-	defaultProjectTmpPath: string | undefined;
+	resourcePersistencePath: string | undefined;
+	resourceTmpPath: string | undefined;
 	workerNames: string[];
 	loopbackHost: string;
 	loopbackPort: number;
@@ -111,10 +101,6 @@ export interface PluginBase<
 	getServices(
 		options: PluginServicesOptions<Options, SharedOptions>
 	): Awaitable<Service[] | ServicesExtensions | void>;
-	getPersistPath?(
-		sharedOptions: OptionalZodTypeOf<SharedOptions>,
-		tmpPath: string
-	): string;
 	getExtensions?(options: {
 		options: z.infer<Options>[];
 	}): Awaitable<Extension[]>;
@@ -214,7 +200,7 @@ export function namespaceEntries(
 	}
 }
 
-export function maybeParseURL(url: Persistence): URL | undefined {
+export function maybeParseURL(url: string | undefined): URL | undefined {
 	if (typeof url !== "string" || path.isAbsolute(url)) return;
 	try {
 		return new URL(url);
@@ -224,48 +210,18 @@ export function maybeParseURL(url: Persistence): URL | undefined {
 export function getPersistPath(
 	pluginName: string,
 	tmpPath: string,
-	defaultPersistRoot: string | undefined,
-	persist: Persistence
+	resourcePersistencePath: string | undefined
 ): string {
-	// If persistence is disabled, use "memory" storage. Note we're still
-	// returning a path on the file-system here. Miniflare 2's in-memory storage
-	// persisted between options reloads. However, we restart the `workerd`
-	// process on each reload which would destroy any in-memory data. We'd like to
-	// keep Miniflare 2's behaviour, so persist to a temporary path which we
-	// destroy on `dispose()`.
-	const memoryishPath = path.join(tmpPath, pluginName);
-
-	let result: string;
-	if (persist === false) {
-		result = memoryishPath;
-	} else if (persist === undefined) {
-		// If `persist` is undefined, use either the default path or fallback to the tmpPath
-		result =
-			defaultPersistRoot === undefined
-				? memoryishPath
-				: path.join(defaultPersistRoot, pluginName);
-	} else {
-		// Try parse `persist` as a URL
-		const url = maybeParseURL(persist);
-		if (url !== undefined) {
-			if (url.protocol === "memory:") {
-				result = memoryishPath;
-			} else if (url.protocol === "file:") {
-				result = fileURLToPath(url);
-			} else {
-				throw new MiniflareCoreError(
-					"ERR_PERSIST_UNSUPPORTED",
-					`Unsupported "${url.protocol}" persistence protocol for storage: ${url.href}`
-				);
-			}
-		} else {
-			// Otherwise, fallback to file storage
-			result =
-				persist === true
-					? path.join(defaultPersistRoot ?? DEFAULT_PERSIST_ROOT, pluginName)
-					: persist;
-		}
-	}
+	// If persistence is disabled (no resource persistence path), use "memory"
+	// storage. Note we're still returning a path on the file-system here.
+	// Miniflare 2's in-memory storage persisted between options reloads. However,
+	// we restart the `workerd` process on each reload which would destroy any
+	// in-memory data. We'd like to keep Miniflare 2's behaviour, so persist to a
+	// temporary path which we destroy on `dispose()`.
+	const result =
+		resourcePersistencePath === undefined
+			? path.join(tmpPath, pluginName)
+			: path.join(resourcePersistencePath, pluginName);
 
 	// Normalize to forward slashes for workerd's disk service compatibility on
 	// Windows. workerd is a Unix-oriented C++ program and its disk service does

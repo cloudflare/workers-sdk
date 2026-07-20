@@ -6,7 +6,6 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
@@ -26,16 +25,8 @@ export const HelloWorldOptionsSchema = z.object({
 		.optional(),
 });
 
-export const HelloWorldSharedOptionsSchema = z.object({
-	helloWorldPersist: PersistenceSchema,
-});
-
-export const HELLO_WORLD_PLUGIN: Plugin<
-	typeof HelloWorldOptionsSchema,
-	typeof HelloWorldSharedOptionsSchema
-> = {
+export const HELLO_WORLD_PLUGIN: Plugin<typeof HelloWorldOptionsSchema> = {
 	options: HelloWorldOptionsSchema,
-	sharedOptions: HelloWorldSharedOptionsSchema,
 	bindingTypeDescription: "Hello World",
 	async getBindings(options) {
 		if (!options.helloWorld) {
@@ -66,7 +57,7 @@ export const HELLO_WORLD_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		const configs = options.helloWorld ? Object.values(options.helloWorld) : [];
 
 		if (configs.length === 0) {
@@ -76,8 +67,7 @@ export const HELLO_WORLD_PLUGIN: Plugin<
 		const persistPath = getPersistPath(
 			HELLO_WORLD_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.helloWorldPersist
+			resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });
@@ -145,13 +135,5 @@ export const HELLO_WORLD_PLUGIN: Plugin<
 		}));
 
 		return [...services, storageService, objectService];
-	},
-	getPersistPath(sharedOptions, tmpPath) {
-		return getPersistPath(
-			HELLO_WORLD_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			sharedOptions.helloWorldPersist
-		);
 	},
 };

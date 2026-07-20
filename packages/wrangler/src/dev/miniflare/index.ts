@@ -1152,8 +1152,10 @@ export async function buildMiniflareOptions(
 		bindingOptions.browserRendering.headful = true;
 	}
 	const sitesOptions = buildSitesOptions(config);
-	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
-	const defaultProjectTmpPath = getDefaultProjectTmpPath(config.projectRoot);
+	const resourcePersistencePath = getDefaultPersistRoot(
+		config.localPersistencePath
+	);
+	const resourceTmpPath = getDefaultProjectTmpPath(config.projectRoot);
 	const assetOptions = buildAssetOptions(config);
 
 	const options: MiniflareOptions = {
@@ -1180,8 +1182,8 @@ export async function buildMiniflareOptions(
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleStructuredLogs: config.structuredLogsHandler ?? handleStructuredLogs,
-		defaultPersistRoot,
-		defaultProjectTmpPath,
+		resourcePersistencePath,
+		resourceTmpPath,
 		workers: [
 			{
 				name: getName(config),

@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { CACHE_PLUGIN_NAME, Miniflare, Request, Response } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
@@ -419,7 +420,7 @@ test("operations persist cached data", async ({ expect }) => {
 	const opts: MiniflareOptions = {
 		modules: true,
 		script: "",
-		cachePersist: tmp,
+		resourcePersistencePath: tmp,
 	};
 	let mf = new Miniflare(opts);
 	useDispose(mf);
@@ -433,8 +434,8 @@ test("operations persist cached data", async ({ expect }) => {
 	});
 	await cache.put(key, resToCache);
 
-	// Check directory created for namespace
-	const names = await fs.readdir(tmp);
+	// Check directory created for namespace under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, CACHE_PLUGIN_NAME));
 	expect(names.includes("miniflare-CacheObject")).toBe(true);
 
 	// Check "restarting" keeps persisted data

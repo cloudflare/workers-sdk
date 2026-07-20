@@ -474,14 +474,11 @@ export async function getDevMiniflareOptions(
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
-			defaultPersistRoot: getPersistenceRoot(
+			resourcePersistencePath: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			defaultProjectTmpPath: path.resolve(
-				resolvedViteConfig.root,
-				".wrangler/tmp"
-			),
+			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
 				const parsed = await parseModuleFallbackRequest(request);
@@ -758,14 +755,11 @@ export async function getPreviewMiniflareOptions(
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
-			defaultPersistRoot: getPersistenceRoot(
+			resourcePersistencePath: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			defaultProjectTmpPath: path.resolve(
-				resolvedViteConfig.root,
-				".wrangler/tmp"
-			),
+			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
 			workers,
 		},
 		containerTagToOptionsMap,

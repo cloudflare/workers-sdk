@@ -321,11 +321,11 @@ async function getMiniflareOptionsFromConfig(args: {
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
 
-	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
+	const resourcePersistencePath = getMiniflarePersistRoot(options.persist);
 	const projectRoot = config.userConfigPath
 		? path.dirname(config.userConfigPath)
 		: process.cwd();
-	const defaultProjectTmpPath = getDefaultProjectTmpPath(projectRoot);
+	const resourceTmpPath = getDefaultProjectTmpPath(projectRoot);
 
 	const miniflareOptions: MiniflareOptions = {
 		workers: [
@@ -339,8 +339,8 @@ async function getMiniflareOptionsFromConfig(args: {
 			},
 			...externalWorkers,
 		],
-		defaultPersistRoot,
-		defaultProjectTmpPath,
+		resourcePersistencePath,
+		resourceTmpPath,
 	};
 
 	return {

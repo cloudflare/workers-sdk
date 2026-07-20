@@ -57,7 +57,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 			options?.map((binding) => [binding.name, new ProxyNodeBinding()]) ?? []
 		);
 	},
-	async getServices({ options, tmpPath, defaultPersistRoot }) {
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		if (!options || options.length === 0) {
 			return [];
 		}
@@ -65,8 +65,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 		const persistPath = getPersistPath(
 			UNSAFE_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			undefined
+			resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });

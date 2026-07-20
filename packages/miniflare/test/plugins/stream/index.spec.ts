@@ -1,4 +1,3 @@
-import { pathToFileURL } from "node:url";
 import {
 	Miniflare,
 	STREAM_COMPAT_DATE,
@@ -140,7 +139,6 @@ function createMiniflare(options: Partial<MiniflareOptions> = {}): Miniflare {
 	return new Miniflare({
 		compatibilityDate: STREAM_COMPAT_DATE,
 		stream: { binding: "STREAM" },
-		streamPersist: false,
 		modules: true,
 		script: WORKER_SCRIPT,
 		...options,
@@ -706,7 +704,6 @@ describe("Stream reloads", () => {
 		const opts = {
 			compatibilityDate: STREAM_COMPAT_DATE,
 			stream: { binding: "STREAM" },
-			streamPersist: false,
 			modules: true,
 			script: WORKER_SCRIPT,
 		} satisfies MiniflareOptions;
@@ -732,9 +729,7 @@ describe("Stream reloads", () => {
 		expect(videos[0].id).toBe(video.id);
 	});
 
-	test("keeps persisted data when persistence path format changes on reload", async ({
-		expect,
-	}) => {
+	test("keeps persisted data across setOptions reloads", async ({ expect }) => {
 		const tmp = await useTmp();
 		const { http: videoUrl } = await useServer(
 			staticBytesListener(TEST_VIDEO_BYTES)
@@ -742,7 +737,7 @@ describe("Stream reloads", () => {
 		const opts = {
 			compatibilityDate: STREAM_COMPAT_DATE,
 			stream: { binding: "STREAM" },
-			streamPersist: tmp,
+			resourcePersistencePath: tmp,
 			modules: true,
 			script: WORKER_SCRIPT,
 		} satisfies MiniflareOptions;
@@ -755,7 +750,6 @@ describe("Stream reloads", () => {
 
 		await mf.setOptions({
 			...opts,
-			streamPersist: pathToFileURL(tmp).href,
 			script: `${WORKER_SCRIPT}\n// reload persisted stream worker`,
 		});
 

@@ -10,7 +10,6 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
-import url from "node:url";
 import util from "node:util";
 import { _forceColour } from "@cloudflare/workers-utils";
 import {
@@ -3198,7 +3197,7 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 	await fs.writeFile(path.join(tmp, "3.txt"), "three text");
 	const mf = new Miniflare({
 		rootPath: tmp,
-		kvPersist: "kv",
+		resourcePersistencePath: tmp,
 		workers: [
 			{
 				name: "a",
@@ -3263,10 +3262,10 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 	});
 	expect(existsSync(path.join(tmp, "kv", "namespace"))).toBe(true);
 
-	// Check persistence URLs not resolved relative to root path
+	// Check persisted KV data survives an options reload
 	await mf.setOptions({
 		rootPath: tmp,
-		kvPersist: url.pathToFileURL(path.join(tmp, "kv")).href,
+		resourcePersistencePath: tmp,
 		kvNamespaces: { NAMESPACE: "namespace" },
 		modules: true,
 		script: `export default {

@@ -187,9 +187,10 @@ export class BlobStore {
 		namespace = encodeURIComponent(sanitisePath(namespace));
 		this.#fetcher = fetcher;
 		// `baseURL`'s `pathname` (`/${namespace}/blobs/`) is relative to the
-		// `*Persist` (e.g. `kvPersist`) option if defined. For example, if
-		// `kvPersist` is `/path/to/kv`, the `blobs` directory for a KV namespace
-		// with ID `TEST_NAMESPACE` would be `/path/to/kv/TEST_NAMESPACE/blobs`.
+		// plugin's persistence directory under `resourcePersistencePath`. For
+		// example, if the KV persistence directory is `/path/to/kv`, the `blobs`
+		// directory for a KV namespace with ID `TEST_NAMESPACE` would be
+		// `/path/to/kv/TEST_NAMESPACE/blobs`.
 		this.#baseURL = `http://placeholder/${namespace}/blobs/`;
 	}
 

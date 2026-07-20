@@ -7,7 +7,6 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
-	PersistenceSchema,
 	SERVICE_LOOPBACK,
 } from "../shared";
 import type {
@@ -19,9 +18,6 @@ import type { Plugin } from "../shared";
 
 export const CacheOptionsSchema = z.object({
 	cacheAPI: z.boolean().optional(),
-});
-export const CacheSharedOptionsSchema = z.object({
-	cachePersist: PersistenceSchema,
 });
 
 export const CACHE_PLUGIN_NAME = "cache";
@@ -38,12 +34,8 @@ export function getCacheServiceName(workerIndex: number) {
 	return `${CACHE_PLUGIN_NAME}:${workerIndex}`;
 }
 
-export const CACHE_PLUGIN: Plugin<
-	typeof CacheOptionsSchema,
-	typeof CacheSharedOptionsSchema
-> = {
+export const CACHE_PLUGIN: Plugin<typeof CacheOptionsSchema> = {
 	options: CacheOptionsSchema,
-	sharedOptions: CacheSharedOptionsSchema,
 	getBindings() {
 		return [];
 	},
@@ -51,11 +43,10 @@ export const CACHE_PLUGIN: Plugin<
 		return {};
 	},
 	async getServices({
-		sharedOptions,
 		options,
 		workerIndex,
 		tmpPath,
-		defaultPersistRoot,
+		resourcePersistencePath,
 	}) {
 		const cache = options.cacheAPI ?? true;
 
@@ -93,12 +84,10 @@ export const CACHE_PLUGIN: Plugin<
 		if (cache) {
 			const uniqueKey = `miniflare-${CACHE_OBJECT_CLASS_NAME}`;
 
-			const persist = sharedOptions.cachePersist;
 			const persistPath = getPersistPath(
 				CACHE_PLUGIN_NAME,
 				tmpPath,
-				defaultPersistRoot,
-				persist
+				resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
@@ -145,8 +134,5 @@ export const CACHE_PLUGIN: Plugin<
 		}
 
 		return services;
-	},
-	getPersistPath({ cachePersist }, tmpPath) {
-		return getPersistPath(CACHE_PLUGIN_NAME, tmpPath, undefined, cachePersist);
 	},
 };

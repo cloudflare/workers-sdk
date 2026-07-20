@@ -302,12 +302,13 @@ export const CoreSharedOptionsSchema = z.object({
 	// Enable logging requests
 	logRequests: z.boolean().default(true),
 
-	// Path to the root directory for persisting data
-	// Used as the default for all plugins with the plugin name as the subdirectory name
-	defaultPersistRoot: z.string().optional(),
+	// Path to the root directory for persisting resource data (e.g. `.wrangler/state/v3`).
+	// Each plugin persists under a subdirectory named after the plugin. When unset,
+	// persistence is disabled and data is stored in an ephemeral tmp directory.
+	resourcePersistencePath: z.string().optional(),
 	// Path to the project temporary directory for plugins that need it
-	// (e.g. email logs). Falls back to a subdirectory of tmpPath if not set.
-	defaultProjectTmpPath: z.string().optional(),
+	// (e.g. `.wrangler/tmp` for email logs). Falls back to a subdirectory of tmpPath if not set.
+	resourceTmpPath: z.string().optional(),
 	// Strip the MF-DISABLE_PRETTY_ERROR header from user request
 	stripDisablePrettyError: z.boolean().default(true),
 
