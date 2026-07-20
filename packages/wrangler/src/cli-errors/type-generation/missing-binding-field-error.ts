@@ -56,7 +56,9 @@ export class MissingBindingFieldError extends CLIError {
 
 			A "${bindingType}" binding ${envContext} is missing the required "${fieldName}" field. While processing "${configFile}", Wrangler found a binding entry that is missing its "${fieldName}" property. The invalid binding object is:
 
+			\`\`\`
 			  ${JSON.stringify(binding, null, 2)}
+			\`\`\`
 
 			To resolve this, add a "${fieldName}" field to the "${field}" binding in "${configFile}" (e.g. "${fieldName}": "MY_BINDING"). See https://developers.cloudflare.com/workers/runtime-apis/bindings/ for binding configuration reference.
 
