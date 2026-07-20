@@ -1,0 +1,23 @@
+packages/miniflare/test/plugins/workflows/index.spec.ts
+  b7c208a924dda068 38-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "df736bfbb0fd902043bfe0dd63e688826cd67bf3",
+  "prompts": {
+    "b7c208a924dda068": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d7dc5906ffey2o2Aj3N3RXp5B",
+        "model": "openai/gpt-5.5"
+      },
+      "human_author": "Zeb Piasecki",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 5,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    }
+  }
+}

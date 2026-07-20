@@ -1,0 +1,19 @@
+packages/wrangler/src/dev/miniflare/index.ts
+  s_431cb25ce926f9::t_f283e3ecc1d3b7 916-925
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "207ab9a26b66ac6cf7354d6a8aa19737adf5a377",
+  "prompts": {},
+  "sessions": {
+    "s_431cb25ce926f9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f49ad-845f-7080-8331-d768a9a32c44",
+        "model": "unknown"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    }
+  }
+}
