@@ -465,7 +465,6 @@ type WorkerOptionsBindings = Pick<
 	| "serviceBindings"
 	| "ratelimits"
 	| "workflows"
-	| "wrappedBindings"
 	| "secretsStoreSecrets"
 	| "images"
 	| "email"
@@ -694,8 +693,6 @@ export function buildMiniflareBindingOptions(
 	);
 
 	const externalWorkers: WorkerOptions[] = [];
-
-	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 
 	for (const ai of aiBindings) {
 		warnOrError("ai", ai.remote);
@@ -1084,7 +1081,6 @@ export function buildMiniflareBindingOptions(
 			})
 		),
 		serviceBindings,
-		wrappedBindings: wrappedBindings,
 		tails,
 		streamingTails,
 	};

@@ -75,7 +75,6 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
-	maybeWrappedModuleToWorkerName,
 	reviveError,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
@@ -93,7 +92,6 @@ import {
 	serializeConfig,
 } from "./runtime";
 import {
-	_isCyclic,
 	isFileNotFoundError,
 	MiniflareCoreError,
 	NoOpLog,
@@ -130,7 +128,6 @@ import type {
 	ReplaceWorkersTypes,
 	SharedOptions,
 	WorkerOptions,
-	WrappedBindingNames,
 } from "./plugins";
 import type {
 	NameSourceOptions,
@@ -661,47 +658,6 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	return externalServices;
 }
 
-function invalidWrappedAsBound(name: string, bindingType: string): never {
-	const stringName = JSON.stringify(name);
-	throw new MiniflareCoreError(
-		"ERR_INVALID_WRAPPED",
-		`Cannot use ${stringName} for wrapped binding because it is bound to with ${bindingType} bindings.\nEnsure other workers don't define ${bindingType} bindings to ${stringName}.`
-	);
-}
-function getWrappedBindingNames(
-	allWorkerOpts: PluginWorkerOptions[],
-	durableObjectClassNames: DurableObjectClassNames
-): WrappedBindingNames {
-	// Build set of all worker names bound to as wrapped bindings.
-	// Also check these "workers" aren't bound to as services/Durable Objects.
-	// We won't add them as regular workers so these bindings would fail.
-	const wrappedBindingWorkerNames = new Set<string>();
-	for (const workerOpts of allWorkerOpts) {
-		for (const designator of Object.values(
-			workerOpts.core.wrappedBindings ?? {}
-		)) {
-			const scriptName =
-				typeof designator === "object" ? designator.scriptName : designator;
-			if (durableObjectClassNames.has(getUserServiceName(scriptName))) {
-				invalidWrappedAsBound(scriptName, "Durable Object");
-			}
-			wrappedBindingWorkerNames.add(scriptName);
-		}
-	}
-	// Need to collect all wrapped bindings before checking service bindings
-	for (const workerOpts of allWorkerOpts) {
-		for (const designator of Object.values(
-			workerOpts.core.serviceBindings ?? {}
-		)) {
-			if (typeof designator !== "string") continue;
-			if (wrappedBindingWorkerNames.has(designator)) {
-				invalidWrappedAsBound(designator, "service");
-			}
-		}
-	}
-	return wrappedBindingWorkerNames;
-}
-
 function getQueueProducers(
 	allWorkerOpts: PluginWorkerOptions[]
 ): QueueProducers {
@@ -789,13 +745,11 @@ function getQueueConsumers(
 
 // Collects all routes from all worker services
 function getWorkerRoutes(
-	allWorkerOpts: PluginWorkerOptions[],
-	wrappedBindingNames: Set<string>
+	allWorkerOpts: PluginWorkerOptions[]
 ): Map<string, string[]> {
 	const allRoutes = new Map<string, string[]>();
 	for (const workerOpts of allWorkerOpts) {
 		const name = workerOpts.core.name ?? "";
-		if (wrappedBindingNames.has(name)) continue; // Wrapped bindings un-routable
 		assert(!allRoutes.has(name)); // Validated unique names earlier
 		allRoutes.set(name, workerOpts.core.routes ?? []);
 	}
@@ -1979,10 +1933,6 @@ export class Miniflare {
 			: null;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
-		const wrappedBindingNames = getWrappedBindingNames(
-			allWorkerOpts,
-			durableObjectClassNames
-		);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		// When the dev registry is enabled, queue brokers bind to the dev-registry
@@ -1990,7 +1940,7 @@ export class Miniflare {
 		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever
 		// there are queues.
 		const hasQueues = queueProducers.size > 0 || queueConsumers.size > 0;
-		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
+		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);
 		const workerNames = [...allWorkerRoutes.keys()];
 
 		// Use Map to dedupe services by name
@@ -2029,12 +1979,6 @@ export class Miniflare {
 		 */
 		const proxyBindings: Worker_Binding[] = [];
 
-		const allWorkerBindings = new Map<string, Worker_Binding[]>();
-		const wrappedBindingsToPopulate: {
-			workerName: string;
-			innerBindings: Worker_Binding[];
-		}[] = [];
-
 		for (const [key, plugin] of this.#mergedPluginEntries) {
 			const pluginExtensions = await plugin.getExtensions?.({
 				// @ts-expect-error `CoreOptionsSchema` has required options which are
@@ -2068,7 +2012,6 @@ export class Miniflare {
 
 			// Collect all bindings from this worker
 			const workerBindings: Worker_Binding[] = [];
-			allWorkerBindings.set(workerName, workerBindings);
 			const additionalModules: Worker_Module[] = [];
 
 			for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -2101,24 +2044,6 @@ export class Miniflare {
 						// already supported by Node.js (e.g. json, text/data blob, wasm)
 						if (isNativeTargetBinding(binding)) {
 							proxyBindings.push(buildProxyBinding(key, workerName, binding));
-						}
-						// If this is a wrapped binding to a wrapped binding worker, record
-						// it, so we can populate its inner bindings with all the wrapped
-						// binding worker's bindings.
-						if (
-							"wrapped" in binding &&
-							binding.wrapped?.moduleName !== undefined &&
-							binding.wrapped.innerBindings !== undefined
-						) {
-							const workerName = maybeWrappedModuleToWorkerName(
-								binding.wrapped.moduleName
-							);
-							if (workerName !== undefined) {
-								wrappedBindingsToPopulate.push({
-									workerName,
-									innerBindings: binding.wrapped.innerBindings,
-								});
-							}
 						}
 						if ("service" in binding) {
 							const targetWorkerName = binding.service?.name?.replace(
@@ -2167,7 +2092,6 @@ export class Miniflare {
 				loopbackHost,
 				loopbackPort,
 				publicUrl: sharedOpts.core.publicUrl,
-				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
 				queueProducers,
@@ -2390,29 +2314,7 @@ export class Miniflare {
 			services.set(service.name, service);
 		}
 
-		// Populate wrapped binding inner bindings with bound worker's bindings
-		for (const toPopulate of wrappedBindingsToPopulate) {
-			const bindings = allWorkerBindings.get(toPopulate.workerName);
-			if (bindings === undefined) continue;
-			const existingBindingNames = new Set(
-				toPopulate.innerBindings.map(({ name }) => name)
-			);
-			toPopulate.innerBindings.push(
-				// If there's already an inner binding with this name, don't add again
-				...bindings.filter(({ name }) => !existingBindingNames.has(name))
-			);
-		}
-		// If we populated wrapped bindings, we may have created cycles in the
-		// `services` array. Attempting to serialise these will lead to unbounded
-		// recursion, so make sure we don't have any
 		const servicesArray = Array.from(services.values());
-		if (wrappedBindingsToPopulate.length > 0 && _isCyclic(servicesArray)) {
-			throw new MiniflareCoreError(
-				"ERR_CYCLIC",
-				"Generated workerd config contains cycles. " +
-					"Ensure wrapped bindings don't have bindings to themselves."
-			);
-		}
 
 		return {
 			services: servicesArray,
@@ -3019,16 +2921,13 @@ export class Miniflare {
 		const bindingName = CoreBindings.SERVICE_USER_ROUTE_PREFIX + workerName;
 
 		const fetcher = proxyClient.env[bindingName];
-		if (fetcher === undefined) {
-			// `#findAndAssertWorkerIndex()` will throw if a "worker" doesn't exist
-			// with the specified name. If this "worker" was used as a wrapped binding
-			// though, it won't be added as a service binding, and so will be
-			// undefined here. In this case, throw a more specific error.
-			const stringName = JSON.stringify(workerName);
-			throw new TypeError(
-				`${stringName} is being used as a wrapped binding, and cannot be accessed as a worker`
-			);
-		}
+		// `#findAndAssertWorkerIndex()` throws if a worker doesn't exist with the
+		// specified name, so by this point the worker is guaranteed to have a
+		// corresponding route service binding.
+		assert(
+			fetcher !== undefined,
+			`Expected ${bindingName} service binding for worker ${JSON.stringify(workerName)}`
+		);
 		return fetcher as ReplaceWorkersTypes<Fetcher>;
 	}
 

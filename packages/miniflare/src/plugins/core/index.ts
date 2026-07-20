@@ -126,12 +126,6 @@ export function createFetchMock() {
 	return new MockAgent();
 }
 
-const WrappedBindingSchema = z.object({
-	scriptName: z.string(),
-	entrypoint: z.string().optional(),
-	bindings: z.record(z.string(), JsonSchema).optional(),
-});
-
 // Validate as string, but don't include in parsed output
 const UnusableStringSchema = z.string().transform(() => undefined);
 
@@ -170,9 +164,6 @@ const CoreOptionsSchemaInput = z.intersection(
 			.record(z.string(), z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
 		serviceBindings: z.record(z.string(), ServiceDesignatorSchema).optional(),
-		wrappedBindings: z
-			.record(z.string(), z.union([z.string(), WrappedBindingSchema]))
-			.optional(),
 
 		outboundService: ServiceDesignatorSchema.optional(),
 		fetchMock: z.instanceof(MockAgent).optional(),
@@ -581,18 +572,6 @@ function getDevControlBindings(
 	return Array.from(bindings.values());
 }
 
-const WRAPPED_MODULE_PREFIX = "miniflare-internal:wrapped:";
-function workerNameToWrappedModule(workerName: string): string {
-	return WRAPPED_MODULE_PREFIX + workerName;
-}
-export function maybeWrappedModuleToWorkerName(
-	name: string
-): string | undefined {
-	if (name.startsWith(WRAPPED_MODULE_PREFIX)) {
-		return name.substring(WRAPPED_MODULE_PREFIX.length);
-	}
-}
-
 function getOutboundInterceptorName(workerIndex: number) {
 	return `outbound:${workerIndex}`;
 }
@@ -667,29 +646,6 @@ export const CORE_PLUGIN: Plugin<
 				})
 			);
 		}
-		if (options.wrappedBindings !== undefined) {
-			bindings.push(
-				...Object.entries(options.wrappedBindings).map(([name, designator]) => {
-					// Normalise designator
-					const isObject = typeof designator === "object";
-					const scriptName = isObject ? designator.scriptName : designator;
-					const entrypoint = isObject ? designator.entrypoint : undefined;
-					const bindings = isObject ? designator.bindings : undefined;
-
-					// Build binding
-					const moduleName = workerNameToWrappedModule(scriptName);
-					const innerBindings =
-						bindings === undefined ? [] : buildBindings(bindings);
-					// `scriptName`'s bindings will be added to `innerBindings` when
-					// assembling the config
-					return {
-						name,
-						wrapped: { moduleName, entrypoint, innerBindings },
-					};
-				})
-			);
-		}
-
 		if (options.unsafeEvalBinding !== undefined) {
 			bindings.push({
 				name: options.unsafeEvalBinding,
@@ -745,15 +701,6 @@ export const CORE_PLUGIN: Plugin<
 				])
 			);
 		}
-		if (options.wrappedBindings !== undefined) {
-			bindingEntries.push(
-				...Object.keys(options.wrappedBindings).map((name) => [
-					name,
-					new ProxyNodeBinding(),
-				])
-			);
-		}
-
 		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
 	async getServices({
@@ -762,7 +709,6 @@ export const CORE_PLUGIN: Plugin<
 		sharedOptions,
 		workerBindings,
 		workerIndex,
-		wrappedBindingNames,
 		durableObjectClassNames,
 		additionalModules,
 		loopbackHost,
@@ -835,119 +781,75 @@ export const CORE_PLUGIN: Plugin<
 			options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
 		);
 
-		const isWrappedBinding = wrappedBindingNames.has(name);
-
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
 
-		if (isWrappedBinding) {
-			const stringName = JSON.stringify(name);
-			function invalidWrapped(reason: string): never {
-				const message = `Cannot use ${stringName} for wrapped binding because ${reason}`;
-				throw new MiniflareCoreError("ERR_INVALID_WRAPPED", message);
-			}
-			if (workerIndex === 0) {
-				invalidWrapped(
-					`it's the entrypoint.\nEnsure ${stringName} isn't the first entry in the \`workers\` array.`
-				);
-			}
-			if (!("modules" in workerScript)) {
-				invalidWrapped(
-					`it's a service worker.\nEnsure ${stringName} sets \`modules\` to \`true\` or an array of modules`
-				);
-			}
-			if (workerScript.modules.length !== 1) {
-				invalidWrapped(
-					`it isn't a single module.\nEnsure ${stringName} doesn't include unbundled \`import\`s.`
-				);
-			}
-			const firstModule = workerScript.modules[0];
-			if (!("esModule" in firstModule)) {
-				invalidWrapped("it isn't a single ES module");
-			}
-			if (options.compatibilityDate !== undefined) {
-				invalidWrapped(
-					"it defines a compatibility date.\nWrapped bindings use the compatibility date of the worker with the binding."
-				);
-			}
-			if (options.compatibilityFlags?.length) {
-				invalidWrapped(
-					"it defines compatibility flags.\nWrapped bindings use the compatibility flags of the worker with the binding."
-				);
-			}
-			if (options.outboundService !== undefined) {
-				invalidWrapped(
-					"it defines an outbound service.\nWrapped bindings use the outbound service of the worker with the binding."
-				);
-			}
-			// We validate this "worker" isn't bound to for services/Durable Objects
-			// in `getWrappedBindingNames()`.
-
-			extensions.push({
-				modules: [
-					{
-						name: workerNameToWrappedModule(name),
-						esModule: firstModule.esModule,
-						internal: true,
-					},
-				],
-			});
-		} else {
-			services.push({
-				name: serviceName,
-				worker: {
-					...workerScript,
-					compatibilityDate,
-					compatibilityFlags: options.compatibilityFlags,
-					bindings: workerBindings,
-					durableObjectNamespaces:
-						classNamesEntries.map<Worker_DurableObjectNamespace>(
-							([
+		services.push({
+			name: serviceName,
+			worker: {
+				...workerScript,
+				compatibilityDate,
+				compatibilityFlags: options.compatibilityFlags,
+				bindings: workerBindings,
+				durableObjectNamespaces:
+					classNamesEntries.map<Worker_DurableObjectNamespace>(
+						([
+							className,
+							{
+								enableSql,
+								unsafeUniqueKey,
+								unsafePreventEviction: preventEviction,
+								container,
+							},
+						]) => {
+							const uniqueKey = getDurableObjectUniqueKey(
 								className,
-								{
-									enableSql,
-									unsafeUniqueKey,
-									unsafePreventEviction: preventEviction,
-									container,
-								},
-							]) => {
-								const uniqueKey = getDurableObjectUniqueKey(
-									className,
-									options.name,
-									unsafeUniqueKey
-								);
+								options.name,
+								unsafeUniqueKey
+							);
 
-								return uniqueKey === undefined
-									? {
-											className,
-											enableSql,
-											ephemeralLocal: kVoid,
-											preventEviction,
-											container,
-										}
-									: {
-											className,
-											enableSql,
-											uniqueKey,
-											preventEviction,
-											container,
-										};
-							}
-						),
-					durableObjectStorage:
-						classNamesEntries.length === 0
-							? undefined
-							: options.unsafeEphemeralDurableObjects
-								? { inMemory: kVoid }
-								: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
-					globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
-					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
-					moduleFallback:
-						options.unsafeUseModuleFallbackService &&
-						sharedOptions.unsafeModuleFallbackService !== undefined
-							? `${loopbackHost}:${loopbackPort}`
-							: undefined,
-					tails: options.tails?.map<ServiceDesignator>((service) => {
+							return uniqueKey === undefined
+								? {
+										className,
+										enableSql,
+										ephemeralLocal: kVoid,
+										preventEviction,
+										container,
+									}
+								: {
+										className,
+										enableSql,
+										uniqueKey,
+										preventEviction,
+										container,
+									};
+						}
+					),
+				durableObjectStorage:
+					classNamesEntries.length === 0
+						? undefined
+						: options.unsafeEphemeralDurableObjects
+							? { inMemory: kVoid }
+							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
+				globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
+				cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
+				moduleFallback:
+					options.unsafeUseModuleFallbackService &&
+					sharedOptions.unsafeModuleFallbackService !== undefined
+						? `${loopbackHost}:${loopbackPort}`
+						: undefined,
+				tails: options.tails?.map<ServiceDesignator>((service) => {
+					return getCustomServiceDesignator(
+						/* referrer */ options.name,
+						workerIndex,
+						CustomServiceKind.UNKNOWN,
+						name,
+						service,
+						options.hasAssetsAndIsVitest
+					);
+				}),
+				streamingTails: options.streamingTails?.map<ServiceDesignator>(
+					(service) => {
 						return getCustomServiceDesignator(
 							/* referrer */ options.name,
 							workerIndex,
@@ -956,23 +858,11 @@ export const CORE_PLUGIN: Plugin<
 							service,
 							options.hasAssetsAndIsVitest
 						);
-					}),
-					streamingTails: options.streamingTails?.map<ServiceDesignator>(
-						(service) => {
-							return getCustomServiceDesignator(
-								/* referrer */ options.name,
-								workerIndex,
-								CustomServiceKind.UNKNOWN,
-								name,
-								service,
-								options.hasAssetsAndIsVitest
-							);
-						}
-					),
-					containerEngine: getContainerEngine(options.containerEngine),
-				},
-			});
-		}
+					}
+				),
+				containerEngine: getContainerEngine(options.containerEngine),
+			},
+		});
 
 		// Define custom `fetch` services if set
 		if (options.serviceBindings !== undefined) {

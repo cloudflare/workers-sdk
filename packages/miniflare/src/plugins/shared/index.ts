@@ -29,10 +29,6 @@ export const PersistenceSchema = z
 	.optional();
 export type Persistence = z.infer<typeof PersistenceSchema>;
 
-// Set of "worker" names that are being used as wrapped bindings and shouldn't
-// be added a regular worker services. These workers shouldn't be routable.
-export type WrappedBindingNames = Set<string>;
-
 // Maps workflow binding names to their workflow options
 export interface WorkflowOption {
 	name: string;
@@ -82,7 +78,6 @@ export interface PluginServicesOptions<
 	publicUrl: string | undefined;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
-	wrappedBindingNames: WrappedBindingNames;
 	durableObjectClassNames: DurableObjectClassNames;
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
