@@ -33,7 +33,7 @@ Each Wrangler command that adopts this system gets its own subdirectory
 (e.g. `type-generation/`). This keeps errors co-located by feature while
 making it easy to enumerate every error a command can throw.
 
-## Adding a New Error
+## Adding a new error
 
 1. Create a file in the appropriate command subdirectory (e.g.
    `cli-errors/deploy/my-new-error.ts`).
