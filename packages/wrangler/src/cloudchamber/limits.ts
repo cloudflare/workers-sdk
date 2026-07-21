@@ -111,7 +111,7 @@ export async function ensureImageFitsLimits(options: {
 	);
 	if (options.availableSizeInBytes < requiredSizeInBytes) {
 		throw new UserError(
-			`Image too large: needs ${Math.ceil(requiredSizeInBytes / MB)}MB, but your app is limited to images with size ${options.availableSizeInBytes / MB}MB. Your need more disk for this image.`,
+			`Image too large: needs ${Math.ceil(requiredSizeInBytes / MB)}MB, but your app is limited to images with size ${options.availableSizeInBytes / MB}MB. You need more disk for this image.`,
 			{ telemetryMessage: "cloudchamber limits image too large" }
 		);
 	}
