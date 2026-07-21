@@ -2458,6 +2458,53 @@ export class Miniflare {
 		};
 	}
 
+	#handleWorkerdCrash(): void {
+		// A crash destroys the proxy server heap just like a config update.
+		this.#proxyClient?.poisonProxies();
+		void this.#runtimeMutex
+			.runWith(async () => {
+				try {
+					await this.#assembleAndUpdateConfig(true);
+				} catch (error) {
+					const cause =
+						error instanceof Error ? error : new Error(String(error));
+					this.#runtimeRestartError = new MiniflareCoreError(
+						"ERR_RUNTIME_FAILURE",
+						"The Workers runtime failed to restart after an unexpected crash.",
+						cause
+					);
+					throw this.#runtimeRestartError;
+				}
+			})
+			.then(
+				async () => {
+					if (this.#disposeController.signal.aborted) {
+						return;
+					}
+					try {
+						await this.#sharedOpts.core.unsafeHandleRuntimeRestart?.();
+					} catch (error) {
+						const cause =
+							error instanceof Error ? error : new Error(String(error));
+						this.#log.error(
+							new Error(
+								"The Workers runtime restarted, but the runtime restart callback failed.",
+								{ cause }
+							)
+						);
+					}
+				},
+				(error) => {
+					if (this.#disposeController.signal.aborted) {
+						return;
+					}
+					this.#log.error(
+						error instanceof Error ? error : new Error(String(error))
+					);
+				}
+			);
+	}
+
 	async #assembleAndUpdateConfig(reusePorts = false) {
 		await this.#closeBrowserProcesses();
 
@@ -2545,52 +2592,7 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
-			onWorkerdCrashRestart: () => {
-				// A crash destroys the proxy server heap just like a config update.
-				this.#proxyClient?.poisonProxies();
-				void this.#runtimeMutex
-					.runWith(async () => {
-						try {
-							await this.#assembleAndUpdateConfig(true);
-						} catch (error) {
-							const cause =
-								error instanceof Error ? error : new Error(String(error));
-							this.#runtimeRestartError = new MiniflareCoreError(
-								"ERR_RUNTIME_FAILURE",
-								"The Workers runtime failed to restart after an unexpected crash.",
-								cause
-							);
-							throw this.#runtimeRestartError;
-						}
-					})
-					.then(
-						async () => {
-							if (this.#disposeController.signal.aborted) {
-								return;
-							}
-							try {
-								await this.#sharedOpts.core.unsafeHandleRuntimeRestart?.();
-							} catch (error) {
-								const cause =
-									error instanceof Error ? error : new Error(String(error));
-								this.#log.error(
-									new Error(
-										"The Workers runtime restarted, but the runtime restart callback failed.",
-										{ cause }
-									)
-								);
-							}
-						},
-						(error) => {
-							if (this.#disposeController.signal.aborted) {
-								return;
-							}
-							this.#log.error(
-								error instanceof Error ? error : new Error(String(error))
-							);
-						}
-					);
-			},
+			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
