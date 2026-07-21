@@ -1456,13 +1456,12 @@ describe("Context - typed-array step outputs (issue #14101)", () => {
 });
 
 describe("Sensitive step output", () => {
-	// Temporary regression validation for the Windows CI worker exit.
 	it("should redact a sensitive step's output in logs while passing the real value downstream", async ({
 		expect,
 	}) => {
 		let downstreamValue: unknown;
 
-		const engineStub = await runWorkflow(
+		const engineStub = await runWorkflowAndAwait(
 			"SENSITIVE-STEP-OUTPUT",
 			async (_event, step) => {
 				const secret = await step.do(
@@ -1504,7 +1503,7 @@ describe("Sensitive step output", () => {
 	it("should redact a sensitive step's output from waitForStepResult", async ({
 		expect,
 	}) => {
-		const engineStub = await runWorkflow(
+		const engineStub = await runWorkflowAndAwait(
 			"SENSITIVE-STEP-WAIT-RESULT",
 			async (_event, step) => {
 				await step.do(
@@ -1530,16 +1529,18 @@ describe("Sensitive step output", () => {
 	});
 
 	it("should not redact a sensitive step's error", async ({ expect }) => {
-		const engineStub = await runWorkflow(
+		const engineStub = await runWorkflowAndAwait(
 			"SENSITIVE-STEP-ERROR",
 			async (_event, step) => {
-				await step.do(
-					"sensitive failing step",
-					{ sensitive: "output", retries: { limit: 0, delay: 0 } },
-					async () => {
-						throw new NonRetryableError("boom with secret context");
-					}
-				);
+				try {
+					await step.do(
+						"sensitive failing step",
+						{ sensitive: "output", retries: { limit: 0, delay: 0 } },
+						async () => {
+							throw new NonRetryableError("boom with secret context");
+						}
+					);
+				} catch {}
 			}
 		);
 
@@ -1547,7 +1548,7 @@ describe("Sensitive step output", () => {
 			async () => {
 				const logs = (await engineStub.readLogs()) as EngineLogs;
 				return logs.logs.some(
-					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
 			{ timeout: 5000 }
@@ -1569,7 +1570,7 @@ describe("Sensitive step output", () => {
 		const payload = "streamed secret";
 		const payloadBytes = encodeUtf8(payload);
 
-		const engineStub = await runWorkflow(
+		const engineStub = await runWorkflowAndAwait(
 			"SENSITIVE-STREAM-OUTPUT",
 			async (_event, step) => {
 				const stream = await step.do(
