@@ -39,9 +39,6 @@
 		},
 		"./types": {
 			"types": "./types/cloudflare-test.d.ts"
-		},
-		"./codemods/vitest-v3-to-v4": {
-			"import": "./dist/codemods/vitest-v3-to-v4.mjs"
 		}
 	},
 	"scripts": {
@@ -65,7 +62,6 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
-		"@types/jscodeshift": "^17.3.0",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
 		"@vitest/runner": "catalog:default",
@@ -74,7 +70,6 @@
 		"capnp-es": "catalog:default",
 		"devalue": "^5.6.3",
 		"get-port": "^7.1.0",
-		"jscodeshift": "^17.3.0",
 		"semver": "^7.7.1",
 		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",

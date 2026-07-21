@@ -1,4 +1,4 @@
-# @cloudflare/codemod
+# @cloudflare/shared-ast-primitives
 
 ## 1.1.0
 

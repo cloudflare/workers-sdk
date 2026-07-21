@@ -1,8 +1,12 @@
-# @cloudflare/codemod
+# `@cloudflare/shared-ast-primitives`
 
-Internal codemod utilities for the Cloudflare Workers SDK.
+Internal AST-manipulation primitives shared across Cloudflare Workers SDK codemods.
 
-## Developing Codemods
+This package wraps [`recast`](https://github.com/benjamn/recast) with a small set of
+helpers (`parseJs`, `parseTs`, `parseFile`, `transformFile`, `mergeObjectProperties`)
+used by C3 and autoconfig to transform user project files. It is private and not published.
+
+## Developing
 
 Writing codemods often requires trial and error. The package ships a dedicated dev workflow so you can iterate on transforms in isolation without writing throw-away scripts.
 
@@ -32,14 +36,6 @@ Writing codemods often requires trial and error. The package ships a dedicated d
 
 3. **Run `pnpm dev`** — the transformed code is printed to the console and written to `dev-snippets-outputs/test.ts` (gitignored). Inspect the output file to verify the transform behaves as expected.
 
-### Key Files
-
-| File                    | Purpose                                                                                      |
-| ----------------------- | -------------------------------------------------------------------------------------------- |
-| `src/dev.ts`            | Dev entry point; exports `testTransform()` and contains the editable `testCodemod()` sandbox |
-| `dev-snippets/test.ts`  | Default sample input — replace its contents freely                                           |
-| `dev-snippets-outputs/` | Auto-generated transform output, gitignored — safe to inspect, never committed               |
-
 ### `testTransform(filePath, methods)`
 
 Mirrors the production `transformFile()` API but instead of silently writing in place it:
@@ -48,16 +44,3 @@ Mirrors the production `transformFile()` API but instead of silently writing in 
 - Writes the result to the corresponding path under `dev-snippets-outputs/`
 
 The `filePath` argument must point to a file inside `dev-snippets/`; paths outside that directory are rejected.
-
-### Inspecting the AST
-
-`src/dev.ts` includes a commented-out `_printSnippet()` helper. Uncomment its call at the bottom of the file to log the AST of an arbitrary snippet to the console — useful when you need to know the exact node shape to target in a visitor:
-
-```ts
-const _printSnippet = () => {
-	const snippet = `if (true) { console.log("potato"); }`;
-	const program = parseTs(snippet).program;
-	console.log(program.body[0]);
-};
-_printSnippet(); // uncomment to run
-```
