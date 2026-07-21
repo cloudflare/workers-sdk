@@ -1,0 +1,33 @@
+packages/workers-shared/asset-worker/tests/customer-analytics.test.ts
+  s_3d26c2afc107f7::t_9b3651c0fe40a3 1-46
+.changeset/assets-script-version-analytics.md
+  s_e4b51853b557d5::t_3cffd964773661 5,7
+packages/workers-shared/asset-worker/src/customer-analytics.ts
+  s_e4b51853b557d5::t_155065b6be29b3 1-60
+packages/workers-shared/asset-worker/src/worker.ts
+  s_e4b51853b557d5::t_68a596ac8e6a44 8,51,269,317-322,345-348,353,356
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b92557cab6631291d932069106db4f1dcf607386",
+  "prompts": {},
+  "sessions": {
+    "s_3d26c2afc107f7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f692e-f996-7df2-9081-b3aad66816d0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    },
+    "s_e4b51853b557d5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f67d6-caa1-7de1-8c9d-63c60d711931",
+        "model": "unknown"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    }
+  }
+}
