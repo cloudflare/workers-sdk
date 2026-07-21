@@ -61,7 +61,11 @@ export function _enableControlEndpoints() {
 
 export function objectEntryWorker(
 	durableObjectNamespace: Worker_Binding_DurableObjectNamespaceDesignator,
-	namespace: string
+	// When provided, the namespace is baked into the worker as a static binding
+	// (the original per-resource model). When omitted, the namespace is supplied
+	// per-request via `ctx.props` (the props-based model that lets a single entry
+	// service serve any number of namespaces).
+	namespace?: string
 ): Worker {
 	return {
 		compatibilityDate: "2023-07-24",
@@ -69,7 +73,9 @@ export function objectEntryWorker(
 			{ name: "object-entry.worker.js", esModule: SCRIPT_OBJECT_ENTRY() },
 		],
 		bindings: [
-			{ name: SharedBindings.TEXT_NAMESPACE, text: namespace },
+			...(namespace !== undefined
+				? [{ name: SharedBindings.TEXT_NAMESPACE, text: namespace }]
+				: []),
 			{
 				name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
 				durableObjectNamespace,
@@ -78,12 +84,24 @@ export function objectEntryWorker(
 	};
 }
 
-export function remoteProxyClientWorker(
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	binding: string,
-	script?: () => string
-) {
-	const cfTraceId = process.env.CF_TRACE_ID;
+// Builds the `props` for a binding that points at a shared object-entry service
+// (KV namespace / R2 bucket / D1 database). The resource id travels via props so
+// that a single entry service can route to any number of resources; it is read
+// back in `object-entry.worker.ts` via `ctx.props` and used as the Durable
+// Object name (`idFromName`).
+export function buildObjectEntryProps(id: string): { json: string } {
+	return {
+		json: JSON.stringify({ [SharedBindings.TEXT_NAMESPACE]: id }),
+	};
+}
+
+// A single remote-proxy client service can serve any number of remote bindings:
+// the per-binding data (connection string, binding name, trace id) is supplied
+// at runtime via `ctx.props` (see `buildRemoteProxyProps`), rather than baked
+// into a per-binding service. The only static, non-props-able binding is the
+// loopback service (used to surface diagnostics back to the Miniflare host,
+// e.g. a Cloudflare Access block detected on the remote proxy response).
+export function remoteProxyClientWorker(script?: () => string) {
 	return {
 		compatibilityDate: "2025-01-01",
 		modules: [
@@ -92,32 +110,61 @@ export function remoteProxyClientWorker(
 				esModule: (script ?? SCRIPT_REMOTE_PROXY_CLIENT)(),
 			},
 		],
-		bindings: [
-			...(remoteProxyConnectionString?.href
-				? [
-						{
-							name: "remoteProxyConnectionString",
-							text: remoteProxyConnectionString.href,
-						},
-					]
-				: []),
-			{
-				name: "binding",
-				text: binding,
-			},
-			...(cfTraceId
-				? [
-						{
-							name: "cfTraceId",
-							text: cfTraceId,
-						},
-					]
-				: []),
-			// Loopback binding so the proxy client can report diagnostics
-			// (e.g. a Cloudflare Access block on the remote proxy server)
-			// back to the Miniflare host for a single, actionable warning.
-			WORKER_BINDING_SERVICE_LOOPBACK,
-		],
+		bindings: [WORKER_BINDING_SERVICE_LOOPBACK],
+	};
+}
+
+// Builds the `props` value for a binding that points at a shared remote-proxy
+// client service. Read back in `remote-proxy-client.worker.ts` via `ctx.props`.
+export function buildRemoteProxyProps(
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	binding: string
+): { json: string } {
+	return {
+		json: JSON.stringify({
+			remoteProxyConnectionString: remoteProxyConnectionString?.href,
+			binding,
+			cfTraceId: process.env.CF_TRACE_ID,
+		}),
+	};
+}
+
+// Inverse of `buildObjectEntryProps`: reads the resource id carried in an
+// object-entry binding's `props.json`, or `undefined` if the props don't carry
+// one (e.g. remote/mixed-mode bindings). Used by storage plugins to recognise
+// their own local bindings when routing them to a shared storage owner.
+export function extractObjectEntryId(
+	propsJson: string | undefined
+): string | undefined {
+	if (propsJson === undefined) {
+		return undefined;
+	}
+	try {
+		const parsed = JSON.parse(propsJson) as Record<string, unknown>;
+		const id = parsed[SharedBindings.TEXT_NAMESPACE];
+		return typeof id === "string" ? id : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+// Client-side service that proxies routed storage bindings to the shared storage
+// owner over HTTP. Reuses the remote-bindings ("mixed-mode") client worker: each
+// routed binding carries the owner's address + resource key via props. Stood up
+// by `Miniflare` when acting as a storage-owner client.
+export const SERVICE_STORAGE_OWNER_PROXY = "storage-owner-proxy";
+
+// Builds a binding designator routing a storage op through the client-side
+// storage-owner proxy to the owner. The owner address + resource key travel via
+// props (read by `remote-proxy-client.worker.ts`). The `resourceKey` is the key
+// the owner's storage server dispatches on (see `storage-owner-server.worker.ts`).
+export function storageOwnerProxyDesignator(
+	conn: RemoteProxyConnectionString,
+	resourceKey: string
+): { name: string; props: { json: string } } {
+	return {
+		name: SERVICE_STORAGE_OWNER_PROXY,
+		props: buildRemoteProxyProps(conn, resourceKey),
 	};
 }
 

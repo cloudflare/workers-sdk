@@ -1,5 +1,9 @@
 export const SharedHeaders = {
 	LOG_LEVEL: "MF-Log-Level",
+	// Resource id (KV namespace / R2 bucket / D1 database) supplied per-request
+	// by the storage-owner server so a single shared object-entry service can
+	// resolve any resource without a per-id binding. Read by object-entry.
+	STORAGE_OWNER_NAMESPACE: "MF-Storage-Owner-Namespace",
 } as const;
 
 export const SharedBindings = {

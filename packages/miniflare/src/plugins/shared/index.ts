@@ -97,11 +97,38 @@ export interface PluginServicesOptions<
 	// messages to a consumer in another `wrangler dev` process.
 	devRegistryEnabled: boolean;
 	hyperdriveProxyController: HyperdriveProxyController;
+	// Plugin names (e.g. "kv") whose *local* storage is being routed to a shared
+	// storage owner process. Plugins listed here should skip standing up their
+	// local storage services (disk/DO/migrations); their bindings are rewritten
+	// to the storage-owner proxy by `Miniflare`.
+	storageOwnerRoutePlugins: Set<string>;
+	// Connection string for the shared storage owner's proxy, when a plugin needs
+	// to repoint an internal storage binding at the owner itself (e.g. the Images
+	// transform worker's backing KV store). `undefined` when not routing.
+	storageOwnerConn: RemoteProxyConnectionString | undefined;
+	// When the shared storage owner feature is enabled, plugins that aren't
+	// routed to the owner but still persist to `defaultPersistRoot` (Cache,
+	// Durable Objects, Workflows) keep their storage per-instance (under
+	// `tmpPath`) instead of the shared root, so separate processes don't contend
+	// on one database. Honoured unless the user set an explicit `*Persist`.
+	isolateLocalStorage: boolean;
 }
 
 export interface ServicesExtensions {
 	services: Service[];
 	extensions: Extension[];
+}
+
+// How a shared storage owner should host one plugin's local storage. Returned by
+// `PluginBase.getStorageOwnerHosting`.
+export interface StorageOwnerHosting {
+	// Option fragment merged into the detached owner process's `MiniflareOptions`
+	// so it stands up the corresponding local storage services.
+	ownerOptions: Record<string, unknown>;
+	// Bindings exposing this plugin's local storage on the owner's HTTP storage
+	// server, keyed by the resource key clients route to (see
+	// `storage-owner-server.worker.ts`).
+	ownerBindings: Worker_Binding[];
 }
 
 export interface PluginBase<
@@ -127,6 +154,26 @@ export interface PluginBase<
 	getExtensions?(options: {
 		options: z.infer<Options>[];
 	}): Awaitable<Extension[]>;
+	// Shared storage owner (experimental `unsafeSharedStorageOwner`) hooks. Only
+	// implemented by plugins whose local storage can be routed to a single owner
+	// process. `Miniflare` owns the process/presence/routing orchestration; these
+	// let each plugin own the knowledge of its own binding + resource shapes.
+
+	// Rewrite one of this plugin's *local* storage bindings so the op is served by
+	// the owner process (via the client-side storage-owner proxy), or return
+	// `undefined` to leave `binding` unchanged. Called for each binding this plugin
+	// emits when its storage is routed to an owner.
+	routeBindingToStorageOwner?(
+		binding: Worker_Binding,
+		conn: RemoteProxyConnectionString
+	): Worker_Binding | undefined;
+	// Given every worker's options for this plugin, describe how a shared owner
+	// should host its local storage, or `undefined` if there's nothing local to
+	// share. Used both to configure a spawned owner and to bind that storage on
+	// the owner's HTTP storage server.
+	getStorageOwnerHosting?(
+		allOptions: z.infer<Options>[]
+	): StorageOwnerHosting | undefined;
 }
 
 export type Plugin<

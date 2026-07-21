@@ -4,9 +4,11 @@ import SCRIPT_R2_PUBLIC from "worker:r2/public";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	buildObjectEntryProps,
+	buildRemoteProxyProps,
+	extractObjectEntryId,
 	getMiniflareObjectBindings,
 	getPersistPath,
-	getUserBindingServiceName,
 	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
@@ -15,6 +17,7 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 } from "../shared";
 import type {
 	Service,
@@ -48,6 +51,11 @@ export const R2SharedOptionsSchema = z.object({
 export const R2_PLUGIN_NAME = "r2";
 const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
 const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
+// A single entry service shared by every *local* bucket. Each bucket's id is
+// supplied per-binding via `ctx.props`, so one service serves all of them.
+export const R2_LOCAL_ENTRY_SERVICE_NAME = `${R2_PLUGIN_NAME}:bucket:entry`;
+// One shared remote-proxy service for all remote R2 buckets (config via props).
+const R2_REMOTE_SERVICE_NAME = `${R2_PLUGIN_NAME}:bucket:remote`;
 export const R2_PUBLIC_SERVICE_NAME = `${R2_PLUGIN_NAME}:public`;
 const R2_BUCKET_OBJECT_CLASS_NAME = "R2BucketObject";
 const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
@@ -73,7 +81,8 @@ export function getR2PublicService(
 	const bindings = Array.from(publicBucketIds).map<Worker_Binding>((id) => ({
 		name: id,
 		r2Bucket: {
-			name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
+			name: R2_LOCAL_ENTRY_SERVICE_NAME,
+			props: buildObjectEntryProps(id),
 		},
 	}));
 	return {
@@ -97,13 +106,18 @@ export const R2_PLUGIN: Plugin<
 		const buckets = namespaceEntries(options.r2Buckets);
 		return buckets.map<Worker_Binding>(([name, bucket]) => ({
 			name,
-			r2Bucket: {
-				name: getUserBindingServiceName(
-					R2_BUCKET_SERVICE_PREFIX,
-					bucket.id,
-					bucket.remoteProxyConnectionString
-				),
-			},
+			r2Bucket: bucket.remoteProxyConnectionString
+				? {
+						name: R2_REMOTE_SERVICE_NAME,
+						props: buildRemoteProxyProps(
+							bucket.remoteProxyConnectionString,
+							name
+						),
+					}
+				: {
+						name: R2_LOCAL_ENTRY_SERVICE_NAME,
+						props: buildObjectEntryProps(bucket.id),
+					},
 		}));
 	},
 	getNodeBindings(options) {
@@ -119,23 +133,38 @@ export const R2_PLUGIN: Plugin<
 		defaultPersistRoot,
 		log,
 		unsafeStickyBlobs,
+		storageOwnerRoutePlugins,
 	}) {
 		const persist = sharedOptions.r2Persist;
 		const buckets = namespaceEntries(options.r2Buckets);
-		const services = buckets.map<Service>(
-			([name, { id, remoteProxyConnectionString }]) => ({
-				name: getUserBindingServiceName(
-					R2_BUCKET_SERVICE_PREFIX,
-					id,
-					remoteProxyConnectionString
-				),
-				worker: remoteProxyConnectionString
-					? remoteProxyClientWorker(remoteProxyConnectionString, name)
-					: objectEntryWorker(R2_BUCKET_OBJECT, id),
-			})
-		);
 
-		if (buckets.length > 0) {
+		const services: Service[] = [];
+
+		// When routing local R2 to a shared storage owner, this instance must not
+		// stand up its own R2 storage — its bindings are repointed at the owner
+		// proxy by `Miniflare`.
+		const routeToOwner = storageOwnerRoutePlugins.has(R2_PLUGIN_NAME);
+
+		// One shared entry service for all local buckets (id supplied via props).
+		const hasLocal =
+			!routeToOwner && buckets.some(([, b]) => !b.remoteProxyConnectionString);
+		if (hasLocal) {
+			services.push({
+				name: R2_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(R2_BUCKET_OBJECT),
+			});
+		}
+
+		// One shared proxy service for all remote (mixed-mode) buckets.
+		const hasRemote = buckets.some(([, b]) => b.remoteProxyConnectionString);
+		if (hasRemote) {
+			services.push({
+				name: R2_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			});
+		}
+
+		if (hasLocal) {
 			const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(
 				R2_PLUGIN_NAME,
@@ -183,12 +212,46 @@ export const R2_PLUGIN: Plugin<
 			};
 			services.push(storageService, objectService);
 
-			for (const bucket of buckets) {
-				await migrateDatabase(log, uniqueKey, persistPath, bucket[1].id);
+			for (const [, bucket] of buckets) {
+				if (bucket.remoteProxyConnectionString) {
+					continue;
+				}
+				await migrateDatabase(log, uniqueKey, persistPath, bucket.id);
 			}
 		}
 
 		return services;
+	},
+	routeBindingToStorageOwner(binding, conn) {
+		if ("r2Bucket" in binding && binding.r2Bucket?.name !== undefined) {
+			const id = extractObjectEntryId(binding.r2Bucket.props?.json);
+			if (id !== undefined) {
+				return {
+					name: binding.name,
+					r2Bucket: storageOwnerProxyDesignator(conn, `r2:${id}`),
+				};
+			}
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		const ids = new Set<string>();
+		for (const options of allOptions) {
+			for (const [, bucket] of namespaceEntries(options.r2Buckets)) {
+				if (!bucket.remoteProxyConnectionString) {
+					ids.add(bucket.id);
+				}
+			}
+		}
+		if (ids.size === 0) {
+			return undefined;
+		}
+		return {
+			ownerOptions: { r2Buckets: [...ids] },
+			ownerBindings: [
+				{ name: "r2", service: { name: R2_LOCAL_ENTRY_SERVICE_NAME } },
+			],
+		};
 	},
 	getPersistPath({ r2Persist }, tmpPath) {
 		return getPersistPath(R2_PLUGIN_NAME, tmpPath, undefined, r2Persist);

@@ -4,12 +4,14 @@ import OBJECT_SCRIPT from "worker:stream/object";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	buildRemoteProxyProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
 	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
+	storageOwnerProxyDesignator,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
@@ -31,9 +33,14 @@ export const StreamSharedOptionsSchema = z.object({
 });
 
 export const STREAM_PLUGIN_NAME = "stream";
+const STREAM_REMOTE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:remote`;
 const STREAM_STORAGE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:storage`;
 const STREAM_OBJECT_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:object`;
 export const STREAM_OBJECT_CLASS_NAME = "StreamObject";
+// The RPC entrypoint service exposing the stream store. Referenced by the
+// shared storage owner so it can route a client's Stream binding here.
+export const STREAM_BINDING_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:service`;
+export const STREAM_BINDING_ENTRYPOINT = "StreamBinding";
 
 export const STREAM_COMPAT_DATE = "2026-03-23";
 
@@ -52,16 +59,18 @@ export const STREAM_PLUGIN: Plugin<
 		return [
 			{
 				name: options.stream.binding,
-				service: {
-					name: getUserBindingServiceName(
-						STREAM_PLUGIN_NAME,
-						"service",
-						options.stream.remoteProxyConnectionString
-					),
-					entrypoint: options.stream.remoteProxyConnectionString
-						? undefined
-						: "StreamBinding",
-				},
+				service: options.stream.remoteProxyConnectionString
+					? {
+							name: STREAM_REMOTE_SERVICE_NAME,
+							props: buildRemoteProxyProps(
+								options.stream.remoteProxyConnectionString,
+								options.stream.binding
+							),
+						}
+					: {
+							name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
+							entrypoint: "StreamBinding",
+						},
 			},
 		];
 	},
@@ -79,25 +88,24 @@ export const STREAM_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
+		storageOwnerRoutePlugins,
 	}) {
 		if (!options.stream) {
 			return [];
 		}
 
-		if (options.stream.remoteProxyConnectionString) {
-			const serviceName = getUserBindingServiceName(
-				STREAM_PLUGIN_NAME,
-				"service",
-				options.stream.remoteProxyConnectionString
-			);
+		// Routed to the shared storage owner: the owner stands up the stream
+		// store and entrypoint; this instance's binding is repointed at the owner
+		// proxy by `Miniflare`, so skip standing up local storage here.
+		if (storageOwnerRoutePlugins.has(STREAM_PLUGIN_NAME)) {
+			return [];
+		}
 
+		if (options.stream.remoteProxyConnectionString) {
 			return [
 				{
-					name: serviceName,
-					worker: remoteProxyClientWorker(
-						options.stream.remoteProxyConnectionString,
-						options.stream.binding
-					),
+					name: STREAM_REMOTE_SERVICE_NAME,
+					worker: remoteProxyClientWorker(),
 				},
 			];
 		}
@@ -181,6 +189,40 @@ export const STREAM_PLUGIN: Plugin<
 		} satisfies Service;
 
 		return [storageService, objectService, bindingService];
+	},
+	routeBindingToStorageOwner(binding, conn) {
+		// A single per-instance store accessed over RPC. Repoint the whole binding
+		// at the owner proxy (the remote-proxy client carries the RPC); the owner
+		// hosts the stream entrypoint + store under the canonical "stream" key.
+		if ("service" in binding && binding.service?.name !== undefined) {
+			return {
+				name: binding.name,
+				service: storageOwnerProxyDesignator(conn, "stream"),
+			};
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		const hasLocal = allOptions.some(
+			(options) => options.stream && !options.stream.remoteProxyConnectionString
+		);
+		if (!hasLocal) {
+			return undefined;
+		}
+		// One stream store per owner; the binding name is irrelevant (the owner
+		// exposes it under the canonical "stream" key, dispatched via JSRPC).
+		return {
+			ownerOptions: { stream: { binding: "stream" } },
+			ownerBindings: [
+				{
+					name: "stream",
+					service: {
+						name: STREAM_BINDING_SERVICE_NAME,
+						entrypoint: STREAM_BINDING_ENTRYPOINT,
+					},
+				},
+			],
+		};
 	},
 	getPersistPath({ streamPersist }, tmpPath) {
 		return getPersistPath(

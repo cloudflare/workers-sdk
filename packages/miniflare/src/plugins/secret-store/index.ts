@@ -12,6 +12,7 @@ import {
 	PersistenceSchema,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
@@ -32,6 +33,9 @@ export const SecretsStoreSecretsSharedOptionsSchema = z.object({
 });
 
 export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
+// RPC entrypoint exposing a single secret. Referenced by the shared storage
+// owner so it can route a client's Secrets Store binding here.
+export const SECRET_STORE_SECRET_ENTRYPOINT = "SecretsStoreSecret";
 
 export const SECRET_STORE_PLUGIN: Plugin<
 	typeof SecretsStoreSecretsOptionsSchema,
@@ -78,12 +82,19 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
+		storageOwnerRoutePlugins,
 	}) {
 		const configs = options.secretsStoreSecrets
 			? Object.values(options.secretsStoreSecrets)
 			: [];
 
 		if (configs.length === 0) {
+			return [];
+		}
+
+		// Routed to the shared storage owner: the owner stands up the secret
+		// services; this instance's bindings are repointed at the owner proxy.
+		if (storageOwnerRoutePlugins.has(SECRET_STORE_PLUGIN_NAME)) {
 			return [];
 		}
 
@@ -176,6 +187,61 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		});
 
 		return [...services, storageService, objectService];
+	},
+	routeBindingToStorageOwner(binding, conn) {
+		// Per-secret RPC service. Repoint at the owner proxy, keyed by
+		// "secrets:<store_id>:<secret_name>" (extracted from the local service name).
+		if ("service" in binding && binding.service?.name !== undefined) {
+			const resource = binding.service.name.slice(
+				`${SECRET_STORE_PLUGIN_NAME}:`.length
+			);
+			return {
+				name: binding.name,
+				service: storageOwnerProxyDesignator(conn, `secrets:${resource}`),
+			};
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		// Dedupe by "<store_id>:<secret_name>" across all workers.
+		const secrets = new Map<
+			string,
+			{ store_id: string; secret_name: string }
+		>();
+		for (const options of allOptions) {
+			if (!options.secretsStoreSecrets) {
+				continue;
+			}
+			for (const { store_id, secret_name } of Object.values(
+				options.secretsStoreSecrets
+			)) {
+				secrets.set(`${store_id}:${secret_name}`, { store_id, secret_name });
+			}
+		}
+		if (secrets.size === 0) {
+			return undefined;
+		}
+		return {
+			// Recreate each secret resource so the owner stands up the matching
+			// per-secret service (binding names are irrelevant).
+			ownerOptions: {
+				secretsStoreSecrets: Object.fromEntries(
+					[...secrets.entries()].map(([resource, secret]) => [
+						`owner:${resource}`,
+						secret,
+					])
+				),
+			},
+			// One RPC entrypoint per secret, exposed under
+			// "secrets:<store_id>:<secret_name>" and dispatched via the JSRPC branch.
+			ownerBindings: [...secrets.keys()].map((resource) => ({
+				name: `secrets:${resource}`,
+				service: {
+					name: getUserBindingServiceName(SECRET_STORE_PLUGIN_NAME, resource),
+					entrypoint: SECRET_STORE_SECRET_ENTRYPOINT,
+				},
+			})),
+		};
 	},
 	getPersistPath({ secretsStorePersist }, tmpPath) {
 		return getPersistPath(
