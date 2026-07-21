@@ -197,19 +197,6 @@ const CoreOptionsSchemaInput = z.intersection(
 		// If not specified, defaults to `${worker-name}.example.com`
 		zone: z.string().optional(),
 
-		/** Configuration used to connect to the container engine */
-		containerEngine: z
-			.union([
-				z.object({
-					localDocker: z.object({
-						socketPath: z.string(),
-						containerEgressInterceptorImage: z.string().optional(),
-					}),
-				}),
-				z.string(),
-			])
-			.optional(),
-
 		unsafeBindings: z
 			.array(
 				z.object({
@@ -325,6 +312,19 @@ export const CoreSharedOptionsSchema = z.object({
 	// plugins like Stream to generate preview URLs that outlive runtime
 	// restarts. If not set, plugins fall back to the runtime entry URL.
 	publicUrl: z.url().optional(),
+
+	/** Configuration used to connect to the container engine */
+	containerEngine: z
+		.union([
+			z.object({
+				localDocker: z.object({
+					socketPath: z.string(),
+					containerEgressInterceptorImage: z.string().optional(),
+				}),
+			}),
+			z.string(),
+		])
+		.optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -811,7 +811,7 @@ export const CORE_PLUGIN: Plugin<
 						);
 					}
 				),
-				containerEngine: getContainerEngine(options.containerEngine),
+				containerEngine: getContainerEngine(sharedOptions.containerEngine),
 			},
 		});
 

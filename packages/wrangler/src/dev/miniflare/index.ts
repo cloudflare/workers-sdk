@@ -1184,6 +1184,7 @@ export async function buildMiniflareOptions(
 		handleStructuredLogs: config.structuredLogsHandler ?? handleStructuredLogs,
 		resourcePersistencePath,
 		resourceTmpPath,
+		containerEngine: config.containerEngine,
 		workers: [
 			{
 				name: getName(config),
@@ -1196,7 +1197,6 @@ export async function buildMiniflareOptions(
 				...assetOptions,
 				routes: config.routes,
 				outboundService: config.outboundService,
-				containerEngine: config.containerEngine,
 				zone: config.zone,
 			},
 			...externalWorkers,

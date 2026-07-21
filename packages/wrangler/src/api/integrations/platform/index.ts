@@ -1,8 +1,6 @@
 import path from "node:path";
-import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
-	getDockerPath,
 	getRegistryPath,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
@@ -502,15 +500,10 @@ export function unstable_getMiniflareWorkerOptions(
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
 
-	const useContainers =
-		config.dev?.enable_containers && config.containers?.length;
 	const workerOptions: SourcelessWorkerOptions = {
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
-		containerEngine: useContainers
-			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
-			: undefined,
 		zone: getZoneFromConfig(config),
 
 		...bindingOptions,
