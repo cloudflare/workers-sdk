@@ -40,7 +40,18 @@ jobs:
         run: rm -f fixtures/get-platform-proxy/tests/__image_snapshots__/get-platform-proxy-env-test-ts-get-platform-proxy-env-correctly-obtains-functioning-image-bindings-2-snap.png
 
       - name: Regenerate snapshot (jest-image-snapshot writes a new baseline when none exists)
-        run: pnpm --filter @fixture/get-platform-proxy exec vitest run -t "correctly obtains functioning Image bindings"
+        # Goes through turbo (like real CI's `pnpm run test:ci`) rather than
+        # calling vitest directly, so wrangler (and other fixture deps) get
+        # built first via turbo's task graph. A direct `vitest run` skips
+        # that build step, which fails with "Failed to resolve entry for
+        # package wrangler" since its dist/ doesn't exist yet.
+        #
+        # --update is required in addition to unsetting CI: jest-image-snapshot
+        # does its own CI detection via the `is-ci` package, which also checks
+        # GITHUB_ACTIONS=true (always set by the runner, unaffected by unsetting
+        # CI below), and vitest defaults updateSnapshot to 'none' in CI. Without
+        # --update the matcher refuses to write a new baseline at all.
+        run: pnpm run test:ci --filter="./fixtures/get-platform-proxy" -- -t "correctly obtains functioning Image bindings" --update
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           # jest-image-snapshot refuses to write a fresh baseline when CI is
