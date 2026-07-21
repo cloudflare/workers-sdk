@@ -113,7 +113,7 @@ export class ProxyController extends Controller {
 					},
 
 					// no need to use file-system, so don't
-					cache: false,
+					cacheAPI: false,
 					unsafeEphemeralDurableObjects: true,
 				},
 			],
@@ -133,7 +133,6 @@ export class ProxyController extends Controller {
 				this.localServerReady.promise
 			),
 			handleStructuredLogs,
-			liveReload: false,
 		};
 
 		if (this.inspectorEnabled) {
@@ -173,7 +172,7 @@ export class ProxyController extends Controller {
 					},
 				],
 				// no need to use file-system, so don't
-				cache: false,
+				cacheAPI: false,
 				unsafeEphemeralDurableObjects: true,
 			});
 		}

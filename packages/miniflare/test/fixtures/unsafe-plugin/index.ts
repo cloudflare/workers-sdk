@@ -98,7 +98,7 @@ export const plugins = {
 				Object.keys(options).map((name) => [name, new ProxyNodeBinding()])
 			);
 		},
-		getServices({ options, unsafeStickyBlobs }) {
+		getServices({ options }) {
 			if (options.length === 0) {
 				return [];
 			}
@@ -155,7 +155,7 @@ export const plugins = {
 								name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 								service: { name: SERVICE_LOOPBACK },
 							},
-							...getMiniflareObjectBindings(unsafeStickyBlobs),
+							...getMiniflareObjectBindings(),
 						],
 					},
 				},

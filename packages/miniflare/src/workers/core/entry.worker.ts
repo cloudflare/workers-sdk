@@ -26,7 +26,6 @@ type Env = {
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
-	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
@@ -294,45 +293,6 @@ function maybePrettifyError(request: Request, response: Response, env: Env) {
 	);
 }
 
-function maybeInjectLiveReload(
-	response: Response,
-	env: Env,
-	ctx: ExecutionContext
-) {
-	const liveReloadScript = env[CoreBindings.DATA_LIVE_RELOAD_SCRIPT];
-	if (
-		liveReloadScript === undefined ||
-		!response.headers.get("Content-Type")?.toLowerCase().includes("text/html")
-	) {
-		return response;
-	}
-
-	const headers = new Headers(response.headers);
-	const contentLength = parseInt(headers.get("content-length") ?? "NaN");
-	if (!isNaN(contentLength)) {
-		headers.set(
-			"content-length",
-			String(contentLength + liveReloadScript.byteLength)
-		);
-	}
-
-	const { readable, writable } = new IdentityTransformStream();
-	ctx.waitUntil(
-		(async () => {
-			await response.body?.pipeTo(writable, { preventClose: true });
-			const writer = writable.getWriter();
-			await writer.write(liveReloadScript);
-			await writer.close();
-		})()
-	);
-
-	return new Response(readable, {
-		status: response.status,
-		statusText: response.statusText,
-		headers,
-	});
-}
-
 const acceptEncodingElement =
 	/^(?<coding>[a-z]+|\*)(?:\s*;\s*q=(?<weight>\d+(?:.\d+)?))?$/;
 interface AcceptedEncoding {
@@ -572,24 +532,7 @@ export default <ExportedHandler<Env>>{
 				return await imagesDelivery.fetch(request);
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
-				if (
-					url.pathname === CorePaths.SCHEDULED ||
-					/* legacy URL path */ url.pathname === CorePaths.LEGACY_SCHEDULED
-				) {
-					if (url.pathname === CorePaths.LEGACY_SCHEDULED) {
-						ctx.waitUntil(
-							env[CoreBindings.SERVICE_LOOPBACK].fetch(
-								"http://localhost/core/log",
-								{
-									method: "POST",
-									headers: {
-										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
-									},
-									body: `Triggering scheduled handlers via a request to \`${CorePaths.LEGACY_SCHEDULED}\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`${CorePaths.SCHEDULED}\``,
-								}
-							)
-						);
-					}
+				if (url.pathname === CorePaths.SCHEDULED) {
 					return await handleScheduled(url.searchParams, service);
 				}
 
@@ -600,13 +543,6 @@ export default <ExportedHandler<Env>>{
 						service,
 						env,
 						ctx
-					);
-				}
-
-				if (url.pathname.startsWith(CorePaths.HANDLER_PREFIX)) {
-					return new Response(
-						`"${url.pathname}" is not a valid handler. Did you mean to use "${CorePaths.SCHEDULED}" or "${CorePaths.EMAIL}"?`,
-						{ status: 404 }
 					);
 				}
 			}
@@ -633,7 +569,6 @@ export default <ExportedHandler<Env>>{
 			if (!disablePrettyErrorPage) {
 				response = await maybePrettifyError(request, response, env);
 			}
-			response = maybeInjectLiveReload(response, env, ctx);
 			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
 			if (env[CoreBindings.LOG_REQUESTS]) {
 				response = maybeLogRequest(request, response, env, ctx, startTime);

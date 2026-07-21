@@ -3,11 +3,10 @@ import SCRIPT_CACHE_OBJECT from "worker:cache/cache";
 import SCRIPT_CACHE_ENTRY from "worker:cache/cache-entry";
 import SCRIPT_CACHE_ENTRY_NOOP from "worker:cache/cache-entry-noop";
 import { z } from "zod";
-import { CacheBindings, SharedBindings } from "../../workers";
+import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
-	PersistenceSchema,
 	SERVICE_LOOPBACK,
 } from "../shared";
 import type {
@@ -18,11 +17,7 @@ import type {
 import type { Plugin } from "../shared";
 
 export const CacheOptionsSchema = z.object({
-	cache: z.boolean().optional(),
-	cacheWarnUsage: z.boolean().optional(),
-});
-export const CacheSharedOptionsSchema = z.object({
-	cachePersist: PersistenceSchema,
+	cacheAPI: z.boolean().optional(),
 });
 
 export const CACHE_PLUGIN_NAME = "cache";
@@ -39,12 +34,8 @@ export function getCacheServiceName(workerIndex: number) {
 	return `${CACHE_PLUGIN_NAME}:${workerIndex}`;
 }
 
-export const CACHE_PLUGIN: Plugin<
-	typeof CacheOptionsSchema,
-	typeof CacheSharedOptionsSchema
-> = {
+export const CACHE_PLUGIN: Plugin<typeof CacheOptionsSchema> = {
 	options: CacheOptionsSchema,
-	sharedOptions: CacheSharedOptionsSchema,
 	getBindings() {
 		return [];
 	},
@@ -52,15 +43,12 @@ export const CACHE_PLUGIN: Plugin<
 		return {};
 	},
 	async getServices({
-		sharedOptions,
 		options,
 		workerIndex,
 		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
+		resourcePersistencePath,
 	}) {
-		const cache = options.cache ?? true;
-		const cacheWarnUsage = options.cacheWarnUsage ?? false;
+		const cache = options.cacheAPI ?? true;
 
 		let entryWorker: Worker;
 		if (cache) {
@@ -74,10 +62,6 @@ export const CACHE_PLUGIN: Plugin<
 					{
 						name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
 						durableObjectNamespace: CACHE_OBJECT,
-					},
-					{
-						name: CacheBindings.MAYBE_JSON_CACHE_WARN_USAGE,
-						json: JSON.stringify(cacheWarnUsage),
 					},
 				],
 			};
@@ -100,12 +84,10 @@ export const CACHE_PLUGIN: Plugin<
 		if (cache) {
 			const uniqueKey = `miniflare-${CACHE_OBJECT_CLASS_NAME}`;
 
-			const persist = sharedOptions.cachePersist;
 			const persistPath = getPersistPath(
 				CACHE_PLUGIN_NAME,
 				tmpPath,
-				defaultPersistRoot,
-				persist
+				resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
@@ -141,7 +123,7 @@ export const CACHE_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};
@@ -152,8 +134,5 @@ export const CACHE_PLUGIN: Plugin<
 		}
 
 		return services;
-	},
-	getPersistPath({ cachePersist }, tmpPath) {
-		return getPersistPath(CACHE_PLUGIN_NAME, tmpPath, undefined, cachePersist);
 	},
 };

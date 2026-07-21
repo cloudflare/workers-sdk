@@ -1,10 +1,11 @@
 import ANALYTICS_ENGINE from "worker:analytics-engine/analytics-engine";
 import { z } from "zod";
-import { PersistenceSchema, ProxyNodeBinding } from "../shared";
+import { ProxyNodeBinding } from "../shared";
 import type { Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 const AnalyticsEngineSchema = z.record(
+	z.string(),
 	z.object({
 		dataset: z.string(),
 	})
@@ -14,18 +15,12 @@ export const AnalyticsEngineSchemaOptionsSchema = z.object({
 	analyticsEngineDatasets: AnalyticsEngineSchema.optional(),
 });
 
-export const AnalyticsEngineSchemaSharedOptionsSchema = z.object({
-	analyticsEngineDatasetsPersist: PersistenceSchema,
-});
-
 export const ANALYTICS_ENGINE_PLUGIN_NAME = "analytics-engine";
 
 export const ANALYTICS_ENGINE_PLUGIN: Plugin<
-	typeof AnalyticsEngineSchemaOptionsSchema,
-	typeof AnalyticsEngineSchemaSharedOptionsSchema
+	typeof AnalyticsEngineSchemaOptionsSchema
 > = {
 	options: AnalyticsEngineSchemaOptionsSchema,
-	sharedOptions: AnalyticsEngineSchemaSharedOptionsSchema,
 	bindingTypeDescription: "Analytics Engine dataset",
 	async getBindings(options) {
 		if (!options.analyticsEngineDatasets) {

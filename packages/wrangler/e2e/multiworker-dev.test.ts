@@ -643,7 +643,7 @@ describe("multiworker", () => {
 					"Scheduled Workers are not automatically triggered"
 				);
 				expect(worker.currentOutput).toContain(
-					`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
+					`curl "http://${hostname}:${port}/cdn-cgi/local/scheduled"`
 				);
 				expect(worker.currentOutput).not.toContain("undefined");
 			});

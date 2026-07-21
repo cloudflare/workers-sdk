@@ -23,46 +23,46 @@ function getPort(url: URL) {
 }
 
 export const HyperdriveSchema = z
-	.union([z.string().url(), z.instanceof(URL)])
+	.union([z.url(), z.instanceof(URL)])
 	.transform((url, ctx) => {
 		if (typeof url === "string") url = new URL(url);
 		if (url.protocol === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must specify the database protocol - e.g. 'postgresql'/'mysql'.",
 			});
 		} else if (!hasPostgresProtocol(url) && !hasMysqlProtocol(url)) {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported.",
 			});
 		}
 		if (url.host === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must provide a hostname or IP address in your connection string - e.g. 'user:password@database-hostname.example.com:5432/databasename",
 			});
 		}
 		if (url.pathname === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must provide a database name as the path component - e.g. /postgres",
 			});
 		}
 		if (url.username === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must provide a username - e.g. 'user:password@database.example.com:port/databasename'",
 			});
 		}
 		if (url.password === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must provide a password - e.g. 'user:password@database.example.com:port/databasename' ",
 			});

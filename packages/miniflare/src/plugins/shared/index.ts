@@ -1,11 +1,7 @@
-import crypto, { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import fs from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { z } from "zod";
-import { MiniflareCoreError, PathSchema } from "../../shared";
-import { sanitisePath } from "../../workers";
+import { pathToFileURL } from "node:url";
+import { MiniflareCoreError } from "../../shared";
 import type {
 	Extension,
 	Service,
@@ -21,20 +17,7 @@ import type {
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
 import type { UnsafeUniqueKey } from "./constants";
-
-export const DEFAULT_PERSIST_ROOT = ".mf";
-
-export const PersistenceSchema = z
-	// Zod checks union types in order, both `z.string().url()` and `PathSchema`
-	// will result in a `string`, but `PathSchema` gets resolved relative to the
-	// closest `rootPath`.
-	.union([z.boolean(), z.string().url(), PathSchema])
-	.optional();
-export type Persistence = z.infer<typeof PersistenceSchema>;
-
-// Set of "worker" names that are being used as wrapped bindings and shouldn't
-// be added a regular worker services. These workers shouldn't be routable.
-export type WrappedBindingNames = Set<string>;
+import type { z } from "zod";
 
 // Maps workflow binding names to their workflow options
 export interface WorkflowOption {
@@ -77,16 +60,14 @@ export interface PluginServicesOptions<
 	workerIndex: number;
 	additionalModules: Worker_Module[];
 	tmpPath: string;
-	defaultPersistRoot: string | undefined;
-	defaultProjectTmpPath: string | undefined;
+	resourcePersistencePath: string | undefined;
+	resourceTmpPath: string | undefined;
 	workerNames: string[];
 	loopbackHost: string;
 	loopbackPort: number;
 	publicUrl: string | undefined;
-	unsafeStickyBlobs: boolean;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
-	wrappedBindingNames: WrappedBindingNames;
 	durableObjectClassNames: DurableObjectClassNames;
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
@@ -120,10 +101,6 @@ export interface PluginBase<
 	getServices(
 		options: PluginServicesOptions<Options, SharedOptions>
 	): Awaitable<Service[] | ServicesExtensions | void>;
-	getPersistPath?(
-		sharedOptions: OptionalZodTypeOf<SharedOptions>,
-		tmpPath: string
-	): string;
 	getExtensions?(options: {
 		options: z.infer<Options>[];
 	}): Awaitable<Extension[]>;
@@ -143,7 +120,7 @@ export type Plugin<
  */
 export async function loadExternalPlugins(
 	packageName: string
-): Promise<Record<string, Plugin<z.AnyZodObject>>> {
+): Promise<Record<string, Plugin<z.ZodType>>> {
 	let pluginModule;
 	try {
 		const pluginPath = require.resolve(packageName);
@@ -223,7 +200,7 @@ export function namespaceEntries(
 	}
 }
 
-export function maybeParseURL(url: Persistence): URL | undefined {
+export function maybeParseURL(url: string | undefined): URL | undefined {
 	if (typeof url !== "string" || path.isAbsolute(url)) return;
 	try {
 		return new URL(url);
@@ -233,48 +210,18 @@ export function maybeParseURL(url: Persistence): URL | undefined {
 export function getPersistPath(
 	pluginName: string,
 	tmpPath: string,
-	defaultPersistRoot: string | undefined,
-	persist: Persistence
+	resourcePersistencePath: string | undefined
 ): string {
-	// If persistence is disabled, use "memory" storage. Note we're still
-	// returning a path on the file-system here. Miniflare 2's in-memory storage
-	// persisted between options reloads. However, we restart the `workerd`
-	// process on each reload which would destroy any in-memory data. We'd like to
-	// keep Miniflare 2's behaviour, so persist to a temporary path which we
-	// destroy on `dispose()`.
-	const memoryishPath = path.join(tmpPath, pluginName);
-
-	let result: string;
-	if (persist === false) {
-		result = memoryishPath;
-	} else if (persist === undefined) {
-		// If `persist` is undefined, use either the default path or fallback to the tmpPath
-		result =
-			defaultPersistRoot === undefined
-				? memoryishPath
-				: path.join(defaultPersistRoot, pluginName);
-	} else {
-		// Try parse `persist` as a URL
-		const url = maybeParseURL(persist);
-		if (url !== undefined) {
-			if (url.protocol === "memory:") {
-				result = memoryishPath;
-			} else if (url.protocol === "file:") {
-				result = fileURLToPath(url);
-			} else {
-				throw new MiniflareCoreError(
-					"ERR_PERSIST_UNSUPPORTED",
-					`Unsupported "${url.protocol}" persistence protocol for storage: ${url.href}`
-				);
-			}
-		} else {
-			// Otherwise, fallback to file storage
-			result =
-				persist === true
-					? path.join(defaultPersistRoot ?? DEFAULT_PERSIST_ROOT, pluginName)
-					: persist;
-		}
-	}
+	// If persistence is disabled (no resource persistence path), use "memory"
+	// storage. Note we're still returning a path on the file-system here.
+	// Miniflare 2's in-memory storage persisted between options reloads. However,
+	// we restart the `workerd` process on each reload which would destroy any
+	// in-memory data. We'd like to keep Miniflare 2's behaviour, so persist to a
+	// temporary path which we destroy on `dispose()`.
+	const result =
+		resourcePersistencePath === undefined
+			? path.join(tmpPath, pluginName)
+			: path.join(resourcePersistencePath, pluginName);
 
 	// Normalize to forward slashes for workerd's disk service compatibility on
 	// Windows. workerd is a Unix-oriented C++ program and its disk service does
@@ -282,62 +229,6 @@ export function getPersistPath(
 	// errors. Forward slashes work for both Node.js fs APIs and workerd on all
 	// platforms.
 	return result.replaceAll("\\", "/");
-}
-
-// https://github.com/cloudflare/workerd/blob/81d97010e44f848bb95d0083e2677bca8d1658b7/src/workerd/server/workerd-api.c%2B%2B#L436
-function durableObjectNamespaceIdFromName(uniqueKey: string, name: string) {
-	const key = crypto.createHash("sha256").update(uniqueKey).digest();
-	const nameHmac = crypto
-		.createHmac("sha256", key)
-		.update(name)
-		.digest()
-		.subarray(0, 16);
-	const hmac = crypto
-		.createHmac("sha256", key)
-		.update(nameHmac)
-		.digest()
-		.subarray(0, 16);
-	return Buffer.concat([nameHmac, hmac]).toString("hex");
-}
-
-export async function migrateDatabase(
-	log: Log,
-	uniqueKey: string,
-	persistPath: string,
-	namespace: string
-) {
-	// Check if database exists at previous location
-	const sanitisedNamespace = sanitisePath(namespace);
-	const previousDir = path.join(persistPath, sanitisedNamespace);
-	const previousPath = path.join(previousDir, "db.sqlite");
-	const previousWalPath = path.join(previousDir, "db.sqlite-wal");
-	if (!existsSync(previousPath)) return;
-
-	// Move database to new location, if database isn't already there
-	const id = durableObjectNamespaceIdFromName(uniqueKey, namespace);
-	const newDir = path.join(persistPath, uniqueKey);
-	const newPath = path.join(newDir, `${id}.sqlite`);
-	const newWalPath = path.join(newDir, `${id}.sqlite-wal`);
-	if (existsSync(newPath)) {
-		log.debug(
-			`Not migrating ${previousPath} to ${newPath} as it already exists`
-		);
-		return;
-	}
-
-	log.debug(`Migrating ${previousPath} to ${newPath}...`);
-	await fs.mkdir(newDir, { recursive: true });
-
-	try {
-		await fs.copyFile(previousPath, newPath);
-		if (existsSync(previousWalPath)) {
-			await fs.copyFile(previousWalPath, newWalPath);
-		}
-		await fs.unlink(previousPath);
-		await fs.unlink(previousWalPath);
-	} catch (e) {
-		log.warn(`Error migrating ${previousPath} to ${newPath}: ${e}`);
-	}
 }
 
 /**

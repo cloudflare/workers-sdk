@@ -1,6 +1,6 @@
 import path from "node:path";
+import { formatZodError } from "@cloudflare/workers-utils";
 import {
-	formatZodError,
 	getRootPath,
 	Log,
 	LogLevel,
@@ -17,7 +17,7 @@ import {
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { TestProject } from "vitest/node";
 import type { Binding, RemoteProxySession } from "wrangler";
-import type { ParseParams, ZodError } from "zod";
+import type { ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
 	setMain(newMain?: string): void;
@@ -35,7 +35,7 @@ const WorkersPoolOptionsSchema = z.object({
 	 * `module` instance as is used internally for the `SELF` and Durable Object
 	 * bindings.
 	 */
-	main: z.ostring(),
+	main: z.string().optional(),
 	/**
 	 * Enables remote bindings to access remote resources configured
 	 * with `remote: true` in the wrangler configuration file.
@@ -60,13 +60,15 @@ const WorkersPoolOptionsSchema = z.object({
 		)
 		.default({}),
 	miniflare: z
-		.object({
-			workers: z.array(z.object({}).passthrough()).optional(),
+		.looseObject({
+			workers: z.array(z.looseObject({})).optional(),
 		})
-		.passthrough()
 		.optional(),
 	wrangler: z
-		.object({ configPath: z.ostring(), environment: z.ostring() })
+		.object({
+			configPath: z.string().optional(),
+			environment: z.string().optional(),
+		})
 		.optional(),
 });
 
@@ -89,7 +91,7 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
 };
 
-type PathParseParams = Pick<ParseParams, "path">;
+type PathParseParams = { path?: (string | number)[] };
 
 function isZodErrorLike(value: unknown): value is ZodError {
 	return (

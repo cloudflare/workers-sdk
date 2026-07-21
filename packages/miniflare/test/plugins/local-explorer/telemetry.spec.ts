@@ -15,7 +15,7 @@ describe("getRouteName", () => {
 				test(`handles ${method.toUpperCase()} ${path}`, ({ expect }) => {
 					// Replace {param} placeholders with dummy values
 					const testPath = path.replace(/\{[^}]+\}/g, "test-id");
-					const fullPath = `/cdn-cgi/explorer/api${testPath}`;
+					const fullPath = `/cdn-cgi/local/explorer/api${testPath}`;
 
 					const routeName = getRouteName(fullPath);
 
@@ -27,12 +27,14 @@ describe("getRouteName", () => {
 	});
 
 	test("maps routes to expected names", ({ expect }) => {
-		expect(getRouteName(`/cdn-cgi/explorer/api/storage/kv/namespaces`)).toBe(
-			"kv.namespaces"
-		);
+		expect(
+			getRouteName(`/cdn-cgi/local/explorer/api/storage/kv/namespaces`)
+		).toBe("kv.namespaces");
 	});
 
 	test("returns unknown for unrecognized paths", ({ expect }) => {
-		expect(getRouteName("/cdn-cgi/explorer/api/unknown/path")).toBe("unknown");
+		expect(getRouteName("/cdn-cgi/local/explorer/api/unknown/path")).toBe(
+			"unknown"
+		);
 	});
 });

@@ -10,7 +10,6 @@ test("hello-world", async ({ expect }) => {
 				enable_timer: true,
 			},
 		},
-		helloWorldPersist: false,
 		modules: true,
 		script: `
             export default {

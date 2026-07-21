@@ -1193,7 +1193,7 @@ describe.sequential("DevRegistry", () => {
 			serviceBindings: {
 				remote: "remote-worker",
 			},
-			handleRuntimeStdio: () => {},
+			handleStructuredLogs: () => {},
 			compatibilityFlags: ["experimental"],
 			modules: true,
 			script: `
@@ -1231,7 +1231,7 @@ describe.sequential("DevRegistry", () => {
 			},
 			compatibilityFlags: ["experimental"],
 			modules: true,
-			handleRuntimeStdio: () => {},
+			handleStructuredLogs: () => {},
 			script: `
 				export default {
 					async fetch(request, env) {
@@ -1306,7 +1306,7 @@ describe.sequential("DevRegistry", () => {
 					props: { tailKey: "from-tail-binding" },
 				},
 			],
-			handleRuntimeStdio: () => {},
+			handleStructuredLogs: () => {},
 			compatibilityFlags: ["experimental"],
 			modules: true,
 			script: `
