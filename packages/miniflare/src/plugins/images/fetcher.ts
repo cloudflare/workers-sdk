@@ -176,7 +176,9 @@ async function runTransform(
 		}
 
 		if (transform.width !== undefined || transform.height !== undefined) {
-			const { fit, withoutEnlargement } = resolveImagesBindingFit(transform.fit);
+			const { fit, withoutEnlargement } = resolveImagesBindingFit(
+				transform.fit
+			);
 			transformer.resize(transform.width || null, transform.height || null, {
 				fit,
 				withoutEnlargement,
@@ -262,7 +264,9 @@ function resolveQuality(
 // Unlike cf.image, an explicit fit:"contain" pads to the exact requested
 // box (letterbox), matching production Images binding behavior. Default
 // (unspecified) and "scale-down" must NOT pad - see transform.spec.ts.
-function resolveImagesBindingFit(fit: RequestInitCfPropertiesImage["fit"]): {
+function resolveImagesBindingFit(
+	fit: RequestInitCfPropertiesImage["fit"]
+): {
 	fit: keyof FitEnum;
 	withoutEnlargement?: boolean;
 } {
