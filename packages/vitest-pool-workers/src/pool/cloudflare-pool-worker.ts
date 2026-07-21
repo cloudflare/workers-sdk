@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
@@ -35,6 +36,10 @@ import type {
 
 export class CloudflarePoolWorker implements PoolWorker {
 	name = "cloudflare-pool";
+	// Used to log non-fatal dispose errors (e.g. workerd shutdown segfaults —
+	// see https://github.com/cloudflare/workerd/issues/6763) without propagating
+	// them as unhandled rejections that fail an otherwise-passing vitest run.
+	private readonly debug = util.debuglog("vitest-pool-workers");
 	private mf: Miniflare | undefined;
 	private socket: WebSocket | undefined;
 	private parsedPoolOptions: WorkersPoolOptionsWithDefines | undefined;
@@ -109,13 +114,30 @@ export class CloudflarePoolWorker implements PoolWorker {
 	async stop(): Promise<void> {
 		this.socket?.close();
 		this.socket = undefined;
-		await this.mf?.dispose();
+		// Tolerate (but log) dispose rejections. workerd can segfault during
+		// shutdown on linux-x64 / WSL2 and macOS-arm64 (see
+		// https://github.com/cloudflare/workerd/issues/6763); without this,
+		// the rejection bubbles out of `stop()` and fails an otherwise-passing
+		// vitest run with exit 1, even though every test body reported as
+		// passed.
+		await this.mf?.dispose().catch((err) => {
+			this.debug(
+				"miniflare dispose rejected (likely workerd shutdown segfault — see cloudflare/workerd#6763): %s",
+				err instanceof Error ? err.stack ?? err.message : err
+			);
+		});
 		this.mf = undefined;
 
 		if (this.parsedPoolOptions?.wrangler?.configPath) {
-			await remoteProxySessionsDataMap
-				.get(this.parsedPoolOptions?.wrangler?.configPath)
-				?.session?.dispose?.();
+			const session = remoteProxySessionsDataMap.get(
+				this.parsedPoolOptions.wrangler.configPath
+			)?.session;
+			await session?.dispose?.()?.catch((err) => {
+				this.debug(
+					"remote proxy session dispose rejected (likely workerd shutdown segfault — see cloudflare/workerd#6763): %s",
+					err instanceof Error ? err.stack ?? err.message : err
+				);
+			});
 		}
 
 		// Decrement the active worker count. When the last worker stops, this
