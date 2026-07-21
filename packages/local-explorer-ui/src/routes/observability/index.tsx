@@ -4,6 +4,7 @@ import {
 	InputGroup,
 	Popover,
 	RefreshButton,
+	Select,
 } from "@cloudflare/kumo";
 import {
 	EyeIcon,
@@ -23,8 +24,6 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { FilterSelect } from "../../components/observability/FilterSelect";
-import { ObservabilityViewSwitcher } from "../../components/observability/ObservabilityViewSwitcher";
 import { TraceWaterfall } from "../../components/observability/TraceWaterfall";
 import { ResourceError } from "../../components/ResourceError";
 import {
@@ -201,7 +200,7 @@ function ObservabilityView(): JSX.Element {
 			setInvocationRootsByTrace({});
 			await refresh();
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to clear traces");
+			setError(e instanceof Error ? e.message : "Failed to clear data");
 		} finally {
 			setClearing(false);
 		}
@@ -311,7 +310,9 @@ function ObservabilityView(): JSX.Element {
 			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<ObservabilityViewSwitcher current="traces" />
+					<span className="pl-1 text-sm leading-tight font-semibold text-kumo-default">
+						Traces
+					</span>
 					<span className="pl-1 text-[11px] leading-tight text-kumo-subtle">
 						{traces.length} trace{traces.length === 1 ? "" : "s"}
 					</span>
@@ -335,7 +336,7 @@ function ObservabilityView(): JSX.Element {
 					size="sm"
 					variant="ghost"
 					icon={TrashIcon}
-					title="Clear all captured traces and logs"
+					title="Clear all captured traces and events"
 					loading={clearing}
 					disabled={clearing || traces.length === 0}
 					onClick={() => void handleClear()}
@@ -398,44 +399,46 @@ function ObservabilityView(): JSX.Element {
 					) : null}
 				</InputGroup>
 				<QuerySyntaxHint />
-				<FilterSelect
-					label="Filter by status"
+				<Select
+					aria-label="Filter by status"
 					value={status}
-					onChange={(v) => setStatus(v as typeof status)}
-					options={[
-						["all", "All statuses"],
-						["success", "Success"],
-						["error", "Errors"],
-					]}
-				/>
-				<FilterSelect
-					label="Filter by type"
+					onValueChange={(v) => setStatus(String(v) as typeof status)}
+				>
+					<Select.Option value="all">All statuses</Select.Option>
+					<Select.Option value="success">Success</Select.Option>
+					<Select.Option value="error">Errors</Select.Option>
+				</Select>
+				<Select
+					aria-label="Filter by type"
 					value={kind}
-					onChange={setKind}
-					options={[
-						["all", "All types"],
-						["http", "HTTP"],
-						["fetch", "Fetch"],
-						["d1", "D1"],
-						["kv", "KV"],
-						["r2", "R2"],
-						["do", "Durable Object"],
-					]}
-				/>
-				<FilterSelect
-					label="Filter by tag"
+					onValueChange={(v) => setKind(String(v))}
+				>
+					<Select.Option value="all">All types</Select.Option>
+					<Select.Option value="http">HTTP</Select.Option>
+					<Select.Option value="fetch">Fetch</Select.Option>
+					<Select.Option value="d1">D1</Select.Option>
+					<Select.Option value="kv">KV</Select.Option>
+					<Select.Option value="r2">R2</Select.Option>
+					<Select.Option value="do">Durable Object</Select.Option>
+				</Select>
+				<Select
+					aria-label="Filter by tag"
 					value={tagKey}
-					onChange={(v) => {
-						setTagKey(v);
-						if (v === "all") {
+					onValueChange={(v) => {
+						const key = String(v);
+						setTagKey(key);
+						if (key === "all") {
 							setTagValue("");
 						}
 					}}
-					options={[
-						["all", "All tags"],
-						...tagKeys.map((k) => [k, k] as [string, string]),
-					]}
-				/>
+				>
+					<Select.Option value="all">All tags</Select.Option>
+					{tagKeys.map((k) => (
+						<Select.Option key={k} value={k}>
+							{k}
+						</Select.Option>
+					))}
+				</Select>
 				{tagKey !== "all" ? (
 					<InputGroup size="sm" className="w-40">
 						<input
@@ -459,7 +462,7 @@ function ObservabilityView(): JSX.Element {
 				{traces.length === 0 && !loading ? (
 					<EmptyState
 						title="No traces yet"
-						body="Send some requests to your Worker (with observability traces enabled) and they'll show up here."
+						body="Send some requests to your Worker and each trace will show up here."
 						inline
 					/>
 				) : (

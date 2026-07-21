@@ -1,4 +1,10 @@
-import { cn, InputGroup, RefreshButton } from "@cloudflare/kumo";
+import {
+	Button,
+	cn,
+	InputGroup,
+	RefreshButton,
+	Select,
+} from "@cloudflare/kumo";
 import {
 	CopyIcon,
 	MagnifyingGlassIcon,
@@ -7,16 +13,14 @@ import {
 } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FilterSelect } from "../../components/observability/FilterSelect";
-import { ObservabilityViewSwitcher } from "../../components/observability/ObservabilityViewSwitcher";
 import { ResourceError } from "../../components/ResourceError";
 import { listEvents } from "../../utils/observability";
 import { parseEventQuery } from "../../utils/observability-query";
 import type { LogEvent } from "../../utils/observability";
 import type { JSX } from "react";
 
-export const Route = createFileRoute("/observability/logs")({
-	component: LogsView,
+export const Route = createFileRoute("/observability/events")({
+	component: EventsView,
 	errorComponent: ResourceError,
 });
 
@@ -55,7 +59,7 @@ function levelClass(level: string | null): string {
 	}
 }
 
-function LogsView(): JSX.Element {
+function EventsView(): JSX.Element {
 	const [events, setEvents] = useState<LogEvent[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -83,7 +87,7 @@ function LogsView(): JSX.Element {
 				})
 			);
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to load logs");
+			setError(e instanceof Error ? e.message : "Failed to load events");
 		} finally {
 			setLoading(false);
 		}
@@ -98,15 +102,17 @@ function LogsView(): JSX.Element {
 			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<ObservabilityViewSwitcher current="logs" />
+					<span className="pl-1 text-sm leading-tight font-semibold text-kumo-default">
+						Events
+					</span>
 					<span className="pl-1 text-[11px] leading-tight text-kumo-subtle">
-						{events.length} log{events.length === 1 ? "" : "s"}
+						{events.length} event{events.length === 1 ? "" : "s"}
 					</span>
 				</div>
 				<div className="flex-1" />
 				<RefreshButton
 					size="sm"
-					aria-label="Refresh logs"
+					aria-label="Refresh events"
 					loading={loading}
 					onClick={() => void refresh()}
 				/>
@@ -118,7 +124,7 @@ function LogsView(): JSX.Element {
 						<MagnifyingGlassIcon size={14} />
 					</div>
 					<input
-						aria-label="Search logs"
+						aria-label="Search events"
 						value={search}
 						onChange={(e) => setSearch(e.currentTarget.value)}
 						placeholder="Search, or query e.g. level:error op:/checkout timeout"
@@ -135,20 +141,21 @@ function LogsView(): JSX.Element {
 						</InputGroup.Button>
 					) : null}
 				</InputGroup>
-				<FilterSelect
-					label="Filter by level"
+				{/*
+				 * Note: capture folds console.log's "log" level into "info"
+				 * (OTel severity), so there's no distinct "Log" level to filter on.
+				 */}
+				<Select
+					aria-label="Filter by level"
 					value={level}
-					onChange={setLevel}
-					options={[
-						// Note: capture folds console.log's "log" level into "info"
-						// (OTel severity), so there's no distinct "Log" level to filter on.
-						["all", "All levels"],
-						["error", "Error"],
-						["warn", "Warn"],
-						["info", "Info"],
-						["debug", "Debug"],
-					]}
-				/>
+					onValueChange={(v) => setLevel(String(v))}
+				>
+					<Select.Option value="all">All levels</Select.Option>
+					<Select.Option value="error">Error</Select.Option>
+					<Select.Option value="warn">Warn</Select.Option>
+					<Select.Option value="info">Info</Select.Option>
+					<Select.Option value="debug">Debug</Select.Option>
+				</Select>
 			</div>
 
 			<div className="flex-1 overflow-y-auto">
@@ -160,7 +167,7 @@ function LogsView(): JSX.Element {
 
 				{events.length === 0 && !loading ? (
 					<EmptyState
-						title="No logs yet"
+						title="No events yet"
 						body="Send some requests to your Worker; any console.log output will show up here."
 						inline
 					/>
@@ -251,14 +258,15 @@ function EventRow({
 				<tr className="bg-kumo-base">
 					<td colSpan={4} className="px-4 py-3">
 						<div className="relative rounded-lg border border-kumo-fill bg-kumo-elevated p-3">
-							<button
-								type="button"
-								onClick={() => void navigator.clipboard.writeText(blob)}
-								className="absolute top-2 right-2 text-kumo-subtle hover:text-kumo-default"
+							<Button
+								size="sm"
+								shape="square"
+								variant="ghost"
+								icon={CopyIcon}
 								aria-label="Copy JSON"
-							>
-								<CopyIcon size={14} />
-							</button>
+								className="absolute top-2 right-2"
+								onClick={() => void navigator.clipboard.writeText(blob)}
+							/>
 							<pre className="overflow-x-auto font-mono text-xs leading-relaxed text-kumo-default">
 								{blob}
 							</pre>
