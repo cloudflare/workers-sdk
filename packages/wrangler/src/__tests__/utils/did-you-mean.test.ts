@@ -64,6 +64,15 @@ describe("getSuggestion", () => {
 		// is a 4-char candidate — the scaled threshold allows it
 		expect(getSuggestion("git", commands)).toBe("init");
 	});
+
+	it("should return the first candidate when multiple are equidistant", ({
+		expect,
+	}) => {
+		// "hella" is distance 1 from both "hello" and "hellz"; the first one in
+		// iteration order should win, regardless of ordering.
+		expect(getSuggestion("hella", ["hello", "hellz"])).toBe("hello");
+		expect(getSuggestion("hella", ["hellz", "hello"])).toBe("hellz");
+	});
 });
 
 describe("logDidYouMean", () => {

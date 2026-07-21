@@ -36,10 +36,11 @@ export function getSuggestion(
 		// e.g. "cat" -> "ai" or "foo" -> "d1" just because they're within 3 edits.
 		const effectiveMax = Math.min(
 			maxDistance,
-			bestDistance,
 			Math.floor((Math.min(lowerInput.length, candidate.length) * 2) / 3)
 		);
-		if (distance <= effectiveMax) {
+		// Use a strict `<` against the running best so that, on ties, the first
+		// candidate in iteration order wins (as documented above).
+		if (distance <= effectiveMax && distance < bestDistance) {
 			bestDistance = distance;
 			bestMatch = candidate;
 		}
