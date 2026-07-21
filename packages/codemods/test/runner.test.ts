@@ -15,7 +15,7 @@ import { codemods, runCodemods } from "../src/runner";
 const temporaryDirectories: string[] = [];
 
 async function createProject(files: Record<string, string>): Promise<string> {
-	const directory = await mkdtemp(path.join(tmpdir(), "cloudflare-codemod-"));
+	const directory = await mkdtemp(path.join(tmpdir(), "cloudflare-codemods-"));
 	temporaryDirectories.push(directory);
 	for (const [filePath, contents] of Object.entries(files)) {
 		await writeFile(path.join(directory, filePath), contents);

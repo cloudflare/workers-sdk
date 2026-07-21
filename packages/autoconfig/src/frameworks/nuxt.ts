@@ -1,7 +1,10 @@
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
-import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
 import type {

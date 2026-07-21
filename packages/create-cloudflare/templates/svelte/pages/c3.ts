@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import { transformFile } from "@cloudflare/codemod";
+import { transformFile } from "@cloudflare/shared-ast-primitives";
 import { runFrameworkGenerator } from "frameworks/index";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";

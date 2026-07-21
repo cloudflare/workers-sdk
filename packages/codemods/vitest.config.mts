@@ -4,7 +4,7 @@ export default defineConfig({
 	test: {
 		testTimeout: 15_000,
 		pool: "forks",
-		include: ["**/{test,tests}/**/*.test.ts"],
+		include: ["**/test/**/*.test.ts"],
 		reporters: ["default"],
 		unstubEnvs: true,
 		mockReset: true,

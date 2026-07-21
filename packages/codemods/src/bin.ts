@@ -5,13 +5,13 @@ import { parseArgs } from "node:util";
 import { codemods, getCategories, runCodemods } from "./runner";
 
 function printHelp(): void {
-	console.log(`Usage: cloudflare-codemod <category> [codemod] [options]
+	console.log(`Usage: cloudflare-codemods <category> [codemod] [options]
 
 Run all relevant codemods in a category:
-  npx @cloudflare/codemod vitest
+  npx @cloudflare/codemods vitest
 
 Run one codemod:
-  npx @cloudflare/codemod vitest vitest-v3-to-v4
+  npx @cloudflare/codemods vitest vitest-v3-to-v4
 
 Options:
   --cwd <path>     Project directory (default: current directory)
