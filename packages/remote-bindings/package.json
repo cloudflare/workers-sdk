@@ -30,22 +30,24 @@
 		"test:ci": "vitest run --passWithNoTests",
 		"test:watch": "vitest"
 	},
-	"devDependencies": {
+	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/workers-auth": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"chalk": "catalog:default",
+		"miniflare": "workspace:*",
+		"undici": "catalog:default",
+		"ws": "catalog:default"
+	},
+	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@cloudflare/workers-utils": "workspace:*",
 		"@types/ws": "^8.5.13",
 		"capnweb": "catalog:default",
-		"chalk": "catalog:default",
 		"esbuild": "catalog:default",
-		"miniflare": "workspace:*",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"ws": "catalog:default"
+		"vitest": "catalog:default"
 	}
 }

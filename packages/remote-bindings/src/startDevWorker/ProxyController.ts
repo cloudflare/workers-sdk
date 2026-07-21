@@ -1,14 +1,10 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { assertNever } from "@cloudflare/workers-utils";
-import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
+import { Log, LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import proxyWorkerSource from "worker:startDevWorker/ProxyWorker";
 import { logger } from "../logger";
-import {
-	castLogLevel,
-	handleStructuredLogs,
-	WranglerLog,
-} from "../utils/miniflare";
+import { castLogLevel, handleStructuredLogs } from "../utils/miniflare";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
 import type {
@@ -101,8 +97,8 @@ export class ProxyController {
 					prefix:
 						// if debugging, log requests with specic ProxyWorker prefix
 						logger.loggerLevel === "debug"
-							? "wrangler-ProxyWorker"
-							: "wrangler",
+							? "remote-bindings-ProxyWorker"
+							: "remote-bindings",
 				},
 				this.localServerReady.promise
 			),
@@ -254,7 +250,7 @@ export class ProxyController {
 	}
 }
 
-class ProxyControllerLogger extends WranglerLog {
+class ProxyControllerLogger extends Log {
 	constructor(
 		level: LogLevel,
 		opts: LogOptions,
