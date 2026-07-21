@@ -4,7 +4,11 @@
 
 Consolidate persistence and temporary directory options
 
-The per-resource persistence options (`kvPersist`, `r2Persist`, `d1Persist`, `cachePersist`, `durableObjectsPersist`, `workflowsPersist`, `secretsStorePersist`, `analyticsEngineDatasetsPersist`, `streamPersist`, `imagesPersist`, and `helloWorldPersist`) have been removed, along with `defaultPersistRoot` and `defaultProjectTmpPath`. Persistence is now configured with two options:
+The per-resource persistence options (`kvPersist`, `r2Persist`, `d1Persist`, `cachePersist`, `durableObjectsPersist`, `workflowsPersist`, `secretsStorePersist`, `analyticsEngineDatasetsPersist`, `streamPersist`, `imagesPersist`, and `helloWorldPersist`) have been removed. The `Miniflare.unsafeGetPersistPaths()` method, which provided the per-resource persistence paths, has also been removed as they can now be stably inferred from the base path.
+
+For consistency and clarity, `defaultPersistRoot` and `defaultProjectTmpPath` have been renamed to `resourcePersistencePath` and `resourceTmpPath`, respectively.
+
+For example:
 
 ```js
 new Miniflare({
@@ -13,4 +17,4 @@ new Miniflare({
 });
 ```
 
-When `resourcePersistencePath` is set, each resource persists to a subdirectory named after its plugin (e.g. `.wrangler/state/v3/kv`). When it is omitted, resources are ephemeral and their data is cleared on dispose. The `boolean`, `memory:`, `file:` and relative-path forms of the old per-resource options, the `.mf` default directory, and the `Miniflare.unsafeGetPersistPaths()` method have also been removed.
+When `resourcePersistencePath` is set, each resource persists to a subdirectory named after its plugin (e.g. `.wrangler/state/v3/kv`). When it is omitted, resources are ephemeral and their data is cleared on dispose.
