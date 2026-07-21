@@ -334,7 +334,9 @@ test("put: puts empty value", async ({ expect }) => {
 	expect(value).toBe("");
 });
 
-test("getWithMetadata: returns metadata for falsy values", async ({ expect }) => {
+test("getWithMetadata: returns metadata for falsy values", async ({
+	expect,
+}) => {
 	const { kv } = ctx;
 	await kv.put("key-empty", "", { metadata: { key: "empty" } });
 	const emptyResult = await kv.getWithMetadata("key-empty");
