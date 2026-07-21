@@ -339,7 +339,7 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can skip a simple existing application and create other", async ({
+	test("can modify an existing application without a rollout when rollout_kind is none, and create other", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
@@ -385,8 +385,11 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		mockCreateApplication(expect, { id: "abc" });
 		await runWrangler("cloudchamber apply");
+		const body = await applicationReqBodyPromise;
+		expect(body.instances).toEqual(4);
 
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -417,6 +420,8 @@ describe("cloudchamber apply", () => {
 			│   [containers.constraints]
 			│   tier = 1
 			│
+			│
+			│  SUCCESS  Modified application my-container-app
 			│
 			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│

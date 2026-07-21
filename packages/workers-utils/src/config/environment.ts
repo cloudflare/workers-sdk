@@ -309,7 +309,7 @@ export type ContainerApp = {
 	/**
 	 * How a rollout should be created. It supports the following modes:
 	 *  - full_auto: The container application will be rolled out fully automatically.
-	 *  - none: The container application won't have a roll out or update.
+	 *  - none: Application-level changes (e.g. `max_instances`, `scheduling_policy`) will still be applied, but no rollout will be created, so existing instances won't be updated.
 	 *  - manual: The container application will be rollout fully by manually actioning progress steps.
 	 * @optional
 	 * @default "full_auto"
