@@ -333,6 +333,18 @@ test("put: puts empty value", async ({ expect }) => {
 	const value = await kv.get("key");
 	expect(value).toBe("");
 });
+
+test("getWithMetadata: returns metadata for falsy values", async ({ expect }) => {
+	const { kv } = ctx;
+	await kv.put("key-empty", "", { metadata: { key: "empty" } });
+	const emptyResult = await kv.getWithMetadata("key-empty");
+	expect(emptyResult.value).toBe("");
+	expect(emptyResult.metadata).toEqual({ key: "empty" });
+	await kv.put("key-zero", "0");
+	const zeroResult = await kv.getWithMetadata("key-zero");
+	expect(zeroResult.value).toBe("0");
+	expect(zeroResult.metadata).toBe(null);
+});
 test("put: overrides existing keys", async ({ expect }) => {
 	const { kv, ns, object } = ctx;
 	const stmts = sqlStmts(object);
