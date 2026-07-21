@@ -481,34 +481,35 @@ const testCases: TestCase[] = [
 		},
 		getExpectFetchToMatch: (expect) => [expect.stringContaining(`"id"`)],
 	},
-	{
-		name: "Agent Memory",
-		scriptPath: "agent-memory.js",
-		setup: async (helper) => {
-			const namespace = generateResourceName("agent-memory", 8);
-			await helper.run(`wrangler agent-memory namespace create ${namespace}`);
+	// Skipped while the agent memory team figure out the permissions issue
+	// {
+	// 	name: "Agent Memory",
+	// 	scriptPath: "agent-memory.js",
+	// 	setup: async (helper) => {
+	// 		const namespace = generateResourceName("agent-memory", 8);
+	// 		await helper.run(`wrangler agent-memory namespace create ${namespace}`);
 
-			return {
-				remoteProxySessionConfig: {
-					bindings: {
-						MEMORY: {
-							type: "agent_memory",
-							namespace,
-						},
-					},
-				},
-				miniflareConfig: (connection) => ({
-					agentMemory: {
-						MEMORY: {
-							namespace,
-							remoteProxyConnectionString: connection,
-						},
-					},
-				}),
-			};
-		},
-		getExpectFetchToMatch: (expect) => [expect.stringContaining("profile")],
-	},
+	// 		return {
+	// 			remoteProxySessionConfig: {
+	// 				bindings: {
+	// 					MEMORY: {
+	// 						type: "agent_memory",
+	// 						namespace,
+	// 					},
+	// 				},
+	// 			},
+	// 			miniflareConfig: (connection) => ({
+	// 				agentMemory: {
+	// 					MEMORY: {
+	// 						namespace,
+	// 						remoteProxyConnectionString: connection,
+	// 					},
+	// 				},
+	// 			}),
+	// 		};
+	// 	},
+	// 	getExpectFetchToMatch: (expect) => [expect.stringContaining("profile")],
+	// },
 	{
 		name: "Pipelines",
 		scriptPath: "pipelines.js",
