@@ -264,7 +264,7 @@ function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
 } {
 	switch (fit) {
 		case "contain":
-			return { fit: "inside" };
+			return { fit: "contain" };
 		case "cover":
 			return { fit: "cover" };
 		case "crop":
@@ -275,7 +275,7 @@ function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
 			return { fit: "fill" };
 		case "scale-down":
 		default:
-			return { fit: "inside", withoutEnlargement: true };
+			return { fit: "contain", withoutEnlargement: true };
 	}
 }
 
