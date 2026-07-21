@@ -3,12 +3,12 @@ import {
 	type DeferredPromise,
 	rewriteUrlInHeaderValue,
 	urlFromParts,
-} from "../../src/api/startDevWorker/utils";
+} from "../../src/startDevWorker/utils";
 import type {
 	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
-} from "../../src/api/startDevWorker/events";
+} from "../../src/startDevWorker/events";
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;
@@ -23,8 +23,6 @@ type Request = Parameters<
 	>
 >[0];
 
-const LIVE_RELOAD_PROTOCOL = "WRANGLER_PROXYWORKER_LIVE_RELOAD_PROTOCOL";
-const LIVE_RELOAD_PATHNAME = "/cdn-cgi/live-reload";
 export default {
 	fetch(req, env) {
 		const singleton = env.DURABLE_OBJECT.idFromName("");
@@ -36,7 +34,7 @@ export default {
 
 export class ProxyWorker implements DurableObject {
 	constructor(
-		readonly state: DurableObjectState,
+		_state: DurableObjectState,
 		readonly env: Env
 	) {}
 
@@ -45,12 +43,6 @@ export class ProxyWorker implements DurableObject {
 	requestRetryQueue = new Map<Request, DeferredPromise<Response>>();
 
 	fetch(request: Request) {
-		if (isRequestForLiveReloadWebsocket(request)) {
-			// requests for live-reload websocket
-
-			return this.handleLiveReloadWebSocket(request);
-		}
-
 		if (isRequestFromProxyController(request, this.env)) {
 			// requests from ProxyController
 
@@ -66,20 +58,6 @@ export class ProxyWorker implements DurableObject {
 		return deferred.promise;
 	}
 
-	handleLiveReloadWebSocket(request: Request) {
-		const { 0: response, 1: liveReload } = new WebSocketPair();
-		const websocketProtocol =
-			request.headers.get("Sec-WebSocket-Protocol") ?? "";
-
-		this.state.acceptWebSocket(liveReload, ["live-reload"]);
-
-		return new Response(null, {
-			status: 101,
-			webSocket: response,
-			headers: { "Sec-WebSocket-Protocol": websocketProtocol },
-		});
-	}
-
 	processProxyControllerRequest(request: Request) {
 		const event = request.cf?.hostMetadata;
 		switch (event?.type) {
@@ -90,9 +68,6 @@ export class ProxyWorker implements DurableObject {
 			case "play":
 				this.proxyData = event.proxyData;
 				this.processQueue();
-				this.state
-					.getWebSockets("live-reload")
-					.forEach((ws) => ws.send("reload"));
 
 				break;
 		}
@@ -112,7 +87,9 @@ export class ProxyWorker implements DurableObject {
 
 	processQueue() {
 		const { proxyData } = this; // store proxyData at the moment this function was called
-		if (proxyData === undefined) return;
+		if (proxyData === undefined) {
+			return;
+		}
 
 		for (const [request, deferredResponse] of this.getOrderedQueue()) {
 			this.requestRetryQueue.delete(request);
@@ -134,7 +111,9 @@ export class ProxyWorker implements DurableObject {
 			// Preserve client `Accept-Encoding`, rather than using Worker's default
 			// of `Accept-Encoding: br, gzip`
 			const encoding = request.cf?.clientAcceptEncoding;
-			if (encoding !== undefined) headers.set("Accept-Encoding", encoding);
+			if (encoding !== undefined) {
+				headers.set("Accept-Encoding", encoding);
+			}
 
 			rewriteUrlRelatedHeaders(headers, outerUrl, innerUrl);
 
@@ -145,7 +124,9 @@ export class ProxyWorker implements DurableObject {
 
 			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
-				if (value === undefined) continue;
+				if (value === undefined) {
+					continue;
+				}
 
 				if (key.toLowerCase() === "cookie") {
 					const existing = request.headers.get("cookie") ?? "";
@@ -162,16 +143,6 @@ export class ProxyWorker implements DurableObject {
 					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
 
 					await checkForPreviewTokenError(res, this.env, proxyData);
-
-					if (isHtmlResponse(res)) {
-						res = insertLiveReloadScript(request, res, this.env, proxyData);
-					}
-
-					if (isSseResponse(res)) {
-						void sendMessageToProxyController(this.env, {
-							type: "sseResponseDetected",
-						});
-					}
 
 					deferredResponse.resolve(res);
 				})
@@ -236,25 +207,6 @@ export class ProxyWorker implements DurableObject {
 function isRequestFromProxyController(req: Request, env: Env): boolean {
 	return req.headers.get("Authorization") === env.PROXY_CONTROLLER_AUTH_SECRET;
 }
-function isHtmlResponse(res: Response): boolean {
-	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
-}
-function isSseResponse(res: Response): boolean {
-	return (
-		res.headers.get("content-type")?.startsWith("text/event-stream") ?? false
-	);
-}
-function isRequestForLiveReloadWebsocket(req: Request): boolean {
-	if (new URL(req.url).pathname !== LIVE_RELOAD_PATHNAME) {
-		return false;
-	}
-
-	const websocketProtocol = req.headers.get("Sec-WebSocket-Protocol");
-	const isWebSocketUpgrade = req.headers.get("Upgrade") === "websocket";
-
-	return isWebSocketUpgrade && websocketProtocol === LIVE_RELOAD_PROTOCOL;
-}
-
 function sendMessageToProxyController(
 	env: Env,
 	message: ProxyWorkerOutgoingRequestBody
@@ -293,53 +245,6 @@ async function checkForPreviewTokenError(
 		});
 	}
 }
-
-function insertLiveReloadScript(
-	request: Request,
-	response: Response,
-	env: Env,
-	proxyData: ProxyData
-) {
-	const htmlRewriter = new HTMLRewriter();
-
-	htmlRewriter.onDocument({
-		end(end) {
-			// if liveReload enabled, append a script tag
-			// TODO: compare to existing nodejs implementation
-			if (proxyData.liveReload) {
-				const websocketUrl = new URL(request.url);
-				websocketUrl.protocol =
-					websocketUrl.protocol === "http:" ? "ws:" : "wss:";
-
-				end.append(liveReloadScript, { html: true });
-			}
-		},
-	});
-
-	return htmlRewriter.transform(response);
-}
-
-const liveReloadScript = `
-<script defer type="application/javascript">
-	(function() {
-		var ws;
-		function recover() {
-			ws = null;
-			setTimeout(initLiveReload, 100);
-		}
-		function initLiveReload() {
-			if (ws) return;
-			var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
-			ws = new WebSocket(origin + "${LIVE_RELOAD_PATHNAME}", "${LIVE_RELOAD_PROTOCOL}");
-			ws.onclose = recover;
-			ws.onerror = recover;
-			ws.onmessage = location.reload.bind(location);
-		}
-		initLiveReload();
-	})();
-</script>
-`;
-
 /**
  * Rewrite references to URLs in request/response headers.
  *

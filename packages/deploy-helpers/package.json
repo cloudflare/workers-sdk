@@ -25,6 +25,10 @@
 		"./context": {
 			"import": "./dist/context.mjs",
 			"types": "./dist/context.d.mts"
+		},
+		"./create-worker-upload-form": {
+			"import": "./dist/create-worker-upload-form.mjs",
+			"types": "./dist/create-worker-upload-form.d.mts"
 		}
 	},
 	"scripts": {

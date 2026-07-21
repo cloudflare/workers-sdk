@@ -1,0 +1,53 @@
+{
+	"name": "@cloudflare/remote-bindings",
+	"version": "0.0.0",
+	"private": true,
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/remote-bindings#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/remote-bindings"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check:type": "tsc",
+		"dev": "tsdown --watch",
+		"test:ci": "vitest run --passWithNoTests",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/deploy-helpers": "workspace:*",
+		"@cloudflare/workers-auth": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"chalk": "catalog:default",
+		"miniflare": "workspace:*",
+		"undici": "catalog:default",
+		"ws": "catalog:default"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@types/ws": "^8.5.13",
+		"capnweb": "catalog:default",
+		"esbuild": "catalog:default",
+		"tsdown": "0.16.3",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	}
+}
