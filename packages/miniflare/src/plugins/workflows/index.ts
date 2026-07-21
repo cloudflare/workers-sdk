@@ -6,7 +6,6 @@ import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
 	getUserBindingServiceName,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
@@ -37,19 +36,11 @@ export const WorkflowsOptionsSchema = z.object({
 		)
 		.optional(),
 });
-export const WorkflowsSharedOptionsSchema = z.object({
-	workflowsPersist: PersistenceSchema,
-});
-
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
 export const WORKFLOWS_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:storage`;
 
-export const WORKFLOWS_PLUGIN: Plugin<
-	typeof WorkflowsOptionsSchema,
-	typeof WorkflowsSharedOptionsSchema
-> = {
+export const WORKFLOWS_PLUGIN: Plugin<typeof WorkflowsOptionsSchema> = {
 	options: WorkflowsOptionsSchema,
-	sharedOptions: WorkflowsSharedOptionsSchema,
 	bindingTypeDescription: "Workflow",
 	async getBindings(options: z.infer<typeof WorkflowsOptionsSchema>) {
 		return Object.entries(options.workflows ?? {}).map(
@@ -98,12 +89,11 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		];
 	},
 
-	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.workflowsPersist
+			resourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
 		// each workflow should get its own storage service
@@ -204,14 +194,5 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		}
 
 		return [...storageServices, ...services];
-	},
-
-	getPersistPath({ workflowsPersist }, tmpPath) {
-		return getPersistPath(
-			WORKFLOWS_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			workflowsPersist
-		);
 	},
 };

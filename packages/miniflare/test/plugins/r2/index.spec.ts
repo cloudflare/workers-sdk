@@ -3,6 +3,7 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { text } from "node:stream/consumers";
 import { Headers, Miniflare, R2_PLUGIN_NAME } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
@@ -998,7 +999,7 @@ test("operations persist stored data", async ({ expect }) => {
 		modules: true,
 		script: "",
 		r2Buckets: { BUCKET: "bucket" },
-		r2Persist: tmp,
+		resourcePersistencePath: tmp,
 	};
 	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
@@ -1011,8 +1012,8 @@ test("operations persist stored data", async ({ expect }) => {
 	let object = await r2.head("key");
 	expect(object?.size).toBe(5);
 
-	// Check directory created for namespace
-	const names = await fs.readdir(tmp);
+	// Check directory created for namespace under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, R2_PLUGIN_NAME));
 	expect(names.includes("miniflare-R2BucketObject")).toBe(true);
 
 	// Check "restarting" keeps persisted data

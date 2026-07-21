@@ -14,7 +14,6 @@ import {
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
@@ -54,10 +53,6 @@ export const R2OptionsSchema = z.object({
 		])
 		.optional(),
 });
-export const R2SharedOptionsSchema = z.object({
-	r2Persist: PersistenceSchema,
-});
-
 export const R2_PLUGIN_NAME = "r2";
 const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
 const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
@@ -171,12 +166,8 @@ export function getR2S3Service(
 	};
 }
 
-export const R2_PLUGIN: Plugin<
-	typeof R2OptionsSchema,
-	typeof R2SharedOptionsSchema
-> = {
+export const R2_PLUGIN: Plugin<typeof R2OptionsSchema> = {
 	options: R2OptionsSchema,
-	sharedOptions: R2SharedOptionsSchema,
 	bindingTypeDescription: "R2 bucket",
 	getBindings(options) {
 		const buckets = namespaceEntries<R2BucketEntry>(options.r2Buckets);
@@ -204,15 +195,8 @@ export const R2_PLUGIN: Plugin<
 			buckets.map((name) => [name, new ProxyNodeBinding()])
 		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
-		const persist = sharedOptions.r2Persist;
-		const buckets = namespaceEntries<R2BucketEntry>(options.r2Buckets);
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
+		const buckets = namespaceEntries(options.r2Buckets);
 
 		const services: Service[] = [];
 		let hasRemote = false;
@@ -239,8 +223,7 @@ export const R2_PLUGIN: Plugin<
 			const persistPath = getPersistPath(
 				R2_PLUGIN_NAME,
 				tmpPath,
-				defaultPersistRoot,
-				persist
+				resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
@@ -276,7 +259,7 @@ export const R2_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};
@@ -284,8 +267,5 @@ export const R2_PLUGIN: Plugin<
 		}
 
 		return services;
-	},
-	getPersistPath({ r2Persist }, tmpPath) {
-		return getPersistPath(R2_PLUGIN_NAME, tmpPath, undefined, r2Persist);
 	},
 };

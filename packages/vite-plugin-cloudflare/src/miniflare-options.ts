@@ -332,6 +332,7 @@ export async function getDevMiniflareOptions(
 	];
 
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
+	let containerEngine: string | undefined;
 
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
@@ -381,8 +382,7 @@ export async function getDevMiniflareOptions(
 								worker.config.dev.enable_containers
 							) {
 								const dockerPath = getDockerPath();
-								worker.config.dev.container_engine =
-									resolveDockerHost(dockerPath);
+								containerEngine = resolveDockerHost(dockerPath);
 								containerBuildId = generateContainerBuildId();
 
 								const options = getContainerOptions({
@@ -579,14 +579,12 @@ export async function getDevMiniflareOptions(
 				);
 				await viteDevServer.restart();
 			},
-			defaultPersistRoot: getPersistenceRoot(
+			resourcePersistencePath: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			defaultProjectTmpPath: path.resolve(
-				resolvedViteConfig.root,
-				".wrangler/tmp"
-			),
+			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
+			containerEngine,
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
 				const parsed = await parseModuleFallbackRequest(request);
@@ -753,6 +751,7 @@ export async function getPreviewMiniflareOptions(
 	);
 	const { resolvedPluginConfig, resolvedViteConfig } = ctx;
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
+	let containerEngine: string | undefined;
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
@@ -800,7 +799,7 @@ export async function getPreviewMiniflareOptions(
 					workerConfig.dev.enable_containers
 				) {
 					const dockerPath = getDockerPath();
-					workerConfig.dev.container_engine = resolveDockerHost(dockerPath);
+					containerEngine = resolveDockerHost(dockerPath);
 					containerBuildId = generateContainerBuildId();
 
 					const options = getContainerOptions({
@@ -873,14 +872,12 @@ export async function getPreviewMiniflareOptions(
 			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
-			defaultPersistRoot: getPersistenceRoot(
+			resourcePersistencePath: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			defaultProjectTmpPath: path.resolve(
-				resolvedViteConfig.root,
-				".wrangler/tmp"
-			),
+			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
+			containerEngine,
 			workers,
 		},
 		containerTagToOptionsMap,

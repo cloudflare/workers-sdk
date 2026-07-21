@@ -54,7 +54,6 @@ function createMiniflare(): Miniflare {
 	return new Miniflare({
 		compatibilityDate: "2025-04-01",
 		images: { binding: "IMAGES" },
-		imagesPersist: false,
 		modules: true,
 		script: WORKER_SCRIPT,
 	} satisfies MiniflareOptions);

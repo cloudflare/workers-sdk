@@ -77,7 +77,6 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		queueProducers: allQueueProducers,
 		queueConsumers: allQueueConsumers,
 		devRegistryEnabled,
-		unsafeStickyBlobs,
 	}) {
 		const produced = bindingEntries(options.queueProducers).map(([, id]) => id);
 		// Consumed queues get a broker service even without a local producer so
@@ -119,7 +118,7 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 					{
 						name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
 						durableObjectNamespace: {

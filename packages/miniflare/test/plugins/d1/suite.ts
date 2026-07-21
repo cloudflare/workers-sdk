@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { type D1Database } from "@cloudflare/workers-types/experimental";
-import { Miniflare } from "miniflare";
+import { D1_PLUGIN_NAME, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import { useDispose, useTmp, utf8Encode } from "../../test-shared";
 import { binding, ctx, getDatabase, opts } from "./test";
@@ -507,7 +508,10 @@ test("operations persist D1 data", async ({ expect }) => {
 
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp();
-	const persistOpts: MiniflareOptions = { ...opts, d1Persist: tmp };
+	const persistOpts: MiniflareOptions = {
+		...opts,
+		resourcePersistencePath: tmp,
+	};
 	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
 	let db = await getDatabase(mf);
@@ -524,8 +528,8 @@ test("operations persist D1 data", async ({ expect }) => {
 		.first();
 	expect(result).toEqual({ name: "purple" });
 
-	// Check directory created for database
-	const names = await fs.readdir(tmp);
+	// Check directory created for database under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, D1_PLUGIN_NAME));
 	expect(names.includes("miniflare-D1DatabaseObject")).toBe(true);
 
 	// Check "restarting" keeps persisted data
@@ -599,7 +603,7 @@ test("dumpSql exports and imports complete database structure and content correc
 	const tmp1 = await useTmp();
 	const originalMF = new Miniflare({
 		...opts,
-		d1Persist: tmp1,
+		resourcePersistencePath: tmp1,
 		d1Databases: { test: "test" },
 	});
 	useDispose(originalMF);
@@ -620,7 +624,7 @@ test("dumpSql exports and imports complete database structure and content correc
 	const tmp2 = await useTmp();
 	const mirrorMF = new Miniflare({
 		...opts,
-		d1Persist: tmp2,
+		resourcePersistencePath: tmp2,
 		d1Databases: { test: "test" },
 	});
 	useDispose(mirrorMF);

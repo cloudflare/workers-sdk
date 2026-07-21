@@ -93,8 +93,6 @@ export interface ConfigBundle {
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
-	httpsKeyPath: string | undefined;
-	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
@@ -474,7 +472,6 @@ type WorkerOptionsBindings = Pick<
 	| "serviceBindings"
 	| "ratelimits"
 	| "workflows"
-	| "wrappedBindings"
 	| "secretsStoreSecrets"
 	| "images"
 	| "email"
@@ -703,8 +700,6 @@ export function buildMiniflareBindingOptions(
 	);
 
 	const externalWorkers: WorkerOptions[] = [];
-
-	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 
 	for (const ai of aiBindings) {
 		warnOrError("ai", ai.remote);
@@ -1093,7 +1088,6 @@ export function buildMiniflareBindingOptions(
 			})
 		),
 		serviceBindings,
-		wrappedBindings: wrappedBindings,
 		tails,
 		streamingTails,
 	};
@@ -1167,8 +1161,10 @@ export async function buildMiniflareOptions(
 		bindingOptions.browserRendering.headful = true;
 	}
 	const sitesOptions = buildSitesOptions(config);
-	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
-	const defaultProjectTmpPath = getDefaultProjectTmpPath(config.projectRoot);
+	const resourcePersistencePath = getDefaultPersistRoot(
+		config.localPersistencePath
+	);
+	const resourceTmpPath = getDefaultProjectTmpPath(config.projectRoot);
 	const assetOptions = buildAssetOptions(config);
 
 	const options: MiniflareOptions = {
@@ -1198,8 +1194,9 @@ export async function buildMiniflareOptions(
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleStructuredLogs: config.structuredLogsHandler ?? handleStructuredLogs,
-		defaultPersistRoot,
-		defaultProjectTmpPath,
+		resourcePersistencePath,
+		resourceTmpPath,
+		containerEngine: config.containerEngine,
 		workers: [
 			{
 				name: getName(config),
@@ -1212,7 +1209,6 @@ export async function buildMiniflareOptions(
 				...assetOptions,
 				routes: config.routes,
 				outboundService: config.outboundService,
-				containerEngine: config.containerEngine,
 				zone: config.zone,
 			},
 			...externalWorkers,
