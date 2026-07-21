@@ -176,7 +176,7 @@ async function runTransform(
 		}
 
 		if (transform.width !== undefined || transform.height !== undefined) {
-			const { fit, withoutEnlargement } = resolveFit(transform.fit);
+			const { fit, withoutEnlargement } = resolveImagesBindingFit(transform.fit);
 			transformer.resize(transform.width || null, transform.height || null, {
 				fit,
 				withoutEnlargement,
@@ -258,7 +258,11 @@ function resolveQuality(
 	return undefined;
 }
 
-function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
+// Fit resolution for the Images binding (`env.IMAGES.transform()`).
+// Unlike cf.image, an explicit fit:"contain" pads to the exact requested
+// box (letterbox), matching production Images binding behavior. Default
+// (unspecified) and "scale-down" must NOT pad - see transform.spec.ts.
+function resolveImagesBindingFit(fit: RequestInitCfPropertiesImage["fit"]): {
 	fit: keyof FitEnum;
 	withoutEnlargement?: boolean;
 } {
@@ -275,7 +279,32 @@ function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
 			return { fit: "fill" };
 		case "scale-down":
 		default:
-			return { fit: "contain", withoutEnlargement: true };
+			return { fit: "inside", withoutEnlargement: true };
+	}
+}
+
+// Fit resolution for cf.image (`fetch(url, { cf: { image } })`). Here
+// "contain" does NOT pad - it shrinks to fit within the box preserving
+// aspect ratio, same as "scale-down" but allowed to enlarge. See
+// cf-image.spec.ts "fit:contain preserves aspect ratio".
+function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
+	fit: keyof FitEnum;
+	withoutEnlargement?: boolean;
+} {
+	switch (fit) {
+		case "contain":
+			return { fit: "inside" };
+		case "cover":
+			return { fit: "cover" };
+		case "crop":
+			return { fit: "cover", withoutEnlargement: true };
+		case "pad":
+			return { fit: "contain" };
+		case "squeeze":
+			return { fit: "fill" };
+		case "scale-down":
+		default:
+			return { fit: "inside", withoutEnlargement: true };
 	}
 }
 
