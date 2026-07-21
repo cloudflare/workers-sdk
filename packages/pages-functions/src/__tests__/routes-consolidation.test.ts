@@ -1,11 +1,12 @@
 import { describe, it } from "vitest";
 import {
 	consolidateRoutes,
+	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	shortenRoute,
-} from "../../pages/functions/routes-consolidation";
+} from "../index";
 
 describe("route-consolidation", () => {
-	const maxRuleLength = 100; // from constants.MAX_FUNCTIONS_ROUTES_RULE_LENGTH
+	const maxRuleLength = MAX_FUNCTIONS_ROUTES_RULE_LENGTH;
 	describe("consolidateRoutes()", () => {
 		it("should consolidate redundant routes", ({ expect }) => {
 			expect(consolidateRoutes(["/api/foo", "/api/*"])).toEqual(["/api/*"]);

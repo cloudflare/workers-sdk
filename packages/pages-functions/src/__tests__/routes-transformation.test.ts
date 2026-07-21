@@ -1,16 +1,15 @@
 import { describe, it, test } from "vitest";
 import {
-	MAX_FUNCTIONS_ROUTES_RULES,
-	ROUTES_SPEC_DESCRIPTION,
-	ROUTES_SPEC_VERSION,
-} from "../../pages/constants";
-import {
-	compareRoutes,
+	compareRoutesSimplified as compareRoutes,
 	convertRoutesToGlobPatterns,
 	convertRoutesToRoutesJSONSpec,
+	MAX_FUNCTIONS_ROUTES_RULES,
 	optimizeRoutesJSONSpec,
-} from "../../pages/functions/routes-transformation";
-import { toUrlPath } from "../../paths";
+	ROUTES_SPEC_VERSION,
+	toUrlPath,
+} from "../index";
+
+const ROUTES_SPEC_DESCRIPTION = "Generated for a test";
 
 // TODO: make a convenience function for creating a list
 // of `convertRoutesToGlobPatterns` inputs from a string array
@@ -157,16 +156,19 @@ describe("route-paths-to-glob-patterns", () => {
 	describe("convertRoutesToRoutesJSONSpec()", () => {
 		it("should convert and consolidate routes into JSONSpec", ({ expect }) => {
 			expect(
-				convertRoutesToRoutesJSONSpec([
-					{ routePath: toUrlPath("/api/foo/bar") },
-					{ routePath: toUrlPath("/foo/bar") },
-					{ routePath: toUrlPath("/foo/:bar") },
-					{ routePath: toUrlPath("/api/foo/bar") },
-					{
-						routePath: toUrlPath("/middleware"),
-						middleware: "./some-middleware.ts",
-					},
-				])
+				convertRoutesToRoutesJSONSpec(
+					[
+						{ routePath: toUrlPath("/api/foo/bar") },
+						{ routePath: toUrlPath("/foo/bar") },
+						{ routePath: toUrlPath("/foo/:bar") },
+						{ routePath: toUrlPath("/api/foo/bar") },
+						{
+							routePath: toUrlPath("/middleware"),
+							middleware: "./some-middleware.ts",
+						},
+					],
+					ROUTES_SPEC_DESCRIPTION
+				)
 			).toEqual({
 				version: ROUTES_SPEC_VERSION,
 				description: ROUTES_SPEC_DESCRIPTION,
@@ -180,7 +182,9 @@ describe("route-paths-to-glob-patterns", () => {
 			for (let i = 0; i < MAX_FUNCTIONS_ROUTES_RULES + 1; i++) {
 				routes.push({ routePath: toUrlPath(`/api/foo-${i}`) });
 			}
-			expect(convertRoutesToRoutesJSONSpec(routes)).toEqual({
+			expect(
+				convertRoutesToRoutesJSONSpec(routes, ROUTES_SPEC_DESCRIPTION)
+			).toEqual({
 				version: ROUTES_SPEC_VERSION,
 				description: ROUTES_SPEC_DESCRIPTION,
 				include: ["/*"],
