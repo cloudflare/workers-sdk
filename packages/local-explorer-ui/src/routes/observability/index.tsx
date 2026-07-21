@@ -6,6 +6,7 @@ import {
 	RefreshButton,
 } from "@cloudflare/kumo";
 import {
+	EyeIcon,
 	EyeSlashIcon,
 	InfoIcon,
 	MagnifyingGlassIcon,
@@ -319,12 +320,16 @@ function ObservabilityView(): JSX.Element {
 				<Button
 					size="sm"
 					variant={hideDevRunner ? "secondary" : "ghost"}
-					icon={EyeSlashIcon}
-					title="Hide Vite dev module-runner plumbing spans (vite dev only)"
+					icon={hideDevRunner ? EyeIcon : EyeSlashIcon}
+					title={
+						hideDevRunner
+							? "Show Vite dev module-runner plumbing spans (vite dev only)"
+							: "Hide Vite dev module-runner plumbing spans (vite dev only)"
+					}
 					aria-pressed={hideDevRunner}
 					onClick={toggleHideDevRunner}
 				>
-					Hide runner spans
+					{hideDevRunner ? "Show Vite runner spans" : "Hide Vite runner spans"}
 				</Button>
 				<Button
 					size="sm"
@@ -350,11 +355,13 @@ function ObservabilityView(): JSX.Element {
 					<InfoIcon size={14} className="shrink-0 text-blue-500" />
 					<span className="flex-1">
 						{hideDevRunner
-							? "Running under Vite dev — some spans come from Vite's module runner (module loading, RPC dispatch) rather than your code. They're hidden by “Hide runner spans”."
+							? "Running under Vite dev — some spans come from Vite's module runner (module loading, RPC dispatch) rather than your code. They're hidden by “Hide Vite runner spans”."
 							: "Running under Vite dev — Vite module-runner spans (module loading, RPC dispatch) are shown and may add noise to your traces."}
 					</span>
 					<Button size="sm" variant="secondary" onClick={toggleHideDevRunner}>
-						{hideDevRunner ? "Show runner spans" : "Hide runner spans"}
+						{hideDevRunner
+							? "Show Vite runner spans"
+							: "Hide Vite runner spans"}
 					</Button>
 					<Button
 						size="sm"
