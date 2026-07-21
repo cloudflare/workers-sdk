@@ -99,7 +99,7 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 			])
 		);
 	},
-	async getServices({ options, unsafeStickyBlobs }) {
+	async getServices({ options }) {
 		if (!options.ratelimits) {
 			return [];
 		}
@@ -145,7 +145,7 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		});

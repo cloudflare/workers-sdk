@@ -10,17 +10,14 @@ import {
 } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
 import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
-import { MockAgent } from "undici";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
 import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
-import { fetch } from "../../http";
 import { kVoid } from "../../runtime";
 import { JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
 import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
@@ -123,16 +120,6 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 
 const encoder = new TextEncoder();
 
-export function createFetchMock() {
-	return new MockAgent();
-}
-
-const WrappedBindingSchema = z.object({
-	scriptName: z.string(),
-	entrypoint: z.string().optional(),
-	bindings: z.record(z.string(), JsonSchema).optional(),
-});
-
 // Validate as string, but don't include in parsed output
 const UnusableStringSchema = z.string().transform(() => undefined);
 
@@ -171,12 +158,8 @@ const CoreOptionsSchemaInput = z.intersection(
 			.record(z.string(), z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
 		serviceBindings: z.record(z.string(), ServiceDesignatorSchema).optional(),
-		wrappedBindings: z
-			.record(z.string(), z.union([z.string(), WrappedBindingSchema]))
-			.optional(),
 
 		outboundService: ServiceDesignatorSchema.optional(),
-		fetchMock: z.instanceof(MockAgent).optional(),
 
 		// TODO(soon): remove this in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
@@ -215,19 +198,6 @@ const CoreOptionsSchemaInput = z.intersection(
 		// If not specified, defaults to `${worker-name}.example.com`
 		zone: z.string().optional(),
 
-		/** Configuration used to connect to the container engine */
-		containerEngine: z
-			.union([
-				z.object({
-					localDocker: z.object({
-						socketPath: z.string(),
-						containerEgressInterceptorImage: z.string().optional(),
-					}),
-				}),
-				z.string(),
-			])
-			.optional(),
-
 		unsafeBindings: z
 			.array(
 				z.object({
@@ -240,24 +210,7 @@ const CoreOptionsSchemaInput = z.intersection(
 			.optional(),
 	})
 );
-export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
-	const fetchMock = value.fetchMock;
-	if (fetchMock !== undefined) {
-		if (value.outboundService !== undefined) {
-			throw new MiniflareCoreError(
-				"ERR_MULTIPLE_OUTBOUNDS",
-				"Only one of `outboundService` or `fetchMock` may be specified per worker"
-			);
-		}
-
-		// The `fetchMock` option is used to construct the `outboundService` only
-		// Removing it from the output allows us to re-parse the options later
-		// This allows us to validate the options and then feed them into Miniflare without issue.
-		value.fetchMock = undefined;
-		value.outboundService = (req) => fetch(req, { dispatcher: fetchMock });
-	}
-	return value;
-});
+export const CoreOptionsSchema = CoreOptionsSchemaInput;
 
 export type WorkerdStructuredLog = z.infer<typeof WorkerdStructuredLogSchema>;
 
@@ -267,126 +220,113 @@ export const WorkerdStructuredLogSchema = z.object({
 	message: z.string(),
 });
 
-export const CoreSharedOptionsSchema = z
-	.object({
-		rootPath: UnusableStringSchema.optional(),
+export const CoreSharedOptionsSchema = z.object({
+	rootPath: UnusableStringSchema.optional(),
 
-		host: z.string().optional(),
-		port: z.number().optional(),
+	host: z.string().optional(),
+	port: z.number().optional(),
 
-		https: z.boolean().optional(),
-		httpsKey: z.string().optional(),
-		httpsKeyPath: z.string().optional(),
-		httpsCert: z.string().optional(),
-		httpsCertPath: z.string().optional(),
+	https: z.boolean().optional(),
+	httpsKey: z.string().optional(),
+	httpsCert: z.string().optional(),
 
-		inspectorPort: z.number().optional(),
-		inspectorHost: z.string().optional(),
+	inspectorPort: z.number().optional(),
+	inspectorHost: z.string().optional(),
 
-		verbose: z.boolean().optional(),
+	verbose: z.boolean().optional(),
 
-		log: z.instanceof(Log).optional(),
-		handleRuntimeStdio: z
-			.function({
-				input: [z.instanceof(Readable), z.instanceof(Readable)],
-			})
-			.optional(),
+	log: z.instanceof(Log).optional(),
 
-		handleStructuredLogs: z
-			.function({
-				input: [WorkerdStructuredLogSchema],
-				output: z.void(),
-			})
-			.optional(),
+	handleStructuredLogs: z
+		.function({
+			input: [WorkerdStructuredLogSchema],
+			output: z.void(),
+		})
+		.optional(),
 
-		// Deliberately not `z.function()`: parsing that schema replaces the
-		// callback with a validating wrapper. When the callback is `async`
-		// (assignable to a `void` return), the wrapper calls it, rejects the
-		// returned promise as an invalid `void` return value, and drops that
-		// promise un-awaited — so if the callback later rejects, no caller
-		// holds the promise and the rejection crashes the process as an
-		// unhandled rejection. `z.custom()` passes the function through
-		// unwrapped; the call site in `handlePrettyErrorRequest` contains
-		// both throwing and rejecting callbacks.
-		handleUncaughtError: z
-			.custom<(error: Error) => void>((value) => typeof value === "function")
-			.optional(),
+	// Deliberately not `z.function()`: parsing that schema replaces the
+	// callback with a validating wrapper. When the callback is `async`
+	// (assignable to a `void` return), the wrapper calls it, rejects the
+	// returned promise as an invalid `void` return value, and drops that
+	// promise un-awaited — so if the callback later rejects, no caller
+	// holds the promise and the rejection crashes the process as an
+	// unhandled rejection. `z.custom()` passes the function through
+	// unwrapped; the call site in `handlePrettyErrorRequest` contains
+	// both throwing and rejecting callbacks.
+	handleUncaughtError: z
+		.custom<(error: Error) => void>((value) => typeof value === "function")
+		.optional(),
 
-		upstream: z.string().optional(),
-		// TODO: add back validation of cf object
-		cf: z
-			.union([z.boolean(), z.string(), z.record(z.string(), z.any())])
-			.optional(),
+	upstream: z.string().optional(),
+	// TODO: add back validation of cf object
+	cf: z
+		.union([z.boolean(), z.string(), z.record(z.string(), z.any())])
+		.optional(),
 
-		// Enable auto service / durable objects discovery with the dev registry
-		unsafeDevRegistryPath: z.string().optional(),
-		// Called when external workers this instance depends on are updated in the dev registry
-		unsafeHandleDevRegistryUpdate: z
-			.function({
-				input: [z.custom<WorkerRegistry>()],
-			})
-			.optional(),
-		// This is a shared secret between a proxy server and miniflare that can be
-		// passed in a header to prove that the request came from the proxy and not
-		// some malicious attacker.
-		unsafeProxySharedSecret: z.string().optional(),
-		unsafeModuleFallbackService: CustomFetchServiceSchema.optional(),
-		// Keep blobs when deleting/overwriting keys, required for stacked storage
-		unsafeStickyBlobs: z.boolean().optional(),
-		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/local/scheduled`
-		unsafeTriggerHandlers: z.boolean().optional(),
-		// Extra environment variables to set on the spawned `workerd` subprocess.
-		// Merged on top of `process.env` and Miniflare's own defaults
-		// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
-		// (for example, to test timezone-dependent behaviour).
-		unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
-		// Enable the local explorer at /cdn-cgi/local/explorer
-		unsafeLocalExplorer: z.boolean().optional(),
-		// Enable RPC-based Durable Object introspection APIs
-		unsafeInspectDurableObjects: z.boolean().optional(),
-		// Enable logging requests
-		logRequests: z.boolean().default(true),
+	// Enable auto service / durable objects discovery with the dev registry
+	unsafeDevRegistryPath: z.string().optional(),
+	// Called when external workers this instance depends on are updated in the dev registry
+	unsafeHandleDevRegistryUpdate: z
+		.function({
+			input: [z.custom<WorkerRegistry>()],
+		})
+		.optional(),
+	// This is a shared secret between a proxy server and miniflare that can be
+	// passed in a header to prove that the request came from the proxy and not
+	// some malicious attacker.
+	unsafeProxySharedSecret: z.string().optional(),
+	unsafeModuleFallbackService: CustomFetchServiceSchema.optional(),
+	// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/local/scheduled`
+	unsafeTriggerHandlers: z.boolean().optional(),
+	// Extra environment variables to set on the spawned `workerd` subprocess.
+	// Merged on top of `process.env` and Miniflare's own defaults
+	// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
+	// (for example, to test timezone-dependent behaviour).
+	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
+	// Enable the local explorer at /cdn-cgi/local/explorer
+	unsafeLocalExplorer: z.boolean().optional(),
+	// Enable RPC-based Durable Object introspection APIs
+	unsafeInspectDurableObjects: z.boolean().optional(),
+	// Enable logging requests
+	logRequests: z.boolean().default(true),
 
-		// Path to the root directory for persisting data
-		// Used as the default for all plugins with the plugin name as the subdirectory name
-		defaultPersistRoot: z.string().optional(),
-		// Path to the project temporary directory for plugins that need it
-		// (e.g. email logs). Falls back to a subdirectory of tmpPath if not set.
-		defaultProjectTmpPath: z.string().optional(),
-		// Strip the MF-DISABLE_PRETTY_ERROR header from user request
-		stripDisablePrettyError: z.boolean().default(true),
+	// Path to the root directory for persisting resource data (e.g. `.wrangler/state/v3`).
+	// Each plugin persists under a subdirectory named after the plugin. When unset,
+	// persistence is disabled and data is stored in an ephemeral tmp directory.
+	resourcePersistencePath: z.string().optional(),
+	// Path to the project temporary directory for plugins that need it
+	// (e.g. `.wrangler/tmp` for email logs). Falls back to a subdirectory of tmpPath if not set.
+	resourceTmpPath: z.string().optional(),
+	// Strip the MF-DISABLE_PRETTY_ERROR header from user request
+	stripDisablePrettyError: z.boolean().default(true),
 
-		// Whether to get structured logs from workerd or not (defaults to `true` is a
-		// `handleStructuredLogs` is set, to `false` otherwise)
-		// This option is useful in combination with a custom handleRuntimeStdio.
-		structuredWorkerdLogs: z.boolean().optional(),
+	// Enable telemetry for the local explorer.
+	telemetry: z
+		.object({
+			enabled: z.boolean().default(false),
+			deviceId: z.string().optional(),
+		})
+		.default({ enabled: false }),
 
-		// Enable telemetry for the local explorer.
-		telemetry: z
-			.object({
-				enabled: z.boolean().default(false),
-				deviceId: z.string().optional(),
-			})
-			.default({ enabled: false }),
+	// The stable, externally-reachable URL for this Miniflare instance
+	// (e.g. the Wrangler proxy URL or Vite dev server URL). Used by
+	// plugins like Stream to generate preview URLs that outlive runtime
+	// restarts. If not set, plugins fall back to the runtime entry URL.
+	publicUrl: z.url().optional(),
 
-		// The stable, externally-reachable URL for this Miniflare instance
-		// (e.g. the Wrangler proxy URL or Vite dev server URL). Used by
-		// plugins like Stream to generate preview URLs that outlive runtime
-		// restarts. If not set, plugins fall back to the runtime entry URL.
-		publicUrl: z.url().optional(),
-	})
-	.refine(
-		({ structuredWorkerdLogs, handleStructuredLogs }) => {
-			if (structuredWorkerdLogs === false && handleStructuredLogs) {
-				return false;
-			}
-			return true;
-		},
-		{
-			message:
-				"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`",
-		}
-	);
+	/** Configuration used to connect to the container engine */
+	containerEngine: z
+		.union([
+			z.object({
+				localDocker: z.object({
+					socketPath: z.string(),
+					containerEgressInterceptorImage: z.string().optional(),
+				}),
+			}),
+			z.string(),
+		])
+		.optional(),
+});
 
 export const CORE_PLUGIN_NAME = "core";
 
@@ -583,18 +523,6 @@ function getDevControlBindings(
 	return Array.from(bindings.values());
 }
 
-const WRAPPED_MODULE_PREFIX = "miniflare-internal:wrapped:";
-function workerNameToWrappedModule(workerName: string): string {
-	return WRAPPED_MODULE_PREFIX + workerName;
-}
-export function maybeWrappedModuleToWorkerName(
-	name: string
-): string | undefined {
-	if (name.startsWith(WRAPPED_MODULE_PREFIX)) {
-		return name.substring(WRAPPED_MODULE_PREFIX.length);
-	}
-}
-
 function getOutboundInterceptorName(workerIndex: number) {
 	return `outbound:${workerIndex}`;
 }
@@ -669,29 +597,6 @@ export const CORE_PLUGIN: Plugin<
 				})
 			);
 		}
-		if (options.wrappedBindings !== undefined) {
-			bindings.push(
-				...Object.entries(options.wrappedBindings).map(([name, designator]) => {
-					// Normalise designator
-					const isObject = typeof designator === "object";
-					const scriptName = isObject ? designator.scriptName : designator;
-					const entrypoint = isObject ? designator.entrypoint : undefined;
-					const bindings = isObject ? designator.bindings : undefined;
-
-					// Build binding
-					const moduleName = workerNameToWrappedModule(scriptName);
-					const innerBindings =
-						bindings === undefined ? [] : buildBindings(bindings);
-					// `scriptName`'s bindings will be added to `innerBindings` when
-					// assembling the config
-					return {
-						name,
-						wrapped: { moduleName, entrypoint, innerBindings },
-					};
-				})
-			);
-		}
-
 		if (options.unsafeEvalBinding !== undefined) {
 			bindings.push({
 				name: options.unsafeEvalBinding,
@@ -747,15 +652,6 @@ export const CORE_PLUGIN: Plugin<
 				])
 			);
 		}
-		if (options.wrappedBindings !== undefined) {
-			bindingEntries.push(
-				...Object.keys(options.wrappedBindings).map((name) => [
-					name,
-					new ProxyNodeBinding(),
-				])
-			);
-		}
-
 		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
 	async getServices({
@@ -764,7 +660,6 @@ export const CORE_PLUGIN: Plugin<
 		sharedOptions,
 		workerBindings,
 		workerIndex,
-		wrappedBindingNames,
 		durableObjectClassNames,
 		additionalModules,
 		loopbackHost,
@@ -837,119 +732,75 @@ export const CORE_PLUGIN: Plugin<
 			options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
 		);
 
-		const isWrappedBinding = wrappedBindingNames.has(name);
-
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
 
-		if (isWrappedBinding) {
-			const stringName = JSON.stringify(name);
-			function invalidWrapped(reason: string): never {
-				const message = `Cannot use ${stringName} for wrapped binding because ${reason}`;
-				throw new MiniflareCoreError("ERR_INVALID_WRAPPED", message);
-			}
-			if (workerIndex === 0) {
-				invalidWrapped(
-					`it's the entrypoint.\nEnsure ${stringName} isn't the first entry in the \`workers\` array.`
-				);
-			}
-			if (!("modules" in workerScript)) {
-				invalidWrapped(
-					`it's a service worker.\nEnsure ${stringName} sets \`modules\` to \`true\` or an array of modules`
-				);
-			}
-			if (workerScript.modules.length !== 1) {
-				invalidWrapped(
-					`it isn't a single module.\nEnsure ${stringName} doesn't include unbundled \`import\`s.`
-				);
-			}
-			const firstModule = workerScript.modules[0];
-			if (!("esModule" in firstModule)) {
-				invalidWrapped("it isn't a single ES module");
-			}
-			if (options.compatibilityDate !== undefined) {
-				invalidWrapped(
-					"it defines a compatibility date.\nWrapped bindings use the compatibility date of the worker with the binding."
-				);
-			}
-			if (options.compatibilityFlags?.length) {
-				invalidWrapped(
-					"it defines compatibility flags.\nWrapped bindings use the compatibility flags of the worker with the binding."
-				);
-			}
-			if (options.outboundService !== undefined) {
-				invalidWrapped(
-					"it defines an outbound service.\nWrapped bindings use the outbound service of the worker with the binding."
-				);
-			}
-			// We validate this "worker" isn't bound to for services/Durable Objects
-			// in `getWrappedBindingNames()`.
-
-			extensions.push({
-				modules: [
-					{
-						name: workerNameToWrappedModule(name),
-						esModule: firstModule.esModule,
-						internal: true,
-					},
-				],
-			});
-		} else {
-			services.push({
-				name: serviceName,
-				worker: {
-					...workerScript,
-					compatibilityDate,
-					compatibilityFlags: options.compatibilityFlags,
-					bindings: workerBindings,
-					durableObjectNamespaces:
-						classNamesEntries.map<Worker_DurableObjectNamespace>(
-							([
+		services.push({
+			name: serviceName,
+			worker: {
+				...workerScript,
+				compatibilityDate,
+				compatibilityFlags: options.compatibilityFlags,
+				bindings: workerBindings,
+				durableObjectNamespaces:
+					classNamesEntries.map<Worker_DurableObjectNamespace>(
+						([
+							className,
+							{
+								enableSql,
+								unsafeUniqueKey,
+								unsafePreventEviction: preventEviction,
+								container,
+							},
+						]) => {
+							const uniqueKey = getDurableObjectUniqueKey(
 								className,
-								{
-									enableSql,
-									unsafeUniqueKey,
-									unsafePreventEviction: preventEviction,
-									container,
-								},
-							]) => {
-								const uniqueKey = getDurableObjectUniqueKey(
-									className,
-									options.name,
-									unsafeUniqueKey
-								);
+								options.name,
+								unsafeUniqueKey
+							);
 
-								return uniqueKey === undefined
-									? {
-											className,
-											enableSql,
-											ephemeralLocal: kVoid,
-											preventEviction,
-											container,
-										}
-									: {
-											className,
-											enableSql,
-											uniqueKey,
-											preventEviction,
-											container,
-										};
-							}
-						),
-					durableObjectStorage:
-						classNamesEntries.length === 0
-							? undefined
-							: options.unsafeEphemeralDurableObjects
-								? { inMemory: kVoid }
-								: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
-					globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
-					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
-					moduleFallback:
-						options.unsafeUseModuleFallbackService &&
-						sharedOptions.unsafeModuleFallbackService !== undefined
-							? `${loopbackHost}:${loopbackPort}`
-							: undefined,
-					tails: options.tails?.map<ServiceDesignator>((service) => {
+							return uniqueKey === undefined
+								? {
+										className,
+										enableSql,
+										ephemeralLocal: kVoid,
+										preventEviction,
+										container,
+									}
+								: {
+										className,
+										enableSql,
+										uniqueKey,
+										preventEviction,
+										container,
+									};
+						}
+					),
+				durableObjectStorage:
+					classNamesEntries.length === 0
+						? undefined
+						: options.unsafeEphemeralDurableObjects
+							? { inMemory: kVoid }
+							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
+				globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
+				cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
+				moduleFallback:
+					options.unsafeUseModuleFallbackService &&
+					sharedOptions.unsafeModuleFallbackService !== undefined
+						? `${loopbackHost}:${loopbackPort}`
+						: undefined,
+				tails: options.tails?.map<ServiceDesignator>((service) => {
+					return getCustomServiceDesignator(
+						/* referrer */ options.name,
+						workerIndex,
+						CustomServiceKind.UNKNOWN,
+						name,
+						service,
+						options.hasAssetsAndIsVitest
+					);
+				}),
+				streamingTails: options.streamingTails?.map<ServiceDesignator>(
+					(service) => {
 						return getCustomServiceDesignator(
 							/* referrer */ options.name,
 							workerIndex,
@@ -958,23 +809,11 @@ export const CORE_PLUGIN: Plugin<
 							service,
 							options.hasAssetsAndIsVitest
 						);
-					}),
-					streamingTails: options.streamingTails?.map<ServiceDesignator>(
-						(service) => {
-							return getCustomServiceDesignator(
-								/* referrer */ options.name,
-								workerIndex,
-								CustomServiceKind.UNKNOWN,
-								name,
-								service,
-								options.hasAssetsAndIsVitest
-							);
-						}
-					),
-					containerEngine: getContainerEngine(options.containerEngine),
-				},
-			});
-		}
+					}
+				),
+				containerEngine: getContainerEngine(sharedOptions.containerEngine),
+			},
+		});
 
 		// Define custom `fetch` services if set
 		if (options.serviceBindings !== undefined) {

@@ -199,8 +199,6 @@ export async function convertToConfigBundle(
 		queueConsumers,
 		outboundService: event.config.dev.outboundService,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
-		httpsCertPath: event.config.dev?.server?.httpsCertPath,
-		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
 		localUpstream: event.config.dev?.origin?.hostname,
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
 		testScheduled: !!event.config.dev.testScheduled,

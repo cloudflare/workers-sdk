@@ -10,7 +10,6 @@ import {
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
@@ -53,10 +52,6 @@ export const KVOptionsSchema = z.object({
 	siteInclude: z.string().array().optional(),
 	siteExclude: z.string().array().optional(),
 });
-export const KVSharedOptionsSchema = z.object({
-	kvPersist: PersistenceSchema,
-});
-
 const SERVICE_NAMESPACE_PREFIX = `${KV_PLUGIN_NAME}:ns`;
 // A single entry service shared by every *local* namespace. Each namespace's id
 // is supplied per-binding via `ctx.props`, so one service serves all of them.
@@ -76,12 +71,8 @@ function isWorkersSitesEnabled(
 	return options.sitePath !== undefined;
 }
 
-export const KV_PLUGIN: Plugin<
-	typeof KVOptionsSchema,
-	typeof KVSharedOptionsSchema
-> = {
+export const KV_PLUGIN: Plugin<typeof KVOptionsSchema> = {
 	options: KVOptionsSchema,
-	sharedOptions: KVSharedOptionsSchema,
 	bindingTypeDescription: "KV namespace",
 	async getBindings(options) {
 		const namespaces = namespaceEntries(options.kvNamespaces);
@@ -135,14 +126,7 @@ export const KV_PLUGIN: Plugin<
 		return bindings;
 	},
 
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
-		const persist = sharedOptions.kvPersist;
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		const namespaces = namespaceEntries(options.kvNamespaces);
 
 		const services: Service[] = [];
@@ -174,8 +158,7 @@ export const KV_PLUGIN: Plugin<
 			const persistPath = getPersistPath(
 				KV_PLUGIN_NAME,
 				tmpPath,
-				defaultPersistRoot,
-				persist
+				resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
@@ -208,7 +191,7 @@ export const KV_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};
@@ -220,10 +203,6 @@ export const KV_PLUGIN: Plugin<
 		}
 
 		return services;
-	},
-
-	getPersistPath({ kvPersist }, tmpPath) {
-		return getPersistPath(KV_PLUGIN_NAME, tmpPath, undefined, kvPersist);
 	},
 };
 

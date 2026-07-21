@@ -10,7 +10,6 @@ import {
 	getPersistPath,
 	getUserBindingServiceName,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
@@ -30,19 +29,11 @@ export const ImagesOptionsSchema = z.object({
 	images: ImagesSchema.optional(),
 });
 
-export const ImagesSharedOptionsSchema = z.object({
-	imagesPersist: PersistenceSchema,
-});
-
 export const IMAGES_PLUGIN_NAME = "images";
 const IMAGES_REMOTE_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:remote`;
 
-export const IMAGES_PLUGIN: Plugin<
-	typeof ImagesOptionsSchema,
-	typeof ImagesSharedOptionsSchema
-> = {
+export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 	options: ImagesOptionsSchema,
-	sharedOptions: ImagesSharedOptionsSchema,
 	bindingTypeDescription: "Images",
 	async getBindings(options) {
 		if (!options.images) {
@@ -85,13 +76,7 @@ export const IMAGES_PLUGIN: Plugin<
 			[options.images.binding]: new ProxyNodeBinding(),
 		};
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		if (!options.images) {
 			return [];
 		}
@@ -113,8 +98,7 @@ export const IMAGES_PLUGIN: Plugin<
 		const persistPath = getPersistPath(
 			IMAGES_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.imagesPersist
+			resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });
@@ -151,7 +135,7 @@ export const IMAGES_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;
@@ -188,13 +172,5 @@ export const IMAGES_PLUGIN: Plugin<
 		} satisfies Service;
 
 		return [storageService, objectService, kvNamespaceService, imagesService];
-	},
-	getPersistPath({ imagesPersist }, tmpPath) {
-		return getPersistPath(
-			IMAGES_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			imagesPersist
-		);
 	},
 };

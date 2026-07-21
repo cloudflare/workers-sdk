@@ -9,7 +9,6 @@ import {
 	getPersistPath,
 	getUserBindingServiceName,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
@@ -28,18 +27,12 @@ export const SecretsStoreSecretsOptionsSchema = z.object({
 	secretsStoreSecrets: SecretsStoreSecretsSchema.optional(),
 });
 
-export const SecretsStoreSecretsSharedOptionsSchema = z.object({
-	secretsStorePersist: PersistenceSchema,
-});
-
 export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
 
 export const SECRET_STORE_PLUGIN: Plugin<
-	typeof SecretsStoreSecretsOptionsSchema,
-	typeof SecretsStoreSecretsSharedOptionsSchema
+	typeof SecretsStoreSecretsOptionsSchema
 > = {
 	options: SecretsStoreSecretsOptionsSchema,
-	sharedOptions: SecretsStoreSecretsSharedOptionsSchema,
 	bindingTypeDescription: "Secrets Store secret",
 	async getBindings(options) {
 		if (!options.secretsStoreSecrets) {
@@ -73,13 +66,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		const configs = options.secretsStoreSecrets
 			? Object.values(options.secretsStoreSecrets)
 			: [];
@@ -91,8 +78,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		const persistPath = getPersistPath(
 			SECRET_STORE_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.secretsStorePersist
+			resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });
@@ -130,7 +116,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;
@@ -177,13 +163,5 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		});
 
 		return [...services, storageService, objectService];
-	},
-	getPersistPath({ secretsStorePersist }, tmpPath) {
-		return getPersistPath(
-			SECRET_STORE_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			secretsStorePersist
-		);
 	},
 };

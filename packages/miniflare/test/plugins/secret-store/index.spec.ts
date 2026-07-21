@@ -11,7 +11,6 @@ test("single secret-store", async ({ expect }) => {
 				secret_name: "secret_name",
 			},
 		},
-		secretsStorePersist: false,
 		modules: true,
 		script: `
 		export default {

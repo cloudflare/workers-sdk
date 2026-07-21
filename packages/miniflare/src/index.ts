@@ -75,7 +75,6 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
-	maybeWrappedModuleToWorkerName,
 	reviveError,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
@@ -93,7 +92,6 @@ import {
 	serializeConfig,
 } from "./runtime";
 import {
-	_isCyclic,
 	isFileNotFoundError,
 	MiniflareCoreError,
 	NoOpLog,
@@ -122,7 +120,6 @@ import type { DispatchFetch, RequestInit } from "./http";
 import type {
 	DurableObjectClassNames,
 	Plugin,
-	Plugins,
 	PluginServicesOptions,
 	PluginSharedOptions,
 	PluginWorkerOptions,
@@ -131,7 +128,6 @@ import type {
 	ReplaceWorkersTypes,
 	SharedOptions,
 	WorkerOptions,
-	WrappedBindingNames,
 } from "./plugins";
 import type {
 	NameSourceOptions,
@@ -662,47 +658,6 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	return externalServices;
 }
 
-function invalidWrappedAsBound(name: string, bindingType: string): never {
-	const stringName = JSON.stringify(name);
-	throw new MiniflareCoreError(
-		"ERR_INVALID_WRAPPED",
-		`Cannot use ${stringName} for wrapped binding because it is bound to with ${bindingType} bindings.\nEnsure other workers don't define ${bindingType} bindings to ${stringName}.`
-	);
-}
-function getWrappedBindingNames(
-	allWorkerOpts: PluginWorkerOptions[],
-	durableObjectClassNames: DurableObjectClassNames
-): WrappedBindingNames {
-	// Build set of all worker names bound to as wrapped bindings.
-	// Also check these "workers" aren't bound to as services/Durable Objects.
-	// We won't add them as regular workers so these bindings would fail.
-	const wrappedBindingWorkerNames = new Set<string>();
-	for (const workerOpts of allWorkerOpts) {
-		for (const designator of Object.values(
-			workerOpts.core.wrappedBindings ?? {}
-		)) {
-			const scriptName =
-				typeof designator === "object" ? designator.scriptName : designator;
-			if (durableObjectClassNames.has(getUserServiceName(scriptName))) {
-				invalidWrappedAsBound(scriptName, "Durable Object");
-			}
-			wrappedBindingWorkerNames.add(scriptName);
-		}
-	}
-	// Need to collect all wrapped bindings before checking service bindings
-	for (const workerOpts of allWorkerOpts) {
-		for (const designator of Object.values(
-			workerOpts.core.serviceBindings ?? {}
-		)) {
-			if (typeof designator !== "string") continue;
-			if (wrappedBindingWorkerNames.has(designator)) {
-				invalidWrappedAsBound(designator, "service");
-			}
-		}
-	}
-	return wrappedBindingWorkerNames;
-}
-
 function getQueueProducers(
 	allWorkerOpts: PluginWorkerOptions[]
 ): QueueProducers {
@@ -790,13 +745,11 @@ function getQueueConsumers(
 
 // Collects all routes from all worker services
 function getWorkerRoutes(
-	allWorkerOpts: PluginWorkerOptions[],
-	wrappedBindingNames: Set<string>
+	allWorkerOpts: PluginWorkerOptions[]
 ): Map<string, string[]> {
 	const allRoutes = new Map<string, string[]>();
 	for (const workerOpts of allWorkerOpts) {
 		const name = workerOpts.core.name ?? "";
-		if (wrappedBindingNames.has(name)) continue; // Wrapped bindings un-routable
 		assert(!allRoutes.has(name)); // Validated unique names earlier
 		allRoutes.set(name, workerOpts.core.routes ?? []);
 	}
@@ -1002,8 +955,6 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
 
-	#structuredWorkerdLogs: boolean;
-
 	#cfObject?: Record<string, any> = {};
 
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
@@ -1071,11 +1022,6 @@ export class Miniflare {
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 		this.#hyperdriveProxyController.log = this.#log;
-		this.#structuredWorkerdLogs =
-			this.#sharedOpts.core.structuredWorkerdLogs ??
-			// If there is a `handleStructuredLogs` set then `structuredWorkerdLogs` defaults
-			// to `true`, otherwise it defaults to `false`
-			(this.#sharedOpts.core.handleStructuredLogs ? true : false);
 
 		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
 		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
@@ -1155,7 +1101,7 @@ export class Miniflare {
 			// project temp path is supplied, these live inside `#tmpPath` and are
 			// already removed above.
 			const emailPaths = getEmailPathsToClean(
-				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#sharedOpts.core.resourceTmpPath,
 				this.#tmpPath
 			);
 			if (emailPaths) {
@@ -1332,13 +1278,11 @@ export class Miniflare {
 		);
 		assert(namespaceId, "Namespace ID is required");
 
-		const doSharedOpts = this.#sharedOpts.do;
 		const coreSharedOpts = this.#sharedOpts.core;
 		const doPersistPath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			this.#tmpPath,
-			coreSharedOpts.defaultPersistRoot,
-			doSharedOpts.durableObjectsPersist
+			coreSharedOpts.resourcePersistencePath
 		);
 
 		const namespacePath = path.join(doPersistPath, namespaceId);
@@ -1381,13 +1325,11 @@ export class Miniflare {
 		);
 		assert(workflowName, "Workflow name is required");
 
-		const workflowsSharedOpts = this.#sharedOpts.workflows;
 		const coreSharedOpts = this.#sharedOpts.core;
 		const workflowsPersistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			this.#tmpPath,
-			coreSharedOpts.defaultPersistRoot,
-			workflowsSharedOpts.workflowsPersist
+			coreSharedOpts.resourcePersistencePath
 		);
 
 		// Engine DOs are stored under: <persistPath>/miniflare-workflows-<name>/<hexId>.sqlite
@@ -1462,13 +1404,11 @@ export class Miniflare {
 
 		assert(workflowName, "Workflow name is required");
 
-		const workflowsSharedOpts = this.#sharedOpts.workflows;
 		const coreSharedOpts = this.#sharedOpts.core;
 		const workflowsPersistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			this.#tmpPath,
-			coreSharedOpts.defaultPersistRoot,
-			workflowsSharedOpts.workflowsPersist
+			coreSharedOpts.resourcePersistencePath
 		);
 
 		const uniqueKey = `miniflare-workflows-${workflowName}`;
@@ -1980,10 +1920,6 @@ export class Miniflare {
 			: null;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
-		const wrappedBindingNames = getWrappedBindingNames(
-			allWorkerOpts,
-			durableObjectClassNames
-		);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		// When the dev registry is enabled, queue brokers bind to the dev-registry
@@ -1991,7 +1927,7 @@ export class Miniflare {
 		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever
 		// there are queues.
 		const hasQueues = queueProducers.size > 0 || queueConsumers.size > 0;
-		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
+		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);
 		const workerNames = [...allWorkerRoutes.keys()];
 
 		// Use Map to dedupe services by name
@@ -2030,12 +1966,6 @@ export class Miniflare {
 		 */
 		const proxyBindings: Worker_Binding[] = [];
 
-		const allWorkerBindings = new Map<string, Worker_Binding[]>();
-		const wrappedBindingsToPopulate: {
-			workerName: string;
-			innerBindings: Worker_Binding[];
-		}[] = [];
-
 		for (const [key, plugin] of this.#mergedPluginEntries) {
 			const pluginExtensions = await plugin.getExtensions?.({
 				// @ts-expect-error `CoreOptionsSchema` has required options which are
@@ -2069,7 +1999,6 @@ export class Miniflare {
 
 			// Collect all bindings from this worker
 			const workerBindings: Worker_Binding[] = [];
-			allWorkerBindings.set(workerName, workerBindings);
 			const additionalModules: Worker_Module[] = [];
 
 			for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -2103,24 +2032,6 @@ export class Miniflare {
 						if (isNativeTargetBinding(binding)) {
 							proxyBindings.push(buildProxyBinding(key, workerName, binding));
 						}
-						// If this is a wrapped binding to a wrapped binding worker, record
-						// it, so we can populate its inner bindings with all the wrapped
-						// binding worker's bindings.
-						if (
-							"wrapped" in binding &&
-							binding.wrapped?.moduleName !== undefined &&
-							binding.wrapped.innerBindings !== undefined
-						) {
-							const workerName = maybeWrappedModuleToWorkerName(
-								binding.wrapped.moduleName
-							);
-							if (workerName !== undefined) {
-								wrappedBindingsToPopulate.push({
-									workerName,
-									innerBindings: binding.wrapped.innerBindings,
-								});
-							}
-						}
 						if ("service" in binding) {
 							const targetWorkerName = binding.service?.name?.replace(
 								"core:user:",
@@ -2146,7 +2057,6 @@ export class Miniflare {
 			}
 
 			// Collect all services required by this worker
-			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
 			// Store publicUrl so the /core/public-url loopback route can return it.
@@ -2163,14 +2073,12 @@ export class Miniflare {
 				workerIndex: i,
 				additionalModules,
 				tmpPath: this.#tmpPath,
-				defaultPersistRoot: sharedOpts.core.defaultPersistRoot,
-				defaultProjectTmpPath: sharedOpts.core.defaultProjectTmpPath,
+				resourcePersistencePath: sharedOpts.core.resourcePersistencePath,
+				resourceTmpPath: sharedOpts.core.resourceTmpPath,
 				workerNames,
 				loopbackHost,
 				loopbackPort,
 				publicUrl: sharedOpts.core.publicUrl,
-				unsafeStickyBlobs,
-				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
 				queueProducers,
@@ -2393,35 +2301,16 @@ export class Miniflare {
 			services.set(service.name, service);
 		}
 
-		// Populate wrapped binding inner bindings with bound worker's bindings
-		for (const toPopulate of wrappedBindingsToPopulate) {
-			const bindings = allWorkerBindings.get(toPopulate.workerName);
-			if (bindings === undefined) continue;
-			const existingBindingNames = new Set(
-				toPopulate.innerBindings.map(({ name }) => name)
-			);
-			toPopulate.innerBindings.push(
-				// If there's already an inner binding with this name, don't add again
-				...bindings.filter(({ name }) => !existingBindingNames.has(name))
-			);
-		}
-		// If we populated wrapped bindings, we may have created cycles in the
-		// `services` array. Attempting to serialise these will lead to unbounded
-		// recursion, so make sure we don't have any
 		const servicesArray = Array.from(services.values());
-		if (wrappedBindingsToPopulate.length > 0 && _isCyclic(servicesArray)) {
-			throw new MiniflareCoreError(
-				"ERR_CYCLIC",
-				"Generated workerd config contains cycles. " +
-					"Ensure wrapped bindings don't have bindings to themselves."
-			);
-		}
 
 		return {
 			services: servicesArray,
 			sockets,
 			extensions,
-			structuredLogging: this.#structuredWorkerdLogs,
+			// Structured logging is always enabled: workerd emits structured logs
+			// that Miniflare parses and either forwards to a `handleStructuredLogs`
+			// handler or writes to the console by default.
+			structuredLogging: true,
 			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
 				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
 				: [],
@@ -2510,7 +2399,6 @@ export class Miniflare {
 				? "127.0.0.1:0"
 				: undefined,
 			verbose: this.#sharedOpts.core.verbose,
-			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
 			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
@@ -2845,9 +2733,6 @@ export class Miniflare {
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
 		this.#hyperdriveProxyController.log = this.#log;
-		this.#structuredWorkerdLogs =
-			this.#sharedOpts.core.structuredWorkerdLogs ??
-			this.#structuredWorkerdLogs;
 
 		const newExternalOnUpdate = sharedOpts.core.unsafeHandleDevRegistryUpdate;
 		await this.#devRegistry.updateRegistryPath(
@@ -3029,16 +2914,13 @@ export class Miniflare {
 		const bindingName = CoreBindings.SERVICE_USER_ROUTE_PREFIX + workerName;
 
 		const fetcher = proxyClient.env[bindingName];
-		if (fetcher === undefined) {
-			// `#findAndAssertWorkerIndex()` will throw if a "worker" doesn't exist
-			// with the specified name. If this "worker" was used as a wrapped binding
-			// though, it won't be added as a service binding, and so will be
-			// undefined here. In this case, throw a more specific error.
-			const stringName = JSON.stringify(workerName);
-			throw new TypeError(
-				`${stringName} is being used as a wrapped binding, and cannot be accessed as a worker`
-			);
-		}
+		// `#findAndAssertWorkerIndex()` throws if a worker doesn't exist with the
+		// specified name, so by this point the worker is guaranteed to have a
+		// corresponding route service binding.
+		assert(
+			fetcher !== undefined,
+			`Expected ${bindingName} service binding for worker ${JSON.stringify(workerName)}`
+		);
 		return fetcher as ReplaceWorkersTypes<Fetcher>;
 	}
 
@@ -3249,8 +3131,7 @@ export class Miniflare {
 		const durableObjectsPersistPath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			this.#tmpPath,
-			this.#sharedOpts.core.defaultPersistRoot,
-			this.#sharedOpts.do.durableObjectsPersist
+			this.#sharedOpts.core.resourcePersistencePath
 		);
 
 		try {
@@ -3354,17 +3235,6 @@ export class Miniflare {
 		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
 	}
 
-	unsafeGetPersistPaths(): Map<keyof Plugins, string> {
-		const result = new Map<keyof Plugins, string>();
-		for (const [key, plugin] of PLUGIN_ENTRIES) {
-			const sharedOpts = this.#sharedOpts[key];
-			// @ts-expect-error `sharedOptions` will match the plugin's type here
-			const maybePath = plugin.getPersistPath?.(sharedOpts, this.#tmpPath);
-			if (maybePath !== undefined) result.set(key, maybePath);
-		}
-		return result;
-	}
-
 	get #mergedPluginEntries() {
 		return [...PLUGIN_ENTRIES, ...this.#externalPlugins.entries()];
 	}
@@ -3415,7 +3285,7 @@ export class Miniflare {
 			// project temp path is supplied, these live inside `#tmpPath` and are
 			// already removed above.
 			const emailPaths = getEmailPathsToClean(
-				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#sharedOpts.core.resourceTmpPath,
 				this.#tmpPath
 			);
 			if (emailPaths) {

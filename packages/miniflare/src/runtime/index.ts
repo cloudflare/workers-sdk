@@ -40,7 +40,6 @@ export interface RuntimeOptions {
 	inspectorAddress?: string;
 	debugPortAddress?: string;
 	verbose?: boolean;
-	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
 	handleStructuredLogs?: StructuredLogsHandler;
 	// Extra environment variables to set on the spawned `workerd` subprocess.
 	// Merged on top of `process.env` and Miniflare's own defaults
@@ -88,20 +87,27 @@ function waitForExit(process: childProcess.ChildProcess): Promise<void> {
 	});
 }
 
-function pipeOutput(stdout: Readable, stderr: Readable) {
-	// TODO: may want to proxy these and prettify ✨
-	// We can't just pipe() to `process.stdout/stderr` here, as Ink (used by
-	// wrangler), only patches the `console.*` methods:
-	// https://github.com/vadimdemedes/ink/blob/5d24ed8ada593a6c36ea5416f452158461e33ba5/readme.md#patchconsole
-	// Writing directly to `process.stdout/stderr` would result in graphical
-	// glitches.
-	// eslint-disable-next-line no-console -- Intentional console.log to forward workerd stdout through Ink-patched console
-	rl.createInterface(stdout).on("line", (data) => console.log(data));
-	// eslint-disable-next-line no-console -- Intentional console.error to forward workerd stderr through Ink-patched console
-	rl.createInterface(stderr).on("line", (data) => console.error(red(data)));
-	// stdout.pipe(process.stdout);
-	// stderr.pipe(process.stderr);
-}
+// When no `handleStructuredLogs` handler is provided, workerd's structured logs
+// are forwarded to the console by default. `warn`/`error` logs go to stderr
+// (in red), everything else to stdout, matching how the raw workerd streams
+// used to be forwarded. We use `console.*` rather than writing to
+// `process.stdout/stderr` directly, as Ink (used by Wrangler) only patches the
+// `console.*` methods:
+// https://github.com/vadimdemedes/ink/blob/5d24ed8ada593a6c36ea5416f452158461e33ba5/readme.md#patchconsole
+// Writing directly to `process.stdout/stderr` would result in graphical
+// glitches.
+const defaultStructuredLogsHandler: StructuredLogsHandler = ({
+	level,
+	message,
+}) => {
+	if (level === "error" || level === "warn") {
+		// eslint-disable-next-line no-console -- forward workerd output through Ink-patched console
+		console.error(red(message));
+	} else {
+		// eslint-disable-next-line no-console -- forward workerd output through Ink-patched console
+		console.log(message);
+	}
+};
 
 function getRuntimeCommand() {
 	return process.env.MINIFLARE_WORKERD_PATH ?? workerdPath;
@@ -258,28 +264,17 @@ export class Runtime {
 		const processExitPromise = waitForExit(runtimeProcess);
 		this.#processExitPromise = processExitPromise;
 
-		const handleRuntimeStdio =
-			options.handleRuntimeStdio ??
-			(options.handleStructuredLogs
-				? // If `handleStructuredLogs` is provided then by default Miniflare should not pipe through the stream's output
-					() => {}
-				: pipeOutput);
-
-		handleRuntimeStdio(
-			runtimeProcess.stdout.pipe(startupLogBuffer.stdoutStream),
-			runtimeProcess.stderr.pipe(startupLogBuffer.stderrStream)
+		const stdoutStream = runtimeProcess.stdout.pipe(
+			startupLogBuffer.stdoutStream
+		);
+		const stderrStream = runtimeProcess.stderr.pipe(
+			startupLogBuffer.stderrStream
 		);
 
-		if (options.handleStructuredLogs) {
-			handleStructuredLogsFromStream(
-				startupLogBuffer.stdoutStream,
-				options.handleStructuredLogs
-			);
-			handleStructuredLogsFromStream(
-				startupLogBuffer.stderrStream,
-				options.handleStructuredLogs
-			);
-		}
+		const structuredLogsHandler =
+			options.handleStructuredLogs ?? defaultStructuredLogsHandler;
+		handleStructuredLogsFromStream(stdoutStream, structuredLogsHandler);
+		handleStructuredLogsFromStream(stderrStream, structuredLogsHandler);
 
 		const controlPipe = runtimeProcess.stdio[3];
 		assert(controlPipe instanceof Readable);

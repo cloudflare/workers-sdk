@@ -1,11 +1,9 @@
 import { SharedBindings } from "miniflare:shared";
-import { CacheBindings, CacheHeaders } from "./constants";
-import type { CacheObjectCf } from "./constants";
+import { CacheHeaders } from "./constants";
 import type { MiniflareDurableObjectCf } from "miniflare:shared";
 
 interface Env {
 	[SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT]: DurableObjectNamespace;
-	[CacheBindings.MAYBE_JSON_CACHE_WARN_USAGE]?: boolean;
 }
 
 export default <ExportedHandler<Env>>{
@@ -16,11 +14,10 @@ export default <ExportedHandler<Env>>{
 		const objectNamespace = env[SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT];
 		const id = objectNamespace.idFromName(name);
 		const stub = objectNamespace.get(id);
-		const cf: MiniflareDurableObjectCf & CacheObjectCf = {
+		const cf: MiniflareDurableObjectCf = {
 			...request.cf,
 			miniflare: {
 				name,
-				cacheWarnUsage: env[CacheBindings.MAYBE_JSON_CACHE_WARN_USAGE],
 			},
 		};
 		return await stub.fetch(request, { cf: cf as Record<string, unknown> });

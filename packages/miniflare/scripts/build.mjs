@@ -104,6 +104,7 @@ const localExplorerWorkerPath = path.join(
  */
 const fixtureBuilds = [
 	path.join(pkgRoot, "test/fixtures/unsafe-plugin/index.ts"),
+	path.join(pkgRoot, "test/fixtures/echo-plugin/index.ts"),
 ];
 
 /**
