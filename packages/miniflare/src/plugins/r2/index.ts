@@ -4,10 +4,10 @@ import SCRIPT_R2_PUBLIC from "worker:r2/public";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	buildObjectEntryProps,
 	buildRemoteProxyProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
-	getUserBindingServiceName,
 	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
@@ -49,6 +49,9 @@ export const R2SharedOptionsSchema = z.object({
 export const R2_PLUGIN_NAME = "r2";
 const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
 const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
+// A single entry service shared by every *local* bucket. Each bucket's id is
+// supplied per-binding via `ctx.props`, so one service serves all of them.
+const R2_LOCAL_ENTRY_SERVICE_NAME = `${R2_PLUGIN_NAME}:bucket:entry`;
 // One shared remote-proxy service for all remote R2 buckets (config via props).
 const R2_REMOTE_SERVICE_NAME = `${R2_PLUGIN_NAME}:bucket:remote`;
 export const R2_PUBLIC_SERVICE_NAME = `${R2_PLUGIN_NAME}:public`;
@@ -76,7 +79,8 @@ export function getR2PublicService(
 	const bindings = Array.from(publicBucketIds).map<Worker_Binding>((id) => ({
 		name: id,
 		r2Bucket: {
-			name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
+			name: R2_LOCAL_ENTRY_SERVICE_NAME,
+			props: buildObjectEntryProps(id),
 		},
 	}));
 	return {
@@ -109,10 +113,8 @@ export const R2_PLUGIN: Plugin<
 						),
 					}
 				: {
-						name: getUserBindingServiceName(
-							R2_BUCKET_SERVICE_PREFIX,
-							bucket.id
-						),
+						name: R2_LOCAL_ENTRY_SERVICE_NAME,
+						props: buildObjectEntryProps(bucket.id),
 					},
 		}));
 	},
@@ -134,17 +136,18 @@ export const R2_PLUGIN: Plugin<
 		const buckets = namespaceEntries(options.r2Buckets);
 
 		const services: Service[] = [];
-		let hasRemote = false;
-		for (const [, { id, remoteProxyConnectionString }] of buckets) {
-			if (remoteProxyConnectionString) {
-				hasRemote = true;
-			} else {
-				services.push({
-					name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
-					worker: objectEntryWorker(R2_BUCKET_OBJECT, id),
-				});
-			}
+
+		// One shared entry service for all local buckets (id supplied via props).
+		const hasLocal = buckets.some(([, b]) => !b.remoteProxyConnectionString);
+		if (hasLocal) {
+			services.push({
+				name: R2_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(R2_BUCKET_OBJECT),
+			});
 		}
+
+		// One shared proxy service for all remote (mixed-mode) buckets.
+		const hasRemote = buckets.some(([, b]) => b.remoteProxyConnectionString);
 		if (hasRemote) {
 			services.push({
 				name: R2_REMOTE_SERVICE_NAME,
@@ -152,7 +155,6 @@ export const R2_PLUGIN: Plugin<
 			});
 		}
 
-		const hasLocal = services.some((s) => s.name !== R2_REMOTE_SERVICE_NAME);
 		if (hasLocal) {
 			const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(

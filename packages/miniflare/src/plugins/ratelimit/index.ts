@@ -4,8 +4,8 @@ import { z } from "zod";
 import { kVoid } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {
+	buildObjectEntryProps,
 	getMiniflareObjectBindings,
-	getUserBindingServiceName,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
@@ -43,6 +43,9 @@ export const RATELIMIT_PLUGIN_NAME = "ratelimit";
 const SERVICE_RATELIMIT_PREFIX = `${RATELIMIT_PLUGIN_NAME}`;
 const SERVICE_RATELIMIT_MODULE = `cloudflare-internal:${SERVICE_RATELIMIT_PREFIX}:module`;
 const RATELIMIT_ENTRY_SERVICE_PREFIX = `${RATELIMIT_PLUGIN_NAME}:ns`;
+// A single entry service shared by every namespace. Each namespace_id is
+// supplied per-binding via `ctx.props`, so one service serves all of them.
+const RATELIMIT_LOCAL_ENTRY_SERVICE_NAME = `${RATELIMIT_PLUGIN_NAME}:ns:entry`;
 const RATELIMIT_OBJECT_CLASS_NAME = "RateLimiterObject";
 const RATELIMIT_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: RATELIMIT_ENTRY_SERVICE_PREFIX,
@@ -72,10 +75,8 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 						{
 							name: "fetcher",
 							service: {
-								name: getUserBindingServiceName(
-									RATELIMIT_ENTRY_SERVICE_PREFIX,
-									config.namespace_id
-								),
+								name: RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,
+								props: buildObjectEntryProps(config.namespace_id),
 							},
 						},
 						...buildJsonBindings({
@@ -103,21 +104,15 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 		if (!options.ratelimits) {
 			return [];
 		}
-		// One entry service + Durable Object instance per unique namespace_id.
-		// Multiple bindings sharing a namespace collapse to a single counter.
+		// One shared entry service; each namespace_id is supplied per-binding via
+		// props, so a single service serves every rate limiter. Multiple bindings
+		// sharing a namespace still collapse to a single counter (same DO name).
 		const services: Service[] = [];
-		const seenNamespaces = new Set<string>();
-		for (const { namespace_id } of Object.values(options.ratelimits)) {
-			if (seenNamespaces.has(namespace_id)) {
-				continue;
-			}
-			seenNamespaces.add(namespace_id);
+		const hasLocal = Object.keys(options.ratelimits).length > 0;
+		if (hasLocal) {
 			services.push({
-				name: getUserBindingServiceName(
-					RATELIMIT_ENTRY_SERVICE_PREFIX,
-					namespace_id
-				),
-				worker: objectEntryWorker(RATELIMIT_OBJECT, namespace_id),
+				name: RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(RATELIMIT_OBJECT),
 			});
 		}
 
