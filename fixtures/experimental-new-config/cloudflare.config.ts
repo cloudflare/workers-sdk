@@ -1,5 +1,13 @@
-import { bindings, defineWorker } from "wrangler/experimental-config";
+import {
+	bindings,
+	defineSettings,
+	defineWorker,
+} from "wrangler/experimental-config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+export const settings = defineSettings({
+	complianceRegion: "public",
+});
 
 export default defineWorker((ctx) => ({
 	name: "experimental-new-config",

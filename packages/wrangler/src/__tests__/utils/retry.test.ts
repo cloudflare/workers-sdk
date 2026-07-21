@@ -1,7 +1,9 @@
-import { APIError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	retryOnAPIFailure as retryOnAPIFailureWithLogger,
+} from "@cloudflare/workers-utils";
 import { beforeEach, describe, it } from "vitest";
 import { logger } from "../../logger";
-import { retryOnAPIFailure } from "../../utils/retry";
 import { mockConsoleMethods } from "../helpers/mock-console";
 
 describe("retryOnAPIFailure", () => {
@@ -230,4 +232,19 @@ function getRetryAndErrorLogs(debugOutput: string): string[] {
 	return debugOutput
 		.split("\n")
 		.filter((line) => line.includes("Retrying") || line.includes("APIError"));
+}
+
+function retryOnAPIFailure<T>(
+	action: () => T | Promise<T>,
+	backoff?: number,
+	attempts?: number,
+	abortSignal?: AbortSignal
+): Promise<T> {
+	return retryOnAPIFailureWithLogger(
+		action,
+		logger,
+		backoff,
+		attempts,
+		abortSignal
+	);
 }

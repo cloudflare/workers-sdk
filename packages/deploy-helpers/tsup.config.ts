@@ -11,6 +11,8 @@ export default defineConfig(() => [
 		entry: {
 			index: "src/index.ts",
 			context: "src/shared/context.ts",
+			"create-worker-upload-form":
+				"src/deploy/helpers/create-worker-upload-form.ts",
 		},
 		platform: "node",
 		format: "esm",
@@ -34,9 +36,6 @@ export default defineConfig(() => [
 			"dotenv",
 			"command-exists",
 			"esbuild",
-			// Keep zod external so wrangler (the only consumer) bundles a single
-			// shared copy rather than inlining one here.
-			/^zod(\/.*)?$/,
 		],
 	},
 ]);

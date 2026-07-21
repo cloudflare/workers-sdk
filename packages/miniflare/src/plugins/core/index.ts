@@ -35,6 +35,7 @@ import {
 import { IMAGES_PLUGIN_NAME } from "../images";
 import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
 import {
+	buildRemoteProxyProps,
 	getUserBindingServiceName,
 	parseRoutes,
 	ProxyNodeBinding,
@@ -335,6 +336,8 @@ export const CoreSharedOptionsSchema = z
 		unsafeRuntimeEnv: z.record(z.string()).optional(),
 		// Enable the local explorer at /cdn-cgi/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
+		// Enable RPC-based Durable Object introspection APIs
+		unsafeInspectDurableObjects: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
 
@@ -434,6 +437,8 @@ function getCustomServiceDesignator(
 		} else if ("remoteProxyConnectionString" in service) {
 			assert("name" in service && typeof service.name === "string");
 			serviceName = `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`;
+			// Per-binding remote config travels via props to a generic proxy worker.
+			props = buildRemoteProxyProps(service.remoteProxyConnectionString, name);
 		}
 		// Worker with entrypoint
 		else if ("name" in service) {
@@ -522,10 +527,7 @@ function maybeGetCustomServiceService(
 
 		return {
 			name: `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`,
-			worker: remoteProxyClientWorker(
-				service.remoteProxyConnectionString,
-				name
-			),
+			worker: remoteProxyClientWorker(),
 		};
 	}
 }
@@ -832,7 +834,8 @@ export const CORE_PLUGIN: Plugin<
 			([, { enableSql }]) => enableSql
 		);
 		if (
-			sharedOptions.unsafeLocalExplorer &&
+			(sharedOptions.unsafeLocalExplorer ||
+				sharedOptions.unsafeInspectDurableObjects) &&
 			// service-format workers are not supported
 			"modules" in workerScript &&
 			sqliteClasses.length > 0 &&

@@ -1,6 +1,8 @@
 import { ms } from "itty-time";
 import { z } from "zod";
 
+export const SENSITIVE_STEP_OUTPUT = "output";
+
 export const MAX_WORKFLOW_NAME_LENGTH = 64;
 
 export const MAX_WORKFLOW_INSTANCE_ID_LENGTH = 100;
@@ -58,6 +60,7 @@ const STEP_CONFIG_SCHEMA = z
 			.strict()
 			.optional(),
 		timeout: z.number().gte(0).or(z.string()).optional(),
+		sensitive: z.literal(SENSITIVE_STEP_OUTPUT).optional(),
 	})
 	.strict();
 

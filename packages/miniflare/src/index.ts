@@ -67,6 +67,7 @@ import {
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
+import { closeBrowserProcess } from "./plugins/browser-rendering/process";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -98,6 +99,7 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
+import { createDurableObjectStorageHandle } from "./shared/dev-control";
 import { DevRegistry, getWorkerRegistry } from "./shared/dev-registry";
 import {
 	getOutboundDoProxyClassName,
@@ -109,6 +111,7 @@ import {
 	CoreBindings,
 	CoreHeaders,
 	CorePaths,
+	decodeErrorPayload,
 	LogLevel,
 	Mutex,
 	SharedHeaders,
@@ -151,6 +154,8 @@ import type { Log } from "./shared";
 import type {
 	DevControl,
 	DurableObjectEvictionOptions,
+	DurableObjectStorageHandle,
+	DurableObjectStorageOptions,
 } from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
@@ -984,8 +989,11 @@ export class Miniflare {
 	 */
 	#externalPlugins: Map<string, Plugin<z.ZodTypeAny>> = new Map();
 
-	// key is the browser session ID, value is the browser process
-	#browserProcesses: Map<string, Process> = new Map();
+	// key is the browser session ID, value identifies the launched browser
+	#browserProcesses: Map<
+		string,
+		{ browserProcess: Process; wsEndpoint: string }
+	> = new Map();
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1159,17 +1167,6 @@ export class Miniflare {
 				} catch (e) {
 					this.#log.debug(
 						`Unable to remove email session directory: ${String(e)}`
-					);
-				}
-				// Check if parent directory is now empty and remove it
-				try {
-					const entries = fs.readdirSync(emailPaths.parentDir);
-					if (entries.length === 0) {
-						removeDirSync(emailPaths.parentDir);
-					}
-				} catch (e) {
-					this.#log.debug(
-						`Unable to check/remove email parent directory: ${String(e)}`
 					);
 				}
 			}
@@ -1661,22 +1658,28 @@ export class Miniflare {
 				browserProcess.nodeProcess.on("exit", () => {
 					this.#browserProcesses.delete(sessionId);
 				});
-				this.#browserProcesses.set(sessionId, browserProcess);
+				this.#browserProcesses.set(sessionId, {
+					browserProcess,
+					wsEndpoint,
+				});
 				response = Response.json({ wsEndpoint, sessionId, startTime });
 			} else if (url.pathname === "/browser/status") {
 				const sessionId = url.searchParams.get("sessionId");
 				assert(sessionId !== null, "Missing sessionId query parameter");
-				const process = this.#browserProcesses.get(sessionId);
-				response = new Response(null, { status: process ? 200 : 410 });
+				const browser = this.#browserProcesses.get(sessionId);
+				response = new Response(null, { status: browser ? 200 : 410 });
 			} else if (url.pathname === "/browser/close") {
 				const sessionId = url.searchParams.get("sessionId");
 				assert(sessionId !== null, "Missing sessionId query parameter");
-				const browserProcess = this.#browserProcesses.get(sessionId);
-				if (!browserProcess) {
+				const browser = this.#browserProcesses.get(sessionId);
+				if (!browser) {
 					response = new Response("Session not found", { status: 404 });
 				} else {
 					this.#browserProcesses.delete(sessionId);
-					await browserProcess.close().catch(() => {
+					await closeBrowserProcess(
+						browser.browserProcess,
+						browser.wsEndpoint
+					).catch(() => {
 						// oh well, process might already be dead
 					});
 					response = new Response(null, { status: 200 });
@@ -2674,14 +2677,12 @@ export class Miniflare {
 	}
 
 	async #closeBrowserProcesses() {
+		const browsers = Array.from(this.#browserProcesses.values());
+		this.#browserProcesses.clear();
 		await Promise.all(
-			Array.from(this.#browserProcesses.values()).map((process) =>
-				process.close()
+			browsers.map(({ browserProcess, wsEndpoint }) =>
+				closeBrowserProcess(browserProcess, wsEndpoint)
 			)
-		);
-		assert(
-			this.#browserProcesses.size === 0,
-			"Not all browser processes were closed"
 		);
 	}
 
@@ -2929,7 +2930,14 @@ export class Miniflare {
 		// If the Worker threw an uncaught exception, propagate it to the caller
 		const stack = response.headers.get(CoreHeaders.ERROR_STACK);
 		if (response.status === 500 && stack !== null) {
-			const caught = JsonErrorSchema.parse(await response.json());
+			// `workerd` drops response bodies for `HEAD` requests, so fall back to
+			// the header copy of the serialised error
+			const serialised =
+				(await response.text()) || decodeErrorPayload(response);
+			if (serialised === null) {
+				throw new Error("Worker threw an uncaught exception");
+			}
+			const caught = JsonErrorSchema.parse(JSON.parse(serialised));
 			throw reviveError(this.#workerSrcOpts, caught);
 		}
 
@@ -3080,6 +3088,34 @@ export class Miniflare {
 			);
 		}
 		return proxy as T;
+	}
+
+	/**
+	 * Returns remote storage access for a Durable Object instance.
+	 *
+	 * Calling `exec()` runs SQL inside the target Durable Object and returns all
+	 * rows. It may start the object if it is not already active.
+	 */
+	async unsafeGetDurableObjectStorage(
+		scriptName: string,
+		className: string,
+		options: DurableObjectStorageOptions
+	): Promise<DurableObjectStorageHandle> {
+		if (!this.#sharedOpts.core.unsafeInspectDurableObjects) {
+			throw new TypeError(
+				"Durable Object storage inspection requires the `unsafeInspectDurableObjects` option."
+			);
+		}
+
+		const control = await this.#getDevControl();
+		const handle = createDurableObjectStorageHandle(
+			control,
+			scriptName,
+			className,
+			options
+		);
+
+		return handle;
 	}
 	// TODO(someday): would be nice to define these in plugins
 	async getCaches(): Promise<ReplaceWorkersTypes<CacheStorage>> {
@@ -3400,24 +3436,11 @@ export class Miniflare {
 				this.#tmpPath
 			);
 			if (emailPaths) {
-				// Remove session directory and wait for completion before checking parent
 				try {
 					await removeDir(emailPaths.sessionDir);
 				} catch (e) {
 					this.#log.debug(
 						`Unable to remove email session directory: ${String(e)}`
-					);
-				}
-				// Check if parent directory is now empty and remove it
-				try {
-					const entries = await fs.promises.readdir(emailPaths.parentDir);
-					if (entries.length === 0) {
-						await removeDir(emailPaths.parentDir);
-					}
-				} catch (e) {
-					// Parent directory doesn't exist or can't be read, ignore
-					this.#log.debug(
-						`Unable to check/remove email parent directory: ${String(e)}`
 					);
 				}
 			}
@@ -3458,6 +3481,8 @@ export * from "./zod-format";
 export type {
 	DurableObjectIdentifier,
 	DurableObjectEvictionOptions,
+	DurableObjectStorageOptions,
+	DurableObjectStorageHandle,
 } from "./shared/dev-control";
 export type {
 	WorkerRegistry,

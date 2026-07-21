@@ -302,7 +302,12 @@ export async function preUploadApiChecks(
 		}
 	}
 
-	await ensureQueuesExistByConfig(config, accountId);
+	await ensureQueuesExistByConfig(
+		config,
+		accountId,
+		!props.resourcesProvision,
+		name
+	);
 
 	// Resolve whether this deploy will actually publish to workers.dev, using
 	// the same logic as the triggers phase (`getSubdomainValues`): workers_dev
