@@ -1,0 +1,17 @@
+{
+	"name": "@fixture/lockfile-resolution-benchmark",
+	"private": true,
+	"scripts": {
+		"test:ci": "node benchmark.mjs"
+	},
+	"dependencies": {
+		"jsonc-parser": "3.2.0"
+	},
+	"devDependencies": {
+		"wrangler": "workspace:*",
+		"wrangler-pr": "catalog:lockfile-benchmark"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
