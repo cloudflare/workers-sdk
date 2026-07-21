@@ -35,7 +35,11 @@ import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
-import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
+import {
+	debuglog,
+	satisfiesMinimumViteVersion,
+	withTrailingSlash,
+} from "./utils";
 import type { Bundle } from "./build-output-preview";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
@@ -474,6 +478,18 @@ export async function getDevMiniflareOptions(
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
+			async unsafeHandleRuntimeRestart() {
+				// Miniflare has restarted `workerd` after a crash, but the
+				// module runners created over our separate bootstrap channel
+				// died with the previous process. Restarting the Vite dev
+				// server re-creates the environments, hot channels, and module
+				// runners so requests are served again instead of failing with
+				// an opaque `fetch failed`.
+				debuglog(
+					"workerd restarted after a crash; restarting the Vite dev server"
+				);
+				await viteDevServer.restart();
+			},
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
