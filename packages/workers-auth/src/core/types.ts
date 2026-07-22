@@ -52,7 +52,7 @@ export interface CliDescriptor {
 	commands: {
 		login: string;
 		whoami: string;
-		createProfile?: string;
+		createProfile: string;
 	};
 
 	/**
