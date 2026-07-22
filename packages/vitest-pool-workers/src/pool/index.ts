@@ -754,9 +754,15 @@ export async function connectToMiniflareSocket(
 	const res = await stub.fetch("http://placeholder", {
 		headers: {
 			Upgrade: "websocket",
-			"MF-Vitest-Worker-Data": structuredSerializableStringify({
-				cwd: process.cwd(),
-			}),
+			// Headers are restricted to the Latin-1/ASCII byte range, but `process.cwd()`
+			// may contain non-ASCII characters (e.g. a workspace path with CJK
+			// characters on Windows), so percent-encode the whole serialized value.
+			// See https://github.com/cloudflare/workers-sdk/issues/14655
+			"MF-Vitest-Worker-Data": encodeURIComponent(
+				structuredSerializableStringify({
+					cwd: process.cwd(),
+				})
+			),
 		},
 	});
 

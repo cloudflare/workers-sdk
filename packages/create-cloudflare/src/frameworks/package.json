@@ -1,24 +1,24 @@
 {
 	"name": "frameworks_clis_info",
 	"dependencies": {
-		"@angular/create": "22.0.6",
+		"@angular/create": "22.0.7",
 		"@tanstack/cli": "0.69.5",
 		"create-analog": "2.6.3",
 		"create-astro": "5.2.2",
-		"create-docusaurus": "3.10.1",
+		"create-docusaurus": "3.10.2",
 		"create-hono": "0.19.4",
-		"create-next-app": "16.2.10",
+		"create-next-app": "16.2.11",
 		"create-qwik": "1.20.0",
 		"create-react-router": "8.2.0",
 		"create-rwsdk": "3.1.3",
 		"create-solid": "0.7.0",
-		"create-vike": "0.0.662",
+		"create-vike": "0.0.664",
 		"create-vite": "9.1.1",
 		"create-vue": "3.22.4",
 		"create-waku": "0.12.5-1.0.0-alpha.10-0",
 		"gatsby": "5.16.1",
-		"nuxi": "3.36.1",
-		"sv": "0.16.2"
+		"nuxi": "3.37.0",
+		"sv": "0.16.3"
 	},
 	"info": [
 		"This package.json is only used to keep track of the frameworks cli dependencies",

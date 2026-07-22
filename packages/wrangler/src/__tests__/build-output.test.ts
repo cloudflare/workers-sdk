@@ -5,34 +5,9 @@ import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runWrangler } from "./helpers/run-wrangler";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock `@cloudflare/config`'s `loadConfig`
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// `loadNewConfig` calls into `@cloudflare/config`'s `loadConfig`, which uses
-// `module.registerHooks` to register hooks for `.ts` files. That mechanism
-// does not run inside vitest's module runner, so we mock the loader and
-// `import()` the seeded file via a `data:` URL to keep ESM semantics.
-// ─────────────────────────────────────────────────────────────────────────────
-
 vi.mock("@cloudflare/config", async (importOriginal) => {
-	const actual = (await importOriginal()) as Record<string, unknown>;
-
-	async function loadConfig(configPath: string) {
-		const source = await fs.promises.readFile(configPath, "utf8");
-		const mod = (await import(
-			`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
-		)) as { default: unknown };
-		return {
-			config: mod.default,
-			dependencies: new Set<string>([path.resolve(configPath)]),
-		};
-	}
-
-	return {
-		...actual,
-		loadConfig,
-	};
+	const { createConfigMock } = await import("./helpers/mock-new-config");
+	return createConfigMock(importOriginal);
 });
 
 const WORKER_NAME = "build-output-test-worker";
@@ -74,6 +49,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	it("emits the Build Output API tree for a Worker", async ({ expect }) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -107,6 +83,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.ts",
@@ -136,6 +113,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -174,6 +152,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -208,6 +187,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	it("copies the assets directory", async ({ expect }) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -247,6 +227,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 			};`,
@@ -273,6 +254,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -301,6 +283,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -320,6 +303,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 			};`,

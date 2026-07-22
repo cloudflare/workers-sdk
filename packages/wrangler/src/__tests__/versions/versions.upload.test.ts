@@ -2658,6 +2658,58 @@ describe("versions upload", () => {
 			const metadata = await getMetadata(requests[0]);
 			expect(metadata.package_dependencies).toBeUndefined();
 		});
+
+		test("should exclude packages matching exclude_packages patterns from upload metadata", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Create two resolvable packages in node_modules
+			for (const [name, version] of [
+				["@internal/secret", "1.0.0"],
+				["public-lib", "2.0.0"],
+			] as const) {
+				const pkgPath = path.join(process.cwd(), "node_modules", name);
+				fs.mkdirSync(pkgPath, { recursive: true });
+				fs.writeFileSync(path.join(pkgPath, "index.js"), "module.exports = {}");
+				fs.writeFileSync(
+					path.join(pkgPath, "package.json"),
+					JSON.stringify({ name, version })
+				);
+			}
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				dependencies_instrumentation: {
+					enabled: true,
+					exclude_packages: ["@internal/*"],
+				},
+			});
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						"@internal/secret": "^1.0.0",
+						"public-lib": "^2.0.0",
+					},
+				})
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[0]);
+			expect(metadata.package_dependencies).toEqual([
+				{
+					name: "public-lib",
+					packageJsonVersion: "^2.0.0",
+					installedVersion: "2.0.0",
+				},
+			]);
+		});
 	});
 });
 

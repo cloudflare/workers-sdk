@@ -1,6 +1,7 @@
 import SCRIPT_PIPELINE_OBJECT from "worker:pipelines/pipeline";
 import { z } from "zod";
 import {
+	buildRemoteProxyProps,
 	namespaceKeys,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -36,16 +37,24 @@ export const PipelineOptionsSchema = z.object({
 
 export const PIPELINES_PLUGIN_NAME = "pipelines";
 const SERVICE_PIPELINE_PREFIX = `${PIPELINES_PLUGIN_NAME}:pipeline`;
+const PIPELINES_REMOTE_SERVICE_NAME = `${PIPELINES_PLUGIN_NAME}:pipeline:remote`;
 
 export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 	options: PipelineOptionsSchema,
 	bindingTypeDescription: "Pipeline",
 	getBindings(options) {
 		const pipelines = bindingEntries(options.pipelines);
-		return pipelines.map<Service>(([name, { id }]) => ({
-			name,
-			service: { name: `${SERVICE_PIPELINE_PREFIX}:${id}` },
-		}));
+		return pipelines.map<Service>(
+			([name, { id, remoteProxyConnectionString }]) => ({
+				name,
+				service: remoteProxyConnectionString
+					? {
+							name: PIPELINES_REMOTE_SERVICE_NAME,
+							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+						}
+					: { name: `${SERVICE_PIPELINE_PREFIX}:${id}` },
+			})
+		);
 	},
 	getNodeBindings(options) {
 		const buckets = namespaceKeys(options.pipelines);
@@ -56,24 +65,31 @@ export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 	async getServices({ options }) {
 		const pipelines = bindingEntries(options.pipelines);
 
-		const services = [];
-		for (const [bindingName, pipeline] of pipelines) {
+		const services: Service[] = [];
+		let hasRemote = false;
+		for (const [, pipeline] of pipelines) {
+			if (pipeline.remoteProxyConnectionString) {
+				hasRemote = true;
+				continue;
+			}
 			services.push({
 				name: `${SERVICE_PIPELINE_PREFIX}:${pipeline.id}`,
-				worker: pipeline.remoteProxyConnectionString
-					? remoteProxyClientWorker(
-							pipeline.remoteProxyConnectionString,
-							bindingName
-						)
-					: {
-							compatibilityDate: "2024-12-30",
-							modules: [
-								{
-									name: "pipeline.worker.js",
-									esModule: SCRIPT_PIPELINE_OBJECT(),
-								},
-							],
+				worker: {
+					compatibilityDate: "2024-12-30",
+					modules: [
+						{
+							name: "pipeline.worker.js",
+							esModule: SCRIPT_PIPELINE_OBJECT(),
 						},
+					],
+				},
+			});
+		}
+
+		if (hasRemote) {
+			services.push({
+				name: PIPELINES_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
 			});
 		}
 

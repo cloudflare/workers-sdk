@@ -3,15 +3,19 @@ import { bindings } from "../bindings";
 import { convertToWranglerConfig } from "../convert";
 import { exports as exportConfig } from "../exports";
 
-const baseConfig = { name: "worker", compatibilityDate: "2026-06-01" } as const;
+const baseConfig = {
+	type: "worker",
+	name: "my-worker",
+	compatibilityDate: "2026-06-01",
+} as const;
 
 describe("convertToWranglerConfig", () => {
 	describe("top-level fields", () => {
 		it("maps primitive top-level fields", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				type: "worker",
 				name: "my-worker",
 				entrypoint: "./src/index.ts",
-				accountId: "acc-123",
 				compatibilityDate: "2026-01-01",
 				compatibilityFlags: ["nodejs_compat"],
 				workersDev: true,
@@ -22,7 +26,6 @@ describe("convertToWranglerConfig", () => {
 			expect(result).toEqual({
 				name: "my-worker",
 				main: "./src/index.ts",
-				account_id: "acc-123",
 				compatibility_date: "2026-01-01",
 				compatibility_flags: ["nodejs_compat"],
 				workers_dev: true,
@@ -30,24 +33,6 @@ describe("convertToWranglerConfig", () => {
 				logpush: true,
 				first_party_worker: false,
 			});
-		});
-
-		it("maps complianceRegion: 'fedramp-high' to 'fedramp_high'", ({
-			expect,
-		}) => {
-			const result = convertToWranglerConfig({
-				...baseConfig,
-				complianceRegion: "fedramp-high",
-			});
-			expect(result.compliance_region).toBe("fedramp_high");
-		});
-
-		it("passes complianceRegion: 'public' through unchanged", ({ expect }) => {
-			const result = convertToWranglerConfig({
-				...baseConfig,
-				complianceRegion: "public",
-			});
-			expect(result.compliance_region).toBe("public");
 		});
 
 		it("passes placement through unchanged", ({ expect }) => {
@@ -1070,6 +1055,48 @@ describe("convertToWranglerConfig", () => {
 				{ service: "c" },
 			]);
 			expect(result.streaming_tail_consumers).toEqual([{ service: "b" }]);
+		});
+	});
+
+	describe("settings", () => {
+		it("maps accountId to account_id", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				accountId: "acc-123",
+			});
+			expect(result.account_id).toBe("acc-123");
+		});
+
+		it("maps complianceRegion: 'fedramp-high' to 'fedramp_high'", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				complianceRegion: "fedramp-high",
+			});
+			expect(result.compliance_region).toBe("fedramp_high");
+		});
+
+		it("passes complianceRegion: 'public' through unchanged", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				complianceRegion: "public",
+			});
+			expect(result.compliance_region).toBe("public");
+		});
+
+		it("sets no settings fields when none are provided", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, { type: "settings" });
+			expect(result.account_id).toBeUndefined();
+			expect(result.compliance_region).toBeUndefined();
+		});
+
+		it("sets no settings fields when settings config is omitted", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig);
+			expect(result.account_id).toBeUndefined();
+			expect(result.compliance_region).toBeUndefined();
 		});
 	});
 });
