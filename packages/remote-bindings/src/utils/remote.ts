@@ -29,7 +29,7 @@ export class RemoteSessionAuthenticationError extends UserError {
 		const envAuth = getAuthFromEnv();
 
 		let errorMessage =
-			"Failed to establish remote session due to an authentication issue.\n";
+			"This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.\n";
 		if (envAuth !== undefined) {
 			// The user is authenticating via an environment variable
 			const method =
