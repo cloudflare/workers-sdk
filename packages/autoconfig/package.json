@@ -35,7 +35,7 @@
 	"devDependencies": {
 		"@cloudflare/codemod": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@netlify/build-info": "^10.5.1",
+		"@netlify/build-info": "^11.1.0",
 		"@types/esprima": "^4.0.3",
 		"@types/node": "catalog:default",
 		"chalk": "catalog:default",
