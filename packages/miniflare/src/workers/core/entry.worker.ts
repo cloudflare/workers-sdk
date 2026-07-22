@@ -1,7 +1,12 @@
 import { blue, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
-import { CoreBindings, CoreHeaders, CorePaths } from "./constants";
+import {
+	CoreBindings,
+	CoreHeaders,
+	CorePaths,
+	decodeErrorPayload,
+} from "./constants";
 import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
 import { matchRoutes } from "./routing";
@@ -270,12 +275,21 @@ function maybePrettifyError(request: Request, response: Response, env: Env) {
 		return response;
 	}
 
+	// `workerd` drops response bodies for `HEAD` requests, so fall back to the
+	// header copy of the serialised error. Without a payload there is nothing to
+	// prettify, and POSTing an empty body would surface a JSON parse error from
+	// miniflare's internals instead of the user's error.
+	const body = response.body ?? decodeErrorPayload(response);
+	if (body === null) {
+		return response;
+	}
+
 	return env[CoreBindings.SERVICE_LOOPBACK].fetch(
 		"http://localhost/core/error",
 		{
 			method: "POST",
 			headers: request.headers,
-			body: response.body,
+			body,
 			cf: { prettyErrorOriginalUrl: request.url },
 		}
 	);

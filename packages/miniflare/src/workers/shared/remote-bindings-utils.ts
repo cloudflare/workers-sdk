@@ -2,16 +2,25 @@ import { newWebSocketRpcSession } from "capnweb";
 import type { SharedBindings } from "./constants";
 
 /**
- * Common environment type for remote binding workers.
+ * Common environment type for remote binding workers. The loopback service is
+ * the only binding still passed via env (services can't travel through props);
+ * the per-binding fields now arrive via `ctx.props` (see `RemoteBindingProps`).
  */
 export type RemoteBindingEnv = {
-	remoteProxyConnectionString?: string;
-	binding: string;
-	cfTraceId?: string;
 	// Optional loopback service used to surface diagnostics back to the
 	// Miniflare host (e.g. a Cloudflare Access block detected on the response
 	// from the remote-bindings proxy server).
 	[SharedBindings.MAYBE_SERVICE_LOOPBACK]?: Fetcher;
+};
+
+/**
+ * Per-binding configuration supplied at runtime via `ctx.props`. This is what
+ * lets a single remote-proxy client service serve many bindings.
+ */
+export type RemoteBindingProps = {
+	remoteProxyConnectionString?: string;
+	binding: string;
+	cfTraceId?: string;
 };
 
 /** Headers sent alongside proxy requests to provide additional context. */

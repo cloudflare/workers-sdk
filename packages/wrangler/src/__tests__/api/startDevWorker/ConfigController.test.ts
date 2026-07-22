@@ -191,6 +191,61 @@ describe("ConfigController", () => {
 		expect(config.dev?.structuredLogsHandler).toBe(structuredLogsHandler);
 	});
 
+	it("should derive nodejsCompatMode from the config like the CLI", async ({
+		expect,
+	}) => {
+		await seed({
+			"src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
+			"wrangler.toml": dedent /* toml */ `
+				name = "nodejs-compat-worker"
+				main = "src/index.ts"
+				compatibility_date = "2026-06-01"
+				compatibility_flags = ["nodejs_compat"]
+			`,
+		});
+
+		// Unset: derived from the resolved config's date + flags.
+		const derived = bus.waitFor("configUpdate");
+		await controller.set({ config: "./wrangler.toml" });
+		await expect(derived).resolves.toMatchObject({
+			config: { build: { nodejsCompatMode: "v2" } },
+		});
+
+		// Input-level overrides win over the config file, like the CLI's
+		// `args.* ?? parsedConfig.*`: a programmatic worker passing the
+		// flag without a config-file entry still gets the mode.
+		await seed({
+			"wrangler-no-flag.toml": dedent /* toml */ `
+				name = "nodejs-compat-worker"
+				main = "src/index.ts"
+				compatibility_date = "2026-06-01"
+			`,
+		});
+		const overridden = bus.waitFor("configUpdate");
+		await controller.set({
+			config: "./wrangler-no-flag.toml",
+			compatibilityFlags: ["nodejs_compat"],
+		});
+		await expect(overridden).resolves.toMatchObject({
+			config: { build: { nodejsCompatMode: "v2" } },
+		});
+
+		// Explicit null still disables (callers owning the mode keep it).
+		const disabled = bus.waitFor("configUpdate");
+		await controller.set({
+			config: "./wrangler.toml",
+			build: { nodejsCompatMode: null },
+		});
+		const disabledEvent = await disabled;
+		expect(disabledEvent.config.build.nodejsCompatMode).toBeNull();
+	});
+
 	it("should apply module root to parent if main is nested from base_dir", async ({
 		expect,
 	}) => {

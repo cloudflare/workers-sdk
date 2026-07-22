@@ -40,6 +40,7 @@ import {
 	R2_S3_SERVICE_NAME,
 } from "../r2";
 import {
+	buildRemoteProxyProps,
 	getUserBindingServiceName,
 	parseRoutes,
 	ProxyNodeBinding,
@@ -441,6 +442,8 @@ function getCustomServiceDesignator(
 		} else if ("remoteProxyConnectionString" in service) {
 			assert("name" in service && typeof service.name === "string");
 			serviceName = `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`;
+			// Per-binding remote config travels via props to a generic proxy worker.
+			props = buildRemoteProxyProps(service.remoteProxyConnectionString, name);
 		}
 		// Worker with entrypoint
 		else if ("name" in service) {
@@ -529,10 +532,7 @@ function maybeGetCustomServiceService(
 
 		return {
 			name: `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`,
-			worker: remoteProxyClientWorker(
-				service.remoteProxyConnectionString,
-				name
-			),
+			worker: remoteProxyClientWorker(),
 		};
 	}
 }
