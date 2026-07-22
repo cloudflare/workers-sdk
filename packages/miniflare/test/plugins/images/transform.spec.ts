@@ -82,6 +82,14 @@ describe("Images binding local transforms", () => {
 			body: sourcePng,
 		});
 		const body = Buffer.from(await res.arrayBuffer());
+		if (!res.ok || body.length < 100) {
+			console.log(
+				"DEBUG transform() response:",
+				res.status,
+				JSON.stringify(res.headers.get("content-type")),
+				body.toString("utf8").slice(0, 500)
+			);
+		}
 		return { res, body };
 	}
 
