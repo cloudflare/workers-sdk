@@ -16,9 +16,7 @@ describe("errors during dev with remote bindings", () => {
 		msw.use(...mswSuccessUserHandlers);
 	});
 
-	it("explains how to create a draft Flagship app", async ({
-		expect,
-	}) => {
+	it("explains how to create a draft Flagship app", async ({ expect }) => {
 		await expect(
 			startRemoteProxySession({
 				FLAGS: {
