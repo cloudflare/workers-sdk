@@ -12,7 +12,8 @@ export default {
 		const url = new URL(request.url);
 		const transform = JSON.parse(url.searchParams.get("transform") || "{}");
 		const format = url.searchParams.get("format") || "image/png";
-		const result = await env.IMAGES.input(request.body)
+		const buffered = await request.arrayBuffer();
+		const result = await env.IMAGES.input(buffered)
 			.transform(transform)
 			.output({ format });
 		return result.response();
