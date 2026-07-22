@@ -16,7 +16,7 @@ describe("errors during dev with remote bindings", () => {
 		msw.use(...mswSuccessUserHandlers);
 	});
 
-	it("explains how to provision a draft Flagship binding", async ({
+	it("explains how to create a draft Flagship app", async ({
 		expect,
 	}) => {
 		await expect(
@@ -26,7 +26,7 @@ describe("errors during dev with remote bindings", () => {
 				},
 			})
 		).rejects.toThrow(
-			'Flagship binding "FLAGS" has no app_id. Run `wrangler deploy` to provision it, or add `app_id` to your config.'
+			'Flagship binding "FLAGS" has no `app_id` and has not been created, but needs to run remotely. Run `wrangler flagship apps create` to create an app.'
 		);
 	});
 
