@@ -41,14 +41,6 @@ function getDebugFilepath() {
 
 /**
  * Parses the timestamp encoded in a wrangler log filename.
- *
- * Filenames are created by {@link getDebugFilepath} as `wrangler-<date>.log`,
- * where `<date>` is an ISO 8601 timestamp with `:` replaced by `-`, `.` and `T`
- * replaced by `_`, and the trailing `Z` removed
- * (e.g. `wrangler-2024-01-02_03-04-05_678.log`).
- *
- * Returns the timestamp in milliseconds, or `undefined` if the filename does
- * not match the expected format.
  */
 function parseLogFileTimestamp(filename: string): number | undefined {
 	const match =
