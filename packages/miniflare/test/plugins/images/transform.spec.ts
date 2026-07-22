@@ -118,13 +118,14 @@ describe("Images binding local transforms", () => {
 	});
 
 	test("gravity:top crops from the top of the image", async ({ expect }) => {
-		// 100x25 (4:1) is wider than the 200x100 (2:1) source, so fit:cover
-		// must match on width and crop the vertical excess - unlike 50x25
-		// (same 2:1 aspect as the source), which needs no crop at all and
-		// makes gravity a no-op.
+		// 200x20 (10:1, scale=1 - a pure crop with no resampling) keeps rows
+		// 0-19 of the source, solidly inside the white top half. 50x25 (same
+		// 2:1 aspect as the source) needs no crop at all and makes gravity a
+		// no-op; 100x25 crops but lands the sampled row exactly on the
+		// white/red seam, blurring the two colors together via resampling.
 		const { body } = await transform({
-			width: 100,
-			height: 25,
+			width: 200,
+			height: 20,
 			fit: "cover",
 			gravity: "top",
 		});
@@ -136,11 +137,12 @@ describe("Images binding local transforms", () => {
 	test("gravity:bottom crops from the bottom of the image", async ({
 		expect,
 	}) => {
-		// See gravity:top above for why 100x25 (not 50x25) is required to
-		// force a vertical crop that gravity can actually affect.
+		// See gravity:top above - 200x20 keeps rows 80-99, solidly inside
+		// the red bottom half, avoiding both the no-op (50x25) and the
+		// seam-blur (100x25) problems.
 		const { body } = await transform({
-			width: 100,
-			height: 25,
+			width: 200,
+			height: 20,
 			fit: "cover",
 			gravity: "bottom",
 		});
