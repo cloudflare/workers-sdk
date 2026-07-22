@@ -73,6 +73,21 @@ const WorkersPoolOptionsSchema = z.object({
 	wrangler: z
 		.object({ configPath: z.ostring(), environment: z.ostring() })
 		.optional(),
+	/**
+	 * Tolerate `error` events on the runner WebSocket after the pool worker
+	 * has begun shutting down. Workerd can segfault during teardown on
+	 * linux-x64 / WSL2 and macOS-arm64 (see
+	 * https://github.com/cloudflare/workerd/issues/6763); without this flag,
+	 * those errors reach vitest as fatal `[vitest-pool]: Worker cloudflare-pool
+	 * emitted error`s, failing an otherwise-passing run with exit 1.
+	 *
+	 * Errors raised while a task is in flight are still forwarded normally;
+	 * only post-`stop()` `error` events are suppressed (and logged via
+	 * `NODE_DEBUG=vitest-pool-workers`).
+	 *
+	 * @default false
+	 */
+	tolerateWorkerShutdownErrors: z.boolean().default(false),
 });
 
 export type SourcelessWorkerOptions = Omit<

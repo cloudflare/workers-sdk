@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
@@ -35,10 +36,20 @@ import type {
 
 export class CloudflarePoolWorker implements PoolWorker {
 	name = "cloudflare-pool";
+	// Used to log non-fatal socket errors (e.g. workerd shutdown segfaults —
+	// see https://github.com/cloudflare/workerd/issues/6763) without surfacing
+	// them to vitest when configured to tolerate them.
+	private readonly debug = util.debuglog("vitest-pool-workers");
 	private mf: Miniflare | undefined;
 	private socket: WebSocket | undefined;
 	private parsedPoolOptions: WorkersPoolOptionsWithDefines | undefined;
 	private main: string | undefined;
+	// Set once `stop()` begins; controls whether post-teardown `error` events
+	// from the runner socket should be suppressed (see
+	// https://github.com/cloudflare/workerd/issues/6763 and the
+	// `tolerateWorkerShutdownErrors` config option).
+	private stopping = false;
+	private tolerateWorkerShutdownErrors = false;
 	// Store wrapped listeners so off() can remove them correctly.
 	// Vitest registers at most one listener per event type.
 	private messageListener?: (event: MiniflareMessageEvent) => void;
@@ -76,6 +87,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 			this.options.project,
 			resolvedPoolOptions
 		);
+		this.tolerateWorkerShutdownErrors =
+			this.parsedPoolOptions.tolerateWorkerShutdownErrors === true;
 		this.main = maybeGetResolvedMainPath(
 			this.options.project,
 			this.parsedPoolOptions
@@ -107,6 +120,14 @@ export class CloudflarePoolWorker implements PoolWorker {
 	}
 
 	async stop(): Promise<void> {
+		// Mark the worker as stopping BEFORE closing the socket so that any
+		// `error` event dispatched by the WebSocket during teardown (for
+		// example, when workerd segfaults on shutdown — see
+		// https://github.com/cloudflare/workerd/issues/6763) can be inspected
+		// in the `error` listener and, when `tolerateWorkerShutdownErrors`
+		// is enabled, suppressed instead of forwarded to vitest as a fatal
+		// error.
+		this.stopping = true;
 		this.socket?.close();
 		this.socket = undefined;
 		await this.mf?.dispose();
@@ -282,7 +303,25 @@ export class CloudflarePoolWorker implements PoolWorker {
 			this.socket.addEventListener("message", this.messageListener);
 		} else if (event === "error") {
 			this.errorListener = (e: Event) => {
-				(callback as (maybeError: unknown) => void)("error" in e ? e.error : e);
+				const errorValue = "error" in e ? e.error : e;
+				// When `tolerateWorkerShutdownErrors` is enabled and the pool
+				// worker is tearing down (or has finished tearing down),
+				// suppress socket `error` events. The workerd subprocess can
+				// segfault during teardown (see
+				// https://github.com/cloudflare/workerd/issues/6763); the
+				// resulting `error` event would otherwise be surfaced to vitest
+				// as a fatal `[vitest-pool]: Worker cloudflare-pool emitted
+				// error` and fail an otherwise-passing run with exit 1.
+				if (this.stopping && this.tolerateWorkerShutdownErrors) {
+					this.debug(
+						"ignoring socket `error` during teardown (tolerateWorkerShutdownErrors=true; see cloudflare/workerd#6763): %s",
+						errorValue instanceof Error
+							? errorValue.stack ?? errorValue.message
+							: errorValue
+					);
+					return;
+				}
+				(callback as (maybeError: unknown) => void)(errorValue);
 			};
 			this.socket.addEventListener("error", this.errorListener);
 		} else if (event === "exit") {
