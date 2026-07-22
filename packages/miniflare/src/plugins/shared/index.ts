@@ -279,7 +279,11 @@ export {
 export type {
 	MiniflareBinding,
 	MiniflareExport,
+	MiniflareFetcherBinding,
+	MiniflareNodeHandlerBinding,
+	MiniflareServiceBinding,
 	MiniflareTrigger,
+	MiniflareWorkerBinding,
 	ParsedDevConfig,
 	ParsedInstanceOptions,
 	ParsedLegacyConfig,

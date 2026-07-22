@@ -8,9 +8,8 @@ import {
 	type Worker_Module,
 } from "../../runtime";
 import { CoreBindings, SharedBindings } from "../../workers";
-import { normaliseDurableObject } from "../do";
 import {
-	namespaceEntries,
+	getEnvBindingsOfType,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
@@ -19,8 +18,11 @@ import {
 	LOCAL_EXPLORER_DISK,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
-import type { PluginWorkerOptions } from "..";
-import type { DurableObjectClassNames, WorkflowOption } from "../shared";
+import type {
+	DurableObjectClassNames,
+	ParsedWorkerOptions,
+	WorkflowOption,
+} from "../shared";
 import type {
 	BindingIdMap,
 	ExplorerWorkerOpts,
@@ -307,13 +309,13 @@ export function constructExplorerBindingMap(
  * Maps worker names to their resource bindings with IDs.
  */
 export function constructExplorerWorkerOpts(
-	allWorkerOpts: PluginWorkerOptions[],
+	allWorkerOpts: ParsedWorkerOptions[],
 	durableObjectClassNames: DurableObjectClassNames
 ): ExplorerWorkerOpts {
 	const result: ExplorerWorkerOpts = {};
 
 	for (const workerOpts of allWorkerOpts) {
-		const workerName = workerOpts.core.name;
+		const workerName = workerOpts.config.name;
 		if (!workerName) {
 			continue;
 		}
@@ -322,56 +324,48 @@ export function constructExplorerWorkerOpts(
 			d1: [],
 			r2: [],
 			do: [],
-			workflows: [],
 		};
 
-		for (const [bindingName, ns] of namespaceEntries(
-			workerOpts.kv.kvNamespaces
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"kv"
 		)) {
-			bindings.kv.push({ id: ns.id, bindingName });
+			bindings.kv.push({ id: binding.id ?? bindingName, bindingName });
 		}
 
-		for (const [bindingName, db] of namespaceEntries(
-			workerOpts.d1.d1Databases
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"d1"
 		)) {
-			bindings.d1.push({ id: db.id, bindingName });
+			bindings.d1.push({ id: binding.id ?? bindingName, bindingName });
 		}
 
-		for (const [bindingName, bucket] of namespaceEntries(
-			workerOpts.r2.r2Buckets
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"r2"
 		)) {
-			bindings.r2.push({ id: bucket.id, bindingName });
+			bindings.r2.push({ id: binding.name ?? bindingName, bindingName });
 		}
 
-		for (const [bindingName, designator] of Object.entries(
-			workerOpts.do.durableObjects ?? {}
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"durable-object"
 		)) {
-			const doInfo = normaliseDurableObject(designator);
-			const scriptName = doInfo.scriptName ?? workerName;
+			const className = binding.exportName;
+			const scriptName = binding.workerName;
 			const serviceName = getUserServiceName(scriptName);
-			const uniqueKey = `${scriptName}-${doInfo.className}`;
+			const uniqueKey = `${scriptName}-${className}`;
 
-			const classMap = durableObjectClassNames.get(serviceName);
-			const classInfo = classMap?.get(doInfo.className);
-			const useSqlite = classInfo?.enableSql ?? false;
+			const useSqlite =
+				durableObjectClassNames.get(serviceName)?.get(className)?.enableSql ??
+				false;
 
 			bindings.do.push({
 				id: uniqueKey,
 				bindingName,
-				className: doInfo.className,
+				className,
 				scriptName,
 				useSqlite,
-			});
-		}
-
-		for (const [bindingName, workflow] of Object.entries(
-			workerOpts.workflows.workflows ?? {}
-		)) {
-			bindings.workflows.push({
-				id: workflow.name,
-				bindingName,
-				className: workflow.className,
-				scriptName: workflow.scriptName ?? workerName,
 			});
 		}
 

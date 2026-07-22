@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import { builtinModules } from "node:module";
+import { type ModuleType } from "@cloudflare/config";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { TextDecoder, TextEncoder } from "node:util";
@@ -432,6 +433,51 @@ export function convertModuleDefinition(
 			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
 	}
 }
+/**
+ * Converts a single manifest module (config `ModuleType` + inline contents)
+ * into a workerd `Worker_Module`. The module `name` is used as-is (manifest
+ * names are already relative module identifiers).
+ */
+export function convertManifestModule(
+	name: string,
+	type: ModuleType,
+	contents: string | Uint8Array
+): Worker_Module {
+	switch (type) {
+		case "esm":
+			return createJavaScriptModule(
+				contentsToString(contents),
+				name,
+				name,
+				"ESModule"
+			);
+		case "cjs":
+			return createJavaScriptModule(
+				contentsToString(contents),
+				name,
+				name,
+				"CommonJS"
+			);
+		case "wasm":
+			return { name, wasm: contentsToArray(contents) };
+		case "text":
+			return { name, text: contentsToString(contents) };
+		case "data":
+			return { name, data: contentsToArray(contents) };
+		case "json":
+			return { name, json: contentsToString(contents) };
+		case "python":
+			return { name, pythonModule: contentsToString(contents) };
+		case "python-requirement":
+			return { name, pythonRequirement: contentsToString(contents) };
+		case "sourcemap":
+			assert.fail("Unreachable: sourcemap modules are unsupported");
+		default:
+			const exhaustive: never = type;
+			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
+	}
+}
+
 function convertWorkerModule(mod: Worker_Module): ModuleDefinition {
 	const path = mod.name;
 	assert(path !== undefined);

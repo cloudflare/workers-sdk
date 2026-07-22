@@ -46,10 +46,7 @@ import {
 	WORKER_LOADER_PLUGIN,
 	WORKER_LOADER_PLUGIN_NAME,
 } from "./worker-loader";
-import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
-import type { OptionalZodTypeOf } from "../shared";
 import type { ValueOf } from "../workers";
-import type { z } from "zod";
 
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
@@ -62,7 +59,6 @@ export const PLUGINS = {
 	[HYPERDRIVE_PLUGIN_NAME]: HYPERDRIVE_PLUGIN,
 	[RATELIMIT_PLUGIN_NAME]: RATELIMIT_PLUGIN,
 	[ASSETS_PLUGIN_NAME]: ASSETS_PLUGIN,
-	[WORKFLOWS_PLUGIN_NAME]: WORKFLOWS_PLUGIN,
 	[PIPELINES_PLUGIN_NAME]: PIPELINE_PLUGIN,
 	[SECRET_STORE_PLUGIN_NAME]: SECRET_STORE_PLUGIN,
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
@@ -88,100 +84,10 @@ export const PLUGINS = {
 };
 export type Plugins = typeof PLUGINS;
 
-// Note, we used to define these as...
-//
-// ```ts
-// // A | B | ... => A & B & ... (https://stackoverflow.com/a/50375286)
-// export type UnionToIntersection<U> = (
-//   U extends any ? (k: U) => void : never
-// ) extends (k: infer I) => void
-//   ? I
-//   : never;
-// export type WorkerOptions = UnionToIntersection<
-//   z.infer<ValueOf<Plugins>["options"]>
-// >;
-// export type SharedOptions = UnionToIntersection<
-//   z.infer<Exclude<ValueOf<Plugins>["sharedOptions"], undefined>>
-// >;
-// ```
-//
-// This caused issues when we tried to make `CORE_PLUGIN.options` an
-// intersection of a union type (source options) and a regular object type.
-//
-// ```ts
-// type A = { x: 1 } | { x: 2 };
-// type B = A & { y: string };
-// type C = UnionToIntersection<B>;
-// ```
-//
-// In the above example, `C` is typed `{x: 1} & {x: 2} & {y: string}` which
-// simplifies to `never`. Using `[U] extends [any]` instead of `U extends any`
-// disables distributivity of union types over conditional types, which types
-// `C` `({x: 1} | {x: 2}) & {y: string}` as expected. Unfortunately, this
-// appears to prevent us assigning to any `MiniflareOptions` instances after
-// creation, which we do quite a lot in tests.
-//
-// Considering we don't have too many plugins, we now just define these types
-// manually, which has the added benefit of faster type checking.
-export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
-	z.input<typeof CACHE_PLUGIN.options> &
-	z.input<typeof D1_PLUGIN.options> &
-	z.input<typeof DURABLE_OBJECTS_PLUGIN.options> &
-	z.input<typeof KV_PLUGIN.options> &
-	z.input<typeof QUEUES_PLUGIN.options> &
-	z.input<typeof R2_PLUGIN.options> &
-	z.input<typeof HYPERDRIVE_PLUGIN.options> &
-	z.input<typeof RATELIMIT_PLUGIN.options> &
-	z.input<typeof EMAIL_PLUGIN.options> &
-	z.input<typeof ASSETS_PLUGIN.options> &
-	z.input<typeof WORKFLOWS_PLUGIN.options> &
-	z.input<typeof PIPELINE_PLUGIN.options> &
-	z.input<typeof SECRET_STORE_PLUGIN.options> &
-	z.input<typeof ANALYTICS_ENGINE_PLUGIN.options> &
-	z.input<typeof AI_PLUGIN.options> &
-	z.input<typeof AGENT_MEMORY_PLUGIN.options> &
-	z.input<typeof AI_SEARCH_PLUGIN.options> &
-	z.input<typeof WEBSEARCH_PLUGIN.options> &
-	z.input<typeof BROWSER_RENDERING_PLUGIN.options> &
-	z.input<typeof DISPATCH_NAMESPACE_PLUGIN.options> &
-	z.input<typeof IMAGES_PLUGIN.options> &
-	z.input<typeof STREAM_PLUGIN.options> &
-	z.input<typeof VECTORIZE_PLUGIN.options> &
-	z.input<typeof VPC_NETWORKS_PLUGIN.options> &
-	z.input<typeof VPC_SERVICES_PLUGIN.options> &
-	z.input<typeof MTLS_PLUGIN.options> &
-	z.input<typeof HELLO_WORLD_PLUGIN.options> &
-	z.input<typeof FLAGSHIP_PLUGIN.options> &
-	z.input<typeof ARTIFACTS_PLUGIN.options> &
-	z.input<typeof WORKER_LOADER_PLUGIN.options> &
-	z.input<typeof MEDIA_PLUGIN.options> &
-	z.input<typeof VERSION_METADATA_PLUGIN.options>;
-
-export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
-	z.input<typeof CACHE_PLUGIN.sharedOptions> &
-	z.input<typeof D1_PLUGIN.sharedOptions> &
-	z.input<typeof DURABLE_OBJECTS_PLUGIN.sharedOptions> &
-	z.input<typeof KV_PLUGIN.sharedOptions> &
-	z.input<typeof R2_PLUGIN.sharedOptions> &
-	z.input<typeof WORKFLOWS_PLUGIN.sharedOptions> &
-	z.input<typeof SECRET_STORE_PLUGIN.sharedOptions> &
-	z.input<typeof ANALYTICS_ENGINE_PLUGIN.sharedOptions> &
-	z.input<typeof IMAGES_PLUGIN.sharedOptions> &
-	z.input<typeof STREAM_PLUGIN.sharedOptions> &
-	z.input<typeof HELLO_WORLD_PLUGIN.sharedOptions>;
-
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,
 	ValueOf<Plugins>,
 ][];
-
-// ===== `Miniflare` Validated Options =====
-export type PluginWorkerOptions = {
-	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
-};
-export type PluginSharedOptions = {
-	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
-};
 
 export * from "./shared";
 
@@ -191,14 +97,11 @@ export {
 	CORE_PLUGIN,
 	CORE_PLUGIN_NAME,
 	SERVICE_ENTRY,
-	CoreOptionsSchema,
-	CoreSharedOptionsSchema,
 	compileModuleRules,
 	getGlobalServices,
 	ModuleRuleTypeSchema,
 	ModuleRuleSchema,
 	ModuleDefinitionSchema,
-	SourceOptionsSchema,
 	ProxyClient,
 	getFreshSourceMapSupport,
 	kCurrentWorker,
@@ -212,7 +115,6 @@ export type {
 	ModuleRule,
 	ModuleDefinition,
 	GlobalServicesOptions,
-	SourceOptions,
 	NodeJSCompatMode,
 } from "./core";
 export type * from "./core/proxy/types";
