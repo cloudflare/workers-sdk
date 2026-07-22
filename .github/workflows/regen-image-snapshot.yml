@@ -1,0 +1,69 @@
+
+name: Regenerate get-platform-proxy image snapshot (one-off)
+
+# One-off workflow to regenerate the stale Image bindings snapshot in
+# fixtures/get-platform-proxy after the resolveFit()/resolveImagesBindingFit()
+# split (see fetcher.ts). Uploads the new PNG as an artifact for manual
+# review instead of auto-committing it - image snapshots should get a human
+# look before landing, since this exact investigation started from a
+# snapshot catching a real bug.
+#
+# Safe to delete this workflow file once the snapshot has been reviewed and
+# committed.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regen-snapshot:
+    timeout-minutes: 15
+    name: Regenerate Image bindings snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Delete stale snapshot
+        run: rm -f fixtures/get-platform-proxy/tests/__image_snapshots__/get-platform-proxy-env-test-ts-get-platform-proxy-env-correctly-obtains-functioning-image-bindings-2-snap.png
+
+      - name: Regenerate snapshot (jest-image-snapshot writes a new baseline when none exists)
+        # Goes through turbo (like real CI's `pnpm run test:ci`) rather than
+        # calling vitest directly, so wrangler (and other fixture deps) get
+        # built first via turbo's task graph. A direct `vitest run` skips
+        # that build step, which fails with "Failed to resolve entry for
+        # package wrangler" since its dist/ doesn't exist yet.
+        #
+        # --update is required in addition to unsetting CI: jest-image-snapshot
+        # does its own CI detection via the `is-ci` package, which also checks
+        # GITHUB_ACTIONS=true (always set by the runner, unaffected by unsetting
+        # CI below), and vitest defaults updateSnapshot to 'none' in CI. Without
+        # --update the matcher refuses to write a new baseline at all.
+        run: pnpm run test:ci --filter="./fixtures/get-platform-proxy" -- -t "correctly obtains functioning Image bindings" --update
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          # jest-image-snapshot refuses to write a fresh baseline when CI is
+          # truthy (to avoid accidentally creating baselines in normal CI
+          # runs) - this workflow's whole purpose is to write one, so unset it.
+          CI: ""
+
+      - name: Upload regenerated snapshot artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: regenerated-image-snapshot
+          path: fixtures/get-platform-proxy/tests/__image_snapshots__/
+          if-no-files-found: error
