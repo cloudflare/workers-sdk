@@ -118,8 +118,12 @@ describe("Images binding local transforms", () => {
 	});
 
 	test("gravity:top crops from the top of the image", async ({ expect }) => {
+		// 100x25 (4:1) is wider than the 200x100 (2:1) source, so fit:cover
+		// must match on width and crop the vertical excess - unlike 50x25
+		// (same 2:1 aspect as the source), which needs no crop at all and
+		// makes gravity a no-op.
 		const { body } = await transform({
-			width: 50,
+			width: 100,
 			height: 25,
 			fit: "cover",
 			gravity: "top",
@@ -132,8 +136,10 @@ describe("Images binding local transforms", () => {
 	test("gravity:bottom crops from the bottom of the image", async ({
 		expect,
 	}) => {
+		// See gravity:top above for why 100x25 (not 50x25) is required to
+		// force a vertical crop that gravity can actually affect.
 		const { body } = await transform({
-			width: 50,
+			width: 100,
 			height: 25,
 			fit: "cover",
 			gravity: "bottom",
