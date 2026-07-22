@@ -95,7 +95,7 @@ patchedDependencies:
   "toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch"
   "postal-mime": "patches/postal-mime.patch"
   "youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
-  "@netlify/build-info": "patches/@netlify__build-info.patch"
+  "@netlify/build-info@10.5.1": "patches/@netlify__build-info@10.5.1.patch"
   "buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -140,3 +140,12 @@ catalog:
   # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
   # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
   "@cloudflare/vitest-pool-workers": "0.13.3"
+
+catalogs:
+  # This old-node catalog is for packages pinned to older versions because newer releases require a Node.js version higher than the minimum we support.
+  # Ideally we should try to remove packages from this catalog whenever we bump our minimum supported version.
+  old-node:
+    # @netlify/build-info >10.5.1 (11.1.0) requires a Node.js version (>=22.12.0) newer than our
+    # supported minimum (which currently is 22.0.0). Do not bump until our minimum Node.js version is raised.
+    # See: https://npmx.dev/package-code/@netlify/build-info/v/11.1.0/package.json#L69
+    "@netlify/build-info": "10.5.1"
