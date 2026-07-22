@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/deploy-helpers",
-	"version": "0.5.1",
+	"version": "0.6.0",
 	"description": "Internal deploy helpers for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/deploy-helpers#readme",
 	"bugs": {
@@ -25,6 +25,10 @@
 		"./context": {
 			"import": "./dist/context.mjs",
 			"types": "./dist/context.d.mts"
+		},
+		"./create-worker-upload-form": {
+			"import": "./dist/create-worker-upload-form.mjs",
+			"types": "./dist/create-worker-upload-form.d.mts"
 		}
 	},
 	"scripts": {

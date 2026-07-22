@@ -1,5 +1,25 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.18.7
+
+### Patch Changes
+
+- [#14713](https://github.com/cloudflare/workers-sdk/pull/14713) [`de34449`](https://github.com/cloudflare/workers-sdk/commit/de344496160da4c2b9aacc34e8a2fc25684437f8) Thanks [@allocsys](https://github.com/allocsys)! - Fix a non-ASCII path failure during the Miniflare WebSocket handshake: the `MF-Vitest-Worker-Data` header embedded the raw `process.cwd()` value, which threw a Latin-1/ASCII header encoding error when the workspace path contained non-ASCII characters (e.g. CJK characters) on Windows. The value is now percent-encoded on write and decoded on read, matching the fix applied to the module fallback redirect response.
+
+- [#14713](https://github.com/cloudflare/workers-sdk/pull/14713) [`de34449`](https://github.com/cloudflare/workers-sdk/commit/de344496160da4c2b9aacc34e8a2fc25684437f8) Thanks [@allocsys](https://github.com/allocsys)! - Fix a runtime start-up failure ("No such module \"cloudflare:test-internal\"") when the project workspace path contains non-ASCII characters (e.g. CJK characters) on Windows. The module fallback service's redirect response set the target file path directly as an HTTP `Location` header value, but headers are restricted to the Latin-1/ASCII byte range, so any non-ASCII byte in the path caused header construction to throw. Such paths are now percent-encoded (and tagged with a sentinel prefix) before being used as a header value, and decoded again only for the values we encoded, so the round-trip is unambiguous and a workspace path containing a literal `%` is left untouched instead of being mis-decoded.
+
+- [#14739](https://github.com/cloudflare/workers-sdk/pull/14739) [`5eac99e`](https://github.com/cloudflare/workers-sdk/commit/5eac99ec34858f3943f71bf132aa1ba2f5ea3415) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Support testing Streaming Tail Workers in Vitest Pool Workers.
+
+- [#14763](https://github.com/cloudflare/workers-sdk/pull/14763) [`538e867`](https://github.com/cloudflare/workers-sdk/commit/538e8678b32aee68636f60b7a84f35f3375a501b) Thanks [@gianghungtien](https://github.com/gianghungtien)! - Treat `webSocketMessage()`, `webSocketClose()` and `webSocketError()` as optional Durable Object handlers
+
+  The pool wraps each Durable Object class and installs a prototype method for every default handler before user code is loaded, so `workerd` always sees a handler and always dispatches. When the wrapped class didn't actually define one, the wrapper threw `` <ClassName> exported by <path> does not define a `webSocketClose()` method ``, even though deployed Workers silently ignore these events for classes that omit them. A hibernatable Durable Object defining only `webSocketMessage()` would log an uncaught `TypeError` on every close.
+
+  These three handlers now no-op when absent, matching deployed behaviour. `alarm()` is unchanged and still reports a missing handler, since `workerd` rejects `setAlarm()` up front on a class without one.
+
+- Updated dependencies [[`42af66d`](https://github.com/cloudflare/workers-sdk/commit/42af66d00b255945989726387acf46409b4c5eb3), [`a0a091b`](https://github.com/cloudflare/workers-sdk/commit/a0a091b9246c5e10408f57342b3275659c9655e3), [`f03b108`](https://github.com/cloudflare/workers-sdk/commit/f03b10854d983c353fd4f3d6621b5ed716379ba3), [`deae171`](https://github.com/cloudflare/workers-sdk/commit/deae1719b276b9ce2bb67a36671b5cf806ef3801), [`0df3d43`](https://github.com/cloudflare/workers-sdk/commit/0df3d432353f39b6a90c340c268c83a7ac0b7d5c), [`d83a476`](https://github.com/cloudflare/workers-sdk/commit/d83a476bab53f0266a67790242f855aab6e0468c), [`4e92e32`](https://github.com/cloudflare/workers-sdk/commit/4e92e32e1f1c27dcd463bcf38ed79e0d1b046679), [`d1d6945`](https://github.com/cloudflare/workers-sdk/commit/d1d69450decfb319a2bbf61e4c042b0511ab2618), [`4815711`](https://github.com/cloudflare/workers-sdk/commit/4815711fb5f896a5aa9221b6bddb9ef78c3f288d), [`a0c8bb1`](https://github.com/cloudflare/workers-sdk/commit/a0c8bb118e04eebba870a6fbe9f5041095b04637), [`a50f73a`](https://github.com/cloudflare/workers-sdk/commit/a50f73a06bb7b078268ce9cebb4d1c16f79a3144), [`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924), [`c82d96b`](https://github.com/cloudflare/workers-sdk/commit/c82d96ba63a3b343b520e781a070889251868d9a), [`34430b3`](https://github.com/cloudflare/workers-sdk/commit/34430b34f468825775377689621e451d730ab0c9), [`f75ae5d`](https://github.com/cloudflare/workers-sdk/commit/f75ae5d02576d82aad4723b9e17ccb26277b69ab)]:
+  - miniflare@4.20260721.0
+  - wrangler@4.113.0
+
 ## 0.18.6
 
 ### Patch Changes

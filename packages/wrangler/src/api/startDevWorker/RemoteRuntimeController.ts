@@ -1,5 +1,8 @@
 import assert from "node:assert";
-import { MissingConfigError } from "@cloudflare/workers-utils";
+import {
+	MissingConfigError,
+	retryOnAPIFailure,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex, type Miniflare } from "miniflare";
 import { WebSocket } from "ws";
@@ -18,7 +21,6 @@ import { logger } from "../../logger";
 import { TRACE_VERSION } from "../../tail/createTail";
 import { realishPrintLogs } from "../../tail/printing";
 import { getAccessHeaders } from "../../user/access";
-import { retryOnAPIFailure } from "../../utils/retry";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
@@ -76,6 +78,7 @@ export class RemoteRuntimeController extends RuntimeController {
 						this.#abortController.signal,
 						props.name
 					),
+				logger,
 				undefined,
 				undefined,
 				this.#abortController.signal
@@ -175,6 +178,7 @@ export class RemoteRuntimeController extends RuntimeController {
 						this.#abortController.signal,
 						props.minimal_mode
 					),
+				logger,
 				undefined,
 				undefined,
 				this.#abortController.signal

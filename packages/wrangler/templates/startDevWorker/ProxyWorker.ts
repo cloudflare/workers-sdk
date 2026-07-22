@@ -1,6 +1,6 @@
 import {
 	createDeferred,
-	DeferredPromise,
+	type DeferredPromise,
 	rewriteUrlInHeaderValue,
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";

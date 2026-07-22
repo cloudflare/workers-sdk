@@ -21,8 +21,9 @@ import {
 	mswZoneHandlers,
 } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { Binding, StartRemoteProxySessionOptions } from "../../api";
+import type { Binding } from "../../api";
 import type { StartDevOptions } from "../../dev";
+import type { StartRemoteProxySessionOptions } from "@cloudflare/remote-bindings";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
@@ -783,13 +784,13 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		});
 		expect(sessionOptions).toBeDefined();
 		assert(sessionOptions);
-		const { auth, ...rest1 } = sessionOptions;
+		const { auth, logger: _logger, ...rest1 } = sessionOptions;
 		expect(rest1).toEqual({
 			complianceRegion: undefined,
 			workerName: "worker",
 		});
 		assert(auth);
-		expect(await unwrapHook(auth, { account_id: undefined })).toEqual({
+		expect(await unwrapHook(auth)).toEqual({
 			accountId: "some-account-id",
 			apiToken: { apiToken: "some-api-token" },
 		});
@@ -827,13 +828,13 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 
 		expect(sessionOptions).toBeDefined();
 		assert(sessionOptions);
-		const { auth: auth2, ...rest2 } = sessionOptions;
+		const { auth: auth2, logger: _logger, ...rest2 } = sessionOptions;
 		expect(rest2).toEqual({
 			complianceRegion: undefined,
 			workerName: "worker",
 		});
 		assert(auth2);
-		expect(await unwrapHook(auth2, { account_id: undefined })).toEqual({
+		expect(await unwrapHook(auth2)).toEqual({
 			accountId: "mock-account-id",
 			apiToken: { apiToken: "some-api-token" },
 		});

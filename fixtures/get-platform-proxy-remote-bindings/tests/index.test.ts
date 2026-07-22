@@ -259,6 +259,8 @@ if (auth) {
 				).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/NOT a valid account id/workers/subdomain/edge-preview) failed.[0m
 
+					  Could not route to /client/v4/accounts/NOT%20a%20valid%20account%20id/workers/subdomain/edge-preview, perhaps your object identifier is invalid? [code: 7003]
+
 					"
 				`);
 			});

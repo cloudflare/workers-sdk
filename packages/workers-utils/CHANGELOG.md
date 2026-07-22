@@ -1,5 +1,19 @@
 # @cloudflare/workers-utils
 
+## 0.28.0
+
+### Minor Changes
+
+- [#14595](https://github.com/cloudflare/workers-sdk/pull/14595) [`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924) Thanks [@colinhacks](https://github.com/colinhacks)! - Recognise nub as a package manager
+
+  wrangler now detects nub — from its `npm_config_user_agent` and an installed `nub` binary — and autoconfig detects nub projects by their `nub.lock`, alongside npm, pnpm, yarn, and bun.
+
+### Patch Changes
+
+- [#14746](https://github.com/cloudflare/workers-sdk/pull/14746) [`a6c214f`](https://github.com/cloudflare/workers-sdk/commit/a6c214fb311215b1ed09b273171b7995033fb7d7) Thanks [@samarth70](https://github.com/samarth70)! - Return a clear error when `observability` is set to `null`
+
+  `validateObservability` guarded only against `undefined`, so a `null` value (valid in JSON/JSONC config) passed the `typeof value === "object"` check and then threw `TypeError: Cannot read properties of null (reading 'enabled')` while validating the config. It now rejects `null` with the same `"observability" should be an object but got null.` diagnostic that the sibling `cache` validator already produces.
+
 ## 0.27.0
 
 ### Minor Changes

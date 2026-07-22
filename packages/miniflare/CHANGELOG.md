@@ -1,5 +1,30 @@
 # miniflare
 
+## 4.20260721.0
+
+### Minor Changes
+
+- [#14742](https://github.com/cloudflare/workers-sdk/pull/14742) [`34430b3`](https://github.com/cloudflare/workers-sdk/commit/34430b34f468825775377689621e451d730ab0c9) Thanks [@pombosilva](https://github.com/pombosilva)! - Add support for redacting sensitive Workflows step output in local dev.
+
+  Steps configured with `sensitive: "output"` now have their output redacted to `[REDACTED]` in step logs and step-output responses when running Workflows locally, matching production behavior. The real value is still passed to downstream steps, and step errors are never redacted.
+
+### Patch Changes
+
+- [#14715](https://github.com/cloudflare/workers-sdk/pull/14715) [`42af66d`](https://github.com/cloudflare/workers-sdk/commit/42af66d00b255945989726387acf46409b4c5eb3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260714.1 | ^5.20260721.1 |
+  | workerd                   | 1.20260714.1  | 1.20260721.1  |
+
+- [#14766](https://github.com/cloudflare/workers-sdk/pull/14766) [`4815711`](https://github.com/cloudflare/workers-sdk/commit/4815711fb5f896a5aa9221b6bddb9ef78c3f288d) Thanks [@gianghungtien](https://github.com/gianghungtien)! - Report the Worker's error for `HEAD` requests instead of an internal JSON parse error
+
+  A Worker that threw on a `HEAD` request (for example `curl -I`) logged `SyntaxError: Unexpected end of JSON input` from miniflare's internals rather than the actual error, and `dispatchFetch()` rejected with that same misleading error. `workerd` drops response bodies for `HEAD` requests, so the serialised error never reached the code that revives it.
+
+  The error is now also carried in a header, which survives `HEAD`, so the original message and source-mapped stack are reported for every method. When no payload is available the reporting degrades to a plain error rather than surfacing a parse failure.
+
 ## 4.20260714.0
 
 ### Minor Changes

@@ -1,17 +1,10 @@
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { assert, beforeEach, describe, it, vi } from "vitest";
+import { http, HttpResponse } from "msw";
+import { assert, beforeEach, describe, it } from "vitest";
 import { startRemoteProxySession } from "../../api";
-import {
-	createPreviewSession,
-	createWorkerPreview,
-} from "../../dev/create-worker-preview";
 import { mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { msw, mswSuccessUserHandlers } from "../helpers/msw";
-vi.mock("../../dev/create-worker-preview", () => ({
-	createPreviewSession: vi.fn(),
-	createWorkerPreview: vi.fn(),
-}));
+import { createFetchResult, msw, mswSuccessUserHandlers } from "../helpers/msw";
 
 mockConsoleMethods();
 
@@ -55,15 +48,26 @@ describe("errors during dev with remote bindings", () => {
 	it("errors triggered when establishing the remote proxy session (after it has been created) are surfaced", async ({
 		expect,
 	}) => {
-		vi.mocked(createPreviewSession).mockResolvedValue({
-			value: "test-session-value",
-			host: "test.workers.dev",
-			name: "test",
-		});
-
-		vi.mocked(createWorkerPreview).mockImplementation(async () => {
-			throw new Error("The remote worker preview failed.");
-		});
+		msw.use(
+			http.get(
+				"*/accounts/test-account-id/workers/subdomain/edge-preview",
+				() =>
+					HttpResponse.json(createFetchResult({ token: "test-session-value" }))
+			),
+			http.get("*/accounts/test-account-id/workers/subdomain", () =>
+				HttpResponse.json(createFetchResult({ subdomain: "test" }))
+			),
+			http.post(
+				"*/accounts/test-account-id/workers/scripts/:scriptName/edge-preview",
+				() =>
+					HttpResponse.json(
+						createFetchResult({}, false, [
+							{ code: 1000, message: "The remote worker preview failed." },
+						]),
+						{ status: 400 }
+					)
+			)
+		);
 
 		let thrownError: Error | undefined;
 
@@ -84,18 +88,12 @@ describe("errors during dev with remote bindings", () => {
 
 		assert(thrownError);
 
-		expect(thrownError).toMatchInlineSnapshot(
-			`[Error: Failed to start the remote proxy session. Failed to obtain a preview token: The remote worker preview failed.]`
+		expect(thrownError.message).toContain(
+			"Failed to start the remote proxy session. Failed to obtain a preview token"
 		);
-
-		expect(thrownError.cause).toMatchInlineSnapshot(`
-			{
-			  "cause": [Error: The remote worker preview failed.],
-			  "data": undefined,
-			  "reason": "Failed to obtain a preview token",
-			  "source": "RemoteRuntimeController",
-			  "type": "error",
-			}
-		`);
+		expect(thrownError.cause).toMatchObject({
+			reason: "Failed to obtain a preview token",
+			type: "error",
+		});
 	});
 });

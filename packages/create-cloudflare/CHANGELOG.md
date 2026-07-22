@@ -1,5 +1,45 @@
 # create-cloudflare
 
+## 2.70.13
+
+### Patch Changes
+
+- [#14659](https://github.com/cloudflare/workers-sdk/pull/14659) [`5cee1d4`](https://github.com/cloudflare/workers-sdk/commit/5cee1d47c3c17e005b990fd51f710f7782005168) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From   | To     |
+  | ----------------- | ------ | ------ |
+  | create-docusaurus | 3.10.1 | 3.10.2 |
+
+- [#14759](https://github.com/cloudflare/workers-sdk/pull/14759) [`947ad34`](https://github.com/cloudflare/workers-sdk/commit/947ad345a550a6bde8a670c855b1e24b48cff211) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.0.6 | 22.0.7 |
+
+- [#14760](https://github.com/cloudflare/workers-sdk/pull/14760) [`9ed6dc2`](https://github.com/cloudflare/workers-sdk/commit/9ed6dc208d09ad3e2e0994d0df1a34cdc9ffb9de) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.16.2 | 0.16.3 |
+
+- [#14534](https://github.com/cloudflare/workers-sdk/pull/14534) [`a330170`](https://github.com/cloudflare/workers-sdk/commit/a330170e8dfbe481a99597b3e07c1438e20f5ebb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve existing Nuxt `modules` when adding Cloudflare configuration
+
+  Scaffolding a Nuxt application whose `nuxt.config.ts` already declares a `modules` array (for example the `ui` starter, which registers `@nuxt/ui` and `@nuxt/eslint`) previously overwrote that array when adding `nitro-cloudflare-dev`, dropping the existing modules and breaking the build. Existing entries are now retained and the Cloudflare module is appended instead.
+
+- [#14790](https://github.com/cloudflare/workers-sdk/pull/14790) [`03ce063`](https://github.com/cloudflare/workers-sdk/commit/03ce063a66e11d14e06e0dba0863cccacad150a0) Thanks [@emily-shen](https://github.com/emily-shen)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To      |
+  | --------------- | ------- | ------- |
+  | create-next-app | 16.2.10 | 16.2.11 |
+
 ## 2.70.12
 
 ### Patch Changes
