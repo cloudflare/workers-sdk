@@ -13,7 +13,7 @@ import {
 } from "../../utils/observability";
 import { getSpanIcon } from "./icons";
 import type { LayoutSpan, Span } from "../../utils/observability";
-import type { JSX } from "react";
+import type { JSX, PointerEvent as ReactPointerEvent } from "react";
 
 interface TraceWaterfallProps {
 	spans: Span[];
@@ -29,7 +29,9 @@ interface TraceWaterfallProps {
 	hideDevRunner?: boolean;
 }
 
-const LABEL_WIDTH = 256; // matches the dashboard's default name-column width
+const DEFAULT_LABEL_WIDTH = 256; // matches the dashboard's default name-column width
+const MIN_LABEL_WIDTH = 160;
+const NAME_WIDTH_KEY = "wobs-waterfall-name-width";
 
 // "Nice" interval values for time markers (from the dashboard).
 const NICE_INTERVALS = [
@@ -116,6 +118,50 @@ export function TraceWaterfall({
 	const [collapsed, setCollapsed] = useState<string[]>([]);
 	const [focusedId, setFocusedId] = useState<string | null>(null);
 	const [hoveredId, setHoveredId] = useState<string | null>(null);
+	// Draggable width of the name column (persisted). Clamped on drag so the
+	// timeline always keeps room; see startResize.
+	const [labelWidth, setLabelWidth] = useState(() => {
+		try {
+			const v = Number(localStorage.getItem(NAME_WIDTH_KEY));
+			return v >= MIN_LABEL_WIDTH ? v : DEFAULT_LABEL_WIDTH;
+		} catch {
+			return DEFAULT_LABEL_WIDTH;
+		}
+	});
+	useEffect(() => {
+		try {
+			localStorage.setItem(NAME_WIDTH_KEY, String(labelWidth));
+		} catch {
+			// ignore
+		}
+	}, [labelWidth]);
+
+	// The observed container width isn't known on first render, so cap the
+	// draggable max against it once available (leave room for the timeline).
+	const maxLabelWidth =
+		width > 0 ? Math.max(MIN_LABEL_WIDTH, width - 200) : 640;
+	const startResize = useCallback(
+		(e: ReactPointerEvent) => {
+			e.preventDefault();
+			const startX = e.clientX;
+			const startW = labelWidth;
+			const onMove = (ev: PointerEvent) => {
+				setLabelWidth(
+					Math.min(
+						Math.max(startW + (ev.clientX - startX), MIN_LABEL_WIDTH),
+						maxLabelWidth
+					)
+				);
+			};
+			const onUp = () => {
+				window.removeEventListener("pointermove", onMove);
+				window.removeEventListener("pointerup", onUp);
+			};
+			window.addEventListener("pointermove", onMove);
+			window.addEventListener("pointerup", onUp);
+		},
+		[labelWidth, maxLabelWidth]
+	);
 
 	const toggleCollapsed = useCallback((layoutId: string) => {
 		setCollapsed((prev) =>
@@ -161,7 +207,7 @@ export function TraceWaterfall({
 		(max, s) => Math.max(max, s.end_ms ?? s.start_ms + s.duration_ms),
 		0
 	);
-	const traceAreaWidth = Math.max(0, width - LABEL_WIDTH);
+	const traceAreaWidth = Math.max(0, width - labelWidth);
 	// Prefer the extent of the laid-out (already-filtered) spans so the axis fits
 	// what's actually rendered; only fall back to the passed trace duration when
 	// there are no spans to measure. Using `max(traceDurationMs, spansEnd)` here
@@ -201,7 +247,10 @@ export function TraceWaterfall({
 			>
 				<div className="flex">
 					{/* ---- name column ---- */}
-					<div style={{ width: LABEL_WIDTH }} className="shrink-0">
+					<div
+						style={{ width: labelWidth }}
+						className="relative shrink-0 border-r border-kumo-fill"
+					>
 						<div className="flex h-[41px] items-center border-b border-kumo-fill px-4 py-2.5">
 							<span className="text-sm font-medium text-kumo-default">
 								Name
@@ -213,7 +262,7 @@ export function TraceWaterfall({
 								role="button"
 								tabIndex={0}
 								className={cn(
-									"h-8 cursor-pointer border-l-2 border-l-transparent transition-colors duration-150",
+									"h-8 cursor-pointer border-l-2 border-l-transparent",
 									isInvocationStart(span) &&
 										"border-t border-dashed border-kumo-line",
 									rowBg(span.span_id)
@@ -230,6 +279,18 @@ export function TraceWaterfall({
 								/>
 							</div>
 						))}
+						{/*
+						 * Drag handle to resize the name column. Rendered last (after
+						 * the rows) so it paints above them via DOM order, without a
+						 * high z-index that would poke through overlay dropdowns.
+						 */}
+						<div
+							role="separator"
+							aria-orientation="vertical"
+							aria-label="Resize name column"
+							onPointerDown={startResize}
+							className="absolute top-0 right-0 h-full w-1.5 translate-x-1/2 cursor-col-resize hover:bg-blue-500/40"
+						/>
 					</div>
 
 					{/* ---- timeline column ---- */}
@@ -265,7 +326,7 @@ export function TraceWaterfall({
 							<div
 								key={span.layoutId}
 								className={cn(
-									"flex h-8 cursor-pointer items-center pl-0.5 transition-colors duration-150",
+									"flex h-8 cursor-pointer items-center pl-0.5",
 									isInvocationStart(span) &&
 										"border-t border-dashed border-kumo-line",
 									rowBg(span.span_id)
@@ -306,7 +367,7 @@ function SpanLabel({
 	return (
 		<div
 			className="relative flex h-full w-full items-center gap-2 overflow-hidden pl-4 font-mono text-sm text-ellipsis whitespace-nowrap"
-			style={{ paddingLeft: 4 + span.depth * 32, maxWidth: LABEL_WIDTH }}
+			style={{ paddingLeft: 4 + span.depth * 32, maxWidth: "100%" }}
 		>
 			{isInvocationStart ? (
 				<span
@@ -331,7 +392,7 @@ function SpanLabel({
 			) : null}
 			<div
 				className={cn(
-					"relative z-10 flex min-w-0 items-center gap-2",
+					"relative flex min-w-0 items-center gap-2",
 					error && "text-red-500"
 				)}
 			>
@@ -399,10 +460,7 @@ function NormalSpanBar({
 				) : null}
 
 				<div
-					className={cn(
-						"relative z-10 flex h-5 items-center rounded-sm",
-						barColor
-					)}
+					className={cn("relative flex h-5 items-center rounded-sm", barColor)}
 					style={{
 						width: `${Math.max(spanWidth, minWidth)}px`,
 						left: `${spanLeft + 2}px`,

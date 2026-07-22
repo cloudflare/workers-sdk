@@ -2,7 +2,6 @@ import {
 	Button,
 	cn,
 	InputGroup,
-	Popover,
 	RefreshButton,
 	Select,
 } from "@cloudflare/kumo";
@@ -10,9 +9,9 @@ import {
 	EyeIcon,
 	EyeSlashIcon,
 	InfoIcon,
+	ListBulletsIcon,
 	MagnifyingGlassIcon,
 	PulseIcon,
-	TrashIcon,
 	XIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -24,6 +23,12 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { ClearButton } from "../../components/observability/ClearButton";
+import { FilterBuilder } from "../../components/observability/FilterBuilder";
+import { InvocationLogs } from "../../components/observability/InvocationLogs";
+import { ObservabilityDisabled } from "../../components/observability/ObservabilityDisabled";
+import { ObservabilityViewSwitcher } from "../../components/observability/ObservabilityViewSwitcher";
+import { QuerySyntaxHint } from "../../components/observability/QuerySyntaxHint";
 import { TraceWaterfall } from "../../components/observability/TraceWaterfall";
 import { ResourceError } from "../../components/ResourceError";
 import {
@@ -42,10 +47,26 @@ import {
 	visibleTraceSpans,
 } from "../../utils/observability";
 import { parseTraceQuery } from "../../utils/observability-query";
+import type { FilterField } from "../../components/observability/FilterBuilder";
 import type { Span, TraceRow } from "../../utils/observability";
+import type { QueryClause } from "../../utils/observability-query";
 import type { JSX } from "react";
 
 const HIDE_DEV_RUNNER_KEY = "wobs-hide-dev-runner";
+
+/** Display labels for the status/type filter dropdowns (excluding the "all" state). */
+const STATUS_LABELS: Record<string, string> = {
+	success: "Success",
+	error: "Errors",
+};
+const KIND_LABELS: Record<string, string> = {
+	http: "HTTP",
+	fetch: "Fetch",
+	d1: "D1",
+	kv: "KV",
+	r2: "R2",
+	do: "Durable Object",
+};
 
 export const Route = createFileRoute("/observability/")({
 	component: ObservabilityView,
@@ -134,26 +155,42 @@ function ObservabilityView(): JSX.Element {
 	}, []);
 	// Session-only dismissal of the "running under Vite dev" notice.
 	const [viteNoticeDismissed, setViteNoticeDismissed] = useState(false);
+	// Traces whose inline log panel is expanded (keyed by traceKey).
+	const [showLogsFor, setShowLogsFor] = useState<Set<string>>(new Set());
+	const toggleLogs = useCallback((key: string) => {
+		setShowLogsFor((prev) => {
+			const next = new Set(prev);
+			if (next.has(key)) {
+				next.delete(key);
+			} else {
+				next.add(key);
+			}
+			return next;
+		});
+	}, []);
 
 	// filters (a simpler version of the dashboard query builder)
 	const [search, setSearch] = useState("");
-	const [debouncedSearch, setDebouncedSearch] = useState("");
+	// The query actually applied to the list. Only updated when the user submits
+	// the search bar (Enter) or clears it — so typing doesn't filter live.
+	const [appliedSearch, setAppliedSearch] = useState("");
 	const [status, setStatus] = useState<"all" | "success" | "error">("all");
 	const [kind, setKind] = useState("all");
-	const [tagKey, setTagKey] = useState("all");
-	const [tagValue, setTagValue] = useState("");
-	const [debouncedTagValue, setDebouncedTagValue] = useState("");
+	// Structured attribute/duration filters built in the filter modal (AND'd
+	// with the search bar's parsed clauses when querying).
+	const [filterClauses, setFilterClauses] = useState<QueryClause[]>([]);
 	const [tagKeys, setTagKeys] = useState<string[]>([]);
 
-	useEffect(() => {
-		const id = setTimeout(() => setDebouncedSearch(search), 300);
-		return () => clearTimeout(id);
-	}, [search]);
+	// True while the user has edited the search bar but not yet submitted it. We
+	// keep the current rows visible so an unsubmitted edit doesn't flash the list.
+	const queryPending = search !== appliedSearch;
 
-	useEffect(() => {
-		const id = setTimeout(() => setDebouncedTagValue(tagValue), 300);
-		return () => clearTimeout(id);
-	}, [tagValue]);
+	// Submit the search bar: apply the typed query to the list.
+	const submitSearch = useCallback(() => setAppliedSearch(search), [search]);
+	const clearSearch = useCallback(() => {
+		setSearch("");
+		setAppliedSearch("");
+	}, []);
 
 	useEffect(() => {
 		void getTagKeys()
@@ -161,19 +198,27 @@ function ObservabilityView(): JSX.Element {
 			.catch(() => setTagKeys([]));
 	}, []);
 
+	// Fields offered by the filter modal: trace duration plus any span attribute
+	// key discovered in the store.
+	const filterFields = useMemo<FilterField[]>(
+		() => [
+			{ key: "duration", label: "Duration (ms)", type: "number" },
+			...tagKeys.map((k) => ({ key: k, label: k, type: "string" as const })),
+		],
+		[tagKeys]
+	);
+
 	const refresh = useCallback(async () => {
 		setLoading(true);
 		setError(null);
 		try {
-			const parsed = parseTraceQuery(debouncedSearch);
+			const parsed = parseTraceQuery(appliedSearch);
 			setTraces(
 				await listTraces({
 					search: parsed.text,
 					status: parsed.status ?? status,
 					kind: parsed.kind ?? kind,
-					tagKey,
-					tagValue: debouncedTagValue,
-					clauses: parsed.clauses,
+					clauses: [...parsed.clauses, ...filterClauses],
 				})
 			);
 			setDisabled(false);
@@ -188,7 +233,7 @@ function ObservabilityView(): JSX.Element {
 		} finally {
 			setLoading(false);
 		}
-	}, [debouncedSearch, status, kind, tagKey, debouncedTagValue]);
+	}, [appliedSearch, status, kind, filterClauses]);
 
 	const handleClear = useCallback(async () => {
 		setClearing(true);
@@ -307,12 +352,10 @@ function ObservabilityView(): JSX.Element {
 
 	return (
 		<div className="flex h-full flex-col">
-			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
+			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-6">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<span className="pl-1 text-sm leading-tight font-semibold text-kumo-default">
-						Traces
-					</span>
+					<ObservabilityViewSwitcher current="traces" />
 					<span className="pl-1 text-[11px] leading-tight text-kumo-subtle">
 						{traces.length} trace{traces.length === 1 ? "" : "s"}
 					</span>
@@ -332,17 +375,11 @@ function ObservabilityView(): JSX.Element {
 				>
 					{hideDevRunner ? "Show Vite runner spans" : "Hide Vite runner spans"}
 				</Button>
-				<Button
-					size="sm"
-					variant="ghost"
-					icon={TrashIcon}
-					title="Clear all captured traces and events"
+				<ClearButton
+					onConfirm={handleClear}
 					loading={clearing}
-					disabled={clearing || traces.length === 0}
-					onClick={() => void handleClear()}
-				>
-					Clear
-				</Button>
+					disabled={traces.length === 0}
+				/>
 				<RefreshButton
 					size="sm"
 					aria-label="Refresh traces"
@@ -352,7 +389,7 @@ function ObservabilityView(): JSX.Element {
 			</header>
 
 			{showViteNotice ? (
-				<div className="flex items-center gap-2 border-b border-kumo-fill bg-blue-500/10 px-4 py-2 text-xs text-kumo-default">
+				<div className="flex items-center gap-2 border-b border-kumo-fill bg-blue-500/10 px-6 py-2 text-xs text-kumo-default">
 					<InfoIcon size={14} className="shrink-0 text-blue-500" />
 					<span className="flex-1">
 						{hideDevRunner
@@ -375,7 +412,7 @@ function ObservabilityView(): JSX.Element {
 			) : null}
 
 			{/* filter bar — a simpler version of the dashboard query builder */}
-			<div className="flex items-center gap-2 border-b border-kumo-fill px-4 py-2">
+			<div className="flex items-center gap-2 border-b border-kumo-fill px-6 py-3">
 				<InputGroup size="sm" className="flex-1">
 					<div className="flex items-center justify-center pl-2 text-kumo-subtle">
 						<MagnifyingGlassIcon size={14} />
@@ -384,7 +421,12 @@ function ObservabilityView(): JSX.Element {
 						aria-label="Search traces"
 						value={search}
 						onChange={(e) => setSearch(e.currentTarget.value)}
-						placeholder="Search, or query e.g. status:error kind:d1 dur:>100 db.query.text:orders"
+						onKeyDown={(e) => {
+							if (e.key === "Enter") {
+								submitSearch();
+							}
+						}}
+						placeholder="Search, or query e.g. status:error kind:d1 dur:>100 db.query.text:orders — press Enter"
 						className="w-full bg-transparent px-2 text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
 					/>
 					{search ? (
@@ -392,299 +434,247 @@ function ObservabilityView(): JSX.Element {
 							shape="square"
 							variant="ghost"
 							aria-label="Clear search"
-							onClick={() => setSearch("")}
+							onClick={clearSearch}
 						>
 							<XIcon size={12} />
 						</InputGroup.Button>
 					) : null}
 				</InputGroup>
-				<QuerySyntaxHint />
-				<Select
-					aria-label="Filter by status"
-					value={status}
-					onValueChange={(v) => setStatus(String(v) as typeof status)}
-				>
-					<Select.Option value="all">All statuses</Select.Option>
-					<Select.Option value="success">Success</Select.Option>
-					<Select.Option value="error">Errors</Select.Option>
-				</Select>
-				<Select
-					aria-label="Filter by type"
-					value={kind}
-					onValueChange={(v) => setKind(String(v))}
-				>
-					<Select.Option value="all">All types</Select.Option>
-					<Select.Option value="http">HTTP</Select.Option>
-					<Select.Option value="fetch">Fetch</Select.Option>
-					<Select.Option value="d1">D1</Select.Option>
-					<Select.Option value="kv">KV</Select.Option>
-					<Select.Option value="r2">R2</Select.Option>
-					<Select.Option value="do">Durable Object</Select.Option>
-				</Select>
-				<Select
-					aria-label="Filter by tag"
-					value={tagKey}
-					onValueChange={(v) => {
-						const key = String(v);
-						setTagKey(key);
-						if (key === "all") {
-							setTagValue("");
+				<QuerySyntaxHint variant="traces" />
+				<label className="flex items-center gap-1.5 text-xs text-kumo-subtle">
+					Status
+					<Select
+						aria-label="Filter by status"
+						value={status}
+						onValueChange={(v) => setStatus(String(v) as typeof status)}
+						renderValue={(v) =>
+							v === "all" ? (
+								<span className="text-kumo-subtle">Any</span>
+							) : (
+								STATUS_LABELS[String(v)]
+							)
 						}
-					}}
-				>
-					<Select.Option value="all">All tags</Select.Option>
-					{tagKeys.map((k) => (
-						<Select.Option key={k} value={k}>
-							{k}
-						</Select.Option>
-					))}
-				</Select>
-				{tagKey !== "all" ? (
-					<InputGroup size="sm" className="w-40">
-						<input
-							aria-label={`${tagKey} value`}
-							value={tagValue}
-							onChange={(e) => setTagValue(e.currentTarget.value)}
-							placeholder={`${tagKey} value…`}
-							className="w-full bg-transparent px-2 text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
-						/>
-					</InputGroup>
-				) : null}
+					>
+						<Select.Option value="all">Any status</Select.Option>
+						<Select.Option value="success">Success</Select.Option>
+						<Select.Option value="error">Errors</Select.Option>
+					</Select>
+				</label>
+				<label className="flex items-center gap-1.5 text-xs text-kumo-subtle">
+					Type
+					<Select
+						aria-label="Filter by type"
+						value={kind}
+						onValueChange={(v) => setKind(String(v))}
+						renderValue={(v) =>
+							v === "all" ? (
+								<span className="text-kumo-subtle">Any</span>
+							) : (
+								KIND_LABELS[String(v)]
+							)
+						}
+					>
+						<Select.Option value="all">Any type</Select.Option>
+						<Select.Option value="http">HTTP</Select.Option>
+						<Select.Option value="fetch">Fetch</Select.Option>
+						<Select.Option value="d1">D1</Select.Option>
+						<Select.Option value="kv">KV</Select.Option>
+						<Select.Option value="r2">R2</Select.Option>
+						<Select.Option value="do">Durable Object</Select.Option>
+					</Select>
+				</label>
+				<FilterBuilder
+					fields={filterFields}
+					clauses={filterClauses}
+					onApply={setFilterClauses}
+					itemNoun="traces"
+				/>
 			</div>
 
-			<div className="flex-1 overflow-y-auto">
+			<div className="flex-1 overflow-y-auto px-6 py-5">
 				{error ? (
-					<div className="mx-4 mt-3 rounded bg-red-500/10 px-3 py-2 text-xs text-red-500">
+					<div className="mb-3 rounded bg-red-500/10 px-3 py-2 text-xs text-red-500">
 						{error}
 					</div>
 				) : null}
 
-				{traces.length === 0 && !loading ? (
-					<EmptyState
-						title="No traces yet"
-						body="Send some requests to your Worker and each trace will show up here."
-						inline
-					/>
-				) : (
-					<table className="w-full border-collapse text-sm">
-						<thead>
-							<tr className="border-y border-kumo-fill text-left text-xs text-kumo-subtle">
-								<th className="py-2 pr-3 pl-4 font-medium">
-									<span className="inline-flex items-center gap-1">
-										Timestamp <span className="text-blue-500">↓</span>
-									</span>
-								</th>
-								<th className="py-2 pr-3 font-medium">Operation</th>
-								<th className="w-48 py-2 pr-3 font-medium">
-									<span
-										className="inline-flex cursor-help items-center gap-1"
-										title="Local durations are approximate — they reflect this machine and the local simulator, not production, and are not a basis for cost or billing estimates."
-									>
-										Duration (ms)
-										<InfoIcon size={12} className="text-kumo-subtle" />
-									</span>
-								</th>
-								<th className="w-20 py-2 pr-3 font-medium">Spans</th>
-								<th className="w-24 py-2 pr-3 font-medium">Errors</th>
-							</tr>
-						</thead>
-						<tbody>
-							{traces.map((t) => {
-								const key = traceKey(t);
-								const isSel = expanded.has(key);
-								const spans = spansByTrace[key] ?? [];
-								const err = isError(t);
-								const dur = t.duration_ms ?? 0;
-								// For the expanded detail, count/time only the spans actually
-								// shown (runner plumbing hidden), so the header doesn't report
-								// e.g. an alarm's ~15s runner-dispatch span as its duration.
-								const shownSpans =
-									isSel && spans.length
-										? visibleTraceSpans(spans, hideDevRunner)
-										: spans;
-								const shownDur =
-									isSel && spans.length ? traceExtentMs(shownSpans) : dur;
-								const shownCount =
-									isSel && spans.length
-										? shownSpans.length
-										: (t.span_count ?? spans.length);
-								return (
-									<Fragment key={key}>
-										<tr
-											onClick={() => void toggleTrace(t)}
-											className={cn(
-												"cursor-pointer border-b border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5",
-												isSel && "bg-blue-100 dark:bg-blue-900/30"
-											)}
+				<div className="overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
+					{traces.length === 0 && !loading && !queryPending ? (
+						search ||
+						status !== "all" ||
+						kind !== "all" ||
+						filterClauses.length > 0 ? (
+							<EmptyState
+								title="No matching traces"
+								body="No traces match your current search or filters. Try clearing them."
+								inline
+							/>
+						) : (
+							<EmptyState
+								title="No traces yet"
+								body="Send some requests to your Worker and each trace will show up here."
+								inline
+							/>
+						)
+					) : (
+						<table className="w-full border-collapse text-sm">
+							<thead>
+								<tr className="border-b border-kumo-fill text-left text-xs text-kumo-subtle">
+									<th className="py-2 pr-3 pl-4 font-medium">
+										<span className="inline-flex items-center gap-1">
+											Timestamp <span className="text-blue-500">↓</span>
+										</span>
+									</th>
+									<th className="py-2 pr-3 font-medium">Operation</th>
+									<th className="w-48 py-2 pr-3 font-medium">
+										<span
+											className="inline-flex cursor-help items-center gap-1"
+											title="Local durations are approximate — they reflect this machine and the local simulator, not production, and are not a basis for cost or billing estimates."
 										>
-											<td className="py-2.5 pr-3 pl-4">
-												<div className="flex items-center gap-2.5">
-													<span
-														className={cn(
-															"h-4 w-[3px] shrink-0 rounded-full",
-															err ? "bg-red-500" : "bg-blue-500"
-														)}
-													/>
-													<span className="font-mono text-xs text-kumo-default underline decoration-kumo-line decoration-dotted underline-offset-2">
-														{t.created_at ?? ""}
-														<span className="text-kumo-subtle"> UTC</span>
-													</span>
-												</div>
-											</td>
-											<td className="py-2.5 pr-3 font-mono text-xs text-kumo-default">
-												{t.name ? operationLabel(t) : t.trace_id.slice(0, 16)}
-											</td>
-											<td className="py-2.5 pr-3">
-												<div className="flex flex-col gap-1">
-													<div className="text-sm tabular-nums">
-														<span className="text-kumo-default">
-															{splitDuration(dur).value}
-														</span>
-														<span className="text-kumo-subtle">
-															{splitDuration(dur).unit}
-														</span>
-													</div>
-													<div className="h-1 w-24 overflow-hidden rounded-full bg-kumo-fill">
-														<div
-															className="h-full rounded-full bg-blue-500"
-															style={{
-																width: `${Math.max((dur / maxDuration) * 100, 2)}%`,
-															}}
-														/>
-													</div>
-												</div>
-											</td>
-											<td className="py-2.5 pr-3 text-xs text-kumo-default tabular-nums">
-												{t.span_count ?? "-"}
-											</td>
-											<td className="py-2.5 pr-3 text-xs tabular-nums">
-												{(t.error_count ?? 0) > 0 ? (
-													<span className="text-red-500">{t.error_count}</span>
-												) : (
-													<span className="text-kumo-subtle">-</span>
+											Duration (ms)
+											<InfoIcon size={12} className="text-kumo-subtle" />
+										</span>
+									</th>
+									<th className="w-20 py-2 pr-3 font-medium">Spans</th>
+									<th className="w-24 py-2 pr-3 font-medium">Errors</th>
+								</tr>
+							</thead>
+							<tbody>
+								{traces.map((t) => {
+									const key = traceKey(t);
+									const isSel = expanded.has(key);
+									const spans = spansByTrace[key] ?? [];
+									const err = isError(t);
+									const dur = t.duration_ms ?? 0;
+									// For the expanded detail, count/time only the spans actually
+									// shown (runner plumbing hidden), so the header doesn't report
+									// e.g. an alarm's ~15s runner-dispatch span as its duration.
+									const shownSpans =
+										isSel && spans.length
+											? visibleTraceSpans(spans, hideDevRunner)
+											: spans;
+									const shownDur =
+										isSel && spans.length ? traceExtentMs(shownSpans) : dur;
+									const shownCount =
+										isSel && spans.length
+											? shownSpans.length
+											: (t.span_count ?? spans.length);
+									return (
+										<Fragment key={key}>
+											<tr
+												onClick={() => void toggleTrace(t)}
+												className={cn(
+													"cursor-pointer border-b border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5",
+													isSel && "bg-blue-100 dark:bg-blue-900/30"
 												)}
-											</td>
-										</tr>
-										{isSel && spans.length > 0 ? (
-											<tr className="bg-black/[0.02] dark:bg-white/[0.02]">
-												<td
-													colSpan={5}
-													className="border-b border-kumo-fill p-4"
-												>
-													<div className="mb-2 flex items-baseline gap-2">
-														<span className="font-mono text-sm font-semibold text-kumo-default">
-															{t.name ? operationLabel(t) : t.trace_id}
-														</span>
-														<span className="font-mono text-[11px] text-kumo-subtle">
-															{t.trace_id.slice(0, 16)}
-														</span>
-														<span className="text-[11px] text-kumo-subtle">
-															· {formatDuration(shownDur)} · {shownCount} spans
+											>
+												<td className="py-2.5 pr-3 pl-4">
+													<div className="flex items-center gap-2.5">
+														<span
+															className={cn(
+																"h-4 w-[3px] shrink-0 rounded-full",
+																err ? "bg-red-500" : "bg-blue-500"
+															)}
+														/>
+														<span className="font-mono text-xs text-kumo-default underline decoration-kumo-line decoration-dotted underline-offset-2">
+															{t.created_at ?? ""}
+															<span className="text-kumo-subtle"> UTC</span>
 														</span>
 													</div>
-													<TraceWaterfall
-														key={key}
-														spans={spans}
-														rootSpanId={t.root_span_id}
-														traceDurationMs={shownDur}
-														invocationRootIds={invocationRootsByTrace[key]}
-														hideDevRunner={hideDevRunner}
-													/>
+												</td>
+												<td className="py-2.5 pr-3 font-mono text-xs text-kumo-default">
+													{t.name ? operationLabel(t) : t.trace_id.slice(0, 16)}
+												</td>
+												<td className="py-2.5 pr-3">
+													<div className="flex flex-col gap-1">
+														<div className="text-sm tabular-nums">
+															<span className="text-kumo-default">
+																{splitDuration(dur).value}
+															</span>
+															<span className="text-kumo-subtle">
+																{splitDuration(dur).unit}
+															</span>
+														</div>
+														<div className="h-1 w-24 overflow-hidden rounded-full bg-kumo-fill">
+															<div
+																className="h-full rounded-full bg-blue-500"
+																style={{
+																	width: `${Math.max((dur / maxDuration) * 100, 2)}%`,
+																}}
+															/>
+														</div>
+													</div>
+												</td>
+												<td className="py-2.5 pr-3 text-xs text-kumo-default tabular-nums">
+													{t.span_count ?? "-"}
+												</td>
+												<td className="py-2.5 pr-3 text-xs tabular-nums">
+													{(t.error_count ?? 0) > 0 ? (
+														<span className="text-red-500">
+															{t.error_count}
+														</span>
+													) : (
+														<span className="text-kumo-subtle">-</span>
+													)}
 												</td>
 											</tr>
-										) : null}
-									</Fragment>
-								);
-							})}
-						</tbody>
-					</table>
-				)}
-			</div>
-		</div>
-	);
-}
-
-/**
- * A small "?" popover explaining the search bar's `key:value` query language.
- * The syntax mirrors (a subset of) the Workers Observability dashboard's query
- * builder — see utils/observability-query.ts for the parser.
- */
-function QuerySyntaxHint(): JSX.Element {
-	return (
-		<Popover>
-			<Popover.Trigger
-				render={
-					<Button
-						size="sm"
-						shape="square"
-						variant="ghost"
-						icon={InfoIcon}
-						aria-label="Query syntax help"
-					/>
-				}
-			/>
-			<Popover.Content side="bottom" align="end" className="max-w-xs">
-				<div className="text-xs font-semibold text-kumo-default">
-					Query syntax
+											{isSel && spans.length > 0 ? (
+												<tr className="bg-black/[0.02] dark:bg-white/[0.02]">
+													<td
+														colSpan={5}
+														className="border-b border-kumo-fill p-4"
+													>
+														<div className="mb-2 flex items-center gap-2">
+															<span className="font-mono text-sm font-semibold text-kumo-default">
+																{t.name ? operationLabel(t) : t.trace_id}
+															</span>
+															<span className="font-mono text-[11px] text-kumo-subtle">
+																{t.trace_id.slice(0, 16)}
+															</span>
+															<span className="text-[11px] text-kumo-subtle">
+																· {formatDuration(shownDur)} · {shownCount}{" "}
+																spans
+															</span>
+															<div className="flex-1" />
+															<Button
+																size="sm"
+																variant={
+																	showLogsFor.has(key) ? "secondary" : "ghost"
+																}
+																icon={ListBulletsIcon}
+																aria-pressed={showLogsFor.has(key)}
+																title="Show all logs for this invocation"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	toggleLogs(key);
+																}}
+															>
+																{showLogsFor.has(key)
+																	? "Hide logs"
+																	: "Show logs"}
+															</Button>
+														</div>
+														<TraceWaterfall
+															key={key}
+															spans={spans}
+															rootSpanId={t.root_span_id}
+															traceDurationMs={shownDur}
+															invocationRootIds={invocationRootsByTrace[key]}
+															hideDevRunner={hideDevRunner}
+														/>
+														{showLogsFor.has(key) ? (
+															<InvocationLogs traceId={t.trace_id} />
+														) : null}
+													</td>
+												</tr>
+											) : null}
+										</Fragment>
+									);
+								})}
+							</tbody>
+						</table>
+					)}
 				</div>
-				<p className="mt-1 text-xs text-kumo-subtle">
-					Combine <code>key:value</code> terms (matched with AND). This is a
-					subset of the Workers Observability dashboard syntax.
-				</p>
-				<ul className="mt-2 space-y-1 text-xs text-kumo-default">
-					<li>
-						<code>status:error</code> or <code>status:success</code>
-					</li>
-					<li>
-						<code>kind:</code>
-						{" http | fetch | d1 | kv | r2 | do"}
-					</li>
-					<li>
-						<code>dur:&gt;100</code> — duration in ms (
-						<code>&gt; &gt;= &lt; &lt;=</code>)
-					</li>
-					<li>
-						<code>db.query.text:orders</code> — any attribute key
-					</li>
-					<li>Bare words become free-text search.</li>
-				</ul>
-			</Popover.Content>
-		</Popover>
-	);
-}
-
-/**
- * Shown when observability capture is off (opt-in). Capture is enabled by
- * setting the `X_LOCAL_OBSERVABILITY=true` environment variable and restarting
- * the dev server; there is no in-UI toggle while the feature is opt-in.
- */
-function ObservabilityDisabled(): JSX.Element {
-	return (
-		<div className="flex h-full flex-col">
-			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-4">
-				<PulseIcon size={18} className="text-kumo-subtle" />
-				<span className="text-sm font-semibold text-kumo-default">
-					Observability
-				</span>
-			</header>
-			<div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-				<PulseIcon size={28} className="mb-2 text-kumo-subtle" />
-				<h3 className="text-sm font-semibold text-kumo-default">
-					Observability capture is off
-				</h3>
-				<p className="mt-1 max-w-md text-xs text-kumo-subtle">
-					Local observability is opt-in for now. To record traces, spans, and
-					logs from your Worker, restart your dev server with the{" "}
-					<code className="font-mono">X_LOCAL_OBSERVABILITY</code> environment
-					variable set:
-				</p>
-				<pre className="mt-3 max-w-md overflow-x-auto rounded bg-kumo-tint px-3 py-2 text-left font-mono text-xs text-kumo-default">
-					X_LOCAL_OBSERVABILITY=true wrangler dev
-				</pre>
-				<p className="mt-2 max-w-md text-xs text-kumo-subtle">
-					(or <code className="font-mono">X_LOCAL_OBSERVABILITY=true</code>{" "}
-					before <code className="font-mono">vite dev</code>)
-				</p>
 			</div>
 		</div>
 	);
@@ -706,9 +696,9 @@ function EmptyState({
 				inline ? "py-16" : "h-full"
 			)}
 		>
-			<PulseIcon size={28} className="mb-2 text-kumo-subtle" />
-			<h3 className="text-sm font-semibold text-kumo-default">{title}</h3>
-			<p className="mt-1 max-w-md text-xs text-kumo-subtle">{body}</p>
+			<PulseIcon size={32} className="mb-3 text-kumo-subtle" />
+			<h3 className="text-base font-semibold text-kumo-default">{title}</h3>
+			<p className="mt-2 max-w-md text-sm text-kumo-subtle">{body}</p>
 		</div>
 	);
 }

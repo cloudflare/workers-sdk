@@ -1,5 +1,5 @@
 import { observabilityClear, observabilityQuery } from "../api";
-import type { QueryClause } from "./observability-query";
+import type { ClauseOp, QueryClause } from "./observability-query";
 
 /**
  * The Observability store's only read endpoint is `POST /local/observability/query`
@@ -348,6 +348,131 @@ const TRACE_LIST_HEAD = `SELECT s.trace_id, s.span_id AS root_span_id, s.name, s
 		(SELECT COUNT(DISTINCT v.service) FROM spans v WHERE v.trace_id = s.trace_id AND v.service IS NOT NULL) AS service_count
 	FROM spans s`;
 
+/** A ready-to-AND SQL fragment plus its bound parameters, or null to skip. */
+export interface SqlFragment {
+	sql: string;
+	params: unknown[];
+}
+
+const NUMERIC_OPS: ReadonlySet<ClauseOp> = new Set([
+	"=",
+	"!=",
+	">",
+	">=",
+	"<",
+	"<=",
+]);
+
+/**
+ * WHERE fragment for a numeric clause on the trace's total duration. Only
+ * numeric comparators apply; non-numeric ops (or non-numeric values) are
+ * skipped by returning null.
+ */
+export function durationClauseSql(c: QueryClause): SqlFragment | null {
+	if (!NUMERIC_OPS.has(c.op)) {
+		return null;
+	}
+	const n = Number(c.value);
+	if (Number.isNaN(n)) {
+		return null;
+	}
+	return {
+		sql: `(SELECT MAX(d.start_ms + COALESCE(d.duration_ms, 0)) - MIN(d.start_ms) FROM spans d WHERE d.trace_id = s.trace_id) ${c.op} ?`,
+		params: [n],
+	};
+}
+
+/**
+ * WHERE fragment for an attribute clause on a trace, matched against any span's
+ * `attributes` JSON via `json_each`. Honours the full operator set: substring
+ * (`~`/`!~`), prefix (`^`), equality (`=`/`!=`), and presence (`exists`/
+ * `!exists`). Negating operators use a `NOT IN` sub-select. Numeric comparators
+ * are not meaningful on string attributes and return null.
+ */
+export function traceAttrClauseSql(c: QueryClause): SqlFragment | null {
+	const negate = c.op === "!~" || c.op === "!=" || c.op === "!exists";
+	const inOp = negate ? "NOT IN" : "IN";
+
+	if (c.op === "exists" || c.op === "!exists") {
+		return {
+			sql: `s.trace_id ${inOp} (SELECT sp.trace_id FROM spans sp, json_each(json(sp.attributes)) j WHERE j.key = ?)`,
+			params: [c.field],
+		};
+	}
+
+	const v = c.value.trim();
+	if (!v) {
+		return null;
+	}
+	let valPred: string;
+	let param: string;
+	switch (c.op) {
+		case "~":
+		case "!~":
+			valPred = "j.value LIKE ?";
+			param = `%${v}%`;
+			break;
+		case "^":
+			valPred = "j.value LIKE ?";
+			param = `${v}%`;
+			break;
+		case "=":
+		case "!=":
+			valPred = "j.value = ?";
+			param = v;
+			break;
+		default:
+			return null;
+	}
+	return {
+		sql: `s.trace_id ${inOp} (SELECT sp.trace_id FROM spans sp, json_each(json(sp.attributes)) j WHERE j.key = ? AND ${valPred})`,
+		params: [c.field, param],
+	};
+}
+
+/**
+ * WHERE fragment for a clause on a concrete log column (e.g. `l.operation`,
+ * `sp.service`). `col` comes from a fixed internal map, never user input, so
+ * interpolating it is safe. Honours substring/prefix/equality/presence ops.
+ */
+export function logColumnClauseSql(
+	col: string,
+	c: QueryClause
+): SqlFragment | null {
+	if (c.op === "exists") {
+		return { sql: `${col} IS NOT NULL`, params: [] };
+	}
+	if (c.op === "!exists") {
+		return { sql: `${col} IS NULL`, params: [] };
+	}
+	const v = c.value.trim();
+	if (!v) {
+		return null;
+	}
+	switch (c.op) {
+		case "~":
+			return { sql: `${col} LIKE ?`, params: [`%${v}%`] };
+		case "!~":
+			return { sql: `${col} NOT LIKE ?`, params: [`%${v}%`] };
+		case "^":
+			return { sql: `${col} LIKE ?`, params: [`${v}%`] };
+		case "=":
+			return { sql: `${col} = ?`, params: [v] };
+		case "!=":
+			return { sql: `${col} != ?`, params: [v] };
+		default:
+			return null;
+	}
+}
+
+/** Log fields the filter modal can target, mapped to their SQL columns. */
+const LOG_CLAUSE_COLUMNS: Record<string, string> = {
+	service: "sp.service",
+	operation: "l.operation",
+	message: "l.message",
+	level: "l.level",
+};
+
 /** Recent traces (most recent first), applying simple filters. */
 export function listTraces(filters: TraceFilters = {}): Promise<TraceRow[]> {
 	const limit = Number(filters.limit ?? 100);
@@ -386,19 +511,17 @@ export function listTraces(filters: TraceFilters = {}): Promise<TraceRow[]> {
 
 	for (const c of filters.clauses ?? []) {
 		if (c.field === "duration") {
-			const n = Number(c.value);
-			if (!Number.isNaN(n)) {
-				// c.op is restricted to a fixed comparator set by the parser.
-				where.push(
-					`(SELECT MAX(d.start_ms + COALESCE(d.duration_ms, 0)) - MIN(d.start_ms) FROM spans d WHERE d.trace_id = s.trace_id) ${c.op} ?`
-				);
-				params.push(n);
+			const fragment = durationClauseSql(c);
+			if (fragment) {
+				where.push(fragment.sql);
+				params.push(...fragment.params);
 			}
 		} else {
-			where.push(
-				"s.trace_id IN (SELECT sp.trace_id FROM spans sp, json_each(json(sp.attributes)) j WHERE j.key = ? AND j.value LIKE ?)"
-			);
-			params.push(c.field, `%${c.value}%`);
+			const fragment = traceAttrClauseSql(c);
+			if (fragment) {
+				where.push(fragment.sql);
+				params.push(...fragment.params);
+			}
 		}
 	}
 
@@ -457,6 +580,8 @@ export interface LogEvent {
 	message: string | null;
 	operation: string | null;
 	created_at: string | null;
+	/** Owning worker/service name, resolved from the emitting span. */
+	service: string | null;
 }
 
 export interface EventFilters {
@@ -465,6 +590,8 @@ export interface EventFilters {
 	level?: string;
 	/** substring match on the emitting operation/route. */
 	operation?: string;
+	/** structured clauses from the filter modal (service|operation|message|level). */
+	clauses?: QueryClause[];
 	limit?: number;
 }
 
@@ -475,25 +602,44 @@ export function listEvents(filters: EventFilters = {}): Promise<LogEvent[]> {
 	const params: unknown[] = [];
 
 	if (filters.level && filters.level !== "all") {
-		where.push("level = ?");
+		where.push("l.level = ?");
 		params.push(filters.level);
 	}
 	const op = filters.operation?.trim();
 	if (op) {
-		where.push("operation LIKE ?");
+		where.push("l.operation LIKE ?");
 		params.push(`%${op}%`);
 	}
 	const q = filters.search?.trim();
 	if (q) {
 		const like = `%${q}%`;
-		where.push("(message LIKE ? OR operation LIKE ?)");
-		params.push(like, like);
+		where.push("(l.message LIKE ? OR l.operation LIKE ? OR sp.service LIKE ?)");
+		params.push(like, like, like);
+	}
+
+	// Structured clauses from the filter modal. Fields map to a concrete log
+	// column (operation/message/level) or the emitting span (service), each
+	// honouring the operator chosen in the modal.
+	for (const c of filters.clauses ?? []) {
+		const col = LOG_CLAUSE_COLUMNS[c.field];
+		if (!col) {
+			continue;
+		}
+		const fragment = logColumnClauseSql(col, c);
+		if (fragment) {
+			where.push(fragment.sql);
+			params.push(...fragment.params);
+		}
 	}
 
 	params.push(limit);
 	const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
-	const sql = `SELECT trace_id, span_id, seq, ts_ms, level, message, operation, created_at
-		FROM logs ${whereSql} ORDER BY created_at DESC, seq DESC LIMIT ?`;
+	// The `logs` table has no service column, so resolve the owning worker name
+	// from the emitting span (matched by trace_id + span_id).
+	const sql = `SELECT l.trace_id, l.span_id, l.seq, l.ts_ms, l.level, l.message, l.operation, l.created_at, sp.service AS service
+		FROM logs l
+		LEFT JOIN spans sp ON sp.trace_id = l.trace_id AND sp.span_id = l.span_id
+		${whereSql} ORDER BY l.created_at DESC, l.seq DESC LIMIT ?`;
 	return runQuery<LogEvent>(sql, params);
 }
 

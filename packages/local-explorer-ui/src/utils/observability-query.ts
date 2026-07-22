@@ -8,13 +8,91 @@
  * Any bare words (or quoted "phrases") become free-text search.
  */
 
-/** A single structured clause parsed from the trace query bar. */
+/**
+ * The operator set offered by the filter builder, mirroring the production
+ * Workers Observability query builder (`QueryOperation`). String keys get
+ * substring/prefix/equality operators; numeric keys get comparators; presence
+ * operators apply to attribute keys that may be absent.
+ */
+export type ClauseOp =
+	| "~" // contains       (LIKE %v%)
+	| "!~" // does not contain
+	| "="
+	| "!="
+	| "^" // starts with     (LIKE v%)
+	| ">"
+	| ">="
+	| "<"
+	| "<="
+	| "exists"
+	| "!exists";
+
+/** The value types a filterable field can have (local data is string/number). */
+export type ClauseType = "string" | "number";
+
+/** A single structured clause parsed from the query bar or built in the modal. */
 export interface QueryClause {
-	/** "duration" (numeric, on the trace) or a span attribute key. */
+	/** "duration" (numeric, on the trace) or a span attribute / log column key. */
 	field: string;
-	/** comparator; "=" means substring match for attributes. */
-	op: ">" | ">=" | "<" | "<=" | "=";
+	/** comparator; see {@link ClauseOp}. */
+	op: ClauseOp;
 	value: string;
+}
+
+/** Metadata for a single operator: label, applicable types, value requirement. */
+export interface ClauseOperator {
+	op: ClauseOp;
+	label: string;
+	types: ReadonlyArray<ClauseType>;
+	/** Whether the operator takes a value (presence operators do not). */
+	needsValue: boolean;
+}
+
+/** All operators, in display order (mirrors the dashboard's operator list). */
+export const CLAUSE_OPERATORS: ReadonlyArray<ClauseOperator> = [
+	{ op: "~", label: "contains", types: ["string"], needsValue: true },
+	{ op: "!~", label: "does not contain", types: ["string"], needsValue: true },
+	{ op: "=", label: "equals", types: ["string", "number"], needsValue: true },
+	{
+		op: "!=",
+		label: "does not equal",
+		types: ["string", "number"],
+		needsValue: true,
+	},
+	{ op: "^", label: "starts with", types: ["string"], needsValue: true },
+	{ op: ">", label: "greater than", types: ["number"], needsValue: true },
+	{ op: ">=", label: "greater or equal", types: ["number"], needsValue: true },
+	{ op: "<", label: "less than", types: ["number"], needsValue: true },
+	{ op: "<=", label: "less or equal", types: ["number"], needsValue: true },
+	{ op: "exists", label: "exists", types: ["string"], needsValue: false },
+	{
+		op: "!exists",
+		label: "does not exist",
+		types: ["string"],
+		needsValue: false,
+	},
+];
+
+/** Operators applicable to a given field type, in display order. */
+export function operatorsForType(
+	type: ClauseType
+): ReadonlyArray<ClauseOperator> {
+	return CLAUSE_OPERATORS.filter((o) => o.types.includes(type));
+}
+
+/** The default operator for a field type (contains for strings, > for numbers). */
+export function defaultOpForType(type: ClauseType): ClauseOp {
+	return type === "number" ? ">" : "~";
+}
+
+/** Human-readable label for an operator (e.g. "contains", ">="). */
+export function clauseOpLabel(op: ClauseOp): string {
+	return CLAUSE_OPERATORS.find((o) => o.op === op)?.label ?? op;
+}
+
+/** Whether an operator requires a value input. */
+export function clauseOpNeedsValue(op: ClauseOp): boolean {
+	return CLAUSE_OPERATORS.find((o) => o.op === op)?.needsValue ?? true;
 }
 
 const COMPARATORS = [">=", "<=", ">", "<", "="] as const;
@@ -96,7 +174,8 @@ export function parseTraceQuery(input: string): ParsedTraceQuery {
 				break;
 			}
 			default:
-				result.clauses.push({ field: kv.key, op: "=", value: kv.value });
+				// Bare `attr:value` from the search bar is a substring match.
+				result.clauses.push({ field: kv.key, op: "~", value: kv.value });
 		}
 	}
 
