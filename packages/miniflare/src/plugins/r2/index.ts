@@ -1,15 +1,14 @@
 import fs from "node:fs/promises";
 import SCRIPT_R2_BUCKET_OBJECT from "worker:r2/bucket";
 import SCRIPT_R2_PUBLIC from "worker:r2/public";
-import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getRemoteProxyConnectionString,
 	getUserBindingServiceName,
-	namespaceEntries,
-	namespaceKeys,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -20,27 +19,8 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
+import type { ParsedWorkerOptions, Plugin } from "../shared";
 
-export const R2OptionsSchema = z.object({
-	r2Buckets: z
-		.union([
-			z.record(
-				z.string(),
-				z.union([
-					z.string(),
-					z.object({
-						id: z.string(),
-						remoteProxyConnectionString: z
-							.custom<RemoteProxyConnectionString>()
-							.optional(),
-					}),
-				])
-			),
-			z.string().array(),
-		])
-		.optional(),
-});
 export const R2_PLUGIN_NAME = "r2";
 const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
 const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
@@ -54,15 +34,15 @@ const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 };
 
 export function getR2PublicService(
-	allWorkerOpts: { r2?: z.infer<typeof R2OptionsSchema> }[]
+	allWorkerOpts: ParsedWorkerOptions[]
 ): Service | undefined {
 	const publicBucketIds = new Set<string>();
 	for (const worker of allWorkerOpts) {
-		for (const [, bucket] of namespaceEntries(worker.r2?.r2Buckets)) {
-			if (bucket.remoteProxyConnectionString !== undefined) {
+		for (const [name, bucket] of getEnvBindingsOfType(worker.config, "r2")) {
+			if (getRemoteProxyConnectionString(bucket, worker.dev) !== undefined) {
 				continue;
 			}
-			publicBucketIds.add(bucket.id);
+			publicBucketIds.add(bucket.name ?? name);
 		}
 	}
 	if (publicBucketIds.size === 0) {
@@ -84,41 +64,49 @@ export function getR2PublicService(
 	};
 }
 
-export const R2_PLUGIN: Plugin<typeof R2OptionsSchema> = {
-	options: R2OptionsSchema,
+export const R2_PLUGIN: Plugin = {
 	bindingTypeDescription: "R2 bucket",
 	getBindings(options) {
-		const buckets = namespaceEntries(options.r2Buckets);
-		return buckets.map<Worker_Binding>(([name, bucket]) => ({
-			name,
-			r2Bucket: bucket.remoteProxyConnectionString
-				? {
-						name: R2_REMOTE_SERVICE_NAME,
-						props: buildRemoteProxyProps(
-							bucket.remoteProxyConnectionString,
-							name
-						),
-					}
-				: {
-						name: getUserBindingServiceName(
-							R2_BUCKET_SERVICE_PREFIX,
-							bucket.id
-						),
-					},
-		}));
+		return getEnvBindingsOfType(options.config, "r2").map<Worker_Binding>(
+			([name, bucket]) => {
+				const id = bucket.name ?? name;
+				const remoteProxyConnectionString = getRemoteProxyConnectionString(
+					bucket,
+					options.dev
+				);
+				return {
+					name,
+					r2Bucket: remoteProxyConnectionString
+						? {
+								name: R2_REMOTE_SERVICE_NAME,
+								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+							}
+						: {
+								name: getUserBindingServiceName(R2_BUCKET_SERVICE_PREFIX, id),
+							},
+				};
+			}
+		);
 	},
 	getNodeBindings(options) {
-		const buckets = namespaceKeys(options.r2Buckets);
 		return Object.fromEntries(
-			buckets.map((name) => [name, new ProxyNodeBinding()])
+			getEnvBindingsOfType(options.config, "r2").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
 		);
 	},
 	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		const buckets = namespaceEntries(options.r2Buckets);
+		const buckets = getEnvBindingsOfType(options.config, "r2");
 
 		const services: Service[] = [];
 		let hasRemote = false;
-		for (const [, { id, remoteProxyConnectionString }] of buckets) {
+		for (const [name, bucket] of buckets) {
+			const id = bucket.name ?? name;
+			const remoteProxyConnectionString = getRemoteProxyConnectionString(
+				bucket,
+				options.dev
+			);
 			if (remoteProxyConnectionString) {
 				hasRemote = true;
 			} else {

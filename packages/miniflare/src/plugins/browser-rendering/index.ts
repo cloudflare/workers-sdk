@@ -15,88 +15,79 @@ import {
 	resolveBuildId,
 } from "@puppeteer/browsers";
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
-import { z } from "zod";
 import { kVoid } from "../../runtime";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	getUserBindingServiceName,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import type { Service } from "../../runtime";
 import type { Log } from "../../shared";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
+import type { Plugin } from "../shared";
 import type { InstalledBrowser, InstallOptions } from "@puppeteer/browsers";
-
-const BrowserRenderingSchema = z.object({
-	binding: z.string(),
-	remoteProxyConnectionString: z
-		.custom<RemoteProxyConnectionString>()
-		.optional(),
-	headful: z.boolean().optional(),
-});
-
-export const BrowserRenderingOptionsSchema = z.object({
-	browserRendering: BrowserRenderingSchema.optional(),
-});
 
 export const BROWSER_RENDERING_PLUGIN_NAME = "browser-rendering";
 const BROWSER_RENDERING_REMOTE_SERVICE_NAME = `${BROWSER_RENDERING_PLUGIN_NAME}:remote`;
 
-export const BROWSER_RENDERING_PLUGIN: Plugin<
-	typeof BrowserRenderingOptionsSchema
-> = {
-	options: BrowserRenderingOptionsSchema,
+export const BROWSER_RENDERING_PLUGIN: Plugin = {
 	bindingTypeDescription: "Browser Rendering",
 	async getBindings(options) {
-		if (!options.browserRendering) {
-			return [];
-		}
-
-		return [
-			{
-				name: options.browserRendering.binding,
-				service: options.browserRendering.remoteProxyConnectionString
-					? {
-							name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
-							props: buildRemoteProxyProps(
-								options.browserRendering.remoteProxyConnectionString,
-								options.browserRendering.binding
-							),
-						}
-					: {
-							name: getUserBindingServiceName(
-								BROWSER_RENDERING_PLUGIN_NAME,
-								"service"
-							),
-						},
-			},
-		];
+		return getEnvBindingsOfType(options.config, "browser").map(
+			([name, binding]) => {
+				const remoteProxyConnectionString = getRemoteProxyConnectionString(
+					binding,
+					options.dev
+				);
+				return {
+					name,
+					service: remoteProxyConnectionString
+						? {
+								name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
+								props: buildRemoteProxyProps(
+									remoteProxyConnectionString,
+									name
+								),
+							}
+						: {
+								name: getUserBindingServiceName(
+									BROWSER_RENDERING_PLUGIN_NAME,
+									"service"
+								),
+							},
+				};
+			}
+		);
 	},
-	getNodeBindings(options: z.infer<typeof BrowserRenderingOptionsSchema>) {
-		if (!options.browserRendering) {
-			return {};
-		}
-		return {
-			[options.browserRendering.binding]: new ProxyNodeBinding(),
-		};
+	getNodeBindings(options) {
+		return Object.fromEntries(
+			getEnvBindingsOfType(options.config, "browser").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
+		);
 	},
 	async getServices({ options }) {
-		if (!options.browserRendering) {
-			return [];
-		}
+		const services: Service[] = [];
 
-		if (options.browserRendering.remoteProxyConnectionString) {
-			return [
-				{
+		for (const [, binding] of getEnvBindingsOfType(options.config, "browser")) {
+			const remoteProxyConnectionString = getRemoteProxyConnectionString(
+				binding,
+				options.dev
+			);
+
+			if (remoteProxyConnectionString) {
+				services.push({
 					name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
 					worker: remoteProxyClientWorker(),
-				},
-			];
-		}
+				});
+				continue;
+			}
 
-		return [
-			{
+			services.push({
 				name: getUserBindingServiceName(
 					BROWSER_RENDERING_PLUGIN_NAME,
 					"service"
@@ -127,8 +118,10 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 					],
 					durableObjectStorage: { inMemory: kVoid },
 				},
-			},
-		];
+			});
+		}
+
+		return services;
 	},
 };
 

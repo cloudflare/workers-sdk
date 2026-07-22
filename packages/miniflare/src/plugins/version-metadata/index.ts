@@ -1,47 +1,36 @@
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
+import { getEnvBindingsOfType } from "../shared";
 import type { Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 export const VERSION_METADATA_PLUGIN_NAME = "version-metadata";
 
-export const VersionMetadataOptionsSchema = z.object({
-	versionMetadata: z.string().optional(),
-});
-
-export const VERSION_METADATA_PLUGIN: Plugin<
-	typeof VersionMetadataOptionsSchema
-> = {
-	options: VersionMetadataOptionsSchema,
+export const VERSION_METADATA_PLUGIN: Plugin = {
 	async getBindings(options) {
-		if (!options.versionMetadata) {
-			return [];
-		}
+		return getEnvBindingsOfType(
+			options.config,
+			"version-metadata"
+		).map<Worker_Binding>(([name]) => {
+			const id = randomUUID();
+			const tag = "";
+			const timestamp = new Date().toISOString();
 
-		const id = randomUUID();
-		const tag = "";
-		const timestamp = new Date().toISOString();
-
-		const bindings: Worker_Binding[] = [
-			{
-				name: options.versionMetadata,
+			return {
+				name,
 				json: JSON.stringify({ id, tag, timestamp }),
-			},
-		];
-		return bindings;
+			};
+		});
 	},
-	getNodeBindings(options: z.infer<typeof VersionMetadataOptionsSchema>) {
-		if (!options.versionMetadata) {
-			return {};
-		}
+	getNodeBindings(options) {
+		return Object.fromEntries(
+			getEnvBindingsOfType(options.config, "version-metadata").map(([name]) => {
+				const id = randomUUID();
+				const tag = "";
+				const timestamp = new Date().toISOString();
 
-		const id = randomUUID();
-		const tag = "";
-		const timestamp = new Date().toISOString();
-
-		return {
-			[options.versionMetadata]: { id, tag, timestamp },
-		};
+				return [name, { id, tag, timestamp }];
+			})
+		);
 	},
 	async getServices() {
 		return [];

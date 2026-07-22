@@ -1,46 +1,27 @@
 import SCRIPT_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespace";
 import SCRIPT_DISPATCH_NAMESPACE_PROXY from "worker:dispatch-namespace/dispatch-namespace-proxy";
-import { z } from "zod";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
 import type { Worker_Binding } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-export const DispatchNamespaceOptionsSchema = z.object({
-	dispatchNamespaces: z
-		.record(
-			z.string(),
-			z.object({
-				namespace: z.string(),
-				remoteProxyConnectionString: z
-					.custom<RemoteProxyConnectionString>()
-					.optional(),
-			})
-		)
-		.optional(),
-});
+import type { ParsedWorkerOptions, Plugin } from "../shared";
 
 export const DISPATCH_NAMESPACE_PLUGIN_NAME = "dispatch-namespace";
 
 // One shared proxy client service for all dispatch namespaces (config via props).
 const DISPATCH_NAMESPACE_REMOTE_SERVICE_NAME = `${DISPATCH_NAMESPACE_PLUGIN_NAME}-proxy:remote`;
 
-export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
-	typeof DispatchNamespaceOptionsSchema
-> = {
-	options: DispatchNamespaceOptionsSchema,
+export const DISPATCH_NAMESPACE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Dispatch namespace",
 	async getBindings(options) {
-		if (!options.dispatchNamespaces) {
-			return [];
-		}
-
-		const bindings = Object.entries(
-			options.dispatchNamespaces
-		).map<Worker_Binding>(([name, config]) => {
+		return getEnvBindingsOfType(
+			options.config,
+			"dispatch-namespace"
+		).map<Worker_Binding>(([name, binding]) => {
 			return {
 				name,
 				wrapped: {
@@ -51,7 +32,7 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 							service: {
 								name: DISPATCH_NAMESPACE_REMOTE_SERVICE_NAME,
 								props: buildRemoteProxyProps(
-									config.remoteProxyConnectionString,
+									getRemoteProxyConnectionString(binding, options.dev),
 									name
 								),
 							},
@@ -60,14 +41,10 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 				},
 			};
 		});
-		return bindings;
 	},
-	getNodeBindings(options: z.infer<typeof DispatchNamespaceOptionsSchema>) {
-		if (!options.dispatchNamespaces) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.dispatchNamespaces).map((name) => [
+			getEnvBindingsOfType(options.config, "dispatch-namespace").map(([name]) => [
 				name,
 				new ProxyNodeBinding(),
 			])
@@ -75,8 +52,7 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 	},
 	async getServices({ options }) {
 		if (
-			!options.dispatchNamespaces ||
-			Object.keys(options.dispatchNamespaces).length === 0
+			getEnvBindingsOfType(options.config, "dispatch-namespace").length === 0
 		) {
 			return [];
 		}
@@ -88,8 +64,12 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			},
 		];
 	},
-	getExtensions({ options }) {
-		if (!options.some((o) => o.dispatchNamespaces)) {
+	getExtensions({ options }: { options: ParsedWorkerOptions[] }) {
+		if (
+			!options.some(
+				(o) => getEnvBindingsOfType(o.config, "dispatch-namespace").length > 0
+			)
+		) {
 			return [];
 		}
 

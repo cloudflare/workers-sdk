@@ -1,18 +1,16 @@
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
-import { z } from "zod";
 import { kVoid } from "../../runtime";
 import {
 	getQueueServiceName,
 	QueueBindings,
-	QueueConsumerOptionsSchema,
-	QueueProducerOptionsSchema,
 	SERVICE_QUEUE_PREFIX,
 	SharedBindings,
 } from "../../workers";
 import { getUserServiceName } from "../core";
 import {
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
-	namespaceKeys,
+	getTriggersOfType,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	SERVICE_DEV_REGISTRY_PROXY,
@@ -23,30 +21,8 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-export const QueuesOptionsSchema = z.object({
-	queueProducers: z
-		.union([
-			z.record(
-				z.string(),
-				QueueProducerOptionsSchema.extend({
-					remoteProxyConnectionString: z
-						.custom<RemoteProxyConnectionString>()
-						.optional(),
-				})
-			),
-			z.string().array(),
-			z.record(z.string(), z.string()),
-		])
-		.optional(),
-	queueConsumers: z
-		.union([
-			z.record(z.string(), QueueConsumerOptionsSchema),
-			z.string().array(),
-		])
-		.optional(),
-});
+import type { ParsedWorkerOptions } from "../../config/schema";
+import type { Plugin } from "../shared";
 
 export const QUEUES_PLUGIN_NAME = "queues";
 const QUEUE_BROKER_OBJECT_CLASS_NAME = "QueueBrokerObject";
@@ -55,20 +31,17 @@ const QUEUE_BROKER_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	className: QUEUE_BROKER_OBJECT_CLASS_NAME,
 };
 
-export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
-	options: QueuesOptionsSchema,
+export const QUEUES_PLUGIN: Plugin = {
 	bindingTypeDescription: "Queue producer",
 	getBindings(options) {
-		const queues = bindingEntries(options.queueProducers);
-		return queues.map<Worker_Binding>(([name, id]) => ({
+		return producerEntries(options).map<Worker_Binding>(([name, id]) => ({
 			name,
 			queue: { name: getQueueServiceName(id) },
 		}));
 	},
 	getNodeBindings(options) {
-		const queues = namespaceKeys(options.queueProducers);
 		return Object.fromEntries(
-			queues.map((name) => [name, new ProxyNodeBinding()])
+			producerEntries(options).map(([name]) => [name, new ProxyNodeBinding()])
 		);
 	},
 	async getServices({
@@ -78,11 +51,13 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		queueConsumers: allQueueConsumers,
 		devRegistryEnabled,
 	}) {
-		const produced = bindingEntries(options.queueProducers).map(([, id]) => id);
+		const produced = producerEntries(options).map(([, id]) => id);
 		// Consumed queues get a broker service even without a local producer so
 		// producers in other dev sessions can reach this process's broker through
 		// the dev registry's debug port.
-		const consumed = namespaceKeys(options.queueConsumers);
+		const consumed = getTriggersOfType(options.config, "queue").map(
+			(trigger) => trigger.name
+		);
 		const queueIds = new Set([...produced, ...consumed]);
 		if (queueIds.size === 0) return [];
 
@@ -161,22 +136,12 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 	},
 };
 
-function bindingEntries(
-	namespaces?:
-		| Record<string, { queueName: string; deliveryDelay?: number }>
-		| string[]
-		| Record<string, string>
+function producerEntries(
+	options: ParsedWorkerOptions
 ): [bindingName: string, id: string][] {
-	if (Array.isArray(namespaces)) {
-		return namespaces.map((bindingName) => [bindingName, bindingName]);
-	} else if (namespaces !== undefined) {
-		return Object.entries(namespaces).map(([name, opts]) => [
-			name,
-			typeof opts === "string" ? opts : opts.queueName,
-		]);
-	} else {
-		return [];
-	}
+	return getEnvBindingsOfType(options.config, "queue").map(
+		([bindingName, binding]) => [bindingName, binding.name ?? bindingName]
+	);
 }
 
 export * from "./errors";

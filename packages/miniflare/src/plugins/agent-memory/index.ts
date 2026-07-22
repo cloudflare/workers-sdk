@@ -1,60 +1,43 @@
-import { z } from "zod";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-const AgentMemoryEntrySchema = z.object({
-	namespace: z.string(),
-	remoteProxyConnectionString: z
-		.custom<RemoteProxyConnectionString>()
-		.optional(),
-});
-
-export const AgentMemoryOptionsSchema = z.object({
-	agentMemory: z.record(z.string(), AgentMemoryEntrySchema).optional(),
-});
+import type { Plugin } from "../shared";
 
 export const AGENT_MEMORY_PLUGIN_NAME = "agent-memory";
 
 const AGENT_MEMORY_SCOPE = "agent-memory";
 const AGENT_MEMORY_REMOTE_SERVICE_NAME = `${AGENT_MEMORY_SCOPE}:remote`;
 
-export const AGENT_MEMORY_PLUGIN: Plugin<typeof AgentMemoryOptionsSchema> = {
-	options: AgentMemoryOptionsSchema,
+export const AGENT_MEMORY_PLUGIN: Plugin = {
 	bindingTypeDescription: "Agent Memory",
 	async getBindings(options) {
-		if (!options.agentMemory) {
-			return [];
-		}
-
-		return Object.entries(options.agentMemory).map(([bindingName, entry]) => ({
-			name: bindingName,
-			service: {
-				name: AGENT_MEMORY_REMOTE_SERVICE_NAME,
-				props: buildRemoteProxyProps(
-					entry.remoteProxyConnectionString,
-					bindingName
-				),
-			},
-		}));
+		return getEnvBindingsOfType(options.config, "agent-memory").map(
+			([name, binding]) => ({
+				name,
+				service: {
+					name: AGENT_MEMORY_REMOTE_SERVICE_NAME,
+					props: buildRemoteProxyProps(
+						getRemoteProxyConnectionString(binding, options.dev),
+						name
+					),
+				},
+			})
+		);
 	},
 	getNodeBindings(options) {
-		if (!options.agentMemory) {
-			return {};
-		}
-
 		return Object.fromEntries(
-			Object.keys(options.agentMemory).map((bindingName) => [
-				bindingName,
+			getEnvBindingsOfType(options.config, "agent-memory").map(([name]) => [
+				name,
 				new ProxyNodeBinding(),
 			])
 		);
 	},
 	async getServices({ options }) {
-		if (!options.agentMemory || Object.keys(options.agentMemory).length === 0) {
+		if (getEnvBindingsOfType(options.config, "agent-memory").length === 0) {
 			return [];
 		}
 
