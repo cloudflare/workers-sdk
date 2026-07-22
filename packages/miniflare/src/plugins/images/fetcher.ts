@@ -11,7 +11,13 @@ type Transform = {
 	rotate?: number;
 	width?: number;
 	height?: number;
+	fit?: RequestInitCfPropertiesImage["fit"];
+	gravity?: RequestInitCfPropertiesImage["gravity"];
+	background?: string;
 };
+
+const NUMERIC_TRANSFORM_KEYS = ["imageIndex", "rotate", "width", "height"];
+const STRING_TRANSFORM_KEYS = ["fit", "background"];
 
 function validateTransforms(inputTransforms: unknown): Transform[] | null {
 	if (!Array.isArray(inputTransforms)) {
@@ -19,14 +25,60 @@ function validateTransforms(inputTransforms: unknown): Transform[] | null {
 	}
 
 	for (const transform of inputTransforms) {
-		for (const key of ["imageIndex", "rotate", "width", "height"]) {
+		for (const key of NUMERIC_TRANSFORM_KEYS) {
 			if (transform[key] !== undefined && typeof transform[key] != "number") {
+				return null;
+			}
+		}
+
+		for (const key of STRING_TRANSFORM_KEYS) {
+			if (transform[key] !== undefined && typeof transform[key] != "string") {
 				return null;
 			}
 		}
 	}
 
 	return inputTransforms as Transform[];
+}
+
+// Cloudflare Images and `cf.image` share the same resize vocabulary, so both
+// fetchers below resolve their options through these.
+
+function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
+	fit: keyof FitEnum;
+	withoutEnlargement?: boolean;
+} {
+	switch (fit) {
+		case "contain":
+			return { fit: "inside" };
+		case "cover":
+			return { fit: "cover" };
+		case "crop":
+			return { fit: "cover", withoutEnlargement: true };
+		case "pad":
+			return { fit: "contain" };
+		case "squeeze":
+			return { fit: "fill" };
+		case "scale-down":
+		default:
+			return { fit: "inside", withoutEnlargement: true };
+	}
+}
+
+function resolveGravity(
+	gravity: RequestInitCfPropertiesImage["gravity"]
+): string | undefined {
+	switch (gravity) {
+		case "left":
+		case "right":
+		case "top":
+		case "bottom":
+			return gravity;
+		case "center":
+			return "centre";
+		default:
+			return undefined;
+	}
 }
 
 // Local Sharp mock for the Images binding (`env.IMAGES`).
@@ -173,8 +225,14 @@ async function runTransform(
 		}
 
 		if (transform.width !== undefined || transform.height !== undefined) {
+			const { fit, withoutEnlargement } = resolveFit(transform.fit);
 			transformer.resize(transform.width || null, transform.height || null, {
-				fit: "contain",
+				fit,
+				withoutEnlargement,
+				position: resolveGravity(transform.gravity),
+				background:
+					transform.background ??
+					(transform.fit === "pad" ? "#ffffff" : undefined),
 			});
 		}
 	}
@@ -247,43 +305,6 @@ function resolveQuality(
 		return NAMED_QUALITIES[quality];
 	}
 	return undefined;
-}
-
-function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
-	fit: keyof FitEnum;
-	withoutEnlargement?: boolean;
-} {
-	switch (fit) {
-		case "contain":
-			return { fit: "inside" };
-		case "cover":
-			return { fit: "cover" };
-		case "crop":
-			return { fit: "cover", withoutEnlargement: true };
-		case "pad":
-			return { fit: "contain" };
-		case "squeeze":
-			return { fit: "fill" };
-		case "scale-down":
-		default:
-			return { fit: "inside", withoutEnlargement: true };
-	}
-}
-
-function resolveGravity(
-	gravity: RequestInitCfPropertiesImage["gravity"]
-): string | undefined {
-	switch (gravity) {
-		case "left":
-		case "right":
-		case "top":
-		case "bottom":
-			return gravity;
-		case "center":
-			return "centre";
-		default:
-			return undefined;
-	}
 }
 
 function formatToMime(format: string | undefined): string | null {
