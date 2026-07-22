@@ -218,10 +218,10 @@ export const WorkerOptionsSchema = z.strictObject({
 export type WorkerOptions = z.input<typeof WorkerOptionsSchema>;
 
 // ---------------------------------------------------------------------------
-// Shared (instance-wide) options
+//  Instance-wide options
 // ---------------------------------------------------------------------------
 
-export const SharedOptionsSchema = z.object({
+export const InstanceOptionsSchema = z.object({
 	// Server
 	host: z.string().optional(),
 	port: z.number().optional(),
@@ -290,13 +290,13 @@ export const SharedOptionsSchema = z.object({
 	unsafeInspectDurableObjects: z.boolean().optional(),
 });
 
-export type SharedOptions = z.input<typeof SharedOptionsSchema>;
+export type InstanceOptions = z.input<typeof InstanceOptionsSchema>;
 
 // ---------------------------------------------------------------------------
-// Top-level Miniflare options
+// Final Miniflare Schema
 // ---------------------------------------------------------------------------
 
-export const MiniflareOptionsSchema = SharedOptionsSchema.extend({
+export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 	workers: z.array(WorkerOptionsSchema),
 });
 
