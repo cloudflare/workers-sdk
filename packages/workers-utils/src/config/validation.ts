@@ -6191,7 +6191,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		return true;
 	}
 
-	if (typeof value !== "object") {
+	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
 			`"${field}" should be an object but got ${JSON.stringify(value)}.`
 		);

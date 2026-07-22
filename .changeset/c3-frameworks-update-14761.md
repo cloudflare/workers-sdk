@@ -6,6 +6,6 @@ Update dependencies of "create-cloudflare"
 
 The following dependency versions have been updated:
 
-| Dependency      | From   | To     |
-| --------------- | ------ | ------ |
-| @angular/create | 22.0.6 | 22.0.7 |
+| Dependency | From   | To     |
+| ---------- | ------ | ------ |
+| nuxi       | 3.36.1 | 3.37.0 |

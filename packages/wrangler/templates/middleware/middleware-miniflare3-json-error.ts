@@ -22,10 +22,20 @@ const jsonError: Middleware = async (request, env, _ctx, middlewareCtx) => {
 		return await middlewareCtx.next(request, env);
 	} catch (e: any) {
 		const error = reduceError(e);
-		return Response.json(error, {
-			status: 500,
-			headers: { "MF-Experimental-Error-Stack": "true" },
-		});
+		const body = JSON.stringify(error);
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+			"MF-Experimental-Error-Stack": "true",
+		};
+		// `workerd` drops response bodies for `HEAD` requests, so also carry the
+		// serialised error in a header. Past roughly 16KB of encoded header the
+		// runtime drops the whole response, so stay well under that; the body
+		// remains the primary channel for every method that keeps one.
+		const encoded = encodeURIComponent(body);
+		if (encoded.length <= 8192) {
+			headers["MF-Experimental-Error-Stack-Payload"] = encoded;
+		}
+		return new Response(body, { status: 500, headers });
 	}
 };
 
