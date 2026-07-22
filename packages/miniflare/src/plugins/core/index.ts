@@ -780,6 +780,7 @@ export const CORE_PLUGIN: Plugin<
 		workerIndex,
 		wrappedBindingNames,
 		durableObjectClassNames,
+		resolvedContainerEngine,
 		additionalModules,
 		loopbackHost,
 		loopbackPort,
@@ -985,7 +986,7 @@ export const CORE_PLUGIN: Plugin<
 							);
 						}
 					),
-					containerEngine: getContainerEngine(options.containerEngine),
+					containerEngine: getContainerEngine(resolvedContainerEngine),
 				},
 			});
 		}
@@ -1462,7 +1463,10 @@ function getContainerEngine(
 	engineOrSocketPath: Worker_ContainerEngine | string | undefined
 ): Worker_ContainerEngine {
 	if (!engineOrSocketPath) {
-		// TODO: workerd does not support win named pipes
+		// The Windows named pipe here is a placeholder default: workerd can't connect
+		// to it directly, so when containers are actually in use the Miniflare instance
+		// resolves this to a loopback TCP proxy address before it reaches this function
+		// (see Miniflare#resolveContainerEngine).
 		engineOrSocketPath =
 			process.platform === "win32"
 				? "//./pipe/docker_engine"
