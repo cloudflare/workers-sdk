@@ -38,7 +38,9 @@ function sortObjectKeys(unordered: Record<string | number, unknown>) {
 export function sortObjectRecursive<T = Record<string | number, unknown>>(
 	object: Record<string | number, unknown> | Record<string | number, unknown>[]
 ): T {
-	if (typeof object !== "object") {
+	// `typeof null === "object"`, so `null` must be handled before the object
+	// branches below, which would otherwise call `Object.entries(null)` and throw.
+	if (object === null || typeof object !== "object") {
 		return object;
 	}
 
