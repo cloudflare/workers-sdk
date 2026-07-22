@@ -9,10 +9,10 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-function makeAuthError(code: number): APIError {
+function makeAuthError(code: number, status = 400): APIError {
 	const error = new APIError({
 		text: "A request to the Cloudflare API failed.",
-		status: 400,
+		status,
 		telemetryMessage: false,
 	});
 	error.code = code;
@@ -66,9 +66,13 @@ describe("RemoteSessionAuthenticationError", () => {
 });
 
 describe("handlePreviewSessionCreationError", () => {
-	for (const code of [9106, 10000]) {
+	for (const { code, status } of [
+		{ code: 9106, status: 400 },
+		{ code: 10000, status: 400 },
+		{ code: 10405, status: 405 },
+	]) {
 		it(`wraps API authentication error ${code}`, ({ expect }) => {
-			const cause = makeAuthError(code);
+			const cause = makeAuthError(code, status);
 			let thrown: unknown;
 
 			try {

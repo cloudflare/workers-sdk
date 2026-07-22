@@ -23,7 +23,7 @@ import type {
 export class RemoteSessionAuthenticationError extends UserError {
 	/**
 	 * @param cause - The original error that triggered the authentication
-	 *   failure (e.g. an {@link APIError} with code 9106 or 10000).
+	 *   failure (e.g. an {@link APIError} with code 9106, 10000, or 10405).
 	 */
 	constructor(cause: unknown) {
 		const envAuth = getAuthFromEnv();
@@ -165,9 +165,10 @@ export function createRemoteWorkerInit(props: {
 function handleUserFriendlyError(error: unknown, accountId?: string) {
 	if (error instanceof APIError) {
 		switch (error.code) {
-			// code 9106 and 10000 are authentication errors
+			// codes 9106, 10000, and 10405 are authentication errors
 			case 9106:
-			case 10000: {
+			case 10000:
+			case 10405: {
 				throw new RemoteSessionAuthenticationError(error);
 			}
 
