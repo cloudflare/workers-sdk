@@ -496,9 +496,14 @@ export default {
 		try {
 			throw new Error("Unusual oops!");
 		} catch (e) {
-			return Response.json(reduceError(e), {
+			const body = JSON.stringify(reduceError(e));
+			return new Response(body, {
 				status: 500,
-				headers: { "MF-Experimental-Error-Stack": "true" },
+				headers: {
+					"Content-Type": "application/json",
+					"MF-Experimental-Error-Stack": "true",
+					"MF-Experimental-Error-Stack-Payload": encodeURIComponent(body),
+				},
 			});
 		}
 	},
@@ -525,6 +530,77 @@ test("invokes handleUncaughtError with the revived error", async ({
 	expect(errors[0]).toBeInstanceOf(Error);
 	expect(errors[0].message).toBe("Unusual oops!");
 	expect(errors[0].stack).toMatch(/Object\.fetch/);
+});
+
+// `workerd` drops response bodies for `HEAD` requests, so the serialised error
+// cannot be recovered from the body alone — it is carried in a header too.
+test("reports the revived error for HEAD requests", async ({ expect }) => {
+	const log = new CustomLog();
+	const errors: Error[] = [];
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		handleUncaughtError(error) {
+			errors.push(error);
+		},
+		script: JSON_ERROR_SCRIPT,
+	});
+	useDispose(mf);
+
+	const res = await fetch(await mf.ready, { method: "HEAD" });
+	expect(res.status).toBe(500);
+	expect(errors.length).toBe(1);
+	expect(errors[0]).toBeInstanceOf(Error);
+	expect(errors[0].message).toBe("Unusual oops!");
+	expect(errors[0].stack).toMatch(/Object\.fetch/);
+});
+
+test("rejects HEAD dispatchFetch with the user error, not a parse error", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({ modules: true, script: JSON_ERROR_SCRIPT });
+	useDispose(mf);
+
+	await expect(
+		mf.dispatchFetch(await mf.ready, { method: "HEAD" })
+	).rejects.toThrow("Unusual oops!");
+});
+
+// A stack too large to fit in a header is sent without the payload copy, so a
+// `HEAD` request has no way to recover it. Reporting must still degrade to a
+// plain error rather than leaking a JSON parse failure from miniflare.
+const NO_PAYLOAD_HEADER_SCRIPT = `
+export default {
+	async fetch() {
+		return new Response(JSON.stringify({ name: "Error", message: "Unusual oops!" }), {
+			status: 500,
+			headers: {
+				"Content-Type": "application/json",
+				"MF-Experimental-Error-Stack": "true",
+			},
+		});
+	},
+}`;
+
+test("degrades without leaking a parse error when HEAD has no payload header", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: NO_PAYLOAD_HEADER_SCRIPT,
+	});
+	useDispose(mf);
+	const url = await mf.ready;
+
+	const res = await fetch(url, { method: "HEAD" });
+	expect(res.status).toBe(500);
+
+	await expect(mf.dispatchFetch(url, { method: "HEAD" })).rejects.toThrow(
+		"Worker threw an uncaught exception"
+	);
+
+	// The GET path still recovers the error from the body
+	await expect(mf.dispatchFetch(url)).rejects.toThrow("Unusual oops!");
 });
 
 // A stack frame may name a `file://` URL that `fileURLToPath` cannot convert

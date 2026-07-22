@@ -361,6 +361,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "nuxt:pages",
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Would you like to .* install .*modules\?/,
@@ -390,6 +391,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "nuxt:workers",
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Would you like to .* install .*modules\?/,

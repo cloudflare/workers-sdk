@@ -20,6 +20,7 @@ import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import { DEFAULT_WORKERS_TYPES_FILE_PATH } from "../type-generation/helpers";
 import * as generateRuntime from "../type-generation/runtime";
+import { detectAgent } from "../utils/detect-agent";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -36,15 +37,30 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "../api";
+import type { StartDevOptions } from "../dev";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { ExpectStatic } from "vitest";
 import type { Mock, MockInstance } from "vitest";
+
+const startDevMock = vi.hoisted(() => ({
+	calls: [] as StartDevOptions[],
+}));
 
 vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
 	importOriginal()
 );
 vi.mock("node:child_process");
 vi.mock("../dev/hotkeys");
+vi.mock("../dev/start-dev", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../dev/start-dev")>();
+	return {
+		...actual,
+		startDev: vi.fn((args: StartDevOptions) => {
+			startDevMock.calls.push(args);
+			return actual.startDev(args);
+		}),
+	};
+});
 
 // Don't memoize in tests. If we did, it would memoize across test runs, which causes problems
 vi.mock("../utils/memoizeGetPort", () => {
@@ -125,6 +141,7 @@ describe.sequential("wrangler dev", () => {
 
 	beforeEach(() => {
 		setIsTTY(true);
+		startDevMock.calls = [];
 		setSpy = vi.spyOn(ConfigController.prototype, "set");
 		spy = vi
 			.spyOn(ConfigController.prototype, "emitConfigUpdateEvent")
@@ -165,6 +182,62 @@ describe.sequential("wrangler dev", () => {
 		}
 		return { ...spy.mock.calls[0][0], input: setSpy.mock.calls[0][0] };
 	}
+
+	function getLatestStartDevArgs(): StartDevOptions {
+		const args = startDevMock.calls.at(-1);
+		assert(args);
+		return args;
+	}
+
+	describe("Local Explorer agent hint", () => {
+		beforeEach(() => {
+			writeWranglerConfig({
+				name: "test-worker",
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
+		});
+
+		it("asks startDev to print the hint for headless agent sessions", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			vi.mocked(detectAgent).mockReturnValue({
+				isAgent: true,
+				id: "test-agent",
+			});
+
+			await runWranglerUntilConfig("dev");
+
+			expect(getLatestStartDevArgs().showLocalExplorerAgentHint).toBe(true);
+		});
+
+		it("does not ask startDev to print the hint for interactive agent sessions", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+			vi.mocked(detectAgent).mockReturnValue({
+				isAgent: true,
+				id: "test-agent",
+			});
+
+			await runWranglerUntilConfig("dev");
+
+			expect(getLatestStartDevArgs().showLocalExplorerAgentHint).toBe(false);
+		});
+
+		it("does not ask startDev to print the hint for non-agent sessions", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+
+			await runWranglerUntilConfig("dev");
+
+			expect(getLatestStartDevArgs().showLocalExplorerAgentHint).toBe(false);
+		});
+	});
 
 	describe("config file support", () => {
 		it("should support wrangler.toml", async ({ expect }) => {

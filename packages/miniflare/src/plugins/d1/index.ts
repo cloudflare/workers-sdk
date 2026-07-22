@@ -4,6 +4,7 @@ import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	buildRemoteProxyProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
@@ -48,6 +49,8 @@ export const D1SharedOptionsSchema = z.object({
 export const D1_PLUGIN_NAME = "d1";
 const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
 const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
+// One shared remote-proxy service for all remote D1 databases (config via props).
+const D1_REMOTE_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:remote`;
 const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
 const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: D1_DATABASE_SERVICE_PREFIX,
@@ -70,18 +73,21 @@ export const D1_PLUGIN: Plugin<
 					"Alpha D1 Databases cannot run remotely"
 				);
 
-				const serviceName = getUserBindingServiceName(
-					D1_DATABASE_SERVICE_PREFIX,
-					id,
-					remoteProxyConnectionString
-				);
+				// Remote databases share one proxy service (config via props);
+				// local databases keep their per-id entry service.
+				const serviceDesignator = remoteProxyConnectionString
+					? {
+							name: D1_REMOTE_SERVICE_NAME,
+							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+						}
+					: {
+							name: getUserBindingServiceName(D1_DATABASE_SERVICE_PREFIX, id),
+						};
 
 				const binding = name.startsWith("__D1_BETA__")
 					? // Used before Wrangler 3.3
 						{
-							service: {
-								name: serviceName,
-							},
+							service: serviceDesignator,
 						}
 					: // Used after Wrangler 3.3
 						{
@@ -90,9 +96,7 @@ export const D1_PLUGIN: Plugin<
 								innerBindings: [
 									{
 										name: "fetcher",
-										service: {
-											name: serviceName,
-										},
+										service: serviceDesignator,
 									},
 								],
 							},
@@ -118,20 +122,28 @@ export const D1_PLUGIN: Plugin<
 	}) {
 		const persist = sharedOptions.d1Persist;
 		const databases = namespaceEntries(options.d1Databases);
-		const services = databases.map<Service>(
-			([name, { id, remoteProxyConnectionString }]) => ({
-				name: getUserBindingServiceName(
-					D1_DATABASE_SERVICE_PREFIX,
-					id,
-					remoteProxyConnectionString
-				),
-				worker: remoteProxyConnectionString
-					? remoteProxyClientWorker(remoteProxyConnectionString, name)
-					: objectEntryWorker(D1_DATABASE_OBJECT, id),
-			})
-		);
 
-		if (databases.length > 0) {
+		const services: Service[] = [];
+		let hasRemote = false;
+		for (const [, { id, remoteProxyConnectionString }] of databases) {
+			if (remoteProxyConnectionString) {
+				hasRemote = true;
+			} else {
+				services.push({
+					name: getUserBindingServiceName(D1_DATABASE_SERVICE_PREFIX, id),
+					worker: objectEntryWorker(D1_DATABASE_OBJECT, id),
+				});
+			}
+		}
+		if (hasRemote) {
+			services.push({
+				name: D1_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			});
+		}
+
+		const hasLocal = services.some((s) => s.name !== D1_REMOTE_SERVICE_NAME);
+		if (hasLocal) {
 			const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(
 				D1_PLUGIN_NAME,
@@ -180,8 +192,11 @@ export const D1_PLUGIN: Plugin<
 			};
 			services.push(storageService, objectService);
 
-			for (const database of databases) {
-				await migrateDatabase(log, uniqueKey, persistPath, database[1].id);
+			for (const [, database] of databases) {
+				if (database.remoteProxyConnectionString) {
+					continue;
+				}
+				await migrateDatabase(log, uniqueKey, persistPath, database.id);
 			}
 		}
 

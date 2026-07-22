@@ -5,6 +5,7 @@ import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
+	buildRemoteProxyProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
@@ -34,6 +35,7 @@ export const ImagesSharedOptionsSchema = z.object({
 });
 
 export const IMAGES_PLUGIN_NAME = "images";
+const IMAGES_REMOTE_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:remote`;
 
 export const IMAGES_PLUGIN: Plugin<
 	typeof ImagesOptionsSchema,
@@ -55,13 +57,20 @@ export const IMAGES_PLUGIN: Plugin<
 					innerBindings: [
 						{
 							name: "fetcher",
-							service: {
-								name: getUserBindingServiceName(
-									IMAGES_PLUGIN_NAME,
-									options.images.binding,
-									options.images.remoteProxyConnectionString
-								),
-							},
+							service: options.images.remoteProxyConnectionString
+								? {
+										name: IMAGES_REMOTE_SERVICE_NAME,
+										props: buildRemoteProxyProps(
+											options.images.remoteProxyConnectionString,
+											options.images.binding
+										),
+									}
+								: {
+										name: getUserBindingServiceName(
+											IMAGES_PLUGIN_NAME,
+											options.images.binding
+										),
+									},
 						},
 					],
 				},
@@ -87,23 +96,19 @@ export const IMAGES_PLUGIN: Plugin<
 			return [];
 		}
 
-		const serviceName = getUserBindingServiceName(
-			IMAGES_PLUGIN_NAME,
-			options.images.binding,
-			options.images.remoteProxyConnectionString
-		);
-
 		if (options.images.remoteProxyConnectionString) {
 			return [
 				{
-					name: serviceName,
-					worker: remoteProxyClientWorker(
-						options.images.remoteProxyConnectionString,
-						options.images.binding
-					),
+					name: IMAGES_REMOTE_SERVICE_NAME,
+					worker: remoteProxyClientWorker(),
 				},
 			];
 		}
+
+		const serviceName = getUserBindingServiceName(
+			IMAGES_PLUGIN_NAME,
+			options.images.binding
+		);
 
 		const persistPath = getPersistPath(
 			IMAGES_PLUGIN_NAME,

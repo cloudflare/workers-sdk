@@ -2,6 +2,7 @@ import type { AuthConfigStorage } from "./config-file/auth";
 import type { TemporaryAccountStorage } from "./config-file/temporary";
 import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
+import type { Logger } from "@cloudflare/workers-utils";
 
 /**
  * The dependencies the OAuth flow needs to mint/reuse a short-lived "temporary
@@ -36,13 +37,7 @@ export interface OAuthConsentPages {
  * Subset of the wrangler `logger` singleton used by the OAuth flow.
  * Consumers pass in an implementation that maps to their own logging surface.
  */
-export interface OAuthFlowLogger {
-	debug(...args: unknown[]): void;
-	info(...args: unknown[]): void;
-	log(...args: unknown[]): void;
-	warn(...args: unknown[]): void;
-	error(...args: unknown[]): void;
-}
+export type OAuthFlowLogger = Logger;
 
 /**
  * Dependency-injection surface for {@link createOAuthFlow}.
