@@ -7,9 +7,10 @@ import {
 	type Worker_Binding,
 	type Worker_Module,
 } from "../../runtime";
-import { CoreBindings, SharedBindings } from "../../workers";
+import { CoreBindings } from "../../workers";
 import { normaliseDurableObject } from "../do";
 import {
+	extractObjectEntryId,
 	namespaceEntries,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
@@ -176,18 +177,9 @@ export function constructExplorerBindingMap(
 			const [innerBinding] = binding.wrapped?.innerBindings ?? [];
 			assert(innerBinding && "service" in innerBinding);
 
-			let databaseId: string | undefined;
-			const propsJson = innerBinding.service?.props?.json;
-			if (propsJson !== undefined) {
-				try {
-					databaseId = JSON.parse(propsJson)[SharedBindings.TEXT_NAMESPACE];
-				} catch {
-					// fall through to service-name parsing
-				}
-			}
-			if (databaseId === undefined) {
-				databaseId = innerBinding.service?.name?.replace(/^d1:db:/, "");
-			}
+			const databaseId =
+				extractObjectEntryId(innerBinding.service?.props?.json) ??
+				innerBinding.service?.name?.replace(/^d1:db:/, "");
 			assert(databaseId);
 
 			// Remote databases share one proxy service ("d1:db:remote"). Remote
@@ -209,18 +201,9 @@ export function constructExplorerBindingMap(
 			"kvNamespace" in binding &&
 			binding.kvNamespace?.name?.startsWith("kv:ns:")
 		) {
-			let namespaceId: string | undefined;
-			const propsJson = binding.kvNamespace.props?.json;
-			if (propsJson !== undefined) {
-				try {
-					namespaceId = JSON.parse(propsJson)[SharedBindings.TEXT_NAMESPACE];
-				} catch {
-					// fall through to service-name parsing
-				}
-			}
-			if (namespaceId === undefined) {
-				namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
-			}
+			const namespaceId =
+				extractObjectEntryId(binding.kvNamespace.props?.json) ??
+				binding.kvNamespace.name.replace(/^kv:ns:/, "");
 			// Remote namespaces share one proxy service ("kv:ns:remote"). Remote
 			// resources aren't surfaced in the explorer, so skip them — otherwise
 			// they'd all collide under the literal id "remote".
@@ -239,18 +222,9 @@ export function constructExplorerBindingMap(
 			"r2Bucket" in binding &&
 			binding.r2Bucket?.name?.startsWith("r2:bucket:")
 		) {
-			let bucketName: string | undefined;
-			const propsJson = binding.r2Bucket.props?.json;
-			if (propsJson !== undefined) {
-				try {
-					bucketName = JSON.parse(propsJson)[SharedBindings.TEXT_NAMESPACE];
-				} catch {
-					// fall through to service-name parsing
-				}
-			}
-			if (bucketName === undefined) {
-				bucketName = binding.r2Bucket.name.replace(/^r2:bucket:/, "");
-			}
+			const bucketName =
+				extractObjectEntryId(binding.r2Bucket.props?.json) ??
+				binding.r2Bucket.name.replace(/^r2:bucket:/, "");
 			// Remote buckets share one proxy service ("r2:bucket:remote"). Remote
 			// resources aren't surfaced in the explorer, so skip them — otherwise
 			// they'd all collide under the literal id "remote".
