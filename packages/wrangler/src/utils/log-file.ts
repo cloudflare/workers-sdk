@@ -59,8 +59,6 @@ function parseLogFileTimestamp(filename: string): number | undefined {
 
 /**
  * Deletes wrangler-*.log files older than 30 days from the given log directory.
- * The age is derived from the timestamp encoded in each filename, avoiding a
- * `stat` call per file.
  * Runs silently — errors are ignored so startup is never blocked by log cleanup.
  */
 export async function cleanupOldLogFiles(logsDir: string): Promise<void> {
