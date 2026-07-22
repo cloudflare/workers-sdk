@@ -1,4 +1,3 @@
-
 name: Regenerate get-platform-proxy image snapshot (one-off)
 
 # One-off workflow to regenerate the stale Image bindings snapshot in
