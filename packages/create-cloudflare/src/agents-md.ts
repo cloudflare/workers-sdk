@@ -27,6 +27,28 @@ For all limits and quotas, retrieve from the product's \`/platform/limits/\` pag
 
 Run \`wrangler types\` after changing bindings in wrangler.jsonc.
 
+## Local Explorer (Debugging & Inspection)
+
+When running \`npx wrangler dev\`, a Local Explorer API is available for inspecting and debugging local Workers, bindings, and storage state. The API base URL is printed in the terminal when the dev server starts.
+
+The full OpenAPI spec is available at the API root (\`GET /cdn-cgi/explorer/api\`).
+
+Key endpoints (relative to the dev server URL):
+
+| Endpoint | Description |
+|----------|-------------|
+| \`GET /cdn-cgi/explorer/api\` | OpenAPI schema |
+| \`GET /cdn-cgi/explorer/api/local/workers\` | List local Workers and their bindings |
+| \`GET /cdn-cgi/explorer/api/d1/database\` | List D1 databases |
+| \`GET /cdn-cgi/explorer/api/storage/kv/namespaces\` | List KV namespaces |
+| \`GET /cdn-cgi/explorer/api/r2/buckets\` | List R2 buckets |
+| \`GET /cdn-cgi/explorer/api/workers/durable_objects/namespaces\` | List Durable Object namespaces |
+| \`GET /cdn-cgi/explorer/api/workflows\` | List Workflows |
+| \`POST /cdn-cgi/explorer/api/local/observability/query\` | Query captured traces and logs (read-only SQL) |
+| \`POST /cdn-cgi/explorer/api/local/observability/clear\` | Clear all captured traces and logs |
+
+Use the Local Explorer to debug issues by inspecting storage state (KV keys, D1 rows, R2 objects, DO storage), viewing Worker bindings, and querying request traces and logs captured during the dev session.
+
 ## Node.js Compatibility
 
 https://developers.cloudflare.com/workers/runtime-apis/nodejs/
