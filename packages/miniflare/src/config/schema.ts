@@ -136,7 +136,7 @@ const MiniflareExportSchema = z.union([
 // Worker config schema (extends OutputWorkerSchema)
 // ---------------------------------------------------------------------------
 
-const MiniflareWorkerConfigSchema = OutputWorkerSchema.omit({
+export const MiniflareWorkerConfigSchema = OutputWorkerSchema.omit({
 	manifest: true,
 	env: true,
 	exports: true,
@@ -147,6 +147,22 @@ const MiniflareWorkerConfigSchema = OutputWorkerSchema.omit({
 });
 
 export type MiniflareWorkerConfig = z.input<typeof MiniflareWorkerConfigSchema>;
+export type ParsedMiniflareWorkerConfig = z.output<
+	typeof MiniflareWorkerConfigSchema
+>;
+
+/** A single parsed `config.env` binding (known, miniflare-extended, or unsafe). */
+export type MiniflareBinding = NonNullable<
+	ParsedMiniflareWorkerConfig["env"]
+>[string];
+/** A single parsed `config.exports` entry. */
+export type MiniflareExport = NonNullable<
+	ParsedMiniflareWorkerConfig["exports"]
+>[string];
+/** A single parsed `config.triggers` entry. */
+export type MiniflareTrigger = NonNullable<
+	ParsedMiniflareWorkerConfig["triggers"]
+>[number];
 
 // ---------------------------------------------------------------------------
 // Dev config
@@ -216,6 +232,11 @@ export const WorkerOptionsSchema = z.strictObject({
 });
 
 export type WorkerOptions = z.input<typeof WorkerOptionsSchema>;
+
+/**
+ * A single fully-parsed worker's options, as passed to plugin methods.
+ */
+export type ParsedWorkerOptions = z.output<typeof WorkerOptionsSchema>;
 
 // ---------------------------------------------------------------------------
 //  Instance-wide options
@@ -292,6 +313,13 @@ export const InstanceOptionsSchema = z.object({
 
 export type InstanceOptions = z.input<typeof InstanceOptionsSchema>;
 
+/**
+ * The fully-parsed instance-wide (shared) options, as passed to plugin methods.
+ */
+export type ParsedInstanceOptions = z.output<typeof InstanceOptionsSchema>;
+export type ParsedDevConfig = NonNullable<ParsedWorkerOptions["dev"]>;
+export type ParsedLegacyConfig = NonNullable<ParsedWorkerOptions["legacy"]>;
+
 // ---------------------------------------------------------------------------
 // Final Miniflare Schema
 // ---------------------------------------------------------------------------
@@ -301,3 +329,59 @@ export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 });
 
 export type MiniflareOptions = z.input<typeof MiniflareOptionsSchema>;
+
+// ---------------------------------------------------------------------------
+// Binding / export helpers (shared by plugins)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the entries of `config.env` whose binding `type` matches `type`,
+ * typed as the matching binding variant. The record key is the binding name.
+ */
+export function getEnvBindingsOfType<T extends string>(
+	config: ParsedMiniflareWorkerConfig,
+	type: T
+): [name: string, binding: Extract<MiniflareBinding, { type: T }>][] {
+	return Object.entries(config.env ?? {}).filter(
+		([, binding]) => binding.type === type
+	) as [name: string, binding: Extract<MiniflareBinding, { type: T }>][];
+}
+
+/**
+ * Returns the entries of `config.exports` whose `type` matches `type`. The
+ * record key is the export name.
+ */
+export function getExportsOfType<T extends string>(
+	config: ParsedMiniflareWorkerConfig,
+	type: T
+): [name: string, exported: Extract<MiniflareExport, { type: T }>][] {
+	return Object.entries(config.exports ?? {}).filter(
+		([, exported]) => exported.type === type
+	) as [name: string, exported: Extract<MiniflareExport, { type: T }>][];
+}
+
+/**
+ * Returns the entries of `config.triggers` whose `type` matches `type`.
+ */
+export function getTriggersOfType<T extends string>(
+	config: ParsedMiniflareWorkerConfig,
+	type: T
+): Extract<MiniflareTrigger, { type: T }>[] {
+	return (config.triggers ?? []).filter(
+		(trigger) => trigger.type === type
+	) as Extract<MiniflareTrigger, { type: T }>[];
+}
+
+/**
+ * Resolves the remote proxy connection string for a binding. A binding is
+ * proxied remotely iff `binding.remote === true` _and_
+ * `dev.remoteProxyConnectionString` is set (mirroring wrangler's model).
+ */
+export function getRemoteProxyConnectionString(
+	binding: { remote?: boolean },
+	dev: ParsedDevConfig | undefined
+): RemoteProxyConnectionString | undefined {
+	return binding.remote && dev?.remoteProxyConnectionString
+		? dev.remoteProxyConnectionString
+		: undefined;
+}

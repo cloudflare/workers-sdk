@@ -3351,7 +3351,7 @@ export type {
 	ParsedModuleFallbackRequest,
 } from "./plugins/core/module-fallback";
 export {
+	InstanceOptionsSchema as InstanceOptionsSchemaV5,
 	MiniflareOptionsSchema as MiniflareOptionsSchemaV5,
-	SharedOptionsSchema as SharedOptionsSchemaV5,
 	WorkerOptionsSchema as WorkerOptionsSchemaV5,
-} from "./plugins/core/schemas";
+} from "./config/schema";
