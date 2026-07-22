@@ -12,8 +12,7 @@ export default {
 		const url = new URL(request.url);
 		const transform = JSON.parse(url.searchParams.get("transform") || "{}");
 		const format = url.searchParams.get("format") || "image/png";
-		const buffered = await request.arrayBuffer();
-		const result = await env.IMAGES.input(buffered)
+		const result = await env.IMAGES.input(request.body)
 			.transform(transform)
 			.output({ format });
 		return result.response();
@@ -60,6 +59,7 @@ describe("Images binding local transforms", () => {
 			.toBuffer();
 
 		mf = new Miniflare({
+			compatibilityDate: "2025-04-01",
 			modules: true,
 			script: WORKER_SCRIPT,
 			images: { binding: "IMAGES" },
@@ -82,14 +82,6 @@ describe("Images binding local transforms", () => {
 			body: sourcePng,
 		});
 		const body = Buffer.from(await res.arrayBuffer());
-		if (!res.ok || body.length < 100) {
-			console.log(
-				"DEBUG transform() response:",
-				res.status,
-				JSON.stringify(res.headers.get("content-type")),
-				body.toString("utf8").slice(0, 500)
-			);
-		}
 		return { res, body };
 	}
 
