@@ -221,7 +221,13 @@ async function runTransform(
 			break;
 	}
 
-	return new Response(transformer, {
+	// Buffer explicitly rather than passing the raw Sharp Duplex stream
+	// straight into Response() - the latter produced incomplete/corrupted
+	// output in some environments, only caught once pixel-level regression
+	// tests started decoding the response. Matches cfImageLocalFetcher's
+	// (working) pattern below.
+	const output = await transformer.toBuffer();
+	return new Response(output, {
 		headers: {
 			"content-type": outputFormat,
 		},
