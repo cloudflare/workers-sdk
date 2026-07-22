@@ -1,3 +1,10 @@
-# Reporting Security Vulnerabilities
+Contact: https://hackerone.com/cloudflare
+# All abuse reports should be submitted to our Trust & Safety team through
+# our dedicated page.
+Contact: https://www.cloudflare.com/abuse/
 
-Please see [this page](https://www.cloudflare.com/.well-known/security.txt) for information on how to report a vulnerability to Cloudflare. Thanks!
+Policy: https://www.cloudflare.com/disclosure/ 
+Hiring: https://www.cloudflare.com/careers/jobs/
+
+Preferred-Languages: en
+Canonical: https://www.cloudflare.com/.well-known/security.txt
