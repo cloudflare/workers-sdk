@@ -93,6 +93,15 @@ export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
+	for (const [name, binding] of Object.entries(bindings ?? {})) {
+		if (binding.type === "flagship" && binding.app_id === undefined) {
+			throw new UserError(
+				`Flagship binding "${name}" has no app_id. Run \`wrangler deploy\` to provision it, or add \`app_id\` to your config.`,
+				{ telemetryMessage: "flagship remote binding missing app_id" }
+			);
+		}
+	}
+
 	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
 	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
