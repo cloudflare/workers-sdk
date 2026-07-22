@@ -11,7 +11,38 @@ import type {
 	MetadataRedirects,
 	MetadataStaticRedirects,
 } from "../types";
-import type { Logger, ParsedHeaders, ParsedRedirects } from "./types";
+import type {
+	InvalidRedirectRule,
+	Logger,
+	ParsedHeaders,
+	ParsedRedirects,
+} from "./types";
+
+/**
+ * Build the human-readable warning text for a list of invalid `_redirects` rules.
+ * Shared between the dev-time construction path (`constructRedirects`) and any
+ * other caller (e.g. deploy) that wants to surface the same validation warnings
+ * without re-implementing the formatting.
+ */
+export function formatInvalidRedirectsWarning(
+	invalid: InvalidRedirectRule[],
+	relativePath: string
+): string {
+	let invalidRedirectRulesList = ``;
+
+	for (const { line, lineNumber, message } of invalid) {
+		invalidRedirectRulesList += `▶︎ ${message}\n`;
+
+		if (line) {
+			invalidRedirectRulesList += `    at ${relativePath}${lineNumber ? `:${lineNumber}` : ""} | ${line}\n\n`;
+		}
+	}
+
+	return (
+		`Found ${invalid.length} invalid redirect rule${invalid.length === 1 ? "" : "s"}:\n` +
+		`${invalidRedirectRulesList}`
+	);
+}
 
 export function constructRedirects({
 	redirects,
@@ -40,19 +71,8 @@ export function constructRedirects({
 	);
 
 	if (num_invalid > 0) {
-		let invalidRedirectRulesList = ``;
-
-		for (const { line, lineNumber, message } of redirects.invalid) {
-			invalidRedirectRulesList += `▶︎ ${message}\n`;
-
-			if (line) {
-				invalidRedirectRulesList += `    at ${redirectsRelativePath}${lineNumber ? `:${lineNumber}` : ""} | ${line}\n\n`;
-			}
-		}
-
 		logger.warn(
-			`Found ${num_invalid} invalid redirect rule${num_invalid === 1 ? "" : "s"}:\n` +
-				`${invalidRedirectRulesList}`
+			formatInvalidRedirectsWarning(redirects.invalid, redirectsRelativePath)
 		);
 	}
 

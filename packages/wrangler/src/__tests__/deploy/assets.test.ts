@@ -858,6 +858,106 @@ describe("deploy", () => {
 				  },
 				}
 			`);
+			// A valid _redirects file should not produce any deploy-time warning.
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should warn about invalid _redirects rules at deploy time without altering what is uploaded", async ({
+			expect,
+		}) => {
+			// A duplicate rule for the same path is invalid and should be flagged,
+			// but until now this warning only ever surfaced in `wrangler dev`.
+			const redirectsContent = "/foo /bar\n/foo /baz";
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "index.html", content: "<html></html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					// The raw (unparsed, unmodified) _redirects file is still uploaded
+					// as-is -- the deploy-time validation is warning-only.
+					config: {
+						_redirects: redirectsContent,
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(std.warn).toContain("Found 1 invalid redirect rule");
+			expect(std.warn).toContain("Ignoring duplicate rule for path /foo.");
+		});
+
+		it("should not warn about a false infinite-loop when html_handling is 'none'", async ({
+			expect,
+		}) => {
+			// `/ /index.html` looks like an infinite-loop redirect only when HTML
+			// handling is enabled. Projects that explicitly disable it (html_handling:
+			// "none") must not get a false warning at deploy time -- the deploy-time
+			// validation has to respect the same option the Vite plugin already passes.
+			const redirectsContent = "/ /index.html";
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "index.html", content: "<html></html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets", html_handling: "none" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						_redirects: redirectsContent,
+						html_handling: "none",
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(std.warn).not.toContain("Infinite loop detected");
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should still warn about a real infinite-loop when html_handling is enabled (default)", async ({
+			expect,
+		}) => {
+			// Sanity check for the other side of the fix: when HTML handling is left
+			// at its default (enabled), the same rule genuinely is an infinite loop
+			// and should still be flagged.
+			const redirectsContent = "/ /index.html";
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "index.html", content: "<html></html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						_redirects: redirectsContent,
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(std.warn).toContain("Infinite loop detected");
 		});
 
 		it("should resolve assets directory relative to cwd if using cli", async ({

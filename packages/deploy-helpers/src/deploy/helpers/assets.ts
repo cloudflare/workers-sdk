@@ -2,6 +2,8 @@ import assert from "node:assert";
 import { createReadStream } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { formatInvalidRedirectsWarning } from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
+import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
@@ -553,6 +555,28 @@ export function resolveAssetOptions(
 	const _headers = directoryExists
 		? maybeGetFile(path.join(directory, HEADERS_FILENAME))
 		: undefined;
+
+	// The _redirects and _headers files are parsed in Miniflare in dev, and the
+	// asset worker is the source of truth for the parsed/enforced config at
+	// runtime, so we don't need the parsed result here for deploy. We do still
+	// parse `_redirects` for validation purposes so that authors get the same
+	// "invalid rule" / dynamic-rule-limit warnings at deploy time that they'd
+	// otherwise only see in `wrangler dev` (see issue #14694). This never
+	// changes what gets uploaded -- the raw file content is still uploaded as-is
+	// below, unchanged.
+	if (_redirects) {
+		const parsedRedirects = parseRedirects(_redirects, {
+			htmlHandling: config.assets?.html_handling,
+		});
+		if (parsedRedirects.invalid.length > 0) {
+			logger.warn(
+				formatInvalidRedirectsWarning(
+					parsedRedirects.invalid,
+					REDIRECTS_FILENAME
+				)
+			);
+		}
+	}
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
