@@ -165,6 +165,32 @@ describe("kv", () => {
 			`);
 			});
 
+			it("should create a namespace in a jurisdiction", async ({ expect }) => {
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/storage/kv/namespaces",
+						async ({ request, params }) => {
+							expect(params.accountId).toEqual("some-account-id");
+							const body = (await request.json()) as Record<string, string>;
+							expect(body.title).toEqual("UnitTestNamespace");
+							expect(body.jurisdiction).toEqual("eu");
+							return HttpResponse.json(
+								createFetchResult({ id: "some-namespace-id" }),
+								{ status: 200 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler(
+					"kv namespace create UnitTestNamespace --binding MY_NS --jurisdiction eu"
+				);
+				expect(std.out).toContain(
+					'Creating namespace with title "UnitTestNamespace" (jurisdiction: eu)'
+				);
+			});
+
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
 				it("should create a namespace", async ({ expect }) => {
 					writeWranglerConfig({ name: "worker" }, configPath);
