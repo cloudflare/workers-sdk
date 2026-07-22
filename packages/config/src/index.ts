@@ -14,6 +14,7 @@ export {
 	writeRootOutputConfig,
 } from "./build-output";
 export {
+	AssetsSchema,
 	BindingSchema,
 	BrowserBindingSchema,
 	ConfigExportsSchema,

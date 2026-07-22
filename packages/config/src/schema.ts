@@ -1,7 +1,7 @@
 import * as z from "zod";
 import type { SettingsConfig, WorkerConfig } from "./types";
 
-const AssetsSchema = z.strictObject({
+export const AssetsSchema = z.strictObject({
 	htmlHandling: z
 		.enum([
 			"auto-trailing-slash",

@@ -1,4 +1,5 @@
 import {
+	AssetsSchema as RawAssetsConfigSchema,
 	BrowserBindingSchema,
 	DurableObjectCreatedExportSchema,
 	ExportSchema,
@@ -70,10 +71,20 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 	headful: z.boolean().optional(),
 });
 
+/**
+ * The `hello-world` binding backs an internal example/test plugin and has no
+ * `@cloudflare/config` equivalent, so it lives only in the miniflare schema.
+ */
+const HelloWorldBindingSchema = z.strictObject({
+	type: z.literal("hello-world"),
+	enable_timer: z.boolean().optional(),
+});
+
 const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	MiniflareBrowserBindingSchema,
 	FetcherBindingSchema,
 	NodeHandlerBindingSchema,
+	HelloWorldBindingSchema,
 	...KnownBindingSchema.options.filter(
 		(option) => option !== BrowserBindingSchema
 	),
@@ -133,6 +144,18 @@ const MiniflareExportSchema = z.union([
 ]);
 
 // ---------------------------------------------------------------------------
+// Miniflare-only assets extension
+// ---------------------------------------------------------------------------
+
+/**
+ * Extends the config `assets` block with `directory`, resolved to an
+ * absolute path by the caller.
+ */
+const MiniflareAssetsSchema = RawAssetsConfigSchema.extend({
+	directory: z.string(),
+});
+
+// ---------------------------------------------------------------------------
 // Worker config schema (extends OutputWorkerSchema)
 // ---------------------------------------------------------------------------
 
@@ -140,10 +163,12 @@ export const MiniflareWorkerConfigSchema = OutputWorkerSchema.omit({
 	manifest: true,
 	env: true,
 	exports: true,
+	assets: true,
 }).extend({
 	manifest: MiniflareManifestSchema.optional(),
 	env: z.record(z.string(), MiniflareBindingSchema).optional(),
 	exports: z.record(z.string(), MiniflareExportSchema).optional(),
+	assets: MiniflareAssetsSchema.optional(),
 });
 
 export type MiniflareWorkerConfig = z.input<typeof MiniflareWorkerConfigSchema>;

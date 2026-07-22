@@ -224,7 +224,6 @@ export * from "./r2";
 export * from "./hyperdrive";
 export * from "./ratelimit";
 export * from "./assets";
-export * from "./assets/schema";
 export * from "./workflows";
 export * from "./pipelines";
 export * from "./secret-store";
