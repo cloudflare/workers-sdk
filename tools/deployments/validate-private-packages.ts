@@ -25,6 +25,7 @@ if (require.main === module) {
 async function getPrivatePackageJsons() {
 	const packageJsonPaths = await glob("**/package.json", {
 		cwd: resolve(__dirname, "../../"),
+		dot: true,
 		ignore: [
 			// We are not interested in dependencies
 			"**/node_modules/**",

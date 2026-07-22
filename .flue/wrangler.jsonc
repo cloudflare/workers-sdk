@@ -1,0 +1,25 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "workers-sdk-flue",
+	"compatibility_date": "2026-07-21",
+	"compatibility_flags": ["nodejs_compat"],
+	"ai": {
+		"binding": "AI",
+		"remote": true,
+	},
+	"exports": {
+		"FlueRegistry": {
+			"storage": "sqlite",
+			"type": "durable-object",
+		},
+		"FlueWorkspaceSmokeAgent": {
+			"storage": "sqlite",
+			"type": "durable-object",
+		},
+	},
+	"worker_loaders": [
+		{
+			"binding": "LOADER",
+		},
+	],
+}

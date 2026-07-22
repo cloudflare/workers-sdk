@@ -76,6 +76,7 @@ async function main(): Promise<void> {
 	const packageJsonPaths = await glob(
 		[
 			"package.json",
+			".flue/package.json",
 			"packages/*/package.json",
 			"packages/vite-plugin-cloudflare/playground/*/package.json",
 			"packages/vite-plugin-cloudflare/playground/package.json",

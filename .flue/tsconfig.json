@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "esnext",
+		"types": ["@cloudflare/workers-types/experimental"]
+	},
+	"exclude": ["dist"],
+	"include": ["flue.config.ts", "src/**/*.ts", "worker-configuration.d.ts"]
+}
