@@ -1,15 +1,14 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
-import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getRemoteProxyConnectionString,
 	getUserBindingServiceName,
-	namespaceEntries,
-	namespaceKeys,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -20,27 +19,8 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
+import type { Plugin } from "../shared";
 
-export const D1OptionsSchema = z.object({
-	d1Databases: z
-		.union([
-			z.record(
-				z.string(),
-				z.union([
-					z.string(),
-					z.object({
-						id: z.string(),
-						remoteProxyConnectionString: z
-							.custom<RemoteProxyConnectionString>()
-							.optional(),
-					}),
-				])
-			),
-			z.string().array(),
-		])
-		.optional(),
-});
 export const D1_PLUGIN_NAME = "d1";
 const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
 const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
@@ -52,13 +32,17 @@ const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	className: D1_DATABASE_OBJECT_CLASS_NAME,
 };
 
-export const D1_PLUGIN: Plugin<typeof D1OptionsSchema> = {
-	options: D1OptionsSchema,
+export const D1_PLUGIN: Plugin = {
 	bindingTypeDescription: "D1 database",
 	getBindings(options) {
-		const databases = namespaceEntries(options.d1Databases);
-		return databases.map<Worker_Binding>(
-			([name, { id, remoteProxyConnectionString }]) => {
+		return getEnvBindingsOfType(options.config, "d1").map<Worker_Binding>(
+			([name, binding]) => {
+				const id = binding.id ?? name;
+				const remoteProxyConnectionString = getRemoteProxyConnectionString(
+					binding,
+					options.dev
+				);
+
 				assert(
 					!(name.startsWith("__D1_BETA__") && remoteProxyConnectionString),
 					"Alpha D1 Databases cannot run remotely"
@@ -75,7 +59,7 @@ export const D1_PLUGIN: Plugin<typeof D1OptionsSchema> = {
 							name: getUserBindingServiceName(D1_DATABASE_SERVICE_PREFIX, id),
 						};
 
-				const binding = name.startsWith("__D1_BETA__")
+				const bindingConfig = name.startsWith("__D1_BETA__")
 					? // Used before Wrangler 3.3
 						{
 							service: serviceDesignator,
@@ -93,22 +77,29 @@ export const D1_PLUGIN: Plugin<typeof D1OptionsSchema> = {
 							},
 						};
 
-				return { name, ...binding };
+				return { name, ...bindingConfig };
 			}
 		);
 	},
 	getNodeBindings(options) {
-		const databases = namespaceKeys(options.d1Databases);
 		return Object.fromEntries(
-			databases.map((name) => [name, new ProxyNodeBinding()])
+			getEnvBindingsOfType(options.config, "d1").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
 		);
 	},
 	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		const databases = namespaceEntries(options.d1Databases);
+		const databases = getEnvBindingsOfType(options.config, "d1");
 
 		const services: Service[] = [];
 		let hasRemote = false;
-		for (const [, { id, remoteProxyConnectionString }] of databases) {
+		for (const [name, binding] of databases) {
+			const id = binding.id ?? name;
+			const remoteProxyConnectionString = getRemoteProxyConnectionString(
+				binding,
+				options.dev
+			);
 			if (remoteProxyConnectionString) {
 				hasRemote = true;
 			} else {

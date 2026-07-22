@@ -1,10 +1,27 @@
 import assert from "node:assert";
 import { z } from "zod";
-import { ProxyNodeBinding } from "../shared";
+import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
+import type { ParsedMiniflareWorkerConfig } from "../shared";
 import type { Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
+
+/**
+ * Resolves the `hyperdrive` env bindings that have a local connection string
+ * (the only ones miniflare can serve locally), parsing/validating each
+ * connection string into a `URL` via `HyperdriveSchema`.
+ */
+function getHyperdrives(
+	config: ParsedMiniflareWorkerConfig
+): [name: string, url: URL][] {
+	return getEnvBindingsOfType(config, "hyperdrive")
+		.filter(([, binding]) => binding.localConnectionString !== undefined)
+		.map(([name, binding]) => [
+			name,
+			HyperdriveSchema.parse(binding.localConnectionString),
+		]);
+}
 
 function hasPostgresProtocol(url: URL) {
 	return url.protocol === "postgresql:" || url.protocol === "postgres:";
@@ -71,15 +88,10 @@ export const HyperdriveSchema = z
 		return url;
 	});
 
-export const HyperdriveInputOptionsSchema = z.object({
-	hyperdrives: z.record(z.string(), HyperdriveSchema).optional(),
-});
-
-export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
-	options: HyperdriveInputOptionsSchema,
+export const HYPERDRIVE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Hyperdrive",
 	getBindings(options) {
-		return Object.entries(options.hyperdrives ?? {}).map<Worker_Binding>(
+		return getHyperdrives(options.config).map<Worker_Binding>(
 			([name, url]) => {
 				const database = url.pathname.replace("/", "");
 				const scheme = url.protocol.replace(":", "");
@@ -100,7 +112,7 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 	},
 	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.entries(options.hyperdrives ?? {}).map(([name, url]) => {
+			getHyperdrives(options.config).map(([name, url]) => {
 				const connectionOverrides: Record<string | symbol, string | number> = {
 					connectionString: `${url}`,
 					port: Number.parseInt(url.port),
@@ -119,7 +131,7 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 	},
 	async getServices({ options, hyperdriveProxyController }) {
 		const services = [];
-		for (const [name, url] of Object.entries(options.hyperdrives ?? {})) {
+		for (const [name, url] of getHyperdrives(options.config)) {
 			const scheme = url.protocol.replace(":", "");
 			const sslmode = parseSslMode(url, scheme);
 			const targetPort = getPort(url);

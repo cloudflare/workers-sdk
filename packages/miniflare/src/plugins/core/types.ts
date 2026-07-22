@@ -44,13 +44,13 @@ export type WorkerResourceBindings = {
 		scriptName: string;
 		useSqlite: boolean;
 	}[];
-	workflows: {
-		/** id = workflow name */
-		id: string;
-		bindingName: string;
-		className: string;
-		scriptName: string;
-	}[];
+	// workflows: {
+	// 	/** id = workflow name */
+	// 	id: string;
+	// 	bindingName: string;
+	// 	className: string;
+	// 	scriptName: string;
+	// }[];
 };
 
 export type ExplorerWorkerOpts = Record<string, WorkerResourceBindings>;

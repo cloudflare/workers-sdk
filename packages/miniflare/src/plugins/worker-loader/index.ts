@@ -1,27 +1,18 @@
-import { z } from "zod";
+import { getEnvBindingsOfType } from "../shared";
 import type { Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
-export const WorkerLoaderConfigSchema = z.object({});
-export const WorkerLoaderOptionsSchema = z.object({
-	workerLoaders: z.record(z.string(), WorkerLoaderConfigSchema).optional(),
-});
-
 export const WORKER_LOADER_PLUGIN_NAME = "worker-loader";
 
-export const WORKER_LOADER_PLUGIN: Plugin<typeof WorkerLoaderOptionsSchema> = {
-	options: WorkerLoaderOptionsSchema,
+export const WORKER_LOADER_PLUGIN: Plugin = {
 	getBindings(options) {
-		if (!options.workerLoaders) {
-			return [];
-		}
-		const bindings = Object.entries(options.workerLoaders).map<Worker_Binding>(
-			([name]) => ({
-				name,
-				workerLoader: {},
-			})
-		);
-		return bindings;
+		return getEnvBindingsOfType(
+			options.config,
+			"worker-loader"
+		).map<Worker_Binding>(([name]) => ({
+			name,
+			workerLoader: {},
+		}));
 	},
 	getNodeBindings() {
 		return {};

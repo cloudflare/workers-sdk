@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
 import BINDING_SCRIPT from "worker:hello-world/binding";
 import OBJECT_SCRIPT from "worker:hello-world/object";
-import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	ProxyNodeBinding,
@@ -14,53 +14,32 @@ import type { Plugin } from "../shared";
 
 export const HELLO_WORLD_PLUGIN_NAME = "hello-world";
 
-export const HelloWorldOptionsSchema = z.object({
-	helloWorld: z
-		.record(
-			z.string(),
-			z.object({
-				enable_timer: z.boolean().optional(),
-			})
-		)
-		.optional(),
-});
-
-export const HELLO_WORLD_PLUGIN: Plugin<typeof HelloWorldOptionsSchema> = {
-	options: HelloWorldOptionsSchema,
+export const HELLO_WORLD_PLUGIN: Plugin = {
 	bindingTypeDescription: "Hello World",
 	async getBindings(options) {
-		if (!options.helloWorld) {
-			return [];
-		}
-
-		const bindings = Object.entries(options.helloWorld).map<Worker_Binding>(
-			([name, config]) => {
-				return {
-					name,
-					service: {
-						name: `${HELLO_WORLD_PLUGIN_NAME}:${JSON.stringify(config.enable_timer ?? false)}`,
-						entrypoint: "HelloWorldBinding",
-					},
-				};
-			}
-		);
-		return bindings;
+		return getEnvBindingsOfType(
+			options.config,
+			"hello-world"
+		).map<Worker_Binding>(([name, binding]) => ({
+			name,
+			service: {
+				name: `${HELLO_WORLD_PLUGIN_NAME}:${JSON.stringify(binding.enable_timer ?? false)}`,
+				entrypoint: "HelloWorldBinding",
+			},
+		}));
 	},
-	getNodeBindings(options: z.infer<typeof HelloWorldOptionsSchema>) {
-		if (!options.helloWorld) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.helloWorld).map((name) => [
+			getEnvBindingsOfType(options.config, "hello-world").map(([name]) => [
 				name,
 				new ProxyNodeBinding(),
 			])
 		);
 	},
 	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		const configs = options.helloWorld ? Object.values(options.helloWorld) : [];
+		const bindings = getEnvBindingsOfType(options.config, "hello-world");
 
-		if (configs.length === 0) {
+		if (bindings.length === 0) {
 			return [];
 		}
 
@@ -108,8 +87,8 @@ export const HELLO_WORLD_PLUGIN: Plugin<typeof HelloWorldOptionsSchema> = {
 				],
 			},
 		} satisfies Service;
-		const services = configs.map<Service>((config) => ({
-			name: `${HELLO_WORLD_PLUGIN_NAME}:${JSON.stringify(config.enable_timer ?? false)}`,
+		const services = bindings.map<Service>(([, binding]) => ({
+			name: `${HELLO_WORLD_PLUGIN_NAME}:${JSON.stringify(binding.enable_timer ?? false)}`,
 			worker: {
 				compatibilityDate: "2025-01-01",
 				modules: [
@@ -121,7 +100,7 @@ export const HELLO_WORLD_PLUGIN: Plugin<typeof HelloWorldOptionsSchema> = {
 				bindings: [
 					{
 						name: "config",
-						json: JSON.stringify(config),
+						json: JSON.stringify({ enable_timer: binding.enable_timer }),
 					},
 					{
 						name: "store",

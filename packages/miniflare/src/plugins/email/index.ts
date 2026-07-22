@@ -2,45 +2,16 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
-import { z } from "zod";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	getUserBindingServiceName,
-	remoteProxyClientWorker,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-// Define the mutually exclusive schema
-const EmailBindingOptionsSchema = z
-	.object({
-		name: z.string(),
-		remoteProxyConnectionString: z
-			.custom<RemoteProxyConnectionString>()
-			.optional(),
-		allowed_sender_addresses: z.array(z.string()).optional(),
-	})
-	.and(
-		z.union([
-			z.object({
-				destination_address: z.string().optional(),
-				allowed_destination_addresses: z.never().optional(),
-			}),
-			z.object({
-				allowed_destination_addresses: z.array(z.string()).optional(),
-				destination_address: z.never().optional(),
-			}),
-		])
-	);
-
-export const EmailOptionsSchema = z.object({
-	email: z
-		.object({
-			send_email: z.array(EmailBindingOptionsSchema).optional(),
-		})
-		.optional(),
-});
+import type { ParsedWorkerOptions, Plugin } from "../shared";
 
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
@@ -99,43 +70,50 @@ export function getEmailPathsToClean(
 	return { sessionDir, parentDir };
 }
 
-export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
-	options: EmailOptionsSchema,
+export const EMAIL_PLUGIN: Plugin = {
 	bindingTypeDescription: "Email",
 	getBindings(options): Worker_Binding[] {
-		if (!options.email?.send_email) {
-			return [];
-		}
-
-		const sendEmailBindings = options.email.send_email;
-
-		return sendEmailBindings.map(({ name, remoteProxyConnectionString }) => ({
-			name,
-			service: remoteProxyConnectionString
-				? {
-						name: EMAIL_REMOTE_SERVICE_NAME,
-						props: buildRemoteProxyProps(remoteProxyConnectionString, name),
-					}
-				: {
-						entrypoint: "SendEmailBinding",
-						name: getUserBindingServiceName(
-							SERVICE_SEND_EMAIL_WORKER_PREFIX,
-							name
-						),
-					},
-		}));
+		return getEnvBindingsOfType(options.config, "send-email").map(
+			([name, binding]) => {
+				const remoteProxyConnectionString = getRemoteProxyConnectionString(
+					binding,
+					options.dev
+				);
+				return {
+					name,
+					service: remoteProxyConnectionString
+						? {
+								name: EMAIL_REMOTE_SERVICE_NAME,
+								props: buildRemoteProxyProps(
+									remoteProxyConnectionString,
+									name
+								),
+							}
+						: {
+								entrypoint: "SendEmailBinding",
+								name: getUserBindingServiceName(
+									SERVICE_SEND_EMAIL_WORKER_PREFIX,
+									name
+								),
+							},
+				};
+			}
+		);
 	},
 	getNodeBindings(options) {
-		if (!options.email?.send_email) {
-			return {};
-		}
-
 		return Object.fromEntries(
-			options.email.send_email.map(({ name }) => [name, new ProxyNodeBinding()])
+			getEnvBindingsOfType(options.config, "send-email").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
 		);
 	},
 	async getServices(args) {
-		if (!args.options.email?.send_email) {
+		const sendEmailBindings = getEnvBindingsOfType(
+			args.options.config,
+			"send-email"
+		);
+		if (sendEmailBindings.length === 0) {
 			return [];
 		}
 
@@ -185,12 +163,27 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 		}));
 
 		let hasRemote = false;
-		for (const { name, remoteProxyConnectionString, ...config } of args.options
-			.email?.send_email ?? []) {
-			if (remoteProxyConnectionString) {
+		for (const [name, binding] of sendEmailBindings) {
+			if (getRemoteProxyConnectionString(binding, args.options.dev)) {
 				hasRemote = true;
 				continue;
 			}
+
+			// The local send-email worker reads these config values from env
+			// under their original snake_case names, so map the renamed config
+			// fields back and only include the ones that are present.
+			const config: Record<string, unknown> = {};
+			if (binding.destinationAddress !== undefined) {
+				config.destination_address = binding.destinationAddress;
+			}
+			if (binding.allowedDestinationAddresses !== undefined) {
+				config.allowed_destination_addresses =
+					binding.allowedDestinationAddresses;
+			}
+			if (binding.allowedSenderAddresses !== undefined) {
+				config.allowed_sender_addresses = binding.allowedSenderAddresses;
+			}
+
 			services.push({
 				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
 				worker: {
@@ -226,7 +219,15 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 		return services;
 	},
 
-	getExtensions() {
+	getExtensions({ options }: { options: ParsedWorkerOptions[] }) {
+		if (
+			!options.some(
+				(o) => getEnvBindingsOfType(o.config, "send-email").length > 0
+			)
+		) {
+			return [];
+		}
+
 		return [
 			{
 				modules: [

@@ -1,35 +1,28 @@
+import { getRemoteProxyConnectionString } from "../config/schema";
 import { kCurrentWorker } from "../plugins/core";
-import type { ServiceDesignatorSchema } from "../plugins/core";
+import type { MiniflareWorkerBinding, ParsedDevConfig } from "../config/schema";
 import type { RemoteProxyConnectionString } from "../plugins/shared";
-import type { z } from "zod";
 
+/**
+ * Extracts the target service name, entrypoint, props and (resolved) remote
+ * proxy connection string from a parsed `worker` service binding.
+ * `kCurrentWorker` (SELF) yields an undefined `serviceName`.
+ */
 export function normaliseServiceDesignator(
-	service: z.infer<typeof ServiceDesignatorSchema>
+	binding: MiniflareWorkerBinding,
+	dev: ParsedDevConfig | undefined
 ): {
 	serviceName: string | undefined;
 	entrypoint: string | undefined;
 	props: Record<string, unknown> | undefined;
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
 } {
-	let serviceName: string | undefined;
-	let entrypoint: string | undefined;
-	let props: Record<string, unknown> | undefined;
-	let remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
-
-	if (typeof service === "string") {
-		serviceName = service;
-	} else if (typeof service === "object" && "name" in service) {
-		serviceName = service.name !== kCurrentWorker ? service.name : undefined;
-		entrypoint = service.entrypoint;
-		props = service.props;
-		remoteProxyConnectionString = service.remoteProxyConnectionString;
-	}
-
 	return {
-		serviceName,
-		entrypoint,
-		props,
-		remoteProxyConnectionString,
+		serviceName:
+			binding.workerName !== kCurrentWorker ? binding.workerName : undefined,
+		entrypoint: binding.exportName,
+		props: binding.props,
+		remoteProxyConnectionString: getRemoteProxyConnectionString(binding, dev),
 	};
 }
 

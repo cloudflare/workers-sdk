@@ -19,6 +19,7 @@ import {
 } from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
 import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
 import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	HEADERS_FILENAME,
 	REDIRECTS_FILENAME,
@@ -38,7 +39,7 @@ import SCRIPT_ROUTER from "worker:assets/router";
 import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
-import { ProxyNodeBinding } from "../shared";
+import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
 import {
 	ASSETS_KV_SERVICE_NAME,
 	ASSETS_PLUGIN_NAME,
@@ -46,51 +47,77 @@ import {
 	ROUTER_SERVICE_NAME,
 	RPC_PROXY_SERVICE_NAME,
 } from "./constants";
-import { AssetsOptionsSchema } from "./schema";
+import type { ParsedMiniflareWorkerConfig } from "../../config/schema";
 import type { Service } from "../../runtime";
 import type { Plugin } from "../shared";
-import type { Logger } from "@cloudflare/workers-shared";
+import type { Logger, RouterConfig } from "@cloudflare/workers-shared";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
-import type { z } from "zod";
 
 // Cache of temp directories created for missing asset directories, keyed by
 // the Worker's name followed by the assets directory path. Prevents accumulating
 // orphaned temp directories when getServices is called repeatedly
 const tempDirCache = new Map<string, string>();
 
-export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
-	options: AssetsOptionsSchema,
+/**
+ * Builds the router worker's `RouterConfig` from the parsed worker config,
+ * mirroring `resolveAssetOptions` in `@cloudflare/deploy-helpers`:
+ * - `has_user_worker` reflects whether the worker has a script (a manifest).
+ * - `run_worker_first: boolean` → `invoke_user_worker_ahead_of_assets`.
+ * - `run_worker_first: string[]` → parsed `static_routing` rules.
+ */
+function resolveRouterConfig(
+	config: ParsedMiniflareWorkerConfig
+): RouterConfig {
+	const routerConfig: RouterConfig = {
+		has_user_worker: config.manifest !== undefined,
+	};
+
+	const runWorkerFirst = config.assets?.runWorkerFirst;
+	if (typeof runWorkerFirst === "boolean") {
+		routerConfig.invoke_user_worker_ahead_of_assets = runWorkerFirst;
+	} else if (Array.isArray(runWorkerFirst)) {
+		routerConfig.static_routing = parseStaticRouting(runWorkerFirst);
+	}
+
+	return routerConfig;
+}
+
+export const ASSETS_PLUGIN: Plugin = {
 	bindingTypeDescription: "Assets",
-	async getBindings(options: z.infer<typeof AssetsOptionsSchema>) {
-		if (!options.assets?.binding) {
+	async getBindings(options) {
+		const [assetsBinding] = getEnvBindingsOfType(options.config, "assets");
+		if (!assetsBinding) {
 			return [];
 		}
+		const [bindingName] = assetsBinding;
 		return [
 			{
 				// binding between User Worker and Asset Worker
-				name: options.assets.binding,
+				name: bindingName,
 				service: {
-					name: `${ASSETS_SERVICE_NAME}:${options.assets.workerName}`,
+					name: `${ASSETS_SERVICE_NAME}:${options.config.name}`,
 				},
 			},
 		];
 	},
 
 	async getNodeBindings(options) {
-		if (!options.assets?.binding) {
+		const [assetsBinding] = getEnvBindingsOfType(options.config, "assets");
+		if (!assetsBinding) {
 			return {};
 		}
 		return {
-			[options.assets.binding]: new ProxyNodeBinding(),
+			[assetsBinding[0]]: new ProxyNodeBinding(),
 		};
 	},
 
 	async getServices({ options, log }) {
-		if (!options.assets) {
+		const assets = options.config.assets;
+		if (!assets) {
 			return [];
 		}
 
-		let assetDirectory = options.assets.directory;
+		let assetDirectory = assets.directory;
 		const directoryStats = await fs.stat(assetDirectory).catch((err) => {
 			if (err?.code === "ENOENT") {
 				return undefined;
@@ -103,7 +130,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			// asset services can still start up with zero assets.
 			// Reuse a previously created temp directory for this path to avoid
 			// accumulating orphaned temp directories on repeated calls.
-			const cacheKey = `${options.assets.workerName}:${assetDirectory}`;
+			const cacheKey = `${options.config.name}:${assetDirectory}`;
 			const cached = tempDirCache.get(cacheKey);
 			const cachedExists = cached
 				? await fs.stat(cached).catch(() => undefined)
@@ -148,7 +175,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		let parsedRedirects: AssetConfig["redirects"] | undefined;
 		if (redirectsContents !== undefined) {
 			const redirects = parseRedirects(redirectsContents, {
-				htmlHandling: options.assets.assetConfig?.html_handling,
+				htmlHandling: assets.htmlHandling,
 			});
 			parsedRedirects = RedirectsSchema.parse(
 				constructRedirects({
@@ -171,17 +198,20 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			);
 		}
 
+		const routerConfig = resolveRouterConfig(options.config);
+
 		const assetConfig: AssetConfig = {
-			compatibility_date: options.compatibilityDate,
-			compatibility_flags: options.compatibilityFlags,
-			...options.assets.assetConfig,
+			compatibility_date: options.config.compatibilityDate,
+			compatibility_flags: options.config.compatibilityFlags,
+			html_handling: assets.htmlHandling,
+			not_found_handling: assets.notFoundHandling,
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
 			debug: true,
-			has_static_routing: Boolean(options.assets.routerConfig?.static_routing),
+			has_static_routing: Boolean(routerConfig.static_routing),
 		};
 
-		const id = options.assets.workerName;
+		const id = options.config.name;
 
 		const namespaceService: Service = {
 			name: `${ASSETS_KV_SERVICE_NAME}:${id}`,
@@ -267,7 +297,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					},
 					{
 						name: "CONFIG",
-						json: JSON.stringify(options.assets.routerConfig ?? {}),
+						json: JSON.stringify(routerConfig),
 					},
 				],
 			},

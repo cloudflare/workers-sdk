@@ -1,9 +1,9 @@
 import SCRIPT_RATELIMIT_CLIENT from "worker:ratelimit/ratelimit";
 import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit-object";
-import { z } from "zod";
 import { kVoid } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getUserBindingServiceName,
 	objectEntryWorker,
@@ -15,29 +15,12 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { Plugin } from "../shared";
+import type { ParsedWorkerOptions, Plugin } from "../shared";
 
 export enum PeriodType {
 	TENSECONDS = 10,
 	MINUTE = 60,
 }
-
-export const RatelimitConfigSchema = z.object({
-	// The rate limiter's namespace identity. Counters are keyed by this, not by
-	// the binding name, so two bindings (in the same Worker or across Workers in
-	// a multiworker session) that reference the same namespace share a limit,
-	// while the same binding name pointing at different namespaces stays isolated.
-	namespace_id: z.string(),
-	simple: z.object({
-		limit: z.number().gt(0),
-
-		// may relax this to be any number in the future
-		period: z.enum(PeriodType).optional().default(PeriodType.MINUTE),
-	}),
-});
-export const RatelimitOptionsSchema = z.object({
-	ratelimits: z.record(z.string(), RatelimitConfigSchema).optional(),
-});
 
 export const RATELIMIT_PLUGIN_NAME = "ratelimit";
 const SERVICE_RATELIMIT_PREFIX = `${RATELIMIT_PLUGIN_NAME}`;
@@ -56,15 +39,11 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	}));
 }
 
-export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
-	options: RatelimitOptionsSchema,
+export const RATELIMIT_PLUGIN: Plugin = {
 	bindingTypeDescription: "Rate Limit",
-	getBindings(options: z.infer<typeof RatelimitOptionsSchema>) {
-		if (!options.ratelimits) {
-			return [];
-		}
-		const bindings = Object.entries(options.ratelimits).map<Worker_Binding>(
-			([name, config]) => ({
+	getBindings(options) {
+		return getEnvBindingsOfType(options.config, "rate-limit").map<Worker_Binding>(
+			([name, binding]) => ({
 				name,
 				wrapped: {
 					moduleName: SERVICE_RATELIMIT_MODULE,
@@ -74,50 +53,47 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 							service: {
 								name: getUserBindingServiceName(
 									RATELIMIT_ENTRY_SERVICE_PREFIX,
-									config.namespace_id
+									binding.namespace
 								),
 							},
 						},
 						...buildJsonBindings({
-							limit: config.simple.limit,
-							period: config.simple.period,
+							limit: binding.simple.limit,
+							period: binding.simple.period,
 						}),
 					],
 				},
 			})
 		);
-		return bindings;
 	},
-	getNodeBindings(options: z.infer<typeof RatelimitOptionsSchema>) {
-		if (!options.ratelimits) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.ratelimits).map((name) => [
+			getEnvBindingsOfType(options.config, "rate-limit").map(([name]) => [
 				name,
 				new ProxyNodeBinding(),
 			])
 		);
 	},
 	async getServices({ options }) {
-		if (!options.ratelimits) {
+		const ratelimits = getEnvBindingsOfType(options.config, "rate-limit");
+		if (ratelimits.length === 0) {
 			return [];
 		}
-		// One entry service + Durable Object instance per unique namespace_id.
+		// One entry service + Durable Object instance per unique namespace.
 		// Multiple bindings sharing a namespace collapse to a single counter.
 		const services: Service[] = [];
 		const seenNamespaces = new Set<string>();
-		for (const { namespace_id } of Object.values(options.ratelimits)) {
-			if (seenNamespaces.has(namespace_id)) {
+		for (const [, binding] of ratelimits) {
+			if (seenNamespaces.has(binding.namespace)) {
 				continue;
 			}
-			seenNamespaces.add(namespace_id);
+			seenNamespaces.add(binding.namespace);
 			services.push({
 				name: getUserBindingServiceName(
 					RATELIMIT_ENTRY_SERVICE_PREFIX,
-					namespace_id
+					binding.namespace
 				),
-				worker: objectEntryWorker(RATELIMIT_OBJECT, namespace_id),
+				worker: objectEntryWorker(RATELIMIT_OBJECT, binding.namespace),
 			});
 		}
 
@@ -152,8 +128,12 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 
 		return services;
 	},
-	getExtensions({ options }) {
-		if (!options.some((o) => o.ratelimits)) {
+	getExtensions({ options }: { options: ParsedWorkerOptions[] }) {
+		if (
+			!options.some(
+				(o) => getEnvBindingsOfType(o.config, "rate-limit").length > 0
+			)
+		) {
 			return [];
 		}
 		return [
