@@ -189,6 +189,7 @@ describe("kv", () => {
 				expect(std.out).toContain(
 					'Creating namespace with title "UnitTestNamespace" (jurisdiction: eu)'
 				);
+				expect(std.out).toContain("✨ Success!");
 			});
 
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
