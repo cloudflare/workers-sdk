@@ -42,11 +42,16 @@ export class RemoteSessionAuthenticationError extends UserError {
 	 * @param cause - The original error that triggered the authentication
 	 *   failure (e.g. an {@link APIError} with code 9106 or 10000).
 	 */
-	constructor(cause: unknown) {
+	constructor(cause: unknown, isRemoteBinding = false) {
 		const envAuth = getAuthFromEnv();
 
 		let errorMessage =
 			"Failed to establish remote session due to an authentication issue.\n";
+		if (isRemoteBinding) {
+			errorMessage +=
+				"A remote binding (e.g. AI or Vectorize) forced your local dev session to be partially remote, which requires authentication.\n";
+		}
+
 		if (envAuth !== undefined) {
 			// The user is authenticating via an environment variable
 			const method =
@@ -66,6 +71,10 @@ export class RemoteSessionAuthenticationError extends UserError {
 				"To fix this, try to:\n" +
 				"  - Run `wrangler whoami` to check your current authentication status.\n" +
 				"  - Run `wrangler logout` and then `wrangler login` to re-authenticate.";
+		}
+
+		if (isRemoteBinding) {
+			errorMessage += "\n\nAlternatively, you can opt into fully-local dev by configuring your binding for local development.";
 		}
 
 		super(errorMessage, {
@@ -102,13 +111,14 @@ export function handlePreviewSessionUploadError(
 
 export function handlePreviewSessionCreationError(
 	err: unknown,
-	accountId: string
+	accountId: string,
+	isRemoteBinding = false
 ) {
 	assert(err && typeof err === "object");
 	// instead of logging the raw API error to the user,
 	// give them friendly instructions
 	if (isAuthenticationError(err)) {
-		throw new RemoteSessionAuthenticationError(err);
+		throw new RemoteSessionAuthenticationError(err, isRemoteBinding);
 	}
 	// for error 10063 (workers.dev subdomain required)
 	else if ("code" in err && err.code === 10063) {

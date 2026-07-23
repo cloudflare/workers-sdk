@@ -63,6 +63,7 @@ export class RemoteRuntimeController extends RuntimeController {
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
 			name: string;
+			minimal_mode?: boolean;
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
@@ -88,7 +89,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				return; // ignore
 			}
 
-			handlePreviewSessionCreationError(err, props.accountId);
+			handlePreviewSessionCreationError(err, props.accountId, props.minimal_mode);
 
 			throw err;
 		}
@@ -251,6 +252,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			sendMetrics: config.sendMetrics,
 			configPath: config.config,
 			name: config.name,
+			minimal_mode: config.dev.remote === "minimal",
 		});
 	}
 
