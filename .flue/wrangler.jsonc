@@ -8,6 +8,10 @@
 		"remote": true,
 	},
 	"exports": {
+		"FlueGithubAssistantAgent": {
+			"storage": "sqlite",
+			"type": "durable-object",
+		},
 		"FlueRegistry": {
 			"storage": "sqlite",
 			"type": "durable-object",
@@ -18,7 +22,7 @@
 		},
 	},
 	"secrets": {
-		"required": ["FLUE_BEARER_TOKEN"],
+		"required": ["FLUE_BEARER_TOKEN", "GITHUB_TOKEN", "GITHUB_WEBHOOK_SECRET"],
 	},
 	"worker_loaders": [
 		{
