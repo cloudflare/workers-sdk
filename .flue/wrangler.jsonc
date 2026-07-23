@@ -17,6 +17,9 @@
 			"type": "durable-object",
 		},
 	},
+	"secrets": {
+		"required": ["FLUE_EVALS_BEARER_TOKEN"],
+	},
 	"worker_loaders": [
 		{
 			"binding": "LOADER",

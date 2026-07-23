@@ -8,6 +8,9 @@
 		"cf-typegen": "wrangler types --config dist/workers_sdk_flue/wrangler.json --include-runtime=false",
 		"check:type": "tsc",
 		"dev": "flue dev",
+		"evals": "vitest run --config vitest.evals.config.ts",
+		"evals:info": "VITEST_EVALS_REPORT_LEVEL=info vitest run --config vitest.evals.config.ts",
+		"evals:json": "vitest run --config vitest.evals.config.ts --reporter=vitest-evals/reporter --reporter=json --outputFile.json=vitest-results.json",
 		"smoke": "flue run workspace-smoke --input '{\"message\":\"Verify the durable workspace.\"}'"
 	},
 	"devDependencies": {
@@ -16,10 +19,15 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@flue/cli": "1.0.0-beta.9",
 		"@flue/runtime": "1.0.0-beta.9",
+		"@flue/sdk": "1.0.0-beta.9",
 		"agents": "0.14.2",
+		"get-port": "^7.1.0",
+		"hono": "4.12.31",
 		"typescript": "catalog:default",
 		"valibot": "1.4.2",
 		"vite": "8.1.5",
+		"vitest": "catalog:default",
+		"vitest-evals": "0.15.0",
 		"wrangler": "workspace:*",
 		"zod": "4.3.6"
 	},

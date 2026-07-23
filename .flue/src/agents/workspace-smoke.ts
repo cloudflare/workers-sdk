@@ -1,8 +1,27 @@
-import { defineAgent } from "@flue/runtime";
+import { defineAgent, type AgentRouteHandler } from "@flue/runtime";
+import { bearerAuth } from "hono/bearer-auth";
+import { HTTPException } from "hono/http-exception";
 import {
 	getDefaultWorkspace,
 	getShellSandbox,
 } from "../sandboxes/cloudflare-shell";
+import type { Context } from "hono";
+
+export const route: AgentRouteHandler = async (c, next) => {
+	try {
+		const middleware = bearerAuth({
+			token: c.env.FLUE_EVALS_BEARER_TOKEN,
+		});
+
+		await middleware(c as unknown as Context, next);
+	} catch (error) {
+		if (error instanceof HTTPException) {
+			return error.getResponse();
+		}
+
+		throw error;
+	}
+};
 
 export default defineAgent<Env>(({ env }) => {
 	const workspace = getDefaultWorkspace();
