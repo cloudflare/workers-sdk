@@ -1,5 +1,13 @@
 # @cloudflare/workers-auth
 
+## 0.5.2
+
+### Patch Changes
+
+- [#14781](https://github.com/cloudflare/workers-sdk/pull/14781) [`fe3ae91`](https://github.com/cloudflare/workers-sdk/commit/fe3ae91e5c7da16da9e27a66bd11dc45291b3119) Thanks [@edmundhung](https://github.com/edmundhung)! - Make auth profile guidance CLI agnostic
+
+  Remove Wrangler-specific wording from shared profile errors and add `cf auth create` to cf's auth descriptor.
+
 ## 0.5.1
 
 ### Patch Changes
