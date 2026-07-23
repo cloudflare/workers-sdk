@@ -3,7 +3,85 @@ import {
 	convertConfigBindingsToStartWorkerBindings,
 	convertStartDevOptionsToBindings,
 } from "../../../api/startDevWorker/binding-utils";
-import { rewriteUrlInHeaderValue } from "../../../api/startDevWorker/utils";
+import {
+	isSameUserWorkerOrigin,
+	rewriteUrlInHeaderValue,
+} from "../../../api/startDevWorker/utils";
+
+describe("isSameUserWorkerOrigin", () => {
+	const userWorker = { protocol: "http:", hostname: "localhost", port: "8787" };
+
+	it("matches same-origin requests regardless of path or query", ({
+		expect,
+	}) => {
+		// Regression guard for the ProxyWorker origin-vs-href fix: a request to a
+		// non-root path (or with a query string) must still resolve to the same
+		// UserWorker. An href comparison would fail all but "/" here, because
+		// urlFromParts() yields an origin-only URL.
+		expect(
+			isSameUserWorkerOrigin(new URL("http://localhost:8787/"), userWorker)
+		).toBe(true);
+		expect(
+			isSameUserWorkerOrigin(
+				new URL("http://localhost:8787/users/1/accessible-locks"),
+				userWorker
+			)
+		).toBe(true);
+		expect(
+			isSameUserWorkerOrigin(new URL("http://localhost:8787/x?a=1"), userWorker)
+		).toBe(true);
+	});
+
+	it("does not match when the port differs", ({ expect }) => {
+		expect(
+			isSameUserWorkerOrigin(new URL("http://localhost:8788/"), userWorker)
+		).toBe(false);
+		expect(
+			isSameUserWorkerOrigin(new URL("http://localhost:8787/some/path"), {
+				protocol: "http:",
+				hostname: "localhost",
+				port: "8788",
+			})
+		).toBe(false);
+	});
+
+	it("does not match when the hostname differs", ({ expect }) => {
+		expect(
+			isSameUserWorkerOrigin(new URL("http://127.0.0.1:8787/"), userWorker)
+		).toBe(false);
+		expect(
+			isSameUserWorkerOrigin(new URL("http://localhost:8787/some/path"), {
+				protocol: "http:",
+				hostname: "127.0.0.1",
+				port: "8787",
+			})
+		).toBe(false);
+	});
+
+	it("does not match when the protocol differs", ({ expect }) => {
+		expect(
+			isSameUserWorkerOrigin(new URL("https://localhost:8787/"), userWorker)
+		).toBe(false);
+		expect(
+			isSameUserWorkerOrigin(new URL("http://localhost:8787/some/path"), {
+				protocol: "https:",
+				hostname: "localhost",
+				port: "8787",
+			})
+		).toBe(false);
+	});
+
+	it("does not match when there is no proxyData (UserWorker torn down)", ({
+		expect,
+	}) => {
+		expect(
+			isSameUserWorkerOrigin(
+				new URL("http://localhost:8787/some/path"),
+				undefined
+			)
+		).toBe(false);
+	});
+});
 
 describe("convertConfigBindingsToStartWorkerBindings", () => {
 	it("converts config bindings into startWorker bindings", async ({
