@@ -1,0 +1,21 @@
+packages/wrangler/src/workflows/commands/instances/restart.ts
+  s_98a259550c0665::t_c185d18c3f9e7b 64
+packages/wrangler/src/workflows/commands/instances/terminate.ts
+  s_98a259550c0665::t_dfce1f750e09ea 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c12181e30440879365189d764f464859e3913d89",
+  "prompts": {},
+  "sessions": {
+    "s_98a259550c0665": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f671f-e536-7ecc-8fad-e740d54fa0bb",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}

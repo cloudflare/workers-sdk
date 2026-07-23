@@ -1,0 +1,22 @@
+packages/workflows-shared/src/binding.ts
+  s_b554ffcd7ba695::t_46590fd57ca0fa 289-296,301-304,444-450,452-454
+  s_b554ffcd7ba695::t_453b4708230a18 272-276,278-286,297-300
+  s_b554ffcd7ba695::t_0d974914842f96 287-288,451
+  s_b554ffcd7ba695::t_d85edf00b0489c 271
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ca9e0b424fa5059d4e17a3e01a1306c301855dba",
+  "prompts": {},
+  "sessions": {
+    "s_b554ffcd7ba695": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f74df-f5c8-71b4-88d3-30b0c9e17ab0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}
