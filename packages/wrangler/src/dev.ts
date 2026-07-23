@@ -4,6 +4,8 @@ import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	formatConfigSnippet,
+	getLocalExplorerEnabledFromEnv,
+	isInteractive,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { getHostFromRoute } from "@cloudflare/workers-utils";
@@ -15,6 +17,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
 import { logger } from "./logger";
+import { detectAgent } from "./utils/detect-agent";
 import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -238,11 +241,6 @@ export const dev = createCommand({
 			describe: "Auto reload HTML pages when change is detected in local mode",
 			type: "boolean",
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 		"test-scheduled": {
 			describe: "Test scheduled events by visiting /__scheduled in browser",
 			type: "boolean",
@@ -304,7 +302,17 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
-		const devInstance = await startDev(args);
+		const interactiveDevSession =
+			isInteractive() && args.showInteractiveDevSession !== false;
+		const showLocalExplorerAgentHint =
+			!interactiveDevSession &&
+			!args.remote &&
+			getLocalExplorerEnabledFromEnv() &&
+			detectAgent().isAgent;
+		const devInstance = await startDev({
+			...args,
+			showLocalExplorerAgentHint,
+		});
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
@@ -363,6 +371,7 @@ export type AdditionalDevProps = {
 	moduleRoot?: string;
 	rules?: Rule[];
 	showInteractiveDevSession?: boolean;
+	showLocalExplorerAgentHint?: boolean;
 };
 
 type DevArguments = Omit<(typeof dev)["args"], "installSkills" | "profile">;

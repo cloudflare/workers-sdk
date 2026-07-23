@@ -174,6 +174,9 @@ test("lists Durable Object ids with persisted storage", async ({ expect }) => {
 	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual(
 		[firstId, secondId].sort()
 	);
+	await expect(mf.listDurableObjectIds("Counter")).resolves.toEqual(
+		[firstId, secondId].sort()
+	);
 });
 
 test("multiple Workers access same Durable Object data", async ({ expect }) => {
@@ -465,6 +468,96 @@ test("SQLite is available in SQLite backed Durable Objects", async ({
 	const stub = ns.get(id);
 	res = await stub.fetch("http://localhost");
 	expect(await res.text()).toBe("4096");
+});
+
+test("gets SQLite storage for Durable Objects", async ({ expect }) => {
+	const mf = new Miniflare({
+		unsafeInspectDurableObjects: true,
+		modules: true,
+		name: "worker",
+		script: `
+			import { DurableObject } from "cloudflare:workers";
+
+			export class TestObject extends DurableObject {
+				constructor(ctx, env) {
+					super(ctx, env);
+					this.ctx.storage.sql.exec(
+						"CREATE TABLE IF NOT EXISTS entries (id TEXT PRIMARY KEY, value TEXT)"
+					);
+				}
+
+				fetch(request) {
+					const url = new URL(request.url);
+					const sql = this.ctx.storage.sql;
+
+					if (url.pathname === "/write") {
+						sql.exec(
+							"INSERT OR REPLACE INTO entries (id, value) VALUES ('key', ?)",
+							url.searchParams.get("value")
+						);
+						return new Response("ok");
+					}
+
+					const row = sql.exec("SELECT value FROM entries WHERE id = 'key'").one();
+					return new Response(row?.value ?? "missing");
+				}
+			}
+
+			export default {
+				fetch(request, env) {
+					const name = new URL(request.url).searchParams.get("name") ?? "by-name";
+					const id = env.OBJECT.idFromName(name);
+					return env.OBJECT.get(id).fetch(request);
+				}
+			}
+		`,
+		durableObjects: {
+			OBJECT: {
+				className: "TestObject",
+				useSQLite: true,
+			},
+		},
+	});
+	useDispose(mf);
+
+	const storageByName = await mf.unsafeGetDurableObjectStorage(
+		"worker",
+		"TestObject",
+		{
+			name: "by-name",
+		}
+	);
+	await storageByName.exec(
+		"INSERT INTO entries (id, value) VALUES ('key', ?)",
+		"seeded"
+	);
+
+	const response1 = await mf.dispatchFetch("http://localhost/read");
+	expect(await response1.text()).toBe("seeded");
+
+	const response2 = await mf.dispatchFetch("http://localhost/write?value=app");
+	expect(await response2.text()).toBe("ok");
+
+	const rows = await storageByName.exec<{ value: string }>(
+		"SELECT value FROM entries WHERE id = 'key'"
+	);
+	expect(rows).toEqual([{ value: "app" }]);
+
+	const namespace = await mf.getDurableObjectNamespace("OBJECT");
+	const storageById = await mf.unsafeGetDurableObjectStorage(
+		"worker",
+		"TestObject",
+		{
+			id: namespace.idFromName("by-id").toString(),
+		}
+	);
+	await storageById.exec(
+		"INSERT INTO entries (id, value) VALUES ('key', ?)",
+		"seeded-by-id"
+	);
+
+	const response3 = await mf.dispatchFetch("http://localhost/read?name=by-id");
+	expect(await response3.text()).toBe("seeded-by-id");
 });
 
 test("SQLite is not available in default Durable Objects", async ({

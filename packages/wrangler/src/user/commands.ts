@@ -1,11 +1,13 @@
 import { getCloudflareAuthUseKeyringFromEnv } from "@cloudflare/workers-auth";
+import {
+	readUserPreferences,
+	setKeyringPreference,
+} from "@cloudflare/workers-auth/wrangler";
 import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
 import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { setKeyringPreference } from "./keyring-preference";
-import { readUserPreferences } from "./preferences";
 import {
 	DefaultScopeKeys,
 	getActiveProfile,
@@ -112,7 +114,7 @@ export const loginCommand = createCommand({
 		// (env-override warning, opt-out scrub of all encrypted profiles, and
 		// eager validation + rollback of an unusable opt-in).
 		if (args.useKeyring !== undefined) {
-			setKeyringPreference(args.useKeyring);
+			setKeyringPreference(args.useKeyring, { logger, getCredentialStore });
 		}
 
 		// Validate `--scopes` up front so we can share a single `login(...)`
@@ -372,7 +374,10 @@ export const authKeyringCommand = createCommand({
 		}
 
 		const enable = args.action === "enable";
-		const { enabled } = setKeyringPreference(enable);
+		const { enabled } = setKeyringPreference(enable, {
+			logger,
+			getCredentialStore,
+		});
 		if (enable) {
 			if (enabled) {
 				logger.log(

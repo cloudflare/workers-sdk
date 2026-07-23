@@ -1,5 +1,77 @@
 # @cloudflare/deploy-helpers
 
+## 0.6.0
+
+### Minor Changes
+
+- [#14471](https://github.com/cloudflare/workers-sdk/pull/14471) [`f03b108`](https://github.com/cloudflare/workers-sdk/commit/f03b10854d983c353fd4f3d6621b5ed716379ba3) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Apply Email Routing `addresses` during Worker trigger deployment
+
+  Worker trigger deployment now reconciles the Worker's Email Routing rules with the top-level `addresses` config. This runs for `wrangler deploy`, `wrangler triggers deploy`, and clients of `@cloudflare/deploy-helpers`. After the Worker uploads, or when `wrangler triggers deploy` runs after a version promotion, the deploy helper asks the Email Routing API for a plan, renders the changes grouped by zone (`+` added, `~` updated, `-` deleted, `!` conflict), prompts once for destructive changes in interactive mode, and applies accepted changes through the per-zone rule endpoints. Purely additive plans apply without a prompt, while non-interactive destructive plans fail without modifying rules.
+
+### Patch Changes
+
+- [#14744](https://github.com/cloudflare/workers-sdk/pull/14744) [`a0a091b`](https://github.com/cloudflare/workers-sdk/commit/a0a091b9246c5e10408f57342b3275659c9655e3) Thanks [@penalosa](https://github.com/penalosa)! - Drop the "Experimental:" prefix from the resource provisioning header now that automatic provisioning is generally available. The deploy output now reads `The following bindings need to be provisioned:`.
+
+- Updated dependencies [[`42af66d`](https://github.com/cloudflare/workers-sdk/commit/42af66d00b255945989726387acf46409b4c5eb3), [`4815711`](https://github.com/cloudflare/workers-sdk/commit/4815711fb5f896a5aa9221b6bddb9ef78c3f288d), [`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924), [`a6c214f`](https://github.com/cloudflare/workers-sdk/commit/a6c214fb311215b1ed09b273171b7995033fb7d7), [`34430b3`](https://github.com/cloudflare/workers-sdk/commit/34430b34f468825775377689621e451d730ab0c9)]:
+  - miniflare@4.20260721.0
+  - @cloudflare/workers-utils@0.28.0
+  - @cloudflare/cli-shared-helpers@0.1.16
+
+## 0.5.1
+
+### Patch Changes
+
+- [#14707](https://github.com/cloudflare/workers-sdk/pull/14707) [`b38f494`](https://github.com/cloudflare/workers-sdk/commit/b38f494204e5e08e561b8f198ef928188e554868) Thanks [@emily-shen](https://github.com/emily-shen)! - Update zod to v4
+
+- Updated dependencies [[`34e696d`](https://github.com/cloudflare/workers-sdk/commit/34e696dc60dcd7ea04cdab8a6267d255efab9983), [`d39ae01`](https://github.com/cloudflare/workers-sdk/commit/d39ae0131018088f8b4c31ba3f5506e224796cce), [`8cd805d`](https://github.com/cloudflare/workers-sdk/commit/8cd805db2f9901cba52d574b385577bafd595cb5), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d), [`cb6c3f9`](https://github.com/cloudflare/workers-sdk/commit/cb6c3f9a5c6d67804cd0cb447cc0837a9f75848c), [`3f3afbb`](https://github.com/cloudflare/workers-sdk/commit/3f3afbbf136c404d26ee39d187a44adb06c1b6e8), [`e6fbc4e`](https://github.com/cloudflare/workers-sdk/commit/e6fbc4e67f76f9b78da3d9a2dd27c6e9786d2645)]:
+  - miniflare@4.20260714.0
+  - @cloudflare/cli-shared-helpers@0.1.15
+  - @cloudflare/workers-utils@0.27.0
+
+## 0.5.0
+
+### Minor Changes
+
+- [#14689](https://github.com/cloudflare/workers-sdk/pull/14689) [`2cd84d4`](https://github.com/cloudflare/workers-sdk/commit/2cd84d455cfa174ff7264e94e678b6d2eb2a25e4) Thanks [@emily-shen](https://github.com/emily-shen)! - Publish `@cloudflare/config` package
+
+  `@cloudflare/config` is now published as a standalone package. Previously, its exports (`InputWorkerSchema`, `OutputWorkerSchema`, `convertToWranglerConfig`, and related types) were re-exported through `@cloudflare/deploy-helpers`. Consumers should import directly from `@cloudflare/config` instead.
+
+  `@cloudflare/deploy-helpers` no longer re-exports `@cloudflare/config` symbols.
+
+### Patch Changes
+
+- [#14681](https://github.com/cloudflare/workers-sdk/pull/14681) [`8e29318`](https://github.com/cloudflare/workers-sdk/commit/8e29318b568299e0da3e44d17af62ea2d6b80911) Thanks [@emily-shen](https://github.com/emily-shen)! - Move preview command logic from wrangler into `@cloudflare/deploy-helpers`
+
+  Preview orchestration, API calls, formatting, and settings management now live in `@cloudflare/deploy-helpers`.
+
+- Updated dependencies [[`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`ed33326`](https://github.com/cloudflare/workers-sdk/commit/ed3332620a15dff35b0875eb9ded87086104b2f0), [`018574b`](https://github.com/cloudflare/workers-sdk/commit/018574b5ab22cc0e3141d1f09c2c383d76d59b2c), [`42df9bb`](https://github.com/cloudflare/workers-sdk/commit/42df9bbf07e37032a3e61027e33d504d74a25ccd), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36)]:
+  - miniflare@4.20260710.0
+  - @cloudflare/workers-utils@0.27.0
+  - @cloudflare/cli-shared-helpers@0.1.14
+
+## 0.4.0
+
+### Minor Changes
+
+- [#14591](https://github.com/cloudflare/workers-sdk/pull/14591) [`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Export `collectPackageDependencies` for npm dependency metadata collection
+
+  The package dependency discovery logic (collecting installed npm package names and versions from a project's `package.json`) is now owned by `deploy-helpers` and called internally during deploy and version uploads, rather than being pre-computed in wrangler and passed through as a prop.
+
+### Patch Changes
+
+- Updated dependencies [[`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3), [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f)]:
+  - @cloudflare/workers-utils@0.26.0
+  - miniflare@4.20260708.1
+  - @cloudflare/cli-shared-helpers@0.1.13
+
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`8511ddf`](https://github.com/cloudflare/workers-sdk/commit/8511ddf769a603f49576b8cf632ea330c353001f), [`2fedb1f`](https://github.com/cloudflare/workers-sdk/commit/2fedb1fc811efb3f7544c569e57383cabd4f14f8)]:
+  - miniflare@4.20260708.0
+  - @cloudflare/workers-utils@0.25.1
+
 ## 0.3.2
 
 ### Patch Changes

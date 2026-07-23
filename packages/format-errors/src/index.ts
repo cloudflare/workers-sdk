@@ -8,6 +8,7 @@ export interface Env {
 	SENTRY_ACCESS_CLIENT_SECRET: string;
 	SENTRY_ACCESS_CLIENT_ID: string;
 	SENTRY_DSN: string;
+	WSHIM_SOCKET: Fetcher;
 }
 export interface JsonError {
 	message?: string;
@@ -21,6 +22,26 @@ export interface Payload {
 	headers?: Record<string, string>;
 	error?: JsonError;
 }
+
+async function pushMetrics(env: Env, metrics: string) {
+	try {
+		const response = await env.WSHIM_SOCKET.fetch(
+			"https://workers-logging.cfdata.org/prometheus",
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
+				},
+				body: metrics,
+			}
+		);
+		if (!response.ok) {
+			console.error(`Failed to push metrics: ${response.status}`);
+		}
+	} catch (error) {
+		console.error("Failed to push metrics", error);
+	}
+}
 export const JsonErrorSchema: z.ZodType<JsonError> = z.lazy(() =>
 	z.object({
 		message: z.string().optional(),
@@ -33,7 +54,7 @@ export const JsonErrorSchema: z.ZodType<JsonError> = z.lazy(() =>
 export const PayloadSchema = z.object({
 	url: z.string().optional(),
 	method: z.string().optional(),
-	headers: z.record(z.string()),
+	headers: z.record(z.string(), z.string()),
 	error: JsonErrorSchema.optional(),
 });
 
@@ -185,15 +206,7 @@ export default {
 				}
 			);
 		} finally {
-			ctx.waitUntil(
-				fetch("https://workers-logging.cfdata.org/prometheus", {
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
-					},
-					body: registry.metrics(),
-				})
-			);
+			ctx.waitUntil(pushMetrics(env, registry.metrics()));
 		}
 	},
 };

@@ -160,6 +160,7 @@ export async function convertToConfigBundle(
 
 	return {
 		name: event.config.name,
+		projectRoot: event.config.projectRoot,
 		bundle: event.bundle,
 		format: event.bundle.entry.format,
 		compatibilityDate: event.config.compatibilityDate,
@@ -277,6 +278,23 @@ export class LocalRuntimeController extends RuntimeController {
 		process.on("exit", this.cleanupContainers);
 	}
 
+	/**
+	 * Surfaces uncaught Worker exceptions as typed `runtimeError` events
+	 * (workerd catches handler exceptions to build the 500 response, so they
+	 * never reach the inspector — Miniflare's pretty-error path is where the
+	 * revived, source-mapped Error exists). Installed as Miniflare's
+	 * `handleUncaughtError` by every code path that builds Miniflare options:
+	 * this controller's and `MultiworkerRuntimeController`'s.
+	 */
+	protected dispatchRuntimeError = (error: Error): void => {
+		this.bus.dispatch({
+			type: "runtimeError",
+			source: "LocalRuntimeController",
+			text: `${error.name ?? "Error"}: ${error.message}`,
+			stack: error.stack ?? "",
+		});
+	};
+
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
 			// A newer bundle has already been queued — skip this stale one
@@ -391,6 +409,7 @@ export class LocalRuntimeController extends RuntimeController {
 				}
 			);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
+			options.handleUncaughtError = this.dispatchRuntimeError;
 
 			// Bail out if a newer bundle arrived while we were building
 			// miniflare options — avoid a redundant local server reload.

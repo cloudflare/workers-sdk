@@ -4,15 +4,13 @@ import {
 	experimental_patchConfig,
 	formatConfigSnippet,
 	getTodaysCompatDate,
+	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
-import {
-	confirm,
-	fetchResult,
-	isNonInteractiveOrCI,
-	logger,
-} from "../../shared/context";
+import { confirm, fetchResult, logger } from "../../shared/context";
+import { getSubdomainValues } from "../../triggers/deploy";
 import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
+import { getWorkersDevSubdomain } from "../../triggers/subdomain";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
@@ -283,8 +281,7 @@ export async function preUploadApiChecks(
 	const remoteSecretsCheck = await checkRemoteSecretsOverride(
 		config,
 		name,
-		accountId,
-		props.env
+		accountId
 	);
 
 	if (remoteSecretsCheck?.override) {
@@ -305,6 +302,37 @@ export async function preUploadApiChecks(
 		}
 	}
 
-	await ensureQueuesExistByConfig(config, accountId);
+	await ensureQueuesExistByConfig(
+		config,
+		accountId,
+		!props.resourcesProvision,
+		name
+	);
+
+	// Resolve whether this deploy will actually publish to workers.dev, using
+	// the same logic as the triggers phase (`getSubdomainValues`): workers_dev
+	// defaults to true only when there are no routes.
+	const wantsWorkersDev =
+		props.command === "deploy" &&
+		getSubdomainValues(config.workers_dev, config.preview_urls, props.routes)
+			.workers_dev;
+
+	// A brand-new account has no workers.dev subdomain, and the worker upload
+	// API rejects the first script upload with error 10063 until one exists.
+	// Proactively fetch (and offer to register) the subdomain before uploading a
+	// new Worker that targets workers.dev, so the user gets a clear prompt
+	// instead of a cryptic API failure. We skip it for:
+	//   - existing Workers (their account already has a subdomain),
+	//   - dispatch namespace deploys (which skip the metadata fetch, so
+	//     `workerExists` stays true), and
+	//   - routes-only / `workers_dev: false` deploys, which don't publish to
+	//     workers.dev and previously never required a subdomain (workflows on
+	//     such deploys still get a correctly-worded prompt in the triggers phase).
+	if (!workerExists && wantsWorkersDev) {
+		await getWorkersDevSubdomain(config, accountId, {
+			configPath: config.configPath,
+		});
+	}
+
 	return { workerTag, tags, workerExists, aborted: false };
 }

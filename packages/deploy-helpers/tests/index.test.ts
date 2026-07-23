@@ -18,7 +18,6 @@ describe("context singleton", () => {
 			confirm: (() => {}) as never,
 			prompt: (() => {}) as never,
 			select: (() => {}) as never,
-			isNonInteractiveOrCI: () => false,
 		});
 
 		expect(logger).toBe(mockLogger);

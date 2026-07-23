@@ -1003,7 +1003,6 @@ export const pagesDevCommand = createCommand({
 					jsxFragment: undefined,
 					tsconfig: undefined,
 					minify: undefined,
-					legacyEnv: undefined,
 					tunnelName: undefined,
 					env: undefined,
 					envFile: undefined,

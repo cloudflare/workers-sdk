@@ -1,12 +1,11 @@
-import { configFormat } from "@cloudflare/workers-utils";
-import { detectAgenticEnvironment } from "am-i-vibing";
+import { configFormat, isInteractive } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import ci from "ci-info";
 import { fetch } from "undici";
 import { telemetryCurrentAgentSkillsInstalled } from "../agents-skills-install";
-import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
+import { detectAgent } from "../utils/detect-agent";
 import {
 	getNodeVersion,
 	getOS,
@@ -53,17 +52,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	let amplitude_event_id = 0;
 
 	// Detect agent environment once when dispatcher is created.
-	// Environment variable detection is sufficient for identifying most agentic
-	// environments — process tree traversal (checkProcesses) is disabled by
-	// default since it uses execSync('ps ...') which is slow and can cause
-	// timeouts, especially in CI environments.
-	let agent: string | null = null;
-	try {
-		const agentDetection = detectAgenticEnvironment();
-		agent = agentDetection.id;
-	} catch {
-		// Silent failure - agent remains null
-	}
+	const agent = detectAgent().id;
 
 	function getCommonEventProperties(): CommonEventProperties {
 		return {

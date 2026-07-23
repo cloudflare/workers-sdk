@@ -83,6 +83,10 @@
 						"importNames": ["expect"],
 						"message": "Import 'expect' from the test context instead of 'vitest' for concurrency safety. Use: test('name', ({ expect }) => { ... })",
 					},
+					{
+						"name": "am-i-vibing",
+						"message": "Use `detectAgent()` from `src/utils/detect-agent` instead.",
+					},
 				],
 			},
 		],
@@ -200,18 +204,6 @@
 			"files": ["packages/vite-plugin-cloudflare/**"],
 			"rules": {
 				"workers-sdk/no-wrangler-named-imports": "error",
-			},
-		},
-		// Gradually rolling out @typescript-eslint/no-deprecated.
-		// TODO: Remove the following overrides, one package at a time.
-		{
-			"files": [
-				"packages/local-explorer-ui/**",
-				"packages/vite-plugin-cloudflare/**",
-				"packages/workflows-shared/**",
-			],
-			"rules": {
-				"@typescript-eslint/no-deprecated": "off",
 			},
 		},
 	],

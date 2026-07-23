@@ -504,10 +504,11 @@ it.runIf(process.platform !== "win32")(
 
 		expect(exitCode).not.toBe(0);
 
-		const endProcesses = getStartedWorkerdProcesses(helper.tmpPath);
-
 		expect(beginProcesses.length).toBe(0);
-		expect(endProcesses.length).toBe(0);
+		// workerd shutdown can lag briefly after wrangler exits
+		await waitFor(() => {
+			expect(getStartedWorkerdProcesses(helper.tmpPath).length).toBe(0);
+		});
 	}
 );
 
@@ -2587,7 +2588,7 @@ This is a random email body.
 		);
 
 		const pathRegexp = new RegExp(
-			"send_email binding called with the following message:\\s*(\\S*)"
+			"send_email binding called with the following message:\\s*\\nEmail: (\\S+)"
 		);
 
 		const maybeReplyPath = await vi.waitUntil(

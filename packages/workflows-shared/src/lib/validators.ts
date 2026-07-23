@@ -1,6 +1,8 @@
 import { ms } from "itty-time";
 import { z } from "zod";
 
+export const SENSITIVE_STEP_OUTPUT = "output";
+
 export const MAX_WORKFLOW_NAME_LENGTH = 64;
 
 export const MAX_WORKFLOW_INSTANCE_ID_LENGTH = 100;
@@ -51,13 +53,14 @@ const STEP_CONFIG_SCHEMA = z
 	.object({
 		retries: z
 			.object({
-				delay: z.number().gte(0).or(z.string()),
+				delay: z.number().gte(0).or(z.string()).or(z.function()),
 				limit: z.number().gte(0),
 				backoff: z.enum(["constant", "linear", "exponential"]).optional(),
 			})
 			.strict()
 			.optional(),
 		timeout: z.number().gte(0).or(z.string()).optional(),
+		sensitive: z.literal(SENSITIVE_STEP_OUTPUT).optional(),
 	})
 	.strict();
 
@@ -70,6 +73,7 @@ export function isValidStepConfig(stepConfig: unknown): boolean {
 
 	if (
 		config.data.retries !== undefined &&
+		typeof config.data.retries.delay !== "function" &&
 		Number.isNaN(ms(config.data.retries.delay))
 	) {
 		return false;

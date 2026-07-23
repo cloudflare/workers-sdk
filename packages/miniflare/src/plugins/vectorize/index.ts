@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
@@ -18,6 +18,7 @@ export const VectorizeOptionsSchema = z.object({
 });
 
 export const VECTORIZE_PLUGIN_NAME = "vectorize";
+const VECTORIZE_REMOTE_SERVICE_NAME = `${VECTORIZE_PLUGIN_NAME}:remote`;
 
 export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 	options: VectorizeOptionsSchema,
@@ -37,10 +38,10 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 							{
 								name: "fetcher",
 								service: {
-									name: getUserBindingServiceName(
-										VECTORIZE_PLUGIN_NAME,
-										name,
-										remoteProxyConnectionString
+									name: VECTORIZE_REMOTE_SERVICE_NAME,
+									props: buildRemoteProxyProps(
+										remoteProxyConnectionString,
+										name
 									),
 								},
 							},
@@ -74,21 +75,15 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 		);
 	},
 	async getServices({ options }) {
-		if (!options.vectorize) {
+		if (!options.vectorize || Object.keys(options.vectorize).length === 0) {
 			return [];
 		}
 
-		return Object.entries(options.vectorize).map(
-			([name, { remoteProxyConnectionString }]) => {
-				return {
-					name: getUserBindingServiceName(
-						VECTORIZE_PLUGIN_NAME,
-						name,
-						remoteProxyConnectionString
-					),
-					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
-				};
-			}
-		);
+		return [
+			{
+				name: VECTORIZE_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			},
+		];
 	},
 };

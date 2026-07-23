@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, type JSX } from "react";
 import { useStudioContext } from "../Context";
 import { StudioWindowTab } from ".";
 import type { StudioWindowTabItem } from "./types";

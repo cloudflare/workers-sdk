@@ -1,5 +1,39 @@
 # @cloudflare/workers-utils
 
+## 0.28.0
+
+### Minor Changes
+
+- [#14595](https://github.com/cloudflare/workers-sdk/pull/14595) [`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924) Thanks [@colinhacks](https://github.com/colinhacks)! - Recognise nub as a package manager
+
+  wrangler now detects nub — from its `npm_config_user_agent` and an installed `nub` binary — and autoconfig detects nub projects by their `nub.lock`, alongside npm, pnpm, yarn, and bun.
+
+### Patch Changes
+
+- [#14746](https://github.com/cloudflare/workers-sdk/pull/14746) [`a6c214f`](https://github.com/cloudflare/workers-sdk/commit/a6c214fb311215b1ed09b273171b7995033fb7d7) Thanks [@samarth70](https://github.com/samarth70)! - Return a clear error when `observability` is set to `null`
+
+  `validateObservability` guarded only against `undefined`, so a `null` value (valid in JSON/JSONC config) passed the `typeof value === "object"` check and then threw `TypeError: Cannot read properties of null (reading 'enabled')` while validating the config. It now rejects `null` with the same `"observability" should be an object but got null.` diagnostic that the sibling `cache` validator already produces.
+
+## 0.27.0
+
+### Minor Changes
+
+- [#14630](https://github.com/cloudflare/workers-sdk/pull/14630) [`42df9bb`](https://github.com/cloudflare/workers-sdk/commit/42df9bbf07e37032a3e61027e33d504d74a25ccd) Thanks [@penalosa](https://github.com/penalosa)! - Extract the Cloudflare CLI auth layer into a product-agnostic `@cloudflare/workers-auth` core
+
+  The OAuth login/logout/refresh, credential storage, config cache, and account-selection machinery is now shared behind an `AuthProduct` descriptor, with a thin per-CLI entrypoint on top. `@cloudflare/workers-auth/wrangler` (`createWranglerAuth`) preserves wrangler's existing behaviour, and a new `@cloudflare/workers-auth/cf` (`createCfAuth`) adds the `cf` CLI: its own OAuth app registration (client id, callback port, branded consent pages, scoped-token-only auth), a dedicated scope catalog, JSON config files under `~/.config/cloudflare`, and an isolated config-cache namespace so `cf` login/logout never purges wrangler's cache.
+
+  As part of the extraction, `@cloudflare/workers-utils` now exports the shared `createConfigCache` (with a `namespace` option), `openInBrowser`, and the `isInteractive` / `isNonInteractiveOrCI` / `isCI` TTY-and-CI detection helpers (each taking the caller's logger as a parameter rather than relying on a singleton). These read a bundled `ci-info`, so consumers that need to fake CI in their tests should mock this package's helpers rather than `ci-info` directly.
+
+## 0.26.0
+
+### Minor Changes
+
+- [#14591](https://github.com/cloudflare/workers-sdk/pull/14591) [`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Export `getInstalledPackageVersion`, `getPackagePath`, and `isPackageInstalled` utilities
+
+  Package resolution helpers that were previously internal to `@cloudflare/autoconfig` are now exported from `@cloudflare/workers-utils` so they can be shared across packages without pulling in the full autoconfig dependency.
+
+  `getPackagePath` now also consistently returns a directory path. Previously the fallback resolution strategy could return a file path (the package entry point) instead of its containing directory.
+
 ## 0.25.1
 
 ### Patch Changes

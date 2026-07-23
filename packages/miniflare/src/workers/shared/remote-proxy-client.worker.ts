@@ -5,29 +5,38 @@ import {
 	makeRemoteProxyStub,
 	throwRemoteRequired,
 } from "./remote-bindings-utils";
-import type { RemoteBindingEnv } from "./remote-bindings-utils";
+import type {
+	RemoteBindingEnv,
+	RemoteBindingProps,
+} from "./remote-bindings-utils";
 
 /** Generic remote proxy client for bindings. */
-export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
+export default class Client extends WorkerEntrypoint<
+	RemoteBindingEnv,
+	RemoteBindingProps
+> {
 	fetch(request: Request): Promise<Response> {
 		return makeFetch(
-			this.env.remoteProxyConnectionString,
-			this.env.binding,
+			this.ctx.props.remoteProxyConnectionString,
+			this.ctx.props.binding,
 			undefined,
-			this.env.cfTraceId,
+			this.ctx.props.cfTraceId,
 			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
 		)(request);
 	}
 
-	constructor(ctx: ExecutionContext, env: RemoteBindingEnv) {
+	constructor(
+		ctx: ExecutionContext<RemoteBindingProps>,
+		env: RemoteBindingEnv
+	) {
 		super(ctx, env);
 
-		const stub = env.remoteProxyConnectionString
+		const stub = ctx.props.remoteProxyConnectionString
 			? makeRemoteProxyStub(
-					env.remoteProxyConnectionString,
-					env.binding,
+					ctx.props.remoteProxyConnectionString,
+					ctx.props.binding,
 					undefined,
-					env.cfTraceId,
+					ctx.props.cfTraceId,
 					env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
 				)
 			: undefined;
@@ -38,7 +47,7 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 					return Reflect.get(target, prop);
 				}
 				if (!stub) {
-					throwRemoteRequired(env.binding);
+					throwRemoteRequired(ctx.props.binding);
 				}
 				return Reflect.get(stub, prop);
 			},

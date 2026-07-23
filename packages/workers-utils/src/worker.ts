@@ -202,7 +202,7 @@ export interface CfWorkflow {
 
 export interface CfQueue {
 	binding: string;
-	queue_name: string;
+	queue_name?: string | typeof INHERIT_SYMBOL;
 	delivery_delay?: number;
 	remote?: boolean;
 	raw?: boolean;
@@ -279,7 +279,7 @@ export interface CfHelloWorld {
 
 export interface CfFlagship {
 	binding: string;
-	app_id: string;
+	app_id?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 
@@ -353,7 +353,7 @@ export interface CfAnalyticsEngineDataset {
 
 export interface CfDispatchNamespace {
 	binding: string;
-	namespace: string;
+	namespace?: string | typeof INHERIT_SYMBOL;
 	outbound?: {
 		service: string;
 		environment?: string;
@@ -505,11 +505,21 @@ export interface CfWorkerInit {
 		| undefined;
 	observability: Observability | undefined;
 	cache: CacheOptions | undefined;
+	/**
+	 * The list of npm package dependencies collected from the project's package.json.
+	 * Sent to the API for instrumentation and analytics purposes.
+	 */
+	package_dependencies?:
+		| Array<{
+				name: string;
+				packageJsonVersion: string;
+				installedVersion: string;
+		  }>
+		| undefined;
 }
 
 export interface CfWorkerContext {
 	env: string | undefined;
-	useServiceEnvironments: boolean | undefined;
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;

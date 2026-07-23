@@ -28,6 +28,11 @@ export const workflowsInstancesTerminateCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
+		rollback: {
+			describe: "Run registered rollback handlers before terminating",
+			type: "boolean",
+			default: false,
+		},
 	},
 
 	async handler(args, { config }) {
@@ -35,11 +40,26 @@ export const workflowsInstancesTerminateCommand = createCommand({
 
 		if (args.local) {
 			id = await getLocalInstanceIdFromArgs(args.port, args);
-			await updateLocalInstanceStatus(args.port, args.name, id, "terminate");
+			await updateLocalInstanceStatus(
+				args.port,
+				args.name,
+				id,
+				"terminate",
+				undefined,
+				args.rollback
+			);
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			await updateInstanceStatus(config, accountId, args.name, id, "terminate");
+			await updateInstanceStatus(
+				config,
+				accountId,
+				args.name,
+				id,
+				"terminate",
+				undefined,
+				args.rollback
+			);
 		}
 
 		logger.info(

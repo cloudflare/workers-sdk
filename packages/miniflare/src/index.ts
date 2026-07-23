@@ -38,6 +38,7 @@ import {
 	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
 	getDurableObjectUniqueKey,
+	getEmailPathsToClean,
 	getGlobalServices,
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -66,6 +67,7 @@ import {
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
+import { closeBrowserProcess } from "./plugins/browser-rendering/process";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -97,6 +99,7 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
+import { createDurableObjectStorageHandle } from "./shared/dev-control";
 import { DevRegistry, getWorkerRegistry } from "./shared/dev-registry";
 import {
 	getOutboundDoProxyClassName,
@@ -108,6 +111,7 @@ import {
 	CoreBindings,
 	CoreHeaders,
 	CorePaths,
+	decodeErrorPayload,
 	LogLevel,
 	Mutex,
 	SharedHeaders,
@@ -147,6 +151,12 @@ import type {
 	Worker_Module,
 } from "./runtime";
 import type { Log } from "./shared";
+import type {
+	DevControl,
+	DurableObjectEvictionOptions,
+	DurableObjectStorageHandle,
+	DurableObjectStorageOptions,
+} from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
@@ -979,8 +989,11 @@ export class Miniflare {
 	 */
 	#externalPlugins: Map<string, Plugin<z.ZodTypeAny>> = new Map();
 
-	// key is the browser session ID, value is the browser process
-	#browserProcesses: Map<string, Process> = new Map();
+	// key is the browser session ID, value identifies the launched browser
+	#browserProcesses: Map<
+		string,
+		{ browserProcess: Process; wsEndpoint: string }
+	> = new Map();
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1140,6 +1153,22 @@ export class Miniflare {
 				removeDirSync(this.#tmpPath);
 			} catch (e) {
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
+			}
+			// Clean up email session directories in the project temp path. When no
+			// project temp path is supplied, these live inside `#tmpPath` and are
+			// already removed above.
+			const emailPaths = getEmailPathsToClean(
+				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#tmpPath
+			);
+			if (emailPaths) {
+				try {
+					removeDirSync(emailPaths.sessionDir);
+				} catch (e) {
+					this.#log.debug(
+						`Unable to remove email session directory: ${String(e)}`
+					);
+				}
 			}
 			// Unregister all workers from the dev registry. Note that dispose()
 			// does synchronous cleanup (unregistering workers) then returns a
@@ -1569,7 +1598,8 @@ export class Miniflare {
 				response = await handlePrettyErrorRequest(
 					this.#log,
 					this.#workerSrcOpts,
-					request
+					request,
+					this.#sharedOpts.core.handleUncaughtError
 				);
 			} else if (url.pathname === "/core/log") {
 				const level = parseInt(
@@ -1628,22 +1658,28 @@ export class Miniflare {
 				browserProcess.nodeProcess.on("exit", () => {
 					this.#browserProcesses.delete(sessionId);
 				});
-				this.#browserProcesses.set(sessionId, browserProcess);
+				this.#browserProcesses.set(sessionId, {
+					browserProcess,
+					wsEndpoint,
+				});
 				response = Response.json({ wsEndpoint, sessionId, startTime });
 			} else if (url.pathname === "/browser/status") {
 				const sessionId = url.searchParams.get("sessionId");
 				assert(sessionId !== null, "Missing sessionId query parameter");
-				const process = this.#browserProcesses.get(sessionId);
-				response = new Response(null, { status: process ? 200 : 410 });
+				const browser = this.#browserProcesses.get(sessionId);
+				response = new Response(null, { status: browser ? 200 : 410 });
 			} else if (url.pathname === "/browser/close") {
 				const sessionId = url.searchParams.get("sessionId");
 				assert(sessionId !== null, "Missing sessionId query parameter");
-				const browserProcess = this.#browserProcesses.get(sessionId);
-				if (!browserProcess) {
+				const browser = this.#browserProcesses.get(sessionId);
+				if (!browser) {
 					response = new Response("Session not found", { status: 404 });
 				} else {
 					this.#browserProcesses.delete(sessionId);
-					await browserProcess.close().catch(() => {
+					await closeBrowserProcess(
+						browser.browserProcess,
+						browser.wsEndpoint
+					).catch(() => {
 						// oh well, process might already be dead
 					});
 					response = new Response(null, { status: 200 });
@@ -2145,6 +2181,7 @@ export class Miniflare {
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				defaultPersistRoot: sharedOpts.core.defaultPersistRoot,
+				defaultProjectTmpPath: sharedOpts.core.defaultProjectTmpPath,
 				workerNames,
 				loopbackHost,
 				loopbackPort,
@@ -2640,14 +2677,12 @@ export class Miniflare {
 	}
 
 	async #closeBrowserProcesses() {
+		const browsers = Array.from(this.#browserProcesses.values());
+		this.#browserProcesses.clear();
 		await Promise.all(
-			Array.from(this.#browserProcesses.values()).map((process) =>
-				process.close()
+			browsers.map(({ browserProcess, wsEndpoint }) =>
+				closeBrowserProcess(browserProcess, wsEndpoint)
 			)
-		);
-		assert(
-			this.#browserProcesses.size === 0,
-			"Not all browser processes were closed"
 		);
 	}
 
@@ -2895,7 +2930,14 @@ export class Miniflare {
 		// If the Worker threw an uncaught exception, propagate it to the caller
 		const stack = response.headers.get(CoreHeaders.ERROR_STACK);
 		if (response.status === 500 && stack !== null) {
-			const caught = JsonErrorSchema.parse(await response.json());
+			// `workerd` drops response bodies for `HEAD` requests, so fall back to
+			// the header copy of the serialised error
+			const serialised =
+				(await response.text()) || decodeErrorPayload(response);
+			if (serialised === null) {
+				throw new Error("Worker threw an uncaught exception");
+			}
+			const caught = JsonErrorSchema.parse(JSON.parse(serialised));
 			throw reviveError(this.#workerSrcOpts, caught);
 		}
 
@@ -3047,6 +3089,34 @@ export class Miniflare {
 		}
 		return proxy as T;
 	}
+
+	/**
+	 * Returns remote storage access for a Durable Object instance.
+	 *
+	 * Calling `exec()` runs SQL inside the target Durable Object and returns all
+	 * rows. It may start the object if it is not already active.
+	 */
+	async unsafeGetDurableObjectStorage(
+		scriptName: string,
+		className: string,
+		options: DurableObjectStorageOptions
+	): Promise<DurableObjectStorageHandle> {
+		if (!this.#sharedOpts.core.unsafeInspectDurableObjects) {
+			throw new TypeError(
+				"Durable Object storage inspection requires the `unsafeInspectDurableObjects` option."
+			);
+		}
+
+		const control = await this.#getDevControl();
+		const handle = createDurableObjectStorageHandle(
+			control,
+			scriptName,
+			className,
+			options
+		);
+
+		return handle;
+	}
 	// TODO(someday): would be nice to define these in plugins
 	async getCaches(): Promise<ReplaceWorkersTypes<CacheStorage>> {
 		const proxyClient = await this._getProxyClient();
@@ -3101,8 +3171,48 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
 		return this.#getProxy(DURABLE_OBJECTS_PLUGIN_NAME, bindingName, workerName);
 	}
+	async #getDevControl(): Promise<DevControl> {
+		const proxyClient = await this._getProxyClient();
+		const control = proxyClient.env[CoreBindings.SERVICE_DEV_CONTROL] as
+			| DevControl
+			| undefined;
+		assert(control !== undefined, "Expected dev control service");
+
+		return control;
+	}
+	async unsafeEvictDurableObject(
+		scriptName: string,
+		className: string,
+		options: DurableObjectEvictionOptions
+	): Promise<void> {
+		this.#checkDisposed();
+		await this.ready;
+
+		const durableObjectExists = this.#workerOpts.some((workerOpts) => {
+			const workerName = workerOpts.core.name ?? "";
+			return [
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].some((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					(durableObject.scriptName ?? workerName) === scriptName &&
+					durableObject.className === className
+				);
+			});
+		});
+
+		if (!durableObjectExists) {
+			throw new TypeError(
+				`No Durable Object class named ${JSON.stringify(className)} found in ${JSON.stringify(scriptName)} worker.`
+			);
+		}
+
+		const control = await this.#getDevControl();
+		await control.evictDurableObject(scriptName, className, options);
+	}
 	async listDurableObjectIds(
-		bindingName: string,
+		classNameOrBindingName: string,
 		workerName?: string
 	): Promise<string[]> {
 		this.#checkDisposed();
@@ -3111,14 +3221,25 @@ export class Miniflare {
 		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
 		const workerOpts = this.#workerOpts[workerIndex];
 		const resolvedWorkerName = workerOpts.core.name ?? "";
-		const durableObject = workerOpts.do.durableObjects?.[bindingName];
+		const durableObject =
+			[
+				...Object.values(workerOpts.do.durableObjects ?? {}),
+				...(workerOpts.do.additionalUnboundDurableObjects ?? []),
+			].find((designator) => {
+				const durableObject = normaliseDurableObject(designator);
+				return (
+					durableObject.className === classNameOrBindingName &&
+					(durableObject.scriptName === undefined ||
+						durableObject.scriptName === resolvedWorkerName)
+				);
+			}) ?? workerOpts.do.durableObjects?.[classNameOrBindingName];
 
 		if (durableObject === undefined) {
 			const friendlyWorkerName = resolvedWorkerName
 				? `${JSON.stringify(resolvedWorkerName)} worker`
 				: "the worker";
 			throw new TypeError(
-				`No Durable Object namespace binding named ${JSON.stringify(bindingName)} found in ${friendlyWorkerName}.`
+				`No Durable Object class or namespace binding named ${JSON.stringify(classNameOrBindingName)} found in ${friendlyWorkerName}.`
 			);
 		}
 
@@ -3137,7 +3258,7 @@ export class Miniflare {
 
 		if (namespaceKey === undefined) {
 			throw new TypeError(
-				`Cannot list Durable Object ids for ${JSON.stringify(bindingName)} because the namespace uses ephemeral local storage.`
+				`Cannot list Durable Object ids for ${JSON.stringify(classNameOrBindingName)} because the namespace uses ephemeral local storage.`
 			);
 		}
 
@@ -3307,6 +3428,22 @@ export class Miniflare {
 			// immediately after disposal, causing EBUSY errors. The temp directory
 			// lives in os.tmpdir() so the OS will clean it up eventually.
 			removeDir(this.#tmpPath, { fireAndForget: true });
+			// Clean up email session directories in the project temp path. When no
+			// project temp path is supplied, these live inside `#tmpPath` and are
+			// already removed above.
+			const emailPaths = getEmailPathsToClean(
+				this.#sharedOpts.core.defaultProjectTmpPath,
+				this.#tmpPath
+			);
+			if (emailPaths) {
+				try {
+					await removeDir(emailPaths.sessionDir);
+				} catch (e) {
+					this.#log.debug(
+						`Unable to remove email session directory: ${String(e)}`
+					);
+				}
+			}
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();
@@ -3341,6 +3478,12 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export type {
+	DurableObjectIdentifier,
+	DurableObjectEvictionOptions,
+	DurableObjectStorageOptions,
+	DurableObjectStorageHandle,
+} from "./shared/dev-control";
 export type {
 	WorkerRegistry,
 	WorkerDefinition,

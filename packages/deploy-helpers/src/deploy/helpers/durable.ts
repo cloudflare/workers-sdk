@@ -16,8 +16,6 @@ export async function getMigrationsToUpload(
 	props: {
 		accountId: string | undefined;
 		config: Config;
-		useServiceEnvironments: boolean | undefined;
-		env: string | undefined;
 		dispatchNamespace: string | undefined;
 	}
 ): Promise<CfWorkerInit["migrations"]> {
@@ -39,34 +37,11 @@ export async function getMigrationsToUpload(
 				suppressNotFoundError(err);
 			}
 		} else {
-			if (props.useServiceEnvironments) {
-				try {
-					if (props.env) {
-						const scriptData = await fetchResult<{
-							script: ScriptData;
-						}>(
-							config,
-							`/accounts/${accountId}/workers/services/${scriptName}/environments/${props.env}`
-						);
-						script = scriptData.script;
-					} else {
-						const scriptData = await fetchResult<{
-							default_environment: {
-								script: ScriptData;
-							};
-						}>(config, `/accounts/${accountId}/workers/services/${scriptName}`);
-						script = scriptData.default_environment.script;
-					}
-				} catch (err) {
-					suppressNotFoundError(err);
-				}
-			} else {
-				const scripts = await fetchResult<ScriptData[]>(
-					config,
-					`/accounts/${accountId}/workers/scripts`
-				);
-				script = scripts.find(({ id }) => id === scriptName);
-			}
+			const scripts = await fetchResult<ScriptData[]>(
+				config,
+				`/accounts/${accountId}/workers/scripts`
+			);
+			script = scripts.find(({ id }) => id === scriptName);
 		}
 
 		if (script?.migration_tag) {
@@ -118,8 +93,6 @@ export async function resolveDoLifecyclePayload(props: {
 	isDryRun: boolean | undefined;
 	accountId: string | undefined;
 	config: Config;
-	useServiceEnvironments: boolean | undefined;
-	env: string | undefined;
 	dispatchNamespace: string | undefined;
 }): Promise<{
 	migrations: CfWorkerInit["migrations"];
@@ -138,8 +111,6 @@ export async function resolveDoLifecyclePayload(props: {
 		? await getMigrationsToUpload(props.scriptName, {
 				accountId: props.accountId,
 				config: props.config,
-				useServiceEnvironments: props.useServiceEnvironments,
-				env: props.env,
 				dispatchNamespace: props.dispatchNamespace,
 			})
 		: undefined;

@@ -1,6 +1,8 @@
 import {
 	createDeferred,
-	DeferredPromise,
+	type DeferredPromise,
+	isSameUserWorkerOrigin,
+	rewriteUrlInHeaderValue,
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
 import type {
@@ -181,12 +183,13 @@ export class ProxyWorker implements DurableObject {
 					// we have crossed an async boundary, so proxyData may have changed
 					// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
 					// and that this error is stale since it was for a request to the old UserWorker
-					// so here we construct a newUserWorkerUrl so we can compare it to the (old) userWorkerUrl
-					const newUserWorkerUrl =
-						this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
-
-					// only report errors if the downstream proxy has NOT changed
-					if (userWorkerUrl.href === newUserWorkerUrl?.href) {
+					// only report the error if the request still targets the current
+					// UserWorker. isSameUserWorkerOrigin compares origin (not href) so a
+					// genuine error on a non-root path isn't misread as a reload — see
+					// its docs.
+					if (
+						isSameUserWorkerOrigin(userWorkerUrl, this.proxyData?.userWorkerUrl)
+					) {
 						void sendMessageToProxyController(this.env, {
 							type: "error",
 							error: {
@@ -350,10 +353,7 @@ function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
 	headers.delete("Set-Cookie");
 	headers.forEach((value, key) => {
 		if (typeof value === "string" && value.includes(from.host)) {
-			headers.set(
-				key,
-				value.replaceAll(from.origin, to.origin).replaceAll(from.host, to.host)
-			);
+			headers.set(key, rewriteUrlInHeaderValue(value, from, to));
 		}
 	});
 	for (const cookie of setCookie) {

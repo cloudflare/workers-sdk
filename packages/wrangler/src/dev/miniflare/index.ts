@@ -8,6 +8,7 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getWranglerHiddenDirPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
@@ -68,6 +69,7 @@ type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
 export interface ConfigBundle {
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
+	projectRoot: string;
 	bundle: EsbuildBundle;
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string | undefined;
@@ -281,11 +283,19 @@ function queueProducerEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
+	const concreteQueueName = getRemoteId(queueName) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { queueName, deliveryDelay }];
+		return [binding, { queueName: concreteQueueName, deliveryDelay }];
 	}
 
-	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
+	return [
+		binding,
+		{
+			queueName: concreteQueueName,
+			deliveryDelay,
+			remoteProxyConnectionString,
+		},
+	];
 }
 function pipelineEntry(
 	{ binding, stream, pipeline, remote }: CfPipeline,
@@ -402,10 +412,14 @@ function dispatchNamespaceEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
+	const concreteNamespace = getRemoteId(namespace) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { namespace }];
+		return [binding, { namespace: concreteNamespace }];
 	}
-	return [binding, { namespace, remoteProxyConnectionString }];
+	return [
+		binding,
+		{ namespace: concreteNamespace, remoteProxyConnectionString },
+	];
 }
 function ratelimitEntry<T extends { name: string; namespace_id?: string }>(
 	ratelimit: T
@@ -914,7 +928,7 @@ export function buildMiniflareBindingOptions(
 			flagshipBindings.map((binding) => [
 				binding.binding,
 				{
-					app_id: binding.app_id,
+					app_id: getRemoteId(binding.app_id) ?? binding.binding,
 					remoteProxyConnectionString,
 				},
 			])
@@ -1082,6 +1096,10 @@ export function buildMiniflareBindingOptions(
 	};
 }
 
+export function getDefaultProjectTmpPath(projectRoot: string): string {
+	return path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
+}
+
 export function getDefaultPersistRoot(
 	localPersistencePath: ConfigBundle["localPersistencePath"]
 ): string | undefined {
@@ -1142,6 +1160,7 @@ export async function buildMiniflareOptions(
 	}
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
+	const defaultProjectTmpPath = getDefaultProjectTmpPath(config.projectRoot);
 	const assetOptions = buildAssetOptions(config);
 
 	const options: MiniflareOptions = {
@@ -1157,6 +1176,7 @@ export async function buildMiniflareOptions(
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+		unsafeInspectDurableObjects: true,
 		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
@@ -1169,6 +1189,7 @@ export async function buildMiniflareOptions(
 		verbose: logger.loggerLevel === "debug",
 		handleStructuredLogs: config.structuredLogsHandler ?? handleStructuredLogs,
 		defaultPersistRoot,
+		defaultProjectTmpPath,
 		workers: [
 			{
 				name: getName(config),

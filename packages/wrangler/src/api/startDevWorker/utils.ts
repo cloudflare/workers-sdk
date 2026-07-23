@@ -58,6 +58,64 @@ export function urlFromParts(
 	return url;
 }
 
+/**
+ * Rewrites the absolute URLs inside a single header value (e.g. `Location`,
+ * `Origin`, `Access-Control-Allow-Origin`), mapping only those whose host
+ * that match the target host.
+ *
+ * This function ensures that the host is replaced in a robust manner avoiding
+ * corruptions (that can happen for example if a naive replacement was used).
+ *
+ * @param value - The raw header value string that may contain absolute URLs to rewrite.
+ * @param from - The URL whose host should be matched against URLs found in the header value.
+ * @param to - The URL whose origin will replace the matched origin in the header value.
+ * @returns The header value string with all matching absolute URLs rewritten to use the target origin.
+ */
+export function rewriteUrlInHeaderValue(
+	value: string,
+	from: URL,
+	to: URL
+): string {
+	// Split each absolute URL into its `scheme://authority` origin and the
+	// literal remainder (path/query/fragment). Keeping the remainder verbatim
+	// avoids URL normalization such as appending a trailing slash to a bare
+	// origin (which would corrupt an `Origin` header), and leaves host-like
+	// substrings inside query strings untouched.
+	return value.replace(
+		/(https?:\/\/[^/?#\s,;"']+)([^\s,;"']*)/gi,
+		(match, origin: string, rest: string) => {
+			let url: URL;
+			try {
+				url = new URL(origin);
+			} catch {
+				return match;
+			}
+			if (url.host !== from.host) {
+				return match;
+			}
+			return to.origin + rest;
+		}
+	);
+}
+
+/**
+ * Whether a loopback request sent to `requestUrl` still targets the current
+ * UserWorker, described by its origin `parts` (e.g. `proxyData.userWorkerUrl`).
+ *
+ * Compares `.origin` only, NOT `.href`: `requestUrl` carries the original
+ * request's path and query, whereas `urlFromParts()` yields an origin-only URL
+ * (path "/"). An href comparison would therefore only ever match requests to
+ * "/", so a genuine network error on any other path would be misclassified as
+ * the UserWorker having been replaced.
+ */
+export function isSameUserWorkerOrigin(
+	requestUrl: URL,
+	parts: Partial<URL> | undefined
+): boolean {
+	const currentUserWorkerUrl = parts && urlFromParts(parts);
+	return requestUrl.origin === currentUserWorkerUrl?.origin;
+}
+
 type UnwrapHook<
 	T extends HookValues | Promise<HookValues>,
 	Args extends unknown[],

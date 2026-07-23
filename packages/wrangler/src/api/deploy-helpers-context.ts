@@ -6,7 +6,6 @@ import {
 	fetchResult,
 } from "../cfetch";
 import { confirm, prompt, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 
 export function initApiDeployHelpersContext(): void {
@@ -19,6 +18,5 @@ export function initApiDeployHelpersContext(): void {
 		confirm,
 		prompt,
 		select,
-		isNonInteractiveOrCI,
 	});
 }

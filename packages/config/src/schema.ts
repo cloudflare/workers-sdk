@@ -1,5 +1,5 @@
 import * as z from "zod";
-import type { UserConfig } from "./types";
+import type { SettingsConfig, WorkerConfig } from "./types";
 
 const AssetsSchema = z.strictObject({
 	htmlHandling: z
@@ -55,7 +55,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("dispatch-namespace"),
-		namespace: z.string(),
+		namespace: z.string().optional(),
 		outbound: z
 			.strictObject({
 				workerName: z.string(),
@@ -71,7 +71,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("flagship"),
-		id: z.string(),
+		id: z.string().optional(),
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({
@@ -108,7 +108,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("queue"),
-		name: z.string(),
+		name: z.string().optional(),
 		deliveryDelay: z.number().optional(),
 		remote: z.boolean().optional(),
 	}),
@@ -381,8 +381,10 @@ const TailConsumerSchema = z.strictObject({
 });
 
 const TriggerSchema = z.discriminatedUnion("type", [
-	// TODO: email triggers not yet implemented
-	// z.strictObject({ type: z.literal("email") }),
+	z.strictObject({
+		type: z.literal("email"),
+		addresses: z.array(z.string()),
+	}),
 	z.strictObject({
 		type: z.literal("fetch"),
 		pattern: z.string(),
@@ -428,8 +430,8 @@ const UnsafeSchema = z.strictObject({
  * (user-authored) and output (on-disk) Worker configs.
  */
 const BaseWorkerSchema = z.strictObject({
+	type: z.literal("worker"),
 	name: z.string(),
-	accountId: z.string().optional(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	assets: AssetsSchema.optional(),
@@ -443,7 +445,6 @@ const BaseWorkerSchema = z.strictObject({
 	observability: ObservabilitySchema.optional(),
 	workersDev: z.boolean().optional(),
 	previewUrls: z.boolean().optional(),
-	complianceRegion: z.enum(["public", "fedramp-high"]).optional(),
 	firstPartyWorker: z.boolean().optional(),
 	unsafe: UnsafeSchema.optional(),
 	// TODO: support previews
@@ -464,6 +465,61 @@ export const InputWorkerSchema = BaseWorkerSchema.extend({
 });
 
 export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
+
+/**
+ * Settings schema — validates the named `settings` export of a
+ * `cloudflare.config.ts`. Holds account/deployment settings shared by the other exports.
+ */
+export const SettingsSchema = z.strictObject({
+	type: z.literal("settings"),
+	accountId: z.string().optional(),
+	complianceRegion: z.enum(["public", "fedramp-high"]).optional(),
+});
+
+export type ParsedSettingsConfig = z.output<typeof SettingsSchema>;
+
+/**
+ * Discriminated union of the config kinds a single export may resolve to.
+ */
+const ConfigExportSchema = z.discriminatedUnion("type", [
+	InputWorkerSchema,
+	SettingsSchema,
+]);
+
+const SETTINGS_EXPORT_NAME = "settings";
+
+/**
+ * Schema for the resolved config exports, keyed by export
+ * name. Each value is discriminated on its `type` field. Reserves the
+ * `settings` export name exclusively for settings configs: a `settings`
+ * config must live on the `settings` export, and the `settings` export
+ * may only hold a `settings` config.
+ */
+export const ConfigExportsSchema = z
+	.record(z.string(), ConfigExportSchema)
+	.check((ctx) => {
+		for (const [key, value] of Object.entries(ctx.value)) {
+			const isSettingsName = key === SETTINGS_EXPORT_NAME;
+			const isSettingsType = value.type === "settings";
+			if (isSettingsType && !isSettingsName) {
+				ctx.issues.push({
+					code: "custom",
+					input: value,
+					path: [key],
+					message: `A \`settings\` config is only allowed on the \`${SETTINGS_EXPORT_NAME}\` export; found one on the \`${key}\` export.`,
+				});
+			} else if (isSettingsName && !isSettingsType) {
+				ctx.issues.push({
+					code: "custom",
+					input: value,
+					path: [key],
+					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${value.type}\` config.`,
+				});
+			}
+		}
+	});
+
+export type ParsedConfigExports = z.output<typeof ConfigExportsSchema>;
 
 export const ModuleTypeSchema = z.enum([
 	"esm",
@@ -497,7 +553,7 @@ export type ParsedOutputWorkerConfig = z.output<typeof OutputWorkerSchema>;
 
 /**
  * Bidirectional drift check between {@link InputWorkerSchema} and the
- * public {@link UserConfig} interface. Excludes `entrypoint` and `env`,
+ * public {@link WorkerConfig} interface. Excludes `entrypoint` and `env`,
  * which deliberately differ:
  *
  * - `entrypoint`: the public type accepts a `WorkerModule` namespace
@@ -510,16 +566,16 @@ type _ComparableInput = Omit<
 	z.input<typeof InputWorkerSchema>,
 	"entrypoint" | "env"
 >;
-type _ComparableUserConfig = Omit<UserConfig, "entrypoint" | "env">;
-type _AssertSchemaMatchesUserConfig = [
-	_ComparableInput extends _ComparableUserConfig ? true : false,
-	_ComparableUserConfig extends _ComparableInput ? true : false,
+type _ComparableWorkerConfig = Omit<WorkerConfig, "entrypoint" | "env">;
+type _AssertSchemaMatchesWorkerConfig = [
+	_ComparableInput extends _ComparableWorkerConfig ? true : false,
+	_ComparableWorkerConfig extends _ComparableInput ? true : false,
 ];
-const _assertSchemaMatchesUserConfig: _AssertSchemaMatchesUserConfig = [
+const _assertSchemaMatchesWorkerConfig: _AssertSchemaMatchesWorkerConfig = [
 	true,
 	true,
 ];
-void _assertSchemaMatchesUserConfig;
+void _assertSchemaMatchesWorkerConfig;
 
 /**
  * Unidirectional drift check for `env`. The public binding return types
@@ -527,17 +583,31 @@ void _assertSchemaMatchesUserConfig;
  * inference helpers that the schema does not (and cannot) validate at
  * runtime, so a bidirectional check would always fail in that direction.
  *
- * We therefore only assert that `UserConfig['env']` is assignable to
+ * We therefore only assert that `WorkerConfig['env']` is assignable to
  * `z.input<typeof InputWorkerSchema>['env']` — i.e. every binding shape
  * the public type accepts is something the schema is willing to parse.
  * This catches drift where the public type drops a field the schema
  * still requires, renames a field, changes a field's type to one the
  * schema rejects, or adds a binding the schema doesn't know about.
  */
-type _AssertUserConfigEnvExtendsSchema = UserConfig["env"] extends z.input<
+type _AssertWorkerConfigEnvExtendsSchema = WorkerConfig["env"] extends z.input<
 	typeof InputWorkerSchema
 >["env"]
 	? true
 	: false;
-const _assertUserConfigEnvExtendsSchema: _AssertUserConfigEnvExtendsSchema = true;
-void _assertUserConfigEnvExtendsSchema;
+const _assertWorkerConfigEnvExtendsSchema: _AssertWorkerConfigEnvExtendsSchema = true;
+void _assertWorkerConfigEnvExtendsSchema;
+
+/**
+ * Bidirectional drift check between {@link SettingsSchema} and the public
+ * {@link SettingsConfig} interface.
+ */
+type _AssertSettingsSchemaMatchesConfig = [
+	z.input<typeof SettingsSchema> extends SettingsConfig ? true : false,
+	SettingsConfig extends z.input<typeof SettingsSchema> ? true : false,
+];
+const _assertSettingsSchemaMatchesConfig: _AssertSettingsSchemaMatchesConfig = [
+	true,
+	true,
+];
+void _assertSettingsSchemaMatchesConfig;
