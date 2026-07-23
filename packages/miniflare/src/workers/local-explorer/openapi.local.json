@@ -1863,6 +1863,102 @@
 				"tags": ["Workflows"]
 			}
 		},
+		"/workflows/{workflow_name}/instances/{instance_id}/step": {
+			"get": {
+				"description": "Returns the full output (or error) of a single step. Unlike the instance details endpoint, streamed step outputs are returned in full rather than truncated to a preview.",
+				"operationId": "workflows-get-step-output",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "workflow_name",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workflows_workflow-name"
+						}
+					},
+					{
+						"in": "path",
+						"name": "instance_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workflows_instance-id"
+						}
+					},
+					{
+						"in": "query",
+						"name": "name",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "Exact step name from the instance logs response, including the generated counter suffix."
+						}
+					},
+					{
+						"in": "query",
+						"name": "type",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"enum": ["step", "waitForEvent"],
+							"description": "Step type to disambiguate step.do and waitForEvent entries that share the same name."
+						}
+					},
+					{
+						"in": "query",
+						"name": "attempt",
+						"schema": {
+							"type": "integer",
+							"exclusiveMinimum": 0,
+							"description": "Specific attempt number to retrieve output or error for."
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/workflows_step-output"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							},
+							"application/octet-stream": {
+								"schema": {
+									"type": "string",
+									"format": "binary",
+									"description": "Raw bytes of the ReadableStream returned from step.do."
+								}
+							}
+						},
+						"description": "Get Workflow Step Output response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Get Workflow Step Output response failure."
+					}
+				},
+				"summary": "Get Workflow Step Output",
+				"tags": ["Workflows"]
+			}
+		},
 		"/workflows/{workflow_name}/instances/{instance_id}/events/{event_type}": {
 			"post": {
 				"description": "Sends an event to a workflow instance.",
@@ -3400,6 +3496,35 @@
 					}
 				},
 				"required": ["columns", "rows"]
+			},
+			"workflows_step-output": {
+				"type": "object",
+				"description": "Flat status-shaped output of a single step. `status` is the source of truth; `error` and `output` are populated when relevant. When the step returned a ReadableStream the response is served as application/octet-stream instead of this JSON body.",
+				"properties": {
+					"status": {
+						"type": "string",
+						"enum": ["running", "waiting", "complete", "errored"],
+						"description": "The step status. 'running' with a non-null error means the step is retrying after a failed attempt."
+					},
+					"error": {
+						"type": "object",
+						"nullable": true,
+						"properties": {
+							"name": {
+								"type": "string"
+							},
+							"message": {
+								"type": "string"
+							}
+						},
+						"description": "Error details when the step errored, otherwise null."
+					},
+					"output": {
+						"nullable": true,
+						"description": "The step output value, or null while running/waiting or when errored."
+					}
+				},
+				"required": ["status", "error", "output"]
 			}
 		}
 	}
