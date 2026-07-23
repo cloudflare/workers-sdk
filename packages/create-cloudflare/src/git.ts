@@ -86,18 +86,30 @@ export const gitCommit = async (ctx: C3Context) => {
 			silent: true,
 			cwd: ctx.project.path,
 		});
+	} catch {
+		// Stop the spinner here too, otherwise it never gets cleared when staging fails.
+		s.stop(`${brandColor("git")} ${dim(`commit failed`)}`);
+		updateStatus(
+			"Failed to create initial commit. You can commit manually later."
+		);
+		return;
+	}
 
+	// Stop the spinner before committing: a GPG passphrase prompt may need the
+	// terminal, and it can't compete with our redraw loop or piped stdio.
+	s.stop();
+
+	try {
 		await runCommand(
 			["git", "commit", "-m", ctx.commitMessage, "--no-verify"],
 			{
-				silent: true,
 				cwd: ctx.project.path,
 			}
 		);
 
-		s.stop(`${brandColor("git")} ${dim(`commit`)}`);
+		updateStatus(`${brandColor("git")} ${dim(`commit`)}`);
 	} catch {
-		s.stop(`${brandColor("git")} ${dim(`commit failed`)}`);
+		updateStatus(`${brandColor("git")} ${dim(`commit failed`)}`);
 		updateStatus(
 			"Failed to create initial commit. You can commit manually later."
 		);
