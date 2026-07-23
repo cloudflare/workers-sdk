@@ -1,0 +1,43 @@
+packages/workflows-shared/src/vendor/saffron/saffron.js
+  s_ae35787d6a1137::t_dcb29df97d7a8d 1-250
+packages/miniflare/src/workers/wasm.d.ts
+  s_be6963a76dcd42::t_fe54eedd86503d 1-6
+packages/workflows-shared/tests/test-entry.ts
+  s_be6963a76dcd42::t_3e110970c4d8a2 17-18
+packages/wrangler/src/dev/miniflare/index.ts
+  s_be6963a76dcd42::t_ba6b797398c519 349,362,367-373,383-385,399-401
+packages/miniflare/src/workers/workflows/saffron.worker.ts
+  s_be6963a76dcd42::t_fdaf26814b9fdb 1-3
+packages/workflows-shared/tests/cron.test.ts
+  s_be6963a76dcd42::t_336a55f4fbc388 1-329
+packages/workflows-shared/src/vendor/saffron/build/Cargo.lock
+  s_be6963a76dcd42::t_2597fb64c285e9 1-171
+packages/workflows-shared/src/vendor/saffron/build/src/lib.rs
+  s_ae35787d6a1137::t_fc5ee89651011c 1-31
+.oxfmtrc.jsonc
+  s_be6963a76dcd42::t_a4deb46b41442b 64-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "44e503682ea628b0fc99e0351bfe463e308f2d4e",
+  "prompts": {},
+  "sessions": {
+    "s_ae35787d6a1137": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09ab06098ffesH5F5Uozpihg6a",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Olga Silva <osilva@cloudflare.com>"
+    },
+    "s_be6963a76dcd42": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08078e24fffeYmIbtI34egyoGu",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Olga Silva <osilva@cloudflare.com>"
+    }
+  }
+}
