@@ -295,6 +295,14 @@ export const CoreSharedOptionsSchema = z
 			.returns(z.void())
 			.optional(),
 
+		// Called after Miniflare has automatically restarted the `workerd`
+		// runtime following an unexpected crash. Lets embedders (e.g. the Vite
+		// plugin) re-establish any state that lived in the crashed process,
+		// such as module runners created over a separate bootstrap channel.
+		unsafeHandleRuntimeRestart: z
+			.custom<() => Awaitable<void>>((value) => typeof value === "function")
+			.optional(),
+
 		// Deliberately not `z.function()`: parsing that schema replaces the
 		// callback with a validating wrapper. When the callback is `async`
 		// (assignable to a `void` return), the wrapper calls it, rejects the

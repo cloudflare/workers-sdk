@@ -2969,6 +2969,175 @@ unixSerialTest(
 	}
 );
 
+test("Miniflare: workerd crash during startup => ERR_RUNTIME_FAILURE", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+			import { abortIsolate } from "cloudflare:workers";
+			abortIsolate("crash!");
+			export default {
+				fetch(request) {
+					return new Response("ok");
+				},
+			}
+		`,
+	});
+	// dispose() on a startup-failed instance propagates the same
+	// ERR_RUNTIME_FAILURE
+	onTestFinished(() => mf.dispose().catch(() => {}));
+
+	await expect(mf.ready).rejects.toMatchObject({
+		code: "ERR_RUNTIME_FAILURE",
+		message: expect.stringContaining("The Workers runtime failed to start."),
+	});
+});
+
+test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
+	const runtimeRestarted = new DeferredPromise<void>();
+	const mf = new Miniflare({
+		modules: true,
+		unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+		script: `
+			import { abortIsolate } from "cloudflare:workers";
+			let counter = 1;
+			export default {
+				fetch(request) {
+					if (new URL(request.url).searchParams.get("crash")) {
+						abortIsolate("test crash");
+					}
+					return new Response(\`ok \${counter++}\`);
+				},
+			}
+		`,
+	});
+	useDispose(mf);
+
+	const ready = await mf.ready;
+	const worker = await mf.getWorker();
+	const r1 = await mf.dispatchFetch("http://placeholder/");
+	expect(await r1.text()).toBe("ok 1");
+
+	const r2 = await mf.dispatchFetch("http://placeholder/");
+	expect(await r2.text()).toBe("ok 2");
+
+	// Trigger crash
+	await expect(
+		mf.dispatchFetch("http://placeholder/?crash=1")
+	).rejects.toThrow();
+
+	await runtimeRestarted;
+	expect(await mf.ready).toEqual(ready);
+	expect(() => worker.fetch("http://placeholder/")).toThrow(/poisoned stub/);
+
+	// Starts over with counter = 1 again
+	const r3 = await fetch(ready);
+	expect(await r3.text()).toBe("ok 1");
+	const restartedWorker = await mf.getWorker();
+	const r4 = await restartedWorker.fetch("http://placeholder/");
+	expect(await r4.text()).toBe("ok 2");
+});
+
+test("Miniflare: logs workerd restart failures", async ({ expect }) => {
+	const log = new TestLog();
+	const logError = vi.spyOn(log, "error").mockImplementation(() => {});
+	const handleRuntimeRestart = vi.fn();
+	let runtimeStarts = 0;
+	const options = {
+		log,
+		modules: true,
+		handleRuntimeStdio() {
+			runtimeStarts++;
+			if (runtimeStarts === 2) {
+				throw new Error("restart failed");
+			}
+		},
+		unsafeHandleRuntimeRestart: handleRuntimeRestart,
+		script: `
+			import { abortIsolate } from "cloudflare:workers";
+			export default {
+				fetch(request) {
+					if (new URL(request.url).searchParams.get("crash")) {
+						abortIsolate("test crash");
+					}
+					return new Response("ok");
+				},
+			}
+		`,
+	} satisfies MiniflareOptions;
+	const mf = new Miniflare(options);
+	useDispose(mf);
+
+	await mf.ready;
+	await expect(
+		mf.dispatchFetch("http://placeholder/?crash=1")
+	).rejects.toThrow();
+
+	await vi.waitFor(() => {
+		expect(logError).toHaveBeenCalledWith(
+			expect.objectContaining({
+				code: "ERR_RUNTIME_FAILURE",
+				message:
+					"The Workers runtime failed to restart after an unexpected crash.",
+			})
+		);
+	});
+	expect(handleRuntimeRestart).not.toHaveBeenCalled();
+	await expect(mf.ready).rejects.toMatchObject({
+		code: "ERR_RUNTIME_FAILURE",
+		message: "The Workers runtime failed to restart after an unexpected crash.",
+	});
+
+	await mf.setOptions(options);
+	const response = await mf.dispatchFetch("http://placeholder/");
+	expect(await response.text()).toBe("ok");
+});
+
+test("Miniflare: logs post-restart callback failures", async ({ expect }) => {
+	const log = new TestLog();
+	const logError = vi.spyOn(log, "error").mockImplementation(() => {});
+	const callbackCalled = new DeferredPromise<void>();
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		async unsafeHandleRuntimeRestart() {
+			callbackCalled.resolve();
+			throw new Error("callback failed");
+		},
+		script: `
+			import { abortIsolate } from "cloudflare:workers";
+			export default {
+				fetch(request) {
+					if (new URL(request.url).searchParams.get("crash")) {
+						abortIsolate("test crash");
+					}
+					return new Response("ok");
+				},
+			}
+		`,
+	});
+	useDispose(mf);
+
+	await mf.ready;
+	await expect(
+		mf.dispatchFetch("http://placeholder/?crash=1")
+	).rejects.toThrow();
+	await callbackCalled;
+
+	await vi.waitFor(() => {
+		expect(logError).toHaveBeenCalledWith(
+			expect.objectContaining({
+				message:
+					"The Workers runtime restarted, but the runtime restart callback failed.",
+			})
+		);
+	});
+	const response = await mf.dispatchFetch("http://placeholder/");
+	expect(await response.text()).toBe("ok");
+});
+
 test("Miniflare: exits cleanly", async ({ expect }) => {
 	const miniflarePath = require.resolve("miniflare");
 	const result = childProcess.spawn(
