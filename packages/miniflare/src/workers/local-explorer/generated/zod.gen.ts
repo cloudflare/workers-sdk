@@ -1056,6 +1056,41 @@ export const zWorkflowsCreateInstanceResponse = zWorkersApiResponseCommon.and(
 	})
 );
 
+export const zWorkflowsBatchDeleteInstancesData = z.object({
+	body: z.object({
+		instances: z.array(z.string().min(1).max(271)).min(1).max(100),
+	}),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Batch delete Workflow Instances response.
+ */
+export const zWorkflowsBatchDeleteInstancesResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: z
+				.object({
+					deleted: z.array(
+						z.object({
+							id: z.string(),
+						})
+					),
+					errors: z.array(
+						z.object({
+							id: z.string(),
+							code: z.number(),
+							message: z.string(),
+						})
+					),
+				})
+				.optional(),
+		})
+	);
+
 export const zWorkflowsDeleteInstanceData = z.object({
 	body: z.never().optional(),
 	path: z.object({

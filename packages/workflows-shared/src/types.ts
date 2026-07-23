@@ -1,3 +1,12 @@
+export interface WorkflowBatchDeleteResult {
+	deleted: { id: string }[];
+	errors: Array<{
+		id: string;
+		code: number;
+		message: string;
+	}>;
+}
+
 export type WorkflowStepSelector = {
 	name: string;
 	index?: number;

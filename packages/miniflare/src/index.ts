@@ -7,6 +7,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { ReadableStream } from "node:stream/web";
+import { setTimeout as wait } from "node:timers/promises";
 import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
@@ -928,6 +929,15 @@ export function _initialiseInstanceRegistry() {
 	return (maybeInstanceRegistry = new Map());
 }
 
+type PendingWorkflowStorageDelete = {
+	promise: Promise<void>;
+	failed: boolean;
+	deleted: boolean;
+};
+
+const WORKFLOW_STORAGE_EXTENSIONS = [".sqlite", ".sqlite-shm", ".sqlite-wal"];
+const WORKFLOW_STORAGE_DELETE_ATTEMPTS = 41;
+
 export class Miniflare {
 	#previousSharedOpts?: PluginSharedOptions;
 	#previousWorkerOpts?: PluginWorkerOptions[];
@@ -946,6 +956,10 @@ export class Miniflare {
 		string,
 		{ browserProcess: Process; wsEndpoint: string }
 	> = new Map();
+	#pendingWorkflowStorageDeletes = new Map<
+		string,
+		PendingWorkflowStorageDelete
+	>();
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1385,6 +1399,131 @@ export class Miniflare {
 		}
 	}
 
+	async #deleteWorkflowStorageFiles(
+		instancePath: string,
+		pendingDelete: PendingWorkflowStorageDelete
+	): Promise<void> {
+		let firstError: unknown;
+		let failed = false;
+		for (const ext of WORKFLOW_STORAGE_EXTENSIONS) {
+			const filePath = `${instancePath}${ext}`;
+			for (
+				let attempt = 0;
+				attempt < WORKFLOW_STORAGE_DELETE_ATTEMPTS;
+				attempt++
+			) {
+				try {
+					await fs.promises.unlink(filePath);
+					if (ext === ".sqlite") {
+						pendingDelete.deleted = true;
+					}
+					break;
+				} catch (error) {
+					if (isFileNotFoundError(error)) {
+						break;
+					}
+					const code =
+						typeof error === "object" && error !== null && "code" in error
+							? error.code
+							: undefined;
+					if (
+						(code !== "EBUSY" && code !== "EPERM") ||
+						attempt === WORKFLOW_STORAGE_DELETE_ATTEMPTS - 1
+					) {
+						if (!failed) {
+							firstError = error;
+							failed = true;
+						}
+						break;
+					}
+					await wait(50);
+				}
+			}
+		}
+		if (failed) {
+			throw firstError;
+		}
+	}
+
+	async #runWorkflowStorageDelete(
+		instancePath: string,
+		defer: boolean,
+		pendingDelete: PendingWorkflowStorageDelete,
+		previousDelete?: PendingWorkflowStorageDelete
+	): Promise<void> {
+		await previousDelete?.promise;
+		pendingDelete.deleted = previousDelete?.deleted ?? false;
+		if (defer) {
+			await wait(100);
+		}
+		try {
+			await this.#deleteWorkflowStorageFiles(instancePath, pendingDelete);
+		} catch (error) {
+			pendingDelete.failed = true;
+			this.#log.error(
+				error instanceof Error ? error : new Error(String(error))
+			);
+		}
+		if (
+			!pendingDelete.failed &&
+			this.#pendingWorkflowStorageDeletes.get(instancePath) === pendingDelete
+		) {
+			this.#pendingWorkflowStorageDeletes.delete(instancePath);
+		}
+	}
+
+	#queueWorkflowStorageDelete(
+		instancePath: string,
+		defer: boolean
+	): PendingWorkflowStorageDelete {
+		const previousDelete =
+			this.#pendingWorkflowStorageDeletes.get(instancePath);
+		const pendingDelete: PendingWorkflowStorageDelete = {
+			deleted: false,
+			failed: false,
+			promise: Promise.resolve(),
+		};
+		this.#pendingWorkflowStorageDeletes.set(instancePath, pendingDelete);
+		pendingDelete.promise = this.#runWorkflowStorageDelete(
+			instancePath,
+			defer,
+			pendingDelete,
+			previousDelete
+		);
+		return pendingDelete;
+	}
+
+	async #waitForWorkflowStorageDelete(
+		instancePath: string,
+		retried = false
+	): Promise<Response> {
+		const pendingDelete = this.#pendingWorkflowStorageDeletes.get(instancePath);
+		if (pendingDelete === undefined) {
+			return new Response(null, { status: 204 });
+		}
+		await pendingDelete.promise;
+
+		const latestDelete = this.#pendingWorkflowStorageDeletes.get(instancePath);
+		if (latestDelete === undefined) {
+			return new Response(null, { status: 204 });
+		}
+		if (latestDelete !== pendingDelete) {
+			return this.#waitForWorkflowStorageDelete(instancePath, retried);
+		}
+		if (!pendingDelete.failed) {
+			this.#pendingWorkflowStorageDeletes.delete(instancePath);
+			return new Response(null, { status: 204 });
+		}
+		if (retried || this.#disposeController.signal.aborted) {
+			return new Response("Failed to delete workflow instance", {
+				status: 500,
+			});
+		}
+
+		this.#queueWorkflowStorageDelete(instancePath, false);
+		return this.#waitForWorkflowStorageDelete(instancePath, true);
+	}
+
 	/**
 	 * Deletes a Workflow Engine DO instance by removing its .sqlite file
 	 * (and any associated -shm/-wal files) from the persistence directory.
@@ -1405,9 +1544,14 @@ export class Miniflare {
 		const hexId =
 			slashIndex === -1
 				? null
-				: decodeURIComponent(pathAfterPrefix.slice(slashIndex + 1));
+				: decodeURIComponent(
+						pathAfterPrefix.slice(slashIndex + 1)
+					).toLowerCase();
 
 		assert(workflowName, "Workflow name is required");
+		if (url.searchParams.has("waitForPendingDelete") && !hexId) {
+			return new Response("Instance ID is required", { status: 400 });
+		}
 
 		const coreSharedOpts = this.#sharedOpts.core;
 		const workflowsPersistPath = getPersistPath(
@@ -1426,28 +1570,30 @@ export class Miniflare {
 			return new Response("Invalid workflow name", { status: 400 });
 		}
 
-		const extensions = [".sqlite", ".sqlite-shm", ".sqlite-wal"];
-
 		if (hexId) {
-			// Delete a single instance
-			let deleted = false;
-			for (const ext of extensions) {
-				const filePath = path.join(namespacePath, `${hexId}${ext}`);
-				if (!filePath.startsWith(namespacePath + path.sep)) {
-					return new Response("Invalid instance ID", { status: 400 });
-				}
-				try {
-					await fs.promises.unlink(filePath);
-					if (ext === ".sqlite") {
-						deleted = true;
-					}
-				} catch (e) {
-					if (!isFileNotFoundError(e)) {
-						throw e;
-					}
-				}
+			const instancePath = path.join(namespacePath, hexId);
+			if (!instancePath.startsWith(namespacePath + path.sep)) {
+				return new Response("Invalid instance ID", { status: 400 });
 			}
-			if (!deleted) {
+
+			if (url.searchParams.has("waitForPendingDelete")) {
+				return this.#waitForWorkflowStorageDelete(instancePath);
+			}
+
+			const pendingDelete = this.#queueWorkflowStorageDelete(
+				instancePath,
+				url.searchParams.has("defer")
+			);
+			if (url.searchParams.has("defer")) {
+				return new Response("Accepted", { status: 202 });
+			}
+			await pendingDelete.promise;
+			if (pendingDelete.failed) {
+				return new Response("Failed to delete workflow instance", {
+					status: 500,
+				});
+			}
+			if (!pendingDelete.deleted) {
 				return new Response("Not Found", { status: 404 });
 			}
 		} else {
@@ -1456,7 +1602,9 @@ export class Miniflare {
 				const dirEntries = await fs.promises.readdir(namespacePath);
 				await Promise.all(
 					dirEntries
-						.filter((name) => extensions.some((ext) => name.endsWith(ext)))
+						.filter((name) =>
+							WORKFLOW_STORAGE_EXTENSIONS.some((ext) => name.endsWith(ext))
+						)
 						.map((name) =>
 							fs.promises.unlink(path.join(namespacePath, name)).catch(() => {})
 						)
@@ -1639,7 +1787,10 @@ export class Miniflare {
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {
-				if (request.method === "DELETE") {
+				if (
+					request.method === "DELETE" ||
+					url.searchParams.has("waitForPendingDelete")
+				) {
 					response =
 						await this.#handleLoopbackWorkflowStorageDeleteRequest(url);
 				} else {
@@ -3365,6 +3516,11 @@ export class Miniflare {
 			// Cleanup as much as possible even if `#init()` threw
 			await this.#proxyClient?.dispose();
 			await this.#runtime?.dispose();
+			await Promise.all(
+				[...this.#pendingWorkflowStorageDeletes.values()].map(
+					({ promise }) => promise
+				)
+			);
 			// Close the undici Pool used for dispatching fetch requests to the
 			// runtime. This must happen after the runtime is disposed, so that
 			// in-flight connections are broken and close immediately. Without this,

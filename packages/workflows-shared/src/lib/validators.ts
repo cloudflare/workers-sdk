@@ -7,6 +7,8 @@ export const MAX_WORKFLOW_NAME_LENGTH = 64;
 
 export const MAX_WORKFLOW_INSTANCE_ID_LENGTH = 100;
 
+export const MAX_ADDRESSABLE_WORKFLOW_INSTANCE_ID_LENGTH = 271;
+
 export const MAX_STEP_NAME_LENGTH = 256;
 
 export const ALLOWED_STRING_ID_PATTERN = "^[a-zA-Z0-9_][a-zA-Z0-9-_]*$";
@@ -39,6 +41,14 @@ export function isValidWorkflowInstanceId(id: string): boolean {
 	}
 
 	return ALLOWED_WORKFLOW_INSTANCE_ID_REGEX.test(id);
+}
+
+export function isValidAddressableWorkflowInstanceId(id: string): boolean {
+	return (
+		typeof id === "string" &&
+		id.length > 0 &&
+		id.length <= MAX_ADDRESSABLE_WORKFLOW_INSTANCE_ID_LENGTH
+	);
 }
 
 export function isValidStepName(name: string): boolean {

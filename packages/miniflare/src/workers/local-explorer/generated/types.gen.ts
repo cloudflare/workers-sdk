@@ -1666,6 +1666,48 @@ export type WorkflowsCreateInstanceResponses = {
 export type WorkflowsCreateInstanceResponse =
 	WorkflowsCreateInstanceResponses[keyof WorkflowsCreateInstanceResponses];
 
+export type WorkflowsBatchDeleteInstancesData = {
+	body: {
+		instances: Array<string>;
+	};
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances/batch/delete";
+};
+
+export type WorkflowsBatchDeleteInstancesErrors = {
+	/**
+	 * Batch delete Workflow Instances response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsBatchDeleteInstancesError =
+	WorkflowsBatchDeleteInstancesErrors[keyof WorkflowsBatchDeleteInstancesErrors];
+
+export type WorkflowsBatchDeleteInstancesResponses = {
+	/**
+	 * Batch delete Workflow Instances response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			deleted: Array<{
+				id: string;
+			}>;
+			errors: Array<{
+				id: string;
+				code: number;
+				message: string;
+			}>;
+		};
+	};
+};
+
+export type WorkflowsBatchDeleteInstancesResponse =
+	WorkflowsBatchDeleteInstancesResponses[keyof WorkflowsBatchDeleteInstancesResponses];
+
 export type WorkflowsDeleteInstanceData = {
 	body?: never;
 	path: {
