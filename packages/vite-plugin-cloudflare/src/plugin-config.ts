@@ -1,12 +1,15 @@
 import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
 	convertToWranglerConfig,
 	generateTypes,
-	InputWorkerSchema,
-	loadConfig,
-	resolveWorkerDefinition,
+	loadAndValidateConfig,
 } from "@cloudflare/config";
+import {
+	generateRuntimeTypes,
+	RUNTIME_TYPES_MARKER,
+} from "@cloudflare/runtime-types";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import { getWorkerNameFromProject } from "@cloudflare/workers-utils";
 import { defu } from "defu";
@@ -32,7 +35,10 @@ import type {
 	WorkerResolvedConfig,
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
-import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type {
+	ParsedConfigExports,
+	ParsedInputWorkerConfig,
+} from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { Unstable_Config } from "wrangler";
@@ -106,6 +112,12 @@ interface ExperimentalNewConfig {
 		 * root. Defaults to `true`.
 		 */
 		generate?: boolean;
+		/**
+		 * Whether to include the Worker's runtime types (generated from the
+		 * project's compatibility date and flags) in the generated
+		 * `worker-configuration.d.ts`. Defaults to `true`.
+		 */
+		includeRuntime?: boolean;
 	};
 	/**
 	 * Whether to emit the experimental Build Output API (`.cloudflare/output/v0/`)
@@ -115,7 +127,7 @@ interface ExperimentalNewConfig {
 }
 
 interface ResolvedExperimentalNewConfig {
-	types: { generate: boolean };
+	types: { generate: boolean; includeRuntime: boolean };
 	cfBuildOutput: boolean;
 }
 
@@ -147,6 +159,10 @@ function normalizeNewConfig(
 			types: {
 				generate:
 					typeof option === "object" ? (option.types?.generate ?? true) : true,
+				includeRuntime:
+					typeof option === "object"
+						? (option.types?.includeRuntime ?? true)
+						: true,
 			},
 			cfBuildOutput: true,
 		};
@@ -155,10 +171,16 @@ function normalizeNewConfig(
 		return undefined;
 	}
 	if (option === true) {
-		return { types: { generate: true }, cfBuildOutput: false };
+		return {
+			types: { generate: true, includeRuntime: true },
+			cfBuildOutput: false,
+		};
 	}
 	return {
-		types: { generate: option.types?.generate ?? true },
+		types: {
+			generate: option.types?.generate ?? true,
+			includeRuntime: option.types?.includeRuntime ?? true,
+		},
 		cfBuildOutput: option.cfBuildOutput ?? false,
 	};
 }
@@ -202,7 +224,7 @@ export interface Worker {
 	config: ResolvedWorkerConfig;
 	nodeJsCompat: NodeJsCompat | undefined;
 	devOnly: DevOnly | undefined;
-	parsedNewConfig: ParsedInputWorkerConfig | undefined;
+	parsedNewWorkerConfig: ParsedInputWorkerConfig | undefined;
 }
 
 interface BaseResolvedConfig {
@@ -221,12 +243,15 @@ interface NonPreviewResolvedConfig extends BaseResolvedConfig {
 	environmentNameToWorkerMap: Map<string, Worker>;
 	environmentNameToChildEnvironmentNamesMap: Map<string, string[]>;
 	prerenderWorkerEnvironmentName: string | undefined;
+	// The full parsed `cloudflare.config.ts` exports (every worker export plus
+	// the optional `settings` export), keyed by export name. Undefined when
+	// new-config is not in use.
+	parsedNewConfig: ParsedConfigExports | undefined;
 }
 
 export interface AssetsOnlyResolvedConfig extends NonPreviewResolvedConfig {
 	type: "assets-only";
 	config: ResolvedAssetsOnlyConfig;
-	parsedNewConfig: ParsedInputWorkerConfig | undefined;
 	rawConfigs: {
 		entryWorker: AssetsOnlyWorkerResolvedConfig;
 	};
@@ -462,7 +487,7 @@ export async function resolvePluginConfig(
 
 	let configPath: string | undefined;
 	let rawConfigOverride: RawConfig | undefined;
-	let parsedNewConfig: ParsedInputWorkerConfig | undefined;
+	let parsedNewConfig: ParsedConfigExports | undefined;
 
 	if (resolvedNewConfig) {
 		if (pluginConfig.configPath) {
@@ -496,7 +521,8 @@ export async function resolvePluginConfig(
 		const result = await loadNewConfig({
 			root,
 			mode: viteEnv.mode,
-			generateTypes: resolvedNewConfig.types.generate,
+			command: viteEnv.command,
+			types: resolvedNewConfig.types,
 		});
 		configPath = result.configPath;
 		rawConfigOverride = result.rawConfig;
@@ -615,12 +641,17 @@ export async function resolvePluginConfig(
 
 	validateAndAddEnvironmentName(entryWorkerEnvironmentName);
 
+	const entryWorkerNewConfig =
+		parsedNewConfig?.default?.type === "worker"
+			? parsedNewConfig.default
+			: undefined;
+
 	environmentNameToWorkerMap.set(
 		entryWorkerEnvironmentName,
 		resolveWorker(
 			entryWorkerResolvedConfig.config,
 			pluginConfig.assetsOnly,
-			parsedNewConfig
+			entryWorkerNewConfig
 		)
 	);
 
@@ -701,6 +732,7 @@ export async function resolvePluginConfig(
 		environmentNameToWorkerMap,
 		environmentNameToChildEnvironmentNamesMap,
 		prerenderWorkerEnvironmentName,
+		parsedNewConfig,
 		entryWorkerEnvironmentName,
 		staticRouting,
 		remoteBindings,
@@ -747,7 +779,7 @@ export function resolveDevOnly(devOnly: DevOnly | undefined): boolean {
 function resolveWorker(
 	workerConfig: ResolvedWorkerConfig,
 	devOnly: DevOnly | undefined,
-	parsedNewConfig?: ParsedInputWorkerConfig
+	parsedNewWorkerConfig?: ParsedInputWorkerConfig
 ): Worker {
 	return {
 		config: workerConfig,
@@ -755,7 +787,7 @@ function resolveWorker(
 			? new NodeJsCompat(workerConfig)
 			: undefined,
 		devOnly,
-		parsedNewConfig,
+		parsedNewWorkerConfig,
 	};
 }
 
@@ -770,16 +802,18 @@ const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
  * file, and the set of files imported while resolving the config (for
  * watch-mode).
  *
- * If `generateTypes` is true, also writes `worker-configuration.d.ts` next to
- * the config when the generated content differs from what's already on disk.
+ * When `types.generate` is true, also writes `worker-configuration.d.ts` next
+ * to the config when the generated content differs from what's already on disk.
+ * Type generation only runs in dev.
  */
 async function loadNewConfig(options: {
 	root: string;
 	mode: string;
-	generateTypes: boolean;
+	command: "build" | "serve";
+	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<{
 	rawConfig: RawConfig;
-	parsedConfig: ParsedInputWorkerConfig;
+	parsedConfig: ParsedConfigExports;
 	configPath: string;
 	dependencies: Set<string>;
 }> {
@@ -791,31 +825,45 @@ async function loadNewConfig(options: {
 		);
 	}
 
-	const { config: rawExport, dependencies } = await loadConfig(configPath);
-
-	const resolved = await resolveWorkerDefinition(rawExport, {
+	const { result, dependencies } = await loadAndValidateConfig(configPath, {
 		mode: options.mode,
 	});
 
-	const parsed = InputWorkerSchema.safeParse(resolved);
-	if (!parsed.success) {
+	if (!result.success) {
 		throw new Error(
-			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${parsed.error.message}`
+			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${result.error.message}`
 		);
 	}
 
-	const rawConfig = convertToWranglerConfig(parsed.data);
+	const worker =
+		result.data.default?.type === "worker" ? result.data.default : undefined;
 
-	if (options.generateTypes) {
-		writeWorkerConfigurationDts({
+	if (worker === undefined) {
+		throw new Error(
+			`\`${NEW_CONFIG_FILENAME}\` must have a default worker export.`
+		);
+	}
+
+	const settings =
+		result.data.settings?.type === "settings"
+			? result.data.settings
+			: undefined;
+
+	const rawConfig: RawConfig = convertToWranglerConfig(worker, settings);
+
+	if (options.command === "serve" && options.types.generate) {
+		await writeWorkerConfigurationDts({
 			root: options.root,
 			configPath,
+			includeRuntime: options.types.includeRuntime,
+			compatibilityDate: worker.compatibilityDate,
+			compatibilityFlags: worker.compatibilityFlags ?? [],
 		});
 	}
 
 	return {
 		rawConfig,
-		parsedConfig: parsed.data,
+		parsedConfig: result.data,
 		configPath,
 		dependencies,
 	};
@@ -827,28 +875,48 @@ async function loadNewConfig(options: {
  * `experimental-config` subpath (so users don't need a direct dependency on
  * `@cloudflare/config`).
  *
- * Reads the existing file first and only writes if the content differs, to
- * avoid touching mtimes unnecessarily.
+ * When `includeRuntime` is true, appends the Workers runtime types (generated
+ * from the project's compatibility date/flags) after the inference block. The
+ * runtime-types generator caches against the existing file content, so it only
+ * spawns workerd when the compat date/flags/workerd version change.
+ *
+ * The existing file is read once and reused for both the runtime-types cache
+ * check and the diff-before-write (only writes if content differs, to avoid
+ * touching mtimes unnecessarily).
  */
-function writeWorkerConfigurationDts(options: {
+async function writeWorkerConfigurationDts(options: {
 	root: string;
 	configPath: string;
-}): void {
+	includeRuntime: boolean;
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): Promise<void> {
 	const outputPath = path.resolve(options.root, TYPES_OUTPUT_FILENAME);
 	const relativeConfigPath =
 		"./" + path.relative(options.root, options.configPath);
-	const content = generateTypes({
+
+	let existingContent: string | undefined;
+	try {
+		existingContent = await fsp.readFile(outputPath, "utf8");
+	} catch {
+		// File doesn't exist yet — we'll create it below.
+	}
+
+	let content = generateTypes({
 		configPath: relativeConfigPath,
 		packageName: EXPERIMENTAL_CONFIG_PKG,
 	});
 
-	let existing: string | undefined;
-	try {
-		existing = fs.readFileSync(outputPath, "utf8");
-	} catch {
-		// File doesn't exist yet — we'll create it below.
+	if (options.includeRuntime) {
+		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+			compatibilityDate: options.compatibilityDate,
+			compatibilityFlags: options.compatibilityFlags,
+			existingContent,
+		});
+		content += `\n${runtimeHeader}\n${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`;
 	}
-	if (existing !== content) {
-		fs.writeFileSync(outputPath, content);
+
+	if (existingContent !== content) {
+		await fsp.writeFile(outputPath, content);
 	}
 }

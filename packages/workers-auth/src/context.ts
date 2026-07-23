@@ -2,6 +2,7 @@ import type { AuthConfigStorage } from "./config-file/auth";
 import type { TemporaryAccountStorage } from "./config-file/temporary";
 import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
+import type { Logger } from "@cloudflare/workers-utils";
 
 /**
  * The dependencies the OAuth flow needs to mint/reuse a short-lived "temporary
@@ -36,13 +37,7 @@ export interface OAuthConsentPages {
  * Subset of the wrangler `logger` singleton used by the OAuth flow.
  * Consumers pass in an implementation that maps to their own logging surface.
  */
-export interface OAuthFlowLogger {
-	debug(...args: unknown[]): void;
-	info(...args: unknown[]): void;
-	log(...args: unknown[]): void;
-	warn(...args: unknown[]): void;
-	error(...args: unknown[]): void;
-}
+export type OAuthFlowLogger = Logger;
 
 /**
  * Dependency-injection surface for {@link createOAuthFlow}.
@@ -104,9 +99,23 @@ export interface OAuthFlowContext {
 	redirectUri: string;
 
 	/**
-	 * Persistence backend for the stored auth config.
+	 * Factory that returns a persistence backend for the given auth profile.
+	 *
+	 * Called with the active profile name (e.g. `"default"`) on every storage
+	 * access so the flow always reads/writes the correct backing store.
+	 * The consumer is responsible for mapping profile names to concrete storage
+	 * backends (e.g. wrangler maps each profile to a separate TOML file under
+	 * the global config directory).
+	 *
+	 * Consumers that want OS-keyring-backed encryption pass the
+	 * `storageFactory` from {@link createCredentialStorageContext} (in the
+	 * `credential-store` module) — for each profile that adapter resolves
+	 * between the plaintext TOML file and the encrypted-file-with-keyring-key
+	 * implementation on every call, so runtime preference changes
+	 * (`--use-keyring` / `CLOUDFLARE_AUTH_USE_KEYRING`) take effect without
+	 * rebuilding the flow.
 	 */
-	storage: AuthConfigStorage;
+	storageFactory: (profile?: string) => AuthConfigStorage;
 
 	/**
 	 * Whether the flow's credential resolvers (`getAPIToken` / `requireApiToken`)

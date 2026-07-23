@@ -11,7 +11,10 @@ import type {
 	WorkflowsWorkflow,
 } from "../generated";
 import type { zWorkflowsListInstancesData } from "../generated/zod.gen";
-import type { RestartFromStep } from "@cloudflare/workflows-shared/src/binding";
+import type {
+	RestartFromStep,
+	WorkflowInstanceTerminateOptions,
+} from "@cloudflare/workflows-shared/src/binding";
 import type { z } from "zod";
 
 // ============================================================================
@@ -35,7 +38,7 @@ interface WorkflowHandle {
 	pause(): Promise<void>;
 	resume(): Promise<void>;
 	restart(options?: { from?: RestartFromStep }): Promise<void>;
-	terminate(): Promise<void>;
+	terminate(options?: WorkflowInstanceTerminateOptions): Promise<void>;
 	sendEvent(args: { payload: unknown; type: string }): Promise<void>;
 	status(): Promise<{ status: string; output?: unknown; error?: unknown }>;
 }
@@ -886,6 +889,14 @@ export async function changeWorkflowInstanceStatus(
 			);
 		}
 
+		if (body.rollback !== undefined && action !== "terminate") {
+			return errorResponse(
+				400,
+				10001,
+				"'rollback' is only valid when terminating."
+			);
+		}
+
 		const handle = await workflow.get(instanceId);
 
 		switch (action) {
@@ -909,7 +920,10 @@ export async function changeWorkflowInstanceStatus(
 				break;
 			}
 			case "terminate":
-				await handle.terminate();
+				// TODO(vaish): remove cast once @cloudflare/workers-types ships terminate options
+				await (handle as unknown as WorkflowHandle).terminate(
+					body.rollback === true ? { rollback: true } : undefined
+				);
 				break;
 		}
 

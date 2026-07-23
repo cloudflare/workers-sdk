@@ -18,6 +18,7 @@ import { readConfig, readNewConfig } from "../../config";
 import { containersScope } from "../../containers";
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
+import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { getBindings, getHostAndRoutes, getInferredHost } from "../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
@@ -38,7 +39,6 @@ import { getRules } from "../../utils/getRules";
 import { getScriptName } from "../../utils/getScriptName";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { printBindings } from "../../utils/print-bindings";
-import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -366,7 +366,21 @@ async function resolveConfig(
 		"dev"
 	);
 
-	const nodejsCompatMode = unwrapHook(input.build?.nodejsCompatMode, config);
+	// Mirror the CLI: when the caller does not provide a mode (or a hook),
+	// derive it from the same effective values the CLI feeds
+	// validateNodeCompatMode — input-level overrides first, then the
+	// resolved config (the CLI passes `args.* ?? parsedConfig.*`; the
+	// programmatic spelling of no-bundle is `build.bundle: false`).
+	// Otherwise a dev worker's own `nodejs_compat` compatibility flag is
+	// silently ignored. An explicit null still disables.
+	const nodejsCompatMode =
+		input.build?.nodejsCompatMode === undefined
+			? validateNodeCompatMode(
+					input.compatibilityDate ?? config.compatibility_date,
+					input.compatibilityFlags ?? config.compatibility_flags ?? [],
+					{ noBundle: !(input.build?.bundle ?? !config.no_bundle) }
+				)
+			: unwrapHook(input.build.nodejsCompatMode, config);
 
 	const { bindings, unsafe, printCurrentBindings } = await resolveBindings(
 		config,
@@ -401,6 +415,7 @@ async function resolveConfig(
 		projectRoot: entry.projectRoot,
 		bindings,
 		migrations: input.migrations ?? config.migrations,
+		exports: input.exports ?? config.exports,
 		sendMetrics: input.sendMetrics ?? config.send_metrics,
 		triggers: await resolveTriggers(config, input),
 		env: input.env,
@@ -435,8 +450,6 @@ async function resolveConfig(
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
-			useServiceEnvironments:
-				input.legacy?.useServiceEnvironments ?? useServiceEnvironments(config),
 		},
 		unsafe: {
 			capnp: input.unsafe?.capnp ?? unsafe?.capnp,
@@ -519,7 +532,8 @@ async function resolveConfig(
 
 		// TODO(do) support remote wrangler dev
 		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
-			resolved.migrations
+			resolved.migrations,
+			resolved.exports
 		);
 		if (
 			resolved.dev.remote &&
@@ -570,7 +584,8 @@ function getDevCompatibilityDate(
 }
 
 export class ConfigController extends Controller {
-	latestInput?: StartDevWorkerInput;
+	latestInput?: WranglerStartDevWorkerInput;
+	latestWranglerConfig?: Config;
 	latestConfig?: StartDevWorkerOptions;
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
 
@@ -611,20 +626,20 @@ export class ConfigController extends Controller {
 		});
 	}
 
-	public set(input: StartDevWorkerInput, throwErrors = false) {
+	public set(input: WranglerStartDevWorkerInput, throwErrors = false) {
 		logger.debug("setting config");
 		return runWithLogLevel(input.dev?.logLevel, () =>
 			this.#updateConfig(input, throwErrors)
 		);
 	}
-	public patch(input: Partial<StartDevWorkerInput>) {
+	public patch(input: Partial<WranglerStartDevWorkerInput>) {
 		logger.debug("patching config");
 		assert(
 			this.latestInput,
 			"Cannot call updateConfig without previously calling setConfig"
 		);
 
-		const config: StartDevWorkerInput = {
+		const config: WranglerStartDevWorkerInput = {
 			...this.latestInput,
 			...input,
 		};
@@ -634,7 +649,7 @@ export class ConfigController extends Controller {
 		);
 	}
 
-	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
+	async #updateConfig(input: WranglerStartDevWorkerInput, throwErrors = false) {
 		logger.debug(
 			"Updating config...",
 			this.#abortController?.signal,
@@ -657,7 +672,6 @@ export class ConfigController extends Controller {
 					config: input.config,
 					env: input.env,
 					"dispatch-namespace": undefined,
-					"legacy-env": !input.legacy?.useServiceEnvironments,
 					remote: !!input.dev?.remote,
 					upstreamProtocol:
 						input.dev?.origin?.secure === undefined
@@ -703,6 +717,7 @@ export class ConfigController extends Controller {
 			if (newConfig && fileConfig.configPath) {
 				await regenerateNewConfigTypes({
 					cloudflareConfigPath: fileConfig.configPath,
+					workerConfig: newConfig.parsedWorkerConfig,
 					types: newConfig.types,
 				});
 			}
@@ -718,6 +733,7 @@ export class ConfigController extends Controller {
 			if (signal.aborted) {
 				return;
 			}
+			this.latestWranglerConfig = fileConfig;
 			this.latestConfig = resolvedConfig;
 			this.#printCurrentBindings = printCurrentBindings;
 			this.emitConfigUpdateEvent(resolvedConfig);

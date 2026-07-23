@@ -57,9 +57,9 @@ describe("createWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MY_KV: { type: "kv_namespace" } as never,
 			};
-			expect(() =>
-				createWorkerUploadForm(createEsmWorker(), bindings)
-			).toThrowError('MY_KV bindings must have an "id" field');
+			expect(() => createWorkerUploadForm(createEsmWorker(), bindings)).toThrow(
+				'MY_KV bindings must have an "id" field'
+			);
 		});
 
 		it("should convert KV namespace to inherit binding during dry run when ID is missing", ({
@@ -115,9 +115,9 @@ describe("createWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MY_BUCKET: { type: "r2_bucket" } as never,
 			};
-			expect(() =>
-				createWorkerUploadForm(createEsmWorker(), bindings)
-			).toThrowError('MY_BUCKET bindings must have a "bucket_name" field');
+			expect(() => createWorkerUploadForm(createEsmWorker(), bindings)).toThrow(
+				'MY_BUCKET bindings must have a "bucket_name" field'
+			);
 		});
 
 		it("should convert R2 bucket to inherit binding during dry run when bucket_name is missing", ({
@@ -155,9 +155,9 @@ describe("createWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MY_DB: { type: "d1" } as never,
 			};
-			expect(() =>
-				createWorkerUploadForm(createEsmWorker(), bindings)
-			).toThrowError('MY_DB bindings must have a "database_id" field');
+			expect(() => createWorkerUploadForm(createEsmWorker(), bindings)).toThrow(
+				'MY_DB bindings must have a "database_id" field'
+			);
 		});
 
 		it("should convert D1 to inherit binding during dry run when database_id is missing", ({
@@ -356,9 +356,9 @@ describe("createWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				AI_SEARCH: { type: "ai_search_namespace" } as never,
 			};
-			expect(() =>
-				createWorkerUploadForm(createEsmWorker(), bindings)
-			).toThrowError('AI_SEARCH bindings must have a "namespace" field');
+			expect(() => createWorkerUploadForm(createEsmWorker(), bindings)).toThrow(
+				'AI_SEARCH bindings must have a "namespace" field'
+			);
 		});
 
 		it("should convert ai_search_namespace to inherit binding during dry run when namespace is missing", ({
@@ -399,9 +399,9 @@ describe("createWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MEMORY: { type: "agent_memory" } as never,
 			};
-			expect(() =>
-				createWorkerUploadForm(createEsmWorker(), bindings)
-			).toThrowError('MEMORY bindings must have a "namespace" field');
+			expect(() => createWorkerUploadForm(createEsmWorker(), bindings)).toThrow(
+				'MEMORY bindings must have a "namespace" field'
+			);
 		});
 
 		it("should convert agent_memory to inherit binding during dry run when namespace is missing", ({
@@ -590,6 +590,29 @@ describe("createWorkerUploadForm — bindings", () => {
 			expect(dataPart).not.toBeNull();
 			expect(dataPart.type).toBe("application/octet-stream");
 		});
+	});
+
+	describe("provisionable name-only bindings", () => {
+		it.for([
+			{ label: "Queue", input: { type: "queue" } as const },
+			{
+				label: "Dispatch Namespace",
+				input: { type: "dispatch_namespace" } as const,
+			},
+			{ label: "Flagship", input: { type: "flagship" } as const },
+		])(
+			"should inherit a draft $label binding during dry run",
+			({ input }, { expect }) => {
+				const bindings: StartDevWorkerInput["bindings"] = { RESOURCE: input };
+				const form = createWorkerUploadForm(createEsmWorker(), bindings, {
+					dryRun: true,
+				});
+				expect(getBindings(form)).toContainEqual({
+					name: "RESOURCE",
+					type: "inherit",
+				});
+			}
+		);
 	});
 
 	describe("multiple binding types together", () => {

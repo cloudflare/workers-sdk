@@ -74,6 +74,17 @@ describe("Package Managers", () => {
 			expect(pm.npx).toBe("yarn");
 			expect(pm.dlx).toEqual(["yarn"]);
 		});
+
+		test("nub", ({ expect }) => {
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "nub",
+				version: "0.2.9",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("nub");
+			expect(pm.npx).toBe("nubx");
+			expect(pm.dlx).toEqual(["nubx"]);
+		});
 	});
 
 	describe("detectPmMismatch", async () => {
@@ -127,6 +138,27 @@ describe("Package Managers", () => {
 				["pnpm-lock.yaml", true],
 				["bun.lock", false],
 				["bun.lockb", false],
+			] as const)("with %s", ([file, isMismatch], { expect }) => {
+				vi.mocked(existsSync).mockImplementationOnce(
+					(path) => !!(path as string).includes(file)
+				);
+				expect(detectPmMismatch({ project: { path: "" } } as C3Context)).toBe(
+					isMismatch
+				);
+			});
+		});
+
+		describe("nub", () => {
+			beforeEach(() => {
+				mockPackageManager("nub");
+			});
+
+			test.for([
+				["yarn.lock", false],
+				["pnpm-lock.yaml", false],
+				["bun.lock", false],
+				["bun.lockb", false],
+				["package-lock.json", false],
 			] as const)("with %s", ([file, isMismatch], { expect }) => {
 				vi.mocked(existsSync).mockImplementationOnce(
 					(path) => !!(path as string).includes(file)

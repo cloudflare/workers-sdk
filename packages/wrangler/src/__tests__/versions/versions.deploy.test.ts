@@ -1,3 +1,4 @@
+import { INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -281,7 +282,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`[Error: You need to provide a name for your Worker. Either pass it as a CLI arg with \`--name <name>\` or set the \`name\` field in your Wrangler configuration file (e.g. wrangler.json).]`
 			);
 		});
 	});
@@ -293,7 +294,7 @@ describe("versions deploy", () => {
 			const result = runWrangler("versions deploy --yes");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You must select at least 1 version to deploy.]`
+				`[Error: You must select at least 1 version to deploy. Provide a version using positional args (e.g. \`wrangler versions deploy <version-id>\`), --version-id, or --version-tag.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
@@ -685,7 +686,7 @@ describe("versions deploy", () => {
 				);
 
 				await expect(result).rejects.toMatchInlineSnapshot(
-					`[Error: You must select at most 2 versions to deploy.]`
+					`[Error: Too many versions selected. You can deploy at most 2 version(s) at a time. Please remove some versions and try again.]`
 				);
 
 				expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
@@ -1139,7 +1140,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (101%) must be between 0 and 100.]`
+				`[Error: The --percentage value 101% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1151,7 +1152,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+				`[Error: The --percentage value -1% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1163,7 +1164,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (101%) must be between 0 and 100.]`
+				`[Error: The --percentage value 101% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1175,7 +1176,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+				`[Error: The --percentage value -1% is out of range. Percentages must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`""`);
@@ -1394,6 +1395,114 @@ describe("versions deploy", () => {
 				`);
 			});
 		});
+
+		describe("EWC error mapping", () => {
+			// EWC server message from
+			// edgeworker-config-service!9919 — surfaced verbatim by wrangler
+			// before the renderer appends actionable next-steps.
+			const serverMessage =
+				"All versions in a multi-version deployment must declare identical `exports`. Deploy the version that changes `exports` at 100% first, then split traffic.";
+
+			test("surfaces a friendly error when EWC rejects multi-version exports as inconsistent (code 100405)", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
+										message: serverMessage,
+									},
+								]),
+								{ status: 400 }
+							),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler(
+						"versions deploy 10000000-0000-0000-0000-000000000000@50% 20000000-0000-0000-0000-000000000000@50% --yes"
+					)
+				).rejects.toThrow(
+					// Both the server message and the suggested next-step
+					// should appear in the final user-facing error.
+					/Deploy the version that changes `exports` at 100% first[\s\S]*wrangler versions deploy <new-version-id>@100%/
+				);
+			});
+
+			test("includes a link to the gradual-deployments docs", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
+										message: serverMessage,
+									},
+								]),
+								{ status: 400 }
+							),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler(
+						"versions deploy 10000000-0000-0000-0000-000000000000@50% 20000000-0000-0000-0000-000000000000@50% --yes"
+					)
+				).rejects.toThrow(
+					/developers\.cloudflare\.com\/workers\/configuration\/versions-and-deployments\/gradual-deployments/
+				);
+			});
+
+			test("does not remap unrelated EWC errors", async ({ expect }) => {
+				writeWranglerConfig();
+
+				// A different EWC error code must pass through untransformed —
+				// the catch block falls through to `throw e`, surfacing the
+				// original APIError (and its notes) from the cfetch layer.
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 10001,
+										message: "some other API error",
+									},
+								]),
+								{ status: 500 }
+							)
+					)
+				);
+
+				// The original API error is re-thrown verbatim — its `.message`
+				// is the request-URL line. Most importantly the friendly
+				// "What to do" copy is NOT applied to unrelated codes.
+				const rejection = runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000@50% 20000000-0000-0000-0000-000000000000@50% --yes"
+				);
+				await expect(rejection).rejects.toThrow(
+					/A request to the Cloudflare API .* failed/
+				);
+				await expect(rejection).rejects.not.toThrow(
+					/Deploy the version that changes `exports` at 100% first/
+				);
+			});
+		});
 	});
 });
 
@@ -1523,16 +1632,14 @@ describe("units", () => {
 		});
 
 		test("throws on empty tag", ({ expect }) => {
-			expect(() => parseTagSpecs({ versionTag: ["@100%"] })).toThrowError(
+			expect(() => parseTagSpecs({ versionTag: ["@100%"] })).toThrow(
 				`Could not parse a tag from --version-tag arg "@100%".`
 			);
 		});
 
 		test("throws on out-of-range percentage", ({ expect }) => {
-			expect(() =>
-				parseTagSpecs({ versionTag: ["abc1234@101%"] })
-			).toThrowError(
-				`Percentage value (101%) parsed from --version-tag arg "abc1234@101%" must be between 0 and 100.`
+			expect(() => parseTagSpecs({ versionTag: ["abc1234@101%"] })).toThrow(
+				`Percentage value 101% (from --version-tag arg "abc1234@101%") is out of range. Percentages must be between 0 and 100.`
 			);
 		});
 
@@ -1683,21 +1790,21 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (101%) must be at most 100%]`
+				`[Error: The specified traffic percentages add up to 101%, which exceeds the maximum of 100%. Reduce one or more percentages so they sum to at most 100%.]`
 			);
 		});
 		test("errors if subtotal below min", ({ expect }) => {
 			expect(() =>
 				validateTrafficSubtotal(-1, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (-1%) must be at least 0%]`
+				`[Error: The specified traffic percentages add up to -1%, which is below the minimum of 0%. Increase one or more percentages so they sum to at least 0%.]`
 			);
 		});
 		test("different error message if min === max", ({ expect }) => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 100, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (101%) must be 100%]`
+				`[Error: The specified traffic percentages add up to 101%, but must total exactly 100%. Adjust the --percentage values or version-spec percentages so they sum to 100%.]`
 			);
 		});
 		test("no error if subtotal above max but not above max + EPSILON", ({
@@ -1708,7 +1815,7 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(100.01)
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (100.01%) must be 100%]`
+				`[Error: The specified traffic percentages add up to 100.01%, but must total exactly 100%. Adjust the --percentage values or version-spec percentages so they sum to 100%.]`
 			);
 		});
 		test("no error if subtotal below min but not below min - EPSILON", ({
@@ -1719,7 +1826,7 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(99.99)
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Sum of specified percentages (99.99%) must be 100%]`
+				`[Error: The specified traffic percentages add up to 99.99%, but must total exactly 100%. Adjust the --percentage values or version-spec percentages so they sum to 100%.]`
 			);
 		});
 	});

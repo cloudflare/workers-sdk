@@ -1,4 +1,6 @@
 import path from "node:path";
+import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
+import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import {
 	formatZodError,
 	getRootPath,
@@ -14,9 +16,12 @@ import {
 	getRelativeProjectConfigPath,
 	getRelativeProjectPath,
 } from "./helpers";
+import type {
+	RemoteBindingsLogger,
+	RemoteProxySessionData,
+} from "@cloudflare/remote-bindings";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { TestProject } from "vitest/node";
-import type { Binding, RemoteProxySession } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
@@ -151,6 +156,18 @@ function parseWorkerOptions(
 
 const log = new Log(LogLevel.WARN, { prefix: "vpw" });
 
+const remoteBindingsLogger: RemoteBindingsLogger = {
+	loggerLevel: "log",
+	debug: console.debug,
+	log: console.log,
+	info: console.info,
+	warn: console.warn,
+	error: console.error,
+	console(method, ...args) {
+		Reflect.apply(console[method], console, args);
+	},
+};
+
 function filterTails(
 	tails: WorkerOptions["tails"],
 	userWorkers?: { name?: string }[]
@@ -186,10 +203,7 @@ function filterTails(
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
 export const remoteProxySessionsDataMap = new Map<
 	string,
-	{
-		session: RemoteProxySession;
-		remoteBindings: Record<string, Binding>;
-	} | null
+	RemoteProxySessionData | null
 >();
 
 async function parseCustomPoolOptions(
@@ -254,17 +268,33 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
+		// Parse the wrangler config once so we can pass the parsed config
+		// straight into `unstable_getMiniflareWorkerOptions` without
+		// re-parsing it.
+		const wranglerConfig = wrangler.unstable_readConfig({
+			config: configPath,
+			env: options.wrangler.environment,
+		});
+
 		const preExistingRemoteProxySessionData = options.wrangler?.configPath
 			? remoteProxySessionsDataMap.get(options.wrangler.configPath)
 			: undefined;
 
 		const remoteProxySessionData = options.remoteBindings
-			? await wrangler.maybeStartOrUpdateRemoteProxySession(
+			? await maybeStartOrUpdateRemoteProxySession(
 					{
-						path: options.wrangler.configPath,
-						environment: options.wrangler.environment,
+						name: wranglerConfig.name ?? "worker",
+						bindings:
+							wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
+								wranglerConfig
+							) ?? {},
+						complianceRegion: getCloudflareComplianceRegion(wranglerConfig),
+						account_id: wranglerConfig.account_id,
+						profileDir: path.dirname(configPath),
 					},
-					preExistingRemoteProxySessionData ?? null
+					preExistingRemoteProxySessionData ?? null,
+					undefined,
+					{ logger: remoteBindingsLogger }
 				)
 			: null;
 
@@ -277,7 +307,7 @@ async function parseCustomPoolOptions(
 
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
-				configPath,
+				wranglerConfig,
 				options.wrangler.environment,
 				{
 					overrides: {

@@ -15,9 +15,10 @@ import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 export async function runBuildOutput(buildArgs: {
 	env?: string;
 }): Promise<void> {
-	const { config, parsedWorkerConfig } = await readNewConfig({
-		env: buildArgs.env,
-	});
+	const { config, parsedWorkerConfig, parsedSettingsConfig } =
+		await readNewConfig({
+			env: buildArgs.env,
+		});
 	const { buildProps, assetsOptions } = await mergeBuildOutputProps(config);
 	const root = process.cwd();
 
@@ -30,6 +31,7 @@ export async function runBuildOutput(buildArgs: {
 		await writeBuildOutput({
 			root,
 			parsedWorkerConfig,
+			parsedSettingsConfig,
 			buildResult,
 			assetsOptions,
 		});

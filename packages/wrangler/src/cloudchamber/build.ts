@@ -165,11 +165,24 @@ function findRemoteDigest(
 	return imageRefWithDigest(externalAccountId, imageTag, hash);
 }
 
+/**
+ * Builds a Docker image and optionally pushes it to the Cloudflare managed registry.
+ *
+ * @param args - Build arguments including tag, Dockerfile path, build context, and platform.
+ * @param pathToDocker - Path to the Docker CLI executable.
+ * @param push - Whether to push the built image to the remote registry.
+ * @param containerConfig - Optional container configuration for limit validation.
+ * @param verifyDockerIsRunning - When `true` (the default), verifies Docker is installed and the
+ *   daemon is running before building. Set to `false` when the caller has already performed this check.
+ *
+ * @returns An {@link ImageRef} describing the built/pushed image.
+ */
 export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
-	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>
+	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
+	verifyDockerIsRunning?: boolean
 ): Promise<ImageRef> {
 	try {
 		const imageTag = args.tag;
@@ -185,10 +198,12 @@ export async function buildAndMaybePush(
 			logger
 		);
 
-		await dockerBuild(pathToDocker, {
+		const build = await dockerBuild(pathToDocker, {
 			buildCmd,
 			dockerfile,
-		}).ready;
+			verifyDockerIsRunning,
+		});
+		await build.ready;
 
 		if (push) {
 			/**

@@ -1,6 +1,6 @@
 import { Button } from "@cloudflare/kumo";
 import { ExportIcon } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type JSX } from "react";
 import { StudioExportModal } from "../Modal/Export";
 import { StudioResultTable } from "../Table/Result";
 import { createStudioTableStateFromResult } from "../Table/State/Helpers";

@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { brandColor, dim, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { removeDir } from "@cloudflare/workers-utils";
+import {
+	getGlobalWranglerCachePath,
+	removeDir,
+} from "@cloudflare/workers-utils";
 import {
 	Browser,
 	CDP_WEBSOCKET_ENDPOINT_REGEX,
@@ -14,8 +17,8 @@ import {
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
-import { getGlobalWranglerCachePath } from "../../shared/wrangler";
 import {
+	buildRemoteProxyProps,
 	getUserBindingServiceName,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -38,6 +41,7 @@ export const BrowserRenderingOptionsSchema = z.object({
 });
 
 export const BROWSER_RENDERING_PLUGIN_NAME = "browser-rendering";
+const BROWSER_RENDERING_REMOTE_SERVICE_NAME = `${BROWSER_RENDERING_PLUGIN_NAME}:remote`;
 
 export const BROWSER_RENDERING_PLUGIN: Plugin<
 	typeof BrowserRenderingOptionsSchema
@@ -52,13 +56,20 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		return [
 			{
 				name: options.browserRendering.binding,
-				service: {
-					name: getUserBindingServiceName(
-						BROWSER_RENDERING_PLUGIN_NAME,
-						"service",
-						options.browserRendering.remoteProxyConnectionString
-					),
-				},
+				service: options.browserRendering.remoteProxyConnectionString
+					? {
+							name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
+							props: buildRemoteProxyProps(
+								options.browserRendering.remoteProxyConnectionString,
+								options.browserRendering.binding
+							),
+						}
+					: {
+							name: getUserBindingServiceName(
+								BROWSER_RENDERING_PLUGIN_NAME,
+								"service"
+							),
+						},
 			},
 		];
 	},
@@ -75,44 +86,47 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			return [];
 		}
 
+		if (options.browserRendering.remoteProxyConnectionString) {
+			return [
+				{
+					name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
+					worker: remoteProxyClientWorker(),
+				},
+			];
+		}
+
 		return [
 			{
 				name: getUserBindingServiceName(
 					BROWSER_RENDERING_PLUGIN_NAME,
-					"service",
-					options.browserRendering.remoteProxyConnectionString
+					"service"
 				),
-				worker: options.browserRendering.remoteProxyConnectionString
-					? remoteProxyClientWorker(
-							options.browserRendering.remoteProxyConnectionString,
-							options.browserRendering.binding
-						)
-					: {
-							compatibilityDate: "2025-05-01",
-							compatibilityFlags: ["nodejs_compat"],
-							modules: [
-								{
-									name: "index.worker.js",
-									esModule: BROWSER_RENDERING_WORKER(),
-								},
-							],
-							bindings: [
-								WORKER_BINDING_SERVICE_LOOPBACK,
-								{
-									name: "BrowserSession",
-									durableObjectNamespace: {
-										className: "BrowserSession",
-									},
-								},
-							],
-							durableObjectNamespaces: [
-								{
-									className: "BrowserSession",
-									uniqueKey: "miniflare-BrowserSession",
-								},
-							],
-							durableObjectStorage: { inMemory: kVoid },
+				worker: {
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["nodejs_compat"],
+					modules: [
+						{
+							name: "index.worker.js",
+							esModule: BROWSER_RENDERING_WORKER(),
 						},
+					],
+					bindings: [
+						WORKER_BINDING_SERVICE_LOOPBACK,
+						{
+							name: "BrowserSession",
+							durableObjectNamespace: {
+								className: "BrowserSession",
+							},
+						},
+					],
+					durableObjectNamespaces: [
+						{
+							className: "BrowserSession",
+							uniqueKey: "miniflare-BrowserSession",
+						},
+					],
+					durableObjectStorage: { inMemory: kVoid },
+				},
 			},
 		];
 	},

@@ -5,7 +5,29 @@ import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { resolvePluginConfig } from "../plugin-config";
 import type { PluginConfig, WorkersResolvedConfig } from "../plugin-config";
 
+// Stub the runtime-types generator: the real one spawns workerd via Miniflare.
+// Its caching/generation behaviour is
+// covered by `@cloudflare/runtime-types`' own tests. We just need a
+// deterministic header + body so the assembled `.d.ts` is stable across runs.
+const {
+	RUNTIME_MARKER,
+	FAKE_RUNTIME_HEADER,
+	FAKE_RUNTIME_TYPES,
+	generateRuntimeTypesMock,
+} = vi.hoisted(() => ({
+	RUNTIME_MARKER: "// Begin runtime types",
+	FAKE_RUNTIME_HEADER:
+		"// Runtime types generated with workerd@1.0.0 2024-12-30 ",
+	FAKE_RUNTIME_TYPES: "declare type __FakeRuntimeType = true;",
+	generateRuntimeTypesMock: vi.fn(),
+}));
+vi.mock("@cloudflare/runtime-types", () => ({
+	RUNTIME_TYPES_MARKER: RUNTIME_MARKER,
+	generateRuntimeTypes: generateRuntimeTypesMock,
+}));
+
 const viteEnv = { mode: "development", command: "serve" as const };
+const viteBuildEnv = { mode: "production", command: "build" as const };
 
 // Create the temp directory inside the package so Node can resolve the
 // workspace-linked `@cloudflare/config` import from the generated
@@ -21,6 +43,12 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 	let tempDir: string;
 
 	beforeEach(() => {
+		generateRuntimeTypesMock.mockReset();
+		generateRuntimeTypesMock.mockResolvedValue({
+			runtimeHeader: FAKE_RUNTIME_HEADER,
+			runtimeTypes: FAKE_RUNTIME_TYPES,
+			isCached: false,
+		});
 		fs.mkdirSync(FIXTURES_ROOT, { recursive: true });
 		tempDir = fs.realpathSync(
 			fs.mkdtempSync(path.join(FIXTURES_ROOT, "case-"))
@@ -212,7 +240,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 
 		expect(result.type).toBe("workers");
 		expect(result.experimental.newConfig).toEqual({
-			types: { generate: true },
+			types: { generate: true, includeRuntime: true },
 			cfBuildOutput: false,
 		});
 		const worker = result.environmentNameToWorkerMap.get(
@@ -311,10 +339,17 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(fs.existsSync(dtsPath)).toBe(true);
 		const content = fs.readFileSync(dtsPath, "utf8");
 		expect(content).toContain(
-			`from "@cloudflare/vite-plugin/experimental-config"`
+			`import("@cloudflare/vite-plugin/experimental-config")`
 		);
-		expect(content).toContain(`import type Config from "./cloudflare.config"`);
-		expect(content).not.toContain(`} from "@cloudflare/config"`);
+		expect(content).toContain(`import("./cloudflare.config").default`);
+		// Runtime types are appended by default (includeRuntime defaults to true).
+		expect(content).toContain(RUNTIME_MARKER);
+		expect(content).toContain(FAKE_RUNTIME_TYPES);
+		// A blank line separates the inference block from the runtime types.
+		expect(content).toContain(
+			`interface Env extends Cloudflare.Env {}\n\n${FAKE_RUNTIME_HEADER}`
+		);
+		expect(generateRuntimeTypesMock).toHaveBeenCalledTimes(1);
 	});
 
 	test("does not write the .d.ts when types.generate is false", async ({
@@ -340,12 +375,12 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 
 		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
 		expect(fs.existsSync(dtsPath)).toBe(false);
+		expect(generateRuntimeTypesMock).not.toHaveBeenCalled();
 	});
 
-	test.for([
-		{ mode: "development", command: "serve" as const },
-		{ mode: "production", command: "build" as const },
-	])("throws on durable-object exports ($command)", async (env, { expect }) => {
+	test("omits runtime types when types.includeRuntime is false", async ({
+		expect,
+	}) => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
@@ -354,21 +389,82 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 				"  name: 'experimental-config-worker',",
 				"  entrypoint: './src/index.ts',",
 				"  compatibilityDate: '2024-12-30',",
-				"  exports: {",
-				"    Counter: { type: 'durable-object', storage: 'sqlite' },",
-				"  },",
 				"});",
 			].join("\n")
 		);
 
-		const pluginConfig: PluginConfig = {
-			experimental: { newConfig: true },
-		};
+		await resolvePluginConfig(
+			{ experimental: { newConfig: { types: { includeRuntime: false } } } },
+			{ root: tempDir },
+			viteEnv
+		);
 
-		await expect(
-			resolvePluginConfig(pluginConfig, { root: tempDir }, env)
-		).rejects.toThrow(/Durable Object exports/);
+		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
+		expect(fs.existsSync(dtsPath)).toBe(true);
+		const content = fs.readFileSync(dtsPath, "utf8");
+		// Inference block still present, runtime types absent.
+		expect(content).toContain(`import("./cloudflare.config").default`);
+		expect(content).not.toContain(RUNTIME_MARKER);
+		expect(generateRuntimeTypesMock).not.toHaveBeenCalled();
 	});
+
+	test("does not generate types during build (dev-only)", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+
+		await resolvePluginConfig(
+			{ experimental: { newConfig: true } },
+			{ root: tempDir },
+			viteBuildEnv
+		);
+
+		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
+		expect(fs.existsSync(dtsPath)).toBe(false);
+		expect(generateRuntimeTypesMock).not.toHaveBeenCalled();
+	});
+
+	test.for([
+		{ mode: "development", command: "serve" as const },
+		{ mode: "production", command: "build" as const },
+	])(
+		"accepts durable-object exports and converts to the wrangler schema ($command)",
+		async (env, { expect }) => {
+			seedWorkerSource();
+			writeWorkerConfig(
+				[
+					"import { defineWorker } from '@cloudflare/config';",
+					"export default defineWorker({",
+					"  name: 'experimental-config-worker',",
+					"  entrypoint: './src/index.ts',",
+					"  compatibilityDate: '2024-12-30',",
+					"  exports: {",
+					"    Counter: { type: 'durable-object', storage: 'sqlite' },",
+					"  },",
+					"});",
+				].join("\n")
+			);
+
+			const pluginConfig: PluginConfig = {
+				experimental: { newConfig: true },
+			};
+
+			// The conversion shape is covered by the @cloudflare/config unit tests.
+			await expect(
+				resolvePluginConfig(pluginConfig, { root: tempDir }, env)
+			).resolves.toBeDefined();
+		}
+	);
 
 	test("does not rewrite worker-configuration.d.ts when content is unchanged", async ({
 		expect,
@@ -427,7 +523,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 
 		expect(result.type).toBe("workers");
 		expect(result.experimental.newConfig).toEqual({
-			types: { generate: true },
+			types: { generate: true, includeRuntime: true },
 			cfBuildOutput: true,
 		});
 	});
@@ -459,7 +555,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		)) as WorkersResolvedConfig;
 
 		expect(result.experimental.newConfig).toEqual({
-			types: { generate: true },
+			types: { generate: true, includeRuntime: true },
 			cfBuildOutput: true,
 		});
 	});

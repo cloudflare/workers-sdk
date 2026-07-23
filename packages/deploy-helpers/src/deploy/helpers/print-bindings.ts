@@ -731,8 +731,11 @@ export function printBindings(
 			...vars.map((variable) => {
 				const { binding, type: varType, value: varValue } = variable;
 				let parsedValue;
-				/**
-				 * @see packages/workers-utils/src/types.ts for details on the hidden property
+				/* eslint-disable-next-line @typescript-eslint/no-deprecated --
+				 *    hidden is a deprecated property, but still needs to be supported for backwards compatibility
+				 *    so we need to handle appropriately here
+				 *
+				 *    see packages/workers-utils/src/types.ts for details on the hidden property
 				 */
 				if (varType === "plain_text" && variable.hidden !== true) {
 					parsedValue = `"${truncate(varValue)}"`;
@@ -768,9 +771,12 @@ export function printBindings(
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("dispatch_namespace"),
-					value: outbound
-						? `${namespace} (outbound -> ${outbound.service})`
-						: namespace,
+					value:
+						typeof namespace === "symbol"
+							? namespace
+							: outbound
+								? `${namespace} (outbound -> ${outbound.service})`
+								: namespace,
 					mode: getMode({
 						isSimulatedLocally:
 							remote && !context.remoteBindingsDisabled ? false : undefined,
@@ -818,7 +824,7 @@ export function printBindings(
 	} else {
 		let title: string;
 		if (context.provisioning) {
-			title = `${chalk.red("Experimental:")} The following bindings need to be provisioned:`;
+			title = "The following bindings need to be provisioned:";
 		} else if (context.name && isMultiWorker) {
 			title = `${chalk.blue(context.name)} has access to the following bindings:`;
 		} else {

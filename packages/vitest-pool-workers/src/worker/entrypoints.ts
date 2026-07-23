@@ -247,6 +247,17 @@ const DURABLE_OBJECT_KEYS = [
 	"webSocketClose",
 	"webSocketError",
 ] as const;
+// Handlers `workerd` treats as optional: when a Durable Object doesn't define
+// one, the corresponding event is silently dropped. We can't leave them off the
+// wrapper's prototype to get that behaviour for free — the prototype is built
+// before user code is loaded, so `workerd` always sees a handler and always
+// dispatches. The no-op has to be reproduced here instead.
+//
+// `alarm()` deliberately isn't in this set: `workerd` rejects `setAlarm()` up
+// front on a class with no `alarm()` handler, so a missing one is a real error.
+const OPTIONAL_DURABLE_OBJECT_KEYS: ReadonlySet<
+	(typeof DURABLE_OBJECT_KEYS)[number]
+> = new Set(["webSocketMessage", "webSocketClose", "webSocketError"] as const);
 
 // This type will grab the keys from T and remove "branded" keys
 type UnbrandedKeys<T> = Exclude<keyof T, `__${string}_BRAND`>;
@@ -555,6 +566,8 @@ export function createDurableObjectWrapper(
 					const maybeFn = instance[key];
 					if (typeof maybeFn === "function") {
 						return (maybeFn as (...a: unknown[]) => void).apply(instance, args);
+					} else if (OPTIONAL_DURABLE_OBJECT_KEYS.has(key)) {
+						return;
 					} else {
 						const message = `${className} exported by ${mainPath} does not define a \`${key}()\` method`;
 						throw new TypeError(message);

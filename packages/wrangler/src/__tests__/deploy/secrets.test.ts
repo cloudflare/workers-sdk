@@ -265,7 +265,7 @@ SECRET3=value3`
 		it("should fail when secrets file does not exist", async ({ expect }) => {
 			await expect(
 				runWrangler("deploy --secrets-file non-existent-file.json")
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 
 		it("should fail when secrets file contains invalid JSON", async ({
@@ -276,7 +276,7 @@ SECRET3=value3`
 
 			await expect(
 				runWrangler(`deploy --secrets-file ${secretsFile}`)
-			).rejects.toThrowError();
+			).rejects.toThrow();
 		});
 	});
 
@@ -338,7 +338,8 @@ SECRET3=value3`
 				runWrangler("deploy index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The following required secrets have not been set: API_KEY, DB_PASSWORD
-Use \`wrangler secret put <NAME>\` to set secrets before deploying.
+Use \`wrangler secret put <NAME>\` to set secrets before deploying,
+or supply them when deploying with \`wrangler deploy --secrets-file <path-to-file>\`.
 See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.]`
 			);
 		});
@@ -353,12 +354,17 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 			});
 
 			mockServiceScriptData({});
+			// A new Worker triggers a pre-upload workers.dev subdomain check.
+			mockSubDomainRequest();
 
 			await expect(
 				runWrangler("deploy index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The following required secrets have not been set: API_KEY, DB_PASSWORD
-Use \`wrangler secret put <NAME>\` to set secrets before deploying.
+This Worker does not exist yet, so secrets cannot be set in advance with \`wrangler secret put\`.
+To deploy a new Worker with secrets, supply them via a secrets file:
+  wrangler deploy --secrets-file <path-to-file>
+where the file contains lines in the format \`SECRET_NAME=value\` (or JSON).
 See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.]`
 			);
 		});
@@ -384,7 +390,9 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 			// Worker does not exist
 			mockServiceScriptData({});
 
-			mockSubDomainRequest();
+			// The subdomain is fetched both before upload (new Worker check) and
+			// again for the post-upload triggers, so use a persistent handler.
+			mockSubDomainRequest("test-sub-domain", true, false);
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
@@ -427,12 +435,17 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 
 			// Worker does not exist
 			mockServiceScriptData({});
+			// A new Worker triggers a pre-upload workers.dev subdomain check.
+			mockSubDomainRequest();
 
 			await expect(
 				runWrangler(`deploy --secrets-file ${secretsFile}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The following required secrets have not been set: SECRET2, SECRET3
-Use \`wrangler secret put <NAME>\` to set secrets before deploying.
+This Worker does not exist yet, so secrets cannot be set in advance with \`wrangler secret put\`.
+To deploy a new Worker with secrets, supply them via a secrets file:
+  wrangler deploy --secrets-file <path-to-file>
+where the file contains lines in the format \`SECRET_NAME=value\` (or JSON).
 See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.]`
 			);
 		});

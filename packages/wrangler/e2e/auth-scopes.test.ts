@@ -1,12 +1,11 @@
-import { getAuthUrlFromEnv } from "@cloudflare/workers-auth";
+import { generateAuthUrl, getAuthUrlFromEnv } from "@cloudflare/workers-auth";
+import {
+	DefaultScopeKeys,
+	getClientIdFromEnv,
+	OAUTH_CALLBACK_URL,
+} from "@cloudflare/workers-auth/wrangler";
 import { fetch } from "undici";
 import { describe, it } from "vitest";
-import { getClientIdFromEnv } from "../src/user/auth-variables";
-import {
-	generateAuthUrl,
-	OAUTH_CALLBACK_URL,
-} from "../src/user/generate-auth-url";
-import { DefaultScopeKeys } from "../src/user/user";
 
 describe("auth scopes", () => {
 	it("default OAuth scopes are accepted by the Cloudflare backend", async ({

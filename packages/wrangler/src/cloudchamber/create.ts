@@ -17,8 +17,8 @@ import {
 	DeploymentsService,
 } from "@cloudflare/containers-shared";
 import { parseByteSize } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
@@ -340,6 +340,7 @@ async function handleInteractiveCloudchamberCreateCommand(
 		resolveMemory(args, config.cloudchamber) ??
 		account.defaults.memory_mib ??
 		Math.round(
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `memory` when `memory_mib` is not set
 			parseByteSize(account.defaults.memory ?? "2000MiB", 1024) / (1024 * 1024)
 		);
 	const vcpu = args.vcpu ?? config.cloudchamber.vcpu ?? account.defaults.vcpus;

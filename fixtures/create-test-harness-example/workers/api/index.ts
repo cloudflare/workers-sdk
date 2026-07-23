@@ -2,6 +2,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 
 type Env = {
 	STORE: KVNamespace;
+	DATABASE: D1Database;
 };
 
 type User = {
@@ -47,9 +48,11 @@ export default class ApiWorker extends WorkerEntrypoint<Env> {
 		const list = await this.env.STORE.list({ prefix: "user/" });
 		const userIds = list.keys.map((key) => key.name.slice("user/".length));
 
-		await this.env.STORE.put(`daily-report/${date}`, JSON.stringify(userIds), {
-			expirationTtl: 60 * 60,
-		});
+		await this.env.DATABASE.prepare(
+			"INSERT OR REPLACE INTO daily_reports (date, user_ids) VALUES (?, ?)"
+		)
+			.bind(date, JSON.stringify(userIds))
+			.run();
 		console.info(`Generated daily report for ${date}`);
 
 		for (const key of list.keys) {
@@ -78,8 +81,17 @@ export default class ApiWorker extends WorkerEntrypoint<Env> {
 	}
 
 	async getDailyReport(date: string) {
-		return await this.env.STORE.get<string[]>(`daily-report/${date}`, {
-			type: "json",
-		});
+		const report = await this.env.DATABASE.prepare(
+			"SELECT user_ids FROM daily_reports WHERE date = ?"
+		)
+			.bind(date)
+			.first<{ user_ids: string }>();
+
+		if (report === null) {
+			return null;
+		}
+
+		const userIds: string[] = JSON.parse(report.user_ids);
+		return userIds;
 	}
 }

@@ -1,6 +1,7 @@
 import assert from "node:assert";
-import { createWriteStream, mkdirSync, rmSync } from "node:fs";
+import { createWriteStream, mkdirSync } from "node:fs";
 import nodePath from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
 import { isExperimental, testPackageManager } from "./constants";
 import type { RunnerTask, RunnerTestSuite } from "vitest";
 
@@ -20,21 +21,7 @@ export function createTestLogStream(task: RunnerTask) {
 
 export function recreateLogFolder(suite: RunnerTestSuite) {
 	// Clean the old folder if exists (useful for dev)
-
-	/* eslint-disable-next-line workers-sdk/no-direct-recursive-rm --
-	   Note: this is intentionally inlined rather than importing `removeDirSync`
-	   from `@cloudflare/workers-utils`. That package's barrel export pulls in CJS
-	   dependencies (e.g. `xdg-app-paths`) that break when Vite bundles the vitest
-	   config (which imports this file) into ESM — the shimmed `require()` calls
-	   throw "Dynamic require of 'path' is not supported".
-	   Keep aligned with `removeDirSync()` in `packages/workers-utils/src/fs-helpers.ts`.
-	*/
-	rmSync(getLogPath(suite), {
-		recursive: true,
-		force: true,
-		maxRetries: 5,
-		retryDelay: 100,
-	});
+	removeDirSync(getLogPath(suite));
 
 	mkdirSync(getLogPath(suite), { recursive: true });
 }

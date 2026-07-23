@@ -11,6 +11,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -153,6 +154,7 @@ function mockUploadVersion(has_preview = false) {
 
 /** Parse WorkerMetadata from a captured upload request */
 async function getMetadata(request: Request): Promise<WorkerMetadata> {
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 	const formBody = await request.clone().formData();
 	return JSON.parse(await toString(formBody.get("metadata"))) as WorkerMetadata;
 }
@@ -175,6 +177,13 @@ describe.each([
 			setImmediate(fn);
 		});
 		setIsTTY(false);
+		// Mock the secrets endpoint that checkRemoteSecretsOverride calls
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
+		);
 	});
 
 	afterEach(() => {
@@ -344,16 +353,15 @@ describe.each([
 			}) => {
 				writeWranglerConfig({ compatibility_date: undefined });
 				writeWorkerSource();
+				const today = getTodaysCompatDate();
 				await expect(runWrangler("deploy ./index.js")).rejects
-					.toThrowErrorMatchingInlineSnapshot(`
-					[Error: A compatibility_date is required when uploading a Worker. Add the following to your wrangler.toml file:
-					    \`\`\`
-					    compatibility_date = "2026-06-24"
+					.toThrow(`A compatibility_date is required when uploading a Worker. Add the following to your wrangler.toml file:
+    \`\`\`
+    compatibility_date = "${today}"
 
-					    \`\`\`
-					    Or you could pass it in your terminal as \`--compatibility-date 2026-06-24\`
-					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.]
-				`);
+    \`\`\`
+    Or you could pass it in your terminal as \`--compatibility-date ${today}\`
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
 			});
 		});
 
@@ -442,7 +450,7 @@ describe.each([
 				// On main, versions upload calls requireAuth() before validating compat date,
 				// so we need the service metadata mock to avoid an unrelated API error
 				mockGetScript();
-				await expect(runWrangler("versions upload")).rejects.toThrowError(
+				await expect(runWrangler("versions upload")).rejects.toThrow(
 					/A compatibility_date is required/
 				);
 			});

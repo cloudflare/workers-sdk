@@ -3,10 +3,12 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { format } from "node:util";
 import {
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
+import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
@@ -47,17 +49,17 @@ import type {
 import type { PersistState } from "./plugin-config";
 import type { ModuleType } from "@cloudflare/config";
 import type {
+	RemoteBindingsLogger,
+	RemoteProxySessionData,
+} from "@cloudflare/remote-bindings";
+import type {
 	MiniflareOptions,
 	ModuleRuleType,
 	WorkerdStructuredLog,
 	WorkerOptions,
 } from "miniflare";
 import type * as vite from "vite";
-import type {
-	Binding,
-	RemoteProxySession,
-	SourcelessWorkerOptions,
-} from "wrangler";
+import type { SourcelessWorkerOptions } from "wrangler";
 
 const INTERNAL_WORKERS_COMPATIBILITY_DATE = "2024-10-04";
 // Used to mark HTML assets as being in the public directory so that they can be resolved from their root relative paths
@@ -101,11 +103,33 @@ const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
 const remoteProxySessionsDataMap = new Map<
 	string,
-	{
-		session: RemoteProxySession;
-		remoteBindings: Record<string, Binding>;
-	} | null
+	RemoteProxySessionData | null
 >();
+
+function createRemoteBindingsLogger(logger: vite.Logger): RemoteBindingsLogger {
+	const write = (
+		level: "info" | "warn" | "error",
+		args: Parameters<typeof console.log>
+	) => logger[level](format(...args));
+
+	return {
+		loggerLevel: "log",
+		debug() {},
+		log: (...args) => write("info", args),
+		info: (...args) => write("info", args),
+		warn: (...args) => write("warn", args),
+		error: (...args) => write("error", args),
+		console(method, ...args) {
+			if (method === "error") {
+				write("error", args);
+			} else if (method === "warn") {
+				write("warn", args);
+			} else if (method !== "debug" && method !== "trace") {
+				write("info", args);
+			}
+		},
+	};
+}
 
 export async function getDevMiniflareOptions(
 	ctx: AssetsOnlyPluginContext | WorkersPluginContext,
@@ -270,13 +294,21 @@ export async function getDevMiniflareOptions(
 								!resolvedPluginConfig.remoteBindings
 									? // if remote bindings are not enabled then the proxy session can simply be null
 										null
-									: await wrangler.maybeStartOrUpdateRemoteProxySession(
+									: await maybeStartOrUpdateRemoteProxySession(
 											{
 												name: worker.config.name,
 												bindings: bindings ?? {},
+												complianceRegion: worker.config.compliance_region,
 												account_id: worker.config.account_id,
+												profileDir: resolvedViteConfig.root,
 											},
-											preExistingRemoteProxySession ?? null
+											preExistingRemoteProxySession ?? null,
+											undefined,
+											{
+												logger: createRemoteBindingsLogger(
+													viteDevServer.config.logger
+												),
+											}
 										);
 
 							if (worker.config.configPath && remoteProxySessionData) {
@@ -477,6 +509,10 @@ export async function getDevMiniflareOptions(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
+			defaultProjectTmpPath: path.resolve(
+				resolvedViteConfig.root,
+				".wrangler/tmp"
+			),
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
 				const parsed = await parseModuleFallbackRequest(request);
@@ -660,13 +696,21 @@ export async function getPreviewMiniflareOptions(
 				const remoteProxySessionData = !resolvedPluginConfig.remoteBindings
 					? // if remote bindings are not enabled then the proxy session can simply be null
 						null
-					: await wrangler.maybeStartOrUpdateRemoteProxySession(
+					: await maybeStartOrUpdateRemoteProxySession(
 							{
 								name: workerConfig.name,
 								bindings: bindings ?? {},
+								complianceRegion: workerConfig.compliance_region,
 								account_id: workerConfig.account_id,
+								profileDir: resolvedViteConfig.root,
 							},
-							preExistingRemoteProxySessionData ?? null
+							preExistingRemoteProxySessionData ?? null,
+							undefined,
+							{
+								logger: createRemoteBindingsLogger(
+									vitePreviewServer.config.logger
+								),
+							}
 						);
 
 				if (workerConfig.configPath && remoteProxySessionData) {
@@ -755,6 +799,10 @@ export async function getPreviewMiniflareOptions(
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
+			),
+			defaultProjectTmpPath: path.resolve(
+				resolvedViteConfig.root,
+				".wrangler/tmp"
 			),
 			workers,
 		},

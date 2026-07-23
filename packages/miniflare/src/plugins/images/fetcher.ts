@@ -46,6 +46,7 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 		);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Workers API for parsing multipart bodies; only deprecated on undici's server-side Request
 	const data = await request.formData();
 
 	const body = data.get("image");
@@ -119,7 +120,9 @@ async function runInfo(transformer: Sharp): Promise<Response> {
 		case "gif":
 			mime = "image/gif";
 			break;
-		case "avif":
+		// libvips reports AVIF (and other HEIF variants) under the `heif`
+		// container format; Cloudflare Images' supported HEIF variant is AVIF.
+		case "heif":
 			mime = "image/avif";
 			break;
 		default:
@@ -297,7 +300,9 @@ function formatToMime(format: string | undefined): string | null {
 			return "image/webp";
 		case "gif":
 			return "image/gif";
-		case "avif":
+		// libvips reports AVIF (and other HEIF variants) under the `heif`
+		// container format; Cloudflare Images' supported HEIF variant is AVIF.
+		case "heif":
 			return "image/avif";
 		default:
 			return null;
@@ -349,6 +354,7 @@ export async function cfImageLocalFetcher(request: Request): Promise<Response> {
 	let body: unknown;
 	let options: RequestInitCfPropertiesImage;
 	try {
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Workers API for parsing multipart bodies; only deprecated on undici's server-side Request
 		const data = await request.formData();
 		body = data.get("image");
 		const optionsJson = data.get("options");

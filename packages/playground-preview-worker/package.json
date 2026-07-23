@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/playground-preview-worker",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"private": true,
 	"scripts": {
 		"build-middleware": "pnpm run build-middleware:common && pnpm run build-middleware:loader",
@@ -14,7 +14,7 @@
 	},
 	"dependencies": {
 		"hono": "^4.12.5",
-		"zod": "^3.22.3"
+		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default",

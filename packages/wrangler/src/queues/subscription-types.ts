@@ -15,6 +15,9 @@ export interface EventDestination {
 }
 
 export enum EventSourceType {
+	ARTIFACTS = "artifacts",
+	ARTIFACTS_REPO = "artifacts.repo",
+	IMAGES = "images",
 	KV = "kv",
 	R2 = "r2",
 	SUPER_SLURPER = "superSlurper",
@@ -27,6 +30,9 @@ export enum EventSourceType {
 export const EVENT_SOURCE_TYPES = Object.values(EventSourceType);
 
 export type EventSource =
+	| ArtifactsEventSource
+	| ArtifactsRepoEventSource
+	| ImagesEventSource
 	| KvEventSource
 	| R2EventSource
 	| SuperSlurperEventSource
@@ -34,6 +40,18 @@ export type EventSource =
 	| WorkersAiModelEventSource
 	| WorkersBuildsWorkerEventSource
 	| WorkflowsWorkflowEventSource;
+
+export interface ArtifactsEventSource {
+	type: EventSourceType.ARTIFACTS;
+}
+
+export interface ArtifactsRepoEventSource {
+	type: EventSourceType.ARTIFACTS_REPO;
+}
+
+export interface ImagesEventSource {
+	type: EventSourceType.IMAGES;
+}
 
 export interface KvEventSource {
 	type: EventSourceType.KV;

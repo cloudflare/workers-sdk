@@ -2,7 +2,8 @@ import assert from "node:assert";
 import path from "node:path";
 import { bold, green } from "@cloudflare/cli-shared-helpers/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { getRegistryPath } from "@cloudflare/workers-utils";
+import { getRegistryPath, isInteractive } from "@cloudflare/workers-utils";
+import { CorePaths } from "miniflare";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { convertStartDevOptionsToBindings } from "../api/startDevWorker/binding-utils";
@@ -10,7 +11,6 @@ import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerR
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
-import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
 import { TunnelManager } from "../tunnel/dev";
@@ -123,7 +123,10 @@ export async function startDev(args: StartDevOptions) {
 			tunnelManager?.getTunnel()?.dispose();
 		});
 
-		if (isInteractive() && args.showInteractiveDevSession !== false) {
+		const interactiveDevSession =
+			isInteractive() && args.showInteractiveDevSession !== false;
+
+		if (interactiveDevSession) {
 			unregisterHotKeys = registerDevHotKeys(devEnvs, args, { tunnelManager });
 		}
 
@@ -155,6 +158,9 @@ export async function startDev(args: StartDevOptions) {
 					false
 			);
 			maybePrintScheduledWorkerWarning(hasCrons, !!args.testScheduled, url);
+			if (args.showLocalExplorerAgentHint) {
+				printLocalExplorerAgentHint(url);
+			}
 		});
 
 		// Start tunnel early, before the proxy is ready.
@@ -290,7 +296,6 @@ async function setupDevEnv(
 							}
 						: undefined;
 				},
-				useServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
 		} satisfies StartDevWorkerInput,
@@ -360,6 +365,23 @@ function maybePrintScheduledWorkerWarning(
 			`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
 			`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
 	);
+}
+
+function printLocalExplorerAgentHint(url: URL): void {
+	const displayUrl = new URL(url.href);
+	displayUrl.hostname = formatHostname(url.hostname);
+	const explorerApiUrl = new URL(`${CorePaths.EXPLORER}/api`, displayUrl).href;
+	logger.once.log(dedent`
+		Wrangler detected this dev session is running in an AI agent.
+		The Local Explorer API is available at ${explorerApiUrl}
+		Useful routes:
+		  GET ${explorerApiUrl} - OpenAPI schema
+		  GET ${explorerApiUrl}/d1/database - D1 databases
+		  GET ${explorerApiUrl}/local/workers - local Workers and bindings
+		  GET ${explorerApiUrl}/r2/buckets - R2 buckets
+		  GET ${explorerApiUrl}/storage/kv/namespaces - KV namespaces
+		  GET ${explorerApiUrl}/workers/durable_objects/namespaces - Durable Object namespaces
+		  GET ${explorerApiUrl}/workflows - Workflows`);
 }
 
 export function formatHostname(hostname: string): string {

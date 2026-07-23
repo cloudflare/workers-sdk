@@ -452,7 +452,7 @@ describe("deploy", () => {
 				},
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
-			await expect(runWrangler("deploy index.js")).rejects.toThrowError(
+			await expect(runWrangler("deploy index.js")).rejects.toThrow(
 				/Only "worker" consumers can be configured in your Wrangler configuration/
 			);
 		});
@@ -677,7 +677,7 @@ describe("deploy", () => {
 			mockGetQueueByName(queueName, null);
 
 			await expect(
-				runWrangler("deploy index.js")
+				runWrangler("deploy index.js --no-experimental-provision")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
@@ -698,7 +698,7 @@ describe("deploy", () => {
 			mockGetQueueByName(queueName, null);
 
 			await expect(
-				runWrangler("deploy index.js")
+				runWrangler("deploy index.js --no-experimental-provision")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);

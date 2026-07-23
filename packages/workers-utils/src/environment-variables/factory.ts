@@ -90,6 +90,8 @@ type VariableNames =
 	| "WRANGLER_AUTH_URL"
 	/** Custom OAuth client ID (usually auto-configured). */
 	| "WRANGLER_CLIENT_ID"
+	/** Custom OAuth client ID for the `cf` CLI's OAuth app (usually auto-configured). */
+	| "CLOUDFLARE_CLIENT_ID"
 	/** Custom token URL (usually auto-configured). */
 	| "WRANGLER_TOKEN_URL"
 	/** Custom token revocation URL (usually auto-configured). */
@@ -103,6 +105,12 @@ type VariableNames =
 	| "CLOUDFLARE_ACCESS_CLIENT_ID"
 	/** Cloudflare Access Service Token Client Secret. Used with CLOUDFLARE_ACCESS_CLIENT_ID. */
 	| "CLOUDFLARE_ACCESS_CLIENT_SECRET"
+	/**
+	 * Store OAuth credentials in the OS keychain instead of a plaintext TOML
+	 * file. Overrides the persistent `keyring_enabled` preference written by
+	 * `wrangler login --use-keyring`.
+	 */
+	| "CLOUDFLARE_AUTH_USE_KEYRING"
 
 	// ## Experimental Feature Flags
 

@@ -95,7 +95,8 @@ export async function deployContainers(
 				container,
 				versionId,
 				false, // dry runs will have already exited by this point
-				pathToDocker
+				pathToDocker,
+				false
 			);
 		} else {
 			imageRef = { newTag: container.image_uri };
@@ -477,6 +478,7 @@ export async function apply(
 			nowContainer,
 			config.configPath
 		);
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- Diff is used here for formatted config string diffing, not JSON objects
 		const diff = new Diff(prev, now);
 
 		if (diff.changes === 0) {
@@ -741,6 +743,7 @@ export function cleanApplicationFromAPI(
 		cleanedPreviousApp.configuration.instance_type = instance_type;
 
 		delete cleanedPreviousApp.configuration.disk;
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- intentionally cleaning up deprecated `memory` field
 		delete cleanedPreviousApp.configuration.memory;
 		delete cleanedPreviousApp.configuration.memory_mib;
 		delete cleanedPreviousApp.configuration.vcpu;

@@ -22,10 +22,13 @@ async function runCheckRemoteSecretsOverride(
 	remoteSecrets: string[]
 ): ReturnType<typeof checkRemoteSecretsOverride> {
 	mockSecrets(remoteSecrets);
-	return checkRemoteSecretsOverride({
-		...config,
-		name: "test-script",
-	} as Config);
+	return checkRemoteSecretsOverride(
+		{
+			...config,
+			name: "test-script",
+		} as Config,
+		"test-script"
+	);
 }
 
 describe("checkRemoteSecretsOverride", () => {

@@ -39,6 +39,13 @@ export const CoreHeaders = {
 	PROXY_SHARED_SECRET: "MF-Proxy-Shared-Secret",
 	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
+	/**
+	 * The serialised error, URI-encoded. `workerd` drops response bodies for
+	 * `HEAD` requests, so the body alone cannot carry the error out of the user
+	 * Worker. Producers set this in addition to the body; consumers fall back to
+	 * it whenever the body is unavailable.
+	 */
+	ERROR_STACK_PAYLOAD: "MF-Experimental-Error-Stack-Payload",
 	ROUTE_OVERRIDE: "MF-Route-Override",
 	CF_BLOB: "MF-CF-Blob",
 	/** Used by the Vite plugin to pass through the original `sec-fetch-mode` header */
@@ -81,6 +88,7 @@ export const CoreBindings = {
 	JSON_LOCAL_EXPLORER_WORKER_NAMES: "LOCAL_EXPLORER_WORKER_NAMES",
 	JSON_EXPLORER_WORKER_OPTS: "MINIFLARE_EXPLORER_WORKER_OPTS",
 	SERVICE_CACHE: "MINIFLARE_CACHE",
+	SERVICE_DEV_CONTROL: "MINIFLARE_DEV_CONTROL",
 	SERVICE_DEV_REGISTRY_PROXY: "MINIFLARE_DEV_REGISTRY_PROXY",
 	JSON_TELEMETRY_CONFIG: "MINIFLARE_TELEMETRY_CONFIG",
 	DEV_REGISTRY_DEBUG_PORT: "DEV_REGISTRY_DEBUG_PORT",
@@ -107,6 +115,26 @@ export const ProxyAddresses = {
 	ENV: 1, // env
 	USER_START: 2,
 } as const;
+
+/**
+ * Recovers the serialised error a Worker put in `ERROR_STACK_PAYLOAD`, for the
+ * cases where the response body carrying it has been dropped (`HEAD` requests).
+ * Returns `null` when the header is absent or malformed, so callers can fall
+ * back rather than surfacing a decoding failure as the Worker's error.
+ */
+export function decodeErrorPayload(response: {
+	headers: { get(name: string): string | null };
+}): string | null {
+	const payload = response.headers.get(CoreHeaders.ERROR_STACK_PAYLOAD);
+	if (payload === null) {
+		return null;
+	}
+	try {
+		return decodeURIComponent(payload);
+	} catch {
+		return null;
+	}
+}
 
 // ### Proxy Special Cases
 // The proxy supports serialising `Request`/`Response`s for the Cache API. It

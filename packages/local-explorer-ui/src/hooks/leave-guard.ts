@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, type DependencyList } from "react";
 
 type LeaveEvent = "navigation" | "unload";
 
@@ -7,17 +7,12 @@ interface UseLeaveGuardOptions {
 	 * List of reactive dependencies used inside `onBeforeLeave`.
 	 * Similar to a `useCallback` dependency array.
 	 */
-	dependencies?: React.DependencyList;
+	dependencies?: DependencyList;
 
 	/**
 	 * Enable or disable the leave guard. When false, no blocking is applied.
 	 */
 	enabled: boolean;
-
-	/**
-	 * Optional fallback message when `onBeforeLeave` returns void.
-	 */
-	fallbackMessage?: string;
 
 	/**
 	 * Handle user attempting to leave.
@@ -39,7 +34,6 @@ interface UseLeaveGuardOptions {
 export function useLeaveGuard({
 	dependencies = [],
 	enabled,
-	fallbackMessage = "You have unsaved changes. Are you sure you want to leave?",
 	onBeforeLeave,
 }: UseLeaveGuardOptions): void {
 	const handlerCallback = useCallback(onBeforeLeave, [
@@ -58,17 +52,15 @@ export function useLeaveGuard({
 
 			if (typeof result === "string") {
 				e.preventDefault();
-				e.returnValue = result;
 				return;
 			}
 
 			if (result === true || result === undefined) {
 				e.preventDefault();
-				e.returnValue = fallbackMessage;
 			}
 		};
 
 		window.addEventListener("beforeunload", handleBeforeUnload);
 		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-	}, [enabled, handlerCallback, fallbackMessage]);
+	}, [enabled, handlerCallback]);
 }

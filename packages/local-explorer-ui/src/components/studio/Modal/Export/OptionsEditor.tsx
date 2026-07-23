@@ -3,6 +3,7 @@ import type { StudioExportOption } from "../../../../types/studio";
 import type {
 	ChangeEvent,
 	Dispatch,
+	JSX,
 	PropsWithChildren,
 	SetStateAction,
 } from "react";

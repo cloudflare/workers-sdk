@@ -6,9 +6,9 @@ import {
 	getCloudflareApiEnvironmentFromEnv,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { openInBrowser } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { logger } from "../logger";
-import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
 import type { R2BucketInfo } from "../r2/helpers/bucket";
 import type {
@@ -385,7 +385,7 @@ export async function generateR2ServiceToken(
 
 	const urlToOpen = `https://${oauthDomain}/oauth/login?accountId=${accountId}&bucketName=${bucketName}&pipelineName=${pipelineName}`;
 	logger.log(`Opening a link in your default browser: ${urlToOpen}`);
-	await openInBrowser(urlToOpen);
+	await openInBrowser(urlToOpen, logger);
 
 	const result = await Promise.race([timeoutPromise, serverPromise]);
 	controller.abort();

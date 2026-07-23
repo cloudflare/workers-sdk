@@ -104,21 +104,26 @@ export const isDockerRunning = async (dockerPath: string) => {
 };
 
 /** Options for verifying that Docker is installed and the daemon is running. */
-type VerifyDockerInstalledOptions = {
+export type VerifyDockerInstalledOptions = {
 	/** Path to the Docker CLI executable. */
 	dockerPath: string;
-	/** The number of container images that need to be built. Used to pluralize the error message. */
-	numberOfContainers: number;
 	/**
-	 * Flag indicating whether the check is being run as part of `wrangler dev`.
-	 * @default true
+	 * Human-readable description of the operation that requires Docker,
+	 * e.g. `"running dev"`, `"deploying"`.
+	 * When provided, the error headline reads "... before ${operation} ...".
+	 * When omitted, the "before ..." clause is left out entirely.
 	 */
-	isDev?: boolean;
+	operation?: string;
 	/**
-	 * Flag indicating whether the check is being run as part of a dry-run execution.
-	 * @default false
+	 * Noun describing what needs to be built, used in the error headline.
+	 * For example `"the configured image"` or `"the configured images"`.
 	 */
-	isDryRun?: boolean;
+	imageNoun: string;
+	/**
+	 * Optional context-specific hint appended at the end of the error message.
+	 * When omitted, no hint paragraph is included.
+	 */
+	hint?: string;
 };
 
 /**
@@ -127,20 +132,25 @@ type VerifyDockerInstalledOptions = {
  * @throws {UserError} If the Docker CLI cannot be reached.
  *
  * @param options - Docker verification options.
+ * @param options.dockerPath - Path to the Docker CLI executable.
+ * @param options.operation - Optional human-readable operation description for the error message
+ *   headline. When provided, produces "before ${operation}". When omitted, the clause is skipped.
+ * @param options.imageNoun - Noun describing what needs to be built (e.g. "the configured image").
+ * @param options.hint - Optional context-specific hint appended to the error message.
  */
 export const verifyDockerInstalled = async ({
 	dockerPath,
-	numberOfContainers,
-	isDev = true,
-	isDryRun = false,
+	operation,
+	imageNoun,
+	hint,
 }: VerifyDockerInstalledOptions) => {
 	const dockerIsRunning = await isDockerRunning(dockerPath);
 	if (!dockerIsRunning) {
 		throw new UserError(
 			getFailedToRunDockerErrorMessage({
-				numberOfContainers,
-				isDev,
-				isDryRun,
+				operation,
+				imageNoun,
+				hint,
 			}),
 			{
 				telemetryMessage: false,
@@ -152,20 +162,20 @@ export const verifyDockerInstalled = async ({
 /**
  * Builds the user-facing error message shown when Docker cannot be reached.
  *
- * @param options - Docker verification options.
+ * @param options - Options controlling the error message content.
+ * @param options.operation - Optional human-readable operation description for the headline.
+ * @param options.imageNoun - Noun describing what needs to be built.
+ * @param options.hint - Optional context-specific hint paragraph.
  *
  * @returns The formatted error message string.
  */
 function getFailedToRunDockerErrorMessage({
-	numberOfContainers,
-	isDev,
-	isDryRun,
+	operation,
+	imageNoun,
+	hint,
 }: Omit<VerifyDockerInstalledOptions, "dockerPath">): string {
-	const operation = isDev
-		? "running dev"
-		: `deploying${isDryRun ? " (even in dry-run mode)" : ""}`;
-
-	const headline = `The Docker CLI is needed to build the configured ${numberOfContainers !== 1 ? "images" : "image"} before ${operation} but could not be launched.`;
+	const beforeOperation = operation ? ` before ${operation}` : "";
+	const headline = `The Docker CLI is needed to build ${imageNoun}${beforeOperation} but could not be launched.`;
 
 	let daemonHint: string;
 	if (process.platform === "darwin") {
@@ -185,11 +195,12 @@ function getFailedToRunDockerErrorMessage({
 	const alternatives =
 		"Note: Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so.";
 
-	const hint = isDev
-		? "To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or pass --enable-containers=false."
-		: "If you cannot run Docker locally, you can still deploy your Worker by passing --containers-rollout=none. This will not deploy or update your Container.";
+	let message = `${headline}\n${steps}\n\n${alternatives}`;
+	if (hint) {
+		message += `\n\n${hint}`;
+	}
 
-	return `${headline}\n${steps}\n\n${alternatives}\n\n${hint}`;
+	return message;
 }
 
 /**

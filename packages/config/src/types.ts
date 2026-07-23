@@ -46,9 +46,17 @@ import type {
 	// TODO: re-enable when workflow bindings return.
 	// WorkflowBinding,
 } from "./bindings";
-import type { DurableObjectExport } from "./exports";
+import type {
+	DurableObjectDeletedExport,
+	DurableObjectExpectingTransferExport,
+	DurableObjectCreatedExport,
+	DurableObjectRenamedExport,
+	DurableObjectTransferredExport,
+	WorkerEntrypointExport,
+} from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
+	EmailTrigger,
 	FetchTrigger,
 	QueueConsumerTrigger,
 	ScheduledTrigger,
@@ -100,14 +108,25 @@ type Binding =
 /**
  * Union of all trigger definitions accepted in `triggers`.
  */
-type Trigger = FetchTrigger | QueueConsumerTrigger | ScheduledTrigger;
+type Trigger =
+	| EmailTrigger
+	| FetchTrigger
+	| QueueConsumerTrigger
+	| ScheduledTrigger;
 
 /**
- * Union of all export definitions accepted in `exports`.
+ * Union of all export definitions accepted in `exports`. Worker entries
+ * configure WorkerEntrypoint exports. Durable Object entries configure live
+ * classes and tombstone lifecycle operations.
  */
-type Export = DurableObjectExport;
+type Export =
+	| DurableObjectCreatedExport
+	| DurableObjectDeletedExport
+	| DurableObjectRenamedExport
+	| DurableObjectTransferredExport
+	| DurableObjectExpectingTransferExport
+	| WorkerEntrypointExport;
 // TODO: support Workflows
-// type Export = DurableObjectExport | WorkflowExport;
 
 /**
  * Worker configuration. This is the input shape passed to
@@ -116,20 +135,19 @@ type Export = DurableObjectExport;
  * Fields are validated at runtime by `InputWorkerSchema` and normalised before
  * being passed to downstream tooling.
  */
-export interface UserConfig {
+export interface WorkerConfig {
+	/**
+	 * Discriminates this config as a Worker config.
+	 *
+	 * Injected automatically by `defineWorker`; only needs to be written by
+	 * hand when authoring a raw config object without the helper.
+	 */
+	type: "worker";
+
 	/**
 	 * The name of your Worker.
 	 */
 	name: string;
-
-	/**
-	 * This is the ID of the account associated with your zone.
-	 * You might have more than one account, so make sure to use
-	 * the ID of the account associated with the zone/route you
-	 * provide, if you provide one. It can also be specified through
-	 * the CLOUDFLARE_ACCOUNT_ID environment variable.
-	 */
-	accountId?: string;
 
 	/**
 	 * A date in the form yyyy-mm-dd, which will be used to determine
@@ -197,9 +215,10 @@ export interface UserConfig {
 	domains?: string[];
 
 	/**
-	 * Event triggers — fetch routes, queue consumers, and cron schedules
+	 * Event triggers — fetch routes, queue consumers, cron schedules, and Email
+	 * Routing addresses
 	 * — that invoke this Worker. Construct entries with `triggers.fetch(...)`,
-	 * `triggers.queue(...)`, or `triggers.scheduled(...)`.
+	 * `triggers.queue(...)`, `triggers.scheduled(...)`, or `triggers.email(...)`.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
 	 */
@@ -226,6 +245,8 @@ export interface UserConfig {
 	cache?: {
 		/** If cache is enabled for this Worker. */
 		enabled: boolean;
+		/** Whether cached assets may be reused across Worker versions. */
+		crossVersionCache?: boolean;
 	};
 
 	/**
@@ -329,14 +350,6 @@ export interface UserConfig {
 	previewUrls?: boolean;
 
 	/**
-	 * Specify the compliance region mode of the Worker.
-	 *
-	 * Although if the user does not specify a compliance region, the default is `public`,
-	 * it can be set to `undefined` in configuration to delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable.
-	 */
-	complianceRegion?: "public" | "fedramp-high";
-
-	/**
 	 * Designates this Worker as an internal-only "first-party" Worker.
 	 *
 	 * @internal
@@ -381,19 +394,46 @@ export interface UserConfig {
 	/**
 	 * Configuration for named exports declared by the Worker. Each entry's
 	 * key is the exported class name; the value configures the export.
-	 * Construct entries with `exports.durableObject(...)` or
-	 * `exports.workflow(...)`.
 	 *
-	 * Two export kinds are supported:
+	 * Only one export kind is currently supported:
 	 *
-	 * - `durable-object`: declares a Durable Object class defined by this
-	 *   Worker. For more information about Durable Objects, see the
-	 *   documentation at
-	 *   https://developers.cloudflare.com/workers/learning/using-durable-objects
-	 *
-	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
-	 *
-	 * - `workflow`: declares a Workflow defined by this Worker.
+	 * - Construct entries with `exports.durableObject(...)`.
+	 * - Declares Durable Object classes exported from this Worker.
+	 *   For more information about Durable Objects, see the documentation at
+	 *   https://developers.cloudflare.com/workers/learning/using-durable-objects.
+	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
 	 */
 	exports?: Record<string, Export>;
+}
+
+/**
+ * Settings shared by the other exports.
+ * Authored as a named `settings` export via
+ * `defineSettings`.
+ */
+export interface SettingsConfig {
+	/**
+	 * Discriminates this config as a settings config.
+	 *
+	 * Injected automatically by `defineSettings`; only needs to be written by
+	 * hand when authoring a raw config object without the helper.
+	 */
+	type: "settings";
+
+	/**
+	 * This is the ID of the account associated with your zone.
+	 * You might have more than one account, so make sure to use
+	 * the ID of the account associated with the zone/route you
+	 * provide, if you provide one. It can also be specified through
+	 * the CLOUDFLARE_ACCOUNT_ID environment variable.
+	 */
+	accountId?: string;
+
+	/**
+	 * Specify the compliance region mode of the Worker.
+	 *
+	 * Although if the user does not specify a compliance region, the default is `public`,
+	 * it can be set to `undefined` in configuration to delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable.
+	 */
+	complianceRegion?: "public" | "fedramp-high";
 }
