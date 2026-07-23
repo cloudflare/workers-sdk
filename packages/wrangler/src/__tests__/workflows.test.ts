@@ -19,6 +19,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { Instance, Workflow } from "../workflows/types";
 import type { RawConfig } from "@cloudflare/workers-utils";
+import type { WorkflowBatchDeleteResult } from "@cloudflare/workflows-shared/src/types";
 import type { ExpectStatic } from "vitest";
 
 describe("wrangler workflows", () => {
@@ -199,6 +200,7 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances restart <name> <id>     Restart a workflow instance
 				  wrangler workflows instances pause <name> <id>       Pause a workflow instance
 				  wrangler workflows instances resume <name> <id>      Resume a workflow instance
+				  wrangler workflows instances delete <name> <id..>    Delete workflow instances
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]
@@ -683,6 +685,65 @@ describe("wrangler workflows", () => {
 			);
 			expect(std.info).toMatchInlineSnapshot(
 				`"🥷 The instance "bar" from some-workflow was terminated successfully"`
+			);
+		});
+	});
+
+	describe("instances delete", () => {
+		const mockDeleteInstances = (
+			expect: ExpectStatic,
+			expectedIds: string[],
+			result: WorkflowBatchDeleteResult = {
+				deleted: expectedIds.map((id) => ({ id })),
+				errors: [],
+			}
+		) => {
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workflows/:workflowName/instances/batch/delete`,
+					async ({ request }) => {
+						expect(await request.json()).toEqual({ instances: expectedIds });
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result,
+						});
+					},
+					{ once: true }
+				)
+			);
+		};
+
+		it("should delete multiple instances", async ({ expect }) => {
+			writeWranglerConfig();
+			mockDeleteInstances(expect, ["foo", "bar"]);
+
+			await runWrangler(`workflows instances delete some-workflow foo bar`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🗑️  Deleted workflow instances from "some-workflow": "foo", "bar""`
+			);
+		});
+
+		it("should report per-instance errors", async ({ expect }) => {
+			writeWranglerConfig();
+			mockDeleteInstances(expect, ["foo", "bar"], {
+				deleted: [{ id: "foo" }],
+				errors: [{ index: 1, id: "bar", code: 500, message: "delete failed" }],
+			});
+
+			await expect(
+				runWrangler(`workflows instances delete some-workflow foo bar`)
+			).rejects.toThrow("Failed to delete 1 workflow instance(s)");
+		});
+
+		it("should reject more than 100 instances", async ({ expect }) => {
+			writeWranglerConfig();
+			const ids = Array.from({ length: 101 }, (_, i) => `instance-${i}`);
+			await expect(
+				runWrangler(`workflows instances delete some-workflow ${ids.join(" ")}`)
+			).rejects.toThrow(
+				"You can delete at most 100 workflow instances at a time"
 			);
 		});
 	});
@@ -1804,6 +1865,39 @@ describe("wrangler workflows", () => {
 				);
 				expect(std.info).toMatchInlineSnapshot(
 					`"🥷 The instance "instance-123" from my-workflow was terminated successfully"`
+				);
+			});
+		});
+
+		describe("workflows instances delete --local", () => {
+			it("should delete multiple instances in local dev session", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				const deleted: string[] = [];
+
+				msw.use(
+					http.delete(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId`,
+						({ params }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							deleted.push(params.instanceId as string);
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances delete my-workflow instance-123 instance-456 instance-123 --local"
+				);
+				expect(deleted).toEqual(["instance-123", "instance-456"]);
+				expect(std.info).toMatchInlineSnapshot(
+					`"🗑️  Deleted workflow instances from "my-workflow": "instance-123", "instance-456", "instance-123""`
 				);
 			});
 		});

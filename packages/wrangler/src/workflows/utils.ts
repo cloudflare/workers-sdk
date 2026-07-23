@@ -7,6 +7,7 @@ import type {
 	WorkflowInstanceRestartFrom,
 } from "./types";
 import type { Config } from "@cloudflare/workers-utils";
+import type { WorkflowBatchDeleteResult } from "@cloudflare/workflows-shared/src/types";
 
 export const emojifyInstanceStatus = (status: InstanceStatus) => {
 	switch (status) {
@@ -140,6 +141,25 @@ export async function updateInstanceStatus(
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify(body),
+		}
+	);
+}
+
+export async function deleteInstances(
+	config: Config,
+	accountId: string,
+	workflowName: string,
+	instanceIds: string[]
+): Promise<WorkflowBatchDeleteResult> {
+	return fetchResult(
+		config,
+		`/accounts/${accountId}/workflows/${workflowName}/instances/batch/delete`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ instances: instanceIds }),
 		}
 	);
 }

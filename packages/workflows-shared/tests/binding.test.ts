@@ -130,6 +130,7 @@ describe("WorkflowBinding", () => {
 				resume: expect.any(Function),
 				terminate: expect.any(Function),
 				restart: expect.any(Function),
+				delete: expect.any(Function),
 			});
 
 			// Wait for the workflow to complete before the test ends so
@@ -141,6 +142,139 @@ describe("WorkflowBinding", () => {
 				},
 				{ timeout: 5000 }
 			);
+		});
+	});
+
+	describe("delete()", () => {
+		it("should delete an instance and wipe its stored state", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+
+			setTestWorkflowCallback(async () => "done");
+			await binding.create({ id });
+
+			const instance = await binding.get(id);
+			await vi.waitUntil(
+				async () => {
+					const status = await instance.status();
+					return status.status === "complete";
+				},
+				{ timeout: 5000 }
+			);
+
+			await expect(
+				(instance as unknown as { delete(): Promise<void> }).delete()
+			).resolves.toBeUndefined();
+			await expect(binding.get(id)).rejects.toThrow("instance.not_found");
+		});
+
+		it("should let a running instance delete itself and stop execution", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			let deleteStarted = false;
+			let continuedAfterDelete = false;
+
+			setTestWorkflowCallback(async () => {
+				deleteStarted = true;
+				const instance = await binding.get(id);
+				await (instance as unknown as { delete(): Promise<void> }).delete();
+				continuedAfterDelete = true;
+			});
+			await binding.create({ id });
+			await vi.waitUntil(() => deleteStarted, { timeout: 5000 });
+
+			await vi.waitUntil(
+				async () => {
+					try {
+						await binding.get(id);
+						return false;
+					} catch {
+						return true;
+					}
+				},
+				{ timeout: 5000 }
+			);
+
+			await scheduler.wait(50);
+			expect(continuedAfterDelete).toBe(false);
+			await expect(binding.get(id)).rejects.toThrow("instance.not_found");
+		});
+	});
+
+	describe("deleteBatch()", () => {
+		it("should delete instances and wipe their stored state", async ({
+			expect,
+		}) => {
+			const ids = [uniqueId(), uniqueId()];
+			const binding = createBinding();
+
+			setTestWorkflowCallback(async () => "done");
+			await binding.createBatch(ids.map((id) => ({ id })));
+
+			for (const id of ids) {
+				const instance = await binding.get(id);
+				await vi.waitUntil(
+					async () => {
+						const status = await instance.status();
+						return status.status === "complete";
+					},
+					{ timeout: 5000 }
+				);
+			}
+
+			await expect(binding.deleteBatch({ instances: ids })).resolves.toEqual({
+				deleted: ids.map((id) => ({ id })),
+				errors: [],
+			});
+			for (const id of ids) {
+				await expect(binding.get(id)).rejects.toThrow("instance.not_found");
+			}
+		});
+
+		it("should report duplicate missing instances at each request index", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			await expect(
+				binding.deleteBatch({
+					instances: ["missing-instance", "missing-instance"],
+				})
+			).resolves.toEqual({
+				deleted: [],
+				errors: [
+					{
+						index: 0,
+						id: "missing-instance",
+						code: 10400,
+						message: "workflows.api.error.instance.not_found",
+					},
+					{
+						index: 1,
+						id: "missing-instance",
+						code: 10400,
+						message: "workflows.api.error.instance.not_found",
+					},
+				],
+			});
+		});
+
+		it("should reject invalid batches", async ({ expect }) => {
+			const binding = createBinding();
+			for (const instances of [
+				[],
+				Array.from({ length: 101 }, (_, i) => `instance-${i}`),
+			]) {
+				await expect(binding.deleteBatch({ instances })).rejects.toThrow(
+					"Batch must contain between 1 and 100 instance IDs"
+				);
+			}
+			await expect(
+				binding.deleteBatch({ instances: ["#invalid!"] })
+			).rejects.toThrow("Workflow instance has invalid id");
 		});
 	});
 
