@@ -2,6 +2,7 @@ import { registerProvider } from "@flue/runtime";
 import { flue } from "@flue/runtime/routing";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
+import { bearerAuth } from "hono/bearer-auth";
 
 registerProvider("cloudflare", {
 	api: "cloudflare-ai-binding",
@@ -12,4 +13,11 @@ registerProvider("cloudflare", {
 	},
 });
 
-export default new Hono().route("/", flue());
+export default new Hono()
+	.use(
+		"/agents/*",
+		bearerAuth({
+			token: env.FLUE_EVALS_BEARER_TOKEN,
+		})
+	)
+	.route("/", flue());

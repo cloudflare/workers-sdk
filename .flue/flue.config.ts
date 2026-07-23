@@ -14,7 +14,6 @@ export const vite = defineViteConfig({
 					"@flue/runtime/routing",
 					"hono",
 					"hono/bearer-auth",
-					"hono/http-exception",
 				],
 			},
 		},
