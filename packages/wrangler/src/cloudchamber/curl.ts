@@ -8,6 +8,7 @@ import {
 } from "@cloudflare/cli-shared-helpers/colors";
 import { ApiError, OpenAPI } from "@cloudflare/containers-shared";
 import { request } from "@cloudflare/containers-shared/src/client/core/request";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
@@ -73,6 +74,38 @@ async function read(stream: NodeJS.ReadStream) {
 	return Buffer.concat(chunks).toString("utf8");
 }
 
+function parseHeaders(
+	headerArgs: (string | number)[] | undefined,
+	requestId: string
+): Record<string, string> {
+	const headers: Record<string, string> = {
+		"coordinator-request-id": requestId,
+	};
+
+	for (const headerArg of headerArgs ?? []) {
+		const header = headerArg.toString();
+		const separatorIndex = header.indexOf(":");
+		if (separatorIndex === -1) {
+			throw new UserError(
+				`Invalid header format: "${header}". Expected "name:value".`,
+				{ telemetryMessage: "cloudchamber curl invalid header" }
+			);
+		}
+
+		const name = header.slice(0, separatorIndex).trim();
+		if (!name) {
+			throw new UserError(
+				`Invalid header format: "${header}". Header name cannot be empty.`,
+				{ telemetryMessage: "cloudchamber curl empty header name" }
+			);
+		}
+
+		headers[name] = header.slice(separatorIndex + 1).trim();
+	}
+
+	return headers;
+}
+
 async function requestFromCmd(
 	args: {
 		path: string;
@@ -94,18 +127,9 @@ async function requestFromCmd(
 	if (args.useStdin) {
 		args.data = await read(process.stdin);
 	}
-	try {
-		const headers: Record<string, string> = (args.header ?? []).reduce(
-			(prev, now) => ({
-				...prev,
-				[now.toString().split(":")[0].trim()]: now
-					.toString()
-					.split(":")[1]
-					.trim(),
-			}),
-			{ "coordinator-request-id": requestId }
-		);
+	const headers = parseHeaders(args.header, requestId);
 
+	try {
 		const data = args.data ?? args.dataDeprecated;
 		const res = await request(OpenAPI, {
 			url: args.path,

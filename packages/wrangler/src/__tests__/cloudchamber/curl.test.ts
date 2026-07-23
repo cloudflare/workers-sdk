@@ -217,19 +217,44 @@ describe("cloudchamber curl", () => {
 				// verify we are hitting the expected url
 				expect(request.url).toEqual(baseRequestUrl + "test");
 				// and that we set the expected headers
-				expect(request.headers.get("something")).toEqual("here");
-				expect(request.headers.get("other")).toEqual("thing");
+				expect(request.headers.get("location")).toEqual(
+					"https://example.com/a:b"
+				);
+				expect(request.headers.get("x-test")).toEqual("one:two:three");
+				expect(request.headers.get("x-empty")).toEqual("");
 				return HttpResponse.json(`{}`);
 			})
 		);
 		await runWrangler(
-			"cloudchamber curl /test --header something:here --header other:thing"
+			"cloudchamber curl /test --header location:https://example.com/a:b --header X-Test:one:two:three --header X-Empty:"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			""{}"
 			"
 		`);
+	});
+
+	it("rejects a header without a colon", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+
+		await expect(
+			runWrangler("cloudchamber curl /test --header invalid")
+		).rejects.toThrow(
+			'Invalid header format: "invalid". Expected "name:value".'
+		);
+	});
+
+	it("rejects an empty header name", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+
+		await expect(
+			runWrangler('cloudchamber curl /test --header " :value"')
+		).rejects.toThrow(
+			'Invalid header format: " :value". Header name cannot be empty.'
+		);
 	});
 
 	it("works", async ({ expect }) => {
