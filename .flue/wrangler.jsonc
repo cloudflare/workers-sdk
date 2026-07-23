@@ -12,6 +12,10 @@
 			"storage": "sqlite",
 			"type": "durable-object",
 		},
+		"FluePlaceholderWorkflow": {
+			"storage": "sqlite",
+			"type": "durable-object",
+		},
 		"FlueRegistry": {
 			"storage": "sqlite",
 			"type": "durable-object",

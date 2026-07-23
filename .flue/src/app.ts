@@ -20,4 +20,10 @@ export default new Hono()
 			token: env.FLUE_BEARER_TOKEN,
 		})
 	)
+	.use(
+		"/workflows/*",
+		bearerAuth({
+			token: env.FLUE_BEARER_TOKEN,
+		})
+	)
 	.route("/", flue());

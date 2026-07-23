@@ -37,12 +37,25 @@ Start the Cloudflare development server:
 pnpm --filter @cloudflare/workers-sdk-flue dev
 ```
 
-The agent HTTP routes require `FLUE_BEARER_TOKEN`. Configure it as a deployed
-Worker secret, and provide the same value when running the smoke agent locally:
+The agent and workflow HTTP routes require `FLUE_BEARER_TOKEN`. Configure it as
+a deployed Worker secret, and provide the same value when running the smoke
+agent locally:
 
 ```sh
 FLUE_BEARER_TOKEN=replace-with-a-random-token pnpm --filter @cloudflare/workers-sdk-flue smoke
 ```
+
+Run the placeholder workflow locally:
+
+```sh
+pnpm --filter @cloudflare/workers-sdk-flue exec flue run placeholder \
+  --input '{"message":"Hello from a Flue workflow."}' \
+  --header "Authorization: Bearer $FLUE_BEARER_TOKEN"
+```
+
+The workflow validates its input and returns the message unchanged. Its HTTP
+endpoint is `POST /workflows/placeholder` and requires the same bearer token as
+the agent routes.
 
 ## GitHub channel
 
