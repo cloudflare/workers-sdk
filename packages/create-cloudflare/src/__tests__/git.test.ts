@@ -329,15 +329,17 @@ describe("git helpers", () => {
 				.mocked(runCommand)
 				.mock.calls.find(([command]) => command.includes("commit"));
 			expect(commitCall).toBeDefined();
-			const [, commitOpts] = commitCall!;
+			if (!commitCall) {
+				throw new Error("missing commit call");
+			}
+			const [, commitOpts] = commitCall;
 			expect(commitOpts).not.toHaveProperty("silent");
 
 			const stopOrder = spinner.stop.mock.invocationCallOrder[0];
-			const commitCallOrder = vi
-				.mocked(runCommand)
-				.mock.invocationCallOrder[
-				vi.mocked(runCommand).mock.calls.indexOf(commitCall!)
-			];
+			const commitCallOrder =
+				vi.mocked(runCommand).mock.invocationCallOrder[
+					vi.mocked(runCommand).mock.calls.indexOf(commitCall)
+				];
 			expect(stopOrder).toBeLessThan(commitCallOrder);
 		});
 
