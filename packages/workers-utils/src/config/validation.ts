@@ -284,14 +284,28 @@ export function normalizeAndValidateConfig(
 		} configuration:`
 	);
 
+	const isRedirectedConfig = isRedirectedRawConfig(
+		rawConfig,
+		configPath,
+		userConfigPath
+	);
+
 	if ("legacy_env" in rawConfig) {
-		diagnostics.errors.push(
-			dedent`
-				The "legacy_env" field is no longer supported, so please remove it from your configuration file.
-				Service environments have been removed, and each environment is now deployed as its own Worker named "<name>-<environment>". This matches the behaviour of "legacy_env = true", which was the default, so removing the field will not change how your Worker is deployed.
-				Refer to https://developers.cloudflare.com/workers/wrangler/environments/ for more information.
-			`
-		);
+		// Older versions of tools such as the Vite plugin can generate redirected
+		// configurations that still include the removed `legacy_env` field.
+		// `legacy_env = true` was the historical default (so removing it does not
+		// change how the Worker is deployed), we silently strip it here rather than
+		// erroring. For user-authored configurations we still surface the error so
+		// that they know to remove the field.
+		if (!isRedirectedConfig) {
+			diagnostics.errors.push(
+				dedent`
+					The "legacy_env" field is no longer supported, so please remove it from your configuration file.
+					Service environments have been removed, and each environment is now deployed as its own Worker named "<name>-<environment>". This matches the behaviour of "legacy_env = true", which was the default, so removing the field will not change how your Worker is deployed.
+					Refer to https://developers.cloudflare.com/workers/wrangler/environments/ for more information.
+				`
+			);
+		}
 		// Remove the field so it is not also reported as an unexpected top-level field.
 		delete (rawConfig as Record<string, unknown>).legacy_env;
 	}
@@ -382,12 +396,6 @@ export function normalizeAndValidateConfig(
 		rawConfig,
 		isDispatchNamespace,
 		preserveOriginalMain
-	);
-
-	const isRedirectedConfig = isRedirectedRawConfig(
-		rawConfig,
-		configPath,
-		userConfigPath
 	);
 
 	const definedEnvironments = Object.keys(rawConfig.env ?? {});
