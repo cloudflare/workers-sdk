@@ -519,6 +519,20 @@ export const zObservabilityQueryResult = z.object({
 	rows: z.array(z.array(z.unknown())),
 });
 
+/**
+ * Flat status-shaped output of a single step. `status` is the source of truth; `error` and `output` are populated when relevant. When the step returned a ReadableStream the response is served as application/octet-stream instead of this JSON body.
+ */
+export const zWorkflowsStepOutput = z.object({
+	status: z.enum(["running", "waiting", "complete", "errored"]),
+	error: z
+		.object({
+			name: z.string().optional(),
+			message: z.string().optional(),
+		})
+		.nullable(),
+	output: z.unknown(),
+});
+
 export const zR2ResultInfoWritable = z.record(z.unknown());
 
 export const zWorkersNamespaceWritable = z.object({
@@ -1120,6 +1134,28 @@ export const zWorkflowsChangeInstanceStatusResponse =
 				.optional(),
 		})
 	);
+
+export const zWorkflowsGetStepOutputData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+		instance_id: zWorkflowsInstanceId,
+	}),
+	query: z.object({
+		name: z.string().min(1),
+		type: z.enum(["step", "waitForEvent"]),
+		attempt: z.number().int().optional(),
+	}),
+});
+
+/**
+ * Get Workflow Step Output response.
+ */
+export const zWorkflowsGetStepOutputResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zWorkflowsStepOutput.optional(),
+	})
+);
 
 export const zWorkflowsSendInstanceEventData = z.object({
 	body: z.unknown().optional(),

@@ -8,6 +8,7 @@ import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
 	WorkflowsChangeInstanceStatusData,
+	WorkflowsGetStepOutputData,
 	WorkflowsWorkflow,
 } from "../generated";
 import type { zWorkflowsListInstancesData } from "../generated/zod.gen";
@@ -15,6 +16,7 @@ import type {
 	RestartFromStep,
 	WorkflowInstanceTerminateOptions,
 } from "@cloudflare/workflows-shared/src/binding";
+import type { StepOutputResult } from "@cloudflare/workflows-shared/src/engine";
 import type { z } from "zod";
 
 // ============================================================================
@@ -60,6 +62,11 @@ interface EngineStub {
 			metadata: Record<string, unknown>;
 		}>
 	>;
+	getStepOutput(options: {
+		name: string;
+		type: "step" | "waitForEvent";
+		attempt?: number;
+	}): Promise<StepOutputResult>;
 }
 
 // InstanceEvent enum values
@@ -155,6 +162,21 @@ const STATUS_NAMES: Record<number, string> = {
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Resolve the Engine DO stub for an instance. A 64-char hex string is treated
+ * as a raw DO ID (idFromString); anything else is the instance ID the engine
+ * created the DO from (idFromName).
+ */
+function resolveEngineStub(
+	engineNamespace: DurableObjectNamespace,
+	instanceId: string
+): EngineStub {
+	const stubId = /^[0-9a-f]{64}$/i.test(instanceId)
+		? engineNamespace.idFromString(instanceId)
+		: engineNamespace.idFromName(instanceId);
+	return engineNamespace.get(stubId) as unknown as EngineStub;
+}
 
 /**
  * Get the Engine DO namespace for a workflow.
@@ -589,10 +611,7 @@ export async function getWorkflowInstanceDetails(
 /**
  * Get instance details via the Engine DO directly.
  *
- * Accepts either a real instance ID or a hex DO ID:
- * - Real instance ID (e.g. "my-instance"): uses idFromName() — same mapping
- *   the workflow engine used to create the DO.
- * - Hex DO ID (64-char hex string): uses idFromString() for direct access.
+ * Accepts either a real instance ID or a hex DO ID (see resolveEngineStub).
  */
 async function executeGetInstanceDetails(
 	engineNamespace: DurableObjectNamespace,
@@ -600,11 +619,7 @@ async function executeGetInstanceDetails(
 	c: AppContext
 ): Promise<Response> {
 	try {
-		const isHexId = /^[0-9a-f]{64}$/i.test(instanceId);
-		const stubId = isHexId
-			? engineNamespace.idFromString(instanceId)
-			: engineNamespace.idFromName(instanceId);
-		const stub = engineNamespace.get(stubId) as unknown as EngineStub;
+		const stub = resolveEngineStub(engineNamespace, instanceId);
 
 		const metadata = await stub.getInstanceMetadata();
 
@@ -778,6 +793,95 @@ async function executeGetInstanceDetails(
 
 		return errorResponse(500, 10001, message);
 	}
+}
+
+type StepOutputQuery = NonNullable<WorkflowsGetStepOutputData["query"]>;
+
+export async function getWorkflowStepOutput(
+	c: AppContext,
+	workflowName: string,
+	instanceId: string,
+	query: StepOutputQuery
+): Promise<Response> {
+	if (query.attempt !== undefined && query.type === "waitForEvent") {
+		return errorResponse(
+			400,
+			10001,
+			"'attempt' is not supported when type is 'waitForEvent'."
+		);
+	}
+
+	const engineNamespace = getEngineNamespace(c.env, workflowName);
+
+	if (engineNamespace) {
+		try {
+			const stub = resolveEngineStub(engineNamespace, instanceId);
+
+			const result = await stub.getStepOutput({
+				name: query.name,
+				type: query.type,
+				attempt: query.attempt,
+			});
+
+			// A ReadableStream output is streamed back as raw bytes
+			if (result.output instanceof ReadableStream) {
+				return new Response(result.output, {
+					status: 200,
+					headers: { "Content-Type": "application/octet-stream" },
+				});
+			}
+
+			return c.json(
+				wrapResponse({
+					status: result.status,
+					error: result.error,
+					output: result.output,
+				})
+			);
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : "Instance not found";
+			if (message.includes("instance.step_not_found")) {
+				return errorResponse(
+					404,
+					WORKFLOW_ERROR_NOT_FOUND,
+					`Step '${query.name}' not found for instance '${instanceId}'.`
+				);
+			}
+			if (
+				message.includes("instance.not_found") ||
+				message === "Engine was never started"
+			) {
+				return errorResponse(
+					404,
+					WORKFLOW_ERROR_NOT_FOUND,
+					`Workflow instance '${instanceId}' not found.`
+				);
+			}
+			return errorResponse(500, 10001, message);
+		}
+	}
+
+	const ownerMiniflare = await findWorkflowOwner(c, workflowName);
+	if (ownerMiniflare) {
+		const params = new URLSearchParams();
+		params.set("name", query.name);
+		params.set("type", query.type);
+		if (query.attempt !== undefined) {
+			params.set("attempt", String(query.attempt));
+		}
+		const peerPath = `/workflows/${encodeURIComponent(workflowName)}/instances/${encodeURIComponent(instanceId)}/step?${params.toString()}`;
+		const response = await fetchFromPeer(ownerMiniflare, peerPath);
+		if (response) {
+			return response;
+		}
+	}
+
+	return errorResponse(
+		404,
+		WORKFLOW_ERROR_NOT_FOUND,
+		`Workflow '${workflowName}' not found.`
+	);
 }
 
 /**
