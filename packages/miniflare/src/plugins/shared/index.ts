@@ -143,18 +143,6 @@ export class ProxyNodeBinding {
 	constructor(public proxyOverrideHandler?: ProxyHandler<any>) {}
 }
 
-export function namespaceKeys(
-	namespaces?: Record<string, unknown> | string[]
-): string[] {
-	if (Array.isArray(namespaces)) {
-		return namespaces;
-	} else if (namespaces !== undefined) {
-		return Object.keys(namespaces);
-	} else {
-		return [];
-	}
-}
-
 export type RemoteProxyConnectionString = URL & {
 	__brand: "RemoteProxyConnectionString";
 };
@@ -279,7 +267,11 @@ export {
 export type {
 	MiniflareBinding,
 	MiniflareExport,
+	MiniflareFetcherBinding,
+	MiniflareNodeHandlerBinding,
+	MiniflareServiceBinding,
 	MiniflareTrigger,
+	MiniflareWorkerBinding,
 	ParsedDevConfig,
 	ParsedInstanceOptions,
 	ParsedLegacyConfig,

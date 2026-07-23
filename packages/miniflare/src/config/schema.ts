@@ -16,6 +16,7 @@ import type {
 	RemoteProxyConnectionString,
 	WorkerdStructuredLog,
 } from "../index";
+import type { kCurrentWorker } from "../plugins/core/services";
 import type { DOContainerOptions } from "../plugins/do";
 import type { UnsafeUniqueKey } from "../plugins/shared/constants";
 import type { Log } from "../shared";
@@ -72,6 +73,19 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 });
 
 /**
+ * Extended worker (service) binding. `workerName` may be `kCurrentWorker`
+ * (the SELF marker) in addition to a plain worker name.
+ */
+const MiniflareWorkerBindingSchema = WorkerBindingSchema.extend({
+	workerName: z.union([
+		z.string(),
+		z.custom<typeof kCurrentWorker>(
+			(v) => v === Symbol.for("miniflare.kCurrentWorker")
+		),
+	]),
+});
+
+/**
  * The `hello-world` binding backs an internal example/test plugin and has no
  * `@cloudflare/config` equivalent, so it lives only in the miniflare schema.
  */
@@ -82,11 +96,13 @@ const HelloWorldBindingSchema = z.strictObject({
 
 const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	MiniflareBrowserBindingSchema,
+	MiniflareWorkerBindingSchema,
 	FetcherBindingSchema,
 	NodeHandlerBindingSchema,
 	HelloWorldBindingSchema,
 	...KnownBindingSchema.options.filter(
-		(option) => option !== BrowserBindingSchema
+		(option) =>
+			option !== BrowserBindingSchema && option !== WorkerBindingSchema
 	),
 ]);
 
@@ -180,6 +196,23 @@ export type ParsedMiniflareWorkerConfig = z.output<
 export type MiniflareBinding = NonNullable<
 	ParsedMiniflareWorkerConfig["env"]
 >[string];
+/** A parsed `worker` (service) binding, extended with `kCurrentWorker` support. */
+export type MiniflareWorkerBinding = Extract<MiniflareBinding, { type: "worker" }>;
+/** A parsed function-backed `fetcher` service binding. */
+export type MiniflareFetcherBinding = Extract<
+	MiniflareBinding,
+	{ type: "fetcher" }
+>;
+/** A parsed Node.js http-style `node-handler` service binding. */
+export type MiniflareNodeHandlerBinding = Extract<
+	MiniflareBinding,
+	{ type: "node-handler" }
+>;
+/** Any of the three service-binding variants (worker / fetcher / node-handler). */
+export type MiniflareServiceBinding =
+	| MiniflareWorkerBinding
+	| MiniflareFetcherBinding
+	| MiniflareNodeHandlerBinding;
 /** A single parsed `config.exports` entry. */
 export type MiniflareExport = NonNullable<
 	ParsedMiniflareWorkerConfig["exports"]
@@ -223,6 +256,13 @@ const DevConfigSchema = z.strictObject({
 	unsafeEvalBinding: z.string().optional(),
 	useModuleFallbackService: z.boolean().optional(),
 	hasAssetsAndIsVitest: z.boolean().optional(),
+	// TODO(soon): remove in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
+	unsafeEphemeralDurableObjects: z.boolean().optional(),
+	// Strip the CF-Connecting-IP header from outbound fetches
+	stripCfConnectingIp: z.boolean().default(true),
+	// Zone to use for the CF-Worker header in outbound fetches. If not
+	// specified, defaults to `${worker-name}.example.com`
+	zone: z.string().optional(),
 });
 
 export type DevConfig = z.input<typeof DevConfigSchema>;
@@ -232,6 +272,9 @@ export type DevConfig = z.input<typeof DevConfigSchema>;
 // ---------------------------------------------------------------------------
 
 const LegacyConfigSchema = z.strictObject({
+	// Service-worker format (non-module, global `addEventListener`) script,
+	// provided directly by the caller (e.g. wrangler for service-worker workers).
+	serviceWorkerScript: z.string().optional(),
 	wasmBindings: z
 		.record(z.string(), z.union([z.string(), z.instanceof(Uint8Array)]))
 		.optional(),
