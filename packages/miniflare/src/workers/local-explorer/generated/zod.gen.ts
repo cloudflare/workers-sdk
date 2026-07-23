@@ -534,6 +534,20 @@ export const zObservabilityQueryResult = z.object({
 });
 
 /**
+ * Flat status-shaped output of a single step. `status` is the source of truth; `error` and `output` are populated when relevant. When the step returned a ReadableStream the response is served as application/octet-stream instead of this JSON body.
+ */
+export const zWorkflowsStepOutput = z.object({
+	status: z.enum(["running", "waiting", "complete", "errored"]),
+	error: z
+		.object({
+			name: z.string().optional(),
+			message: z.string().optional(),
+		})
+		.nullable(),
+	output: z.unknown(),
+});
+
+/**
  * One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
  */
 export const zEmailHandlerEvent = z.union([
@@ -1413,6 +1427,28 @@ export const zWorkflowsChangeInstanceStatusResponse =
 				.optional(),
 		})
 	);
+
+export const zWorkflowsGetStepOutputData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+		instance_id: zWorkflowsInstanceId,
+	}),
+	query: z.object({
+		name: z.string().min(1),
+		type: z.enum(["step", "waitForEvent"]),
+		attempt: z.int().optional(),
+	}),
+});
+
+/**
+ * Get Workflow Step Output response.
+ */
+export const zWorkflowsGetStepOutputResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zWorkflowsStepOutput.optional(),
+	})
+);
 
 export const zWorkflowsSendInstanceEventData = z.object({
 	body: z.unknown().optional(),

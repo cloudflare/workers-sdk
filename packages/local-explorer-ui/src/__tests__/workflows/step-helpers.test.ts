@@ -1,4 +1,5 @@
 import { describe, test } from "vitest";
+import { isTruncatedStreamPreview } from "../../components/workflows/helpers";
 import {
 	getStepDisplayName,
 	getStepKey,
@@ -104,5 +105,33 @@ describe("getRestartFromStepParam", () => {
 			name: "",
 			type: "do",
 		});
+	});
+});
+
+describe("isTruncatedStreamPreview", () => {
+	test("detects a truncated text preview", ({ expect }) => {
+		expect(isTruncatedStreamPreview("some output[truncated output]")).toBe(
+			true
+		);
+	});
+
+	test("detects a binary stream placeholder", ({ expect }) => {
+		expect(
+			isTruncatedStreamPreview("[ReadableStream (binary): 2048 bytes]")
+		).toBe(true);
+	});
+
+	test("detects an incomplete stream placeholder", ({ expect }) => {
+		expect(isTruncatedStreamPreview("[ReadableStream: 100 bytes]")).toBe(true);
+	});
+
+	test("returns false for a complete inline value", ({ expect }) => {
+		expect(isTruncatedStreamPreview("hello world")).toBe(false);
+	});
+
+	test("returns false for non-string values", ({ expect }) => {
+		expect(isTruncatedStreamPreview({ foo: "bar" })).toBe(false);
+		expect(isTruncatedStreamPreview(undefined)).toBe(false);
+		expect(isTruncatedStreamPreview(42)).toBe(false);
 	});
 });
