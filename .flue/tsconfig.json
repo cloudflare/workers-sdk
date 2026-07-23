@@ -9,10 +9,5 @@
 		"types": ["@cloudflare/workers-types/experimental"]
 	},
 	"exclude": ["dist"],
-	"include": [
-		"flue.config.ts",
-		"src/**/*.ts",
-		"vitest.evals.config.ts",
-		"worker-configuration.d.ts"
-	]
+	"include": ["flue.config.ts", "src/**/*.ts", "worker-configuration.d.ts"]
 }

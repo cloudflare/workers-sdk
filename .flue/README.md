@@ -23,33 +23,23 @@ Regenerate the Wrangler `Env` types after changing bindings, agents, or workflow
 pnpm --filter @cloudflare/workers-sdk-flue cf-typegen
 ```
 
+Create the ignored `.flue/.env` file with a local bearer token:
+
+```sh
+FLUE_BEARER_TOKEN=replace-with-a-random-token
+```
+
 Start the Cloudflare development server:
 
 ```sh
 pnpm --filter @cloudflare/workers-sdk-flue dev
 ```
 
-Run the smoke agent:
+The agent HTTP routes require `FLUE_BEARER_TOKEN`. Configure it as a deployed
+Worker secret, and provide the same value when running the smoke agent locally:
 
 ```sh
-pnpm --filter @cloudflare/workers-sdk-flue smoke
+FLUE_BEARER_TOKEN=replace-with-a-random-token pnpm --filter @cloudflare/workers-sdk-flue smoke
 ```
-
-## Evals
-
-The `workspace-smoke` agent exposes an authenticated HTTP route for evals. The
-Vitest global setup generates a new `FLUE_EVALS_BEARER_TOKEN` for each run, so
-the eval process does not read the token from an environment variable or local
-secret file. It starts a local Flue development server with the generated token
-on an available port and stops the server after the suite finishes.
-
-Run the eval suite with:
-
-```sh
-pnpm --filter @cloudflare/workers-sdk-flue evals
-```
-
-Use `evals:info` for detailed tool and usage output, or `evals:json` to write
-`vitest-results.json`.
 
 The smoke agent uses Workers AI and may require an authenticated Wrangler session. Its Codemode sandbox cannot execute Linux commands or access the network. Heavyweight repository builds and tests remain the responsibility of CI.

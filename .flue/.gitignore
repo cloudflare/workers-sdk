@@ -4,4 +4,3 @@
 .wrangler/
 dist/
 node_modules/
-vitest-results.json

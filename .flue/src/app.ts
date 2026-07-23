@@ -17,7 +17,7 @@ export default new Hono()
 	.use(
 		"/agents/*",
 		bearerAuth({
-			token: env.FLUE_EVALS_BEARER_TOKEN,
+			token: env.FLUE_BEARER_TOKEN,
 		})
 	)
 	.route("/", flue());

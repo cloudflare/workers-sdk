@@ -18,7 +18,7 @@
 		},
 	},
 	"secrets": {
-		"required": ["FLUE_EVALS_BEARER_TOKEN"],
+		"required": ["FLUE_BEARER_TOKEN"],
 	},
 	"worker_loaders": [
 		{

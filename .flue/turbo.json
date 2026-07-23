@@ -4,19 +4,7 @@
 	"tasks": {
 		"build": {
 			"outputs": ["dist/**"],
-			"passThroughEnv": ["FLUE_EVALS_BEARER_TOKEN"]
-		},
-		"evals": {
-			"cache": false,
-			"passThroughEnv": ["FLUE_BASE_URL", "FLUE_EVALS_BEARER_TOKEN"]
-		},
-		"evals:info": {
-			"cache": false,
-			"passThroughEnv": ["FLUE_BASE_URL", "FLUE_EVALS_BEARER_TOKEN"]
-		},
-		"evals:json": {
-			"cache": false,
-			"passThroughEnv": ["FLUE_BASE_URL", "FLUE_EVALS_BEARER_TOKEN"]
+			"passThroughEnv": ["FLUE_BEARER_TOKEN"]
 		}
 	}
 }
