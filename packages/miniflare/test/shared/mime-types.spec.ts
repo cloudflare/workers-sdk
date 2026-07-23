@@ -1,7 +1,9 @@
 import { test } from "vitest";
 import { isCompressedByCloudflareFL } from "../../src/shared/mime-types";
 
-test("isCompressedByCloudflareFL: matches known content types", ({ expect }) => {
+test("isCompressedByCloudflareFL: matches known content types", ({
+	expect,
+}) => {
 	expect(isCompressedByCloudflareFL("text/html")).toBe(true);
 	expect(isCompressedByCloudflareFL("application/json")).toBe(true);
 	expect(isCompressedByCloudflareFL("image/png")).toBe(false);
