@@ -8,6 +8,7 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalObservabilityEnabledFromEnv,
 	getWranglerHiddenDirPath,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -1176,6 +1177,9 @@ export async function buildMiniflareOptions(
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+		// The one switch for local observability: this env var tells Miniflare core
+		// to attach the trace collector to each user worker.
+		unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 		unsafeInspectDurableObjects: true,
 		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:

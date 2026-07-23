@@ -12,6 +12,7 @@ import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-binding
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalObservabilityEnabledFromEnv,
 } from "@cloudflare/workers-utils";
 import {
 	buildPublicUrl,
@@ -507,6 +508,11 @@ export async function getDevMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			// The switch for local observability capture: tells Miniflare core to
+			// attach the trace collector to each user worker. Opt-in via the
+			// `X_LOCAL_OBSERVABILITY` env var (defaults off); enabling it requires
+			// restarting the dev server.
+			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			async unsafeHandleRuntimeRestart() {
@@ -810,6 +816,9 @@ export async function getPreviewMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			// The one switch for local observability: this env var tells Miniflare
+			// core to attach the trace collector to each user worker.
+			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(

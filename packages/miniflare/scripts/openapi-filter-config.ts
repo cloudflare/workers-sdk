@@ -1289,6 +1289,139 @@ const config = {
 						tags: ["Workflows"],
 					},
 				},
+			// Local-only observability endpoint. Runs a single read-only SQL query
+			// against the trace store; the schema it queries is in the description
+			// below.
+			"/local/observability/query": {
+				post: {
+					description: [
+						"Runs a single read-only SQL query against the local trace store and returns { columns, rows }.",
+						"",
+						"Only one SELECT/WITH statement is allowed; writes, DDL, PRAGMA, ATTACH, and multiple statements are rejected, and at most 10000 rows are returned.",
+						"Bind values with `params` rather than string-interpolating them.",
+						"`attributes` is stored as JSONB — wrap it with `json(attributes)` to read it back as JSON.",
+						"",
+						"Schema (the query contract):",
+						"",
+						"CREATE TABLE spans (",
+						"  trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_id TEXT, -- parent_id IS NULL on a root (invocation) span",
+						"  service TEXT,        -- owning worker name (multi-worker attribution)",
+						"  name TEXT, kind TEXT,",
+						"  start_ms INTEGER,    -- absolute epoch ms",
+						"  duration_ms INTEGER, -- whole ms; NULL while the span is still running",
+						"  outcome TEXT, error TEXT,",
+						"  attributes BLOB,     -- JSONB; read via json(attributes)",
+						"  created_at TEXT,",
+						"  PRIMARY KEY (trace_id, span_id)",
+						");",
+						"-- index spans_roots ON spans (start_ms) WHERE parent_id IS NULL",
+						"",
+						"CREATE TABLE logs (",
+						"  trace_id TEXT NOT NULL, span_id TEXT,",
+						"  seq INTEGER NOT NULL, -- order within the trace",
+						"  ts_ms INTEGER, level TEXT, message TEXT, -- message is a JSON-encoded console arg array",
+						"  operation TEXT, created_at TEXT,",
+						"  PRIMARY KEY (trace_id, seq)",
+						");",
+					].join("\n"),
+					operationId: "observability-query",
+					parameters: [],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									properties: {
+										sql: {
+											type: "string",
+											description:
+												"A single read-only SELECT/WITH query against the spans/logs schema above.",
+										},
+										params: {
+											type: "array",
+											items: {},
+											description:
+												"Values bound to `?` placeholders in the query, in order.",
+										},
+									},
+									required: ["sql"],
+								},
+							},
+						},
+					},
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														$ref: "#/components/schemas/observability_query-result",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Query response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Query response failure.",
+						},
+					},
+					summary: "Query Observability Store",
+					tags: ["Observability"],
+				},
+			},
+			// Local-only observability endpoint. Deletes all captured spans and
+			// logs from the trace store.
+			"/local/observability/clear": {
+				post: {
+					description:
+						"Deletes all captured spans and logs from the local trace store.",
+					operationId: "observability-clear",
+					parameters: [],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common",
+									},
+								},
+							},
+							description: "Clear response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Clear response failure.",
+						},
+					},
+					summary: "Clear Observability Store",
+					tags: ["Observability"],
+				},
+			},
 		},
 		schemas: {
 			// R2 schemas - matches stratus dashboard API shapes
@@ -1720,6 +1853,19 @@ const config = {
 					},
 				},
 				required: ["id", "status"],
+			},
+			// Observability schema (local-only)
+			"observability_query-result": {
+				type: "object",
+				description: "Columns and rows for a read-only SQL query.",
+				properties: {
+					columns: { type: "array", items: { type: "string" } },
+					rows: {
+						type: "array",
+						items: { type: "array", items: {} },
+					},
+				},
+				required: ["columns", "rows"],
 			},
 		},
 	},
