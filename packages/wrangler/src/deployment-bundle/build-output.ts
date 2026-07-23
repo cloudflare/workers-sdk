@@ -5,12 +5,14 @@ import {
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	writeOutputWorkerConfig,
+	writeRootOutputConfig,
 } from "@cloudflare/config";
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
+	ParsedSettingsConfig,
 } from "@cloudflare/config";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
@@ -18,6 +20,7 @@ import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
 interface WriteBuildOutputArgs {
 	root: string;
 	parsedWorkerConfig: ParsedInputWorkerConfig;
+	parsedSettingsConfig: ParsedSettingsConfig | undefined;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }
@@ -29,6 +32,7 @@ interface WriteBuildOutputArgs {
 export async function writeBuildOutput({
 	root,
 	parsedWorkerConfig,
+	parsedSettingsConfig,
 	buildResult,
 	assetsOptions,
 }: WriteBuildOutputArgs): Promise<void> {
@@ -58,6 +62,10 @@ export async function writeBuildOutput({
 	]);
 
 	await writeOutputWorkerConfig(root, parsedWorkerConfig, manifest);
+
+	if (parsedSettingsConfig !== undefined) {
+		await writeRootOutputConfig(root, parsedSettingsConfig);
+	}
 }
 
 async function writeBundle({
