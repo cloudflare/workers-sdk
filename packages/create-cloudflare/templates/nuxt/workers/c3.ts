@@ -33,9 +33,12 @@ const configure = async () => {
 	const packages = ["nitro-cloudflare-dev", "nitropack"];
 
 	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
-	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`
+	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`.
+	// Pin to the h3 major used by nitropack — h3's `latest` dist-tag now points at the 2.x release
+	// candidates, which are incompatible with the h3 v1 runtime Nuxt/Nitro use and break
+	// `event.context.cloudflare` in dev.
 	if (pm === "pnpm") {
-		packages.push("h3");
+		packages.push("h3@^1");
 	}
 
 	await installPackages(packages, {
