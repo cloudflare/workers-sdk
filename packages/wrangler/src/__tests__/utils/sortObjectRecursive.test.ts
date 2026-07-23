@@ -3,7 +3,10 @@ import { sortObjectRecursive } from "../../utils/sortObjectRecursive";
 
 describe("sortObjectRecursive", () => {
 	it("should sort object keys alphabetically", ({ expect }) => {
-		expect(Object.keys(sortObjectRecursive({ b: 1, a: 2 }))).toEqual(["a", "b"]);
+		expect(Object.keys(sortObjectRecursive({ b: 1, a: 2 }))).toEqual([
+			"a",
+			"b",
+		]);
 	});
 
 	it("should sort nested object keys recursively", ({ expect }) => {
@@ -21,7 +24,9 @@ describe("sortObjectRecursive", () => {
 		expect(sortObjectRecursive({ a: [null] })).toEqual({ a: [null] });
 	});
 
-	it("should sort objects in an array that also contains null", ({ expect }) => {
+	it("should sort objects in an array that also contains null", ({
+		expect,
+	}) => {
 		expect(sortObjectRecursive({ a: [{ c: 1, b: 2 }, null] })).toEqual({
 			a: [{ b: 2, c: 1 }, null],
 		});
