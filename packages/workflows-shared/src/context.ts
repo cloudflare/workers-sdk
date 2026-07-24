@@ -7,7 +7,6 @@ import {
 	DELAY_FUNCTION_TIMEOUT_MS,
 	invokeDelayFunction,
 	raceAgainstAbort,
-	schedulerWait,
 } from "./lib/delay";
 import {
 	ABORT_REASONS,
@@ -107,6 +106,31 @@ export function toEngineStepConfig(
 		return { ...config, retries: { ...retries, delay } };
 	}
 	return { ...config, retries };
+}
+
+// Signal-aware wrapper around the global `scheduler.wait`. `scheduler.wait`
+// can't itself be cancelled, so an aborted signal resolves the returned promise
+// early and the dangling timer becomes a no-op.
+function schedulerWait(
+	durationMs: number,
+	opts?: { signal?: AbortSignal }
+): Promise<void> {
+	return new Promise<void>((resolve) => {
+		const signal = opts?.signal;
+		if (signal?.aborted) {
+			resolve();
+			return;
+		}
+		let done = false;
+		const finish = (): void => {
+			if (!done) {
+				done = true;
+				resolve();
+			}
+		};
+		void scheduler.wait(durationMs).then(finish);
+		signal?.addEventListener("abort", finish, { once: true });
+	});
 }
 
 const defaultConfig: ResolvedStepConfig = {

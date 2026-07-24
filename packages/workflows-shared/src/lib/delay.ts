@@ -30,10 +30,10 @@ export async function raceAgainstAbort<T>(
 		})
 	);
 	if (signal.aborted) {
-		return await Promise.race([
-			Promise.resolve<AbortRaceResult<T>>({ aborted: true }),
-			resultPromise,
-		]);
+		// Observe a later rejection from the losing promise so it doesn't become
+		// an unhandled rejection after returning the already-aborted result.
+		void resultPromise.catch(() => undefined);
+		return { aborted: true };
 	}
 
 	let resolveAbort: ((result: AbortRaceResult<T>) => void) | undefined;
@@ -43,34 +43,11 @@ export async function raceAgainstAbort<T>(
 	const onAbort = (): void => resolveAbort?.({ aborted: true });
 	signal.addEventListener("abort", onAbort, { once: true });
 
-	if (signal.aborted) {
-		onAbort();
-	}
-
 	try {
 		return await Promise.race([resultPromise, abortPromise]);
 	} finally {
 		signal.removeEventListener("abort", onAbort);
 	}
-}
-
-// Signal-aware wrapper around the global `scheduler.wait`. `scheduler.wait`
-// can't itself be cancelled, so an aborted signal resolves the returned promise
-// early and the dangling timer becomes a no-op.
-export async function schedulerWait(
-	durationMs: number,
-	opts?: { signal?: AbortSignal }
-): Promise<void> {
-	const signal = opts?.signal;
-	if (signal?.aborted) {
-		return;
-	}
-	const waitPromise = scheduler.wait(durationMs);
-	if (signal === undefined) {
-		await waitPromise;
-		return;
-	}
-	await raceAgainstAbort(waitPromise, signal);
 }
 
 export async function invokeDelayFunction(

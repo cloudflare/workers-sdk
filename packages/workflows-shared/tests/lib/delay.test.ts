@@ -2,7 +2,7 @@ import { describe, it, vi } from "vitest";
 import {
 	DEFAULT_RETRY_DELAY_MS,
 	invokeDelayFunction,
-	schedulerWait,
+	raceAgainstAbort,
 } from "../../src/lib/delay";
 import { DelayFunctionError } from "../../src/lib/retries";
 import type { WorkflowDynamicDelayContext } from "cloudflare:workers";
@@ -22,34 +22,88 @@ const noTimeout =
 	(): ((ms: number, opts?: { signal?: AbortSignal }) => Promise<void>) => () =>
 		new Promise<void>(() => {});
 
-describe("schedulerWait", () => {
-	it("removes abort listeners after the wait completes", async ({ expect }) => {
-		const listeners = new Set<EventListenerOrEventListenerObject>();
-		const signal = {
-			aborted: false,
-			addEventListener(
-				type: string,
-				listener: EventListenerOrEventListenerObject
-			) {
-				if (type === "abort") {
-					listeners.add(listener);
-				}
-			},
-			removeEventListener(
-				type: string,
-				listener: EventListenerOrEventListenerObject
-			) {
-				if (type === "abort") {
-					listeners.delete(listener);
-				}
-			},
-		} as AbortSignal;
+describe("raceAgainstAbort", () => {
+	it("removes the abort listener when the raced promise resolves", async ({
+		expect,
+	}) => {
+		const controller = new AbortController();
+		const addEventListener = vi.spyOn(controller.signal, "addEventListener");
+		const removeEventListener = vi.spyOn(
+			controller.signal,
+			"removeEventListener"
+		);
 
-		for (let i = 0; i < 100; i++) {
-			await schedulerWait(0, { signal });
-		}
+		await expect(
+			raceAgainstAbort(Promise.resolve("done"), controller.signal)
+		).resolves.toEqual({ aborted: false, value: "done" });
 
-		expect(listeners).toHaveLength(0);
+		expect(addEventListener).toHaveBeenCalledOnce();
+		expect(removeEventListener).toHaveBeenCalledWith(
+			"abort",
+			addEventListener.mock.calls[0]?.[1]
+		);
+	});
+
+	it("removes the abort listener when the signal wins", async ({ expect }) => {
+		const controller = new AbortController();
+		const addEventListener = vi.spyOn(controller.signal, "addEventListener");
+		const removeEventListener = vi.spyOn(
+			controller.signal,
+			"removeEventListener"
+		);
+		const result = raceAgainstAbort(
+			new Promise<void>(() => {}),
+			controller.signal
+		);
+
+		controller.abort();
+
+		await expect(result).resolves.toEqual({ aborted: true });
+		expect(removeEventListener).toHaveBeenCalledWith(
+			"abort",
+			addEventListener.mock.calls[0]?.[1]
+		);
+	});
+
+	it("removes the abort listener when the raced promise rejects", async ({
+		expect,
+	}) => {
+		const controller = new AbortController();
+		const addEventListener = vi.spyOn(controller.signal, "addEventListener");
+		const removeEventListener = vi.spyOn(
+			controller.signal,
+			"removeEventListener"
+		);
+		const error = new Error("boom");
+
+		await expect(
+			raceAgainstAbort(Promise.reject(error), controller.signal)
+		).rejects.toBe(error);
+		expect(removeEventListener).toHaveBeenCalledWith(
+			"abort",
+			addEventListener.mock.calls[0]?.[1]
+		);
+	});
+
+	it("does not register a listener for an already-aborted signal", async ({
+		expect,
+	}) => {
+		const controller = new AbortController();
+		controller.abort();
+		const addEventListener = vi.spyOn(controller.signal, "addEventListener");
+		const removeEventListener = vi.spyOn(
+			controller.signal,
+			"removeEventListener"
+		);
+
+		await expect(
+			raceAgainstAbort(
+				Promise.reject(new Error("late rejection")),
+				controller.signal
+			)
+		).resolves.toEqual({ aborted: true });
+		expect(addEventListener).not.toHaveBeenCalled();
+		expect(removeEventListener).not.toHaveBeenCalled();
 	});
 });
 
