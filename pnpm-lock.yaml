@@ -4284,9 +4284,15 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      '@types/yarnpkg__lockfile':
+        specifier: ^1.1.9
+        version: 1.1.9
       '@vitest/ui':
         specifier: catalog:default
         version: 4.1.0(vitest@4.1.0)
+      '@yarnpkg/lockfile':
+        specifier: ^1.1.0
+        version: 1.1.0
       ci-info:
         specifier: catalog:default
         version: 4.4.0
@@ -4335,6 +4341,9 @@ importers:
       xdg-app-paths:
         specifier: ^8.3.0
         version: 8.3.0
+      yaml:
+        specifier: ^2.8.1
+        version: 2.8.1
 
   packages/workflows-shared:
     dependencies:
@@ -9706,6 +9715,9 @@ packages:
   '@types/yargs@17.0.24':
     resolution: {integrity: sha512-6i0aC7jV6QzQB8ne1joVZ0eSFIstHsCrobmOtghM11yGlH0j43FKL2UhWdELkyps0zuf7qVTUVCCR+tgSlyLLw==}
 
+  '@types/yarnpkg__lockfile@1.1.9':
+    resolution: {integrity: sha512-GD4Fk15UoP5NLCNor51YdfL9MSdldKCqOC9EssrRw3HVfar9wUZ5y8Lfnp+qVD6hIinLr8ygklDYnmlnlQo12Q==}
+
   '@types/yauzl@2.10.3':
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
 
@@ -9913,6 +9925,9 @@ packages:
 
   '@webcontainer/env@1.1.0':
     resolution: {integrity: sha512-DreJFHUui8vq1N3nQGU3HwK5UI4hVNW7VQfhAOmeQbBVnpKtGhoNobjDNF8LzlN7ssmFI9Uhkc9Au4mtKvPK6Q==}
+
+  '@yarnpkg/lockfile@1.1.0':
+    resolution: {integrity: sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==}
 
   JSONStream@1.3.5:
     resolution: {integrity: sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ==}
@@ -20846,6 +20861,8 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 20.2.1
 
+  '@types/yarnpkg__lockfile@1.1.9': {}
+
   '@types/yauzl@2.10.3':
     dependencies:
       '@types/node': 22.15.17
@@ -21223,6 +21240,8 @@ snapshots:
   '@web3-storage/multipart-parser@1.0.0': {}
 
   '@webcontainer/env@1.1.0': {}
+
+  '@yarnpkg/lockfile@1.1.0': {}
 
   JSONStream@1.3.5:
     dependencies:

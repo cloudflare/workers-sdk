@@ -1,6 +1,6 @@
-import { statSync } from "node:fs";
 import path from "node:path";
-import { parsePackageJSON, readFileSync } from "./parse";
+import * as find from "empathic/find";
+import { parsePackageJSON, readFileSync } from "../parse";
 
 /**
  * Resolves the filesystem path for an installed npm package.
@@ -53,8 +53,11 @@ export function isPackageInstalled(
 }
 
 /**
- * Gets the exact version of an npm package installed in a project by resolving
- * it from node_modules and reading its package.json.
+ * Resolves a package version by reading its package.json from node_modules.
+ *
+ * This is the original resolution strategy, preserved as a fallback for
+ * packages that cannot be resolved from lockfiles (aliases, binary lockfiles,
+ * missing lockfiles, etc.).
  *
  * @param packageName - The name of the target package
  * @param projectPath - The path of the project to check
@@ -62,7 +65,7 @@ export function isPackageInstalled(
  * @param opts.stopAtProjectPath - If `true`, stop walking up at the project's path
  * @returns The installed version string, or `undefined` if the package is not installed
  */
-export function getInstalledPackageVersion(
+export function getInstalledPackageVersionFromNodeModules(
 	packageName: string,
 	projectPath: string,
 	opts: {
@@ -75,8 +78,10 @@ export function getInstalledPackageVersion(
 			return undefined;
 		}
 
-		const lastDir = opts.stopAtProjectPath === true ? projectPath : undefined;
-		const packageJsonPath = findFileUp("package.json", packagePath, lastDir);
+		const packageJsonPath = find.file("package.json", {
+			cwd: packagePath,
+			last: opts.stopAtProjectPath === true ? projectPath : undefined,
+		});
 
 		if (!packageJsonPath) {
 			return undefined;
@@ -104,43 +109,4 @@ export function getInstalledPackageVersion(
 		}
 		return packageJson.version;
 	} catch {}
-}
-
-/**
- * Walks up from `startDir` looking for a file named `name`.
- * Stops at `lastDir` (inclusive) if provided, otherwise walks to the filesystem root.
- *
- * @param name - The filename to search for
- * @param startDir - The directory to start searching from
- * @param lastDir - If provided, stop searching after reaching this directory
- * @returns The full path to the found file, or `undefined`
- */
-function findFileUp(
-	name: string,
-	startDir: string,
-	lastDir?: string
-): string | undefined {
-	let dir = startDir;
-	const root = path.parse(dir).root;
-
-	while (true) {
-		const candidate = path.join(dir, name);
-		try {
-			if (statSync(candidate).isFile()) {
-				return candidate;
-			}
-		} catch {}
-
-		if (lastDir !== undefined && dir === lastDir) {
-			break;
-		}
-
-		const parent = path.dirname(dir);
-		if (parent === dir || dir === root) {
-			break;
-		}
-		dir = parent;
-	}
-
-	return undefined;
 }

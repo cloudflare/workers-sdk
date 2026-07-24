@@ -1,6 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
+	createLockfileCache,
 	getInstalledPackageVersion,
 	parsePackageJSON,
 } from "@cloudflare/workers-utils";
@@ -96,6 +97,11 @@ export async function collectPackageDependencies(
 
 		const result: PackageDependency[] = [];
 
+		// Create a function-scoped cache so the lockfile is parsed once and
+		// shared across all per-package lookups within this single collection
+		// pass. The cache is garbage-collected when this function returns.
+		const lockfileCache = createLockfileCache();
+
 		for (const [dependencyName, packageJsonVersion] of Object.entries(
 			allDependencies
 		)) {
@@ -121,7 +127,8 @@ export async function collectPackageDependencies(
 
 			const installedVersion = getInstalledPackageVersion(
 				dependencyName,
-				projectPath
+				projectPath,
+				{ cache: lockfileCache }
 			);
 
 			if (!installedVersion) {
