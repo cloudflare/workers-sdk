@@ -37,6 +37,29 @@ export type Options = {
 	metafile?: string | boolean;
 };
 
+/**
+ * Builds Pages Functions using Wrangler's existing bundling pipeline.
+ *
+ * Route discovery and route-module generation have moved to
+ * `@cloudflare/pages-functions`, but this final bundling step intentionally
+ * remains in Wrangler. Wrangler integrates with `bundleWorker()` to support
+ * behavior not currently provided by the standalone package, including watch
+ * mode, local-development checks, Node.js compatibility, build notifications,
+ * Wrangler-specific output options, asset handling, module collection, and
+ * bundle metadata.
+ *
+ * This implementation also requires Wrangler's copy of
+ * `templates/pages-template-worker.ts` as its esbuild entry point. That
+ * template cannot be removed until Wrangler delegates this entire build step
+ * to `@cloudflare/pages-functions`.
+ *
+ * TODO: Move the remaining Wrangler-specific build capabilities into
+ * `@cloudflare/pages-functions`, update Wrangler to delegate to that package,
+ * and then remove this function and Wrangler's template copy.
+ *
+ * @param options - Options controlling the Pages Functions bundle.
+ * @returns The resulting Wrangler Worker bundle.
+ */
 export function buildWorkerFromFunctions({
 	routesModule,
 	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
