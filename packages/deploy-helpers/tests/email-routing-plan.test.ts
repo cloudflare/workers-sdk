@@ -1,4 +1,5 @@
-import { describe, it } from "vitest";
+import chalk from "chalk";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import {
 	buildEmailRoutingPlanRequest,
 	isDestructiveChange,
@@ -51,6 +52,16 @@ describe("buildEmailRoutingPlanRequest", () => {
 });
 
 describe("renderEmailRoutingPlan", () => {
+	const originalChalkLevel = chalk.level;
+
+	beforeEach(() => {
+		chalk.level = 0;
+	});
+
+	afterEach(() => {
+		chalk.level = originalChalkLevel;
+	});
+
 	const plan: EmailRoutingPlanResponse = {
 		zones: [
 			{
@@ -106,6 +117,30 @@ describe("renderEmailRoutingPlan", () => {
 			`  ! *@example.net -> conflict: owned by worker "other-worker" (worker other-worker)`,
 			"4 changes across 2 zones (1 added, 1 deleted, 2 conflict)",
 		]);
+	});
+
+	it("colors change markers", ({ expect }) => {
+		chalk.level = 1;
+		const lines = renderEmailRoutingPlan(
+			{
+				zones: [
+					{
+						zone_id: "zone1",
+						changes: [
+							{ type: "added", target: "add@example.com" },
+							{ type: "updated", target: "update@example.com" },
+							{ type: "deleted", target: "delete@example.com" },
+							{ type: "conflict", target: "conflict@example.com" },
+						],
+					},
+				],
+			},
+			"my-worker"
+		);
+		expect(lines[1]).toContain("\u001b[32m+\u001b[39m");
+		expect(lines[2]).toContain("\u001b[33m~\u001b[39m");
+		expect(lines[3]).toContain("\u001b[31m-\u001b[39m");
+		expect(lines[4]).toContain("\u001b[31m!\u001b[39m");
 	});
 
 	it("omits zones with no changes", ({ expect }) => {
