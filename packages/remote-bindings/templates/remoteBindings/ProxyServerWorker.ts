@@ -127,7 +127,10 @@ function isConnectBinding(request: Request): boolean {
 }
 
 function handleConnect(request: Request, env: Env): Response {
-	const address = request.headers.get("MF-Connect-Address")!;
+	const address = request.headers.get("MF-Connect-Address");
+	if (address === null) {
+		return new Response("Missing MF-Connect-Address header", { status: 400 });
+	}
 	const fetcher = getExposedFetcher(request, env) as Fetcher;
 
 	const { 0: client, 1: server } = new WebSocketPair();
