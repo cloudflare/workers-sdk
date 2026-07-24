@@ -4,10 +4,10 @@ import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	buildObjectEntryProps,
 	buildRemoteProxyProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
-	getUserBindingServiceName,
 	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
@@ -49,6 +49,9 @@ export const D1SharedOptionsSchema = z.object({
 export const D1_PLUGIN_NAME = "d1";
 const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
 const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
+// A single entry service shared by every *local* database. Each database's id is
+// supplied per-binding via `ctx.props`, so one service serves all of them.
+const D1_LOCAL_ENTRY_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:entry`;
 // One shared remote-proxy service for all remote D1 databases (config via props).
 const D1_REMOTE_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:remote`;
 const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
@@ -73,15 +76,16 @@ export const D1_PLUGIN: Plugin<
 					"Alpha D1 Databases cannot run remotely"
 				);
 
-				// Remote databases share one proxy service (config via props);
-				// local databases keep their per-id entry service.
+				// Remote databases share one proxy service (config via props); local
+				// databases share one entry service with the id supplied via props.
 				const serviceDesignator = remoteProxyConnectionString
 					? {
 							name: D1_REMOTE_SERVICE_NAME,
 							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 						}
 					: {
-							name: getUserBindingServiceName(D1_DATABASE_SERVICE_PREFIX, id),
+							name: D1_LOCAL_ENTRY_SERVICE_NAME,
+							props: buildObjectEntryProps(id),
 						};
 
 				const binding = name.startsWith("__D1_BETA__")
@@ -124,17 +128,22 @@ export const D1_PLUGIN: Plugin<
 		const databases = namespaceEntries(options.d1Databases);
 
 		const services: Service[] = [];
-		let hasRemote = false;
-		for (const [, { id, remoteProxyConnectionString }] of databases) {
-			if (remoteProxyConnectionString) {
-				hasRemote = true;
-			} else {
-				services.push({
-					name: getUserBindingServiceName(D1_DATABASE_SERVICE_PREFIX, id),
-					worker: objectEntryWorker(D1_DATABASE_OBJECT, id),
-				});
-			}
+
+		// One shared entry service for all local databases (id supplied via props).
+		const hasLocal = databases.some(
+			([, db]) => !db.remoteProxyConnectionString
+		);
+		if (hasLocal) {
+			services.push({
+				name: D1_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(D1_DATABASE_OBJECT),
+			});
 		}
+
+		// One shared proxy service for all remote (mixed-mode) databases.
+		const hasRemote = databases.some(
+			([, db]) => db.remoteProxyConnectionString
+		);
 		if (hasRemote) {
 			services.push({
 				name: D1_REMOTE_SERVICE_NAME,
@@ -142,7 +151,6 @@ export const D1_PLUGIN: Plugin<
 			});
 		}
 
-		const hasLocal = services.some((s) => s.name !== D1_REMOTE_SERVICE_NAME);
 		if (hasLocal) {
 			const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(

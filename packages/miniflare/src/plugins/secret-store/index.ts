@@ -5,6 +5,7 @@ import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
+	buildObjectEntryProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
@@ -32,6 +33,9 @@ export const SecretsStoreSecretsSharedOptionsSchema = z.object({
 });
 
 export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
+// A single entry service shared by every secret store. Each store_id is supplied
+// per-binding via `ctx.props`, so one service serves all of them.
+const SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME = `${SECRET_STORE_PLUGIN_NAME}:ns:entry`;
 
 export const SECRET_STORE_PLUGIN: Plugin<
 	typeof SecretsStoreSecretsOptionsSchema,
@@ -133,49 +137,44 @@ export const SECRET_STORE_PLUGIN: Plugin<
 				],
 			},
 		} satisfies Service;
-		const services = configs.flatMap<Service>((config) => {
-			const kvNamespaceService = {
-				name: `${SECRET_STORE_PLUGIN_NAME}:ns:${config.store_id}`,
-				worker: objectEntryWorker(
+		// One shared entry service; each store_id is supplied per-binding via props.
+		const entryService = {
+			name: SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME,
+			worker: objectEntryWorker({
+				serviceName: objectService.name,
+				className: KV_NAMESPACE_OBJECT_CLASS_NAME,
+			}),
+		} satisfies Service;
+		const secretServices = configs.map<Service>((config) => ({
+			name: getUserBindingServiceName(
+				SECRET_STORE_PLUGIN_NAME,
+				`${config.store_id}:${config.secret_name}`
+			),
+			worker: {
+				compatibilityDate: "2025-01-01",
+				modules: [
 					{
-						serviceName: objectService.name,
-						className: KV_NAMESPACE_OBJECT_CLASS_NAME,
+						name: "secret.worker.js",
+						esModule: SCRIPT_SECRETS_STORE_SECRET(),
 					},
-					config.store_id
-				),
-			} satisfies Service;
-			const secretStoreSecretService = {
-				name: getUserBindingServiceName(
-					SECRET_STORE_PLUGIN_NAME,
-					`${config.store_id}:${config.secret_name}`
-				),
-				worker: {
-					compatibilityDate: "2025-01-01",
-					modules: [
-						{
-							name: "secret.worker.js",
-							esModule: SCRIPT_SECRETS_STORE_SECRET(),
+				],
+				bindings: [
+					{
+						name: "store",
+						kvNamespace: {
+							name: SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME,
+							props: buildObjectEntryProps(config.store_id),
 						},
-					],
-					bindings: [
-						{
-							name: "store",
-							kvNamespace: {
-								name: kvNamespaceService.name,
-							},
-						},
-						{
-							name: "secret_name",
-							json: JSON.stringify(config.secret_name),
-						},
-					],
-				},
-			} satisfies Service;
+					},
+					{
+						name: "secret_name",
+						json: JSON.stringify(config.secret_name),
+					},
+				],
+			},
+		}));
 
-			return [kvNamespaceService, secretStoreSecretService];
-		});
-
-		return [...services, storageService, objectService];
+		return [...secretServices, entryService, storageService, objectService];
 	},
 	getPersistPath({ secretsStorePersist }, tmpPath) {
 		return getPersistPath(
