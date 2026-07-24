@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { appendFile, readdir, stat, unlink } from "node:fs/promises";
+import { appendFile, readdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import {
@@ -40,6 +40,24 @@ function getDebugFilepath() {
 }
 
 /**
+ * Parses the timestamp encoded in a wrangler log filename.
+ */
+function parseLogFileTimestamp(filename: string): number | undefined {
+	const match =
+		/^wrangler-(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})-(\d{2})_(\d{3})\.log$/.exec(
+			filename
+		);
+	if (!match) {
+		return undefined;
+	}
+	const [, date, hours, minutes, seconds, milliseconds] = match;
+	const timestamp = Date.parse(
+		`${date}T${hours}:${minutes}:${seconds}.${milliseconds}Z`
+	);
+	return Number.isNaN(timestamp) ? undefined : timestamp;
+}
+
+/**
  * Deletes wrangler-*.log files older than 30 days from the given log directory.
  * Runs silently — errors are ignored so startup is never blocked by log cleanup.
  */
@@ -53,16 +71,13 @@ export async function cleanupOldLogFiles(logsDir: string): Promise<void> {
 	try {
 		const files = await readdir(logsDir);
 		const now = Date.now();
-		for (const f of files.filter(
-			(filename) =>
-				filename.startsWith("wrangler-") && filename.endsWith(".log")
-		)) {
-			const filePath = path.join(logsDir, f);
+		for (const f of files) {
+			const timestamp = parseLogFileTimestamp(f);
+			if (timestamp === undefined || now - timestamp <= cutoffMs) {
+				continue;
+			}
 			try {
-				const fileStat = await stat(filePath);
-				if (now - fileStat.mtimeMs > cutoffMs) {
-					await unlink(filePath);
-				}
+				await unlink(path.join(logsDir, f));
 			} catch {
 				// silently ignore errors for individual files
 			}

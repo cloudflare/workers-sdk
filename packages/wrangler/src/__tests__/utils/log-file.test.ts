@@ -5,7 +5,6 @@ import {
 	readFileSync,
 	writeFileSync,
 } from "node:fs";
-import { utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
@@ -136,13 +135,21 @@ describe("appendToDebugLogFile", () => {
 describe("cleanupOldLogFiles", () => {
 	runInTempDir();
 
-	async function createLogFile(logsDir: string, name: string, ageDays: number) {
+	/** Builds a wrangler log filename encoding a timestamp `ageDays` in the past. */
+	function logFileNameForAge(ageDays: number) {
+		const date = new Date(Date.now() - ageDays * 24 * 60 * 60 * 1000)
+			.toISOString()
+			.replaceAll(":", "-")
+			.replace(".", "_")
+			.replace("T", "_")
+			.replace("Z", "");
+		return `wrangler-${date}.log`;
+	}
+
+	function createLogFile(logsDir: string, name: string) {
 		mkdirSync(logsDir, { recursive: true });
 		const filePath = join(logsDir, name);
 		writeFileSync(filePath, "test log content");
-		// Set the file's modification time to simulate its age
-		const mtime = new Date(Date.now() - ageDays * 24 * 60 * 60 * 1000);
-		await utimes(filePath, mtime, mtime);
 		return filePath;
 	}
 
@@ -150,15 +157,13 @@ describe("cleanupOldLogFiles", () => {
 		expect,
 	}) => {
 		const logsDir = "test-logs";
-		const oldFile = await createLogFile(
+		const oldFile = createLogFile(
 			logsDir,
-			"wrangler-old.log",
-			31 // 31 days old — should be deleted
+			logFileNameForAge(31) // 31 days old — should be deleted
 		);
-		const recentFile = await createLogFile(
+		const recentFile = createLogFile(
 			logsDir,
-			"wrangler-recent.log",
-			10 // 10 days old — should be kept
+			logFileNameForAge(10) // 10 days old — should be kept
 		);
 
 		await cleanupOldLogFiles(logsDir);
@@ -169,11 +174,22 @@ describe("cleanupOldLogFiles", () => {
 
 	it("should not delete non-wrangler log files", async ({ expect }) => {
 		const logsDir = "test-logs-other";
-		const otherFile = await createLogFile(logsDir, "other-app.log", 10);
+		const otherFile = createLogFile(logsDir, "other-app.log");
 
 		await cleanupOldLogFiles(logsDir);
 
 		expect(existsSync(otherFile)).toBe(true);
+	});
+
+	it("should keep wrangler log files whose name has no parseable timestamp", async ({
+		expect,
+	}) => {
+		const logsDir = "test-logs-unparseable";
+		const oddFile = createLogFile(logsDir, "wrangler-not-a-date.log");
+
+		await cleanupOldLogFiles(logsDir);
+
+		expect(existsSync(oddFile)).toBe(true);
 	});
 
 	it("should silently succeed if the logs directory does not exist", async ({

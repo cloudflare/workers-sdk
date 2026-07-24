@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.18.8
+
+### Patch Changes
+
+- [#14793](https://github.com/cloudflare/workers-sdk/pull/14793) [`7b3fea6`](https://github.com/cloudflare/workers-sdk/commit/7b3fea69d6001c993887c3eff04d134d2485390f) Thanks [@trafgals](https://github.com/trafgals)! - Prevent worker disposal errors from failing otherwise successful test runs
+
+  Errors raised while disposing test Workers are now logged for diagnostics rather than overriding the test result. Set `NODE_DEBUG=vitest-pool-workers` to view these errors.
+
+- Updated dependencies [[`246ce92`](https://github.com/cloudflare/workers-sdk/commit/246ce92d1d24974678eb23a03290f9391fe9b272), [`c38a2c3`](https://github.com/cloudflare/workers-sdk/commit/c38a2c358ef5c8628ce26fa8c62f002dda0dcb3d), [`8416b33`](https://github.com/cloudflare/workers-sdk/commit/8416b33d9ba0109195ce8fd5a0c185366c41af5a), [`c079ba3`](https://github.com/cloudflare/workers-sdk/commit/c079ba33f1df98e38f7cebc82a64886a7e495879), [`4683ff8`](https://github.com/cloudflare/workers-sdk/commit/4683ff8aa72e1ba559108f7074d8f6aa5d73eaaa), [`95b026e`](https://github.com/cloudflare/workers-sdk/commit/95b026edfdf0c6b6e40994cd8fa06a350bc868f2), [`02232f3`](https://github.com/cloudflare/workers-sdk/commit/02232f348002d8dc002c108ac7095119d34d1b35), [`c4bacec`](https://github.com/cloudflare/workers-sdk/commit/c4bacec349f2d6e1bf4115f22a4b4eaca62cd0fc), [`f8a8c2c`](https://github.com/cloudflare/workers-sdk/commit/f8a8c2c0001c669a731b947755bb68208d7e6f43), [`3203b5d`](https://github.com/cloudflare/workers-sdk/commit/3203b5d34488b2b14d6066db705acef267d1229a)]:
+  - wrangler@4.114.0
+  - miniflare@4.20260722.0
+
 ## 0.18.7
 
 ### Patch Changes

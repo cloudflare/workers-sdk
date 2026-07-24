@@ -227,7 +227,7 @@ describe("ensureImageFitsLimits", () => {
 				imageTag: "docker.io/test-app:tag",
 			})
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Image too large: needs 3146MB, but your app is limited to images with size 2000MB. Your need more disk for this image.]`
+			`[Error: Image too large: needs 3146MB, but your app is limited to images with size 2000MB. You need more disk for this image.]`
 		);
 
 		expect(dockerImageInspect).toHaveBeenCalledExactlyOnceWith(

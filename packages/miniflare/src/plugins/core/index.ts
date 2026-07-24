@@ -56,6 +56,8 @@ import {
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
 	getUserServiceName,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+	OBSERVABILITY_COMPAT_FLAGS,
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
@@ -73,6 +75,7 @@ import {
 	SourceOptionsSchema,
 	withSourceURL,
 } from "./modules";
+import { getObservabilityServices } from "./observability";
 import { PROXY_SECRET } from "./proxy";
 import {
 	CustomFetchServiceSchema,
@@ -300,6 +303,14 @@ export const CoreSharedOptionsSchema = z
 			.returns(z.void())
 			.optional(),
 
+		// Called after Miniflare has automatically restarted the `workerd`
+		// runtime following an unexpected crash. Lets embedders (e.g. the Vite
+		// plugin) re-establish any state that lived in the crashed process,
+		// such as module runners created over a separate bootstrap channel.
+		unsafeHandleRuntimeRestart: z
+			.custom<() => Awaitable<void>>((value) => typeof value === "function")
+			.optional(),
+
 		// Deliberately not `z.function()`: parsing that schema replaces the
 		// callback with a validating wrapper. When the callback is `async`
 		// (assignable to a `void` return), the wrapper calls it, rejects the
@@ -341,6 +352,9 @@ export const CoreSharedOptionsSchema = z
 		unsafeRuntimeEnv: z.record(z.string()).optional(),
 		// Enable the local explorer at /cdn-cgi/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
+		// Turn on local-dev observability: attach the trace collector to the
+		// user's worker(s) so it receives their tail events.
+		unsafeObservability: z.boolean().optional(),
 		// Enable RPC-based Durable Object introspection APIs
 		unsafeInspectDurableObjects: z.boolean().optional(),
 		// Enable logging requests
@@ -861,6 +875,39 @@ export const CORE_PLUGIN: Plugin<
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
 
+		// When local observability is on, attach the collector to every user worker
+		// (as a tail consumer) and add the compatibility flags workerd needs to emit
+		// those tail events. This is done here so wrangler and the Vite plugin don't
+		// each have to repeat it. Wrapped bindings aren't real workers and reject
+		// compatibility flags, so they're skipped.
+		const observabilityEnabled =
+			sharedOptions.unsafeObservability === true && !isWrappedBinding;
+		const streamingTails = observabilityEnabled
+			? [
+					...(options.streamingTails ?? []),
+					// Pass the worker's name to the collector via binding props. workerd
+					// doesn't populate the tail onset's `scriptName` locally, so this is
+					// how the collector attributes each captured invocation to its worker
+					// (each worker streams to the collector with its own props).
+					{
+						name: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+						props: { worker: name },
+					},
+				]
+			: options.streamingTails;
+		// Only add the flags the worker doesn't already declare. A worker that sets
+		// e.g. `streaming_tail_worker` itself (some do) would otherwise have it
+		// listed twice, which workerd rejects ("specified multiple times").
+		const existingFlags = options.compatibilityFlags ?? [];
+		const compatibilityFlags = observabilityEnabled
+			? [
+					...existingFlags,
+					...OBSERVABILITY_COMPAT_FLAGS.filter(
+						(flag) => !existingFlags.includes(flag)
+					),
+				]
+			: options.compatibilityFlags;
+
 		if (isWrappedBinding) {
 			const stringName = JSON.stringify(name);
 			function invalidWrapped(reason: string): never {
@@ -919,7 +966,7 @@ export const CORE_PLUGIN: Plugin<
 				worker: {
 					...workerScript,
 					compatibilityDate,
-					compatibilityFlags: options.compatibilityFlags,
+					compatibilityFlags,
 					bindings: workerBindings,
 					durableObjectNamespaces:
 						classNamesEntries.map<Worker_DurableObjectNamespace>(
@@ -978,18 +1025,16 @@ export const CORE_PLUGIN: Plugin<
 							options.hasAssetsAndIsVitest
 						);
 					}),
-					streamingTails: options.streamingTails?.map<ServiceDesignator>(
-						(service) => {
-							return getCustomServiceDesignator(
-								/* referrer */ options.name,
-								workerIndex,
-								CustomServiceKind.UNKNOWN,
-								name,
-								service,
-								options.hasAssetsAndIsVitest
-							);
-						}
-					),
+					streamingTails: streamingTails?.map<ServiceDesignator>((service) => {
+						return getCustomServiceDesignator(
+							/* referrer */ options.name,
+							workerIndex,
+							CustomServiceKind.UNKNOWN,
+							name,
+							service,
+							options.hasAssetsAndIsVitest
+						);
+					}),
 					containerEngine: getContainerEngine(options.containerEngine),
 				},
 			});
@@ -1018,7 +1063,7 @@ export const CORE_PLUGIN: Plugin<
 			if (maybeService !== undefined) services.push(maybeService);
 		}
 
-		for (const service of options.streamingTails ?? []) {
+		for (const service of streamingTails ?? []) {
 			const maybeService = maybeGetCustomServiceService(
 				workerIndex,
 				CustomServiceKind.UNKNOWN,
@@ -1310,7 +1355,16 @@ export function getGlobalServices({
 				workerNames,
 				explorerWorkerOpts,
 				telemetry: sharedOptions.telemetry,
+				observabilityEnabled: sharedOptions.unsafeObservability === true,
 			})
+		);
+	}
+
+	// Register the trace collector service. It's attached to each user worker's
+	// tail above.
+	if (sharedOptions.unsafeObservability) {
+		services.push(
+			...getObservabilityServices(tmpPath, sharedOptions.defaultPersistRoot)
 		);
 	}
 
