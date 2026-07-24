@@ -192,10 +192,11 @@ export default async function versionsUpload(
 		cache: config.cache, // cache is a versioned setting
 		package_dependencies:
 			config.dependencies_instrumentation?.enabled !== false && projectRoot
-				? await collectPackageDependencies(
-						projectRoot,
-						config.dependencies_instrumentation?.exclude_packages
-					)
+				? await collectPackageDependencies(projectRoot, {
+						excludePackages:
+							config.dependencies_instrumentation?.exclude_packages,
+						cacheDir: props.cacheDir,
+					})
 				: undefined,
 	};
 

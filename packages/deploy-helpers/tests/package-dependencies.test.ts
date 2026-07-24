@@ -328,9 +328,9 @@ describe("collectPackageDependencies", () => {
 				)
 			);
 
-			const result = await collectPackageDependencies(process.cwd(), [
-				"exclude-me",
-			]);
+			const result = await collectPackageDependencies(process.cwd(), {
+				excludePackages: ["exclude-me"],
+			});
 
 			expect(result).toEqual([
 				{
@@ -372,9 +372,9 @@ describe("collectPackageDependencies", () => {
 				)
 			);
 
-			const result = await collectPackageDependencies(process.cwd(), [
-				"*-utils",
-			]);
+			const result = await collectPackageDependencies(process.cwd(), {
+				excludePackages: ["*-utils"],
+			});
 
 			expect(result).toEqual([
 				{
@@ -418,9 +418,9 @@ describe("collectPackageDependencies", () => {
 				)
 			);
 
-			const result = await collectPackageDependencies(process.cwd(), [
-				"@internal/*",
-			]);
+			const result = await collectPackageDependencies(process.cwd(), {
+				excludePackages: ["@internal/*"],
+			});
 
 			expect(result).toEqual([
 				{
@@ -458,7 +458,9 @@ describe("collectPackageDependencies", () => {
 				)
 			);
 
-			const result = await collectPackageDependencies(process.cwd(), []);
+			const result = await collectPackageDependencies(process.cwd(), {
+				excludePackages: [],
+			});
 
 			expect(result).toEqual([
 				{
@@ -496,10 +498,9 @@ describe("collectPackageDependencies", () => {
 				)
 			);
 
-			const result = await collectPackageDependencies(process.cwd(), [
-				"@other/*",
-				"unrelated-*",
-			]);
+			const result = await collectPackageDependencies(process.cwd(), {
+				excludePackages: ["@other/*", "unrelated-*"],
+			});
 
 			expect(result).toEqual([
 				{
@@ -554,9 +555,9 @@ describe("collectPackageDependencies", () => {
 				)
 			);
 
-			const result = await collectPackageDependencies(process.cwd(), [
-				"excluded-pkg",
-			]);
+			const result = await collectPackageDependencies(process.cwd(), {
+				excludePackages: ["excluded-pkg"],
+			});
 
 			assert(result);
 			expect(result).toHaveLength(200);
@@ -599,10 +600,9 @@ describe("collectPackageDependencies", () => {
 				)
 			);
 
-			const result = await collectPackageDependencies(process.cwd(), [
-				"@internal/*",
-				"secret-*",
-			]);
+			const result = await collectPackageDependencies(process.cwd(), {
+				excludePackages: ["@internal/*", "secret-*"],
+			});
 
 			expect(result).toEqual([
 				{
@@ -659,5 +659,281 @@ describe("collectPackageDependencies", () => {
 				installedVersion: "1.5.0",
 			},
 		]);
+	});
+
+	describe("caching", () => {
+		/**
+		 * Sets up a minimal project with a single installed npm package in node_modules.
+		 *
+		 * @param cwd - The directory to set up the project in
+		 * @param opts - Options for the package name, version constraint, and installed version
+		 */
+		function seedProjectWithPackage(
+			cwd: string,
+			opts: {
+				packageName?: string;
+				packageJsonVersion?: string;
+				installedVersion?: string;
+			} = {}
+		) {
+			const {
+				packageName = "test-pkg",
+				packageJsonVersion = "^1.0.0",
+				installedVersion = "1.0.0",
+			} = opts;
+			const nodeModulesPath = path.join(cwd, "node_modules");
+			const pkgPath = path.join(nodeModulesPath, packageName);
+			fs.mkdirSync(pkgPath, { recursive: true });
+			fs.writeFileSync(path.join(pkgPath, "index.js"), "module.exports = {}");
+			fs.writeFileSync(
+				path.join(pkgPath, "package.json"),
+				JSON.stringify(
+					{ name: packageName, version: installedVersion },
+					null,
+					2
+				)
+			);
+			fs.writeFileSync(
+				path.join(cwd, "package.json"),
+				JSON.stringify(
+					{
+						name: "test-project",
+						dependencies: { [packageName]: packageJsonVersion },
+					},
+					null,
+					2
+				)
+			);
+		}
+
+		it("should write a cache file and return cached results on second call", async ({
+			expect,
+		}) => {
+			const cwd = process.cwd();
+			const cacheDir = path.join(cwd, ".cache");
+			seedProjectWithPackage(cwd);
+
+			const first = await collectPackageDependencies(cwd, { cacheDir });
+
+			expect(first).toEqual([
+				{
+					name: "test-pkg",
+					packageJsonVersion: "^1.0.0",
+					installedVersion: "1.0.0",
+				},
+			]);
+
+			// Cache file should exist on disk
+			const cachePath = path.join(cacheDir, "package-dependencies.json");
+			expect(fs.existsSync(cachePath)).toBe(true);
+
+			const second = await collectPackageDependencies(cwd, { cacheDir });
+			expect(second).toEqual(first);
+		});
+
+		it("should invalidate cache when package.json changes", async ({
+			expect,
+		}) => {
+			const cwd = process.cwd();
+			const cacheDir = path.join(cwd, ".cache");
+			seedProjectWithPackage(cwd);
+
+			const first = await collectPackageDependencies(cwd, { cacheDir });
+			expect(first).toHaveLength(1);
+
+			// Add a second dependency
+			const newPkgPath = path.join(cwd, "node_modules", "new-pkg");
+			fs.mkdirSync(newPkgPath, { recursive: true });
+			fs.writeFileSync(
+				path.join(newPkgPath, "index.js"),
+				"module.exports = {}"
+			);
+			fs.writeFileSync(
+				path.join(newPkgPath, "package.json"),
+				JSON.stringify({ name: "new-pkg", version: "2.0.0" }, null, 2)
+			);
+			fs.writeFileSync(
+				path.join(cwd, "package.json"),
+				JSON.stringify(
+					{
+						name: "test-project",
+						dependencies: {
+							"test-pkg": "^1.0.0",
+							"new-pkg": "^2.0.0",
+						},
+					},
+					null,
+					2
+				)
+			);
+
+			const second = await collectPackageDependencies(cwd, { cacheDir });
+			expect(second).toHaveLength(2);
+			expect(second).toEqual(
+				expect.arrayContaining([expect.objectContaining({ name: "new-pkg" })])
+			);
+		});
+
+		it("should invalidate cache when lockfile content changes", async ({
+			expect,
+		}) => {
+			const cwd = process.cwd();
+			const cacheDir = path.join(cwd, ".cache");
+			seedProjectWithPackage(cwd);
+
+			// Create a lockfile
+			fs.writeFileSync(
+				path.join(cwd, "package-lock.json"),
+				JSON.stringify({ lockfileVersion: 1 })
+			);
+
+			const first = await collectPackageDependencies(cwd, { cacheDir });
+			expect(first).toHaveLength(1);
+
+			// Modify the lockfile content (simulates a new `npm install`)
+			fs.writeFileSync(
+				path.join(cwd, "package-lock.json"),
+				JSON.stringify({ lockfileVersion: 2 })
+			);
+
+			// Update the installed version to verify the cache was really invalidated
+			fs.writeFileSync(
+				path.join(cwd, "node_modules", "test-pkg", "package.json"),
+				JSON.stringify({ name: "test-pkg", version: "1.0.1" }, null, 2)
+			);
+
+			const second = await collectPackageDependencies(cwd, { cacheDir });
+			expect(second).toEqual([
+				{
+					name: "test-pkg",
+					packageJsonVersion: "^1.0.0",
+					installedVersion: "1.0.1",
+				},
+			]);
+		});
+
+		it("should work when no lockfile exists", async ({ expect }) => {
+			const cwd = process.cwd();
+			const cacheDir = path.join(cwd, ".cache");
+			seedProjectWithPackage(cwd);
+
+			// No lockfile present — cache should still work based on package.json hash
+			const first = await collectPackageDependencies(cwd, { cacheDir });
+			expect(first).toHaveLength(1);
+
+			const second = await collectPackageDependencies(cwd, { cacheDir });
+			expect(second).toEqual(first);
+		});
+
+		it("should detect lockfile in a parent directory (monorepo)", async ({
+			expect,
+		}) => {
+			const cwd = process.cwd();
+
+			// Simulate a monorepo: lockfile at workspace root, sub-package below
+			const subPkg = path.join(cwd, "packages", "my-worker");
+			fs.mkdirSync(subPkg, { recursive: true });
+
+			// Lockfile lives at the workspace root (cwd), not in the sub-package
+			fs.writeFileSync(
+				path.join(cwd, "pnpm-lock.yaml"),
+				"lockfileVersion: 9.0"
+			);
+
+			// Set up the sub-package with a dependency
+			seedProjectWithPackage(subPkg);
+
+			const cacheDir = path.join(subPkg, ".cache");
+			const first = await collectPackageDependencies(subPkg, { cacheDir });
+			expect(first).toHaveLength(1);
+
+			// Second call should hit cache
+			const second = await collectPackageDependencies(subPkg, { cacheDir });
+			expect(second).toEqual(first);
+
+			// Changing the root lockfile content should invalidate the cache
+			fs.writeFileSync(
+				path.join(cwd, "pnpm-lock.yaml"),
+				"lockfileVersion: 9.1"
+			);
+
+			// Update installed version to prove cache was invalidated
+			fs.writeFileSync(
+				path.join(subPkg, "node_modules", "test-pkg", "package.json"),
+				JSON.stringify({ name: "test-pkg", version: "1.0.1" }, null, 2)
+			);
+
+			const third = await collectPackageDependencies(subPkg, { cacheDir });
+			expect(third).toEqual([
+				{
+					name: "test-pkg",
+					packageJsonVersion: "^1.0.0",
+					installedVersion: "1.0.1",
+				},
+			]);
+		});
+
+		it("should handle corrupted cache file gracefully", async ({ expect }) => {
+			const cwd = process.cwd();
+			const cacheDir = path.join(cwd, ".cache");
+			seedProjectWithPackage(cwd);
+
+			// Write invalid JSON to the cache file
+			fs.mkdirSync(cacheDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(cacheDir, "package-dependencies.json"),
+				"NOT VALID JSON{{{{"
+			);
+
+			const result = await collectPackageDependencies(cwd, { cacheDir });
+
+			// Should fall through to fresh collection despite the bad cache
+			expect(result).toEqual([
+				{
+					name: "test-pkg",
+					packageJsonVersion: "^1.0.0",
+					installedVersion: "1.0.0",
+				},
+			]);
+		});
+
+		it("should discard cache with structurally invalid content", async ({
+			expect,
+		}) => {
+			const cwd = process.cwd();
+			const cacheDir = path.join(cwd, ".cache");
+			seedProjectWithPackage(cwd);
+
+			// Write valid JSON that doesn't match the expected cache shape
+			fs.mkdirSync(cacheDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(cacheDir, "package-dependencies.json"),
+				JSON.stringify({ unexpected: "shape", numbers: [1, 2, 3] })
+			);
+
+			const result = await collectPackageDependencies(cwd, { cacheDir });
+
+			// Should fall through to fresh collection despite the bad cache shape
+			expect(result).toEqual([
+				{
+					name: "test-pkg",
+					packageJsonVersion: "^1.0.0",
+					installedVersion: "1.0.0",
+				},
+			]);
+		});
+
+		it("should not cache when cacheDir is not provided", async ({ expect }) => {
+			const cwd = process.cwd();
+			const cacheDir = path.join(cwd, ".cache");
+			seedProjectWithPackage(cwd);
+
+			// Call without cacheDir
+			const result = await collectPackageDependencies(cwd);
+			expect(result).toHaveLength(1);
+
+			// No cache file should exist
+			expect(fs.existsSync(cacheDir)).toBe(false);
+		});
 	});
 });

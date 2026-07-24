@@ -2023,6 +2023,9 @@ importers:
       devtools-protocol:
         specifier: ^0.0.1182435
         version: 0.0.1182435
+      empathic:
+        specifier: ^2.0.0
+        version: 2.0.1
       esbuild:
         specifier: catalog:default
         version: 0.28.1
