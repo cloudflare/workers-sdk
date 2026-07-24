@@ -43,6 +43,9 @@ describe("applyEmailRoutingAddresses", () => {
 	let metadataFailures: number[];
 	let planFailures: APIError[];
 	let planBody: unknown;
+	let holdRuleWrites: boolean;
+	let ruleWriteStarts: string[];
+	let releaseRuleWrites: Array<() => void>;
 
 	beforeEach(() => {
 		plan = { zones: [] };
@@ -58,6 +61,9 @@ describe("applyEmailRoutingAddresses", () => {
 		metadataFailures = [];
 		planFailures = [];
 		planBody = undefined;
+		holdRuleWrites = false;
+		ruleWriteStarts = [];
+		releaseRuleWrites = [];
 
 		initDeployHelpersContext({
 			logger: {
@@ -111,6 +117,12 @@ describe("applyEmailRoutingAddresses", () => {
 		if (init?.method === "POST" && path.endsWith("/email/routing/rules")) {
 			const target = (body as { matchers: { value?: string }[] }).matchers[0]
 				?.value;
+			if (target) {
+				ruleWriteStarts.push(target);
+			}
+			if (holdRuleWrites) {
+				await new Promise<void>((resolve) => releaseRuleWrites.push(resolve));
+			}
 			if (target === failTarget) {
 				throw new Error("duplicate rule");
 			}
@@ -271,6 +283,85 @@ describe("applyEmailRoutingAddresses", () => {
 		]);
 		expect(writes.deletes).toEqual(["old-rule-id"]);
 		expect(confirmRequests).toBe(1);
+	});
+
+	it("applies independent zones concurrently", async ({ expect }) => {
+		holdRuleWrites = true;
+		plan = {
+			zones: [
+				{
+					zone_id: "zone1",
+					changes: [{ type: "added", target: "first@example.com" }],
+				},
+				{
+					zone_id: "zone2",
+					changes: [{ type: "added", target: "second@example.net" }],
+				},
+			],
+		};
+
+		const applying = apply(["first@example.com", "second@example.net"]);
+		await vi.waitFor(() => expect(ruleWriteStarts).toHaveLength(2));
+
+		holdRuleWrites = false;
+		for (const release of releaseRuleWrites) {
+			release();
+		}
+		await applying;
+	});
+
+	it("limits concurrent zone applies", async ({ expect }) => {
+		holdRuleWrites = true;
+		const targets = Array.from(
+			{ length: 11 },
+			(_, index) => `address-${index}@example.com`
+		);
+		plan = {
+			zones: targets.map((target, index) => ({
+				zone_id: `zone${index}`,
+				changes: [{ type: "added", target }],
+			})),
+		};
+
+		const applying = apply(targets);
+		await vi.waitFor(() => expect(ruleWriteStarts).toHaveLength(10));
+
+		holdRuleWrites = false;
+		for (const release of releaseRuleWrites) {
+			release();
+		}
+		await applying;
+		expect(ruleWriteStarts).toHaveLength(11);
+	});
+
+	it("preserves plan order within a zone", async ({ expect }) => {
+		holdRuleWrites = true;
+		plan = {
+			zones: [
+				{
+					zone_id: "zone1",
+					changes: [
+						{ type: "added", target: "first@example.com" },
+						{ type: "added", target: "second@example.com" },
+					],
+				},
+			],
+		};
+
+		const applying = apply(["first@example.com", "second@example.com"]);
+		await vi.waitFor(() =>
+			expect(ruleWriteStarts).toEqual(["first@example.com"])
+		);
+
+		holdRuleWrites = false;
+		for (const release of releaseRuleWrites) {
+			release();
+		}
+		await applying;
+		expect(ruleWriteStarts).toEqual([
+			"first@example.com",
+			"second@example.com",
+		]);
 	});
 
 	it("does not write rules when destructive changes are declined", async ({
