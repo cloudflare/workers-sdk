@@ -2287,7 +2287,7 @@ importers:
         specifier: ^3.721.0
         version: 3.721.0
       '@aws-sdk/s3-request-presigner':
-        specifier: 3.721.0
+        specifier: ^3.721.0
         version: 3.721.0
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
@@ -2806,6 +2806,12 @@ importers:
 
   packages/vite-plugin-cloudflare/playground:
     devDependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.721.0
+        version: 3.721.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.721.0
+        version: 3.721.0
       '@cloudflare/vite-plugin':
         specifier: workspace:*
         version: link:..
@@ -4416,6 +4422,9 @@ importers:
         version: 1.20260722.1
     devDependencies:
       '@aws-sdk/client-s3':
+        specifier: ^3.721.0
+        version: 3.721.0
+      '@aws-sdk/s3-request-presigner':
         specifier: ^3.721.0
         version: 3.721.0
       '@bomb.sh/tab':
