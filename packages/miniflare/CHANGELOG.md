@@ -1,5 +1,21 @@
 # miniflare
 
+## 4.20260722.1
+
+### Minor Changes
+
+- [#14702](https://github.com/cloudflare/workers-sdk/pull/14702) [`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a) Thanks [@Sipixer](https://github.com/Sipixer)! - Support passing V8 flags to `workerd` via the `MINIFLARE_WORKERD_V8_FLAGS` environment variable
+
+  The generated `workerd` config already supports `v8Flags`, but Miniflare never populated it, so the runtime always ran with V8's default heap limit (~1.4 GB). Large dev applications (e.g. big SSR module graphs under `@cloudflare/vite-plugin`, where each server-file edit grows the runner isolate's heap) can reach that limit, at which point `workerd` aborts with `V8 fatal error; location = Reached heap limit` and every subsequent `dispatchFetch()` fails with `fetch failed` until the dev server is manually restarted.
+
+  Setting e.g. `MINIFLARE_WORKERD_V8_FLAGS="--max-old-space-size=4096"` raises the limit and keeps long dev sessions alive. The variable follows the same space-separated format as `MINIFLARE_WORKERD_AUTOGATES`.
+
+- [#14712](https://github.com/cloudflare/workers-sdk/pull/14712) [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1) Thanks [@mack-erel](https://github.com/mack-erel)! - Support `connect()` on remote VPC Network and VPC Service bindings in local development
+
+  Remote VPC Network and VPC Service bindings previously only supported HTTP and JSRPC, so calling `binding.connect(address)` against a private TCP service (for example a database) failed in local dev with `Incoming CONNECT on a worker not supported`. Raw TCP connections through remote VPC Network and VPC Service bindings now work in local development.
+
+  This feature is experimental. Existing HTTP and JSRPC usage of remote VPC Network and VPC Service bindings is unaffected, and no new configuration is required.
+
 ## 4.20260722.0
 
 ### Minor Changes

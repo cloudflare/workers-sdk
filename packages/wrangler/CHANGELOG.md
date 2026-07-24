@@ -1,5 +1,24 @@
 # wrangler
 
+## 4.115.0
+
+### Minor Changes
+
+- [#14712](https://github.com/cloudflare/workers-sdk/pull/14712) [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1) Thanks [@mack-erel](https://github.com/mack-erel)! - Support `connect()` on remote VPC Network and VPC Service bindings in local development
+
+  Remote VPC Network and VPC Service bindings previously only supported HTTP and JSRPC, so calling `binding.connect(address)` against a private TCP service (for example a database) failed in local dev with `Incoming CONNECT on a worker not supported`. Raw TCP connections through remote VPC Network and VPC Service bindings now work in local development.
+
+  This feature is experimental. Existing HTTP and JSRPC usage of remote VPC Network and VPC Service bindings is unaffected, and no new configuration is required.
+
+### Patch Changes
+
+- [#14801](https://github.com/cloudflare/workers-sdk/pull/14801) [`b737676`](https://github.com/cloudflare/workers-sdk/commit/b737676db01a62e115b7fc56b5af36f5daaf5f6e) Thanks [@emily-shen](https://github.com/emily-shen)! - Speed up old debug log cleanup by reading each log file's date from its filename instead of `stat`-ing every file
+
+  Wrangler periodically deletes debug log files older than 30 days from its logs directory. Previously it made a filesystem `stat` call for each file to read its modification time; it now derives the age from the timestamp already encoded in the log filename, avoiding that extra work.
+
+- Updated dependencies [[`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a), [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1)]:
+  - miniflare@4.20260722.1
+
 ## 4.114.0
 
 ### Minor Changes

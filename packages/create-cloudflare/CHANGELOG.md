@@ -1,5 +1,23 @@
 # create-cloudflare
 
+## 2.70.15
+
+### Patch Changes
+
+- [#14767](https://github.com/cloudflare/workers-sdk/pull/14767) [`3a141ed`](https://github.com/cloudflare/workers-sdk/commit/3a141ed118b7ed58301c9be57517167ddff10d50) Thanks [@jasoncabot](https://github.com/jasoncabot)! - Fix `git commit` hanging when `commit.gpgsign` is enabled
+
+  If you have GPG commit signing configured with a passphrase-protected key, the initial commit created during project setup would appear to hang: the passphrase prompt couldn't get keyboard input because it had to compete with C3's own progress output for control of the terminal. The only way out was Ctrl+C, which also skipped the rest of setup, including the prompt to deploy your new project.
+
+  `git commit` now runs the same way it would if you ran it yourself, so passphrase-protected signing keys work as expected. A failure while staging files is also now reported correctly instead of leaving the progress indicator spinning indefinitely.
+
+- [#14758](https://github.com/cloudflare/workers-sdk/pull/14758) [`b8b60f2`](https://github.com/cloudflare/workers-sdk/commit/b8b60f210f84ff06ede3057550eac53dace89893) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.69.5 | 0.69.6 |
+
 ## 2.70.14
 
 ### Patch Changes
