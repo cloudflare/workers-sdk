@@ -4135,12 +4135,35 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	experimental(
+		diagnostics,
+		value as { experimental_local_s3_credentials?: unknown },
+		"experimental_local_s3_credentials"
+	);
+	if (hasProperty(value, "experimental_local_s3_credentials")) {
+		const credentials = value.experimental_local_s3_credentials;
+		if (
+			typeof credentials !== "object" ||
+			credentials === null ||
+			!isRequiredProperty(credentials, "accessKeyId", "string") ||
+			!isRequiredProperty(credentials, "secretAccessKey", "string")
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an "experimental_local_s3_credentials" field with string "accessKeyId" and "secretAccessKey" fields, but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
 		"remote",
+		"experimental_local_s3_credentials",
 	]);
 
 	return isValid;

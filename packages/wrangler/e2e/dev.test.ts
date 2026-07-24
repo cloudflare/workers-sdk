@@ -4,9 +4,23 @@ import { readFile } from "node:fs/promises";
 import * as nodeNet from "node:net";
 import { setTimeout } from "node:timers/promises";
 import { stripVTControlCharacters } from "node:util";
+import {
+	GetObjectCommand,
+	PutObjectCommand,
+	S3Client,
+	S3ServiceException,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	it,
+	onTestFinished,
+	vi,
+} from "vitest";
 import {
 	CLOUDFLARE_ACCOUNT_ID,
 	E2E_ACCOUNT_WORKERS_DEV_DOMAIN,
@@ -2607,6 +2621,101 @@ This is a random email body.
 			This is a random email body.
 			"
 		`);
+	});
+});
+
+describe("r2 local S3-compatible API", () => {
+	// Regression test for SigV4 verification through the dev server routing:
+	// signatures cover the exact host, path, and query the client sent, so any
+	// rewriting between the client and the S3 worker breaks verification.
+	it("verifies SigV4 requests proxied through wrangler dev", async ({
+		expect,
+	}) => {
+		const credentials = {
+			accessKeyId: "A".repeat(32),
+			secretAccessKey: "local-secret-access-key",
+		};
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2025-03-17"
+
+					[[r2_buckets]]
+					binding = "BUCKET"
+					bucket_name = "s3-test-bucket"
+
+					[r2_buckets.experimental_local_s3_credentials]
+					accessKeyId = "${credentials.accessKeyId}"
+					secretAccessKey = "${credentials.secretAccessKey}"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						fetch() {
+							return new Response(null, { status: 404 });
+						}
+					}
+			`,
+		});
+
+		const worker = helper.runLongLived(
+			"wrangler dev --port=0 --inspector-port=0"
+		);
+		const { url } = await worker.waitForReady();
+
+		function s3Client(secretAccessKey = credentials.secretAccessKey) {
+			const client = new S3Client({
+				region: "auto",
+				endpoint: `${url}/cdn-cgi/local/r2/s3`,
+				credentials: { ...credentials, secretAccessKey },
+				forcePathStyle: true,
+			});
+			// The SDK sends `Expect: 100-continue` on requests with bodies, but
+			// workerd never responds with `100 Continue`, so the SDK would wait
+			// for it indefinitely before sending the body
+			client.middlewareStack.remove("addExpectContinueMiddleware");
+			onTestFinished(() => client.destroy());
+			return client;
+		}
+
+		const client = s3Client();
+		await client.send(
+			new PutObjectCommand({
+				Bucket: "s3-test-bucket",
+				Key: "key.txt",
+				Body: "body contents",
+			})
+		);
+		const object = await client.send(
+			new GetObjectCommand({ Bucket: "s3-test-bucket", Key: "key.txt" })
+		);
+		await expect(object.Body?.transformToString()).resolves.toBe(
+			"body contents"
+		);
+
+		// Presigned URLs authenticate via query parameters instead of the
+		// `Authorization` header, so exercise that path through the proxy too
+		const presignedUrl = await getSignedUrl(
+			client,
+			new GetObjectCommand({ Bucket: "s3-test-bucket", Key: "key.txt" }),
+			{ expiresIn: 300 }
+		);
+		const presignedResponse = await fetch(presignedUrl);
+		expect(presignedResponse.status).toBe(200);
+		await expect(presignedResponse.text()).resolves.toBe("body contents");
+
+		// Verification must still reject bad signatures (i.e. requests are
+		// not implicitly trusted for having come through the dev server)
+		const error = await s3Client("wrong")
+			.send(new GetObjectCommand({ Bucket: "s3-test-bucket", Key: "key.txt" }))
+			.then(
+				() => undefined,
+				(e: unknown) => e
+			);
+		assert(error instanceof S3ServiceException);
+		expect(error.$metadata.httpStatusCode).toBe(403);
+		expect(error.name).toBe("SignatureDoesNotMatch");
 	});
 });
 

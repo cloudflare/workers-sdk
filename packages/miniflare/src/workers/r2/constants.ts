@@ -8,6 +8,19 @@ export const R2Limits = {
 	MIN_MULTIPART_PART_SIZE_TEST: 50,
 } as const;
 
+/** AWS SigV4 credentials guarding a bucket on the local S3 endpoint */
+export interface S3Credentials {
+	accessKeyId: string;
+	secretAccessKey: string;
+}
+
+export const R2S3Bindings = {
+	/** JSON map of bucket id to `{ accessKeyId, secretAccessKey }` */
+	JSON_CREDENTIALS: "MINIFLARE_R2_S3_CREDENTIALS",
+	/** Prefix for per-bucket `R2Bucket` bindings (followed by the bucket id) */
+	BUCKET_PREFIX: "MINIFLARE_R2_S3_BUCKET_",
+} as const;
+
 export const R2Headers = {
 	ERROR: "cf-r2-error",
 	REQUEST: "cf-r2-request",

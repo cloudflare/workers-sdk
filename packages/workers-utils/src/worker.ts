@@ -1,6 +1,7 @@
 import type {
 	CacheOptions,
 	Exports,
+	LocalS3Credentials,
 	Observability,
 	Route,
 } from "./config/environment";
@@ -214,6 +215,8 @@ export interface CfR2Bucket {
 	jurisdiction?: string;
 	remote?: boolean;
 	raw?: boolean;
+	/** EXPERIMENTAL: credentials for the local S3-compatible endpoint */
+	experimental_local_s3_credentials?: LocalS3Credentials;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
