@@ -5,7 +5,7 @@ import {
 	PagesFunctionsErrorCode,
 } from "./filepath-routing";
 import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
-import type { UrlPath } from "../paths";
+import type { UrlPath } from "@cloudflare/workers-utils";
 
 export type HTTPMethod =
 	| "HEAD"

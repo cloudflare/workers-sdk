@@ -171,3 +171,6 @@ export {
 	getWorkerName,
 	getWorkerNameFromProject,
 } from "./worker-name";
+
+export { toUrlPath } from "./url-path";
+export type { UrlPath } from "./url-path";

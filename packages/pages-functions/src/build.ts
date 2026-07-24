@@ -2,16 +2,15 @@ import crypto from "node:crypto";
 import { access, cp, lstat, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { removeDir } from "@cloudflare/workers-utils";
+import { removeDir, toUrlPath } from "@cloudflare/workers-utils";
 import * as esbuild from "esbuild";
-import { toUrlPath } from "./paths";
 import {
 	generateConfigFromFileTree,
 	writeRoutesModule,
 	convertRoutesToRoutesJSONSpec,
 } from "./routing";
-import type { UrlPath } from "./paths";
 import type { Config, RouteConfig, RoutesJSONSpec } from "./routing";
+import type { UrlPath } from "@cloudflare/workers-utils";
 
 /**
  * Options for compiling a Pages Functions directory into a Worker.
