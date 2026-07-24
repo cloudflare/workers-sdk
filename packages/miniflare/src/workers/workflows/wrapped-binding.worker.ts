@@ -3,6 +3,7 @@ import type {
 	WorkflowInstanceRestartOptions,
 	WorkflowInstanceTerminateOptions,
 } from "@cloudflare/workflows-shared/src/binding";
+import type { WorkflowBatchDeleteResult } from "@cloudflare/workflows-shared/src/types";
 import type { WorkflowIntrospectionOperation } from "@cloudflare/workflows-shared/src/types";
 
 class WorkflowImpl implements Workflow {
@@ -32,6 +33,10 @@ class WorkflowImpl implements Workflow {
 		return result.map((res) => {
 			return new InstanceImpl(res.id, this.binding);
 		});
+	}
+
+	async deleteBatch(instanceIds: string[]): Promise<WorkflowBatchDeleteResult> {
+		return this.binding.deleteBatch({ instances: instanceIds });
 	}
 
 	async unsafeGetBindingName(): Promise<string> {
@@ -122,6 +127,12 @@ class InstanceImpl implements WorkflowInstance {
 	): Promise<void> {
 		using instance = await this.getInstance();
 		await instance.restart(options);
+	}
+
+	public async delete(): Promise<void> {
+		using instance = await this.getInstance();
+		// TODO(vaish): remove cast once @cloudflare/workers-types ships instance delete
+		await (instance as unknown as { delete(): Promise<void> }).delete();
 	}
 
 	public async status(): Promise<InstanceStatus> {

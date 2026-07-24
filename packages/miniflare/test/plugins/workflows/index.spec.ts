@@ -169,6 +169,18 @@ export default {
 		return Response.json(await instance.status());
 	}
 
+	if (url.pathname === "/delete") {
+		const instance = await env.LIFECYCLE_WORKFLOW.get(id);
+		await instance.delete();
+		return Response.json({ ok: true });
+	}
+
+	if (url.pathname === "/deleteBatch") {
+		return Response.json(
+			await env.LIFECYCLE_WORKFLOW.deleteBatch(url.searchParams.getAll("id"))
+		);
+	}
+
 		if (url.pathname === "/sendEvent") {
 			const instance = await env.LIFECYCLE_WORKFLOW.get(id);
 			await instance.sendEvent({ type: "continue", payload: { sent: true } });
@@ -303,6 +315,43 @@ describe("workflow instance lifecycle methods", () => {
 		expect(terminateData).toHaveProperty("status");
 
 		await waitForStatus(mf, "terminate-test", "terminated");
+	});
+
+	test("delete a workflow", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare(lifecycleMiniflareOpts(tmp));
+		useDispose(mf);
+
+		const createResponse = await mf.dispatchFetch(
+			"http://localhost/create?id=delete-one"
+		);
+		await createResponse.text();
+
+		const deleteResponse = await mf.dispatchFetch(
+			"http://localhost/delete?id=delete-one"
+		);
+		expect(await deleteResponse.json()).toEqual({ ok: true });
+	});
+
+	test("delete multiple workflows", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare(lifecycleMiniflareOpts(tmp));
+		useDispose(mf);
+
+		for (const id of ["delete-1", "delete-2"]) {
+			const response = await mf.dispatchFetch(
+				`http://localhost/create?id=${id}`
+			);
+			await response.text();
+		}
+
+		const response = await mf.dispatchFetch(
+			"http://localhost/deleteBatch?id=delete-1&id=delete-2"
+		);
+		expect(await response.json()).toEqual({
+			deleted: [{ id: "delete-1" }, { id: "delete-2" }],
+			errors: [],
+		});
 	});
 
 	test("restart a running workflow", async ({ expect }) => {

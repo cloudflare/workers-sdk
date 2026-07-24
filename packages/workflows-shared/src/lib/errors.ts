@@ -70,6 +70,7 @@ export const ABORT_REASONS = {
 	USER_PAUSE: `${ABORT_PREFIX} User called pause`,
 	USER_RESTART: `${ABORT_PREFIX} User called restart`,
 	USER_TERMINATE: `${ABORT_PREFIX} User called terminate`,
+	USER_DELETE: `${ABORT_PREFIX} User called delete`,
 	NON_RETRYABLE_ERROR: `${ABORT_PREFIX} A step threw a NonRetryableError`,
 	NOT_SERIALISABLE: `${ABORT_PREFIX} Value is not serialisable`,
 	STORAGE_LIMIT_EXCEEDED: `${ABORT_PREFIX} Storage limit exceeded`,
@@ -108,6 +109,10 @@ export function isUserTriggeredRestart(e: unknown): boolean {
 
 export function isUserTriggeredTerminate(e: unknown): boolean {
 	return getErrorMessage(e) === ABORT_REASONS.USER_TERMINATE;
+}
+
+export function isUserTriggeredDelete(e: unknown): boolean {
+	return getErrorMessage(e) === ABORT_REASONS.USER_DELETE;
 }
 
 function getCompatFlag(name: string): boolean {

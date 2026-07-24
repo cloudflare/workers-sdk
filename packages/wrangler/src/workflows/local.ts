@@ -5,6 +5,7 @@ import type {
 	InstanceStatusAndLogs,
 	WorkflowInstanceRestartFrom,
 } from "./types";
+import type { WorkflowBatchDeleteResult } from "@cloudflare/workflows-shared/src/types";
 
 const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer/api";
 const DEFAULT_LOCAL_PORT = 8787;
@@ -161,6 +162,59 @@ export async function updateLocalInstanceStatus(
 			body: JSON.stringify(body),
 		}
 	);
+}
+
+async function deleteLocalInstance(
+	port: number,
+	workflowName: string,
+	instanceId: string
+): Promise<void> {
+	await fetchLocalResult<{ success: boolean }>(
+		port,
+		`/workflows/${encodeURIComponent(workflowName)}/instances/${encodeURIComponent(instanceId)}`,
+		{
+			method: "DELETE",
+		}
+	);
+}
+
+export async function deleteLocalInstances(
+	port: number,
+	workflowName: string,
+	instanceIds: string[]
+): Promise<WorkflowBatchDeleteResult> {
+	const uniqueIds = [...new Set(instanceIds)];
+	const deletions: Promise<void>[] = [];
+	for (const id of uniqueIds) {
+		deletions.push(deleteLocalInstance(port, workflowName, id));
+	}
+
+	const settled = await Promise.allSettled(deletions);
+	const resultsById = new Map(
+		uniqueIds.map((id, index) => [id, settled[index]])
+	);
+	const result: WorkflowBatchDeleteResult = { deleted: [], errors: [] };
+	for (const [index, id] of instanceIds.entries()) {
+		const deletion = resultsById.get(id);
+		if (deletion === undefined) {
+			throw new Error("Missing batch deletion result");
+		}
+		if (deletion.status === "fulfilled") {
+			result.deleted.push({ id });
+			continue;
+		}
+
+		result.errors.push({
+			index,
+			id,
+			code: 500,
+			message:
+				deletion.reason instanceof Error
+					? deletion.reason.message
+					: String(deletion.reason),
+		});
+	}
+	return result;
 }
 
 // ============================================================================

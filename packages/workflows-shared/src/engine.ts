@@ -1037,6 +1037,18 @@ export class Engine extends DurableObject<Env> {
 		await this.abort(ABORT_REASONS.USER_TERMINATE);
 	}
 
+	async deleteInstance(): Promise<void> {
+		if ((await this.ctx.storage.get(INSTANCE_METADATA)) === undefined) {
+			throw createWorkflowError(
+				"Instance does not exist",
+				"instance.not_found"
+			);
+		}
+
+		await this.ctx.storage.deleteAll();
+		await this.abort(ABORT_REASONS.USER_DELETE);
+	}
+
 	async userTriggeredPause() {
 		const status = await this.getStatus();
 
