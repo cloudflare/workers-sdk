@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.18.9
+
+### Patch Changes
+
+- [#14821](https://github.com/cloudflare/workers-sdk/pull/14821) [`edc203e`](https://github.com/cloudflare/workers-sdk/commit/edc203e42a10a52f8d2af305fecd2fed4807274e) Thanks [@mishushakov](https://github.com/mishushakov)! - Ignore workerd's `disconnected: peer disconnected without gracefully ending TLS session` exception logs
+
+  When tests make real `fetch()` calls to external TLS endpoints, servers and load balancers routinely close idle keepalive connections without sending a TLS `close_notify`. No request fails — the connection is idle — but workerd logs a `kj/compat/tls.c++` exception with a full stack trace each time, flooding otherwise green test runs. This is the TLS sibling of the `disconnected: ...` messages already in the ignore list, so filter it the same way.
+
+- Updated dependencies [[`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a), [`b737676`](https://github.com/cloudflare/workers-sdk/commit/b737676db01a62e115b7fc56b5af36f5daaf5f6e), [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1)]:
+  - miniflare@4.20260722.1
+  - wrangler@4.115.0
+
 ## 0.18.8
 
 ### Patch Changes
