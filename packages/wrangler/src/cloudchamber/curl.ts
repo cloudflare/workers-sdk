@@ -96,13 +96,12 @@ async function requestFromCmd(
 	}
 	try {
 		const headers: Record<string, string> = (args.header ?? []).reduce(
-			(prev, now) => ({
-				...prev,
-				[now.toString().split(":")[0].trim()]: now
-					.toString()
-					.split(":")[1]
-					.trim(),
-			}),
+			(prev, now) => {
+				// Split on the first colon only: header values may themselves contain
+				// colons, e.g. `--header location:https://example.com/x`.
+				const [key, ...value] = now.toString().split(":");
+				return { ...prev, [key.trim()]: value.join(":").trim() };
+			},
 			{ "coordinator-request-id": requestId }
 		);
 

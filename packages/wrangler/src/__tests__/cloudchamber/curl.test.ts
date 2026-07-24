@@ -232,6 +232,37 @@ describe("cloudchamber curl", () => {
 		`);
 	});
 
+	it("should preserve colons in header values", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		let locationHeader: string | null = null;
+		msw.use(
+			http.get("*/test", async ({ request }) => {
+				locationHeader = request.headers.get("location");
+				return HttpResponse.json(`{}`);
+			})
+		);
+		await runWrangler(
+			"cloudchamber curl /test --header location:https://example.com/a:b"
+		);
+		expect(locationHeader).toEqual("https://example.com/a:b");
+	});
+
+	it("should not throw for a header without a colon", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		let requestMade = false;
+		msw.use(
+			http.get("*/test", async () => {
+				requestMade = true;
+				return HttpResponse.json(`{}`);
+			})
+		);
+		await runWrangler("cloudchamber curl /test --header something");
+		expect(requestMade).toBe(true);
+		expect(std.out).not.toContain("TypeError");
+	});
+
 	it("works", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
