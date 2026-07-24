@@ -244,9 +244,13 @@ const STEP_TYPE_FILTERS = [
 const StepHistory = memo(function StepHistory({
 	steps,
 	onRestartFromStep,
+	workflowName,
+	instanceId,
 }: {
 	steps: InstanceDetails["steps"];
 	onRestartFromStep?: (step: StepData) => void;
+	workflowName: string;
+	instanceId: string;
 }) {
 	const stepList = steps ?? [];
 	const [search, setSearch] = useState("");
@@ -361,6 +365,8 @@ const StepHistory = memo(function StepHistory({
 									isExpanded={expandedStepKeys.has(key)}
 									onToggleExpanded={() => toggleStepExpanded(key)}
 									onRestartFromStep={onRestartFromStep}
+									workflowName={workflowName}
+									instanceId={instanceId}
 								/>
 							);
 						})
@@ -840,6 +846,8 @@ function InstanceDetailView() {
 					<StepHistory
 						steps={details.steps}
 						onRestartFromStep={handleRestartFromStep}
+						workflowName={params.workflowName}
+						instanceId={instanceId}
 					/>
 				</div>
 			</div>

@@ -112,6 +112,23 @@ export type EngineLogs = {
 	logs: Log[];
 };
 
+export type StepOutputResult = {
+	status: string;
+	error: { name: string; message: string } | null;
+	output: unknown;
+};
+
+function toStepError(raw: unknown): { name: string; message: string } | null {
+	if (raw !== null && typeof raw === "object") {
+		const e = raw as { name?: unknown; message?: unknown };
+		return {
+			name: typeof e.name === "string" ? e.name : "Error",
+			message: typeof e.message === "string" ? e.message : "",
+		};
+	}
+	return null;
+}
+
 const ENGINE_STATUS_KEY = "ENGINE_STATUS";
 
 const EVENT_MAP_PREFIX = "EVENT_MAP";
@@ -547,6 +564,139 @@ export class Engine extends DurableObject<Env> {
 			instanceId: this.instanceId ?? "",
 			status,
 			createdOn,
+		};
+	}
+
+	async getStepOutput(options: {
+		name: string;
+		type: "step" | "waitForEvent";
+		attempt?: number;
+	}): Promise<StepOutputResult> {
+		const { name, type, attempt } = options;
+		const startEvent =
+			type === "step" ? InstanceEvent.STEP_START : InstanceEvent.WAIT_START;
+
+		const matchingStep = this.ctx.storage.sql
+			.exec<{ groupKey: string | null }>(
+				"SELECT groupKey FROM states WHERE target = ? AND event = ? LIMIT 1",
+				name,
+				startEvent
+			)
+			.toArray()[0];
+		if (matchingStep === undefined || matchingStep.groupKey === null) {
+			throw createWorkflowError("Step not found", "instance.step_not_found");
+		}
+		const groupKey = matchingStep.groupKey;
+
+		const rows = [
+			...this.ctx.storage.sql.exec<{ event: InstanceEvent; metadata: string }>(
+				"SELECT event, metadata FROM states WHERE groupKey = ? ORDER BY id ASC",
+				groupKey
+			),
+		].map((row) => ({
+			event: row.event,
+			metadata: JSON.parse(row.metadata) as Record<string, unknown>,
+		}));
+
+		const errored = instanceStatusName(InstanceStatus.Errored);
+		const complete = instanceStatusName(InstanceStatus.Complete);
+
+		if (attempt !== undefined) {
+			const terminal = rows.find(
+				(r) =>
+					(r.event === InstanceEvent.ATTEMPT_SUCCESS ||
+						r.event === InstanceEvent.ATTEMPT_FAILURE) &&
+					r.metadata.attempt === attempt
+			);
+			if (terminal === undefined) {
+				const started = rows.some(
+					(r) =>
+						r.event === InstanceEvent.ATTEMPT_START &&
+						r.metadata.attempt === attempt
+				);
+				if (!started) {
+					throw createWorkflowError(
+						"Step not found",
+						"instance.step_not_found"
+					);
+				}
+				return {
+					status: instanceStatusName(InstanceStatus.Running),
+					error: null,
+					output: null,
+				};
+			}
+			if (terminal.event === InstanceEvent.ATTEMPT_FAILURE) {
+				return {
+					status: errored,
+					error: toStepError(terminal.metadata.error),
+					output: null,
+				};
+			}
+			// Successful attempt: the single stored value is shared across attempts.
+		}
+
+		if (type === "waitForEvent") {
+			const waitComplete = rows.find(
+				(r) => r.event === InstanceEvent.WAIT_COMPLETE
+			);
+			if (waitComplete) {
+				const meta = waitComplete.metadata as { payload?: unknown };
+				return { status: complete, error: null, output: meta.payload ?? null };
+			}
+			const timedOut = rows.find(
+				(r) => r.event === InstanceEvent.WAIT_TIMED_OUT
+			);
+			if (timedOut) {
+				return {
+					status: errored,
+					error: toStepError(timedOut.metadata),
+					output: null,
+				};
+			}
+			return {
+				status: instanceStatusName(InstanceStatus.Waiting),
+				error: null,
+				output: null,
+			};
+		}
+
+		const stepSuccess = rows.find(
+			(r) => r.event === InstanceEvent.STEP_SUCCESS
+		);
+		if (stepSuccess) {
+			const streamOutput = stepSuccess.metadata.streamOutput as
+				| { cacheKey: string; meta: StreamOutputMeta }
+				| undefined;
+			if (streamOutput) {
+				const stream = this.replayStreamFromMeta(streamOutput);
+				if (stream !== undefined) {
+					return { status: complete, error: null, output: stream };
+				}
+			}
+			return {
+				status: complete,
+				error: null,
+				output: stepSuccess.metadata.result ?? null,
+			};
+		}
+
+		const stepFailed = rows.some((r) => r.event === InstanceEvent.STEP_FAILURE);
+		if (stepFailed) {
+			const lastAttemptFailure = [...rows]
+				.reverse()
+				.find((r) => r.event === InstanceEvent.ATTEMPT_FAILURE);
+			return {
+				status: errored,
+				error: toStepError(lastAttemptFailure?.metadata.error),
+				output: null,
+			};
+		}
+
+		return {
+			status: instanceStatusName(InstanceStatus.Running),
+			error: null,
+			output: null,
 		};
 	}
 

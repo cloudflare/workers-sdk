@@ -19,6 +19,7 @@ import {
 	zWorkersKvNamespaceListNamespacesData,
 	zObservabilityQueryData,
 	zWorkflowsChangeInstanceStatusData,
+	zWorkflowsGetStepOutputData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
 import openApiSpec from "./openapi.local.json";
@@ -47,6 +48,7 @@ import {
 	deleteWorkflowInstance,
 	getWorkflowDetails,
 	getWorkflowInstanceDetails,
+	getWorkflowStepOutput,
 	listWorkflowInstances,
 	listWorkflows,
 	sendWorkflowInstanceEvent,
@@ -321,6 +323,18 @@ app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 		c.req.param("workflow_name"),
 		c.req.param("instance_id")
 	)
+);
+
+app.get(
+	"/api/workflows/:workflow_name/instances/:instance_id/step",
+	validateQuery(zWorkflowsGetStepOutputData.shape.query),
+	(c) =>
+		getWorkflowStepOutput(
+			c,
+			c.req.param("workflow_name"),
+			c.req.param("instance_id"),
+			c.req.valid("query")
+		)
 );
 
 app.patch(

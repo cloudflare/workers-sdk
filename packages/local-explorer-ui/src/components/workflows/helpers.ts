@@ -55,6 +55,16 @@ export function timeAgo(dateString: string | undefined): string {
 	return `${days}d ago`;
 }
 
+const STREAM_PREVIEW_TRUNCATED_MARKER = "[truncated output]";
+
+export function isTruncatedStreamPreview(value: unknown): value is string {
+	return (
+		typeof value === "string" &&
+		(value.endsWith(STREAM_PREVIEW_TRUNCATED_MARKER) ||
+			value.startsWith("[ReadableStream"))
+	);
+}
+
 export function formatJson(value: unknown): string {
 	if (value === null || value === undefined) {
 		return "N/A";
