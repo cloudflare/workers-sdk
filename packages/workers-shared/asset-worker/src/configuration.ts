@@ -23,6 +23,7 @@ export const normalizeConfiguration = (
 		has_static_routing: configuration?.has_static_routing ?? false,
 		account_id: configuration?.account_id ?? -1,
 		script_id: configuration?.script_id ?? -1,
+		script_version_id: configuration?.script_version_id ?? "",
 		debug: configuration?.debug ?? false,
 	};
 };

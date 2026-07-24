@@ -5,6 +5,7 @@ import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, EntrypointType, getRequestKind } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
 import { normalizeConfiguration } from "./configuration";
+import { CustomerAnalytics } from "./customer-analytics";
 import { ExperimentAnalytics } from "./experiment-analytics";
 import { canFetch, handleRequest } from "./handler";
 import { handleError, submitMetrics } from "./utils/final-operations";
@@ -47,6 +48,7 @@ export type Env = {
 	ENVIRONMENT: Environment;
 	EXPERIMENT_ANALYTICS: ReadyAnalytics;
 	ANALYTICS: ReadyAnalytics;
+	CUSTOMER_ANALYTICS: ReadyAnalytics;
 	COLO_METADATA: ColoMetadata;
 	UNSAFE_PERFORMANCE: UnsafePerformanceTimer;
 	VERSION_METADATA: WorkerVersionMetadata;
@@ -264,6 +266,7 @@ async function runFetchRequest(
 ): Promise<Response> {
 	let sentry: ReturnType<typeof setupSentry> | undefined;
 	const analytics = new Analytics(env.ANALYTICS);
+	const customerAnalytics = new CustomerAnalytics(env.CUSTOMER_ANALYTICS);
 	const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
 	const startTimeMs = performance.now();
 
@@ -312,6 +315,13 @@ async function runFetchRequest(
 				cohort: cohort ?? "unknown",
 				requestKind: getRequestKind(request),
 			});
+			customerAnalytics.setData({
+				accountId: config.account_id,
+				scriptId: config.script_id,
+				coloId: env.COLO_METADATA.coloId,
+				hostname: url.hostname,
+				scriptVersionId: config.script_version_id || undefined,
+			});
 		}
 
 		return await env.JAEGER.enterSpan("handleRequest", async (span) => {
@@ -332,12 +342,18 @@ async function runFetchRequest(
 			);
 
 			analytics.setData({ status: response.status });
+			customerAnalytics.setData({
+				status: response.status,
+				cacheStatus: analytics.getData("cacheStatus"),
+			});
 
 			return response;
 		});
 	} catch (err) {
+		customerAnalytics.setData({ status: 500 });
 		return handleError(sentry, analytics, err);
 	} finally {
+		customerAnalytics.write();
 		submitMetrics(analytics, performance, startTimeMs);
 	}
 }
