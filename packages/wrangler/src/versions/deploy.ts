@@ -11,7 +11,10 @@ import {
 	type ApiVersion,
 	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
 	printVersions,
+	reconcileMetricsExportConfig,
 	renderInconsistentExportsAcrossVersionsError,
+	useServiceEnvironments,
+	withoutMetricsExportConfig,
 } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
@@ -248,7 +251,13 @@ export const versionsDeployCommand = createCommand({
 		}
 
 		await maybePatchSettings(config, accountId, workerName);
-		await reconcileMetricsExportConfig(config, accountId, workerName);
+		await reconcileMetricsExportConfig({
+			config,
+			accountId,
+			scriptName: workerName,
+			envName: args.env ?? "production",
+			useServiceEnvironments: useServiceEnvironments(config),
+		});
 
 		const elapsedMilliseconds = Date.now() - start;
 		const elapsedSeconds = elapsedMilliseconds / 1000;
@@ -935,73 +944,4 @@ export function validateTrafficSubtotal(
 			}
 		);
 	}
-}
-
-function withoutMetricsExportConfig(
-	observability: Config["observability"]
-): Config["observability"] {
-	if (observability === undefined || observability.metrics === undefined) {
-		return observability;
-	}
-
-	const { metrics: _metrics, ...uploadObservability } = observability;
-
-	return Object.keys(uploadObservability).length > 0
-		? uploadObservability
-		: undefined;
-}
-
-async function reconcileMetricsExportConfig(
-	config: Config,
-	accountId: string,
-	workerName: string
-) {
-	const metricsConfig = config.observability?.metrics;
-
-	if (metricsConfig?.enabled === undefined) {
-		return;
-	}
-
-	const resourceId = metricsConfig.enabled
-		? await fetchWorkerScriptId(config, accountId, workerName)
-		: workerName;
-
-	await fetchResult(
-		config,
-		`/accounts/${accountId}/workers/observability/metricsexport`,
-		{
-			method: "POST",
-			body: JSON.stringify({
-				requester: {
-					requesterType: "workers",
-					requesterId: workerName,
-				},
-				resources: metricsConfig.enabled
-					? [
-							{
-								resourceType: "workers",
-								resourceId,
-								meta: "self",
-								destinations: metricsConfig.destinations ?? [],
-							},
-						]
-					: [],
-			}),
-			headers: {
-				"Content-Type": "application/json",
-			},
-		}
-	);
-}
-
-async function fetchWorkerScriptId(
-	config: Config,
-	accountId: string,
-	workerName: string
-) {
-	const serviceMetadata = await fetchResult<{
-		default_environment: { script: { id: string } };
-	}>(config, `/accounts/${accountId}/workers/services/${workerName}`);
-
-	return serviceMetadata.default_environment.script.id;
 }

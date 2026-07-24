@@ -1232,6 +1232,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected "observability.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.traces.enabled" to be of type boolean but got "INVALID".
+				  - Expected "observability.metrics.enabled" to be of type boolean but got undefined.
 				  - Expected "observability.head_sampling_rate" to be of type number but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.head_sampling_rate" to be of type number but got "INVALID".
@@ -10139,6 +10140,51 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should trim metrics export destinations", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+								destinations: ["  opentelemetry-metrics  "],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.observability?.metrics?.destinations).toEqual([
+					"opentelemetry-metrics",
+				]);
+			});
+
+			it("should error on blank or duplicate metrics export destinations", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+								destinations: ["destination", "  ", " destination "],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.metrics.destinations" must not contain blank destinations.
+					  - "observability.metrics.destinations" must not contain duplicate destinations."
+				`);
 			});
 
 			it("should error when metrics export is enabled without destinations", ({

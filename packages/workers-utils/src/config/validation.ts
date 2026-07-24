@@ -6377,14 +6377,47 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 				"string"
 			) && isValid;
 
-		if (val.metrics.enabled === true && val.metrics.destinations?.length === 0) {
+		if (
+			Array.isArray(val.metrics.destinations) &&
+			val.metrics.destinations.every(
+				(destination) => typeof destination === "string"
+			)
+		) {
+			const destinations = val.metrics.destinations.map((destination) =>
+				destination.trim()
+			);
+
+			if (destinations.some((destination) => destination.length === 0)) {
+				diagnostics.errors.push(
+					`"${field}.metrics.destinations" must not contain blank destinations.`
+				);
+				isValid = false;
+			}
+
+			if (new Set(destinations).size !== destinations.length) {
+				diagnostics.errors.push(
+					`"${field}.metrics.destinations" must not contain duplicate destinations.`
+				);
+				isValid = false;
+			}
+
+			val.metrics.destinations = destinations;
+		}
+
+		if (
+			val.metrics.enabled === true &&
+			val.metrics.destinations?.length === 0
+		) {
 			diagnostics.errors.push(
 				`"${field}.metrics.destinations" must contain at least one destination when "${field}.metrics.enabled" is true.`
 			);
 			isValid = false;
 		}
 
-		if (val.metrics.enabled === true && val.metrics.destinations === undefined) {
+		if (
+			val.metrics.enabled === true &&
+			val.metrics.destinations === undefined
+		) {
 			diagnostics.errors.push(
 				`"${field}.metrics.destinations" is required when "${field}.metrics.enabled" is true.`
 			);

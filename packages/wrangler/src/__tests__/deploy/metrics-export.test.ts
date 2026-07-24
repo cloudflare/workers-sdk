@@ -10,7 +10,9 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs } from "../helpers/mock-dialogs";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
 import { mockGetSettings } from "../helpers/mock-worker-settings";
+import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
+import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -33,6 +35,8 @@ describe("deploy metrics export", () => {
 		mockDeploymentsListRequest();
 		mockPatchScriptSettings();
 		mockGetSettings();
+		mockSubDomainRequest();
+		msw.use(...mswListNewDeploymentsLatestFull);
 		msw.use(
 			http.get(
 				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
@@ -51,6 +55,7 @@ describe("deploy metrics export", () => {
 		expect,
 	}) => {
 		writeWranglerConfig({
+			main: "./index.js",
 			observability: {
 				metrics: {
 					enabled: true,
@@ -70,7 +75,7 @@ describe("deploy metrics export", () => {
 						createFetchResult({
 							default_environment: {
 								script: {
-									id: "worker-script-id",
+									id: "453134676",
 									last_deployed_from: "wrangler",
 									tag: `tag:${params["scriptName"]}`,
 								},
@@ -94,12 +99,12 @@ describe("deploy metrics export", () => {
 		expect(requestBody).toEqual({
 			requester: {
 				requesterType: "workers",
-				requesterId: "test-name",
+				requesterId: "test-name/production",
 			},
 			resources: [
 				{
 					resourceType: "workers",
-					resourceId: "worker-script-id",
+					resourceId: "453134676",
 					meta: "self",
 					destinations: ["opentelemetry-metrics"],
 				},
@@ -111,6 +116,7 @@ describe("deploy metrics export", () => {
 		expect,
 	}) => {
 		writeWranglerConfig({
+			main: "./index.js",
 			observability: {
 				metrics: {
 					enabled: false,
@@ -136,7 +142,7 @@ describe("deploy metrics export", () => {
 		expect(requestBody).toEqual({
 			requester: {
 				requesterType: "workers",
-				requesterId: "test-name",
+				requesterId: "test-name/production",
 			},
 			resources: [],
 		});
@@ -145,7 +151,7 @@ describe("deploy metrics export", () => {
 	it("does not reconcile when metrics export config is absent", async ({
 		expect,
 	}) => {
-		writeWranglerConfig();
+		writeWranglerConfig({ main: "./index.js" });
 		writeWorkerSource();
 		mockUploadWorkerRequest();
 
@@ -163,5 +169,106 @@ describe("deploy metrics export", () => {
 		await runWrangler("deploy");
 
 		expect(called).toBe(false);
+	});
+
+	it("retries transient metrics export reconciliation failures", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				metrics: {
+					enabled: false,
+				},
+			},
+		});
+		writeWorkerSource();
+		mockUploadWorkerRequest({ expectedObservability: undefined });
+
+		let attempts = 0;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => {
+					attempts += 1;
+					return attempts < 3
+						? HttpResponse.json(createFetchResult(null, false), { status: 500 })
+						: HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy");
+
+		expect(attempts).toBe(3);
+	});
+
+	it("reports when deployment succeeds but metrics export reconciliation fails", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				metrics: {
+					enabled: false,
+				},
+			},
+		});
+		writeWorkerSource();
+		mockUploadWorkerRequest({ expectedObservability: undefined });
+
+		let attempts = 0;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => {
+					attempts += 1;
+					return HttpResponse.json(createFetchResult(null, false), {
+						status: 500,
+					});
+				}
+			)
+		);
+
+		await expect(runWrangler("deploy")).rejects.toThrow(
+			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration."
+		);
+		expect(attempts).toBe(3);
+	});
+
+	it("fails safely when the Workers API does not provide a constant script ID", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				metrics: {
+					enabled: true,
+					destinations: ["opentelemetry-metrics"],
+				},
+			},
+		});
+		writeWorkerSource();
+		mockUploadWorkerRequest({ expectedObservability: undefined });
+
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/services/:scriptName",
+				({ params }) =>
+					HttpResponse.json(
+						createFetchResult({
+							default_environment: {
+								script: {
+									id: params["scriptName"],
+								},
+							},
+						})
+					)
+			)
+		);
+
+		await expect(runWrangler("deploy")).rejects.toThrow(
+			"The Workers API did not return the numeric script ID required for metrics export."
+		);
 	});
 });

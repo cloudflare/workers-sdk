@@ -1,4 +1,5 @@
-import { fetchResult } from "../../shared/context";
+import { retryOnAPIFailure, UserError } from "@cloudflare/workers-utils";
+import { fetchResult, logger } from "../../shared/context";
 import type { Config, ServiceMetadataRes } from "@cloudflare/workers-utils";
 
 export function withoutMetricsExportConfig(
@@ -49,46 +50,63 @@ export async function reconcileMetricsExportConfig({
 		return;
 	}
 
-	const resourceId = metrics.enabled
-		? await fetchWorkerScriptId({
-				config,
-				accountId,
-				scriptName,
-				envName,
-				useServiceEnvironments,
-			})
-		: scriptName;
+	try {
+		await retryOnAPIFailure(async () => {
+			const resourceId = metrics.enabled
+				? await fetchWorkerScriptId({
+						config,
+						accountId,
+						scriptName,
+						envName,
+						useServiceEnvironments,
+					})
+				: scriptName;
 
-	const resources: MetricExportResource[] = metrics.enabled
-		? [
-				{
-					resourceType: "workers",
-					resourceId,
-					meta: "self",
-					destinations: metrics.destinations ?? [],
+			const resources: MetricExportResource[] = metrics.enabled
+				? [
+						{
+							resourceType: "workers",
+							resourceId,
+							meta: "self",
+							destinations: metrics.destinations ?? [],
+						},
+					]
+				: [];
+
+			const payload: MetricExportRequesterPayload = {
+				requester: {
+					requesterType: "workers",
+					requesterId: `${scriptName}/${envName}`,
 				},
-			]
-		: [];
+				resources,
+			};
 
-	const payload: MetricExportRequesterPayload = {
-		requester: {
-			requesterType: "workers",
-			requesterId: scriptName,
-		},
-		resources,
-	};
-
-	await fetchResult(
-		config,
-		`/accounts/${accountId}/workers/observability/metricsexport`,
-		{
-			method: "POST",
-			body: JSON.stringify(payload),
-			headers: {
-				"Content-Type": "application/json",
-			},
-		}
-	);
+			await fetchResult(
+				config,
+				`/accounts/${accountId}/workers/observability/metricsexport`,
+				{
+					method: "POST",
+					body: JSON.stringify(payload),
+					headers: {
+						"Content-Type": "application/json",
+					},
+				}
+			);
+		}, logger);
+	} catch (error) {
+		const reason =
+			error instanceof UserError &&
+			error.telemetryMessage === "metrics export script id unavailable"
+				? ` ${error.message}`
+				: "";
+		throw new UserError(
+			`The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration.${reason} Retry the deployment to reconcile the configuration.`,
+			{
+				cause: error,
+				telemetryMessage: "metrics export reconciliation partial failure",
+			}
+		);
+	}
 }
 
 async function fetchWorkerScriptId({
@@ -112,7 +130,7 @@ async function fetchWorkerScriptId({
 			`/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		);
 
-		return serviceEnvironmentMetadata.script.id;
+		return validateConstantScriptId(serviceEnvironmentMetadata.script.id);
 	}
 
 	const serviceMetadata = await fetchResult<ServiceMetadataRes>(
@@ -120,5 +138,21 @@ async function fetchWorkerScriptId({
 		`/accounts/${accountId}/workers/services/${scriptName}`
 	);
 
-	return serviceMetadata.default_environment.script.id;
+	return validateConstantScriptId(
+		serviceMetadata.default_environment.script.id
+	);
+}
+
+function validateConstantScriptId(scriptId: string): string {
+	const parsedScriptId = Number(scriptId);
+	if (!Number.isSafeInteger(parsedScriptId) || parsedScriptId <= 0) {
+		throw new UserError(
+			"The Workers API did not return the numeric script ID required for metrics export.",
+			{
+				telemetryMessage: "metrics export script id unavailable",
+			}
+		);
+	}
+
+	return scriptId;
 }
