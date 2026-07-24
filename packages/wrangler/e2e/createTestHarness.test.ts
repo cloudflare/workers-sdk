@@ -1802,6 +1802,141 @@ describe("createTestHarness", () => {
 		`);
 	});
 
+	it("triggers email handlers", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "email-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"src/index.ts": dedent`
+				import { EmailMessage } from "cloudflare:email";
+
+				export default {
+					async email(message) {
+						const mode = message.to.split("@")[0];
+						if (mode === "rejected") {
+							message.setReject("blocked sender");
+							return;
+						}
+
+						await message.forward(
+							"archive@example.com",
+							new Headers({ "X-Test": mode })
+						);
+						await message.reply(new EmailMessage(
+							message.to,
+							message.from,
+							\`From: \${message.to}\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
+						));
+
+						if (mode === "exception") {
+							message.setReject("triggered exception");
+							throw new Error("sensitive handler error");
+						}
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+		await server.listen();
+		const worker = server.getWorker();
+
+		function createRawEmail(mode: string) {
+			return `From: sender <sender@example.com>\r\nTo: ${mode} <${mode}@example.com>\r\nMessage-ID: <${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nMessage for ${mode}\r\n`;
+		}
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "ok@example.com",
+				raw: createRawEmail("ok"),
+			})
+		).resolves.toMatchObject({
+			outcome: "ok",
+			forwards: [
+				{
+					rcptTo: "archive@example.com",
+					headers: [["x-test", "ok"]],
+					messageId: expect.any(String),
+				},
+			],
+			replies: [
+				{
+					messageId: expect.any(String),
+					raw: expect.stringContaining("Reply for ok"),
+				},
+			],
+		});
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "rejected@example.com",
+				raw: createRawEmail("rejected"),
+			})
+		).resolves.toEqual({
+			outcome: "ok",
+			rejectReason: "blocked sender",
+			forwards: [],
+			replies: [],
+		});
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "exception@example.com",
+				raw: createRawEmail("exception"),
+			})
+		).resolves.toMatchObject({
+			outcome: "exception",
+			rejectReason: "triggered exception",
+			forwards: [
+				{
+					rcptTo: "archive@example.com",
+					headers: [["x-test", "exception"]],
+				},
+			],
+			replies: [
+				{
+					messageId: expect.any(String),
+					raw: expect.stringContaining("Reply for exception"),
+				},
+			],
+		});
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "invalid@example.com",
+				raw: "From: sender@example.com\r\nTo: invalid@example.com\r\n\r\nInvalid",
+			})
+		).rejects.toThrow(
+			"Failed to dispatch email event: Email could not be parsed: invalid or no message id provided"
+		);
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "stream@example.com",
+				raw: new ReadableStream<Uint8Array>({
+					start(controller) {
+						const streamRaw = createRawEmail("stream");
+						controller.enqueue(new TextEncoder().encode(streamRaw));
+						controller.close();
+					},
+				}),
+			})
+		).resolves.toMatchObject({ outcome: "ok" });
+	});
+
 	it("lists Durable Object ids by class name or binding name", async ({
 		expect,
 	}) => {
