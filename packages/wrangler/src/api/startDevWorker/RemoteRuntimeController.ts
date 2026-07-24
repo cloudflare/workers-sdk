@@ -37,10 +37,20 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { Bundle, StartDevWorkerOptions, Trigger } from "./types";
+import type { Binding, Bundle, StartDevWorkerOptions, Trigger } from "./types";
 import type { Route } from "@cloudflare/workers-utils";
 
 type CreateRemoteWorkerInitProps = Parameters<typeof createRemoteWorkerInit>[0];
+
+function getRemotePreviewBindings(
+	bindings: StartDevWorkerOptions["bindings"]
+): Record<string, Binding> {
+	return Object.fromEntries(
+		Object.entries(bindings ?? {}).filter(
+			([, binding]) => binding.type !== "queue"
+		)
+	);
+}
 
 export class RemoteRuntimeController extends RuntimeController {
 	#abortController = new AbortController();
@@ -157,7 +167,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				assets: props.assets,
 				legacyAssetPaths: props.legacyAssetPaths,
 				format: props.format,
-				bindings: props.bindings,
+				bindings: getRemotePreviewBindings(props.bindings),
 				compatibilityDate: props.compatibilityDate,
 				compatibilityFlags: props.compatibilityFlags,
 			});

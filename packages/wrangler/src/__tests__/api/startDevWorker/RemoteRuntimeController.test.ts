@@ -157,6 +157,42 @@ describe("RemoteRuntimeController", () => {
 		vi.mocked(getAccessHeaders).mockResolvedValue({});
 	});
 
+	describe("unsupported queue bindings", () => {
+		it("should omit queue producer bindings from remote preview uploads", async ({
+			expect,
+		}) => {
+			const { controller, bus } = setup();
+			const config = makeConfig({
+				bindings: {
+					QUEUE: {
+						type: "queue",
+						queue_name: "test-queue",
+					},
+					KV: {
+						type: "kv_namespace",
+						id: "test-kv-namespace",
+					},
+				},
+			});
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			expect(createRemoteWorkerInit).toHaveBeenCalledWith(
+				expect.objectContaining({
+					bindings: {
+						KV: {
+							type: "kv_namespace",
+							id: "test-kv-namespace",
+						},
+					},
+				})
+			);
+		});
+	});
+
 	describe("stale bundle bail-out", () => {
 		it("should skip stale bundles and only reload once for rapid updates", async ({
 			expect,
