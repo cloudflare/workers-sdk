@@ -90,9 +90,22 @@ export function objectEntryWorker(
 // into a per-binding service. The only static, non-props-able binding is the
 // loopback service (used to surface diagnostics back to the Miniflare host,
 // e.g. a Cloudflare Access block detected on the remote proxy response).
-export function remoteProxyClientWorker(script?: () => string) {
+//
+// `options.rawTcp` opts the service into raw TCP `connect()` tunnelling (see the
+// `experimental` compatibility flag below). That is a property of the service
+// itself, not of any individual binding, so it stays valid under the shared,
+// props-based service model.
+export function remoteProxyClientWorker(
+	script?: () => string,
+	options?: { rawTcp?: boolean }
+) {
 	return {
 		compatibilityDate: "2025-01-01",
+		// Raw TCP bindings (e.g. VPC networks) tunnel `binding.connect()` traffic
+		// through this worker's inbound `connect` handler, which requires the
+		// `experimental` compatibility flag (workerd#6059). Other bindings only
+		// proxy HTTP/JSRPC and must not opt in.
+		...(options?.rawTcp ? { compatibilityFlags: ["experimental"] } : {}),
 		modules: [
 			{
 				name: "index.worker.js",
