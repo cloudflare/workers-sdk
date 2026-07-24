@@ -419,6 +419,25 @@ async function buildProjectWorkerOptions(
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_v8_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_process_v2");
 
+	// `@vitest/coverage-v8` collects coverage by driving V8's Profiler domain via
+	// `node:inspector`. Two compatibility flags are required for this to work, and we
+	// enable both automatically when V8 coverage is in use:
+	//   - `enable_nodejs_inspector_module` selects workerd's native `node:inspector`
+	//     (rather than the unenv polyfill) and makes it importable. It is only implied
+	//     by `nodejs_compat` for compatibility dates >= 2026-01-29, so we must set it
+	//     explicitly to support older dates.
+	//   - `enable_nodejs_inspector_local_dev` (experimental, local-dev only) swaps the
+	//     non-functional stub `Session` for the real implementation that connects to the
+	//     isolate's V8 inspector. Without it, `Session.connect()` throws.
+	const { coverage } = project.vitest.config;
+	if (coverage.enabled && coverage.provider === "v8") {
+		ensureFeature(runnerWorker.compatibilityFlags, "nodejs_inspector_module");
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"nodejs_inspector_local_dev"
+		);
+	}
+
 	// Make sure we define an unsafe eval binding and enable the fallback service
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
 	runnerWorker.unsafeUseModuleFallbackService = true;
