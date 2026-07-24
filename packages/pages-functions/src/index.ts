@@ -35,6 +35,3 @@ export type {
 	RouteConfig,
 	RoutesJSONSpec,
 } from "./routing";
-
-export { toUrlPath } from "./paths";
-export type { UrlPath } from "./paths";
