@@ -1,3 +1,5 @@
+// This file is a copy of packages/pages-functions/src/templates/pages-template-worker.ts.
+// Changes here should be reflected there and vice-versa.
 import { match } from "path-to-regexp";
 
 //note: this explicitly does not include the * character, as pages requires this
