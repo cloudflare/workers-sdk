@@ -333,7 +333,7 @@ export async function pipeSocketOverWebSocket(
 			}
 			closeWebSocket(1000);
 		} catch (error) {
-			closeWebSocket(1011, (error as Error).message);
+			closeWebSocket(1011, (error as Error)?.message ?? "socket read failed");
 			throw error;
 		} finally {
 			reader.releaseLock();
