@@ -2456,6 +2456,9 @@ export class Miniflare {
 			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
 				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
 				: [],
+			v8Flags: process.env.MINIFLARE_WORKERD_V8_FLAGS
+				? process.env.MINIFLARE_WORKERD_V8_FLAGS.split(" ")
+				: [],
 		};
 	}
 
