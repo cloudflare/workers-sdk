@@ -30,8 +30,7 @@ export default class Client extends WorkerEntrypoint<
 	// Only reachable when the worker is configured with the `experimental`
 	// compatibility flag, which enables inbound `connect` handlers (workerd#6059).
 	async connect(socket: Socket): Promise<void> {
-		const { remoteProxyConnectionString, binding, cfTraceId } =
-			this.ctx.props;
+		const { remoteProxyConnectionString, binding, cfTraceId } = this.ctx.props;
 		if (!remoteProxyConnectionString) {
 			throwRemoteRequired(binding);
 		}

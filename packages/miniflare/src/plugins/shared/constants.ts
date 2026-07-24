@@ -105,9 +105,7 @@ export function remoteProxyClientWorker(
 		// through this worker's inbound `connect` handler, which requires the
 		// `experimental` compatibility flag (workerd#6059). Other bindings only
 		// proxy HTTP/JSRPC and must not opt in.
-		...(options?.rawTcp
-			? { compatibilityFlags: ["experimental"] }
-			: {}),
+		...(options?.rawTcp ? { compatibilityFlags: ["experimental"] } : {}),
 		modules: [
 			{
 				name: "index.worker.js",
