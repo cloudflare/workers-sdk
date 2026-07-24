@@ -937,6 +937,11 @@ export interface EnvironmentNonInheritable {
 		id?: string;
 		/** The ID of the KV namespace used during `wrangler dev` */
 		preview_id?: string;
+		/**
+		 * The jurisdiction to create the KV namespace in when provisioning it
+		 * during `wrangler deploy`. Only read when the namespace does not yet exist. Ignored once the namespace has been created.
+		 */
+		jurisdiction?: string;
 		/** Whether the KV namespace should be remote or not in local development */
 		remote?: boolean;
 	}[];
