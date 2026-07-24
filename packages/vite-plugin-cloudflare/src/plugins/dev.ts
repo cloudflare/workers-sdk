@@ -55,11 +55,26 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				cleanupContainers(dockerPath, containerImageTags);
 			}
 
+			// `buildEnd` fires both when the dev server closes AND, when Vite's
+			// `experimental.bundledDev` is enabled, at the end of every build
+			// pass that runs *during* `serve`. Disposing Miniflare here on the
+			// latter tears it down while the dev server is still live, so the
+			// next request hits `Expected \`miniflare\` to be defined`. During
+			// `serve` we therefore dispose from the patched `server.close`
+			// below (mirroring how `server.restart` is patched in index.ts)
+			// rather than from `buildEnd`.
 			debuglog(
 				"buildEnd:",
-				ctx.isRestartingDevServer ? "restarted" : "disposing"
+				ctx.resolvedViteConfig.command === "serve"
+					? "serve (dispose handled on server close)"
+					: ctx.isRestartingDevServer
+						? "restarted"
+						: "disposing"
 			);
-			if (!ctx.isRestartingDevServer) {
+			if (
+				ctx.resolvedViteConfig.command !== "serve" &&
+				!ctx.isRestartingDevServer
+			) {
 				try {
 					await ctx.disposeMiniflare();
 				} catch (error) {
@@ -74,6 +89,28 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
+
+			// Dispose Miniflare when the dev server genuinely closes. `buildEnd`
+			// can no longer be trusted for this under `experimental.bundledDev`
+			// (see above), so patch `server.close` the same way `server.restart`
+			// is patched in index.ts. Skip disposal while restarting so Miniflare
+			// stays warm across restarts, exactly as the previous
+			// `!isRestartingDevServer` guard in `buildEnd` did. Forceful exits
+			// (ctrl+C) are still covered by the `exit` handler registered below.
+			const closeServer = viteDevServer.close.bind(viteDevServer);
+			viteDevServer.close = async () => {
+				try {
+					await closeServer();
+				} finally {
+					if (!ctx.isRestartingDevServer) {
+						try {
+							await ctx.disposeMiniflare();
+						} catch (error) {
+							debuglog("Failed to dispose Miniflare instance:", error);
+						}
+					}
+				}
+			};
 
 			// Once the HTTP server is listening, update Miniflare's publicUrl with
 			// the actual address. This ensures "Cloudflare Stream" preview URLs always reflect
