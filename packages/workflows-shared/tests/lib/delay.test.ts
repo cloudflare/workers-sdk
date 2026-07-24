@@ -2,6 +2,7 @@ import { describe, it, vi } from "vitest";
 import {
 	DEFAULT_RETRY_DELAY_MS,
 	invokeDelayFunction,
+	schedulerWait,
 } from "../../src/lib/delay";
 import { DelayFunctionError } from "../../src/lib/retries";
 import type { WorkflowDynamicDelayContext } from "cloudflare:workers";
@@ -20,6 +21,37 @@ const makeLogger = () => ({ warn: vi.fn(), debug: vi.fn() });
 const noTimeout =
 	(): ((ms: number, opts?: { signal?: AbortSignal }) => Promise<void>) => () =>
 		new Promise<void>(() => {});
+
+describe("schedulerWait", () => {
+	it("removes abort listeners after the wait completes", async ({ expect }) => {
+		const listeners = new Set<EventListenerOrEventListenerObject>();
+		const signal = {
+			aborted: false,
+			addEventListener(
+				type: string,
+				listener: EventListenerOrEventListenerObject
+			) {
+				if (type === "abort") {
+					listeners.add(listener);
+				}
+			},
+			removeEventListener(
+				type: string,
+				listener: EventListenerOrEventListenerObject
+			) {
+				if (type === "abort") {
+					listeners.delete(listener);
+				}
+			},
+		} as AbortSignal;
+
+		for (let i = 0; i < 100; i++) {
+			await schedulerWait(0, { signal });
+		}
+
+		expect(listeners).toHaveLength(0);
+	});
+});
 
 describe("invokeDelayFunction", () => {
 	it("returns the value a synchronous delay function produces", async ({

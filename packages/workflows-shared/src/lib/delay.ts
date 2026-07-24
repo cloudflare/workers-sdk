@@ -17,6 +17,62 @@ type DelayLogger = {
 
 type Waiter = (ms: number, opts?: { signal?: AbortSignal }) => Promise<void>;
 
+type AbortRaceResult<T> = { aborted: true } | { aborted: false; value: T };
+
+export async function raceAgainstAbort<T>(
+	promise: Promise<T>,
+	signal: AbortSignal
+): Promise<AbortRaceResult<T>> {
+	const resultPromise = promise.then(
+		(value): AbortRaceResult<T> => ({
+			aborted: false,
+			value,
+		})
+	);
+	if (signal.aborted) {
+		return await Promise.race([
+			Promise.resolve<AbortRaceResult<T>>({ aborted: true }),
+			resultPromise,
+		]);
+	}
+
+	let resolveAbort: ((result: AbortRaceResult<T>) => void) | undefined;
+	const abortPromise = new Promise<AbortRaceResult<T>>((resolve) => {
+		resolveAbort = resolve;
+	});
+	const onAbort = (): void => resolveAbort?.({ aborted: true });
+	signal.addEventListener("abort", onAbort, { once: true });
+
+	if (signal.aborted) {
+		onAbort();
+	}
+
+	try {
+		return await Promise.race([resultPromise, abortPromise]);
+	} finally {
+		signal.removeEventListener("abort", onAbort);
+	}
+}
+
+// Signal-aware wrapper around the global `scheduler.wait`. `scheduler.wait`
+// can't itself be cancelled, so an aborted signal resolves the returned promise
+// early and the dangling timer becomes a no-op.
+export async function schedulerWait(
+	durationMs: number,
+	opts?: { signal?: AbortSignal }
+): Promise<void> {
+	const signal = opts?.signal;
+	if (signal?.aborted) {
+		return;
+	}
+	const waitPromise = scheduler.wait(durationMs);
+	if (signal === undefined) {
+		await waitPromise;
+		return;
+	}
+	await raceAgainstAbort(waitPromise, signal);
+}
+
 export async function invokeDelayFunction(
 	delay: WorkflowDelayFunction,
 	input: WorkflowDynamicDelayContext,
