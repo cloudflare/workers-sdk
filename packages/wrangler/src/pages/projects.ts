@@ -129,12 +129,19 @@ export const pagesProjectCreateCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		force: {
+		"i-really-want-to-deploy-to-pages-because-i-have-a-rationale": {
 			type: "boolean",
 			default: false,
 			hidden: true,
 			description:
 				"Create a Cloudflare Pages project directly, bypassing the automatic delegation to Cloudflare Workers for new static projects",
+		},
+		"agent-rationale-context": {
+			type: "string",
+			hidden: true,
+			requiresArg: true,
+			description:
+				"A categorical reason for bypassing delegation (e.g. user-requested-pages), recorded to help us understand why the Workers delegation was bypassed. Only recognised categories are recorded; any other value is bucketed and the raw text is never sent.",
 		},
 	},
 	positionalArgs: ["project-name"],
@@ -143,7 +150,8 @@ export const pagesProjectCreateCommand = createCommand({
 		compatibilityFlags,
 		compatibilityDate,
 		projectName,
-		force,
+		iReallyWantToDeployToPagesBecauseIHaveARationale,
+		agentRationaleContext,
 	}) {
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
@@ -151,15 +159,15 @@ export const pagesProjectCreateCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		// When run by an AI agent, delegate new static Pages projects to a Workers
-		// static-assets deploy of the current directory. Accounts that already
-		// have Pages projects, projects using unsupported Pages features, and
-		// `--force` are never delegated.
+		// static-assets deploy of the current directory. `pages project create`
+		// always targets a new project, so it is eligible regardless of whether
+		// the account already has other Pages projects. Projects using unsupported
+		// Pages features and explicit opt-outs are never delegated.
 		const delegation = await maybeDelegatePagesToWorkers({
 			command: "create",
 			projectPath: process.cwd(),
-			accountHasPagesProjects: async () =>
-				(await listProjects({ accountId })).length > 0,
-			force,
+			force: iReallyWantToDeployToPagesBecauseIHaveARationale,
+			rationale: agentRationaleContext,
 			projectName,
 			compatibilityDate,
 			compatibilityFlags,
@@ -268,8 +276,8 @@ export const pagesProjectCreateCommand = createCommand({
 		);
 		metrics.sendMetricsEvent("create pages project");
 
-		// If the agent opted this create out of delegation with `--force`, tell it
-		// (at the end, on success) that `--force` is a one-time action.
+		// If the agent opted this create out of delegation, tell it (at the end,
+		// on success) that the opt-out flag is a one-time action.
 		if (delegation.forcedOptOut) {
 			logPagesToWorkersForceOptOutNotice("create");
 		}

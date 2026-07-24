@@ -4,6 +4,9 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { sendMetricsEvent } from "../../metrics";
 import {
+	AGENT_RATIONALE_CONTEXT_FLAG,
+	categoriseForceRationale,
+	FORCE_PAGES_FLAG,
 	logPagesToWorkersForceOptOutNotice,
 	maybeDelegatePagesToWorkers,
 	recordPagesToWorkersDelegateFailure,
@@ -47,28 +50,31 @@ describe("maybeDelegatePagesToWorkers", () => {
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
-	for (const command of ["deploy", "create"] as const) {
-		it(`does not delegate (or emit telemetry) when the account already has Pages projects (${command})`, async ({
-			expect,
-		}) => {
-			const result = await maybeDelegatePagesToWorkers({
-				command,
-				projectPath: process.cwd(),
-				accountHasPagesProjects: async () => true,
-			});
-
-			expect(result).toEqual({ delegate: false });
-			// Skips are deterministic, expected non-cases, so they are not sent to
-			// telemetry.
-			expect(sendMetricsEvent).not.toHaveBeenCalled();
-		});
-	}
-
-	it("delegates when the account has no Pages projects", async ({ expect }) => {
+	it("does not delegate (or emit telemetry) when the deploy targets an existing Pages project", async ({
+		expect,
+	}) => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
-			accountHasPagesProjects: async () => false,
+			projectExists: true,
+		});
+
+		expect(result).toEqual({ delegate: false });
+		// Skips are deterministic, expected non-cases, so they are not sent to
+		// telemetry.
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
+	});
+
+	it("delegates a new project even when the account already has other Pages projects", async ({
+		expect,
+	}) => {
+		// The gate is per-project, not per-account: `projectExists: false` means
+		// this specific project is new, so we delegate regardless of what else the
+		// account has.
+		const result = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			projectExists: false,
 		});
 
 		expect(result).toEqual({
@@ -77,40 +83,6 @@ describe("maybeDelegatePagesToWorkers", () => {
 			agentId: "test-agent",
 			deployArgs: {},
 		});
-	});
-
-	it("skips delegation (without emitting telemetry) when the account Pages projects lookup fails", async ({
-		expect,
-	}) => {
-		const result = await maybeDelegatePagesToWorkers({
-			command: "deploy",
-			projectPath: process.cwd(),
-			accountHasPagesProjects: async () => {
-				throw new Error("boom");
-			},
-		});
-
-		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).not.toHaveBeenCalled();
-	});
-
-	it("does not query account Pages projects when a cheaper, local check already skips", async ({
-		expect,
-	}) => {
-		createFunctionsDir(process.cwd());
-		const accountHasPagesProjects = vi.fn(async () => true);
-
-		const result = await maybeDelegatePagesToWorkers({
-			command: "deploy",
-			projectPath: process.cwd(),
-			accountHasPagesProjects,
-		});
-
-		expect(result).toEqual({ delegate: false });
-		// The functions/ directory is a local, no-cost skip reason, so the
-		// account-listing API call must never be made.
-		expect(accountHasPagesProjects).not.toHaveBeenCalled();
-		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
 	it("does not delegate when project has a functions directory", async ({
@@ -309,7 +281,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 	});
 
-	it("does not delegate when --force is set, records the opt-out, and flags forcedOptOut", async ({
+	it("does not delegate when the opt-out flag is set, records the opt-out (with an unspecified rationale), and flags forcedOptOut", async ({
 		expect,
 	}) => {
 		const result = await maybeDelegatePagesToWorkers({
@@ -321,32 +293,84 @@ describe("maybeDelegatePagesToWorkers", () => {
 		expect(result).toEqual({ delegate: false, forcedOptOut: true });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"delegate pages to workers",
-			expect.objectContaining({ command: "deploy", result: "forced" }),
+			expect.objectContaining({
+				command: "deploy",
+				result: "forced",
+				// No rationale was passed, so it is recorded as "unspecified".
+				rationale: "unspecified",
+			}),
 			expect.anything()
 		);
 	});
 
-	it("emits a one-time, deploy-specific --force notice to stdout", ({
+	it("records a recognised rationale category on the forced event", async ({
+		expect,
+	}) => {
+		const result = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			force: true,
+			rationale: "user-requested-pages",
+		});
+
+		expect(result).toEqual({ delegate: false, forcedOptOut: true });
+		expect(sendMetricsEvent).toHaveBeenCalledWith(
+			"delegate pages to workers",
+			expect.objectContaining({
+				result: "forced",
+				rationale: "user-requested-pages",
+			}),
+			expect.anything()
+		);
+	});
+
+	it("buckets an unrecognised rationale as 'other' rather than transmitting the raw text", async ({
+		expect,
+	}) => {
+		await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			force: true,
+			// A value that could contain sensitive text must never be sent verbatim.
+			rationale: "token=sk-secret-value",
+		});
+
+		expect(sendMetricsEvent).toHaveBeenCalledWith(
+			"delegate pages to workers",
+			expect.objectContaining({ result: "forced", rationale: "other" }),
+			expect.anything()
+		);
+		const [, properties] = vi.mocked(sendMetricsEvent).mock.calls[0];
+		expect(JSON.stringify(properties)).not.toContain("sk-secret-value");
+	});
+
+	it("emits a one-time, deploy-specific opt-out notice to stdout", ({
 		expect,
 	}) => {
 		logPagesToWorkersForceOptOutNotice("deploy");
 
 		expect(std.out).toContain("deployed directly on Cloudflare Pages");
-		expect(std.out).toContain("This is the only time you need --force");
+		expect(std.out).toContain(
+			`This is the only time you need --${FORCE_PAGES_FLAG}`
+		);
 		expect(std.out).toContain("this project now exists");
-		expect(std.out).toContain("Do not pass --force on future commands");
+		expect(std.out).toContain(
+			`Do not pass --${FORCE_PAGES_FLAG} on future commands`
+		);
 	});
 
-	it("emits a one-time, create-specific --force notice to stdout", ({
+	it("emits a one-time, create-specific opt-out notice to stdout", ({
 		expect,
 	}) => {
 		logPagesToWorkersForceOptOutNotice("create");
 
 		expect(std.out).toContain("created directly on Cloudflare Pages");
-		expect(std.out).toContain("This is the only time you need --force");
+		expect(std.out).toContain(
+			`This is the only time you need --${FORCE_PAGES_FLAG}`
+		);
 	});
 
-	it("records failure and gives explicit, loop-safe --force guidance", async ({
+	it("records failure and gives explicit, loop-safe opt-out guidance", async ({
 		expect,
 	}) => {
 		recordPagesToWorkersDelegateFailure(
@@ -358,7 +382,12 @@ describe("maybeDelegatePagesToWorkers", () => {
 
 		expect(std.warn).toContain("nothing was deployed");
 		expect(std.warn).toContain("do not retry it unchanged");
-		expect(std.warn).toContain("wrangler pages deploy --force");
+		expect(std.warn).toContain(`wrangler pages deploy --${FORCE_PAGES_FLAG}`);
+		// The failure message hands the agent the exact rationale for this case,
+		// so a subsequent opt-out is attributable rather than "unspecified".
+		expect(std.warn).toContain(
+			`--${AGENT_RATIONALE_CONTEXT_FLAG}=workers-delegation-failed`
+		);
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"delegate pages to workers",
 			expect.objectContaining({ command: "deploy", result: "failure" }),
@@ -366,7 +395,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		);
 	});
 
-	it("gives create-specific --force guidance when a create delegation fails", async ({
+	it("gives create-specific opt-out guidance when a create delegation fails", async ({
 		expect,
 	}) => {
 		recordPagesToWorkersDelegateFailure(
@@ -376,6 +405,33 @@ describe("maybeDelegatePagesToWorkers", () => {
 			new Error("nope")
 		);
 
-		expect(std.warn).toContain("wrangler pages project create --force");
+		expect(std.warn).toContain(
+			`wrangler pages project create --${FORCE_PAGES_FLAG}`
+		);
+	});
+});
+
+describe("categoriseForceRationale", () => {
+	it("returns 'unspecified' when no rationale is given", ({ expect }) => {
+		expect(categoriseForceRationale(undefined)).toBe("unspecified");
+	});
+
+	it("keeps a recognised category", ({ expect }) => {
+		expect(categoriseForceRationale("existing-pages-workflow")).toBe(
+			"existing-pages-workflow"
+		);
+	});
+
+	it("normalises case and surrounding whitespace before matching", ({
+		expect,
+	}) => {
+		expect(categoriseForceRationale("  User-Requested-Pages  ")).toBe(
+			"user-requested-pages"
+		);
+	});
+
+	it("collapses anything off-menu to 'other'", ({ expect }) => {
+		expect(categoriseForceRationale("because the user said so")).toBe("other");
+		expect(categoriseForceRationale("")).toBe("other");
 	});
 });

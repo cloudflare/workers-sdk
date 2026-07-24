@@ -118,12 +118,19 @@ export const pagesDeployCommand = createCommand({
 			description:
 				"Whether to upload any server-side sourcemaps with this deployment",
 		},
-		force: {
+		"i-really-want-to-deploy-to-pages-because-i-have-a-rationale": {
 			type: "boolean",
 			default: false,
 			hidden: true,
 			description:
 				"Deploy directly to Cloudflare Pages, bypassing the automatic delegation to Cloudflare Workers for new static projects",
+		},
+		"agent-rationale-context": {
+			type: "string",
+			hidden: true,
+			requiresArg: true,
+			description:
+				"A categorical reason for bypassing delegation (e.g. user-requested-pages), recorded to help us understand why the Workers delegation was bypassed. Only recognised categories are recorded; any other value is bucketed and the raw text is never sent.",
 		},
 	},
 	positionalArgs: ["directory"],
@@ -215,15 +222,17 @@ export const pagesDeployCommand = createCommand({
 		}
 
 		// When run by an AI agent, delegate brand-new static Pages deploys to a
-		// Workers static-assets deploy. Existing projects, projects using
-		// unsupported Pages features, and `--force` are never delegated.
+		// Workers static-assets deploy. Deploys to an existing project, projects
+		// using unsupported Pages features, and explicit opt-outs are never
+		// delegated. The account is free to already have other Pages projects —
+		// only the specific project being targeted must be new.
 		const delegation = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
-			accountHasPagesProjects: async () =>
-				(await listProjects({ accountId })).length > 0,
-			force: args.force,
+			projectExists: Boolean(projectName) && isExistingProject,
+			force: args.iReallyWantToDeployToPagesBecauseIHaveARationale,
+			rationale: args.agentRationaleContext,
 			projectName,
 			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),
 		});
@@ -638,8 +647,8 @@ export const pagesDeployCommand = createCommand({
 
 		metrics.sendMetricsEvent("create pages deployment");
 
-		// If the agent opted this deploy out of delegation with `--force`, tell it
-		// (at the end, on success) that `--force` is a one-time action.
+		// If the agent opted this deploy out of delegation, tell it (at the end,
+		// on success) that the opt-out flag is a one-time action.
 		if (delegation.forcedOptOut) {
 			logPagesToWorkersForceOptOutNotice("deploy");
 		}
