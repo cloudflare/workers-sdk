@@ -3903,6 +3903,14 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (!isOptionalProperty(value, "jurisdiction", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "jurisdiction" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
 	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}
@@ -3911,6 +3919,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		"binding",
 		"id",
 		"preview_id",
+		"jurisdiction",
 		"remote",
 	]);
 

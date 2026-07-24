@@ -4179,6 +4179,37 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
+
+			it("should allow an optional jurisdiction field", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						kv_namespaces: [{ binding: "VALID", jurisdiction: "eu" }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if jurisdiction is not a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						kv_namespaces: [{ binding: "VALID", jurisdiction: 2000 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "kv_namespaces[0]" bindings should, optionally, have a string "jurisdiction" field but got {"binding":"VALID","jurisdiction":2000}."
+				`);
+			});
 		});
 
 		it("should error if send_email.bindings are not valid", ({ expect }) => {
