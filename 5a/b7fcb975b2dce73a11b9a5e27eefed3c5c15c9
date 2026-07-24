@@ -1,0 +1,75 @@
+packages/wrangler/src/index.ts
+  s_b554ffcd7ba695::t_5291f17defe478 2273-2276
+  s_b554ffcd7ba695::t_f1a9e748753c5a 539
+packages/wrangler/src/workflows/commands/instances/delete.ts
+  s_b554ffcd7ba695::t_99b5b507767fa2 1-77
+  s_b554ffcd7ba695::t_98155c792642f8 78-79
+packages/workflows-shared/tests/binding.test.ts
+  s_b554ffcd7ba695::t_5ec3fc0bae7f10 154-169
+  s_b554ffcd7ba695::t_d8980b974dbb1c 272-275
+  s_b554ffcd7ba695::t_9faf269352b65e 171-206
+  s_b554ffcd7ba695::t_36b2ec3946260d 233
+  s_b554ffcd7ba695::t_be587f8fb9a3b6 150-151,234-236,239-241,243-257
+  s_b554ffcd7ba695::t_81ee96e8a1379f 148-149
+  s_b554ffcd7ba695::t_296d2f7cfa6049 280
+  s_b554ffcd7ba695::t_e75ecd16eb4861 153,170,207-232,237,242,258-271,276
+  s_b554ffcd7ba695::t_c4ed170e802db3 152
+  s_b554ffcd7ba695::t_50efa72e5dfeb9 238
+  s_b554ffcd7ba695::t_1ade05072611fa 277-279
+  s_b554ffcd7ba695::t_b601987a5955c0 133
+packages/miniflare/test/plugins/workflows/index.spec.ts
+  s_b554ffcd7ba695::t_adcf97d5610de9 172-183,320-356
+packages/wrangler/src/workflows/local.ts
+  s_b554ffcd7ba695::t_b90b34a3c4a0c2 8,167-219
+packages/wrangler/src/workflows/utils.ts
+  s_b554ffcd7ba695::t_2c5c1656534e2f 10
+  s_93fdbd5f4aa262::t_6e0f5ce878095f 147-165
+packages/wrangler/src/__tests__/workflows.test.ts
+  s_b554ffcd7ba695::t_86b61946fbc9c6 203,692-750,1872-1903
+  s_b554ffcd7ba695::t_ee736ea3af2dfd 22,1904
+packages/workflows-shared/src/lib/errors.ts
+  s_b554ffcd7ba695::t_b5f30faadcb387 73,114-117
+packages/workflows-shared/src/binding.ts
+  s_b554ffcd7ba695::t_f6f1c273788f66 253-255
+  s_b554ffcd7ba695::t_c55587b6e9fcbf 260-261
+  s_b554ffcd7ba695::t_6006506d65ca78 263
+  s_b554ffcd7ba695::t_46590fd57ca0fa 259,262,288-295,300-305,443-449,451-453
+  s_b554ffcd7ba695::t_453b4708230a18 265-285,296-299
+  s_b554ffcd7ba695::t_d85edf00b0489c 264
+  s_b554ffcd7ba695::t_0d974914842f96 286-287,450
+  s_b554ffcd7ba695::t_4c27fe9a334c0f 250-252
+  s_b554ffcd7ba695::t_e55d0a8bf49645 256-258
+  s_b554ffcd7ba695::t_bc851e536f97fb 4,20,26-27,247-249
+.changeset/workflows-instances-delete.md
+  s_b554ffcd7ba695::t_472e09124dd2c4 1-9
+packages/miniflare/src/workers/workflows/wrapped-binding.worker.ts
+  s_b554ffcd7ba695::t_75c27ef3e25b54 6,38-41,132-137
+packages/workflows-shared/src/engine.ts
+  s_b554ffcd7ba695::t_78ab9378137ee7 1040-1051
+packages/workflows-shared/src/types.ts
+  s_b554ffcd7ba695::t_a2a38183e94ed5 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5ab7fcb975b2dce73a11b9a5e27eefed3c5c15c9",
+  "prompts": {},
+  "sessions": {
+    "s_93fdbd5f4aa262": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09e78a68cffd43A72FtUyJHs9e",
+        "model": "gpt-5.5"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    },
+    "s_b554ffcd7ba695": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f74df-f5c8-71b4-88d3-30b0c9e17ab0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}
