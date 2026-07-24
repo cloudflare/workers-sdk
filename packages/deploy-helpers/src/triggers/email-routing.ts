@@ -4,6 +4,7 @@ import {
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
+import PQueue from "p-queue";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
 import { confirm, fetchResult, logger } from "../shared/context";
 import {
@@ -30,6 +31,7 @@ const PLAN_RETRY_WORKER_NOT_FOUND_CODE = 2016;
 const PLAN_RETRY_TIMEOUT_MS = 30_000;
 const PLAN_RETRY_DELAY_MS = 3_000;
 const NON_INTERACTIVE_PROGRESS_INTERVAL = 10;
+const APPLY_ZONE_CONCURRENCY = 10;
 
 function applyProgressMessage(done: number, total: number): string {
 	return `Applying Email Routing changes (${done}/${total}, ${Math.floor(
@@ -294,39 +296,49 @@ export async function applyEmailRoutingAddresses({
 		}
 	}
 
-	const failures: string[] = [];
 	const totalChanges = plan.zones.reduce(
 		(total, zone) => total + zone.changes.length,
 		0
 	);
 	const progress = startApplyProgress(totalChanges);
 	let completedChanges = 0;
+	const queue = new PQueue({ concurrency: APPLY_ZONE_CONCURRENCY });
+	const failuresByZone: string[][] = [];
+	const zonePromises: Array<Promise<void>> = [];
 
 	try {
 		for (const zone of plan.zones) {
-			for (const change of zone.changes) {
-				try {
-					await applyChange(
-						config,
-						zone.zone_id,
-						change,
-						scriptName,
-						ownerWorkerTag
-					);
-				} catch (e) {
-					failures.push(
-						`${change.target}: ${e instanceof Error ? e.message : String(e)}`
-					);
-				} finally {
-					completedChanges++;
-					progress.update(completedChanges);
-				}
-			}
+			const zoneFailures: string[] = [];
+			failuresByZone.push(zoneFailures);
+			zonePromises.push(
+				queue.add(async () => {
+					for (const change of zone.changes) {
+						try {
+							await applyChange(
+								config,
+								zone.zone_id,
+								change,
+								scriptName,
+								ownerWorkerTag
+							);
+						} catch (e) {
+							zoneFailures.push(
+								`${change.target}: ${e instanceof Error ? e.message : String(e)}`
+							);
+						} finally {
+							completedChanges++;
+							progress.update(completedChanges);
+						}
+					}
+				})
+			);
 		}
+		await Promise.all(zonePromises);
 	} finally {
 		progress.stop();
 	}
 
+	const failures = failuresByZone.flat();
 	if (failures.length > 0) {
 		for (const failure of failures) {
 			logger.error(`Email Routing change failed: ${failure}`);
