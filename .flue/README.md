@@ -1,6 +1,6 @@
 # Workers SDK Flue
 
-This private workspace contains the Flue agents and workflows used by Workers SDK automation. It targets Cloudflare and uses Cloudflare Shell with Codemode for durable, structured workspace operations without Containers.
+This private workspace contains the Flue agents used by Workers SDK automation. It targets Cloudflare with Flue v2 and uses Cloudflare Shell with Codemode for durable, structured workspace operations without Containers.
 
 ## Setup
 
@@ -17,7 +17,7 @@ pnpm --filter @cloudflare/workers-sdk-flue build
 pnpm --filter @cloudflare/workers-sdk-flue check:type
 ```
 
-Regenerate the Wrangler `Env` types after changing bindings, agents, or workflows:
+Regenerate the Wrangler `Env` types after changing bindings or agents:
 
 ```sh
 pnpm --filter @cloudflare/workers-sdk-flue cf-typegen
@@ -37,25 +37,31 @@ Start the Cloudflare development server:
 pnpm --filter @cloudflare/workers-sdk-flue dev
 ```
 
-The agent and workflow HTTP routes require `FLUE_BEARER_TOKEN`. Configure it as
-a deployed Worker secret, and provide the same value when running the smoke
-agent locally:
+The workspace smoke agent route requires `FLUE_BEARER_TOKEN`. Configure it as a
+deployed Worker secret. The GitHub webhook route verifies requests with
+`GITHUB_WEBHOOK_SECRET` instead of bearer authentication.
+
+Send a message to the smoke agent after starting the development server:
 
 ```sh
-FLUE_BEARER_TOKEN=replace-with-a-random-token pnpm --filter @cloudflare/workers-sdk-flue smoke
+curl --fail-with-body --request POST \
+  http://localhost:5173/agents/workspace-smoke/local-smoke \
+  --header "Authorization: Bearer $FLUE_BEARER_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{"kind":"user","body":"Verify the durable workspace."}'
 ```
 
-Run the placeholder workflow locally:
+Read the conversation after the agent settles:
 
 ```sh
-pnpm --filter @cloudflare/workers-sdk-flue exec flue run placeholder \
-  --input '{"message":"Hello from a Flue workflow."}' \
+curl --fail-with-body \
+  "http://localhost:5173/agents/workspace-smoke/local-smoke?view=history" \
   --header "Authorization: Bearer $FLUE_BEARER_TOKEN"
 ```
 
-The workflow validates its input and returns the message unchanged. Its HTTP
-endpoint is `POST /workflows/placeholder` and requires the same bearer token as
-the agent routes.
+Cloudflare Shell requires the Worker Loader binding. If local development cannot
+simulate Worker Loader, deploy a preview Worker and use the same requests against
+its URL.
 
 ## GitHub channel
 
@@ -73,7 +79,7 @@ Create a GitHub webhook with these settings:
 
 The webhook route uses GitHub signature verification instead of the bearer
 authentication required by `/agents/*`. Created comments are dispatched to the
-durable `github-assistant` agent, which can reply only to the repository and
-issue or pull request associated with that verified webhook.
+dispatch-only `github-assistant` agent, which can reply only to the repository
+and issue or pull request associated with that verified webhook.
 
 The smoke agent uses Workers AI and may require an authenticated Wrangler session. Its Codemode sandbox cannot execute Linux commands or access the network. Heavyweight repository builds and tests remain the responsibility of CI.

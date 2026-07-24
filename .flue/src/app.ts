@@ -1,29 +1,18 @@
-import { registerProvider } from "@flue/runtime";
-import { flue } from "@flue/runtime/routing";
+import { createAgentRouter } from "@flue/runtime/routing";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
+import { WorkspaceSmoke } from "./agents/workspace-smoke";
+import { channel as github } from "./channels/github";
 
-registerProvider("cloudflare", {
-	api: "cloudflare-ai-binding",
-	binding: env.AI,
-	gateway: {
-		collectLog: true,
-		id: "default",
-	},
-});
-
-export default new Hono()
+const app = new Hono()
 	.use(
 		"/agents/*",
 		bearerAuth({
 			token: env.FLUE_BEARER_TOKEN,
 		})
 	)
-	.use(
-		"/workflows/*",
-		bearerAuth({
-			token: env.FLUE_BEARER_TOKEN,
-		})
-	)
-	.route("/", flue());
+	.route("/agents/workspace-smoke", createAgentRouter(WorkspaceSmoke))
+	.route("/channels/github", github.route());
+
+export default app;
