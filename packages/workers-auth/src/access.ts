@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { isNonInteractiveOrCI, UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import {
@@ -153,14 +153,14 @@ export async function getAccessHeaders(
 
 	// 3. Interactive: fall back to cloudflared
 	logger.debug("Spawning cloudflared to get Access token for domain:");
-	const output = spawnSync("cloudflared", ["access", "login", domain]);
+	const output = await spawnCloudflaredAccessLogin(domain);
 	if (output.error) {
 		throw new UserError(
 			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation",
 			{ telemetryMessage: "user access missing cloudflared" }
 		);
 	}
-	const stringOutput = output.stdout.toString();
+	const stringOutput = output.stdout;
 	logger.debug("cloudflared output:", stringOutput);
 	const matches = stringOutput.match(/fetched your token:\n\n(.*)/m);
 	if (matches && matches.length >= 2) {
@@ -170,6 +170,40 @@ export async function getAccessHeaders(
 		return headers;
 	}
 	throw new Error("Failed to authenticate with Cloudflare Access");
+}
+
+/**
+ * Run `cloudflared access login <domain>` without blocking the event loop.
+ *
+ * `cloudflared` only exits once the user completes the authorization flow in
+ * the browser, which can take arbitrarily long (or never happen). Waiting for
+ * it synchronously would prevent any SIGINT or keypress handler from running,
+ * making it impossible to interrupt wrangler with ctrl+c. The `exit` hook
+ * makes sure a still-waiting `cloudflared` does not outlive the process.
+ *
+ * A spawn failure (e.g. `cloudflared` is not installed) is reported via the
+ * `error` property, mirroring the `spawnSync` API, so that the caller can
+ * surface an installation hint.
+ */
+function spawnCloudflaredAccessLogin(
+	domain: string
+): Promise<{ error?: Error; stdout: string }> {
+	return new Promise((resolve) => {
+		const child = spawn("cloudflared", ["access", "login", domain]);
+		const stdoutChunks: Buffer[] = [];
+		child.stdout.on("data", (chunk: Buffer) => stdoutChunks.push(chunk));
+		child.stderr.resume();
+		const killChild = () => child.kill();
+		process.once("exit", killChild);
+		child.on("error", (error) => {
+			process.removeListener("exit", killChild);
+			resolve({ error, stdout: "" });
+		});
+		child.on("close", () => {
+			process.removeListener("exit", killChild);
+			resolve({ stdout: Buffer.concat(stdoutChunks).toString() });
+		});
+	});
 }
 
 /**
