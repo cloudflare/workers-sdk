@@ -62,6 +62,13 @@ export interface CloudflareLoginProps {
 	callbackHost?: string;
 	callbackPort?: number;
 	profile?: string;
+	/**
+	 * When `true`, authenticate using the OAuth 2.0 Device Authorization Grant
+	 * (RFC 8628) instead of the authorization-code-with-PKCE callback flow. The
+	 * device flow does not start a local callback server, so `callbackHost` and
+	 * `callbackPort` are ignored when this is set.
+	 */
+	device?: boolean;
 }
 
 /** A Cloudflare CLI's auth layer, returned by {@link createCloudflareAuth}. */
@@ -285,6 +292,7 @@ export function createCloudflareAuth(
 			callbackHost: props?.callbackHost,
 			callbackPort: props?.callbackPort,
 			profile: props?.profile,
+			device: props?.device,
 		};
 	}
 

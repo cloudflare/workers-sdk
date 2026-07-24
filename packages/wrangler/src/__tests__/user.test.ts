@@ -7,6 +7,7 @@ import {
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalConfigPath,
+	openInBrowser,
 	UserError,
 } from "@cloudflare/workers-utils";
 import {
@@ -1166,6 +1167,327 @@ describe("User", () => {
 		).resolves.toEqual({
 			loggedIn: false,
 			reason: "no-credentials-non-interactive",
+		});
+	});
+
+	describe("login (experimental device flow)", () => {
+		/**
+		 * Register an MSW handler for `POST /oauth2/device/auth` that returns
+		 * a successful device authorization response.
+		 */
+		function mockDeviceAuthSuccess(
+			overrides: {
+				verification_uri_complete?: string | null;
+				interval?: number;
+				expires_in?: number;
+			} = {}
+		) {
+			let calls = 0;
+			msw.use(
+				http.post(
+					"*/oauth2/device/auth",
+					() => {
+						calls += 1;
+						const body: Record<string, unknown> = {
+							device_code: "test-device-code",
+							user_code: "WDJB-MJHT",
+							verification_uri: "https://dash.cloudflare.com/oauth2/device",
+							expires_in: overrides.expires_in ?? 600,
+							interval: overrides.interval ?? 5,
+						};
+						// `null` means "deliberately omit this field"; undefined means
+						// "use the default".
+						if (overrides.verification_uri_complete === undefined) {
+							body.verification_uri_complete =
+								"https://dash.cloudflare.com/oauth2/device?user_code=WDJB-MJHT";
+						} else if (overrides.verification_uri_complete !== null) {
+							body.verification_uri_complete =
+								overrides.verification_uri_complete;
+						}
+						return HttpResponse.json(body);
+					},
+					{ once: true }
+				)
+			);
+			return {
+				get calls() {
+					return calls;
+				},
+			};
+		}
+
+		/**
+		 * Register an MSW handler for `POST /oauth2/token` that returns the
+		 * supplied sequence of responses in order. After exhausting the
+		 * sequence the handler is removed.
+		 */
+		function mockDevicePollSequence(
+			responses: Array<{ status: number; body: Record<string, unknown> }>
+		) {
+			let i = 0;
+			const counts = { calls: 0 };
+			msw.use(
+				http.post("*/oauth2/token", async () => {
+					counts.calls += 1;
+					const response = responses[Math.min(i, responses.length - 1)];
+					i += 1;
+					return HttpResponse.json(response.body, {
+						status: response.status,
+					});
+				})
+			);
+			return counts;
+		}
+
+		beforeEach(() => {
+			// Reset openInBrowser to a no-op for device flow tests. The
+			// `mockOAuthFlow()` helper used elsewhere in this file installs a
+			// callback-flow-specific implementation that tries to parse a
+			// `redirect_uri` out of the URL — which the device flow URL does
+			// not have. mockReset clears both the implementation and call
+			// history.
+			vi.mocked(openInBrowser).mockReset();
+		});
+
+		it("should complete login on the first successful poll", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess();
+			const poll = mockDevicePollSequence([
+				{
+					status: 200,
+					body: {
+						access_token: "test-access-token",
+						expires_in: 100000,
+						refresh_token: "test-refresh-token",
+						scope: "account:read",
+					},
+				},
+			]);
+
+			await runWrangler("login --experimental-device");
+
+			expect(poll.calls).toBe(1);
+			expect(openInBrowser).toHaveBeenCalledWith(
+				"https://dash.cloudflare.com/oauth2/device?user_code=WDJB-MJHT",
+				expect.anything()
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Attempting to login via OAuth Device Authorization Grant (experimental)...
+				To authorize Wrangler, please visit:
+
+				  https://dash.cloudflare.com/oauth2/device
+
+				and enter the code:
+
+				  WDJB-MJHT
+
+				You have 5 minutes to approve this request.
+
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/device?user_code=WDJB-MJHT
+				Successfully logged in."
+			`);
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				api_token: undefined,
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+		});
+
+		it("should display the effective timeout when the server's `expires_in` is shorter than the 5-minute cap", async ({
+			expect,
+		}) => {
+			// Server grants only 2 minutes; the displayed timeout must reflect
+			// that, not the 5-minute hard cap.
+			mockDeviceAuthSuccess({ expires_in: 120 });
+			mockDevicePollSequence([
+				{
+					status: 200,
+					body: {
+						access_token: "test-access-token",
+						expires_in: 100000,
+						refresh_token: "test-refresh-token",
+						scope: "account:read",
+					},
+				},
+			]);
+
+			await runWrangler("login --experimental-device");
+
+			expect(std.out).toContain("You have 2 minutes to approve this request.");
+			expect(std.out).not.toContain("You have 5 minutes");
+		});
+
+		it("should fall back to constructing a verification URL when the server omits `verification_uri_complete`", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess({ verification_uri_complete: null });
+			mockDevicePollSequence([
+				{
+					status: 200,
+					body: {
+						access_token: "test-access-token",
+						expires_in: 100000,
+						refresh_token: "test-refresh-token",
+						scope: "account:read",
+					},
+				},
+			]);
+
+			await runWrangler("login --experimental-device");
+
+			// We synthesised the verification URL by appending the user code
+			// because the server didn't give us a complete one.
+			expect(openInBrowser).toHaveBeenCalledWith(
+				"https://dash.cloudflare.com/oauth2/device?user_code=WDJB-MJHT",
+				expect.anything()
+			);
+		});
+
+		it("should not open the browser when `--browser=false`", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess();
+			mockDevicePollSequence([
+				{
+					status: 200,
+					body: {
+						access_token: "test-access-token",
+						expires_in: 100000,
+						refresh_token: "test-refresh-token",
+						scope: "account:read",
+					},
+				},
+			]);
+
+			await runWrangler("login --experimental-device --browser=false");
+
+			expect(openInBrowser).not.toHaveBeenCalled();
+			expect(std.out).not.toContain("Opening a link in your default browser");
+		});
+
+		it("should keep polling while the server returns `authorization_pending`, then succeed", async ({
+			expect,
+		}) => {
+			// Use fake timers so the polling sleep is instant.
+			vi.useFakeTimers();
+			try {
+				mockDeviceAuthSuccess({ interval: 1 });
+				const poll = mockDevicePollSequence([
+					{ status: 400, body: { error: "authorization_pending" } },
+					{ status: 400, body: { error: "authorization_pending" } },
+					{
+						status: 200,
+						body: {
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						},
+					},
+				]);
+
+				const runPromise = runWrangler("login --experimental-device");
+				// Drain microtasks + fake-timer waits until the polling loop
+				// completes. `runAllTimersAsync` cycles until no pending timers.
+				await vi.runAllTimersAsync();
+				await runPromise;
+
+				expect(poll.calls).toBe(3);
+				expect(readAuthConfigFile()).toMatchObject({
+					oauth_token: "test-access-token",
+					refresh_token: "test-refresh-token",
+				});
+				// RFC 8628 §3.5: HTTP 400 with `authorization_pending` is the
+				// expected polling-control mechanism, not an error. Verify that
+				// the polling loop does NOT log spurious "Failed to fetch auth
+				// token" errors to stderr while the user is approving.
+				expect(std.err).toBe("");
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it("should time out with a message reflecting the server's `expires_in` when shorter than the cap", async ({
+			expect,
+		}) => {
+			// Use fake timers so the polling sleeps are instant.
+			vi.useFakeTimers();
+			try {
+				// Server grants 2 minutes and never approves; the timeout error
+				// must quote the effective 2-minute window, not the 5-minute cap.
+				mockDeviceAuthSuccess({ interval: 1, expires_in: 120 });
+				mockDevicePollSequence([
+					{ status: 400, body: { error: "authorization_pending" } },
+				]);
+
+				const runPromise = runWrangler("login --experimental-device");
+				const assertion = expect(runPromise).rejects.toThrow(
+					"Device authorization timed out after 2 minutes. Please run `wrangler login --experimental-device` again to obtain a new code."
+				);
+				await vi.runAllTimersAsync();
+				await assertion;
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it("should error with a clear message when the user denies consent", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess();
+			mockDevicePollSequence([
+				{ status: 400, body: { error: "access_denied" } },
+			]);
+
+			await expect(
+				runWrangler("login --experimental-device")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Consent denied. You must grant consent to Wrangler in order to login.
+				If you don't want to do this consider passing an API token via the \`CLOUDFLARE_API_TOKEN\` environment variable.]
+			`
+			);
+		});
+
+		it("should error with a clear message when the device code expires", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess();
+			mockDevicePollSequence([
+				{ status: 400, body: { error: "expired_token" } },
+			]);
+
+			await expect(
+				runWrangler("login --experimental-device")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Device code expired before the request was approved. Please run \`wrangler login --experimental-device\` again to obtain a new code.]`
+			);
+		});
+
+		it("should error when `--callback-host` is passed alongside `--experimental-device`", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --experimental-device --callback-host=0.0.0.0")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: \`--callback-host\` and \`--callback-port\` cannot be used with \`--experimental-device\`; the device authorization flow does not use a local callback server.]`
+			);
+		});
+
+		it("should error when `--callback-port` is passed alongside `--experimental-device`", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --experimental-device --callback-port=9999")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: \`--callback-host\` and \`--callback-port\` cannot be used with \`--experimental-device\`; the device authorization flow does not use a local callback server.]`
+			);
 		});
 	});
 
