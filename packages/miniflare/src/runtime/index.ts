@@ -44,6 +44,8 @@ export interface RuntimeOptions {
 	verbose?: boolean;
 	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
 	handleStructuredLogs?: StructuredLogsHandler;
+	// Called when workerd crashes after the initial ready signal
+	onWorkerdCrashRestart?: () => void;
 	// Extra environment variables to set on the spawned `workerd` subprocess.
 	// Merged on top of `process.env` and Miniflare's own defaults
 	// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults.
@@ -235,7 +237,6 @@ export class Runtime {
 	): Promise<SocketPorts | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
-		// TODO: what happens if runtime crashes?
 
 		// 2. Start new process
 		const command = getRuntimeCommand();
@@ -308,36 +309,35 @@ export class Runtime {
 			const bootloaderPath =
 				process.env.NODE_OPTIONS?.match(/--require "(.*?)"/)?.[1];
 
-			if (!bootloaderPath) {
-				return ports;
-			}
-			const watchdogPath = path.resolve(bootloaderPath, "../watchdog.js");
+			if (bootloaderPath) {
+				const watchdogPath = path.resolve(bootloaderPath, "../watchdog.js");
 
-			const info = getInspectorOptions();
+				const info = getInspectorOptions();
 
-			for (const name of workerNames) {
-				// This is copied from https://github.com/microsoft/vscode-js-debug/blob/0b5e0dade997b3c702a98e1f58989afcb30612d6/src/targets/node/bootloader.ts#L284
-				// It spawns a detached "watchdog" process for each corresponding (user) Worker in workerd which will maintain the VSCode debug connection
-				const p = spawn(process.execPath, [watchdogPath], {
-					env: {
-						NODE_INSPECTOR_INFO: JSON.stringify({
-							ipcAddress: info.inspectorIpc || "",
-							pid: String(this.#process.pid),
-							scriptName: name,
-							inspectorURL: `ws://127.0.0.1:${ports?.get(
-								kInspectorSocket
-							)}/core:user:${name}`,
-							waitForDebugger: true,
-							ownId: randomBytes(12).toString("hex"),
-							openerId: info.openerId,
-						}),
-						NODE_SKIP_PLATFORM_CHECK: process.env.NODE_SKIP_PLATFORM_CHECK,
-						ELECTRON_RUN_AS_NODE: "1",
-					},
-					stdio: "ignore",
-					detached: true,
-				});
-				p.unref();
+				for (const name of workerNames) {
+					// This is copied from https://github.com/microsoft/vscode-js-debug/blob/0b5e0dade997b3c702a98e1f58989afcb30612d6/src/targets/node/bootloader.ts#L284
+					// It spawns a detached "watchdog" process for each corresponding (user) Worker in workerd which will maintain the VSCode debug connection
+					const p = spawn(process.execPath, [watchdogPath], {
+						env: {
+							NODE_INSPECTOR_INFO: JSON.stringify({
+								ipcAddress: info.inspectorIpc || "",
+								pid: String(this.#process.pid),
+								scriptName: name,
+								inspectorURL: `ws://127.0.0.1:${ports?.get(
+									kInspectorSocket
+								)}/core:user:${name}`,
+								waitForDebugger: true,
+								ownId: randomBytes(12).toString("hex"),
+								openerId: info.openerId,
+							}),
+							NODE_SKIP_PLATFORM_CHECK: process.env.NODE_SKIP_PLATFORM_CHECK,
+							ELECTRON_RUN_AS_NODE: "1",
+						},
+						stdio: "ignore",
+						detached: true,
+					});
+					p.unref();
+				}
 			}
 		}
 
@@ -345,6 +345,23 @@ export class Runtime {
 
 		if (ports === undefined && !abortSignal.aborted) {
 			startupLogBuffer.handleStartupFailure();
+		} else {
+			// workerd is now listening. Watch for unexpected exits so we can
+			// restart.
+			const currentProcess = this.#process;
+			void processExitPromise.then(() => {
+				if (this.#process !== currentProcess) {
+					// We got here because dispose() set this.#process to
+					// undefined before sending SIGKILL
+					return;
+				}
+				if (abortSignal.aborted) {
+					return;
+				}
+				// Crash: clear stale #process and notify the caller.
+				this.#process = undefined;
+				options.onWorkerdCrashRestart?.();
+			});
 		}
 
 		return ports;

@@ -770,6 +770,14 @@ export type WorkflowsInstanceDetails = {
 	};
 };
 
+/**
+ * Columns and rows for a read-only SQL query.
+ */
+export type ObservabilityQueryResult = {
+	columns: Array<string>;
+	rows: Array<Array<unknown>>;
+};
+
 export type R2ResultInfoWritable = {
 	[key: string]: unknown;
 };
@@ -1820,3 +1828,68 @@ export type WorkflowsSendInstanceEventResponses = {
 
 export type WorkflowsSendInstanceEventResponse =
 	WorkflowsSendInstanceEventResponses[keyof WorkflowsSendInstanceEventResponses];
+
+export type ObservabilityQueryData = {
+	body: {
+		/**
+		 * A single read-only SELECT/WITH query against the spans/logs schema above.
+		 */
+		sql: string;
+		/**
+		 * Values bound to `?` placeholders in the query, in order.
+		 */
+		params?: Array<unknown>;
+	};
+	path?: never;
+	query?: never;
+	url: "/local/observability/query";
+};
+
+export type ObservabilityQueryErrors = {
+	/**
+	 * Query response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type ObservabilityQueryError =
+	ObservabilityQueryErrors[keyof ObservabilityQueryErrors];
+
+export type ObservabilityQueryResponses = {
+	/**
+	 * Query response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: ObservabilityQueryResult;
+	};
+};
+
+export type ObservabilityQueryResponse =
+	ObservabilityQueryResponses[keyof ObservabilityQueryResponses];
+
+export type ObservabilityClearData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/local/observability/clear";
+};
+
+export type ObservabilityClearErrors = {
+	/**
+	 * Clear response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type ObservabilityClearError =
+	ObservabilityClearErrors[keyof ObservabilityClearErrors];
+
+export type ObservabilityClearResponses = {
+	/**
+	 * Clear response.
+	 */
+	200: WorkersApiResponseCommon;
+};
+
+export type ObservabilityClearResponse =
+	ObservabilityClearResponses[keyof ObservabilityClearResponses];

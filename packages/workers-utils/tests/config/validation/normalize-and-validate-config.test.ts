@@ -316,6 +316,21 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
+		it("should silently strip the deprecated `legacy_env` field from a redirected config", ({
+			expect,
+		}) => {
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				{ legacy_env: true } as unknown as RawConfig,
+				"/some/path/.wrangler/deploy/wrangler.json",
+				"/some/path/wrangler.json",
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect("legacy_env" in config).toBe(false);
+		});
+
 		it("should warn on and remove unexpected top level fields", ({
 			expect,
 		}) => {
