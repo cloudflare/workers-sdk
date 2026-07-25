@@ -248,19 +248,24 @@ describe("cloudchamber curl", () => {
 		expect(locationHeader).toEqual("https://example.com/a:b");
 	});
 
-	it("should not throw for a header without a colon", async ({ expect }) => {
+	it("should error for a header without a colon", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		let requestMade = false;
-		msw.use(
-			http.get("*/test", async () => {
-				requestMade = true;
-				return HttpResponse.json(`{}`);
-			})
+		await expect(
+			runWrangler("cloudchamber curl /test --header something")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Invalid header "something". Headers must be in the form of --header <name>:<value>]`
 		);
-		await runWrangler("cloudchamber curl /test --header something");
-		expect(requestMade).toBe(true);
-		expect(std.out).not.toContain("TypeError");
+	});
+
+	it("should error for a header without a name", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("cloudchamber curl /test --header :here")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Invalid header ":here". Headers must be in the form of --header <name>:<value>]`
+		);
 	});
 
 	it("works", async ({ expect }) => {
