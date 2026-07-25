@@ -141,14 +141,27 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		super(ctx, env);
 	}
 
-	public async create({
-		id = crypto.randomUUID(),
-		params = {},
-	}: WorkflowInstanceCreateOptions = {}): Promise<{
+	async #instanceExists(id: string): Promise<boolean> {
+		const stub = this.env.ENGINE.get(this.env.ENGINE.idFromName(id));
+		return await stub.hasInstance();
+	}
+
+	public async create(options: WorkflowInstanceCreateOptions = {}): Promise<{
 		id: string;
 	}> {
+		const id = options.id ?? crypto.randomUUID();
+		const params = options.params ?? {};
 		if (!isValidWorkflowInstanceId(id)) {
 			throw new WorkflowError("Workflow instance has invalid id");
+		}
+
+		// Deterministic (caller-provided) ids carry a documented uniqueness
+		// contract: creating an instance with an id that already exists throws
+		// and the existing instance is retained.
+		if (options.id !== undefined && (await this.#instanceExists(id))) {
+			throw new WorkflowError(
+				`Workflow instance with id "${id}" already exists`
+			);
 		}
 
 		const stubId = this.env.ENGINE.idFromName(id);
@@ -232,12 +245,23 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			);
 		}
 
-		return await Promise.all(
-			batch.map(async (val) => {
-				const res = await this.create(val);
-				return res;
-			})
-		);
+		// The documented batch contract is idempotent creation: ids that already
+		// exist, or that repeat within the batch, are skipped and excluded from
+		// the result rather than throwing, and instances are created in batch
+		// order.
+		const results: { id: string }[] = [];
+		const seenIds = new Set<string>();
+		for (const options of batch) {
+			const id = options.id;
+			if (id !== undefined) {
+				if (seenIds.has(id) || (await this.#instanceExists(id))) {
+					continue;
+				}
+				seenIds.add(id);
+			}
+			results.push(await this.create(options));
+		}
+		return results;
 	}
 
 	public async unsafeGetBindingName(): Promise<string> {
