@@ -21,6 +21,20 @@ packages:
 
 gitChecks: false
 
+# whatwg-url@5.0.0 (pulled in by node-fetch@2.x) and its tr46@0.0.3 dependency
+# both `require("punycode")` against the deprecated Node builtin, which logs a
+# DEP0040 warning on every wrangler invocation. Our patches (patches/whatwg-url@5.0.0.patch,
+# patches/tr46@0.0.3.patch) switch them to the userland `punycode` package instead,
+# but pnpm doesn't re-resolve a patched package's dependency list, so we declare
+# the new dependency here to make sure it's actually installed and linked.
+packageExtensions:
+  "tr46@0.0.3":
+    dependencies:
+      punycode: ^2.3.1
+  "whatwg-url@5.0.0":
+    dependencies:
+      punycode: ^2.3.1
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Supply chain security
 # See: https://pnpm.io/supply-chain-security
@@ -97,6 +111,8 @@ patchedDependencies:
   "youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
   "@netlify/build-info": "patches/@netlify__build-info.patch"
   "buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
+  "tr46@0.0.3": "patches/tr46@0.0.3.patch"
+  "whatwg-url@5.0.0": "patches/whatwg-url@5.0.0.patch"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Catalog
