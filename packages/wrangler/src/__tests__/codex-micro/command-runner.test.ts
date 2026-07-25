@@ -130,6 +130,40 @@ describe("CodexMicroCommandRunner", () => {
 		expect(spawnProcess.mock.calls[0]?.[1]).toContain("deploy");
 	});
 
+	it("does not arm deploy confirmation while deploy is active", ({
+		expect,
+	}) => {
+		let now = 1_000;
+		const firstDeploy = createChild(51);
+		const secondDeploy = createChild(52);
+		const spawnProcess = vi
+			.fn()
+			.mockReturnValueOnce(firstDeploy)
+			.mockReturnValueOnce(secondDeploy);
+		const runner = new CodexMicroCommandRunner({
+			cliPath: "/opt/wrangler/cli.js",
+			projectPath: "/work/project",
+			now: () => now,
+			spawnProcess,
+		});
+
+		runner.handleKey({ key: "AG02", action: 1 });
+		now = 1_100;
+		runner.handleKey({ key: "AG02", action: 1 });
+
+		now = 2_000;
+		runner.handleKey({ key: "AG02", action: 1 });
+		firstDeploy.emit("exit", 0, null);
+
+		now = 2_100;
+		runner.handleKey({ key: "AG02", action: 1 });
+		expect(spawnProcess).toHaveBeenCalledOnce();
+
+		now = 2_200;
+		runner.handleKey({ key: "AG02", action: 1 });
+		expect(spawnProcess).toHaveBeenCalledTimes(2);
+	});
+
 	it("runs a configured AG02 action without interpreting it", ({ expect }) => {
 		const spawnProcess = vi.fn(() => createChild(47));
 		const runner = new CodexMicroCommandRunner({
@@ -189,6 +223,27 @@ describe("CodexMicroCommandRunner", () => {
 		expect(killProcess).toHaveBeenCalledTimes(2);
 		expect(killProcess).toHaveBeenCalledWith(44, "SIGTERM");
 		expect(killProcess).toHaveBeenCalledWith(45, "SIGTERM");
+	});
+
+	it("uses AG05 to stop all when its configured action is empty", ({
+		expect,
+	}) => {
+		const dev = createChild(53);
+		const spawnProcess = vi.fn(() => dev);
+		const killProcess = vi.fn();
+		const runner = new CodexMicroCommandRunner({
+			cliPath: "/opt/wrangler/cli.js",
+			keymap: { AG05: "   " },
+			projectPath: "/work/project",
+			spawnProcess,
+			killProcess,
+		});
+
+		runner.handleKey({ key: "AG00", action: 1 });
+		runner.handleKey({ key: "AG05", action: 1 });
+
+		expect(killProcess).toHaveBeenCalledOnce();
+		expect(killProcess).toHaveBeenCalledWith(53, "SIGTERM");
 	});
 });
 

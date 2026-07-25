@@ -61,9 +61,9 @@ export class CodexMicroCommandRunner {
 	#deployConfirmationExpiresAt = 0;
 
 	constructor(options: CodexMicroCommandRunnerOptions) {
-		this.#ag05StopsAll = options.keymap?.AG05 === undefined;
 		this.#cliPath = options.cliPath;
 		this.#commands = applyKeymap(options.keymap);
+		this.#ag05StopsAll = this.#commands.AG05 === undefined;
 		this.#projectPath = options.projectPath;
 		this.#now = options.now ?? Date.now;
 		this.#schedule = options.schedule ?? setTimeout;
@@ -90,10 +90,6 @@ export class CodexMicroCommandRunner {
 			return;
 		}
 
-		if (definition.confirm && !this.#confirmDeploy()) {
-			return;
-		}
-
 		const active = this.#active.get(event.key);
 		if (active !== undefined) {
 			if (definition.toggle) {
@@ -103,6 +99,10 @@ export class CodexMicroCommandRunner {
 					`Codex Micro ignored ${definition.label}; it is already running.`
 				);
 			}
+			return;
+		}
+
+		if (definition.confirm && !this.#confirmDeploy()) {
 			return;
 		}
 

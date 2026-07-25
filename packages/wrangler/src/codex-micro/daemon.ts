@@ -111,9 +111,7 @@ async function findCodexMicro(hid: NodeHid): Promise<Device | undefined> {
 	);
 	return devices.find(
 		(device) =>
-			device.productId === CODEX_MICRO_PRODUCT_ID &&
-			device.usagePage === CODEX_MICRO_USAGE_PAGE &&
-			device.path !== undefined
+			device.usagePage === CODEX_MICRO_USAGE_PAGE && device.path !== undefined
 	);
 }
 
