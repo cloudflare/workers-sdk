@@ -1899,6 +1899,15 @@ export class Miniflare {
 				http.createServer(this.#handleLoopback),
 				/* grace */ 0
 			);
+			// Disable timeouts for local dev — workerd pools and reuses connections
+			// to the loopback server, and Node's default `keepAliveTimeout` (5s)
+			// races with that reuse: Node closes an idle pooled socket just as
+			// workerd sends the next request on it, which surfaces in the Worker
+			// as "Network connection lost". This mirrors the undici pools used
+			// for dispatch in the opposite direction, which already disable
+			// their timeouts.
+			server.keepAliveTimeout = 0;
+			server.headersTimeout = 0;
 			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(0, hostname, () => resolve(server));
 		});
