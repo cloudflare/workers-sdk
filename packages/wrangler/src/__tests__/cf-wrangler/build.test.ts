@@ -14,7 +14,7 @@ describe("cf-wrangler build", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("emits the Build Output API tree", async ({ expect }) => {
+	it("emits the Build Output Specification tree", async ({ expect }) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
 				type: "worker",

@@ -8,7 +8,7 @@ import {
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 
 /**
- * Run the standalone Build Output API path for `wrangler build`.
+ * Run the standalone Build Output Specification path for `wrangler build`.
  *
  * The output is a self-contained `.cloudflare/output/v0/` directory.
  */

@@ -144,7 +144,7 @@ function stripLeadingDotSlash(name: string): string {
 
 /**
  * Map Wrangler's internal {@link CfModuleType} to the
- * Build Output API's {@link ModuleType}.
+ * Build Output Specification's {@link ModuleType}.
  */
 function toManifestType(cfType: CfModuleType): ModuleType {
 	switch (cfType) {

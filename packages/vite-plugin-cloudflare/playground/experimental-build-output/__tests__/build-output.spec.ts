@@ -9,7 +9,7 @@ function getBuildOutputDir() {
 	return path.join(rootDir, ".cloudflare/output/v0/workers", WORKER_NAME);
 }
 
-describe("Build Output API", () => {
+describe("Build Output Specification", () => {
 	test("serves the worker", async ({ expect }) => {
 		const response = await getTextResponse("/");
 		expect(response).toBe("hello from worker");
@@ -26,7 +26,7 @@ describe("Build Output API", () => {
 	});
 });
 
-describe.runIf(isBuild)("Build Output API spec", () => {
+describe.runIf(isBuild)("Build Output Specification files", () => {
 	test("emits worker.config.json at the correct location", ({ expect }) => {
 		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		expect(fs.existsSync(configPath)).toBe(true);

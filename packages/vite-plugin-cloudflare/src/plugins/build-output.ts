@@ -9,7 +9,7 @@ import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
 
 /**
- * Build Output API plugin. Replaces `outputConfigPlugin` when
+ * Build Output Specification plugin. Replaces `outputConfigPlugin` when
  * `experimental.newConfig.cfBuildOutput` is set.
  */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {

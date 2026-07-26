@@ -354,7 +354,7 @@ function getEnvironmentsConfig(
 }
 
 /**
- * When the Build Output API is enabled,
+ * When the Build Output Specification is enabled,
  * force every Worker environment's and the client environment's `build.outDir`
  * to the spec-mandated location.
  *

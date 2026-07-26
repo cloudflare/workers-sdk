@@ -8,7 +8,7 @@ import type {
 } from "./schema";
 
 /**
- * Initial draft version of the Build Output API.
+ * Initial draft version of the Build Output Specification.
  *
  * Will move to `v1` when the spec stabilises.
  */
@@ -30,7 +30,7 @@ export const ROOT_CONFIG_FILENAME = "config.json";
 export const WORKER_CONFIG_FILENAME = "worker.config.json";
 
 /**
- * Absolute path to the Build Output API root for the current project.
+ * Absolute path to the Build Output Specification root for the current project.
  */
 function getBuildOutputDir(root: string): string {
 	return path.resolve(root, BUILD_OUTPUT_ROOT);

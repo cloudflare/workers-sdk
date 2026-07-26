@@ -28,7 +28,7 @@ export interface BuildOutputPreviewWorker {
 }
 
 /**
- * Read the Build Output API at `<root>/.cloudflare/output/v0/workers/`
+ * Read the Build Output Specification at `<root>/.cloudflare/output/v0/workers/`
  * and reconstruct a `BuildOutputPreviewWorker` for each Worker
  */
 export async function readBuildOutputWorkers(
@@ -37,7 +37,9 @@ export async function readBuildOutputWorkers(
 	const workersDir = getWorkersDir(root);
 
 	if (!fs.existsSync(workersDir)) {
-		throw new Error(`No Build Output API tree found at ${workersDir}.`);
+		throw new Error(
+			`No Build Output Specification tree found at ${workersDir}.`
+		);
 	}
 
 	const workerNames = fs
@@ -47,7 +49,7 @@ export async function readBuildOutputWorkers(
 
 	if (workerNames.length === 0) {
 		throw new Error(
-			`Build Output API tree at ${workersDir} contains no Worker directories.`
+			`Build Output Specification tree at ${workersDir} contains no Worker directories.`
 		);
 	}
 
@@ -62,7 +64,7 @@ export async function readBuildOutputWorkers(
 		const configPath = getWorkerConfigPath(root, workerName);
 		assert(
 			fs.existsSync(configPath),
-			`Build Output API: missing \`${WORKER_CONFIG_FILENAME}\` for Worker "${workerName}" at ${configPath}.`
+			`Build Output Specification: missing \`${WORKER_CONFIG_FILENAME}\` for Worker "${workerName}" at ${configPath}.`
 		);
 		const outputConfig = OutputWorkerSchema.parse(
 			JSON.parse(fs.readFileSync(configPath, "utf-8"))
