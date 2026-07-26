@@ -1047,6 +1047,37 @@ describe.sequential("wrangler dev", () => {
 			);
 			expect(config.dev.origin?.hostname).toEqual("some-host.com");
 		});
+
+		it("should not infer the origin from routes with --infer-origin-from-routes=false", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toBeUndefined();
+		});
+
+		it("should still respect an explicit host with --infer-origin-from-routes=false", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+				dev: {
+					host: "2.some-host.com",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toEqual("2.some-host.com");
+		});
 	});
 
 	describe("custom builds", () => {
