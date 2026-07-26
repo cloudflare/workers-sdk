@@ -253,6 +253,28 @@ test("bulk get: check metadata as string", async ({ expect }) => {
 	expect(result).toEqual(expectedResult);
 });
 
+test("bulk get: check metadata for present-but-falsy values", async ({
+	expect,
+}) => {
+	const { kv } = ctx;
+	await kv.put("key1", "0", { metadata: { testing: "zero" } });
+	await kv.put("key2", "false", { metadata: { testing: "false" } });
+	await kv.put("key3", "", { metadata: { testing: "empty" } });
+
+	const result: any = await kv.getWithMetadata(["key1", "key2"], "json");
+	const expectedResult: any = new Map([
+		["key1", { value: 0, metadata: { testing: "zero" } }],
+		["key2", { value: false, metadata: { testing: "false" } }],
+	]);
+	expect(result.get("key1")).toEqual(expectedResult.get("key1"));
+	expect(result.get("key2")).toEqual(expectedResult.get("key2"));
+
+	const textResult: any = await kv.getWithMetadata(["key3"]);
+	expect(textResult).toEqual(
+		new Map([["key3", { value: "", metadata: { testing: "empty" } }]])
+	);
+});
+
 test("bulk get: get with metadata for 404", async ({ expect }) => {
 	const { kv } = ctx;
 
