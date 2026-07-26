@@ -1,13 +1,15 @@
-import { EventEmitter } from "node:events";
+import { ChildProcess } from "node:child_process";
 import process from "node:process";
 import { describe, it, vi } from "vitest";
 import { CodexMicroCommandRunner } from "../../codex-micro/command-runner";
-import type { ChildProcess } from "node:child_process";
+import type { CodexMicroCommandRunnerOptions } from "../../codex-micro/command-runner";
+
+type SpawnProcess = NonNullable<CodexMicroCommandRunnerOptions["spawnProcess"]>;
 
 describe("CodexMicroCommandRunner", () => {
 	it("starts the mapped Wrangler command without a shell", ({ expect }) => {
 		const child = createChild(41);
-		const spawnProcess = vi.fn(() => child);
+		const spawnProcess = vi.fn<SpawnProcess>(() => child);
 		const runner = new CodexMicroCommandRunner({
 			cliPath: "/opt/wrangler/cli.js",
 			projectPath: "/work/project",
@@ -37,7 +39,7 @@ describe("CodexMicroCommandRunner", () => {
 
 	it("runs arbitrary configured Wrangler arguments", ({ expect }) => {
 		const child = createChild(46);
-		const spawnProcess = vi.fn(() => child);
+		const spawnProcess = vi.fn<SpawnProcess>(() => child);
 		const runner = new CodexMicroCommandRunner({
 			cliPath: "/opt/wrangler/cli.js",
 			keymap: {
@@ -80,7 +82,7 @@ describe("CodexMicroCommandRunner", () => {
 		const counterclockwise = createChild(49);
 		const press = createChild(50);
 		const spawnProcess = vi
-			.fn()
+			.fn<SpawnProcess>()
 			.mockReturnValueOnce(clockwise)
 			.mockReturnValueOnce(counterclockwise)
 			.mockReturnValueOnce(press);
@@ -113,7 +115,7 @@ describe("CodexMicroCommandRunner", () => {
 		expect,
 	}) => {
 		let now = 1_000;
-		const spawnProcess = vi.fn(() => createChild(42));
+		const spawnProcess = vi.fn<SpawnProcess>(() => createChild(42));
 		const runner = new CodexMicroCommandRunner({
 			cliPath: "/opt/wrangler/cli.js",
 			projectPath: "/work/project",
@@ -137,7 +139,7 @@ describe("CodexMicroCommandRunner", () => {
 		const firstDeploy = createChild(51);
 		const secondDeploy = createChild(52);
 		const spawnProcess = vi
-			.fn()
+			.fn<SpawnProcess>()
 			.mockReturnValueOnce(firstDeploy)
 			.mockReturnValueOnce(secondDeploy);
 		const runner = new CodexMicroCommandRunner({
@@ -165,7 +167,7 @@ describe("CodexMicroCommandRunner", () => {
 	});
 
 	it("runs a configured AG02 action without interpreting it", ({ expect }) => {
-		const spawnProcess = vi.fn(() => createChild(47));
+		const spawnProcess = vi.fn<SpawnProcess>(() => createChild(47));
 		const runner = new CodexMicroCommandRunner({
 			cliPath: "/opt/wrangler/cli.js",
 			keymap: { AG02: "deploy --env staging" },
@@ -182,7 +184,7 @@ describe("CodexMicroCommandRunner", () => {
 
 	it("toggles long-running commands and ignores key releases", ({ expect }) => {
 		const child = createChild(43);
-		const spawnProcess = vi.fn(() => child);
+		const spawnProcess = vi.fn<SpawnProcess>(() => child);
 		const killProcess = vi.fn();
 		const runner = new CodexMicroCommandRunner({
 			cliPath: "/opt/wrangler/cli.js",
@@ -205,7 +207,7 @@ describe("CodexMicroCommandRunner", () => {
 		const dev = createChild(44);
 		const tail = createChild(45);
 		const spawnProcess = vi
-			.fn()
+			.fn<SpawnProcess>()
 			.mockReturnValueOnce(dev)
 			.mockReturnValueOnce(tail);
 		const killProcess = vi.fn();
@@ -229,7 +231,7 @@ describe("CodexMicroCommandRunner", () => {
 		expect,
 	}) => {
 		const dev = createChild(53);
-		const spawnProcess = vi.fn(() => dev);
+		const spawnProcess = vi.fn<SpawnProcess>(() => dev);
 		const killProcess = vi.fn();
 		const runner = new CodexMicroCommandRunner({
 			cliPath: "/opt/wrangler/cli.js",
@@ -248,7 +250,7 @@ describe("CodexMicroCommandRunner", () => {
 });
 
 function createChild(pid: number): ChildProcess {
-	const child = new EventEmitter() as ChildProcess;
-	child.pid = pid;
+	const child = new ChildProcess();
+	Object.defineProperty(child, "pid", { value: pid });
 	return child;
 }

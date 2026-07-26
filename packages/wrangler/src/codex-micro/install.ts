@@ -3,7 +3,6 @@ import {
 	access,
 	mkdir,
 	rename,
-	rm,
 	stat,
 	unlink,
 	writeFile,
@@ -11,7 +10,11 @@ import {
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { getGlobalConfigPath, UserError } from "@cloudflare/workers-utils";
+import {
+	getGlobalConfigPath,
+	removeDir,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { execa } from "execa";
 import { logger } from "../logger";
 import { getCodexMicroKeymapPath } from "./keymap";
@@ -111,7 +114,7 @@ export async function uninstallCodexMicroDaemon(
 		});
 	}
 
-	await rm(paths.configPath, { recursive: true, force: true });
+	await removeDir(paths.configPath);
 	logger.log("Codex Micro daemon uninstalled.");
 }
 
@@ -243,6 +246,7 @@ function resolveInstallPaths(
 
 	const launchdDomain = `gui/${uid ?? 0}`;
 	const systemdConfigPath = path.resolve(
+		// eslint-disable-next-line turbo/no-undeclared-env-vars -- XDG_CONFIG_HOME is a runtime OS setting, not a build input.
 		process.env.XDG_CONFIG_HOME ?? path.join(homePath, ".config")
 	);
 

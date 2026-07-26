@@ -151,7 +151,7 @@ async function listenToDevice(
 				.finally(finish);
 		});
 		device.once("close", finish);
-		signal.addEventListener("abort", onAbort, { once: true });
+		signal.addEventListener("abort", onAbort);
 
 		if (signal.aborted) {
 			onAbort();
@@ -179,19 +179,16 @@ async function wait(milliseconds: number, signal: AbortSignal): Promise<void> {
 	}
 
 	await new Promise<void>((resolve) => {
-		let timeout: NodeJS.Timeout | undefined;
+		const timeout = setTimeout(finish, milliseconds);
 		function finish() {
-			if (timeout !== undefined) {
-				clearTimeout(timeout);
-			}
+			clearTimeout(timeout);
 			signal.removeEventListener("abort", onAbort);
 			resolve();
 		}
 		function onAbort() {
 			finish();
 		}
-		timeout = setTimeout(finish, milliseconds);
-		signal.addEventListener("abort", onAbort, { once: true });
+		signal.addEventListener("abort", onAbort);
 		timeout.unref();
 	});
 }
