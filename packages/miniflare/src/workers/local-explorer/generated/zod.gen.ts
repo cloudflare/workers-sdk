@@ -511,6 +511,14 @@ export const zWorkflowsInstanceDetails = z.object({
 		.optional(),
 });
 
+/**
+ * Columns and rows for a read-only SQL query.
+ */
+export const zObservabilityQueryResult = z.object({
+	columns: z.array(z.string()),
+	rows: z.array(z.array(z.unknown())),
+});
+
 export const zR2ResultInfoWritable = z.record(z.unknown());
 
 export const zWorkersNamespaceWritable = z.object({
@@ -1127,3 +1135,32 @@ export const zWorkflowsSendInstanceEventData = z.object({
  * Send Event response.
  */
 export const zWorkflowsSendInstanceEventResponse = zWorkersApiResponseCommon;
+
+export const zObservabilityQueryData = z.object({
+	body: z.object({
+		sql: z.string(),
+		params: z.array(z.unknown()).optional(),
+	}),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * Query response.
+ */
+export const zObservabilityQueryResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zObservabilityQueryResult.optional(),
+	})
+);
+
+export const zObservabilityClearData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * Clear response.
+ */
+export const zObservabilityClearResponse = zWorkersApiResponseCommon;

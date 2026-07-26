@@ -1,5 +1,39 @@
 # create-cloudflare
 
+## 2.70.14
+
+### Patch Changes
+
+- [#14505](https://github.com/cloudflare/workers-sdk/pull/14505) [`65b0ccf`](https://github.com/cloudflare/workers-sdk/commit/65b0ccf6e52a9e24d171cddf7f3a9eacc6a936f0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop pre-approving `sharp`'s build script in generated projects
+
+  `miniflare` 0.35+ ships `sharp` 0.35, which no longer has an `install` lifecycle script, so generated `pnpm-workspace.yaml` files no longer pre-approve `sharp` under `allowBuilds`. `esbuild` and `workerd` are still pre-approved because they retain their install/`postinstall` scripts.
+
+- [#14761](https://github.com/cloudflare/workers-sdk/pull/14761) [`c64cad3`](https://github.com/cloudflare/workers-sdk/commit/c64cad359805dfc9ee142d856f0d241fb7f0da26) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.36.1 | 3.37.0 |
+
+- [#14789](https://github.com/cloudflare/workers-sdk/pull/14789) [`67f55b7`](https://github.com/cloudflare/workers-sdk/commit/67f55b75c5ae1ec6992d6113e2c842fcb0d3a607) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.662 | 0.0.664 |
+
+- [#14613](https://github.com/cloudflare/workers-sdk/pull/14613) [`620227d`](https://github.com/cloudflare/workers-sdk/commit/620227dfb83dd69b186dfe2490a22371bf424ec5) Thanks [@lucasmzz](https://github.com/lucasmzz)! - Fix Cloudflare bindings being unavailable during `nuxt dev` in pnpm projects created from the Nuxt template
+
+  The Nuxt (Workers) template explicitly installs `h3` when using pnpm, so that the `H3EventContext` type augmentation in `env.d.ts` can resolve the `h3` module under pnpm's isolated `node_modules` layout. Since h3's `latest` npm dist-tag moved to the 2.x release candidates, this installed `h3@2.0.1-rc.x` alongside the `h3@1.x` that Nuxt/Nitro run on. Nitro's auto-import layer then resolved `getRequestURL` from h3 v2, which throws when called with an h3 v1 event inside the `nitro-cloudflare-dev` request hook. Nitro swallows request-hook errors, so the hook silently failed before assigning `event.context.cloudflare`, and any server route accessing bindings crashed with "Cannot read properties of undefined (reading 'env')".
+
+  The template now installs `h3@^1`, matching the h3 major that nitropack depends on.
+
+- [#14769](https://github.com/cloudflare/workers-sdk/pull/14769) [`d059704`](https://github.com/cloudflare/workers-sdk/commit/d0597045a1e68bbcb1757b5481ed7d32693d81f2) Thanks [@edmundhung](https://github.com/edmundhung)! - Stop adding a custom React Router server entry file to new projects
+
+  React Router 8.2 now provides a Web Streams-compatible default server entry for non-Node runtimes. Newly generated Cloudflare projects use that default and only need `app/entry.server.tsx` for custom server rendering.
+
 ## 2.70.13
 
 ### Patch Changes

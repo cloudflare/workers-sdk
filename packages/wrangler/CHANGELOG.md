@@ -1,5 +1,54 @@
 # wrangler
 
+## 4.114.0
+
+### Minor Changes
+
+- [#14633](https://github.com/cloudflare/workers-sdk/pull/14633) [`3203b5d`](https://github.com/cloudflare/workers-sdk/commit/3203b5d34488b2b14d6066db705acef267d1229a) Thanks [@nickpatt](https://github.com/nickpatt)! - Add local-dev observability
+
+  `wrangler dev` and the Vite plugin now capture a trace for every local Worker invocation - spans, logs, and `console.*` output, including requests that cross worker or Durable Object boundaries.
+
+  You can explore this data two ways:
+
+  - A new Observability tab in the Local Explorer, with a Traces view (recent invocations, an inline timeline waterfall, and filters) and an Events view.
+  - A read-only SQL endpoint at `/cdn-cgi/explorer/api/local/observability/query`, discoverable via the Local Explorer's OpenAPI document, so coding agents and tools can query the same `spans` and `logs` tables.
+
+  While this is in testing it's off by default; set `X_LOCAL_OBSERVABILITY=true` to turn it on. It will be on by default in the public release.
+
+### Patch Changes
+
+- [#14373](https://github.com/cloudflare/workers-sdk/pull/14373) [`246ce92`](https://github.com/cloudflare/workers-sdk/commit/246ce92d1d24974678eb23a03290f9391fe9b272) Thanks [@Jacroney](https://github.com/Jacroney)! - Improve the D1 database-limit error message
+
+  When creating a D1 database fails because the account has hit its database limit, the error now points to the relevant next steps — upgrading on the Workers Free plan or requesting a higher limit on a paid plan — alongside the existing commands to list and delete databases. Previously it only suggested deleting unused databases. This applies both to `wrangler d1 create` and to the D1 database that is created during resource provisioning on deploy.
+
+- [#14796](https://github.com/cloudflare/workers-sdk/pull/14796) [`c38a2c3`](https://github.com/cloudflare/workers-sdk/commit/c38a2c358ef5c8628ce26fa8c62f002dda0dcb3d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260721.1 | ^5.20260722.1 |
+  | workerd                   | 1.20260721.1  | 1.20260722.1  |
+
+- [#14788](https://github.com/cloudflare/workers-sdk/pull/14788) [`8416b33`](https://github.com/cloudflare/workers-sdk/commit/8416b33d9ba0109195ce8fd5a0c185366c41af5a) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Fix grammar in the container image-too-large error
+
+  The error thrown when a container image exceeds the available disk size ended with "Your need more disk for this image." It now reads "You need more disk for this image."
+
+- [#14809](https://github.com/cloudflare/workers-sdk/pull/14809) [`4683ff8`](https://github.com/cloudflare/workers-sdk/commit/4683ff8aa72e1ba559108f7074d8f6aa5d73eaaa) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ignore the removed `legacy_env` field when reading a redirected configuration
+
+  Older versions of tools such as the Vite plugin can generate a redirected configuration (`.wrangler/deploy/config.json`) that still includes the removed `legacy_env` field. Since these files are tool-generated, users could not easily remove the field themselves, and Wrangler would error out. Wrangler now silently strips `legacy_env` from redirected configurations. User-authored configurations still report an error so that the field can be removed.
+
+- [#14593](https://github.com/cloudflare/workers-sdk/pull/14593) [`02232f3`](https://github.com/cloudflare/workers-sdk/commit/02232f348002d8dc002c108ac7095119d34d1b35) Thanks [@spk-ai](https://github.com/spk-ai)! - Fix dev proxy silently hanging or returning a misleading 503 on network errors for non-root-path requests
+
+  During `wrangler dev`, a transient network error on any request path other than `/` could be misclassified as the worker being reloaded, even when it wasn't: `GET`/`HEAD` requests would silently hang (with nothing logged) until the client timed out, and other methods would receive a misleading `Your worker restarted mid-request` 503. Such errors are now reported and surfaced immediately when the worker has not actually changed.
+
+- [#14797](https://github.com/cloudflare/workers-sdk/pull/14797) [`f8a8c2c`](https://github.com/cloudflare/workers-sdk/commit/f8a8c2c0001c669a731b947755bb68208d7e6f43) Thanks [@roerohan](https://github.com/roerohan)! - Explain how to provision Flagship bindings if `app_id` missing in remote development
+
+  Wrangler now reports that a Flagship binding without an `app_id` must first be created with `wrangler flagship apps create`.
+
+- Updated dependencies [[`c38a2c3`](https://github.com/cloudflare/workers-sdk/commit/c38a2c358ef5c8628ce26fa8c62f002dda0dcb3d), [`c079ba3`](https://github.com/cloudflare/workers-sdk/commit/c079ba33f1df98e38f7cebc82a64886a7e495879), [`95b026e`](https://github.com/cloudflare/workers-sdk/commit/95b026edfdf0c6b6e40994cd8fa06a350bc868f2), [`c4bacec`](https://github.com/cloudflare/workers-sdk/commit/c4bacec349f2d6e1bf4115f22a4b4eaca62cd0fc), [`3203b5d`](https://github.com/cloudflare/workers-sdk/commit/3203b5d34488b2b14d6066db705acef267d1229a)]:
+  - miniflare@4.20260722.0
+
 ## 4.113.0
 
 ### Minor Changes

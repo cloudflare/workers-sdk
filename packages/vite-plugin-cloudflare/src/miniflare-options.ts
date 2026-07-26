@@ -12,6 +12,7 @@ import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-binding
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalObservabilityEnabledFromEnv,
 } from "@cloudflare/workers-utils";
 import {
 	buildPublicUrl,
@@ -37,7 +38,11 @@ import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
-import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
+import {
+	debuglog,
+	satisfiesMinimumViteVersion,
+	withTrailingSlash,
+} from "./utils";
 import type { Bundle } from "./build-output-preview";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
@@ -503,8 +508,25 @@ export async function getDevMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			// The switch for local observability capture: tells Miniflare core to
+			// attach the trace collector to each user worker. Opt-in via the
+			// `X_LOCAL_OBSERVABILITY` env var (defaults off); enabling it requires
+			// restarting the dev server.
+			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
+			async unsafeHandleRuntimeRestart() {
+				// Miniflare has restarted `workerd` after a crash, but the
+				// module runners created over our separate bootstrap channel
+				// died with the previous process. Restarting the Vite dev
+				// server re-creates the environments, hot channels, and module
+				// runners so requests are served again instead of failing with
+				// an opaque `fetch failed`.
+				debuglog(
+					"workerd restarted after a crash; restarting the Vite dev server"
+				);
+				await viteDevServer.restart();
+			},
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
@@ -794,6 +816,9 @@ export async function getPreviewMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			// The one switch for local observability: this env var tells Miniflare
+			// core to attach the trace collector to each user worker.
+			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(

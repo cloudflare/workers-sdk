@@ -1002,6 +1002,7 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
+	#runtimeRestartError?: MiniflareCoreError;
 
 	#structuredWorkerdLogs: boolean;
 
@@ -1914,8 +1915,12 @@ export class Miniflare {
 		id: SocketIdentifier,
 		previousRequestedPort: number | undefined,
 		host = DEFAULT_HOST,
-		requestedPort?: number
+		requestedPort?: number,
+		reusePort = false
 	) {
+		if (reusePort) {
+			requestedPort = this.#socketPorts?.get(id) ?? requestedPort;
+		}
 		// If `port` is set to `0`, was previously set to `0`, and we previously had
 		// a port for this socket, reuse that random port
 		if (requestedPort === 0 && previousRequestedPort === 0) {
@@ -1983,7 +1988,8 @@ export class Miniflare {
 	async #assembleConfig(
 		loopbackHost: string,
 		loopbackPort: number,
-		devRegistryEnabled: boolean
+		devRegistryEnabled: boolean,
+		reusePorts: boolean
 	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
@@ -2034,12 +2040,18 @@ export class Miniflare {
 		const configuredHost = sharedOpts.core.host ?? DEFAULT_HOST;
 		if (maybeGetLocallyAccessibleHost(configuredHost) === undefined) {
 			// If we aren't able to locally access `workerd` on the configured host, configure an additional socket that's
-			// only accessible on `127.0.0.1:0`
+			// only accessible on `127.0.0.1`
 			sockets.push({
 				name: SOCKET_ENTRY_LOCAL,
 				service: { name: SERVICE_ENTRY },
 				http: {},
-				address: "127.0.0.1:0",
+				address: this.#getSocketAddress(
+					SOCKET_ENTRY_LOCAL,
+					undefined,
+					"127.0.0.1",
+					undefined,
+					reusePorts
+				),
 			});
 		}
 
@@ -2247,7 +2259,8 @@ export class Miniflare {
 					name,
 					previousDirectSocket?.port,
 					directSocket.host,
-					directSocket.port
+					directSocket.port,
+					reusePorts
 				);
 				// check if Worker with assets with default export
 				// (class or non-class based)
@@ -2443,10 +2456,60 @@ export class Miniflare {
 			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
 				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
 				: [],
+			v8Flags: process.env.MINIFLARE_WORKERD_V8_FLAGS
+				? process.env.MINIFLARE_WORKERD_V8_FLAGS.split(" ")
+				: [],
 		};
 	}
 
-	async #assembleAndUpdateConfig() {
+	#handleWorkerdCrash(): void {
+		// A crash destroys the proxy server heap just like a config update.
+		this.#proxyClient?.poisonProxies();
+		void this.#runtimeMutex
+			.runWith(async () => {
+				try {
+					await this.#assembleAndUpdateConfig(true);
+				} catch (error) {
+					const cause =
+						error instanceof Error ? error : new Error(String(error));
+					this.#runtimeRestartError = new MiniflareCoreError(
+						"ERR_RUNTIME_FAILURE",
+						"The Workers runtime failed to restart after an unexpected crash.",
+						cause
+					);
+					throw this.#runtimeRestartError;
+				}
+			})
+			.then(
+				async () => {
+					if (this.#disposeController.signal.aborted) {
+						return;
+					}
+					try {
+						await this.#sharedOpts.core.unsafeHandleRuntimeRestart?.();
+					} catch (error) {
+						const cause =
+							error instanceof Error ? error : new Error(String(error));
+						this.#log.error(
+							new Error(
+								"The Workers runtime restarted, but the runtime restart callback failed.",
+								{ cause }
+							)
+						);
+					}
+				},
+				(error) => {
+					if (this.#disposeController.signal.aborted) {
+						return;
+					}
+					this.#log.error(
+						error instanceof Error ? error : new Error(String(error))
+					);
+				}
+			);
+	}
+
+	async #assembleAndUpdateConfig(reusePorts = false) {
 		await this.#closeBrowserProcesses();
 
 		// This function must be run with `#runtimeMutex` held
@@ -2465,7 +2528,8 @@ export class Miniflare {
 		const config = await this.#assembleConfig(
 			loopbackHost,
 			loopbackPort,
-			this.#devRegistry.isEnabled()
+			this.#devRegistry.isEnabled(),
+			reusePorts
 		);
 		const configBuffer = serializeConfig(config);
 
@@ -2493,7 +2557,8 @@ export class Miniflare {
 			SOCKET_ENTRY,
 			this.#previousSharedOpts?.core.port,
 			configuredHost,
-			this.#sharedOpts.core.port
+			this.#sharedOpts.core.port,
+			reusePorts
 		);
 		let runtimeInspectorAddress: string | undefined;
 		if (this.#sharedOpts.core.inspectorPort !== undefined) {
@@ -2513,7 +2578,8 @@ export class Miniflare {
 				// listen-inspector event, causing waitForPorts() to hang.
 				// See https://github.com/cloudflare/workers-sdk/issues/14077
 				"127.0.0.1",
-				runtimeInspectorPort
+				runtimeInspectorPort,
+				reusePorts
 			);
 			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
 		}
@@ -2530,6 +2596,7 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
+			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
@@ -2674,6 +2741,7 @@ export class Miniflare {
 
 			this.#handleReload();
 		}
+		this.#runtimeRestartError = undefined;
 	}
 
 	async #closeBrowserProcesses() {
@@ -2697,6 +2765,9 @@ export class Miniflare {
 		// waiters on the mutex to avoid logging ready/updated messages to the
 		// console if there are future updates)
 		await this.#runtimeMutex.drained();
+		if (!disposing && this.#runtimeRestartError !== undefined) {
+			throw this.#runtimeRestartError;
+		}
 		// If we called `dispose()`, we may not have a `#runtimeEntryURL` if we
 		// `dispose()`d synchronously, immediately after constructing a `Miniflare`
 		// instance. In this case, return a discard URL which we'll ignore.
