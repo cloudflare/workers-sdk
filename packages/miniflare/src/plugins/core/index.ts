@@ -200,6 +200,20 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeOverrideFetchWorker: z.string().optional(),
 
 		unsafeEvalBinding: z.string().optional(),
+		unsafeMemoryCaches: z
+			.record(
+				z.object({
+					id: z.string().optional(),
+					maxKeys: z.number().int().nonnegative().max(0xffffffff),
+					maxValueSize: z.number().int().nonnegative().max(0xffffffff),
+					maxTotalValueSize: z
+						.number()
+						.int()
+						.nonnegative()
+						.max(Number.MAX_SAFE_INTEGER),
+				})
+			)
+			.optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
 		/** Used to set the vitest pool worker SELF binding to point to the Router Worker if there are assets.
@@ -725,6 +739,26 @@ export const CORE_PLUGIN: Plugin<
 				name: options.unsafeEvalBinding,
 				unsafeEval: kVoid,
 			});
+		}
+		if (options.unsafeMemoryCaches !== undefined) {
+			bindings.push(
+				...Object.entries(options.unsafeMemoryCaches).map(
+					([
+						name,
+						{ id, maxKeys, maxValueSize, maxTotalValueSize },
+					]): Worker_Binding => ({
+						name,
+						memoryCache: {
+							id,
+							limits: {
+								maxKeys,
+								maxValueSize,
+								maxTotalValueSize: BigInt(maxTotalValueSize),
+							},
+						},
+					})
+				)
+			);
 		}
 
 		return Promise.all(bindings);

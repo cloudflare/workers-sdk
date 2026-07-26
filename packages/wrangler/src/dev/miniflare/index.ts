@@ -484,6 +484,7 @@ type WorkerOptionsBindings = Pick<
 	| "flagship"
 	| "artifacts"
 	| "workerLoaders"
+	| "unsafeMemoryCaches"
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
 	| "media"
@@ -561,6 +562,10 @@ export function buildMiniflareBindingOptions(
 	const flagshipBindings = extractBindingsOfType("flagship", bindings);
 	const artifactsBindings = extractBindingsOfType("artifacts", bindings);
 	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
+	const volatileCaches = extractBindingsOfType(
+		"unsafe_volatile_cache",
+		bindings
+	);
 	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
 	// Extract both regular and unsafe ratelimit bindings
 	// Unsafe bindings have type "unsafe_ratelimit" (prefixed with "unsafe_")
@@ -811,6 +816,25 @@ export function buildMiniflareBindingOptions(
 		dataBlobBindings,
 		wasmBindings,
 		unsafeBindings,
+		unsafeMemoryCaches: Object.fromEntries(
+			volatileCaches.map(
+				({
+					binding,
+					cache_id,
+					max_keys,
+					max_value_size,
+					max_total_value_size,
+				}) => [
+					binding,
+					{
+						id: cache_id,
+						maxKeys: max_keys,
+						maxValueSize: max_value_size,
+						maxTotalValueSize: max_total_value_size,
+					},
+				]
+			)
+		),
 
 		ai:
 			aiBindings.length > 0

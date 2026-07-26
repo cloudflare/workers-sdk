@@ -231,4 +231,41 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			).toBeUndefined();
 		});
 	});
+
+	it("configures unsafe volatile cache bindings for local development", ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "test-worker",
+				main: "./index.js",
+				compatibility_date: "2024-10-04",
+				unsafe: {
+					bindings: [
+						{
+							name: "AIG_VOLATILE_CACHE",
+							type: "volatile_cache",
+							cache_id: "ai-gateway-worker-staging",
+							max_keys: 10_000,
+							max_value_size: 16_384,
+							max_total_value_size: 33_554_432,
+						},
+					],
+				},
+			},
+			"./wrangler.json"
+		);
+
+		const { workerOptions } =
+			unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+		expect(workerOptions.unsafeMemoryCaches).toEqual({
+			AIG_VOLATILE_CACHE: {
+				id: "ai-gateway-worker-staging",
+				maxKeys: 10_000,
+				maxValueSize: 16_384,
+				maxTotalValueSize: 33_554_432,
+			},
+		});
+	});
 });
