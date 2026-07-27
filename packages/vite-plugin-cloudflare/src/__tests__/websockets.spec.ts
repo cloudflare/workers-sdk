@@ -7,6 +7,7 @@ import {
 	beforeEach,
 	describe,
 	type ExpectStatic,
+	onTestFinished,
 	test,
 	vi,
 } from "vitest";
@@ -374,6 +375,9 @@ describe("handleWebSocket", () => {
 
 		const unhandled = vi.fn();
 		process.on("unhandledRejection", unhandled);
+		onTestFinished(() => {
+			process.off("unhandledRejection", unhandled);
+		});
 
 		const socket = await connect();
 		const closed = new Promise<void>((resolve) =>
@@ -393,7 +397,6 @@ describe("handleWebSocket", () => {
 		await closed;
 		// Give any (incorrectly) unhandled rejection a tick to surface.
 		await new Promise((resolve) => setTimeout(resolve, 50));
-		process.off("unhandledRejection", unhandled);
 
 		expect(unhandled).not.toHaveBeenCalled();
 	});
