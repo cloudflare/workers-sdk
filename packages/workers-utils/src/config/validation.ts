@@ -4135,12 +4135,55 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "local_dev")) {
+		const localDev = value.local_dev;
+		if (typeof localDev !== "object" || localDev === null) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "local_dev" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			experimental(
+				diagnostics,
+				{ local_dev: localDev } as {
+					local_dev: { experimental_s3_credentials?: unknown };
+				},
+				"local_dev.experimental_s3_credentials"
+			);
+			if (hasProperty(localDev, "experimental_s3_credentials")) {
+				const credentials = localDev.experimental_s3_credentials;
+				if (
+					typeof credentials !== "object" ||
+					credentials === null ||
+					!isRequiredProperty(credentials, "accessKeyId", "string") ||
+					!isRequiredProperty(credentials, "secretAccessKey", "string")
+				) {
+					diagnostics.errors.push(
+						`"${field}" bindings should, optionally, have a "local_dev.experimental_s3_credentials" field with string "accessKeyId" and "secretAccessKey" fields, but got ${JSON.stringify(
+							value
+						)}.`
+					);
+					isValid = false;
+				}
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.local_dev`,
+				Object.keys(localDev),
+				["experimental_s3_credentials"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
 		"remote",
+		"local_dev",
 	]);
 
 	return isValid;
