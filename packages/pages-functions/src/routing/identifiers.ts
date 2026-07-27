@@ -69,8 +69,9 @@ const validIdentifierRegex = new RegExp(
  * @param identifier - The string to validate
  * @returns `true` when the identifier is safe to use in generated code
  */
-export const isValidIdentifier = (identifier: string) =>
-	validIdentifierRegex.test(identifier);
+export function isValidIdentifier(identifier: string) {
+	return validIdentifierRegex.test(identifier);
+}
 
 /**
  * Normalize a string into a valid JavaScript identifier by replacing
@@ -79,8 +80,9 @@ export const isValidIdentifier = (identifier: string) =>
  * @param identifier - The raw string to normalize
  * @returns A string suitable for use as a JavaScript identifier
  */
-export const normalizeIdentifier = (identifier: string) =>
-	identifier.replace(
+export function normalizeIdentifier(identifier: string) {
+	return identifier.replace(
 		/(?:^[^$_\p{ID_Start}])|[^$_\u200C\u200D\p{ID_Continue}]/gu,
 		"_"
 	);
+}
