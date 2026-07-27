@@ -276,7 +276,9 @@ export async function getDevMiniflareOptions(
 							}
 
 							if (!file) {
-								throw new Error(`No bundled file for "${pathname}"`);
+								throw new Error(
+									`No bundled file for "${pathname}" after waiting for bundle regeneration.`
+								);
 							}
 
 							const html =
@@ -297,8 +299,10 @@ export async function getDevMiniflareOptions(
 						return new MiniflareResponse(html, {
 							headers: { "Content-Type": "text/html" },
 						});
-					} catch {
-						throw new Error(`Unexpected error. Failed to load "${pathname}".`);
+					} catch (error) {
+						throw new Error(`Unexpected error. Failed to load "${pathname}".`, {
+							cause: error,
+						});
 					}
 				},
 			},
