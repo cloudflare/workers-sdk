@@ -322,11 +322,11 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 				expect(headers).toEqual({
 					Cookie: "CF_Authorization=test-access-token",
 				});
-				expect(spawn).toHaveBeenCalledWith("cloudflared", [
-					"access",
-					"login",
-					"access-protected.com",
-				]);
+				expect(spawn).toHaveBeenCalledWith(
+					"cloudflared",
+					["access", "login", "access-protected.com"],
+					{ signal: undefined }
+				);
 			});
 
 			it("should kill a still-pending cloudflared when the process exits", async ({
@@ -370,6 +370,53 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 					"Failed to authenticate with Cloudflare Access"
 				);
 				expect(process.listenerCount("exit")).toBe(exitListenersBefore.length);
+			});
+
+			it("should abort a pending cloudflared authorization when the signal aborts", async ({
+				expect,
+			}) => {
+				const child = createFakeCloudflaredProcess({
+					stdout: "fetched your token:\n\ntest-access-token\n",
+					delayMs: 10_000,
+				});
+				const spawnImpl = (
+					_binary: string,
+					_args: readonly string[],
+					options?: { signal?: AbortSignal }
+				) => {
+					// Mirror Node's behavior for `spawn(..., { signal })`: an abort
+					// kills the child and emits an AbortError on it.
+					options?.signal?.addEventListener("abort", () => {
+						child.kill();
+						const error = new Error("The operation was aborted");
+						error.name = "AbortError";
+						child.emit("error", error);
+					});
+					return child;
+				};
+				vi.mocked(spawn).mockImplementationOnce(
+					spawnImpl as unknown as typeof spawn
+				);
+
+				const controller = new AbortController();
+				const pendingHeaders = getAccessHeaders("access-protected.com", {
+					logger: silentLogger,
+					isNonInteractiveOrCI: () => false,
+					signal: controller.signal,
+				});
+				// Abort once cloudflared has been spawned, which happens after the
+				// async Access-detection probe.
+				await vi.waitFor(() => {
+					if (vi.mocked(spawn).mock.calls.length === 0) {
+						throw new Error("cloudflared not spawned yet");
+					}
+				});
+				controller.abort();
+
+				await expect(pendingHeaders).rejects.toMatchObject({
+					name: "AbortError",
+				});
+				expect(child.killed).toBe(true);
 			});
 
 			it("should error without cloudflared installed on an access protected domain", async ({

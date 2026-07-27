@@ -90,6 +90,8 @@ export async function getAccessHeaders(
 	options: {
 		logger: OAuthFlowLogger;
 		isNonInteractiveOrCI?: () => boolean;
+		/** Aborts a pending `cloudflared` authorization and kills its process. */
+		signal?: AbortSignal;
 	}
 ): Promise<Record<string, string>> {
 	const logger = options.logger;
@@ -153,7 +155,7 @@ export async function getAccessHeaders(
 
 	// 3. Interactive: fall back to cloudflared
 	logger.debug("Spawning cloudflared to get Access token for domain:");
-	const output = await spawnCloudflaredAccessLogin(domain);
+	const output = await spawnCloudflaredAccessLogin(domain, options.signal);
 	if (output.error) {
 		throw new UserError(
 			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation",
@@ -186,10 +188,11 @@ export async function getAccessHeaders(
  * surface an installation hint.
  */
 function spawnCloudflaredAccessLogin(
-	domain: string
+	domain: string,
+	signal?: AbortSignal
 ): Promise<{ error?: Error; stdout: string }> {
-	return new Promise((resolve) => {
-		const child = spawn("cloudflared", ["access", "login", domain]);
+	return new Promise((resolve, reject) => {
+		const child = spawn("cloudflared", ["access", "login", domain], { signal });
 		const stdoutChunks: Buffer[] = [];
 		child.stdout.on("data", (chunk: Buffer) => stdoutChunks.push(chunk));
 		child.stderr.resume();
@@ -197,10 +200,22 @@ function spawnCloudflaredAccessLogin(
 		process.once("exit", killChild);
 		child.on("error", (error) => {
 			process.removeListener("exit", killChild);
+			if (signal?.aborted) {
+				// The runtime aborted the authorization; the signal has already
+				// killed the child, so propagate the AbortError to the caller.
+				reject(error);
+				return;
+			}
 			resolve({ error, stdout: "" });
 		});
 		child.on("close", () => {
 			process.removeListener("exit", killChild);
+			if (signal?.aborted) {
+				// The abort kill also fires `close`; whichever of `close` and
+				// `error` arrives first must settle the promise as aborted.
+				reject(signal.reason ?? new Error("The operation was aborted"));
+				return;
+			}
 			resolve({ stdout: Buffer.concat(stdoutChunks).toString() });
 		});
 	});
@@ -217,6 +232,7 @@ function spawnCloudflaredAccessLogin(
 export async function getCloudflareAccessHeaders(options: {
 	logger: OAuthFlowLogger;
 	isNonInteractiveOrCI: () => boolean;
+	signal?: AbortSignal;
 }): Promise<Record<string, string>> {
 	const cfAuthToken = getCfAuthorizationTokenFromEnv();
 
