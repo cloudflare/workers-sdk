@@ -9,6 +9,18 @@
 			"id": "test-kv-id",
 		},
 	],
+	"r2_buckets": [
+		{
+			"binding": "BUCKET",
+			"bucket_name": "s3-test-bucket",
+			"local_dev": {
+				"experimental_s3_credentials": {
+					"accessKeyId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+					"secretAccessKey": "local-secret-access-key",
+				},
+			},
+		},
+	],
 	"images": {
 		"binding": "IMAGES",
 	},

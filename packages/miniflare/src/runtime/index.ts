@@ -247,8 +247,13 @@ export class Runtime {
 		// Default `TZ` to `UTC` to match the production Cloudflare runtime.
 		// Callers can override via `options.runtimeEnv` (e.g. for tests of
 		// timezone-dependent behaviour).
+		// `windowsHide: true` prevents a console window from popping up when the
+		// parent has no console (e.g. a detached/backgrounded Node process).
+		// Without it, Windows allocates a new console for workerd.exe, and on
+		// Windows 11 that is hosted by a visible, focus-stealing Terminal window.
 		const runtimeProcess = childProcess.spawn(command, args, {
 			stdio: ["pipe", "pipe", "pipe", "pipe"],
+			windowsHide: true,
 			env: {
 				...process.env,
 				TZ: "UTC",

@@ -188,35 +188,25 @@ export type RemoteProxyConnectionString = URL & {
 	__brand: "RemoteProxyConnectionString";
 };
 
-export function namespaceEntries(
-	namespaces?:
-		| Record<
-				string,
-				| string
-				| {
-						id: string;
-						remoteProxyConnectionString?: RemoteProxyConnectionString;
-				  }
-		  >
-		| string[]
-): [
-	bindingName: string,
-	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
-][] {
+export function namespaceEntries<
+	Entry extends {
+		id: string;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+	} = { id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
+>(
+	namespaces?: Record<string, string | Entry> | string[]
+): [bindingName: string, entry: Entry][] {
 	if (Array.isArray(namespaces)) {
-		return namespaces.map((bindingName) => [bindingName, { id: bindingName }]);
+		return namespaces.map((bindingName) => [
+			bindingName,
+			{ id: bindingName } as Entry,
+		]);
 	} else if (namespaces !== undefined) {
 		return Object.entries(namespaces).map(([key, value]) => {
 			if (typeof value === "string") {
-				return [key, { id: value }];
+				return [key, { id: value } as Entry];
 			}
-			return [
-				key,
-				{
-					id: value.id,
-					remoteProxyConnectionString: value.remoteProxyConnectionString,
-				},
-			];
+			return [key, value];
 		});
 	} else {
 		return [];

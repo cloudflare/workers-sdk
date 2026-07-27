@@ -1,3 +1,5 @@
+import chalk from "chalk";
+
 /**
  * Pure plan logic for the `addresses` config field: build the plan request and
  * render the plan response. No network access.
@@ -127,11 +129,11 @@ export function planHasDestructiveChanges(
 	return plan.zones.some((zone) => zone.changes.some(isDestructiveChange));
 }
 
-const CHANGE_MARKERS: Record<PlanChangeType, string> = {
-	added: "+",
-	updated: "~",
-	deleted: "-",
-	conflict: "!",
+const CHANGE_MARKERS: Record<PlanChangeType, () => string> = {
+	added: () => chalk.green("+"),
+	updated: () => chalk.yellow("~"),
+	deleted: () => chalk.red("-"),
+	conflict: () => chalk.red("!"),
 };
 
 /** Human description of what a remote rule currently does, for conflict lines. */
@@ -189,7 +191,7 @@ export function renderEmailRoutingPlan(
 
 		for (const change of zone.changes) {
 			counts[change.type]++;
-			const marker = CHANGE_MARKERS[change.type];
+			const marker = CHANGE_MARKERS[change.type]();
 			switch (change.type) {
 				case "added":
 				case "updated":
