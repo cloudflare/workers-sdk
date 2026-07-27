@@ -45,6 +45,7 @@ import type {
 	DOContainerOptions,
 	Json,
 	MiniflareOptions,
+	R2S3Credentials,
 	RemoteProxyConnectionString,
 	SourceOptions,
 	WorkerdStructuredLog,
@@ -243,15 +244,22 @@ function kvNamespaceEntry(
 	return [binding, { id, remoteProxyConnectionString }];
 }
 function r2BucketEntry(
-	{ binding, bucket_name, remote }: CfR2Bucket,
+	{ binding, bucket_name, remote, local_dev }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
+	{
+		id: string;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		s3Credentials?: R2S3Credentials;
+	},
 ] {
 	const id = getRemoteId(bucket_name) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { id }];
+		return [
+			binding,
+			{ id, s3Credentials: local_dev?.experimental_s3_credentials },
+		];
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }

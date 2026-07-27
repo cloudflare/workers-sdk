@@ -57,6 +57,9 @@
 		"youch": "4.1.0-beta.10"
 	},
 	"devDependencies": {
+		"@aws-crypto/sha256-js": "^5.2.0",
+		"@aws-sdk/client-s3": "^3.721.0",
+		"@aws-sdk/s3-request-presigner": "^3.721.0",
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/kv-asset-handler": "workspace:*",
@@ -68,6 +71,7 @@
 		"@hey-api/openapi-ts": "catalog:default",
 		"@microsoft/api-extractor": "^7.52.8",
 		"@puppeteer/browsers": "^2.10.6",
+		"@smithy/signature-v4": "^4.2.4",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
 		"@types/glob-to-regexp": "^0.4.1",
@@ -89,6 +93,7 @@
 		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "catalog:default",
 		"expect-type": "^0.15.0",
+		"fast-xml-parser": "^4.4.1",
 		"get-port": "^7.1.0",
 		"glob-to-regexp": "0.4.1",
 		"hono": "^4.12.5",
