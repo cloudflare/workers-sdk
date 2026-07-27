@@ -826,6 +826,82 @@ describe("resource provisioning", () => {
 			`);
 		});
 
+		it("provisions a KV namespace in the jurisdiction specified in config", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				kv_namespaces: [
+					{
+						binding: "KV",
+						jurisdiction: "eu",
+					},
+				],
+			});
+			mockGetSettings();
+			mockListKVNamespacesRequest(expect, {
+				title: "test-kv",
+				id: "existing-kv-id",
+			});
+
+			mockSelect({
+				text: "Would you like to connect an existing KV Namespace or create a new one?",
+				result: "__WRANGLER_INTERNAL_NEW",
+			});
+			mockPrompt({
+				text: "Enter a name for your new KV Namespace",
+				result: "new-kv",
+			});
+			mockCreateKVNamespace(expect, {
+				assertTitle: "new-kv",
+				assertJurisdiction: "eu",
+				resultId: "new-kv-id",
+			});
+
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "KV",
+						type: "kv_namespace",
+						namespace_id: "new-kv-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+
+				The following bindings need to be provisioned:
+				Binding        Resource
+				env.KV         KV Namespace
+
+
+				Provisioning KV (KV Namespace)...
+				🌀 Creating new KV Namespace "new-kv"...
+				✨ KV provisioned 🎉
+
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
+				🎉 All resources provisioned, continuing with deployment...
+
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                 Resource
+				env.KV (new-kv-id)      KV Namespace
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
 		it("can provision KV, R2 and D1 bindings with new resources w/ redirected config", async ({
 			expect,
 		}) => {
