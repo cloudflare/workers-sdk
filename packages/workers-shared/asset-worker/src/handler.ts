@@ -16,7 +16,12 @@ import {
 	flagIsEnabled,
 	SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING,
 } from "./compatibility-flags";
-import { attachCustomHeaders, getAssetHeaders } from "./utils/headers";
+import { canonicalizePath } from "./utils/canonical-path";
+import {
+	attachCustomHeaders,
+	getAssetHeaders,
+	getCustomHeaderMatches,
+} from "./utils/headers";
 import {
 	generateRedirectsMatcher,
 	staticRedirectsMatcher,
@@ -37,6 +42,12 @@ type AssetIntent = {
 
 export type AssetIntentWithResolver = AssetIntent & { resolver: Resolver };
 
+// Bitmask of rule decisions that differ between raw and canonical paths.
+const enum CanonicalPathRuleDifference {
+	Redirect = 1 << 0,
+	Headers = 1 << 1,
+}
+
 const getResponseOrAssetIntent = async (
 	request: Request,
 	env: Env,
@@ -46,6 +57,9 @@ const getResponseOrAssetIntent = async (
 ): Promise<Response | AssetIntentWithResolver> => {
 	const url = new URL(request.url);
 	const { search } = url;
+	// Shadow-only: raw-path matching remains authoritative.
+	recordCanonicalPathRuleDifferences(request, configuration, analytics);
+
 	const redirectResult = handleRedirects(
 		env,
 		request,
@@ -1112,4 +1126,60 @@ export function getRedirectMatch(
 		staticRedirectsMatcher(configuration, host, pathname) ||
 		generateRedirectsMatcher(configuration)({ request, canonicalPath })[0]
 	);
+}
+
+/**
+ * Records rule differences caused by canonicalization without changing the
+ * raw-path response.
+ */
+function recordCanonicalPathRuleDifferences(
+	request: Request,
+	configuration: Required<AssetConfig>,
+	analytics?: Analytics
+) {
+	if (!analytics) {
+		return;
+	}
+
+	const url = new URL(request.url);
+	const canonicalPath = canonicalizePath(url.pathname);
+	if (canonicalPath.routingPath === url.pathname) {
+		return;
+	}
+
+	let difference = 0;
+	// Compare selected _redirects rules, not the response they would produce.
+	const currentRedirect = getRedirectMatch(request, configuration, url.host);
+	const canonicalRedirect = getRedirectMatch(
+		request,
+		configuration,
+		url.host,
+		canonicalPath.routingPath
+	);
+	if (ruleMatchesDiffer(currentRedirect, canonicalRedirect)) {
+		difference |= CanonicalPathRuleDifference.Redirect;
+	}
+
+	// Compare selected _headers rules after placeholder substitution.
+	const currentHeaders = getCustomHeaderMatches(request, configuration);
+	const canonicalHeaders = getCustomHeaderMatches(
+		request,
+		configuration,
+		canonicalPath.routingPath
+	);
+	if (ruleMatchesDiffer(currentHeaders, canonicalHeaders)) {
+		difference |= CanonicalPathRuleDifference.Headers;
+	}
+
+	if (difference !== 0) {
+		analytics.setData({
+			pathNormalization: canonicalPath.normalization,
+			pathNormalizationDifference: difference,
+		});
+	}
+}
+
+// Matcher outputs are JSON-safe and generated in deterministic rule order.
+function ruleMatchesDiffer(left: unknown, right: unknown): boolean {
+	return JSON.stringify(left) !== JSON.stringify(right);
 }

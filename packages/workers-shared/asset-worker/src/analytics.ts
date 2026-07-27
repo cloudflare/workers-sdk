@@ -64,6 +64,10 @@ type Data = {
 	compatibilityFlags?: string[]; // converted into a bitmask
 	// double7 - Entrypoint discriminator (see EntrypointType enum)
 	entrypoint?: EntrypointType;
+	// double8 - Canonicalization performed while in shadow mode
+	pathNormalization?: number;
+	// double9 - Shadow decisions that differ from current behavior
+	pathNormalizationDifference?: number;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -142,6 +146,8 @@ export class Analytics {
 				this.data.status ?? -1, // double5
 				compatibilityFlagsBitmask, // double6
 				this.data.entrypoint ?? -1, // double7
+				this.data.pathNormalization ?? 0, // double8
+				this.data.pathNormalizationDifference ?? 0, // double9
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes

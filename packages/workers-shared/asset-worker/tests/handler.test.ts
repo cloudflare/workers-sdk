@@ -40,6 +40,39 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(response.headers.get("ETag")).toBe(`"${eTag}"`);
 	});
 
+	it("records shadow rule differences without changing the response", async ({
+		expect,
+	}) => {
+		const configuration: AssetConfig = normalizeConfiguration({
+			html_handling: "none",
+			not_found_handling: "none",
+			redirects: {
+				version: 1,
+				staticRules: {},
+				rules: { "/docs%2Bdraft": { status: 302, to: "/login" } },
+			},
+			headers: {
+				version: 2,
+				rules: { "/docs%2Bdraft": { set: { "X-Example": "true" } } },
+			},
+		});
+		const shadowAnalytics = new Analytics();
+
+		const response = await handleRequest(
+			new Request("https://example.com/docs+draft"),
+			// @ts-expect-error Empty config defaults to using mocked Jaeger.
+			mockEnv,
+			configuration,
+			vi.fn().mockReturnValue(null),
+			vi.fn(),
+			shadowAnalytics
+		);
+
+		expect(response.status).toBe(404);
+		expect(shadowAnalytics.getData("pathNormalization")).toBe(8);
+		expect(shadowAnalytics.getData("pathNormalizationDifference")).toBe(3);
+	});
+
 	it("returns 304 Not Modified responses for a valid strong ETag in If-None-Match", async ({
 		expect,
 	}) => {
