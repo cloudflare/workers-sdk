@@ -17,6 +17,39 @@ type DelayLogger = {
 
 type Waiter = (ms: number, opts?: { signal?: AbortSignal }) => Promise<void>;
 
+type AbortRaceResult<T> = { aborted: true } | { aborted: false; value: T };
+
+export async function raceAgainstAbort<T>(
+	promise: Promise<T>,
+	signal: AbortSignal
+): Promise<AbortRaceResult<T>> {
+	const resultPromise = promise.then(
+		(value): AbortRaceResult<T> => ({
+			aborted: false,
+			value,
+		})
+	);
+	if (signal.aborted) {
+		// Observe a later rejection from the losing promise so it doesn't become
+		// an unhandled rejection after returning the already-aborted result.
+		void resultPromise.catch(() => undefined);
+		return { aborted: true };
+	}
+
+	let resolveAbort: ((result: AbortRaceResult<T>) => void) | undefined;
+	const abortPromise = new Promise<AbortRaceResult<T>>((resolve) => {
+		resolveAbort = resolve;
+	});
+	const onAbort = (): void => resolveAbort?.({ aborted: true });
+	signal.addEventListener("abort", onAbort, { once: true });
+
+	try {
+		return await Promise.race([resultPromise, abortPromise]);
+	} finally {
+		signal.removeEventListener("abort", onAbort);
+	}
+}
+
 export async function invokeDelayFunction(
 	delay: WorkflowDelayFunction,
 	input: WorkflowDynamicDelayContext,
