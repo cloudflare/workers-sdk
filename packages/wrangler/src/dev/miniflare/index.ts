@@ -244,12 +244,7 @@ function kvNamespaceEntry(
 	return [binding, { id, remoteProxyConnectionString }];
 }
 function r2BucketEntry(
-	{
-		binding,
-		bucket_name,
-		remote,
-		experimental_local_s3_credentials,
-	}: CfR2Bucket,
+	{ binding, bucket_name, remote, local_dev }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
@@ -261,7 +256,10 @@ function r2BucketEntry(
 ] {
 	const id = getRemoteId(bucket_name) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { id, s3Credentials: experimental_local_s3_credentials }];
+		return [
+			binding,
+			{ id, s3Credentials: local_dev?.experimental_s3_credentials },
+		];
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }

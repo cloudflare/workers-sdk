@@ -4832,7 +4832,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should accept experimental_local_s3_credentials, with an experimental warning", ({
+			it("should accept local_dev.experimental_s3_credentials, with an experimental warning", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -4841,9 +4841,11 @@ describe("normalizeAndValidateConfig()", () => {
 							{
 								binding: "R2_BINDING",
 								bucket_name: "my-bucket",
-								experimental_local_s3_credentials: {
-									accessKeyId: "key-id",
-									secretAccessKey: "secret",
+								local_dev: {
+									experimental_s3_credentials: {
+										accessKeyId: "key-id",
+										secretAccessKey: "secret",
+									},
 								},
 							},
 						],
@@ -4856,20 +4858,18 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "experimental_local_s3_credentials" fields are experimental and may change or break at any time."
+					  - "local_dev.experimental_s3_credentials" fields are experimental and may change or break at any time."
 				`);
 			});
 
-			it("should error if experimental_local_s3_credentials is not valid", ({
-				expect,
-			}) => {
+			it("should error if local_dev is not an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						r2_buckets: [
 							{
 								binding: "R2_BINDING",
 								bucket_name: "my-bucket",
-								experimental_local_s3_credentials: { accessKeyId: "key-id" },
+								local_dev: "credentials",
 							},
 						],
 					} as unknown as RawConfig,
@@ -4880,7 +4880,33 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "r2_buckets[0]" bindings should, optionally, have an "experimental_local_s3_credentials" field with string "accessKeyId" and "secretAccessKey" fields, but got {"binding":"R2_BINDING","bucket_name":"my-bucket","experimental_local_s3_credentials":{"accessKeyId":"key-id"}}."
+					  - "r2_buckets[0]" bindings should, optionally, have an object "local_dev" field but got {"binding":"R2_BINDING","bucket_name":"my-bucket","local_dev":"credentials"}."
+				`);
+			});
+
+			it("should error if local_dev.experimental_s3_credentials is not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: {
+									experimental_s3_credentials: { accessKeyId: "key-id" },
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "r2_buckets[0]" bindings should, optionally, have a "local_dev.experimental_s3_credentials" field with string "accessKeyId" and "secretAccessKey" fields, but got {"binding":"R2_BINDING","bucket_name":"my-bucket","local_dev":{"experimental_s3_credentials":{"accessKeyId":"key-id"}}}."
 				`);
 			});
 		});

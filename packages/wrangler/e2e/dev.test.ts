@@ -2646,7 +2646,7 @@ describe("r2 local S3-compatible API", () => {
 					binding = "BUCKET"
 					bucket_name = "s3-test-bucket"
 
-					[r2_buckets.experimental_local_s3_credentials]
+					[r2_buckets.local_dev.experimental_s3_credentials]
 					accessKeyId = "${credentials.accessKeyId}"
 					secretAccessKey = "${credentials.secretAccessKey}"
 			`,

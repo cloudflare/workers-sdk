@@ -1051,13 +1051,16 @@ export interface EnvironmentNonInheritable {
 		jurisdiction?: string;
 		/** Whether the R2 bucket should be remote or not in local development */
 		remote?: boolean;
-		/**
-		 * EXPERIMENTAL: AWS SigV4 credentials for the local S3-compatible
-		 * endpoint. When set, the bucket is served at
-		 * `/cdn-cgi/local/r2/s3/<bucket-name>` during local development.
-		 * Ignored when the bucket runs remotely.
-		 */
-		experimental_local_s3_credentials?: LocalS3Credentials;
+		/** Settings that only apply to local development */
+		local_dev?: {
+			/**
+			 * EXPERIMENTAL: AWS SigV4 credentials for the local S3-compatible
+			 * endpoint. When set, the bucket is served at
+			 * `/cdn-cgi/local/r2/s3/<bucket-name>` during local development.
+			 * Ignored when the bucket runs remotely.
+			 */
+			experimental_s3_credentials?: LocalS3Credentials;
+		};
 	}[];
 
 	/**

@@ -215,8 +215,11 @@ export interface CfR2Bucket {
 	jurisdiction?: string;
 	remote?: boolean;
 	raw?: boolean;
-	/** EXPERIMENTAL: credentials for the local S3-compatible endpoint */
-	experimental_local_s3_credentials?: LocalS3Credentials;
+	/** Settings that only apply to local development */
+	local_dev?: {
+		/** EXPERIMENTAL: credentials for the local S3-compatible endpoint */
+		experimental_s3_credentials?: LocalS3Credentials;
+	};
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
