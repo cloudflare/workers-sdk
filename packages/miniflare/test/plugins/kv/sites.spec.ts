@@ -20,6 +20,19 @@ const ctx: Context = {
 	modulesPath: "",
 };
 
+// The fixtures below import `@cloudflare/kv-asset-handler`. By default esbuild
+// resolves that bare specifier through the pnpm symlink to the sibling
+// workspace package's built `dist/`, coupling this suite to that package having
+// been built and its output being readable at bundle time. That coupling has
+// caused CI failures ("Could not resolve @cloudflare/kv-asset-handler") from
+// this `beforeAll`, taking down the whole suite. Alias the specifier to the
+// package source instead so fixture bundling is self-contained and never
+// depends on the sibling package's build output.
+const KV_ASSET_HANDLER_SOURCE = path.resolve(
+	FIXTURES_PATH,
+	"../../../../kv-asset-handler/src/index.ts"
+);
+
 beforeAll(async () => {
 	// Build fixtures
 	const tmp = await useTmp();
@@ -27,6 +40,9 @@ beforeAll(async () => {
 		entryPoints: [SERVICE_WORKER_ENTRY_PATH, MODULES_ENTRY_PATH],
 		format: "esm",
 		external: ["__STATIC_CONTENT_MANIFEST"],
+		alias: {
+			"@cloudflare/kv-asset-handler": KV_ASSET_HANDLER_SOURCE,
+		},
 		bundle: true,
 		sourcemap: true,
 		outdir: tmp,

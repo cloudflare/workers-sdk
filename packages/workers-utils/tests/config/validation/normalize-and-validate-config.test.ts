@@ -4831,6 +4831,84 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
+
+			it("should accept local_dev.experimental_s3_credentials, with an experimental warning", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: {
+									experimental_s3_credentials: {
+										accessKeyId: "key-id",
+										secretAccessKey: "secret",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "local_dev.experimental_s3_credentials" fields are experimental and may change or break at any time."
+				`);
+			});
+
+			it("should error if local_dev is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: "credentials",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "r2_buckets[0]" bindings should, optionally, have an object "local_dev" field but got {"binding":"R2_BINDING","bucket_name":"my-bucket","local_dev":"credentials"}."
+				`);
+			});
+
+			it("should error if local_dev.experimental_s3_credentials is not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: {
+									experimental_s3_credentials: { accessKeyId: "key-id" },
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "r2_buckets[0]" bindings should, optionally, have a "local_dev.experimental_s3_credentials" field with string "accessKeyId" and "secretAccessKey" fields, but got {"binding":"R2_BINDING","bucket_name":"my-bucket","local_dev":{"experimental_s3_credentials":{"accessKeyId":"key-id"}}}."
+				`);
+			});
 		});
 
 		describe("[services]", () => {
