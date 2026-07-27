@@ -6,7 +6,7 @@ import {
 	getWorkerBundleDir,
 	writeOutputWorkerConfig,
 	writeRootOutputConfig,
-} from "@cloudflare/config";
+} from "@cloudflare/build-output-utils";
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,

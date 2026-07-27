@@ -6,7 +6,7 @@ import {
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	writeOutputWorkerConfig,
-} from "@cloudflare/config";
+} from "@cloudflare/build-output-utils";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";

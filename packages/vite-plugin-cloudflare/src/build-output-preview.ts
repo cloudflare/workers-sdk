@@ -1,15 +1,17 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import {
-	convertToWranglerConfig,
 	getRootConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
 	getWorkersDir,
+	WORKER_CONFIG_FILENAME,
+} from "@cloudflare/build-output-utils";
+import {
+	convertToWranglerConfig,
 	OutputWorkerSchema,
 	SettingsSchema,
-	WORKER_CONFIG_FILENAME,
 } from "@cloudflare/config";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
 import type { ModuleType } from "@cloudflare/config";

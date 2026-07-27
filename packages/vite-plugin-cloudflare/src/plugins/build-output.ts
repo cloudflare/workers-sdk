@@ -3,7 +3,7 @@ import * as path from "node:path";
 import {
 	writeOutputWorkerConfig,
 	writeRootOutputConfig,
-} from "@cloudflare/config";
+} from "@cloudflare/build-output-utils";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";

@@ -5,7 +5,7 @@ import type {
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
 	ParsedSettingsConfig,
-} from "./schema";
+} from "@cloudflare/config";
 
 /**
  * Initial draft version of the Build Output Specification.
@@ -84,7 +84,7 @@ export function getWorkerAssetsDir(root: string, workerName: string): string {
 
 /**
  * Write the output `worker.config.json` for a given Worker to the Build
- * Output API tree.
+ * Output Specification tree.
  *
  * - Workers mode: `manifest` is provided (bundle/ present on disk).
  * - Assets-only mode: `manifest` is omitted (no bundle/ directory).
@@ -104,7 +104,7 @@ export async function writeOutputWorkerConfig(
 
 /**
  * Write the top-level `config.json` holding shared settings to the Build
- * Output API tree.
+ * Output Specification tree.
  */
 export async function writeRootOutputConfig(
 	root: string,
