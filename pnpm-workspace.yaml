@@ -40,11 +40,6 @@ minimumReleaseAge: 1440
 # First-party Cloudflare packages are exempt from the cooldown so they can be
 # adopted same-day.
 minimumReleaseAgeExclude:
-  # TODO: Remove in a few days once these packages pass the max age limit
-  - "@flue/cli"
-  - "@flue/github"
-  - "@flue/runtime"
-  - "@flue/vite"
   - "workerd"
   # Platform-specific workerd binaries published in lock-step with workerd.
   - "@cloudflare/workerd-*"
