@@ -628,6 +628,258 @@ const config = {
 				},
 			},
 
+			// Email endpoints (local-only, not pulling from upstream API)
+			"/email/routing": {
+				get: {
+					description:
+						"Lists emails received by the worker's email() handler during this dev session.",
+					operationId: "email-list-routing",
+					parameters: [],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														items: {
+															$ref: "#/components/schemas/email_routing-item",
+														},
+														type: "array",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List received emails response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List received emails failure.",
+						},
+					},
+					summary: "List Received Emails",
+					tags: ["Email"],
+				},
+			},
+			"/email/routing/send": {
+				post: {
+					description:
+						"Sends a test email to trigger the worker's email() handler.",
+					operationId: "email-send-routing",
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									$ref: "#/components/schemas/email_send-request",
+								},
+							},
+						},
+					},
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															id: { type: "string" },
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Send test email response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Send test email failure.",
+						},
+					},
+					summary: "Send Test Email",
+					tags: ["Email"],
+				},
+			},
+			"/email/routing/{email_id}": {
+				get: {
+					description: "Returns the details of a received email.",
+					operationId: "email-get-routing",
+					parameters: [
+						{
+							in: "path",
+							name: "email_id",
+							required: true,
+							schema: { type: "string" },
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														$ref: "#/components/schemas/email_routing-detail",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Get received email response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Get received email failure.",
+						},
+					},
+					summary: "Get Received Email",
+					tags: ["Email"],
+				},
+			},
+			"/email/sending": {
+				get: {
+					description:
+						"Lists emails sent through send_email bindings during this dev session.",
+					operationId: "email-list-sending",
+					parameters: [],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														items: {
+															$ref: "#/components/schemas/email_sending-item",
+														},
+														type: "array",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List sent emails response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List sent emails failure.",
+						},
+					},
+					summary: "List Sent Emails",
+					tags: ["Email"],
+				},
+			},
+			"/email/sending/{email_id}": {
+				get: {
+					description: "Returns the details of a sent email.",
+					operationId: "email-get-sending",
+					parameters: [
+						{
+							in: "path",
+							name: "email_id",
+							required: true,
+							schema: { type: "string" },
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														$ref: "#/components/schemas/email_sending-detail",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Get sent email response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Get sent email failure.",
+						},
+					},
+					summary: "Get Sent Email",
+					tags: ["Email"],
+				},
+			},
+
 			// Workflows endpoints (local-only, not pulling from upstream API)
 			"/workflows": {
 				get: {
@@ -1663,6 +1915,13 @@ const config = {
 						},
 						description: "Workflow bindings",
 					},
+					sendEmail: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_resource-binding",
+						},
+						description: "Send Email bindings",
+					},
 				},
 			},
 			"local-explorer_resource-binding": {
@@ -1866,6 +2125,183 @@ const config = {
 					},
 				},
 				required: ["columns", "rows"],
+			},
+
+			"email_routing-action": {
+				type: "object",
+				properties: {
+					action: {
+						type: "string",
+						enum: ["received", "unhandled", "rejected", "forwarded", "replied"],
+						description: "The action the handler took on the message.",
+					},
+					timestamp: {
+						type: "string",
+						description: "ISO 8601 timestamp of when the action occurred.",
+					},
+					details: {
+						type: "object",
+						additionalProperties: true,
+						description: "Action-specific details (e.g. forward recipient).",
+					},
+				},
+				required: ["action", "timestamp"],
+			},
+			"email_routing-item": {
+				type: "object",
+				properties: {
+					id: { type: "string" },
+					worker: {
+						type: "string",
+						description:
+							"Worker whose email() handler processed the message, if known.",
+					},
+					from: { type: "string", description: "Envelope MAIL FROM address." },
+					to: { type: "string", description: "Envelope RCPT TO address." },
+					subject: { type: "string" },
+					messageId: { type: "string" },
+					receivedAt: { type: "string" },
+					rawSize: { type: "number" },
+					handlingPath: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_routing-action",
+						},
+					},
+				},
+				required: [
+					"id",
+					"from",
+					"to",
+					"subject",
+					"receivedAt",
+					"rawSize",
+					"handlingPath",
+				],
+			},
+			"email_routing-detail": {
+				type: "object",
+				properties: {
+					id: { type: "string" },
+					worker: { type: "string" },
+					from: { type: "string" },
+					to: { type: "string" },
+					subject: { type: "string" },
+					messageId: { type: "string" },
+					receivedAt: { type: "string" },
+					rawSize: { type: "number" },
+					raw: {
+						type: "string",
+						description: "Raw MIME content of the received email.",
+					},
+					handlingPath: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_routing-action",
+						},
+					},
+				},
+				required: [
+					"id",
+					"from",
+					"to",
+					"subject",
+					"receivedAt",
+					"rawSize",
+					"raw",
+					"handlingPath",
+				],
+			},
+			"email_send-request": {
+				type: "object",
+				description:
+					"Fields for composing a test email, mirroring MessageBuilder.",
+				properties: {
+					from: { type: "string", description: "Sender address." },
+					to: {
+						type: "array",
+						items: { type: "string" },
+						description: "Recipient addresses.",
+					},
+					cc: { type: "array", items: { type: "string" } },
+					bcc: { type: "array", items: { type: "string" } },
+					replyTo: { type: "string" },
+					subject: { type: "string" },
+					text: { type: "string", description: "Plain text body." },
+					html: { type: "string", description: "HTML body." },
+					headers: {
+						type: "object",
+						additionalProperties: { type: "string" },
+						description: "Custom headers to include on the message.",
+					},
+				},
+				required: ["from", "to", "subject"],
+			},
+			"email_sending-attachment": {
+				type: "object",
+				properties: {
+					filename: { type: "string" },
+					contentType: { type: "string" },
+					disposition: {
+						type: "string",
+						enum: ["inline", "attachment"],
+					},
+					size: { type: "number" },
+				},
+				required: ["filename", "contentType", "disposition", "size"],
+			},
+			"email_sending-item": {
+				type: "object",
+				properties: {
+					id: { type: "string" },
+					from: { type: "string" },
+					to: { type: "array", items: { type: "string" } },
+					cc: { type: "array", items: { type: "string" } },
+					bcc: { type: "array", items: { type: "string" } },
+					replyTo: { type: "string" },
+					subject: { type: "string" },
+					messageId: { type: "string" },
+					sentAt: { type: "string" },
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_sending-attachment",
+						},
+					},
+				},
+				required: ["id", "from", "to", "subject", "sentAt", "attachments"],
+			},
+			"email_sending-detail": {
+				type: "object",
+				properties: {
+					id: { type: "string" },
+					from: { type: "string" },
+					to: { type: "array", items: { type: "string" } },
+					cc: { type: "array", items: { type: "string" } },
+					bcc: { type: "array", items: { type: "string" } },
+					replyTo: { type: "string" },
+					subject: { type: "string" },
+					messageId: { type: "string" },
+					sentAt: { type: "string" },
+					text: { type: "string" },
+					html: { type: "string" },
+					headers: {
+						type: "object",
+						additionalProperties: { type: "string" },
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_sending-attachment",
+						},
+					},
+					raw: {
+						type: "string",
+						description:
+							"Raw MIME content, present when sent via the EmailMessage API.",
+					},
+				},
+				required: ["id", "from", "to", "subject", "sentAt", "attachments"],
 			},
 		},
 	},

@@ -440,6 +440,7 @@ export const zLocalExplorerWorkerBindings = z.object({
 	r2: z.array(zLocalExplorerResourceBinding).optional(),
 	do: z.array(zLocalExplorerDoBinding).optional(),
 	workflows: z.array(zLocalExplorerWorkflowBinding).optional(),
+	sendEmail: z.array(zLocalExplorerResourceBinding).optional(),
 });
 
 export const zLocalExplorerWorker = z.object({
@@ -529,6 +530,89 @@ export const zObservabilityQueryResult = z.object({
 });
 
 export const zR2ResultInfoWritable = z.record(z.string(), z.unknown());
+
+export const zEmailRoutingAction = z.object({
+	action: z.enum(["received", "unhandled", "rejected", "forwarded", "replied"]),
+	timestamp: z.string(),
+	details: z.record(z.unknown()).optional(),
+});
+
+export const zEmailRoutingItem = z.object({
+	id: z.string(),
+	worker: z.string().optional(),
+	from: z.string(),
+	to: z.string(),
+	subject: z.string(),
+	messageId: z.string().optional(),
+	receivedAt: z.string(),
+	rawSize: z.number(),
+	handlingPath: z.array(zEmailRoutingAction),
+});
+
+export const zEmailRoutingDetail = z.object({
+	id: z.string(),
+	worker: z.string().optional(),
+	from: z.string(),
+	to: z.string(),
+	subject: z.string(),
+	messageId: z.string().optional(),
+	receivedAt: z.string(),
+	rawSize: z.number(),
+	raw: z.string(),
+	handlingPath: z.array(zEmailRoutingAction),
+});
+
+/**
+ * Fields for composing a test email, mirroring MessageBuilder.
+ */
+export const zEmailSendRequest = z.object({
+	from: z.string(),
+	to: z.array(z.string()),
+	cc: z.array(z.string()).optional(),
+	bcc: z.array(z.string()).optional(),
+	replyTo: z.string().optional(),
+	subject: z.string(),
+	text: z.string().optional(),
+	html: z.string().optional(),
+	headers: z.record(z.string()).optional(),
+});
+
+export const zEmailSendingAttachment = z.object({
+	filename: z.string(),
+	contentType: z.string(),
+	disposition: z.enum(["inline", "attachment"]),
+	size: z.number(),
+});
+
+export const zEmailSendingItem = z.object({
+	id: z.string(),
+	from: z.string(),
+	to: z.array(z.string()),
+	cc: z.array(z.string()).optional(),
+	bcc: z.array(z.string()).optional(),
+	replyTo: z.string().optional(),
+	subject: z.string(),
+	messageId: z.string().optional(),
+	sentAt: z.string(),
+	attachments: z.array(zEmailSendingAttachment),
+});
+
+export const zEmailSendingDetail = z.object({
+	id: z.string(),
+	from: z.string(),
+	to: z.array(z.string()),
+	cc: z.array(z.string()).optional(),
+	bcc: z.array(z.string()).optional(),
+	replyTo: z.string().optional(),
+	subject: z.string(),
+	messageId: z.string().optional(),
+	sentAt: z.string(),
+	text: z.string().optional(),
+	html: z.string().optional(),
+	headers: z.record(z.string()).optional(),
+	attachments: z.array(zEmailSendingAttachment),
+	raw: z.string().optional(),
+});
 
 export const zWorkersNamespaceWritable = z.object({
 	class: z.string().optional(),
@@ -1173,3 +1257,86 @@ export const zObservabilityClearData = z.object({
  * Clear response.
  */
 export const zObservabilityClearResponse = zWorkersApiResponseCommon;
+
+export const zEmailListRoutingData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List received emails response.
+ */
+export const zEmailListRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zEmailRoutingItem).optional(),
+	})
+);
+
+export const zEmailSendRoutingData = z.object({
+	body: zEmailSendRequest,
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * Send test email response.
+ */
+export const zEmailSendRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				id: z.string().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zEmailGetRoutingData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		email_id: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get received email response.
+ */
+export const zEmailGetRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zEmailRoutingDetail.optional(),
+	})
+);
+
+export const zEmailListSendingData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List sent emails response.
+ */
+export const zEmailListSendingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zEmailSendingItem).optional(),
+	})
+);
+
+export const zEmailGetSendingData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		email_id: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get sent email response.
+ */
+export const zEmailGetSendingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zEmailSendingDetail.optional(),
+	})
+);
