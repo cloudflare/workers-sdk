@@ -47,6 +47,10 @@ const WorkersPoolOptionsSchema = z.object({
 	 */
 	remoteBindings: z.boolean().default(true),
 	/**
+	 * Enables verbose workerd logging. Defaults to `true`.
+	 */
+	verbose: z.boolean().optional(),
+	/**
 	 * Additional exports.
 	 * A map of module exports to be made available on the `ctx.exports`
 	 * that cannot be automatically inferred by analyzing the Worker source code.

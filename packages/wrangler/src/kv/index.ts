@@ -96,6 +96,13 @@ export const kvNamespaceCreateCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
+		jurisdiction: {
+			type: "string",
+			describe:
+				'The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")',
+			requiresArg: true,
+			hidden: true,
+		},
 		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["namespace"],
@@ -104,18 +111,27 @@ export const kvNamespaceCreateCommand = createCommand({
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
 		const title = `${environment}${args.namespace}${preview}`;
+		const { jurisdiction } = args;
 
 		const accountId = await requireAuth(config);
 		printResourceLocation("remote");
 		// TODO: generate a binding name stripping non alphanumeric chars
-		logger.log(`🌀 Creating namespace with title "${title}"`);
+		logger.log(
+			`🌀 Creating namespace with title "${title}"${
+				jurisdiction ? ` (jurisdiction: ${jurisdiction})` : ""
+			}`
+		);
 
 		let namespaceId: string;
 		try {
-			const result = await sdk.kv.namespaces.create({
+			const createParams: Cloudflare.KV.Namespaces.NamespaceCreateParams & {
+				jurisdiction?: string;
+			} = {
 				account_id: accountId,
 				title,
-			});
+				jurisdiction,
+			};
+			const result = await sdk.kv.namespaces.create(createParams);
 			namespaceId = result.id;
 		} catch (e) {
 			if (
