@@ -9,6 +9,7 @@ import { generateRulesMatcher, replacer } from "./rules-engine";
 import type { AssetConfig, JaegerTracing } from "../../../utils/types";
 import type { AssetIntentWithResolver } from "../handler";
 import type { Env } from "../worker";
+import type { CanonicalRoutingPath } from "./canonical-path";
 
 /**
  * Returns a Headers object that contains additional headers (to those
@@ -96,10 +97,11 @@ export function attachCustomHeaders(
 	});
 }
 
-// Returns matching _headers rules after applying placeholder substitutions.
+// Returns matching _headers rules for raw or canonical paths after substitutions.
 export function getCustomHeaderMatches(
 	request: Request,
-	configuration: Required<AssetConfig>
+	configuration: Required<AssetConfig>,
+	canonicalPath?: CanonicalRoutingPath
 ) {
 	const headersMatcher = generateRulesMatcher(
 		configuration.headers?.version === HEADERS_VERSION
@@ -117,5 +119,5 @@ export function getCustomHeaderMatches(
 		}
 	);
 
-	return headersMatcher({ request });
+	return headersMatcher({ request, canonicalPath });
 }

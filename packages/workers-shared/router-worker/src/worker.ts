@@ -11,6 +11,7 @@ import {
 } from "./configuration";
 import { renderLimitedResponse } from "./limited-response";
 import type AssetWorker from "../../asset-worker";
+import type { CanonicalRoutingPath } from "../../asset-worker/src/utils/canonical-path";
 import type {
 	EyeballRouterConfig,
 	JaegerTracing,
@@ -353,11 +354,13 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 // Asset rules take precedence over user Worker rules, matching existing routing.
 function getStaticRoutingTarget(
 	request: Request,
-	staticRouting: NonNullable<RouterConfig["static_routing"]>
+	staticRouting: NonNullable<RouterConfig["static_routing"]>,
+	canonicalPath?: CanonicalRoutingPath
 ): "asset" | "user" | "none" {
 	if (
 		generateStaticRoutingRuleMatcher(staticRouting.asset_worker ?? [])({
 			request,
+			canonicalPath,
 		})
 	) {
 		return "asset";
@@ -366,6 +369,7 @@ function getStaticRoutingTarget(
 	if (
 		generateStaticRoutingRuleMatcher(staticRouting.user_worker ?? [])({
 			request,
+			canonicalPath,
 		})
 	) {
 		return "user";

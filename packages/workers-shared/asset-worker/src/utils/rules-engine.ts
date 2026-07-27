@@ -4,6 +4,7 @@
 
 import { REDIRECTS_VERSION } from "../handler";
 import type { AssetConfig } from "../../../utils/types";
+import type { CanonicalRoutingPath } from "./canonical-path";
 
 // As the answer says, there's no downside to escaping these extra characters, so better safe than sorry
 const ESCAPE_REGEX_CHARACTERS = /[-/\\^$*+?.()|[\]{}]/g;
@@ -87,8 +88,15 @@ export const generateRulesMatcher = <T>(
 		T,
 	][];
 
-	return ({ request }: { request: Request }) => {
-		const { pathname, hostname } = new URL(request.url);
+	return ({
+		request,
+		canonicalPath,
+	}: {
+		request: Request;
+		canonicalPath?: CanonicalRoutingPath;
+	}) => {
+		const { pathname: requestPathname, hostname } = new URL(request.url);
+		const pathname = canonicalPath ?? requestPathname;
 
 		return compiledRules
 			.map(([{ crossHost, regExp }, match]) => {
@@ -161,8 +169,14 @@ export const generateRedirectsMatcher = (
 
 export const generateStaticRoutingRuleMatcher =
 	(rules: string[]) =>
-	({ request }: { request: Request }) => {
-		const { pathname } = new URL(request.url);
+	({
+		request,
+		canonicalPath,
+	}: {
+		request: Request;
+		canonicalPath?: CanonicalRoutingPath;
+	}) => {
+		const pathname = canonicalPath ?? new URL(request.url).pathname;
 		for (const rule of rules) {
 			try {
 				const regExp = generateGlobOnlyRuleRegExp(rule);

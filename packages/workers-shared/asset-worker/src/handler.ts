@@ -23,6 +23,7 @@ import {
 } from "./utils/rules-engine";
 import type { AssetConfig } from "../../utils/types";
 import type { Analytics, ServedBy } from "./analytics";
+import type { CanonicalRoutingPath } from "./utils/canonical-path";
 import type EntrypointType from "./worker";
 import type { Env } from "./worker";
 
@@ -1099,15 +1100,16 @@ const handleRedirects = (
 	});
 };
 
-// Returns the first matching redirect rule for a request.
+// Returns the first matching redirect rule, optionally using a canonical path.
 export function getRedirectMatch(
 	request: Request,
 	configuration: Required<AssetConfig>,
-	host: string
+	host: string,
+	canonicalPath?: CanonicalRoutingPath
 ) {
-	const pathname = new URL(request.url).pathname;
+	const pathname = canonicalPath ?? new URL(request.url).pathname;
 	return (
 		staticRedirectsMatcher(configuration, host, pathname) ||
-		generateRedirectsMatcher(configuration)({ request })[0]
+		generateRedirectsMatcher(configuration)({ request, canonicalPath })[0]
 	);
 }

@@ -1,4 +1,5 @@
 import { describe, test } from "vitest";
+import { canonicalizePath } from "../src/utils/canonical-path";
 import {
 	generateRulesMatcher,
 	generateStaticRoutingRuleMatcher,
@@ -6,6 +7,19 @@ import {
 } from "../src/utils/rules-engine";
 
 describe("rules engine", () => {
+	test("matches a supplied canonical pathname", ({ expect }) => {
+		const matcher = generateRulesMatcher({ "/example/*": 1 });
+		const request = new Request("https://example.com/%65xample/report.json");
+
+		expect(matcher({ request })).toEqual([]);
+		expect(
+			matcher({
+				request,
+				canonicalPath: canonicalizePath("/%65xample/report.json").routingPath,
+			})
+		).toEqual([1]);
+	});
+
 	test("it should match simple pathname hosts", ({ expect }) => {
 		const matcher = generateRulesMatcher({ "/test": 1, "/some%20page": 2 });
 		expect(
