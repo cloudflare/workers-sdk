@@ -1,9 +1,9 @@
+import { toUrlPath } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
 	PagesFunctionsError,
 	PagesFunctionsErrorCode,
-	toUrlPath,
 	writeRoutesModule,
 } from "../index";
 

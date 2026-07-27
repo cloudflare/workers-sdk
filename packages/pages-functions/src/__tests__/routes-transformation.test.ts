@@ -1,3 +1,4 @@
+import { toUrlPath } from "@cloudflare/workers-utils";
 import { describe, it, test } from "vitest";
 import {
 	compareRoutesSimplified as compareRoutes,
@@ -6,7 +7,6 @@ import {
 	MAX_FUNCTIONS_ROUTES_RULES,
 	optimizeRoutesJSONSpec,
 	ROUTES_SPEC_VERSION,
-	toUrlPath,
 } from "../index";
 
 const ROUTES_SPEC_DESCRIPTION = "Generated for a test";

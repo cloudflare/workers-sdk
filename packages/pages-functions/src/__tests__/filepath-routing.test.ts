@@ -1,8 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import { toUrlPath } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, test } from "vitest";
-import { compareRoutes, generateConfigFromFileTree, toUrlPath } from "../index";
-import type { HTTPMethod, RouteConfig, UrlPath } from "../index";
+import { compareRoutes, generateConfigFromFileTree } from "../index";
+import type { HTTPMethod, RouteConfig } from "../index";
+import type { UrlPath } from "@cloudflare/workers-utils";
 
 describe("filepath-routing", () => {
 	describe("compareRoutes()", () => {
