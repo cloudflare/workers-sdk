@@ -46,40 +46,16 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 	let containerImageTags = new Set<string>();
 
 	return {
-		async buildEnd() {
+		buildEnd() {
+			// Server restarts are handled here.
+			// Server shutdown is handled in the patched `server.close()`.
 			if (
 				ctx.resolvedViteConfig.command === "serve" &&
+				ctx.isRestartingDevServer &&
 				containerImageTags.size
 			) {
 				const dockerPath = getDockerPath();
 				cleanupContainers(dockerPath, containerImageTags);
-			}
-
-			// `buildEnd` fires both when the dev server closes AND, when Vite's
-			// `experimental.bundledDev` is enabled, at the end of every build
-			// pass that runs *during* `serve`. Disposing Miniflare here on the
-			// latter tears it down while the dev server is still live, so the
-			// next request hits `Expected \`miniflare\` to be defined`. During
-			// `serve` we therefore dispose from the patched `server.close`
-			// below (mirroring how `server.restart` is patched in index.ts)
-			// rather than from `buildEnd`.
-			debuglog(
-				"buildEnd:",
-				ctx.resolvedViteConfig.command === "serve"
-					? "serve (dispose handled on server close)"
-					: ctx.isRestartingDevServer
-						? "restarted"
-						: "disposing"
-			);
-			if (
-				ctx.resolvedViteConfig.command !== "serve" &&
-				!ctx.isRestartingDevServer
-			) {
-				try {
-					await ctx.disposeMiniflare();
-				} catch (error) {
-					debuglog("Failed to dispose Miniflare instance:", error);
-				}
 			}
 		},
 		async configureServer(viteDevServer) {
@@ -90,19 +66,20 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
-			// Dispose Miniflare when the dev server genuinely closes. `buildEnd`
-			// can no longer be trusted for this under `experimental.bundledDev`
-			// (see above), so patch `server.close` the same way `server.restart`
-			// is patched in index.ts. Skip disposal while restarting so Miniflare
-			// stays warm across restarts, exactly as the previous
-			// `!isRestartingDevServer` guard in `buildEnd` did. Forceful exits
-			// (ctrl+C) are still covered by the `exit` handler registered below.
+			// Dispose Miniflare and clean up containers when the dev server
+			// shuts down. `buildEnd` can't be used for this under
+			// `experimental.bundledDev`.
+			// Note Vite's `restartServer` calls `server.close()` on every restart, so we skip
+			// teardown while restarting.
 			const closeServer = viteDevServer.close.bind(viteDevServer);
 			viteDevServer.close = async () => {
 				try {
 					await closeServer();
 				} finally {
 					if (!ctx.isRestartingDevServer) {
+						if (containerImageTags.size) {
+							cleanupContainers(getDockerPath(), containerImageTags);
+						}
 						try {
 							await ctx.disposeMiniflare();
 						} catch (error) {

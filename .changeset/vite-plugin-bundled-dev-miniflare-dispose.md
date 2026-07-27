@@ -2,8 +2,8 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Keep Miniflare alive when a build runs during `serve` (Vite `experimental.bundledDev`)
+Fix compatibility with Vite's `experimental.bundledDev` option. Keep Miniflare, containers, and tunnels alive when a build runs in dev.
 
-The plugin used the `buildEnd` hook as its signal that the dev server was closing, and disposed the Miniflare instance there. Vite's `experimental.bundledDev` runs a Rolldown build pass *during* `serve`, which fires `buildEnd` while the dev server is still live — so Miniflare was torn down mid-serve and the next request failed with `Expected \`miniflare\` to be defined`.
+The plugin used the `buildEnd` hook as its signal that the dev server was closing, and tore down its dev resources there. Vite's `experimental.bundledDev` runs a build pass _during_ `serve`, which fires `buildEnd` while the dev server is still live — so Miniflare was disposed (the next request failed with `Expected \`miniflare\` to be defined`), locally-built container images were removed, and any active tunnel was closed, all mid-serve.
 
-During `serve`, Miniflare is now disposed from a patched `server.close` (mirroring the existing `server.restart` patch) instead of from `buildEnd`, so build passes that run while serving no longer dispose it. Behaviour is unchanged for production builds, dev-server restarts (Miniflare stays warm), and forceful exits (still covered by the existing `exit` handler).
+During `serve`, these resources are now torn down from a patched `server.close`. We will replace server patching with first-class APIs when they are [added to Vite](https://github.com/vitejs/vite/issues/22913).
