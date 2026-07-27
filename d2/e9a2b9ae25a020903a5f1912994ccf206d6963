@@ -1,0 +1,19 @@
+packages/wrangler/src/workflows/utils.ts
+  s_93fdbd5f4aa262::t_6e0f5ce878095f 146-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d2e9a2b9ae25a020903a5f1912994ccf206d6963",
+  "prompts": {},
+  "sessions": {
+    "s_93fdbd5f4aa262": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09e78a68cffd43A72FtUyJHs9e",
+        "model": "gpt-5.5"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "5a1989172a90d0b99d32d12031bd74f155e0505e",
+  "prompts": {
+    "9c61d599bb3f0c0a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1b3fb5305ffe6XkFVYpElsOwcG",
+        "model": "anthropic/claude-opus-4-6"
+      },
+      "human_author": "matt price",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}
