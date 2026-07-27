@@ -23,24 +23,26 @@ if (require.main === module) {
 }
 
 async function getPrivatePackageJsons() {
-	const packageJsonPaths = await glob("**/package.json", {
-		cwd: resolve(__dirname, "../../"),
-		dot: true,
-		ignore: [
-			// We are not interested in dependencies
-			"**/node_modules/**",
-			// The package.jsons in the fixtures directory use the `@fixture/` scope
-			// TODO: consider if we should use the `@cloudflare/` scope instead
-			"fixtures/**",
-			// C3 template package.jsons have placeholder names that are populated by C3 during the app creation
-			"packages/create-cloudflare/templates/**",
-			// The package.jsons in the vite-plugin playground use the `@playground/` scope
-			// TODO: consider if we should use the `@cloudflare/` scope instead
-			"packages/vite-plugin-cloudflare/playground/**",
-			// We are not interested in vendor sub-packages
-			"vendor/**",
-		],
-	});
+	const packageJsonPaths = await glob(
+		["**/package.json", ".flue/package.json"],
+		{
+			cwd: resolve(__dirname, "../../"),
+			ignore: [
+				// We are not interested in dependencies
+				"**/node_modules/**",
+				// The package.jsons in the fixtures directory use the `@fixture/` scope
+				// TODO: consider if we should use the `@cloudflare/` scope instead
+				"fixtures/**",
+				// C3 template package.jsons have placeholder names that are populated by C3 during the app creation
+				"packages/create-cloudflare/templates/**",
+				// The package.jsons in the vite-plugin playground use the `@playground/` scope
+				// TODO: consider if we should use the `@cloudflare/` scope instead
+				"packages/vite-plugin-cloudflare/playground/**",
+				// We are not interested in vendor sub-packages
+				"vendor/**",
+			],
+		}
+	);
 	return (
 		packageJsonPaths
 			.map((packageJson) => {
