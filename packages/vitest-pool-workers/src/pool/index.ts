@@ -625,7 +625,6 @@ async function buildProjectWorkerOptions(
 
 const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	log: mfLog,
-	verbose: true,
 	handleStructuredLogs,
 	unsafeStickyBlobs: true,
 } satisfies Partial<MiniflareOptions>;
@@ -696,6 +695,7 @@ async function buildProjectMiniflareOptions(
 
 	return {
 		...SHARED_MINIFLARE_OPTIONS,
+		verbose: customOptions.verbose ?? true,
 		inspectorPort,
 		unsafeModuleFallbackService: moduleFallbackService,
 		workers: [runnerWorker, ...auxiliaryWorkers],

@@ -33,7 +33,12 @@ import {
 	normaliseDurableObject,
 } from "../do";
 import { IMAGES_PLUGIN_NAME } from "../images";
-import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
+import {
+	getR2PublicService,
+	getR2S3Service,
+	R2_PUBLIC_SERVICE_NAME,
+	R2_S3_SERVICE_NAME,
+} from "../r2";
 import {
 	buildRemoteProxyProps,
 	getUserBindingServiceName,
@@ -1220,6 +1225,13 @@ export function getGlobalServices({
 			service: { name: R2_PUBLIC_SERVICE_NAME },
 		});
 	}
+	const r2S3Service = getR2S3Service(allWorkerOpts ?? []);
+	if (r2S3Service !== undefined) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_R2_S3,
+			service: { name: R2_S3_SERVICE_NAME },
+		});
+	}
 	const imagesBinding = allWorkerOpts
 		?.map((worker) => worker.images?.images)
 		.find(
@@ -1316,6 +1328,9 @@ export function getGlobalServices({
 
 	if (r2PublicService !== undefined) {
 		services.push(r2PublicService);
+	}
+	if (r2S3Service !== undefined) {
+		services.push(r2S3Service);
 	}
 
 	if (sharedOptions.unsafeLocalExplorer) {
