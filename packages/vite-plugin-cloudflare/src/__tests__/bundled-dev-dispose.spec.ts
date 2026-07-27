@@ -2,12 +2,12 @@ import { fileURLToPath } from "node:url";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { createServer } from "vite";
 import { afterEach, describe, test } from "vitest";
-import type { ObjectHook, Plugin, ViteDevServer } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
 
 const fixturesPath = fileURLToPath(new URL("./fixtures", import.meta.url));
 
 function callBuildEnd(plugin: Plugin): unknown {
-	const hook = plugin.buildEnd as ObjectHook<NonNullable<Plugin["buildEnd"]>>;
+	const hook = plugin.buildEnd;
 	const handler = typeof hook === "function" ? hook : hook?.handler;
 	// The cloudflare hooks close over their own context, so the `this`
 	// PluginContext is unused; an empty object is sufficient to invoke them.
