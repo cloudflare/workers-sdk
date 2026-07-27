@@ -267,6 +267,12 @@ export interface CfAgentMemory {
 	remote?: boolean;
 }
 
+export interface CfMessaging {
+	binding: string;
+	namespace: string;
+	remote?: boolean;
+}
+
 export interface CfSecretsStoreSecrets {
 	binding: string;
 	store_id: string;

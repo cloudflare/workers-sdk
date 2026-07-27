@@ -466,6 +466,12 @@ const bindingsConfigMock: Omit<
 			namespace: "my-agent",
 		},
 	],
+	messaging: [
+		{
+			binding: "MESSAGING_BINDING",
+			namespace: "my-namespace",
+		},
+	],
 	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
@@ -800,6 +806,7 @@ describe("generate types - CLI", () => {
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
+				MESSAGING_BINDING: unknown;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
 				AI_BINDING: Ai;
@@ -920,6 +927,7 @@ describe("generate types - CLI", () => {
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
+				MESSAGING_BINDING: unknown;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
 				AI_BINDING: Ai;
@@ -1103,6 +1111,7 @@ describe("generate types - CLI", () => {
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
+				MESSAGING_BINDING: unknown;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
 				AI_BINDING: Ai;
@@ -2781,6 +2790,55 @@ describe("generate types - CLI", () => {
 					interface ProductionEnv {
 						KV_SHARED: KVNamespace;
 						KV_PROD_ONLY: KVNamespace;
+					}
+					interface Env extends __BaseEnv_Env {}
+				}
+				interface Env extends __BaseEnv_Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should emit unknown Messaging types for named environments", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					messaging: [{ binding: "MESSAGING_TOP", namespace: "top-namespace" }],
+					env: {
+						staging: {
+							messaging: [
+								{
+									binding: "MESSAGING_STAGING",
+									namespace: "staging-namespace",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				interface __BaseEnv_Env {
+					MESSAGING_STAGING?: unknown;
+					MESSAGING_TOP?: unknown;
+				}
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						MESSAGING_STAGING: unknown;
 					}
 					interface Env extends __BaseEnv_Env {}
 				}

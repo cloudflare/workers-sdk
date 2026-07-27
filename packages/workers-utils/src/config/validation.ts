@@ -85,6 +85,7 @@ export type ConfigBindingFieldName =
 	| "ai_search"
 	| "websearch"
 	| "agent_memory"
+	| "messaging"
 	| "hyperdrive"
 	| "r2_buckets"
 	| "logfwdr"
@@ -126,6 +127,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	ai_search: "AI Search Instance",
 	websearch: "Web Search",
 	agent_memory: "Agent Memory",
+	messaging: "Messaging",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
 	logfwdr: "logfwdr",
@@ -185,6 +187,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	ai_search: "AI Search Instance",
 	websearch: "Web Search",
 	agent_memory: "Agent Memory",
+	messaging: "Messaging",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
 	fetcher: "Service Binding",
@@ -1845,6 +1848,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateAgentMemoryBinding),
 			[]
 		),
+		messaging: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"messaging",
+			validateBindingArray(envName, validateMessagingBinding),
+			[]
+		),
 		hyperdrive: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3162,6 +3175,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai_search",
 			"websearch",
 			"agent_memory",
+			"messaging",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
@@ -4413,6 +4427,40 @@ const validateAgentMemoryBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
 			`"agent_memory" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
+		"remote",
+	]);
+
+	return isValid;
+};
+
+const validateMessagingBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"messaging" bindings should be objects, but got ${JSON.stringify(value)}`
 		);
 		return false;
 	}

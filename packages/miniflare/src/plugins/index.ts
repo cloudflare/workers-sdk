@@ -27,6 +27,7 @@ import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { IMAGES_PLUGIN, IMAGES_PLUGIN_NAME } from "./images";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
 import { MEDIA_PLUGIN, MEDIA_PLUGIN_NAME } from "./media";
+import { MESSAGING_PLUGIN, MESSAGING_PLUGIN_NAME } from "./messaging";
 import { MTLS_PLUGIN, MTLS_PLUGIN_NAME } from "./mtls";
 import { PIPELINE_PLUGIN, PIPELINES_PLUGIN_NAME } from "./pipelines";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
@@ -84,6 +85,7 @@ export const PLUGINS = {
 	[ARTIFACTS_PLUGIN_NAME]: ARTIFACTS_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
+	[MESSAGING_PLUGIN_NAME]: MESSAGING_PLUGIN,
 	[VERSION_METADATA_PLUGIN_NAME]: VERSION_METADATA_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
@@ -155,6 +157,7 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof ARTIFACTS_PLUGIN.options> &
 	z.input<typeof WORKER_LOADER_PLUGIN.options> &
 	z.input<typeof MEDIA_PLUGIN.options> &
+	z.input<typeof MESSAGING_PLUGIN.options> &
 	z.input<typeof VERSION_METADATA_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
@@ -248,4 +251,5 @@ export * from "./flagship";
 export * from "./artifacts";
 export * from "./worker-loader";
 export * from "./media";
+export * from "./messaging";
 export * from "./version-metadata";

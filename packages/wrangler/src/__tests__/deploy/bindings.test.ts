@@ -2276,6 +2276,44 @@ describe("deploy", () => {
 			});
 		});
 
+		describe("[messaging]", () => {
+			it("should support messaging bindings", async ({ expect }) => {
+				writeWranglerConfig({
+					messaging: [{ binding: "MESSAGING", namespace: "my-namespace" }],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							name: "MESSAGING",
+							type: "messaging",
+							namespace: "my-namespace",
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                           Resource
+					env.MESSAGING (my-namespace)      Messaging
+
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+		});
+
 		describe("[unsafe]", () => {
 			describe("[unsafe.bindings]", () => {
 				it("should stringify object in unsafe metadata", async ({ expect }) => {
