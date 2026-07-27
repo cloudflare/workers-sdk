@@ -1282,6 +1282,259 @@
 				"tags": ["Local Explorer"]
 			}
 		},
+		"/email/routing": {
+			"get": {
+				"description": "Lists emails received by the worker's email() handler during this dev session.",
+				"operationId": "email-list-routing",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/email_routing-item"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List received emails response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List received emails failure."
+					}
+				},
+				"summary": "List Received Emails",
+				"tags": ["Email"]
+			}
+		},
+		"/email/routing/send": {
+			"post": {
+				"description": "Sends a test email to trigger the worker's email() handler. Only the first `to` address is used as the envelope recipient; any other to/cc/bcc addresses appear only in the composed MIME headers.",
+				"operationId": "email-send-routing",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/email_send-request"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														}
+													}
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Send test email response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Send test email failure."
+					}
+				},
+				"summary": "Send Test Email",
+				"tags": ["Email"]
+			}
+		},
+		"/email/routing/{email_id}": {
+			"get": {
+				"description": "Returns the details of a received email.",
+				"operationId": "email-get-routing",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "email_id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/email_routing-detail"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Get received email response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Get received email failure."
+					}
+				},
+				"summary": "Get Received Email",
+				"tags": ["Email"]
+			}
+		},
+		"/email/sending": {
+			"get": {
+				"description": "Lists emails sent through send_email bindings during this dev session.",
+				"operationId": "email-list-sending",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/email_sending-item"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List sent emails response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List sent emails failure."
+					}
+				},
+				"summary": "List Sent Emails",
+				"tags": ["Email"]
+			}
+		},
+		"/email/sending/{email_id}": {
+			"get": {
+				"description": "Returns the details of a sent email.",
+				"operationId": "email-get-sending",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "email_id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/email_sending-detail"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Get sent email response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Get sent email failure."
+					}
+				},
+				"summary": "Get Sent Email",
+				"tags": ["Email"]
+			}
+		},
 		"/workflows": {
 			"get": {
 				"description": "Returns the workflows configured for local development.",
@@ -2023,259 +2276,6 @@
 				},
 				"summary": "Clear Observability Store",
 				"tags": ["Observability"]
-			}
-		},
-		"/email/routing": {
-			"get": {
-				"description": "Lists emails received by the worker's email() handler during this dev session.",
-				"operationId": "email-list-routing",
-				"parameters": [],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"items": {
-														"$ref": "#/components/schemas/email_routing-item"
-													},
-													"type": "array"
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "List received emails response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "List received emails failure."
-					}
-				},
-				"summary": "List Received Emails",
-				"tags": ["Email"]
-			}
-		},
-		"/email/routing/send": {
-			"post": {
-				"description": "Sends a test email to trigger the worker's email() handler.",
-				"operationId": "email-send-routing",
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/email_send-request"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"type": "object",
-													"properties": {
-														"id": {
-															"type": "string"
-														}
-													}
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "Send test email response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "Send test email failure."
-					}
-				},
-				"summary": "Send Test Email",
-				"tags": ["Email"]
-			}
-		},
-		"/email/routing/{email_id}": {
-			"get": {
-				"description": "Returns the details of a received email.",
-				"operationId": "email-get-routing",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "email_id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"$ref": "#/components/schemas/email_routing-detail"
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "Get received email response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "Get received email failure."
-					}
-				},
-				"summary": "Get Received Email",
-				"tags": ["Email"]
-			}
-		},
-		"/email/sending": {
-			"get": {
-				"description": "Lists emails sent through send_email bindings during this dev session.",
-				"operationId": "email-list-sending",
-				"parameters": [],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"items": {
-														"$ref": "#/components/schemas/email_sending-item"
-													},
-													"type": "array"
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "List sent emails response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "List sent emails failure."
-					}
-				},
-				"summary": "List Sent Emails",
-				"tags": ["Email"]
-			}
-		},
-		"/email/sending/{email_id}": {
-			"get": {
-				"description": "Returns the details of a sent email.",
-				"operationId": "email-get-sending",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "email_id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"$ref": "#/components/schemas/email_sending-detail"
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "Get sent email response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "Get sent email failure."
-					}
-				},
-				"summary": "Get Sent Email",
-				"tags": ["Email"]
 			}
 		}
 	},
@@ -3424,7 +3424,7 @@
 						"items": {
 							"$ref": "#/components/schemas/local-explorer_resource-binding"
 						},
-						"description": "send_email bindings"
+						"description": "Send Email bindings"
 					}
 				}
 			},

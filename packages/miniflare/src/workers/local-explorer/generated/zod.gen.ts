@@ -1012,6 +1012,89 @@ export const zLocalExplorerListWorkersResponse = zWorkersApiResponseCommon.and(
 	})
 );
 
+export const zEmailListRoutingData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List received emails response.
+ */
+export const zEmailListRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zEmailRoutingItem).optional(),
+	})
+);
+
+export const zEmailSendRoutingData = z.object({
+	body: zEmailSendRequest,
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * Send test email response.
+ */
+export const zEmailSendRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				id: z.string().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zEmailGetRoutingData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		email_id: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get received email response.
+ */
+export const zEmailGetRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zEmailRoutingDetail.optional(),
+	})
+);
+
+export const zEmailListSendingData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List sent emails response.
+ */
+export const zEmailListSendingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zEmailSendingItem).optional(),
+	})
+);
+
+export const zEmailGetSendingData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		email_id: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get sent email response.
+ */
+export const zEmailGetSendingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zEmailSendingDetail.optional(),
+	})
+);
+
 export const zWorkflowsListWorkflowsData = z.object({
 	body: z.never().optional(),
 	path: z.never().optional(),
@@ -1257,86 +1340,3 @@ export const zObservabilityClearData = z.object({
  * Clear response.
  */
 export const zObservabilityClearResponse = zWorkersApiResponseCommon;
-
-export const zEmailListRoutingData = z.object({
-	body: z.never().optional(),
-	path: z.never().optional(),
-	query: z.never().optional(),
-});
-
-/**
- * List received emails response.
- */
-export const zEmailListRoutingResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: z.array(zEmailRoutingItem).optional(),
-	})
-);
-
-export const zEmailSendRoutingData = z.object({
-	body: zEmailSendRequest,
-	path: z.never().optional(),
-	query: z.never().optional(),
-});
-
-/**
- * Send test email response.
- */
-export const zEmailSendRoutingResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: z
-			.object({
-				id: z.string().optional(),
-			})
-			.optional(),
-	})
-);
-
-export const zEmailGetRoutingData = z.object({
-	body: z.never().optional(),
-	path: z.object({
-		email_id: z.string(),
-	}),
-	query: z.never().optional(),
-});
-
-/**
- * Get received email response.
- */
-export const zEmailGetRoutingResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: zEmailRoutingDetail.optional(),
-	})
-);
-
-export const zEmailListSendingData = z.object({
-	body: z.never().optional(),
-	path: z.never().optional(),
-	query: z.never().optional(),
-});
-
-/**
- * List sent emails response.
- */
-export const zEmailListSendingResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: z.array(zEmailSendingItem).optional(),
-	})
-);
-
-export const zEmailGetSendingData = z.object({
-	body: z.never().optional(),
-	path: z.object({
-		email_id: z.string(),
-	}),
-	query: z.never().optional(),
-});
-
-/**
- * Get sent email response.
- */
-export const zEmailGetSendingResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: zEmailSendingDetail.optional(),
-	})
-);

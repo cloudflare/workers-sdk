@@ -608,7 +608,7 @@ export type LocalExplorerWorkerBindings = {
 	 */
 	workflows?: Array<LocalExplorerWorkflowBinding>;
 	/**
-	 * send_email bindings
+	 * Send Email bindings
 	 */
 	sendEmail?: Array<LocalExplorerResourceBinding>;
 };
@@ -1598,6 +1598,157 @@ export type LocalExplorerListWorkersResponses = {
 export type LocalExplorerListWorkersResponse =
 	LocalExplorerListWorkersResponses[keyof LocalExplorerListWorkersResponses];
 
+export type EmailListRoutingData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/email/routing";
+};
+
+export type EmailListRoutingErrors = {
+	/**
+	 * List received emails failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailListRoutingError =
+	EmailListRoutingErrors[keyof EmailListRoutingErrors];
+
+export type EmailListRoutingResponses = {
+	/**
+	 * List received emails response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<EmailRoutingItem>;
+	};
+};
+
+export type EmailListRoutingResponse =
+	EmailListRoutingResponses[keyof EmailListRoutingResponses];
+
+export type EmailSendRoutingData = {
+	body: EmailSendRequest;
+	path?: never;
+	query?: never;
+	url: "/email/routing/send";
+};
+
+export type EmailSendRoutingErrors = {
+	/**
+	 * Send test email failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailSendRoutingError =
+	EmailSendRoutingErrors[keyof EmailSendRoutingErrors];
+
+export type EmailSendRoutingResponses = {
+	/**
+	 * Send test email response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			id?: string;
+		};
+	};
+};
+
+export type EmailSendRoutingResponse =
+	EmailSendRoutingResponses[keyof EmailSendRoutingResponses];
+
+export type EmailGetRoutingData = {
+	body?: never;
+	path: {
+		email_id: string;
+	};
+	query?: never;
+	url: "/email/routing/{email_id}";
+};
+
+export type EmailGetRoutingErrors = {
+	/**
+	 * Get received email failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailGetRoutingError =
+	EmailGetRoutingErrors[keyof EmailGetRoutingErrors];
+
+export type EmailGetRoutingResponses = {
+	/**
+	 * Get received email response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: EmailRoutingDetail;
+	};
+};
+
+export type EmailGetRoutingResponse =
+	EmailGetRoutingResponses[keyof EmailGetRoutingResponses];
+
+export type EmailListSendingData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/email/sending";
+};
+
+export type EmailListSendingErrors = {
+	/**
+	 * List sent emails failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailListSendingError =
+	EmailListSendingErrors[keyof EmailListSendingErrors];
+
+export type EmailListSendingResponses = {
+	/**
+	 * List sent emails response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<EmailSendingItem>;
+	};
+};
+
+export type EmailListSendingResponse =
+	EmailListSendingResponses[keyof EmailListSendingResponses];
+
+export type EmailGetSendingData = {
+	body?: never;
+	path: {
+		email_id: string;
+	};
+	query?: never;
+	url: "/email/sending/{email_id}";
+};
+
+export type EmailGetSendingErrors = {
+	/**
+	 * Get sent email failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailGetSendingError =
+	EmailGetSendingErrors[keyof EmailGetSendingErrors];
+
+export type EmailGetSendingResponses = {
+	/**
+	 * Get sent email response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: EmailSendingDetail;
+	};
+};
+
+export type EmailGetSendingResponse =
+	EmailGetSendingResponses[keyof EmailGetSendingResponses];
+
 export type WorkflowsListWorkflowsData = {
 	body?: never;
 	path?: never;
@@ -2025,154 +2176,3 @@ export type ObservabilityClearResponses = {
 
 export type ObservabilityClearResponse =
 	ObservabilityClearResponses[keyof ObservabilityClearResponses];
-
-export type EmailListRoutingData = {
-	body?: never;
-	path?: never;
-	query?: never;
-	url: "/email/routing";
-};
-
-export type EmailListRoutingErrors = {
-	/**
-	 * List received emails failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type EmailListRoutingError =
-	EmailListRoutingErrors[keyof EmailListRoutingErrors];
-
-export type EmailListRoutingResponses = {
-	/**
-	 * List received emails response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: Array<EmailRoutingItem>;
-	};
-};
-
-export type EmailListRoutingResponse =
-	EmailListRoutingResponses[keyof EmailListRoutingResponses];
-
-export type EmailSendRoutingData = {
-	body: EmailSendRequest;
-	path?: never;
-	query?: never;
-	url: "/email/routing/send";
-};
-
-export type EmailSendRoutingErrors = {
-	/**
-	 * Send test email failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type EmailSendRoutingError =
-	EmailSendRoutingErrors[keyof EmailSendRoutingErrors];
-
-export type EmailSendRoutingResponses = {
-	/**
-	 * Send test email response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: {
-			id?: string;
-		};
-	};
-};
-
-export type EmailSendRoutingResponse =
-	EmailSendRoutingResponses[keyof EmailSendRoutingResponses];
-
-export type EmailGetRoutingData = {
-	body?: never;
-	path: {
-		email_id: string;
-	};
-	query?: never;
-	url: "/email/routing/{email_id}";
-};
-
-export type EmailGetRoutingErrors = {
-	/**
-	 * Get received email failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type EmailGetRoutingError =
-	EmailGetRoutingErrors[keyof EmailGetRoutingErrors];
-
-export type EmailGetRoutingResponses = {
-	/**
-	 * Get received email response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: EmailRoutingDetail;
-	};
-};
-
-export type EmailGetRoutingResponse =
-	EmailGetRoutingResponses[keyof EmailGetRoutingResponses];
-
-export type EmailListSendingData = {
-	body?: never;
-	path?: never;
-	query?: never;
-	url: "/email/sending";
-};
-
-export type EmailListSendingErrors = {
-	/**
-	 * List sent emails failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type EmailListSendingError =
-	EmailListSendingErrors[keyof EmailListSendingErrors];
-
-export type EmailListSendingResponses = {
-	/**
-	 * List sent emails response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: Array<EmailSendingItem>;
-	};
-};
-
-export type EmailListSendingResponse =
-	EmailListSendingResponses[keyof EmailListSendingResponses];
-
-export type EmailGetSendingData = {
-	body?: never;
-	path: {
-		email_id: string;
-	};
-	query?: never;
-	url: "/email/sending/{email_id}";
-};
-
-export type EmailGetSendingErrors = {
-	/**
-	 * Get sent email failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type EmailGetSendingError =
-	EmailGetSendingErrors[keyof EmailGetSendingErrors];
-
-export type EmailGetSendingResponses = {
-	/**
-	 * Get sent email response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: EmailSendingDetail;
-	};
-};
-
-export type EmailGetSendingResponse =
-	EmailGetSendingResponses[keyof EmailGetSendingResponses];
