@@ -1,10 +1,7 @@
 import { setProvider } from "@flue/runtime";
 import { cloudflareBindingProvider } from "@flue/runtime/cloudflare/workers-ai";
-import { createAgentRouter } from "@flue/runtime/routing";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
-import { bearerAuth } from "hono/bearer-auth";
-import { WorkspaceSmoke } from "./agents/workspace-smoke";
 import { channel as github } from "./channels/github";
 
 setProvider(
@@ -16,14 +13,9 @@ setProvider(
 	})
 );
 
-const app = new Hono()
-	.use(
-		"/agents/*",
-		bearerAuth({
-			token: env.FLUE_BEARER_TOKEN,
-		})
-	)
-	.route("/agents/workspace-smoke", createAgentRouter(WorkspaceSmoke))
-	.route("/channels/github", github.route());
+const app = new Hono().route("/channels/github", github.route());
+
+// Triage agents are driven by verified GitHub events and should remain
+// dispatch-only unless a future feature has a specific authenticated HTTP use.
 
 export default app;

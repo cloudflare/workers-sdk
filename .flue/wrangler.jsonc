@@ -12,13 +12,9 @@
 			"storage": "sqlite",
 			"type": "durable-object",
 		},
-		"FlueWorkspaceSmokeAgent": {
-			"storage": "sqlite",
-			"type": "durable-object",
-		},
 	},
 	"secrets": {
-		"required": ["FLUE_BEARER_TOKEN", "GITHUB_TOKEN", "GITHUB_WEBHOOK_SECRET"],
+		"required": ["GITHUB_TOKEN", "GITHUB_WEBHOOK_SECRET"],
 	},
 	"worker_loaders": [
 		{

@@ -3,8 +3,7 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"outputs": ["dist/**"],
-			"passThroughEnv": ["FLUE_BEARER_TOKEN"]
+			"outputs": ["dist/**"]
 		}
 	}
 }
