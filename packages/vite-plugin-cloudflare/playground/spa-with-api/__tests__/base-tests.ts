@@ -10,9 +10,18 @@ test("returns the response from the API", async ({ expect }) => {
 	const button = page.getByRole("button", { name: "get-name" });
 	const contentBefore = await button.innerText();
 	expect(contentBefore).toBe("Name from API is: unknown");
-	await button.click();
+	// The outer `waitFor` re-clicks in case the initial-build `full-reload`
+	// under `experimental.bundledDev` resets the SPA state and discards an
+	// earlier click. The inner `waitFor` then waits for the API response after
+	// each click so latency is tolerated.
 	await vi.waitFor(async () => {
-		const contentAfter = await button.innerText();
-		expect(contentAfter).toBe("Name from API is: Cloudflare");
+		await button.click();
+		await vi.waitFor(
+			async () => {
+				const contentAfter = await button.innerText();
+				expect(contentAfter).toBe("Name from API is: Cloudflare");
+			},
+			{ timeout: 1_000, interval: 100 }
+		);
 	}, WAIT_FOR_OPTIONS);
 });
