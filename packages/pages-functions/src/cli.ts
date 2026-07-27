@@ -72,14 +72,14 @@ async function main() {
 			external: values.external,
 		});
 
-		// Write _routes.json if requested or by default alongside the output
-		const routesOutputPath =
-			values["routes-output"] || resolve(outdir, "_routes.json");
-		await mkdir(dirname(routesOutputPath), { recursive: true });
-		await writeFile(
-			routesOutputPath,
-			JSON.stringify(result.routesJSON, null, 2)
-		);
+		if (values["routes-output"]) {
+			const routesOutputPath = resolve(values["routes-output"]);
+			await mkdir(dirname(routesOutputPath), { recursive: true });
+			await writeFile(
+				routesOutputPath,
+				JSON.stringify(result.routesJSON, null, 2)
+			);
+		}
 
 		console.log(`Compiled Worker successfully to ${outdir}/index.js`);
 	} catch (error) {
