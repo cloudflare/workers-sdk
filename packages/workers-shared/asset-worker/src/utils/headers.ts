@@ -68,23 +68,7 @@ export function attachCustomHeaders(
 ) {
 	const jaeger: JaegerTracing = env.JAEGER ?? mockJaegerBinding();
 	return jaeger.enterSpan("add_headers", (span) => {
-		// Iterate through rules and find rules that match the path
-		const headersMatcher = generateRulesMatcher(
-			configuration.headers?.version === HEADERS_VERSION
-				? configuration.headers.rules
-				: {},
-			({ set = {}, unset = [] }, replacements) => {
-				const replacedSet: Record<string, string> = {};
-				Object.entries(set).forEach(([key, value]) => {
-					replacedSet[key] = replacer(value, replacements);
-				});
-				return {
-					set: replacedSet,
-					unset,
-				};
-			}
-		);
-		const matches = headersMatcher({ request });
+		const matches = getCustomHeaderMatches(request, configuration);
 
 		// This keeps track of every header that we've set from _headers
 		// because we want to combine user declared headers but overwrite
@@ -110,4 +94,28 @@ export function attachCustomHeaders(
 
 		return response;
 	});
+}
+
+// Returns matching _headers rules after applying placeholder substitutions.
+export function getCustomHeaderMatches(
+	request: Request,
+	configuration: Required<AssetConfig>
+) {
+	const headersMatcher = generateRulesMatcher(
+		configuration.headers?.version === HEADERS_VERSION
+			? configuration.headers.rules
+			: {},
+		({ set = {}, unset = [] }, replacements) => {
+			const replacedSet: Record<string, string> = {};
+			Object.entries(set).forEach(([key, value]) => {
+				replacedSet[key] = replacer(value, replacements);
+			});
+			return {
+				set: replacedSet,
+				unset,
+			};
+		}
+	);
+
+	return headersMatcher({ request });
 }

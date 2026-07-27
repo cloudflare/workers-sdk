@@ -280,40 +280,26 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 			};
 
 			if (config.static_routing) {
-				// evaluate "exclude" rules
-				const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
-					config.static_routing.asset_worker ?? []
-				);
-				if (
-					excludeRulesMatcher({
-						request,
-					})
-				) {
-					// direct to asset worker
-					analytics.setData({
-						staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
-					});
-					return await routeToAssets({ asset: "static_routing" });
-				}
-				// evaluate "include" rules
-				const includeRulesMatcher = generateStaticRoutingRuleMatcher(
-					config.static_routing.user_worker ?? []
-				);
-				if (
-					includeRulesMatcher({
-						request,
-					})
-				) {
-					if (!config.has_user_worker) {
-						throw new Error(
-							"Fetch for user worker without having a user worker binding"
-						);
-					}
-					// direct to user worker
-					analytics.setData({
-						staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
-					});
-					return await routeToUserWorker({ asset: "static_routing" });
+				switch (getStaticRoutingTarget(request, config.static_routing)) {
+					case "asset":
+						// direct to asset worker
+						analytics.setData({
+							staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
+						});
+						return await routeToAssets({ asset: "static_routing" });
+					case "user":
+						if (!config.has_user_worker) {
+							throw new Error(
+								"Fetch for user worker without having a user worker binding"
+							);
+						}
+						// direct to user worker
+						analytics.setData({
+							staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
+						});
+						return await routeToUserWorker({ asset: "static_routing" });
+					case "none":
+						break;
 				}
 
 				analytics.setData({
@@ -362,6 +348,30 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 			analytics.write();
 		}
 	}
+}
+
+// Asset rules take precedence over user Worker rules, matching existing routing.
+function getStaticRoutingTarget(
+	request: Request,
+	staticRouting: NonNullable<RouterConfig["static_routing"]>
+): "asset" | "user" | "none" {
+	if (
+		generateStaticRoutingRuleMatcher(staticRouting.asset_worker ?? [])({
+			request,
+		})
+	) {
+		return "asset";
+	}
+
+	if (
+		generateStaticRoutingRuleMatcher(staticRouting.user_worker ?? [])({
+			request,
+		})
+	) {
+		return "user";
+	}
+
+	return "none";
 }
 
 export default RouterInnerEntrypoint;

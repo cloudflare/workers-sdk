@@ -45,7 +45,6 @@ const getResponseOrAssetIntent = async (
 ): Promise<Response | AssetIntentWithResolver> => {
 	const url = new URL(request.url);
 	const { search } = url;
-
 	const redirectResult = handleRedirects(
 		env,
 		request,
@@ -1039,9 +1038,7 @@ const handleRedirects = (
 ): { proxied: boolean; pathname: string } | Response => {
 	const jaeger = env.JAEGER ?? mockJaegerBinding();
 	return jaeger.enterSpan("handle_redirects", (span) => {
-		const redirectMatch =
-			staticRedirectsMatcher(configuration, host, pathname) ||
-			generateRedirectsMatcher(configuration)({ request })[0];
+		const redirectMatch = getRedirectMatch(request, configuration, host);
 
 		let proxied = false;
 		if (redirectMatch) {
@@ -1101,3 +1098,16 @@ const handleRedirects = (
 		return { proxied, pathname };
 	});
 };
+
+// Returns the first matching redirect rule for a request.
+export function getRedirectMatch(
+	request: Request,
+	configuration: Required<AssetConfig>,
+	host: string
+) {
+	const pathname = new URL(request.url).pathname;
+	return (
+		staticRedirectsMatcher(configuration, host, pathname) ||
+		generateRedirectsMatcher(configuration)({ request })[0]
+	);
+}
