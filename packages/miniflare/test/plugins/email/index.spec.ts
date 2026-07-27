@@ -1056,6 +1056,73 @@ test("reply: references generated correctly", async ({ expect }) => {
 	).toBe(true);
 });
 
+test("reply: stored in project directory when defaultProjectTmpPath is set", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const projectTmpPath = await useProjectTmpPath();
+	const mf = new Miniflare({
+		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
+		modules: true,
+		script: REPLY_EMAIL_WORKER(
+			JSON.stringify(dedent`
+				From: someone else <someone-else@example.com>
+				To: someone <someone@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+				In-Reply-To: <im-a-random-parent-message-id@example.com>
+				Message-ID: <im-a-random-message-id@example.com>
+
+				This is a random email body.`)
+		),
+		unsafeTriggerHandlers: true,
+		defaultProjectTmpPath: projectTmpPath,
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const email = dedent`
+		From: someone <someone@example.com>
+		To: someone else <someone-else@example.com>
+		Message-ID: <im-a-random-parent-message-id@example.com>
+		MIME-Version: 1.0
+		Content-Type: text/plain
+
+		This is a random email body.`;
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?" +
+			new URLSearchParams({
+				from: "someone@example.com",
+				to: "someone-else@example.com",
+			}).toString(),
+		{
+			body: email,
+			method: "POST",
+		}
+	);
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
+
+	const message = log.logs[1][1];
+	const file = message.match(/^ {2}(.+)$/m)?.[1];
+	expect(file).toBeDefined();
+	// The reply must be written inside the project's `.wrangler/tmp` directory,
+	// not only the OS temp directory.
+	expect(String(file).startsWith(projectTmpPath)).toBe(true);
+	expect(existsSync(String(file))).toBe(true);
+	const fileContent = await readFile(String(file), "utf-8");
+	expect(
+		fileContent.includes(
+			`References: <im-a-random-parent-message-id@example.com>`
+		)
+	).toBe(true);
+});
+
 const MESSAGE_BUILDER_WORKER = dedent /* javascript */ `
 	export default {
 		async fetch(request, env) {
@@ -1955,11 +2022,11 @@ const SEND_EMAIL_RETURNS_RESULT_WORKER = dedent /* javascript */ `
 	};
 `;
 
-// Both branches return an id in the shape production returns:
-// `<{36 alphanumeric chars}@{sender domain}>`, angle brackets included.
+// MessageBuilder emails get a synthesized id in the shape:
+// `<{random alphanumeric chars}@{sender domain}>`, angle brackets included.
 function synthesizedMessageId(expect: ExpectStatic, domain: string) {
 	return expect.stringMatching(
-		new RegExp(`^<[A-Za-z0-9]{36}@${domain.replace(/\./g, "\\.")}>$`)
+		new RegExp(`^<[a-z0-9]+@${domain.replace(/\./g, "\\.")}>$`)
 	);
 }
 
@@ -1997,7 +2064,9 @@ test("send() on an EmailMessage returns a synthesized messageId", async ({
 
 	expect(res.status).toBe(200);
 	expect(await res.json()).toEqual({
-		messageId: synthesizedMessageId(expect, "sender.domain"),
+		// The binding preserves the Message-ID from the worker's raw email
+		// rather than overriding it with a synthesized one.
+		messageId: "<do-not-echo-this@example.com>",
 	});
 });
 
@@ -2111,7 +2180,7 @@ test("disposing does not remove a concurrent email session", async ({
 });
 
 describe("EMAIL_PLUGIN.getServices", () => {
-	test("creates disk services for system temp and project directories", async ({
+	test("creates a single send_email worker service bound to the loopback service", async ({
 		expect,
 	}) => {
 		const tmp = await useTmp();
@@ -2133,40 +2202,23 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		}
 		const services = result;
 
-		expect(services).toHaveLength(3);
-
-		const diskServices = services.filter((s) => "disk" in s) as Array<{
-			name: string;
-			disk: { path: string; writable?: boolean };
-		}>;
-		expect(diskServices).toHaveLength(2);
-
-		const systemTempDisk = diskServices.find(
-			(s) => s.name === "email:disk:system"
-		);
-		const projectDisk = diskServices.find(
-			(s) => s.name === "email:disk:project"
-		);
-		if (!systemTempDisk || !projectDisk) {
-			throw new Error("Expected both disk services to be present");
-		}
-
-		// System temp directory
-		expect(systemTempDisk.disk.path).toBe(path.join(tmp, "email"));
-		expect(existsSync(systemTempDisk.disk.path)).toBe(true);
-
-		// Project temp directory
-		expect(projectDisk.disk.path).toBe(
-			path.join(projectTmpPath, "email", path.basename(tmp))
-		);
-		expect(existsSync(projectDisk.disk.path)).toBe(true);
+		// Files are written via the loopback `/core/store-temp-file` endpoint, so
+		// no dedicated disk services are created - only the send_email worker.
+		expect(services).toHaveLength(1);
+		expect(services.some((s) => "disk" in s)).toBe(false);
 
 		const workerService = services.find(
 			(s) => s.name === "SEND-EMAIL-WORKER:SEND_EMAIL"
 		) as
 			| {
 					name: string;
-					worker: { bindings: { name: string; json?: string }[] };
+					worker: {
+						bindings: {
+							name: string;
+							json?: string;
+							service?: { name: string };
+						}[];
+					};
 			  }
 			| undefined;
 		if (!workerService) {
@@ -2250,7 +2302,13 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		) as
 			| {
 					name: string;
-					worker: { bindings: { name: string; json?: string }[] };
+					worker: {
+						bindings: {
+							name: string;
+							json?: string;
+							service?: { name: string };
+						}[];
+					};
 			  }
 			| undefined;
 		if (!workerService) {
@@ -2259,30 +2317,17 @@ describe("EMAIL_PLUGIN.getServices", () => {
 
 		const bindings = workerService.worker.bindings;
 
-		const systemServiceBinding = bindings.find(
-			(b) => b.name === "MINIFLARE_EMAIL_DISK_SYSTEM"
-		) as { name: string; service?: { name: string } } | undefined;
-		expect(systemServiceBinding?.service?.name).toBe("email:disk:system");
-
-		const projectServiceBinding = bindings.find(
-			(b) => b.name === "MINIFLARE_EMAIL_DISK_PROJECT"
+		// The worker reaches the loopback service to store files and log.
+		const loopbackBinding = bindings.find(
+			(b) => b.name === "MINIFLARE_LOOPBACK"
 		);
-		expect(projectServiceBinding).toBeUndefined();
+		expect(loopbackBinding?.service?.name).toBeDefined();
 
-		const emailDiskServicesBinding = bindings.find(
-			(b) => b.name === "email_disk_services"
-		);
-		if (!emailDiskServicesBinding?.json) {
-			throw new Error("Expected email_disk_services binding with JSON value");
-		}
-
-		const emailDiskServices = JSON.parse(emailDiskServicesBinding.json);
-		expect(emailDiskServices).toHaveLength(1);
-		expect(emailDiskServices[0].bindingName).toBe(
-			"MINIFLARE_EMAIL_DISK_SYSTEM"
-		);
-		expect(emailDiskServices[0].location).toBe("system");
-		expect(emailDiskServices[0].path).toBe(path.join(tmp, "email"));
+		// The old disk-service bindings are gone.
+		expect(
+			bindings.some((b) => b.name.startsWith("MINIFLARE_EMAIL_DISK"))
+		).toBe(false);
+		expect(bindings.some((b) => b.name === "email_disk_services")).toBe(false);
 	});
 });
 
