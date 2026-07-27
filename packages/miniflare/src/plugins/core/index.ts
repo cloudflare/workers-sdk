@@ -33,6 +33,7 @@ import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
 import {
 	buildRemoteProxyProps,
 	getUserBindingServiceName,
+	HOST_CAPNP_CONNECT,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -48,6 +49,7 @@ import { STREAM_PLUGIN_NAME } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	getBuiltinServiceName,
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
 	getUserServiceName,
@@ -69,6 +71,8 @@ import { PROXY_SECRET } from "./proxy";
 import { kCurrentWorker } from "./services";
 import type {
 	Extension,
+	ExternalServer,
+	HttpOptions,
 	Service,
 	ServiceDesignator,
 	Worker_Binding,
@@ -159,6 +163,13 @@ function getCustomServiceDesignator(
 	} else if (service.type === "node-handler") {
 		// Custom Node.js style handler
 		serviceName = getCustomNodeServiceName(workerIndex, kind, name);
+	} else if (
+		service.type === "network" ||
+		service.type === "external" ||
+		service.type === "disk"
+	) {
+		// Builtin workerd service: network, external, disk
+		serviceName = getBuiltinServiceName(workerIndex, kind, name);
 	} else {
 		// This only returns it if the specific service is remote:true
 		const remoteProxyConnectionString = getRemoteProxyConnectionString(
@@ -236,6 +247,30 @@ function maybeGetCustomServiceService(
 				],
 			},
 		};
+	} else if (service.type === "network") {
+		// Builtin workerd `network` service
+		const { type: _type, ...network } = service;
+		return { name: getBuiltinServiceName(workerIndex, kind, name), network };
+	} else if (service.type === "external") {
+		// Builtin workerd `external` service. Set `capnpConnectHost` so JS RPC
+		// works over `external` services (e.g. RPC across Miniflare instances).
+		const { type: _type, http, https, ...rest } = service;
+		const external: ExternalServer = {
+			...rest,
+			...(https !== undefined
+				? {
+						https: {
+							...https,
+							options: withCapnpConnectHost(https.options),
+						},
+					}
+				: { http: withCapnpConnectHost(http) ?? {} }),
+		};
+		return { name: getBuiltinServiceName(workerIndex, kind, name), external };
+	} else if (service.type === "disk") {
+		// Builtin workerd `disk` service
+		const { type: _type, ...disk } = service;
+		return { name: getBuiltinServiceName(workerIndex, kind, name), disk };
 	} else if (getRemoteProxyConnectionString(service, dev) !== undefined) {
 		// Remote `worker` service binding
 		return {
@@ -243,6 +278,15 @@ function maybeGetCustomServiceService(
 			worker: remoteProxyClientWorker(),
 		};
 	}
+}
+
+function withCapnpConnectHost(
+	options: Omit<HttpOptions, "capnpConnectHost"> | undefined
+): HttpOptions | undefined {
+	if (options === undefined) {
+		return undefined;
+	}
+	return { ...options, capnpConnectHost: HOST_CAPNP_CONNECT };
 }
 
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
@@ -311,6 +355,21 @@ function getGlobalOutbound(
 			);
 }
 
+function getTailServiceDesignator(consumer: {
+	workerName: string;
+	entrypoint?: string;
+	props?: Record<string, unknown>;
+}): ServiceDesignator {
+	return {
+		name: getUserServiceName(consumer.workerName),
+		entrypoint: consumer.entrypoint,
+		props:
+			consumer.props !== undefined
+				? { json: JSON.stringify(consumer.props) }
+				: undefined,
+	};
+}
+
 function getServiceBindings(
 	config: ParsedMiniflareWorkerConfig
 ): [name: string, binding: MiniflareServiceBinding][] {
@@ -318,6 +377,9 @@ function getServiceBindings(
 		...getEnvBindingsOfType(config, "worker"),
 		...getEnvBindingsOfType(config, "fetcher"),
 		...getEnvBindingsOfType(config, "node-handler"),
+		...getEnvBindingsOfType(config, "network"),
+		...getEnvBindingsOfType(config, "external"),
+		...getEnvBindingsOfType(config, "disk"),
 	];
 }
 
@@ -556,14 +618,10 @@ export const CORE_PLUGIN: Plugin = {
 						: undefined,
 				tails: tailConsumers
 					.filter((consumer) => !consumer.streaming)
-					.map<ServiceDesignator>((consumer) => ({
-						name: getUserServiceName(consumer.workerName),
-					})),
+					.map<ServiceDesignator>(getTailServiceDesignator),
 				streamingTails: tailConsumers
 					.filter((consumer) => consumer.streaming)
-					.map<ServiceDesignator>((consumer) => ({
-						name: getUserServiceName(consumer.workerName),
-					})),
+					.map<ServiceDesignator>(getTailServiceDesignator),
 				containerEngine: getContainerEngine(sharedOptions.containerEngine),
 			},
 		});
@@ -593,7 +651,7 @@ export const CORE_PLUGIN: Plugin = {
 
 		{
 			// Use the zone option if provided, otherwise default to `${worker-name}.example.com`
-			const workerName = config.name ?? "worker";
+			const workerName = config.name || "worker";
 			const cfWorkerValue = dev?.zone ?? `${workerName}.example.com`;
 			services.push({
 				name: getOutboundInterceptorName(workerIndex),
@@ -967,6 +1025,11 @@ function getWorkerScript(
 	];
 	for (const [name, module] of Object.entries(manifest.modules)) {
 		if (name === manifest.mainModule) {
+			continue;
+		}
+		// `sourcemap` modules are only used for error stack-trace revival (see
+		// `Miniflare#workerSrcOpts`); they are not passed to workerd.
+		if (module.type === "sourcemap") {
 			continue;
 		}
 		modules.push(convertManifestModule(name, module.type, module.contents));

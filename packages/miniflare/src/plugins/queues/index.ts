@@ -16,12 +16,12 @@ import {
 	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_LOOPBACK,
 } from "../shared";
+import type { ParsedWorkerOptions } from "../../config/schema";
 import type {
 	Service,
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { ParsedWorkerOptions } from "../../config/schema";
 import type { Plugin } from "../shared";
 
 export const QUEUES_PLUGIN_NAME = "queues";

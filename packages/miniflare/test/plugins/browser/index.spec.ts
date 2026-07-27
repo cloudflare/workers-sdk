@@ -7,7 +7,7 @@ import {
 	type TestOptions,
 	vi,
 } from "vitest";
-import { useDispose } from "../../test-shared";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 async function sendMessage(ws: WebSocket, message: unknown) {
@@ -97,11 +97,17 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: BROWSER_WORKER_SCRIPT(),
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(BROWSER_WORKER_SCRIPT()),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			};
 			const mf = new Miniflare(opts);
 			useDispose(mf);
@@ -129,18 +135,22 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 			const mf = new Miniflare({
 				workers: [
 					{
-						name: "worker-a",
-						compatibilityDate: "2024-11-20",
-						modules: true,
-						script: workerScript("BROWSER_A"),
-						browserRendering: { binding: "BROWSER_A" },
+						config: {
+							type: "worker",
+							name: "worker-a",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(workerScript("BROWSER_A")),
+							env: { BROWSER_A: { type: "browser" } },
+						},
 					},
 					{
-						name: "worker-b",
-						compatibilityDate: "2024-11-20",
-						modules: true,
-						script: workerScript("BROWSER_B"),
-						browserRendering: { binding: "BROWSER_B" },
+						config: {
+							type: "worker",
+							name: "worker-b",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(workerScript("BROWSER_B")),
+							env: { BROWSER_B: { type: "browser" } },
+						},
 					},
 				],
 			});
@@ -178,11 +188,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: BROWSER_WORKER_CLOSE_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(BROWSER_WORKER_CLOSE_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			};
 			const mf = new Miniflare(opts);
 			useDispose(mf);
@@ -225,11 +241,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: BROWSER_WORKER_REUSE_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(BROWSER_WORKER_REUSE_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			};
 			const mf = new Miniflare(opts);
 			useDispose(mf);
@@ -316,11 +338,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: BROWSER_WORKER_RECONNECT_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(BROWSER_WORKER_RECONNECT_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			};
 			const mf = new Miniflare(opts);
 			useDispose(mf);
@@ -360,11 +388,19 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: BROWSER_WORKER_ALREADY_USED_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(
+								BROWSER_WORKER_ALREADY_USED_SCRIPT
+							),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			};
 			const mf = new Miniflare(opts);
 			useDispose(mf);
@@ -408,11 +444,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: GET_SESSIONS_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(GET_SESSIONS_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			};
 			const mf = new Miniflare(opts);
 			useDispose(mf);
@@ -460,11 +502,19 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(
+								GET_SESSIONS_AFTER_DISCONNECT_SCRIPT
+							),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			};
 			const mf = new Miniflare(opts);
 			useDispose(mf);
@@ -486,13 +536,21 @@ export default {
 
 	test("returns limits", async ({ expect }) => {
 		const mf = new Miniflare({
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: `export default { async fetch(req, env) {
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "worker",
+						compatibilityDate: "2024-11-20",
+						manifest: singleModuleManifest(
+							`export default { async fetch(req, env) {
 				return env.MYBROWSER.fetch("https://localhost/v1/limits");
-			} }`,
-			browserRendering: { binding: "MYBROWSER" },
+			} }`
+						),
+						env: { MYBROWSER: { type: "browser" } },
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -506,13 +564,21 @@ export default {
 
 	test("returns empty history", async ({ expect }) => {
 		const mf = new Miniflare({
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: `export default { async fetch(req, env) {
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "worker",
+						compatibilityDate: "2024-11-20",
+						manifest: singleModuleManifest(
+							`export default { async fetch(req, env) {
 				return env.MYBROWSER.fetch("https://localhost/v1/history");
-			} }`,
-			browserRendering: { binding: "MYBROWSER" },
+			} }`
+						),
+						env: { MYBROWSER: { type: "browser" } },
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -540,11 +606,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: DEVTOOLS_SESSION_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(DEVTOOLS_SESSION_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -587,11 +659,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: DEVTOOLS_JSON_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(DEVTOOLS_JSON_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -647,11 +725,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: DEVTOOLS_DELETE_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(DEVTOOLS_DELETE_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -705,11 +789,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: DEVTOOLS_BROWSER_WS_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(DEVTOOLS_BROWSER_WS_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -737,10 +827,14 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: `export default {
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(
+								`export default {
 	async fetch(request, env) {
 		const resp = await env.MYBROWSER.fetch("https://localhost/v1/devtools/browser", {
 			headers: { Upgrade: "websocket" },
@@ -755,8 +849,12 @@ export default {
 		ws.close();
 		return Response.json({ status: resp.status, sessionId, browserProduct: browserVersion.result?.product });
 	}
-};`,
-				browserRendering: { binding: "MYBROWSER" },
+};`
+							),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -788,11 +886,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: DEVTOOLS_JSON_PROTOCOL_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(DEVTOOLS_JSON_PROTOCOL_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -832,11 +936,19 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: DEVTOOLS_JSON_NEW_ACTIVATE_CLOSE_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(
+								DEVTOOLS_JSON_NEW_ACTIVATE_CLOSE_SCRIPT
+							),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -878,11 +990,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: DEVTOOLS_PAGE_WS_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(DEVTOOLS_PAGE_WS_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -899,10 +1017,14 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: `export default {
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(
+								`export default {
 	async fetch(request, env) {
 		const { sessionId } = await env.MYBROWSER.fetch("https://localhost/v1/acquire").then(r => r.json());
 		const deleteResp = await env.MYBROWSER.fetch(
@@ -917,8 +1039,12 @@ export default {
 			sessionGone: sessions.length === 0,
 		});
 	}
-};`,
-				browserRendering: { binding: "MYBROWSER" },
+};`
+							),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -983,11 +1109,17 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: DEVTOOLS_DELETE_ALL_WS_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(DEVTOOLS_DELETE_ALL_WS_SCRIPT),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 
@@ -1008,10 +1140,14 @@ export default {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: `export default {
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker",
+							compatibilityDate: "2024-11-20",
+							manifest: singleModuleManifest(
+								`export default {
 	async fetch(request, env) {
 		const { sessionId } = await env.MYBROWSER.fetch("https://localhost/v1/acquire").then(r => r.json());
 
@@ -1047,8 +1183,12 @@ export default {
 			product2: r2.result?.product,
 		});
 	}
-};`,
-				browserRendering: { binding: "MYBROWSER" },
+};`
+							),
+							env: { MYBROWSER: { type: "browser" } },
+						},
+					},
+				],
 			});
 			useDispose(mf);
 

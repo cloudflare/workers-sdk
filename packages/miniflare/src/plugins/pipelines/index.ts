@@ -28,10 +28,7 @@ export const PIPELINE_PLUGIN: Plugin = {
 					service: remoteProxyConnectionString
 						? {
 								name: PIPELINES_REMOTE_SERVICE_NAME,
-								props: buildRemoteProxyProps(
-									remoteProxyConnectionString,
-									name
-								),
+								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 							}
 						: { name: `${SERVICE_PIPELINE_PREFIX}:${id}` },
 				};

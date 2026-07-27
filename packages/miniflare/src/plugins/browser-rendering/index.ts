@@ -47,10 +47,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin = {
 					service: remoteProxyConnectionString
 						? {
 								name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
-								props: buildRemoteProxyProps(
-									remoteProxyConnectionString,
-									name
-								),
+								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 							}
 						: {
 								name: getUserBindingServiceName(

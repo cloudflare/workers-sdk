@@ -44,10 +44,9 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin = {
 	},
 	getNodeBindings(options) {
 		return Object.fromEntries(
-			getEnvBindingsOfType(options.config, "dispatch-namespace").map(([name]) => [
-				name,
-				new ProxyNodeBinding(),
-			])
+			getEnvBindingsOfType(options.config, "dispatch-namespace").map(
+				([name]) => [name, new ProxyNodeBinding()]
+			)
 		);
 	},
 	async getServices({ options }) {

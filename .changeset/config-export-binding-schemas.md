@@ -2,4 +2,4 @@
 "@cloudflare/config": minor
 ---
 
-Export `BrowserBindingSchema` and `DurableObjectCreatedExportSchema`
+Export `BrowserBindingSchema`, `DurableObjectCreatedExportSchema`, `DurableObjectDeletedExportSchema`, `DurableObjectRenamedExportSchema`, `DurableObjectTransferredExportSchema`, `DurableObjectExpectingTransferExportSchema`, and `WorkerEntrypointExportSchema`

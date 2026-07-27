@@ -19,6 +19,10 @@ export {
 	BrowserBindingSchema,
 	ConfigExportsSchema,
 	DurableObjectCreatedExportSchema,
+	DurableObjectDeletedExportSchema,
+	DurableObjectExpectingTransferExportSchema,
+	DurableObjectRenamedExportSchema,
+	DurableObjectTransferredExportSchema,
 	ExportSchema,
 	InputWorkerSchema,
 	KnownBindingSchema,
@@ -27,6 +31,7 @@ export {
 	SettingsSchema,
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
+	WorkerEntrypointExportSchema,
 } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";

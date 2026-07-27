@@ -2,14 +2,22 @@ import {
 	AssetsSchema as RawAssetsConfigSchema,
 	BrowserBindingSchema,
 	DurableObjectCreatedExportSchema,
-	ExportSchema,
+	DurableObjectDeletedExportSchema,
+	DurableObjectExpectingTransferExportSchema,
+	DurableObjectRenamedExportSchema,
+	DurableObjectTransferredExportSchema,
 	KnownBindingSchema,
 	ModuleTypeSchema,
 	OutputWorkerSchema,
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
+	WorkerEntrypointExportSchema,
 } from "@cloudflare/config";
 import { z } from "zod";
+import {
+	HttpOptions_Style,
+	TlsOptions_Version,
+} from "../runtime/config/workerd";
 import type { Request, Response } from "../http";
 import type {
 	Miniflare,
@@ -65,6 +73,74 @@ const NodeHandlerBindingSchema = z.strictObject({
 	>((v) => typeof v === "function"),
 });
 
+// Zod validators for workerd's builtin services (`runtime/config/workerd.ts`).
+// All fields are optional except where a value is structurally required.
+
+const HttpOptionsHeaderSchema = z.object({
+	name: z.string(),
+	// If omitted, the header will be removed.
+	value: z.string().optional(),
+});
+
+const HttpOptionsSchema = z.object({
+	style: z.nativeEnum(HttpOptions_Style).optional(),
+	forwardedProtoHeader: z.string().optional(),
+	cfBlobHeader: z.string().optional(),
+	injectRequestHeaders: HttpOptionsHeaderSchema.array().optional(),
+	injectResponseHeaders: HttpOptionsHeaderSchema.array().optional(),
+});
+
+const TlsOptionsKeypairSchema = z.object({
+	privateKey: z.string().optional(),
+	certificateChain: z.string().optional(),
+});
+
+const TlsOptionsSchema = z.object({
+	keypair: TlsOptionsKeypairSchema.optional(),
+	requireClientCerts: z.boolean().optional(),
+	trustBrowserCas: z.boolean().optional(),
+	trustedCertificates: z.string().array().optional(),
+	minVersion: z.nativeEnum(TlsOptions_Version).optional(),
+	cipherList: z.string().optional(),
+});
+
+/**
+ * Binds directly to workerd's `network` service, allowing a worker to make
+ * arbitrary outbound connections (subject to `allow`/`deny` filters).
+ */
+const NetworkServiceBindingSchema = z.strictObject({
+	type: z.literal("network"),
+	allow: z.string().array().optional(),
+	deny: z.string().array().optional(),
+	tlsOptions: TlsOptionsSchema.optional(),
+});
+
+/**
+ * Binds directly to workerd's `external` service, forwarding subrequests to a
+ * server reachable at `address`.
+ */
+const ExternalServiceBindingSchema = z.strictObject({
+	type: z.literal("external"),
+	address: z.string(),
+	http: HttpOptionsSchema.optional(),
+	https: z
+		.object({
+			options: HttpOptionsSchema.optional(),
+			tlsOptions: TlsOptionsSchema.optional(),
+			certificateHost: z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Binds directly to workerd's `disk` service, serving files from `path`.
+ */
+const DiskServiceBindingSchema = z.strictObject({
+	type: z.literal("disk"),
+	path: z.string(),
+	writable: z.boolean().optional(),
+});
+
 /**
  * Extended browser binding with `headful` (local-only, so not in config schema).
  */
@@ -99,6 +175,9 @@ const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	MiniflareWorkerBindingSchema,
 	FetcherBindingSchema,
 	NodeHandlerBindingSchema,
+	NetworkServiceBindingSchema,
+	ExternalServiceBindingSchema,
+	DiskServiceBindingSchema,
 	HelloWorldBindingSchema,
 	...KnownBindingSchema.options.filter(
 		(option) =>
@@ -145,18 +224,24 @@ const MiniflareBindingSchema = z.unknown().transform((value, ctx) => {
  * - `unsafePreventEviction` — prevents the DO from being evicted
  * - `container` — container config for container-attached DOs
  */
-const MiniflareDurableObjectExportSchema =
+export const MiniflareDurableObjectExportSchema =
 	DurableObjectCreatedExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
 		container: z.custom<DOContainerOptions>().optional(),
 	});
 
+// Compose the union explicitly (rather than filtering `ExportSchema.options`)
+// so the inferred type is precise: the miniflare-extended "created" variant
+// replaces the plain one, and `Array.prototype.filter` can't narrow the element
+// type.
 const MiniflareExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
-	...ExportSchema.options.filter(
-		(option) => option !== DurableObjectCreatedExportSchema
-	),
+	DurableObjectDeletedExportSchema,
+	DurableObjectRenamedExportSchema,
+	DurableObjectTransferredExportSchema,
+	DurableObjectExpectingTransferExportSchema,
+	WorkerEntrypointExportSchema,
 ]);
 
 // ---------------------------------------------------------------------------
@@ -164,11 +249,29 @@ const MiniflareExportSchema = z.union([
 // ---------------------------------------------------------------------------
 
 /**
- * Extends the config `assets` block with `directory`, resolved to an
- * absolute path by the caller.
+ * Extends the config `assets` block with:
+ * - `directory` — resolved to an absolute path by the caller.
+ * - `hasUserWorker` — whether the worker has a user-authored script the asset
+ *   router should fall back to for unmatched requests. Cannot be inferred from
+ *   manifest presence: wrangler injects a placeholder script for assets-only
+ *   workers, so this must be supplied explicitly (defaults to `false`).
  */
 const MiniflareAssetsSchema = RawAssetsConfigSchema.extend({
 	directory: z.string(),
+	hasUserWorker: z.boolean().default(false),
+});
+
+/**
+ * Extends the config tail-consumer entry with miniflare-internal `entrypoint`
+ * and `props`. These let a tail consumer be rerouted through the dev-registry
+ * proxy worker (`ExternalServiceProxy`) when the target worker lives in another
+ * Miniflare instance, mirroring the `worker`/`durable-object` reroute.
+ */
+const MiniflareTailConsumerSchema = z.object({
+	workerName: z.string(),
+	streaming: z.boolean().optional(),
+	entrypoint: z.string().optional(),
+	props: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -180,11 +283,13 @@ export const MiniflareWorkerConfigSchema = OutputWorkerSchema.omit({
 	env: true,
 	exports: true,
 	assets: true,
+	tailConsumers: true,
 }).extend({
 	manifest: MiniflareManifestSchema.optional(),
 	env: z.record(z.string(), MiniflareBindingSchema).optional(),
 	exports: z.record(z.string(), MiniflareExportSchema).optional(),
 	assets: MiniflareAssetsSchema.optional(),
+	tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
 });
 
 export type MiniflareWorkerConfig = z.input<typeof MiniflareWorkerConfigSchema>;
@@ -197,7 +302,10 @@ export type MiniflareBinding = NonNullable<
 	ParsedMiniflareWorkerConfig["env"]
 >[string];
 /** A parsed `worker` (service) binding, extended with `kCurrentWorker` support. */
-export type MiniflareWorkerBinding = Extract<MiniflareBinding, { type: "worker" }>;
+export type MiniflareWorkerBinding = Extract<
+	MiniflareBinding,
+	{ type: "worker" }
+>;
 /** A parsed function-backed `fetcher` service binding. */
 export type MiniflareFetcherBinding = Extract<
 	MiniflareBinding,
@@ -208,11 +316,32 @@ export type MiniflareNodeHandlerBinding = Extract<
 	MiniflareBinding,
 	{ type: "node-handler" }
 >;
-/** Any of the three service-binding variants (worker / fetcher / node-handler). */
+/** A parsed binding to workerd's builtin `network` service. */
+export type MiniflareNetworkServiceBinding = Extract<
+	MiniflareBinding,
+	{ type: "network" }
+>;
+/** A parsed binding to workerd's builtin `external` service. */
+export type MiniflareExternalServiceBinding = Extract<
+	MiniflareBinding,
+	{ type: "external" }
+>;
+/** A parsed binding to workerd's builtin `disk` service. */
+export type MiniflareDiskServiceBinding = Extract<
+	MiniflareBinding,
+	{ type: "disk" }
+>;
+/**
+ * Any service-binding variant: a `worker`/`fetcher`/`node-handler` custom
+ * service, or a `network`/`external`/`disk` workerd builtin service.
+ */
 export type MiniflareServiceBinding =
 	| MiniflareWorkerBinding
 	| MiniflareFetcherBinding
-	| MiniflareNodeHandlerBinding;
+	| MiniflareNodeHandlerBinding
+	| MiniflareNetworkServiceBinding
+	| MiniflareExternalServiceBinding
+	| MiniflareDiskServiceBinding;
 /** A single parsed `config.exports` entry. */
 export type MiniflareExport = NonNullable<
 	ParsedMiniflareWorkerConfig["exports"]
@@ -235,16 +364,17 @@ const UnsafeDirectSocketSchema = z.object({
 });
 
 /**
- * The outbound service intercepts a worker's outgoing `fetch()` subrequests, so
- * it only accepts fetch-style handlers: a function-backed `fetcher` binding or a
- * `worker` service binding.
+ * The outbound service intercepts a worker's outgoing `fetch()` subrequests. It
+ * accepts a function-backed `fetcher` binding, a Node.js http-style
+ * `node-handler`, or a `worker` service binding.
  */
 const OutboundServiceSchema = z.discriminatedUnion("type", [
 	FetcherBindingSchema,
+	NodeHandlerBindingSchema,
 	WorkerBindingSchema,
 ]);
 
-const DevConfigSchema = z.strictObject({
+export const DevConfigSchema = z.strictObject({
 	disableCache: z.boolean().optional(),
 	outboundService: OutboundServiceSchema.optional(),
 	remoteProxyConnectionString: z
@@ -271,7 +401,7 @@ export type DevConfig = z.input<typeof DevConfigSchema>;
 // Legacy config (service-worker format, Workers Sites)
 // ---------------------------------------------------------------------------
 
-const LegacyConfigSchema = z.strictObject({
+export const LegacyConfigSchema = z.strictObject({
 	// Service-worker format (non-module, global `addEventListener`) script,
 	// provided directly by the caller (e.g. wrangler for service-worker workers).
 	serviceWorkerScript: z.string().optional(),

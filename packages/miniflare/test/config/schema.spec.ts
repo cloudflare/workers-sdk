@@ -1,6 +1,6 @@
 import {
+	InstanceOptionsSchemaV5 as SharedOptionsSchema,
 	MiniflareOptionsSchemaV5 as MiniflareOptionsSchema,
-	SharedOptionsSchemaV5 as SharedOptionsSchema,
 	WorkerOptionsSchemaV5 as WorkerOptionsSchema,
 } from "miniflare";
 import { describe, test } from "vitest";

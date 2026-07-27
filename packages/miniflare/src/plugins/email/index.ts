@@ -11,7 +11,7 @@ import {
 	remoteProxyClientWorker,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
-import type { ParsedWorkerOptions, Plugin } from "../shared";
+import type { Plugin } from "../shared";
 
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
@@ -84,10 +84,7 @@ export const EMAIL_PLUGIN: Plugin = {
 					service: remoteProxyConnectionString
 						? {
 								name: EMAIL_REMOTE_SERVICE_NAME,
-								props: buildRemoteProxyProps(
-									remoteProxyConnectionString,
-									name
-								),
+								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 							}
 						: {
 								entrypoint: "SendEmailBinding",
@@ -219,15 +216,7 @@ export const EMAIL_PLUGIN: Plugin = {
 		return services;
 	},
 
-	getExtensions({ options }: { options: ParsedWorkerOptions[] }) {
-		if (
-			!options.some(
-				(o) => getEnvBindingsOfType(o.config, "send-email").length > 0
-			)
-		) {
-			return [];
-		}
-
+	getExtensions() {
 		return [
 			{
 				modules: [

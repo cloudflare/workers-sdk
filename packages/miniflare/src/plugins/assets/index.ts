@@ -61,7 +61,9 @@ const tempDirCache = new Map<string, string>();
 /**
  * Builds the router worker's `RouterConfig` from the parsed worker config,
  * mirroring `resolveAssetOptions` in `@cloudflare/deploy-helpers`:
- * - `has_user_worker` reflects whether the worker has a script (a manifest).
+ * - `has_user_worker` comes from the explicit `assets.hasUserWorker` flag
+ *   (defaults to false). It can't be inferred from manifest presence because
+ *   wrangler injects a placeholder script for assets-only workers.
  * - `run_worker_first: boolean` → `invoke_user_worker_ahead_of_assets`.
  * - `run_worker_first: string[]` → parsed `static_routing` rules.
  */
@@ -69,7 +71,7 @@ function resolveRouterConfig(
 	config: ParsedMiniflareWorkerConfig
 ): RouterConfig {
 	const routerConfig: RouterConfig = {
-		has_user_worker: config.manifest !== undefined,
+		has_user_worker: config.assets?.hasUserWorker ?? false,
 	};
 
 	const runWorkerFirst = config.assets?.runWorkerFirst;

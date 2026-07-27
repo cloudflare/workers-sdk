@@ -1,8 +1,8 @@
 import assert from "node:assert";
 import { z } from "zod";
 import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
-import type { ParsedMiniflareWorkerConfig } from "../shared";
 import type { Worker_Binding } from "../../runtime";
+import type { ParsedMiniflareWorkerConfig } from "../shared";
 import type { Plugin } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
@@ -91,24 +91,22 @@ export const HyperdriveSchema = z
 export const HYPERDRIVE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Hyperdrive",
 	getBindings(options) {
-		return getHyperdrives(options.config).map<Worker_Binding>(
-			([name, url]) => {
-				const database = url.pathname.replace("/", "");
-				const scheme = url.protocol.replace(":", "");
-				return {
-					name,
-					hyperdrive: {
-						designator: {
-							name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
-						},
-						database: decodeURIComponent(database),
-						user: decodeURIComponent(url.username),
-						password: decodeURIComponent(url.password),
-						scheme,
+		return getHyperdrives(options.config).map<Worker_Binding>(([name, url]) => {
+			const database = url.pathname.replace("/", "");
+			const scheme = url.protocol.replace(":", "");
+			return {
+				name,
+				hyperdrive: {
+					designator: {
+						name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
 					},
-				};
-			}
-		);
+					database: decodeURIComponent(database),
+					user: decodeURIComponent(url.username),
+					password: decodeURIComponent(url.password),
+					scheme,
+				},
+			};
+		});
 	},
 	getNodeBindings(options) {
 		return Object.fromEntries(

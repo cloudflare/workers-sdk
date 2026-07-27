@@ -301,32 +301,42 @@ export const DurableObjectCreatedExportSchema = z.strictObject({
 	storage: z.enum(["sqlite", "legacy-kv"]),
 });
 
+export const DurableObjectDeletedExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("deleted"),
+});
+
+export const DurableObjectRenamedExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("renamed"),
+	renamedTo: z.string(),
+});
+
+export const DurableObjectTransferredExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("transferred"),
+	transferredTo: z.string(),
+});
+
+export const DurableObjectExpectingTransferExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("expecting-transfer"),
+	storage: z.enum(["sqlite", "legacy-kv"]),
+	transferFrom: z.string(),
+});
+
+export const WorkerEntrypointExportSchema = z.strictObject({
+	type: z.literal("worker"),
+	cache: z.strictObject({ enabled: z.boolean() }).optional(),
+});
+
 export const ExportSchema = z.union([
 	DurableObjectCreatedExportSchema,
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("deleted"),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("renamed"),
-		renamedTo: z.string(),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("transferred"),
-		transferredTo: z.string(),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("expecting-transfer"),
-		storage: z.enum(["sqlite", "legacy-kv"]),
-		transferFrom: z.string(),
-	}),
-	z.strictObject({
-		type: z.literal("worker"),
-		cache: z.strictObject({ enabled: z.boolean() }).optional(),
-	}),
+	DurableObjectDeletedExportSchema,
+	DurableObjectRenamedExportSchema,
+	DurableObjectTransferredExportSchema,
+	DurableObjectExpectingTransferExportSchema,
+	WorkerEntrypointExportSchema,
 	// TODO: support Workflows
 	// z.strictObject({
 	// 	type: z.literal("workflow"),

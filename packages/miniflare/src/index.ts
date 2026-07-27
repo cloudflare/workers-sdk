@@ -76,6 +76,7 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
+	manifestModuleTypeToRuleType,
 	reviveError,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
@@ -314,10 +315,11 @@ function validateOptions(
 }
 
 // When creating user worker services, we need to know which Durable Objects
-// they export. In the config-based model, a worker's Durable Object class
-// definitions come from its `config.exports` (live `durable-object` exports).
-// The service that hosts a class is always the worker that exports it, so we
-// key the resulting map by that worker's user service name.
+// they export. Rather than parsing JavaScript to search for class exports
+// (which would have to be recursive because of `export * from ...`), we collect
+// all Durable Object bindings, noting that bindings may be defined for objects
+// in other services.
+// Note that while the new config format restricts
 function getDurableObjectClassNames(
 	allWorkerOpts: ParsedWorkerOptions[]
 ): DurableObjectClassNames {
@@ -341,8 +343,19 @@ function getDurableObjectClassNames(
 			if (!("storage" in exported)) {
 				continue;
 			}
+			// `expecting-transfer` exports are runnable (they carry `storage`) but,
+			// unlike `created` exports, don't carry the miniflare-only unsafe fields.
+			if ("transferFrom" in exported) {
+				classNames.set(className, {
+					enableSql: exported.storage === "sqlite",
+				});
+				continue;
+			}
 			classNames.set(className, {
 				enableSql: exported.storage === "sqlite",
+				unsafeUniqueKey: exported.unsafeUniqueKey,
+				unsafePreventEviction: exported.unsafePreventEviction,
+				container: exported.container,
 			});
 		}
 	}
@@ -381,6 +394,36 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 
 	for (const workerOpts of allWorkerOpts) {
 		const { config, dev } = workerOpts;
+
+		// Tail consumers targeting a worker outside this instance. Reroute them
+		// through the dev-registry proxy worker (`ExternalServiceProxy`), mirroring
+		// the `worker`/`durable-object` reroute below. Without this, the worker
+		// binds its tail to a non-existent local service `core:user:<workerName>`
+		// and workerd refuses to start. Handled before the `env` guard since a
+		// worker may declare tail consumers without any `env` bindings.
+		const tailConsumers = config.tailConsumers;
+		if (tailConsumers !== undefined) {
+			for (let i = 0; i < tailConsumers.length; i++) {
+				const consumer = tailConsumers[i];
+				const serviceName = consumer.workerName;
+				if (serviceName && !allWorkerNames.includes(serviceName)) {
+					getEntrypoints(serviceName).entrypoints.add(consumer.entrypoint);
+					tailConsumers[i] = {
+						workerName: SERVICE_DEV_REGISTRY_PROXY,
+						streaming: consumer.streaming,
+						entrypoint: "ExternalServiceProxy",
+						// User-supplied `props` are preserved in `userProps` so the proxy
+						// can forward them to the remote entrypoint via the debug port.
+						props: {
+							service: serviceName,
+							entrypoint: consumer.entrypoint ?? null,
+							userProps: consumer.props,
+						},
+					};
+				}
+			}
+		}
+
 		const env = config.env;
 		if (env === undefined) {
 			continue;
@@ -1032,6 +1075,11 @@ export class Miniflare {
 			if (binding?.type === "node-handler") {
 				handler = binding.handler;
 			}
+		} else if (serviceName === CUSTOM_SERVICE_KNOWN_OUTBOUND) {
+			const outbound = this.#workerOpts[workerIndex]?.dev?.outboundService;
+			if (outbound?.type === "node-handler") {
+				handler = outbound.handler;
+			}
 		}
 		assert(typeof handler === "function");
 
@@ -1247,13 +1295,26 @@ export class Miniflare {
 	}
 
 	get #workerSrcOpts(): NameSourceOptions[] {
-		// Source is now provided inline via each worker's manifest, so there are no
-		// on-disk module paths to resolve stack traces against. Source-map revival
-		// from the manifest is a follow-up; for now expose just the worker name.
-		return this.#workerOpts.map<NameSourceOptions>(({ config }) => ({
-			modules: [],
-			name: config.name,
-		}));
+		// Source is provided inline (manifest module `contents` or a service-worker
+		// script). Expose it as `SourceOptions` so stack traces can be source-mapped
+		// against it — including any `sourcemap`-type manifest modules, which carry
+		// the source maps referenced by `//# sourceMappingURL=` comments.
+		return this.#workerOpts.map<NameSourceOptions>(({ config, legacy }) => {
+			if (legacy?.serviceWorkerScript !== undefined) {
+				// Service-worker scripts have no module path, so their `//#
+				// sourceMappingURL=` comments can't be resolved to an inline map.
+				return { name: config.name, script: legacy.serviceWorkerScript };
+			}
+			const manifest = config.manifest;
+			const modules = Object.entries(manifest?.modules ?? {}).map(
+				([modulePath, module]) => ({
+					type: manifestModuleTypeToRuleType(module.type),
+					path: modulePath,
+					contents: module.contents,
+				})
+			);
+			return { name: config.name, modules };
+		});
 	}
 
 	#handleLoopback = async (
@@ -3088,7 +3149,19 @@ export type {
 	ParsedModuleFallbackRequest,
 } from "./plugins/core/module-fallback";
 export {
+	DevConfigSchema as DevConfigSchemaV5,
 	InstanceOptionsSchema as InstanceOptionsSchemaV5,
+	LegacyConfigSchema as LegacyConfigSchemaV5,
+	MiniflareDurableObjectExportSchema as MiniflareDurableObjectExportSchemaV5,
 	MiniflareOptionsSchema as MiniflareOptionsSchemaV5,
+	MiniflareWorkerConfigSchema as MiniflareWorkerConfigSchemaV5,
 	WorkerOptionsSchema as WorkerOptionsSchemaV5,
+} from "./config/schema";
+export type {
+	MiniflareOptions,
+	WorkerOptions,
+	MiniflareWorkerConfig,
+	DevConfig,
+	LegacyConfig,
+	InstanceOptions,
 } from "./config/schema";

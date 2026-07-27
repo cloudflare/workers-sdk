@@ -89,7 +89,7 @@ class TestD1PreparedStatement implements D1PreparedStatement {
 
 // Pre-wrangler 3.3, D1 bindings needed a local compilation step, so use
 // the output version of the fixture, and the appropriately prefixed binding name
-setupTest(
+await setupTest(
 	"__D1_BETA__DB",
 	"worker.dist.mjs",
 	async (mf) => new TestD1Database(mf)

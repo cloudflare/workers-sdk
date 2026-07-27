@@ -11,6 +11,7 @@ import {
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	namespace,
+	singleModuleManifest,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
@@ -58,8 +59,16 @@ interface Context extends MiniflareTestContext {
 }
 
 const opts: Partial<MiniflareOptions> = {
-	r2Buckets: { BUCKET: "bucket" },
-	compatibilityFlags: ["r2_list_honor_include"],
+	workers: [
+		{
+			config: {
+				type: "worker",
+				name: "",
+				compatibilityDate: "2025-05-01",
+				env: { BUCKET: { type: "r2", name: "bucket" } },
+			},
+		},
+	],
 };
 const ctx = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 	opts,
@@ -540,9 +549,14 @@ test("put: validates metadata size", async ({ expect }) => {
 });
 test("put: can copy values", async ({ expect }) => {
 	const mf = new Miniflare({
-		r2Buckets: ["BUCKET"],
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					manifest: singleModuleManifest(`export default {
       async fetch(request, env, ctx) {
         await env.BUCKET.put("key", "0123456789");
 
@@ -570,7 +584,10 @@ test("put: can copy values", async ({ expect }) => {
 
         return Response.json({ copy, copyRange1, copyRange2, copyRange3, copyRange4 });
       }
-    }`,
+    }`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
@@ -996,10 +1013,18 @@ test("operations permit empty key", async ({ expect }) => {
 test("operations persist stored data", async ({ expect }) => {
 	const tmp = await useTmp();
 	const persistOpts: MiniflareOptions = {
-		modules: true,
-		script: "",
-		r2Buckets: { BUCKET: "bucket" },
 		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+					env: { BUCKET: { type: "r2", name: "bucket" } },
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
@@ -1051,7 +1076,18 @@ test("operations permit strange bucket names", async ({ expect }) => {
 
 	// Set option, then reset after test
 	const id = "my/ Bucket";
-	await ctx.setOptions({ ...opts, r2Buckets: { BUCKET: id } });
+	await ctx.setOptions({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { BUCKET: { type: "r2", name: id } },
+				},
+			},
+		],
+	});
 	onTestFinished(() => ctx.setOptions(opts));
 	const r2 = namespace(ns, await mf.getR2Bucket("BUCKET"));
 

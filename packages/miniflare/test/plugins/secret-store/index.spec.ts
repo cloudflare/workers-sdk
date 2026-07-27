@@ -1,18 +1,23 @@
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
-import { useDispose } from "../../test-shared";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 
 test("single secret-store", async ({ expect }) => {
 	const mf = new Miniflare({
-		compatibilityDate: "2025-01-01",
-		secretsStoreSecrets: {
-			SECRET: {
-				store_id: "test_store_id",
-				secret_name: "secret_name",
-			},
-		},
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-01-01",
+					env: {
+						SECRET: {
+							type: "secrets-store-secret",
+							storeId: "test_store_id",
+							secretName: "secret_name",
+						},
+					},
+					manifest: singleModuleManifest(`
 		export default {
 			async fetch(request, env, ctx) {
 				try {
@@ -23,7 +28,10 @@ test("single secret-store", async ({ expect }) => {
 				}
 			},
 		}
-		`,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -44,25 +52,32 @@ test("single secret-store", async ({ expect }) => {
 
 test("multiple secret-store", async ({ expect }) => {
 	const mf = new Miniflare({
-		compatibilityDate: "2025-01-01",
-		secretsStoreSecrets: {
-			SECRET1: {
-				store_id: "test_store_id_1",
-				secret_name: "secret_name_a",
-			},
-			// Same store id, different secret name
-			SECRET2: {
-				store_id: "test_store_id_1",
-				secret_name: "secret_name_b",
-			},
-			// Different store id, same secret name
-			SECRET3: {
-				store_id: "test_store_id_2",
-				secret_name: "secret_name_a",
-			},
-		},
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-01-01",
+					env: {
+						SECRET1: {
+							type: "secrets-store-secret",
+							storeId: "test_store_id_1",
+							secretName: "secret_name_a",
+						},
+						// Same store id, different secret name
+						SECRET2: {
+							type: "secrets-store-secret",
+							storeId: "test_store_id_1",
+							secretName: "secret_name_b",
+						},
+						// Different store id, same secret name
+						SECRET3: {
+							type: "secrets-store-secret",
+							storeId: "test_store_id_2",
+							secretName: "secret_name_a",
+						},
+					},
+					manifest: singleModuleManifest(`
 		export default {
 			async fetch(request, env, ctx) {
 				const [result1, result2, result3] = await Promise.allSettled([
@@ -78,7 +93,10 @@ test("multiple secret-store", async ({ expect }) => {
 				});
 			},
 		}
-		`,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 

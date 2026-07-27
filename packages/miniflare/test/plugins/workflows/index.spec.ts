@@ -3,8 +3,14 @@ import path from "node:path";
 import { scheduler } from "node:timers/promises";
 import { Miniflare, WORKFLOWS_PLUGIN_NAME } from "miniflare";
 import { describe, test } from "vitest";
-import { useDispose, useTmp } from "../../test-shared";
+import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
+
+// TODO(miniflare v5): the Workflows plugin is temporarily disabled during the
+// config-schema migration (the plugin is a no-op and workflow bindings are
+// commented out in `@cloudflare/config`). These tests are skipped until the
+// plugin is re-implemented against the new config. See the workflows re-enable
+// follow-up.
 
 const WORKFLOW_SCRIPT = () => `
 import { WorkflowEntrypoint } from "cloudflare:workers";
@@ -23,27 +29,30 @@ export class MyWorkflow extends WorkflowEntrypoint {
 	},
   };`;
 
-test("starts Workflows with user-provided experimental compatibility flag", async ({
+test.skip("starts Workflows with user-provided experimental compatibility flag", async ({
 	expect,
 }) => {
 	const tmp = await useTmp();
+	// SOURCE GAP: the old top-level `workflows: {...}` option (and its
+	// per-workflow `className`/`compatibilityFlags`) has no equivalent in the
+	// new config schema. The Workflows plugin is currently a disabled no-op (see
+	// src/plugins/workflows/index.ts) and the `workflow` binding/export type is
+	// commented out in `@cloudflare/config`. There is nowhere to map the
+	// `workflows` option, so it has been dropped. As a result `env.MY_WORKFLOW`
+	// does not exist at runtime and this test cannot pass until Workflows support
+	// is re-implemented against the unified config shape.
 	const mf = new Miniflare({
-		name: "workflow-compatibility-flags-worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: WORKFLOW_SCRIPT(),
-		workflows: {
-			MY_WORKFLOW: {
-				className: "MyWorkflow",
-				name: "MY_WORKFLOW",
-				compatibilityFlags: [
-					"nodejs_compat",
-					"experimental",
-					"enhanced_error_serialization",
-				],
-			},
-		},
 		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "workflow-compatibility-flags-worker",
+					compatibilityDate: "2024-11-20",
+					manifest: singleModuleManifest(WORKFLOW_SCRIPT()),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -53,22 +62,25 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 	);
 });
 
-test("persists Workflow data on file-system between runs", async ({
+test.skip("persists Workflow data on file-system between runs", async ({
 	expect,
 }) => {
 	const tmp = await useTmp();
+	// SOURCE GAP: see the note in the first test. The `workflows` option has no
+	// new-format equivalent and has been dropped, so `env.MY_WORKFLOW` does not
+	// exist and this test cannot pass until Workflows support is re-implemented.
 	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: WORKFLOW_SCRIPT(),
-		workflows: {
-			MY_WORKFLOW: {
-				className: "MyWorkflow",
-				name: "MY_WORKFLOW",
-			},
-		},
 		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "worker",
+					compatibilityDate: "2024-11-20",
+					manifest: singleModuleManifest(WORKFLOW_SCRIPT()),
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);
@@ -180,19 +192,23 @@ export default {
 	},
 };`;
 
+// SOURCE GAP: see the note in the first test. The `workflows` option has no
+// new-format equivalent and has been dropped, so `env.LIFECYCLE_WORKFLOW` does
+// not exist and these lifecycle tests cannot pass until Workflows support is
+// re-implemented against the unified config shape.
 function lifecycleMiniflareOpts(tmp: string): MiniflareOptions {
 	return {
-		name: "lifecycle-worker",
-		compatibilityDate: "2026-03-09",
-		modules: true,
-		script: LIFECYCLE_WORKFLOW_SCRIPT(),
-		workflows: {
-			LIFECYCLE_WORKFLOW: {
-				className: "LifecycleWorkflow",
-				name: "LIFECYCLE_WORKFLOW",
-			},
-		},
 		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "lifecycle-worker",
+					compatibilityDate: "2026-03-09",
+					manifest: singleModuleManifest(LIFECYCLE_WORKFLOW_SCRIPT()),
+				},
+			},
+		],
 	};
 }
 
@@ -242,7 +258,7 @@ async function waitForStepOutput(
 	);
 }
 
-describe("workflow instance lifecycle methods", () => {
+describe.skip("workflow instance lifecycle methods", () => {
 	test("pause and resume a running workflow", async ({ expect }) => {
 		const tmp = await useTmp();
 		const mf = new Miniflare(lifecycleMiniflareOpts(tmp));

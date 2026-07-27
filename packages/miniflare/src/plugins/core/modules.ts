@@ -1,10 +1,10 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import { builtinModules } from "node:module";
-import { type ModuleType } from "@cloudflare/config";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { TextDecoder, TextEncoder } from "node:util";
+import { type ModuleType } from "@cloudflare/config";
 import { Parser } from "acorn";
 import importPhases from "acorn-import-phases";
 import { simple } from "acorn-walk";
@@ -475,6 +475,36 @@ export function convertManifestModule(
 		default:
 			const exhaustive: never = type;
 			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
+	}
+}
+
+/**
+ * Maps a manifest `ModuleType` to the `ModuleRuleType` used by `SourceOptions`
+ * (for stack-trace source mapping). The exact JavaScript/binary distinction
+ * doesn't matter here — source mapping only reads a module's `path` and
+ * `contents` — so non-JavaScript types collapse to `Text`.
+ */
+export function manifestModuleTypeToRuleType(type: ModuleType): ModuleRuleType {
+	switch (type) {
+		case "esm":
+			return "ESModule";
+		case "cjs":
+			return "CommonJS";
+		case "wasm":
+			return "CompiledWasm";
+		case "data":
+			return "Data";
+		case "python":
+			return "PythonModule";
+		case "python-requirement":
+			return "PythonRequirement";
+		case "text":
+		case "json":
+		case "sourcemap":
+			return "Text";
+		default:
+			const exhaustive: never = type;
+			assert.fail(`Unreachable: unknown module type ${exhaustive}`);
 	}
 }
 

@@ -42,29 +42,30 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 export const RATELIMIT_PLUGIN: Plugin = {
 	bindingTypeDescription: "Rate Limit",
 	getBindings(options) {
-		return getEnvBindingsOfType(options.config, "rate-limit").map<Worker_Binding>(
-			([name, binding]) => ({
-				name,
-				wrapped: {
-					moduleName: SERVICE_RATELIMIT_MODULE,
-					innerBindings: [
-						{
-							name: "fetcher",
-							service: {
-								name: getUserBindingServiceName(
-									RATELIMIT_ENTRY_SERVICE_PREFIX,
-									binding.namespace
-								),
-							},
+		return getEnvBindingsOfType(
+			options.config,
+			"rate-limit"
+		).map<Worker_Binding>(([name, binding]) => ({
+			name,
+			wrapped: {
+				moduleName: SERVICE_RATELIMIT_MODULE,
+				innerBindings: [
+					{
+						name: "fetcher",
+						service: {
+							name: getUserBindingServiceName(
+								RATELIMIT_ENTRY_SERVICE_PREFIX,
+								binding.namespace
+							),
 						},
-						...buildJsonBindings({
-							limit: binding.simple.limit,
-							period: binding.simple.period,
-						}),
-					],
-				},
-			})
-		);
+					},
+					...buildJsonBindings({
+						limit: binding.simple.limit,
+						period: binding.simple.period,
+					}),
+				],
+			},
+		}));
 	},
 	getNodeBindings(options) {
 		return Object.fromEntries(

@@ -1,17 +1,19 @@
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
-import { useDispose } from "../../test-shared";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 
 test("hello-world", async ({ expect }) => {
 	const mf = new Miniflare({
-		compatibilityDate: "2025-01-01",
-		helloWorld: {
-			BINDING: {
-				enable_timer: true,
-			},
-		},
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-01-01",
+					env: {
+						BINDING: { type: "hello-world", enable_timer: true },
+					},
+					manifest: singleModuleManifest(`
             export default {
                 async fetch(request, env, ctx) {
                     if (request.method === "POST") {
@@ -24,7 +26,10 @@ test("hello-world", async ({ expect }) => {
                     return Response.json(result);
                 },
             }
-		`,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 

@@ -47,10 +47,7 @@ export const IMAGES_PLUGIN: Plugin = {
 											),
 										}
 									: {
-											name: getUserBindingServiceName(
-												IMAGES_PLUGIN_NAME,
-												name
-											),
+											name: getUserBindingServiceName(IMAGES_PLUGIN_NAME, name),
 										},
 							},
 						],

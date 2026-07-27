@@ -38,10 +38,7 @@ export const STREAM_PLUGIN: Plugin = {
 					service: remoteProxyConnectionString
 						? {
 								name: STREAM_REMOTE_SERVICE_NAME,
-								props: buildRemoteProxyProps(
-									remoteProxyConnectionString,
-									name
-								),
+								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 							}
 						: {
 								name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
