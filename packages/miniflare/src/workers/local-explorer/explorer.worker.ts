@@ -10,9 +10,9 @@ import { wrapResponse } from "./common";
 import {
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
-	zEmailSendRoutingData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
+	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
@@ -67,6 +67,7 @@ import type {
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { CoreBindings } from "../core";
 import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
+import type { EmailStoreService } from "../email/storage";
 import type { LocalExplorerWorker } from "./generated";
 
 export type Env = {
@@ -86,6 +87,9 @@ export type Env = {
 	// Internal observability collector's read API — only bound when local
 	// observability is enabled (see getExplorerServices).
 	[CoreBindings.SERVICE_OBSERVABILITY_COLLECTOR]?: Fetcher;
+	// Email store RPC. Bound whenever the local explorer is enabled (see
+	// getExplorerServices). Backs the Email tab's routing/sending views.
+	[CoreBindings.SERVICE_EMAIL_STORE]?: EmailStoreService;
 };
 
 export type AppBindings = { Bindings: Env };

@@ -2023,14 +2023,14 @@ const SEND_EMAIL_RETURNS_RESULT_WORKER = dedent /* javascript */ `
 `;
 
 // MessageBuilder emails get a synthesized id in the shape:
-// `<{random alphanumeric chars}@{sender domain}>`, angle brackets included.
+// `<{36 alphanumeric chars}@{sender domain}>`, angle brackets included.
 function synthesizedMessageId(expect: ExpectStatic, domain: string) {
 	return expect.stringMatching(
-		new RegExp(`^<[a-z0-9]+@${domain.replace(/\./g, "\\.")}>$`)
+		new RegExp(`^<[A-Za-z0-9]{36}@${domain.replace(/\./g, "\\.")}>$`)
 	);
 }
 
-test("send() on an EmailMessage returns a synthesized messageId", async ({
+test("send() on an EmailMessage echoes the raw email's Message-ID", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
@@ -2064,8 +2064,10 @@ test("send() on an EmailMessage returns a synthesized messageId", async ({
 
 	expect(res.status).toBe(200);
 	expect(await res.json()).toEqual({
-		// The binding preserves the Message-ID from the worker's raw email
-		// rather than overriding it with a synthesized one.
+		// Locally the binding echoes the Message-ID from the worker's raw email;
+		// production synthesizes its own. This divergence is tracked by the
+		// TODO(someday) in send_email.worker.ts to unify on the mimetext id in
+		// Miniflare v5.
 		messageId: "<do-not-echo-this@example.com>",
 	});
 });
@@ -2148,7 +2150,19 @@ test("disposing does not remove a concurrent email session", async ({
 	const projectTmpPath = await useProjectTmpPath();
 	const mf = new Miniflare({
 		modules: true,
-		script: "",
+		script: dedent /* javascript */ `
+			export default {
+				async fetch(request, env) {
+					const result = await env.SEND_EMAIL.send({
+						from: "sender@sender.domain",
+						to: "recipient@example.com",
+						subject: "s",
+						text: "t",
+					});
+					return Response.json(result);
+				},
+			};
+		`,
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
@@ -2156,13 +2170,26 @@ test("disposing does not remove a concurrent email session", async ({
 		compatibilityDate: "2025-03-17",
 	});
 
-	await mf.getBindings();
+	// The project email session directory is created lazily on first write, via
+	// the `/core/store-temp-file` loopback endpoint. Send an email through the
+	// async dispatchFetch path so the session directory exists before asserting
+	// that disposal leaves a concurrent instance's session untouched. The files
+	// are written in a deferred (waitUntil) task, so poll until the session
+	// directory appears.
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(res.status).toBe(200);
+	await res.text();
 
 	const emailParentPath = path.join(projectTmpPath, "email");
-	const [sessionName] = await readdir(emailParentPath);
-	if (sessionName === undefined) {
-		throw new Error("Expected an email session directory");
-	}
+	await vi.waitFor(
+		async () => {
+			const [sessionName] = await readdir(emailParentPath);
+			if (sessionName === undefined) {
+				throw new Error("Expected an email session directory");
+			}
+		},
+		{ timeout: 5_000, interval: 100 }
+	);
 	const concurrentSessionPath = path.join(
 		emailParentPath,
 		"concurrent-session"

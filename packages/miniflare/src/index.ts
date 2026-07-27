@@ -21,7 +21,6 @@ import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
-import { emailStorage, type StoredRoutingEmail, type StoredSendingEmail } from "./email-storage";
 import { exitHook } from "./exit-hook";
 import {
 	coupleWebSocket,
@@ -1473,86 +1472,6 @@ export class Miniflare {
 		return new Response("OK", { status: 200 });
 	}
 
-	/**
-	 * Backs the local explorer email "Routing" interface. Received emails are
-	 * captured by the core email handler and pushed here.
-	 */
-	async #handleLoopbackEmailRoutingRequest(
-		url: URL,
-		request: Request
-	): Promise<Response> {
-		const id = decodeURIComponent(
-			url.pathname.slice("/core/email-routing".length).replace(/^\//, "")
-		);
-
-		if (request.method === "POST") {
-			const email = (await request.json()) as StoredRoutingEmail;
-			emailStorage.storeReceived(email);
-			return Response.json({ id: email.id });
-		}
-
-		// GET
-		if (id) {
-			const email = emailStorage.findReceived(id);
-			if (!email) {
-				return new Response("Not Found", { status: 404 });
-			}
-			return Response.json(email);
-		}
-
-		// List newest first, without the raw body to keep the payload small.
-		const list = emailStorage
-			.getAllReceived()
-			.reverse()
-			.map(({ raw: _raw, handlingPath, ...rest }) => ({
-				...rest,
-				handlingPath: handlingPath.map((action) => {
-					if (action.details && "raw" in action.details) {
-						const { raw: _actionRaw, ...details } = action.details;
-						return { ...action, details };
-					}
-					return action;
-				}),
-			}));
-		return Response.json(list);
-	}
-
-	/**
-	 * Backs the local explorer email "Sending" interface. Emails sent through
-	 * `send_email` bindings are captured by the send_email worker and pushed
-	 * here.
-	 */
-	async #handleLoopbackEmailSendingRequest(
-		url: URL,
-		request: Request
-	): Promise<Response> {
-		const id = decodeURIComponent(
-			url.pathname.slice("/core/email-sending".length).replace(/^\//, "")
-		);
-
-		if (request.method === "POST") {
-			const email = (await request.json()) as StoredSendingEmail;
-			emailStorage.storeSent(email);
-			return Response.json({ id: email.id });
-		}
-
-		// GET
-		if (id) {
-			const email = emailStorage.findSent(id);
-			if (!email) {
-				return new Response("Not Found", { status: 404 });
-			}
-			return Response.json(email);
-		}
-
-		// List newest first, without body content to keep the payload small.
-		const list = emailStorage
-			.getAllSent()
-			.reverse()
-			.map(({ text: _text, html: _html, raw: _raw, ...rest }) => rest);
-		return Response.json(list);
-	}
-
 	get #workerSrcOpts(): NameSourceOptions[] {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
@@ -1708,6 +1627,8 @@ export class Miniflare {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));
 			} else if (url.pathname === "/core/store-temp-file") {
+				// Used for emails writes captured email content (received replies and
+				// sent messages) into the email temp dir.
 				const prefix = url.searchParams.get("prefix") ?? "files";
 				// Callers may supply an `id` so the on-disk filename matches the
 				// local explorer resource id.
@@ -1732,10 +1653,6 @@ export class Miniflare {
 				}
 
 				response = new Response(filePath, { status: 200 });
-			} else if (url.pathname.startsWith("/core/email-routing")) {
-				response = await this.#handleLoopbackEmailRoutingRequest(url, request);
-			} else if (url.pathname.startsWith("/core/email-sending")) {
-				response = await this.#handleLoopbackEmailSendingRequest(url, request);
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {

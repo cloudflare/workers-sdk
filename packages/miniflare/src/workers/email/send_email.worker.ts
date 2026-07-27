@@ -2,9 +2,14 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { $, blue } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime from "postal-mime";
+import { CoreBindings } from "../core/constants";
 import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
-import type { StoredSendingAttachment, StoredSendingEmail } from "./storage";
+import type {
+	EmailStoreService,
+	StoredSendingAttachment,
+	StoredSendingEmail,
+} from "./storage";
 import type { EmailAddress, MessageBuilder } from "./types";
 import type { Email } from "postal-mime";
 
@@ -13,22 +18,60 @@ $.enabled = true;
 
 /**
  * Build a Message-ID in the shape the production `send_email` binding returns:
- * `<{random alphanumeric chars}@{sender domain}>`.
+ * `<{36 alphanumeric chars}@{sender domain}>`.
  */
 function synthesizeMessageId(senderEmail: string): string {
-	const id = Math.random().toString(36).slice(2);
+	const alphabet =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	const bytes = crypto.getRandomValues(new Uint8Array(36));
+	const id = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 	const domain = senderEmail.slice(senderEmail.lastIndexOf("@") + 1);
 	return `<${id}@${domain}>`;
 }
 
 /**
- * Derives the stoage id from the email's message id
- * (<id>@<domain>.com becomes <id>@<domain>.
+ * Strips the enclosing angle brackets from a Message-ID (`<id@domain>` becomes
+ * `id@domain`).
+ *
+ * TODO(someday): once Miniflare v5 generates message ids via mimetext, unify
+ * the local explorer id and the on-disk storage filename on that single
+ * mimetext-generated Message-ID (they currently diverge: the explorer keys off
+ * the Message-ID while system storage uses a random UUID).
  */
-function messageIdToStorageId(messageId: string): string {
-	const content = messageId.slice(1, -1);
-	const lastDot = content.lastIndexOf(".");
-	return lastDot === -1 ? content : content.slice(0, lastDot);
+function stripAngleBrackets(messageId: string): string {
+	return messageId.replace(/^<|>$/g, "");
+}
+
+/**
+ * Byte length of email content, so attachment sizes are accurate for
+ * multi-byte payloads (string `.length` counts UTF-16 code units, not bytes).
+ */
+function contentByteLength(
+	content: string | ArrayBuffer | ArrayBufferView
+): number {
+	if (typeof content === "string") {
+		return new TextEncoder().encode(content).byteLength;
+	}
+	return content.byteLength;
+}
+
+/**
+ * Case-insensitive lookup of a header value in a MessageBuilder's `headers`.
+ */
+function getHeader(
+	headers: Record<string, string> | undefined,
+	name: string
+): string | undefined {
+	if (headers === undefined) {
+		return undefined;
+	}
+	const target = name.toLowerCase();
+	for (const [key, value] of Object.entries(headers)) {
+		if (key.toLowerCase() === target) {
+			return value;
+		}
+	}
+	return undefined;
 }
 
 /**
@@ -85,6 +128,7 @@ interface SendEmailEnv {
 	allowed_destination_addresses: string[] | undefined;
 	allowed_sender_addresses: string[] | undefined;
 	MINIFLARE_LOOPBACK: Fetcher;
+	[CoreBindings.SERVICE_EMAIL_STORE]?: EmailStoreService;
 }
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
@@ -100,19 +144,13 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	}
 
 	/**
-	 * Reports a sent email to the local explorer.
+	 * Captures a sent email into the local email store for the explorer.
 	 */
 	private async reportSentEmail(email: StoredSendingEmail): Promise<void> {
 		try {
-			await this.env.MINIFLARE_LOOPBACK.fetch(
-				"http://localhost/core/email-sending",
-				{
-					method: "POST",
-					body: JSON.stringify(email satisfies StoredSendingEmail),
-				}
-			);
+			await this.env[CoreBindings.SERVICE_EMAIL_STORE]?.storeSent(email);
 		} catch {
-			// Ignore reporting failures.
+			// Ignore capture failures - they must not affect sending.
 		}
 	}
 	/**
@@ -261,23 +299,9 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				throw new Error("invalid headers set");
 			}
 
-			// Derive the storage id from the email's message-id so the on-disk filename
-			// matches the id shown in the local explorer.
 			const messageId =
 				parsedEmail.messageId ?? synthesizeMessageId(emailMessage.from);
-			const id = messageIdToStorageId(messageId);
-
-			const filePath = await this.storeTempFile(
-				rawEmailBuffer,
-				"eml",
-				"email",
-				id
-			);
-
-			const fileInfo = `Email: ${filePath}`;
-			await this.log(
-				`${blue("send_email binding called with the following message:")}\n${fileInfo}`
-			);
+			const id = stripAngleBrackets(messageId);
 
 			await this.reportSentEmail({
 				id,
@@ -293,14 +317,25 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					contentType: attachment.mimeType ?? "application/octet-stream",
 					disposition:
 						attachment.disposition === "inline" ? "inline" : "attachment",
-					size:
-						typeof attachment.content === "string"
-							? attachment.content.length
-							: attachment.content.byteLength,
+					size: contentByteLength(attachment.content),
 				})),
 				raw: new TextDecoder().decode(rawEmailBuffer),
 			});
 
+			this.ctx.waitUntil(
+				(async () => {
+					const filePath = await this.storeTempFile(
+						rawEmailBuffer,
+						"eml",
+						"email"
+					);
+					await this.log(
+						`${blue("send_email binding called with the following message:")}\nEmail: ${filePath}`
+					);
+				})()
+			);
+
+			// Production returns the RFC Message-ID with angle brackets; keep parity.
 			return { messageId };
 		} else {
 			// New MessageBuilder API - just validate and log
@@ -309,75 +344,27 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			// Validate the message builder
 			this.validateMessageBuilder(builder);
 
-			// Derive the storage id from the synthesized message-id so the on-disk filenames
-			// match the id shown in the local explorer.
-			const messageId = synthesizeMessageId(extractEmailAddress(builder.from));
-			const id = messageIdToStorageId(messageId);
-
-			// Store text, HTML content, and attachments to files for easy viewing
-			const files: string[] = [];
-
-			if (builder.text) {
-				const textPath = await this.storeTempFile(
-					builder.text,
-					"txt",
-					"email-text",
-					id
-				);
-				files.push(`Text: ${textPath}`);
-			}
-
-			if (builder.html) {
-				const htmlPath = await this.storeTempFile(
-					builder.html,
-					"html",
-					"email-html",
-					id
-				);
-				files.push(`HTML: ${htmlPath}`);
-			}
-
-			// Store attachments
-			const sentAttachments: StoredSendingAttachment[] = [];
-			if (builder.attachments) {
-				for (const attachment of builder.attachments) {
-					// Extract file extension from filename or use generic extension
-					const extMatch = attachment.filename.match(/\.([^.]+)$/);
-					const extension = extMatch ? extMatch[1] : "bin";
-					const attachmentUUID = crypto.randomUUID();
-
-					const attachmentPath = await this.storeTempFile(
-						attachment.content,
-						extension,
-						"email-attachment",
-						attachmentUUID
-					);
-					files.push(
-						`Attachment (${attachment.disposition}): ${attachment.filename} -> ${attachmentPath}`
-					);
-					sentAttachments.push({
-						filename: attachment.filename,
-						contentType: attachment.type,
-						disposition: attachment.disposition,
-						size:
-							typeof attachment.content === "string"
-								? attachment.content.length
-								: attachment.content.byteLength,
-					});
-				}
-			}
-
-			// Format and log the message details with file paths
-			const formatted = formatMessageBuilder(builder);
-			const fileInfo = files.length > 0 ? `\n\n${files.join("\n")}` : "";
-			await this.log(
-				`${blue("send_email binding called with MessageBuilder:")}\n${formatted}${fileInfo}`
-			);
+			// Use the Message-ID the caller supplied (mimetext sets one) if present,
+			// otherwise synthesize one as production would. This keys the local
+			// explorer record; on-disk files use random UUIDs (see `storeTempFile`).
+			const messageId =
+				getHeader(builder.headers, "Message-ID") ??
+				synthesizeMessageId(extractEmailAddress(builder.from));
+			const id = stripAngleBrackets(messageId);
 
 			const toDisplay = (
 				addr: string | EmailAddress | (string | EmailAddress)[]
 			): string[] =>
 				(Array.isArray(addr) ? addr : [addr]).map(formatEmailAddress);
+
+			const sentAttachments: StoredSendingAttachment[] = (
+				builder.attachments ?? []
+			).map((attachment) => ({
+				filename: attachment.filename,
+				contentType: attachment.type,
+				disposition: attachment.disposition,
+				size: contentByteLength(attachment.content),
+			}));
 
 			await this.reportSentEmail({
 				id,
@@ -397,6 +384,57 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				attachments: sentAttachments,
 			});
 
+			this.ctx.waitUntil(
+				(async () => {
+					const files: string[] = [];
+
+					if (builder.text) {
+						const textPath = await this.storeTempFile(
+							builder.text,
+							"txt",
+							"email-text"
+						);
+						files.push(`Text: ${textPath}`);
+					}
+
+					if (builder.html) {
+						const htmlPath = await this.storeTempFile(
+							builder.html,
+							"html",
+							"email-html"
+						);
+						files.push(`HTML: ${htmlPath}`);
+					}
+
+					if (builder.attachments) {
+						for (const attachment of builder.attachments) {
+							// Extract file extension from filename or use generic extension
+							const extMatch = attachment.filename.match(/\.([^.]+)$/);
+							const extension = extMatch ? extMatch[1] : "bin";
+							const attachmentUUID = crypto.randomUUID();
+
+							const attachmentPath = await this.storeTempFile(
+								attachment.content,
+								extension,
+								"email-attachment",
+								attachmentUUID
+							);
+							files.push(
+								`Attachment (${attachment.disposition}): ${attachment.filename} -> ${attachmentPath}`
+							);
+						}
+					}
+
+					// Format and log the message details with file paths
+					const formatted = formatMessageBuilder(builder);
+					const fileInfo = files.length > 0 ? `\n\n${files.join("\n")}` : "";
+					await this.log(
+						`${blue("send_email binding called with MessageBuilder:")}\n${formatted}${fileInfo}`
+					);
+				})()
+			);
+
+			// Production returns the ID with angle brackets; keep parity.
 			return { messageId };
 		}
 	}

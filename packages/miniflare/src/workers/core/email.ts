@@ -5,7 +5,11 @@ import PostalMime, { decodeWords } from "postal-mime";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
 import type { MiniflareEmailMessage } from "../email/email.worker";
-import type { EmailRoutingAction, StoredRoutingEmail } from "../email/storage";
+import type {
+	EmailRoutingAction,
+	EmailStoreService,
+	StoredRoutingEmail,
+} from "../email/storage";
 import type { ForwardableEmailMessage } from "@cloudflare/workers-types/experimental";
 import type { Email } from "postal-mime";
 
@@ -15,6 +19,7 @@ $.enabled = true;
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	[CoreBindings.SERVICE_EMAIL_STORE]?: EmailStoreService;
 };
 
 function renderEmailHeaders(headers: Headers | undefined) {
@@ -168,14 +173,11 @@ export async function handleEmail(
 		handlingPath,
 	};
 	async function storeReceivedEmail(): Promise<void> {
-		await env[CoreBindings.SERVICE_LOOPBACK]
-			.fetch("http://localhost/core/email-routing", {
-				method: "POST",
-				body: JSON.stringify(storedEmail),
-			})
-			.catch(() => {
-				// Ignore storage failures - they must not affect email handling.
-			});
+		try {
+			await env[CoreBindings.SERVICE_EMAIL_STORE]?.storeReceived(storedEmail);
+		} catch {
+			// Ignore storage failures - they must not affect email handling.
+		}
 	}
 
 	// Propogate `.setReject()` reasons to the caller
@@ -213,11 +215,11 @@ export async function handleEmail(
 						)
 					);
 
-				events.push({
-					type: "reject",
-					timestamp: new Date().toISOString(),
-				});
-				rejectReason = reason;
+					events.push({
+						type: "reject",
+						timestamp: new Date().toISOString(),
+					});
+					rejectReason = reason;
 				},
 				forward: async (
 					rcptTo: string,
@@ -248,21 +250,23 @@ export async function handleEmail(
 					 * format (random alphanumeric chars followed by a domain).
 					 */
 					const forwardDomain = rcptTo.slice(rcptTo.lastIndexOf("@") + 1);
-					const result = { messageId: `<${Math.random().toString(36).slice(2)}@${forwardDomain}>` };
+					const result = {
+						messageId: `<${Math.random().toString(36).slice(2)}@${forwardDomain}>`,
+					};
 
-				events.push({
-					type: "forward",
-					timestamp: new Date().toISOString(),
-					messageId: result.messageId,
-				});
-				forwards.push({
-					recipient: rcptTo,
-					headers: headers ? [...headers.entries()] : [],
-					messageId: result.messageId,
-				});
+					events.push({
+						type: "forward",
+						timestamp: new Date().toISOString(),
+						messageId: result.messageId,
+					});
+					forwards.push({
+						recipient: rcptTo,
+						headers: headers ? [...headers.entries()] : [],
+						messageId: result.messageId,
+					});
 
-				return result;
-			},
+					return result;
+				},
 				reply: async (replyMessage): Promise<EmailSendResult> => {
 					const repliedAction: EmailRoutingAction = {
 						action: "replied",
@@ -313,7 +317,9 @@ export async function handleEmail(
 					repliedAction.details = {
 						raw: decodeWords(new TextDecoder().decode(finalReply)),
 						...(replySubject !== undefined ? { subject: replySubject } : {}),
-						...(replyMessageId !== undefined ? { messageId: replyMessageId } : {}),
+						...(replyMessageId !== undefined
+							? { messageId: replyMessageId }
+							: {}),
 						from: replyMessage.from,
 						to: replyMessage.to,
 					};
@@ -374,7 +380,6 @@ export async function handleEmail(
 				status: 200,
 			});
 		}
-
 
 		let outcome: "ok" | "exception";
 

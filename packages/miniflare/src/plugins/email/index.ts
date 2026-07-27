@@ -2,6 +2,8 @@ import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
+import { CoreBindings } from "../../workers";
+import { EMAIL_STORE_SERVICE_NAME } from "../core/constants";
 import {
 	buildRemoteProxyProps,
 	getUserBindingServiceName,
@@ -40,6 +42,13 @@ export const EmailOptionsSchema = z.object({
 			send_email: z.array(EmailBindingOptionsSchema).optional(),
 		})
 		.optional(),
+});
+
+export const EmailSharedOptionsSchema = z.object({
+	// Mirrors the core shared option. When the local explorer is enabled, the
+	// email store service exists, so the send_email worker binds to it to capture
+	// sent emails.
+	unsafeLocalExplorer: z.boolean().optional(),
 });
 
 export const EMAIL_PLUGIN_NAME = "email";
@@ -118,8 +127,12 @@ export function getEmailPathsToClean(
 	return { sessionDir, parentDir };
 }
 
-export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
+export const EMAIL_PLUGIN: Plugin<
+	typeof EmailOptionsSchema,
+	typeof EmailSharedOptionsSchema
+> = {
 	options: EmailOptionsSchema,
+	sharedOptions: EmailSharedOptionsSchema,
 	bindingTypeDescription: "Email",
 	getBindings(options): Worker_Binding[] {
 		if (!options.email?.send_email) {
@@ -158,6 +171,17 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			return [];
 		}
 
+		// The email store service only exists when the local explorer is enabled.
+		const emailStoreBinding: Worker_Binding[] = args.sharedOptions
+			.unsafeLocalExplorer
+			? [
+					{
+						name: CoreBindings.SERVICE_EMAIL_STORE,
+						service: { name: EMAIL_STORE_SERVICE_NAME },
+					},
+				]
+			: [];
+
 		const services: Service[] = [];
 		let hasRemote = false;
 		for (const { name, remoteProxyConnectionString, ...config } of args.options
@@ -169,18 +193,19 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			services.push({
 				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
 				worker: {
-							compatibilityDate: "2025-03-17",
-							modules: [
-								{
-									name: "send_email.mjs",
-									esModule: SEND_EMAIL_BINDING(),
-								},
-							],
-							bindings: [
-								...buildJsonBindings(config),
-								WORKER_BINDING_SERVICE_LOOPBACK,
-							],
+					compatibilityDate: "2025-03-17",
+					modules: [
+						{
+							name: "send_email.mjs",
+							esModule: SEND_EMAIL_BINDING(),
 						},
+					],
+					bindings: [
+						...buildJsonBindings(config),
+						WORKER_BINDING_SERVICE_LOOPBACK,
+						...emailStoreBinding,
+					],
+				},
 			});
 		}
 

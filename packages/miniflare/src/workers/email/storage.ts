@@ -60,3 +60,19 @@ export interface StoredSendingEmail {
 	/** Raw MIME content, present when sent via the `EmailMessage` API. */
 	raw?: string;
 }
+
+/**
+ * RPC surface of the email store host worker (see email-store.worker.ts). Used
+ * to type the `SERVICE_EMAIL_STORE` service binding in the workers that
+ * capture (send_email, the receiving `email()` path) and read (local explorer)
+ * emails.
+ */
+export interface EmailStoreService {
+	storeReceived(email: StoredRoutingEmail): Promise<void>;
+	findReceived(id: string): Promise<StoredRoutingEmail | undefined>;
+	listReceived(): Promise<StoredRoutingEmail[]>;
+	storeSent(email: StoredSendingEmail): Promise<void>;
+	findSent(id: string): Promise<StoredSendingEmail | undefined>;
+	listSent(): Promise<StoredSendingEmail[]>;
+	clear(): Promise<void>;
+}

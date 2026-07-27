@@ -1,6 +1,7 @@
 import { getPublicUrl } from "miniflare:shared";
-import { CorePaths } from "../../core";
+import { CoreBindings, CorePaths } from "../../core";
 import { errorResponse, wrapResponse } from "../common";
+import type { EmailStoreService } from "../../email/storage";
 import type { AppContext } from "../common";
 import type {
 	EmailRoutingDetail,
@@ -12,6 +13,13 @@ import type {
 
 const EMAIL_ERROR_NOT_FOUND = 10601;
 const EMAIL_ERROR_SEND_FAILED = 10602;
+/** Occurs when the email store binding is missing (should not happen when the explorer is
+ * enabled, since the store is registered alongside it). */
+const EMAIL_ERROR_STORE_UNAVAILABLE = 10603;
+
+function getEmailStore(c: AppContext): EmailStoreService | undefined {
+	return c.env[CoreBindings.SERVICE_EMAIL_STORE];
+}
 
 function extractAddress(value: string): string {
 	const match = value.match(/<([^>]+)>/);
@@ -70,29 +78,50 @@ function buildMimeMessage(body: EmailSendRequest, messageId: string): string {
 }
 
 export async function listReceivedEmails(c: AppContext): Promise<Response> {
-	const response = await c.env.MINIFLARE_LOOPBACK.fetch(
-		"http://localhost/core/email-routing"
+	const store = getEmailStore(c);
+	if (!store) {
+		return errorResponse(
+			500,
+			EMAIL_ERROR_STORE_UNAVAILABLE,
+			"Email store is not available for this dev session."
+		);
+	}
+	const emails = (await store.listReceived()).map(
+		({ raw: _raw, handlingPath, ...rest }) => ({
+			...rest,
+			handlingPath: handlingPath.map((action) => {
+				if (action.details && "raw" in action.details) {
+					const { raw: _actionRaw, ...details } = action.details;
+					return { ...action, details };
+				}
+				return action;
+			}),
+		})
 	);
-	const emails = (await response.json()) as EmailRoutingItem[];
-	return c.json(wrapResponse(emails));
+	return c.json(wrapResponse(emails as EmailRoutingItem[]));
 }
 
 export async function getReceivedEmail(
 	c: AppContext,
 	emailId: string
 ): Promise<Response> {
-	const response = await c.env.MINIFLARE_LOOPBACK.fetch(
-		`http://localhost/core/email-routing/${encodeURIComponent(emailId)}`
-	);
-	if (response.status === 404) {
+	const store = getEmailStore(c);
+	if (!store) {
+		return errorResponse(
+			500,
+			EMAIL_ERROR_STORE_UNAVAILABLE,
+			"Email store is not available for this dev session."
+		);
+	}
+	const email = await store.findReceived(emailId);
+	if (!email) {
 		return errorResponse(
 			404,
 			EMAIL_ERROR_NOT_FOUND,
 			`Email '${emailId}' not found.`
 		);
 	}
-	const email = (await response.json()) as EmailRoutingDetail;
-	return c.json(wrapResponse(email));
+	return c.json(wrapResponse(email as EmailRoutingDetail));
 }
 
 /**
@@ -106,11 +135,7 @@ export async function sendTestEmail(
 	const to = extractAddress(body.to[0] ?? "");
 
 	if (!to) {
-		return errorResponse(
-			400,
-			EMAIL_ERROR_SEND_FAILED,
-			"At least one recipient is required."
-		);
+		return errorResponse(400, 10000, "At least one recipient is required.");
 	}
 
 	// Message-ID header keeps the full domain.
@@ -142,27 +167,39 @@ export async function sendTestEmail(
 }
 
 export async function listSentEmails(c: AppContext): Promise<Response> {
-	const response = await c.env.MINIFLARE_LOOPBACK.fetch(
-		"http://localhost/core/email-sending"
+	const store = getEmailStore(c);
+	if (!store) {
+		return errorResponse(
+			500,
+			EMAIL_ERROR_STORE_UNAVAILABLE,
+			"Email store is not available for this dev session."
+		);
+	}
+	const emails = (await store.listSent()).map(
+		({ text: _text, html: _html, raw: _raw, ...rest }) => rest
 	);
-	const emails = (await response.json()) as EmailSendingItem[];
-	return c.json(wrapResponse(emails));
+	return c.json(wrapResponse(emails as EmailSendingItem[]));
 }
 
 export async function getSentEmail(
 	c: AppContext,
 	emailId: string
 ): Promise<Response> {
-	const response = await c.env.MINIFLARE_LOOPBACK.fetch(
-		`http://localhost/core/email-sending/${encodeURIComponent(emailId)}`
-	);
-	if (response.status === 404) {
+	const store = getEmailStore(c);
+	if (!store) {
+		return errorResponse(
+			500,
+			EMAIL_ERROR_STORE_UNAVAILABLE,
+			"Email store is not available for this dev session."
+		);
+	}
+	const email = await store.findSent(emailId);
+	if (!email) {
 		return errorResponse(
 			404,
 			EMAIL_ERROR_NOT_FOUND,
 			`Email '${emailId}' not found.`
 		);
 	}
-	const email = (await response.json()) as EmailSendingDetail;
-	return c.json(wrapResponse(email));
+	return c.json(wrapResponse(email as EmailSendingDetail));
 }

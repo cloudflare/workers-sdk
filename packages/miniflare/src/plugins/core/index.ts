@@ -29,6 +29,7 @@ import {
 	getDurableObjectUniqueKey,
 	normaliseDurableObject,
 } from "../do";
+import { getEmailStoreServices } from "../email/store";
 import { IMAGES_PLUGIN_NAME } from "../images";
 import {
 	getR2PublicService,
@@ -49,6 +50,7 @@ import { STREAM_PLUGIN_NAME } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	EMAIL_STORE_SERVICE_NAME,
 	getBuiltinServiceName,
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
@@ -1024,6 +1026,12 @@ export function getGlobalServices({
 				name: SERVICE_LOCAL_EXPLORER,
 			},
 		});
+		// The entry worker runs the receiving `email()` path (see handleEmail),
+		// which captures received emails into the store over RPC.
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		});
 	}
 	const streamServiceEnabled = allWorkerOpts?.some(
 		(worker) =>
@@ -1171,6 +1179,7 @@ export function getGlobalServices({
 				observabilityEnabled: sharedOptions.unsafeObservability === true,
 			})
 		);
+		services.push(...getEmailStoreServices(tmpPath));
 	}
 
 	// Register the trace collector service. It's attached to each user worker's

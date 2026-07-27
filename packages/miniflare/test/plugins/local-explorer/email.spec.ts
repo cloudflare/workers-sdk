@@ -479,4 +479,101 @@ describe("Email API - Sending", () => {
 			errors: [expect.objectContaining({ code: 10601 })],
 		});
 	});
+
+	test("lists sent emails newest-first", async ({ expect }) => {
+		const subjects = ["ordering-1", "ordering-2", "ordering-3"];
+		for (const subject of subjects) {
+			const res = await mf.dispatchFetch("http://localhost", {
+				method: "POST",
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: "recipient@example.com",
+					subject,
+					text: subject,
+				}),
+			});
+			expect(await res.text()).toBe("ok");
+		}
+
+		const listResponse = await mf.dispatchFetch(`${BASE_URL}/email/sending`);
+		const data = await expectValidResponse(
+			listResponse,
+			zEmailListSendingResponse,
+			expect
+		);
+		// The store returns records newest-first, so the three most recent sends
+		// appear in reverse insertion order.
+		const listedSubjects = (data.result ?? []).map((email) => email.subject);
+		expect(listedSubjects.slice(0, 3)).toEqual([
+			"ordering-3",
+			"ordering-2",
+			"ordering-1",
+		]);
+	});
+});
+
+// Email capture is stored per-`Miniflare` instance. Two instances running in the
+// same process must not see each other's emails (regression test for a former
+// module-global store).
+describe("Email API - per-instance isolation", () => {
+	let mfA: Miniflare;
+	let mfB: Miniflare;
+
+	beforeAll(async () => {
+		mfA = new Miniflare({
+			inspectorPort: 0,
+			compatibilityDate: "2025-03-17",
+			modules: true,
+			script: EMAIL_HANDLER_WORKER,
+			unsafeLocalExplorer: true,
+			unsafeTriggerHandlers: true,
+		});
+		mfB = new Miniflare({
+			inspectorPort: 0,
+			compatibilityDate: "2025-03-17",
+			modules: true,
+			script: EMAIL_HANDLER_WORKER,
+			unsafeLocalExplorer: true,
+			unsafeTriggerHandlers: true,
+		});
+	});
+
+	afterAll(async () => {
+		await Promise.all([disposeWithRetry(mfA), disposeWithRetry(mfB)]);
+	});
+
+	test("one instance's emails are not visible to another", async ({
+		expect,
+	}) => {
+		const sendResponse = await mfA.dispatchFetch(
+			`${BASE_URL}/email/routing/send`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "Only in A",
+					text: "body",
+				}),
+			}
+		);
+		await sendResponse.text();
+
+		const listA = await expectValidResponse(
+			await mfA.dispatchFetch(`${BASE_URL}/email/routing`),
+			zEmailListRoutingResponse,
+			expect
+		);
+		const listB = await expectValidResponse(
+			await mfB.dispatchFetch(`${BASE_URL}/email/routing`),
+			zEmailListRoutingResponse,
+			expect
+		);
+
+		expect(listA.result).toHaveLength(1);
+		expect(listA.result?.[0]?.subject).toBe("Only in A");
+		// B captured nothing, so it must not see A's email.
+		expect(listB.result).toEqual([]);
+	});
 });

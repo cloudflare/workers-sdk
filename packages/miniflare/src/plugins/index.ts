@@ -163,6 +163,7 @@ export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof DURABLE_OBJECTS_PLUGIN.sharedOptions> &
 	z.input<typeof KV_PLUGIN.sharedOptions> &
 	z.input<typeof R2_PLUGIN.sharedOptions> &
+	z.input<typeof EMAIL_PLUGIN.sharedOptions> &
 	z.input<typeof WORKFLOWS_PLUGIN.sharedOptions> &
 	z.input<typeof SECRET_STORE_PLUGIN.sharedOptions> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.sharedOptions> &
