@@ -5,6 +5,7 @@ import {
 	defaultWranglerConfig,
 	FatalError,
 	getCloudflareEnv,
+	getNoSkillsUpdatePromptsFromEnv,
 	getWranglerHideBanner,
 	experimental_readRawConfig,
 	UserError,
@@ -13,6 +14,7 @@ import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	runSkillsInstallFlow,
+	runSkillsUpdateFlow,
 	skillInstallPromptMessageAfterWranglerCommandHandler,
 } from "../agents-skills-install";
 import {
@@ -359,12 +361,26 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 
 					if (suggestSkillsEnabled) {
 						try {
-							await runSkillsInstallFlow({
+							const justInstalled = await runSkillsInstallFlow({
 								force: false,
 								command: sanitizedCommand,
 								promptMessage:
 									skillInstallPromptMessageAfterWranglerCommandHandler,
 							});
+
+							// Only check for updates when the install flow did not
+							// just perform a fresh install — a brand-new install
+							// already has the latest content — and the user has
+							// not opted out via config or environment variable.
+							if (
+								!justInstalled &&
+								config.no_skills_update_prompts !== true &&
+								getNoSkillsUpdatePromptsFromEnv() !== true
+							) {
+								await runSkillsUpdateFlow({
+									command: sanitizedCommand,
+								});
+							}
 						} catch (skillsErr) {
 							logger.debug(
 								`Skills suggestion failed: ${skillsErr instanceof Error ? skillsErr.message : skillsErr}`

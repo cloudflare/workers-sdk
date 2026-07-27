@@ -65,6 +65,21 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	send_metrics: boolean | undefined;
 
 	/**
+	 * Whether to suppress the prompt that offers to update Cloudflare agent
+	 * skills when they are out of date.
+	 *
+	 * When `true`, Wrangler will not prompt the user to update skills even if
+	 * newer versions are available upstream. The `--install-skills` flag still
+	 * works regardless of this setting.
+	 *
+	 * Can also be controlled via the `WRANGLER_NO_SKILLS_UPDATE_PROMPTS`
+	 * environment variable.
+	 *
+	 * @default false
+	 */
+	no_skills_update_prompts: boolean | undefined;
+
+	/**
 	 * Configuration for npm package dependency instrumentation.
 	 *
 	 * Controls whether Wrangler should collect and send npm package dependency
@@ -338,6 +353,7 @@ export const defaultWranglerConfig: Config = {
 	/* TOP-LEVEL ONLY FIELDS */
 	pages_build_output_dir: undefined,
 	send_metrics: undefined,
+	no_skills_update_prompts: undefined,
 	dependencies_instrumentation: undefined,
 	dev: {
 		ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
