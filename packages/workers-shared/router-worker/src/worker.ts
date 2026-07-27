@@ -1,4 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { canonicalizePath } from "../../asset-worker/src/utils/canonical-path";
 import { generateStaticRoutingRuleMatcher } from "../../asset-worker/src/utils/rules-engine";
 import { PerformanceTimer } from "../../utils/performance";
 import { TemporaryRedirectResponse } from "../../utils/responses";
@@ -281,6 +282,26 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 			};
 
 			if (config.static_routing) {
+				// Shadow-only: raw-path dispatch below remains authoritative.
+				const canonicalPath = canonicalizePath(url.pathname);
+				if (canonicalPath.routingPath !== url.pathname) {
+					const currentTarget = getStaticRoutingTarget(
+						request,
+						config.static_routing
+					);
+					const canonicalTarget = getStaticRoutingTarget(
+						request,
+						config.static_routing,
+						canonicalPath.routingPath
+					);
+					if (currentTarget !== canonicalTarget) {
+						analytics.setData({
+							pathNormalization: canonicalPath.normalization,
+							pathNormalizationDifference: 1,
+						});
+					}
+				}
+
 				switch (getStaticRoutingTarget(request, config.static_routing)) {
 					case "asset":
 						// direct to asset worker

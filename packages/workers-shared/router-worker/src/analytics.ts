@@ -39,6 +39,10 @@ type Data = {
 	userWorkerFreeTierLimiting?: boolean;
 	// double9 - The time it takes for the request to be handed off the Asset Worker or user Worker in milliseconds
 	timeToDispatch?: number;
+	// double10 - Canonicalization performed while in shadow mode
+	pathNormalization?: number;
+	// double11 - Canonical routing decision differs from current behavior
+	pathNormalizationDifference?: number;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -103,6 +107,8 @@ export class Analytics {
 				this.data.abuseMitigationBlocked ? 1 : 0, // double7
 				this.data.userWorkerFreeTierLimiting ? 1 : 0, // double8
 				this.data.timeToDispatch ?? -1, // double9
+				this.data.pathNormalization ?? 0, // double10
+				this.data.pathNormalizationDifference ?? 0, // double11
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes

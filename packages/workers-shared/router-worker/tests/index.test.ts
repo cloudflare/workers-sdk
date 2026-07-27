@@ -5,6 +5,7 @@ import DefaultRouterEntrypoint, {
 	RouterInnerEntrypoint,
 	RouterOuterEntrypoint,
 } from "../src/worker";
+import type { ReadyAnalyticsEvent } from "../src/types";
 import type { Env } from "../src/worker";
 
 async function fetchFromInnerEntrypoint(
@@ -198,6 +199,42 @@ describe("inner entrypoint unit tests", () => {
 
 		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from user worker");
+	});
+
+	it("records a canonical routing difference without changing dispatch", async ({
+		expect,
+	}) => {
+		const request = new Request("https://example.com/docs+draft");
+		const ctx = createExecutionContext();
+		const logEvent = vi.fn((_event: ReadyAnalyticsEvent) => undefined);
+		const env = {
+			CONFIG: {
+				has_user_worker: true,
+				static_routing: { user_worker: ["/docs%2Bdraft"] },
+			},
+			ANALYTICS: { logEvent },
+			USER_WORKER: {
+				async fetch(_request: Request): Promise<Response> {
+					return new Response("user worker");
+				},
+			},
+			ASSET_WORKER: {
+				async fetch(_request: Request): Promise<Response> {
+					return new Response("asset worker");
+				},
+				async unstable_canFetch(_request: Request): Promise<boolean> {
+					return true;
+				},
+			},
+		} as unknown as Env;
+
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
+
+		expect(await response.text()).toBe("asset worker");
+		expect(logEvent).toHaveBeenCalledOnce();
+		const event = logEvent.mock.calls[0]?.[0];
+		expect(event?.doubles?.[9]).toBe(8);
+		expect(event?.doubles?.[10]).toBe(1);
 	});
 
 	it("returns fetch from asset worker when static_routing asset_worker rule matches", async ({
