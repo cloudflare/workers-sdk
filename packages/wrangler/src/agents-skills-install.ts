@@ -56,10 +56,12 @@ type SkillsInstallFlowOptions =
  * caller-provided message, and performs the installation via rosie.
  *
  * @param options - Controls whether to force-install and what prompt to show.
+ * @returns `true` if skills were installed (or attempted to) during this call,
+ *   `false` if the flow was skipped or the user declined.
  */
 export async function runSkillsInstallFlow(
 	options: SkillsInstallFlowOptions
-): Promise<void> {
+): Promise<boolean> {
 	const { force, command } = options;
 
 	const sendResultMetricsEvent = (
@@ -95,13 +97,13 @@ export async function runSkillsInstallFlow(
 	const existingConfig = readSkillsInstallMetadataFile();
 	if (existingConfig !== undefined && !force) {
 		// Note: no metrics event is sent in this case
-		return;
+		return false;
 	}
 
 	if (ci.isCI && !force) {
 		// In CI environments, skip silently
 		sendResultMetricsEvent({ skippedBecause: "Running in CI" });
-		return;
+		return false;
 	}
 
 	let detectedAgents: AgentInfo[];
@@ -112,14 +114,14 @@ export async function runSkillsInstallFlow(
 			skippedBecause: "Failed to install skills",
 			errorMessage: err instanceof Error ? err.message : String(err),
 		});
-		return;
+		return false;
 	}
 
 	if (detectedAgents.length === 0) {
 		sendResultMetricsEvent({
 			skippedBecause: "No supported agents detected",
 		});
-		return;
+		return false;
 	}
 
 	// In non-interactive terminals do nothing
@@ -127,7 +129,7 @@ export async function runSkillsInstallFlow(
 		sendResultMetricsEvent({
 			skippedBecause: "Non-interactive terminal",
 		});
-		return;
+		return false;
 	}
 
 	let accepted: boolean;
@@ -161,7 +163,7 @@ export async function runSkillsInstallFlow(
 			detectedAgents,
 		});
 		sendResultMetricsEvent({ skippedBecause: "User declined" });
-		return;
+		return false;
 	}
 
 	try {
@@ -195,18 +197,25 @@ export async function runSkillsInstallFlow(
 			logger.warn(SKILLS_INSTALL_RETRY_HINT);
 		}
 
+		const freshTreeSha = await fetchSkillsTreeSha();
+
 		writeSkillsInstallMetadataFile({
 			version: 1,
 			accepted: true,
 			date: new Date().toISOString(),
 			detectedAgents,
 			installFailed: failedAgents.length > 0 ? failedAgents : false,
+			// Only mark this revision as installed when every agent succeeded.
+			// If some agents failed, leave `installedTreeSha` undefined so the
+			// update flow re-prompts them on the next run instead of treating
+			// them as up to date.
+			installedTreeSha: failedAgents.length > 0 ? undefined : freshTreeSha,
 		});
 
 		sendResultMetricsEvent({
 			targetedAgents: succeededAgents,
 		});
-		return;
+		return true;
 	} catch (err) {
 		logger.warn(
 			`Failed to install Cloudflare skills: ${err instanceof Error ? err.message : String(err)}`
@@ -224,6 +233,7 @@ export async function runSkillsInstallFlow(
 		sendResultMetricsEvent({
 			skippedBecause: "Failed to install skills",
 		});
+		return true;
 	}
 }
 
@@ -296,6 +306,18 @@ interface SkillsInstallMetadata {
 	 * attempted (user declined or prompt was skipped).
 	 */
 	installFailed?: boolean | string[];
+	/**
+	 * Git tree SHA of the `skills/` directory in `cloudflare/skills` at the
+	 * time of the last successful Wrangler-managed install or update. Used to
+	 * detect when upstream content has changed.
+	 */
+	installedTreeSha?: string;
+	/**
+	 * Git tree SHA of the `skills/` directory that the user declined to update
+	 * to. When set, Wrangler will not prompt again until the upstream SHA
+	 * changes to a different value.
+	 */
+	declinedTreeSha?: string;
 }
 
 /** Jsonc metadata file created when Cloudflare agent skills are installed */
@@ -304,6 +326,10 @@ const SKILLS_INSTALL_METADATA_FILENAME = "agents-skills-install.jsonc";
 /** GitHub Contents API URL for listing skill directories in the cloudflare/skills repo. */
 const SKILLS_REPO_CONTENTS_URL =
 	"https://api.github.com/repos/cloudflare/skills/contents/skills";
+
+/** GitHub Contents API URL for the repo root, used to retrieve the tree SHA of the `skills/` directory. */
+const SKILLS_REPO_ROOT_CONTENTS_URL =
+	"https://api.github.com/repos/cloudflare/skills/contents/";
 
 /** Cache filename for skill directory names fetched from the GitHub API. */
 const SKILLS_REPO_CACHE_FILENAME = "cloudflare-skills-repo-cache.json";
@@ -419,6 +445,22 @@ interface SkillsRepoCache {
 	lastUpdate: number;
 	/** Skill directory names from the `cloudflare/skills` repository. */
 	skillNames: string[];
+	/**
+	 * Git tree SHA of the `skills/` directory in the `cloudflare/skills`
+	 * repository, fetched from the GitHub Trees API. Used to detect upstream
+	 * content changes for the skills-update flow.
+	 */
+	skillsTreeSha?: string;
+}
+
+/**
+ * Result of reading the skills repo cache, including optional tree SHA.
+ */
+interface SkillsRepoCacheResult {
+	/** Skill directory names from the repository. */
+	skillNames: string[];
+	/** Git tree SHA of the `skills/` directory, if available. */
+	skillsTreeSha?: string;
 }
 
 /**
@@ -426,9 +468,11 @@ interface SkillsRepoCache {
  * Falls back to stale data when {@link allowStale} is true (e.g. after a failed network request).
  *
  * @param allowStale When `true`, returns cached data even if the TTL has expired.
- * @returns Array of cached skill names, or `undefined` on cache miss.
+ * @returns Cached skill names and tree SHA, or `undefined` on cache miss.
  */
-function readSkillsRepoCache(allowStale = false): string[] | undefined {
+function readSkillsRepoCache(
+	allowStale = false
+): SkillsRepoCacheResult | undefined {
 	try {
 		const raw = readFileSync(getSkillsRepoCachePath(), "utf8");
 		const cache = JSON.parse(raw) as SkillsRepoCache;
@@ -436,7 +480,10 @@ function readSkillsRepoCache(allowStale = false): string[] | undefined {
 			allowStale ||
 			cache.lastUpdate + SKILLS_REPO_CACHE_TTL_MS > Date.now()
 		) {
-			return cache.skillNames;
+			return {
+				skillNames: cache.skillNames,
+				skillsTreeSha: cache.skillsTreeSha,
+			};
 		}
 	} catch {
 		// Cache file missing, corrupt, or unreadable — treat as cache miss.
@@ -445,17 +492,22 @@ function readSkillsRepoCache(allowStale = false): string[] | undefined {
 }
 
 /**
- * Writes skill names to the disk cache with the current timestamp.
+ * Writes skill names and optional tree SHA to the disk cache with the current timestamp.
  *
  * @param skillNames The skill directory names to persist.
+ * @param skillsTreeSha Optional git tree SHA for the `skills/` directory.
  */
-function writeSkillsRepoCache(skillNames: string[]): void {
+function writeSkillsRepoCache(
+	skillNames: string[],
+	skillsTreeSha?: string
+): void {
 	try {
 		const cachePath = getSkillsRepoCachePath();
 		mkdirSync(path.dirname(cachePath), { recursive: true });
 		const data: SkillsRepoCache = {
 			lastUpdate: Date.now(),
 			skillNames,
+			...(skillsTreeSha ? { skillsTreeSha } : {}),
 		};
 		writeFileSync(cachePath, JSON.stringify(data));
 	} catch {
@@ -464,13 +516,23 @@ function writeSkillsRepoCache(skillNames: string[]): void {
 }
 
 /**
- * Fetches the list of skill directory names from the `cloudflare/skills` GitHub
- * repository using the GitHub Contents API. Results are cached to disk for 24 hours
- * to avoid hitting API rate limits.
- *
- * @returns Array of skill directory names, or `undefined` if both fetch and cache fail.
+ * Standard HTTP headers sent with every GitHub API request.
  */
-async function fetchSkillNamesFromGitHub(): Promise<string[] | undefined> {
+const GITHUB_API_HEADERS = {
+	Accept: "application/vnd.github.v3+json",
+	"User-Agent": "cloudflare-wrangler",
+} as const;
+
+/**
+ * Fetches the list of skill directory names (and the `skills/` tree SHA) from
+ * the `cloudflare/skills` GitHub repository using the GitHub Contents API.
+ * Results are cached to disk for 24 hours to avoid hitting API rate limits.
+ *
+ * @returns Skill names and optional tree SHA, or `undefined` if both fetch and cache fail.
+ */
+async function fetchSkillNamesFromGitHub(): Promise<
+	SkillsRepoCacheResult | undefined
+> {
 	// Return fresh cached data if available.
 	const cached = readSkillsRepoCache();
 	if (cached) {
@@ -479,10 +541,7 @@ async function fetchSkillNamesFromGitHub(): Promise<string[] | undefined> {
 
 	try {
 		const res = await fetch(SKILLS_REPO_CONTENTS_URL, {
-			headers: {
-				Accept: "application/vnd.github.v3+json",
-				"User-Agent": "cloudflare-wrangler",
-			},
+			headers: GITHUB_API_HEADERS,
 		});
 		if (!res.ok) {
 			// API error (rate limited, 404, etc.) — fall back to stale cache.
@@ -496,11 +555,44 @@ async function fetchSkillNamesFromGitHub(): Promise<string[] | undefined> {
 			.filter((e) => e.type === "dir")
 			.map((e) => e.name);
 
-		writeSkillsRepoCache(skillNames);
-		return skillNames;
+		// Fetch the tree SHA of the `skills/` directory from the repo root.
+		const treeSha = await fetchSkillsTreeSha();
+
+		writeSkillsRepoCache(skillNames, treeSha);
+		return { skillNames, skillsTreeSha: treeSha };
 	} catch {
 		// Network failure — fall back to stale cache.
 		return readSkillsRepoCache(true);
+	}
+}
+
+/**
+ * Fetches the git tree SHA of the `skills/` directory from the root of the
+ * `cloudflare/skills` repository. This single SHA changes whenever any file
+ * inside `skills/` is modified, added, or removed, making it a lightweight
+ * change-detection signal.
+ *
+ * @returns The tree SHA string, or `undefined` on failure.
+ */
+async function fetchSkillsTreeSha(): Promise<string | undefined> {
+	try {
+		const res = await fetch(SKILLS_REPO_ROOT_CONTENTS_URL, {
+			headers: GITHUB_API_HEADERS,
+		});
+		if (!res.ok) {
+			return undefined;
+		}
+		const entries = (await res.json()) as Array<{
+			name: string;
+			type: string;
+			sha: string;
+		}>;
+		const skillsEntry = entries.find(
+			(e) => e.name === "skills" && e.type === "dir"
+		);
+		return skillsEntry?.sha;
+	} catch {
+		return undefined;
 	}
 }
 
@@ -697,10 +789,11 @@ async function computeTelemetryCurrentAgentSkillsInstalled(): Promise<AgentSkill
 
 	const globalSkillsPath = path.resolve(mapping.rosie.globalPath);
 
-	const skillNames = await fetchSkillNamesFromGitHub();
-	if (!skillNames || skillNames.length === 0) {
+	const cacheResult = await fetchSkillNamesFromGitHub();
+	if (!cacheResult || cacheResult.skillNames.length === 0) {
 		return false;
 	}
+	const skillNames = cacheResult.skillNames;
 
 	// Check whether any Cloudflare skill exists at the primary rosie path.
 	const hasSkillsAtPrimary = directoryContainsAnySkill(
@@ -817,4 +910,379 @@ async function getDetectedAgents(): Promise<AgentInfo[]> {
 				globalPath: agent.installPath,
 			},
 		}));
+}
+
+/** Actionable hint shown after declining a skills update. */
+const SKILLS_UPDATE_OPT_OUT_HINT =
+	'If you don\'t want to be prompted again, set "no_skills_update_prompts": true in your wrangler.jsonc or set the WRANGLER_NO_SKILLS_UPDATE_PROMPTS=true environment variable.';
+
+/**
+ * Options for {@link runSkillsUpdateFlow}.
+ */
+type SkillsUpdateFlowOptions = {
+	/**
+	 * The wrangler command that triggered the update flow, for telemetry.
+	 */
+	command?: string;
+};
+
+/**
+ * Minimum time (7 days in ms) that must have elapsed since the last
+ * skills install or update before we check for upstream changes again.
+ * This prevents pestering users who just installed/updated recently.
+ */
+const SKILLS_UPDATE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Checks whether Wrangler-installed skills are out of date and, if so, prompts
+ * the user to update them. Only runs when:
+ *
+ * 1. Skills were previously installed by Wrangler (metadata `accepted === true`
+ *    with no full failure).
+ * 2. At least {@link SKILLS_UPDATE_COOLDOWN_MS} has elapsed since the last
+ *    install or update (avoids pestering users who just updated).
+ * 3. The upstream `skills/` tree SHA differs from the recorded
+ *    `installedTreeSha` (i.e. content has actually changed).
+ * 4. The upstream changes are significant enough (measured by file count and
+ *    size delta) to warrant an interruption.
+ * 5. The user has not already declined this specific upstream revision
+ *    (`declinedTreeSha`).
+ *
+ * Callers are responsible for checking config / env-var opt-outs and simply
+ * not calling this function when the user has opted out.
+ *
+ * @param options - Controls telemetry context.
+ */
+export async function runSkillsUpdateFlow(
+	options: SkillsUpdateFlowOptions
+): Promise<void> {
+	const { command } = options;
+
+	const metadata = readSkillsInstallMetadataFile();
+	if (!metadata) {
+		return;
+	}
+	if (metadata.accepted !== true) {
+		return;
+	}
+	if (metadata.installFailed === true) {
+		return;
+	}
+
+	if (ci.isCI) {
+		return;
+	}
+	if (!isInteractive()) {
+		return;
+	}
+
+	if (metadata.date) {
+		const lastModified = new Date(metadata.date).getTime();
+		if (
+			!Number.isNaN(lastModified) &&
+			Date.now() - lastModified < SKILLS_UPDATE_COOLDOWN_MS
+		) {
+			logger.debug(
+				"Skills were recently installed/updated; skipping update check."
+			);
+			return;
+		}
+	}
+
+	const cacheResult = await fetchSkillNamesFromGitHub();
+	const remoteTreeSha = cacheResult?.skillsTreeSha;
+
+	if (!remoteTreeSha) {
+		logger.debug("Skills update check: could not determine remote tree SHA.");
+		return;
+	}
+
+	if (
+		metadata.installedTreeSha &&
+		metadata.installedTreeSha === remoteTreeSha
+	) {
+		logger.debug("Skills are up to date.");
+		return;
+	}
+
+	if (metadata.declinedTreeSha === remoteTreeSha) {
+		logger.debug("User already declined update for this upstream revision.");
+		return;
+	}
+
+	if (metadata.installedTreeSha) {
+		const significant = await areChangesSignificant(
+			metadata.installedTreeSha,
+			remoteTreeSha
+		);
+		if (!significant) {
+			logger.debug(
+				"Upstream skills changes are below the significance threshold; skipping update prompt."
+			);
+			writeSkillsInstallMetadataFile({
+				...metadata,
+				date: new Date().toISOString(),
+			});
+			return;
+		}
+	}
+
+	const skillNames = cacheResult.skillNames;
+	if (!skillNames || skillNames.length === 0) {
+		return;
+	}
+
+	const wranglerManagedAgents = metadata.detectedAgents ?? [];
+	const managedAgentsWithSkills = wranglerManagedAgents.filter((agent) => {
+		if (
+			Array.isArray(metadata.installFailed) &&
+			metadata.installFailed.includes(agent.rosie.id)
+		) {
+			return true;
+		}
+		return directoryContainsAnySkill(
+			path.resolve(agent.rosie.globalPath),
+			skillNames
+		);
+	});
+
+	if (managedAgentsWithSkills.length === 0) {
+		return;
+	}
+
+	// --- Prompt ---
+	// Persist the current remote SHA as "declined" *before* showing the prompt
+	// so that if the user interrupts the process (Ctrl+C, terminal closed, etc.)
+	// the prompt won't reappear for this upstream revision. An explicit accept or
+	// decline will overwrite this marker with the correct final state.
+	writeSkillsInstallMetadataFile({
+		...metadata,
+		date: new Date().toISOString(),
+		declinedTreeSha: remoteTreeSha,
+	});
+
+	logger.log();
+	const accepted = await confirm(
+		"It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+		{
+			defaultValue: true,
+			fallbackValue: false,
+		}
+	);
+
+	if (!accepted) {
+		logger.log("\nUnderstood, skills will not be updated at this time.");
+		logger.log(SKILLS_UPDATE_OPT_OUT_HINT);
+
+		writeSkillsInstallMetadataFile({
+			...metadata,
+			date: new Date().toISOString(),
+			declinedTreeSha: remoteTreeSha,
+		});
+
+		sendMetricsEvent(
+			"skills_update_skipped",
+			{
+				reason: "User declined",
+				...(command ? { command } : {}),
+			},
+			{}
+		);
+		return;
+	}
+
+	try {
+		const agentNames = managedAgentsWithSkills.map((a) => a.rosie.id);
+		const { failedAgents } = await rosieInstall(SKILLS_REPO, {
+			global: true,
+			agent: agentNames,
+			lockfile: false,
+			onLog: ({ message }) => logger.debug(message),
+		});
+
+		const failedSet = new Set(failedAgents);
+		const succeededAgents = managedAgentsWithSkills.filter(
+			(a) => !failedSet.has(a.rosie.id)
+		);
+
+		if (succeededAgents.length > 0) {
+			logger.log(
+				`\n🚀 Successfully updated Cloudflare skills for: ${succeededAgents.map(({ name }) => name).join(", ")}.\n`
+			);
+		}
+
+		if (failedAgents.length > 0) {
+			logger.log();
+			logger.warn(
+				`Skills update failed for agents: ${failedAgents.join(", ")}.`
+			);
+			logger.warn(SKILLS_INSTALL_RETRY_HINT);
+		}
+
+		const freshTreeSha = await fetchSkillsTreeSha();
+
+		writeSkillsInstallMetadataFile({
+			...metadata,
+			date: new Date().toISOString(),
+			// Only mark this revision as installed when every agent succeeded.
+			// If some agents failed, keep the previous `installedTreeSha` so the
+			// update flow re-prompts them on the next run instead of treating
+			// them as up to date.
+			installedTreeSha:
+				failedAgents.length > 0
+					? metadata.installedTreeSha
+					: (freshTreeSha ?? remoteTreeSha),
+			declinedTreeSha: undefined,
+			installFailed: failedAgents.length > 0 ? failedAgents : false,
+		});
+
+		sendMetricsEvent(
+			"skills_update_completed",
+			{
+				agents: succeededAgents,
+				...(command ? { command } : {}),
+			},
+			{}
+		);
+	} catch (err) {
+		logger.warn(
+			`Failed to update Cloudflare skills: ${err instanceof Error ? err.message : String(err)}`
+		);
+		logger.warn(SKILLS_INSTALL_RETRY_HINT);
+
+		writeSkillsInstallMetadataFile({
+			...metadata,
+			date: new Date().toISOString(),
+		});
+
+		sendMetricsEvent(
+			"skills_update_skipped",
+			{
+				reason: "Failed to update skills",
+				errorMessage: err instanceof Error ? err.message : String(err),
+				...(command ? { command } : {}),
+			},
+			{}
+		);
+	}
+}
+
+/** Shape of a single blob entry from the GitHub Git Trees API. */
+interface TreeBlobEntry {
+	sha: string;
+	size: number;
+}
+
+/**
+ * Fetches the full recursive tree for a given tree SHA from the
+ * `cloudflare/skills` repository using the GitHub Git Trees API.
+ *
+ * Returns a map of `path -> { sha, size }` for blob entries only (files,
+ * not sub-trees), which is used to diff two revisions of the `skills/`
+ * directory.
+ *
+ * @param treeSha - The git tree SHA to fetch (e.g. the `skills/` directory SHA).
+ * @returns A map of blob entries keyed by path, or `undefined` on failure.
+ */
+async function fetchSkillsTreeEntries(
+	treeSha: string
+): Promise<Map<string, TreeBlobEntry> | undefined> {
+	try {
+		const url = `https://api.github.com/repos/cloudflare/skills/git/trees/${treeSha}?recursive=1`;
+		const res = await fetch(url, { headers: GITHUB_API_HEADERS });
+		if (!res.ok) {
+			return undefined;
+		}
+		const body = (await res.json()) as {
+			tree: Array<{
+				path: string;
+				type: string;
+				sha: string;
+				size?: number;
+			}>;
+		};
+		const entries = new Map<string, TreeBlobEntry>();
+		for (const entry of body.tree) {
+			if (entry.type === "blob") {
+				entries.set(entry.path, { sha: entry.sha, size: entry.size ?? 0 });
+			}
+		}
+		return entries;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Minimum number of changed files (added + removed + modified) in the
+ * upstream `skills/` tree before the user is prompted to update. Changes
+ * below this threshold are considered too minor to warrant an interruption.
+ */
+const MIN_CHANGED_FILES_FOR_UPDATE = 5;
+
+/**
+ * Minimum total size delta (in bytes) of changed blobs in the upstream
+ * `skills/` tree before the user is prompted to update. Allows large
+ * single-file rewrites to trigger an update even if fewer than
+ * {@link MIN_CHANGED_FILES_FOR_UPDATE} files changed.
+ */
+const MIN_SIZE_DELTA_FOR_UPDATE = 10 * 1024; // 10 KB
+
+/**
+ * Determines whether the changes between two revisions of the `skills/`
+ * tree are significant enough to warrant prompting the user to update.
+ *
+ * Fetches the full recursive tree for both the installed and remote SHAs,
+ * then counts the number of changed files (added, removed, or modified)
+ * and the total size delta. The changes are considered significant when
+ * either the file count or size delta exceeds the configured thresholds
+ * ({@link MIN_CHANGED_FILES_FOR_UPDATE} / {@link MIN_SIZE_DELTA_FOR_UPDATE}).
+ *
+ * If either tree cannot be fetched the result is indeterminate, so returns
+ * `false` to avoid pestering the user when we can't reliably compare.
+ *
+ * @param installedTreeSha - Tree SHA of the currently installed `skills/` revision.
+ * @param remoteTreeSha - Tree SHA of the upstream `skills/` revision.
+ * @returns `true` if the changes are significant, `false` otherwise (including when indeterminate).
+ */
+async function areChangesSignificant(
+	installedTreeSha: string,
+	remoteTreeSha: string
+): Promise<boolean> {
+	const [installedTree, remoteTree] = await Promise.all([
+		fetchSkillsTreeEntries(installedTreeSha),
+		fetchSkillsTreeEntries(remoteTreeSha),
+	]);
+
+	if (!installedTree || !remoteTree) {
+		// If one of the fetches failed we can't determine significance — bail
+		// and skip the update prompt rather than pestering the user.
+		return false;
+	}
+
+	let changedFiles = 0;
+	let sizeDelta = 0;
+
+	for (const [filePath, remote] of remoteTree) {
+		const installed = installedTree.get(filePath);
+		if (!installed) {
+			changedFiles++;
+			sizeDelta += remote.size;
+		} else if (installed.sha !== remote.sha) {
+			changedFiles++;
+			sizeDelta += Math.abs(remote.size - installed.size);
+		}
+	}
+
+	for (const [filePath, installed] of installedTree) {
+		if (!remoteTree.has(filePath)) {
+			changedFiles++;
+			sizeDelta += installed.size;
+		}
+	}
+
+	return (
+		changedFiles >= MIN_CHANGED_FILES_FOR_UPDATE ||
+		sizeDelta >= MIN_SIZE_DELTA_FOR_UPDATE
+	);
 }

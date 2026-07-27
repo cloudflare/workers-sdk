@@ -66,6 +66,7 @@ describe("normalizeAndValidateConfig()", () => {
 				bindings: [],
 			},
 			send_metrics: undefined,
+			no_skills_update_prompts: undefined,
 			dependencies_instrumentation: undefined,
 			main: undefined,
 			migrations: [],
