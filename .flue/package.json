@@ -14,7 +14,6 @@
 		"@cloudflare/shell": "0.4.1",
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@flue/cli": "2.0.0-nightly.202607240825",
 		"@flue/github": "2.0.0-nightly.202607240825",
 		"@flue/runtime": "2.0.0-nightly.202607240825",
 		"@flue/vite": "2.0.0-nightly.202607240825",
@@ -25,7 +24,7 @@
 		"valibot": "1.4.2",
 		"vite": "catalog:default",
 		"wrangler": "workspace:*",
-		"zod": "4.3.6"
+		"zod": "catalog:default"
 	},
 	"volta": {
 		"extends": "../package.json"
