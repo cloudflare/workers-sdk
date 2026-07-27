@@ -1,0 +1,23 @@
+.changeset/add-messaging-binding.md
+  s_82ae919c84e6c2::t_d7d396581870b8 1-22
+packages/wrangler/src/__tests__/deploy/bindings.test.ts
+  s_82ae919c84e6c2::t_41d2ba743c9da4 2279-2316
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_82ae919c84e6c2::t_36c1bad6343da9 469-474,809,930,1114,2806-2854
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d044af04180d8dae44ef743f33d28ff96963df5b",
+  "prompts": {},
+  "sessions": {
+    "s_82ae919c84e6c2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07bf80f27ffeGYM5uASTKJxS3a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Gabriel Massadas <gmassadas@cloudflare.com>"
+    }
+  }
+}
