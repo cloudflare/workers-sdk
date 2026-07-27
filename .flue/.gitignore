@@ -1,6 +1,2 @@
 .flue-vite/
 .flue-vite.wrangler.jsonc
-.turbo/
-.wrangler/
-dist/
-node_modules/
