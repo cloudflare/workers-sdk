@@ -29,6 +29,8 @@ export const DefaultScopes = {
 	"websearch.run": "Run search queries against Cloudflare Web Search",
 	"agent-memory:write":
 		"See and change Agent Memory data such as keys and namespaces.",
+	"messaging.edit":
+		"See and change Messaging configuration and message content, including sending and receiving messages.",
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",

@@ -1,6 +1,7 @@
 ---
 "@cloudflare/workers-utils": minor
 "@cloudflare/config": minor
+"@cloudflare/workers-auth": patch
 "miniflare": minor
 "wrangler": minor
 ---
