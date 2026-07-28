@@ -1,5 +1,23 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.19.0
+
+### Minor Changes
+
+- [#14879](https://github.com/cloudflare/workers-sdk/pull/14879) [`e6480e3`](https://github.com/cloudflare/workers-sdk/commit/e6480e3c26e849034e9e511a2fd1216257975656) Thanks [@dmmulroy](https://github.com/dmmulroy)! - Add a `verbose` option to `cloudflareTest()` and `cloudflarePool()` configuration
+
+  Set `verbose: false` to suppress verbose workerd runtime logs, such as caught Durable Object RPC errors. The option defaults to `true` to preserve existing output.
+
+### Patch Changes
+
+- [#14821](https://github.com/cloudflare/workers-sdk/pull/14821) [`edc203e`](https://github.com/cloudflare/workers-sdk/commit/edc203e42a10a52f8d2af305fecd2fed4807274e) Thanks [@mishushakov](https://github.com/mishushakov)! - Ignore workerd's `disconnected: peer disconnected without gracefully ending TLS session` exception logs
+
+  When tests make real `fetch()` calls to external TLS endpoints, servers and load balancers routinely close idle keepalive connections without sending a TLS `close_notify`. No request fails — the connection is idle — but workerd logs a `kj/compat/tls.c++` exception with a full stack trace each time, flooding otherwise green test runs. This is the TLS sibling of the `disconnected: ...` messages already in the ignore list, so filter it the same way.
+
+- Updated dependencies [[`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7), [`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7), [`09b8a44`](https://github.com/cloudflare/workers-sdk/commit/09b8a44e736f28798c733e46ec11eced25fdc897), [`4dfb96e`](https://github.com/cloudflare/workers-sdk/commit/4dfb96ed31c30d98ccf670f9e9453a86861c0c5f), [`1035f74`](https://github.com/cloudflare/workers-sdk/commit/1035f7450006c5c8b8b003135d2b530193c913a1), [`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a), [`3a22ae5`](https://github.com/cloudflare/workers-sdk/commit/3a22ae532c5c75c716d4c219e116eb3e0c5b236e), [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468), [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468), [`e8b3a9d`](https://github.com/cloudflare/workers-sdk/commit/e8b3a9d8bf5f63f7e318de220d91625f96cfb85a), [`552bcfc`](https://github.com/cloudflare/workers-sdk/commit/552bcfc8d44f8625b09dfd5d821c132b626cb7bb), [`b737676`](https://github.com/cloudflare/workers-sdk/commit/b737676db01a62e115b7fc56b5af36f5daaf5f6e), [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1)]:
+  - wrangler@4.115.0
+  - miniflare@4.20260722.1
+
 ## 0.18.8
 
 ### Patch Changes
