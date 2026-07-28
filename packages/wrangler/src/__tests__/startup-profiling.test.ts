@@ -5,6 +5,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, test } from "vitest";
+import { summarizeStartupProfile } from "../check/commands";
 import { logger } from "../logger";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -33,6 +34,13 @@ describe("wrangler check startup", () => {
 		expect(std.out).toContain(
 			`CPU Profile has been written to worker-startup.cpuprofile`
 		);
+		expect(std.out).toMatch(/Bundle: \d+\.\d{2} KiB \/ gzip: \d+\.\d{2} KiB/);
+		expect(std.out).toContain("Local startup profile:");
+		expect(std.out).toContain("Profile window:");
+		expect(std.out).toContain("Sampled time:");
+		expect(std.out).toContain("Active:");
+		expect(std.out).toContain("Idle:");
+		expect(std.out).toContain("Samples:");
 
 		await expect(
 			readFile("worker-startup.cpuprofile", "utf8")
@@ -158,5 +166,59 @@ describe("wrangler check startup", () => {
 		await expect(
 			readFile("worker-startup.cpuprofile", "utf8")
 		).resolves.toContain("callFrame");
+	});
+});
+
+describe("summarizeStartupProfile", () => {
+	test("separates active, garbage collection, and idle samples", ({
+		expect,
+	}) => {
+		expect(
+			summarizeStartupProfile({
+				nodes: [
+					{
+						id: 1,
+						callFrame: {
+							functionName: "(idle)",
+							scriptId: "0",
+							url: "",
+							lineNumber: -1,
+							columnNumber: -1,
+						},
+					},
+					{
+						id: 2,
+						callFrame: {
+							functionName: "(garbage collector)",
+							scriptId: "0",
+							url: "",
+							lineNumber: -1,
+							columnNumber: -1,
+						},
+					},
+					{
+						id: 3,
+						callFrame: {
+							functionName: "startup",
+							scriptId: "1",
+							url: "index.js",
+							lineNumber: 0,
+							columnNumber: 0,
+						},
+					},
+				],
+				startTime: 1_000,
+				endTime: 8_000,
+				samples: [1, 2, 3],
+				timeDeltas: [1_000, 2_000, 3_000],
+			})
+		).toEqual({
+			profileWindow: 7_000,
+			sampledTime: 6_000,
+			activeTime: 5_000,
+			garbageCollectionTime: 2_000,
+			idleTime: 1_000,
+			sampleCount: 3,
+		});
 	});
 });

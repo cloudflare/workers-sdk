@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import events from "node:events";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 import { log } from "@cloudflare/cli-shared-helpers";
 import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import { getWranglerTmpDir, UserError } from "@cloudflare/workers-utils";
@@ -17,10 +18,21 @@ import {
 } from "../deployment-bundle/module-collection";
 import { logger } from "../logger";
 import type { Config } from "@cloudflare/workers-utils";
+import type Protocol from "devtools-protocol";
 import type { ModuleDefinition } from "miniflare";
 import type { FormData, FormDataEntryValue } from "undici";
 
 const mimeTypeModuleType = flipObject(moduleTypeMimeType);
+const ONE_KIB_BYTES = 1024;
+
+export interface StartupProfileSummary {
+	profileWindow: number;
+	sampledTime: number;
+	activeTime: number;
+	garbageCollectionTime: number;
+	idleTime: number;
+	sampleCount: number;
+}
 
 export const checkNamespace = createNamespace({
 	metadata: {
@@ -79,16 +91,28 @@ async function checkStartupHandler(
 		});
 		logger.resetLoggerLevel();
 	}
+	const parsedWorkerBundle = await parseFormDataFromFile(workerBundle);
+	const bundleSize = await getBundleSize(parsedWorkerBundle);
 	const cpuProfileResult = await spinnerWhile({
-		promise: analyseBundle(workerBundle),
+		promise: analyseBundleProfile(parsedWorkerBundle),
 		startMessage: "Analysing",
 		endMessage: chalk.green("Startup phase analysed"),
 	});
+	const startupSummary = summarizeStartupProfile(cpuProfileResult);
 
 	await writeFile(outfile, JSON.stringify(await cpuProfileResult));
 
 	log(
 		[
+			`Bundle: ${(bundleSize.size / ONE_KIB_BYTES).toFixed(2)} KiB / gzip: ${(bundleSize.gzipSize / ONE_KIB_BYTES).toFixed(2)} KiB`,
+			"",
+			"Local startup profile:",
+			`  Profile window: ${formatMicroseconds(startupSummary.profileWindow)}`,
+			`  Sampled time: ${formatMicroseconds(startupSummary.sampledTime)}`,
+			`  Active: ${formatMicroseconds(startupSummary.activeTime)} (including ${formatMicroseconds(startupSummary.garbageCollectionTime)} garbage collection)`,
+			`  Idle: ${formatMicroseconds(startupSummary.idleTime)}`,
+			`  Samples: ${startupSummary.sampleCount}`,
+			"",
 			`CPU Profile has been written to ${outfile}. Load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.`,
 			"",
 			"Note that the CPU Profile was measured on your Worker running locally on your machine, which has a different CPU than when your Worker runs on Cloudflare.",
@@ -96,6 +120,54 @@ async function checkStartupHandler(
 			"As such, CPU Profile can be used to understand where time is spent at startup, but the overall startup time in the profile should not be expected to exactly match what your Worker's startup time will be when deploying to Cloudflare.",
 		].join("\n")
 	);
+}
+
+function formatMicroseconds(microseconds: number): string {
+	return `${(microseconds / 1000).toFixed(1)} ms`;
+}
+
+async function getBundleSize(workerBundle: FormData) {
+	const modules: Blob[] = [];
+	for (const entry of workerBundle.values()) {
+		if (entry instanceof Blob && entry.type !== "application/source-map") {
+			modules.push(entry);
+		}
+	}
+	const bundle = new Blob(modules);
+	return {
+		size: bundle.size,
+		gzipSize: gzipSync(await bundle.arrayBuffer()).byteLength,
+	};
+}
+
+export function summarizeStartupProfile(
+	profile: Protocol.Profiler.Profile
+): StartupProfileSummary {
+	const nodes = new Map(profile.nodes.map((node) => [node.id, node]));
+	const samples = profile.samples ?? [];
+	const timeDeltas = profile.timeDeltas ?? [];
+	let sampledTime = 0;
+	let idleTime = 0;
+	let garbageCollectionTime = 0;
+
+	for (const [index, timeDelta] of timeDeltas.entries()) {
+		sampledTime += timeDelta;
+		const functionName = nodes.get(samples[index] ?? 0)?.callFrame.functionName;
+		if (functionName === "(idle)") {
+			idleTime += timeDelta;
+		} else if (functionName === "(garbage collector)") {
+			garbageCollectionTime += timeDelta;
+		}
+	}
+
+	return {
+		profileWindow: profile.endTime - profile.startTime,
+		sampledTime,
+		activeTime: sampledTime - idleTime,
+		garbageCollectionTime,
+		idleTime,
+		sampleCount: samples.length,
+	};
 }
 
 export const checkStartupCommand = createCommand({
@@ -211,6 +283,12 @@ async function parseFormDataFromFile(file: string): Promise<FormData> {
 export async function analyseBundle(
 	workerBundle: string | FormData
 ): Promise<Record<string, unknown>> {
+	return { ...(await analyseBundleProfile(workerBundle)) };
+}
+
+async function analyseBundleProfile(
+	workerBundle: string | FormData
+): Promise<Protocol.Profiler.Profile> {
 	if (typeof workerBundle === "string") {
 		workerBundle = await parseFormDataFromFile(workerBundle);
 	}
@@ -256,9 +334,12 @@ export async function analyseBundle(
 	ws.send(JSON.stringify({ id: 1, method: "Profiler.enable", params: {} }));
 	ws.send(JSON.stringify({ id: 2, method: "Profiler.start", params: {} }));
 
-	const cpuProfileResult = new Promise<Record<string, unknown>>((accept) => {
+	const cpuProfileResult = new Promise<Protocol.Profiler.Profile>((accept) => {
 		ws.addEventListener("message", (e) => {
-			const data = JSON.parse(e.data as string);
+			const data = JSON.parse(e.data as string) as {
+				method?: string;
+				result: { profile: Protocol.Profiler.Profile };
+			};
 			if (data.method === "Profiler.stop") {
 				void mf.dispose().then(() => accept(data.result.profile));
 			}
