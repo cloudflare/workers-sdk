@@ -456,7 +456,16 @@ export function getFrameworkConfig(frameworkKey: string) {
 	const frameworkMap = getFrameworkMap({
 		experimental: isExperimental,
 	});
-	const [frameworkId, platformVariant] = frameworkKey.split(":");
+	// Test keys may include optional labels after the framework id, e.g.
+	//   "next" | "next:vinext" | "nuxt:pages" | "nuxt:pages:minimal"
+	// Only "pages" / "workers" are treated as platform variants; any other
+	// trailing segment is a disambiguating label ignored here.
+	const [frameworkId, second, third] = frameworkKey.split(":");
+	const platformVariant =
+		second === "pages" || second === "workers" ? second : undefined;
+	const _label = platformVariant ? third : second; // reserved for callers
+	void _label;
+
 	if ("platformVariants" in frameworkMap[frameworkId]) {
 		assert(
 			platformVariant === "pages" || platformVariant === "workers",

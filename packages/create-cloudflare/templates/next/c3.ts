@@ -1,21 +1,68 @@
+import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
+import {
+	downloadRemoteTemplate,
+	updatePackageName,
+} from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
-const generate = async (ctx: C3Context) => {
+type NextVariantValue = "vinext" | "opennext";
+
+type NextVariant = {
+	value: NextVariantValue;
+	label: string;
+};
+
+const NEXT_VARIANTS: NextVariant[] = [
+	{
+		value: "vinext",
+		label: "vinext (recommended)",
+	},
+	{
+		value: "opennext",
+		label: "OpenNext adapter",
+	},
+];
+
+async function getNextVariant(ctx: C3Context): Promise<NextVariant> {
+	if (ctx.args.variant) {
+		const selected = NEXT_VARIANTS.find(
+			(variant) => variant.value === ctx.args.variant
+		);
+		if (!selected) {
+			throw new Error(
+				`Unknown Next.js variant "${
+					ctx.args.variant
+				}". Valid variants are: ${NEXT_VARIANTS.map((v) => v.value).join(", ")}`
+			);
+		}
+		return selected;
+	}
+
+	const value = await inputPrompt({
+		type: "select",
+		question: "Which Next.js adapter do you want to use?",
+		label: "variant",
+		options: NEXT_VARIANTS,
+		defaultValue: NEXT_VARIANTS[0].value,
+		// Honour -y / --accept-defaults by taking the recommended vinext path.
+		acceptDefault: Boolean(ctx.args.acceptDefaults),
+	});
+
+	const selected = NEXT_VARIANTS.find((variant) => variant.value === value);
+	assert(selected, "Expected a Next.js variant to be selected");
+	return selected;
+}
+
+async function generateVinext(ctx: C3Context) {
 	// Delegate to create-vinext-app, which scaffolds a Next.js App Router project
 	// already configured for vinext + Cloudflare Workers.
-	//
-	// Flags:
-	// - --platform cloudflare: Workers is the default deployment target
-	// - --yes: accept create-vinext-app defaults (no interactive prompts)
-	// - --skip-install: C3 installs dependencies itself after generate()
-	// - --disable-git: C3 owns git init / first commit
-	// - package-manager flag: keep the nested install path consistent with C3's PM
 	const pmFlag =
 		npm === "pnpm"
 			? "--use-pnpm"
@@ -41,29 +88,65 @@ const generate = async (ctx: C3Context) => {
 	]);
 
 	logRaw("");
+}
+
+async function generateOpenNext(ctx: C3Context) {
+	// Easy way to switch branch for local testing
+	const branch = "main";
+
+	const repoUrl = `github:opennextjs/opennextjs-cloudflare/create-cloudflare/next#${branch}`;
+
+	await downloadRemoteTemplate(repoUrl, {
+		intoFolder: ctx.project.path,
+	});
+
+	await updatePackageName(ctx);
+}
+
+const generate = async (ctx: C3Context) => {
+	const variant = await getNextVariant(ctx);
+	// Stash on args so transformPackageJson can branch without re-prompting.
+	ctx.args.variant = variant.value;
+
+	if (variant.value === "opennext") {
+		await generateOpenNext(ctx);
+		return;
+	}
+
+	await generateVinext(ctx);
 };
 
 const envInterfaceName = "CloudflareEnv";
+// vinext generates wrangler types into worker-configuration.d.ts; OpenNext's
+// remote template ships cloudflare-env.d.ts and its own cf-typegen script.
 const typesPath = "./worker-configuration.d.ts";
 
 export default {
 	configVersion: 1,
 	id: "next",
+	// Used by runFrameworkGenerator for the vinext path. OpenNext downloads a
+	// remote template and does not invoke this CLI.
 	frameworkCli: "create-vinext-app",
 	platform: "workers",
 	displayName: "Next.js",
 	generate,
-	// create-vinext-app already writes fully-wired scripts; keep C3's standard
-	// cf-typegen helper so `wrangler types` stays one command away.
-	transformPackageJson: async () => ({
-		scripts: {
-			"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${typesPath}`,
-		},
-	}),
+	transformPackageJson: async (_pkgJson, ctx) => {
+		// OpenNext's remote template already has deploy/preview/cf-typegen.
+		if (ctx.args.variant === "opennext") {
+			return {};
+		}
+
+		return {
+			scripts: {
+				// Align with OpenNext so the shared previewScript: "preview" works
+				// for both variants (vinext only ships dev/build/start/deploy).
+				preview: `${npm} run build && ${npm} run start`,
+				"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${typesPath}`,
+			},
+		};
+	},
 	devScript: "dev",
-	// vinext has no separate "preview" script; `start` runs the built Worker
-	// locally via `wrangler dev` against the production build output.
-	previewScript: "start",
+	previewScript: "preview",
 	deployScript: "deploy",
 	typesPath,
 	envInterfaceName,
