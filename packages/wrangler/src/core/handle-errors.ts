@@ -6,6 +6,7 @@ import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	JsonFriendlyFatalError,
 	ParseError,
+	parseRetryAfterValue,
 	renderError,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -609,15 +610,25 @@ export async function handleError(
 		mayReport = false;
 		logBuildFailure(e.cause.errors, e.cause.warnings);
 	} else if (e instanceof Cloudflare.APIError) {
-		const error = new APIError({
-			text: `A request to the Cloudflare API failed.`,
-			notes: [...e.errors.map((err) => ({ text: renderError(err) }))],
-			telemetryMessage: false,
-		});
-		error.notes.push({
+		const retryAfterMs = parseRetryAfterValue(e.headers?.["retry-after"]);
+		const notes = [...e.errors.map((err) => ({ text: renderError(err) }))];
+		if (retryAfterMs !== undefined) {
+			notes.push({
+				text: `The API responded with a "Retry-After" header indicating you should wait ${Math.ceil(retryAfterMs / 1000)} second(s) before retrying.`,
+			});
+		}
+		notes.push({
 			text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 		});
-		logger.error(error);
+		logger.error(
+			new APIError({
+				text: `A request to the Cloudflare API failed.`,
+				notes,
+				status: e.status,
+				retryAfterMs,
+				telemetryMessage: false,
+			})
+		);
 	} else {
 		if (
 			// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error

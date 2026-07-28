@@ -1,5 +1,33 @@
 # @cloudflare/vite-plugin
 
+## 1.48.0
+
+### Minor Changes
+
+- [#14883](https://github.com/cloudflare/workers-sdk/pull/14883) [`76e6014`](https://github.com/cloudflare/workers-sdk/commit/76e6014ccc156d19ddc105540a347ced99d676bc) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Serve the bundled client HTML in dev when Vite's `experimental.bundledDev` is enabled
+
+  Note that this feature is experimental and subject to change.
+
+### Patch Changes
+
+- [#14862](https://github.com/cloudflare/workers-sdk/pull/14862) [`c232d05`](https://github.com/cloudflare/workers-sdk/commit/c232d059f2787cb2f36149e331241fde488e4704) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Destroy the client socket instead of crashing when a WebSocket upgrade fails
+
+  If `dispatchFetch` rejected while a WebSocket upgrade was still in flight (for example when Miniflare is disposed during a dev server shutdown or restart), the error escaped the `async` upgrade handler as an unhandled rejection. This could terminate the dev server process and leaked the client socket. The upgrade handler now catches such failures and tears the socket down cleanly.
+
+- [#14837](https://github.com/cloudflare/workers-sdk/pull/14837) [`de6a951`](https://github.com/cloudflare/workers-sdk/commit/de6a951826cd43df9cea21d490fb365ee807f290) Thanks [@1rgs](https://github.com/1rgs)! - Fix compatibility with Vite's `experimental.bundledDev` option. Keep Miniflare, containers, and tunnels alive when a build runs in dev.
+
+  The plugin used the `buildEnd` hook as its signal that the dev server was closing, and tore down its dev resources there. Vite's `experimental.bundledDev` runs a build pass _during_ `serve`, which fires `buildEnd` while the dev server is still live — so Miniflare was disposed (the next request failed with `Expected \`miniflare\` to be defined`), locally-built container images were removed, and any active tunnel was closed, all mid-serve.
+
+  During `serve`, these resources are now torn down from a patched `server.close`. We will replace server patching with first-class APIs when they are [added to Vite](https://github.com/vitejs/vite/issues/22913).
+
+- [#14851](https://github.com/cloudflare/workers-sdk/pull/14851) [`fb89b72`](https://github.com/cloudflare/workers-sdk/commit/fb89b725ee796af63f60e5bd7f0216f7f44c7e61) Thanks [@exKAZUu](https://github.com/exKAZUu)! - Retry transient module-transport failures in the runner worker
+
+  Each `fetchModule` invoke was a single fetch to the dev server with no retry. If that one fetch failed transiently (e.g. `Network connection lost` when workerd reuses a loopback connection that Node just closed), Vite's module runner cached the rejection and every request importing the affected module failed for the rest of the dev session. The invoke is an idempotent request for module code, so retry it up to three times before giving up.
+
+- Updated dependencies [[`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7), [`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7), [`09b8a44`](https://github.com/cloudflare/workers-sdk/commit/09b8a44e736f28798c733e46ec11eced25fdc897), [`4dfb96e`](https://github.com/cloudflare/workers-sdk/commit/4dfb96ed31c30d98ccf670f9e9453a86861c0c5f), [`1035f74`](https://github.com/cloudflare/workers-sdk/commit/1035f7450006c5c8b8b003135d2b530193c913a1), [`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a), [`3a22ae5`](https://github.com/cloudflare/workers-sdk/commit/3a22ae532c5c75c716d4c219e116eb3e0c5b236e), [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468), [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468), [`e8b3a9d`](https://github.com/cloudflare/workers-sdk/commit/e8b3a9d8bf5f63f7e318de220d91625f96cfb85a), [`552bcfc`](https://github.com/cloudflare/workers-sdk/commit/552bcfc8d44f8625b09dfd5d821c132b626cb7bb), [`b737676`](https://github.com/cloudflare/workers-sdk/commit/b737676db01a62e115b7fc56b5af36f5daaf5f6e), [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1)]:
+  - wrangler@4.115.0
+  - miniflare@4.20260722.1
+
 ## 1.47.0
 
 ### Minor Changes

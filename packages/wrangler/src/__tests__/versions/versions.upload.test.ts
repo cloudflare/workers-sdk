@@ -2462,8 +2462,9 @@ describe("versions upload", () => {
 							createFetchResult(null, false, [
 								{ code: 10001, message: "some other API error" },
 							]),
-							// 4xx so the upload isn't retried (retryOnAPIFailure
-							// only retries 5xx), keeping this test fast.
+							// 400 so the upload isn't retried (retryOnAPIFailure
+							// retries 5xx and 429, not other 4xx), keeping this
+							// test fast.
 							{ status: 400 }
 						),
 					{ once: true }

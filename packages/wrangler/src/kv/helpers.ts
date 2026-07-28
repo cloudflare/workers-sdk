@@ -46,8 +46,7 @@ type KvArgs = {
 export async function createKVNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	title: string,
-	jurisdiction?: string
+	title: string
 ): Promise<string> {
 	const response = await fetchResult<{ id: string }>(
 		complianceConfig,
@@ -59,7 +58,6 @@ export async function createKVNamespace(
 			},
 			body: JSON.stringify({
 				title,
-				jurisdiction,
 			}),
 		}
 	);
