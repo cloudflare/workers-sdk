@@ -586,10 +586,21 @@ export async function usingLocalNamespace<T>(
 	const persist = getLocalPersistencePath(persistTo, config);
 	const resourcePersistencePath = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
-		script:
-			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
 		resourcePersistencePath,
-		kvNamespaces: { NAMESPACE: namespaceId },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "wrangler-kv",
+					compatibilityDate: "2024-01-01",
+					env: { NAMESPACE: { type: "kv", id: namespaceId } },
+				},
+				legacy: {
+					serviceWorkerScript:
+						'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+				},
+			},
+		],
 	});
 	const namespace = await mf.getKVNamespace("NAMESPACE");
 	try {

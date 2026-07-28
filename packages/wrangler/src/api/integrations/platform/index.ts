@@ -35,7 +35,10 @@ import type {
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
+	DevConfig,
+	LegacyConfig,
 	MiniflareOptions,
+	MiniflareWorkerConfig,
 	ModuleRule,
 	RemoteProxyConnectionString,
 	WorkerOptions,
@@ -281,24 +284,22 @@ async function getMiniflareOptionsFromConfig(args: {
 		}
 	}
 
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
-		{
-			name: config.name,
-			complianceRegion: config.compliance_region,
-			bindings,
-			queueConsumers: undefined,
-			migrations: config.migrations,
-			exports: config.exports,
-			tails: [],
-			streamingTails: [],
-			containerDOClassNames: new Set(
-				config.containers?.map((c) => c.class_name)
-			),
-			containerBuildId: undefined,
-			enableContainers: config.dev.enable_containers,
-		},
-		remoteProxyConnectionString
-	);
+	const {
+		env,
+		exports,
+		wasmBindings,
+		textBlobBindings,
+		dataBlobBindings,
+		externalWorkers,
+	} = buildMiniflareBindingOptions({
+		name: config.name,
+		bindings,
+		migrations: config.migrations,
+		exports: config.exports,
+		containerDOClassNames: new Set(config.containers?.map((c) => c.class_name)),
+		containerBuildId: undefined,
+		enableContainers: config.dev.enable_containers,
+	});
 
 	let processedAssetOptions: AssetsOptions | undefined;
 
@@ -317,7 +318,56 @@ async function getMiniflareOptionsFromConfig(args: {
 
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
-		: {};
+		: undefined;
+	if (assetOptions?.bindingName !== undefined) {
+		env[assetOptions.bindingName] = { type: "assets" };
+	}
+
+	const legacy: LegacyConfig = {};
+	if (Object.keys(wasmBindings).length > 0) {
+		legacy.wasmBindings = wasmBindings;
+	}
+	if (Object.keys(textBlobBindings).length > 0) {
+		legacy.textBlobBindings = textBlobBindings;
+	}
+	if (Object.keys(dataBlobBindings).length > 0) {
+		legacy.dataBlobBindings = dataBlobBindings;
+	}
+
+	const dev: DevConfig = {};
+	if (remoteProxyConnectionString !== undefined) {
+		dev.remoteProxyConnectionString = remoteProxyConnectionString;
+	}
+	const zone = getZoneFromConfig(config);
+	if (zone !== undefined) {
+		dev.zone = zone;
+	}
+
+	const workerConfig: MiniflareWorkerConfig = {
+		type: "worker",
+		name: config.name ?? "worker",
+		compatibilityDate: config.compatibility_date ?? "2024-01-01",
+		compatibilityFlags: config.compatibility_flags,
+		// getPlatformProxy doesn't run a user worker; a placeholder module
+		// manifest is enough for Miniflare to materialise the bindings.
+		manifest: {
+			mainModule: "index.mjs",
+			modules: { "index.mjs": { type: "esm", contents: "" } },
+		},
+		env,
+		exports,
+	};
+	if (assetOptions !== undefined) {
+		workerConfig.assets = assetOptions.assets;
+	}
+
+	const worker: WorkerOptions = { config: workerConfig };
+	if (Object.keys(legacy).length > 0) {
+		worker.legacy = legacy;
+	}
+	if (Object.keys(dev).length > 0) {
+		worker.dev = dev;
+	}
 
 	const resourcePersistencePath = getMiniflarePersistRoot(options.persist);
 	const projectRoot = config.userConfigPath
@@ -325,26 +375,10 @@ async function getMiniflareOptionsFromConfig(args: {
 		: process.cwd();
 	const resourceTmpPath = getDefaultProjectTmpPath(projectRoot);
 
-	const miniflareOptions: MiniflareOptions = {
-		workers: [
-			{
-				script: "",
-				modules: true,
-				name: config.name,
-				zone: getZoneFromConfig(config),
-				...bindingOptions,
-				...assetOptions,
-			},
-			...externalWorkers,
-		],
+	return {
+		workers: [worker, ...externalWorkers],
 		resourcePersistencePath,
 		resourceTmpPath,
-	};
-
-	return {
-		script: "",
-		modules: true,
-		...miniflareOptions,
 		unsafeDevRegistryPath: getRegistryPath(),
 	};
 }
@@ -381,10 +415,14 @@ function deepFreeze<T extends Record<string | number | symbol, unknown>>(
 	});
 }
 
-export type SourcelessWorkerOptions = Omit<
-	WorkerOptions,
-	"script" | "scriptPath" | "modules" | "modulesRoot"
-> & { modulesRules?: ModuleRule[] };
+export type SourcelessWorkerOptions = {
+	// The per-worker config without its source (`manifest`); the consumer
+	// (e.g. vitest-pool-workers) supplies the script/manifest itself.
+	config: Omit<MiniflareWorkerConfig, "manifest">;
+	legacy?: LegacyConfig;
+	dev?: DevConfig;
+	modulesRules?: ModuleRule[];
+};
 
 export interface Unstable_MiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
@@ -460,22 +498,22 @@ export function unstable_getMiniflareWorkerOptions(
 			? options?.overrides?.enableContainers
 			: config.dev.enable_containers;
 
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
-		{
-			name: config.name,
-			complianceRegion: config.compliance_region,
-			bindings,
-			queueConsumers: config.queues.consumers,
-			migrations: config.migrations,
-			exports: config.exports,
-			tails: config.tail_consumers,
-			streamingTails: config.streaming_tail_consumers,
-			containerDOClassNames,
-			containerBuildId: options?.containerBuildId,
-			enableContainers,
-		},
-		options?.remoteProxyConnectionString
-	);
+	const {
+		env: workerEnv,
+		exports: workerExports,
+		wasmBindings,
+		textBlobBindings,
+		dataBlobBindings,
+		externalWorkers,
+	} = buildMiniflareBindingOptions({
+		name: config.name,
+		bindings,
+		migrations: config.migrations,
+		exports: config.exports,
+		containerDOClassNames,
+		containerBuildId: options?.containerBuildId,
+		enableContainers,
+	});
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
@@ -498,18 +536,80 @@ export function unstable_getMiniflareWorkerOptions(
 		: undefined;
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
-		: {};
+		: undefined;
+	if (assetOptions?.bindingName !== undefined) {
+		workerEnv[assetOptions.bindingName] = { type: "assets" };
+	}
+
+	// Queue consumers become `queue` triggers; tail consumers collapse into one list.
+	const triggers: NonNullable<MiniflareWorkerConfig["triggers"]> = [];
+	for (const consumer of config.queues.consumers ?? []) {
+		triggers.push({
+			type: "queue",
+			name: consumer.queue,
+			deadLetterQueue: consumer.dead_letter_queue,
+			maxBatchSize: consumer.max_batch_size,
+			maxBatchTimeout: consumer.max_batch_timeout,
+			maxRetries: consumer.max_retries,
+			retryDelay: consumer.retry_delay,
+		});
+	}
+	const tailConsumers: NonNullable<MiniflareWorkerConfig["tailConsumers"]> = [];
+	for (const tail of config.tail_consumers ?? []) {
+		tailConsumers.push({ workerName: tail.service });
+	}
+	for (const tail of config.streaming_tail_consumers ?? []) {
+		tailConsumers.push({ workerName: tail.service, streaming: true });
+	}
+
+	const legacy: LegacyConfig = { ...sitesOptions };
+	if (Object.keys(wasmBindings).length > 0) {
+		legacy.wasmBindings = wasmBindings;
+	}
+	if (Object.keys(textBlobBindings).length > 0) {
+		legacy.textBlobBindings = textBlobBindings;
+	}
+	if (Object.keys(dataBlobBindings).length > 0) {
+		legacy.dataBlobBindings = dataBlobBindings;
+	}
+
+	const dev: DevConfig = {};
+	if (options?.remoteProxyConnectionString !== undefined) {
+		dev.remoteProxyConnectionString = options.remoteProxyConnectionString;
+	}
+	const zone = getZoneFromConfig(config);
+	if (zone !== undefined) {
+		dev.zone = zone;
+	}
+
+	const workerConfig: Omit<MiniflareWorkerConfig, "manifest"> = {
+		type: "worker",
+		name: config.name ?? "worker",
+		compatibilityDate: config.compatibility_date ?? "2024-01-01",
+		compatibilityFlags: config.compatibility_flags,
+		env: workerEnv,
+		exports: workerExports,
+	};
+	if (assetOptions !== undefined) {
+		workerConfig.assets = assetOptions.assets;
+	}
+	if (triggers.length > 0) {
+		workerConfig.triggers = triggers;
+	}
+	if (tailConsumers.length > 0) {
+		workerConfig.tailConsumers = tailConsumers;
+	}
 
 	const workerOptions: SourcelessWorkerOptions = {
-		compatibilityDate: config.compatibility_date,
-		compatibilityFlags: config.compatibility_flags,
+		config: workerConfig,
 		modulesRules,
-		zone: getZoneFromConfig(config),
-
-		...bindingOptions,
-		...sitesOptions,
-		...assetOptions,
 	};
+	if (Object.keys(legacy).length > 0) {
+		workerOptions.legacy = legacy;
+	}
+	if (Object.keys(dev).length > 0) {
+		workerOptions.dev = dev;
+	}
 
 	return {
 		workerOptions,

@@ -36,15 +36,27 @@ export async function usingLocalSecretsStoreSecretAPI<T>(
 	const persist = getLocalPersistencePath(persistTo, config);
 	const resourcePersistencePath = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
-		script:
-			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
 		resourcePersistencePath,
-		secretsStoreSecrets: {
-			SECRET: {
-				store_id: storeId,
-				secret_name: secretName,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "wrangler-secrets-store",
+					compatibilityDate: "2024-01-01",
+					env: {
+						SECRET: {
+							type: "secrets-store-secret",
+							storeId: storeId,
+							secretName: secretName,
+						},
+					},
+				},
+				legacy: {
+					serviceWorkerScript:
+						'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+				},
 			},
-		},
+		],
 	});
 	const namespace = await mf.getSecretsStoreSecretAPI("SECRET");
 	try {

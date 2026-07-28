@@ -45,6 +45,20 @@ export const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> =
 
 export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
 
+/**
+ * Maps wrangler's `CfModuleType` to the manifest `ModuleType` understood by
+ * Miniflare / `@cloudflare/config` (see `ModuleTypeSchema`).
+ */
+export const CfModuleTypeToManifestType = {
+	esm: "esm",
+	commonjs: "cjs",
+	"compiled-wasm": "wasm",
+	text: "text",
+	buffer: "data",
+	python: "python",
+	"python-requirement": "python-requirement",
+} as const satisfies Record<CfModuleType, string>;
+
 // Strip query string suffixes (e.g. `?module`) from module paths so that
 // file paths and module names don't contain characters invalid on Windows.
 function stripQueryString(modulePath: string): string {

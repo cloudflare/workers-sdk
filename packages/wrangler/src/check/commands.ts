@@ -223,17 +223,28 @@ export async function analyseBundle(
 			{ telemetryMessage: "check startup service worker format unsupported" }
 		);
 	}
-	const mf = new Miniflare({
-		name: "profiler",
-		compatibilityDate: metadata.compatibility_date,
-		compatibilityFlags: metadata.compatibility_flags,
-		modulesRoot: "/",
-		modules: [
-			{
-				type: "ESModule",
-				// Make sure the entrypoint path doesn't conflict with a user worker module
-				path: randomUUID(),
-				contents: /* javascript */ `
+	// Miniflare v5 takes an inline module manifest keyed by module name; map the
+	// bundle's workerd rule types onto the manifest module types.
+	const ruleTypeToModuleType = {
+		ESModule: "esm",
+		CommonJS: "cjs",
+		Text: "text",
+		Data: "data",
+		CompiledWasm: "wasm",
+		PythonModule: "python",
+		PythonRequirement: "python-requirement",
+	} as const;
+	type ManifestModuleType =
+		(typeof ruleTypeToModuleType)[keyof typeof ruleTypeToModuleType];
+	// Make sure the entrypoint path doesn't conflict with a user worker module
+	const mainModule = randomUUID();
+	const manifestModules: Record<
+		string,
+		{ type: ManifestModuleType; contents: string | Uint8Array<ArrayBuffer> }
+	> = {
+		[mainModule]: {
+			type: "esm",
+			contents: /* javascript */ `
 					async function startup() {
 						await import("${metadata.main_module}");
 					}
@@ -244,10 +255,30 @@ export async function analyseBundle(
 						}
 					}
 					`,
-			},
-			...(await convertWorkerBundleToModules(workerBundle)),
-		],
+		},
+	};
+	for (const m of await convertWorkerBundleToModules(workerBundle)) {
+		if (m.path === undefined) {
+			continue;
+		}
+		manifestModules[m.path] = {
+			type: ruleTypeToModuleType[m.type],
+			contents: (m.contents ?? "") as string | Uint8Array<ArrayBuffer>,
+		};
+	}
+	const mf = new Miniflare({
 		inspectorPort: 0,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "profiler",
+					compatibilityDate: metadata.compatibility_date,
+					compatibilityFlags: metadata.compatibility_flags,
+					manifest: { mainModule, modules: manifestModules },
+				},
+			},
+		],
 	});
 	await mf.ready;
 	const inspectorUrl = await mf.getInspectorURL();

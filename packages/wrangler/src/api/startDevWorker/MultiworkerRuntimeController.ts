@@ -18,33 +18,6 @@ import type { ControllerBus } from "./BaseController";
 import type { BundleCompleteEvent } from "./events";
 import type { Binding } from "./index";
 
-// Ensure DO references from other workers have the same SQL setting as the DO definition in it's original Worker
-function ensureMatchingSql(options: MF.Options) {
-	const sameWorkerDOSqlEnabled = new Map<string, boolean | undefined>();
-
-	for (const worker of options.workers) {
-		for (const designator of Object.values(worker.durableObjects ?? {})) {
-			const isObject = typeof designator === "object";
-			const className = isObject ? designator.className : designator;
-			const enableSql = isObject ? designator.useSQLite : undefined;
-
-			if (!isObject || designator.scriptName === undefined) {
-				sameWorkerDOSqlEnabled.set(className, enableSql);
-			}
-		}
-	}
-
-	for (const worker of options.workers) {
-		for (const designator of Object.values(worker.durableObjects ?? {})) {
-			const isObject = typeof designator === "object";
-
-			if (isObject && designator.scriptName !== undefined) {
-				designator.useSQLite = sameWorkerDOSqlEnabled.get(designator.className);
-			}
-		}
-	}
-	return options;
-}
 export class MultiworkerRuntimeController extends LocalRuntimeController {
 	constructor(
 		bus: ControllerBus,
@@ -257,7 +230,10 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					return;
 				}
 
-				const mergedMfOptions = ensureMatchingSql(this.#mergedMfOptions());
+				// Miniflare resolves each Durable Object's storage backend from the
+				// defining worker's `exports` (gathered across all workers), so cross-
+				// worker DO references no longer need their SQL setting reconciled here.
+				const mergedMfOptions = this.#mergedMfOptions();
 
 				if (this.#mf === undefined) {
 					logger.log(chalk.dim("⎔ Starting local server..."));
