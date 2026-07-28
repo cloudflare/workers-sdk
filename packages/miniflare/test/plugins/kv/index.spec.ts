@@ -333,6 +333,30 @@ test("put: puts empty value", async ({ expect }) => {
 	const value = await kv.get("key");
 	expect(value).toBe("");
 });
+
+test("bulk get: check metadata for falsy values", async ({ expect }) => {
+	const { kv } = ctx;
+	await kv.put("key1", "", { metadata: { testing: true } });
+
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "", metadata: { testing: true } }],
+	]);
+	expect(result).toEqual(expectedResult);
+});
+
+test("bulk get: check metadata for falsy json values", async ({ expect }) => {
+	const { kv } = ctx;
+	await kv.put("key1", "0", { metadata: { testing: "zero" } });
+	await kv.put("key2", "false", { metadata: { testing: "false" } });
+
+	const result: any = await kv.getWithMetadata(["key1", "key2"], "json");
+	const expectedResult: any = new Map([
+		["key1", { value: 0, metadata: { testing: "zero" } }],
+		["key2", { value: false, metadata: { testing: "false" } }],
+	]);
+	expect(result).toEqual(expectedResult);
+});
 test("put: overrides existing keys", async ({ expect }) => {
 	const { kv, ns, object } = ctx;
 	const stmts = sqlStmts(object);
