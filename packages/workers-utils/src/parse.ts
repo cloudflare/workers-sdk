@@ -61,11 +61,21 @@ export class APIError extends ParseError {
 	 * endpoint-specific structured error payloads.
 	 */
 	meta?: { details?: unknown } & Record<string, unknown>;
+	/**
+	 * Optional number of milliseconds the API asked us to wait before retrying,
+	 * derived from the response's `Retry-After` header (if present).
+	 */
+	retryAfterMs?: number;
 
-	constructor({ status, ...rest }: MessageInit & { status?: number }) {
+	constructor({
+		status,
+		retryAfterMs,
+		...rest
+	}: MessageInit & { status?: number; retryAfterMs?: number }) {
 		super(rest);
 		this.name = this.constructor.name;
 		this.#status = status;
+		this.retryAfterMs = retryAfterMs;
 	}
 
 	get status(): number | undefined {
