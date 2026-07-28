@@ -1,5 +1,79 @@
 # wrangler
 
+## 4.115.0
+
+### Minor Changes
+
+- [#14807](https://github.com/cloudflare/workers-sdk/pull/14807) [`4dfb96e`](https://github.com/cloudflare/workers-sdk/commit/4dfb96ed31c30d98ccf670f9e9453a86861c0c5f) Thanks [@oOPa](https://github.com/oOPa)! - Add hidden `--jurisdiction` option to `wrangler kv namespace create` for internal testing
+
+  This option creates a KV namespace within a specific jurisdiction (for example `us`, `eu`, or `fedramp`), backing it with jurisdiction-scoped storage. It is experimental and currently gated to allow-listed accounts, so it is hidden from `--help` until the feature is generally available.
+
+- [#14280](https://github.com/cloudflare/workers-sdk/pull/14280) [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468) Thanks [@tahmid-23](https://github.com/tahmid-23)! - Add experimental `local_dev.experimental_s3_credentials` to `r2_buckets` config
+
+  When set, the R2 bucket is served over a local S3-compatible API at `/cdn-cgi/local/r2/s3/<bucket-id>` during local development, authenticated with the configured AWS SigV4 credentials. `<bucket-id>` is the bucket's `bucket_name`, or the binding name if `bucket_name` is not set:
+
+  ```jsonc
+  {
+    "r2_buckets": [
+      {
+        "binding": "BUCKET",
+        "bucket_name": "my-bucket",
+        "local_dev": {
+          "experimental_s3_credentials": {
+            "accessKeyId": "local-access-key-id",
+            "secretAccessKey": "local-secret-access-key"
+          }
+        }
+      }
+    ]
+  }
+  ```
+
+- [#14877](https://github.com/cloudflare/workers-sdk/pull/14877) [`552bcfc`](https://github.com/cloudflare/workers-sdk/commit/552bcfc8d44f8625b09dfd5d821c132b626cb7bb) Thanks [@jasoncabot](https://github.com/jasoncabot)! - Respect and surface the `Retry-After` header on Cloudflare API responses
+
+  Previously, if a Wrangler command (e.g. `wrangler versions upload`, `wrangler deploy`) hit the Cloudflare API's rate limit, the resulting error gave no indication of how long to wait before trying again, and 429 responses weren't retried at all (only `5xx` errors were, with a fixed linear backoff).
+
+  Now:
+
+  - `429 Too Many Requests` responses are automatically retried, alongside the existing `5xx` retry behaviour.
+  - If a retried response includes a `Retry-After` header, Wrangler waits for that duration instead of the default backoff, and logs a message indicating how long it's waiting. To avoid blocking for an excessive amount of time, waits longer than 60 seconds fail fast instead — the surfaced `Retry-After` value lets the caller schedule its own retry.
+  - If a retryable error is ultimately surfaced to the user (e.g. because retries were exhausted), the error message includes a note with the `Retry-After` duration, and the `command-failed` entry written to the Wrangler output file (`WRANGLER_OUTPUT_FILE_PATH`/`WRANGLER_OUTPUT_FILE_DIRECTORY`) gains a `retry_after_ms` field. This lets scripts and CI/CD pipelines calling Wrangler repeatedly (for example, `wrangler versions upload` on every commit) read the wait duration directly instead of regex-parsing stderr.
+
+  `APIError.isRetryable()` is unchanged (still `5xx` only); `retryOnAPIFailure()` separately retries 429s. `retryAfterMs`, when present, is honoured for any retried error, not just 429s.
+
+  `retryAfterMs` is also now populated on `APIError`s raised from direct R2 object requests, the Browser Rendering API, and errors surfaced from commands using the official `cloudflare` SDK client.
+
+- [#14712](https://github.com/cloudflare/workers-sdk/pull/14712) [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1) Thanks [@mack-erel](https://github.com/mack-erel)! - Support `connect()` on remote VPC Network and VPC Service bindings in local development
+
+  Remote VPC Network and VPC Service bindings previously only supported HTTP and JSRPC, so calling `binding.connect(address)` against a private TCP service (for example a database) failed in local dev with `Incoming CONNECT on a worker not supported`. Raw TCP connections through remote VPC Network and VPC Service bindings now work in local development.
+
+  This feature is experimental. Existing HTTP and JSRPC usage of remote VPC Network and VPC Service bindings is unaffected, and no new configuration is required.
+
+### Patch Changes
+
+- [#14833](https://github.com/cloudflare/workers-sdk/pull/14833) [`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Color Email Routing plan change markers
+
+  Wrangler now highlights additions in green, updates in yellow, and deletions and conflicts in red so Email Routing deployment plans are easier to scan before confirmation.
+
+- [#14833](https://github.com/cloudflare/workers-sdk/pull/14833) [`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Apply Email Routing changes across independent zones concurrently
+
+  Wrangler now limits concurrent zone updates while preserving the Email Routing plan order within each zone. Deployments that configure addresses across multiple zones complete faster without breaking delete-before-add transitions at a zone's rule limit.
+
+- [#14815](https://github.com/cloudflare/workers-sdk/pull/14815) [`09b8a44`](https://github.com/cloudflare/workers-sdk/commit/09b8a44e736f28798c733e46ec11eced25fdc897) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Fix `wrangler cloudchamber curl` mangling header values that contain a colon
+
+  Header values were split on every colon and only the segment between the first and second was sent, so `--header location:https://example.com/x` arrived as `https`. Headers are now split on the first colon only. A header that is not in the documented `--header <name>:<value>` form previously threw an unhandled `TypeError`, and now reports a clear error.
+
+- [#14806](https://github.com/cloudflare/workers-sdk/pull/14806) [`e8b3a9d`](https://github.com/cloudflare/workers-sdk/commit/e8b3a9d8bf5f63f7e318de220d91625f96cfb85a) Thanks [@akim136](https://github.com/akim136)! - Handle and explain authentication failures from remote bindings during local development
+
+  Wrangler now recognizes authentication failures from remote preview sessions and reports that bindings which need to run remotely require Cloudflare authentication even when the rest of the Worker is developed locally.
+
+- [#14801](https://github.com/cloudflare/workers-sdk/pull/14801) [`b737676`](https://github.com/cloudflare/workers-sdk/commit/b737676db01a62e115b7fc56b5af36f5daaf5f6e) Thanks [@emily-shen](https://github.com/emily-shen)! - Speed up old debug log cleanup by reading each log file's date from its filename instead of `stat`-ing every file
+
+  Wrangler periodically deletes debug log files older than 30 days from its logs directory. Previously it made a filesystem `stat` call for each file to read its modification time; it now derives the age from the timestamp already encoded in the log filename, avoiding that extra work.
+
+- Updated dependencies [[`1035f74`](https://github.com/cloudflare/workers-sdk/commit/1035f7450006c5c8b8b003135d2b530193c913a1), [`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a), [`3a22ae5`](https://github.com/cloudflare/workers-sdk/commit/3a22ae532c5c75c716d4c219e116eb3e0c5b236e), [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468), [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1)]:
+  - miniflare@4.20260722.1
+
 ## 4.114.0
 
 ### Minor Changes
