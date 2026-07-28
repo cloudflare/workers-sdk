@@ -79,10 +79,14 @@ async function processKeyValue(
 	type: "text" | "json" = "text",
 	withMetadata = false
 ) {
+	// `obj` is `null` only when the key is missing. A present key always has a
+	// `value` stream, so presence — not value truthiness — decides the response
+	// shape: present keys are wrapped as `{ value, metadata }`, missing keys are
+	// returned as a bare `null`.
 	const decoder = new TextDecoder();
 	let decodedValue = "";
-	if (obj?.value) {
-		for await (const chunk of obj?.value) {
+	if (obj !== null) {
+		for await (const chunk of obj.value) {
 			decodedValue += decoder.decode(chunk, { stream: true });
 		}
 		decodedValue += decoder.decode();
@@ -91,22 +95,23 @@ async function processKeyValue(
 	let val = null;
 	const size = decodedValue.length;
 	try {
-		val = !obj?.value
-			? null
-			: type === "json"
-				? JSON.parse(decodedValue)
-				: decodedValue;
+		val =
+			obj === null
+				? null
+				: type === "json"
+					? JSON.parse(decodedValue)
+					: decodedValue;
 	} catch {
 		throw new HttpError(
 			400,
 			`At least one of the requested keys corresponds to a non-${type} value`
 		);
 	}
-	if (val && withMetadata) {
+	if (obj !== null && withMetadata) {
 		return [
 			{
 				value: val,
-				metadata: obj?.metadata ?? null,
+				metadata: obj.metadata ?? null,
 			},
 			size,
 		];
