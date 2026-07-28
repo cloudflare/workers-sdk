@@ -910,6 +910,7 @@ describe("autoconfig (deploy)", () => {
 			const callOrder: string[] = [];
 			vi.spyOn(framework, "validateFrameworkVersion").mockImplementation(() => {
 				callOrder.push("validateFrameworkVersion");
+				return undefined;
 			});
 			vi.spyOn(framework, "configure").mockImplementation(async () => {
 				callOrder.push("configure");
