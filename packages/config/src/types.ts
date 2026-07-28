@@ -25,6 +25,7 @@ import type {
 	KvBinding,
 	LogfwdrBinding,
 	MediaBinding,
+	MessagingBinding,
 	MtlsCertificateBinding,
 	PipelineBinding,
 	QueueBinding,
@@ -84,6 +85,7 @@ type Binding =
 	| KvBinding
 	| LogfwdrBinding
 	| MediaBinding
+	| MessagingBinding
 	| MtlsCertificateBinding
 	| PipelineBinding
 	| QueueBinding

@@ -97,6 +97,11 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({
+		type: z.literal("messaging"),
+		namespace: z.string(),
+		remote: z.boolean().optional(),
+	}),
+	z.strictObject({
 		type: z.literal("mtls-certificate"),
 		id: z.string(),
 		remote: z.boolean().optional(),

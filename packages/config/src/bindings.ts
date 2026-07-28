@@ -306,6 +306,18 @@ export interface MediaBinding extends MediaBindingOptions {
 	type: "media";
 }
 
+interface MessagingBindingOptions {
+	/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
+	namespace: string;
+	/** Whether the Messaging binding should be remote in local development. */
+	remote?: boolean;
+}
+
+/** Messaging namespace binding. */
+export interface MessagingBinding extends MessagingBindingOptions {
+	type: "messaging";
+}
+
 interface MtlsCertificateBindingOptions {
 	/** The UUID of the uploaded mTLS certificate. */
 	id: string;
@@ -743,6 +755,8 @@ export interface Bindings {
 	logfwdr(options: LogfwdrBindingOptions): LogfwdrBinding;
 	/** Binding to Cloudflare Media Transformations. */
 	media(options?: MediaBindingOptions): MediaBinding;
+	/** Messaging namespace binding. */
+	messaging(options: MessagingBindingOptions): MessagingBinding;
 	/**
 	 * Binding to an uploaded mTLS certificate.
 	 *
@@ -865,6 +879,7 @@ export const bindings = {
 	kv: (options) => ({ type: "kv", ...options }),
 	logfwdr: (options) => ({ type: "logfwdr", ...options }),
 	media: (options) => ({ type: "media", ...options }),
+	messaging: (options) => ({ type: "messaging", ...options }),
 	mtlsCertificate: (options) => ({ type: "mtls-certificate", ...options }),
 	pipeline: (options) => ({ type: "pipeline", ...options }),
 	queue: (options) => ({ type: "queue", ...options }),
