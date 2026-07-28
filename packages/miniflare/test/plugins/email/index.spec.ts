@@ -6,6 +6,7 @@ import {
 	getEmailPathsToClean,
 	LogLevel,
 	Miniflare,
+	writeEmailTempFile,
 } from "miniflare";
 import dedent from "ts-dedent";
 import { describe, type ExpectStatic, test, vi } from "vitest";
@@ -2204,6 +2205,74 @@ test("disposing does not remove a concurrent email session", async ({
 
 	expect(readdirSpy).not.toHaveBeenCalled();
 	expect(existsSync(concurrentSessionPath)).toBe(true);
+});
+
+describe("writeEmailTempFile", () => {
+	test("mirrors into the project directory and returns the project path", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const projectTmpPath = path.join(tmp, ".wrangler", "tmp");
+
+		const filePath = await writeEmailTempFile({
+			defaultProjectTmpPath: projectTmpPath,
+			tmpPath: tmp,
+			prefix: "reply",
+			fileName: "abc123.eml",
+			contents: Buffer.from("raw message"),
+		});
+
+		// The returned path is the project copy, since that is the one a user can
+		// navigate to.
+		expect(filePath).toBe(
+			path.join(
+				projectTmpPath,
+				"email",
+				path.basename(tmp),
+				"reply",
+				"abc123.eml"
+			)
+		);
+		expect(await readFile(filePath, "utf8")).toBe("raw message");
+
+		// The instance copy is written too.
+		const systemPath = path.join(tmp, "email", "reply", "abc123.eml");
+		expect(await readFile(systemPath, "utf8")).toBe("raw message");
+	});
+
+	test("returns the instance path when no project directory is configured", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+
+		const filePath = await writeEmailTempFile({
+			defaultProjectTmpPath: undefined,
+			tmpPath: tmp,
+			prefix: "sent",
+			fileName: "def456.eml",
+			contents: Buffer.from("raw message"),
+		});
+
+		expect(filePath).toBe(path.join(tmp, "email", "sent", "def456.eml"));
+		expect(await readFile(filePath, "utf8")).toBe("raw message");
+	});
+
+	test("preserves binary content exactly", async ({ expect }) => {
+		const tmp = await useTmp();
+		// A byte sequence that is not valid UTF-8, so it would be corrupted if the
+		// content were round-tripped through a string.
+		const contents = Buffer.from([0x00, 0xff, 0xfe, 0x80, 0x01]);
+
+		const filePath = await writeEmailTempFile({
+			defaultProjectTmpPath: undefined,
+			tmpPath: tmp,
+			prefix: "sent",
+			fileName: "binary.bin",
+			contents,
+		});
+
+		expect(await readFile(filePath)).toStrictEqual(contents);
+	});
 });
 
 describe("EMAIL_PLUGIN.getServices", () => {

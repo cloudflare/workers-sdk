@@ -156,6 +156,9 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	/**
 	 * Persists email content to a temp file via the loopback
 	 * `/core/store-temp-file` endpoint and returns the on-disk path.
+	 *
+	 * Always requests the endpoint's email mode so the file lands in the email
+	 * directories and is mirrored into the project directory.
 	 */
 	private async storeTempFile(
 		content: string | ArrayBuffer | ArrayBufferView,
@@ -177,7 +180,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			);
 		}
 
-		const params = new URLSearchParams({ prefix, extension });
+		const params = new URLSearchParams({ prefix, extension, email: "true" });
 		if (id !== undefined) {
 			params.set("id", id);
 		}

@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
@@ -110,6 +111,42 @@ export function getEmailFileDirectories(
 				? path.join(projectSessionDir, prefix)
 				: undefined,
 	};
+}
+
+/**
+ * Writes email content to the directories resolved by
+ * {@link getEmailFileDirectories}.
+ *
+ * The file is always written to the instance temp directory, and mirrored into
+ * the project directory when one is configured so that captured messages
+ * outlive the dev session. Returns the path callers should surface, preferring
+ * the project copy since that is the one a user can navigate to.
+ */
+export async function writeEmailTempFile(options: {
+	defaultProjectTmpPath: string | undefined;
+	tmpPath: string;
+	prefix: string;
+	fileName: string;
+	contents: Buffer;
+}): Promise<string> {
+	const { system, project } = getEmailFileDirectories(
+		options.defaultProjectTmpPath,
+		options.tmpPath,
+		options.prefix
+	);
+
+	await mkdir(system, { recursive: true });
+	const systemPath = path.join(system, options.fileName);
+	await writeFile(systemPath, options.contents);
+
+	if (project === undefined) {
+		return systemPath;
+	}
+
+	await mkdir(project, { recursive: true });
+	const projectPath = path.join(project, options.fileName);
+	await writeFile(projectPath, options.contents);
+	return projectPath;
 }
 
 export function getEmailPathsToClean(

@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
@@ -39,7 +38,6 @@ import {
 	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
 	getDurableObjectUniqueKey,
-	getEmailFileDirectories,
 	getEmailPathsToClean,
 	getGlobalServices,
 	getPersistPath,
@@ -80,6 +78,8 @@ import {
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
+import { writeTempFile } from "./plugins/core/temp-file";
+import { writeEmailTempFile } from "./plugins/email";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import {
 	cfImageLocalFetcher,
@@ -1272,6 +1272,45 @@ export class Miniflare {
 	}
 
 	/**
+	 * Writes a request body to a temp file and responds with its on-disk path.
+	 *
+	 * By default the file is written to a single random path under this
+	 * instance's temp directory. Email callers pass `email=true` to opt into the
+	 * email layout instead, which groups files by session, mirrors them into the
+	 * project directory so they outlive the dev session, and honours an `id` so
+	 * the filename matches the corresponding local explorer resource.
+	 *
+	 * @param url in format: /core/store-temp-file?prefix&extension[&email&id]
+	 */
+	async #handleLoopbackStoreTempFileRequest(
+		request: Request,
+		url: URL
+	): Promise<Response> {
+		const extension = url.searchParams.get("extension") ?? "txt";
+		const prefix = url.searchParams.get("prefix");
+
+		if (url.searchParams.get("email") === "true") {
+			const id = url.searchParams.get("id") ?? crypto.randomUUID();
+			const filePath = await writeEmailTempFile({
+				defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
+				tmpPath: this.#tmpPath,
+				prefix: prefix ?? "files",
+				fileName: `${id}.${extension}`,
+				contents: Buffer.from(await request.arrayBuffer()),
+			});
+			return new Response(filePath, { status: 200 });
+		}
+
+		const filePath = await writeTempFile({
+			tmpPath: this.#tmpPath,
+			prefix,
+			extension,
+			contents: await request.text(),
+		});
+		return new Response(filePath, { status: 200 });
+	}
+
+	/**
 	 * Gets DO object IDs by checking filenames in the DO persistence directory.
 	 *
 	 * @param url in format: /core/do-storage/<namespaceId>
@@ -1627,32 +1666,7 @@ export class Miniflare {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));
 			} else if (url.pathname === "/core/store-temp-file") {
-				// Used for emails writes captured email content (received replies and
-				// sent messages) into the email temp dir.
-				const prefix = url.searchParams.get("prefix") ?? "files";
-				// Callers may supply an `id` so the on-disk filename matches the
-				// local explorer resource id.
-				const id = url.searchParams.get("id") ?? crypto.randomUUID();
-				const fileName = `${id}.${url.searchParams.get("extension") ?? "txt"}`;
-				const contents = Buffer.from(await request.arrayBuffer());
-
-				const { system, project } = getEmailFileDirectories(
-					this.#sharedOpts.core.defaultProjectTmpPath,
-					this.#tmpPath,
-					prefix
-				);
-
-				await mkdir(system, { recursive: true });
-				const systemPath = path.join(system, fileName);
-				await writeFile(systemPath, contents);
-				let filePath = systemPath;
-				if (project !== undefined) {
-					await mkdir(project, { recursive: true });
-					filePath = path.join(project, fileName);
-					await writeFile(filePath, contents);
-				}
-
-				response = new Response(filePath, { status: 200 });
+				response = await this.#handleLoopbackStoreTempFileRequest(request, url);
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {

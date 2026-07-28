@@ -337,7 +337,7 @@ export async function handleEmail(
 					// Store the reply under `email/<session-id>/reply/<emailId>.eml` -
 					// grouped under `reply/` (keeping it separate from sent emails)
 					const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
-						`http://localhost/core/store-temp-file?extension=eml&prefix=reply&id=${encodeURIComponent(emailId)}`,
+						`http://localhost/core/store-temp-file?email=true&extension=eml&prefix=reply&id=${encodeURIComponent(emailId)}`,
 						{
 							method: "POST",
 							body: finalReply,
