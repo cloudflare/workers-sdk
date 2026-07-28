@@ -178,9 +178,7 @@ async function runTransform(
 		}
 
 		if (transform.width !== undefined || transform.height !== undefined) {
-			const { fit, withoutEnlargement } = resolveImagesBindingFit(
-				transform.fit
-			);
+			const { fit, withoutEnlargement } = resolveFit(transform.fit);
 			transformer.resize(transform.width || null, transform.height || null, {
 				fit,
 				withoutEnlargement,
@@ -268,35 +266,12 @@ function resolveQuality(
 	return undefined;
 }
 
-// Fit resolution for the Images binding (`env.IMAGES.transform()`).
-// Unlike cf.image, an explicit fit:"contain" pads to the exact requested
-// box (letterbox), matching production Images binding behavior. Default
-// (unspecified) and "scale-down" must NOT pad - see transform.spec.ts.
-function resolveImagesBindingFit(fit: RequestInitCfPropertiesImage["fit"]): {
-	fit: keyof FitEnum;
-	withoutEnlargement?: boolean;
-} {
-	switch (fit) {
-		case "contain":
-			return { fit: "contain" };
-		case "cover":
-			return { fit: "cover" };
-		case "crop":
-			return { fit: "cover", withoutEnlargement: true };
-		case "pad":
-			return { fit: "contain" };
-		case "squeeze":
-			return { fit: "fill" };
-		case "scale-down":
-		default:
-			return { fit: "inside", withoutEnlargement: true };
-	}
-}
-
-// Fit resolution for cf.image (`fetch(url, { cf: { image } })`). Here
-// "contain" does NOT pad - it shrinks to fit within the box preserving
-// aspect ratio, same as "scale-down" but allowed to enlarge. See
-// cf-image.spec.ts "fit:contain preserves aspect ratio".
+// Fit resolution shared by the Images binding (`env.IMAGES.transform()`)
+// and cf.image (`fetch(url, { cf: { image } })`). Despite `fit` being
+// documented per-API, production treats them identically - `contain`
+// shrinks to fit within the box preserving aspect ratio (no padding),
+// same as `scale-down` but allowed to enlarge. See cf-image.spec.ts
+// "fit:contain preserves aspect ratio" and transform.spec.ts.
 function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
 	fit: keyof FitEnum;
 	withoutEnlargement?: boolean;
