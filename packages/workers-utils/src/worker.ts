@@ -84,7 +84,6 @@ export interface CfVars {
 export interface CfKvNamespace {
 	binding: string;
 	id?: string | typeof INHERIT_SYMBOL;
-	jurisdiction?: string;
 	remote?: boolean;
 	raw?: boolean;
 }
