@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
+import * as timers from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { format } from "node:util";
 import {
@@ -232,25 +233,76 @@ export async function getDevMiniflareOptions(
 				},
 				__VITE_FETCH_HTML__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const { root, publicDir } = resolvedViteConfig;
-					const isInPublicDir = pathname.startsWith(PUBLIC_DIR_PREFIX);
-					const resolvedPath = isInPublicDir
-						? path.join(publicDir, pathname.slice(PUBLIC_DIR_PREFIX.length))
-						: path.join(root, pathname);
 
 					try {
-						let html = await fsp.readFile(resolvedPath, "utf-8");
+						const { root, publicDir } = resolvedViteConfig;
+						const isInPublicDir = pathname.startsWith(PUBLIC_DIR_PREFIX);
 
-						// HTML files in the public directory should not be transformed
-						if (!isInPublicDir) {
-							html = await viteDevServer.transformIndexHtml(resolvedPath, html);
+						// HTML files in the public directory are served as-is (no
+						// transform) from disk in both bundled and non-bundled dev.
+						if (isInPublicDir) {
+							const resolvedPath = path.join(
+								publicDir,
+								pathname.slice(PUBLIC_DIR_PREFIX.length)
+							);
+							const html = await fsp.readFile(resolvedPath, "utf-8");
+
+							return new MiniflareResponse(html, {
+								headers: { "Content-Type": "text/html" },
+							});
 						}
+
+						const bundledDev = viteDevServer.environments.client.bundledDev;
+
+						if (bundledDev) {
+							// When the client environment runs in bundled dev mode
+							// (`experimental.bundledDev`), the transformed HTML lives in
+							// Vite's in-memory files rather than on disk. Serving it here
+							// ensures the returned HTML references the bundled client
+							// chunks (which Vite serves from `memoryFiles`) instead of the
+							// raw source entry.
+							//
+							// Unlike Vite's `indexHtmlMiddleware`, which serves a fallback
+							// loading page and relies on an HMR reload, we intentionally
+							// block briefly and serve the real HTML.
+							await bundledDev.triggerBundleRegenerationIfStale();
+
+							const key = pathname.slice(1);
+							let file = bundledDev.memoryFiles.get(key);
+							const deadline = Date.now() + 10_000;
+							while (!file && Date.now() < deadline) {
+								await timers.setTimeout(10);
+								file = bundledDev.memoryFiles.get(key);
+							}
+
+							if (!file) {
+								throw new Error(
+									`No bundled file for "${pathname}" after waiting for bundle regeneration.`
+								);
+							}
+
+							const html =
+								typeof file.source === "string"
+									? file.source
+									: Buffer.from(file.source);
+
+							return new MiniflareResponse(html, {
+								headers: { "Content-Type": "text/html" },
+							});
+						}
+
+						// Non-bundled dev: read root HTML from disk and transform via Vite.
+						const resolvedPath = path.join(root, pathname);
+						let html = await fsp.readFile(resolvedPath, "utf-8");
+						html = await viteDevServer.transformIndexHtml(resolvedPath, html);
 
 						return new MiniflareResponse(html, {
 							headers: { "Content-Type": "text/html" },
 						});
-					} catch {
-						throw new Error(`Unexpected error. Failed to load "${pathname}".`);
+					} catch (error) {
+						throw new Error(`Unexpected error. Failed to load "${pathname}".`, {
+							cause: error,
+						});
 					}
 				},
 			},

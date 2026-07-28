@@ -9,7 +9,9 @@ import {
 	rootDir,
 	viteTestUrl,
 } from "../../__test-utils__";
-import "./base-tests";
+import { runBaseTests } from "./base-tests";
+
+runBaseTests();
 
 test("returns the home page directly without invoking the Worker", async ({
 	expect,
