@@ -1,0 +1,25 @@
+packages/config/src/__tests__/load.test.ts
+  s_b654aa20bc31a3::t_18d13d5fa744c3 13-17,19,26-28,31,33-34,77-113,201,231-232
+packages/config/src/config-loader.ts
+  s_b654aa20bc31a3::t_0a4f0aaa076eee 1-36
+packages/config/src/schema.ts
+  s_b654aa20bc31a3::t_80adb61bed51f9 2,433,469-523,556,569-572,574,578,586,593,598-613
+packages/config/src/worker-definition.ts
+  s_b654aa20bc31a3::t_5c0503f9ae58bd 1,7,13,16-17,20,22-25,32,74-75,77-97,99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c82e5afd4713668a52a3852fbca53c8d2df0cda3",
+  "prompts": {},
+  "sessions": {
+    "s_b654aa20bc31a3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_099e7ccc8ffePLo6RHoj78WH63",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}

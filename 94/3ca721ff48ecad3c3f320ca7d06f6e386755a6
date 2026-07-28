@@ -1,0 +1,37 @@
+packages/local-explorer-ui/src/__tests__/workflows/step-helpers.test.ts
+  s_ddeb22e940afd2::t_299894be77db2a 2,110-137
+packages/local-explorer-ui/src/components/workflows/CopyButton.tsx
+  s_ddeb22e940afd2::t_1a73696f0c8a2e 7,11,24-25
+packages/local-explorer-ui/src/routes/workflows/$workflowName/$instanceId.tsx
+  s_ddeb22e940afd2::t_544bd9fd36362a 247-248,252-253,368-369,849-850
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_ddeb22e940afd2::t_adeb05f119c455 1225-1325,1825-1852
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_ddeb22e940afd2::t_463b1d05a00c30 21,49,323-334
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_ddeb22e940afd2::t_bd22fab18536be 191-195,219
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_ddeb22e940afd2::t_e8efefe3efd232 773-793,1808-1852
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_ddeb22e940afd2::t_aa06d4f10a8bd7 514-527,1130-1151
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_ddeb22e940afd2::t_9ae9c23a02d56b 1866-1961,3383-3411
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_ddeb22e940afd2::t_f731b4c163e0d4 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "943ca721ff48ecad3c3f320ca7d06f6e386755a6",
+  "prompts": {},
+  "sessions": {
+    "s_ddeb22e940afd2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09088c208ffeTZ5b1KQeXuPzl4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Olga Silva <osilva@cloudflare.com>"
+    }
+  }
+}
