@@ -22,6 +22,21 @@ function parseVersion(version) {
 	return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
 }
 
+function getNextPrereleaseVersion(
+	currentVersion,
+	changesetsVersion,
+	prereleaseVersion
+) {
+	if (currentVersion === changesetsVersion) return changesetsVersion;
+	const prefix = `${prereleaseVersion}.`;
+	if (!currentVersion.startsWith(prefix)) return `${prefix}0`;
+
+	const number = currentVersion.slice(prefix.length);
+	assert(/^\d+$/.test(number));
+	return `${prefix}${Number(number) + 1}`;
+}
+exports.getNextPrereleaseVersion = getNextPrereleaseVersion;
+
 const rootPath = path.resolve(__dirname, "..");
 const miniflarePath = path.join(rootPath, "packages/miniflare");
 const miniflarePkgPath = path.join(miniflarePath, "package.json");
@@ -34,6 +49,7 @@ function getWorkerdVersion() {
 	assert(match !== null, `Expected ${match[1]} to be <major>.<minor>.<patch>`);
 	return match[1];
 }
+
 /**
  * Gets the correct version to bump `miniflare` to, ensuring the minor versions
  * of `workerd` and `miniflare` match. Minor bumps in changesets will become
@@ -68,6 +84,14 @@ function main() {
 	//    minor version was bumped
 	const previousMiniflarePkg = getPkg(miniflarePkgPath);
 	const previousMiniflareVersion = previousMiniflarePkg.version;
+	const prereleaseVersion =
+		previousMiniflarePkg["workers-sdk"]?.npmPrereleaseVersion;
+	if (prereleaseVersion !== undefined) {
+		assert(
+			/^\d+\.\d+\.\d+-[0-9A-Za-z-]+$/.test(prereleaseVersion),
+			"Invalid Miniflare npmPrereleaseVersion"
+		);
+	}
 
 	// 2. Run standard `changeset version` command to apply changesets, bump
 	//    versions, and update changelogs
@@ -79,11 +103,19 @@ function main() {
 	const miniflarePkg = getPkg(miniflarePkgPath);
 	const miniflareVersion = miniflarePkg.version;
 	const workerdVersion = getWorkerdVersion();
-	const nextMiniflareVersion = getNextMiniflareVersion(
+	let nextMiniflareVersion = getNextMiniflareVersion(
 		workerdVersion,
 		previousMiniflareVersion,
 		miniflareVersion
 	);
+	if (prereleaseVersion !== undefined) {
+		nextMiniflareVersion = getNextPrereleaseVersion(
+			previousMiniflareVersion,
+			miniflareVersion,
+			prereleaseVersion
+		);
+	}
+
 	if (nextMiniflareVersion !== miniflareVersion) {
 		// If `changeset version` didn't produce the correct version on its own...
 

@@ -193,19 +193,27 @@ describe("validateChangesets()", () => {
 		expect(errors).toMatchInlineSnapshot(`[]`);
 	});
 
-	it("should report errors for major bump changesets", ({ expect }) => {
+	it("should report errors for major bumps except Miniflare prereleases", ({
+		expect,
+	}) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
-				["package-a", { name: "package-a" }],
+				[
+					"miniflare",
+					{
+						name: "miniflare",
+						"workers-sdk": { npmPrereleaseVersion: "5.0.0-alpha" },
+					},
+				],
 				["package-b", { name: "package-b" }],
 				["package-c", { name: "package-c" }],
 			]),
 			[
 				{
-					file: "patch-one.md",
+					file: "major-one.md",
 					contents: dedent`
 						---
-						"package-a": patch
+						"miniflare": major
 						---
 	  				refactor: test`,
 				},

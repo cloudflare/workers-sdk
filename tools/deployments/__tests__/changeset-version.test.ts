@@ -1,5 +1,8 @@
 import { it } from "vitest";
-import { getNextMiniflareVersion } from "../../../.github/changeset-version";
+import {
+	getNextMiniflareVersion,
+	getNextPrereleaseVersion,
+} from "../../../.github/changeset-version";
 
 // prettier-ignore
 const miniflareVersionTestCases = [
@@ -29,5 +32,36 @@ for (const [
 			miniflareVersion
 		);
 		expect(actual).toEqual(correctMiniflareVersion);
+	});
+}
+
+// prettier-ignore
+const prereleaseVersionTestCases = [
+	// previous,      changesets,     configured,    corrected
+	["4.20260722.0",  "4.20260723.0", "5.0.0-alpha", "5.0.0-alpha.0"],
+	["4.20260722.0",  "5.0.0",        "5.0.0-alpha", "5.0.0-alpha.0"],
+	["5.0.0-alpha.0", "5.0.0",        "5.0.0-alpha", "5.0.0-alpha.1"],
+	["5.0.0-alpha.1", "5.0.0",        "5.0.0-beta",  "5.0.0-beta.0"],
+	["5.0.0-alpha.4", "5.0.1",        "5.0.0-alpha", "5.0.0-alpha.5"],
+	["5.0.0-alpha.4", "5.1.0",        "5.0.0-alpha", "5.0.0-alpha.5"],
+	["5.0.0-alpha.4", "6.0.0",        "5.0.0-alpha", "5.0.0-alpha.5"],
+	["5.0.0-alpha.4", "5.0.0-alpha.4", "5.0.0-alpha", "5.0.0-alpha.4"],
+];
+
+for (const [
+	previousVersion,
+	changesetsVersion,
+	prereleaseVersion,
+	correctVersion,
+] of prereleaseVersionTestCases) {
+	it(`changeset prerelease ${previousVersion} -> ${changesetsVersion} (${prereleaseVersion}) = ${correctVersion}`, ({
+		expect,
+	}) => {
+		const actual = getNextPrereleaseVersion(
+			previousVersion,
+			changesetsVersion,
+			prereleaseVersion
+		);
+		expect(actual).toEqual(correctVersion);
 	});
 }
