@@ -68,15 +68,21 @@ export function mockCreateKVNamespace(
 	options: {
 		resultId?: string;
 		assertTitle?: string;
+		assertJurisdiction?: string;
 	} = {}
 ) {
 	msw.use(
 		http.post(
 			"*/accounts/:accountId/storage/kv/namespaces",
 			async ({ request }) => {
+				const requestBody = await request.json();
 				if (options.assertTitle) {
-					const requestBody = await request.json();
-					expect(requestBody).toEqual({ title: options.assertTitle });
+					expect(requestBody).toMatchObject({ title: options.assertTitle });
+				}
+				if (options.assertJurisdiction) {
+					expect(requestBody).toMatchObject({
+						jurisdiction: options.assertJurisdiction,
+					});
 				}
 
 				return HttpResponse.json(

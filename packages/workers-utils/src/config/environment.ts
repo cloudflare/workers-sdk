@@ -18,6 +18,12 @@ export interface Environment
 	extends EnvironmentInheritable, EnvironmentNonInheritable {}
 
 type SimpleRoute = string;
+/** AWS SigV4 credentials for miniflare's local S3-compatible endpoint */
+export interface LocalS3Credentials {
+	accessKeyId: string;
+	secretAccessKey: string;
+}
+
 export type ZoneIdRoute = {
 	pattern: string;
 	zone_id: string;
@@ -937,6 +943,11 @@ export interface EnvironmentNonInheritable {
 		id?: string;
 		/** The ID of the KV namespace used during `wrangler dev` */
 		preview_id?: string;
+		/**
+		 * The jurisdiction to create the KV namespace in when provisioning it
+		 * during `wrangler deploy`. Only read when the namespace does not yet exist. Ignored once the namespace has been created.
+		 */
+		jurisdiction?: string;
 		/** Whether the KV namespace should be remote or not in local development */
 		remote?: boolean;
 	}[];
@@ -1045,6 +1056,16 @@ export interface EnvironmentNonInheritable {
 		jurisdiction?: string;
 		/** Whether the R2 bucket should be remote or not in local development */
 		remote?: boolean;
+		/** Settings that only apply to local development */
+		local_dev?: {
+			/**
+			 * EXPERIMENTAL: AWS SigV4 credentials for the local S3-compatible
+			 * endpoint. When set, the bucket is served at
+			 * `/cdn-cgi/local/r2/s3/<bucket-name>` during local development.
+			 * Ignored when the bucket runs remotely.
+			 */
+			experimental_s3_credentials?: LocalS3Credentials;
+		};
 	}[];
 
 	/**

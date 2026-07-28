@@ -69,7 +69,12 @@ export const VPC_NETWORKS_PLUGIN: Plugin<typeof VpcNetworksOptionsSchema> = {
 		return [
 			{
 				name: VPC_NETWORKS_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
+				// VPC networks expose raw TCP via `binding.connect()`, tunnelled
+				// through the proxy client's inbound `connect` handler. The shared
+				// `vpc-networks:remote` service is dedicated to VPC networks, so
+				// opting it into raw TCP leaves every other binding's service
+				// untouched.
+				worker: remoteProxyClientWorker(undefined, { rawTcp: true }),
 			},
 		];
 	},

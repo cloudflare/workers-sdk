@@ -1,4 +1,4 @@
-import { APIError } from "@cloudflare/workers-utils";
+import { APIError, parseRetryAfterMs } from "@cloudflare/workers-utils";
 import { performApiFetch } from "../cfetch";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -61,6 +61,7 @@ export async function fetchBrowserRendering<ResponseType>(
 			text: `Browser Run API error: ${errorMessage}`,
 			notes: [{ text: `${method} ${url} -> ${response.status}` }],
 			status: response.status,
+			retryAfterMs: parseRetryAfterMs(response.headers),
 			telemetryMessage: false,
 		});
 	}
@@ -76,6 +77,7 @@ export async function fetchBrowserRendering<ResponseType>(
 				{ text: `${method} ${url} -> ${response.status}` },
 			],
 			status: response.status,
+			retryAfterMs: parseRetryAfterMs(response.headers),
 			telemetryMessage: false,
 		});
 	}

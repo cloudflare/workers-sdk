@@ -8,6 +8,7 @@ import {
 	PatchConfigError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import dedent from "ts-dedent";
 import {
 	fetchListResult,
 	fetchPagedListResult,
@@ -575,7 +576,12 @@ class KVHandler extends ProvisionResourceHandler<
 		return undefined;
 	}
 	async create(name: string) {
-		return await createKVNamespace(this.complianceConfig, this.accountId, name);
+		return await createKVNamespace(
+			this.complianceConfig,
+			this.accountId,
+			name,
+			this.binding.jurisdiction
+		);
 	}
 	constructor(
 		bindingName: string,
@@ -1357,7 +1363,8 @@ function autoProvisionedResourceName(
 async function createKVNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	title: string
+	title: string,
+	jurisdiction?: string
 ): Promise<string> {
 	const response = await fetchResult<{ id: string }>(
 		complianceConfig,
@@ -1369,6 +1376,7 @@ async function createKVNamespace(
 			},
 			body: JSON.stringify({
 				title,
+				jurisdiction,
 			}),
 		}
 	);
@@ -1431,6 +1439,8 @@ async function listFlagshipApps(
 	);
 }
 
+// Keep the D1 error copy below in sync with the CLI copy in
+// packages/wrangler/src/d1/create.ts.
 async function createD1Database(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -1459,7 +1469,19 @@ async function createD1Database(
 
 		if (errorCode === 7406) {
 			throw new UserError(
-				"You have reached the maximum number of D1 databases for your account. Please consider deleting unused databases, or visit the D1 documentation to learn more: https://developers.cloudflare.com/d1/",
+				dedent`
+					You have reached the maximum number of D1 databases for your account.
+
+					On the Workers Free plan? Upgrade to create more:
+					https://dash.cloudflare.com/${accountId}/workers/plans
+
+					Already on a paid plan? You can request a higher limit — learn more in the D1 docs:
+					https://developers.cloudflare.com/d1/
+
+					Or free up space:
+					To list your existing databases, run: wrangler d1 list
+					To delete a database, run: wrangler d1 delete <database-name>
+				`,
 				{ telemetryMessage: "d1 create database limit reached" }
 			);
 		}

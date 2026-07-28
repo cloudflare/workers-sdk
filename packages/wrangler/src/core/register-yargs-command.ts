@@ -7,6 +7,7 @@ import {
 	getCloudflareEnv,
 	getWranglerHideBanner,
 	experimental_readRawConfig,
+	parseRetryAfterValue,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
@@ -426,9 +427,34 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					version: 1,
 					code,
 					message: outputErr.message,
+					retry_after_ms: getRetryAfterMs(outputErr),
 				});
 			}
 			throw err;
 		}
 	};
+}
+
+/**
+ * Extract the number of milliseconds indicated by a `Retry-After` header (if
+ * any) associated with the given error, so it can be written to the Wrangler
+ * output file as structured JSON rather than requiring consumers to parse it
+ * out of the human-readable error message.
+ *
+ * Handles both:
+ * - `APIError`s raised internally by Wrangler's own fetch helpers, which
+ *   already have `retryAfterMs` parsed and attached directly.
+ * - Errors raised by the `cloudflare` SDK client, which expose the raw
+ *   response headers (with a lowercased `retry-after` key) instead.
+ */
+function getRetryAfterMs(err: Error): number | undefined {
+	if ("retryAfterMs" in err && typeof err.retryAfterMs === "number") {
+		return err.retryAfterMs;
+	}
+	if ("headers" in err && err.headers && typeof err.headers === "object") {
+		return parseRetryAfterValue(
+			(err.headers as Record<string, string | undefined>)["retry-after"]
+		);
+	}
+	return undefined;
 }
