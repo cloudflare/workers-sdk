@@ -75,10 +75,19 @@ export const allKnownFrameworks = [
 		class: NextJs,
 		frameworkPackageInfo: {
 			name: "next",
-			// 14.2.35 is the earliest version of Next.js officially supported by open-next
-			// see: https://github.com/cloudflare/workers-sdk/pull/11704#discussion_r2634519440
-			minimumVersion: "14.2.35",
+			// 15.5.21 is the earliest version of Next.js officially supported by open-next
+			// see: https://github.com/opennextjs/opennextjs-cloudflare/pull/1313
+			minimumVersion: "15.5.21",
 			maximumKnownMajorVersion: "16",
+			// Next.js 15 and 16 installations that OpenNext doesn't support are upgraded in
+			// place, staying within their existing major version.
+			// 15.0.x is deliberately excluded: `create-next-app` pinned React to a 19 prerelease
+			// until Next.js 15.1, which no supported Next.js version accepts as a peer, so the
+			// upgrade cannot succeed without the user changing React first.
+			upgradeRequired: {
+				">=15.1.0 <15.5.21": "15.5.21",
+				">=16 <16.2.11": "16.2.11",
+			},
 		},
 		supported: true,
 	},

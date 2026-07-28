@@ -1,11 +1,26 @@
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { Framework } from "./framework-class";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
+	FrameworkVersionUpgradeOptions,
 } from "./framework-class";
 
 export class NextJs extends Framework {
+	async upgradeFrameworkVersion({
+		upgradeTo,
+		packageManager,
+		isWorkspaceRoot,
+	}: FrameworkVersionUpgradeOptions): Promise<void> {
+		await installPackages(packageManager.type, [`next@${upgradeTo}`], {
+			isWorkspaceRoot,
+			startText: `Updating Next.js to ${upgradeTo}`,
+			doneText: `${brandColor("updated")} ${dim(`Next.js to ${upgradeTo}`)}`,
+		});
+	}
+
 	async configure({
 		dryRun,
 		projectPath,
@@ -14,20 +29,9 @@ export class NextJs extends Framework {
 		const { npx, dlx } = packageManager;
 
 		if (!dryRun) {
-			await runCommand(
-				[
-					...dlx,
-					"@opennextjs/cloudflare",
-					"migrate",
-					// Note: we force-install so that even if an incompatible version of
-					//       Next.js is used this installation still succeeds, moving users
-					//       (hopefully) in right direction (instead of failing at this step)
-					"--force-install",
-				],
-				{
-					cwd: projectPath,
-				}
-			);
+			await runCommand([...dlx, "@opennextjs/cloudflare", "migrate"], {
+				cwd: projectPath,
+			});
 		}
 
 		return {

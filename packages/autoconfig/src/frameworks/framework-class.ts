@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import semiver from "semiver";
+import semverSatisfies from "semver/functions/satisfies.js";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
 import type { AutoConfigFrameworkPackageInfo, FrameworkInfo } from ".";
@@ -36,21 +37,43 @@ export abstract class Framework {
 	configurationDescription?: string;
 
 	/**
+	 * Upgrades the framework to a version that autoconfig supports.
+	 *
+	 * Only called for installed versions matched by the package's `upgradeRequired` ranges, so
+	 * frameworks that don't declare any never need to implement this.
+	 *
+	 * @param _options - The installed version, the version to upgrade to, the package
+	 * manager, and the workspace root flag.
+	 */
+	upgradeFrameworkVersion(
+		_options: FrameworkVersionUpgradeOptions
+	): Promise<void> {
+		throw new AutoConfigFrameworkConfigurationError(
+			`${this.name} requires an upgrade before it can be automatically configured, but autoconfig cannot upgrade it automatically.`,
+			{ telemetryMessage: "autoconfig framework version upgrade unavailable" }
+		);
+	}
+
+	/**
 	 * Validates the installed framework version against the supported range and
 	 * stores it for later access via the `frameworkVersion` getter.
 	 * Warns via the context logger if the version exceeds `maximumKnownMajorVersion`.
+	 *
+	 * Versions matched by `upgradeRequired` are returned as an upgrade for the caller to apply,
+	 * rather than being rejected for being below `minimumVersion`.
 	 *
 	 * @param projectPath - Path to the project root used to resolve the installed version.
 	 * @param frameworkPackageInfo - Package metadata including name and version bounds.
 	 * @param context - The autoconfig context providing logger and other dependencies.
 	 * @throws {AssertionError} If the installed version cannot be determined.
-	 * @throws {AutoConfigFrameworkConfigurationError} If the version is below `minimumVersion`.
+	 * @throws {AutoConfigFrameworkConfigurationError} If the version is below `minimumVersion` and no upgrade is available.
+	 * @returns The upgrade needed to reach a supported version, or `undefined` if none is needed.
 	 */
 	validateFrameworkVersion(
 		projectPath: string,
 		frameworkPackageInfo: AutoConfigFrameworkPackageInfo,
 		context: AutoConfigContext
-	) {
+	): FrameworkVersionUpgrade | undefined {
 		const frameworkVersion = getInstalledPackageVersion(
 			frameworkPackageInfo.name,
 			projectPath
@@ -60,6 +83,19 @@ export abstract class Framework {
 			frameworkVersion,
 			`Unable to detect the version of the \`${frameworkPackageInfo.name}\` package`
 		);
+
+		for (const [versionRange, upgradeTo] of Object.entries(
+			frameworkPackageInfo.upgradeRequired ?? {}
+		)) {
+			if (
+				semverSatisfies(frameworkVersion, versionRange, {
+					includePrerelease: true,
+				})
+			) {
+				this.#frameworkVersion = frameworkVersion;
+				return { installedVersion: frameworkVersion, upgradeTo };
+			}
+		}
 
 		if (semiver(frameworkVersion, frameworkPackageInfo.minimumVersion) < 0) {
 			throw new AutoConfigFrameworkConfigurationError(
@@ -88,6 +124,14 @@ export abstract class Framework {
 		this.#frameworkVersion = frameworkVersion;
 	}
 }
+
+export type FrameworkVersionUpgrade = {
+	installedVersion: string;
+	upgradeTo: string;
+};
+
+export type FrameworkVersionUpgradeOptions = FrameworkVersionUpgrade &
+	Pick<ConfigurationOptions, "isWorkspaceRoot" | "packageManager">;
 
 export type ConfigurationOptions = {
 	outputDir: string;
