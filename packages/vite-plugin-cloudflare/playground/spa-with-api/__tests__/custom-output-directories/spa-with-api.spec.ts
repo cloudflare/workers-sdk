@@ -2,7 +2,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, test, vi } from "vitest";
 import { isBuild, rootDir, WAIT_FOR_OPTIONS } from "../../../__test-utils__";
-import "../base-tests";
+import { runBaseTests } from "../base-tests";
+
+runBaseTests();
 
 describe.runIf(isBuild)("output directories", () => {
 	test("creates the correct output directories", async ({ expect }) => {
