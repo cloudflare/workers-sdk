@@ -104,6 +104,23 @@ describe("Images binding local transforms", () => {
 		expect(meta.height).toBe(50);
 	});
 
+	test("fit:contain does not pad with black bars (matches cf.image)", async ({
+		expect,
+	}) => {
+		// Regression test for the removed resolveImagesBindingFit: the binding
+		// and cf.image previously diverged here (binding letterboxed fit:"contain"
+		// with black bars), but production treats them identically - shrink to
+		// fit within the box, preserving aspect ratio, no padding.
+		const { body } = await transform({
+			width: 50,
+			height: 50,
+			fit: "contain",
+		});
+		const meta = await sharp(body).metadata();
+		expect(meta.width).toBe(50);
+		expect(meta.height).toBe(25);
+	});
+
 	test("default fit (unspecified) does not letterbox with black bars", async ({
 		expect,
 	}) => {
