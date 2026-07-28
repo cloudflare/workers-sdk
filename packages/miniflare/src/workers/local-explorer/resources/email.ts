@@ -50,10 +50,15 @@ function buildMimeMessage(body: EmailSendRequest, messageId: string): string {
 	const text = body.text ?? "";
 	const html = body.html;
 
+	let contentHeaders: string[];
+	let content: string;
+
 	if (html && body.text) {
 		const boundary = `----=_Part_${crypto.randomUUID()}`;
-		headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
-		const parts = [
+		contentHeaders = [
+			`Content-Type: multipart/alternative; boundary="${boundary}"`,
+		];
+		content = [
 			`--${boundary}`,
 			"Content-Type: text/plain; charset=utf-8",
 			"",
@@ -64,17 +69,45 @@ function buildMimeMessage(body: EmailSendRequest, messageId: string): string {
 			html,
 			`--${boundary}--`,
 			"",
-		];
-		return `${headers.join("\r\n")}\r\n\r\n${parts.join("\r\n")}`;
+		].join("\r\n");
+	} else if (html) {
+		contentHeaders = ["Content-Type: text/html; charset=utf-8"];
+		content = html;
+	} else {
+		contentHeaders = ["Content-Type: text/plain; charset=utf-8"];
+		content = text;
 	}
 
-	if (html) {
-		headers.push("Content-Type: text/html; charset=utf-8");
-		return `${headers.join("\r\n")}\r\n\r\n${html}`;
+	const attachments = body.attachments ?? [];
+	if (attachments.length === 0) {
+		headers.push(...contentHeaders);
+		return `${headers.join("\r\n")}\r\n\r\n${content}`;
 	}
 
-	headers.push("Content-Type: text/plain; charset=utf-8");
-	return `${headers.join("\r\n")}\r\n\r\n${text}`;
+	const boundary = `----=_Mixed_${crypto.randomUUID()}`;
+	headers.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
+
+	const parts: string[] = [`--${boundary}`, ...contentHeaders, "", content];
+	for (const attachment of attachments) {
+		const filename = attachment.filename
+			.replace(/[\r\n]/g, " ")
+			.replace(/(["\\])/g, "\\$1");
+		parts.push(
+			`--${boundary}`,
+			`Content-Type: ${attachment.type}; name="${filename}"`,
+			`Content-Disposition: ${attachment.disposition ?? "attachment"}; filename="${filename}"`,
+			"Content-Transfer-Encoding: base64",
+			"",
+			// RFC 2045 caps base64 body lines at 76 characters.
+			attachment.content
+				.replace(/\s/g, "")
+				.replace(/(.{76})/g, "$1\r\n")
+				.trimEnd()
+		);
+	}
+	parts.push(`--${boundary}--`, "");
+
+	return `${headers.join("\r\n")}\r\n\r\n${parts.join("\r\n")}`;
 }
 
 export async function listReceivedEmails(c: AppContext): Promise<Response> {

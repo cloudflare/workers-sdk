@@ -7,7 +7,7 @@ import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 import type {
 	EmailStoreService,
-	StoredSendingAttachment,
+	StoredEmailAttachment,
 	StoredSendingEmail,
 } from "./storage";
 import type { EmailAddress, MessageBuilder } from "./types";
@@ -357,7 +357,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			): string[] =>
 				(Array.isArray(addr) ? addr : [addr]).map(formatEmailAddress);
 
-			const sentAttachments: StoredSendingAttachment[] = (
+			const sentAttachments: StoredEmailAttachment[] = (
 				builder.attachments ?? []
 			).map((attachment) => ({
 				filename: attachment.filename,

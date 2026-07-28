@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { afterAll, beforeAll, describe, test } from "vitest";
+import { afterAll, beforeAll, describe, type ExpectStatic, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
 import {
 	zEmailGetRoutingResponse,
@@ -182,6 +182,283 @@ describe("Email API - Routing", () => {
 			success: false,
 			errors: [expect.objectContaining({ code: 10601 })],
 		});
+	});
+});
+
+describe("Email API - Routing attachments", () => {
+	let mf: Miniflare;
+
+	beforeAll(async () => {
+		mf = new Miniflare({
+			inspectorPort: 0,
+			compatibilityDate: "2025-03-17",
+			modules: true,
+			script: EMAIL_HANDLER_WORKER,
+			unsafeLocalExplorer: true,
+			unsafeTriggerHandlers: true,
+		});
+	});
+
+	afterAll(async () => {
+		await disposeWithRetry(mf);
+	});
+
+	/** Sends a test email and returns the stored record the explorer exposes. */
+	async function sendAndReadDetail(
+		body: Record<string, unknown>,
+		expect: ExpectStatic
+	) {
+		const sendResponse = await mf.dispatchFetch(
+			`${BASE_URL}/email/routing/send`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			}
+		);
+		const sendData = await expectValidResponse(
+			sendResponse,
+			zEmailSendRoutingResponse,
+			expect
+		);
+		const detail = await expectValidResponse(
+			await mf.dispatchFetch(
+				`${BASE_URL}/email/routing/${sendData.result?.id}`
+			),
+			zEmailGetRoutingResponse,
+			expect
+		);
+		return detail.result;
+	}
+
+	/** Sends a test email and returns the raw MIME the worker received. */
+	async function sendAndReadRaw(
+		body: Record<string, unknown>,
+		expect: ExpectStatic
+	): Promise<string> {
+		return (await sendAndReadDetail(body, expect))?.raw ?? "";
+	}
+
+	test("composes an attachment into a multipart/mixed message", async ({
+		expect,
+	}) => {
+		const content = Buffer.from("Hello, attachment!").toString("base64");
+		const raw = await sendAndReadRaw(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "With attachment",
+				text: "See attached.",
+				attachments: [{ filename: "notes.txt", type: "text/plain", content }],
+			},
+			expect
+		);
+
+		expect(raw).toContain("Content-Type: multipart/mixed; boundary=");
+		// The body survives alongside the attachment rather than being replaced.
+		expect(raw).toContain("See attached.");
+		expect(raw).toContain('Content-Type: text/plain; name="notes.txt"');
+		expect(raw).toContain(
+			'Content-Disposition: attachment; filename="notes.txt"'
+		);
+		expect(raw).toContain("Content-Transfer-Encoding: base64");
+		expect(raw).toContain(content);
+	});
+
+	test("supports multiple attachments and inline disposition", async ({
+		expect,
+	}) => {
+		const raw = await sendAndReadRaw(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "Two attachments",
+				text: "body",
+				attachments: [
+					{
+						filename: "a.txt",
+						type: "text/plain",
+						content: Buffer.from("first").toString("base64"),
+					},
+					{
+						filename: "logo.png",
+						type: "image/png",
+						content: Buffer.from("second").toString("base64"),
+						disposition: "inline",
+					},
+				],
+			},
+			expect
+		);
+
+		expect(raw).toContain('Content-Disposition: attachment; filename="a.txt"');
+		expect(raw).toContain('Content-Type: image/png; name="logo.png"');
+		expect(raw).toContain('Content-Disposition: inline; filename="logo.png"');
+	});
+
+	test("keeps an html and text body as multipart/alternative alongside attachments", async ({
+		expect,
+	}) => {
+		const raw = await sendAndReadRaw(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "Alternative plus attachment",
+				text: "plain body",
+				html: "<p>html body</p>",
+				attachments: [
+					{
+						filename: "a.txt",
+						type: "text/plain",
+						content: Buffer.from("first").toString("base64"),
+					},
+				],
+			},
+			expect
+		);
+
+		// The alternative body is nested inside the mixed container, so both
+		// representations of the body and the attachment all survive.
+		expect(raw).toContain("Content-Type: multipart/mixed; boundary=");
+		expect(raw).toContain("Content-Type: multipart/alternative; boundary=");
+		expect(raw).toContain("plain body");
+		expect(raw).toContain("<p>html body</p>");
+		expect(raw).toContain('filename="a.txt"');
+	});
+
+	test("wraps long attachment content at the MIME line limit", async ({
+		expect,
+	}) => {
+		// Base64 lines longer than 76 characters are invalid per RFC 2045 and can
+		// be rejected or truncated by parsers.
+		const content = Buffer.from("a".repeat(500)).toString("base64");
+		expect(content.length).toBeGreaterThan(76);
+
+		const raw = await sendAndReadRaw(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "Long attachment",
+				text: "body",
+				attachments: [
+					{
+						filename: "big.bin",
+						type: "application/octet-stream",
+						content,
+					},
+				],
+			},
+			expect
+		);
+
+		const base64Lines = raw
+			.split(/\r?\n/)
+			.filter((line) => /^[A-Za-z0-9+/]+={0,2}$/.test(line));
+		expect(base64Lines.length).toBeGreaterThan(1);
+		for (const line of base64Lines) {
+			expect(line.length).toBeLessThanOrEqual(76);
+		}
+		// The content is still recoverable once the line wrapping is undone.
+		expect(raw.replace(/\r?\n/g, "")).toContain(content);
+	});
+
+	test("escapes quotes in attachment filenames", async ({ expect }) => {
+		const raw = await sendAndReadRaw(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "Quoted filename",
+				text: "body",
+				attachments: [
+					{
+						filename: 'we"ird.txt',
+						type: "text/plain",
+						content: Buffer.from("x").toString("base64"),
+					},
+				],
+			},
+			expect
+		);
+
+		// An unescaped quote would terminate the filename parameter early.
+		expect(raw).toContain('filename="we\\"ird.txt"');
+	});
+
+	test("omits multipart framing when there are no attachments", async ({
+		expect,
+	}) => {
+		const raw = await sendAndReadRaw(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "No attachments",
+				text: "just text",
+			},
+			expect
+		);
+
+		expect(raw).not.toContain("multipart/mixed");
+		expect(raw).toContain("Content-Type: text/plain; charset=utf-8");
+		expect(raw).toContain("just text");
+	});
+
+	// The explorer surfaces attachment metadata for received emails so they can
+	// be listed in the UI. The content itself stays in `raw`.
+	test("exposes metadata for attachments parsed off the received message", async ({
+		expect,
+	}) => {
+		const detail = await sendAndReadDetail(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "Metadata check",
+				text: "See attached.",
+				attachments: [
+					{
+						filename: "invoice.pdf",
+						type: "application/pdf",
+						content: Buffer.from("%PDF-1.4 pretend pdf").toString("base64"),
+					},
+					{
+						filename: "logo.png",
+						type: "image/png",
+						content: Buffer.from("pretend png").toString("base64"),
+						disposition: "inline",
+					},
+				],
+			},
+			expect
+		);
+
+		expect(detail?.attachments).toEqual([
+			{
+				filename: "invoice.pdf",
+				contentType: "application/pdf",
+				disposition: "attachment",
+				// Byte length of the decoded content, not the base64 payload.
+				size: "%PDF-1.4 pretend pdf".length,
+			},
+			{
+				filename: "logo.png",
+				contentType: "image/png",
+				disposition: "inline",
+				size: "pretend png".length,
+			},
+		]);
+	});
+
+	test("reports no attachments for a plain message", async ({ expect }) => {
+		const detail = await sendAndReadDetail(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "Nothing attached",
+				text: "just text",
+			},
+			expect
+		);
+
+		expect(detail?.attachments).toEqual([]);
 	});
 });
 

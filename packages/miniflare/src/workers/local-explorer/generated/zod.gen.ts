@@ -549,19 +549,6 @@ export const zEmailRoutingItem = z.object({
 	handlingPath: z.array(zEmailRoutingAction),
 });
 
-export const zEmailRoutingDetail = z.object({
-	id: z.string(),
-	worker: z.string().optional(),
-	from: z.string(),
-	to: z.string(),
-	subject: z.string(),
-	messageId: z.string().optional(),
-	receivedAt: z.string(),
-	rawSize: z.number(),
-	raw: z.string(),
-	handlingPath: z.array(zEmailRoutingAction),
-});
-
 /**
  * Fields for composing a test email, mirroring MessageBuilder.
  */
@@ -575,13 +562,40 @@ export const zEmailSendRequest = z.object({
 	text: z.string().optional(),
 	html: z.string().optional(),
 	headers: z.record(z.string()).optional(),
+	attachments: z
+		.array(
+			z.object({
+				filename: z.string(),
+				type: z.string(),
+				content: z.string(),
+				disposition: z.enum(["inline", "attachment"]).optional(),
+			})
+		)
+		.optional(),
 });
 
-export const zEmailSendingAttachment = z.object({
+/**
+ * Metadata describing an attachment on a captured email, without its content.
+ */
+export const zEmailAttachment = z.object({
 	filename: z.string(),
 	contentType: z.string(),
 	disposition: z.enum(["inline", "attachment"]),
 	size: z.number(),
+});
+
+export const zEmailRoutingDetail = z.object({
+	id: z.string(),
+	worker: z.string().optional(),
+	from: z.string(),
+	to: z.string(),
+	subject: z.string(),
+	messageId: z.string().optional(),
+	receivedAt: z.string(),
+	rawSize: z.number(),
+	raw: z.string(),
+	attachments: z.array(zEmailAttachment),
+	handlingPath: z.array(zEmailRoutingAction),
 });
 
 export const zEmailSendingItem = z.object({
@@ -594,7 +608,7 @@ export const zEmailSendingItem = z.object({
 	subject: z.string(),
 	messageId: z.string().optional(),
 	sentAt: z.string(),
-	attachments: z.array(zEmailSendingAttachment),
+	attachments: z.array(zEmailAttachment),
 });
 
 export const zEmailSendingDetail = z.object({
@@ -610,7 +624,7 @@ export const zEmailSendingDetail = z.object({
 	text: z.string().optional(),
 	html: z.string().optional(),
 	headers: z.record(z.string()).optional(),
-	attachments: z.array(zEmailSendingAttachment),
+	attachments: z.array(zEmailAttachment),
 	raw: z.string().optional(),
 });
 

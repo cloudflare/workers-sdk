@@ -32,11 +32,13 @@ export interface StoredRoutingEmail {
 	rawSize: number;
 	/** Raw MIME content (capped at 1MiB by the email handler). */
 	raw: string;
+	/** Attachments parsed out of `raw`. Metadata only.*/
+	attachments: StoredEmailAttachment[];
 	/** Ordered list of actions the handler took on the message. */
 	handlingPath: EmailRoutingAction[];
 }
 
-export interface StoredSendingAttachment {
+export interface StoredEmailAttachment {
 	filename: string;
 	contentType: string;
 	disposition: "inline" | "attachment";
@@ -56,7 +58,7 @@ export interface StoredSendingEmail {
 	text?: string;
 	html?: string;
 	headers?: Record<string, string>;
-	attachments: StoredSendingAttachment[];
+	attachments: StoredEmailAttachment[];
 	/** Raw MIME content, present when sent via the `EmailMessage` API. */
 	raw?: string;
 }

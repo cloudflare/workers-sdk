@@ -679,7 +679,7 @@ const config = {
 			"/email/routing/send": {
 				post: {
 					description:
-						"Sends a test email to trigger the worker's email() handler.",
+						"Sends a test email to trigger the worker's email() handler. Only the first `to` address is used as the envelope recipient; any other to/cc/bcc addresses appear only in the composed MIME headers.",
 					operationId: "email-send-routing",
 					requestBody: {
 						required: true,
@@ -2194,6 +2194,14 @@ const config = {
 						type: "string",
 						description: "Raw MIME content of the received email.",
 					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the received message. The content itself is only available in `raw`.",
+					},
 					handlingPath: {
 						type: "array",
 						items: {
@@ -2209,6 +2217,7 @@ const config = {
 					"receivedAt",
 					"rawSize",
 					"raw",
+					"attachments",
 					"handlingPath",
 				],
 			},
@@ -2234,11 +2243,44 @@ const config = {
 						additionalProperties: { type: "string" },
 						description: "Custom headers to include on the message.",
 					},
+					attachments: {
+						type: "array",
+						description:
+							"Attachments to include on the message, mirroring the MessageBuilder `attachments` entries accepted by a send_email binding. Adding any attachment composes the message as multipart/mixed.",
+						items: {
+							type: "object",
+							properties: {
+								filename: {
+									type: "string",
+									description: "Name the attachment is presented under.",
+								},
+								type: {
+									type: "string",
+									description:
+										"MIME type of the attachment, e.g. 'application/pdf'.",
+								},
+								content: {
+									type: "string",
+									description:
+										"Attachment content, base64-encoded. MessageBuilder takes raw bytes here, but this endpoint accepts JSON so the bytes must be base64-encoded.",
+								},
+								disposition: {
+									type: "string",
+									enum: ["inline", "attachment"],
+									description:
+										"How the attachment is presented. Defaults to 'attachment'.",
+								},
+							},
+							required: ["filename", "type", "content"],
+						},
+					},
 				},
 				required: ["from", "to", "subject"],
 			},
-			"email_sending-attachment": {
+			email_attachment: {
 				type: "object",
+				description:
+					"Metadata describing an attachment on a captured email, without its content.",
 				properties: {
 					filename: { type: "string" },
 					contentType: { type: "string" },
@@ -2265,7 +2307,7 @@ const config = {
 					attachments: {
 						type: "array",
 						items: {
-							$ref: "#/components/schemas/email_sending-attachment",
+							$ref: "#/components/schemas/email_attachment",
 						},
 					},
 				},
@@ -2292,7 +2334,7 @@ const config = {
 					attachments: {
 						type: "array",
 						items: {
-							$ref: "#/components/schemas/email_sending-attachment",
+							$ref: "#/components/schemas/email_attachment",
 						},
 					},
 					raw: {

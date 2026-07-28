@@ -833,6 +833,10 @@ export type EmailRoutingDetail = {
 	 * Raw MIME content of the received email.
 	 */
 	raw: string;
+	/**
+	 * Metadata for attachments parsed out of the received message. The content itself is only available in `raw`.
+	 */
+	attachments: Array<EmailAttachment>;
 	handlingPath: Array<EmailRoutingAction>;
 };
 
@@ -866,9 +870,33 @@ export type EmailSendRequest = {
 	headers?: {
 		[key: string]: string;
 	};
+	/**
+	 * Attachments to include on the message, mirroring the MessageBuilder `attachments` entries accepted by a send_email binding. Adding any attachment composes the message as multipart/mixed.
+	 */
+	attachments?: Array<{
+		/**
+		 * Name the attachment is presented under.
+		 */
+		filename: string;
+		/**
+		 * MIME type of the attachment, e.g. 'application/pdf'.
+		 */
+		type: string;
+		/**
+		 * Attachment content, base64-encoded. MessageBuilder takes raw bytes here, but this endpoint accepts JSON so the bytes must be base64-encoded.
+		 */
+		content: string;
+		/**
+		 * How the attachment is presented. Defaults to 'attachment'.
+		 */
+		disposition?: "inline" | "attachment";
+	}>;
 };
 
-export type EmailSendingAttachment = {
+/**
+ * Metadata describing an attachment on a captured email, without its content.
+ */
+export type EmailAttachment = {
 	filename: string;
 	contentType: string;
 	disposition: "inline" | "attachment";
@@ -885,7 +913,7 @@ export type EmailSendingItem = {
 	subject: string;
 	messageId?: string;
 	sentAt: string;
-	attachments: Array<EmailSendingAttachment>;
+	attachments: Array<EmailAttachment>;
 };
 
 export type EmailSendingDetail = {
@@ -903,7 +931,7 @@ export type EmailSendingDetail = {
 	headers?: {
 		[key: string]: string;
 	};
-	attachments: Array<EmailSendingAttachment>;
+	attachments: Array<EmailAttachment>;
 	/**
 	 * Raw MIME content, present when sent via the EmailMessage API.
 	 */

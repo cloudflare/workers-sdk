@@ -170,6 +170,16 @@ export async function handleEmail(
 		receivedAt: new Date().toISOString(),
 		rawSize: incomingEmailRaw.byteLength,
 		raw: new TextDecoder().decode(incomingEmailRaw),
+		attachments: (parsedIncomingEmail.attachments ?? []).map((attachment) => ({
+			filename: attachment.filename ?? "attachment",
+			contentType: attachment.mimeType ?? "application/octet-stream",
+			disposition:
+				attachment.disposition === "inline" ? "inline" : "attachment",
+			size:
+				typeof attachment.content === "string"
+					? attachment.content.length
+					: attachment.content.byteLength,
+		})),
 		handlingPath,
 	};
 	async function storeReceivedEmail(): Promise<void> {
