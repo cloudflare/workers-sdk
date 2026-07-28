@@ -22,7 +22,12 @@ const result = await server.getWorker().email({
 
 expect(result).toMatchObject({
 	outcome: "ok",
-	forwards: [{ rcptTo: "archive@example.com" }],
-	replies: [{ raw: expect.stringContaining("Thanks for your email") }],
+	forwards: [{ recipient: "archive@example.com" }],
+	replies: [
+		{
+			sender: "inbox@example.com",
+			raw: expect.stringContaining("Thanks for your email"),
+		},
+	],
 });
 ```
