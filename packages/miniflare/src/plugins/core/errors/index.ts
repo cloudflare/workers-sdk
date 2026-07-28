@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import { Response } from "../../../http";
 import { processStackTrace } from "../../../shared";
@@ -157,11 +157,15 @@ function getSourceMappedStack(
 		if (matches.length === 0) return null;
 		const sourceMapMatch = matches[matches.length - 1];
 
-		// Get the source map
+		// Get the source map. `maybeGetFile` first checks inline sources (e.g.
+		// `sourcemap`-type manifest modules) and falls back to reading from disk.
 		const root = path.dirname(sourceFile.path);
 		const sourceMapPath = path.resolve(root, sourceMapMatch[1]);
-		const sourceMapFile = maybeGetDiskFile(sourceMapPath);
-		if (sourceMapFile === undefined) return null;
+		const sourceMapFile = maybeGetFile(
+			workerSrcOpts,
+			pathToFileURL(sourceMapPath).href
+		);
+		if (sourceMapFile?.path === undefined) return null;
 
 		if (onSourceMap) {
 			try {

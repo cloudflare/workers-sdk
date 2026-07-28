@@ -1,7 +1,11 @@
 import { Miniflare, QUEUES_PLUGIN_NAME, Response } from "miniflare";
 import { afterEach, beforeEach, test } from "vitest";
 import { z } from "zod";
-import { MiniflareDurableObjectControlStub, TestLog } from "../../test-shared";
+import {
+	MiniflareDurableObjectControlStub,
+	singleModuleManifest,
+	TestLog,
+} from "../../test-shared";
 
 const StringArraySchema = z.string().array();
 
@@ -31,24 +35,34 @@ beforeEach(async () => {
 	mf = new Miniflare({
 		log: new TestLog(),
 		verbose: true,
-		queueProducers: { QUEUE: { queueName: "QUEUE", deliveryDelay: 2 } },
-		queueConsumers: {
-			QUEUE: {
-				maxBatchSize: 100,
-				maxBatchTimeout: 0,
-			},
-		},
-		serviceBindings: {
-			async REPORTER(request) {
-				const batch = StringArraySchema.parse(await request.json());
-				if (batch.length > 0) {
-					batches.push(batch);
-				}
-				return new Response();
-			},
-		},
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: {
+						QUEUE: { type: "queue", name: "QUEUE", deliveryDelay: 2 },
+						REPORTER: {
+							type: "fetcher",
+							handler: async (request) => {
+								const batch = StringArraySchema.parse(await request.json());
+								if (batch.length > 0) {
+									batches.push(batch);
+								}
+								return new Response();
+							},
+						},
+					},
+					triggers: [
+						{
+							type: "queue",
+							name: "QUEUE",
+							maxBatchSize: 100,
+							maxBatchTimeout: 0,
+						},
+					],
+					manifest: singleModuleManifest(`export default {
       async fetch(request, env, ctx) {
 				const delay = request.headers.get("X-Msg-Delay-Secs");
 				const url = new URL(request.url);
@@ -77,7 +91,10 @@ beforeEach(async () => {
 		  		body: JSON.stringify(batch.messages.map(({ id }) => id)),
         });
       },
-    };`,
+    };`),
+				},
+			},
+		],
 	});
 
 	object = await getControlStub(mf, "QUEUE");

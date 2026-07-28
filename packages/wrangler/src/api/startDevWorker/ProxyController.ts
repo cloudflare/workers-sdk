@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import events from "node:events";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { assertNever } from "@cloudflare/workers-utils";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
@@ -41,7 +42,7 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
-import type { LogOptions, MiniflareOptions } from "miniflare";
+import type { LogOptions, MiniflareOptions, Request } from "miniflare";
 
 export class ProxyController extends Controller {
 	public ready = createDeferred<ReadyEvent>();
@@ -84,37 +85,58 @@ export class ProxyController extends Controller {
 			unsafeLocalExplorer: false,
 			workers: [
 				{
-					name: "ProxyWorker",
-					compatibilityDate: "2023-12-18",
-					compatibilityFlags: ["nodejs_compat"],
-					modulesRoot: path.dirname(proxyWorkerPath),
-					modules: [{ type: "ESModule", path: proxyWorkerPath }],
-					durableObjects: {
-						DURABLE_OBJECT: {
-							className: "ProxyWorker",
-							unsafePreventEviction: true,
+					config: {
+						type: "worker",
+						name: "ProxyWorker",
+						compatibilityDate: "2023-12-18",
+						compatibilityFlags: ["nodejs_compat"],
+						manifest: {
+							mainModule: path.basename(proxyWorkerPath),
+							modules: {
+								[path.basename(proxyWorkerPath)]: {
+									type: "esm",
+									contents: readFileSync(proxyWorkerPath, "utf8"),
+								},
+							},
+						},
+						exports: {
+							ProxyWorker: {
+								type: "durable-object",
+								storage: "legacy-kv",
+								unsafePreventEviction: true,
+							},
+						},
+						env: {
+							DURABLE_OBJECT: {
+								type: "durable-object",
+								workerName: "ProxyWorker",
+								exportName: "ProxyWorker",
+							},
+							PROXY_CONTROLLER: {
+								type: "fetcher",
+								handler: async (req: Request): Promise<Response> => {
+									const message =
+										(await req.json()) as ProxyWorkerOutgoingRequestBody;
+
+									this.onProxyWorkerMessage(message);
+
+									return new Response(null, { status: 204 });
+								},
+							},
+							PROXY_CONTROLLER_AUTH_SECRET: {
+								type: "text",
+								value: this.secret,
+							},
 						},
 					},
-					// Miniflare will strip CF-Connecting-IP from outgoing fetches from a Worker (to fix https://github.com/cloudflare/workers-sdk/issues/7924)
-					// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
-					stripCfConnectingIp: false,
-					serviceBindings: {
-						PROXY_CONTROLLER: async (req): Promise<Response> => {
-							const message =
-								(await req.json()) as ProxyWorkerOutgoingRequestBody;
-
-							this.onProxyWorkerMessage(message);
-
-							return new Response(null, { status: 204 });
-						},
+					dev: {
+						// Miniflare will strip CF-Connecting-IP from outgoing fetches from a Worker (to fix https://github.com/cloudflare/workers-sdk/issues/7924)
+						// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
+						stripCfConnectingIp: false,
+						// no need to use file-system, so don't
+						disableCache: true,
+						unsafeEphemeralDurableObjects: true,
 					},
-					bindings: {
-						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
-					},
-
-					// no need to use file-system, so don't
-					cacheAPI: false,
-					unsafeEphemeralDurableObjects: true,
 				},
 			],
 
@@ -138,42 +160,60 @@ export class ProxyController extends Controller {
 		if (this.inspectorEnabled) {
 			assert(this.latestConfig.dev?.inspector);
 			proxyWorkerOptions.workers.push({
-				name: "InspectorProxyWorker",
-				compatibilityDate: "2023-12-18",
-				compatibilityFlags: [
-					"nodejs_compat",
-					"increase_websocket_message_size",
-				],
-				modulesRoot: path.dirname(inspectorProxyWorkerPath),
-				modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
-				durableObjects: {
-					DURABLE_OBJECT: {
-						className: "InspectorProxyWorker",
-						unsafePreventEviction: true,
+				config: {
+					type: "worker",
+					name: "InspectorProxyWorker",
+					compatibilityDate: "2023-12-18",
+					compatibilityFlags: [
+						"nodejs_compat",
+						"increase_websocket_message_size",
+					],
+					manifest: {
+						mainModule: path.basename(inspectorProxyWorkerPath),
+						modules: {
+							[path.basename(inspectorProxyWorkerPath)]: {
+								type: "esm",
+								contents: readFileSync(inspectorProxyWorkerPath, "utf8"),
+							},
+						},
 					},
-				},
-				serviceBindings: {
-					PROXY_CONTROLLER: async (req): Promise<Response> => {
-						const body =
-							(await req.json()) as InspectorProxyWorkerOutgoingRequestBody;
+					exports: {
+						InspectorProxyWorker: {
+							type: "durable-object",
+							storage: "legacy-kv",
+							unsafePreventEviction: true,
+						},
+					},
+					env: {
+						DURABLE_OBJECT: {
+							type: "durable-object",
+							workerName: "InspectorProxyWorker",
+							exportName: "InspectorProxyWorker",
+						},
+						PROXY_CONTROLLER: {
+							type: "fetcher",
+							handler: async (req: Request): Promise<Response> => {
+								const body =
+									(await req.json()) as InspectorProxyWorkerOutgoingRequestBody;
 
-						return this.onInspectorProxyWorkerRequest(body);
+								return this.onInspectorProxyWorkerRequest(body);
+							},
+						},
+						PROXY_CONTROLLER_AUTH_SECRET: { type: "text", value: this.secret },
+						WRANGLER_VERSION: { type: "text", value: packageVersion },
 					},
 				},
-				bindings: {
-					PROXY_CONTROLLER_AUTH_SECRET: this.secret,
-					WRANGLER_VERSION: packageVersion,
+				dev: {
+					unsafeDirectSockets: [
+						{
+							host: this.latestConfig.dev?.inspector?.hostname,
+							port: this.latestConfig.dev?.inspector?.port ?? 0,
+						},
+					],
+					// no need to use file-system, so don't
+					disableCache: true,
+					unsafeEphemeralDurableObjects: true,
 				},
-
-				unsafeDirectSockets: [
-					{
-						host: this.latestConfig.dev?.inspector?.hostname,
-						port: this.latestConfig.dev?.inspector?.port ?? 0,
-					},
-				],
-				// no need to use file-system, so don't
-				cacheAPI: false,
-				unsafeEphemeralDurableObjects: true,
 			});
 		}
 

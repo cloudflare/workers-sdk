@@ -1,7 +1,8 @@
-import { Miniflare } from "miniflare";
+import { Miniflare, Response } from "miniflare";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import type { MiniflareOptions, Request as MiniflareRequest } from "miniflare";
+import { singleModuleManifest } from "../../test-shared";
+import type { MiniflareOptions } from "miniflare";
 
 // A worker that simply forwards to an origin URL with the given cf.image
 // options, mirroring the production "transform via Workers" pattern.
@@ -38,24 +39,37 @@ describe("cf.image local transforms", () => {
 			.toBuffer();
 
 		mf = new Miniflare({
-			modules: true,
-			script: WORKER_SCRIPT,
-			outboundService(request: MiniflareRequest) {
-				seenVia.push(request.headers.get("via"));
-				const url = new URL(request.url);
-				if (url.pathname === "/not-ok") {
-					return new Response("upstream error", { status: 503 });
-				}
-				if (url.pathname === "/not-an-image") {
-					return new Response("this is definitely not an image", {
-						headers: { "content-type": "image/png" },
-					});
-				}
-				return new Response(sourcePng, {
-					headers: { "content-type": "image/png" },
-				});
-			},
-		} satisfies MiniflareOptions);
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+					},
+					dev: {
+						outboundService: {
+							type: "fetcher",
+							handler(request) {
+								seenVia.push(request.headers.get("via"));
+								const url = new URL(request.url);
+								if (url.pathname === "/not-ok") {
+									return new Response("upstream error", { status: 503 });
+								}
+								if (url.pathname === "/not-an-image") {
+									return new Response("this is definitely not an image", {
+										headers: { "content-type": "image/png" },
+									});
+								}
+								return new Response(sourcePng, {
+									headers: { "content-type": "image/png" },
+								});
+							},
+						},
+					},
+				},
+			],
+		});
 	});
 
 	afterAll(() => mf.dispose());

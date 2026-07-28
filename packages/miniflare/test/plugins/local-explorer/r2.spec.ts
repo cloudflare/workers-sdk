@@ -8,7 +8,11 @@ import {
 	zR2BucketPutObjectResponse,
 	zR2ListBucketsResponse,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
-import { dispatchFetchWithRetry, disposeWithRetry } from "../../test-shared";
+import {
+	dispatchFetchWithRetry,
+	disposeWithRetry,
+	singleModuleManifest,
+} from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
@@ -19,14 +23,23 @@ describe("R2 API", () => {
 	beforeAll(async () => {
 		mf = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
-			r2Buckets: {
-				TEST_BUCKET: "test-bucket",
-				ANOTHER_BUCKET: "another-bucket",
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+						env: {
+							TEST_BUCKET: { type: "r2", name: "test-bucket" },
+							ANOTHER_BUCKET: { type: "r2", name: "another-bucket" },
+						},
+					},
+				},
+			],
 		});
 	});
 

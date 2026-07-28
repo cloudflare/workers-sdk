@@ -1,15 +1,4 @@
-import fs from "node:fs/promises";
-import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
-import SCRIPT_WORKFLOWS_WRAPPED_BINDING from "worker:workflows/wrapped-binding";
 import { z } from "zod";
-import { getUserServiceName } from "../core";
-import {
-	getPersistPath,
-	getUserBindingServiceName,
-	ProxyNodeBinding,
-	SERVICE_DEV_REGISTRY_PROXY,
-} from "../shared";
-import type { Service } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const WorkflowsOptionsSchema = z.object({
@@ -20,12 +9,6 @@ export const WorkflowsOptionsSchema = z.object({
 				name: z.string(),
 				className: z.string(),
 				scriptName: z.string().optional(),
-				// When set, the workflow's `scriptName` refers to a worker that lives
-				// outside this Miniflare instance (registered in the wrangler dev
-				// registry). The engine's USER_WORKFLOW binding is rerouted through
-				// the dev-registry-proxy so calls reach the external worker. Set by
-				// `getExternalServiceEntrypoints` in `src/index.ts`; not part of the
-				// public API.
 				external: z.boolean().optional(),
 				remoteProxyConnectionString: z
 					.custom<RemoteProxyConnectionString>()
@@ -39,160 +22,21 @@ export const WorkflowsOptionsSchema = z.object({
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
 export const WORKFLOWS_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:storage`;
 
-export const WORKFLOWS_PLUGIN: Plugin<typeof WorkflowsOptionsSchema> = {
-	options: WorkflowsOptionsSchema,
+// NOTE(miniflare v5 options-schema migration): Workflows support is temporarily
+// disabled. This plugin has been removed from the `PLUGINS` registry and
+// neutralised to a no-op while the config schema migration lands. It must be
+// re-implemented against the unified `ParsedWorkerOptions` shape (reading
+// workflow definitions from the parsed config) in a follow-up phase. The
+// previous implementation is preserved in git history.
+export const WORKFLOWS_PLUGIN: Plugin = {
 	bindingTypeDescription: "Workflow",
-	async getBindings(options: z.infer<typeof WorkflowsOptionsSchema>) {
-		return Object.entries(options.workflows ?? {}).map(
-			([bindingName, workflow]) => ({
-				name: bindingName,
-				wrapped: {
-					moduleName: `${WORKFLOWS_PLUGIN_NAME}:local-wrapped-binding`,
-					innerBindings: [
-						{
-							name: "binding",
-							service: {
-								name: getUserBindingServiceName(
-									WORKFLOWS_PLUGIN_NAME,
-									workflow.name,
-									workflow.remoteProxyConnectionString
-								),
-								entrypoint: "WorkflowBinding",
-							},
-						},
-					],
-				},
-			})
-		);
+	getBindings() {
+		return [];
 	},
-
-	async getNodeBindings(options) {
-		return Object.fromEntries(
-			Object.keys(options.workflows ?? {}).map((bindingName) => [
-				bindingName,
-				new ProxyNodeBinding(),
-			])
-		);
+	getNodeBindings() {
+		return {};
 	},
-
-	getExtensions() {
-		return [
-			{
-				modules: [
-					{
-						name: `${WORKFLOWS_PLUGIN_NAME}:local-wrapped-binding`,
-						esModule: SCRIPT_WORKFLOWS_WRAPPED_BINDING(),
-						internal: true,
-					},
-				],
-			},
-		];
-	},
-
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		const persistPath = getPersistPath(
-			WORKFLOWS_PLUGIN_NAME,
-			tmpPath,
-			resourcePersistencePath
-		);
-		await fs.mkdir(persistPath, { recursive: true });
-		// each workflow should get its own storage service
-		const storageServices: Service[] = Object.entries(
-			options.workflows ?? {}
-		).map<Service>(([_, workflow]) => ({
-			name: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${workflow.name}`,
-			disk: { path: persistPath, writable: true },
-		}));
-
-		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
-		const services = Object.entries(options.workflows ?? {}).map<Service>(
-			([bindingName, workflow]) => {
-				// NOTE(lduarte): the engine unique namespace key must be unique per workflow definition
-				// otherwise workerd will crash because there's two equal DO namespaces
-				const uniqueKey = `miniflare-workflows-${workflow.name}`;
-
-				const workflowsBinding: Service = {
-					name: getUserBindingServiceName(
-						WORKFLOWS_PLUGIN_NAME,
-						workflow.name,
-						workflow.remoteProxyConnectionString
-					),
-					worker: {
-						compatibilityDate: "2024-10-22",
-						compatibilityFlags: Array.from(
-							new Set(["experimental", ...(workflow.compatibilityFlags ?? [])])
-						),
-						modules: [
-							{
-								name: "workflows.mjs",
-								esModule: SCRIPT_WORKFLOWS_BINDING(),
-							},
-						],
-						durableObjectNamespaces: [
-							{
-								className: "Engine",
-								enableSql: true,
-								uniqueKey,
-								preventEviction: true,
-							},
-						],
-						durableObjectStorage: {
-							localDisk: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${workflow.name}`,
-						},
-						bindings: [
-							{
-								name: "ENGINE",
-								durableObjectNamespace: { className: "Engine" },
-							},
-							workflow.external && workflow.scriptName
-								? {
-										name: "USER_WORKFLOW",
-										service: {
-											name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
-											entrypoint: "ExternalServiceProxy",
-											props: {
-												json: JSON.stringify({
-													service: workflow.scriptName,
-													entrypoint: workflow.className,
-												}),
-											},
-										},
-									}
-								: {
-										name: "USER_WORKFLOW",
-										service: {
-											name: getUserServiceName(workflow.scriptName),
-											entrypoint: workflow.className,
-										},
-									},
-							{
-								name: "BINDING_NAME",
-								json: JSON.stringify(bindingName),
-							},
-							{
-								name: "WORKFLOW_NAME",
-								json: JSON.stringify(workflow.name),
-							},
-							...(workflow.stepLimit !== undefined
-								? [
-										{
-											name: "STEP_LIMIT",
-											json: JSON.stringify(workflow.stepLimit),
-										},
-									]
-								: []),
-						],
-					},
-				};
-
-				return workflowsBinding;
-			}
-		);
-
-		if (services.length === 0) {
-			return [];
-		}
-
-		return [...storageServices, ...services];
+	getServices() {
+		return [];
 	},
 };

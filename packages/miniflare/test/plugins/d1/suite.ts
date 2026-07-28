@@ -548,7 +548,12 @@ test("operations permit strange database names", async ({ expect }) => {
 
 	// Set option, then reset after test
 	const id = "my/ Database";
-	await ctx.setOptions({ ...opts, d1Databases: { [binding]: id } });
+	const baseConfig = opts.workers[0].config;
+	await ctx.setOptions({
+		workers: [
+			{ config: { ...baseConfig, env: { [binding]: { type: "d1", id } } } },
+		],
+	});
 	onTestFinished(() => ctx.setOptions(opts));
 	const db = await getDatabase(ctx.mf);
 
@@ -601,10 +606,12 @@ test("dumpSql exports and imports complete database structure and content correc
 }) => {
 	// Create a new Miniflare instance with D1 database
 	const tmp1 = await useTmp();
+	const baseConfig = opts.workers[0].config;
 	const originalMF = new Miniflare({
-		...opts,
 		resourcePersistencePath: tmp1,
-		d1Databases: { test: "test" },
+		workers: [
+			{ config: { ...baseConfig, env: { test: { type: "d1", id: "test" } } } },
+		],
 	});
 	useDispose(originalMF);
 	const originalDb = await originalMF.getD1Database("test");
@@ -623,9 +630,10 @@ test("dumpSql exports and imports complete database structure and content correc
 	// Create a new Miniflare instance and import the dump into a new database
 	const tmp2 = await useTmp();
 	const mirrorMF = new Miniflare({
-		...opts,
 		resourcePersistencePath: tmp2,
-		d1Databases: { test: "test" },
+		workers: [
+			{ config: { ...baseConfig, env: { test: { type: "d1", id: "test" } } } },
+		],
 	});
 	useDispose(mirrorMF);
 

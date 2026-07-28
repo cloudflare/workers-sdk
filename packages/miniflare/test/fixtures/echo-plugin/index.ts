@@ -1,6 +1,5 @@
 import { ProxyNodeBinding } from "miniflare";
-import { z } from "miniflare:zod";
-import type { Plugin, Worker_Binding } from "miniflare";
+import type { ParsedWorkerOptions, Plugin, Worker_Binding } from "miniflare";
 
 // Module implementing the wrapped binding. It exposes an `asyncIdentity` method
 // that echoes back its arguments, allowing tests to exercise the proxy client's
@@ -25,24 +24,22 @@ export default function () {
 }
 `;
 
-export const EchoBindingOptionSchema = z.array(
-	z.object({
-		name: z.string(),
-		type: z.string(),
-		plugin: z.object({
-			package: z.string(),
-			name: z.string(),
-		}),
-		options: z.record(z.string(), z.unknown()),
-	})
-);
+const ECHO_PLUGIN_NAME = "echo-plugin";
+
+// Unsafe bindings live in `config.env` with an `unsafe:*` type and carry the
+// plugin reference under `dev.plugin`. Select the ones targeting this plugin.
+function getEchoBindings(config: ParsedWorkerOptions["config"]) {
+	return Object.entries(config.env ?? {}).filter(
+		([, binding]) =>
+			"dev" in binding && binding.dev?.plugin?.name === ECHO_PLUGIN_NAME
+	);
+}
 
 export const plugins = {
 	"echo-plugin": {
-		options: EchoBindingOptionSchema,
 		getBindings(options) {
-			return options.map<Worker_Binding>((binding) => ({
-				name: binding.name,
+			return getEchoBindings(options.config).map<Worker_Binding>(([name]) => ({
+				name,
 				wrapped: {
 					moduleName: ECHO_MODULE_NAME,
 					innerBindings: [],
@@ -51,14 +48,20 @@ export const plugins = {
 		},
 		getNodeBindings(options) {
 			return Object.fromEntries(
-				options.map((binding) => [binding.name, new ProxyNodeBinding()])
+				getEchoBindings(options.config).map(([name]) => [
+					name,
+					new ProxyNodeBinding(),
+				])
 			);
 		},
 		getServices() {
 			return [];
 		},
 		getExtensions({ options }) {
-			if (!options.some((bindings) => bindings.length > 0)) {
+			const hasEchoBinding = options.some(
+				(workerOptions) => getEchoBindings(workerOptions.config).length > 0
+			);
+			if (!hasEchoBinding) {
 				return [];
 			}
 			return [
@@ -73,5 +76,5 @@ export const plugins = {
 				},
 			];
 		},
-	} satisfies Plugin<typeof EchoBindingOptionSchema>,
+	} satisfies Plugin,
 };

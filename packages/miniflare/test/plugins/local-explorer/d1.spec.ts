@@ -6,7 +6,7 @@ import {
 	zD1ListDatabasesResponse,
 	zD1RawDatabaseQueryResponse,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
-import { disposeWithRetry } from "../../test-shared";
+import { disposeWithRetry, singleModuleManifest } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
@@ -16,15 +16,24 @@ describe("D1 API", () => {
 
 	beforeAll(async () => {
 		mf = new Miniflare({
-			compatibilityDate: "2026-01-01",
-			d1Databases: {
-				TEST_DB: "test-db-id",
-				ANOTHER_DB: "another-db-id",
-			},
 			inspectorPort: 0,
-			modules: true,
-			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2026-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+						env: {
+							TEST_DB: { type: "d1", id: "test-db-id" },
+							ANOTHER_DB: { type: "d1", id: "another-db-id" },
+						},
+					},
+				},
+			],
 		});
 
 		// Create a test table in the `TEST_DB`

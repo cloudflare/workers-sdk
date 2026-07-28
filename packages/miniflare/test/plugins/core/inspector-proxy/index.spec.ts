@@ -4,7 +4,7 @@ import getPort from "get-port";
 import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
 import { beforeAll, test, vi } from "vitest";
 import WebSocket from "ws";
-import { useDispose } from "../../../test-shared";
+import { singleModuleManifest, useDispose } from "../../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 const nullScript =
@@ -24,8 +24,13 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -49,8 +54,13 @@ test("InspectorProxy: /json should provide a list of a single worker inspector",
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -76,8 +86,13 @@ test("InspectorProxy: proxy port validation", async ({ expect }) => {
 			new Miniflare({
 				workers: [
 					{
-						script: nullScript,
-						unsafeInspectorProxy: true,
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-05-01",
+						},
+						legacy: { serviceWorkerScript: nullScript },
+						dev: { unsafeInspectorProxy: true },
 					},
 				],
 			})
@@ -96,18 +111,31 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "extra-worker-a",
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "extra-worker-a",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "extra-worker-b",
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "extra-worker-b",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -144,17 +172,30 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "extra-worker-a",
-				script: nullScript,
+				config: {
+					type: "worker",
+					name: "extra-worker-a",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
 			},
 			{
-				name: "extra-worker-b",
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "extra-worker-b",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -186,8 +227,13 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 	const options: MiniflareOptions = {
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	};
@@ -239,8 +285,13 @@ test("InspectorProxy: should keep the same inspector port on miniflare#setOption
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	};
@@ -264,8 +315,13 @@ test("InspectorProxy: should not keep the same inspector port on miniflare#setOp
 		inspectorPort: initialInspectorPort,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	};
@@ -294,16 +350,20 @@ test("InspectorProxy: should allow debugging a single worker", async ({
 		inspectorPort: 0,
 		workers: [
 			{
-				script: `
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("body");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -350,16 +410,20 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 	const options: MiniflareOptions = {
 		workers: [
 			{
-				script: `
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("body");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	};
@@ -422,8 +486,11 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 		inspectorPort: 0,
 		workers: [
 			{
-				name: "worker-a",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							async fetch(request, env, ctx) {
 								debugger;
@@ -432,25 +499,28 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 								return new Response(\`worker-a -> \${workerBText}\`);
 							}
 						}
-					`,
-				modules: true,
-				serviceBindings: {
-					WORKER_B: "worker-b",
+					`),
+					env: {
+						WORKER_B: { type: "worker", workerName: "worker-b" },
+					},
 				},
-				unsafeInspectorProxy: true,
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "worker-b",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("worker-b");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -551,17 +621,20 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 		inspectorPort: 0,
 		workers: [
 			{
-				name: "worker-b",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("worker-b");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -573,8 +646,11 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 		inspectorPort: 0,
 		workers: [
 			{
-				name: "worker-a",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							async fetch(request, env, ctx) {
 								debugger;
@@ -583,25 +659,28 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 								return new Response(\`worker-a -> \${workerBText}\`);
 							}
 						}
-					`,
-				modules: true,
-				serviceBindings: {
-					WORKER_B: "worker-b",
+					`),
+					env: {
+						WORKER_B: { type: "worker", workerName: "worker-b" },
+					},
 				},
-				unsafeInspectorProxy: true,
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "worker-b",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("worker-b");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -712,16 +791,20 @@ test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 		handleStructuredLogs() {},
 		workers: [
 			{
-				script: `
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								console.log("${LARGE_STRING}");
 								return new Response(\`body:${LARGE_STRING}\`);
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
