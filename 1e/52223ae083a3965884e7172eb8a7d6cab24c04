@@ -1,0 +1,19 @@
+packages/vite-plugin-cloudflare/playground/spa-with-api/__tests__/client-bundled-dev/spa-with-api.spec.ts
+  s_5bc7d37e49699a::t_2faec0854aabe4 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1e52223ae083a3965884e7172eb8a7d6cab24c04",
+  "prompts": {},
+  "sessions": {
+    "s_5bc7d37e49699a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05b8af360ffe5qurF630qnjB89",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}
