@@ -576,12 +576,7 @@ class KVHandler extends ProvisionResourceHandler<
 		return undefined;
 	}
 	async create(name: string) {
-		return await createKVNamespace(
-			this.complianceConfig,
-			this.accountId,
-			name,
-			this.binding.jurisdiction
-		);
+		return await createKVNamespace(this.complianceConfig, this.accountId, name);
 	}
 	constructor(
 		bindingName: string,
@@ -1363,8 +1358,7 @@ function autoProvisionedResourceName(
 async function createKVNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	title: string,
-	jurisdiction?: string
+	title: string
 ): Promise<string> {
 	const response = await fetchResult<{ id: string }>(
 		complianceConfig,
@@ -1376,7 +1370,6 @@ async function createKVNamespace(
 			},
 			body: JSON.stringify({
 				title,
-				jurisdiction,
 			}),
 		}
 	);
