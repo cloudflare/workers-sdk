@@ -29,12 +29,27 @@ export async function handleEmail(
 	env: Env,
 	ctx: ExecutionContext
 ): Promise<Response> {
+	const events: Array<
+		| {
+				type: "forward" | "reply";
+				timestamp: string;
+				messageId: string;
+		  }
+		| {
+				type: "reject";
+				timestamp: string;
+		  }
+	> = [];
 	const forwards: Array<{
-		rcptTo: string;
-		headers: [string, string][];
 		messageId: string;
+		recipient: string;
+		headers: [string, string][];
 	}> = [];
-	const replies: Array<{ messageId: string; raw: string }> = [];
+	const replies: Array<{
+		messageId: string;
+		sender: string;
+		raw: string;
+	}> = [];
 
 	// Turn an HTTP request into an EmailMessage, using:
 	//  - `from` and `to` from the URL
@@ -152,6 +167,11 @@ export async function handleEmail(
 						}
 					)
 				);
+
+				events.push({
+					type: "reject",
+					timestamp: new Date().toISOString(),
+				});
 				rejectReason = reason;
 			},
 			forward: async (
@@ -174,8 +194,13 @@ export async function handleEmail(
 				const uuid = crypto.randomUUID().replaceAll("-", "");
 				const result = { messageId: `${uuid}@example.com` };
 
+				events.push({
+					type: "forward",
+					timestamp: new Date().toISOString(),
+					messageId: result.messageId,
+				});
 				forwards.push({
-					rcptTo,
+					recipient: rcptTo,
 					headers: headers ? [...headers.entries()] : [],
 					messageId: result.messageId,
 				});
@@ -237,8 +262,14 @@ export async function handleEmail(
 				 */
 				const uuid = crypto.randomUUID().replaceAll("-", "");
 				const result = { messageId: `${uuid}@example.com` };
+				events.push({
+					type: "reply",
+					timestamp: new Date().toISOString(),
+					messageId: result.messageId,
+				});
 				replies.push({
 					messageId: result.messageId,
+					sender: replyMessage.from,
 					raw: new TextDecoder().decode(finalReply),
 				});
 				return result;
@@ -279,6 +310,7 @@ export async function handleEmail(
 			rejectReason,
 			forwards,
 			replies,
+			events,
 		},
 		{ status: outcome === "ok" ? 200 : 500 }
 	);

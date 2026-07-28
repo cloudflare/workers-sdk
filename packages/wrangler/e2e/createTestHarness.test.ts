@@ -1827,9 +1827,9 @@ describe("createTestHarness", () => {
 							new Headers({ "X-Test": mode })
 						);
 						await message.reply(new EmailMessage(
-							message.to,
+							\`reply-\${mode}@example.com\`,
 							message.from,
-							\`From: \${message.to}\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
+							\`From: reply-\${mode}@example.com\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
 						));
 
 						if (mode === "exception") {
@@ -1859,11 +1859,11 @@ describe("createTestHarness", () => {
 				to: "ok@example.com",
 				raw: createRawEmail("ok"),
 			})
-		).resolves.toMatchObject({
+		).resolves.toEqual({
 			outcome: "ok",
 			forwards: [
 				{
-					rcptTo: "archive@example.com",
+					recipient: "archive@example.com",
 					headers: [["x-test", "ok"]],
 					messageId: expect.any(String),
 				},
@@ -1871,7 +1871,20 @@ describe("createTestHarness", () => {
 			replies: [
 				{
 					messageId: expect.any(String),
+					sender: "reply-ok@example.com",
 					raw: expect.stringContaining("Reply for ok"),
+				},
+			],
+			events: [
+				{
+					type: "forward",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+				{
+					type: "reply",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
 				},
 			],
 		});
@@ -1887,6 +1900,7 @@ describe("createTestHarness", () => {
 			rejectReason: "blocked sender",
 			forwards: [],
 			replies: [],
+			events: [{ type: "reject", timestamp: expect.any(String) }],
 		});
 
 		await expect(
@@ -1895,20 +1909,35 @@ describe("createTestHarness", () => {
 				to: "exception@example.com",
 				raw: createRawEmail("exception"),
 			})
-		).resolves.toMatchObject({
+		).resolves.toEqual({
 			outcome: "exception",
 			rejectReason: "triggered exception",
 			forwards: [
 				{
-					rcptTo: "archive@example.com",
+					recipient: "archive@example.com",
 					headers: [["x-test", "exception"]],
+					messageId: expect.any(String),
 				},
 			],
 			replies: [
 				{
 					messageId: expect.any(String),
+					sender: "reply-exception@example.com",
 					raw: expect.stringContaining("Reply for exception"),
 				},
+			],
+			events: [
+				{
+					type: "forward",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+				{
+					type: "reply",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+				{ type: "reject", timestamp: expect.any(String) },
 			],
 		});
 

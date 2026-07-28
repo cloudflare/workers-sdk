@@ -108,14 +108,26 @@ export type FetcherEmailResult = {
 	outcome: "ok" | "exception";
 	rejectReason?: string;
 	forwards: Array<{
-		rcptTo: string;
-		headers: [string, string][];
 		messageId: string;
+		recipient: string;
+		headers: [string, string][];
 	}>;
 	replies: Array<{
 		messageId: string;
+		sender: string;
 		raw: string;
 	}>;
+	events: Array<
+		| {
+				type: "forward" | "reply";
+				timestamp: string;
+				messageId: string;
+		  }
+		| {
+				type: "reject";
+				timestamp: string;
+		  }
+	>;
 };
 
 export type WorkerDefaultExport =
