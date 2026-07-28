@@ -110,7 +110,7 @@ describe("startDev", () => {
 			"GET http://127.0.0.1:8787/cdn-cgi/explorer/api/local/workers - local Workers and bindings"
 		);
 		expect(std.out).toContain(
-			"POST http://127.0.0.1:8787/cdn-cgi/explorer/api/local/observability/query - query captured request traces and console logs (read-only SQL over the spans and logs tables)"
+			"POST http://127.0.0.1:8787/cdn-cgi/explorer/api/local/observability/query - query request traces and console logs"
 		);
 	});
 
