@@ -55,6 +55,7 @@ export const triggersDeployCommand = createCommand({
 	},
 	behaviour: {
 		supportTemporary: true,
+		useConfigRedirectIfAvailable: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		suggestSkillsAfterHandler: true,
 	},
