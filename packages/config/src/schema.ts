@@ -541,7 +541,7 @@ const ManifestSchema = z.strictObject({
 });
 
 /**
- * Output Worker schema — the shape of `worker.config.json` in the
+ * Output Worker schema — the shape of the Worker's `config.json` in the
  * Build Output Specification. Adds an optional `manifest` field to the
  * base schema.
  */

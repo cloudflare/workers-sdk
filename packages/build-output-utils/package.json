@@ -30,8 +30,10 @@
 		"test:ci": "vitest run",
 		"test:watch": "vitest"
 	},
+	"dependencies": {
+		"@cloudflare/config": "workspace:*"
+	},
 	"devDependencies": {
-		"@cloudflare/config": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",

@@ -1,116 +1,20 @@
-import * as fsp from "node:fs/promises";
-import * as path from "node:path";
-import { removeDir } from "@cloudflare/workers-utils";
-import type {
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
-} from "@cloudflare/config";
-
-/**
- * Initial draft version of the Build Output Specification.
- *
- * Will move to `v1` when the spec stabilises.
- */
-export const BUILD_OUTPUT_VERSION = "v0";
-
-/**
- * Project-relative root.
- */
-export const BUILD_OUTPUT_ROOT = ".cloudflare/output";
-
-/**
- * Filename of the top-level (root) config holding shared settings.
- */
-export const ROOT_CONFIG_FILENAME = "config.json";
-
-/**
- * Filename of the per-Worker config.
- */
-export const WORKER_CONFIG_FILENAME = "worker.config.json";
-
-/**
- * Absolute path to the Build Output Specification root for the current project.
- */
-function getBuildOutputDir(root: string): string {
-	return path.resolve(root, BUILD_OUTPUT_ROOT);
-}
-
-/**
- * Absolute path to the top-level `config.json` for the current project.
- */
-export function getRootConfigPath(root: string): string {
-	return path.join(
-		getBuildOutputDir(root),
-		BUILD_OUTPUT_VERSION,
-		ROOT_CONFIG_FILENAME
-	);
-}
-
-/**
- * Clean the build output directory.
- */
-export async function cleanBuildOutputDir(root: string): Promise<void> {
-	await removeDir(getBuildOutputDir(root));
-}
-
-/**
- * Absolute path to the Workers output directory.
- */
-export function getWorkersDir(root: string): string {
-	return path.join(getBuildOutputDir(root), BUILD_OUTPUT_VERSION, "workers");
-}
-
-/**
- * Absolute path to the config file for a given Worker.
- */
-export function getWorkerConfigPath(root: string, workerName: string): string {
-	return path.join(getWorkersDir(root), workerName, WORKER_CONFIG_FILENAME);
-}
-
-/**
- * Absolute path to the bundle directory for a given Worker.
- */
-export function getWorkerBundleDir(root: string, workerName: string): string {
-	return path.join(getWorkersDir(root), workerName, "bundle");
-}
-
-/**
- * Absolute path to the assets directory for a given Worker.
- */
-export function getWorkerAssetsDir(root: string, workerName: string): string {
-	return path.join(getWorkersDir(root), workerName, "assets");
-}
-
-/**
- * Write the output `worker.config.json` for a given Worker to the Build
- * Output Specification tree.
- *
- * - Workers mode: `manifest` is provided (bundle/ present on disk).
- * - Assets-only mode: `manifest` is omitted (no bundle/ directory).
- */
-export async function writeOutputWorkerConfig(
-	root: string,
-	parsedConfig: ParsedInputWorkerConfig,
-	manifest?: ParsedOutputWorkerConfig["manifest"]
-): Promise<void> {
-	const { entrypoint: _entrypoint, ...rest } = parsedConfig;
-	const outputConfig: ParsedOutputWorkerConfig = { ...rest, manifest };
-	const workerOutputDir = path.join(getWorkersDir(root), outputConfig.name);
-	await fsp.mkdir(workerOutputDir, { recursive: true });
-	const configPath = getWorkerConfigPath(root, outputConfig.name);
-	await fsp.writeFile(configPath, JSON.stringify(outputConfig));
-}
-
-/**
- * Write the top-level `config.json` holding shared settings to the Build
- * Output Specification tree.
- */
-export async function writeRootOutputConfig(
-	root: string,
-	settings: ParsedSettingsConfig
-): Promise<void> {
-	const configPath = getRootConfigPath(root);
-	await fsp.mkdir(path.dirname(configPath), { recursive: true });
-	await fsp.writeFile(configPath, JSON.stringify(settings));
-}
+export {
+	BUILD_OUTPUT_ROOT,
+	BUILD_OUTPUT_VERSION,
+	CONFIG_FILENAME,
+	DEFAULT_WORKER_EXPORT,
+	getRootConfigPath,
+	getWorkerAssetsDir,
+	getWorkerBundleDir,
+	getWorkerConfigPath,
+	getWorkerDir,
+	getWorkersDir,
+} from "./paths";
+export {
+	cleanBuildOutputDir,
+	writeRootConfig,
+	writeWorkerConfig,
+} from "./write";
+export { BuildOutputError } from "./errors";
+export { readBuildOutput } from "./read";
+export type { BuildOutput, BuildOutputWorker } from "./read";

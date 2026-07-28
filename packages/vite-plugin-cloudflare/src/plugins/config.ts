@@ -5,7 +5,7 @@ import {
 	cleanBuildOutputDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
-	writeOutputWorkerConfig,
+	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
@@ -223,10 +223,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 							entryWorkerNewConfig,
 							`No config found for "${entryWorkerEnvironmentName}" environment`
 						);
-						await writeOutputWorkerConfig(
-							builder.config.root,
-							entryWorkerNewConfig
-						);
+						await writeWorkerConfig(builder.config.root, entryWorkerNewConfig);
 					} else {
 						const entryWorkerConfig = ctx.getWorkerConfig(
 							entryWorkerEnvironmentName
@@ -371,52 +368,22 @@ function forceBuildOutputDirs(
 	}
 
 	const { root } = resolvedViteConfig;
-	let clientWorkerName: string;
 
+	// The Build Output Specification currently holds a single Worker in the
+	// `default` directory (the default export in `cloudflare.config.ts`). Only
+	// the entry Worker is emitted; auxiliary Worker environments keep their
+	// normal build output and are ignored by the spec.
 	if (resolvedPluginConfig.type === "workers") {
-		for (const [
-			environmentName,
-			worker,
-		] of resolvedPluginConfig.environmentNameToWorkerMap) {
-			const environment = resolvedViteConfig.environments[environmentName];
-			if (!environment) {
-				continue;
-			}
-			assert(
-				worker.parsedNewWorkerConfig,
-				"Expected parsedNewWorkerConfig to be defined"
-			);
-			environment.build.outDir = getWorkerBundleDir(
-				root,
-				worker.parsedNewWorkerConfig.name
-			);
-		}
-
 		const entryName = resolvedPluginConfig.entryWorkerEnvironmentName;
-		const entryWorker =
-			resolvedPluginConfig.environmentNameToWorkerMap.get(entryName);
-		assert(entryWorker, `Expected entry worker for environment "${entryName}"`);
-		assert(
-			entryWorker.parsedNewWorkerConfig,
-			"Expected parsedNewWorkerConfig to be defined"
-		);
-		clientWorkerName = entryWorker.parsedNewWorkerConfig.name;
-	} else {
-		assert(
-			resolvedPluginConfig.parsedNewConfig,
-			"Expected parsedNewConfig to be defined"
-		);
-		const defaultExport = resolvedPluginConfig.parsedNewConfig.default;
-		assert(
-			defaultExport?.type === "worker",
-			"Expected a default worker export"
-		);
-		clientWorkerName = defaultExport.name;
+		const entryEnvironment = resolvedViteConfig.environments[entryName];
+		if (entryEnvironment) {
+			entryEnvironment.build.outDir = getWorkerBundleDir(root);
+		}
 	}
 
 	const clientEnvironment = resolvedViteConfig.environments.client;
 	if (clientEnvironment) {
-		clientEnvironment.build.outDir = getWorkerAssetsDir(root, clientWorkerName);
+		clientEnvironment.build.outDir = getWorkerAssetsDir(root);
 	}
 }
 
