@@ -119,7 +119,7 @@ catalog:
   # version of Undici
   undici-types: "7.28.0"
   vitest: "4.1.0"
-  vite: "8.0.13"
+  vite: "8.1.5"
   "ws": "8.21.0"
   esbuild: "0.28.1"
   "@playwright/test": "1.60.0"
