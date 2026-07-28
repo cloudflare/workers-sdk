@@ -334,18 +334,28 @@ test("put: puts empty value", async ({ expect }) => {
 	expect(value).toBe("");
 });
 
-test("getWithMetadata: returns metadata for falsy values", async ({
-	expect,
-}) => {
+test("bulk get: check metadata for falsy values", async ({ expect }) => {
 	const { kv } = ctx;
-	await kv.put("key-empty", "", { metadata: { key: "empty" } });
-	const emptyResult = await kv.getWithMetadata("key-empty");
-	expect(emptyResult.value).toBe("");
-	expect(emptyResult.metadata).toEqual({ key: "empty" });
-	await kv.put("key-zero", "0");
-	const zeroResult = await kv.getWithMetadata("key-zero");
-	expect(zeroResult.value).toBe("0");
-	expect(zeroResult.metadata).toBe(null);
+	await kv.put("key1", "", { metadata: { testing: true } });
+
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "", metadata: { testing: true } }],
+	]);
+	expect(result).toEqual(expectedResult);
+});
+
+test("bulk get: check metadata for falsy json values", async ({ expect }) => {
+	const { kv } = ctx;
+	await kv.put("key1", "0", { metadata: { testing: "zero" } });
+	await kv.put("key2", "false", { metadata: { testing: "false" } });
+
+	const result: any = await kv.getWithMetadata(["key1", "key2"], "json");
+	const expectedResult: any = new Map([
+		["key1", { value: 0, metadata: { testing: "zero" } }],
+		["key2", { value: false, metadata: { testing: "false" } }],
+	]);
+	expect(result).toEqual(expectedResult);
 });
 test("put: overrides existing keys", async ({ expect }) => {
 	const { kv, ns, object } = ctx;
