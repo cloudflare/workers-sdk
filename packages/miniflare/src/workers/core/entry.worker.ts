@@ -21,6 +21,7 @@ type Env = {
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
 	[CoreBindings.SERVICE_R2_PUBLIC]?: Fetcher;
+	[CoreBindings.SERVICE_R2_S3]?: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
@@ -627,6 +628,28 @@ export default <ExportedHandler<Env>>{
 				r2PublicService
 			) {
 				return await r2PublicService.fetch(request);
+			}
+
+			const r2S3Service = env[CoreBindings.SERVICE_R2_S3];
+			if (
+				(url.pathname === CorePaths.R2_S3 ||
+					url.pathname.startsWith(`${CorePaths.R2_S3}/`)) &&
+				r2S3Service
+			) {
+				// SigV4 verification compares against the host the client
+				// signed, so undo the `upstream` URL/Host rewrite from
+				// `getUserRequest()`
+				let s3Request = request;
+				const originalHostname = request.headers.get(
+					CoreHeaders.ORIGINAL_HOSTNAME
+				);
+				if (originalHostname !== null) {
+					const s3Url = new URL(url);
+					s3Url.host = originalHostname;
+					s3Request = new Request(s3Url, request);
+					s3Request.headers.set("Host", originalHostname);
+				}
+				return await r2S3Service.fetch(s3Request);
 			}
 
 			let response = await service.fetch(request);
