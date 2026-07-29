@@ -33,6 +33,10 @@ test("groups files under `files/<prefix>` when a prefix is given", async ({
 	});
 
 	expect(path.dirname(filePath)).toBe(path.join(tmp, "files", "somewhere"));
+	// The generic endpoint writes a single file; it must not mirror it anywhere
+	// else (that layout is exclusive to `writeEmailTempFile`).
+	expect(await readdir(tmp)).toStrictEqual(["files"]);
+	expect(await readdir(path.join(tmp, "files", "somewhere"))).toHaveLength(1);
 });
 
 test("names files randomly with the requested extension", async ({
@@ -56,18 +60,4 @@ test("names files randomly with the requested extension", async ({
 	expect(first).not.toBe(second);
 	expect(first.endsWith(".eml")).toBe(true);
 	expect(second.endsWith(".eml")).toBe(true);
-});
-
-test("does not mirror the file anywhere else", async ({ expect }) => {
-	const tmp = await useTmp();
-
-	await writeTempFile({
-		tmpPath: tmp,
-		prefix: "somewhere",
-		extension: "txt",
-		contents: "hello",
-	});
-
-	expect(await readdir(tmp)).toStrictEqual(["files"]);
-	expect(await readdir(path.join(tmp, "files", "somewhere"))).toHaveLength(1);
 });

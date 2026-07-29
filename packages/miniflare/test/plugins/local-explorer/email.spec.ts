@@ -71,7 +71,9 @@ describe("Email API - Routing", () => {
 		expect(data.result).toEqual([]);
 	});
 
-	test("delivers a test email and captures it", async ({ expect }) => {
+	test("delivers a test email and exposes it in the list and detail views", async ({
+		expect,
+	}) => {
 		const sendResponse = await mf.dispatchFetch(
 			`${BASE_URL}/email/routing/send`,
 			{
@@ -110,7 +112,8 @@ describe("Email API - Routing", () => {
 			})
 		);
 
-		// And the detail endpoint must resolve that same id.
+		// And the detail endpoint must resolve that same id, exposing the raw MIME
+		// and the handling path the list view omits.
 		const detailResponse = await mf.dispatchFetch(
 			`${BASE_URL}/email/routing/${sentId}`
 		);
@@ -120,26 +123,6 @@ describe("Email API - Routing", () => {
 			expect
 		);
 		expect(detail.result?.id).toBe(sentId);
-	});
-
-	test("returns details for a received email", async ({ expect }) => {
-		const listResponse = await mf.dispatchFetch(`${BASE_URL}/email/routing`);
-		const list = await expectValidResponse(
-			listResponse,
-			zEmailListRoutingResponse,
-			expect
-		);
-		const id = list.result?.[0]?.id;
-		expect(id).toBeDefined();
-
-		const detailResponse = await mf.dispatchFetch(
-			`${BASE_URL}/email/routing/${id}`
-		);
-		const detail = await expectValidResponse(
-			detailResponse,
-			zEmailGetRoutingResponse,
-			expect
-		);
 		expect(detail.result?.raw).toContain("Subject: Hello from the explorer");
 		expect(detail.result?.handlingPath[0]?.action).toBe("received");
 	});
@@ -387,7 +370,7 @@ describe("Email API - Routing attachments", () => {
 	test("omits multipart framing when there are no attachments", async ({
 		expect,
 	}) => {
-		const raw = await sendAndReadRaw(
+		const detail = await sendAndReadDetail(
 			{
 				from: "sender@example.com",
 				to: ["recipient@example.com"],
@@ -397,9 +380,11 @@ describe("Email API - Routing attachments", () => {
 			expect
 		);
 
+		const raw = detail?.raw ?? "";
 		expect(raw).not.toContain("multipart/mixed");
 		expect(raw).toContain("Content-Type: text/plain; charset=utf-8");
 		expect(raw).toContain("just text");
+		expect(detail?.attachments).toEqual([]);
 	});
 
 	// The explorer surfaces attachment metadata for received emails so they can
@@ -446,20 +431,6 @@ describe("Email API - Routing attachments", () => {
 			},
 		]);
 	});
-
-	test("reports no attachments for a plain message", async ({ expect }) => {
-		const detail = await sendAndReadDetail(
-			{
-				from: "sender@example.com",
-				to: ["recipient@example.com"],
-				subject: "Nothing attached",
-				text: "just text",
-			},
-			expect
-		);
-
-		expect(detail?.attachments).toEqual([]);
-	});
 });
 
 describe("Email API - Routing without an email() handler", () => {
@@ -481,25 +452,23 @@ describe("Email API - Routing without an email() handler", () => {
 		await disposeWithRetry(mf);
 	});
 
-	test("succeeds when the worker has no email() handler", async ({
-		expect,
-	}) => {
-		const response = await mf.dispatchFetch(`${BASE_URL}/email/routing/send`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				from: "sender@example.com",
-				to: ["recipient@example.com"],
-				subject: "Undeliverable",
-				text: "body",
-			}),
-		});
-		await expectValidResponse(response, zEmailSendRoutingResponse, expect);
-	});
+	test("still records the message, marked as unhandled", async ({ expect }) => {
+		// Sending succeeds even though the message cannot be delivered.
+		const sendResponse = await mf.dispatchFetch(
+			`${BASE_URL}/email/routing/send`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "Undeliverable",
+					text: "body",
+				}),
+			}
+		);
+		await expectValidResponse(sendResponse, zEmailSendRoutingResponse, expect);
 
-	test("records the message in the inbox marked as unhandled", async ({
-		expect,
-	}) => {
 		const response = await mf.dispatchFetch(`${BASE_URL}/email/routing`);
 		const data = await expectValidResponse(
 			response,
@@ -694,7 +663,7 @@ describe("Email API - Sending", () => {
 		expect(data.result).toEqual([]);
 	});
 
-	test("captures an email sent through a send_email binding", async ({
+	test("captures an email sent through a send_email binding and exposes its details", async ({
 		expect,
 	}) => {
 		const sendResponse = await mf.dispatchFetch("http://localhost", {
@@ -722,21 +691,12 @@ describe("Email API - Sending", () => {
 				}),
 			])
 		);
-		expect(data.result?.[0]?.to).toContain("recipient@example.com");
-	});
+		const listed = data.result?.[0];
+		expect(listed?.to).toContain("recipient@example.com");
 
-	test("returns details for a sent email", async ({ expect }) => {
-		const listResponse = await mf.dispatchFetch(`${BASE_URL}/email/sending`);
-		const list = await expectValidResponse(
-			listResponse,
-			zEmailListSendingResponse,
-			expect
-		);
-		const id = list.result?.[0]?.id;
-		expect(id).toBeDefined();
-
+		// The list view omits the body, so the detail endpoint must expose it.
 		const detailResponse = await mf.dispatchFetch(
-			`${BASE_URL}/email/sending/${id}`
+			`${BASE_URL}/email/sending/${listed?.id}`
 		);
 		const detail = await expectValidResponse(
 			detailResponse,

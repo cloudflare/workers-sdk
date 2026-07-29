@@ -990,74 +990,7 @@ test("reply: invalid references", async ({ expect }) => {
 	expect((await res.text()).includes("provided References header is invalid"));
 });
 
-test("reply: references generated correctly", async ({ expect }) => {
-	const log = new TestLog();
-	const mf = new Miniflare({
-		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
-		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(
-			JSON.stringify(dedent`
-				From: someone else <someone-else@example.com>
-				To: someone <someone@example.com>
-				MIME-Version: 1.0
-				Content-Type: text/plain
-				In-Reply-To: <im-a-random-parent-message-id@example.com>
-				Message-ID: <im-a-random-message-id@example.com>
-
-				This is a random email body.`)
-		),
-		unsafeTriggerHandlers: true,
-
-		compatibilityDate: "2025-03-17",
-	});
-
-	useDispose(mf);
-
-	const email = dedent`
-		From: someone <someone@example.com>
-		To: someone else <someone-else@example.com>
-		Message-ID: <im-a-random-parent-message-id@example.com>
-		MIME-Version: 1.0
-		Content-Type: text/plain
-
-		This is a random email body.`;
-
-	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/local/email?" +
-			new URLSearchParams({
-				from: "someone@example.com",
-				to: "someone-else@example.com",
-			}).toString(),
-		{
-			body: email,
-			method: "POST",
-		}
-	);
-	expect(await res.text()).toBe("Worker successfully processed email");
-	expect(res.status).toBe(200);
-	expect(log.logs[1][0]).toBe(LogLevel.INFO);
-	expect(log.logs[1][1].split("\n")[0]).toBe(
-		"Email handler replied to sender with the following message:"
-	);
-
-	const message = log.logs[1][1];
-	const fileMatch = message.match(/^ {2}(.+)$/m);
-	expect(fileMatch).not.toBeNull();
-	const file = fileMatch?.[1];
-	expect(file).toBeDefined();
-	const fileContent = await readFile(String(file), "utf-8");
-	expect(fileContent).toBeTruthy();
-	expect(
-		fileContent.includes(
-			`References: <im-a-random-parent-message-id@example.com>`
-		)
-	).toBe(true);
-});
-
-test("reply: stored in project directory when defaultProjectTmpPath is set", async ({
+test("reply: references generated correctly and written to the project directory", async ({
 	expect,
 }) => {
 	const log = new TestLog();
@@ -1096,7 +1029,7 @@ test("reply: stored in project directory when defaultProjectTmpPath is set", asy
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -1108,12 +1041,18 @@ test("reply: stored in project directory when defaultProjectTmpPath is set", asy
 	);
 	expect(await res.text()).toBe("Worker successfully processed email");
 	expect(res.status).toBe(200);
+	expect(log.logs[1][0]).toBe(LogLevel.INFO);
+	expect(log.logs[1][1].split("\n")[0]).toBe(
+		"Email handler replied to sender with the following message:"
+	);
 
 	const message = log.logs[1][1];
-	const file = message.match(/^ {2}(.+)$/m)?.[1];
+	const fileMatch = message.match(/^ {2}(.+)$/m);
+	expect(fileMatch).not.toBeNull();
+	const file = fileMatch?.[1];
 	expect(file).toBeDefined();
-	// The reply must be written inside the project's `.wrangler/tmp` directory,
-	// not only the OS temp directory.
+	// The surfaced path is inside the project's `.wrangler/tmp` directory, not
+	// only the OS temp directory, so the reply outlives the dev session.
 	expect(String(file).startsWith(projectTmpPath)).toBe(true);
 	expect(existsSync(String(file))).toBe(true);
 	const fileContent = await readFile(String(file), "utf-8");
