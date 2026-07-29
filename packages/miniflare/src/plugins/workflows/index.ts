@@ -2,7 +2,11 @@ import fs from "node:fs/promises";
 import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
 import SCRIPT_WORKFLOWS_WRAPPED_BINDING from "worker:workflows/wrapped-binding";
 import { z } from "zod";
-import { getUserServiceName } from "../core";
+import {
+	getUserServiceName,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+	OBSERVABILITY_COMPAT_FLAGS,
+} from "../core";
 import {
 	getPersistPath,
 	getUserBindingServiceName,
@@ -38,6 +42,8 @@ export const WorkflowsOptionsSchema = z.object({
 });
 export const WorkflowsSharedOptionsSchema = z.object({
 	workflowsPersist: PersistenceSchema,
+	// Shared with the core plugin; lets us tail the engine service (see below).
+	unsafeObservability: z.boolean().optional(),
 });
 
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
@@ -113,12 +119,39 @@ export const WORKFLOWS_PLUGIN: Plugin<
 			disk: { path: persistPath, writable: true },
 		}));
 
+		// The engine service is built here, not through the core plugin's
+		// per-user-worker path, so tail it explicitly or workflow invocations are
+		// invisible in the Local Explorer.
+		const observabilityEnabled = sharedOptions.unsafeObservability === true;
+
 		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = Object.entries(options.workflows ?? {}).map<Service>(
 			([bindingName, workflow]) => {
 				// NOTE(lduarte): the engine unique namespace key must be unique per workflow definition
 				// otherwise workerd will crash because there's two equal DO namespaces
 				const uniqueKey = `miniflare-workflows-${workflow.name}`;
+
+				const engineCompatibilityFlags = [
+					"experimental",
+					...(workflow.compatibilityFlags ?? []),
+				];
+				// Mirrors core's designator shape (prefixed name, JSON props);
+				// attributes the engine's invocations to the workflow.
+				const streamingTails = observabilityEnabled
+					? [
+							{
+								name: getUserServiceName(OBSERVABILITY_COLLECTOR_SERVICE_NAME),
+								props: { json: JSON.stringify({ worker: workflow.name }) },
+							},
+						]
+					: undefined;
+				if (observabilityEnabled) {
+					engineCompatibilityFlags.push(
+						...OBSERVABILITY_COMPAT_FLAGS.filter(
+							(flag) => !engineCompatibilityFlags.includes(flag)
+						)
+					);
+				}
 
 				const workflowsBinding: Service = {
 					name: getUserBindingServiceName(
@@ -128,9 +161,8 @@ export const WORKFLOWS_PLUGIN: Plugin<
 					),
 					worker: {
 						compatibilityDate: "2024-10-22",
-						compatibilityFlags: Array.from(
-							new Set(["experimental", ...(workflow.compatibilityFlags ?? [])])
-						),
+						compatibilityFlags: Array.from(new Set(engineCompatibilityFlags)),
+						...(streamingTails ? { streamingTails } : {}),
 						modules: [
 							{
 								name: "workflows.mjs",
