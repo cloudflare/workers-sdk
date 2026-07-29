@@ -83,8 +83,13 @@ const WorkersPoolOptionsSchema = z.object({
 		.optional(),
 });
 
+type CompatibleWorkerOptions = WorkerOptions & {
+	/** @deprecated Use `cacheAPI` instead. */
+	cache?: WorkerOptions["cacheAPI"];
+};
+
 export type SourcelessWorkerOptions = Omit<
-	WorkerOptions,
+	CompatibleWorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 > & {
 	// `modulesRules` is not included in all members of the `SourceOptions` type
@@ -94,7 +99,7 @@ export type SourcelessWorkerOptions = Omit<
 
 export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	miniflare?: SourcelessWorkerOptions & {
-		workers?: WorkerOptions[];
+		workers?: CompatibleWorkerOptions[];
 	};
 };
 
@@ -103,6 +108,13 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 };
 
 type PathParseParams = { path?: (string | number)[] };
+
+function normalizeMiniflareWorkerOptions(value: Record<string, unknown>): void {
+	if (value.cacheAPI === undefined) {
+		value.cacheAPI = value.cache;
+	}
+	delete value.cache;
+}
 
 function isZodErrorLike(value: unknown): value is ZodError {
 	return (
@@ -131,6 +143,8 @@ function parseWorkerOptions(
 	withoutScript: boolean,
 	opts: PathParseParams
 ): WorkerOptions {
+	normalizeMiniflareWorkerOptions(value);
+
 	// If this worker shouldn't have a configurable script, remove all script data
 	// and replace it with an empty `script` that will pass validation
 	if (withoutScript) {
