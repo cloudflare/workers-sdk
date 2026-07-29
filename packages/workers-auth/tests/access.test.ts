@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { setupServer } from "msw/node";
 import {
@@ -19,34 +19,18 @@ import { mswAccessHandlers } from "../src/test-helpers/msw-handlers/access";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 
 vi.mock("node:child_process", () => ({
-	spawnSync: vi.fn((binary: string) => {
-		if (binary === "cloudflared") {
-			return { error: true };
-		}
-		return {
-			error: null,
-			stdout: Buffer.from(""),
-			stderr: Buffer.from(""),
-			status: 0,
-		};
+	spawn: vi.fn(() => {
+		const fake = createFakeProcess();
+		fake.failSpawn(new Error("spawn cloudflared ENOENT"));
+		return fake.child;
 	}),
-	spawn: vi.fn(() =>
-		createFakeCloudflaredProcess({
-			spawnError: new Error("spawn cloudflared ENOENT"),
-		})
-	),
 }));
 
-/**
- * A minimal stand-in for the `cloudflared access login` child process.
- *
- * `cloudflared` only exits once the user completes (or abandons) the
- * authorization flow in the browser, so the fake keeps running until
- * `delayMs` elapses (success) or it is killed.
- */
-function createFakeCloudflaredProcess(
-	outcome: { spawnError: Error } | { stdout: string; delayMs: number }
-): ChildProcessWithoutNullStreams {
+function createFakeProcess(): {
+	child: ChildProcessWithoutNullStreams;
+	complete(stdout: string): void;
+	failSpawn(error: Error): void;
+} {
 	const child = new EventEmitter() as EventEmitter & {
 		stdout: EventEmitter;
 		stderr: EventEmitter & { resume: () => void };
@@ -61,20 +45,22 @@ function createFakeCloudflaredProcess(
 		child.emit("close", null, "SIGTERM");
 		return true;
 	};
-	if ("spawnError" in outcome) {
-		setImmediate(() => child.emit("error", outcome.spawnError));
-	} else {
-		setTimeout(() => {
-			if (!child.killed) {
-				// Emit in two chunks, as a real pipe is free to do.
-				const stdout = Buffer.from(outcome.stdout);
-				child.stdout.emit("data", stdout.subarray(0, 8));
-				child.stdout.emit("data", stdout.subarray(8));
-				child.emit("close", 0, null);
+	return {
+		child: child as unknown as ChildProcessWithoutNullStreams,
+		complete(stdout) {
+			if (child.killed) {
+				return;
 			}
-		}, outcome.delayMs);
-	}
-	return child as unknown as ChildProcessWithoutNullStreams;
+			// Emit in two chunks, as a real pipe is free to do.
+			const output = Buffer.from(stdout);
+			child.stdout.emit("data", output.subarray(0, 8));
+			child.stdout.emit("data", output.subarray(8));
+			child.emit("close", 0, null);
+		},
+		failSpawn(error) {
+			setImmediate(() => child.emit("error", error));
+		},
+	};
 }
 
 const msw = setupServer();
@@ -258,68 +244,50 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 			it("should keep the event loop responsive while cloudflared waits for browser authorization", async ({
 				expect,
 			}) => {
-				// Regression test for https://github.com/cloudflare/workers-sdk/issues/12900.
-				// `cloudflared access login` blocks until the user completes the
-				// authorization flow in the browser, which can take arbitrarily
-				// long (or never happen). If wrangler waits for it synchronously,
-				// no SIGINT or keypress handler can run in the meantime, so
-				// ctrl+c cannot interrupt wrangler. Both mock implementations
-				// model that waiting behavior for their respective APIs; the
-				// timer below can only fire while cloudflared is still running
-				// if the event loop stays free during the wait.
-				vi.mocked(spawnSync).mockImplementationOnce(() => {
-					Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 200);
-					const stdout = Buffer.from(
-						"fetched your token:\n\ntest-access-token\n"
-					);
-					return {
-						pid: 0,
-						output: [null, stdout, Buffer.from("")],
-						stdout,
-						stderr: Buffer.from(""),
-						status: 0,
-						signal: null,
-					};
+				const fake = createFakeProcess();
+				const {
+					promise: cloudflaredSpawned,
+					resolve: resolveCloudflaredSpawned,
+				} = Promise.withResolvers<void>();
+				vi.mocked(spawn).mockImplementationOnce(() => {
+					resolveCloudflaredSpawned();
+					return fake.child;
 				});
-				vi.mocked(spawn).mockImplementationOnce(() =>
-					createFakeCloudflaredProcess({
-						stdout: "fetched your token:\n\ntest-access-token\n",
-						delayMs: 100,
-					})
-				);
 
-				let eventLoopTicked = false;
-				const timer = setTimeout(() => {
-					eventLoopTicked = true;
-				}, 10);
-				const headers = await getAccessHeaders("access-protected.com", {
+				const pendingHeaders = getAccessHeaders("access-protected.com", {
 					logger: silentLogger,
 					isNonInteractiveOrCI: () => false,
 				});
-				clearTimeout(timer);
+				await cloudflaredSpawned;
 
-				expect(headers).toEqual({
+				// Yield one event-loop turn while cloudflared is still pending. If the
+				// login blocked the event loop, this callback could not run.
+				await new Promise<void>((resolve) => setImmediate(resolve));
+
+				expect(spawn).toHaveBeenCalledOnce();
+				fake.complete("fetched your token:\n\ntest-access-token\n");
+
+				await expect(pendingHeaders).resolves.toEqual({
 					Cookie: "CF_Authorization=test-access-token",
 				});
-				expect(eventLoopTicked).toBe(true);
 			});
 
 			it("should return the CF_Authorization cookie header once cloudflared completes", async ({
 				expect,
 			}) => {
-				vi.mocked(spawn).mockImplementationOnce(() =>
-					createFakeCloudflaredProcess({
-						stdout: "fetched your token:\n\ntest-access-token\n",
-						delayMs: 10,
-					})
-				);
+				const fake = createFakeProcess();
+				vi.mocked(spawn).mockReturnValueOnce(fake.child);
 
-				const headers = await getAccessHeaders("access-protected.com", {
+				const pendingHeaders = getAccessHeaders("access-protected.com", {
 					logger: silentLogger,
 					isNonInteractiveOrCI: () => false,
 				});
+				await vi.waitFor(() => {
+					expect(spawn).toHaveBeenCalledOnce();
+				});
+				fake.complete("fetched your token:\n\ntest-access-token\n");
 
-				expect(headers).toEqual({
+				await expect(pendingHeaders).resolves.toEqual({
 					Cookie: "CF_Authorization=test-access-token",
 				});
 				expect(spawn).toHaveBeenCalledWith(
@@ -335,11 +303,8 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 				// If the user interrupts wrangler before completing the
 				// authorization flow in the browser, the cloudflared child
 				// must not be left running.
-				const child = createFakeCloudflaredProcess({
-					stdout: "fetched your token:\n\ntest-access-token\n",
-					delayMs: 10_000,
-				});
-				vi.mocked(spawn).mockImplementationOnce(() => child);
+				const fake = createFakeProcess();
+				vi.mocked(spawn).mockImplementationOnce(() => fake.child);
 				const exitListenersBefore = process.rawListeners("exit");
 
 				const pendingHeaders = getAccessHeaders("access-protected.com", {
@@ -365,7 +330,7 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 				expect(exitHook).toBeDefined();
 				exitHook?.();
 
-				expect(child.killed).toBe(true);
+				expect(fake.child.killed).toBe(true);
 				await expect(pendingHeaders).rejects.toThrow(
 					"Failed to authenticate with Cloudflare Access"
 				);
@@ -375,10 +340,7 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 			it("should abort a pending cloudflared authorization when the signal aborts", async ({
 				expect,
 			}) => {
-				const child = createFakeCloudflaredProcess({
-					stdout: "fetched your token:\n\ntest-access-token\n",
-					delayMs: 10_000,
-				});
+				const fake = createFakeProcess();
 				const spawnImpl = (
 					_binary: string,
 					_args: readonly string[],
@@ -387,12 +349,12 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 					// Mirror Node's behavior for `spawn(..., { signal })`: an abort
 					// kills the child and emits an AbortError on it.
 					options?.signal?.addEventListener("abort", () => {
-						child.kill();
+						fake.child.kill();
 						const error = new Error("The operation was aborted");
 						error.name = "AbortError";
-						child.emit("error", error);
+						fake.child.emit("error", error);
 					});
-					return child;
+					return fake.child;
 				};
 				vi.mocked(spawn).mockImplementationOnce(
 					spawnImpl as unknown as typeof spawn
@@ -416,7 +378,7 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 				await expect(pendingHeaders).rejects.toMatchObject({
 					name: "AbortError",
 				});
-				expect(child.killed).toBe(true);
+				expect(fake.child.killed).toBe(true);
 			});
 
 			it("should error without cloudflared installed on an access protected domain", async ({
