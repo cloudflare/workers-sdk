@@ -371,7 +371,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			// Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
-			// and the minimal template we use enforces pnpm/
 			unsupportedPms: ["yarn", "npm"],
 			unsupportedOSs: ["win32"],
 			// The Nuxt `ui` template pins `packageManager: pnpm@11.9.0`, so run
@@ -402,7 +401,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			// Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
-			// and the minimal template we use enforces pnpm/
 			unsupportedPms: ["yarn", "npm"],
 			unsupportedOSs: ["win32"],
 			// See note on nuxt:pages above.
